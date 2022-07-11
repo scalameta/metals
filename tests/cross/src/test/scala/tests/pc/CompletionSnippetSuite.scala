@@ -23,8 +23,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|apply($0)
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -37,7 +37,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|println()
        |println($0)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -49,7 +49,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|head
        |headOption
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -64,7 +64,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|now()
        |""".stripMargin,
-    topLines = Some(1)
+    topLines = Some(1),
   )
 
   checkSnippet(
@@ -88,7 +88,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         """|toString
            |""".stripMargin
-    )
+    ),
   )
 
   checkSnippet(
@@ -101,7 +101,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|MyType
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -115,7 +115,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|MyType
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -135,7 +135,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|IndexedSeq
            |IndexedSeq
            |""".stripMargin
-    )
+    ),
   )
 
   checkSnippet(
@@ -146,7 +146,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|IndexedSeq
        |IndexedSeq[$0] {}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -169,8 +169,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |ArrayDeque
            |ArrayDeque
            |ArrayDequeOps
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -186,7 +186,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         """|SimpleFileVisitor
            |""".stripMargin
-    )
+    ),
   )
 
   checkSnippet(
@@ -209,8 +209,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable
            |IterableOnce
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -233,8 +233,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable
            |IterableOnce
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -257,8 +257,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable
            |IterableOnce
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkEditLine(
@@ -269,7 +269,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@()",
-    "trailing()"
+    "trailing()",
   )
 
   checkEditLine(
@@ -280,7 +280,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@ { }",
-    "trailing { }"
+    "trailing { }",
   )
 
   checkEditLine(
@@ -291,7 +291,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@{ }",
-    "trailing{ }"
+    "trailing{ }",
   )
 
   checkEditLine(
@@ -302,7 +302,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@ _",
-    "trailing _"
+    "trailing _",
   )
 
   checkEditLine(
@@ -312,7 +312,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "List(1).flatte@@",
-    "List(1).flatten"
+    "List(1).flatten",
   )
 
   checkEditLine(
@@ -323,7 +323,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "scala.util.Try@@(1)",
-    "scala.util.Try(1)"
+    "scala.util.Try(1)",
   )
 
   checkEditLine(
@@ -334,7 +334,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "scala.util.Tr@@(1)",
     "scala.util.Try(1)",
-    filter = str => str.contains("Try")
+    filter = str => str.contains("Try"),
   )
 
   checkSnippet(
@@ -358,8 +358,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |PropertiesTrait
            |Either
            |control
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -381,7 +381,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |TryMethods
            |TryMethods
            |""".stripMargin
-    )
+    ),
   )
 
   checkEditLine(
@@ -393,7 +393,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "out.+@@=('a')",
     "out.++==('a')",
-    filter = _.contains("++=(s: String)")
+    filter = _.contains("++=(s: String)"),
   )
 
   checkSnippet(
@@ -418,7 +418,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |Widget($0) - (name: String, age: Int): Widget
            |""".stripMargin
     ),
-    includeDetail = true
+    includeDetail = true,
   )
 
   checkSnippet(
@@ -436,7 +436,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Widget -  example
            |""".stripMargin
     ),
-    includeDetail = true
+    includeDetail = true,
   )
 
   // https://github.com/scalameta/metals/issues/4004
@@ -453,7 +453,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |  extension (s: String)
         |    def bar = 0
         |  val bar = "abc".bar
-    """.stripMargin
+    """.stripMargin,
   )
 
   // https://github.com/scalameta/metals/issues/4004
@@ -470,7 +470,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |  extension (s: String)
         |    def bar() = 0
         |  val bar = "abc".bar()
-    """.stripMargin
+    """.stripMargin,
   )
 
   // https://github.com/scalameta/metals/issues/4004
@@ -487,7 +487,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |  extension (s: String)
         |    def bar()() = 0
         |  val bar = "abc".bar()()
-    """.stripMargin
+    """.stripMargin,
   )
 
 }

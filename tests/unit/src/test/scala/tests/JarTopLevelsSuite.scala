@@ -21,7 +21,7 @@ class JarTopLevelsSuite extends BaseTablesSuite {
         """|/foo.scala
            |object Hello {
            |}""".stripMargin,
-        root
+        root,
       )
     }
     zip

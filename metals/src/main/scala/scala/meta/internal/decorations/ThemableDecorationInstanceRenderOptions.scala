@@ -6,5 +6,5 @@ case class ThemableDecorationInstanceRenderOptions(
     @Nullable before: ThemableDecorationAttachmentRenderOptions = null,
     @Nullable after: ThemableDecorationAttachmentRenderOptions = null,
     @Nullable light: ThemableDecorationInstanceRenderOptions = null,
-    @Nullable dark: ThemableDecorationInstanceRenderOptions = null
+    @Nullable dark: ThemableDecorationInstanceRenderOptions = null,
 )

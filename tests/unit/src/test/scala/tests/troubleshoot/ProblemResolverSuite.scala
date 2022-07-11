@@ -38,53 +38,53 @@ class ProblemResolverSuite extends FunSuite {
   checkRecommendation(
     "unsupported-scala-version",
     scalaVersion = "2.12.7",
-    UnsupportedScalaVersion("2.12.7").message
+    UnsupportedScalaVersion("2.12.7").message,
   )
 
   checkRecommendation(
     "deprecated-scala-version",
     scalaVersion = "2.12.8",
-    DeprecatedScalaVersion("2.12.8").message
+    DeprecatedScalaVersion("2.12.8").message,
   )
 
   checkRecommendation(
     "future-scala-version",
     scalaVersion = "2.12.50",
-    FutureScalaVersion("2.12.50").message
+    FutureScalaVersion("2.12.50").message,
   )
 
   checkRecommendation(
     "ok-scala-version",
     scalaVersion = BuildInfo.scala212,
-    ""
+    "",
   )
 
   checkRecommendation(
     "unsupported-sbt-version",
     scalaVersion = "2.12.7",
     UnsupportedSbtVersion.message,
-    sbtVersion = Some("1.2.0")
+    sbtVersion = Some("1.2.0"),
   )
 
   checkRecommendation(
     "deprecated-sbt-version",
     scalaVersion = "2.12.8",
     DeprecatedSbtVersion.message,
-    sbtVersion = Some("1.3.0")
+    sbtVersion = Some("1.3.0"),
   )
 
   checkRecommendation(
     "future-sbt-version",
     scalaVersion = "2.12.51",
     FutureSbtVersion.message,
-    sbtVersion = Some("1.6.0")
+    sbtVersion = Some("1.6.0"),
   )
 
   checkRecommendation(
     "ok-sbt-version",
     scalaVersion = BuildInfo.scala212,
     "",
-    sbtVersion = Some("1.6.0")
+    sbtVersion = Some("1.6.0"),
   )
 
   checkRecommendation(
@@ -93,16 +93,16 @@ class ProblemResolverSuite extends FunSuite {
     SemanticDBDisabled(
       BuildInfo.scala212,
       BuildInfo.bloopVersion,
-      false
+      false,
     ).message,
-    scalacOpts = Nil
+    scalacOpts = Nil,
   )
 
   checkRecommendation(
     "missing-sourceroot",
     scalaVersion = BuildInfo.scala212,
     MissingSourceRoot("\"-P:semanticdb:sourceroot:$workspace\"").message,
-    scalacOpts = List("-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar")
+    scalacOpts = List("-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar"),
   )
 
   checkRecommendation(
@@ -113,32 +113,32 @@ class ProblemResolverSuite extends FunSuite {
         "/some/invalid/src.zip",
         "/some/invalid/lib/src.zip",
         "/some/invalid/path/src.zip",
-        "/some/invalid/path/lib/src.zip"
+        "/some/invalid/path/lib/src.zip",
       ).map(path => AbsolutePath(Paths.get(path)))
     ).message,
     sbtVersion = Some("1.6.0"),
-    invalidJavaHome = true
+    invalidJavaHome = true,
   )
 
   checkRecommendation(
     "novocode-junit-interface",
     scalaVersion = BuildInfo.scala213,
     OutdatedJunitInterfaceVersion.message,
-    classpath = List("/com/novocode/junit-interface/0.11/")
+    classpath = List("/com/novocode/junit-interface/0.11/"),
   )
 
   checkRecommendation(
     "github-junit-interface",
     scalaVersion = BuildInfo.scala213,
     OutdatedJunitInterfaceVersion.message,
-    classpath = List("/com/github/sbt/junit-interface/0.13.2/")
+    classpath = List("/com/github/sbt/junit-interface/0.13.2/"),
   )
 
   checkRecommendation(
     "github-junit-interface-valid",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpath = List("/com/github/sbt/junit-interface/0.13.3/")
+    classpath = List("/com/github/sbt/junit-interface/0.13.3/"),
   )
 
   checkRecommendation(
@@ -146,7 +146,7 @@ class ProblemResolverSuite extends FunSuite {
     scalaVersion = BuildInfo.scala213,
     "",
     classpath = List("/com/github/sbt/junit-interface/0.13.2/"),
-    isTestExplorerProvider = false
+    isTestExplorerProvider = false,
   )
 
   checkRecommendation(
@@ -155,44 +155,44 @@ class ProblemResolverSuite extends FunSuite {
     "",
     classpath = List(
       "org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29.jar",
-      "/com/github/sbt/junit-interface/0.13.2/"
+      "/com/github/sbt/junit-interface/0.13.2/",
     ),
-    sbtVersion = Some(BuildInfo.sbtVersion)
+    sbtVersion = Some(BuildInfo.sbtVersion),
   )
 
   checkRecommendation(
     "munit_2.13-0.x",
     scalaVersion = BuildInfo.scala213,
     OutdatedMunitInterfaceVersion.message,
-    classpath = List("org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29.jar")
+    classpath = List("org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29.jar"),
   )
 
   checkRecommendation(
     "munit_3-0.x",
     scalaVersion = BuildInfo.scala213,
     OutdatedMunitInterfaceVersion.message,
-    classpath = List("org/scalameta/munit_3/0.7.29/munit_3-0.7.29.jar")
+    classpath = List("org/scalameta/munit_3/0.7.29/munit_3-0.7.29.jar"),
   )
 
   checkRecommendation(
     "munit-1.0.0-M2",
     scalaVersion = BuildInfo.scala213,
     OutdatedMunitInterfaceVersion.message,
-    classpath = List("org/scalameta/munit_2.13/1.0.0-M2/")
+    classpath = List("org/scalameta/munit_2.13/1.0.0-M2/"),
   )
 
   checkRecommendation(
     "munit-valid",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpath = List("org/scalameta/munit_2.13/1.0.0-M3/")
+    classpath = List("org/scalameta/munit_2.13/1.0.0-M3/"),
   )
 
   checkRecommendation(
     "munit-valid-2",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpath = List("org/scalameta/munit_2.13/1.0.1/")
+    classpath = List("org/scalameta/munit_2.13/1.0.1/"),
   )
 
   def checkRecommendation(
@@ -201,12 +201,12 @@ class ProblemResolverSuite extends FunSuite {
       expected: String,
       scalacOpts: List[String] = List(
         "-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar",
-        "-P:semanticdb:sourceroot:/tmp/metals"
+        "-P:semanticdb:sourceroot:/tmp/metals",
       ),
       sbtVersion: Option[String] = None,
       invalidJavaHome: Boolean = false,
       classpath: List[String] = Nil,
-      isTestExplorerProvider: Boolean = true
+      isTestExplorerProvider: Boolean = true,
   )(implicit loc: Location): Unit = {
     test(name) {
       val workspace = Files.createTempDirectory("metals")
@@ -225,7 +225,7 @@ class ProblemResolverSuite extends FunSuite {
         () => isTestExplorerProvider,
         JdkVersion.maybeJdkVersionFromJavaHome(
           Some(AbsolutePath(System.getProperty("java.home")))
-        )
+        ),
       )
 
       val target =
@@ -234,7 +234,7 @@ class ProblemResolverSuite extends FunSuite {
 
       assertNoDiff(
         message,
-        expected.replace("$workspace", workspace.toString())
+        expected.replace("$workspace", workspace.toString()),
       )
     }
   }
@@ -244,7 +244,7 @@ class ProblemResolverSuite extends FunSuite {
       scalaVersion: String,
       scalacOptions: List[String],
       sbtVersion: Option[String] = None,
-      classpatch: List[String] = Nil
+      classpatch: List[String] = Nil,
   ): ScalaTarget = {
     val scalaBinaryVersion =
       ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
@@ -255,21 +255,21 @@ class ProblemResolverSuite extends FunSuite {
         /* tags = */ Nil.asJava,
         /* languageIds = */ Nil.asJava,
         /* dependencies = */ Nil.asJava,
-        /* capabilities = */ new BuildTargetCapabilities(true, true, true)
+        /* capabilities = */ new BuildTargetCapabilities(true, true, true),
       )
     val scalaBuildTarget = new ScalaBuildTarget(
       "org.scala-lang",
       scalaVersion,
       scalaBinaryVersion,
       ScalaPlatform.JVM,
-      /* jars = */ Nil.asJava
+      /* jars = */ Nil.asJava,
     )
 
     val scalacOptionsItem = new ScalacOptionsItem(
       buildId,
       scalacOptions.asJava,
       classpatch.asJava,
-      ""
+      "",
     )
 
     ScalaTarget(
@@ -277,7 +277,7 @@ class ProblemResolverSuite extends FunSuite {
       scalaBuildTarget,
       scalacOptionsItem,
       autoImports = None,
-      sbtVersion
+      sbtVersion,
     )
   }
 }

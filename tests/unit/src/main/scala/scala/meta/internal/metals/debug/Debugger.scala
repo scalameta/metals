@@ -72,7 +72,7 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
 
   def setBreakpoints(
       source: Source,
-      breakpoints: Array[SourceBreakpoint]
+      breakpoints: Array[SourceBreakpoint],
   ): Future[SetBreakpointsResponse] = {
     val args = new SetBreakpointsArguments
     args.setSource(source)

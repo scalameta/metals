@@ -19,18 +19,18 @@ import org.eclipse.lsp4j.MessageActionItem
 final class BspConfigGenerator(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
-    shellRunner: ShellRunner
+    shellRunner: ShellRunner,
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(
       buildTool: BuildServerProvider,
-      args: List[String]
+      args: List[String],
   ): Future[BspConfigGenerationStatus] =
     shellRunner
       .run(
         s"${buildTool.getBuildServerName} bspConfig",
         args,
         workspace,
-        buildTool.redirectErrorOutput
+        buildTool.redirectErrorOutput,
       )
       .map(BspConfigGenerationStatus.fromExitCode)
 
@@ -45,7 +45,7 @@ final class BspConfigGenerator(
       Some(buildTool) <- chooseBuildServerProvider(buildTools)
       status <- buildTool.generateBspConfig(
         workspace,
-        args => runUnconditionally(buildTool, args)
+        args => runUnconditionally(buildTool, args),
       )
     } yield (buildTool, status)
   }

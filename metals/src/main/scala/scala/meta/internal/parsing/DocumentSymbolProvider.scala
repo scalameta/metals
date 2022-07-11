@@ -57,7 +57,7 @@ class DocumentSymbolProvider(trees: Trees) {
       new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
       new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
       "",
-      new util.ArrayList[DocumentSymbol]()
+      new util.ArrayList[DocumentSymbol](),
     )
     def symbols(tree: Tree): util.List[DocumentSymbol] = {
       apply(tree)
@@ -69,7 +69,7 @@ class DocumentSymbolProvider(trees: Trees) {
         kind: SymbolKind,
         range: Position,
         selection: Position,
-        detail: String
+        detail: String,
     ): Unit = {
       owner.getChildren.add(
         new DocumentSymbol(
@@ -78,7 +78,7 @@ class DocumentSymbolProvider(trees: Trees) {
           range.toLSP,
           selection.toLSP,
           detail,
-          new util.ArrayList[DocumentSymbol]()
+          new util.ArrayList[DocumentSymbol](),
         )
       )
     }
@@ -86,7 +86,7 @@ class DocumentSymbolProvider(trees: Trees) {
         pats: List[Pat],
         kind: SymbolKind,
         range: Position,
-        detail: String
+        detail: String,
     ): Unit = {
       pats.foreach { pat =>
         pat.collect { case Pat.Var(name) =>
@@ -95,7 +95,7 @@ class DocumentSymbolProvider(trees: Trees) {
             kind,
             range,
             name.pos,
-            detail
+            detail,
           )
         }
       }
@@ -163,7 +163,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Class,
             t.pos,
             t.name.pos,
-            ""
+            "",
           )
           newOwner()
         case t: Defn.Trait =>
@@ -172,7 +172,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Interface,
             t.pos,
             t.name.pos,
-            ""
+            "",
           )
           newOwner()
         case t: Defn.Object =>
@@ -181,7 +181,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Module,
             t.pos,
             t.name.pos,
-            ""
+            "",
           )
           newOwner()
         case t: Pkg.Object =>
@@ -190,7 +190,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Module,
             t.pos,
             t.name.pos,
-            ""
+            "",
           )
           newOwner()
         case t: Defn.Def =>
@@ -199,7 +199,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Method,
             t.pos,
             t.name.pos,
-            t.decltpe.fold("")(_.syntax)
+            t.decltpe.fold("")(_.syntax),
           )
           newOwner()
         case t: Decl.Def =>
@@ -208,7 +208,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Method,
             t.pos,
             t.name.pos,
-            t.decltpe.syntax
+            t.decltpe.syntax,
           )
           newOwner()
         case t: Defn.Val =>
@@ -216,7 +216,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.pats,
             SymbolKind.Constant,
             t.pos,
-            t.decltpe.fold("")(_.syntax)
+            t.decltpe.fold("")(_.syntax),
           )
           newOwner()
         case t: Decl.Val =>
@@ -224,7 +224,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.pats,
             SymbolKind.Constant,
             t.pos,
-            t.decltpe.syntax
+            t.decltpe.syntax,
           )
           newOwner()
         case t: Defn.Var =>
@@ -232,7 +232,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.pats,
             SymbolKind.Variable,
             t.pos,
-            t.decltpe.fold("")(_.syntax)
+            t.decltpe.fold("")(_.syntax),
           )
           newOwner()
         case t: Decl.Var =>
@@ -240,7 +240,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.pats,
             SymbolKind.Variable,
             t.pos,
-            t.decltpe.syntax
+            t.decltpe.syntax,
           )
           newOwner()
         case t: Defn.Type =>
@@ -249,7 +249,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.TypeParameter,
             t.pos,
             t.name.pos,
-            t.body.syntax
+            t.body.syntax,
           )
         case t: Decl.Type =>
           addChild(
@@ -257,7 +257,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.TypeParameter,
             t.pos,
             t.name.pos,
-            ""
+            "",
           )
         case t: Defn.Enum =>
           addChild(
@@ -265,7 +265,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Enum,
             t.pos,
             t.name.pos,
-            ""
+            "",
           )
           newOwner()
         case t: Defn.RepeatedEnumCase =>
@@ -275,7 +275,7 @@ class DocumentSymbolProvider(trees: Trees) {
               SymbolKind.EnumMember,
               name.pos,
               name.pos,
-              ""
+              "",
             )
           }
           newOwner()
@@ -285,7 +285,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.EnumMember,
             t.pos,
             t.name.pos,
-            ""
+            "",
           )
         case t: Defn.ExtensionGroup =>
           val declaredType = for {
@@ -301,7 +301,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Module,
             t.pos,
             pos,
-            name
+            name,
           )
           newOwner()
         case t: Defn.GivenAlias =>
@@ -310,7 +310,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Constant,
             t.pos,
             t.name.pos,
-            t.decltpe.syntax
+            t.decltpe.syntax,
           )
           newOwner()
         case t: Defn.Given =>
@@ -331,7 +331,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Class,
             t.pos,
             pos,
-            tpeName
+            tpeName,
           )
           newOwner()
         case t: Decl.Given =>
@@ -340,7 +340,7 @@ class DocumentSymbolProvider(trees: Trees) {
             SymbolKind.Constant,
             t.pos,
             t.name.pos,
-            t.decltpe.syntax
+            t.decltpe.syntax,
           )
         case _ =>
       }

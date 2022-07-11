@@ -125,7 +125,7 @@ object Bill {
         mtags.BuildInfo.scalaCompilerVersion,
         "2.12",
         ScalaPlatform.JVM,
-        scalaJars
+        scalaJars,
       )
       val id = new BuildTargetIdentifier("id")
       val capabilities = new BuildTargetCapabilities(true, false, false)
@@ -134,7 +134,7 @@ object Bill {
         Collections.singletonList("tag"),
         languages,
         Collections.emptyList(),
-        capabilities
+        capabilities,
       )
       result.setDisplayName("id")
       result.setData(scalaTarget)
@@ -209,9 +209,9 @@ object Bill {
                 new SourceItem(
                   src.toUri.toString,
                   SourceItemKind.DIRECTORY,
-                  false
+                  false,
                 )
-              ).asJava
+              ).asJava,
             )
           ).asJava
         )
@@ -226,7 +226,7 @@ object Bill {
       val scalaLib = Dependency.of(
         "org.scala-lang",
         "scala-library",
-        mtags.BuildInfo.scalaCompilerVersion
+        mtags.BuildInfo.scalaCompilerVersion,
       )
 
       CompletableFuture.completedFuture {
@@ -242,7 +242,7 @@ object Bill {
           List(
             new DependencySourcesItem(
               target.getId,
-              sources.map(_.toUri.toString).asJava
+              sources.map(_.toUri.toString).asJava,
             )
           ).asJava
         )
@@ -262,7 +262,7 @@ object Bill {
             new TextDocumentIdentifier(file.name),
             target.getId,
             List().asJava,
-            true
+            true,
           )
         )
       }
@@ -299,7 +299,7 @@ object Bill {
             new TextDocumentIdentifier(uri),
             target.getId,
             diagnostics.asJava,
-            true
+            true,
           )
         client.onBuildPublishDiagnostics(params)
         hasError += file
@@ -364,7 +364,7 @@ object Bill {
               target.getId,
               List().asJava,
               scalaJars,
-              out.toURI.toASCIIString
+              out.toURI.toASCIIString,
             )
           ).asJava
         )
@@ -409,7 +409,7 @@ object Bill {
       Files.newOutputStream(
         log,
         StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING
+        StandardOpenOption.TRUNCATE_EXISTING,
       )
     )
     System.setOut(logStream)
@@ -420,7 +420,7 @@ object Bill {
         Files.newOutputStream(
           trace,
           StandardOpenOption.CREATE,
-          StandardOpenOption.TRUNCATE_EXISTING
+          StandardOpenOption.TRUNCATE_EXISTING,
         )
       )
       val launcher = new Launcher.Builder[BuildClient]()
@@ -457,7 +457,7 @@ object Bill {
    */
   def installWorkspace(
       directory: Path,
-      name: String = "Bill"
+      name: String = "Bill",
   ): Unit = {
     handleInstall(directory.resolve(".bsp"), name)
   }
@@ -467,7 +467,7 @@ object Bill {
    */
   def installGlobal(
       directory: Path,
-      name: String = "Bill"
+      name: String = "Bill",
   ): Unit = {
     handleInstall(directory.resolve("bsp"), name)
   }
@@ -483,11 +483,11 @@ object Bill {
         "-classpath",
         classpath,
         "bill.Bill",
-        "bsp"
+        "bsp",
       ).asJava,
       BuildInfo.metalsVersion,
       BuildInfo.bspVersion,
-      List("scala").asJava
+      List("scala").asJava,
     )
     val json = new GsonBuilder().setPrettyPrinting().create().toJson(details)
     val bspJson = directory.resolve(s"${name.toLowerCase()}.json")
@@ -515,7 +515,7 @@ object Bill {
           val pos = diag.getRange.toMeta(input)
           val message = pos.formatMessage(
             diag.getSeverity.toString.toLowerCase(),
-            diag.getMessage
+            diag.getMessage,
           )
           println(message)
         }
@@ -535,7 +535,7 @@ object Bill {
               wd.toUri.toString,
               new BuildClientCapabilities(
                 Collections.singletonList("scala")
-              )
+              ),
             )
           )
           .asScala

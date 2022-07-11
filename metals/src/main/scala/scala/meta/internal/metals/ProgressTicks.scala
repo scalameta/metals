@@ -20,7 +20,7 @@ object ProgressTicks {
       "   ",
       ".  ",
       ".. ",
-      "..."
+      "...",
     )
     override def format(i: Int): String = {
       value(i % value.length)

@@ -30,7 +30,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
       """|package a
          |
          |final case class Location()
-         |""".stripMargin
+         |""".stripMargin,
   )
 
   checkNewSymbol(
@@ -51,7 +51,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
           |trait Location {
           |$indent
           |}
-          |""".stripMargin
+          |""".stripMargin,
   )
 
   checkNewSymbol(
@@ -76,7 +76,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
           |$indent
           |}
           |""".stripMargin,
-    expectNoDiagnostics = false
+    expectNoDiagnostics = false,
   )
 
   def checkNewSymbol(
@@ -86,7 +86,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
       pickedKind: String,
       newFile: (String, String),
       selectedActionIndex: Int = 0,
-      expectNoDiagnostics: Boolean = true
+      expectNoDiagnostics: Boolean = true,
   )(implicit loc: Location): Unit = {
     val path = "a/src/main/scala/a/A.scala"
     test(name) {
@@ -119,7 +119,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
           val absolutePath = workspace.resolve(path)
           assert(
             absolutePath.exists,
-            s"File $absolutePath should have been created"
+            s"File $absolutePath should have been created",
           )
           assertNoDiff(absolutePath.readText, content)
         }

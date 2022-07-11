@@ -30,7 +30,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     fileType = Right(Worksheet),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
-    expectedContent = ""
+    expectedContent = "",
   )
 
   checkScala("new-worksheet-name-provided")(
@@ -38,7 +38,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     fileType = Left(Worksheet),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
-    expectedContent = ""
+    expectedContent = "",
   )
 
   checkScala("new-worksheet-fully-provided")(
@@ -46,7 +46,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     fileType = Left(Worksheet),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
-    expectedContent = ""
+    expectedContent = "",
   )
 
   checkScala("new-ammonite-script")(
@@ -54,7 +54,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     fileType = Right(AmmoniteScript),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
-    expectedContent = ""
+    expectedContent = "",
   )
 
   checkScala("new-ammonite-script-name-provided")(
@@ -62,7 +62,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     fileType = Right(AmmoniteScript),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
-    expectedContent = ""
+    expectedContent = "",
   )
 
   checkScala("new-ammonite-script-fully-provided")(
@@ -70,7 +70,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     fileType = Left(AmmoniteScript),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
-    expectedContent = ""
+    expectedContent = "",
   )
 
   checkScala("new-class")(
@@ -83,7 +83,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |class Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-class-backticked")(
@@ -96,7 +96,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |class `type` {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-class-name-provided")(
@@ -109,7 +109,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |class Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-class-fully-provided")(
@@ -122,7 +122,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |class Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-case-class")(
@@ -133,7 +133,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = """|package foo
                          |
                          |final case class Foo()
-                         |""".stripMargin
+                         |""".stripMargin,
   )
 
   checkScala("new-case-class-name-provided")(
@@ -144,7 +144,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = """|package foo
                          |
                          |final case class Foo()
-                         |""".stripMargin
+                         |""".stripMargin,
   )
 
   checkScala("new-case-class-fully-provided")(
@@ -155,7 +155,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = """|package foo
                          |
                          |final case class Foo()
-                         |""".stripMargin
+                         |""".stripMargin,
   )
 
   checkScala("new-object-null-dir")(
@@ -166,7 +166,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = s"""|object Bar {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-object-null-dir-name-provided")(
@@ -177,7 +177,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = s"""|object Bar {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-object-null-dir")(
@@ -188,7 +188,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = s"""|object Bar {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-trait-new-dir")(
@@ -201,7 +201,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |trait Baz {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-trait-new-dir-name-provided")(
@@ -214,7 +214,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |trait Baz {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-trait-new-dir-fully-provided")(
@@ -227,7 +227,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |trait Baz {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-package-object")(
@@ -240,7 +240,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = s"""|package object foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-package-object-provided")(
@@ -253,7 +253,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = s"""|package object foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkScala("new-class-on-file")(
@@ -271,7 +271,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                        |package foo
                        |
                        |class Other
-                       |""".stripMargin
+                       |""".stripMargin,
   )
 
   checkScala("new-class-on-file-name-provided")(
@@ -289,7 +289,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                        |package foo
                        |
                        |class Other
-                       |""".stripMargin
+                       |""".stripMargin,
   )
 
   checkScala("new-class-on-file-fully-provided")(
@@ -307,7 +307,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                        |package foo
                        |
                        |class Other
-                       |""".stripMargin
+                       |""".stripMargin,
   )
 
   checkScala("existing-file")(
@@ -328,7 +328,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                         | val withContent = true
                         |}
                         |""".stripMargin,
-    expectedException = List(classOf[FileAlreadyExistsException])
+    expectedException = List(classOf[FileAlreadyExistsException]),
   )
 
   checkScala("scala3-enum")(
@@ -342,7 +342,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |${indent}case
                           |}
                           |""".stripMargin,
-    scalaVersion = Some(V.scala3)
+    scalaVersion = Some(V.scala3),
   )
 
   checkScala("empty-file-with-package")(
@@ -353,7 +353,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = s"""|package foo
                           |
                           |
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-class")(
@@ -366,7 +366,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |class Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-class-name-provided")(
@@ -379,7 +379,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |class Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-class-fully-provided")(
@@ -392,7 +392,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |class Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-interface")(
@@ -405,7 +405,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |interface Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-interface-name-provided")(
@@ -418,7 +418,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |interface Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-interface-fully-provided")(
@@ -431,7 +431,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |interface Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-enum")(
@@ -444,7 +444,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |enum Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-enum-name-provided")(
@@ -457,7 +457,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |enum Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-enum-fully-provided")(
@@ -470,7 +470,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |enum Foo {
                           |$indent
                           |}
-                          |""".stripMargin
+                          |""".stripMargin,
   )
 
   checkJava("new-java-record")(
@@ -484,7 +484,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                          |
                          |}
                          |""".stripMargin,
-    javaMinVersion = Some("14")
+    javaMinVersion = Some("14"),
   )
 
   checkJava("new-java-record-name-provided")(
@@ -498,7 +498,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                          |
                          |}
                          |""".stripMargin,
-    javaMinVersion = Some("14")
+    javaMinVersion = Some("14"),
   )
 
   checkJava("new-java-record-fully-provided")(
@@ -512,7 +512,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                          |
                          |}
                          |""".stripMargin,
-    javaMinVersion = Some("14")
+    javaMinVersion = Some("14"),
   )
 
   private lazy val indent = "  "
@@ -530,7 +530,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       expectedContent: String,
       existingFiles: String = "",
       expectedException: List[Class[_]] = Nil,
-      javaMinVersion: Option[String] = None
+      javaMinVersion: Option[String] = None,
   )(implicit loc: Location): Unit = if (
     Properties.isJavaAtLeast(javaMinVersion.getOrElse("1.8"))
   )
@@ -543,7 +543,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       ServerCommands.NewJavaFile,
       existingFiles,
       expectedException,
-      None
+      None,
     )
 
   private def checkScala(testName: TestOptions)(
@@ -554,7 +554,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       expectedContent: String,
       existingFiles: String = "",
       expectedException: List[Class[_]] = Nil,
-      scalaVersion: Option[String] = None
+      scalaVersion: Option[String] = None,
   )(implicit loc: Location): Unit = check(testName)(
     directory,
     fileType,
@@ -564,7 +564,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     ServerCommands.NewScalaFile,
     existingFiles,
     expectedException,
-    scalaVersion
+    scalaVersion,
   )
 
   /**
@@ -580,7 +580,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       command: ListParametrizedCommand[String],
       existingFiles: String,
       expectedException: List[Class[_]],
-      scalaVersion: Option[String]
+      scalaVersion: Option[String],
   )(implicit loc: Location): Unit =
     test(testName) {
       val localScalaVersion = scalaVersion.getOrElse(V.scala213)
@@ -639,7 +639,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       val args = List(
         directoryUri,
         fileName.fold(identity, _ => null.asInstanceOf[String]),
-        fileType.fold(ft => ft.id, _ => null.asInstanceOf[String])
+        fileType.fold(ft => ft.id, _ => null.asInstanceOf[String]),
       )
 
       val futureToRecover = for {
@@ -657,12 +657,12 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
         _ = {
           assertNoDiff(
             client.workspaceMessageRequests,
-            expectedMessages
+            expectedMessages,
           )
           assert(expectedFilePathAbsolute.exists)
           assertLines(
             expectedFilePathAbsolute.readText,
-            expectedContent
+            expectedContent,
           )
         }
       } yield ()
@@ -672,7 +672,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
           case e if expectedException.contains(e.getClass()) =>
             assertNoDiff(
               expectedFilePathAbsolute.readText,
-              expectedContent
+              expectedContent,
             )
           case other =>
             throw other

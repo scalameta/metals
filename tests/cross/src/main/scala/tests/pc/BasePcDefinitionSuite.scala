@@ -19,7 +19,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
   def check(
       options: TestOptions,
       original: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit = {
     test(options) {
       val filename = "A.scala"
@@ -42,17 +42,17 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
             new TextEdit(
               new l.Range(
                 location.getRange().getStart(),
-                location.getRange().getStart()
+                location.getRange().getStart(),
               ),
-              "<<"
+              "<<",
             ),
             new TextEdit(
               new l.Range(
                 location.getRange().getEnd(),
-                location.getRange().getEnd()
+                location.getRange().getEnd(),
               ),
-              ">>"
-            )
+              ">>",
+            ),
           )
         } else {
           val filename = location.getUri()
@@ -64,7 +64,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       val expected = getExpected(original, compat, scalaVersion).removePos
       assertNoDiff(
         obtained,
-        expected
+        expected,
       )
     }
   }

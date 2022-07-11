@@ -25,7 +25,7 @@ import tests.DapTestEnrichments._
 
 final class TestDebugger(
     connect: RemoteServer.Listener => Debugger,
-    onStoppage: Stoppage.Handler
+    onStoppage: Stoppage.Handler,
 )(implicit ec: ExecutionContext)
     extends RemoteServer.Listener {
   @volatile private var debugger = connect(this)
@@ -57,7 +57,7 @@ final class TestDebugger(
 
   def setBreakpoints(
       path: AbsolutePath,
-      positions: List[Int]
+      positions: List[Int],
   ): Future[SetBreakpointsResponse] = {
     val source = path.toDAP
     val breakpoints = positions.map { line =>
@@ -167,7 +167,7 @@ final class TestDebugger(
 
   private def findStoppageCause(
       event: StoppedEventArguments,
-      frame: StackFrame
+      frame: StackFrame,
   ): Future[Stoppage.Cause] = {
     import org.eclipse.lsp4j.debug.{StoppedEventArgumentsReason => Reason}
     event.getReason match {

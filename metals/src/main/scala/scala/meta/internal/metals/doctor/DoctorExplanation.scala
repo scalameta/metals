@@ -42,14 +42,14 @@ sealed trait DoctorExplanation {
    */
   def toHtml(
       html: HtmlBuilder,
-      allTargetsInfo: Seq[DoctorTargetInfo]
+      allTargetsInfo: Seq[DoctorTargetInfo],
   ): HtmlBuilder =
     explanation(
       html,
       title,
       correctMessage,
       incorrectMessage,
-      show(allTargetsInfo)
+      show(allTargetsInfo),
     )
 
   /**
@@ -63,7 +63,7 @@ sealed trait DoctorExplanation {
       title,
       correctMessage,
       incorrectMessage,
-      show(allTargetsInfo)
+      show(allTargetsInfo),
     )
 
   /**
@@ -74,7 +74,7 @@ sealed trait DoctorExplanation {
       title: String,
       correctMessage: String,
       incorrectMessage: String,
-      show: Boolean
+      show: Boolean,
   ): HtmlBuilder = {
     html.element("div")(
       _.element("p")(_.text(title)).element("ul") { ul =>
@@ -93,7 +93,7 @@ sealed trait DoctorExplanation {
       title: String,
       correctMessage: String,
       incorrectMessage: String,
-      show: Boolean
+      show: Boolean,
   ): Obj = {
     val explanations =
       if (show)
@@ -103,7 +103,7 @@ sealed trait DoctorExplanation {
 
     ujson.Obj(
       "title" -> title,
-      "explanations" -> explanations
+      "explanations" -> explanations,
     )
   }
 }

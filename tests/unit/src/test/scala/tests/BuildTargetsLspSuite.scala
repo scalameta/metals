@@ -31,7 +31,7 @@ class BuildTargetsLspSuite
           |object Main {
           |  sourcecode.Line(1).val@@ue
           |}""".stripMargin,
-        """val value: Int""".hover
+        """val value: Int""".hover,
       )
     } yield ()
   }

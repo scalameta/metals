@@ -19,7 +19,7 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
   private def convert(
       block: Term.Block,
       patternMatch: Term.Match,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Seq[l.CodeAction] = patternMatch match {
     case Term.Match(Term.Placeholder(), head :: _) =>
       val lines = block.pos.input.text.split("\n")
@@ -96,7 +96,7 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
       .findLastEnclosingAt[Term.AnonymousFunction](
         path,
         range.getStart(),
-        isAnonymousFunctionWithMatch
+        isAnonymousFunctionWithMatch,
       )
       .map {
         case func @ Term.AnonymousFunction(head: Term.Match) =>

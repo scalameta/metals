@@ -70,7 +70,7 @@ case class QuickBuild(
     dependsOn: Array[String],
     additionalSources: Array[String],
     sbtVersion: String,
-    sbtAutoImports: Array[String]
+    sbtAutoImports: Array[String],
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -83,7 +83,7 @@ case class QuickBuild(
       orEmpty(dependsOn),
       orEmpty(additionalSources),
       sbtVersion,
-      orEmpty(sbtAutoImports)
+      orEmpty(sbtAutoImports),
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -106,18 +106,18 @@ case class QuickBuild(
       "src/main/java",
       "src/main/scala",
       s"src/main/scala-$binaryVersion",
-      s"src/main/scala-$binaryVersion"
+      s"src/main/scala-$binaryVersion",
     ).map(relpath => baseDirectory.resolve(relpath))
     val scalaDependencies =
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         Array(
           s"org.scala-lang:scala-library:2.13.1",
-          s"org.scala-lang:scala3-library_$binaryVersion:$scalaVersion"
+          s"org.scala-lang:scala3-library_$binaryVersion:$scalaVersion",
         )
       } else {
         Array(
           s"org.scala-lang:scala-library:$scalaVersion",
-          s"org.scala-lang:scala-reflect:$scalaVersion"
+          s"org.scala-lang:scala-reflect:$scalaVersion",
         )
       }
 
@@ -126,7 +126,7 @@ case class QuickBuild(
       allDependencies,
       scalaVersion,
       binaryVersion,
-      sources = true
+      sources = true,
     )
     def isSourceJar(jarFile: Path): Boolean = {
       jarFile.getFileName.toString.endsWith("-sources.jar")
@@ -158,11 +158,11 @@ case class QuickBuild(
             s"-P:semanticdb:failures:warning",
             s"-P:semanticdb:synthetics:on",
             s"-P:semanticdb:sourceroot:$workspace",
-            s"-P:semanticdb:targetroot:$classDirectory"
+            s"-P:semanticdb:targetroot:$classDirectory",
           ),
           plugins,
           cache,
-          scalacOptions.toList
+          scalacOptions.toList,
         ).flatten
       }
     def artifactName(jarFile: Path): String = {
@@ -177,7 +177,7 @@ case class QuickBuild(
             name,
             classifier,
             checksum = None,
-            jar
+            jar,
           )
         }
         C.Module(
@@ -185,7 +185,7 @@ case class QuickBuild(
           name,
           version = "",
           configurations = None,
-          artifacts
+          artifacts,
         )
       }
     val javaHome = Option(Properties.jdkHome).map(Paths.get(_))
@@ -236,10 +236,10 @@ case class QuickBuild(
           QuickBuild.fetch(
             Array(
               scalaCompiler,
-              "jline:jline:2.14.6"
+              "jline:jline:2.14.6",
             ),
             scalaVersion,
-            binaryVersion
+            binaryVersion,
           ),
           None,
           setup = Some(
@@ -249,9 +249,9 @@ case class QuickBuild(
               addCompilerToClasspath = false,
               addExtraJarsToClasspath = false,
               manageBootClasspath = true,
-              filterLibraryFromClasspath = true
+              filterLibraryFromClasspath = true,
             )
-          )
+          ),
         )
       ),
       java = Some(C.Java(Nil)),
@@ -262,7 +262,7 @@ case class QuickBuild(
       ),
       resolution = Some(C.Resolution(resolution.toList)),
       resources = None,
-      tags = Some(tags)
+      tags = Some(tags),
     )
   }
 }
@@ -274,7 +274,7 @@ object QuickBuild {
       List("utest.runner.Framework")
     ),
     "org.scalameta::munit" -> Config.TestFramework.munit,
-    "junit:junit" -> Config.TestFramework.JUnit
+    "junit:junit" -> Config.TestFramework.JUnit,
   )
 
   /**
@@ -285,7 +285,7 @@ object QuickBuild {
   def toDependency(
       module: String,
       scalaVersion: String,
-      scalaBinaryVersion: String
+      scalaBinaryVersion: String,
   ): Dependency =
     module match {
       case Full(org, name, version) =>
@@ -301,17 +301,17 @@ object QuickBuild {
       dependencies: Array[String],
       scalaVersion: String,
       scalaBinaryVersion: String,
-      sources: Boolean = false
+      sources: Boolean = false,
   ): List[Path] =
     fetchDependencies(
       dependencies.iterator
         .map(d => toDependency(d, scalaVersion, scalaBinaryVersion))
         .toList,
-      sources
+      sources,
     )
   def fetchDependencies(
       dependencies: List[Dependency],
-      sources: Boolean = false
+      sources: Boolean = false,
   ): List[Path] = {
     val classifiers =
       if (sources) Set("sources")
@@ -324,7 +324,7 @@ object QuickBuild {
           Repository.ivy2Local(),
           MavenRepository.of(
             "https://oss.sonatype.org/content/repositories/public"
-          )
+          ),
         )
 
     Fetch

@@ -39,7 +39,7 @@ final class StatusBar(
     client: () => MetalsLanguageClient,
     time: Time,
     progressTicks: ProgressTicks = ProgressTicks.braille,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext)
     extends Cancelable {
   def trackBlockingTask[T](message: String)(thunk: => T): T = {
@@ -89,7 +89,7 @@ final class StatusBar(
     client().logMessage(
       new MessageParams(
         MessageType.Error,
-        s"$message failed, see metals.log for more details."
+        s"$message failed, see metals.log for more details.",
       )
     )
   }
@@ -98,7 +98,7 @@ final class StatusBar(
       message: String,
       value: Future[T],
       showTimer: Boolean = false,
-      progress: Option[TaskProgress] = None
+      progress: Option[TaskProgress] = None,
   ): Future[T] = {
     items.add(Progress(message, value, showTimer, progress))
     tickIfHidden()
@@ -118,7 +118,7 @@ final class StatusBar(
       sh: ScheduledExecutorService,
       initialDelay: Long,
       period: Long,
-      unit: TimeUnit
+      unit: TimeUnit,
   ): Unit = {
     cancel()
     scheduledFuture =
@@ -214,7 +214,7 @@ final class StatusBar(
       message: String,
       job: Future[_],
       showTimer: Boolean,
-      taskProgress: Option[TaskProgress]
+      taskProgress: Option[TaskProgress],
   ) extends Item
 
   private var isHidden: Boolean = true

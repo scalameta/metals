@@ -26,7 +26,7 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
         """|} // <- parse error
            |object Outer {
            |  class Inner
-           |}""".stripMargin
+           |}""".stripMargin,
       )
       // fix the code to make it parse
       _ <- server.didChange("a/src/main/scala/a/Main.scala") { _ =>
@@ -42,7 +42,7 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
         """|
            |/*Outer(Module):4*/object Outer {
            |  /*Outer.Inner(Class):3*/class Inner
-           |}""".stripMargin
+           |}""".stripMargin,
       )
       // make the code unparseable again
       _ <- server.didChange("a/src/main/scala/a/Main.scala") { _ =>
@@ -59,7 +59,7 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
         """|} // <- parse error
            |/*Outer(Module):4*/object Outer {
            |  /*Outer.Inner(Class):3*/class Inner
-           |}""".stripMargin
+           |}""".stripMargin,
       )
       // check that when closing the buffer, the snapshot is lost, and no symbols
       // are found for unparseable code
@@ -72,7 +72,7 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
         """|} // <- parse error
            |object Outer {
            |  class Inner
-           |}""".stripMargin
+           |}""".stripMargin,
       )
     } yield ()
   }

@@ -30,7 +30,7 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
        |
        |}
        |""".stripMargin,
-    selectedActionIndex = 1
+    selectedActionIndex = 1,
   )
 
   check(
@@ -45,7 +45,7 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
        |
        |}
        |""".stripMargin,
-    selectedActionIndex = 1
+    selectedActionIndex = 1,
   )
 
   check(
@@ -75,7 +75,7 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNoAction(
@@ -94,7 +94,7 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
        |  }
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -122,7 +122,7 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
        |
        |}
        |""".stripMargin,
-    selectedActionIndex = 1
+    selectedActionIndex = 1,
   )
 
 }

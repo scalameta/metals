@@ -43,7 +43,7 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
         // try before we come up with a way to test cancellation more robustly.
         "expected didOpen future to fail with Cancellation Exception. " +
           "If this happens frequently for unrelated changes, then this may be a flaky test that needs refactoring. " +
-          "If this assertion is flaky, feel free to remove it until it's refactored."
+          "If this assertion is flaky, feel free to remove it until it's refactored.",
       )
       _ <- server.executeCommand(ServerCommands.CascadeCompile)
     } yield ()

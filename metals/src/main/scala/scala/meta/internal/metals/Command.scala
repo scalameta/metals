@@ -22,7 +22,7 @@ case class Command(
     id: String,
     title: String,
     description: String,
-    arguments: String = "`null`"
+    arguments: String = "`null`",
 ) extends BaseCommand {
   def unapply(params: l.ExecuteCommandParams): Boolean = {
     isApplicableCommand(params)
@@ -31,7 +31,7 @@ case class Command(
   def toExecuteCommandParams(): l.ExecuteCommandParams = {
     new l.ExecuteCommandParams(
       id,
-      List[Object]().asJava
+      List[Object]().asJava,
     )
   }
 
@@ -42,7 +42,7 @@ case class Command(
 case class OpenBrowserCommand(
     url: String,
     title: String,
-    description: String
+    description: String,
 ) extends BaseCommand {
   def id: String = s"browser-open-url:$url"
   def arguments: String = "`null`"
@@ -64,7 +64,7 @@ case class ParametrizedCommand[T: ClassTag](
     id: String,
     title: String,
     description: String,
-    arguments: String
+    arguments: String,
 ) extends BaseCommand {
 
   private val parser = new JsonParser.Of[T]
@@ -83,7 +83,7 @@ case class ParametrizedCommand[T: ClassTag](
 
   def toCommandLink(
       argument: T,
-      commandInHtmlFormat: CommandHTMLFormat
+      commandInHtmlFormat: CommandHTMLFormat,
   ): String =
     commandInHtmlFormat.createLink(id, List(argument.toJson.toString()))
 
@@ -95,7 +95,7 @@ case class ParametrizedCommand[T: ClassTag](
       id,
       List[Object](
         argument.toJson
-      ).asJava
+      ).asJava,
     )
   }
 }
@@ -104,7 +104,7 @@ case class ListParametrizedCommand[T: ClassTag](
     id: String,
     title: String,
     description: String,
-    arguments: String
+    arguments: String,
 ) extends BaseCommand {
 
   private val parser = new JsonParser.Of[T]
@@ -113,7 +113,7 @@ case class ListParametrizedCommand[T: ClassTag](
     new l.Command(
       title,
       id,
-      arguments.map(_.toJson.asInstanceOf[AnyRef]).asJava
+      arguments.map(_.toJson.asInstanceOf[AnyRef]).asJava,
     )
 
   def unapply(params: l.ExecuteCommandParams): Option[List[Option[T]]] = {
@@ -132,7 +132,7 @@ case class ListParametrizedCommand[T: ClassTag](
   def toExecuteCommandParams(argument: T*): l.ExecuteCommandParams = {
     new l.ExecuteCommandParams(
       id,
-      argument.map(_.toJson.asInstanceOf[AnyRef]).asJava
+      argument.map(_.toJson.asInstanceOf[AnyRef]).asJava,
     )
   }
 }

@@ -76,11 +76,11 @@ class PackageProvider(private val buildTargets: BuildTargets) {
 
   private def workspaceEdit(
       path: AbsolutePath,
-      packageStatement: String
+      packageStatement: String,
   ): WorkspaceEdit = {
     val textEdit = new TextEdit(
       new Range(new Position(0, 0), new Position(0, 0)),
-      packageStatement
+      packageStatement,
     )
     val textEdits = List(textEdit).asJava
     val changes = Map(path.toURI.toString -> textEdits).asJava

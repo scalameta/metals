@@ -43,7 +43,7 @@ private[debug] final class DebugProxy(
     stackTraceAnalyzer: StacktraceAnalyzer,
     compilers: Compilers,
     stripColor: Boolean,
-    statusBar: StatusBar
+    statusBar: StatusBar,
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -80,7 +80,7 @@ private[debug] final class DebugProxy(
     case request @ InitializeRequest(args) =>
       statusBar.trackFuture(
         "Initializing debugger",
-        initialized.future
+        initialized.future,
       )
       clientAdapter = ClientConfigurationAdapter.initialize(args)
       server.send(request)
@@ -127,7 +127,7 @@ private[debug] final class DebugProxy(
           sourceUri,
           new Position(frame.getLine() - 1, 0),
           EmptyCancelToken,
-          args
+          args,
         )
       }
       completions
@@ -148,7 +148,7 @@ private[debug] final class DebugProxy(
 
   private def assembleResponse(
       responses: Iterable[SetBreakpointsResponse],
-      originalSource: Source
+      originalSource: Source,
   ): SetBreakpointsResponse = {
     val breakpoints = for {
       response <- responses
@@ -180,7 +180,7 @@ private[debug] final class DebugProxy(
         sourcePath <- Option(frameSource.getPath)
         metalsSource <- debugAdapter.adaptStackFrameSource(
           sourcePath,
-          frameSource.getName
+          frameSource.getName,
         )
       } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSource))
       response.setResult(args.toJson)
@@ -239,7 +239,7 @@ private[debug] object DebugProxy {
       compilers: Compilers,
       workspace: AbsolutePath,
       stripColor: Boolean,
-      status: StatusBar
+      status: StatusBar,
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -263,14 +263,14 @@ private[debug] object DebugProxy {
       stackTraceAnalyzer,
       compilers,
       stripColor,
-      status
+      status,
     )
   }
 
   private def withLogger(
       workspace: AbsolutePath,
       endpoint: RemoteEndpoint,
-      name: String
+      name: String,
   ): RemoteEndpoint =
     Trace.setupTracePrinter(name, workspace) match {
       case Some(trace) => new EndpointLogger(endpoint, trace)

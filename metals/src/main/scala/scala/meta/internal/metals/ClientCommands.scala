@@ -23,7 +23,7 @@ object ClientCommands {
       |forwarded back to the Metals server if the client clicks on the UI elements.
       |""".stripMargin,
     arguments =
-      """`string`, the command ID to execute on the client.""".stripMargin
+      """`string`, the command ID to execute on the client.""".stripMargin,
   )
 
   val RunDoctor = new ParametrizedCommand[String](
@@ -116,7 +116,7 @@ object ClientCommands {
         |```
         |""".stripMargin,
     arguments =
-      """`string`, the HTML to display in the focused window.""".stripMargin
+      """`string`, the HTML to display in the focused window.""".stripMargin,
   )
 
   val ReloadDoctor = new ParametrizedCommand[String](
@@ -125,7 +125,7 @@ object ClientCommands {
     """|Reload the HTML contents of an open Doctor window, if any. Should be ignored if there is no open doctor window.
        |If `doctorProvider` is set to `"json"`, then the schema is the same as found above in `"metals-run-doctor"`""".stripMargin,
     arguments =
-      """`string`, the HTML to display in the focused window.""".stripMargin
+      """`string`, the HTML to display in the focused window.""".stripMargin,
   )
 
   val ToggleLogs = new Command(
@@ -134,7 +134,7 @@ object ClientCommands {
     """|Focus or remove focus on the output logs reported by the server via `window/logMessage`.
        |
        |In VS Code, this opens the "output" channel for the Metals extension.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val FocusDiagnostics = new Command(
@@ -143,7 +143,7 @@ object ClientCommands {
     """|Focus on the window that lists all published diagnostics.
        |
        |In VS Code, this opens the "problems" window.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val StartRunSession = new Command(
@@ -166,7 +166,7 @@ object ClientCommands {
         |   }
         |}
         |```
-    """.stripMargin
+    """.stripMargin,
   )
 
   val StartDebugSession = new Command(
@@ -189,7 +189,7 @@ object ClientCommands {
         |   }
         |}
         |```
-    """.stripMargin
+    """.stripMargin,
   )
 
   val UpdateTestExplorer = new ListParametrizedCommand[BuildTargetUpdate](
@@ -246,7 +246,7 @@ object ClientCommands {
       |  location: Location;
       |}
       |```
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   val RefreshModel = new Command(
@@ -256,13 +256,13 @@ object ClientCommands {
        |
        |Notifies the client that the model has been updated and it
        |should be refreshed (e.g. by resending code lens request)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   case class WindowLocation(
       uri: String,
       range: l.Range,
-      otherWindow: Boolean = false
+      otherWindow: Boolean = false,
   )
   object GotoLocation
       extends ParametrizedCommand[WindowLocation](
@@ -285,7 +285,7 @@ object ClientCommands {
            |},
            |]
            |```
-           |""".stripMargin
+           |""".stripMargin,
       )
 
   val OpenFolder = new ParametrizedCommand[MetalsOpenWindowParams](
@@ -300,7 +300,7 @@ object ClientCommands {
        |  "newWindow": true
        |}
        |```
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val CopyWorksheetOutput = new ParametrizedCommand[URI](
@@ -313,7 +313,7 @@ object ClientCommands {
         |
         |Server will attempt to create code lens with this command if `copyWorksheetOutputProvider` option is set.
         |""".stripMargin,
-    "[uri], the uri of the worksheet that you'd like to copy the contents of."
+    "[uri], the uri of the worksheet that you'd like to copy the contents of.",
   )
 
   val ShowStacktrace = new ParametrizedCommand[String](
@@ -321,7 +321,7 @@ object ClientCommands {
     "Show the stacktrace in the client.",
     s"""|Show the stacktrace modified with links to specific files.
         |""".stripMargin,
-    "[string], the markdown representation of the stacktrace"
+    "[string], the markdown representation of the stacktrace",
   )
 
   def all: List[BaseCommand] =
@@ -337,6 +337,6 @@ object ClientCommands {
       ShowStacktrace,
       CopyWorksheetOutput,
       StartRunSession,
-      StartDebugSession
+      StartDebugSession,
     )
 }

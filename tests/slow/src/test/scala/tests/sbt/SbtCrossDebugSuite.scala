@@ -8,5 +8,5 @@ class SbtCrossDebugSuite
     extends BaseCrossDebugSuite(
       "sbt-cross-debug",
       SbtServerInitializer,
-      SbtBuildLayout
+      SbtBuildLayout,
     )

@@ -33,7 +33,7 @@ class JavadocSuite extends BaseSuite {
       |
       |
       |**See**
-      |- [previousProblemsFromSuccessfulCompilation](previousProblemsFromSuccessfulCompilation)""".stripMargin
+      |- [previousProblemsFromSuccessfulCompilation](previousProblemsFromSuccessfulCompilation)""".stripMargin,
   )
 
   check(
@@ -79,7 +79,7 @@ class JavadocSuite extends BaseSuite {
       |[java.util.regex.Matcher#replaceFirst](java.util.regex.Matcher#replaceFirst).
       |Use [java.util.regex.Matcher#quoteReplacement](java.util.regex.Matcher#quoteReplacement) to suppress the special
       |meaning of these characters, if desired.
-    """.stripMargin
+    """.stripMargin,
   )
 
   check(
@@ -90,19 +90,19 @@ class JavadocSuite extends BaseSuite {
        |<tr><td>bar</td></tr>
        |</table>
        """.stripMargin,
-    ""
+    "",
   )
 
   check(
     "basic",
     "/** a {@code int} value */",
-    "a `int` value"
+    "a `int` value",
   )
 
   check(
     "basicHtml",
     """/** a {@code int} value <p><code>foo</code></p><a href="http://www.cnn.com">CNN</a> */""",
-    "a `int` value `foo`\n\n[CNN](http://www.cnn.com)"
+    "a `int` value `foo`\n\n[CNN](http://www.cnn.com)",
   )
 
   check(
@@ -130,7 +130,7 @@ class JavadocSuite extends BaseSuite {
         |**See**
         |- [java.awt.BaseWindow](java.awt.BaseWindow)
         |- [java.awt.Button](java.awt.Button)
-     """.stripMargin
+     """.stripMargin,
   )
   check(
     "method",
@@ -174,7 +174,7 @@ class JavadocSuite extends BaseSuite {
         |- `IOException`: 
         |
         |**See**
-        |- [Image](Image)""".stripMargin
+        |- [Image](Image)""".stripMargin,
   )
 
   check(
@@ -243,7 +243,7 @@ class JavadocSuite extends BaseSuite {
        |  change this policy through [GsonBuilder#setFieldNamingPolicy(FieldNamingPolicy)](GsonBuilder#setFieldNamingPolicy(FieldNamingPolicy)).
        |- By default, Gson excludes- `transient`- or- `static`- fields from
        |  consideration for serialization and deserialization. You can change this behavior through
-       |  [GsonBuilder#excludeFieldsWithModifiers(int...)](GsonBuilder#excludeFieldsWithModifiers(int...)).""".stripMargin
+       |  [GsonBuilder#excludeFieldsWithModifiers(int...)](GsonBuilder#excludeFieldsWithModifiers(int...)).""".stripMargin,
   )
 
   check(
@@ -265,7 +265,7 @@ class JavadocSuite extends BaseSuite {
        | */""".stripMargin,
     s"""|- some element
         |\t- some other element
-        |\t\t- yet some other element""".stripMargin
+        |\t\t- yet some other element""".stripMargin,
   )
 
 }

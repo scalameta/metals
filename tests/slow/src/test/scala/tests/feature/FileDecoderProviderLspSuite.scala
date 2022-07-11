@@ -32,7 +32,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/scala/Main.scala",
     None,
     "tasty-decoded",
-    Right(FileDecoderProviderLspSuite.tastySingle)
+    Right(FileDecoderProviderLspSuite.tastySingle),
   )
 
   check(
@@ -50,7 +50,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/scala/Main.scala",
     None,
     "tasty-decoded",
-    Left("Decoding tasty is only supported in Scala 3 for now.")
+    Left("Decoding tasty is only supported in Scala 3 for now."),
   )
 
   check(
@@ -81,7 +81,7 @@ class FileDecoderProviderLspSuite
     customUri = Some(
       // uri is encoded because coursier encodes it - this is not Metals/BSP encoding it.
       s"jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/ch/epfl/scala/com-microsoft-java-debug-core/0.21.0%2B1-7f1080f1/com-microsoft-java-debug-core-0.21.0%2B1-7f1080f1-sources.jar!/com/microsoft/java/debug/core/LoggerFactory.java"
-    )
+    ),
   )
 
   check(
@@ -100,7 +100,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Foo.tasty"),
     "tasty-decoded",
-    Right(FileDecoderProviderLspSuite.tastyMultiple)
+    Right(FileDecoderProviderLspSuite.tastyMultiple),
   )
 
   check(
@@ -119,7 +119,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Main$package.tasty"),
     "tasty-decoded",
-    Right(FileDecoderProviderLspSuite.tastyToplevel)
+    Right(FileDecoderProviderLspSuite.tastyToplevel),
   )
 
   check(
@@ -143,8 +143,8 @@ class FileDecoderProviderLspSuite
       str
         .replaceAll(
           ".*(Decompiled with CFR )(\\d|.)*\\.",
-          " * Decompiled with CFR VERSION."
-        )
+          " * Decompiled with CFR VERSION.",
+        ),
   )
 
   check(
@@ -167,8 +167,8 @@ class FileDecoderProviderLspSuite
       str
         .replaceAll(
           ".*(Decompiled with CFR )(\\d|.)*\\.",
-          " * Decompiled with CFR VERSION."
-        )
+          " * Decompiled with CFR VERSION.",
+        ),
   )
 
   check(
@@ -192,8 +192,8 @@ class FileDecoderProviderLspSuite
         .replace("\\", "/")
         .replaceAll(
           "[\\s\\S]*(Can't load the class specified:)[\\s]*(org.benf.cfr.reader.util.CannotLoadClassException:.*foo\\/bar\\/example\\/Main\\.class)[\\s\\S]*",
-          "$1$2"
-        )
+          "$1$2",
+        ),
   )
 
   check(
@@ -218,8 +218,8 @@ class FileDecoderProviderLspSuite
       str
         .replaceAll(
           ".*(Decompiled with CFR )(\\d|.)*\\.",
-          " * Decompiled with CFR VERSION."
-        )
+          " * Decompiled with CFR VERSION.",
+        ),
   )
 
   check(
@@ -237,7 +237,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/java/foo/bar/example/Main.java",
     None,
     "javap",
-    Right(FileDecoderProviderLspSuite.javapJava)
+    Right(FileDecoderProviderLspSuite.javapJava),
   )
 
   check(
@@ -255,7 +255,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/java/foo/bar/example/Main.java",
     None,
     "javap",
-    Left(FileDecoderProviderLspSuite.javapMissing)
+    Left(FileDecoderProviderLspSuite.javapMissing),
   )
 
   check(
@@ -276,7 +276,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Foo.class"),
     "javap",
-    Right(FileDecoderProviderLspSuite.javap)
+    Right(FileDecoderProviderLspSuite.javap),
   )
 
   check(
@@ -296,7 +296,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Main$package.class"),
     "javap",
-    Right(FileDecoderProviderLspSuite.javapToplevel)
+    Right(FileDecoderProviderLspSuite.javapToplevel),
   )
 
   check(
@@ -318,7 +318,7 @@ class FileDecoderProviderLspSuite
     Some("foo/bar/example/Foo.class"),
     "javap-verbose",
     Right(FileDecoderProviderLspSuite.javapVerbose),
-    str => str.substring(str.indexOf("Compiled from"), str.length())
+    str => str.substring(str.indexOf("Compiled from"), str.length()),
   )
 
   check(
@@ -348,7 +348,7 @@ class FileDecoderProviderLspSuite
     ),
     customUri = Some(
       s"metalsDecode:jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29-sources.jar!/munit/Printable.scala.semanticdb-compact"
-    )
+    ),
   )
 
   check(
@@ -367,7 +367,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/scala/Main.scala",
     None,
     "semanticdb-compact",
-    Right(FileDecoderProviderLspSuite.semanticdbCompact)
+    Right(FileDecoderProviderLspSuite.semanticdbCompact),
   )
 
   check(
@@ -388,7 +388,7 @@ class FileDecoderProviderLspSuite
     "app/src/main/scala/Main.scala",
     None,
     "semanticdb-detailed",
-    Right(FileDecoderProviderLspSuite.semanticdbDetailed)
+    Right(FileDecoderProviderLspSuite.semanticdbDetailed),
   )
 
   checkBuildTarget(
@@ -414,15 +414,15 @@ class FileDecoderProviderLspSuite
           |  def foo(): Unit = ()
           |}
           |""".stripMargin,
-      V.scala3
+      V.scala3,
     ),
     "a[2.13.8]", // buildTarget, see: SbtBuildLayout
     Right(FileDecoderProviderLspSuite.buildTargetResponse),
     result =>
       FileDecoderProviderLspSuite.filterSections(
         result,
-        Set("Target", "Scala Version", "Base Directory")
-      )
+        Set("Target", "Scala Version", "Base Directory"),
+      ),
   )
 
 }
@@ -445,15 +445,15 @@ class FileDecoderProviderSbtLspSuite
           |  def foo(): Unit = ()
           |}
           |""".stripMargin,
-      V.scala3
+      V.scala3,
     ),
     "a", // buildTarget, see: SbtBuildLayout
     Right(FileDecoderProviderLspSuite.sbtBuildTargetResponse),
     result =>
       FileDecoderProviderLspSuite.filterSections(
         result,
-        Set("Target", "Scala Version", "Base Directory", "Source Directories")
-      )
+        Set("Target", "Scala Version", "Base Directory", "Source Directories"),
+      ),
   )
 }
 
@@ -468,7 +468,7 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
       input: String,
       buildTarget: String,
       expected: Either[String, String],
-      transformResult: String => String = identity
+      transformResult: String => String = identity,
   ): Unit = {
     test(testName) {
       for {
@@ -484,8 +484,8 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
           else Left(transformResult(result.error)),
           expected.fold(
             e => Left(e),
-            v => Right(v.replaceAll("@workspace", workspace.toString))
-          )
+            v => Right(v.replaceAll("@workspace", workspace.toString)),
+          ),
         )
       }
     }
@@ -499,7 +499,7 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
       extension: String,
       expected: Either[String, String],
       transformResult: String => String = identity,
-      customUri: Option[String] = None
+      customUri: Option[String] = None,
   ): Unit = {
     test(testName) {
       picked.foreach { pickedItem =>
@@ -519,7 +519,7 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
         assertEquals(
           if (result.value != null) Right(transformResult(result.value))
           else Left(transformResult(result.error)),
-          expected
+          expected,
         )
       }
     }
@@ -529,7 +529,7 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
 object FileDecoderProviderLspSuite {
   def filterSections(
       buildTargetResult: String,
-      sections: Set[String]
+      sections: Set[String],
   ): String = {
     val sep = System.lineSeparator()
     buildTargetResult

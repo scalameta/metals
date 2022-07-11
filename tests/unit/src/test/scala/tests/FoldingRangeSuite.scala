@@ -14,7 +14,7 @@ import tests.BuildInfo.testResourceDirectory
 
 abstract class FoldingRangeSuite(
     scalaVersion: String,
-    directory: String
+    directory: String,
 ) extends DirectoryExpectSuite(s"$directory/expect") {
   private val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
   private val foldingRangeProvider = new FoldingRangeProvider(trees, buffers)
@@ -45,7 +45,7 @@ abstract class FoldingRangeSuite(
 
   private def findFoldingRangesFor(
       source: String,
-      extension: String
+      extension: String,
   ): java.util.List[l.FoldingRange] = {
     val path = registerSource(source, extension)
     if (path.isScala) foldingRangeProvider.getRangedForScala(path)
@@ -54,7 +54,7 @@ abstract class FoldingRangeSuite(
 
   private def registerSource(
       source: String,
-      extension: String
+      extension: String,
   ): AbsolutePath = {
     val name = UUID.randomUUID().toString + "." + extension
     val path = AbsolutePath(Paths.get(name))

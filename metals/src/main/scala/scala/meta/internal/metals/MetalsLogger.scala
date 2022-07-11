@@ -39,7 +39,7 @@ object MetalsLogger {
       .withHandler(
         formatter = defaultFormat,
         minimumLevel = Some(level),
-        modifiers = List(MetalsFilter())
+        modifiers = List(MetalsFilter()),
       )
       .replace()
   }
@@ -49,7 +49,7 @@ object MetalsLogger {
     val logStream = Files.newOutputStream(
       logfile.toNIO,
       StandardOpenOption.APPEND,
-      StandardOpenOption.CREATE
+      StandardOpenOption.CREATE,
     )
     val out = new PrintStream(logStream)
     System.setOut(out)
@@ -65,13 +65,13 @@ object MetalsLogger {
         writer = newFileWriter(logfile),
         formatter = defaultFormat,
         minimumLevel = Some(level),
-        modifiers = List(MetalsFilter())
+        modifiers = List(MetalsFilter()),
       )
       .withHandler(
         writer = LanguageClientLogger,
         formatter = MetalsLogger.defaultFormat,
         minimumLevel = Some(level),
-        modifiers = List(MetalsFilter())
+        modifiers = List(MetalsFilter()),
       )
       .replace()
   }
@@ -95,7 +95,7 @@ object MetalsLogger {
 
   def setupLspLogger(
       workspace: AbsolutePath,
-      redirectSystemStreams: Boolean
+      redirectSystemStreams: Boolean,
   ): Unit = {
     val newLogFile = workspace.resolve(workspaceLogPath)
     scribe.info(s"logging to file $newLogFile")

@@ -18,7 +18,7 @@ class ScalafmtConfigSuite extends BaseSuite {
   checkParseOk(
     s"""|version = 3.0.0-RC3
         |""".stripMargin,
-    ScalafmtConfig(Some(version), None, List.empty, Nil, Nil)
+    ScalafmtConfig(Some(version), None, List.empty, Nil, Nil),
   )
 
   checkParseOk(
@@ -30,8 +30,8 @@ class ScalafmtConfigSuite extends BaseSuite {
       Some(ScalafmtDialect.Scala3),
       List.empty,
       Nil,
-      Nil
-    )
+      Nil,
+    ),
   )
 
   checkParseOk(
@@ -50,8 +50,8 @@ class ScalafmtConfigSuite extends BaseSuite {
         "glob:**/scala-3*/**" -> ScalafmtDialect.Scala3
       ),
       Nil,
-      Nil
-    )
+      Nil,
+    ),
   )
 
   checkParseOk(
@@ -69,8 +69,8 @@ class ScalafmtConfigSuite extends BaseSuite {
         "glob:**/scala-3*/**" -> ScalafmtDialect.Scala3
       ),
       Nil,
-      Nil
-    )
+      Nil,
+    ),
   )
 
   checkUpdate(
@@ -83,7 +83,7 @@ class ScalafmtConfigSuite extends BaseSuite {
         |runner.dialect = scala3
         |maxColumn = 100
         |""".stripMargin,
-    updateRunnerDialect = Some(ScalafmtDialect.Scala3)
+    updateRunnerDialect = Some(ScalafmtDialect.Scala3),
   )
 
   checkUpdate(
@@ -95,7 +95,7 @@ class ScalafmtConfigSuite extends BaseSuite {
         |maxColumn = 100
         |runner.dialect = scala3
         |""".stripMargin,
-    updateRunnerDialect = Some(ScalafmtDialect.Scala3)
+    updateRunnerDialect = Some(ScalafmtDialect.Scala3),
   )
 
   checkUpdate(
@@ -107,7 +107,7 @@ class ScalafmtConfigSuite extends BaseSuite {
         |runner.dialect = scala3
         |""".stripMargin,
     updateVersion = Some("3.0.0-RC3"),
-    updateRunnerDialect = Some(ScalafmtDialect.Scala3)
+    updateRunnerDialect = Some(ScalafmtDialect.Scala3),
   )
 
   checkUpdate(
@@ -129,8 +129,8 @@ class ScalafmtConfigSuite extends BaseSuite {
     updateVersion = Some("3.0.0-RC3"),
     updateFileOverride = Map(
       "glob:**/scala-2/**" -> ScalafmtDialect.Scala213,
-      "glob:module/src/main/scala/*" -> ScalafmtDialect.Scala3
-    )
+      "glob:module/src/main/scala/*" -> ScalafmtDialect.Scala3,
+    ),
   )
 
   def checkUpdate(
@@ -139,7 +139,7 @@ class ScalafmtConfigSuite extends BaseSuite {
       expected: String,
       updateVersion: Option[String] = None,
       updateRunnerDialect: Option[ScalafmtDialect] = None,
-      updateFileOverride: Map[String, ScalafmtDialect] = Map.empty
+      updateFileOverride: Map[String, ScalafmtDialect] = Map.empty,
   ): Unit = {
     test(options) {
       val obtained =
@@ -147,7 +147,7 @@ class ScalafmtConfigSuite extends BaseSuite {
           config,
           updateVersion,
           updateRunnerDialect,
-          updateFileOverride
+          updateFileOverride,
         )
       assertDiffEqual(obtained, expected)
     }
@@ -155,7 +155,7 @@ class ScalafmtConfigSuite extends BaseSuite {
 
   def checkParseOk(
       config: TestOptions,
-      expected: ScalafmtConfig
+      expected: ScalafmtConfig,
   ): Unit = {
     test(config) {
       val cfg = ConfigFactory.parseString(config.name)

@@ -17,8 +17,8 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> "type: Int",
       ">=3.2.0" -> "`type`: Int",
-      ">=3.2.1-RC1-bin-20220616-140693d-NIGHTLY" -> "type: Int"
-    )
+      ">=3.2.1-RC1-bin-20220616-140693d-NIGHTLY" -> "type: Int",
+    ),
   )
 
   checkEdit(
@@ -33,7 +33,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |  Main.`type`
        |}
        |""".stripMargin,
-    filterText = "type"
+    filterText = "type",
   )
 
   check(
@@ -48,7 +48,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     filterText = "hello world",
     compat = Map(
       "3" -> "hello world: Int"
-    )
+    ),
   )
 
   check(
@@ -63,7 +63,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     filterText = "///",
     compat = Map(
       "3" -> "///: Int"
-    )
+    ),
   )
 
   check(
@@ -78,7 +78,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     filterText = "type",
     compat = Map(
       "3" -> ""
-    )
+    ),
   )
 
   check(
@@ -92,7 +92,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     // distinguish if the symbol was defined with backticks in source.
     """spaced: Int
       |""".stripMargin,
-    filterText = ""
+    filterText = "",
   )
 
   check(
@@ -105,7 +105,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     // NOTE(olafur) expected output is empty because the source does not tokenize due to unclosed identifier.
     // It would be nice to fix this limitation down the road.
     "",
-    filter = _.contains("`type`")
+    filter = _.contains("`type`"),
   )
 
 }

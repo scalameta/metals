@@ -73,7 +73,7 @@ final case class Indexer(
     sh: ScheduledExecutorService,
     symbolDocs: Docstrings,
     scalaVersionSelector: ScalaVersionSelector,
-    sourceMapper: SourceMapper
+    sourceMapper: SourceMapper,
 ) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
@@ -81,7 +81,7 @@ final case class Indexer(
   def reloadWorkspaceAndIndex(
       forceRefresh: Boolean,
       buildTool: BuildTool,
-      checksum: String
+      checksum: String,
   ): Future[BuildChange] = {
     def reloadAndIndex(session: BspSession): Future[BuildChange] = {
       workspaceReload().persistChecksumStatus(Status.Started, buildTool)
@@ -116,7 +116,7 @@ final case class Indexer(
             for {
               userResponse <- workspaceReload().requestReload(
                 buildTool,
-                checksum
+                checksum,
               )
               installResult <- {
                 if (userResponse.isYes) {
@@ -143,7 +143,7 @@ final case class Indexer(
             indexingPromise.trySuccess(())
           }
         }
-      }
+      },
     )
     tracked.foreach { _ =>
       statusBar().addMessage(
@@ -158,8 +158,8 @@ final case class Indexer(
             ("build targets", buildTargets),
             (
               "classpath symbol index",
-              workspaceSymbols().inDependencies.packages
-            )
+              workspaceSymbols().inDependencies.packages,
+            ),
           )
         )
       }
@@ -172,7 +172,7 @@ final case class Indexer(
 
     timerProvider.timedThunk(
       "reset stuff",
-      clientConfig.initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex,
     ) {
       interactiveSemanticdbs().reset()
       buildClient().reset()
@@ -185,7 +185,7 @@ final case class Indexer(
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
         s"updated ${buildTool.name} build targets",
-        clientConfig.initialConfig.statistics.isIndex
+        clientConfig.initialConfig.statistics.isIndex,
       ) {
         val data = buildTool.data
         val importedBuild = buildTool.importedBuild
@@ -202,7 +202,7 @@ final case class Indexer(
       }
     timerProvider.timedThunk(
       "post update build targets stuff",
-      clientConfig.initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex,
     ) {
       check()
       buildTools()
@@ -211,7 +211,7 @@ final case class Indexer(
     }
     timerProvider.timedThunk(
       "started file watcher",
-      clientConfig.initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex,
     ) {
       try {
         fileWatcher.start()
@@ -225,20 +225,20 @@ final case class Indexer(
     }
     timerProvider.timedThunk(
       "indexed library classpath",
-      clientConfig.initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex,
     ) {
       workspaceSymbols().indexClasspath()
     }
     timerProvider.timedThunk(
       "indexed workspace SemanticDBs",
-      clientConfig.initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex,
     ) {
       semanticDBIndexer().onTargetRoots()
     }
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
         s"indexed workspace ${buildTool.name} sources",
-        clientConfig.initialConfig.statistics.isIndex
+        clientConfig.initialConfig.statistics.isIndex,
       ) {
         indexWorkspaceSources(buildTool.data)
       }
@@ -246,15 +246,15 @@ final case class Indexer(
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
         "indexed library sources",
-        clientConfig.initialConfig.statistics.isIndex
+        clientConfig.initialConfig.statistics.isIndex,
       ) {
         usedJars ++= indexJdkSources(
           buildTool.data,
-          buildTool.importedBuild.dependencySources
+          buildTool.importedBuild.dependencySources,
         )
         usedJars ++= indexDependencySources(
           buildTool.data,
-          buildTool.importedBuild.dependencySources
+          buildTool.importedBuild.dependencySources,
         )
       }
     // Schedule removal of unused toplevel symbols from cache
@@ -266,7 +266,7 @@ final case class Indexer(
           }
         },
         2,
-        TimeUnit.SECONDS
+        TimeUnit.SECONDS,
       )
 
     focusedDocument().foreach { doc =>
@@ -291,7 +291,7 @@ final case class Indexer(
     case class SourceToIndex(
         source: AbsolutePath,
         sourceItem: AbsolutePath,
-        targets: Iterable[b.BuildTargetIdentifier]
+        targets: Iterable[b.BuildTargetIdentifier],
     )
     val sourcesToIndex = mutable.ListBuffer.empty[SourceToIndex]
     for {
@@ -318,7 +318,7 @@ final case class Indexer(
           f.source,
           Some(f.sourceItem),
           f.targets.headOption,
-          Seq(data)
+          Seq(data),
         )
       )
     } finally threadPool.shutdown()
@@ -326,7 +326,7 @@ final case class Indexer(
 
   private def indexDependencySources(
       data: TargetData,
-      dependencySources: b.DependencySourcesResult
+      dependencySources: b.DependencySourcesResult,
   ): Set[AbsolutePath] = {
     // Track used Jars so that we can
     // remove cached symbols from Jars
@@ -351,7 +351,7 @@ final case class Indexer(
             .map(scalaTarget =>
               ScalaVersions.dialectForScalaVersion(
                 scalaTarget.scalaVersion,
-                includeSource3 = true
+                includeSource3 = true,
               )
             )
             .getOrElse(Scala213)
@@ -369,7 +369,7 @@ final case class Indexer(
 
   private def indexJdkSources(
       data: TargetData,
-      dependencySources: b.DependencySourcesResult
+      dependencySources: b.DependencySourcesResult,
   ): Set[AbsolutePath] = {
     // Track used Jars so that we can
     // remove cached symbols from Jars
@@ -400,7 +400,7 @@ final case class Indexer(
       source: AbsolutePath,
       sourceItem: Option[AbsolutePath],
       targetOpt: Option[b.BuildTargetIdentifier],
-      data: Seq[TargetData]
+      data: Seq[TargetData],
   ): Unit = {
 
     try {
@@ -424,7 +424,7 @@ final case class Indexer(
               )
           ScalaVersions.dialectForScalaVersion(
             scalaVersion,
-            includeSource3 = true
+            includeSource3 = true,
           )
         }
         val reluri = source.toIdeallyRelativeURI(sourceItem)
@@ -437,7 +437,7 @@ final case class Indexer(
                 symbols += WorkspaceSymbolInformation(
                   info.symbol,
                   info.kind,
-                  range.toLSP
+                  range.toLSP,
                 )
               }
             }
@@ -450,7 +450,7 @@ final case class Indexer(
                 reluri,
                 source,
                 info.symbol,
-                dialect
+                dialect,
               )
             }
         }
@@ -501,6 +501,6 @@ object Indexer {
   final case class BuildTool(
       name: String,
       data: TargetData,
-      importedBuild: ImportedBuild
+      importedBuild: ImportedBuild,
   )
 }

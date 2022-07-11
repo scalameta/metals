@@ -13,13 +13,13 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       filename: String,
       edit: String,
       expected: Map[String, String],
-      base: Map[String, String]
+      base: Map[String, String],
   ): Future[Unit]
 
   def check(
       name: TestOptions,
       input: String,
-      scalaVersion: Option[String] = None
+      scalaVersion: Option[String] = None,
   )(implicit
       loc: Location
   ): Unit = {

@@ -30,7 +30,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
        |                   |second line
        |                   |third line
        |                   |fourth line'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -50,7 +50,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
        |              |second line
        |              |third line
        |              |fourth line'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -68,7 +68,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
        |              |second line
        |              |third line
        |              |fourth line'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -86,7 +86,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
        |               |second line
        |               |third line
        |               |fourth line'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -104,7 +104,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
        |               |second line
        |               |third line
        |               |fourth line'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   val blank = ""
@@ -132,7 +132,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
        |             |first line
        |             |second line'''.stripMargin
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val formattingOptions = new FormattingOptions(2, true)
@@ -140,7 +140,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
   def check(
       name: TestOptions,
       testCase: String,
-      expectedCase: String
+      expectedCase: String,
   )(implicit loc: Location): Unit = {
     val tripleQuote = """\u0022\u0022\u0022"""
 
@@ -165,7 +165,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
           "a/src/main/scala/a/Main.scala",
           testCode, // with << >>
           expected,
-          formattingOptions = Some(formattingOptions)
+          formattingOptions = Some(formattingOptions),
         )
       } yield ()
     }

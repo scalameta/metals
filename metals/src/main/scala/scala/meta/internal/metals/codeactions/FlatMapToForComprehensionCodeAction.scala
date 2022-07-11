@@ -21,7 +21,7 @@ import org.eclipse.{lsp4j => l}
 
 class FlatMapToForComprehensionCodeAction(
     trees: Trees,
-    buffers: Buffers
+    buffers: Buffers,
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
@@ -37,7 +37,7 @@ class FlatMapToForComprehensionCodeAction(
         trees
           .findLastEnclosingAt[Term.Apply](
             path,
-            range.getStart()
+            range.getStart(),
           )
       else
         None
@@ -53,7 +53,7 @@ class FlatMapToForComprehensionCodeAction(
     } yield codeActionWithApply(
       path,
       termApply,
-      indentation
+      indentation,
     )
     maybeChainedCodeAction.flatten.toSeq
 
@@ -65,7 +65,7 @@ class FlatMapToForComprehensionCodeAction(
       indentation: String,
       path: AbsolutePath,
       startPos: l.Position,
-      endPos: l.Position
+      endPos: l.Position,
   ): l.CodeAction = {
 
     val indentedElems = forElementsList
@@ -136,7 +136,7 @@ class FlatMapToForComprehensionCodeAction(
   @tailrec
   private def findOuterMostApply(
       currentTermApply: Term.Apply,
-      lastValidTermApply: Option[Term.Apply]
+      lastValidTermApply: Option[Term.Apply],
   ): Option[Term.Apply] = {
 
     val interestingSelects =
@@ -159,7 +159,7 @@ class FlatMapToForComprehensionCodeAction(
   private def codeActionWithApply(
       path: AbsolutePath,
       termApply: Term.Apply,
-      indentation: String
+      indentation: String,
   ): Option[l.CodeAction] = {
 
     findOuterMostApply(termApply, None).flatMap { outerMostApply =>
@@ -170,7 +170,7 @@ class FlatMapToForComprehensionCodeAction(
           None,
           List.empty,
           outerMostApply,
-          nameGenerator
+          nameGenerator,
         )
 
       if (forElements.nonEmpty) {
@@ -181,7 +181,7 @@ class FlatMapToForComprehensionCodeAction(
             indentation,
             path,
             outerMostApply.pos.toLSP.getStart,
-            outerMostApply.pos.toLSP.getEnd
+            outerMostApply.pos.toLSP.getEnd,
           )
         }
       } else None
@@ -191,14 +191,14 @@ class FlatMapToForComprehensionCodeAction(
 
   private def replacePlaceHolderInTermWithNewName(
       term: Term,
-      nameGenerator: MetalsNames
+      nameGenerator: MetalsNames,
   ): Option[(String, Term)] = {
     var replacementTimes = 0
 
     def replacePlaceHolder(
         tree: Term,
         newName: Term.Name,
-        allowedToGetInsideApply: Boolean
+        allowedToGetInsideApply: Boolean,
     ): Term =
       tree match {
         case Term.Apply(fun, args) if allowedToGetInsideApply =>
@@ -215,7 +215,7 @@ class FlatMapToForComprehensionCodeAction(
         case Term.ApplyUnary(op, arg) if allowedToGetInsideApply =>
           Term.ApplyUnary(
             op,
-            replacePlaceHolder(arg, newName, allowedToGetInsideApply)
+            replacePlaceHolder(arg, newName, allowedToGetInsideApply),
           )
 
         case Term.ApplyUsing(fun, args) if allowedToGetInsideApply =>
@@ -235,7 +235,7 @@ class FlatMapToForComprehensionCodeAction(
         case Term.Select(qual, name) =>
           Term.Select(
             replacePlaceHolder(qual, newName, allowedToGetInsideApply),
-            name
+            name,
           )
 
         case Term.Placeholder() =>
@@ -252,7 +252,7 @@ class FlatMapToForComprehensionCodeAction(
 
   private def processValueNameAndNextQual(
       tree: Tree,
-      nameGenerator: MetalsNames
+      nameGenerator: MetalsNames,
   ): Option[(String, Term)] = {
     tree match {
       case Term.Function(List(param), term) if param.name.value.isEmpty =>
@@ -296,7 +296,7 @@ class FlatMapToForComprehensionCodeAction(
       shouldFlat: Boolean,
       existingForElements: List[Enumerator],
       maybeCurrentYieldTerm: Option[Term],
-      nextQual: Term
+      nextQual: Term,
   ): (List[Enumerator], Option[Term]) = {
     perhapsLastName match {
       case Some(lastName) =>
@@ -306,16 +306,16 @@ class FlatMapToForComprehensionCodeAction(
               // do lastName <- nextQual
               Enumerator.Generator(
                 Pat.Var(Term.Name(lastName)),
-                nextQual
+                nextQual,
               )
             } else
               Enumerator.Val( // when it is map
                 // it is lastName = nextQual
                 Pat.Var(Term.Name(lastName)),
-                nextQual
+                nextQual,
               )
           ) ++ existingForElements,
-          maybeCurrentYieldTerm // there was an iteration before this one,
+          maybeCurrentYieldTerm, // there was an iteration before this one,
           // so the yieldTerm comes from there
         )
       case None => // there was no iteration before this one
@@ -328,7 +328,7 @@ class FlatMapToForComprehensionCodeAction(
           val newEnumerations = List(
             Enumerator.Generator(
               Pat.Var(Term.Name(lastGeneratedName)),
-              nextQual
+              nextQual,
             )
           )
           val newYield =
@@ -346,7 +346,7 @@ class FlatMapToForComprehensionCodeAction(
       maybeYieldTerm: Option[Term],
       nameGenerator: MetalsNames,
       valueName: String,
-      termSelectQual: Term
+      termSelectQual: Term,
   ): (List[Enumerator], Option[Term]) = {
 
     termSelectQual match { // prepare the next iteration
@@ -357,7 +357,7 @@ class FlatMapToForComprehensionCodeAction(
           maybeYieldTerm,
           elems,
           qualTermApply,
-          nameGenerator
+          nameGenerator,
         )
       case otherQual => // there is no further termApply to process,
         // so we just assign what is left to the current valueName, as in
@@ -365,10 +365,10 @@ class FlatMapToForComprehensionCodeAction(
         (
           Enumerator.Generator(
             Pat.Var(Term.Name(valueName)),
-            otherQual
+            otherQual,
           )
             :: elems,
-          maybeYieldTerm // return the already deducted yield term
+          maybeYieldTerm, // return the already deducted yield term
         )
     }
   }
@@ -380,7 +380,7 @@ class FlatMapToForComprehensionCodeAction(
       isFilter: Boolean,
       existingForElements: List[Enumerator],
       currentYieldTerm: Option[Term],
-      termSelectQual: Term
+      termSelectQual: Term,
   ): (List[Enumerator], Option[Term]) = {
 
     perhapsValueNameAndNextQual
@@ -395,9 +395,9 @@ class FlatMapToForComprehensionCodeAction(
                   ), // lastName gets paired with valueName
                   // so in List(1, 2, 3).filter( s => s > 1).map(x => x + 1)
                   // x is paired with s as in x = s
-                  Term.Name(valueName)
+                  Term.Name(valueName),
                 ) :: existingForElements,
-                currentYieldTerm
+                currentYieldTerm,
               )
             case None =>
               (existingForElements, Some(Term.Name(valueName)))
@@ -419,7 +419,7 @@ class FlatMapToForComprehensionCodeAction(
                   Term.ApplyUnary(Term.Name("!"), nextCondition)
               ) :: elems,
               qualTermApply,
-              nameGenerator
+              nameGenerator,
             )
           case otherQual => // list
             ( // we are at the top end of the chain with no longer interesting
@@ -429,20 +429,20 @@ class FlatMapToForComprehensionCodeAction(
               // all the previous enumerators such as x = s after it.
               Enumerator.Generator(
                 Pat.Var(Term.Name(valueName)),
-                otherQual
+                otherQual,
               )
                 :: Enumerator.Guard(
                   if (isFilter) nextCondition
                   else
                     Term.ApplyUnary(Term.Name("!"), nextCondition)
                 ) :: elems,
-              maybeYieldTerm
+              maybeYieldTerm,
             )
         }
       }
       .getOrElse(
         List.empty,
-        currentYieldTerm
+        currentYieldTerm,
       ) // when function passed to filter
     // cannot be processed to give us a parameter name and a condition, we just return an
     // empty list to avoid any further processing.
@@ -495,12 +495,12 @@ class FlatMapToForComprehensionCodeAction(
       currentYieldTerm: Option[Term],
       existingForElements: List[Enumerator],
       termApply: Term.Apply,
-      nameGenerator: MetalsNames
+      nameGenerator: MetalsNames,
   ): (List[Enumerator], Option[Term]) = {
     val perhapsValueNameAndNextQual = termApply.args.headOption.flatMap {
       processValueNameAndNextQual(
         _,
-        nameGenerator
+        nameGenerator,
       )
     }
 
@@ -518,7 +518,7 @@ class FlatMapToForComprehensionCodeAction(
                 shouldFlat,
                 existingForElements,
                 currentYieldTerm,
-                nextQual
+                nextQual,
               )
 
             processMap(
@@ -526,7 +526,7 @@ class FlatMapToForComprehensionCodeAction(
               maybeYieldTerm,
               nameGenerator,
               valueName,
-              termSelect.qual
+              termSelect.qual,
             )
           }
           .getOrElse(List.empty, None)
@@ -543,7 +543,7 @@ class FlatMapToForComprehensionCodeAction(
           isFilter,
           existingForElements,
           currentYieldTerm,
-          termSelect.qual
+          termSelect.qual,
         )
 
       case _ => // there is no interesting function in this termApply
@@ -557,10 +557,10 @@ class FlatMapToForComprehensionCodeAction(
             (
               Enumerator.Generator(
                 Pat.Var(Term.Name(lastName)),
-                termApply
+                termApply,
               )
                 :: existingForElements,
-              currentYieldTerm
+              currentYieldTerm,
             )
           case None => // if this is the first iteration,
             // just return the existingForElements and the termApply itself as yield
@@ -571,7 +571,7 @@ class FlatMapToForComprehensionCodeAction(
 
   private def getIndentForPos(
       treePos: Position,
-      document: String
+      document: String,
   ): String =
     document
       .substring(treePos.start - treePos.startColumn, treePos.start)

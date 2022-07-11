@@ -15,7 +15,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
 
   override def contribute(
       params: l.CodeActionParams,
-      token: CancelToken
+      token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     val uri = params.getTextDocument().getUri()
@@ -35,11 +35,11 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
 
     def importMissingSymbol(
         diagnostic: l.Diagnostic,
-        name: String
+        name: String,
     ): Future[Seq[l.CodeAction]] = {
       val textDocumentPositionParams = new l.TextDocumentPositionParams(
         params.getTextDocument(),
-        diagnostic.getRange.getEnd()
+        diagnostic.getRange.getEnd(),
       )
       compilers
         .autoImports(textDocumentPositionParams, name, token)

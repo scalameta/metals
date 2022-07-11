@@ -23,7 +23,7 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -36,7 +36,7 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -49,7 +49,7 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  def foo(param1: Int, param2: Int, param3: Int) = None
        |  foo(param1 = 1, param2 = 2, param3 = 3)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -62,7 +62,7 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
        |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -75,7 +75,7 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
        |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -89,7 +89,7 @@ class ConvertToNamedArgumentsLspSuite
        |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
        |  foo(1, 2, param3 = 3)(param4 = 4)
        |}""".stripMargin,
-    filterAction = filterAction
+    filterAction = filterAction,
   )
 
   check(
@@ -105,7 +105,7 @@ class ConvertToNamedArgumentsLspSuite
        |  implicit val x = 3
        |  foo(param1 = 1, param2 = 2)
        |}""".stripMargin,
-    filterAction = filterAction
+    filterAction = filterAction,
   )
 
   check(
@@ -119,7 +119,7 @@ class ConvertToNamedArgumentsLspSuite
        |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
        |  foo(1, 2)(param3 = 3)
        |}""".stripMargin,
-    filterAction = filterAction
+    filterAction = filterAction,
   )
 
   check(
@@ -132,7 +132,7 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   checkNoAction(
@@ -140,14 +140,14 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo<<(>>param1 = 1, param2 = <<>>2, param3 = 3)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   checkNoAction(
     "dont-convert-block",
     """|object Something {
        |  def f(x: Seq[Int]) = x.map <<{>> _.toLong }
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -161,7 +161,7 @@ class ConvertToNamedArgumentsLspSuite
        |  case class Foo(param1: Int, param2: Int, param3: String)
        |  Foo(param1 = 1, param2 = 2, param3 = 3.toString())
        |}""".stripMargin,
-    filterAction = filterAction
+    filterAction = filterAction,
   )
 
   checkNoAction(
@@ -170,6 +170,6 @@ class ConvertToNamedArgumentsLspSuite
        |  import scala.concurrent.Future
        |  F<<u>>ture.successful(1)
        |}""".stripMargin,
-    filterAction = filterAction
+    filterAction = filterAction,
   )
 }

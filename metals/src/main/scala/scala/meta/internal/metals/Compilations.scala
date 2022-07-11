@@ -24,19 +24,19 @@ final class Compilations(
     afterCompilation: () => Unit,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
-    onStartCompilation: () => Unit
+    onStartCompilation: () => Unit,
 )(implicit ec: ExecutionContext) {
 
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
   private val compileBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
-      Map[BuildTargetIdentifier, b.CompileResult]
+      Map[BuildTargetIdentifier, b.CompileResult],
     ](compile)
   private val cascadeBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
-      Map[BuildTargetIdentifier, b.CompileResult]
+      Map[BuildTargetIdentifier, b.CompileResult],
     ](compile)
   def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
@@ -122,7 +122,7 @@ final class Compilations(
 
     def clean(
         connectionOpt: Option[BuildServerConnection],
-        targetIds: Seq[BuildTargetIdentifier]
+        targetIds: Seq[BuildTargetIdentifier],
     ): Future[Unit] = {
       val cleaned = connectionOpt match {
         case None =>
@@ -214,7 +214,7 @@ final class Compilations(
   }
   private def compile(
       connection: BuildServerConnection,
-      targets: Seq[b.BuildTargetIdentifier]
+      targets: Seq[b.BuildTargetIdentifier],
   ): CancelableFuture[b.CompileResult] = {
     val params = new b.CompileParams(targets.asJava)
     targets.foreach(target => isCompiling(target) = true)
@@ -235,7 +235,7 @@ final class Compilations(
             if (targets.exists(isCurrentlyFocused)) {
               languageClient.refreshModel()
             }
-          }
+          },
         )
       }
 

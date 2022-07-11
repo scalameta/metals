@@ -12,7 +12,7 @@ object TestingWorkspaceSymbolProvider {
       workspace: AbsolutePath,
       saveClassFileToDisk: Boolean = true,
       index: OnDemandSymbolIndex = OnDemandSymbolIndex.empty(),
-      bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
+      bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
   ): WorkspaceSymbolProvider = {
     new WorkspaceSymbolProvider(
       workspace = workspace,
@@ -20,7 +20,7 @@ object TestingWorkspaceSymbolProvider {
       index = index,
       saveClassFileToDisk = saveClassFileToDisk,
       () => ExcludedPackagesHandler.default,
-      bucketSize = bucketSize
+      bucketSize = bucketSize,
     )
   }
 }

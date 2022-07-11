@@ -22,7 +22,7 @@ import dotty.tools.dotc.reporting.StoreReporter
 class Scala3CompilerAccess(
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
-    newCompiler: () => Scala3CompilerWrapper
+    newCompiler: () => Scala3CompilerWrapper,
 )(using ec: ExecutionContextExecutor)
     extends CompilerAccess[StoreReporter, InteractiveDriver](
       config,
@@ -31,7 +31,7 @@ class Scala3CompilerAccess(
       /* If running inside the executor, we need to reset the job queue
        * Otherwise it will block indefinetely in case of infinite loops.
        */
-      shouldResetJobQueue = true
+      shouldResetJobQueue = true,
     ):
 
   def newReporter = new StoreReporter(null)

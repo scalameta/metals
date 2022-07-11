@@ -11,12 +11,12 @@ class SelectBspServerSuite extends BaseSuite {
       name: String,
       currentlyUsing: Option[String],
       candidates: List[BspConnectionDetails],
-      expected: String
+      expected: String,
   )(implicit loc: Location): Unit = {
     test(name) {
       val query = Messages.BspSwitch.chooseServerRequest(
         candidates.map(_.getName()),
-        currentlyUsing
+        currentlyUsing,
       )
       val obtained =
         query.params.getActions.asScala.map(_.getTitle).mkString("\n")
@@ -33,12 +33,12 @@ class SelectBspServerSuite extends BaseSuite {
     None,
     List(
       name("Bloop"),
-      name("Mill")
+      name("Mill"),
     ),
     """
       |Bloop
       |Mill
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   check(
@@ -46,11 +46,11 @@ class SelectBspServerSuite extends BaseSuite {
     Some("Bloop"),
     List(
       name("Bloop"),
-      name("Mill")
+      name("Mill"),
     ),
     """
       |Bloop (currently using)
       |Mill
-      |""".stripMargin
+      |""".stripMargin,
   )
 }

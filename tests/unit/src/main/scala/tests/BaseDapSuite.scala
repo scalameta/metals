@@ -25,7 +25,7 @@ import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 abstract class BaseDapSuite(
     suiteName: String,
     initializer: BuildServerInitializer,
-    buildToolLayout: BuildToolLayout
+    buildToolLayout: BuildToolLayout,
 ) extends BaseLspSuite(suiteName, initializer) {
 
   private val dapClient = Trace.protocolTracePath(DebugProtocol.clientName)
@@ -60,13 +60,13 @@ abstract class BaseDapSuite(
                 case Success(value) => value
               }(munitExecutionContext)
           )
-        }
+        },
       )
 
   def debugMain(
       buildTarget: String,
       main: String,
-      stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue
+      stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue,
   ): Future[TestDebugger] = {
     val kind = DebugSessionParamsDataKind.SCALA_MAIN_CLASS
     val mainClass = new ScalaMainClass(main, emptyList(), emptyList())
@@ -75,7 +75,7 @@ abstract class BaseDapSuite(
 
   def setBreakpoints(
       debugger: TestDebugger,
-      workspace: DebugWorkspaceLayout
+      workspace: DebugWorkspaceLayout,
   ): Future[List[SetBreakpointsResponse]] = {
     Future.sequence {
       workspace.filesBreakpoints
@@ -88,7 +88,7 @@ abstract class BaseDapSuite(
 
   def removeBreakpoints(
       debugger: TestDebugger,
-      workspace: DebugWorkspaceLayout
+      workspace: DebugWorkspaceLayout,
   ): Future[List[SetBreakpointsResponse]] = {
     Future.sequence {
       workspace.filesBreakpoints
@@ -103,7 +103,7 @@ abstract class BaseDapSuite(
 
   def assertBreakpoints(
       name: TestOptions,
-      main: Option[String] = None
+      main: Option[String] = None,
   )(
       source: String
   )(implicit loc: Location): Unit = {

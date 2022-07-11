@@ -23,14 +23,14 @@ class DebugProtocolSuite
     extends BaseDapSuite(
       "debug-protocol",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     ) {
 
   test("start") {
     val mainClass = new ScalaMainClass(
       "a.Main",
       List("Bar").asJava,
-      List("-Dproperty=Foo").asJava
+      List("-Dproperty=Foo").asJava,
     )
     mainClass.setEnvironmentVariables(List("HELLO=Foo").asJava)
     for {
@@ -56,7 +56,7 @@ class DebugProtocolSuite
       debugger <- server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        mainClass
+        mainClass,
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -72,7 +72,7 @@ class DebugProtocolSuite
       server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        new ScalaMainClass("a.Main", Nil.asJava, Nil.asJava)
+        new ScalaMainClass("a.Main", Nil.asJava, Nil.asJava),
       )
     for {
       _ <- initialize(
@@ -124,7 +124,7 @@ class DebugProtocolSuite
       debugger <- server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        new ScalaMainClass("a.Main", emptyList(), emptyList())
+        new ScalaMainClass("a.Main", emptyList(), emptyList()),
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -156,7 +156,7 @@ class DebugProtocolSuite
       debugger <- server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        new ScalaMainClass("a.Main", emptyList(), emptyList())
+        new ScalaMainClass("a.Main", emptyList(), emptyList()),
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -184,7 +184,7 @@ class DebugProtocolSuite
         workspace
           .resolve(Random.alphanumeric.take(10).mkString.toLowerCase + ".env")
           .toNIO,
-        "MIDDLE_NAME=Emily\n#comment\nLAST_NAME=Morris".getBytes()
+        "MIDDLE_NAME=Emily\n#comment\nLAST_NAME=Morris".getBytes(),
       )
 
     for {
@@ -215,7 +215,7 @@ class DebugProtocolSuite
           singletonList("Arkansas"),
           singletonList("-Dname=Megan"),
           Map("GREETING" -> "Welcome", "MIDDLE_NAME" -> "Olivia").asJava,
-          envFile.getFileName.toString
+          envFile.getFileName.toString,
         ).toJson
       )
       _ <- debugger.initialize
@@ -262,7 +262,7 @@ class DebugProtocolSuite
           singletonList("Arkansas"),
           singletonList("-Dname=Megan"),
           Map("GREETING" -> "Welcome").asJava,
-          envFile.toString
+          envFile.toString,
         ).toJson
       )
       _ <- debugger.initialize
@@ -304,7 +304,7 @@ class DebugProtocolSuite
         new DebugUnresolvedMainClassParams(
           "a.Main",
           "a",
-          singletonList("Foo")
+          singletonList("Foo"),
         ).toJson
       )
       _ <- debugger.initialize
@@ -353,7 +353,7 @@ class DebugProtocolSuite
             new DebugUnresolvedMainClassParams(
               "a.Main",
               "a",
-              singletonList("Foo")
+              singletonList("Foo"),
             ).toJson
           )
           .recover { case WorkspaceErrorsException =>
@@ -361,7 +361,7 @@ class DebugProtocolSuite
           }
     } yield assertDiffEqual(
       result.toString(),
-      WorkspaceErrorsException.toString()
+      WorkspaceErrorsException.toString(),
     )
   }
 
@@ -435,7 +435,7 @@ class DebugProtocolSuite
           }
     } yield assertContains(
       result.toString(),
-      WorkspaceErrorsException.toString()
+      WorkspaceErrorsException.toString(),
     )
   }
 }

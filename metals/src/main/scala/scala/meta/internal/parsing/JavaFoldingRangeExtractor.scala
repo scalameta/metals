@@ -10,7 +10,7 @@ import org.eclipse.lsp4j.FoldingRangeKind
 
 final class JavaFoldingRangeExtractor(
     text: String,
-    foldOnlyLines: Boolean
+    foldOnlyLines: Boolean,
 ) {
   private val spanThreshold = 2
 
@@ -29,7 +29,7 @@ final class JavaFoldingRangeExtractor(
       startLine: Int,
       startCh: Int,
       endLine: Int,
-      endCh: Int
+      endCh: Int,
   ) extends Region {
     def kind = FoldingRangeKind.Comment
   }
@@ -38,7 +38,7 @@ final class JavaFoldingRangeExtractor(
       startLine: Int,
       startCh: Int,
       endLine: Int,
-      endCh: Int
+      endCh: Int,
   ) extends Region {
     def kind = FoldingRangeKind.Imports
   }
@@ -61,14 +61,14 @@ final class JavaFoldingRangeExtractor(
         currentToken: Int,
         currentLine: Int,
         lastImportLine: Int,
-        lastImportCharacter: Int
+        lastImportCharacter: Int,
     )
     @tailrec
     def gatherImportLines(
         token: Int,
         line: Int,
         lastImportLine: Int,
-        hasCarriageReturn: Boolean = false
+        hasCarriageReturn: Boolean = false,
     ): CurrentScannerStatus = {
       val addLine = scanner.getRawTokenSource().count(_ == '\n')
       token match {
@@ -80,7 +80,7 @@ final class JavaFoldingRangeExtractor(
             scanner.getNextToken(),
             line + addLine,
             lastImportLine,
-            hasCarriageReturn || scanner.getRawTokenSource().contains('\r')
+            hasCarriageReturn || scanner.getRawTokenSource().contains('\r'),
           )
         case _ =>
           val endCharacter =
@@ -135,7 +135,7 @@ final class JavaFoldingRangeExtractor(
                 (
                   currentCharacterStart,
                   currentCharacterEnd + 1,
-                  currentEndLine
+                  currentEndLine,
                 )
             val comment = Comment(line, startCh, endLine, endCh)
             gather(next, line + addLine, comment :: acc)
@@ -157,7 +157,7 @@ final class JavaFoldingRangeExtractor(
     @tailrec
     def group(
         remaining: List[Position],
-        acc: List[FoldingRange]
+        acc: List[FoldingRange],
     ): List[FoldingRange] = {
       remaining match {
         case (lBrace: LBrace) :: tail =>
@@ -170,7 +170,7 @@ final class JavaFoldingRangeExtractor(
             lBrace.ch,
             endLine - 1,
             endCharacter,
-            FoldingRangeKind.Region
+            FoldingRangeKind.Region,
           ) match {
             case Some(newFoldingRange) =>
               group(tail, newFoldingRange :: acc)
@@ -184,7 +184,7 @@ final class JavaFoldingRangeExtractor(
             region.startCh,
             region.endLine - 1,
             region.endCh,
-            region.kind
+            region.kind,
           ) match {
             case Some(newFoldingRange) =>
               group(tail, newFoldingRange :: acc)
@@ -205,7 +205,7 @@ final class JavaFoldingRangeExtractor(
       startCharacter: Int,
       endLine: Int,
       endCharacter: Int,
-      kind: String
+      kind: String,
   ): Option[FoldingRange] = {
     if (endLine - startLine >= spanThreshold) {
       val newFoldingRange = new FoldingRange(startLine, endLine)

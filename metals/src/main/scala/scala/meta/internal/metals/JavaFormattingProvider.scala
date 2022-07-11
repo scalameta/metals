@@ -26,7 +26,7 @@ import org.eclipse.{lsp4j => l}
 final class JavaFormattingProvider(
     buffers: Buffers,
     userConfig: () => UserConfiguration,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
 )(implicit
     ec: ExecutionContext
 ) {
@@ -41,7 +41,7 @@ final class JavaFormattingProvider(
 
   private def parseEclipseFormatFile(
       text: String,
-      profileName: Option[String]
+      profileName: Option[String],
   ): Try[Map[String, String]] = {
     import scala.xml.XML
     Try {
@@ -79,12 +79,12 @@ final class JavaFormattingProvider(
           val text = eclipseFormatFile.toInputFromBuffers(buffers).text
           parseEclipseFormatFile(
             text,
-            javaFormatConfig.eclipseFormatProfile
+            javaFormatConfig.eclipseFormatProfile,
           ) match {
             case Failure(e) =>
               scribe.error(
                 s"Failed to parse $eclipseFormatFile. Using default formatting",
-                e
+                e,
               )
               defaultSettings
             case Success(values) =>
@@ -130,7 +130,7 @@ final class JavaFormattingProvider(
       path: AbsolutePath,
       input: Input,
       formattingOptions: l.FormattingOptions,
-      range: m.Position
+      range: m.Position,
   ): List[l.TextEdit] = {
     // if source/target/compliance versions aren't defined by the user then fallback on the build target info
     var options = loadEclipseFormatConfig
@@ -188,7 +188,7 @@ final class JavaFormattingProvider(
       codeOffset,
       codeLength,
       indentationLevel,
-      lineSeparator
+      lineSeparator,
     )
     val formatted =
       try {

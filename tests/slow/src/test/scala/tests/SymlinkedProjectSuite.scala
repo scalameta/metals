@@ -38,7 +38,7 @@ class SymlinkedProjectSuite
       "a",
       "Bar.scala",
       """|class Bar {}
-         |""".stripMargin
+         |""".stripMargin,
     )
     createSymlinked(
       "b",
@@ -46,7 +46,7 @@ class SymlinkedProjectSuite
       """|class Foo {
          |  val bar = new Bar()
          |}
-         |""".stripMargin
+         |""".stripMargin,
     )
     for {
       _ <- initialize(
@@ -71,7 +71,7 @@ class SymlinkedProjectSuite
   def createSymlinked(
       dirname: String,
       filename: String,
-      content: String
+      content: String,
   ): String = {
     val projectDir = workspace.resolve(dirname)
     projectDir.createDirectories()

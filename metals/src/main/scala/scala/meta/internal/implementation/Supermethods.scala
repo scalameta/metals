@@ -20,7 +20,7 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
-    implementationProvider: ImplementationProvider
+    implementationProvider: ImplementationProvider,
 )(implicit
     ec: ExecutionContext
 ) {
@@ -41,7 +41,7 @@ class Supermethods(
   ): Future[Unit] = {
     def execute(
         methodSymbols: List[String],
-        path: AbsolutePath
+        path: AbsolutePath,
     ): Future[Unit] = {
       askUserToSelectSuperMethod(methodSymbols)
         .map(
@@ -71,11 +71,11 @@ class Supermethods(
       filePath <- params.getTextDocument.getUri.toAbsolutePathSafe
       (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
         filePath,
-        params.getPosition()
+        params.getPosition(),
       )
       findSymbol = implementationProvider.defaultSymbolSearch(
         filePath,
-        textDocument
+        textDocument,
       )
       symbolInformation <- findSymbol(symbolOcc.symbol)
       gotoSymbol <- {
@@ -99,11 +99,11 @@ class Supermethods(
             .map(symbol =>
               MetalsQuickPickItem(
                 symbol,
-                formatMethodSymbolForQuickPick(symbol)
+                formatMethodSymbolForQuickPick(symbol),
               )
             )
             .asJava,
-          placeHolder = "Select super method to jump to"
+          placeHolder = "Select super method to jump to",
         )
       )
       .asScala
@@ -117,11 +117,11 @@ class Supermethods(
       filePath <- params.getTextDocument.getUri.toAbsolutePathSafe
       (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
         filePath,
-        params.getPosition()
+        params.getPosition(),
       )
       findSymbol = implementationProvider.defaultSymbolSearch(
         filePath,
-        textDocument
+        textDocument,
       )
       symbolInformation <- findSymbol(symbolOcc.symbol)
       docText = TextDocumentWithPath(textDocument, filePath)
@@ -140,7 +140,7 @@ class Supermethods(
 
   private def findDefinitionLocation(
       symbol: String,
-      source: AbsolutePath
+      source: AbsolutePath,
   ): Option[Location] = {
     definitionProvider.fromSymbol(symbol, Some(source)).asScala.headOption
   }

@@ -7,5 +7,5 @@ class EvaluationDapSuite
     extends BaseEvaluationDapSuite(
       "debug-evaluation",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     )

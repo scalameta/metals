@@ -37,7 +37,7 @@ class ImportMissingSymbolCrossLspSuite
             |""".stripMargin,
         s"""|${ImportMissingSymbol.title("A", "example")}
             |${CreateNewSymbol.title("A")}""".stripMargin,
-        Nil
+        Nil,
       )
     } yield ()
   }

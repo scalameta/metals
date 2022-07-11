@@ -18,7 +18,7 @@ trait CodeAction {
 
   def contribute(
       params: l.CodeActionParams,
-      token: CancelToken
+      token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]]
 
   implicit val actionDiagnosticOrdering: Ordering[l.CodeAction] =
@@ -26,12 +26,12 @@ trait CodeAction {
 
       override def compare(
           x: l.CodeAction,
-          y: l.CodeAction
+          y: l.CodeAction,
       ): Int = {
 
         (
           x.getDiagnostics().asScala.headOption,
-          y.getDiagnostics().asScala.headOption
+          y.getDiagnostics().asScala.headOption,
         ) match {
           case (Some(diagx), Some(diagy)) =>
             val startx = diagx.getRange().getStart()

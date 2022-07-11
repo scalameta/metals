@@ -4,7 +4,7 @@ import java.nio.file.Path
 
 final case class FileWatcherEvent(
     eventType: FileWatcherEvent.EventType,
-    path: Path
+    path: Path,
 )
 
 object FileWatcherEvent {

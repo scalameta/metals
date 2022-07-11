@@ -15,7 +15,7 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
 
   override def contribute(
       params: l.CodeActionParams,
-      token: CancelToken
+      token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
     Future.sequence(
       params
@@ -37,11 +37,11 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
   private def implementAbstractMembers(
       diagnostic: l.Diagnostic,
       params: l.CodeActionParams,
-      token: CancelToken
+      token: CancelToken,
   )(implicit ec: ExecutionContext): Future[l.CodeAction] = {
     val textDocumentPositionParams = new l.TextDocumentPositionParams(
       params.getTextDocument(),
-      diagnostic.getRange.getStart()
+      diagnostic.getRange.getStart(),
     )
     compilers
       .implementAbstractMembers(textDocumentPositionParams, token)

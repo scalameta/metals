@@ -13,7 +13,7 @@ class VersionedDocsModifier extends StringModifier {
   override def process(
       version: String,
       code: Input,
-      reporter: Reporter
+      reporter: Reporter,
   ): String = {
     val unreleased =
       Version.fromString(version) >= Version.fromString(BuildInfo.metalsVersion)

@@ -16,7 +16,7 @@ object TreeUtils {
     val selector =
       new ScalaVersionSelector(
         () => UserConfiguration(fallbackScalaVersion = scalaVersion),
-        buildTargets
+        buildTargets,
       )
     val trees = new Trees(buffers, selector)
     (buffers, trees)

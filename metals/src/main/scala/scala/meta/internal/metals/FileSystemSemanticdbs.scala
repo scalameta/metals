@@ -18,7 +18,7 @@ final class FileSystemSemanticdbs(
     buildTargets: BuildTargets,
     charset: Charset,
     mainWorkspace: AbsolutePath,
-    fingerprints: Md5Fingerprints
+    fingerprints: Md5Fingerprints,
 ) extends Semanticdbs {
 
   override def textDocument(file: AbsolutePath): TextDocumentLookup = {
@@ -52,7 +52,7 @@ final class FileSystemSemanticdbs(
             fingerprints,
             semanticdbRelativePath =>
               findSemanticDb(semanticdbRelativePath, targetroot, file, ws),
-            (warn: String) => scribe.warn(warn)
+            (warn: String) => scribe.warn(warn),
           )
         case None =>
           TextDocumentLookup.NotFound(file)
@@ -64,7 +64,7 @@ final class FileSystemSemanticdbs(
       semanticdbRelativePath: RelativePath,
       targetroot: AbsolutePath,
       file: AbsolutePath,
-      workspace: AbsolutePath
+      workspace: AbsolutePath,
   ): Option[FoundSemanticDbPath] = {
     val semanticdbpath = targetroot.resolve(semanticdbRelativePath)
     if (semanticdbpath.isFile) Some(FoundSemanticDbPath(semanticdbpath, None))
@@ -84,7 +84,7 @@ final class FileSystemSemanticdbs(
         if alternativeSemanticdbPath.isFile
       } yield FoundSemanticDbPath(
         alternativeSemanticdbPath,
-        Some(fullRelativePath)
+        Some(fullRelativePath),
       )
     }
 

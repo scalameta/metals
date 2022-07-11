@@ -17,13 +17,13 @@ import ch.epfl.scala.{bsp4j => b}
 class BuildTargetClassesFinder(
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
-    index: OnDemandSymbolIndex
+    index: OnDemandSymbolIndex,
 ) {
 
   // In case of success returns non-empty list
   def findMainClassAndItsBuildTarget(
       className: String,
-      buildTarget: Option[String]
+      buildTarget: Option[String],
   ): Try[List[(b.ScalaMainClass, b.BuildTarget)]] = {
     findClassAndBuildTarget(
       className,
@@ -33,7 +33,7 @@ class BuildTargetClassesFinder(
         .classesOf(_)
         .mainClasses
         .values,
-      { clazz: b.ScalaMainClass => clazz.getClassName }
+      { clazz: b.ScalaMainClass => clazz.getClassName },
     ).recoverWith { case ex =>
       val found = ex match {
         // We check whether there is a main in dependencies that is not reported via BSP
@@ -52,7 +52,7 @@ class BuildTargetClassesFinder(
   // In case of success returns non-empty list
   def findTestClassAndItsBuildTarget(
       className: String,
-      buildTarget: Option[String]
+      buildTarget: Option[String],
   ): Try[List[(String, b.BuildTarget)]] =
     findClassAndBuildTarget[String](
       className,
@@ -64,12 +64,12 @@ class BuildTargetClassesFinder(
           .testClasses
           .values
           .map(_.fullyQualifiedName),
-      clazz => clazz
+      clazz => clazz,
     )
 
   private def revertToDependencies(
       className: String,
-      buildTarget: Option[BuildTarget]
+      buildTarget: Option[BuildTarget],
   ): List[(b.ScalaMainClass, BuildTarget)] = {
 
     def findTarget(path: AbsolutePath) =
@@ -81,13 +81,13 @@ class BuildTargetClassesFinder(
     for {
       symbol <- buildTargetClasses.symbolFromClassName(
         className,
-        List(Descriptor.Term, Descriptor.Type)
+        List(Descriptor.Term, Descriptor.Type),
       )
       cls <- index.definition(Symbol(symbol))
       target <- buildTarget.orElse(findTarget(cls.path))
     } yield (
       new b.ScalaMainClass(className, Nil.asJava, Nil.asJava),
-      target
+      target,
     )
   }
 
@@ -96,7 +96,7 @@ class BuildTargetClassesFinder(
       buildTarget: Option[String],
       findClassesByName: String => List[(A, b.BuildTargetIdentifier)],
       classesByBuildTarget: b.BuildTargetIdentifier => Iterable[A],
-      getClassName: A => String
+      getClassName: A => String,
   ): Try[List[(A, b.BuildTarget)]] =
     buildTarget.fold {
       val classes =
@@ -126,7 +126,7 @@ class BuildTargetClassesFinder(
               Failure(
                 ClassNotFoundInBuildTargetException(
                   className,
-                  target
+                  target,
                 )
               )
             } { clazz =>
@@ -153,7 +153,7 @@ case class BuildTargetUndefinedException()
 
 case class ClassNotFoundInBuildTargetException(
     className: String,
-    buildTarget: b.BuildTarget
+    buildTarget: b.BuildTarget,
 ) extends Exception(
       s"Class '$className' not found in build target '${buildTarget.getDisplayName()}'"
     )
@@ -167,7 +167,7 @@ case class BuildTargetContainsNoMainException(buildTargetName: String)
     )
 case class NoTestsFoundException(
     testType: String,
-    name: String
+    name: String,
 ) extends Exception(
       s"No tests could be found in ${testType}: $name"
     )

@@ -19,7 +19,7 @@ case class JavaToken(
     start: Int,
     end: Int,
     input: Input,
-    isLF: Boolean = false
+    isLF: Boolean = false,
 ) {
   lazy val pos: Position = Position.Range(input, start, end)
 }
@@ -36,7 +36,7 @@ object JavaTokens {
 
     val scanner = ToolFactory.createScanner(
       /*tokenizeComments = */ true, /*tokenizeWhiteSpace = */ true,
-      /*assertMode = */ false, /*recordLineSeparator = */ true
+      /*assertMode = */ false, /*recordLineSeparator = */ true,
     )
     scanner.setSource(source.chars)
 
@@ -53,7 +53,7 @@ object JavaTokens {
           start,
           end,
           source,
-          isLF
+          isLF,
         )
         token match {
           case ITerminalSymbols.TokenNameWHITESPACE =>

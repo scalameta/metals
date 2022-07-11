@@ -8,7 +8,7 @@ package scala.meta.internal.metals
  */
 class TaskProgress(
     var progress: Long,
-    var total: Long
+    var total: Long,
 ) {
   def update(newProgress: Long, newTotal: Long): Unit = {
     progress = newProgress

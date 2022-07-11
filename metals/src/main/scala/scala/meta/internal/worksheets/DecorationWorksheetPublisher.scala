@@ -24,7 +24,7 @@ class DecorationWorksheetPublisher(isInlineDecorationProvider: Boolean)
   override def publish(
       languageClient: MetalsLanguageClient,
       path: AbsolutePath,
-      worksheet: EvaluatedWorksheet
+      worksheet: EvaluatedWorksheet,
   ): Unit = {
     val rendered = render(worksheet)
     publish(languageClient, path, rendered)
@@ -46,15 +46,15 @@ class DecorationWorksheetPublisher(isInlineDecorationProvider: Boolean)
           s.position().toLsp,
           new MarkupContent(
             MarkupKind.MARKDOWN,
-            HoverMarkup(s.details)
+            HoverMarkup(s.details),
           ),
           ThemableDecorationInstanceRenderOptions(
             after = ThemableDecorationAttachmentRenderOptions(
               commentHeader + truncatify(s),
               color = "green",
-              fontStyle = "italic"
+              fontStyle = "italic",
             )
-          )
+          ),
         )
       }
       .toArray
@@ -63,14 +63,14 @@ class DecorationWorksheetPublisher(isInlineDecorationProvider: Boolean)
   private def publish(
       languageClient: MetalsLanguageClient,
       path: AbsolutePath,
-      decorations: Array[DecorationOptions]
+      decorations: Array[DecorationOptions],
   ): Unit = {
     val params =
       new PublishDecorationsParams(
         path.toURI.toString(),
         decorations,
         // do not send additional param if it's not inline provider
-        isInline = if (isInlineDecorationProvider) false else null
+        isInline = if (isInlineDecorationProvider) false else null,
       )
     languageClient.metalsPublishDecorations(params)
   }

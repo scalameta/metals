@@ -43,7 +43,7 @@ class Completions(
     completionPos: CompletionPos,
     indexedContext: IndexedContext,
     path: List[Tree],
-    config: PresentationCompilerConfig
+    config: PresentationCompilerConfig,
 ):
 
   implicit val context: Context = ctx
@@ -94,7 +94,7 @@ class Completions(
       completionsWithSuffix(
         _,
         completion.label,
-        CompletionValue.Compiler(_, _, _)
+        CompletionValue.Compiler(_, _, _),
       )
     )
   end toCompletionValues
@@ -132,7 +132,7 @@ class Completions(
   def completionsWithSuffix(
       sym: Symbol,
       label: String,
-      toCompletionValue: (String, Symbol, Option[String]) => CompletionValue
+      toCompletionValue: (String, Symbol, Option[String]) => CompletionValue,
   ): List[CompletionValue] =
     // workaround for earlier versions that force correctly detecting Java flags
     def isJavaDefined = if canDetectJavaObjectsCorrectly then
@@ -155,7 +155,7 @@ class Completions(
       toCompletionValue(
         name,
         methodSymbol,
-        suffix
+        suffix,
       )
     }
   end completionsWithSuffix
@@ -167,7 +167,7 @@ class Completions(
   private def advancedCompletions(
       path: List[Tree],
       pos: SourcePosition,
-      completionPos: CompletionPos
+      completionPos: CompletionPos,
   ): (List[CompletionValue], Boolean) =
     lazy val filename = Paths
       .get(pos.source.path)
@@ -191,7 +191,7 @@ class Completions(
           dd.sourcePos.start,
           indexedContext,
           search,
-          config
+          config,
         )
         (values, true)
 
@@ -205,7 +205,7 @@ class Completions(
           ident.sourcePos.start,
           indexedContext,
           search,
-          config
+          config,
         )
         // include compiler-oriented completions, in case `ov` doesn't mean the prefix of `override`
         (values, false)
@@ -219,7 +219,7 @@ class Completions(
           t.sourcePos.start,
           indexedContext,
           search,
-          config
+          config,
         )
         (values, true)
 
@@ -233,7 +233,7 @@ class Completions(
           sel.sourcePos.start,
           indexedContext,
           search,
-          config
+          config,
         )
         (values, false)
 
@@ -250,7 +250,7 @@ class Completions(
           lit,
           path,
           this,
-          config.isCompletionSnippetsEnabled()
+          config.isCompletionSnippetsEnabled(),
         )
         (completions, true)
       // From Scala 3.1.3-RC3 (as far as I know), path contains
@@ -293,8 +293,8 @@ class Completions(
                 completionsWithSuffix(
                   sym,
                   sym.decodedName,
-                  CompletionValue.Workspace(_, _, _)
-                ).forall(visit)
+                  CompletionValue.Workspace(_, _, _),
+                ).forall(visit),
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
       case _ => None
@@ -378,7 +378,7 @@ class Completions(
     // NOTE(gabro) valueOf was added as a Predef member in 2.13. We filter it out since is a niche
     // use case and it would appear upon typing 'val'
     defn.ValueOfClass.info.member(nme.valueOf).symbol,
-    defn.ScalaPredefModule.requiredMethod(nme.valueOf)
+    defn.ScalaPredefModule.requiredMethod(nme.valueOf),
   ).flatMap(_.alternatives.map(_.symbol)).toSet
 
   private def isNotLocalForwardReference(sym: Symbol)(using Context): Boolean =
@@ -388,7 +388,7 @@ class Completions(
 
   private def computeRelevancePenalty(
       completion: CompletionValue,
-      application: CompletionApplication
+      application: CompletionApplication,
   ): Int =
     import scala.meta.internal.pc.MemberOrdering.*
 
@@ -457,7 +457,7 @@ class Completions(
     nme.notify_,
     nme.wait_,
     nme.clone_,
-    nme.finalize_
+    nme.finalize_,
   )
 
   trait CompletionApplication:
@@ -491,7 +491,7 @@ class Completions(
               CompletionValue.Compiler(
                 label,
                 substituteTypeVars(sym),
-                suffix
+                suffix,
               )
             case other => other
           }
@@ -528,7 +528,7 @@ class Completions(
       def compareByRelevance(o1: CompletionValue, o2: CompletionValue): Int =
         Integer.compare(
           computeRelevancePenalty(o1, application),
-          computeRelevancePenalty(o2, application)
+          computeRelevancePenalty(o2, application),
         )
 
       def fuzzyScore(o: CompletionValue.Symbolic): Int =
@@ -538,7 +538,7 @@ class Completions(
             if name.startsWith(queryLower) then 0
             else if name.toLowerCase().contains(queryLower) then 1
             else 2
-          }
+          },
         )
 
       /**
@@ -566,7 +566,7 @@ class Completions(
         (o1, o2) match
           case (
                 sym1: CompletionValue.Symbolic,
-                sym2: CompletionValue.Symbolic
+                sym2: CompletionValue.Symbolic,
               ) =>
             val s1 = sym1.symbol
             val s2 = sym2.symbol
@@ -578,13 +578,13 @@ class Completions(
               else
                 val byFuzzy = Integer.compare(
                   fuzzyScore(sym1),
-                  fuzzyScore(sym2)
+                  fuzzyScore(sym2),
                 )
                 if byFuzzy != 0 then byFuzzy
                 else
                   val byIdentifier = IdentifierComparator.compare(
                     s1.name.show,
-                    s2.name.show
+                    s2.name.show,
                   )
                   if byIdentifier != 0 then byIdentifier
                   else
@@ -595,7 +595,7 @@ class Completions(
                     else
                       val byParamCount = Integer.compare(
                         s1.paramSymss.flatten.size,
-                        s2.paramSymss.flatten.size
+                        s2.paramSymss.flatten.size,
                       )
                       if byParamCount != 0 then byParamCount
                       else s1.detailString.compareTo(s2.detailString)

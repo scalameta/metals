@@ -37,7 +37,7 @@ final class BatchedFunction[A, B](
    */
   def apply(
       arguments: Seq[A],
-      callback: () => Unit
+      callback: () => Unit,
   ): Future[B] = {
     val promise = Promise[B]()
     queue.add(Request(arguments, promise, callback))
@@ -67,7 +67,7 @@ final class BatchedFunction[A, B](
   private val current = new AtomicReference(
     CancelableFuture[B](
       Future.failed(new NoSuchElementException("BatchedFunction")),
-      Cancelable.empty
+      Cancelable.empty,
     )
   )
 
@@ -75,7 +75,7 @@ final class BatchedFunction[A, B](
   private case class Request(
       arguments: Seq[A],
       result: Promise[B],
-      callback: () => Unit
+      callback: () => Unit,
   )
 
   private val lock = new AtomicBoolean()
@@ -132,7 +132,7 @@ final class BatchedFunction[A, B](
 object BatchedFunction {
   def fromFuture[A, B](fn: Seq[A] => Future[B])(implicit
       ec: ExecutionContext,
-      dummy: DummyImplicit
+      dummy: DummyImplicit,
   ): BatchedFunction[A, B] =
     new BatchedFunction(fn.andThen(CancelableFuture(_)))
 }

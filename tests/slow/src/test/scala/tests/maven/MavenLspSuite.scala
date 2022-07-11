@@ -23,7 +23,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     InputStreamIO.readBytes(
       this.getClass.getResourceAsStream("/test-pom.xml")
     ),
-    StandardCharsets.UTF_8
+    StandardCharsets.UTF_8,
   ).replace("<<>>", V.scala213)
 
   override def currentDigest(
@@ -42,8 +42,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -67,8 +67,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         List(
           // Project has .bloop directory so user is asked to "re-import project"
           importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
     }
   }
@@ -85,8 +85,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ <- server.executeCommand(ServerCommands.ImportBuild)
@@ -94,7 +94,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           progressMessage
-        ).mkString("\n")
+        ).mkString("\n"),
       )
     } yield ()
   }
@@ -121,8 +121,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       debugger <- server.startDebugging(
         "maven-test-repo",
@@ -130,8 +130,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         new ScalaMainClass(
           "a.Main",
           List("Bar").asJava,
-          List("-Dproperty=Foo").asJava
-        )
+          List("-Dproperty=Foo").asJava,
+        ),
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -166,7 +166,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
              |  <artifactId>sourcecode_2.12</artifactId>
              |  <version>0.1.4</version>
              |</dependency>
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
       _ <-
@@ -189,25 +189,25 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
          |  <artifactId>bad</artifactId>
          |  <version>0.1.4</version>
          |</dependency>
-         |""".stripMargin
+         |""".stripMargin,
     )
     for {
       _ <- initialize(
         s"""|/pom.xml
             |$badPom
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
-        ImportProjectFailed.getMessage
+        ImportProjectFailed.getMessage,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
@@ -216,8 +216,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -251,7 +251,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
           |src/main/scala/warning/Warning.scala:1:1: error: Unused import
           |import scala.concurrent.Future // unused
           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        """.stripMargin
+        """.stripMargin,
       )
       // we should still have references despite fatal warning
       _ = assertNoDiff(
@@ -259,7 +259,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         """|_empty_/A.
            |_empty_/A.B.
            |_empty_/Warning.
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

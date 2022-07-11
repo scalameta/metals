@@ -28,7 +28,7 @@ import org.eclipse.{lsp4j => l}
  */
 class CreateCompanionObjectCodeAction(
     trees: Trees,
-    buffers: Buffers
+    buffers: Buffers,
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
@@ -45,7 +45,7 @@ class CreateCompanionObjectCodeAction(
           .findLastEnclosingAt[Tree](
             path,
             range.getStart(),
-            applyWithSingleFunction
+            applyWithSingleFunction,
           )
       else
         None
@@ -62,7 +62,7 @@ class CreateCompanionObjectCodeAction(
       getIndentationForPositionInDocument(tree.pos, document),
       name,
       hasBraces(tree, document),
-      tree.canUseBracelessSyntax(document)
+      tree.canUseBracelessSyntax(document),
     )
 
     maybeCompanionObject.toSeq
@@ -84,7 +84,7 @@ class CreateCompanionObjectCodeAction(
 
   private def getIndentationForPositionInDocument(
       treePos: Position,
-      document: String
+      document: String,
   ): String =
     document
       .substring(treePos.start - treePos.startColumn, treePos.start)
@@ -116,7 +116,7 @@ class CreateCompanionObjectCodeAction(
       indentationString: String,
       name: String,
       hasBraces: Boolean,
-      bracelessOK: Boolean
+      bracelessOK: Boolean,
   ): l.CodeAction = {
     val codeAction = new l.CodeAction()
     codeAction.setTitle(CreateCompanionObjectCodeAction.companionObjectCreation)
@@ -146,7 +146,7 @@ class CreateCompanionObjectCodeAction(
     codeAction.setCommand(
       buildCommandForNavigatingToCompanionObject(
         uri,
-        companionObjectStartPosition
+        companionObjectStartPosition,
       )
     )
     codeAction.setEdit(
@@ -159,13 +159,13 @@ class CreateCompanionObjectCodeAction(
 
   private def buildCommandForNavigatingToCompanionObject(
       uri: String,
-      companionObjectPosion: l.Position
+      companionObjectPosion: l.Position,
   ): l.Command = {
     val cursorRange = new l.Range(companionObjectPosion, companionObjectPosion)
     ServerCommands.GotoPosition.toLSP(
       new Location(
         uri,
-        cursorRange
+        cursorRange,
       )
     )
 
@@ -173,7 +173,7 @@ class CreateCompanionObjectCodeAction(
 
   private def hasCompanionObject(
       tree: Tree,
-      name: String
+      name: String,
   ): Boolean =
     tree.parent
       .flatMap(_.children.collectFirst {

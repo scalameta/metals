@@ -22,12 +22,12 @@ object ScaladocCompletions:
   def contribute(
       pos: SourcePosition,
       text: String,
-      config: PresentationCompilerConfig
+      config: PresentationCompilerConfig,
   )(using Context): List[CompletionValue] =
     def buildText(
         params: List[String],
         hasReturnValue: Boolean,
-        indent: String
+        indent: String,
     ): String =
       val builder = new StringBuilder()
       builder.append("\n")
@@ -47,7 +47,7 @@ object ScaladocCompletions:
     val ctx = summon[Context]
     val (numIndent, shouldTabIndent) = CompletionPos.inferIndent(
       ctx.source.lineToOffset(pos.line),
-      text
+      text,
     )
     val indentChar = if shouldTabIndent then "\t" else " "
     val necessaryIndent = indentChar * numIndent

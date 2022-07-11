@@ -22,7 +22,7 @@ class InsertInferredType(trees: Trees) extends CodeAction {
 
   override def contribute(
       params: l.CodeActionParams,
-      token: CancelToken
+      token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = Future {
 
     def insertInferTypeAction(title: String): l.CodeAction = {
@@ -34,7 +34,7 @@ class InsertInferredType(trees: Trees) extends CodeAction {
         ServerCommands.InsertInferredType.toLSP(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
-            range
+            range,
           )
         )
       )

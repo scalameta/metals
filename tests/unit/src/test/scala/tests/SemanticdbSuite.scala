@@ -12,7 +12,7 @@ import scala.meta.internal.mtags.Semanticdbs
  */
 abstract class SemanticdbSuite(
     inputProperties: => InputProperties,
-    directory: String
+    directory: String,
 ) extends DirectoryExpectSuite(s"$directory") {
 
   override lazy val input: InputProperties = inputProperties
@@ -36,7 +36,7 @@ abstract class SemanticdbSuite(
           val textDocument = classpath.textDocument(file.file).get
           val obtained = Semanticdbs.printTextDocument(textDocument)
           obtained
-        }
+        },
       )
     }
   }

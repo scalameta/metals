@@ -36,7 +36,7 @@ object Configs {
           ),
           new FileSystemWatcher(
             Either.forLeft(s"$root/project/build.properties")
-          )
+          ),
         ).asJava
       )
     }
@@ -76,28 +76,28 @@ object Configs {
           },
         isCompletionItemDetailEnabled = MetalsServerConfig.binaryOption(
           "metals.completion-item.detail",
-          default = true
+          default = true,
         ),
         isCompletionItemDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.completion-item.documentation",
-          default = true
+          default = true,
         ),
         isHoverDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.hover.documentation",
-          default = true
+          default = true,
         ),
         snippetAutoIndent = MetalsServerConfig.binaryOption(
           "metals.snippet-auto-indent",
-          default = true
+          default = true,
         ),
         isSignatureHelpDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.signature-help.documentation",
-          default = true
+          default = true,
         ),
         isCompletionItemResolve = MetalsServerConfig.binaryOption(
           "metals.completion-item.resolve",
-          default = true
-        )
+          default = true,
+        ),
       )
     }
   }

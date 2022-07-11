@@ -10,7 +10,7 @@ import scala.meta.internal.metals.ImportedBuild
 
 case class BspSession(
     main: BuildServerConnection,
-    meta: List[BuildServerConnection]
+    meta: List[BuildServerConnection],
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -41,6 +41,6 @@ case class BspSession(
 object BspSession {
   case class BspBuild(
       connection: BuildServerConnection,
-      build: ImportedBuild
+      build: ImportedBuild,
   )
 }

@@ -23,58 +23,58 @@ object Messages {
 
   def errorMessageParams(msg: String) = new MessageParams(
     MessageType.Error,
-    msg
+    msg,
   )
 
   val noRoot = new MessageParams(
     MessageType.Error,
     """|No rootUri or rootPath detected.
        |Metals will not function correctly without either of these set since a workspace is needed.
-       |Try opening your project at the workspace root.""".stripMargin
+       |Try opening your project at the workspace root.""".stripMargin,
   )
 
   val showTastyFailed = new MessageParams(
     MessageType.Error,
     """|Cannot execute show TASTy command because there is no .tasty file for given file.
        |For now, this command only works with Scala 3.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   object Worksheets {
     def unsupportedScalaVersion(
         unsupportedVersion: String,
         fallback: String,
-        recommended: String
+        recommended: String,
     ) = new MessageParams(
       MessageType.Warning,
       s"Scala ${unsupportedVersion} is not supported in worksheets. Falling back to ${fallback} without your classpath.\n" +
-        s"Consider using ${recommended} instead to fix this."
+        s"Consider using ${recommended} instead to fix this.",
     )
 
     val unableToExport = new MessageParams(
       MessageType.Warning,
-      "Unable to export worksheet. Please fix any diagnostics, save, and try again."
+      "Unable to export worksheet. Please fix any diagnostics, save, and try again.",
     )
   }
 
   val NoBspSupport = new MessageParams(
     MessageType.Warning,
-    "Workspace doesn't support BSP, please see logs."
+    "Workspace doesn't support BSP, please see logs.",
   )
 
   object BspProvider {
     val noBuildToolFound = new MessageParams(
       MessageType.Warning,
-      "No build tool found to generate a BSP config."
+      "No build tool found to generate a BSP config.",
     )
     val genericUnableToCreateConfig = new MessageParams(
       MessageType.Error,
-      "Unable to create bsp config. Please check your log for more details."
+      "Unable to create bsp config. Please check your log for more details.",
     )
 
     def unableToCreateConfigFromMessage(message: String) = new MessageParams(
       MessageType.Error,
-      message
+      message,
     )
 
     def params(buildTools: List[BuildTool]): ShowMessageRequestParams = {
@@ -92,7 +92,7 @@ object Messages {
 
   def unableToStartServer(buildTool: String) = new MessageParams(
     MessageType.Warning,
-    s"Metals is unable to start ${buildTool}. Please try to connect after starting it manually."
+    s"Metals is unable to start ${buildTool}. Please try to connect after starting it manually.",
   )
 
   def unknownScalafixRules(unknownRuleMessage: String): MessageParams = {
@@ -104,33 +104,33 @@ object Messages {
     }
     new MessageParams(
       MessageType.Warning,
-      s"Metals is unable to run ${rule}. Please add the rule dependency to `metals.scalafixRulesDependencies`."
+      s"Metals is unable to run ${rule}. Please add the rule dependency to `metals.scalafixRulesDependencies`.",
     )
   }
 
   val ImportProjectFailed = new MessageParams(
     MessageType.Error,
-    "Import project failed, no functionality will work. See the logs for more details"
+    "Import project failed, no functionality will work. See the logs for more details",
   )
   val ImportProjectPartiallyFailed = new MessageParams(
     MessageType.Warning,
     "Import project partially failed, limited functionality may work in some parts of the workspace. " +
-      "See the logs for more details. "
+      "See the logs for more details. ",
   )
 
   val InsertInferredTypeFailed = new MessageParams(
     MessageType.Error,
-    "Could not insert inferred type, please check the logs for more details or report an issue."
+    "Could not insert inferred type, please check the logs for more details or report an issue.",
   )
 
   val ExtractMemberDefinitionFailed = new MessageParams(
     MessageType.Error,
-    "Could not extract the given definition, please check the logs for more details or report an issue."
+    "Could not extract the given definition, please check the logs for more details or report an issue.",
   )
 
   val ReloadProjectFailed = new MessageParams(
     MessageType.Error,
-    "Reloading your project failed, no functionality will work. See the log for more details"
+    "Reloading your project failed, no functionality will work. See the log for more details",
   )
 
   def bloopInstallProgress(buildToolExecName: String) =
@@ -156,7 +156,7 @@ object Messages {
         List(
           yes,
           notNow,
-          dontShowAgain
+          dontShowAgain,
         ).asJava
       )
       params
@@ -178,7 +178,7 @@ object Messages {
         List(
           yes,
           notNow,
-          dontShowAgain
+          dontShowAgain,
         ).asJava
       )
       params
@@ -208,14 +208,14 @@ object Messages {
       s"${icons.info} Partial navigation",
       tooltip = "This external library source has compile errors. " +
         "To fix this problem, update your build settings to use the same compiler plugins and compiler settings as " +
-        "the external library."
+        "the external library.",
     )
 
   object CheckDoctor {
     def problemsFixed: MessageParams =
       new MessageParams(
         MessageType.Info,
-        "Build is correctly configured now, navigation will work for all build targets."
+        "Build is correctly configured now, navigation will work for all build targets.",
       )
 
     def moreInfo: String =
@@ -249,7 +249,7 @@ object Messages {
       params.setActions(
         List(
           moreInformation,
-          dismissForever
+          dismissForever,
         ).asJava
       )
       params
@@ -278,7 +278,7 @@ object Messages {
       params.setActions(
         List(
           learnMore,
-          dismissForever
+          dismissForever,
         ).asJava
       )
       params
@@ -303,7 +303,7 @@ object Messages {
       params.setActions(
         List(
           reconnect,
-          notNow
+          notNow,
         ).asJava
       )
       params
@@ -326,7 +326,7 @@ object Messages {
       params.setActions(
         List(
           reconnect,
-          notNow
+          notNow,
         ).asJava
       )
       params
@@ -356,7 +356,7 @@ object Messages {
         List(
           applyAndRestart,
           useGlobalFile,
-          openGlobalJsonFile
+          openGlobalJsonFile,
         ).asJava
       )
       params
@@ -382,7 +382,7 @@ object Messages {
       params.setActions(
         List(
           reconnect,
-          notNow
+          notNow,
         ).asJava
       )
       params
@@ -405,7 +405,7 @@ object Messages {
       params.setActions(
         List(
           restart,
-          notNow
+          notNow,
         ).asJava
       )
       params
@@ -417,7 +417,7 @@ object Messages {
   ): MessageParams =
     new MessageParams(
       MessageType.Error,
-      throwable.getMessage()
+      throwable.getMessage(),
     )
 
   object IncompatibleBloopVersion {
@@ -433,7 +433,7 @@ object Messages {
     def params(
         bloopVersion: String,
         minimumBloopVersion: String,
-        isChangedInSettings: Boolean
+        isChangedInSettings: Boolean,
     ): ShowMessageRequestParams = {
 
       val params = new ShowMessageRequestParams()
@@ -452,7 +452,7 @@ object Messages {
         List(
           shutdown,
           manually,
-          dismissForever
+          dismissForever,
         ).asJava
       )
       params
@@ -462,7 +462,7 @@ object Messages {
   object BspSwitch {
     case class Request(
         params: ShowMessageRequestParams,
-        mapping: Map[String, String]
+        mapping: Map[String, String],
     )
 
     val message: String =
@@ -470,7 +470,7 @@ object Messages {
 
     def chooseServerRequest(
         possibleBuildServers: List[String],
-        currentBsp: Option[String]
+        currentBsp: Option[String],
     ): Request = {
       val mapping = mutable.Map.empty[String, String]
       val messageActionItems =
@@ -494,13 +494,13 @@ object Messages {
       new MessageParams(
         MessageType.Error,
         "Unable to switch build server since there are no installed build servers on this computer. " +
-          "To fix this problem, install a build server first."
+          "To fix this problem, install a build server first.",
       )
 
     def onlyOneServer(name: String): MessageParams =
       new MessageParams(
         MessageType.Warning,
-        s"Unable to switch build server since there is only one supported build server '$name' detected for this workspace."
+        s"Unable to switch build server since there is only one supported build server '$name' detected for this workspace.",
       )
 
     def isSelectBspServer(params: ShowMessageRequestParams): Boolean =
@@ -515,7 +515,7 @@ object Messages {
     def fixedVersion(isAgain: Boolean): MessageParams =
       new MessageParams(
         MessageType.Info,
-        s"Updated .scalafmt.conf${MissingScalafmtConf.tryAgain(isAgain)}."
+        s"Updated .scalafmt.conf${MissingScalafmtConf.tryAgain(isAgain)}.",
       )
 
     def isMissingScalafmtVersion(params: ShowMessageRequestParams): Boolean =
@@ -525,7 +525,7 @@ object Messages {
       MetalsInputBoxParams(
         prompt =
           "No Scalafmt version is configured for this workspace, what version would you like to use?",
-        value = BuildInfo.scalafmtVersion
+        value = BuildInfo.scalafmtVersion,
       )
 
     def messageRequestMessage: String =
@@ -545,7 +545,7 @@ object Messages {
         List(
           changeVersion,
           notNow,
-          dontShowAgain
+          dontShowAgain,
         ).asJava
       )
       params
@@ -559,7 +559,7 @@ object Messages {
         "Cannot run or debug due to existing errors in the workspace. " +
           "Please fix the errors and retry.",
       command = ClientCommands.FocusDiagnostics.id,
-      show = true
+      show = true,
     )
 
   object DebugClassNotFound {
@@ -567,21 +567,21 @@ object Messages {
     def invalidTargetClass(cls: String, target: String): MessageParams = {
       new MessageParams(
         MessageType.Error,
-        s"Class '$cls' not found in build target '$target'."
+        s"Class '$cls' not found in build target '$target'.",
       )
     }
 
     def invalidTarget(target: String): MessageParams = {
       new MessageParams(
         MessageType.Error,
-        s"Target '$target' not found."
+        s"Target '$target' not found.",
       )
     }
 
     def invalidClass(cls: String): MessageParams = {
       new MessageParams(
         MessageType.Error,
-        s"Class '$cls' not found."
+        s"Class '$cls' not found.",
       )
     }
 
@@ -597,7 +597,7 @@ object Messages {
     def fixedParams(isAgain: Boolean): MessageParams =
       new MessageParams(
         MessageType.Info,
-        s"Created .scalafmt.conf${tryAgain(isAgain)}."
+        s"Created .scalafmt.conf${tryAgain(isAgain)}.",
       )
 
     def isCreateScalafmtConf(params: ShowMessageRequestParams): Boolean =
@@ -615,7 +615,7 @@ object Messages {
         List(
           createFile,
           notNow,
-          dontShowAgain
+          dontShowAgain,
         ).asJava
       )
       params
@@ -635,7 +635,7 @@ object Messages {
 
     def params(
         dialect: ScalafmtDialect,
-        canUpdate: Boolean
+        canUpdate: Boolean,
     ): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(createMessage(dialect))
@@ -644,7 +644,7 @@ object Messages {
         List(
           if (canUpdate) Some(letUpdate) else None,
           if (canUpdate) Some(notNow) else None,
-          Some(dontShowAgain)
+          Some(dontShowAgain),
         ).flatten.asJava
       )
       params
@@ -724,13 +724,13 @@ object Messages {
     ): MessageParams = {
       new MessageParams(
         MessageType.Warning,
-        message(Set(scalaVersion), Some("fallback"))
+        message(Set(scalaVersion), Some("fallback")),
       )
     }
 
     def message(
         usingNow: Set[String],
-        description: Option[String]
+        description: Option[String],
     ): String = {
       val using = usingString(usingNow)
       val recommended = recommendationString(usingNow)
@@ -785,7 +785,7 @@ object Messages {
         className: String,
         chosenTarget: String,
         anotherTargets: Seq[String],
-        mainOrTest: String
+        mainOrTest: String,
     ): String = {
       val anotherTargetsStr = anotherTargets.map(t => s"'$t'").mkString(", ")
       s"Running '${className}' $mainOrTest class from '${chosenTarget}' build target,\n" +
@@ -814,7 +814,7 @@ object Messages {
     def ImportFailed(script: String) =
       new MessageParams(
         MessageType.Error,
-        s"Error importing $script. See the logs for more details."
+        s"Error importing $script. See the logs for more details.",
       )
   }
 
@@ -831,13 +831,13 @@ object Messages {
     def creationFailed(what: String, where: String) =
       new MessageParams(
         MessageType.Error,
-        s"Could not create $what in $where"
+        s"Could not create $what in $where",
       )
 
     def templateDownloadFailed(why: String) =
       new MessageParams(
         MessageType.Error,
-        s"Failed to download templates from the web.\n" + why
+        s"Failed to download templates from the web.\n" + why,
       )
 
     def yes = new MessageActionItem("Yes")
@@ -850,7 +850,7 @@ object Messages {
     def newProjectCreated(path: AbsolutePath) =
       new MessageParams(
         MessageType.Info,
-        s"New project has been in created in $path"
+        s"New project has been in created in $path",
       )
 
     def askForNewWindowParams(): ShowMessageRequestParams = {
@@ -860,7 +860,7 @@ object Messages {
       params.setActions(
         List(
           yes,
-          no
+          no,
         ).asJava
       )
       params
@@ -888,7 +888,7 @@ object Messages {
         List(
           inCurrent,
           newWindow,
-          dismiss
+          dismiss,
         ).asJava
       )
       params

@@ -20,7 +20,7 @@ final class SuperMethodCodeLens(
     buffers: Buffers,
     userConfig: () => UserConfiguration,
     clientConfig: ClientConfiguration,
-    trees: Trees
+    trees: Trees,
 ) extends CodeLens {
 
   override def isEnabled: Boolean = userConfig().superMethodLensesEnabled
@@ -43,7 +43,7 @@ final class SuperMethodCodeLens(
         symbol,
         search,
         textDocument,
-        path
+        path,
       ).toIterable
       range <-
         occurrence.range
@@ -56,7 +56,7 @@ final class SuperMethodCodeLens(
       symbol: String,
       findSymbol: String => Option[SymbolInformation],
       textDocument: TextDocument,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Option[l.Command] = {
     for {
       symbolInformation <- findSymbol(symbol)
@@ -67,7 +67,7 @@ final class SuperMethodCodeLens(
         gotoParentSymbol,
         symbolInformation.displayName,
         textDocument,
-        path
+        path,
       )
     } yield command
   }
@@ -76,14 +76,14 @@ final class SuperMethodCodeLens(
       symbol: String,
       name: String,
       textDocument: TextDocument,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Option[l.Command] = {
     if (symbol.isLocal)
       textDocument.occurrences.collectFirst {
         case SymbolOccurrence(
               Some(range),
               `symbol`,
-              SymbolOccurrence.Role.DEFINITION
+              SymbolOccurrence.Role.DEFINITION,
             ) =>
           val location = new l.Location(path.toURI.toString(), range.toLSP)
           val command = ServerCommands.GotoPosition.toLSP(location)

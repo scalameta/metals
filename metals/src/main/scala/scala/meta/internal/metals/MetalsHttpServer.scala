@@ -39,7 +39,7 @@ import org.eclipse.lsp4j.ExecuteCommandParams
  */
 final class MetalsHttpServer private (
     server: Undertow,
-    openChannels: mutable.Set[WebSocketChannel]
+    openChannels: mutable.Set[WebSocketChannel],
 ) extends Cancelable {
   override def cancel(): Unit = stop()
   def address: String =
@@ -80,7 +80,7 @@ object MetalsHttpServer {
       render: () => String,
       complete: HttpServerExchange => Unit,
       doctor: () => String,
-      tasty: (URI) => Future[Either[String, String]]
+      tasty: (URI) => Future[Either[String, String]],
   )(implicit ec: ExecutionContext): MetalsHttpServer = {
     val port = freePort(host, preferredPort)
     scribe.info(s"Selected port $port")
@@ -97,14 +97,14 @@ object MetalsHttpServer {
                 case NonFatal(e) =>
                   scribe.error(
                     s"http error: ${exchange.getRequestPath} ${exchange.getQueryString}",
-                    e
+                    e,
                   )
               }
               exchange.setStatusCode(StatusCodes.SEE_OTHER)
               exchange.getResponseHeaders.put(Headers.LOCATION, "/")
               exchange.endExchange()
             }
-          }
+          },
         )
         .addPrefixPath(
           "/execute-command",
@@ -117,22 +117,22 @@ object MetalsHttpServer {
               languageServer.executeCommand(
                 new ExecuteCommandParams(
                   command.getOrElse("<unknown command>"),
-                  Collections.emptyList()
+                  Collections.emptyList(),
                 )
               )
               exchange.setStatusCode(StatusCodes.SEE_OTHER)
               exchange.getResponseHeaders.put(Headers.LOCATION, "/")
               exchange.endExchange()
             }
-          }
+          },
         )
         .addPrefixPath(
           "/livereload",
-          websocket(new LiveReloadConnectionCallback(openChannels))
+          websocket(new LiveReloadConnectionCallback(openChannels)),
         )
         .addPrefixPath(
           "/tasty",
-          tastyEndpointHandler(tasty)
+          tastyEndpointHandler(tasty),
         )
         .addExactPath("/", textHtmlHandler(render))
         .addExactPath("/doctor", textHtmlHandler(doctor))
@@ -156,7 +156,7 @@ object MetalsHttpServer {
     textHandler("text/html", _ => render())
   def textHandler(
       contentType: String,
-      render: HttpServerExchange => String
+      render: HttpServerExchange => String,
   ): HttpHandler =
     new BlockingHandler(new HttpHandler {
       override def handleRequest(exchange: HttpServerExchange): Unit = {
@@ -251,19 +251,19 @@ object MetalsHttpServer {
   ) extends WebSocketConnectionCallback {
     override def onConnect(
         exchange: WebSocketHttpExchange,
-        channel: WebSocketChannel
+        channel: WebSocketChannel,
     ): Unit = {
       channel.getReceiveSetter.set(new AbstractReceiveListener() {
         override def onClose(
             webSocketChannel: WebSocketChannel,
-            channel: StreamSourceFrameChannel
+            channel: StreamSourceFrameChannel,
         ): Unit = {
           openChannels.remove(webSocketChannel)
           super.onClose(webSocketChannel, channel)
         }
         override protected def onFullTextMessage(
             channel: WebSocketChannel,
-            message: BufferedTextMessage
+            message: BufferedTextMessage,
         ): Unit = {
           if (message.getData.contains("""command":"hello""")) {
             val hello =

@@ -38,7 +38,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
 
   private def getItems(
       original: String,
-      filename: String = "A.scala"
+      filename: String = "A.scala",
   ): Seq[CompletionItem] = {
     val (code, offset) = params(original)
     val result = resolvedCompletions(
@@ -46,7 +46,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         Paths.get(filename).toUri(),
         code,
         offset,
-        cancelToken
+        cancelToken,
       )
     )
     result.getItems.asScala.sortBy(item =>
@@ -64,7 +64,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   def checkItems(
       name: TestOptions,
       original: String,
-      fn: Seq[CompletionItem] => Boolean
+      fn: Seq[CompletionItem] => Boolean,
   )(implicit loc: Location): Unit = {
     test(name) { assert(fn(getItems(original))) }
   }
@@ -93,7 +93,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit = {
     val compatTemplate = compat.map { case (key, value) =>
       key -> template.replace("___", value)
@@ -106,7 +106,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem = assertSingleItem,
       filter = filter,
       command = command,
-      compat = compatTemplate
+      compat = compatTemplate,
     )
   }
 
@@ -131,7 +131,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit = {
     test(name) {
       val items = getItems(original).filter(item => filter(item.getLabel))
@@ -146,7 +146,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       val obtained = TextEdits.applyEdits(code, item)
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion)
+        getExpected(expected, compat, scalaVersion),
       )
       if (filterText.nonEmpty) {
         assertNoDiff(item.getFilterText, filterText, "Invalid filter text")
@@ -154,7 +154,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertNoDiff(
         Option(item.getCommand).fold("")(_.getCommand),
         command.getOrElse(""),
-        "Invalid command"
+        "Invalid command",
       )
     }
   }
@@ -173,7 +173,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       expected: String,
       compat: Map[String, String] = Map.empty,
       topLines: Option[Int] = None,
-      includeDetail: Boolean = false
+      includeDetail: Boolean = false,
   )(implicit loc: Location): Unit = {
     test(name) {
       val baseItems = getItems(original)
@@ -194,7 +194,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         .mkString("\n")
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion)
+        getExpected(expected, compat, scalaVersion),
       )
     }
   }
@@ -233,7 +233,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       includeDetail: Boolean = true,
       filename: String = "A.scala",
       filter: String => Boolean = _ => true,
-      enablePackageWrap: Boolean = true
+      enablePackageWrap: Boolean = true,
   )(implicit loc: Location): Unit = {
     test(name) {
       val out = new StringBuilder()
@@ -278,19 +278,19 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertNoDiff(
         sortLines(
           stableOrder,
-          postProcessObtained(trimTrailingSpace(out.toString()))
+          postProcessObtained(trimTrailingSpace(out.toString())),
         ),
         sortLines(
           stableOrder,
-          getExpected(expected, compat, scalaVersion)
-        )
+          getExpected(expected, compat, scalaVersion),
+        ),
       )
       if (filterText.nonEmpty) {
         filteredItems.foreach { item =>
           assertNoDiff(
             item.getFilterText,
             filterText,
-            s"Invalid filter text for item:\n$item"
+            s"Invalid filter text for item:\n$item",
           )
         }
       }
@@ -308,7 +308,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       s.replace("equals(obj: Any)", "equals(obj: Object)")
         .replace(
           "singletonList[T](o: T)",
-          "singletonList[T <: Object](o: T)"
+          "singletonList[T <: Object](o: T)",
         )
     }
   )

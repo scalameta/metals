@@ -32,7 +32,7 @@ object SystemProcess {
       processErr: Option[String => Unit] = Some(scribe.error(_)),
       propagateError: Boolean = false,
       discardInput: Boolean = true,
-      threadNamePrefix: String = ""
+      threadNamePrefix: String = "",
   ): SystemProcess = {
 
     try {
@@ -49,7 +49,7 @@ object SystemProcess {
         processOut,
         processErr,
         discardInput,
-        threadNamePrefix
+        threadNamePrefix,
       )
     } catch {
       case NonFatal(e) =>
@@ -68,12 +68,12 @@ object SystemProcess {
       processOut: Option[String => Unit],
       processErr: Option[String => Unit],
       discardInput: Boolean,
-      threadNamePrefix: String
+      threadNamePrefix: String,
   ): SystemProcess = {
     def readOutput(
         name: String,
         stream: InputStream,
-        f: String => Unit
+        f: String => Unit,
     ): Thread = {
       val filter = AnsiFilter()
       val thread = new Thread {
@@ -106,7 +106,7 @@ object SystemProcess {
     val outReaders = List(
       processOut.map(f => readOutput("stdout", ps.getInputStream(), f)),
       if (redirectErrorOutput) None
-      else processErr.map(f => readOutput("stderr", ps.getErrorStream(), f))
+      else processErr.map(f => readOutput("stderr", ps.getErrorStream(), f)),
     ).flatten
 
     new SystemProcess {

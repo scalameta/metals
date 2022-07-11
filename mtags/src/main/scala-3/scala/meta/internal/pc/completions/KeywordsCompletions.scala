@@ -12,7 +12,7 @@ object KeywordsCompletions:
 
   def contribute(
       path: List[Tree],
-      completionPos: CompletionPos
+      completionPos: CompletionPos,
   )(using ctx: Context): List[CompletionValue] =
 
     lazy val notInComment = checkIfNotInComment(completionPos.cursorPos, path)
@@ -44,7 +44,7 @@ object KeywordsCompletions:
                 isPackage = isPackage,
                 isParam = isParam,
                 isScala3 = true,
-                allowToplevel = true
+                allowToplevel = true,
               ) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }
@@ -53,7 +53,7 @@ object KeywordsCompletions:
 
   private def checkIfNotInComment(
       pos: SourcePosition,
-      path: List[Tree]
+      path: List[Tree],
   ): Boolean =
     val text = pos.source.content
     val (treeStart, treeEnd) = path.headOption
@@ -90,7 +90,7 @@ object KeywordsCompletions:
   private def isDefinition(
       enclosing: List[Tree],
       name: String,
-      pos: SourcePosition
+      pos: SourcePosition,
   )(using ctx: Context): Boolean =
     enclosing match
       case (_: Ident) :: _ => false

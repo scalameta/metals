@@ -244,7 +244,7 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       SemVer.isCompatibleVersion(
         "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY"
+        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
       )
     )
   }
@@ -253,7 +253,7 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       !SemVer.isCompatibleVersion(
         "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY"
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
       )
     )
   }
@@ -262,7 +262,7 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       SemVer.isLaterVersion(
         "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY"
+        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
       )
     )
   }
@@ -271,7 +271,7 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       !SemVer.isLaterVersion(
         "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY"
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
       )
     )
   }
@@ -280,7 +280,7 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       SemVer.isLaterVersion(
         "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC1-bin-20201126-1c3538a-NIGHTLY"
+        "3.0.0-RC1-bin-20201126-1c3538a-NIGHTLY",
       )
     )
   }
@@ -309,13 +309,13 @@ class ScalaVersionsSuite extends BaseSuite {
         ("smth-library_2.13-21.2.0-sources.jar", "2.13"),
         (
           "scala3-compiler_3-3.0.1-RC2-bin-20210310-4af1386-NIGHTLY-sources.jar",
-          "3"
+          "3",
         ),
         ("scala3-library_3-3.1.0-RC1.jar", "3"),
         ("scala-library-2.13.1.jar", "2.13"),
         ("cool4.4_2.13-3.0.jar", "2.13"),
         ("scala3-library_3-3.0.0-sources.jar", "3"),
-        ("munit_3-0.7.29-sources.jar", "3")
+        ("munit_3-0.7.29-sources.jar", "3"),
       )
     expected.foreach { case (jar, version) =>
       val out = ScalaVersions.scalaBinaryVersionFromJarName(jar)

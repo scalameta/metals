@@ -13,7 +13,7 @@ class UserConfigurationSuite extends BaseSuite {
   def check(
       name: String,
       original: String,
-      props: Map[String, String] = Map.empty
+      props: Map[String, String] = Map.empty,
   )(
       fn: Either[List[String], UserConfiguration] => Unit
   )(implicit loc: Location): Unit = {
@@ -31,7 +31,7 @@ class UserConfigurationSuite extends BaseSuite {
   def checkOK(
       name: String,
       original: String,
-      props: Map[String, String] = Map.empty
+      props: Map[String, String] = Map.empty,
   )(fn: UserConfiguration => Unit)(implicit loc: Location): Unit = {
     check(name, original, props) {
       case Left(errs) =>
@@ -43,7 +43,7 @@ class UserConfigurationSuite extends BaseSuite {
   def checkError(
       name: String,
       original: String,
-      expected: String
+      expected: String,
   )(implicit loc: Location): Unit = {
     check(name, original) {
       case Right(ok) =>
@@ -62,7 +62,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "compile-on-save": "current-project",
       | "sbt-script": "script"
       |}
-    """.stripMargin
+    """.stripMargin,
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtScript == Some("script"))
@@ -70,7 +70,7 @@ class UserConfigurationSuite extends BaseSuite {
 
   checkOK(
     "empty-object",
-    "{}"
+    "{}",
   ) { obtained =>
     assert(obtained.javaHome.isEmpty)
     assert(obtained.sbtScript.isEmpty)
@@ -86,7 +86,7 @@ class UserConfigurationSuite extends BaseSuite {
 
   checkOK(
     "empty-string",
-    "{'java-home':''}"
+    "{'java-home':''}",
   ) { obtained => assert(obtained.javaHome.isEmpty) }
 
   checkOK(
@@ -97,8 +97,8 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
     Map(
       "metals.java-home" -> "home",
-      "metals.sbt-script" -> "script"
-    )
+      "metals.sbt-script" -> "script",
+    ),
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtScript == Some("script"))
@@ -111,7 +111,7 @@ class UserConfigurationSuite extends BaseSuite {
       |{
       |  "javaHome": "home"
       |}
-    """.stripMargin
+    """.stripMargin,
   ) { obtained => assert(obtained.javaHome == Some("home")) }
 
   checkOK(
@@ -123,7 +123,7 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
     Map(
       "metals.java-home" -> "b"
-    )
+    ),
   ) { obtained => assert(obtained.javaHome == Some("b")) }
 
   checkOK(
@@ -135,7 +135,7 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
     Map(
       "metals.java-home" -> "b"
-    )
+    ),
   ) { obtained => assert(obtained.javaHome == Some("b")) }
 
   checkOK(
@@ -147,7 +147,7 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
     Map(
       "metals.java-home" -> ""
-    )
+    ),
   ) { obtained => assert(obtained.javaHome == Some("a")) }
 
   checkError(
@@ -159,7 +159,7 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
     """
       |json error: key 'sbt-script' should have value of type string but obtained []
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkError(
@@ -173,7 +173,7 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
     "invalid SemanticDB symbol 'a.b': missing descriptor, " +
       "did you mean `a.b/` or `a.b.`? " +
-      "(to learn the syntax see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)"
+      "(to learn the syntax see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)",
   )
 
   checkOK(
@@ -182,7 +182,7 @@ class UserConfigurationSuite extends BaseSuite {
       |{
       | "enable-strip-margin-on-type-formatting": false
       |}
-    """.stripMargin
+    """.stripMargin,
   ) { ok => assert(ok.enableStripMarginOnTypeFormatting == false) }
 
   checkOK(
@@ -194,7 +194,7 @@ class UserConfigurationSuite extends BaseSuite {
       |  "eclipseProfile": "profile"
       | }
       |}
-    """.stripMargin
+    """.stripMargin,
   ) { obtained =>
     assert(
       obtained.javaFormatConfig == Some(
@@ -207,7 +207,7 @@ class UserConfigurationSuite extends BaseSuite {
     """
       |{
       |}
-    """.stripMargin
+    """.stripMargin,
   ) { obtained =>
     assert(obtained.javaFormatConfig == None)
   }
@@ -219,7 +219,7 @@ class UserConfigurationSuite extends BaseSuite {
       |  "eclipseConfigPath": "path"
       | }
       |}
-    """.stripMargin
+    """.stripMargin,
   ) { obtained =>
     assert(
       obtained.javaFormatConfig == Some(

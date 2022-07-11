@@ -51,7 +51,7 @@ final class InferredTypeProvider(
     params: OffsetParams,
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
-    symbolSearch: SymbolSearch
+    symbolSearch: SymbolSearch,
 ):
 
   def inferredTypeEdits(): List[TextEdit] =
@@ -71,7 +71,7 @@ final class InferredTypeProvider(
       params.text,
       unit.tpdTree,
       indexedCtx,
-      config
+      config,
     )
     val shortenedNames = new ShortenedNames(indexedCtx)
 
@@ -83,7 +83,7 @@ final class InferredTypeProvider(
         shortenedNames,
         indexedCtx,
         symbolSearch,
-        includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater
+        includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
       )
       printer.tpe(tpe)
 
@@ -95,7 +95,7 @@ final class InferredTypeProvider(
     def editForTupleUnapply(
         applied: AppliedType,
         metaPattern: m.Pat,
-        valdefOffset: Int
+        valdefOffset: Int,
     )(using ctx: Context) =
       import scala.meta.*
       metaPattern match
@@ -112,7 +112,7 @@ final class InferredTypeProvider(
             val typeNameEdit =
               new TextEdit(
                 lspPos,
-                ": " + printType(tuplePartTpe)
+                ": " + printType(tuplePartTpe),
               )
             typeNameEdit :: imports
           else Nil
@@ -137,13 +137,13 @@ final class InferredTypeProvider(
             endPos.toLSP,
             ": " + printType(tpt.tpe) + {
               if withParens then ")" else ""
-            }
+            },
           )
 
         def checkForParensAndEdit(
             applyEndingPos: Int,
             toCheckFor: Char,
-            blockStartPos: SourcePosition
+            blockStartPos: SourcePosition,
         ) =
           val text = params.text
           val isParensFunction: Boolean = text(applyEndingPos) == toCheckFor
@@ -188,7 +188,7 @@ final class InferredTypeProvider(
               editForTupleUnapply(
                 applied,
                 valDef.pats.head,
-                vl.startPos.start
+                vl.startPos.start,
               )
             case _ => simpleType
         tpt.tpe match
@@ -205,7 +205,7 @@ final class InferredTypeProvider(
         val typeNameEdit =
           new TextEdit(
             tpt.endPos.toLSP,
-            ": " + printType(tpt.tpe)
+            ": " + printType(tpt.tpe),
           )
         typeNameEdit :: imports
 
@@ -219,7 +219,7 @@ final class InferredTypeProvider(
             bind.endPos.toLSP,
             ": " + printType(body.tpe) + {
               if withParens then ")" else ""
-            }
+            },
           )
         val typeNameEdit = path match
           /* In case it's an infix pattern match
@@ -253,7 +253,7 @@ final class InferredTypeProvider(
       case Some(i @ Ident(name)) =>
         val typeNameEdit = new TextEdit(
           i.endPos.toLSP,
-          ": " + printType(i.tpe.widen)
+          ": " + printType(i.tpe.widen),
         )
         typeNameEdit :: imports
 
@@ -272,7 +272,7 @@ final class InferredTypeProvider(
     def lookup(
         idx: Int,
         start: Option[(Int, List[Char])],
-        withBacktick: Boolean
+        withBacktick: Boolean,
     ): Option[SourcePosition] =
       start match
         case Some((start, nextMatch :: left)) =>

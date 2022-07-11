@@ -14,7 +14,7 @@ import tests.MetalsTestEnrichments._
 abstract class DocumentSymbolSuite(
     directoryName: String,
     inputProperties: => InputProperties,
-    scalaVersion: String
+    scalaVersion: String,
 ) extends DirectoryExpectSuite(directoryName) {
 
   override lazy val input: InputProperties = inputProperties
@@ -44,11 +44,11 @@ abstract class DocumentSymbolSuite(
             schema = s.Schema.SEMANTICDB4,
             language = s.Language.SCALA,
             text = file.input.text,
-            occurrences = flatSymbols.map(_.toSymbolOccurrence)
+            occurrences = flatSymbols.map(_.toSymbolOccurrence),
           )
 
           Semanticdbs.printTextDocument(textDocument)
-        }
+        },
       )
     }
   }
@@ -59,12 +59,12 @@ class DocumentSymbolScala2Suite
     extends DocumentSymbolSuite(
       "documentSymbol",
       InputProperties.scala2(),
-      V.scala213
+      V.scala213,
     )
 
 class DocumentSymbolScala3Suite
     extends DocumentSymbolSuite(
       "documentSymbol-scala3",
       InputProperties.scala3(),
-      V.scala3
+      V.scala3,
     )

@@ -15,7 +15,7 @@ import org.eclipse.lsp4j.Position
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
 ) extends BuildTool
     with BloopInstallProvider
     with BuildServerProvider {
@@ -40,7 +40,7 @@ case class SbtBuildTool(
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val bloopInstallArgs = List[String](
       "-Dbloop.export-jar-classifiers=sources",
-      "bloopInstall"
+      "bloopInstall",
     )
     val allArgs = composeArgs(bloopInstallArgs, workspace, tempDir)
     removeLegacyGlobalPlugin()
@@ -64,7 +64,7 @@ case class SbtBuildTool(
   private def composeArgs(
       sbtArgs: List[String],
       workspace: AbsolutePath,
-      sbtLauncherOutDir: Path
+      sbtLauncherOutDir: Path,
   ): List[String] = {
     userConfig().sbtScript match {
       case Some(script) =>
@@ -74,11 +74,11 @@ case class SbtBuildTool(
           JavaBinary(userConfig().javaHome),
           "-Djline.terminal=jline.UnsupportedTerminal",
           "-Dsbt.log.noformat=true",
-          "-Dfile.encoding=UTF-8"
+          "-Dfile.encoding=UTF-8",
         )
         val jarArgs = List(
           "-jar",
-          embeddedSbtLauncher(sbtLauncherOutDir).toString()
+          embeddedSbtLauncher(sbtLauncherOutDir).toString(),
         )
         val sbtVersion =
           if (workspaceVersion.isEmpty) List(s"-Dsbt.version=$version") else Nil
@@ -88,7 +88,7 @@ case class SbtBuildTool(
           SbtOpts.fromWorkspace(workspace),
           JvmOpts.fromWorkspace(workspace),
           jarArgs,
-          sbtArgs
+          sbtArgs,
         ).flatten
     }
   }
@@ -136,7 +136,7 @@ case class SbtBuildTool(
 
     def sbtMetaDirs(
         meta: AbsolutePath,
-        acc: Set[AbsolutePath]
+        acc: Set[AbsolutePath],
     ): Set[AbsolutePath] = {
       if (meta.exists) {
         val files = meta.list.toList
@@ -220,7 +220,7 @@ object SbtBuildTool {
   private case class PluginDetails private (
       description: Seq[String],
       artifact: String,
-      resolver: Option[String]
+      resolver: Option[String],
   )
 
   /**
@@ -236,7 +236,7 @@ object SbtBuildTool {
       description =
         Seq("This file enables sbt-bloop to create bloop config files."),
       artifact = s""""ch.epfl.scala" % "sbt-bloop" % "$version"""",
-      resolver
+      resolver,
     )
   }
 
@@ -254,10 +254,10 @@ object SbtBuildTool {
     PluginDetails(
       Seq(
         "This plugin enables semantic information to be produced by sbt.",
-        "It also adds support for debugging using the Debug Adapter Protocol"
+        "It also adds support for debugging using the Debug Adapter Protocol",
       ),
       s""""org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"""",
-      resolver
+      resolver,
     )
   }
 
@@ -271,7 +271,7 @@ object SbtBuildTool {
         "This plugin adds the BSP debug capability to sbt server."
       ),
       s""""ch.epfl.scala" % "sbt-debug-adapter" % "${BuildInfo.debugAdapterVersion}"""",
-      resolver = None
+      resolver = None,
     )
 
   /**
@@ -281,10 +281,10 @@ object SbtBuildTool {
     PluginDetails(
       Seq(
         "This plugin makes sure that the JDI tools are in the sbt classpath.",
-        "JDI tools are used by the debug adapter server."
+        "JDI tools are used by the debug adapter server.",
       ),
       s""""org.scala-debugger" % "sbt-jdi-tools" % "${BuildInfo.sbtJdiToolsVersion}"""",
-      resolver = None
+      resolver = None,
     )
 
   private def isSnapshotVersion(version: String): Boolean =
@@ -308,7 +308,7 @@ object SbtBuildTool {
     val isToplevel = Set(
       workspace.toNIO,
       project,
-      project.resolve("project")
+      project.resolve("project"),
     )
     isToplevel(path.toNIO.getParent) && {
       val filename = path.toNIO.getFileName.toString
@@ -320,7 +320,7 @@ object SbtBuildTool {
 
   def apply(
       workspace: AbsolutePath,
-      userConfig: () => UserConfiguration
+      userConfig: () => UserConfiguration,
   ): SbtBuildTool = {
     val version = loadVersion(workspace).map(_.toString())
     SbtBuildTool(version, userConfig)
@@ -342,7 +342,7 @@ object SbtBuildTool {
 
   def sbtInputPosAdjustment(
       originInput: Input.VirtualFile,
-      autoImports: Seq[String]
+      autoImports: Seq[String],
   ): (Input.VirtualFile, Position => Position, AdjustLspData) = {
 
     val appendLineSize = autoImports.size
@@ -353,13 +353,13 @@ object SbtBuildTool {
       )
     def adjustRequest(position: Position) = new Position(
       appendLineSize + position.getLine(),
-      position.getCharacter()
+      position.getCharacter(),
     )
     val adjustLspData = AdjustedLspData.create(
       pos => {
         new Position(pos.getLine() - appendLineSize, pos.getCharacter())
       },
-      filterOutLocations = { loc => !loc.getUri().isSbt }
+      filterOutLocations = { loc => !loc.getUri().isSbt },
     )
     (modifiedInput, adjustRequest, adjustLspData)
   }

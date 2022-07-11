@@ -15,7 +15,7 @@ import coursierapi.Fetch
 case class Library(
     name: String,
     classpath: Classpath,
-    sources: Classpath
+    sources: Classpath,
 )
 
 object Library {
@@ -23,7 +23,7 @@ object Library {
     Library(
       "JDK",
       Classpath(PackageIndex.bootClasspath),
-      Classpath(JdkSources().right.get :: Nil)
+      Classpath(JdkSources().right.get :: Nil),
     )
   def cats: Seq[AbsolutePath] =
     fetch("org.typelevel", "cats-core_2.12", "2.0.0-M4")
@@ -35,13 +35,13 @@ object Library {
       Dependency.of(
         "org.scala-lang",
         s"scala3-compiler_$binaryVersion",
-        BuildInfoVersions.scala3
+        BuildInfoVersions.scala3,
       ),
       Dependency.of(
         "org.scala-lang",
         s"scala3-library_$binaryVersion",
-        BuildInfoVersions.scala3
-      )
+        BuildInfoVersions.scala3,
+      ),
     )
     fetchSources("scala3-suite", dependencies)
   }
@@ -62,7 +62,7 @@ object Library {
       Dependency.of("org.apache.spark", "spark-sql_2.11", "2.2.1"),
       Dependency.of("org.eclipse.jetty", "jetty-servlet", "9.3.11.v20160721"),
       Dependency.of("org.scalameta", "scalameta_2.12", "4.1.4"),
-      Dependency.of("org.scala-lang", "scala-compiler", scalaCompilerVersion)
+      Dependency.of("org.scala-lang", "scala-compiler", scalaCompilerVersion),
     )
     List(fetchSources("scala2-suite", dependencies))
   }
@@ -85,7 +85,7 @@ object Library {
     Library(
       name,
       Classpath(classpath.map(AbsolutePath(_)).toList),
-      Classpath(sources.map(AbsolutePath(_)).toList)
+      Classpath(sources.map(AbsolutePath(_)).toList),
     )
   }
 

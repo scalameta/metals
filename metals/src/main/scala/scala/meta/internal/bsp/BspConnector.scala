@@ -33,7 +33,7 @@ class BspConnector(
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,
     bspConfigGenerator: BspConfigGenerator,
-    currentConnection: () => Option[BuildServerConnection]
+    currentConnection: () => Option[BuildServerConnection],
 )(implicit ec: ExecutionContext) {
 
   /**
@@ -68,7 +68,7 @@ class BspConnector(
    */
   def connect(
       workspace: AbsolutePath,
-      userConfiguration: UserConfiguration
+      userConfiguration: UserConfiguration,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     def connect(
         workspace: AbsolutePath
@@ -108,7 +108,7 @@ class BspConnector(
           val query =
             Messages.BspSwitch.chooseServerRequest(
               distinctServers.keySet.toList,
-              None
+              None,
             )
           for {
             Some(item) <- client
@@ -145,7 +145,7 @@ class BspConnector(
   private def sbtMetaWorkspaces(root: AbsolutePath): List[AbsolutePath] = {
     def recursive(
         p: AbsolutePath,
-        acc: List[AbsolutePath]
+        acc: List[AbsolutePath],
     ): List[AbsolutePath] = {
       val projectDir = p.resolve("project")
       val bloopDir = projectDir.resolve(".bloop")
@@ -171,11 +171,11 @@ class BspConnector(
    */
   private def askUser(
       possibleServers: List[String],
-      currentSelectedServer: Option[String]
+      currentSelectedServer: Option[String],
   ): Future[Option[String]] = {
     val params = Messages.BspSwitch.chooseServerRequest(
       possibleServers,
-      currentSelectedServer
+      currentSelectedServer,
     )
 
     for {
@@ -193,7 +193,7 @@ class BspConnector(
    */
   def switchBuildServer(
       workspace: AbsolutePath,
-      createBloopAndConnect: () => Future[BuildChange]
+      createBloopAndConnect: () => Future[BuildChange],
   ): Future[Boolean] = {
 
     val foundServers = bspServers.findAvailableServers()
@@ -203,7 +203,7 @@ class BspConnector(
     // and don't already have a .bsp entry
     val possibleServers: Map[String, Either[
       BuildServerProvider,
-      BspConnectionDetails
+      BspConnectionDetails,
     ]] = buildTools
       .loadSupported()
       .collect {
@@ -220,7 +220,7 @@ class BspConnector(
     // it's an option.
     val availableServers: Map[String, Either[
       BuildServerProvider,
-      BspConnectionDetails
+      BspConnectionDetails,
     ]] = {
       if (bloopPresent || buildTools.loadSupported().nonEmpty)
         new BspConnectionDetails(
@@ -228,7 +228,7 @@ class BspConnector(
           ImmutableList.of(),
           userConfig().currentBloopVersion,
           "",
-          ImmutableList.of()
+          ImmutableList.of(),
         ) :: foundServers
       else foundServers
     }.map { details =>
@@ -243,7 +243,7 @@ class BspConnector(
      */
     def handleGenerationStatus(
         buildTool: BuildServerProvider,
-        status: BspConfigGenerationStatus
+        status: BspConfigGenerationStatus,
     ): Boolean = status match {
       case BspConfigGenerationStatus.Generated =>
         tables.buildServers.chooseServer(buildTool.getBuildServerName)
@@ -270,7 +270,7 @@ class BspConnector(
 
     def handleServerChoice(
         possibleChoice: Option[String],
-        currentSelectedServer: Option[String]
+        currentSelectedServer: Option[String],
     ) = {
       possibleChoice match {
         case Some(choice) =>
@@ -279,7 +279,7 @@ class BspConnector(
               buildTool
                 .generateBspConfig(
                   workspace,
-                  args => bspConfigGenerator.runUnconditionally(buildTool, args)
+                  args => bspConfigGenerator.runUnconditionally(buildTool, args),
                 )
                 .map(status => handleGenerationStatus(buildTool, status))
             case Right(details) if details.getName == BloopServers.name =>
@@ -311,7 +311,7 @@ class BspConnector(
             buildTool
               .generateBspConfig(
                 workspace,
-                args => bspConfigGenerator.runUnconditionally(buildTool, args)
+                args => bspConfigGenerator.runUnconditionally(buildTool, args),
               )
               .map(status => handleGenerationStatus(buildTool, status))
           case Right(connectionDetails) =>

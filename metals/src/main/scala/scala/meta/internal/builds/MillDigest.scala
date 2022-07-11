@@ -13,7 +13,7 @@ import scala.meta.tokens.Token
 object MillDigest extends Digestable {
   override protected def digestWorkspace(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     def analyzeBuildScript(file: AbsolutePath): Boolean = {
       val imported = findImportedScripts(file)
@@ -31,7 +31,7 @@ object MillDigest extends Digestable {
       var skip: Boolean = false,
       var allPaths: mutable.ListBuffer[AbsolutePath] = new mutable.ListBuffer,
       var current: String = "",
-      var prefix: String = ""
+      var prefix: String = "",
   ) {
     def processingFileImport: Boolean = hadFile && hadImport
   }

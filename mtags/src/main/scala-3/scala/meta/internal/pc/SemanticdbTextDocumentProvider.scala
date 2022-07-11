@@ -20,18 +20,18 @@ import dotty.tools.dotc.util.SourceFile
 
 class SemanticdbTextDocumentProvider(
     driver: InteractiveDriver,
-    workspace: Option[Path]
+    workspace: Option[Path],
 ) extends WorksheetSemanticdbProvider:
 
   def textDocument(
       uri: URI,
-      sourceCode: String
+      sourceCode: String,
   ): Array[Byte] =
     val filePath = Paths.get(uri)
     val validCode = removeMagicImports(sourceCode, AbsolutePath(filePath))
     driver.run(
       uri,
-      SourceFile.virtual(filePath.toString, validCode)
+      SourceFile.virtual(filePath.toString, validCode),
     )
     val tree = driver.currentCtx.run.units.head.tpdTree
     val extract = ExtractSemanticDB()
@@ -53,7 +53,7 @@ class SemanticdbTextDocumentProvider(
       text = sourceCode,
       md5 = MD5.compute(sourceCode),
       symbols = extractor.symbolInfos.toList,
-      occurrences = extractor.occurrences.toList
+      occurrences = extractor.occurrences.toList,
     )
     val byteStream = new ByteArrayOutputStream()
     val out = SemanticdbOutputStream.newInstance(byteStream)

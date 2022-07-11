@@ -7,5 +7,5 @@ class StackFrameDapSuite
     extends BaseStackFrameDapSuite(
       "debug-stack-frame",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     )

@@ -13,7 +13,7 @@ case class InputFile(
     file: AbsolutePath,
     code: String,
     sourceDirectory: AbsolutePath,
-    semanticdbRelativePath: RelativePath
+    semanticdbRelativePath: RelativePath,
 ) {
   def sourceDirectoryRelativePath: RelativePath =
     file.toRelative(sourceDirectory)

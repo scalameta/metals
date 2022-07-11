@@ -20,7 +20,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val toRename = Main.<<toR@@ename>>
        |}
        |""".stripMargin,
-    newName = "otherRename"
+    newName = "otherRename",
   )
 
   renamed(
@@ -44,7 +44,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val toRename: JList[Int] = ???
        |}
        |""".stripMargin,
-    newName = "Java-List"
+    newName = "Java-List",
   )
 
   renamed(
@@ -64,7 +64,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val toRename = ""
        |}
        |""".stripMargin,
-    newName = "OtherM"
+    newName = "OtherM",
   )
 
   renamed(
@@ -78,7 +78,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  user.copy(name = "")
        |}
        |""".stripMargin,
-    newName = "Login"
+    newName = "Login",
   )
 
   renamed(
@@ -92,7 +92,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
       |trait T4[I, J] extends T3[J, I] { override def <<torename>>(p: J): String = super.<<torename>>(p) }
       |trait T5[U] extends T4[U, U] { override def <<tore@@name>>(p: U): String = super.<<torename>>(p) }
       |""".stripMargin,
-    newName = "newname"
+    newName = "newname",
   )
 
   renamed(
@@ -105,7 +105,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
       |trait B extends A { override def <<tore@@name>>(a: String): PP = ??? }
       |
       |""".stripMargin,
-    newName = "newname"
+    newName = "newname",
   )
 
   renamed(
@@ -122,7 +122,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val toRename = Main.<<toR@@ename>>
        |}
        |""".stripMargin,
-    newName = "otherRename"
+    newName = "otherRename",
   )
 
   renamed(
@@ -138,7 +138,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "Bar"
+    newName = "Bar",
   )
 
   renamed(
@@ -154,7 +154,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "str"
+    newName = "str",
   )
 
   renamed(
@@ -168,7 +168,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "otherRename"
+    newName = "otherRename",
   )
 
   renamed(
@@ -181,7 +181,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  if(<<method>>("")) println("Is true!")
        |}
        |""".stripMargin,
-    newName = "truth"
+    newName = "truth",
   )
 
   renamed(
@@ -196,7 +196,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val a = new Alphabet with <<ABC>>
        |}
        |""".stripMargin,
-    newName = "Animal"
+    newName = "Animal",
   )
 
   renamed(
@@ -211,7 +211,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  def <<met@@hod>>(abc : String) = true
        |}
        |""".stripMargin,
-    newName = "truth"
+    newName = "truth",
   )
 
   renamed(
@@ -230,7 +230,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  def <<meth@@od>>(abc : String) : Boolean = false
        |}
        |""".stripMargin,
-    newName = "truth"
+    newName = "truth",
   )
 
   renamed(
@@ -249,7 +249,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  override def <<meth@@od>>(abc : String) : Boolean = false
        |}
        |""".stripMargin,
-    newName = "truth"
+    newName = "truth",
   )
 
   renamed(
@@ -264,7 +264,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val toRename = User##.##<<>>("abc")
        |}
        |""".stripMargin,
-    newName = "name"
+    newName = "name",
   )
 
   same(
@@ -278,7 +278,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val user = new User()
        |  "" <<::>> user
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   renamed(
@@ -293,7 +293,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  "" <<::>> user
        |}
        |""".stripMargin,
-    newName = "+++:"
+    newName = "+++:",
   )
 
   same(
@@ -307,7 +307,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val user = new User()
        |  <<@@!>>user
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   same(
@@ -321,7 +321,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val user = new User()
        |  <<!>>user
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   same(
@@ -331,7 +331,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |class MyException extends Exce@@ption
        |class NewException extends RuntimeException
        |class NewException2 extends RuntimeException
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   renamed(
@@ -342,7 +342,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |class Dog extends <<Animal>>
        |class Cat extends <<Animal>>
        |""".stripMargin,
-    newName = "Tree"
+    newName = "Tree",
   )
 
   renamed(
@@ -354,7 +354,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |""".stripMargin,
     newName = "Tree",
     fileRenames =
-      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala"),
   )
 
   renamed(
@@ -366,7 +366,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |""".stripMargin,
     newName = "Tree",
     fileRenames =
-      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala"),
   )
 
   renamed(
@@ -378,7 +378,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |""".stripMargin,
     newName = "Tree",
     fileRenames =
-      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala"),
   )
 
   renamed(
@@ -389,7 +389,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |object <<The@@Main>>
        |""".stripMargin,
     newName = "Tree",
-    fileRenames = Map.empty
+    fileRenames = Map.empty,
   )
 
   renamed(
@@ -424,8 +424,8 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
     nonOpened = Set(
       "a/src/main/scala/a/C.scala",
       "a/src/main/scala/a/D.scala",
-      "a/src/main/scala/a/E.scala"
-    )
+      "a/src/main/scala/a/E.scala",
+    ),
   )
 
   renamed(
@@ -445,7 +445,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "renamed"
+    newName = "renamed",
   )
 
   renamed(
@@ -465,7 +465,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val other = new <<Oth@@er>>()
        |}
        |""".stripMargin,
-    newName = "Renamed"
+    newName = "Renamed",
   )
 
   renamed(
@@ -485,7 +485,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val other = new <<Oth@@er>>()
        |}
        |""".stripMargin,
-    newName = "Renamed"
+    newName = "Renamed",
   )
 
   renamed(
@@ -503,7 +503,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |""".stripMargin,
     newName = "otherRename",
     breakingChange = (str: String) => str.replaceAll("Int", "String"),
-    expectedError = true
+    expectedError = true,
   )
 
   renamed(
@@ -518,7 +518,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  case object Cat extends <<Animal>>
        |}
        |""".stripMargin,
-    "Tree"
+    "Tree",
   )
 
   renamed(
@@ -533,7 +533,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  case object Cat extends Animal
        |}
        |""".stripMargin,
-    "Tree"
+    "Tree",
   )
 
   renamed(
@@ -544,7 +544,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |@JsonCodec
        |final case class <<Ma@@in2>>(name: String)
        |""".stripMargin,
-    "Tree"
+    "Tree",
   )
 
   renamed(
@@ -564,7 +564,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val dog : <<An@@imal>> = <<Animal>>.Dog
        |}
        |""".stripMargin,
-    "Tree"
+    "Tree",
   )
 
   renamed(
@@ -576,7 +576,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  def m[A](implicit a: A): A = a
        |  m[Int]
        |}""".stripMargin,
-    newName = "anotherName"
+    newName = "anotherName",
   )
 
   renamed(
@@ -588,7 +588,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |}
        |""".stripMargin,
     newName = "Child",
-    fileRenames = Map.empty
+    fileRenames = Map.empty,
   )
 
   renamed(
@@ -604,7 +604,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val toRename = Main.<<toR@@ename>>
        |}
        |""".stripMargin,
-    newName = "other-rename"
+    newName = "other-rename",
   )
 
   renamed(
@@ -618,7 +618,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val toRename = Main.<<`to-R@@ename`>>
        |}
        |""".stripMargin,
-    newName = "`other-rename`"
+    newName = "`other-rename`",
   )
 
   renamed(
@@ -632,7 +632,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "other"
+    newName = "other",
   )
 
   renamed(
@@ -646,7 +646,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "greeting-!"
+    newName = "greeting-!",
   )
 
   renamed(
@@ -660,7 +660,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "other"
+    newName = "other",
   )
 
   renamed(
@@ -676,7 +676,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "other"
+    newName = "other",
   )
 
   // If renaming in VS Code, backticks are taken as part of the name
@@ -693,7 +693,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "`greeting`"
+    newName = "`greeting`",
   )
 
   renamed(
@@ -709,7 +709,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val name2 = Name(<<value>> = "44")
        |}
        |""".stripMargin,
-    newName = "name"
+    newName = "name",
   )
 
   renamed(
@@ -721,7 +721,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val name2 = new Name(<<value>> = "44")
        |}
        |""".stripMargin,
-    newName = "name"
+    newName = "name",
   )
 
   renamed(
@@ -735,7 +735,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val b = new CBD[<<ABC>>]
        |}
        |""".stripMargin,
-    newName = "Animal"
+    newName = "Animal",
   )
 
   renamed(
@@ -750,7 +750,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  val x = bar
        |}
        |""".stripMargin,
-    newName = "foo2"
+    newName = "foo2",
   )
 
   renamed(
@@ -774,7 +774,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
           |  }
           |}""".stripMargin
     ),
-    newName = "C"
+    newName = "C",
   )
 
   renamed(
@@ -792,7 +792,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "NewSymbol"
+    newName = "NewSymbol",
   )
 
   renamed(
@@ -810,7 +810,7 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "NewSymbol"
+    newName = "NewSymbol",
   )
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")

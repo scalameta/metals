@@ -19,7 +19,7 @@ class RenameCrossLspSuite extends BaseRenameLspSuite("rename-cross") {
        |}
        |""".stripMargin,
     newName = "greeting",
-    scalaVersion = Some(V.scala3)
+    scalaVersion = Some(V.scala3),
   )
 
   renamed(
@@ -32,7 +32,7 @@ class RenameCrossLspSuite extends BaseRenameLspSuite("rename-cross") {
        |end extension
        |""".stripMargin,
     newName = "greeting",
-    scalaVersion = Some(V.scala3)
+    scalaVersion = Some(V.scala3),
   )
 
   renamed(
@@ -45,7 +45,7 @@ class RenameCrossLspSuite extends BaseRenameLspSuite("rename-cross") {
        |end extension
        |""".stripMargin,
     newName = "greeting",
-    scalaVersion = Some(V.scala3)
+    scalaVersion = Some(V.scala3),
   )
 
 }

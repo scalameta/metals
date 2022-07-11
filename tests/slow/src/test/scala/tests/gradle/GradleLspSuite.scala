@@ -44,8 +44,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -66,8 +66,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         List(
           // Project has .bloop directory so user is asked to "re-import project"
           importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
     }
   }
@@ -105,8 +105,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -124,7 +124,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       assertNoDiff(
         client.workspaceMessageRequests,
         // Project has .bloop directory so user is asked to "re-import project"
-        importBuildChangesMessage
+        importBuildChangesMessage,
       )
     }
   }
@@ -158,8 +158,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear()
       _ = assertStatus(_.isInstalled)
@@ -170,8 +170,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         new ScalaMainClass(
           "a.Main",
           Nil.asJava,
-          Nil.asJava
-        )
+          Nil.asJava,
+        ),
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -202,8 +202,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear()
       _ = assertStatus(_.isInstalled)
@@ -231,8 +231,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ <- server.executeCommand(ServerCommands.ImportBuild)
@@ -240,7 +240,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         client.workspaceMessageRequests,
         List(
           progressMessage
-        ).mkString("\n")
+        ).mkString("\n"),
       )
     } yield ()
   }
@@ -293,18 +293,18 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         """|/build.gradle
            |, syntax error
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
-        ImportProjectFailed.getMessage
+        ImportProjectFailed.getMessage,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
@@ -324,8 +324,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -395,13 +395,13 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
            |package a
            |object A // ${V.scala213}
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
         // only main projects since no empty test targets are created for gradle
-        CheckDoctor.multipleMisconfiguredProjects(5)
+        CheckDoctor.multipleMisconfiguredProjects(5),
       )
       _ <- Future.sequence(
         ('a' to 'f')
@@ -455,7 +455,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
           |src/main/scala/warning/Warning.scala:1:1: error: Unused import
           |import scala.concurrent.Future // unused
           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        """.stripMargin
+        """.stripMargin,
       )
       // we should still have references despite fatal warning
       _ = assertNoDiff(
@@ -463,7 +463,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         """|_empty_/A.
            |_empty_/A.B.
            |_empty_/Warning.
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

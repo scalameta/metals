@@ -23,7 +23,7 @@ import org.eclipse.{lsp4j => l}
 
 private final case class CompilationStatus(
     code: bsp4j.StatusCode,
-    errors: Int
+    errors: Int,
 )
 
 /**
@@ -44,7 +44,7 @@ final class Diagnostics(
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
     workspace: Option[AbsolutePath],
-    trees: Trees
+    trees: Trees,
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -81,7 +81,7 @@ final class Diagnostics(
 
   def onFinishCompileBuildTarget(
       report: bsp4j.CompileReport,
-      statusCode: bsp4j.StatusCode
+      statusCode: bsp4j.StatusCode,
   ): Unit = {
     publishDiagnosticsBuffer()
 
@@ -117,7 +117,7 @@ final class Diagnostics(
     languageClient.publishDiagnostics(
       new PublishDiagnosticsParams(
         path.toURI.toString(),
-        ju.Collections.emptyList()
+        ju.Collections.emptyList(),
       )
     )
   }
@@ -133,20 +133,20 @@ final class Diagnostics(
     onPublishDiagnostics(
       path,
       params.getDiagnostics().asScala.map(_.toLSP).toSeq,
-      params.getReset()
+      params.getReset(),
     )
   }
 
   def onPublishDiagnostics(
       path: AbsolutePath,
       diagnostics: Seq[Diagnostic],
-      isReset: Boolean
+      isReset: Boolean,
   ): Unit = {
     val isSamePathAsLastDiagnostic = path == lastPublished.get()
     lastPublished.set(path)
     val queue = this.diagnostics.getOrElseUpdate(
       path,
-      new ConcurrentLinkedQueue[Diagnostic]()
+      new ConcurrentLinkedQueue[Diagnostic](),
     )
     if (isReset) {
       queue.clear()
@@ -175,7 +175,7 @@ final class Diagnostics(
   private def publishDiagnostics(path: AbsolutePath): Unit = {
     publishDiagnostics(
       path,
-      diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]())
+      diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]()),
     )
   }
 
@@ -204,7 +204,7 @@ final class Diagnostics(
 
   private def publishDiagnostics(
       path: AbsolutePath,
-      queue: ju.Queue[Diagnostic]
+      queue: ju.Queue[Diagnostic],
   ): Unit = {
     if (!path.isFile) return didDelete(path)
     val current = path.toInputFromBuffers(buffers)
@@ -213,7 +213,7 @@ final class Diagnostics(
       snapshot,
       current,
       trees,
-      doNothingWhenUnchanged = false
+      doNothingWhenUnchanged = false,
     )
     val uri = path.toURI.toString
     val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
@@ -248,21 +248,21 @@ final class Diagnostics(
   private def toFreshDiagnostic(
       edit: TokenEditDistance,
       d: Diagnostic,
-      snapshot: Input
+      snapshot: Input,
   ): Option[Diagnostic] = {
     val result = edit.toRevised(d.getRange).map { range =>
       new l.Diagnostic(
         range,
         d.getMessage,
         d.getSeverity,
-        d.getSource
+        d.getSource,
       )
     }
     if (result.isEmpty) {
       val pos = d.getRange.toMeta(snapshot)
       val message = pos.formatMessage(
         s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
-        d.getMessage
+        d.getMessage,
       )
       scribe.info(message)
     }

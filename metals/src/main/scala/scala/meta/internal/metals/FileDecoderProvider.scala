@@ -45,7 +45,7 @@ import coursierapi._
 final case class DecoderResponse(
     requestedUri: String,
     @Nullable value: String,
-    @Nullable error: String
+    @Nullable error: String,
 )
 
 object DecoderResponse {
@@ -90,19 +90,19 @@ final class FileDecoderProvider(
     interactiveSemanticdbs: InteractiveSemanticdbs,
     languageClient: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
-    classFinder: ClassFinder
+    classFinder: ClassFinder,
 )(implicit ec: ExecutionContext) {
 
   private case class PathInfo(
       targetId: BuildTargetIdentifier,
-      path: AbsolutePath
+      path: AbsolutePath,
   )
   private case class BuildTargetMetadata(
       targetId: BuildTargetIdentifier,
       classDir: AbsolutePath,
       targetRoot: AbsolutePath,
       workspaceDir: AbsolutePath,
-      sourceRoot: AbsolutePath
+      sourceRoot: AbsolutePath,
   )
 
   /**
@@ -166,7 +166,7 @@ final class FileDecoderProvider(
             Future.successful(
               DecoderResponse.failed(
                 uri,
-                s"Unexpected scheme ${uri.getScheme()}"
+                s"Unexpected scheme ${uri.getScheme()}",
               )
             )
         }
@@ -199,7 +199,7 @@ final class FileDecoderProvider(
   private val semanticdbExtensions = Set(
     "semanticdb-compact",
     "semanticdb-detailed",
-    "semanticdb-proto"
+    "semanticdb-proto",
   )
 
   private def decodeMetalsFile(
@@ -209,7 +209,7 @@ final class FileDecoderProvider(
       "javap",
       "javap-verbose",
       "tasty-decoded",
-      "cfr"
+      "cfr",
     ) ++ semanticdbExtensions
     val additionalExtension = uri.toString().split('.').toList.last
     if (supportedExtensions(additionalExtension)) {
@@ -253,7 +253,7 @@ final class FileDecoderProvider(
 
   private def toFile(
       uri: URI,
-      suffixToRemove: String
+      suffixToRemove: String,
   ): Either[DecoderResponse, AbsolutePath] = {
     val strippedURI = uri.toString.stripSuffix(suffixToRemove)
     Try {
@@ -267,7 +267,7 @@ final class FileDecoderProvider(
 
   private def decodeJavaOrScalaOrClass(
       path: AbsolutePath,
-      decode: AbsolutePath => Future[DecoderResponse]
+      decode: AbsolutePath => Future[DecoderResponse],
   ): Future[DecoderResponse] = {
     if (path.isClassfile) decode(path)
     else if (path.isJava) {
@@ -285,7 +285,7 @@ final class FileDecoderProvider(
       Future.successful(
         DecoderResponse.failed(
           path.toURI,
-          """Invalid extension. Metals can only decode ".java" or ".scala" files."""
+          """Invalid extension. Metals can only decode ".java" or ".scala" files.""",
         )
       )
   }
@@ -302,7 +302,7 @@ final class FileDecoderProvider(
 
   private def decodeSemanticDb(
       path: AbsolutePath,
-      format: Format
+      format: Format,
   ): DecoderResponse = {
     if (path.isScalaOrJava)
       interactiveSemanticdbs
@@ -336,7 +336,7 @@ final class FileDecoderProvider(
       Future.successful(
         DecoderResponse.failed(
           path.toURI,
-          "Decoding tasty is only supported in Scala 3 for now."
+          "Decoding tasty is only supported in Scala 3 for now.",
         )
       )
     } else if (path.isTasty) {
@@ -346,7 +346,7 @@ final class FileDecoderProvider(
           Future.successful(
             DecoderResponse.failed(
               path.toURI,
-              "Cannot find build target for a given file"
+              "Cannot find build target for a given file",
             )
           )
       }
@@ -359,7 +359,7 @@ final class FileDecoderProvider(
 
   private def findPathInfoFromJavaSource(
       sourceFile: AbsolutePath,
-      newExtension: String
+      newExtension: String,
   ): Either[String, PathInfo] =
     findBuildTargetMetadata(sourceFile)
       .map(metadata => {
@@ -393,7 +393,7 @@ final class FileDecoderProvider(
   private def selectClassFromScalaFileAndDecode[T](
       requestedURI: URI,
       path: AbsolutePath,
-      includeInnerClasses: Boolean
+      includeInnerClasses: Boolean,
   )(decode: PathInfo => Future[DecoderResponse]): Future[DecoderResponse] = {
     val availableClasses = classFinder.findAllClasses(path, includeInnerClasses)
     availableClasses match {
@@ -420,7 +420,7 @@ final class FileDecoderProvider(
         Future.successful(
           DecoderResponse.failed(
             requestedURI,
-            "File doesn't contain any definitions"
+            "File doesn't contain any definitions",
           )
         )
     }
@@ -432,7 +432,7 @@ final class FileDecoderProvider(
         classes
           .map(c => MetalsQuickPickItem(c.path, c.friendlyName, c.description))
           .asJava,
-        placeHolder = "Pick the class you want to decode"
+        placeHolder = "Pick the class you want to decode",
       )
       languageClient
         .metalsQuickPick(quickPickParams)
@@ -455,7 +455,7 @@ final class FileDecoderProvider(
             relativePath,
             metadata.targetRoot,
             sourceFile,
-            workspace
+            workspace,
           )
           .toRight(
             s"Cannot find semanticDB for ${sourceFile.toURI.toString}"
@@ -500,7 +500,7 @@ final class FileDecoderProvider(
       classDir.toAbsolutePath,
       targetroot,
       workspaceDirectory,
-      sourceRoot
+      sourceRoot,
     )
     metadata.toRight(
       s"Cannot find build's metadata for ${sourceFile.toURI.toString()}"
@@ -533,7 +533,7 @@ final class FileDecoderProvider(
             sbErr.append(Properties.lineSeparator)
           },
           propagateError = true,
-          logInfo = false
+          logInfo = false,
         )
         .map(_ => {
           if (sbErr.nonEmpty)
@@ -610,7 +610,7 @@ final class FileDecoderProvider(
         // analyseAs - must be lowercase
         "--analyseas",
         "CLASS",
-        s"$className"
+        s"$className",
       )
 
     val sbOut = new StringBuilder()
@@ -631,13 +631,13 @@ final class FileDecoderProvider(
             sbErr.append(s)
             sbErr.append(Properties.lineSeparator)
           },
-          propagateError = true
+          propagateError = true,
         )
         .map(_ => {
           if (sbOut.isEmpty && sbErr.nonEmpty)
             DecoderResponse.failed(
               path.toURI,
-              s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}"
+              s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}",
             )
           else
             DecoderResponse.success(path.toURI, sbOut.toString)
@@ -651,7 +651,7 @@ final class FileDecoderProvider(
 
   private def decodeFromSemanticDB(
       path: AbsolutePath,
-      decode: Reporter => Unit
+      decode: Reporter => Unit,
   ): DecoderResponse =
     Try {
       val out = new ByteArrayOutputStream()
@@ -680,7 +680,7 @@ final class FileDecoderProvider(
   private def decodeFromSemanticDBTextDocument(
       path: AbsolutePath,
       document: TextDocument,
-      format: Format
+      format: Format,
   ): DecoderResponse =
     decodeFromSemanticDB(
       path,
@@ -688,12 +688,12 @@ final class FileDecoderProvider(
         val settings = Settings().withFormat(format)
         val printer = new DocumentPrinter(settings, reporter, document)
         printer.print()
-      }
+      },
     )
 
   private def decodeFromSemanticDBFile(
       path: AbsolutePath,
-      format: Format
+      format: Format,
   ): DecoderResponse =
     decodeFromSemanticDB(
       path,
@@ -704,7 +704,7 @@ final class FileDecoderProvider(
             .withFormat(format)
         val main = new Main(settings, reporter)
         main.process()
-      }
+      },
     )
 
   private def decodeFromTastyFile(
@@ -714,14 +714,14 @@ final class FileDecoderProvider(
       case Some(pc) =>
         pc.getTasty(
           pathInfo.path.toURI,
-          clientConfig.isHttpEnabled()
+          clientConfig.isHttpEnabled(),
         ).asScala
           .map(DecoderResponse.success(pathInfo.path.toURI, _))
       case None =>
         Future.successful(
           DecoderResponse.failed(
             pathInfo.path.toURI,
-            "Cannot load presentation compiler"
+            "Cannot load presentation compiler",
           )
         )
     }
@@ -737,7 +737,7 @@ final class FileDecoderProvider(
 
   def chooseClassFromFile(
       path: AbsolutePath,
-      includeInnerClasses: Boolean
+      includeInnerClasses: Boolean,
   ): Future[DecoderResponse] =
     selectClassFromScalaFileAndDecode(path.toURI, path, includeInnerClasses) {
       pathInfo =>
@@ -750,7 +750,7 @@ final class FileDecoderProvider(
 object FileDecoderProvider {
   def createBuildTargetURI(
       workspace: AbsolutePath,
-      buildTargetName: String
+      buildTargetName: String,
   ): URI =
     URI.create(
       s"metalsDecode:${URLEncoder.encode(s"file:///${workspace.filename}/${buildTargetName}.metals-buildtarget")}"

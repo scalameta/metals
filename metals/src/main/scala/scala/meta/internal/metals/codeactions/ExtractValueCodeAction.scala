@@ -23,7 +23,7 @@ import org.eclipse.{lsp4j => l}
 
 class ExtractValueCodeAction(
     trees: Trees,
-    buffers: Buffers
+    buffers: Buffers,
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorExtract
 
@@ -36,7 +36,7 @@ class ExtractValueCodeAction(
     val applyOpt = trees.findLastEnclosingAt[Term.Apply](
       path,
       range.getStart(),
-      appl => appl.args.exists(_.pos.encloses(range))
+      appl => appl.args.exists(_.pos.encloses(range)),
     )
 
     val textEdits = for {
@@ -97,7 +97,7 @@ class ExtractValueCodeAction(
       stat: Tree,
       source: String,
       valueString: String,
-      blank: Char
+      blank: Char,
   ): Seq[l.TextEdit] = {
 
     def defnEqualsPos(defn: Defn.Def): Option[Position] = defn.tokens.reverse
@@ -133,7 +133,7 @@ class ExtractValueCodeAction(
               startBlockPos,
               s"""|
                   |$additionalIndent$valueString
-                  |$innerIndentation""".stripMargin
+                  |$innerIndentation""".stripMargin,
             )
           )
         }
@@ -150,7 +150,7 @@ class ExtractValueCodeAction(
             new l.TextEdit(
               statStart,
               s"""|$indentStat${valueString.trim()}
-                  |$innerIndentation""".stripMargin
+                  |$innerIndentation""".stripMargin,
             )
           )
         }

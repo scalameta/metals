@@ -35,7 +35,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -68,7 +68,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -96,7 +96,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   // Test ScalacDiagnostic can capture the multiple lines of diagnostic message.
@@ -129,7 +129,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -153,7 +153,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -181,7 +181,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -217,7 +217,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -244,6 +244,6 @@ class ImplementAbstractMembersLspSuite
        |  override def readExternal(in: ObjectInput): Unit = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 }

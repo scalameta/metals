@@ -47,7 +47,7 @@ final class SyntheticsDecorationProvider(
     focusedDocument: () => Option[AbsolutePath],
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
-    trees: Trees
+    trees: Trees,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider {
   private object Document {
@@ -69,7 +69,7 @@ final class SyntheticsDecorationProvider(
    */
   def publishSynthetics(
       path: AbsolutePath,
-      isRefresh: Boolean = false
+      isRefresh: Boolean = false,
   ): Future[Unit] = Future {
     if (isRefresh && !areSyntheticsEnabled) publish(path, Nil)
     else if (areSyntheticsEnabled) {
@@ -83,7 +83,7 @@ final class SyntheticsDecorationProvider(
 
   override def onChange(
       textDocument: TextDocuments,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Unit = {
     for {
       focused <- focusedDocument()
@@ -104,7 +104,7 @@ final class SyntheticsDecorationProvider(
 
   def addSyntheticsHover(
       params: HoverExtParams,
-      pcHover: Option[l.Hover]
+      pcHover: Option[l.Hover],
   ): Option[l.Hover] =
     if (areSyntheticsEnabled) {
       val path = params.textDocument.getUri().toAbsolutePath
@@ -118,7 +118,7 @@ final class SyntheticsDecorationProvider(
             isHover = true,
             toHoverString(textDocument, params.textDocument.getUri()),
             PrinterSymtab.fromTextDocument(textDocument),
-            clientConfig.icons().rightArrow
+            clientConfig.icons().rightArrow,
           )
           val syntheticsAtLine = for {
             synthetic <- textDocument.synthetics
@@ -132,7 +132,7 @@ final class SyntheticsDecorationProvider(
                 textDocument,
                 synthetic,
                 userConfig(),
-                isInlineProvider = clientConfig.isInlineDecorationProvider()
+                isInlineProvider = clientConfig.isInlineDecorationProvider(),
               )
               .toIterable
             if range.endLine == line
@@ -146,7 +146,7 @@ final class SyntheticsDecorationProvider(
               createHoverAtPoint(
                 syntheticsAtLine,
                 pcHover,
-                params.getPosition
+                params.getPosition,
               )
             } else {
               createHoverAtLine(path, syntheticsAtLine, pcHover).orElse(
@@ -186,13 +186,13 @@ final class SyntheticsDecorationProvider(
 
   private def publish(
       path: AbsolutePath,
-      decorations: Seq[DecorationOptions]
+      decorations: Seq[DecorationOptions],
   ): Unit = {
     val params =
       new PublishDecorationsParams(
         path.toURI.toString(),
         decorations.toArray,
-        if (clientConfig.isInlineDecorationProvider()) true else null
+        if (clientConfig.isInlineDecorationProvider()) true else null,
       )
 
     client.metalsPublishDecorations(params)
@@ -205,7 +205,7 @@ final class SyntheticsDecorationProvider(
   private def createHoverAtPoint(
       syntheticsAtLine: Seq[(l.Range, String)],
       pcHover: Option[l.Hover],
-      position: l.Position
+      position: l.Position,
   ): Option[l.Hover] = {
     val interestingSynthetics = syntheticsAtLine.collect {
       case (range, text)
@@ -217,7 +217,7 @@ final class SyntheticsDecorationProvider(
       addToHover(
         pcHover,
         "**Synthetics**:\n\n"
-          + interestingSynthetics.mkString("\n")
+          + interestingSynthetics.mkString("\n"),
       )
     else None
   }
@@ -225,7 +225,7 @@ final class SyntheticsDecorationProvider(
   private def createHoverAtLine(
       path: AbsolutePath,
       syntheticsAtLine: Seq[(l.Range, String)],
-      pcHover: Option[l.Hover]
+      pcHover: Option[l.Hover],
   ): Option[l.Hover] =
     Try {
       val line = syntheticsAtLine.head._1.getEnd().getLine()
@@ -239,7 +239,7 @@ final class SyntheticsDecorationProvider(
   private def createLine(
       syntheticsAtLine: Seq[(l.Range, String)],
       pcHover: Option[l.Hover],
-      lineText: String
+      lineText: String,
   ) = {
     val withEnd = syntheticsAtLine
       .map { case (range, str) =>
@@ -256,13 +256,13 @@ final class SyntheticsDecorationProvider(
     addToHover(
       pcHover,
       "**With synthetics added**:\n"
-        + HoverMarkup(lineWithDecorations.trim())
+        + HoverMarkup(lineWithDecorations.trim()),
     )
   }
 
   private def addToHover(
       pcHover: Option[l.Hover],
-      text: String
+      text: String,
   ): Option[l.Hover] = {
     // Left is not handled currently, but we do not use it in Metals
     if (pcHover.exists(_.getContents().isLeft())) {
@@ -276,7 +276,7 @@ final class SyntheticsDecorationProvider(
         new l.Hover(
           new l.MarkupContent(
             l.MarkupKind.MARKDOWN,
-            previousContent + "\n" + text
+            previousContent + "\n" + text,
           )
         )
       )
@@ -296,7 +296,7 @@ final class SyntheticsDecorationProvider(
 
   private def enrichWithText(
       textDocument: Option[s.TextDocument],
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Option[TextDocument] = {
     for {
       doc <- textDocument
@@ -315,7 +315,7 @@ final class SyntheticsDecorationProvider(
 
   private def fullyQualifiedName(
       symbol: String,
-      textDoc: TextDocument
+      textDoc: TextDocument,
   ): String = {
     if (symbol.isLocal) localSymbolName(symbol, textDoc)
     else {
@@ -350,7 +350,7 @@ final class SyntheticsDecorationProvider(
       symbol: String,
       textDocument: s.TextDocument,
       uri: String,
-      format: CommandHTMLFormat
+      format: CommandHTMLFormat,
   ): Option[String] = {
     if (symbol.isLocal) {
       textDocument.occurrences.collectFirst {
@@ -366,7 +366,7 @@ final class SyntheticsDecorationProvider(
   private def gotoLocationUsingUri(
       uri: String,
       range: s.Range,
-      format: CommandHTMLFormat
+      format: CommandHTMLFormat,
   ): String = {
     val location = ClientCommands.WindowLocation(uri, range.toLSP)
     ClientCommands.GotoLocation.toCommandLink(location, format)
@@ -374,7 +374,7 @@ final class SyntheticsDecorationProvider(
 
   private def gotoSymbolUsingUri(
       symbol: String,
-      format: CommandHTMLFormat
+      format: CommandHTMLFormat,
   ): String = {
     ServerCommands.GotoSymbol.toCommandLink(symbol, format)
   }
@@ -392,7 +392,7 @@ final class SyntheticsDecorationProvider(
 
   private def decorationOptions(
       lspRange: l.Range,
-      decorationText: String
+      decorationText: String,
   ) = {
     // We don't add hover due to https://github.com/microsoft/vscode/issues/105302
     new DecorationOptions(
@@ -402,15 +402,15 @@ final class SyntheticsDecorationProvider(
           decorationText,
           color = "grey",
           fontStyle = "italic",
-          opacity = 0.7
+          opacity = 0.7,
         )
-      )
+      ),
     )
   }
 
   private def decorations(
       path: AbsolutePath,
-      textDocument: TextDocument
+      textDocument: TextDocument,
   ): Seq[DecorationOptions] = {
     if (clientConfig.isInlineDecorationProvider()) {
 
@@ -420,7 +420,7 @@ final class SyntheticsDecorationProvider(
         isHover = false,
         toDecorationString(textDocument),
         PrinterSymtab.fromTextDocument(textDocument),
-        clientConfig.icons().rightArrow
+        clientConfig.icons().rightArrow,
       )
 
       val decorations = for {
@@ -429,7 +429,7 @@ final class SyntheticsDecorationProvider(
           .printSyntheticInfo(
             textDocument,
             synthetic,
-            userConfig()
+            userConfig(),
           )
           .toIterable
         currentRange <- edit.toRevisedStrict(range).toIterable
@@ -448,7 +448,7 @@ final class SyntheticsDecorationProvider(
   private def typeDecorations(
       path: AbsolutePath,
       textDocument: TextDocument,
-      decorationPrinter: SemanticdbTreePrinter
+      decorationPrinter: SemanticdbTreePrinter,
   ) = {
 
     val methodPositions = mutable.Map.empty[s.Range, s.Range]
@@ -539,12 +539,12 @@ final class SyntheticsDecorationProvider(
       semanticDbToTreeEdit = TokenEditDistance(
         textDocumentInput,
         treeInput,
-        trees
+        trees,
       )
       treeToBufferEdit = buffer.tokenEditDistance(
         path,
         tree.pos.input.text,
-        trees
+        trees,
       )
       occ <- textDocument.occurrences
       range <- occ.range.toIterable

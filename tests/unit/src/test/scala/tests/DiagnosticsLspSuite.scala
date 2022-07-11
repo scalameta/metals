@@ -62,7 +62,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       }
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        exampleDiagnostics + mainDiagnostics
+        exampleDiagnostics + mainDiagnostics,
       )
       _ <- server.didOpen("b/src/main/scala/a/MainSuite.scala")
       testDiagnostics = {
@@ -76,7 +76,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       }
       _ = assertNoDiff(
         client.pathDiagnostics("b/src/main/scala/a/MainSuite.scala"),
-        testDiagnostics
+        testDiagnostics,
       )
       // This seems to be currently broken on CI - diagnostics not being refreshed
       // _ <- server.didSave("b/src/main/scala/a/MainSuite.scala")(
@@ -119,7 +119,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |a/src/main/scala/Main.scala:3:7: error: a  is already defined as value a
            |  val a = 2
            |      ^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/Main.scala")(
         _.replace("val a = 1\n  ", "")
@@ -153,7 +153,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |  def post: Int // inherited from trait Post
            |object Post extends Post
            |^^^^^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -180,7 +180,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
         """|a/src/main/scala/a/Deprecation.scala:3:16: error: value Stream in package scala is deprecated (since 2.13.0): Use LazyList instead of Stream
            |  val stream = Stream.empty
            |               ^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -216,7 +216,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
         """
           |a/src/main/scala/a/Expo1.scala: 2
           |a/src/main/scala/a/Expo2.scala: 2
-          |""".stripMargin
+          |""".stripMargin,
       )
     } yield ()
   }
@@ -251,7 +251,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            | required: String
            |  val x: String = 42
            |                  ^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.executeCommand(ServerCommands.DisconnectBuildServer)
       _ = assertNoDiagnostics()
@@ -290,7 +290,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            | required: String
            |  val a: String = 2
            |                  ^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = Files.delete(server.toPath("a/src/main/scala/a/B.scala").toNIO)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
@@ -323,7 +323,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            | required: Int
            |  val n: Int = ""
            |               ^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

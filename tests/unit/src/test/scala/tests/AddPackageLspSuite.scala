@@ -13,7 +13,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
     "a/src/main/scala/a/Main.scala",
     """|package a
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check("package-file")(
@@ -21,7 +21,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
     """|package object a {
        |  
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check("package-file-multi")(
@@ -31,31 +31,31 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
        |package object c {
        |  
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check("multilevel")(
     "a/src/main/scala/a/b/c/Main.scala",
     """|package a.b.c
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check("no-package")(
     "a/src/main/scala/Main.scala",
-    ""
+    "",
   )
 
   check("java-file")(
     "a/src/main/scala/Main.java",
-    ""
+    "",
   )
 
   check("escaped-name")(
     "a/src/main/scala/type/a/this/Main.scala",
     """|package `type`.a.`this`
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check("escaped-name-object")(
@@ -65,12 +65,12 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
        |package object `this` {
        |  
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   def check(name: TestOptions)(
       fileToCreate: String,
-      expectedContent: String
+      expectedContent: String,
   ): Unit = {
     test(name) {
       val parent = Paths.get(fileToCreate).getParent()
@@ -93,7 +93,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
         _ <- server.didOpen(fileToCreate)
         _ = assertNoDiff(
           client.buffers.get(workspace.resolve(fileToCreate)).getOrElse(""),
-          expectedContent
+          expectedContent,
         )
       } yield ()
     }

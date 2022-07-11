@@ -54,7 +54,7 @@ class CompilerPlugins {
 
   private val isSupportedPlugin = Set(
     "kind-projector", // https://github.com/non/kind-projector
-    "bm4" // https://github.com/oleg-py/better-monadic-for
+    "bm4", // https://github.com/oleg-py/better-monadic-for
     // Intentionally not supported:
     // "macro-paradise-plugin", see https://github.com/scalameta/metals/issues/622
   )

@@ -36,7 +36,7 @@ import scala.meta.io.Classpath
 class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
   private val cache = TrieMap.empty[
     AbsolutePath,
-    TrieMap[String, Array[TreeViewSymbolInformation]]
+    TrieMap[String, Array[TreeViewSymbolInformation]],
   ]
 
   def clearCache(path: AbsolutePath): Unit = {
@@ -49,7 +49,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
 
   def symbols(
       in: AbsolutePath,
-      symbol: String
+      symbol: String,
   ): Iterator[TreeViewSymbolInformation] = {
     val symbols = cache.getOrElseUpdate(in, TrieMap.empty)
     symbols
@@ -61,7 +61,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
             scribe.info(s"$timer - $in/!$symbol")
           }
           result
-        }
+        },
       )
       .iterator
   }
@@ -70,7 +70,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
   private val isSyntheticMethodName = Set(
     "productElement", "productElementName", "equals", "canEqual", "hashCode",
     "productIterator", "toString", "productPrefix", "unapply", "apply", "copy",
-    "productArity", "readResolve"
+    "productArity", "readResolve",
   )
 
   private def isRelevant(info: SymbolInformation): Boolean =
@@ -91,7 +91,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
 
   private def loadSymbols(
       in: AbsolutePath,
-      symbol: String
+      symbol: String,
   ): Array[TreeViewSymbolInformation] = {
     val index = ClasspathIndex(Classpath(in), false)
     val buf = Array.newBuilder[TreeViewSymbolInformation]
@@ -117,10 +117,10 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
                   buf += TreeViewSymbolInformation(
                     i.symbol,
                     i.kind,
-                    i.properties
+                    i.properties,
                   )
                 }
-              }
+              },
             )
           } catch {
             case NonFatal(ex) =>
@@ -145,7 +145,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
    */
   private def dummyClassfiles(
       root: Path,
-      path: Path
+      path: Path,
   ): collection.Seq[TreeViewSymbolInformation] = {
     val result = mutable.ListBuffer.empty[TreeViewSymbolInformation]
     def isDone = result.lengthCompare(1) > 0
@@ -154,13 +154,13 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
       new SimpleFileVisitor[Path] {
         override def preVisitDirectory(
             dir: Path,
-            attrs: BasicFileAttributes
+            attrs: BasicFileAttributes,
         ): FileVisitResult =
           if (isDone) FileVisitResult.SKIP_SIBLINGS
           else FileVisitResult.CONTINUE
         override def visitFile(
             child: Path,
-            attrs: BasicFileAttributes
+            attrs: BasicFileAttributes,
         ): FileVisitResult = {
           if (isDone) FileVisitResult.CONTINUE
           else {
@@ -170,7 +170,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
                 case (owner, path) =>
                   Symbols.Global(
                     owner,
-                    d.Package(path.filename.stripSuffix("/"))
+                    d.Package(path.filename.stripSuffix("/")),
                   )
               }
               result += TreeViewSymbolInformation(dummySymbol, k.CLASS, 0)
@@ -179,7 +179,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
           }
 
         }
-      }
+      },
     )
     result
   }
@@ -191,7 +191,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
   private def classfileSymbols(
       node: ClassNode,
       index: ClasspathIndex,
-      fn: SymbolInformation => Unit
+      fn: SymbolInformation => Unit,
   ): Unit = {
     node.scalaSig match {
       case Some(scalaSig) =>

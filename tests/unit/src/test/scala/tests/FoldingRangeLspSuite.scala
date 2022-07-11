@@ -32,7 +32,7 @@ class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
           |  }<<region<<
           |
           |  val justAPadding = ???
-          |}<<region<<""".stripMargin
+          |}<<region<<""".stripMargin,
       )
       _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
         "__" + "\n\n" + text
@@ -49,7 +49,7 @@ class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
           |  }<<region<<
           |
           |  val justAPadding = ???
-          |}<<region<<""".stripMargin
+          |}<<region<<""".stripMargin,
       )
     } yield ()
   }

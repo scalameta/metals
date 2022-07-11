@@ -16,7 +16,7 @@ import org.eclipse.lsp4j.MessageActionItem
  */
 final class BuildToolSelector(
     languageClient: MetalsLanguageClient,
-    tables: Tables
+    tables: Tables,
 )(implicit ec: ExecutionContext) {
   def checkForChosenBuildTool(
       buildTools: List[BuildTool]

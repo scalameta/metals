@@ -110,12 +110,12 @@ trait MetalsLanguageClient
 case class RawMetalsInputBoxResult(
     // value=null when cancelled=true
     @Nullable value: String = null,
-    @Nullable cancelled: java.lang.Boolean = null
+    @Nullable cancelled: java.lang.Boolean = null,
 )
 case class RawMetalsQuickPickResult(
     // value=null when cancelled=true
     @Nullable itemId: String = null,
-    @Nullable cancelled: java.lang.Boolean = null
+    @Nullable cancelled: java.lang.Boolean = null,
 )
 
 /**
@@ -133,13 +133,13 @@ case class MetalsStatusParams(
     @Nullable show: java.lang.Boolean = null,
     @Nullable hide: java.lang.Boolean = null,
     @Nullable tooltip: String = null,
-    @Nullable command: String = null
+    @Nullable command: String = null,
 )
 
 case class MetalsSlowTaskParams(
     message: String,
     quietLogs: java.lang.Boolean = null,
-    secondsElapsed: java.lang.Integer = null
+    secondsElapsed: java.lang.Integer = null,
 )
 case class MetalsSlowTaskResult(cancel: Boolean)
 
@@ -155,7 +155,7 @@ case class MetalsInputBoxParams(
     // Set to `true` to keep the input box open when focus moves to another
     // part of the editor or to another window.
     @Nullable ignoreFocusOut: java.lang.Boolean = null,
-    @Nullable valueSelection: Array[Int] = null
+    @Nullable valueSelection: Array[Int] = null,
 )
 
 case class MetalsInputBoxResult(value: String) extends AnyVal
@@ -169,14 +169,14 @@ case class MetalsQuickPickParams(
     // An optional string to show as place holder in the input box to guide the user what to pick on.
     @Nullable placeHolder: String = null,
     // Set to `true` to keep the picker open when focus moves to another part of the editor or to another window.
-    @Nullable ignoreFocusOut: java.lang.Boolean = null
+    @Nullable ignoreFocusOut: java.lang.Boolean = null,
 )
 
 case class MetalsQuickPickResult(itemId: String) extends AnyVal
 
 case class MetalsOpenWindowParams(
     uri: String,
-    openNewWindow: java.lang.Boolean
+    openNewWindow: java.lang.Boolean,
 )
 
 case class MetalsQuickPickItem(
@@ -188,5 +188,5 @@ case class MetalsQuickPickItem(
     // A human readable string which is rendered less prominent.
     @Nullable detail: String = null,
     // Always show this item.
-    @Nullable alwaysShow: java.lang.Boolean = null
+    @Nullable alwaysShow: java.lang.Boolean = null,
 )

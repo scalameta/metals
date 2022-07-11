@@ -16,7 +16,7 @@ val codename = "Aluminium"
 def main(
     firstTag: String,
     lastTag: String,
-    githubToken: Seq[String] = defaultToken.toSeq
+    githubToken: Seq[String] = defaultToken.toSeq,
 ) = {
   val author = os.proc(List("git", "config", "user.name")).call().out.trim()
   val commits = os
@@ -43,7 +43,7 @@ def main(
     s"$firstTag..$lastTag",
     "--first-parent",
     "main",
-    "--pretty=format:%H"
+    "--pretty=format:%H",
   )
 
   val token = githubToken.headOption.getOrElse {
@@ -85,7 +85,7 @@ def main(
       lastTag,
       mergedPRs.toList,
       commits,
-      contributors
+      contributors,
     )
 
   val pathToReleaseNotes =
@@ -105,7 +105,7 @@ def template(
     lastTag: String,
     mergedPrs: List[String],
     commits: Int,
-    contributos: List[String]
+    contributos: List[String],
 ) = {
   s"""|---
       |author: $author

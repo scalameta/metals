@@ -22,7 +22,7 @@ class RewriteBracesParensLspSuite
        |  def foo(n: Int) = ???
        |  foo{5}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -38,7 +38,7 @@ class RewriteBracesParensLspSuite
        |  var x = 0
        |  List(1,2).foreach { a => a }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -60,7 +60,7 @@ class RewriteBracesParensLspSuite
        |    case _ => 1
        |  }}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -76,7 +76,7 @@ class RewriteBracesParensLspSuite
        |  def foo(n: Int) = ???
        |  foo(5)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -91,7 +91,7 @@ class RewriteBracesParensLspSuite
        |  var x = 0
        |  List(1,2).foreach ( a => a )
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -114,7 +114,7 @@ class RewriteBracesParensLspSuite
        |  })
        |}
        |""".stripMargin,
-    selectedActionIndex = 1
+    selectedActionIndex = 1,
   )
 
   checkNoAction(
@@ -127,6 +127,6 @@ class RewriteBracesParensLspSuite
        |    <<>>a 
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 }

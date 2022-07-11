@@ -32,7 +32,7 @@ class MetalsPrinter(
     dotcPrinter: DotcPrinter,
     symbolSearch: SymbolSearch,
     includeDefaultParam: MetalsPrinter.IncludeDefaultParam =
-      IncludeDefaultParam.ResolveLater
+      IncludeDefaultParam.ResolveLater,
 )(using
     Context
 ):
@@ -49,7 +49,7 @@ class MetalsPrinter(
       Erased,
       Inline,
       AbsOverride,
-      Lazy
+      Lazy,
     )
 
   private val defaultWidth = 1000
@@ -133,7 +133,7 @@ class MetalsPrinter(
       gsym: Symbol,
       gtpe: Type,
       onlyMethodParams: Boolean = false,
-      additionalMods: List[String] = Nil
+      additionalMods: List[String] = Nil,
   ): String =
     val namess = gtpe.paramNamess
     val infoss = gtpe.paramInfoss
@@ -182,7 +182,7 @@ class MetalsPrinter(
                 implicitEvidencesByTypeParam,
                 index,
                 defaultValues,
-                nameToInfo
+                nameToInfo,
               ) :: Nil
           index += 1
           lab
@@ -229,7 +229,7 @@ class MetalsPrinter(
   def defaultValueSignature(
       gsym: Symbol,
       gtpe: Type,
-      additionalMods: List[String] = Nil
+      additionalMods: List[String] = Nil,
   ): String =
     val flags = (gsym.flags & methodFlags)
     val flagString =
@@ -293,7 +293,7 @@ class MetalsPrinter(
 
   private def paramssString(
       paramLabels: Iterator[Iterator[String]],
-      paramss: List[List[Symbol]]
+      paramss: List[List[Symbol]],
   )(using Context): Iterator[String] =
     paramLabels
       .zipAll(paramss, Nil, Nil)
@@ -307,13 +307,13 @@ class MetalsPrinter(
             params.mkString(
               "(using ",
               ", ",
-              ")"
+              ")",
             )
           case Params.Kind.Implicit if params.nonEmpty =>
             params.mkString(
               "(implicit ",
               ", ",
-              ")"
+              ")",
             )
           case _ => ""
       }
@@ -328,7 +328,7 @@ class MetalsPrinter(
       implicitEvidences: Map[Symbol, List[String]],
       index: Int,
       defaultValues: => Seq[String],
-      nameToInfo: Map[Name, Type]
+      nameToInfo: Map[Name, Type],
   ): String =
     val keywordName = dotcPrinter.name(param)
     val info = nameToInfo
@@ -409,28 +409,28 @@ object MetalsPrinter:
       indexed: IndexedContext,
       symbolSearch: SymbolSearch,
       includeDefaultParam: IncludeDefaultParam,
-      renames: Map[Symbol, String] = Map.empty
+      renames: Map[Symbol, String] = Map.empty,
   ): MetalsPrinter =
     import indexed.ctx
     MetalsPrinter(
       new ShortenedNames(indexed, renames),
       DotcPrinter.Std(),
       symbolSearch,
-      includeDefaultParam
+      includeDefaultParam,
     )
 
   def forInferredType(
       shortenedNames: ShortenedNames,
       indexed: IndexedContext,
       symbolSearch: SymbolSearch,
-      includeDefaultParam: IncludeDefaultParam
+      includeDefaultParam: IncludeDefaultParam,
   ): MetalsPrinter =
     import shortenedNames.indexedContext.ctx
     MetalsPrinter(
       shortenedNames,
       DotcPrinter.ForInferredType(indexed),
       symbolSearch,
-      includeDefaultParam
+      includeDefaultParam,
     )
 
   enum IncludeDefaultParam:

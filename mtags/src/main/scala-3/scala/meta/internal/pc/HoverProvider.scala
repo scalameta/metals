@@ -32,7 +32,7 @@ object HoverProvider:
   def hover(
       params: OffsetParams,
       driver: InteractiveDriver,
-      search: SymbolSearch
+      search: SymbolSearch,
   ): ju.Optional[Hover] =
     val uri = params.uri
     val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
@@ -62,7 +62,7 @@ object HoverProvider:
         enclosing,
         pos,
         indexedContext,
-        skipCheckOnName
+        skipCheckOnName,
       ) match
         case Nil =>
           ju.Optional.empty()
@@ -78,7 +78,7 @@ object HoverProvider:
           val printer = MetalsPrinter.standard(
             IndexedContext(printerContext),
             search,
-            includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Include
+            includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Include,
           )
 
           val hoverString =
@@ -116,7 +116,7 @@ object HoverProvider:
                 expressionType,
                 hoverString,
                 docString,
-                forceExpressionType
+                forceExpressionType,
               )
               ju.Optional.of(new Hover(content.toMarkupContent))
             case _ =>
@@ -131,7 +131,7 @@ object HoverProvider:
 
   private def expandRangeToEnclosingApply(
       path: List[Tree],
-      pos: SourcePosition
+      pos: SourcePosition,
   )(using Context): List[Tree] =
     def tryTail(enclosing: List[Tree]): Option[List[Tree]] =
       enclosing match

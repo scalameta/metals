@@ -14,7 +14,7 @@ class JunitTestFinder {
   def findTests(
       doc: TextDocument,
       path: AbsolutePath,
-      suiteSymbol: mtags.Symbol
+      suiteSymbol: mtags.Symbol,
   ): Vector[TestCaseEntry] = {
     val uri = path.toURI
 

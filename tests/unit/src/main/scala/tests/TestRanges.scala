@@ -11,7 +11,7 @@ object TestRanges extends RangeReplace {
 
   def renderHighlightsAsString(
       code: String,
-      highlights: List[DocumentHighlight]
+      highlights: List[DocumentHighlight],
   ): String = {
     highlights.foldLeft(code) { (base, highlight) =>
       replaceInRange(base, highlight.getRange)
@@ -20,7 +20,7 @@ object TestRanges extends RangeReplace {
 
   def renderLocationsAsString(
       sourceFiles: Map[String, String],
-      locations: List[Location]
+      locations: List[Location],
   ): Map[String, String] = {
     val resolved = for {
       (file, code) <- sourceFiles.toSeq
@@ -34,7 +34,7 @@ object TestRanges extends RangeReplace {
   def renderEditAsString(
       file: String,
       code: String,
-      workspaceEdit: WorkspaceEdit
+      workspaceEdit: WorkspaceEdit,
   ): Option[String] = {
     for {
       validLocations <-
@@ -47,7 +47,7 @@ object TestRanges extends RangeReplace {
           )
     } yield TextEdits.applyEdits(
       code,
-      validLocations.getLeft.getEdits.asScala.toList
+      validLocations.getLeft.getEdits.asScala.toList,
     )
 
   }

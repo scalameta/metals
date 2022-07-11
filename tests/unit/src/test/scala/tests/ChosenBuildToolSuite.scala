@@ -9,7 +9,7 @@ class ChosenBuildToolSuite extends BaseTablesSuite {
     assertDiffEqual(buildTool.chooseBuildTool("sbt"), 1)
     assertDiffEqual(
       buildTool.selectedBuildTool().get,
-      "sbt"
+      "sbt",
     )
   }
 }

@@ -10,19 +10,19 @@ class WorksheetDependencySourcesSuite extends BaseTablesSuite {
     val worksheet2 = workspace.resolve("w2.worksheet.sc")
     assertDiffEqual(
       dependencySources.setWorksheet(textDocument, worksheet1),
-      1
+      1,
     )
     assertDiffEqual(
       dependencySources.getWorksheet(textDocument).get,
-      worksheet1
+      worksheet1,
     )
     assertDiffEqual(
       dependencySources.setWorksheet(textDocument, worksheet2),
-      1
+      1,
     )
     assertDiffEqual(
       dependencySources.getWorksheet(textDocument).get,
-      worksheet2
+      worksheet2,
     )
   }
 }

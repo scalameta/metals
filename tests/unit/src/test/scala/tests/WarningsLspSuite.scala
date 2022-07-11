@@ -25,7 +25,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
         client.workspaceMessageRequests,
         Messages.DeprecatedScalaVersion.message(
           Set(using)
-        )
+        ),
       )
     } yield ()
   }
@@ -52,7 +52,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        "Your build definition contains multiple unsupported and deprecated Scala versions."
+        "Your build definition contains multiple unsupported and deprecated Scala versions.",
       )
     } yield ()
   }
@@ -75,7 +75,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(Set(using))
+        Messages.DeprecatedScalaVersion.message(Set(using)),
       )
     } yield ()
   }
@@ -98,7 +98,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.UnsupportedScalaVersion.message(Set(using))
+        Messages.UnsupportedScalaVersion.message(Set(using)),
       )
     } yield ()
   }
@@ -121,7 +121,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(Set(using))
+        Messages.DeprecatedScalaVersion.message(Set(using)),
       )
     } yield ()
   }

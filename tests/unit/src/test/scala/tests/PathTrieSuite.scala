@@ -21,10 +21,10 @@ class PathTrieSuite extends BaseSuite {
         Set(
           `/foo/bar`,
           `/foo/bar/src1.scala`,
-          `/foo/bar/src2.scala`
+          `/foo/bar/src2.scala`,
         )
       ),
-      Set(`/foo/bar`)
+      Set(`/foo/bar`),
     )
   }
 
@@ -34,11 +34,11 @@ class PathTrieSuite extends BaseSuite {
         Set(
           `/foo/bar/src1.scala`,
           `/foo/bar/src2.scala`,
-          `/foo/fizz/buzz.scala`
+          `/foo/fizz/buzz.scala`,
         ),
-        maxRoots = 2
+        maxRoots = 2,
       ),
-      Set(`/foo/bar`, `/foo/fizz/buzz.scala`)
+      Set(`/foo/bar`, `/foo/fizz/buzz.scala`),
     )
   }
 
@@ -48,11 +48,11 @@ class PathTrieSuite extends BaseSuite {
         Set(
           `/foo/bar/src1.scala`,
           `/foo/bar/src2.scala`,
-          `/bar`
+          `/bar`,
         ),
-        maxRoots = 1
+        maxRoots = 1,
       ),
-      Set(root)
+      Set(root),
     )
   }
 

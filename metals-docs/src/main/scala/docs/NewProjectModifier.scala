@@ -12,7 +12,7 @@ class NewProjectModifier extends StringModifier {
   override def process(
       info: String,
       code: Input,
-      reporter: Reporter
+      reporter: Reporter,
   ): String = {
     val isVscode = info == "vscode"
     val newScalaProject =

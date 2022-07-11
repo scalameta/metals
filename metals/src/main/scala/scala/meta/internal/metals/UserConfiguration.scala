@@ -18,7 +18,7 @@ import com.google.gson.JsonPrimitive
 
 case class JavaFormatConfig(
     eclipseFormatConfigPath: AbsolutePath,
-    eclipseFormatProfile: Option[String]
+    eclipseFormatProfile: Option[String],
 )
 
 /**
@@ -51,7 +51,7 @@ case class UserConfiguration(
     fallbackScalaVersion: Option[String] = None,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     javaFormatConfig: Option[JavaFormatConfig] = None,
-    scalafixRulesDependencies: List[String] = Nil
+    scalafixRulesDependencies: List[String] = Nil,
 ) {
 
   def currentBloopVersion: String =
@@ -76,7 +76,7 @@ object UserConfiguration {
         "`JAVA_HOME` environment variable with fallback to `user.home` system property.",
         """"/Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home"""",
         "Java Home directory",
-        "The Java Home directory used for indexing JDK sources and locating the `java` binary."
+        "The Java Home directory used for indexing JDK sources and locating the `java` binary.",
       ),
       UserConfigurationOption(
         "sbt-script",
@@ -87,7 +87,7 @@ object UserConfiguration {
           |By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting
           |`.jvmopts` and `.sbtopts`. Update this setting if your `sbt` script requires more customizations
           |like using environment variables.
-          |""".stripMargin
+          |""".stripMargin,
       ),
       UserConfigurationOption(
         "gradle-script",
@@ -97,7 +97,7 @@ object UserConfiguration {
         """Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`.
           |By default, Metals uses gradlew with 5.3.1 gradle version. Update this setting if your `gradle` script requires more customizations
           |like using environment variables.
-          |""".stripMargin
+          |""".stripMargin,
       ),
       UserConfigurationOption(
         "maven-script",
@@ -106,7 +106,7 @@ object UserConfiguration {
         "Maven script",
         """Optional absolute path to a `maven` executable to use for generating bloop config.
           |By default, Metals uses mvnw maven wrapper with 3.6.1 maven version. Update this setting if your `maven` script requires more customizations
-          |""".stripMargin
+          |""".stripMargin,
       ),
       UserConfigurationOption(
         "mill-script",
@@ -116,7 +116,7 @@ object UserConfiguration {
         """Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`.
           |By default, Metals uses mill wrapper script with 0.5.0 mill version. Update this setting if your `mill` script requires more customizations
           |like using environment variables.
-          |""".stripMargin
+          |""".stripMargin,
       ),
       UserConfigurationOption(
         "scalafmt-config-path",
@@ -125,7 +125,7 @@ object UserConfiguration {
         "Scalafmt config path",
         """Optional custom path to the .scalafmt.conf file.
           |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
-          |""".stripMargin
+          |""".stripMargin,
       ),
       UserConfigurationOption(
         "scalafix-config-path",
@@ -134,7 +134,7 @@ object UserConfiguration {
         "Scalafix config path",
         """Optional custom path to the .scalafix.conf file.
           |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
-          |""".stripMargin
+          |""".stripMargin,
       ),
       UserConfigurationOption(
         "ammonite-jvm-properties",
@@ -143,7 +143,7 @@ object UserConfiguration {
         "Ammonite JVM Properties",
         """|Optional list of JVM properties to pass along to the Ammonite server.
            |Each property needs to be a separate item.\n\nExample: `-Xmx1G` or `-Xms100M`"
-           |""".stripMargin
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "excluded-packages",
@@ -166,12 +166,12 @@ object UserConfiguration {
             |```js
             |["--sun"]
             |```
-            |""".stripMargin
+            |""".stripMargin,
       ),
       UserConfigurationOption(
         "bloop-sbt-already-installed", "false", "false",
         "Don't generate Bloop plugin file for sbt",
-        "If true, Metals will not generate `metals.sbt` files under the assumption that sbt-bloop is already manually installed in the sbt build. Build import will fail with a 'not valid command bloopInstall' error in case Bloop is not manually installed in the build when using this option."
+        "If true, Metals will not generate `metals.sbt` files under the assumption that sbt-bloop is already manually installed in the sbt build. Build import will fail with a 'not valid command bloopInstall' error in case Bloop is not manually installed in the build when using this option.",
       ),
       UserConfigurationOption(
         "bloop-version",
@@ -179,7 +179,7 @@ object UserConfiguration {
         """"1.4.0-RC1"""",
         "Version of Bloop",
         """|This version will be used for the Bloop build tool plugin, for any supported build tool,
-           |while importing in Metals as well as for running the embedded server""".stripMargin
+           |while importing in Metals as well as for running the embedded server""".stripMargin,
       ),
       UserConfigurationOption(
         "bloop-jvm-properties",
@@ -188,7 +188,7 @@ object UserConfiguration {
         "Bloop JVM Properties",
         """|Optional list of JVM properties to pass along to the Bloop server.
            |Please follow this guide for the format https://scalacenter.github.io/bloop/docs/server-reference#global-settings-for-the-server"
-           |""".stripMargin
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "super-method-lenses-enabled",
@@ -198,7 +198,7 @@ object UserConfiguration {
         """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
            |Disabled lenses are not calculated for opened documents which might speed up document processing.
            |
-           |""".stripMargin
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "show-inferred-type",
@@ -208,7 +208,7 @@ object UserConfiguration {
         """|When this option is enabled, each method that can have inferred types has them
            |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
-           |""".stripMargin
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "show-implicit-arguments",
@@ -218,7 +218,7 @@ object UserConfiguration {
         """|When this option is enabled, each method that has implicit arguments has them 
            |displayed either as additional decorations if they are supported by the editor or 
            |shown in the hover.
-           |""".stripMargin
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "show-implicit-conversions-and-classes",
@@ -228,7 +228,7 @@ object UserConfiguration {
         """|When this option is enabled, each place where an implicit method or class is used has it 
            |displayed either as additional decorations if they are supported by the editor or 
            |shown in the hover.
-           |""".stripMargin
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "enable-indent-on-paste",
@@ -237,7 +237,7 @@ object UserConfiguration {
         "Should try adjust indentation on range formatting.",
         """|When this option is enabled, when user pastes any snippet into a Scala file, Metals
            |will try to adjust the indentation to that of the current cursor.
-           |""".stripMargin
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "remote-language-server",
@@ -248,7 +248,7 @@ object UserConfiguration {
           |
           |See https://scalameta.org/metals/docs/contributors/remote-language-server.html for
           |documentation on remote language servers.
-          |""".stripMargin
+          |""".stripMargin,
       ),
       UserConfigurationOption(
         "fallback-scala-version",
@@ -258,12 +258,12 @@ object UserConfiguration {
         """|The Scala compiler version that is used as the default or fallback in case a file 
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
            |This applies to standalone Scala files, worksheets, and Ammonite scripts.
-        """.stripMargin
+        """.stripMargin,
       ),
       UserConfigurationOption(
         "test-user-interface", "Code Lenses", "test explorer",
         "Test UI used for tests and test suites",
-        "Default way of handling tests and test suites."
+        "Default way of handling tests and test suites.",
       ),
       UserConfigurationOption(
         "java-format.eclipse-config-path",
@@ -272,7 +272,7 @@ object UserConfiguration {
         "Eclipse Java formatter config path",
         """Optional custom path to the eclipse-formatter.xml file.
           |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
-          |""".stripMargin
+          |""".stripMargin,
       ),
       UserConfigurationOption(
         "java-format.eclipse-profile",
@@ -280,14 +280,14 @@ object UserConfiguration {
         """"GoogleStyle"""",
         "Eclipse Java formatting profile",
         """|If the Eclipse formatter file contains more than one profile then specify the required profile name.
-           |""".stripMargin
-      )
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
       json: JsonObject,
       clientConfiguration: ClientConfiguration,
-      properties: Properties = System.getProperties
+      properties: Properties = System.getProperties,
   ): Either[List[String], UserConfiguration] = {
     val errors = ListBuffer.empty[String]
     val base: JsonObject =
@@ -296,7 +296,7 @@ object UserConfiguration {
     def getKey[A](
         key: String,
         currentObject: JsonObject,
-        f: JsonElement => Option[A]
+        f: JsonElement => Option[A],
     ): Option[A] = {
       def option[T](fn: String => T): Option[T] =
         Option(fn(key)).orElse(Option(fn(StringCase.kebabToCamel(key))))
@@ -319,16 +319,16 @@ object UserConfiguration {
                 errors += s"json error: key '$key' should have value of type object but obtained $value"
                 None
               },
-              Some(_)
+              Some(_),
             )
-        }
+        },
       )
     def getStringKey(key: String): Option[String] =
       getStringKeyOnObj(key, base)
 
     def getStringKeyOnObj(
         key: String,
-        currentObject: JsonObject
+        currentObject: JsonObject,
     ): Option[String] =
       getKey(
         key,
@@ -340,10 +340,10 @@ object UserConfiguration {
                 errors += s"json error: key '$key' should have value of type string but obtained $value"
                 None
               },
-              Some(_)
+              Some(_),
             )
             .filter(_.nonEmpty)
-        }
+        },
       )
 
     def getBooleanKey(key: String): Option[Boolean] =
@@ -357,9 +357,9 @@ object UserConfiguration {
                 errors += s"json error: key '$key' should have value of type boolean but obtained $value"
                 None
               },
-              Some(_)
+              Some(_),
             )
-        }
+        },
       )
     def getIntKey(key: String): Option[Int] =
       getStringKey(key).flatMap { value =>
@@ -392,7 +392,7 @@ object UserConfiguration {
             errors += s"json error: key '$key' should have value of type array but obtained $elem"
             None
           }
-        }
+        },
       )
 
     def getStringMap(key: String): Option[Map[String, String]] =
@@ -413,9 +413,9 @@ object UserConfiguration {
               errors += s"json error: key '$key' should have be object with string values but obtained $value"
               None
             },
-            entries => Some(entries.toMap)
+            entries => Some(entries.toMap),
           ).filter(_.nonEmpty)
-        }
+        },
       )
 
     val javaHome =
@@ -486,7 +486,7 @@ object UserConfiguration {
         getStringKeyOnObj("eclipse-config-path", subKey).map(f =>
           JavaFormatConfig(
             AbsolutePath(f),
-            getStringKeyOnObj("eclipse-profile", subKey)
+            getStringKeyOnObj("eclipse-profile", subKey),
           )
         )
       )
@@ -522,7 +522,7 @@ object UserConfiguration {
           defaultScalaVersion,
           disableTestCodeLenses,
           javaFormatConfig,
-          scalafixRulesDependencies
+          scalafixRulesDependencies,
         )
       )
     } else {

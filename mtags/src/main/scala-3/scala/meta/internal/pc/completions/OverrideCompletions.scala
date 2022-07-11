@@ -51,7 +51,7 @@ object OverrideCompletions:
       start: Int,
       indexedContext: IndexedContext,
       search: SymbolSearch,
-      config: PresentationCompilerConfig
+      config: PresentationCompilerConfig,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val clazz = td.symbol.asClass
@@ -91,7 +91,7 @@ object OverrideCompletions:
       .flatMap { parent =>
         parent.membersBasedOnFlags(
           flags,
-          Flags.Private
+          Flags.Private,
         )
       }
       .distinct
@@ -115,7 +115,7 @@ object OverrideCompletions:
           shouldMoveCursor = true,
           config,
           indexedContext.ctx.compilationUnit.source.content
-            .startsWith("o", start)
+            .startsWith("o", start),
         )
       )
       .toList
@@ -125,7 +125,7 @@ object OverrideCompletions:
       params: OffsetParams,
       driver: InteractiveDriver,
       search: SymbolSearch,
-      config: PresentationCompilerConfig
+      config: PresentationCompilerConfig,
   ): ju.List[l.TextEdit] =
     object FindTypeDef:
       def unapply(path: List[Tree])(using Context): Option[TypeDef] = path match
@@ -148,7 +148,7 @@ object OverrideCompletions:
     val ctx = driver.currentCtx
     driver.run(
       uri,
-      SourceFile.virtual(uri.toASCIIString, params.text)
+      SourceFile.virtual(uri.toASCIIString, params.text),
     )
     val unit = driver.currentCtx.run.units.head
     val tree = unit.tpdTree
@@ -167,14 +167,14 @@ object OverrideCompletions:
       params.text,
       unit.tpdTree,
       indexedContext,
-      config
+      config,
     )
     lazy val implementAll = implementAllFor(
       indexedContext,
       params.text,
       search,
       autoImportsGen,
-      config
+      config,
     )
     path match
       case FindTypeDef(td) =>
@@ -188,7 +188,7 @@ object OverrideCompletions:
       text: String,
       search: SymbolSearch,
       autoImports: AutoImportsGenerator,
-      config: PresentationCompilerConfig
+      config: PresentationCompilerConfig,
   )(
       td: TypeDef
   )(using Context): List[l.TextEdit] =
@@ -197,7 +197,7 @@ object OverrideCompletions:
         decls: List[Symbol],
         source: SourceFile,
         text: String,
-        shouldCompleteBraces: Boolean
+        shouldCompleteBraces: Boolean,
     )(using Context): (String, String, String) =
       // For `FooImpl` in the below, the necessaryIndent will be 2
       // because there're 2 spaces before `class FooImpl`.
@@ -208,7 +208,7 @@ object OverrideCompletions:
       // ```
       val (necessaryIndent, tabIndented) = CompletionPos.inferIndent(
         source.lineToOffset(td.sourcePos.line),
-        text
+        text,
       )
       // infer indent for implementations
       // If there's declaration in the class/object, follow its indent.
@@ -225,7 +225,7 @@ object OverrideCompletions:
           .map { decl =>
             CompletionPos.inferIndent(
               source.lineToOffset(decl.sourcePos.line),
-              text
+              text,
             )
           }
           .getOrElse({
@@ -253,14 +253,14 @@ object OverrideCompletions:
           search,
           shouldMoveCursor = false,
           config,
-          shouldAddOverrideKwd = true
+          shouldAddOverrideKwd = true,
         )
       )
       .toList
 
     val (edits, imports) = toEdits(
       completionValues,
-      autoImports
+      autoImports,
     )
 
     if edits.isEmpty then Nil
@@ -308,7 +308,7 @@ object OverrideCompletions:
         edits.mkString(start, s"\n\n$indent", last)
       val implementAll = new l.TextEdit(
         editPos.toLSP,
-        newEdit
+        newEdit,
       )
       implementAll +: imports.toList
     end if
@@ -317,7 +317,7 @@ object OverrideCompletions:
 
   private def toEdits(
       completions: List[CompletionValue.Override],
-      autoImports: AutoImportsGenerator
+      autoImports: AutoImportsGenerator,
   ): (List[String], Set[l.TextEdit]) =
     completions.foldLeft(
       (List.empty[String], Set.empty[l.TextEdit])
@@ -338,7 +338,7 @@ object OverrideCompletions:
     Set[Name](
       StdNames.nme.hashCode_,
       StdNames.nme.toString_,
-      StdNames.nme.equals_
+      StdNames.nme.equals_,
     )
 
   private def toCompletionValue(
@@ -349,14 +349,14 @@ object OverrideCompletions:
       search: SymbolSearch,
       shouldMoveCursor: Boolean,
       config: PresentationCompilerConfig,
-      shouldAddOverrideKwd: Boolean
+      shouldAddOverrideKwd: Boolean,
   )(using Context): CompletionValue.Override =
     val renames = AutoImport.renameConfigMap(config)
     val printer = MetalsPrinter.standard(
       indexedContext,
       search,
       includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Never,
-      renames
+      renames,
     )
     val overrideKeyword: String =
       // if the overriding method is not an abstract member, add `override` keyword
@@ -379,14 +379,14 @@ object OverrideCompletions:
           sym.symbol,
           seenFrom,
           additionalMods =
-            if overrideKeyword.nonEmpty then List(overrideKeyword) else Nil
+            if overrideKeyword.nonEmpty then List(overrideKeyword) else Nil,
         )
       else
         printer.defaultValueSignature(
           sym.symbol,
           seenFrom,
           additionalMods =
-            if overrideKeyword.nonEmpty then List(overrideKeyword) else Nil
+            if overrideKeyword.nonEmpty then List(overrideKeyword) else Nil,
         )
     end signature
 
@@ -402,7 +402,7 @@ object OverrideCompletions:
       sym.symbol,
       printer.shortenedNames,
       Some(filterText),
-      start
+      start,
     )
   end toCompletionValue
 

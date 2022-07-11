@@ -30,7 +30,7 @@ final class AutoImportsProvider(
     name: String,
     params: OffsetParams,
     config: PresentationCompilerConfig,
-    buildTargetIdentifier: String
+    buildTargetIdentifier: String,
 ):
 
   def autoImports(): List[AutoImportsResult] =
@@ -38,7 +38,7 @@ final class AutoImportsProvider(
     val filePath = Paths.get(uri)
     driver.run(
       uri,
-      SourceFile.virtual(filePath.toString, params.text)
+      SourceFile.virtual(filePath.toString, params.text),
     )
     val unit = driver.currentCtx.run.units.head
     val tree = unit.tpdTree
@@ -78,7 +78,7 @@ final class AutoImportsProvider(
           params.text,
           tree,
           indexedContext.importContext,
-          config
+          config,
         )
 
       for
@@ -86,7 +86,7 @@ final class AutoImportsProvider(
         edits <- generator.forSymbol(sym)
       yield AutoImportsResultImpl(
         sym.owner.showFullName,
-        edits.asJava
+        edits.asJava,
       )
     else List.empty
     end if

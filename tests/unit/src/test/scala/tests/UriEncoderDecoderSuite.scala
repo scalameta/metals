@@ -13,7 +13,7 @@ class UriEncoderDecoderSuite extends BaseSuite {
     val obtained = URIEncoderDecoder.encode(entry)
     assertEquals(
       obtained,
-      expected
+      expected,
     )
   }
 
@@ -25,7 +25,7 @@ class UriEncoderDecoderSuite extends BaseSuite {
     val obtained = URIEncoderDecoder.decode(entry)
     assertEquals(
       obtained,
-      expected
+      expected,
     )
   }
 
@@ -37,7 +37,7 @@ class UriEncoderDecoderSuite extends BaseSuite {
     val obtained = URIEncoderDecoder.decode(entry)
     assertEquals(
       obtained,
-      expected
+      expected,
     )
   }
 

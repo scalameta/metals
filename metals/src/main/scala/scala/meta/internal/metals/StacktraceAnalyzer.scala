@@ -17,7 +17,7 @@ class StacktraceAnalyzer(
     buffers: Buffers,
     definitionProvider: DefinitionProvider,
     icons: Icons,
-    commandInHtmlFormat: Option[CommandHTMLFormat]
+    commandInHtmlFormat: Option[CommandHTMLFormat],
 ) {
 
   def analyzeCommand(
@@ -88,14 +88,14 @@ class StacktraceAnalyzer(
 
   private def makeGotoLocationCodeLens(
       location: l.Location,
-      range: l.Range
+      range: l.Range,
   ): l.CodeLens = {
     val command = ServerCommands.GotoPosition.toLSP(location)
     command.setTitle(s"${icons.findsuper} open")
     new l.CodeLens(
       range,
       command,
-      null
+      null,
     )
   }
 
@@ -129,14 +129,14 @@ class StacktraceAnalyzer(
       ClientCommands.WindowLocation(
         location.getUri(),
         location.getRange(),
-        otherWindow = true
+        otherWindow = true,
       )
     )
   }
 
   private def trySetLineFromStacktrace(
       location: Location,
-      line: String
+      line: String,
   ): Location = {
     val lineNumberOpt = tryGetLineNumberFromStacktrace(line)
     lineNumberOpt.foreach { lineNumber =>
@@ -156,7 +156,7 @@ class StacktraceAnalyzer(
 
   private def makeHtmlCommandParams(
       stacktrace: String,
-      format: CommandHTMLFormat
+      format: CommandHTMLFormat,
   ): l.ExecuteCommandParams = {
     def htmlStack(builder: HtmlBuilder): Unit = {
       for (line <- stacktrace.split('\n')) {
@@ -168,9 +168,9 @@ class StacktraceAnalyzer(
                 gotoLocationUsingUri(
                   location.getUri,
                   location.getRange.getStart.getLine,
-                  format
+                  format,
                 ),
-                line.substring(line.indexOf("at ") + 3)
+                line.substring(line.indexOf("at ") + 3),
               )
           case None =>
             builder.raw(line)
@@ -190,16 +190,16 @@ class StacktraceAnalyzer(
   private def gotoLocationUsingUri(
       uri: String,
       line: Int,
-      format: CommandHTMLFormat
+      format: CommandHTMLFormat,
   ): String = {
     val pos = new l.Position(line, 0)
     ClientCommands.GotoLocation.toCommandLink(
       ClientCommands.WindowLocation(
         uri,
         new l.Range(pos, pos),
-        otherWindow = true
+        otherWindow = true,
       ),
-      format
+      format,
     )
   }
 }

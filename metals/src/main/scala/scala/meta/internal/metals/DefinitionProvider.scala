@@ -54,7 +54,7 @@ final class DefinitionProvider(
     trees: Trees,
     buildTargets: BuildTargets,
     scalaVersionSelector: ScalaVersionSelector,
-    saveDefFileToDisk: Boolean
+    saveDefFileToDisk: Boolean,
 )(implicit ec: ExecutionContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -65,13 +65,13 @@ final class DefinitionProvider(
     Some(semanticdbs),
     trees,
     buildTargets,
-    saveDefFileToDisk
+    saveDefFileToDisk,
   )
 
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
-      token: CancelToken
+      token: CancelToken,
   ): Future[DefinitionResult] = {
     val fromSemanticdb =
       semanticdbs.textDocument(path).documentIncludingStale
@@ -101,7 +101,7 @@ final class DefinitionProvider(
 
   def fromSymbol(
       sym: String,
-      source: Option[AbsolutePath]
+      source: Option[AbsolutePath],
   ): ju.List[Location] = {
     destinationProvider.fromSymbol(sym, source).flatMap(_.toResult) match {
       case None => ju.Collections.emptyList()
@@ -111,7 +111,7 @@ final class DefinitionProvider(
 
   def fromSymbol(
       sym: String,
-      targets: List[BuildTargetIdentifier]
+      targets: List[BuildTargetIdentifier],
   ): ju.List[Location] = {
     destinationProvider
       .fromSymbol(sym, targets.toSet)
@@ -123,12 +123,12 @@ final class DefinitionProvider(
 
   def toLocation(
       symbol: String,
-      targets: List[BuildTargetIdentifier]
+      targets: List[BuildTargetIdentifier],
   ): Option[Location] =
     for {
       definitionDestination <- destinationProvider.fromSymbol(
         symbol,
-        targets.toSet
+        targets.toSet,
       )
       if (symbol == definitionDestination.symbol)
       definitionResult <- definitionDestination.toResult
@@ -143,7 +143,7 @@ final class DefinitionProvider(
    */
   def definitionPathInputFromSymbol(
       sym: String,
-      source: Option[AbsolutePath]
+      source: Option[AbsolutePath],
   ): Option[Input.VirtualFile] =
     destinationProvider
       .definition(sym, source)
@@ -151,7 +151,7 @@ final class DefinitionProvider(
 
   def symbolOccurrence(
       source: AbsolutePath,
-      dirtyPosition: Position
+      dirtyPosition: Position,
   ): Option[(SymbolOccurrence, TextDocument)] = {
     for {
       currentDocument <-
@@ -161,7 +161,7 @@ final class DefinitionProvider(
       posOcc = positionOccurrence(
         source,
         dirtyPosition,
-        currentDocument
+        currentDocument,
       )
       symbolOccurrence <- {
         def mtagsOccurrence =
@@ -175,12 +175,12 @@ final class DefinitionProvider(
   private def positionOccurrenceQuery(
       source: AbsolutePath,
       dirtyPosition: Position,
-      snapshot: TextDocument
+      snapshot: TextDocument,
   ): (TokenEditDistance, Option[Position]) = {
     val sourceDistance = buffers.tokenEditDistance(source, snapshot.text, trees)
     val snapshotPosition = sourceDistance.toOriginal(
       dirtyPosition.getLine,
-      dirtyPosition.getCharacter
+      dirtyPosition.getCharacter,
     )
     (sourceDistance, snapshotPosition.toPosition(dirtyPosition))
   }
@@ -188,7 +188,7 @@ final class DefinitionProvider(
   def positionOccurrence(
       source: AbsolutePath,
       dirtyPosition: Position,
-      snapshot: TextDocument
+      snapshot: TextDocument,
   ): ResolvedSymbolOccurrence = {
     val (sourceDistance, queryPositionOpt) =
       positionOccurrenceQuery(source, dirtyPosition, snapshot)
@@ -212,7 +212,7 @@ final class DefinitionProvider(
   def positionOccurrences(
       source: AbsolutePath,
       dirtyPosition: Position,
-      snapshot: TextDocument
+      snapshot: TextDocument,
   ): List[ResolvedSymbolOccurrence] = {
     val (sourceDistance, queryPositionOpt) =
       positionOccurrenceQuery(source, dirtyPosition, snapshot)
@@ -236,7 +236,7 @@ final class DefinitionProvider(
   private def definitionFromSnapshot(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams,
-      snapshot: TextDocument
+      snapshot: TextDocument,
   ): DefinitionResult = {
     val ResolvedSymbolOccurrence(sourceDistance, occurrence) =
       positionOccurrence(source, dirtyPosition.getPosition, snapshot)
@@ -251,7 +251,7 @@ final class DefinitionProvider(
           sourceDistance,
           occ.symbol,
           None,
-          dirtyPosition.getTextDocument.getUri
+          dirtyPosition.getTextDocument.getUri,
         ).toResult
       } else {
         // symbol is global so it is defined in an external destination buffer.
@@ -278,7 +278,7 @@ case class DefinitionDestination(
     distance: TokenEditDistance,
     symbol: String,
     path: Option[AbsolutePath],
-    uri: String
+    uri: String,
 ) {
 
   /**
@@ -289,7 +289,7 @@ case class DefinitionDestination(
       location <- snapshot.toLocation(uri, symbol)
       revisedPosition = distance.toRevised(
         location.getRange.getStart.getLine,
-        location.getRange.getStart.getCharacter
+        location.getRange.getStart.getCharacter,
       )
       result <- revisedPosition.toLocation(location)
     } yield {
@@ -297,7 +297,7 @@ case class DefinitionDestination(
         Collections.singletonList(result),
         symbol,
         path,
-        Some(snapshot)
+        Some(snapshot),
       )
     }
 }
@@ -310,7 +310,7 @@ class DestinationProvider(
     semanticdbsFallback: Option[Semanticdbs],
     trees: Trees,
     buildTargets: BuildTargets,
-    saveSymbolFileToDisk: Boolean
+    saveSymbolFileToDisk: Boolean,
 ) {
 
   private def bestTextDocument(
@@ -323,7 +323,7 @@ class DestinationProvider(
       mtags.index(
         symbolDefinition.path.toLanguage,
         defnRevisedInput,
-        symbolDefinition.dialect
+        symbolDefinition.dialect,
       )
 
     if (symbolDefinition.path.isAmmoniteScript || parsed.occurrences.isEmpty) {
@@ -340,7 +340,7 @@ class DestinationProvider(
 
   def definition(
       symbol: String,
-      source: Option[AbsolutePath]
+      source: Option[AbsolutePath],
   ): Option[SymbolDefinition] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
     definition(symbol, targets)
@@ -348,7 +348,7 @@ class DestinationProvider(
 
   def definition(
       symbol: String,
-      allowedBuildTargets: Set[BuildTargetIdentifier]
+      allowedBuildTargets: Set[BuildTargetIdentifier],
   ): Option[SymbolDefinition] = {
     val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
     if (allowedBuildTargets.isEmpty)
@@ -386,7 +386,7 @@ class DestinationProvider(
 
   def fromSymbol(
       symbol: String,
-      allowedBuildTargets: Set[BuildTargetIdentifier]
+      allowedBuildTargets: Set[BuildTargetIdentifier],
   ): Option[DefinitionDestination] = {
     definition(symbol, allowedBuildTargets).map { defn =>
       val destinationDoc = bestTextDocument(defn)
@@ -400,14 +400,14 @@ class DestinationProvider(
         destinationDistance,
         defn.definitionSymbol.value,
         Some(destinationPath),
-        destinationPath.toURI.toString
+        destinationPath.toURI.toString,
       )
     }
   }
 
   def fromSymbol(
       symbol: String,
-      source: Option[AbsolutePath]
+      source: Option[AbsolutePath],
   ): Option[DefinitionDestination] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
     fromSymbol(symbol, targets)

@@ -117,7 +117,7 @@ object IndexedContext:
 
   case class Names(
       symbols: Map[String, List[Symbol]],
-      renames: Map[Symbol, String]
+      renames: Map[Symbol, String],
   )
 
   private def extractNames(ctx: Context): Names =
@@ -139,7 +139,7 @@ object IndexedContext:
 
     def allAccessibleSymbols(
         tpe: Type,
-        filter: Symbol => Boolean = _ => true
+        filter: Symbol => Boolean = _ => true,
     )(using Context): List[Symbol] =
       val initial = accessibleSymbols(tpe, tpe).filter(filter)
       val fromPackageObjects =
@@ -161,7 +161,7 @@ object IndexedContext:
       if imp.isWildcardImport then
         allAccessibleSymbols(
           imp.site,
-          sym => !excludedNames.contains(sym.name.decoded)
+          sym => !excludedNames.contains(sym.name.decoded),
         ).map((_, None))
       else
         imp.forwardMapping.toList.flatMap { (name, rename) =>

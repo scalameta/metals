@@ -8,13 +8,13 @@ import munit.Location
 class SbtVersionSuite extends BaseSuite {
   def check(
       layout: String,
-      expected: String
+      expected: String,
   )(implicit loc: Location): Unit = {
     test(expected) {
       val root = FileLayout.fromString(layout)
       val obtained = SbtBuildTool(
         root,
-        () => UserConfiguration()
+        () => UserConfiguration(),
       ).version
       assertNoDiff(obtained, expected)
     }
@@ -25,7 +25,7 @@ class SbtVersionSuite extends BaseSuite {
       |/project/build.properties
       |sbt.version=0.13
       """.stripMargin,
-    "0.13"
+    "0.13",
   )
 
   check(
@@ -33,7 +33,7 @@ class SbtVersionSuite extends BaseSuite {
       |/project/build.properties
       |sbt.version=1.1.3
     """.stripMargin,
-    "1.1.3"
+    "1.1.3",
   )
 
 }

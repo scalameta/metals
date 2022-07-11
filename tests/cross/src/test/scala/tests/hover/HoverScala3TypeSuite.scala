@@ -19,7 +19,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|val name: Foo | Bar[Files]
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   check(
@@ -38,7 +38,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|arg: Resettable & Growable[Files]
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   // We should produce a shorter type but:
@@ -57,7 +57,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       ">=3.1.3-RC1-bin-20220301-fae7c09-NIGHTLY" ->
         """|case Red: Color
            |""".stripMargin.hover
-    )
+    ),
   )
 
   check(
@@ -69,7 +69,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|enum Color: enums2.SimpleEnum
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   check(
@@ -84,7 +84,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       ">=3.1.3-RC1-bin-20220301-fae7c09-NIGHTLY" ->
         """|case Blue: Color
            |""".stripMargin.hover
-    )
+    ),
   )
 
   check(
@@ -97,7 +97,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|enum Color: enums3.SimpleEnum
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   check(
@@ -112,7 +112,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|case Green: Color
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   check(
@@ -126,7 +126,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |    "".<<doub@@le2>>
        |end Foo
        |""".stripMargin,
-    "extension (s: String) def double2: String".hover
+    "extension (s: String) def double2: String".hover,
   )
 
   /* Currently there is no way to differentiate between
@@ -152,7 +152,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |    "".<<doub@@le(1)>>
        |end Foo
        |""".stripMargin,
-    "extension [T](using A)(s: T) def double(using B)[G](using C)(times: G): String".hover
+    "extension [T](using A)(s: T) def double(using B)[G](using C)(times: G): String".hover,
   )
 
   check(
@@ -172,7 +172,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |end Foo
        |""".stripMargin,
     """|Int
-       |extension [T](using A)(main: T) def %:[R](res: R)(using B)(using C): R""".stripMargin.hover
+       |extension [T](using A)(main: T) def %:[R](res: R)(using B)(using C): R""".stripMargin.hover,
   )
 
   check(
@@ -186,7 +186,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|String
        |def apply[T](a: T)(using Int): T
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   check(
@@ -195,6 +195,6 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|Left[String, Nothing]
        |def apply[A, B](value: A): Left[A, B]
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 }

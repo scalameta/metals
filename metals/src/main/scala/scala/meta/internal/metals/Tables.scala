@@ -17,7 +17,7 @@ import org.flywaydb.core.api.FlywayException
 final class Tables(
     workspace: AbsolutePath,
     time: Time,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
 ) extends Cancelable {
   val jarSymbols = new JarTopLevels(() => connection)
   val digests =
@@ -79,7 +79,7 @@ final class Tables(
             s"This means you may be redundantly asked to execute 'Import build', even if it's not needed. " +
             s"Also, code navigation will not work for existing files in the .metals/readonly/ directory. " +
             s"To fix this problem, make sure you only have one running Metals server in the directory '$workspace'.",
-          e
+          e,
         )
 
         RecursivelyDelete(workspace.resolve(Directories.readonly))
@@ -108,7 +108,7 @@ final class Tables(
     Files.createDirectories(dbfile.toNIO.getParent)
     System.setProperty(
       "h2.bindAddress",
-      System.getProperty("h2.bindAddress", "127.0.0.1")
+      System.getProperty("h2.bindAddress", "127.0.0.1"),
     )
     val url = s"jdbc:h2:file:$dbfile$autoServer"
     tryUrl(url)

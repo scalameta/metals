@@ -17,7 +17,7 @@ trait BuildServerProvider extends BuildTool {
    */
   def generateBspConfig(
       workspace: AbsolutePath,
-      systemProcess: List[String] => Future[BspConfigGenerationStatus]
+      systemProcess: List[String] => Future[BspConfigGenerationStatus],
   ): Future[BspConfigGenerationStatus] =
     if (workspaceSupportsBsp(workspace)) {
       systemProcess(createBspFileArgs(workspace))

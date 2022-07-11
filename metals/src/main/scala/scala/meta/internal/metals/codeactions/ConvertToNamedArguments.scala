@@ -57,7 +57,7 @@ class ConvertToNamedArguments(trees: Trees, buildTargets: BuildTargets)
         term <- trees.findLastEnclosingAt[Term.Apply](
           path,
           range.getStart(),
-          term => !term.fun.pos.encloses(range)
+          term => !term.fun.pos.encloses(range),
         )
         apply <- firstApplyWithUnnamedArgs(Some(term))
       } yield apply
@@ -69,14 +69,14 @@ class ConvertToNamedArguments(trees: Trees, buildTargets: BuildTargets)
             codeAction.setKind(l.CodeActionKind.RefactorRewrite)
             val position = new l.TextDocumentPositionParams(
               params.getTextDocument(),
-              new l.Position(apply.app.pos.endLine, apply.app.pos.endColumn)
+              new l.Position(apply.app.pos.endLine, apply.app.pos.endColumn),
             )
             codeAction.setCommand(
               ServerCommands.ConvertToNamedArguments.toLSP(
                 ServerCommands
                   .ConvertToNamedArgsRequest(
                     position,
-                    apply.argIndices.map(new Integer(_)).asJava
+                    apply.argIndices.map(new Integer(_)).asJava,
                   )
               )
             )

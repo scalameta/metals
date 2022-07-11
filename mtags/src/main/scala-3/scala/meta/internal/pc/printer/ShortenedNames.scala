@@ -29,7 +29,7 @@ import org.eclipse.lsp4j.TextEdit
 
 class ShortenedNames(
     val indexedContext: IndexedContext,
-    renames: Map[Symbol, String] = Map.empty
+    renames: Map[Symbol, String] = Map.empty,
 ):
 
   import ShortenedNames.*
@@ -119,7 +119,7 @@ class ShortenedNames(
           def processOwners(
               sym: Symbol,
               prev: List[Symbol],
-              ownersLeft: List[Symbol]
+              ownersLeft: List[Symbol],
           ): Type =
             ownersLeft match
               case Nil =>
@@ -165,7 +165,7 @@ class ShortenedNames(
           ImplicitMethodType(
             pnames,
             ptypes.map(loop(_, None)),
-            loop(restpe, None)
+            loop(restpe, None),
           )
         case mt @ MethodTpe(pnames, ptypes, restpe) =>
           MethodType(pnames, ptypes.map(loop(_, None)), loop(restpe, None))
@@ -176,7 +176,7 @@ class ShortenedNames(
             pl.paramInfos.map(bound =>
               TypeBounds(loop(bound.lo, None), loop(bound.hi, None))
             ),
-            loop(restpe, None)
+            loop(restpe, None),
           )
         case SuperType(thistpe, supertpe) =>
           SuperType(loop(thistpe, None), loop(supertpe, None))
@@ -212,7 +212,7 @@ object ShortenedNames:
 
   case class ShortName(
       name: Name,
-      symbol: Symbol
+      symbol: Symbol,
   ):
     def isRename(using Context): Boolean = symbol.name.show != name.show
     def asImport(using Context): AutoImport =

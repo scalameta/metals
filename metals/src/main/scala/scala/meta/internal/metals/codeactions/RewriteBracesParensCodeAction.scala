@@ -45,7 +45,7 @@ class RewriteBracesParensCodeAction(
           .findLastEnclosingAt[Term.Apply](
             path,
             range.getStart(),
-            applyWithSingleFunction
+            applyWithSingleFunction,
           )
       else None
 
@@ -66,7 +66,7 @@ class RewriteBracesParensCodeAction(
 
   private def switchFrom[L: ClassTag, R: ClassTag](
       path: AbsolutePath,
-      appl: Term.Apply
+      appl: Term.Apply,
   ): Seq[l.CodeAction] = {
     val select = appl.fun
     val term = appl.args.head match {
@@ -114,7 +114,7 @@ class RewriteBracesParensCodeAction(
     // exclude case when body has more than one line (is a Block) because it cannot be rewritten to parens
     case Term.Apply(
           _,
-          List(Term.Block(List(Term.Function(_, _: Term.Block))))
+          List(Term.Block(List(Term.Function(_, _: Term.Block)))),
         ) =>
       false
     case Term.Apply(_, List(_: Term)) => true

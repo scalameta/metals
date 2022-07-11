@@ -26,7 +26,7 @@ object InterpolatorCompletions:
       lit: Literal,
       path: List[Tree],
       completions: Completions,
-      snippetsEnabled: Boolean
+      snippetsEnabled: Boolean,
   )(using Context) =
     val text = pos.source.content().mkString
     InterpolationSplice(pos.span.point, pos.source.content(), text) match
@@ -40,7 +40,7 @@ object InterpolatorCompletions:
           completions,
           snippetsEnabled,
           hasStringInterpolator =
-            path.tail.headOption.exists(_.isInstanceOf[SeqLiteral])
+            path.tail.headOption.exists(_.isInstanceOf[SeqLiteral]),
         )
       case None =>
         InterpolatorCompletions.contributeMember(
@@ -50,7 +50,7 @@ object InterpolatorCompletions:
           pos,
           completionPos,
           completions,
-          snippetsEnabled
+          snippetsEnabled,
         )
     end match
   end contribute
@@ -63,11 +63,11 @@ object InterpolatorCompletions:
    */
   private def interpolatorMemberArg(
       lit: Literal,
-      parent: Tree
+      parent: Tree,
   ): PartialFunction[Tree, Option[Ident | Select]] =
     case tree @ Apply(
           _,
-          List(Typed(expr: SeqLiteral, _))
+          List(Typed(expr: SeqLiteral, _)),
         ) if expr.elems.exists {
           case _: Ident => true
           case _: Select => true
@@ -100,12 +100,12 @@ object InterpolatorCompletions:
       cursor: SourcePosition,
       completionPos: CompletionPos,
       completions: Completions,
-      areSnippetsSupported: Boolean
+      areSnippetsSupported: Boolean,
   )(using Context): List[CompletionValue] =
     def newText(
         name: String,
         suffix: Option[String],
-        identOrSelect: Ident | Select
+        identOrSelect: Ident | Select,
     ): String =
       val snippetCursor = suffixEnding(suffix, areSnippetsSupported)
       new StringBuilder()
@@ -130,7 +130,7 @@ object InterpolatorCompletions:
       case m
           if CompletionFuzzy.matches(
             completionPos.query,
-            m.symbol.name.toString()
+            m.symbol.name.toString(),
           ) =>
         val sym = m.symbol
         val label = sym.name.decoded
@@ -145,8 +145,8 @@ object InterpolatorCompletions:
               Nil,
               Some(cursor.withStart(identOrSelect.span.start).toLSP),
               // Needed for VS Code which will not show the completion otherwise
-              Some(identOrSelect.show + "." + label)
-            )
+              Some(identOrSelect.show + "." + label),
+            ),
         )
     }.flatten
     memberCompletions.flatten
@@ -154,7 +154,7 @@ object InterpolatorCompletions:
 
   private def suffixEnding(
       suffix: Option[String],
-      areSnippetsSupported: Boolean
+      areSnippetsSupported: Boolean,
   ): String =
     suffix match
       case Some(suffix) if areSnippetsSupported && suffix == "()" =>
@@ -184,7 +184,7 @@ object InterpolatorCompletions:
       indexedContext: IndexedContext,
       completions: Completions,
       areSnippetsSupported: Boolean,
-      hasStringInterpolator: Boolean
+      hasStringInterpolator: Boolean,
   )(using ctx: Context): List[CompletionValue] =
 
     val text = position.source.content().mkString
@@ -240,8 +240,8 @@ object InterpolatorCompletions:
               Some(newText(name, suffix)),
               additionalEdits(),
               Some(nameRange),
-              None
-            )
+              None,
+            ),
         )
     }.flatten
   end contributeScope

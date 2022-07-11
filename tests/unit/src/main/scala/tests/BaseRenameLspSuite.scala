@@ -14,13 +14,13 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
 
   def same(
       name: String,
-      input: String
+      input: String,
   )(implicit loc: Location): Unit =
     check(
       name,
       input,
       "SHOULD_NOT_BE_RENAMED",
-      notRenamed = true
+      notRenamed = true,
     )
 
   def renamed(
@@ -32,7 +32,7 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       fileRenames: Map[String, String] = Map.empty,
       scalaVersion: Option[String] = None,
       expectedError: Boolean = false,
-      metalsJson: Option[String] = None
+      metalsJson: Option[String] = None,
   )(implicit loc: Location): Unit = {
     check(
       name,
@@ -44,7 +44,7 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       fileRenames,
       scalaVersion,
       expectedError,
-      metalsJson = metalsJson
+      metalsJson = metalsJson,
     )
   }
 
@@ -58,7 +58,7 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       fileRenames: Map[String, String] = Map.empty,
       scalaVersion: Option[String] = None,
       expectedError: Boolean = false,
-      metalsJson: Option[String] = None
+      metalsJson: Option[String] = None,
   )(implicit loc: Location): Unit = {
     test(name) {
       cleanWorkspace()
@@ -115,7 +115,7 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
           edit.replaceAll("(<<|>>|##.*##)", ""),
           expectedFiles,
           files.keySet,
-          newName
+          newName,
         )
       } yield ()
     }

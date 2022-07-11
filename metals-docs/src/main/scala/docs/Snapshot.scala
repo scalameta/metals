@@ -75,7 +75,7 @@ object Snapshot {
         Try(
           LocalDateTime.parse(
             doc.select("lastUpdated").text().trim,
-            mavenMetadataLastUpdatedFormatter
+            mavenMetadataLastUpdatedFormatter,
           )
         ).getOrElse(LocalDateTime.now())
       Snapshot(latest, lastUpdated)

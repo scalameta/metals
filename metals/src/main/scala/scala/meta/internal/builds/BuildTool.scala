@@ -19,7 +19,7 @@ trait BuildTool {
    */
   def bloopInstall(
       workspace: AbsolutePath,
-      systemProcess: List[String] => Future[WorkspaceLoadedStatus]
+      systemProcess: List[String] => Future[WorkspaceLoadedStatus],
   ): Future[WorkspaceLoadedStatus]
 
   def digest(workspace: AbsolutePath): Option[String]
@@ -46,7 +46,7 @@ object BuildTool {
   def copyFromResource(
       tempDir: Path,
       filePath: String,
-      destination: Option[String] = None
+      destination: Option[String] = None,
   ): Path = {
     val embeddedFile =
       this.getClass.getResourceAsStream(s"/$filePath")

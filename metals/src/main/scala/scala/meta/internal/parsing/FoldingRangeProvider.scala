@@ -15,7 +15,7 @@ import org.eclipse.lsp4j.FoldingRange
 
 final class FoldingRangeProvider(
     val trees: Trees,
-    buffers: Buffers
+    buffers: Buffers,
 ) {
 
   private val foldOnlyLines = new AtomicBoolean(false)

@@ -24,7 +24,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
       List(
         "generate-sources",
         s"ch.epfl.scala:maven-bloop_2.13:$versionToUse:bloopInstall",
-        "-DdownloadSources=true"
+        "-DdownloadSources=true",
       )
     userConfig().mavenScript match {
       case Some(script) =>
@@ -35,18 +35,18 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
           JavaBinary(userConfig().javaHome),
           "-Dfile.encoding=UTF-8",
           s"-Dmaven.multiModuleProjectDirectory=$workspace",
-          s"-Dmaven.home=$tempDir"
+          s"-Dmaven.home=$tempDir",
         )
 
         val jarArgs = List(
           "-cp",
           embeddedMavenLauncher.toString(),
-          "org.apache.maven.wrapper.MavenWrapperMain"
+          "org.apache.maven.wrapper.MavenWrapperMain",
         )
         List(
           javaArgs,
           jarArgs,
-          command(userConfig().currentBloopVersion)
+          command(userConfig().currentBloopVersion),
         ).flatten
     }
   }
@@ -69,7 +69,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
 object MavenBuildTool {
   def isMavenRelatedPath(
       workspace: AbsolutePath,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Boolean = {
     path.toNIO.startsWith(workspace.toNIO) && path.filename == "pom.xml"
   }

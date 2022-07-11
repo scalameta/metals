@@ -20,7 +20,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |>>  println(0)
        |}
        |""".stripMargin,
-    "a.B$"
+    "a.B$",
   )
 
   check(
@@ -32,7 +32,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |  }
        |}
        |""".stripMargin,
-    "a.Bar$"
+    "a.Bar$",
   )
 
   check(
@@ -46,7 +46,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |  }
        |}
        |""".stripMargin,
-    "a.Bar$Foo"
+    "a.Bar$Foo",
   )
 
   check(
@@ -60,7 +60,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |  }
        |}
        |""".stripMargin,
-    "a.Bar$Foo$"
+    "a.Bar$Foo$",
   )
 
   check(
@@ -71,7 +71,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |>>  println(0)
        |}
        |""".stripMargin,
-    "B"
+    "B",
   )
 
   check(
@@ -84,7 +84,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |  }
        |}
        |""".stripMargin,
-    "a.b.B"
+    "a.b.B",
   )
 
   check(
@@ -98,7 +98,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |  }
        |}
        |""".stripMargin,
-    "a.b.B"
+    "a.b.B",
   )
 
   check(
@@ -110,7 +110,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |  }
        |}
        |""".stripMargin,
-    "a.b.c.package$"
+    "a.b.c.package$",
   )
 
   check(
@@ -121,7 +121,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |}
        |""".stripMargin,
     "a.b.Main$package",
-    scalaVersion = V.scala3
+    scalaVersion = V.scala3,
   )
 
   check(
@@ -137,7 +137,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |
        |""".stripMargin,
     "a.Main$package",
-    scalaVersion = V.scala3
+    scalaVersion = V.scala3,
   )
 
   check(
@@ -156,14 +156,14 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
        |
        |""".stripMargin,
     "a.Main$package",
-    scalaVersion = V.scala3
+    scalaVersion = V.scala3,
   )
 
   def check(
       name: TestOptions,
       original: String,
       expected: String,
-      scalaVersion: String = V.scala213
+      scalaVersion: String = V.scala213,
   ): Unit =
     test(name) {
       val (buffers, classFinder) = init(scalaVersion)

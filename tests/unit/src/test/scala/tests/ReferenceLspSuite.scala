@@ -81,7 +81,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |  <<hello>>()
        |}
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   test("synthetic") {
@@ -166,7 +166,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     """|object Other {
        |  val mb = <<Main>>.apply("b")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkInSamePackage(
@@ -179,7 +179,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     """|object Other {
        |  val mb = Main.<<ap@@ply>>("b")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkInSamePackage(
@@ -193,7 +193,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |     case _ => None
        |   }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkInSamePackage( // FIXME: should, but doesn't find the class declaration: https://github.com/scalameta/metals/issues/1553#issuecomment-617884934
@@ -213,7 +213,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |     case _ => None
        |   }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkInSamePackage(
@@ -231,7 +231,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |     case _ => None
        |   }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   test("edit-distance".flaky) {
@@ -346,7 +346,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |trait BB extends <<AA>>
        |trait CC extends <<AA>>
        |trait DD extends <<AA>>
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -356,7 +356,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |trait BB extends <<AA>>
        |trait CC extends <<AA>>
        |trait DD extends <<AA>>
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -370,7 +370,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |object Other {
        |  val mb = new <<M@@ain>>("b")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -384,7 +384,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |object Other {
        |  val mb = new <<Main>>("b")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -395,14 +395,14 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |object Main {
        |  val name2 = new Name(<<va@@lue>> = "44")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   override def assertCheck(
       filename: String,
       edit: String,
       expected: Map[String, String],
-      base: Map[String, String]
+      base: Map[String, String],
   ): Future[Unit] = {
     server.assertReferences(filename, edit, expected, base)
   }

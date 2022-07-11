@@ -22,7 +22,7 @@ object ServerCommands {
       |
       |By default, Metals automatically prompts you to import the build when sources of the build change.
       |Use this command to manually trigger an import build instead of relying on the automatic prompt.
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   val ConnectBuildServer = new Command(
@@ -32,19 +32,19 @@ object ServerCommands {
       |
       |This command can be helpful in scenarios when Metals feels unresponsive, for example
       |when reopening Metals after the computer it has been sleeping.
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   val DisconnectBuildServer = new Command(
     "build-disconnect",
     "Disconnect to build server",
-    """Unconditionally cancel existing build server connection without reconnecting"""
+    """Unconditionally cancel existing build server connection without reconnecting""",
   )
 
   val RestartBuildServer = new Command(
     "build-restart",
     "Restart build server",
-    """Unconditionally stop the current running Bloop server and start a new one using Bloop launcher"""
+    """Unconditionally stop the current running Bloop server and start a new one using Bloop launcher""",
   )
 
   val ScanWorkspaceSources = new Command(
@@ -57,7 +57,7 @@ object ServerCommands {
        |file watching can run this manually instead. It should not be much slower
        |than walking the entire file tree and reading `*.scala` files to string,
        |indexing itself is cheap.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /** Decode a file e.g. javap, semanticdb */
@@ -114,7 +114,7 @@ object ServerCommands {
        |  error?: string
        |}
        |```
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /** If uri is null discover all test suites, otherwise discover testcases in file */
@@ -139,14 +139,14 @@ object ServerCommands {
       |```json
       |{}
       |```
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   val ListBuildTargets = new Command(
     "list-build-targets",
     "List build targets",
     """|Retrieve a list of build targets for the workspace.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val RunDoctor = new Command(
@@ -156,7 +156,7 @@ object ServerCommands {
        |
        |This command can be helpful in scenarios where features are not working as expected such
        |as compile errors are not appearing or completions are not correct.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val RunScalafix = new ParametrizedCommand[TextDocumentPositionParams](
@@ -168,7 +168,7 @@ object ServerCommands {
        |Their format is the coursier one https://get-coursier.io/
        |""".stripMargin,
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val CascadeCompile = new Command(
@@ -180,7 +180,7 @@ object ServerCommands {
        |Run the cascade compile task to additionally compile the inverse dependencies of the current build target.
        |For example, if you change the API in main sources and run cascade compile then it will also compile the
        |test sources that depend on main.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val CleanCompile = new Command(
@@ -190,13 +190,13 @@ object ServerCommands {
        |
        |By default, Metals compiles the files incrementally. In case of any compile artifacts corruption 
        |this command might be run to make sure everything is recompiled correctly.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val CancelCompile = new Command(
     "compile-cancel",
     "Cancel compilation",
-    """Cancel the currently ongoing compilation, if any."""
+    """Cancel the currently ongoing compilation, if any.""",
   )
 
   val GenerateBspConfig = new Command(
@@ -216,7 +216,7 @@ object ServerCommands {
        |Note: while Metals does know how to start Bloop, Bloop will be started when you trigger a build
        |import or when you use `bsp-switch` to switch to Bloop.
        |""".stripMargin,
-    "[string], name of the build server."
+    "[string], name of the build server.",
   )
 
   val BspSwitch = new Command(
@@ -227,7 +227,7 @@ object ServerCommands {
        |This command does nothing in case there are less than two installed build
        |servers on the computer. In case the user has multiple BSP servers installed
        |then Metals will prompt the user to select which server to use.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val StartDebugAdapter = new Command(
@@ -267,7 +267,7 @@ object ServerCommands {
         |   buildTarget: "foo"
         |}
         |```
-        |""".stripMargin
+        |""".stripMargin,
   )
 
   val PresentationCompilerRestart = new Command(
@@ -278,7 +278,7 @@ object ServerCommands {
        |Metals automatically restarts the presentation compiler after every successful compilation
        |in the build tool so this command should not be needed for normal usage. Please report
        |an issue if you need to use this command.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val AnalyzeStacktrace = new ParametrizedCommand[String](
@@ -293,12 +293,12 @@ object ServerCommands {
        |Otherwise client will display simple scala file
        |but with code lenses that direct user to proper location in codebase.
        |""".stripMargin,
-    "[string], where the string is a stacktrace."
+    "[string], where the string is a stacktrace.",
   )
 
   final case class ChooseClassRequest(
       textDocument: TextDocumentIdentifier,
-      kind: String
+      kind: String,
   )
   val ChooseClass = new ParametrizedCommand[ChooseClassRequest](
     "choose-class",
@@ -316,7 +316,7 @@ object ServerCommands {
        |  kind: 'tasty' | 'class'
        |}
        |```
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val GotoSymbol = new ParametrizedCommand[String](
@@ -325,7 +325,7 @@ object ServerCommands {
     """|Move the cursor to the definition of the argument symbol.
        |
        |""".stripMargin,
-    "[string], where the string is a SemanticDB symbol."
+    "[string], where the string is a SemanticDB symbol.",
   )
 
   val GotoPosition = new ParametrizedCommand[Location](
@@ -335,7 +335,7 @@ object ServerCommands {
        |It simply forwards request to client.
        |
        |""".stripMargin,
-    "[location], where the location is a lsp location object."
+    "[location], where the location is a lsp location object.",
   )
 
   val GotoSuperMethod = new ParametrizedCommand[TextDocumentPositionParams](
@@ -349,7 +349,7 @@ object ServerCommands {
        |
        |""".stripMargin,
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val SuperMethodHierarchy =
@@ -364,7 +364,7 @@ object ServerCommands {
          |
          |""".stripMargin,
       """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
-         |""".stripMargin
+         |""".stripMargin,
     )
 
   val ResetChoicePopup = new Command(
@@ -377,7 +377,7 @@ object ServerCommands {
        |If a choice is not provided it will execute interactive mode where user is prompt to select
        |which choice to reset.
        |""".stripMargin,
-    "[string?], where string is a choice value."
+    "[string?], where string is a choice value.",
   )
 
   val ResetNotifications = new Command(
@@ -386,7 +386,7 @@ object ServerCommands {
     """|ResetNotifications command allows you to reset all the dismissed notifications.
        |E.g. If you choose to dismiss build import forever, this command will make the notification show up again.
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val NewScalaFile = new ListParametrizedCommand[String](
@@ -411,7 +411,7 @@ object ServerCommands {
     """|[string[]], where the first is a directory location for the new file.
        |The second and third positions correspond to the file name and file type to allow for quick
        |creation of a file if all are present.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val NewJavaFile = new ListParametrizedCommand[String](
@@ -431,7 +431,7 @@ object ServerCommands {
     """|[string[]], where the first is a directory location for the new file.
        |The second and third positions correspond to the file name and file type to allow for quick
        |creation of a file if all are present.
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val NewScalaProject = new Command(
@@ -442,7 +442,7 @@ object ServerCommands {
        |The command reuses the Metals quick pick extension to work and can function with `window/showMessageRequest`, 
        |however the experience will not be optimal in that case. Some editors might also offer to open the newly created
        |project via `openNewWindowProvider`, but it is not necessary for the main functionality to work. 
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val CopyWorksheetOutput = new ParametrizedCommand[String](
@@ -453,7 +453,7 @@ object ServerCommands {
        |Note: This command returns the contents of the worksheet, and the LSP client
        |is in charge of taking that content and putting it into your local buffer.
        |""".stripMargin,
-    "[uri], the uri of the worksheet that you'd like to copy the contents of."
+    "[uri], the uri of the worksheet that you'd like to copy the contents of.",
   )
 
   val ExtractMemberDefinition =
@@ -464,7 +464,7 @@ object ServerCommands {
          |command is later ran to extract the code and create a new file with it
          |""".stripMargin,
       """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
-         |""".stripMargin
+         |""".stripMargin,
     )
 
   val InsertInferredType = new ParametrizedCommand[TextDocumentPositionParams](
@@ -474,12 +474,12 @@ object ServerCommands {
        |calculate the type and insert it in the correct location.
        |""".stripMargin,
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   final case class ConvertToNamedArgsRequest(
       position: TextDocumentPositionParams,
-      argIndices: ju.List[Integer]
+      argIndices: ju.List[Integer],
   )
   val ConvertToNamedArguments =
     new ParametrizedCommand[ConvertToNamedArgsRequest](
@@ -489,67 +489,67 @@ object ServerCommands {
          |determine the parameter names of all unnamed arguments and insert names at the correct locations.
          |""".stripMargin,
       """|Object with [TextDocumentPositionParams](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams) of the target Apply and `numUnnamedArgs` (int)
-         |""".stripMargin
+         |""".stripMargin,
     )
 
   val GotoLog = new Command(
     "goto-log",
     "Check logs",
-    "Open the Metals logs to troubleshoot issues."
+    "Open the Metals logs to troubleshoot issues.",
   )
 
   val OpenIssue = new OpenBrowserCommand(
     "https://github.com/scalameta/metals/issues/new/choose",
     "Open issue on GitHub",
-    "Open the Metals repository on GitHub to ask a question, report a bug or request a new feature."
+    "Open the Metals repository on GitHub to ask a question, report a bug or request a new feature.",
   )
 
   val MetalsGithub = new OpenBrowserCommand(
     "https://github.com/scalameta/metals",
     "Metals on GitHub",
-    "Open the Metals repository on GitHub"
+    "Open the Metals repository on GitHub",
   )
 
   val BloopGithub = new OpenBrowserCommand(
     "https://github.com/scalacenter/bloop",
     "Bloop on GitHub",
-    "Open the Metals repository on GitHub"
+    "Open the Metals repository on GitHub",
   )
 
   val ChatOnDiscord = new OpenBrowserCommand(
     "https://discord.gg/RFpSVth",
     "Chat on Discord",
-    "Open the Scalameta server on Discord to discuss with other Metals users."
+    "Open the Scalameta server on Discord to discuss with other Metals users.",
   )
 
   val ReadVscodeDocumentation = new OpenBrowserCommand(
     "https://scalameta.org/metals/docs/editors/vscode.html",
     "Read Metals documentation",
-    "Open the Metals website to read the full instructions on how to use Metals with VS Code."
+    "Open the Metals website to read the full instructions on how to use Metals with VS Code.",
   )
 
   val ReadBloopDocumentation = new OpenBrowserCommand(
     "https://scalacenter.github.io/bloop/",
     "Read Bloop documentation",
-    "Open the Bloop website to read the full instructions on how to install and use Bloop."
+    "Open the Bloop website to read the full instructions on how to install and use Bloop.",
   )
 
   val ScalametaTwitter = new OpenBrowserCommand(
     "https://twitter.com/scalameta",
     "Scalameta on Twitter",
-    "Stay up to date with the latest release announcements and learn new Scala code editing tricks."
+    "Stay up to date with the latest release announcements and learn new Scala code editing tricks.",
   )
 
   val StartAmmoniteBuildServer = new Command(
     "ammonite-start",
     "Start Ammonite build server",
-    "Start Ammonite build server"
+    "Start Ammonite build server",
   )
 
   val StopAmmoniteBuildServer = new Command(
     "ammonite-stop",
     "Stop Ammonite build server",
-    "Stop Ammonite build server"
+    "Stop Ammonite build server",
   )
 
   def all: List[BaseCommand] =
@@ -586,7 +586,7 @@ object ServerCommands {
       StartAmmoniteBuildServer,
       StartDebugAdapter,
       StopAmmoniteBuildServer,
-      SuperMethodHierarchy
+      SuperMethodHierarchy,
     )
 }
 
@@ -596,34 +596,34 @@ case class DebugUnresolvedMainClassParams(
     @Nullable args: java.util.List[String] = null,
     @Nullable jvmOptions: java.util.List[String] = null,
     @Nullable env: java.util.Map[String, String] = null,
-    @Nullable envFile: String = null
+    @Nullable envFile: String = null,
 )
 
 final case class ScalaTestSuitesDebugRequest(
     @Nullable target: b.BuildTargetIdentifier,
-    requestData: ScalaTestSuites
+    requestData: ScalaTestSuites,
 )
 
 final case class ScalaTestSuites(
     suites: java.util.List[ScalaTestSuiteSelection],
     jvmOptions: java.util.List[String],
-    environmentVariables: java.util.List[String]
+    environmentVariables: java.util.List[String],
 )
 
 final case class ScalaTestSuiteSelection(
     className: String,
-    tests: java.util.List[String]
+    tests: java.util.List[String],
 )
 
 case class DebugUnresolvedTestClassParams(
     testClass: String,
-    @Nullable buildTarget: String = null
+    @Nullable buildTarget: String = null,
 )
 
 case class DebugUnresolvedAttachRemoteParams(
     hostName: String,
     port: Int,
-    buildTarget: String
+    buildTarget: String,
 )
 
 case class DebugDiscoveryParams(
@@ -632,5 +632,5 @@ case class DebugDiscoveryParams(
     @Nullable args: java.util.List[String] = null,
     @Nullable jvmOptions: java.util.List[String] = null,
     @Nullable env: java.util.Map[String, String] = null,
-    @Nullable envFile: String = null
+    @Nullable envFile: String = null,
 )

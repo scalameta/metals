@@ -12,7 +12,7 @@ class AnalyzeStacktraceLspSuite
        |	at a.b.ClassError.raise(Main.scala:12)
        |	at a.b.Main$.main(Main.scala:5)
        |	at a.b.Main.main(Main.scala)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -24,7 +24,7 @@ class AnalyzeStacktraceLspSuite
        |[E] 	at a.b.ClassError.raise(Main.scala:12)
        |[E] 	at a.b.Main$.main(Main.scala:5)
        |[E] 	at a.b.Main.main(Main.scala)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /**
@@ -49,7 +49,7 @@ class AnalyzeStacktraceLspSuite
        |[error]         at a.b.ClassError.raise(Main.scala:12)
        |[error]         at a.b.Main$.main(Main.scala:5)
        |[error]         at a.b.Main.main(Main.scala)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /**
@@ -71,7 +71,7 @@ class AnalyzeStacktraceLspSuite
        |[info]         at a.b.ClassError.raise(Main.scala:12)
        |[info]         at a.b.Main$.main(Main.scala:5)
        |[info]         at a.b.Main.main(Main.scala)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -83,7 +83,7 @@ class AnalyzeStacktraceLspSuite
        |        at map @ a.Main$.run(Stacktraces.scala:9)
        |        at run$ @ a.Main$.run(Stacktraces.scala:6)
        |""".stripMargin,
-    dependency = "\"org.typelevel::cats-effect:3.3.11\""
+    dependency = "\"org.typelevel::cats-effect:3.3.11\"",
   )
 
   private lazy val code: String =

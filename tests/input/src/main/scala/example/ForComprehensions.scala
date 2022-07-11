@@ -6,23 +6,23 @@ class ForComprehensions {
     b <- List(a)
     if (
       a,
-      b
+      b,
     ) == (1, 2)
     (
       c,
-      d
+      d,
     ) <- List((a, b))
     if (
       a,
       b,
       c,
-      d
+      d,
     ) == (1, 2, 3, 4)
     e = (
       a,
       b,
       c,
-      d
+      d,
     )
     if e == (1, 2, 3, 4)
     f <- List(e)
@@ -33,7 +33,7 @@ class ForComprehensions {
       c,
       d,
       e,
-      f
+      f,
     )
   }
 

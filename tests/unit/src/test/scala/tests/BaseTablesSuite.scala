@@ -19,7 +19,7 @@ abstract class BaseTablesSuite extends BaseSuite {
     tables = new Tables(
       workspace,
       time,
-      ClientConfiguration.Default()
+      ClientConfiguration.Default(),
     )
     tables.connect()
   }

@@ -47,7 +47,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
           translateCapability("Test", info.getCapabilities().getCanTest) ::
           translateCapability(
             "Compile",
-            info.getCapabilities().getCanCompile
+            info.getCapabilities().getCanCompile,
           ) :: Nil
       output ++= getSection("Capabilities", capabilities)
 
@@ -90,7 +90,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       output ++= getSection("Scala Version", List(info.scalaVersion))
       output ++= getSection(
         "Scala Binary Version",
-        List(info.scalaBinaryVersion)
+        List(info.scalaBinaryVersion),
       )
       output ++= getSection("Scala Platform", List(info.scalaPlatform))
       info.jvmVersion.foreach(jvmVersion =>
@@ -103,7 +103,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
     commonInfo.foreach(info => {
       output ++= getSection(
         "Base Directory",
-        List(URIEncoderDecoder.decode(info.baseDirectory))
+        List(URIEncoderDecoder.decode(info.baseDirectory)),
       )
       output ++= getSection("Source Directories", getSources(info))
     })
@@ -137,7 +137,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
 
   private def getSection(
       sectionName: String,
-      sectionText: List[_]
+      sectionText: List[_],
   ): List[String] =
     "" :: sectionName :: {
       if (sectionText.isEmpty) List("  NONE")
@@ -146,7 +146,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
 
   private def translateCapability(
       capability: String,
-      hasCapability: Boolean
+      hasCapability: Boolean,
   ): String =
     if (hasCapability) s"  $capability" else s"  $capability <- NOT SUPPORTED"
 
@@ -160,7 +160,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
   private def getSingleClassPathInfo(
       path: Path,
       shortPath: Path,
-      maxFilenameSize: Int
+      maxFilenameSize: Int,
   ): String = {
     val filename = shortPath.toString()
     val padding = " " * (maxFilenameSize - filename.size)
@@ -191,7 +191,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
         getSingleClassPathInfo(
           path,
           shortenPath(path),
-          maxFilenameSize
+          maxFilenameSize,
         )
       )
     } else

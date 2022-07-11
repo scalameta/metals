@@ -13,7 +13,7 @@ case class DefinitionResult(
     locations: util.List[Location],
     symbol: String,
     definition: Option[AbsolutePath],
-    semanticdb: Option[TextDocument]
+    semanticdb: Option[TextDocument],
 ) {
   def isEmpty: Boolean = locations.isEmpty()
 }

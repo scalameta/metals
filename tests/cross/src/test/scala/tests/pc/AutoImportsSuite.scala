@@ -19,7 +19,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
            |scala.concurrent.impl
            |java.util.concurrent
            |""".stripMargin
-    )
+    ),
   )
 
   checkEdit(
@@ -37,7 +37,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  Future.successful(2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -58,7 +58,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  Future.successful(2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -77,7 +77,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  Future.successful(2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -95,7 +95,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val uuid = UUID.randomUUID()
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -113,7 +113,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val uuid = UUID.randomUUID()
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -131,7 +131,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val l : ju.Map[String, Int] = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -150,7 +150,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |  val l = s"${mutable.Seq(2)}"
        |}
        |""".stripMargin,
-    selection = 1
+    selection = 1,
   )
 
   checkEdit(
@@ -168,7 +168,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val l = s"${mutable.Seq(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -189,7 +189,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object Main{
        | val obj = ABC
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -207,7 +207,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |package object b {
        |  val l = s"${ListBuffer(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -229,7 +229,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val l = s"${ListBuffer(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -254,7 +254,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val l = s"${ListBuffer(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkAmmoniteEdit(
@@ -271,7 +271,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
       ammoniteWrapper(
         """val p: Path = ???
           |""".stripMargin
-      )
+      ),
   )
 
   checkAmmoniteEdit(
@@ -286,7 +286,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
         |import java.nio.file.Path
         |val p: Path = ???
         |""".stripMargin
-    )
+    ),
   )
 
   private def ammoniteWrapper(code: String): String =

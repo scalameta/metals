@@ -31,7 +31,7 @@ class CompletionsProvider(
     driver: InteractiveDriver,
     params: OffsetParams,
     config: PresentationCompilerConfig,
-    buildTargetIdentifier: String
+    buildTargetIdentifier: String,
 ):
   def completions(): CompletionList =
     val uri = params.uri
@@ -67,14 +67,14 @@ class CompletionsProvider(
             completionPos,
             indexedCtx,
             path,
-            config
+            config,
           ).completions()
         val autoImportsGen = AutoImports.generator(
           completionPos.sourcePos,
           params.text,
           unit.tpdTree,
           indexedCtx,
-          config
+          config,
         )
 
         val items = completions.zipWithIndex.map { case (item, idx) =>
@@ -84,7 +84,7 @@ class CompletionsProvider(
             autoImportsGen,
             completionPos,
             path,
-            indexedCtx
+            indexedCtx,
           )(using newctx)
         }
         val isIncomplete = searchResult match
@@ -95,7 +95,7 @@ class CompletionsProvider(
 
     new CompletionList(
       isIncomplete,
-      items.asJava
+      items.asJava,
     )
   end completions
 
@@ -153,12 +153,12 @@ class CompletionsProvider(
       autoImports: AutoImportsGenerator,
       completionPos: CompletionPos,
       path: List[Tree],
-      indexedContext: IndexedContext
+      indexedContext: IndexedContext,
   )(using ctx: Context): CompletionItem =
     val printer = MetalsPrinter.standard(
       indexedContext,
       search,
-      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater
+      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
     )
     val editRange = completionPos.toEditRange
 
@@ -175,7 +175,7 @@ class CompletionsProvider(
         nameEdit: TextEdit,
         isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil,
-        filterText: Option[String] = None
+        filterText: Option[String] = None,
     ): CompletionItem =
 
       val label =
@@ -209,7 +209,7 @@ class CompletionsProvider(
             CompletionItemData(
               SemanticdbSymbols.symbolName(v.symbol),
               buildTargetIdentifier,
-              kind = completionItemDataKind
+              kind = completionItemDataKind,
             ).toJson
           )
         case _: CompletionValue.Document =>
@@ -232,11 +232,11 @@ class CompletionsProvider(
         isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil,
         filterText: Option[String] = None,
-        range: Option[LspRange] = None
+        range: Option[LspRange] = None,
     ): CompletionItem =
       val nameEdit = new TextEdit(
         range.getOrElse(editRange),
-        value
+        value,
       )
       mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits, filterText)
     end mkItem
@@ -244,7 +244,7 @@ class CompletionsProvider(
     def mkWorkspaceItem(
         ident: String,
         value: String,
-        additionalEdits: List[TextEdit] = Nil
+        additionalEdits: List[TextEdit] = Nil,
     ): CompletionItem =
       mkItem(ident, value, isFromWorkspace = true, additionalEdits)
 
@@ -257,7 +257,7 @@ class CompletionsProvider(
           case (_: Ident) :: (_: Import) :: _ =>
             mkWorkspaceItem(
               ident,
-              sym.fullNameBackticked
+              sym.fullNameBackticked,
             )
           case _ =>
             autoImports.editsForSymbol(sym) match
@@ -268,14 +268,14 @@ class CompletionsProvider(
                       ident,
                       nameEdit,
                       isFromWorkspace = true,
-                      other.toList
+                      other.toList,
                     )
                   case _ =>
                     mkItem(
                       ident,
                       ident.backticked + completionTextSuffix,
                       isFromWorkspace = true,
-                      edits.edits
+                      edits.edits,
                     )
               case None =>
                 val r = indexedContext.lookupSym(sym)
@@ -285,7 +285,7 @@ class CompletionsProvider(
                   case _ =>
                     mkWorkspaceItem(
                       ident,
-                      sym.fullNameBackticked + completionTextSuffix
+                      sym.fullNameBackticked + completionTextSuffix,
                     )
       case CompletionValue.Override(
             label,
@@ -293,7 +293,7 @@ class CompletionsProvider(
             _,
             shortNames,
             filterText,
-            start
+            start,
           ) =>
         val additionalEdits =
           shortNames
@@ -306,7 +306,7 @@ class CompletionsProvider(
           false,
           additionalEdits,
           filterText,
-          Some(completionPos.copy(start = start).toEditRange)
+          Some(completionPos.copy(start = start).toEditRange),
         )
       case CompletionValue.NamedArg(label, _) =>
         mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
@@ -321,7 +321,7 @@ class CompletionsProvider(
           insert + completionTextSuffix,
           additionalEdits = completion.additionalEdits,
           range = completion.range,
-          filterText = completion.filterText
+          filterText = completion.filterText,
         )
     end match
   end completionItems

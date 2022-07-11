@@ -7,5 +7,5 @@ class BreakpointDapSuite
     extends BaseBreakpointDapSuite(
       "debug-breakpoint",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     )

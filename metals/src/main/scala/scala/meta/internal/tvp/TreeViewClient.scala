@@ -11,12 +11,12 @@ trait TreeViewClient {
 
 case class TreeViewChildrenParams(
     viewId: String,
-    @Nullable nodeUri: String = null
+    @Nullable nodeUri: String = null,
 )
 
 case class TreeViewParentParams(
     viewId: String,
-    @Nullable nodeUri: String = null
+    @Nullable nodeUri: String = null,
 )
 
 case class TreeViewParentResult(
@@ -25,13 +25,13 @@ case class TreeViewParentResult(
 
 case class TreeViewVisibilityDidChangeParams(
     viewId: String,
-    visible: java.lang.Boolean
+    visible: java.lang.Boolean,
 )
 
 case class TreeViewNodeCollapseDidChangeParams(
     viewId: String,
     nodeUri: String,
-    collapsed: java.lang.Boolean
+    collapsed: java.lang.Boolean,
 )
 
 case class MetalsTreeViewChildrenResult(
@@ -48,7 +48,7 @@ case class MetalsCommand(
     title: String,
     command: String,
     @Nullable tooltip: String = null,
-    @Nullable arguments: Array[AnyRef] = null
+    @Nullable arguments: Array[AnyRef] = null,
 )
 
 object MetalsCommand {
@@ -57,7 +57,7 @@ object MetalsCommand {
       "Go to Definition",
       "metals.goto",
       symbol,
-      Array(symbol)
+      Array(symbol),
     )
 }
 
@@ -67,5 +67,5 @@ case class TreeViewDidChangeParams(
 
 case class TreeViewNodeRevealResult(
     viewId: String,
-    uriChain: Array[String]
+    uriChain: Array[String],
 )

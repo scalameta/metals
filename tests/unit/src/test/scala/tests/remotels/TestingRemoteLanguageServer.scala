@@ -42,7 +42,7 @@ object TestingRemoteLanguageServer {
               try {
                 val request = new String(
                   InputStreamIO.readBytes(e.getInputStream()),
-                  StandardCharsets.UTF_8
+                  StandardCharsets.UTF_8,
                 ).parseJson.toJsonObject
                 val params =
                   request.get("params").as[TextDocumentPositionParams].get
@@ -50,7 +50,7 @@ object TestingRemoteLanguageServer {
                   ju.Collections.singletonList(
                     new l.Location(
                       params.getTextDocument().getUri(),
-                      new l.Range(params.getPosition(), params.getPosition())
+                      new l.Range(params.getPosition(), params.getPosition()),
                     )
                   )
                 )
@@ -60,8 +60,8 @@ object TestingRemoteLanguageServer {
                   scribe.error(e)
                   ""
               }
-            }
-          )
+            },
+          ),
         )
       )
       .build()

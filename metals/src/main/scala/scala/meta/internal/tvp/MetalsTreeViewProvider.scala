@@ -30,7 +30,7 @@ class MetalsTreeViewProvider(
     statistics: StatisticsConfig,
     doCompile: BuildTargetIdentifier => Unit,
     sh: ScheduledExecutorService,
-    isBloop: () => Boolean
+    isBloop: () => Boolean,
 ) extends TreeViewProvider {
   private val ticks =
     TrieMap.empty[String, ScheduledFuture[_]]
@@ -52,7 +52,7 @@ class MetalsTreeViewProvider(
     _.filename,
     _.toString,
     () => buildTargets.allWorkspaceJars,
-    (path, symbol) => classpath.symbols(path, symbol)
+    (path, symbol) => classpath.symbols(path, symbol),
   )
 
   val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
@@ -76,7 +76,7 @@ class MetalsTreeViewProvider(
         .targetClassDirectories(id)
         .flatMap(cd => classpath.symbols(cd.toAbsolutePath, symbol))
         .iterator
-    }
+    },
   )
 
   override def init(): Unit = {
@@ -85,7 +85,7 @@ class MetalsTreeViewProvider(
         Array(
           TreeViewNode.empty(Project),
           TreeViewNode.empty(Build),
-          TreeViewNode.empty(Compile)
+          TreeViewNode.empty(Compile),
         )
       )
     )
@@ -149,7 +149,7 @@ class MetalsTreeViewProvider(
             () => tickBuildTreeView(),
             1,
             1,
-            TimeUnit.SECONDS
+            TimeUnit.SECONDS,
           )
         case Project =>
           flushPendingProjectUpdates()
@@ -188,10 +188,10 @@ class MetalsTreeViewProvider(
         command.title,
         ClientCommands.EchoCommand.id,
         command.description,
-        Array(command.id: AnyRef)
+        Array(command.id: AnyRef),
       ),
       icon = icon,
-      tooltip = command.description
+      tooltip = command.description,
     )
   override def children(
       params: TreeViewChildrenParams
@@ -207,14 +207,14 @@ class MetalsTreeViewProvider(
           echoCommand(ServerCommands.OpenIssue, "issue-opened"),
           echoCommand(ServerCommands.MetalsGithub, "github"),
           echoCommand(ServerCommands.BloopGithub, "github"),
-          echoCommand(ServerCommands.ScalametaTwitter, "twitter")
+          echoCommand(ServerCommands.ScalametaTwitter, "twitter"),
         )
       case Project =>
         Option(params.nodeUri) match {
           case None if buildTargets.all.nonEmpty =>
             Array(
               projects.root,
-              libraries.root
+              libraries.root,
             )
           case Some(uri) =>
             if (libraries.matches(uri)) {
@@ -244,8 +244,8 @@ class MetalsTreeViewProvider(
               TreeViewNode
                 .fromCommand(
                   ServerCommands.ResetNotifications,
-                  "notifications-clear"
-                )
+                  "notifications-clear",
+                ),
             )
           case _ =>
             Array()
@@ -268,7 +268,7 @@ class MetalsTreeViewProvider(
 
   override def reveal(
       path: AbsolutePath,
-      pos: l.Position
+      pos: l.Position,
   ): Option[TreeViewNodeRevealResult] = {
     val input = path.toInput
     val occurrences =
@@ -276,7 +276,7 @@ class MetalsTreeViewProvider(
         .allToplevels(
           input,
           // TreeViewProvider doesn't work with Scala 3 - see #2859
-          dialects.Scala213
+          dialects.Scala213,
         )
         .occurrences
         .filterNot(_.symbol.isPackage)
@@ -324,7 +324,7 @@ class MetalsTreeViewProvider(
       Compile,
       id.getUri,
       s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)",
-      icon = "compile"
+      icon = "compile",
     )
   }
 
@@ -332,7 +332,7 @@ class MetalsTreeViewProvider(
     TreeViewNode(
       Compile,
       null,
-      Compile
+      Compile,
     )
   }
 

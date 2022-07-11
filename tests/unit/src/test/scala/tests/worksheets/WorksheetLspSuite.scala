@@ -8,7 +8,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
 
   checkWorksheetDeps(
     "imports-inside",
-    "a/src/main/scala/foo/Main.worksheet.sc"
+    "a/src/main/scala/foo/Main.worksheet.sc",
   )
 
   checkWorksheetDeps("imports-outside", "Main.worksheet.sc")
@@ -38,7 +38,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
         _ <- server.didSave(path)(identity)
         identity <- server.completion(
           path,
-          "htmlFile.render@@"
+          "htmlFile.render@@",
         )
         _ = assertNoDiff(
           server.workspaceDefinitions,
@@ -51,7 +51,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
               |  )
               |)
               |htmlFile/*L2*/.render/*Text.scala*/
-              |""".stripMargin
+              |""".stripMargin,
         )
         _ <- server.didOpen("scalatags/Text.scala")
         _ = assertNoDiff(identity, "render: String")
@@ -66,7 +66,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
              |  )
              |) // : scalatags.Text.TypedTag[String] = TypedTag(tag = "html",modifiers = List(ArraySeq(TypedTag(tag = "body",modifiers = L…
              |htmlFile.render // : String = "<html><body><p>This is a big paragraph of text</p></body></html>"
-             |""".stripMargin
+             |""".stripMargin,
         )
       } yield ()
     }
@@ -89,7 +89,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
       _ <- server.didOpen(path)
       _ = assertNoDiff(
         client.workspaceErrorShowMessages,
-        "Error downloading com.lihaoyi:scalatags_2.13:0.999.0"
+        "Error downloading com.lihaoyi:scalatags_2.13:0.999.0",
       )
     } yield ()
   }
@@ -113,7 +113,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
       _ <- server.didOpen(path)
       _ = assertNoDiff(
         client.workspaceDecorations,
-        "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01"
+        "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01",
       )
     } yield ()
   }
@@ -166,7 +166,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |val source: Source[Int, NotUsed] = Source(1 to 2) // : Source[Int, NotUsed] = Source(SourceShape(StatefulMapConcat.out(...
            |val future = source.runWith(Sink.foreach(_ => ())) // : concurrent.Future[akka.Done] = Future(Success(Done))
            |Await.result(future, 3.seconds) // : akka.Done = Done
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

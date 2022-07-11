@@ -16,7 +16,7 @@ class StatusBarSuite extends BaseSuite {
     () => client,
     time,
     ProgressTicks.dots,
-    ClientConfiguration.Default
+    ClientConfiguration.Default,
   )
   override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()
@@ -41,7 +41,7 @@ class StatusBarSuite extends BaseSuite {
          |<show> - tick 1
          |tick 2
          |<hide>
-         |""".stripMargin
+         |""".stripMargin,
     )
   }
 
@@ -63,7 +63,7 @@ class StatusBarSuite extends BaseSuite {
          |tick..
          |tick...
          |<hide>
-         |""".stripMargin
+         |""".stripMargin,
     )
   }
 
@@ -88,7 +88,7 @@ class StatusBarSuite extends BaseSuite {
          |b 3s
          |b 4s
          |<hide>
-         |""".stripMargin
+         |""".stripMargin,
     )
   }
 }

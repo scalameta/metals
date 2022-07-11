@@ -29,19 +29,19 @@ class MacroCompletionSuite extends BaseCompletionSuite {
           .of(
             "com.olegpy",
             s"better-monadic-for_$scalaBinaryVersion",
-            BuildInfoVersions.betterMonadicFor
+            BuildInfoVersions.betterMonadicFor,
           ),
         Dependency
           .of(
             "org.typelevel",
             s"kind-projector_$scalaVersion",
-            BuildInfoVersions.kindProjector
+            BuildInfoVersions.kindProjector,
           ),
         Dependency
           .of("org.typelevel", s"simulacrum_$scalaBinaryVersion", "1.0.0"),
         Dependency
           .of("com.lihaoyi", s"sourcecode_$scalaBinaryVersion", "0.1.9"),
-        Dependency.of("com.chuusai", s"shapeless_$scalaBinaryVersion", "2.3.3")
+        Dependency.of("com.chuusai", s"shapeless_$scalaBinaryVersion", "2.3.3"),
       ) ++ macrosDependencies
     }
   }
@@ -77,7 +77,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       "2.11" ->
         """|from(r: ::[String,::[Int,HNil]]): Person
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -102,8 +102,8 @@ class MacroCompletionSuite extends BaseCompletionSuite {
         """|fold[X](fa: Int => X, fb: String => X): X
            |""".stripMargin,
       // NOTE(olafur): the presentation compiler returns empty results here in 2.13.0
-      "2.13" -> ""
-    )
+      "2.13" -> "",
+    ),
   )
 
   check(
@@ -114,7 +114,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: String
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   def simulacrum(name: String, completion: String, expected: String): Unit =
@@ -135,19 +135,19 @@ class MacroCompletionSuite extends BaseCompletionSuite {
          |  $completion
          |}
          |""".stripMargin,
-      expected
+      expected,
     )
   simulacrum(
     "import",
     """|import Semigroup.op@@
        |""".stripMargin,
-    ""
+    "",
   )
   simulacrum(
     "object",
     """|Semigroup.apply@@
        |""".stripMargin,
-    ""
+    "",
   )
 
   check(
@@ -164,7 +164,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       "2.11" ->
         """|fold[X](fa: Int => X, fb: String => X): X
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -176,7 +176,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|toCharArray(): Array[Char]
-       |""".stripMargin
+       |""".stripMargin,
   )
 
 }

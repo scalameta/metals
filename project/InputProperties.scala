@@ -6,7 +6,7 @@ object InputProperties extends AutoPlugin {
   var files: Option[Seq[File]] = None
   def resourceGenerator(
       input: Reference,
-      input3: Reference
+      input3: Reference,
   ): Def.Initialize[Task[Seq[File]]] =
     Def.taskDyn {
       files.synchronized {
@@ -29,7 +29,7 @@ object InputProperties extends AutoPlugin {
     }
   def resourceGeneratorImpl(
       input: Reference,
-      resourceName: String
+      resourceName: String,
   ): Def.Initialize[Task[Seq[File]]] =
     Def.task {
       val out =
@@ -37,7 +37,7 @@ object InputProperties extends AutoPlugin {
       val props = new java.util.Properties()
       props.put(
         "sourceroot",
-        (ThisBuild / baseDirectory).value.toString
+        (ThisBuild / baseDirectory).value.toString,
       )
       val sourceJars = for {
         configurationReport <- (input / updateClassifiers).value.configurations
@@ -47,20 +47,20 @@ object InputProperties extends AutoPlugin {
       } yield file
       props.put(
         "dependencySources",
-        sourceJars.map(_.toPath).distinct.mkString(File.pathSeparator)
+        sourceJars.map(_.toPath).distinct.mkString(File.pathSeparator),
       )
       props.put(
         "sourceDirectories",
         List(
           (input / Compile / unmanagedSourceDirectories).value,
-          (input / Test / unmanagedSourceDirectories).value
-        ).flatten.mkString(File.pathSeparator)
+          (input / Test / unmanagedSourceDirectories).value,
+        ).flatten.mkString(File.pathSeparator),
       )
       props.put(
         "classpath",
         (input / Test / fullClasspath).value
           .map(_.data)
-          .mkString(File.pathSeparator)
+          .mkString(File.pathSeparator),
       )
       IO.write(props, "input", out)
       List(out)

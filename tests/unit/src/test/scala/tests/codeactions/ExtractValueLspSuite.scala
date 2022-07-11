@@ -26,7 +26,7 @@ class ExtractValueLspSuite
        |  }
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -57,7 +57,7 @@ class ExtractValueLspSuite
        |    } yield res
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -86,7 +86,7 @@ class ExtractValueLspSuite
        |    } yield res
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -108,7 +108,7 @@ class ExtractValueLspSuite
        |    }
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -130,7 +130,7 @@ class ExtractValueLspSuite
        |    method2(newValue)
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -151,7 +151,7 @@ class ExtractValueLspSuite
        |    println("Hello!"); method2(1  + method2(newValue))
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -171,7 +171,7 @@ class ExtractValueLspSuite
        |  val newValue2 = { 1 + 2 }
        |  method2(newValue2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -188,7 +188,7 @@ class ExtractValueLspSuite
         |\tval newValue = List(1, 2, 3).map(_ + 1).sum
         |\tmethod2(newValue)
         |}
-        |""".stripMargin
+        |""".stripMargin,
   )
 
 }

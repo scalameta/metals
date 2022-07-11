@@ -33,7 +33,7 @@ object FileLayout {
   def fromString(
       layout: String,
       root: AbsolutePath = AbsolutePath(Files.createTempDirectory("scalameta")),
-      charset: Charset = StandardCharsets.UTF_8
+      charset: Charset = StandardCharsets.UTF_8,
   ): AbsolutePath = {
     if (!layout.trim.isEmpty) {
       mapFromString(layout).foreach { case (path, contents) =>
@@ -48,7 +48,7 @@ object FileLayout {
           file.toNIO,
           contents.getBytes(charset),
           StandardOpenOption.WRITE,
-          StandardOpenOption.CREATE
+          StandardOpenOption.CREATE,
         )
       }
     }

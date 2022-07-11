@@ -28,7 +28,7 @@ final class BloopInstall(
     languageClient: MetalsLanguageClient,
     buildTools: BuildTools,
     tables: Tables,
-    shellRunner: ShellRunner
+    shellRunner: ShellRunner,
 )(implicit ec: ExecutionContext) {
 
   override def toString: String = s"BloopInstall($workspace)"
@@ -48,13 +48,13 @@ final class BloopInstall(
           }
         }
         process
-      }
+      },
     )
   }
 
   private def runArgumentsUnconditionally(
       buildTool: BuildTool,
-      args: List[String]
+      args: List[String],
   ): Future[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
     val processFuture = shellRunner
@@ -68,8 +68,8 @@ final class BloopInstall(
           // Envs below might be used to customize build/bloopInstall procedure.
           // Example: you can disable `Xfatal-warnings` scalac option only for Metals.
           "METALS_ENABLED" -> "true",
-          "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion
-        ) ++ sys.env
+          "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion,
+        ) ++ sys.env,
       )
       .map {
         case ExitCodes.Success => WorkspaceLoadedStatus.Installed
@@ -106,7 +106,7 @@ final class BloopInstall(
   // twice whether to import the build.
   def runIfApproved(
       buildTool: BuildTool,
-      digest: String
+      digest: String,
   ): Future[WorkspaceLoadedStatus] =
     synchronized {
       oldInstallResult(digest) match {
@@ -119,7 +119,7 @@ final class BloopInstall(
               buildTools,
               buildTool,
               languageClient,
-              digest
+              digest,
             )
             installResult <- {
               if (userResponse.isYes) {
@@ -136,7 +136,7 @@ final class BloopInstall(
 
   private def persistChecksumStatus(
       status: Status,
-      buildTool: BuildTool
+      buildTool: BuildTool,
   ): Unit = {
     buildTool.digest(workspace).foreach { checksum =>
       tables.digests.setStatus(checksum, status)
@@ -147,7 +147,7 @@ final class BloopInstall(
       buildTools: BuildTools,
       buildTool: BuildTool,
       languageClient: MetalsLanguageClient,
-      digest: String
+      digest: String,
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
     tables.digests.setStatus(digest, Status.Requested)
     val (params, yes) =

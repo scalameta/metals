@@ -56,7 +56,7 @@ class OrganizeImportsLspSuite
       |}
       |""".stripMargin,
     kind = List(sourceKind),
-    scalacOptions = scalacOption
+    scalacOptions = scalacOption,
   )
 
   check(
@@ -90,9 +90,9 @@ class OrganizeImportsLspSuite
         """|import scala.concurrent.ExecutionContext.global""".stripMargin,
         """|import scala.concurrent.ExecutionContext.global
            |import java.nio.file.Path
-           |// comment""".stripMargin
+           |// comment""".stripMargin,
       )
-    }
+    },
   )
 
   check(
@@ -128,11 +128,11 @@ class OrganizeImportsLspSuite
         """|import scala.concurrent.ExecutionContext.global""".stripMargin,
         """|import scala.concurrent.ExecutionContext.global
            |import java.nio.file.ClassDoNotExist
-           |// comment""".stripMargin
+           |// comment""".stripMargin,
       )
     },
     expectError = true,
-    expectNoDiagnostics = false
+    expectNoDiagnostics = false,
   )
 
   check(
@@ -173,7 +173,7 @@ class OrganizeImportsLspSuite
       s"""|{
           |  "scalafixConfigPath": "$configPath"
           |}""".stripMargin
-    }
+    },
   )
 
   check(
@@ -202,7 +202,7 @@ class OrganizeImportsLspSuite
       |""".stripMargin,
     kind = List(sourceKind),
     scalafixConf = scalafixConf(),
-    scalacOptions = scalacOption
+    scalacOptions = scalacOption,
   )
 
   check(
@@ -230,7 +230,7 @@ class OrganizeImportsLspSuite
       |}
       |""".stripMargin,
     kind = List(sourceKind),
-    scalacOptions = scalacOption ++ List("-Xsource:3")
+    scalacOptions = scalacOption ++ List("-Xsource:3"),
   )
 
   check(
@@ -254,7 +254,7 @@ class OrganizeImportsLspSuite
        |""".stripMargin,
     kind = List(quickFixKind),
     scalafixConf = scalafixConf(),
-    scalacOptions = scalacOption
+    scalacOptions = scalacOption,
   )
 
   checkNoAction(
@@ -269,7 +269,7 @@ class OrganizeImportsLspSuite
        |}
        |""".stripMargin,
     scalafixConf = scalafixConf(),
-    scalacOptions = scalacOption
+    scalacOptions = scalacOption,
   )
 
   check(
@@ -294,7 +294,7 @@ class OrganizeImportsLspSuite
     kind = List(sourceKind),
     scalafixConf = scalafixConf(),
     scalacOptions = scalacOption,
-    expectNoDiagnostics = false
+    expectNoDiagnostics = false,
   )
 
   checkNoAction(
@@ -304,6 +304,6 @@ class OrganizeImportsLspSuite
       |object A {
       |  val action = "quick fix should not be available"
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 }

@@ -14,11 +14,11 @@ import tests.BuildToolLayout
 abstract class BaseEvaluationDapSuite(
     suiteName: String,
     initializer: BuildServerInitializer,
-    buildToolLayout: BuildToolLayout
+    buildToolLayout: BuildToolLayout,
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
   assertEvaluation(
     "basic expression evaluation",
-    expression = "1 + 1"
+    expression = "1 + 1",
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -37,7 +37,7 @@ abstract class BaseEvaluationDapSuite(
   def assertEvaluation(
       name: TestOptions,
       expression: String,
-      main: Option[String] = None
+      main: Option[String] = None,
   )(
       source: String
   )(implicit loc: Location): Unit = {

@@ -41,7 +41,7 @@ final class InteractiveSemanticdbs(
     compilers: () => Compilers,
     clientConfig: ClientConfiguration,
     semanticdbIndexer: () => SemanticdbIndexer,
-    javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb]
+    javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb],
 ) extends Cancelable
     with Semanticdbs {
 
@@ -64,7 +64,7 @@ final class InteractiveSemanticdbs(
 
   def textDocument(
       source: AbsolutePath,
-      unsavedContents: Option[String]
+      unsavedContents: Option[String],
   ): TextDocumentLookup = {
 
     def doesNotBelongToBuildTarget = buildTargets.inverseSources(source).isEmpty
@@ -99,7 +99,7 @@ final class InteractiveSemanticdbs(
             }
           } else
             existingDoc
-        }
+        },
       )
       TextDocumentLookup.fromOption(source, Option(result))
     }
@@ -170,7 +170,7 @@ final class InteractiveSemanticdbs(
 
   private def scalaCompile(
       source: AbsolutePath,
-      text: String
+      text: String,
   ): s.TextDocument = {
     def worksheetCompiler =
       if (source.isWorksheet) compilers().loadWorksheetCompiler(source)
@@ -204,7 +204,7 @@ final class InteractiveSemanticdbs(
       .semanticdbTextDocument(source.toURI, modifiedText)
       .get(
         clientConfig.initialConfig.compilers.timeoutDelay,
-        clientConfig.initialConfig.compilers.timeoutUnit
+        clientConfig.initialConfig.compilers.timeoutUnit,
       )
     val textDocument = {
       val doc = s.TextDocument.parseFrom(bytes)
@@ -219,7 +219,7 @@ final class InteractiveSemanticdbs(
   private def cleanupAutoImports(
       document: s.TextDocument,
       originalText: String,
-      linesSize: Int
+      linesSize: Int,
   ): s.TextDocument = {
 
     def adjustRange(range: s.Range): Option[s.Range] = {
@@ -228,7 +228,7 @@ final class InteractiveSemanticdbs(
       if (nextEndLine >= 0) {
         val nextRange = range.copy(
           startLine = nextStartLine,
-          endLine = nextEndLine
+          endLine = nextEndLine,
         )
         Some(nextRange)
       } else None
@@ -264,7 +264,7 @@ final class InteractiveSemanticdbs(
       symbols = document.symbols,
       occurrences = adjustedOccurences,
       diagnostics = adjustedDiagnostic,
-      synthetics = adjustedSynthetic
+      synthetics = adjustedSynthetic,
     )
   }
 

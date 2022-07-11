@@ -42,7 +42,7 @@ class CascadeLspSuite extends BaseLspSuite("cascade") {
            | required: String
            |  val n: String = a.A.n
            |                  ^^^^^
-          """.stripMargin
+          """.stripMargin,
       )
     } yield ()
   }

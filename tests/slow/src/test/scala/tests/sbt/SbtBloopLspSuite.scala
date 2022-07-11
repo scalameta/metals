@@ -48,8 +48,8 @@ class SbtBloopLspSuite
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -70,8 +70,8 @@ class SbtBloopLspSuite
         List(
           // Project has .bloop directory so user is asked to "re-import project"
           importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
     }
   }
@@ -105,8 +105,8 @@ class SbtBloopLspSuite
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ <- server.executeCommand(ServerCommands.ImportBuild)
@@ -114,7 +114,7 @@ class SbtBloopLspSuite
         client.workspaceMessageRequests,
         List(
           progressMessage
-        ).mkString("\n")
+        ).mkString("\n"),
       )
     } yield ()
   }
@@ -171,7 +171,7 @@ class SbtBloopLspSuite
            |version := "1.0"
            |scalaVersion := "${V.scala213}"
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.slowTaskHandler = _ => None
@@ -193,18 +193,18 @@ class SbtBloopLspSuite
             |/build.sbt
             |, syntax error
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
-        ImportProjectFailed.getMessage
+        ImportProjectFailed.getMessage,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
@@ -215,8 +215,8 @@ class SbtBloopLspSuite
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -260,14 +260,14 @@ class SbtBloopLspSuite
            |package a
            |object A // ${V.scala213}
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
         UnsupportedScalaVersion.message(
           Set("2.12.4", "2.12.3", "2.11.8", "2.11.11", "2.10.7")
-        )
+        ),
       )
       sourceJars <- server.buildTargetSourceJars("a")
       _ = assert(sourceJars.nonEmpty) // source jars should not be empty
@@ -295,7 +295,7 @@ class SbtBloopLspSuite
         assert(actual.startsWith(expected))
         assertNoDiff(
           client.workspaceShowMessages,
-          CheckDoctor.problemsFixed.getMessage
+          CheckDoctor.problemsFixed.getMessage,
         )
       }
     } yield ()
@@ -371,7 +371,7 @@ class SbtBloopLspSuite
           |src/main/scala/warning/Warning.scala:1:1: error: Unused import
           |import scala.concurrent.Future // unused
           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        """.stripMargin
+        """.stripMargin,
       )
       // we should still have references despite fatal warning
       _ = assertNoDiff(
@@ -379,7 +379,7 @@ class SbtBloopLspSuite
         """|_empty_/A.
            |_empty_/A.B.
            |_empty_/Warning.
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -415,13 +415,13 @@ class SbtBloopLspSuite
         """|/project/build.properties
            |sbt.version=0.13.15
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
         IncompatibleBuildToolVersion
           .params(SbtBuildTool(Some("0.13.15"), () => userConfig))
-          .getMessage
+          .getMessage,
       )
     } yield ()
   }
@@ -455,7 +455,7 @@ class SbtBloopLspSuite
         "build.sbt",
         "sc@@alaVersion := \"2.12.11\"",
         "sbt/Keys.scala",
-        expectedLine = 190
+        expectedLine = 190,
       )
     } yield ()
   }
@@ -474,7 +474,7 @@ class SbtBloopLspSuite
       _ <- assertDefinitionAtLocation(
         "project/plugins.sbt",
         "addSbt@@Plugin(\"ch.epfl.scala\" % \"sbt-scalafix\" % \"0.9.19\")",
-        "sbt/Defaults.scala"
+        "sbt/Defaults.scala",
       )
     } yield ()
   }
@@ -496,7 +496,7 @@ class SbtBloopLspSuite
         "build.sbt",
         "val bye = hel@@lo",
         "build.sbt",
-        1
+        1,
       )
     } yield ()
   }
@@ -587,7 +587,7 @@ class SbtBloopLspSuite
             |object MetaValues/*L1*/ {
             |  val scalaVersion/*L2*/ = "$scalaVersion"
             |}
-            |""".stripMargin
+            |""".stripMargin,
       )
     } yield ()
 
@@ -612,7 +612,7 @@ class SbtBloopLspSuite
         server.workspaceDefinitions,
         """|/build.sbt
            |scalaVersion/*Keys.scala*/ :=/*Structure.scala*/ MetaValues/*MetaValues.scala:1*/.scalaVersion/*MetaValues.scala:2*/
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -636,7 +636,7 @@ class SbtBloopLspSuite
            |build.sbt:2:21: info: reference
            |def bar(): String = foo() 
            |                    ^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -665,7 +665,7 @@ class SbtBloopLspSuite
           """.stripMargin
         ),
         Set("build.sbt"),
-        "foo2"
+        "foo2",
       )
     } yield ()
   }

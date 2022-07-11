@@ -17,5 +17,5 @@ case class ThemableDecorationAttachmentRenderOptions(
     @Nullable height: String = null,
     @Nullable opacity: java.lang.Double = null,
     @Nullable light: ThemableDecorationAttachmentRenderOptions = null,
-    @Nullable dark: ThemableDecorationAttachmentRenderOptions = null
+    @Nullable dark: ThemableDecorationAttachmentRenderOptions = null,
 )

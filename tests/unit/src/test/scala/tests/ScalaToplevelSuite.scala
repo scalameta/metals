@@ -26,8 +26,8 @@ class ScalaToplevelSuite extends BaseSuite {
       "_empty_/A.",
       "_empty_/B#",
       "_empty_/C#",
-      "_empty_/D#"
-    )
+      "_empty_/D#",
+    ),
   )
 
   check(
@@ -48,8 +48,8 @@ class ScalaToplevelSuite extends BaseSuite {
       "_empty_/A.",
       "_empty_/B#",
       "_empty_/C#",
-      "_empty_/D#"
-    )
+      "_empty_/D#",
+    ),
   )
 
   check(
@@ -59,7 +59,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |def foo: Int = ??? """.stripMargin,
     List(
       "z/Test$package."
-    )
+    ),
   )
 
   check(
@@ -70,7 +70,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |""".stripMargin,
     List(
       "z/Test$package."
-    )
+    ),
   )
 
   check(
@@ -80,7 +80,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |""".stripMargin,
     List(
       "z/Test$package."
-    )
+    ),
   )
 
   check(
@@ -91,7 +91,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |""".stripMargin,
     List(
       "pkg/foo/X."
-    )
+    ),
   )
 
   check(
@@ -106,9 +106,9 @@ class ScalaToplevelSuite extends BaseSuite {
        |class C
        |""".stripMargin,
     List(
-      "pkg/", "pkg/A#", "pkg/A#Z#", "pkg/B.", "pkg/B.Y#", "pkg/B.Y#L#", "pkg/C#"
+      "pkg/", "pkg/A#", "pkg/A#Z#", "pkg/B.", "pkg/B.Y#", "pkg/B.Y#L#", "pkg/C#",
     ),
-    all = true
+    all = true,
   )
 
   check(
@@ -125,9 +125,9 @@ class ScalaToplevelSuite extends BaseSuite {
        |}
        |""".stripMargin,
     List(
-      "pkg/", "pkg/A#", "pkg/A#Z#", "pkg/B.", "pkg/B.Y#", "pkg/B.Y#L#"
+      "pkg/", "pkg/A#", "pkg/A#Z#", "pkg/B.", "pkg/B.Y#", "pkg/B.Y#L#",
     ),
-    all = true
+    all = true,
   )
 
   check(
@@ -138,7 +138,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |""".stripMargin,
     List(
       "x/y/package."
-    )
+    ),
   )
 
   check(
@@ -157,8 +157,8 @@ class ScalaToplevelSuite extends BaseSuite {
        |""".stripMargin,
     List(
       "org/smth/foo/A#",
-      "org/smth/foo/B#"
-    )
+      "org/smth/foo/B#",
+    ),
   )
 
   check(
@@ -172,8 +172,8 @@ class ScalaToplevelSuite extends BaseSuite {
        |""".stripMargin,
     List(
       "org/smth/foo/bar/A#",
-      "org/smth/foo/Z#"
-    )
+      "org/smth/foo/Z#",
+    ),
   )
 
   check(
@@ -187,8 +187,8 @@ class ScalaToplevelSuite extends BaseSuite {
        |""".stripMargin,
     List(
       "org/smth/foo/bar/A#",
-      "org/smth/foo/Z#"
-    )
+      "org/smth/foo/Z#",
+    ),
   )
 
   check(
@@ -203,7 +203,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |""".stripMargin,
     List(
       "xyz/Feature."
-    )
+    ),
   )
 
   check(
@@ -224,8 +224,8 @@ class ScalaToplevelSuite extends BaseSuite {
       "_empty_/A.",
       "_empty_/B#",
       "_empty_/C#",
-      "_empty_/D#"
-    )
+      "_empty_/D#",
+    ),
   )
 
   check(
@@ -243,10 +243,10 @@ class ScalaToplevelSuite extends BaseSuite {
        |  }
        |""".stripMargin,
     List(
-      "a/", "a/A.", "a/A.B1.", "a/A.B1.C1#", "a/A.B2.", "a/A.B2.C2#"
+      "a/", "a/A.", "a/A.B1.", "a/A.B1.C1#", "a/A.B2.", "a/A.B2.C2#",
     ),
     all = true,
-    dialect = dialects.Scala213
+    dialect = dialects.Scala213,
   )
 
   def check(
@@ -254,7 +254,7 @@ class ScalaToplevelSuite extends BaseSuite {
       code: String,
       expected: List[String],
       all: Boolean = false,
-      dialect: Dialect = dialects.Scala3
+      dialect: Dialect = dialects.Scala3,
   )(implicit location: munit.Location): Unit = {
     test(options) {
       val input = Input.VirtualFile("Test.scala", code)
@@ -270,14 +270,14 @@ class ScalaToplevelSuite extends BaseSuite {
         }
       assertNoDiff(
         obtained.sorted.mkString("\n"),
-        expected.sorted.mkString("\n")
+        expected.sorted.mkString("\n"),
       )
     }
   }
 
   def assertToplevelsNoDiff(
       obtained: List[String],
-      expected: List[String]
+      expected: List[String],
   ): Unit = {
     assertNoDiff(obtained.sorted.mkString("\n"), expected.sorted.mkString("\n"))
   }

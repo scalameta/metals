@@ -17,18 +17,18 @@ object MdocEnrichments {
         // Don't construct invalid positions with negative values
         new l.Range(
           new l.Position(0, 0),
-          new l.Position(0, 0)
+          new l.Position(0, 0),
         )
       } else {
         new l.Range(
           new l.Position(
             p.startLine(),
-            p.startColumn()
+            p.startColumn(),
           ),
           new l.Position(
             p.endLine(),
-            p.endColumn()
-          )
+            p.endColumn(),
+          ),
         )
       }
     }
@@ -45,7 +45,7 @@ object MdocEnrichments {
           case i.DiagnosticSeverity.Error => l.DiagnosticSeverity.Error
           case _ => l.DiagnosticSeverity.Error
         },
-        "mdoc"
+        "mdoc",
       )
     }
   }

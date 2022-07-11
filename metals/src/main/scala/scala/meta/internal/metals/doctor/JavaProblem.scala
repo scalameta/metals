@@ -19,7 +19,7 @@ sealed abstract class JavaProblem {
 
 case class JavaSemanticDBDisabled(
     bloopVersion: String,
-    unsupportedBloopVersion: Boolean
+    unsupportedBloopVersion: Boolean,
 ) extends JavaProblem {
   override def message: String = {
     if (unsupportedBloopVersion) {

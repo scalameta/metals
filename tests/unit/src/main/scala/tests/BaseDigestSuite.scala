@@ -14,14 +14,14 @@ trait BaseDigestSuite extends BaseSuite {
   def checkSame(
       name: String,
       layout: String,
-      altLayout: String
+      altLayout: String,
   )(implicit loc: Location): Unit =
     check(name, layout, altLayout, isEqual = true)
 
   def checkDiff(
       name: String,
       layout: String,
-      altLayout: String
+      altLayout: String,
   )(implicit loc: Location): Unit =
     check(name, layout, altLayout, isEqual = false)
 
@@ -29,7 +29,7 @@ trait BaseDigestSuite extends BaseSuite {
       name: String,
       layout: String,
       altLayout: String,
-      isEqual: Boolean
+      isEqual: Boolean,
   )(implicit loc: Location): Unit = {
     test(name) {
       val root = FileLayout.fromString(layout)
@@ -37,12 +37,12 @@ trait BaseDigestSuite extends BaseSuite {
       assertDiffEqual(
         digestCurrent(root),
         digestCurrent(root),
-        "First layout should be equal when run twice"
+        "First layout should be equal when run twice",
       )
       assertDiffEqual(
         digestCurrent(altRoot),
         digestCurrent(altRoot),
-        "Second layout should be equal when run twice"
+        "Second layout should be equal when run twice",
       )
       val rootDigest = digestCurrent(root)
       RecursivelyDelete(root)

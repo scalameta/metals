@@ -17,7 +17,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|match
        |match (exhaustive) Option[Int] (2 cases)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -29,7 +29,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|match
        |match (exhaustive) Option[Int] (2 cases)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -38,7 +38,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |object A {
       |  Option(1).match@@
       |}""".stripMargin,
-    ""
+    "",
   )
 
   check(
@@ -50,7 +50,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |@@
       |""".stripMargin,
     "",
-    filter = _ => false
+    filter = _ => false,
   )
 
   // Assert that Workday/Weekend symbols from previous test don't appear in result.
@@ -83,7 +83,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |}
         |}
         |""".stripMargin,
-    filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive"),
   )
 
   checkEdit(
@@ -107,7 +107,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |}
         |}
         |""".stripMargin,
-    filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive"),
   )
 
   checkEdit(
@@ -134,7 +134,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |}
         |}
         |""".stripMargin,
-    filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive"),
   )
 
   checkEdit(
@@ -163,7 +163,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
           |}
           |""".stripMargin
     ),
-    filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive"),
   )
 
   check(
@@ -186,7 +186,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "2.11" -> "match"
-    )
+    ),
   )
 
   checkEdit(
@@ -214,7 +214,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |\tcase EXECUTE =>
        |}
        |}""".stripMargin,
-    filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive"),
   )
 
   checkEdit(
@@ -238,7 +238,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |\tcase scala.None =>
        |}
        |}""".stripMargin,
-    filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive"),
   )
 
   checkEdit(
@@ -268,7 +268,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |\tcase Bar =>
        |}
        |}""".stripMargin,
-    filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive"),
   )
 
   checkEdit(
@@ -306,6 +306,6 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |\tcase Goo =>
        |}
        |}""".stripMargin,
-    filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive"),
   )
 }

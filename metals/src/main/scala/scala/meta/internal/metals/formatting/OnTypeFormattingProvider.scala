@@ -18,7 +18,7 @@ case class OnTypeFormatterParams(
     triggerChar: String,
     startPos: meta.Position,
     endPos: meta.Position,
-    tokens: Option[Tokens]
+    tokens: Option[Tokens],
 ) extends FormatterParams {
   lazy val splitLines: Array[String] = sourceText.split("\\r?\\n")
   val range = new Range(position, position)
@@ -33,7 +33,7 @@ abstract class OnTypeFormatter {
 class OnTypeFormattingProvider(
     buffers: Buffers,
     trees: Trees,
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
 ) {
 
   // The order of which this is important to know which will first return the Edits
@@ -62,7 +62,7 @@ class OnTypeFormattingProvider(
             triggerChar,
             startPos,
             endPos,
-            tokensOpt
+            tokensOpt,
           )
         formatters.acceptFirst(formater =>
           formater.contribute(onTypeformatterParams)

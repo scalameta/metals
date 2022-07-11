@@ -36,7 +36,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -65,7 +65,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case _: HasMouth[_] => pkg
        |case HasWings(e) => pkg
        |case Seal => pkg
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -78,7 +78,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -92,7 +92,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -106,7 +106,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -119,7 +119,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case Left(value) => scala.util
        |case Right(value) => scala.util
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -133,7 +133,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case Failure(exception) => scala.util
        |case Success(value) => scala.util
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -156,7 +156,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     compat = Map(
       // known-direct subclasses doesn't work well in 2.11 apparently.
       "2.11" -> ""
-    )
+    ),
   )
 
   check(
@@ -171,7 +171,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case scala.util.Left(value) =>
        |case Right(value) => scala.util
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -192,7 +192,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    case Failure(exception) => $0
       |  }
       |}""".stripMargin,
-    filter = _.contains("Failure")
+    filter = _.contains("Failure"),
   )
 
   checkEdit(
@@ -218,7 +218,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    case Failure(exception) => $0
       |  }
       |}""".stripMargin,
-    filter = _.contains("Failure")
+    filter = _.contains("Failure"),
   )
 
   check(
@@ -232,7 +232,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -246,7 +246,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -259,7 +259,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |  }
       |}""".stripMargin,
     """|case (Int, Int) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -272,7 +272,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -286,7 +286,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -300,7 +300,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -313,7 +313,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -326,7 +326,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -340,7 +340,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -354,7 +354,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -373,7 +373,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
         """|case head :: next => scala.collection.immutable
            |case Nil => scala.collection.immutable
            |""".stripMargin
-    )
+    ),
   )
 
   checkEditLine(
@@ -386,7 +386,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     "List(1 -> 2).map { c@@ }",
     "List(1 -> 2).map { case ($0) => }",
     assertSingleItem = false,
-    command = paramHint
+    command = paramHint,
   )
 
   check(
@@ -398,7 +398,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|case (Int, Int) => scala
        |""".stripMargin,
-    topLines = Some(1)
+    topLines = Some(1),
   )
 
   check(
@@ -409,7 +409,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "f = : ((Int, Int)) => B",
-    topLines = Some(1)
+    topLines = Some(1),
   )
 
   checkEditLine(
@@ -422,7 +422,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     "List(1).foldLeft(0) { cas@@ }",
     "List(1).foldLeft(0) { case ($0) => }",
     assertSingleItem = false,
-    command = paramHint
+    command = paramHint,
   )
 
   // Apparently, known-direct subclasses does not work so well in 2.11.
@@ -442,7 +442,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "cas@@",
-    "case a :+: b => $0"
+    "case a :+: b => $0",
   )
 
   checkEditLine(
@@ -461,7 +461,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "cas@@",
     // Assert we don't use infix syntax because `::` resolves to conflicting symbol in scope.
-    "case Outer.::(a, b) => $0"
+    "case Outer.::(a, b) => $0",
   )
 
 }

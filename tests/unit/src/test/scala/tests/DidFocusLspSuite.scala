@@ -64,7 +64,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
            | required: Int
            |  val z: Int = a.A.x
            |               ^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -130,14 +130,14 @@ class DidFocusWhileCompilingLspSuite
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        xMismatch
+        xMismatch,
       )
       _ <- server.didSave("b/src/main/scala/b/B.scala")(
         _.replace("2", "\"\"")
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        xMismatch
+        xMismatch,
       )
       didSaveA = server.didSave("a/src/main/scala/a/A.scala")(
         _.replace("Int", "String")
@@ -150,7 +150,7 @@ class DidFocusWhileCompilingLspSuite
       _ <- didSaveA
       _ = assert(
         didCompile == Compiled,
-        s"expect 'Compiled', actual: ${didCompile}"
+        s"expect 'Compiled', actual: ${didCompile}",
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
@@ -159,7 +159,7 @@ class DidFocusWhileCompilingLspSuite
            | required: Int
            |  val y: Int = ""
            |               ^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

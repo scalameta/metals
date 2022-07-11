@@ -11,7 +11,7 @@ abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
       name: TestOptions,
       library: Option[String] = None,
       scalaVersion: Option[String] = None,
-      printCommand: Boolean = false
+      printCommand: Boolean = false,
   )(
       expected: => String
   )(implicit loc: Location): Unit = {
@@ -54,7 +54,7 @@ abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
       relativeFile: String,
       expected: String,
       maxRetries: Int = 4,
-      printCommand: Boolean = false
+      printCommand: Boolean = false,
   )(implicit loc: Location): Future[Unit] = {
     val obtained =
       server.codeLenses(relativeFile, printCommand)(maxRetries).recover {
@@ -67,7 +67,7 @@ abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
 
   protected def assertNoCodeLenses(
       relativeFile: String,
-      maxRetries: Int = 4
+      maxRetries: Int = 4,
   ): Future[Unit] = {
     server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
       case _: NoSuchElementException => Future.unit

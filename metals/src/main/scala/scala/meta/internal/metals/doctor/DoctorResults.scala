@@ -9,13 +9,13 @@ final case class DoctorResults(
     header: DoctorHeader,
     messages: Option[List[DoctorMessage]],
     targets: Option[Seq[DoctorTargetInfo]],
-    explanations: List[Obj]
+    explanations: List[Obj],
 ) {
   def toJson: Obj = {
     val json = ujson.Obj(
       "title" -> title,
       "header" -> header.toJson,
-      "version" -> DoctorResults.version
+      "version" -> DoctorResults.version,
     )
     messages.foreach(messageList =>
       json("messages") = messageList.map(_.toJson)
@@ -35,7 +35,7 @@ final case class DoctorMessage(title: String, recommendations: List[String]) {
   def toJson: Obj =
     ujson.Obj(
       "title" -> title,
-      "recommendations" -> recommendations
+      "recommendations" -> recommendations,
     )
 }
 
@@ -58,7 +58,7 @@ final case class DoctorTargetInfo(
     indexesStatus: DoctorStatus,
     debuggingStatus: DoctorStatus,
     javaStatus: DoctorStatus,
-    recommenedFix: String
+    recommenedFix: String,
 ) {
   def toJson: Obj =
     ujson.Obj(
@@ -71,7 +71,7 @@ final case class DoctorTargetInfo(
       "semanticdb" -> indexesStatus.explanation,
       "debugging" -> debuggingStatus.explanation,
       "java" -> javaStatus.explanation,
-      "recommendation" -> recommenedFix
+      "recommendation" -> recommenedFix,
     )
 
 }
@@ -92,14 +92,14 @@ final case class DoctorHeader(
     importBuildStatus: Option[String],
     jdkInfo: Option[String],
     serverInfo: String,
-    buildTargetDescription: String
+    buildTargetDescription: String,
 ) {
   def toJson: Obj = {
     val base =
       ujson.Obj(
         "buildServer" -> buildServer,
         "serverInfo" -> serverInfo,
-        "buildTargetDescription" -> buildTargetDescription
+        "buildTargetDescription" -> buildTargetDescription,
       )
 
     buildTool.foreach { bt => base.update("buildTool", bt) }

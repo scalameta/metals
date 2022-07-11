@@ -19,7 +19,7 @@ object CompletionItemResolver extends ItemResolver:
       item: CompletionItem,
       msym: String,
       search: SymbolSearch,
-      metalsConfig: PresentationCompilerConfig
+      metalsConfig: PresentationCompilerConfig,
   )(using Context): CompletionItem =
     SemanticdbSymbols.inverseSemanticdbSymbol(msym) match
       case gsym :: _ if gsym != NoSymbol =>
@@ -34,7 +34,7 @@ object CompletionItemResolver extends ItemResolver:
               info,
               metalsConfig,
               fullDocstring(gsym, search),
-              gsym.is(JavaDefined)
+              gsym.is(JavaDefined),
             )
           case _ =>
             item
@@ -80,7 +80,7 @@ object CompletionItemResolver extends ItemResolver:
               |""".stripMargin,
           s"""|### ${keyword(gsym)} ${gsym.name}
               |${gsymDoc}
-              |""".stripMargin
+              |""".stripMargin,
         ).sorted.mkString("\n")
     end if
   end fullDocstring

@@ -8,5 +8,5 @@ class SbtStepDapSuite
     extends BaseStepDapSuite(
       s"sbt-debug-step",
       SbtServerInitializer,
-      SbtBuildLayout
+      SbtBuildLayout,
     )

@@ -18,7 +18,7 @@ import scala.meta.io.AbsolutePath
 case class Digest(
     md5: String,
     status: Status,
-    millis: Long
+    millis: Long,
 )
 
 object Digest {
@@ -54,13 +54,13 @@ object Digest {
         Rejected,
         Failed,
         Installed,
-        Cancelled
+        Cancelled,
       )
   }
 
   def digestDirectory(
       path: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     if (!path.isDirectory) true
     else {
@@ -70,7 +70,7 @@ object Digest {
 
   def digestFileBytes(
       path: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     if (path.isFile) {
       digest.update(path.readAllBytes)
@@ -80,7 +80,7 @@ object Digest {
 
   def digestFile(
       path: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     val ext = PathIO.extension(path.toNIO)
     val isScala = Set("sbt", "scala", "sc")(ext)
@@ -106,7 +106,7 @@ object Digest {
 
   def digestXml(
       file: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
 
     import scala.xml.XML
@@ -137,7 +137,7 @@ object Digest {
 
   def digestGeneralJvm(
       file: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     try {
       Files
@@ -156,7 +156,7 @@ object Digest {
 
   def digestScala(
       file: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     try {
       val input = file.toInput
@@ -196,6 +196,6 @@ trait Digestable {
 
   protected def digestWorkspace(
       absolutePath: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean
 }

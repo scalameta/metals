@@ -52,7 +52,7 @@ final class Ammonite(
     focusedDocument: () => Option[AbsolutePath],
     buildTools: () => BuildTools,
     config: MetalsServerConfig,
-    scalaVersionSelector: ScalaVersionSelector
+    scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -101,7 +101,7 @@ final class Ammonite(
         for {
           build0 <- statusBar.trackFuture(
             "Importing Ammonite scripts",
-            ImportedBuild.fromConnection(conn)
+            ImportedBuild.fromConnection(conn),
           )
           _ = {
             lastImportedBuild0 = build0
@@ -178,7 +178,7 @@ final class Ammonite(
         AmmVersions(
           ammoniteVersion = BuildInfo.ammoniteVersion,
           scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = true)
+            scalaVersionSelector.fallbackScalaVersion(isAmmonite = true),
         )
       )
     val res = AmmoniteFetcher(versions)
@@ -194,13 +194,13 @@ final class Ammonite(
       case Left(e) =>
         scribe.error(
           s"Error getting Ammonite ${versions.ammoniteVersion} (scala ${versions.scalaVersion})",
-          e
+          e,
         )
         Left(e)
       case Right(command) =>
         lastImportVersions = VersionsOption(
           Some(versions.ammoniteVersion),
-          Some(versions.scalaVersion)
+          Some(versions.scalaVersion),
         )
         Right((command, path))
     }
@@ -290,11 +290,11 @@ final class Ammonite(
               .socketConn(
                 commandWithJVMOpts,
                 script +: extraScripts,
-                workspace()
+                workspace(),
               ),
           tables().dismissedNotifications.ReconnectAmmonite,
           config,
-          "Ammonite"
+          "Ammonite",
         )
         for {
           conn <- futureConn
@@ -343,7 +343,7 @@ object Ammonite {
   private val threadCounter = new AtomicInteger
   private def logOutputThread(
       is: InputStream,
-      stopSendingOutput: => Boolean
+      stopSendingOutput: => Boolean,
   ): Thread =
     new Thread(
       s"ammonite-bsp-server-stderr-to-metals-log-${threadCounter.incrementAndGet()}"
@@ -370,7 +370,7 @@ object Ammonite {
   private def socketConn(
       command: AmmCommand,
       scripts: Seq[AbsolutePath],
-      workspace: AbsolutePath
+      workspace: AbsolutePath,
   )(implicit ec: ExecutionContext): Future[SocketConnection] =
     // meh, blocks on random ec
     Future {
@@ -403,9 +403,9 @@ object Ammonite {
         proc.getInputStream,
         List(
           Cancelable { () => proc.destroyForcibly() },
-          Cancelable { () => stopSendingOutput = true }
+          Cancelable { () => stopSendingOutput = true },
         ),
-        finished
+        finished,
       )
     }
 

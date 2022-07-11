@@ -38,7 +38,7 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
       experimentalCapabilities.statusBarState,
       StatusBarState
         .fromString(initialConfig.statusBar.value)
-        .getOrElse(StatusBarState.Off)
+        .getOrElse(StatusBarState.Off),
     )
 
   def globSyntax(): GlobSyntaxConfig =
@@ -66,35 +66,35 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
     extract(
       initializationOptions.slowTaskProvider,
       experimentalCapabilities.slowTaskProvider,
-      initialConfig.slowTask.isOn
+      initialConfig.slowTask.isOn,
     )
 
   def isExecuteClientCommandProvider(): Boolean =
     extract(
       initializationOptions.executeClientCommandProvider,
       experimentalCapabilities.executeClientCommandProvider,
-      initialConfig.executeClientCommand.isOn
+      initialConfig.executeClientCommand.isOn,
     )
 
   def isInputBoxEnabled(): Boolean =
     extract(
       initializationOptions.inputBoxProvider,
       experimentalCapabilities.inputBoxProvider,
-      initialConfig.isInputBoxEnabled
+      initialConfig.isInputBoxEnabled,
     )
 
   def isQuickPickProvider(): Boolean =
     extract(
       initializationOptions.quickPickProvider,
       experimentalCapabilities.quickPickProvider,
-      false
+      false,
     )
 
   def isOpenFilesOnRenameProvider(): Boolean =
     extract(
       initializationOptions.openFilesOnRenameProvider,
       experimentalCapabilities.openFilesOnRenameProvider,
-      initialConfig.openFilesOnRenames
+      initialConfig.openFilesOnRenames,
     )
 
   def doctorFormat(): DoctorFormat.DoctorFormat =
@@ -103,7 +103,7 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
       experimentalCapabilities.doctorFormat,
       Option(System.getProperty("metals.doctor-format"))
         .flatMap(DoctorFormat.fromString)
-        .getOrElse(DoctorFormat.Html)
+        .getOrElse(DoctorFormat.Html),
     )
 
   def isHttpEnabled(): Boolean =
@@ -123,14 +123,14 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
     extract(
       initializationOptions.debuggingProvider,
       experimentalCapabilities.debuggingProvider,
-      false
+      false,
     )
 
   def isDecorationProvider(): Boolean =
     extract(
       initializationOptions.decorationProvider,
       experimentalCapabilities.decorationProvider,
-      false
+      false,
     )
 
   def isInlineDecorationProvider(): Boolean =
@@ -140,7 +140,7 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
     extract(
       initializationOptions.treeViewProvider,
       experimentalCapabilities.treeViewProvider,
-      false
+      false,
     )
 
   def isTestExplorerProvider(): Boolean =
@@ -150,7 +150,7 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
     extract(
       initializationOptions.didFocusProvider,
       experimentalCapabilities.didFocusProvider,
-      false
+      false,
     )
 
   def isOpenNewWindowProvider(): Boolean =

@@ -72,7 +72,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |  @param ifEmpty the expression to evaluate if empty.
            |  @param f the function to apply if nonempty.
            |""".stripMargin
-    )
+    ),
   )
 
   val foldOlderDocs2: String =
@@ -130,8 +130,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
             |        ^^^^^^^^^^^^^
             |  @param ifEmpty the expression to evaluate if empty.
             |  @param f the function to apply if nonempty.
-            |""".stripMargin
-    )
+            |""".stripMargin,
+    ),
   )
   checkDoc(
     "curry3",
@@ -221,8 +221,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |          Returns `z` if this collection is empty.
            |foldLeft[B](z: B)(op: (B, Int) => B): B
            |                  ^^^^^^^^^^^^^^^^^
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkDoc(
@@ -236,7 +236,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """|
        |curry(a: Int, b: Int)(c: Int): Int
        |                      ^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkDoc(
@@ -284,7 +284,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
            |             ^^^^^^^^^^^
            |""".stripMargin
-    )
+    ),
   )
 
   checkDoc(
@@ -323,8 +323,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |apply[A](x: A): Option[A]
            |         ^^^^
            |  @param x the value
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkDoc(
@@ -356,8 +356,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |singleton[T](o: T): java.util.Set[T]
            |             ^^^^
            |  @param o o the sole object to be stored in the returned set.
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkDoc(
@@ -426,8 +426,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |  @param pf Partial function used when applying catch logic to determine result value
            |  @param fin Finally logic which if defined will be invoked after catch logic
            |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   check(
@@ -449,7 +449,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
                 |File(parent: String, child: String)
                 |File(pathname: String)
                 |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -469,7 +469,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |substring(beginIndex: Int): String
            |          ^^^^^^^^^^^^^^^
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -503,7 +503,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |valueOf(data: Array[Char]): String
            |valueOf(obj: Object): String
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -548,8 +548,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |valueOf(data: Array[Char], offset: Int, count: Int): String
            |valueOf(data: Array[Char]): String
            |valueOf(obj: Object): String
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkDoc(
@@ -576,8 +576,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            | `A`.
            |Some[A](value: A)
            |        ^^^^^^^^
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   checkDoc(
@@ -595,6 +595,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |**Returns:** a new range with a different step
        |by(step: Int): Range
        |   ^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
   )
 }

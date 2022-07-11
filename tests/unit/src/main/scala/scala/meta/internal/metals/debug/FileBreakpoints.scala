@@ -11,7 +11,7 @@ final case class LocalFileBreakpoints(
     root: AbsolutePath,
     relativePath: String,
     content: String,
-    breakpoints: List[Int]
+    breakpoints: List[Int],
 ) extends FileBreakpoints {
 
   override def path: AbsolutePath = root.resolve(relativePath)
@@ -28,7 +28,7 @@ object FileBreakpoints {
   def apply(
       name: String,
       originalText: String,
-      root: AbsolutePath
+      root: AbsolutePath,
   ): FileBreakpoints = {
     val text = originalText.replaceAll(">>", "  ")
     val breakpoints =

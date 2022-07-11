@@ -10,7 +10,7 @@ import dotty.tools.dotc.core.Symbols.*
 
 class CompilerSearchVisitor(
     query: String,
-    visitSymbol: Symbol => Boolean
+    visitSymbol: Symbol => Boolean,
 )(using ctx: Context)
     extends SymbolSearchVisitor:
 
@@ -19,7 +19,7 @@ class CompilerSearchVisitor(
 
   private def toSymbols(
       pkg: String,
-      parts: List[String]
+      parts: List[String],
   ): List[Symbol] =
     def loop(owners: List[Symbol], parts: List[String]): List[Symbol] =
       parts match
@@ -55,7 +55,7 @@ class CompilerSearchVisitor(
       path: java.nio.file.Path,
       symbol: String,
       kind: org.eclipse.lsp4j.SymbolKind,
-      range: org.eclipse.lsp4j.Range
+      range: org.eclipse.lsp4j.Range,
   ): Int =
     val gsym = SemanticdbSymbols.inverseSemanticdbSymbol(symbol).headOption
     gsym

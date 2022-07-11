@@ -56,14 +56,14 @@ final class RenameProvider(
     buffers: Buffers,
     compilations: Compilations,
     clientConfig: ClientConfiguration,
-    trees: Trees
+    trees: Trees,
 )(implicit executionContext: ExecutionContext) {
 
   private val awaitingSave = new ConcurrentLinkedQueue[() => Unit]
 
   def prepareRename(
       params: TextDocumentPositionParams,
-      token: CancelToken
+      token: CancelToken,
   ): Future[Option[LSPRange]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     compilations.compilationFinished(source).flatMap { _ =>
@@ -74,7 +74,7 @@ final class RenameProvider(
             .orElse(
               findRenamedImportOccurrenceAtPosition(
                 source,
-                params.getPosition()
+                params.getPosition(),
               )
             )
         for {
@@ -92,21 +92,21 @@ final class RenameProvider(
 
   def rename(
       params: RenameParams,
-      token: CancelToken
+      token: CancelToken,
   ): Future[WorkspaceEdit] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     compilations.compilationFinished(source).flatMap { _ =>
       definitionProvider.definition(source, params, token).map { definition =>
         val textParams = new TextDocumentPositionParams(
           params.getTextDocument(),
-          params.getPosition()
+          params.getPosition(),
         )
 
         lazy val definitionTextParams =
           definition.locations.asScala.map { l =>
             new TextDocumentPositionParams(
               new TextDocumentIdentifier(l.getUri()),
-              l.getRange().getStart()
+              l.getRange().getStart(),
             )
           }
 
@@ -116,7 +116,7 @@ final class RenameProvider(
             .orElse(
               findRenamedImportOccurrenceAtPosition(
                 source,
-                params.getPosition()
+                params.getPosition(),
               )
             )
 
@@ -129,7 +129,7 @@ final class RenameProvider(
 
         def isNotRenamedSymbol(
             textDocument: TextDocument,
-            occ: SymbolOccurrence
+            occ: SymbolOccurrence,
         ): Boolean = {
           def realName = occ.symbol.desc.name.value
           def foundName =
@@ -143,7 +143,7 @@ final class RenameProvider(
         def shouldCheckImplementation(
             symbol: String,
             path: AbsolutePath,
-            textDocument: TextDocument
+            textDocument: TextDocument,
         ) =
           !symbol.desc.isType && !(symbol.isLocal && implementationProvider
             .defaultSymbolSearch(path, textDocument)(symbol)
@@ -175,10 +175,10 @@ final class RenameProvider(
                  */
                 toReferenceParams(
                   txtParams,
-                  includeDeclaration = isJava
+                  includeDeclaration = isJava,
                 ),
                 findRealRange = findRealRange(newName),
-                includeSynthetic
+                includeSynthetic,
               )
               .flatMap(_.locations)
           definitionLocation = {
@@ -193,9 +193,9 @@ final class RenameProvider(
             shouldCheckImplementation(
               occurence.symbol,
               source,
-              semanticDb
+              semanticDb,
             ),
-            newName
+            newName,
           )
           loc <-
             currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
@@ -262,7 +262,7 @@ final class RenameProvider(
    */
   private def renamedImportOccurrences(
       source: AbsolutePath,
-      symbolOccurrence: Option[(SymbolOccurrence, TextDocument)]
+      symbolOccurrence: Option[(SymbolOccurrence, TextDocument)],
   ): Seq[Location] = {
     lazy val uri = source.toURI.toString()
 
@@ -270,7 +270,7 @@ final class RenameProvider(
     def occurrences(
         semanticDb: TextDocument,
         occurence: SymbolOccurrence,
-        renameName: String
+        renameName: String,
     ) = for {
       occ <- semanticDb.occurrences
       rng <- occ.range
@@ -285,7 +285,7 @@ final class RenameProvider(
       renamedOccurences = occurrences(
         semanticDb,
         occurence,
-        rename.rename.value
+        rename.rename.value,
       )
     } yield renamedOccurences :+ new Location(uri, rename.rename.pos.toLSP)
     result.getOrElse(Nil)
@@ -305,7 +305,7 @@ final class RenameProvider(
   private def fileRenames(
       isOccurrence: (String => Boolean) => Boolean,
       fileChanges: Set[AbsolutePath],
-      newName: String
+      newName: String,
   ): Option[LSPEither[TextDocumentEdit, ResourceOperation]] = {
     fileChanges
       .find { file =>
@@ -328,7 +328,7 @@ final class RenameProvider(
   private def companionReferences(
       sym: String,
       source: AbsolutePath,
-      newName: String
+      newName: String,
   ): Seq[Location] = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
@@ -342,7 +342,7 @@ final class RenameProvider(
         referenceProvider
           .references(
             toReferenceParams(loc, includeDeclaration = false),
-            findRealRange = findRealRange(newName)
+            findRealRange = findRealRange(newName),
           )
           .flatMap(_.locations) :+ loc
     } yield companionLocs
@@ -362,7 +362,7 @@ final class RenameProvider(
     termOrType.map(name =>
       Symbols.Global(
         sym.owner,
-        name
+        name,
       )
     )
   }
@@ -380,7 +380,7 @@ final class RenameProvider(
   private def implementations(
       textParams: TextDocumentPositionParams,
       shouldCheckImplementation: Boolean,
-      newName: String
+      newName: String,
   ): Seq[Location] = {
     if (shouldCheckImplementation) {
       for {
@@ -391,7 +391,7 @@ final class RenameProvider(
             .references(
               locParams,
               findRealRange = findRealRange(newName),
-              includeSynthetic
+              includeSynthetic,
             )
             .flatMap(_.locations)
       } yield loc
@@ -402,7 +402,7 @@ final class RenameProvider(
 
   private def canRenameSymbol(
       symbol: String,
-      newName: Option[String]
+      newName: Option[String],
   ) = {
     val forbiddenMethods = Set("equals", "hashCode", "unapply", "unary_!", "!")
     val desc = symbol.desc
@@ -420,7 +420,7 @@ final class RenameProvider(
 
   private def findRenamedImportOccurrenceAtPosition(
       source: AbsolutePath,
-      pos: Position
+      pos: Position,
   ): Option[(SymbolOccurrence, TextDocument)] = {
     val renameOpt = trees.findLastEnclosingAt[Importee.Rename](source, pos)
 
@@ -428,7 +428,7 @@ final class RenameProvider(
       rename <- renameOpt
       (occ, doc) <- definitionProvider.symbolOccurrence(
         source,
-        rename.name.pos.toLSP.getStart()
+        rename.name.pos.toLSP.getStart(),
       )
 
     } yield (occ.copy(range = Some(rename.rename.pos.toSemanticdb)), doc)
@@ -436,7 +436,7 @@ final class RenameProvider(
 
   private def findRenamedImportForSymbol(
       source: AbsolutePath,
-      symbol: String
+      symbol: String,
   ): Option[Importee.Rename] = {
     lazy val displayName = symbol.desc.name.value
     // make sure it's not just a rename with the same base name
@@ -467,7 +467,7 @@ final class RenameProvider(
 
   private def isWorkspaceSymbol(
       symbol: String,
-      definitionPath: AbsolutePath
+      definitionPath: AbsolutePath,
   ): Boolean = {
 
     def isFromWorkspace = {
@@ -488,7 +488,7 @@ final class RenameProvider(
   private def findRealRange(newName: String)(
       range: s.Range,
       text: String,
-      symbol: String
+      symbol: String,
   ): Option[s.Range] = {
     val name = range.inString(text)
     val symbolName = symbol.desc.name
@@ -519,12 +519,12 @@ final class RenameProvider(
   private def textEdit(
       isOccurrence: (String => Boolean) => Boolean,
       loc: Location,
-      newName: String
+      newName: String,
   ): TextEdit = {
     val isApply = isOccurrence(str => str.desc.name.value == "apply")
     lazy val default = new TextEdit(
       loc.getRange(),
-      newName
+      newName,
     )
     if (isApply) {
       val locSource = loc.getUri.toAbsolutePath
@@ -539,7 +539,7 @@ final class RenameProvider(
         range.setStart(range.getEnd())
         new TextEdit(
           range,
-          "." + newName
+          "." + newName,
         )
       } else {
         default
@@ -552,7 +552,7 @@ final class RenameProvider(
   private def toReferenceParams(
       textDoc: TextDocumentIdentifier,
       pos: Position,
-      includeDeclaration: Boolean
+      includeDeclaration: Boolean,
   ): ReferenceParams = {
     val referenceParams = new ReferenceParams()
     referenceParams.setPosition(pos)
@@ -565,32 +565,32 @@ final class RenameProvider(
 
   private def toReferenceParams(
       location: Location,
-      includeDeclaration: Boolean
+      includeDeclaration: Boolean,
   ): ReferenceParams = {
     val textDoc = new TextDocumentIdentifier()
     textDoc.setUri(location.getUri())
     toReferenceParams(
       textDoc,
       location.getRange().getStart(),
-      includeDeclaration
+      includeDeclaration,
     )
   }
 
   private def toReferenceParams(
       params: TextDocumentPositionParams,
-      includeDeclaration: Boolean
+      includeDeclaration: Boolean,
   ): ReferenceParams = {
     toReferenceParams(
       params.getTextDocument(),
       params.getPosition(),
-      includeDeclaration
+      includeDeclaration,
     )
   }
 
   private def toTextParams(location: Location): TextDocumentPositionParams = {
     new TextDocumentPositionParams(
       new TextDocumentIdentifier(location.getUri()),
-      location.getRange().getStart()
+      location.getRange().getStart(),
     )
   }
 
@@ -606,7 +606,7 @@ final class RenameProvider(
 
   private def forbiddenRename(
       old: String,
-      name: Option[String]
+      name: Option[String],
   ): MessageParams = {
     val renamed = name.map(n => s"to $n").getOrElse("")
     val message =
@@ -617,7 +617,7 @@ final class RenameProvider(
 
   private def forbiddenColonRename(
       old: String,
-      name: Option[String]
+      name: Option[String],
   ): MessageParams = {
     val renamed = name.map(n => s"to $n").getOrElse("")
     val message =

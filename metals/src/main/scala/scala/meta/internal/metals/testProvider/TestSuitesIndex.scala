@@ -18,20 +18,20 @@ private[testProvider] final case class SymbolsPerTarget private (
     target: BuildTarget,
     testSymbols: TrieMap[
       BuildTargetClasses.Symbol,
-      BuildTargetClasses.TestSymbolInfo
-    ]
+      BuildTargetClasses.TestSymbolInfo,
+    ],
 )
 
 private[testProvider] final case class TestFileMetadata(
     md5: String,
     entries: List[TestEntry],
-    hasTestCasesGranularity: Boolean
+    hasTestCasesGranularity: Boolean,
 )
 
 private[testProvider] final case class TestEntry(
     buildTarget: BuildTarget,
     path: AbsolutePath,
-    suiteDetails: TestSuiteDetails
+    suiteDetails: TestSuiteDetails,
 )
 
 private[testProvider] final case class TestSuiteDetails(
@@ -39,19 +39,19 @@ private[testProvider] final case class TestSuiteDetails(
     framework: TestFramework,
     className: ClassName,
     symbol: mtags.Symbol,
-    location: l.Location
+    location: l.Location,
 ) {
   def asAddEvent: TestExplorerEvent = AddTestSuite(
     fullyQualifiedClassName = fullyQualifiedName.value,
     className = className.value,
     symbol = symbol.value,
     location = location,
-    canResolveChildren = framework.canResolveChildren
+    canResolveChildren = framework.canResolveChildren,
   )
 
   def asRemoveEvent: TestExplorerEvent = RemoveTestSuite(
     fullyQualifiedClassName = fullyQualifiedName.value,
-    className = className.value
+    className = className.value,
   )
 }
 
@@ -70,7 +70,7 @@ private[testProvider] final class TestSuitesIndex {
   private val cachedTestSuites =
     TrieMap[
       BuildTarget,
-      TrieMap[FullyQualifiedName, TestEntry]
+      TrieMap[FullyQualifiedName, TestEntry],
     ]()
   private val fileToMetadata = TrieMap[AbsolutePath, TestFileMetadata]()
 
@@ -129,7 +129,7 @@ private[testProvider] final class TestSuitesIndex {
 
   def remove(
       buildTarget: BuildTarget,
-      suiteName: FullyQualifiedName
+      suiteName: FullyQualifiedName,
   ): Option[TestEntry] = {
     for {
       suites <- cachedTestSuites.get(buildTarget)

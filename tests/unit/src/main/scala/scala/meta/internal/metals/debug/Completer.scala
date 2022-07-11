@@ -15,7 +15,7 @@ final class Completer(expression: String) extends Stoppage.Handler {
     require(column >= 0, "Expression needs @@ for testing completions")
     require(
       !expression.contains('\n'),
-      "Only single line expression are supported currently"
+      "Only single line expression are supported currently",
     )
     Complete(expression.replace("@@", ""), frameId, response = _, 1, column + 1)
   }

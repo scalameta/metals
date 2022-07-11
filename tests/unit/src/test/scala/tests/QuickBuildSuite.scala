@@ -48,7 +48,7 @@ class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
       // metals should always return experimental capabilities
       _ = assertNoDiff(
         initResults.getCapabilities().getExperimental().toString,
-        "{\"rangeHoverProvider\":true}"
+        "{\"rangeHoverProvider\":true}",
       )
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiff(
@@ -56,7 +56,7 @@ class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
         """|b/src/main/scala/b/B.scala:3:1: warning: Unused import
            |import scala.util.Success
            |^^^^^^^^^^^^^^^^^^^^^^^^^
-        """.stripMargin
+        """.stripMargin,
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
@@ -77,7 +77,7 @@ class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
            |    println/*Predef.scala*/(A/*A.scala:2*/.creds/*A.scala:3*/)
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

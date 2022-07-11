@@ -72,7 +72,7 @@ object MtagsResolver {
                   failure
                 }
             }
-          }
+          },
         )
         computed match {
           case State.Success(v) => Some(v)

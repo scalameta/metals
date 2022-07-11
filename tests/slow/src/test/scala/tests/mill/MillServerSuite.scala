@@ -37,14 +37,14 @@ class MillServerSuite
         client.workspaceMessageRequests,
         List(
           importBuildMessage
-        ).mkString("\n")
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear()
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
     } yield {
       assertNoDiff(
         client.workspaceShowMessages,
-        Messages.NoBspSupport.toString
+        Messages.NoBspSupport.toString,
       )
     }
   }
@@ -60,7 +60,7 @@ class MillServerSuite
         client.workspaceMessageRequests,
         // Project has no .bloop directory so user is asked to "import via bloop"
         // since bloop is still the default
-        importBuildMessage
+        importBuildMessage,
       )
       _ = client.messageRequests.clear() // restart
       _ = assert(!millBspConfig.exists)

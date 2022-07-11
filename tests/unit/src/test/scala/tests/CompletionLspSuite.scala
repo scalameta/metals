@@ -50,7 +50,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         "DefinedIn@@",
         """|DefinedInA - a.Outer
            |DefinedInC - c
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -58,7 +58,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   def checkPlugin(
       name: String,
       compilerPlugins: String,
-      extra: => Future[Unit] = Future.successful(())
+      extra: => Future[Unit] = Future.successful(()),
   )(implicit loc: Location): Unit =
     test(name) {
       for {
@@ -92,7 +92,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
             |}
             |""".stripMargin,
           """|DelayedLazyVal - scala.concurrent
-             |""".stripMargin
+             |""".stripMargin,
         )
         _ <- extra
       } yield ()
@@ -100,7 +100,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   checkPlugin(
     "empty",
-    ""
+    "",
   )
 
   // FIXME(gabro): the tests don't pass with 2.12.10, although the plugins seem to work fine when
@@ -121,9 +121,9 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           """|def baz[F[_], A]: F[A] = ???
              |baz[Either[Int, ?], String].fold@@
              |""".stripMargin,
-          "fold[C](fa: Int => C, fb: String => C): C"
+          "fold[C](fa: Int => C, fb: String => C): C",
         )
-      } yield ()
+      } yield (),
     )
 
     checkPlugin(
@@ -137,9 +137,9 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
              |    implicitly[String].toCharArr@@
              |""".stripMargin,
           """|toCharArray(): Array[Char]
-             |""".stripMargin
+             |""".stripMargin,
         )
-      } yield ()
+      } yield (),
     )
   }
 
@@ -168,19 +168,19 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         "override def set@@",
         """|def set: mutable.Set[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- assertCompletion(
         "override def list@@",
         """|def list: ju.List[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- assertCompletion(
         "override def failure@@",
         """|def failure: Failure[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- server.didChangeConfiguration(
         """{
@@ -195,20 +195,20 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         "override def failure@@",
         """|def failure: u.Failure[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       // The default settings are no longer enabled.
       _ <- assertCompletion(
         "override def set@@",
         """|def set: mutable.Set[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- assertCompletion(
         "override def list@@",
         """|def list: java.util.List[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
     } yield ()
   }
@@ -222,7 +222,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |  // @@
            |}
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- assertCompletion(
         "Properties@@",
@@ -230,7 +230,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         """|Properties - java.util
            |Properties - scala.util
            |""".stripMargin,
-        filter = _.startsWith("Properties -")
+        filter = _.startsWith("Properties -"),
       )
     } yield ()
   }
@@ -268,7 +268,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |JavaDurationOps - scala.jdk.DurationConverters
            |ScalaDurationOps - scala.jdk.DurationConverters
            |ScalaDurationOps - scala.jdk.DurationConverters""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- server.didChangeConfiguration(
         """{
@@ -290,7 +290,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |ScalaDurationOps - scala.jdk.DurationConverters
            |ScalaDurationOps - scala.jdk.DurationConverters
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
     } yield ()
   }

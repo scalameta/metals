@@ -26,7 +26,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  */
 final class ConfiguredLanguageClient(
     initial: MetalsLanguageClient,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 

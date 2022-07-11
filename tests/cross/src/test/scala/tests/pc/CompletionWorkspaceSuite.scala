@@ -17,7 +17,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |object Main {
        |  val x = Files
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEditLine(
@@ -29,7 +29,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "import Files@@",
     "import java.nio.file.Files",
-    filterText = "Files"
+    filterText = "Files",
   )
 
   checkEditLine(
@@ -46,7 +46,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "import Banana@@",
-    "import pkg.`type`.Banana"
+    "import pkg.`type`.Banana",
   )
 
   checkEdit(
@@ -59,7 +59,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |trait Serializable
       |object Main extends java.io.Serializable
       |""".stripMargin,
-    filter = _ == "Serializable - java.io"
+    filter = _ == "Serializable - java.io",
   )
 
   checkEdit(
@@ -78,7 +78,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  val x = Files
        |}
        |""".stripMargin,
-    filter = _ == "Files - java.nio.file"
+    filter = _ == "Files - java.nio.file",
   )
 
   checkEdit(
@@ -97,7 +97,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  val x = Files
        |}
        |""".stripMargin,
-    filter = _ == "Files - java.nio.file"
+    filter = _ == "Files - java.nio.file",
   )
 
   checkEdit(
@@ -114,7 +114,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: scala.concurrent.Future
        |)
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent"
+    filter = _ == "Future - scala.concurrent",
   )
 
   checkEdit(
@@ -131,7 +131,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: scala.concurrent.Future
        |)
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent"
+    filter = _ == "Future - scala.concurrent",
   )
 
   checkEdit(
@@ -149,7 +149,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: Future
        |)
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent"
+    filter = _ == "Future - scala.concurrent",
   )
 
   checkEdit(
@@ -167,7 +167,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  Await
        |}
        |""".stripMargin,
-    filter = _ == "Await - scala.concurrent"
+    filter = _ == "Await - scala.concurrent",
   )
 
   checkEdit(
@@ -179,7 +179,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |
       |import java.util.concurrent.CompletableFuture
       |object Main extends CompletableFuture
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
@@ -191,7 +191,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |
       |import java.util.concurrent.CompletableFuture
       |object Main extends CompletableFuture
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
@@ -208,7 +208,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |    Files
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -227,7 +227,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |    Files
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -246,7 +246,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |    println("".substring(Files))
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -265,7 +265,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |      Files
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -286,7 +286,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |     } =>
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -304,7 +304,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("java.util")
+    filter = _.contains("java.util"),
   )
 
   checkEdit(
@@ -322,7 +322,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("scala.util")
+    filter = _.contains("scala.util"),
   )
 
   checkEdit(
@@ -344,7 +344,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |      Files
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -370,7 +370,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |    _ = Files
        |  } yield x
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -398,7 +398,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |    }
        |  } yield x
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -426,7 +426,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |    }
        |  } yield x
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEditLine(
@@ -441,7 +441,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "def backtick@@",
-    "def backtick: `type`.Foo = ${0:???}"
+    "def backtick: `type`.Foo = ${0:???}",
   )
 
   checkEdit(
@@ -459,7 +459,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  def foo: ArrayBuffer[Int] = ???
        |}
        |""".stripMargin,
-    filter = _ == "ArrayBuffer - scala.collection.mutable"
+    filter = _ == "ArrayBuffer - scala.collection.mutable",
   )
 
   checkEdit(
@@ -478,7 +478,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  class Foo extends ArrayBuffer[Int]
        |}
        |""".stripMargin,
-    filter = _ == "ArrayBuffer - scala.collection.mutable"
+    filter = _ == "ArrayBuffer - scala.collection.mutable",
   )
 
   checkEdit(
@@ -497,7 +497,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  trait Foo extends ArrayBuffer[Int]
        |}
        |""".stripMargin,
-    filter = _ == "ArrayBuffer - scala.collection.mutable"
+    filter = _ == "ArrayBuffer - scala.collection.mutable",
   )
 
   checkEdit(
@@ -514,7 +514,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: Future[String]
        |)
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent"
+    filter = _ == "Future - scala.concurrent",
   )
 
   checkEdit(
@@ -537,7 +537,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  val x = Future
        |}
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent"
+    filter = _ == "Future - scala.concurrent",
   )
 
   checkEdit(
@@ -561,7 +561,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  val x = Future
        |}
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent"
+    filter = _ == "Future - scala.concurrent",
   )
 
   checkEdit(
@@ -577,7 +577,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  val x = Future
        |}
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent"
+    filter = _ == "Future - scala.concurrent",
   )
 
   checkEdit(
@@ -591,7 +591,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  ExecutionContext.Implicits
        |}
        |""".stripMargin,
-    filter = _ == "Implicits - scala.concurrent.ExecutionContext"
+    filter = _ == "Implicits - scala.concurrent.ExecutionContext",
   )
 
   // this test was intended to check that import is rendered correctly - without `$` symbol
@@ -608,7 +608,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  Implicits
        |}
        |""".stripMargin,
-    filter = _ == "Implicits - scala.concurrent.ExecutionContext"
+    filter = _ == "Implicits - scala.concurrent.ExecutionContext",
   )
 
   checkEdit(
@@ -622,7 +622,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  mutable.Map
        |}
        |""".stripMargin,
-    filter = _ == "Map - scala.collection.mutable"
+    filter = _ == "Map - scala.collection.mutable",
   )
 
   checkEdit(
@@ -637,7 +637,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  mut.Map
        |}
        |""".stripMargin,
-    filter = _ == "Map - scala.collection.mutable"
+    filter = _ == "Map - scala.collection.mutable",
   )
 
   checkEdit(
@@ -651,7 +651,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  ju.Map
        |}
        |""".stripMargin,
-    filter = _ == "Map - java.util"
+    filter = _ == "Map - java.util",
   )
 
   checkEdit(
@@ -666,7 +666,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  ju.Map
        |}
        |""".stripMargin,
-    filter = _ == "Map - java.util"
+    filter = _ == "Map - java.util",
   )
 
   check(
@@ -687,7 +687,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
         """|Future scala.concurrent
            |Future[T](body: => T)(implicit executor: ExecutionContext): Future[T]
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -708,6 +708,6 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
         """|Future java.util.concurrent
            |Future[T](body: => T)(implicit executor: ExecutionContext): scala.concurrent.Future[T]
            |""".stripMargin
-    )
+    ),
   )
 }

@@ -22,7 +22,7 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   }
   def check(
       query: String,
-      expected: String
+      expected: String,
   )(implicit loc: Location): Unit = {
     test(query) {
       val result = symbols.search(query)

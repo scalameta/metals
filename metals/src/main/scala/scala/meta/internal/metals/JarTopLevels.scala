@@ -34,7 +34,7 @@ final class JarTopLevels(conn: () => Connection) {
         .map(jarPath =>
           PlatformFileIO.newFileSystem(
             jarPath.toURI,
-            new java.util.HashMap[String, String]()
+            new java.util.HashMap[String, String](),
           )
         )
         .getOrElse(PlatformFileIO.newJarFileSystem(path, create = false))
@@ -69,7 +69,7 @@ final class JarTopLevels(conn: () => Connection) {
    */
   def putTopLevels(
       path: AbsolutePath,
-      toplevels: List[(String, AbsolutePath)]
+      toplevels: List[(String, AbsolutePath)],
   ): Int = {
     if (toplevels.isEmpty) 0
     else {
@@ -79,7 +79,7 @@ final class JarTopLevels(conn: () => Connection) {
         try {
           jarStmt = conn().prepareStatement(
             s"insert into indexed_jar (md5) values (?)",
-            Statement.RETURN_GENERATED_KEYS
+            Statement.RETURN_GENERATED_KEYS,
           )
           jarStmt.setString(1, getMD5Digest(path))
           jarStmt.executeUpdate()

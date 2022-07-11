@@ -55,7 +55,7 @@ final class MetalsHttpClient(
     icons: Icons,
     time: Time,
     sh: ScheduledExecutorService,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
@@ -85,7 +85,7 @@ final class MetalsHttpClient(
       id: String,
       value: MetalsSlowTaskParams,
       promise: CompletableFuture[MetalsSlowTaskResult],
-      timer: Timer
+      timer: Timer,
   )
   private val slowTasks = new ConcurrentLinkedDeque[SlowTask]()
   private def slowTasksFormatted(html: HtmlBuilder): HtmlBuilder = {
@@ -116,7 +116,7 @@ final class MetalsHttpClient(
       },
       0,
       1,
-      TimeUnit.SECONDS
+      TimeUnit.SECONDS,
     )
     fromEditorCompletable.asScala.onComplete { _ => triggerReload() }
     fromEditorCompletable
@@ -146,7 +146,7 @@ final class MetalsHttpClient(
   private case class MessageRequest(
       id: String,
       value: ShowMessageRequestParams,
-      promise: CompletableFuture[MessageActionItem]
+      promise: CompletableFuture[MessageActionItem],
   )
   private val showMessageRequests = new ConcurrentLinkedDeque[MessageRequest]()
   private def showMessageRequestsFormatted(html: HtmlBuilder): Unit = {
@@ -200,13 +200,13 @@ final class MetalsHttpClient(
   def tracePath(
       protocolName: String,
       workspace: AbsolutePath,
-      description: String
+      description: String,
   ): Option[(String, AbsolutePath)] =
     Some((description, Trace.protocolTracePath(protocolName, workspace)))
 
   def globalTracePath(
       protocolName: String,
-      description: String
+      description: String,
   ): Option[(String, AbsolutePath)] =
     Trace.globalDirectory.flatMap(dir =>
       tracePath(protocolName, dir, description)
@@ -216,13 +216,13 @@ final class MetalsHttpClient(
     ServerCommands.all.foreach { command =>
       html.element(
         "form",
-        s"action='/execute-command?command=${command.id}' method='post'"
+        s"action='/execute-command?command=${command.id}' method='post'",
       )(
         _.text(command.title)
           .text(": ")
           .element(
             "button",
-            "type='submit' class='btn' style='padding:0.4em'"
+            "type='submit' class='btn' style='padding:0.4em'",
           )(
             _.text("Execute")
           )
@@ -239,12 +239,12 @@ final class MetalsHttpClient(
     val result = HtmlBuilder().page(
       "Metals",
       List(livereload, HtmlBuilder.htmlCSS),
-      HtmlBuilder.bodyStyle
+      HtmlBuilder.bodyStyle,
     ) { html =>
       html
         .section(
           "metals/status",
-          _.element("p")(_.text("Status: ").raw(statusFormatted))
+          _.element("p")(_.text("Status: ").raw(statusFormatted)),
         )
         .section("metals/slowTask", slowTasksFormatted)
         .section("workspace/executeCommand", serverCommands)
@@ -257,9 +257,9 @@ final class MetalsHttpClient(
             .element("section", "class='container is-dark'")(
               _.element(
                 "pre",
-                "style='overflow:auto;max-height:400px;min-height:100px;color:white;'"
+                "style='overflow:auto;max-height:400px;min-height:100px;color:white;'",
               )(logsFormatted)
-            )
+            ),
         )
         .section(
           "Log files",
@@ -268,7 +268,7 @@ final class MetalsHttpClient(
               tracePath("LSP", PathIO.workingDirectory, "LSP trace"),
               globalTracePath("LSP", "LSP global trace"),
               tracePath("BSP", PathIO.workingDirectory, "BSP trace"),
-              globalTracePath("BSP", "BSP global trace")
+              globalTracePath("BSP", "BSP global trace"),
             ).flatten
 
             traces.foreach { case (description, path) =>
@@ -278,7 +278,7 @@ final class MetalsHttpClient(
                     .path(path)
                 )
             }
-          }
+          },
         )
     }
     result.render

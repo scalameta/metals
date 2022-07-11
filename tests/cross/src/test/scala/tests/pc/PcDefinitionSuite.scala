@@ -22,7 +22,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  println(abc)
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -48,7 +48,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  } yield y
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -60,7 +60,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |    y <- Option(x)
        |  } yield y
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -72,7 +72,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |    y /*scala/Option#map(). Option.scala*/@@<- Option(x)
        |  } yield y
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -85,7 +85,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |    /*scala/Option#withFilter(). Option.scala*/@@if y > 2
        |  } yield y
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -104,7 +104,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  increment(1)
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -114,7 +114,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  @@(1, 2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -136,8 +136,8 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |object Main {
            |  /*scala/collection/IterableFactory#apply(). Factory.scala*/List(1)
            |}
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   check(
@@ -146,7 +146,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  /*scala/Predef.assert(). Predef.scala*//*scala/Predef.assert(+1). Predef.scala*/@@assert
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -155,7 +155,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  Predef./*scala/Predef.assert(). Predef.scala*//*scala/Predef.assert(+1). Predef.scala*/@@assert
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -164,7 +164,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  1./*scala/Predef.Ensuring#ensuring(). Predef.scala*//*scala/Predef.Ensuring#ensuring(+1). Predef.scala*//*scala/Predef.Ensuring#ensuring(+2). Predef.scala*//*scala/Predef.Ensuring#ensuring(+3). Predef.scala*/@@ensuring
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -173,7 +173,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  ne@@w java.io.File("")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -181,7 +181,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     """|
        |object Main ex@@tends java.io.Serializable {
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -198,7 +198,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |object Main {
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -207,7 +207,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |imp@@ort scala.concurrent.Future
        |object Main {
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -216,7 +216,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |import scala.co@@ncurrent.Future
        |object Main {
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -237,7 +237,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  foo(arg = 42)
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -258,7 +258,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  assert(/*scala/Predef.assert(+1). Predef.scala*/@@assertion = true)
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -267,7 +267,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  val lst = 1 /*scala/collection/immutable/List#`::`(). List.scala*/@@:: Nil
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -284,7 +284,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  val <<number>>: Int = 1
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -293,7 +293,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  val n = ma@@th.max(1, 2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -310,7 +310,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  List(1).map(@@_ + 2)
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -326,7 +326,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  List(1).foldLeft(0)(_ + _)
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -335,14 +335,14 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  def x: /*scala/Int# Int.scala*/@@Int = 42
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
     "constructor",
     """|
        |class Main(x: /*scala/Int# Int.scala*/@@Int)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -352,7 +352,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |class Main {
        |  Foo(@@a = 3, b = "42")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -362,7 +362,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |class Main {
        |  Foo(2, "4").copy(@@a = 3, b = "42")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -371,7 +371,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |class Main {
        |  val all = Option(42)./*scala/Option#get(). Option.scala*/@@get :: List("1", "2")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -392,7 +392,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  hello(User())
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -413,7 +413,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  hello(new Us@@er())
            |}
            |""".stripMargin
-    )
+    ),
   )
   check(
     "no-definition-1",
@@ -425,7 +425,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  }
        |  println(foo())
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -437,7 +437,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  }
        |  println(foo())
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -449,6 +449,6 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  }
        |  println(foo())
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 }

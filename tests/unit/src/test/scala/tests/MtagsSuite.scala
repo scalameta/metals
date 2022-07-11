@@ -19,7 +19,7 @@ abstract class MtagsSuite(
     directory: String,
     dialect: Dialect,
     exclude: InputFile => Boolean,
-    ignoreUnknownSymbols: Boolean = false
+    ignoreUnknownSymbols: Boolean = false,
 ) extends DirectoryExpectSuite(directory) {
 
   override lazy val input: InputProperties = inputProperties
@@ -53,11 +53,11 @@ abstract class MtagsSuite(
             Assertions.assertNoDiff(
               obtained,
               semanticdbExpected,
-              "mtags == obtained, semanticdb-scalac == expected"
+              "mtags == obtained, semanticdb-scalac == expected",
             )
           }
           obtained
-        }
+        },
       )
     }
   }
@@ -74,9 +74,9 @@ class MtagsScala2Suite
           "ImplicitClasses",
           "PatternMatching",
           "ImplicitConversions",
-          "MacroAnnotation"
+          "MacroAnnotation",
         ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
-      }
+      },
     )
 class MtagsScala3Suite
     extends MtagsSuite(
@@ -86,5 +86,5 @@ class MtagsScala3Suite
       _ => true,
       // Do not assert unknown symbols and compare to semanticdb,
       // There're still lot to improve in mtags for Scala3
-      ignoreUnknownSymbols = true
+      ignoreUnknownSymbols = true,
     )

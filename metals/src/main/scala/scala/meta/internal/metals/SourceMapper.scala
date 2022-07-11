@@ -11,7 +11,7 @@ import org.eclipse.{lsp4j => l}
 final case class SourceMapper(
     buildTargets: BuildTargets,
     buffers: Buffers,
-    workspace: () => AbsolutePath
+    workspace: () => AbsolutePath,
 ) {
 
   def mappedTo(path: AbsolutePath): Option[AbsolutePath] =
@@ -19,7 +19,7 @@ final case class SourceMapper(
 
   def pcMapping(
       path: AbsolutePath,
-      scalaVersion: String
+      scalaVersion: String,
   ): (Input.VirtualFile, l.Position => l.Position, AdjustLspData) = {
 
     def input = path.toInputFromBuffers(buffers)

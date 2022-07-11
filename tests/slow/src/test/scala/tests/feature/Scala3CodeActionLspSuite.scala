@@ -26,7 +26,7 @@ class Scala3CodeActionLspSuite
        |object A {
        |  val al<<>>pha: Int = 123
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -52,7 +52,7 @@ class Scala3CodeActionLspSuite
        | }
        |}
        |""".stripMargin,
-    1
+    1,
   )
 
   check(
@@ -80,7 +80,7 @@ class Scala3CodeActionLspSuite
        |  val tr = Try{ new Exception("name") }
        |}
        |""".stripMargin,
-    kind = List(SourceOrganizeImports.kind)
+    kind = List(SourceOrganizeImports.kind),
   )
 
   checkExtractedMember(
@@ -110,8 +110,8 @@ class Scala3CodeActionLspSuite
           |   case Green extends Color(0x00FF00)
           |   case Blue  extends Color(0x0000FF)
           |end Color
-          |""".stripMargin
-    )
+          |""".stripMargin,
+    ),
   )
 
   check(
@@ -127,7 +127,7 @@ class Scala3CodeActionLspSuite
        |
        |object A:
        |  val (first: List[Int], second) = (List(1), List(""))
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -146,7 +146,7 @@ class Scala3CodeActionLspSuite
        |
        |object A:
        |  var alpha: Buffer[Int] = List(123).toBuffer
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -169,7 +169,7 @@ class Scala3CodeActionLspSuite
        |    }
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -188,7 +188,7 @@ class Scala3CodeActionLspSuite
        |    def inner(i : Int) =
        |      val newValue = i + 23 + 123
        |      method2(newValue)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -210,7 +210,7 @@ class Scala3CodeActionLspSuite
        |    method2(newValue)
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -231,7 +231,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = i + 23 + 123
        |    method2(newValue)
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -256,7 +256,7 @@ class Scala3CodeActionLspSuite
        |  val newValue = i + 23 + 123
        |  method2(newValue)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -285,7 +285,7 @@ class Scala3CodeActionLspSuite
        |    ???
        |
        |  class Bar {}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -301,7 +301,7 @@ class Scala3CodeActionLspSuite
        |  ???
        |
        |""".stripMargin,
-    fileName = "Foo.scala"
+    fileName = "Foo.scala",
   )
 
   check(
@@ -325,7 +325,7 @@ class Scala3CodeActionLspSuite
        |  class Concrete extends Base:
        |""".stripMargin,
     expectError = true,
-    expectNoDiagnostics = false
+    expectNoDiagnostics = false,
   )
 
   def checkExtractedMember(
@@ -334,7 +334,7 @@ class Scala3CodeActionLspSuite
       expectedActions: String,
       expectedCode: String,
       newFile: (String, String),
-      selectedActionIndex: Int = 0
+      selectedActionIndex: Int = 0,
   )(implicit loc: Location): Unit = {
     check(
       name,
@@ -347,10 +347,10 @@ class Scala3CodeActionLspSuite
         val absolutePath = workspace.resolve(getPath(fileName))
         assert(
           absolutePath.exists,
-          s"File $absolutePath should have been created"
+          s"File $absolutePath should have been created",
         )
         assertNoDiff(absolutePath.readText, content)
-      }
+      },
     )
   }
 

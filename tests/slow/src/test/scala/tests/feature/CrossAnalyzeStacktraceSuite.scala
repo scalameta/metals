@@ -26,7 +26,7 @@ class CrossAnalyzeStacktraceSuite
        |at a.main.main(other.scala:6)
        |""".stripMargin,
     filename = "other.scala",
-    scalaVersion = V.scala3
+    scalaVersion = V.scala3,
   )
 
 }

@@ -10,7 +10,7 @@ class BootstrapModifier extends StringModifier {
   override def process(
       info: String,
       code: Input,
-      reporter: Reporter
+      reporter: Reporter,
   ): String = {
     info.split(" ") match {
       case Array(binary, client) =>

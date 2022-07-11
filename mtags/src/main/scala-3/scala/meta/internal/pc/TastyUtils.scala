@@ -21,7 +21,7 @@ import org.eclipse.{lsp4j as l}
 object TastyUtils:
   def getTasty(
       tastyURI: URI,
-      isHttpEnabled: Boolean
+      isHttpEnabled: Boolean,
   ): String =
     if isHttpEnabled then getStandaloneHtmlTasty(tastyURI)
     else normalTasty(tastyURI)
@@ -36,7 +36,7 @@ object TastyUtils:
   private def htmlTasty(
       tastyURI: URI,
       headElems: List[String] = Nil,
-      bodyAttributes: String = ""
+      bodyAttributes: String = "",
   ): String =
     val title = tastyHtmlPageTitle(tastyURI)
     val tastyBytes = AbsolutePath.fromAbsoluteUri(tastyURI).readAllBytes

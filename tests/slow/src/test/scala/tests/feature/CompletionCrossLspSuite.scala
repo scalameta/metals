@@ -46,7 +46,7 @@ class CompletionCrossLspSuite
            |Serializable a
            |Serializable - java.io
            |SerializablePermission - java.io
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
