@@ -13,9 +13,6 @@ import tests.BaseCodeActionSuite
 
 class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
 
-  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
-    IgnoreScala3
-  )
   override protected def requiresScalaLibrarySources: Boolean = true
 
   checkEdit(
