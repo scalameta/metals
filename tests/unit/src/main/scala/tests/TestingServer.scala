@@ -123,7 +123,7 @@ import tests.MetalsTestEnrichments._
  * language server the same way from a real editor client like VS Code because JSON-RPC
  * notifications are `Any => Unit`, they cannot respond.
  */
-final class TestingServer(
+final case class TestingServer(
     workspace: AbsolutePath,
     val client: TestingClient,
     buffers: Buffers,
@@ -689,6 +689,10 @@ final class TestingServer(
           )
         )
     }
+  }
+
+  def shutdown(): Future[Unit] = {
+    server.shutdown().asScala
   }
 
   def didChangeConfiguration(config: String): Future[Unit] = {
