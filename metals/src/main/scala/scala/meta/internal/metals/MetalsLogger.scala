@@ -19,6 +19,17 @@ import scribe.modify.LogModifier
 
 object MetalsLogger {
 
+  private val level =
+    MetalsServerConfig.default.loglevel match {
+      case "debug" => Level.Debug
+      case "info" => Level.Info
+      case "warn" => Level.Warn
+      case "error" => Level.Error
+      case "fatal" => Level.Fatal
+      case "trace" => Level.Trace
+      case _ => Level.Info
+    }
+
   private val workspaceLogPath: RelativePath =
     RelativePath(".metals").resolve("metals.log")
 
@@ -27,7 +38,7 @@ object MetalsLogger {
       .clearHandlers()
       .withHandler(
         formatter = defaultFormat,
-        minimumLevel = Some(scribe.Level.Info),
+        minimumLevel = Some(level),
         modifiers = List(MetalsFilter())
       )
       .replace()
@@ -53,13 +64,13 @@ object MetalsLogger {
       .withHandler(
         writer = newFileWriter(logfile),
         formatter = defaultFormat,
-        minimumLevel = Some(Level.Info),
+        minimumLevel = Some(level),
         modifiers = List(MetalsFilter())
       )
       .withHandler(
         writer = LanguageClientLogger,
         formatter = MetalsLogger.defaultFormat,
-        minimumLevel = Some(Level.Info),
+        minimumLevel = Some(level),
         modifiers = List(MetalsFilter())
       )
       .replace()
