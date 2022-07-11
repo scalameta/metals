@@ -8,7 +8,7 @@ class Definitions/*example.Definitions#*/ {
   List/*scala.package.List.*/[
     java.util.Map/*java.util.Map#*/.Entry/*java.util.Map#Entry#*/[
       java.lang.Integer/*java.lang.Integer#*/,
-      java.lang.Double/*java.lang.Double#*/
+      java.lang.Double/*java.lang.Double#*/,
     ]
   ](
     elems/*scala.collection.IterableFactory#apply().(elems)*/ = null

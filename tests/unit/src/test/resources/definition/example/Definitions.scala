@@ -8,7 +8,7 @@ class Definitions/*Definitions.scala*/ {
   List/*package.scala*/[
     java.util.Map/*Map.java*/.Entry/*Map.java*/[
       java.lang.Integer/*Integer.java*/,
-      java.lang.Double/*Double.java*/
+      java.lang.Double/*Double.java*/,
     ]
   ](
     elems/*Factory.scala*/ = null

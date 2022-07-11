@@ -23,7 +23,7 @@ object NamedArguments/*NamedArguments.scala*/ {
   // anonymous classes
   @deprecated/*deprecated.scala*/(
     message/*deprecated.scala fallback to scala.deprecated#*/ = "a",
-    since/*deprecated.scala fallback to scala.deprecated#*/ = susan/*NamedArguments.scala*/
+    since/*deprecated.scala fallback to scala.deprecated#*/ = susan/*NamedArguments.scala*/,
   ) def b/*NamedArguments.scala*/ = 1
 
   // vararg

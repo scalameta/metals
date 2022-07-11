@@ -8,7 +8,7 @@ class Definitions/*example.Definitions#*/ {
   List[
     java.util.Map.Entry[
       java.lang.Integer,
-      java.lang.Double
+      java.lang.Double,
     ]
   ](
     elems = null

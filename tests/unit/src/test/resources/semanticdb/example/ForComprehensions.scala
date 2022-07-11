@@ -6,23 +6,23 @@ class ForComprehensions/*example.ForComprehensions#*/ {
     b/*local1*/ <- List/*scala.package.List.*/(a/*local0*/)
     if (
       a/*local0*/,
-      b/*local1*/
+      b/*local1*/,
     ) ==/*java.lang.Object#`==`().*/ (1, 2)
     (
       c/*local7*/,
-      d/*local8*/
+      d/*local8*/,
     ) <- List/*scala.package.List.*/((a/*local0*/, b/*local1*/))
     if (
       a/*local0*/,
       b/*local1*/,
       c/*local7*/,
-      d/*local8*/
+      d/*local8*/,
     ) ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
     e/*local10*/ = (
       a/*local0*/,
       b/*local1*/,
       c/*local7*/,
-      d/*local8*/
+      d/*local8*/,
     )
     if e/*local10*/ ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
     f/*local11*/ <- List/*scala.package.List.*/(e/*local10*/)
@@ -33,7 +33,7 @@ class ForComprehensions/*example.ForComprehensions#*/ {
       c/*local7*/,
       d/*local8*/,
       e/*local10*/,
-      f/*local11*/
+      f/*local11*/,
     )
   }
 
