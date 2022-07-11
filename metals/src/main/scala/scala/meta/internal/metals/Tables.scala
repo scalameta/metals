@@ -32,6 +32,8 @@ final class Tables(
     new ChosenBuildServers(() => connection, time)
   val buildTool =
     new ChosenBuildTool(() => connection)
+  val fingerprints =
+    new Fingerprints(() => connection)
 
   def connect(): Unit = {
     this._connection =

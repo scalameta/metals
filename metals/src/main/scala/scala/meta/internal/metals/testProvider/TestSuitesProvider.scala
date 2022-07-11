@@ -32,7 +32,6 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
-import org.eclipse.{lsp4j => l}
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
@@ -62,30 +61,18 @@ final class TestSuitesProvider(
       else Future.unit
     }
 
-  /**
-   * For test suites located in a given path,
-   * update their location (range) and their children (test cases).
-   *
-   * For children, only consider 'relevant' files which have already discovered children.
-   * Metals have to update them because they can be visible to the user via:
-   * 1. Test Explorer view can be opened and tree view is visible
-   * 2. test suite's file can be opened and test cases are visible
-   */
+  private val updateTestCases
+      : BatchedFunction[(AbsolutePath, TextDocument), Unit] =
+    BatchedFunction.fromFuture { args =>
+      Future
+        .traverse(args) { case (path, doc) => refreshTestCases(path, doc) }
+        .map(_ => ())
+    }
+
   override def onChange(docs: TextDocuments, file: AbsolutePath): Unit =
     docs.documents.headOption.foreach {
-      case doc if isEnabled =>
-        val suiteLocationChanged =
-          if (index.contains(file))
-            getTestSuitesLocationUpdates(file, doc)
-          else Nil
-
-        val buildTargetUpdates =
-          if (index.hasTestCasesGranularity(file))
-            getTestCasesForPath(file, Some(doc))
-          else Nil
-
-        updateClientIfNonEmpty(suiteLocationChanged ::: buildTargetUpdates)
-      case _ =>
+      case doc if isEnabled => updateTestCases((file, doc))
+      case _ => ()
     }
 
   override def onDelete(file: AbsolutePath): Unit = {
@@ -93,7 +80,10 @@ final class TestSuitesProvider(
     val removeEvents = removed
       .groupBy(_.buildTarget)
       .map { case (buildTarget, entries) =>
-        BuildTargetUpdate(buildTarget, entries.map(_.testClass.asRemove))
+        BuildTargetUpdate(
+          buildTarget,
+          entries.map(_.suiteDetails.asRemoveEvent)
+        )
       }
       .toList
 
@@ -122,9 +112,42 @@ final class TestSuitesProvider(
   ): java.util.List[BuildTargetUpdate] = {
     val updates = path match {
       case Some(path0) => getTestCasesForPath(path0, None)
-      case None => getTestSuites()
+      case None =>
+        index.allSuites.map { case (buildTarget, entries) =>
+          BuildTargetUpdate(
+            buildTarget,
+            entries.map(_.suiteDetails.asAddEvent).toList
+          )
+        }.toList
     }
     updates.asJava
+  }
+
+  /**
+   * For test suites located in a given path,
+   * update their location (range) and their children (test cases).
+   *
+   * For children, only consider 'relevant' files which have already discovered children.
+   * Metals have to update them because they can be visible to the user via:
+   * 1. Test Explorer view can be opened and tree view is visible
+   * 2. test suite's file can be opened and test cases are visible
+   */
+  private def refreshTestCases(
+      file: AbsolutePath,
+      doc: TextDocument
+  ): Future[Unit] = Future {
+    val suiteLocationChanged =
+      if (index.contains(file))
+        getTestSuitesLocationUpdates(file, doc)
+      else Nil
+
+    val buildTargetUpdates =
+      if (index.shouldBeUpdated(file, doc.md5))
+        getTestCasesForPath(file, Some(doc))
+      else Nil
+
+    val updates = suiteLocationChanged ::: buildTargetUpdates
+    updateClientIfNonEmpty(updates)
   }
 
   private def updateClientIfNonEmpty(updates: Seq[BuildTargetUpdate]): Unit =
@@ -142,15 +165,15 @@ final class TestSuitesProvider(
       metadata <- index.getMetadata(path).toList
       entry <- metadata.entries
       symbol <- doc.symbols.find(si =>
-        si.symbol == entry.suiteInfo.symbol.value
+        si.symbol == entry.suiteDetails.symbol.value
       )
-      loc: l.Location <- doc.toLocation(path.toURI, symbol.symbol)
-      if loc != entry.testClass.location
+      loc <- doc.toLocation(path.toURI, symbol.symbol)
+      if loc != entry.suiteDetails.location
     } yield {
       val event = UpdateSuiteLocation(
-        entry.suiteInfo.fullyQualifiedName.value,
-        entry.suiteInfo.className.value,
-        loc
+        fullyQualifiedClassName = entry.suiteDetails.fullyQualifiedName.value,
+        className = entry.suiteDetails.className.value,
+        location = loc
       )
       (entry.buildTarget, event)
     }
@@ -164,15 +187,6 @@ final class TestSuitesProvider(
         )
       }
       .toList
-  }
-
-  /**
-   * Retrieves all cached test suites.
-   */
-  private def getTestSuites(): Seq[BuildTargetUpdate] = {
-    index.allSuites.map { case (buildTarget, entries) =>
-      BuildTargetUpdate(buildTarget, entries.map(_.testClass).toSeq)
-    }.toSeq
   }
 
   /**
@@ -191,7 +205,7 @@ final class TestSuitesProvider(
       for {
         metadata <- index.getMetadata(path).toList
         events = {
-          val suites = metadata.entries.map(_.suiteInfo).distinct
+          val suites = metadata.entries.map(_.suiteDetails).distinct
           val canResolve = suites.exists(_.framework.canResolveChildren)
           if (canResolve) getTestCasesForSuites(path, suites, textDocument)
           else Seq.empty
@@ -213,7 +227,7 @@ final class TestSuitesProvider(
    */
   private def getTestCasesForSuites(
       path: AbsolutePath,
-      suites: Seq[TestSuiteInfo],
+      suites: Seq[TestSuiteDetails],
       doc: Option[TextDocument]
   ): Seq[AddTestCases] = {
     doc
@@ -234,7 +248,7 @@ final class TestSuitesProvider(
           }
 
           if (testCases.nonEmpty) {
-            index.setHasTestCasesGranularity(path)
+            index.updateFileMetadata(path, semanticdb.md5)
             val event = AddTestCases(
               fullyQualifiedClassName = suite.fullyQualifiedName.value,
               className = suite.className.value,
@@ -253,25 +267,18 @@ final class TestSuitesProvider(
   private def doRefreshTestSuites(): Future[Unit] = Future {
     val symbolsPerTarget = buildTargets.allBuildTargetIds.toList
       // filter out JS and Native platforms
-      .filter(id =>
+      .filter { id =>
         buildTargets
           .scalaTarget(id)
           .forall(_.scalaInfo.getPlatform == ScalaPlatform.JVM)
-      )
+      }
       .flatMap(buildTargets.info)
+      // filter out sbt builds
       .filterNot(_.isSbtBuild)
       .map { buildTarget =>
-        val scalac = buildTargets
-          .scalaTarget(buildTarget.getId)
-          .map(_.scalac)
-        val javac = buildTargets
-          .javaTarget(buildTarget.getId)
-          .map(_.javac)
         SymbolsPerTarget(
           buildTarget,
-          buildTargetClasses.classesOf(buildTarget.getId).testClasses,
-          scalac,
-          javac
+          buildTargetClasses.classesOf(buildTarget.getId).testClasses
         )
       }
 
@@ -285,17 +292,22 @@ final class TestSuitesProvider(
 
     val addedTestCases = addedEntries.mapValues {
       _.flatMap { entry =>
-        val canResolve = entry.suiteInfo.framework.canResolveChildren
+        val canResolve = entry.suiteDetails.framework.canResolveChildren
         if (canResolve && buffers.contains(entry.path))
-          getTestCasesForSuites(entry.path, Vector(entry.suiteInfo), None)
-        else Seq.empty
+          getTestCasesForSuites(entry.path, Vector(entry.suiteDetails), None)
+        else Nil
       }
     }.toMap
 
-    val addedSuites = addedEntries.mapValues(_.map(_.testClass)).toMap
+    val addedSuites =
+      addedEntries.mapValues(_.map(_.suiteDetails.asAddEvent)).toMap
 
     val buildTargetUpdates =
-      getBuildTargetUpdates(deletedSuites, addedSuites, addedTestCases)
+      getBuildTargetUpdates(
+        deletedSuites = deletedSuites,
+        addedSuites = addedSuites,
+        addedTestCases = addedTestCases
+      )
 
     updateClientIfNonEmpty(buildTargetUpdates)
   }
@@ -308,22 +320,21 @@ final class TestSuitesProvider(
       symbolsPerTargets: List[SymbolsPerTarget]
   ): Map[BuildTarget, List[TestExplorerEvent]] = {
     // when test suite is deleted it has to be removed from cache
-    symbolsPerTargets.map {
-      case SymbolsPerTarget(buildTarget, testSymbols, _) =>
-        val fromBSP =
-          testSymbols.values
-            .map(info => FullyQualifiedName(info.fullyQualifiedName))
-            .toSet
-        val cached = index.getSuiteNames(buildTarget)
-        val diff = (cached -- fromBSP)
-        val removed = diff.foldLeft(List.empty[TestExplorerEvent]) {
-          case (deleted, unusedClassName) =>
-            index.remove(buildTarget, unusedClassName) match {
-              case Some(entry) => entry.testClass.asRemove :: deleted
-              case None => deleted
-            }
-        }
-        (buildTarget, removed)
+    symbolsPerTargets.map { case SymbolsPerTarget(buildTarget, testSymbols) =>
+      val fromBSP =
+        testSymbols.values
+          .map(info => FullyQualifiedName(info.fullyQualifiedName))
+          .toSet
+      val cached = index.getSuiteNames(buildTarget)
+      val diff = (cached -- fromBSP)
+      val removed = diff.foldLeft(List.empty[TestExplorerEvent]) {
+        case (deleted, unusedClassName) =>
+          index.remove(buildTarget, unusedClassName) match {
+            case Some(entry) => entry.suiteDetails.asRemoveEvent :: deleted
+            case None => deleted
+          }
+      }
+      (buildTarget, removed)
     }.toMap
   }
 
@@ -355,7 +366,7 @@ final class TestSuitesProvider(
               )
               entryOpt match {
                 case Some(entry) =>
-                  cachedSuites.add(entry.suiteInfo.fullyQualifiedName)
+                  cachedSuites.add(entry.suiteDetails.fullyQualifiedName)
                   entry :: entries
                 case None => entries
               }
@@ -374,7 +385,7 @@ final class TestSuitesProvider(
       deletedSuites: Map[BuildTarget, List[TestExplorerEvent]],
       addedSuites: Map[BuildTarget, List[TestExplorerEvent]],
       addedTestCases: Map[BuildTarget, List[TestExplorerEvent]]
-  ): Seq[BuildTargetUpdate] = {
+  ): List[BuildTargetUpdate] = {
     // because events are being prepended, iterate through them in reversed order
     // (testcases, add, remove)
     val aggregated =
@@ -384,11 +395,11 @@ final class TestSuitesProvider(
             val prev = acc.getOrElse(target, List.empty)
             acc.updated(target, events ++ prev)
         }
-        .filter(_._2.nonEmpty)
+        .filter { case (_, events) => events.nonEmpty }
 
     aggregated.map { case (target, events) =>
       BuildTargetUpdate(target, events)
-    }.toSeq
+    }.toList
   }
 
   /**
@@ -413,26 +424,18 @@ final class TestSuitesProvider(
 
         val className = fullyQualifiedName.value.split('.').last
 
-        val testClass = AddTestSuite(
-          fullyQualifiedName.value,
-          className,
-          symbol.value,
-          location,
-          canResolveChildren = testSymbolInfo.framework.canResolveChildren
-        )
-
-        val suiteInfo = TestSuiteInfo(
-          fullyQualifiedName,
-          testSymbolInfo.framework,
-          ClassName(className),
-          symbol
+        val suiteInfo = TestSuiteDetails(
+          fullyQualifiedName = fullyQualifiedName,
+          framework = testSymbolInfo.framework,
+          className = ClassName(className),
+          symbol = symbol,
+          location = location
         )
 
         TestEntry(
-          buildTarget,
-          definition.path,
-          suiteInfo,
-          testClass
+          buildTarget = buildTarget,
+          path = definition.path,
+          suiteDetails = suiteInfo
         )
       }
     entryOpt

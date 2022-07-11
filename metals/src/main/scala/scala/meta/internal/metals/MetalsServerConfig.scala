@@ -95,7 +95,9 @@ final case class MetalsServerConfig(
       Option(System.getProperty("metals.macos-max-watch-roots"))
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
-        .getOrElse(32)
+        .getOrElse(32),
+    loglevel: String =
+      sys.props.get("metals.loglevel").map(_.toLowerCase()).getOrElse("info")
 ) {
   override def toString: String =
     List[String](
@@ -112,7 +114,8 @@ final case class MetalsServerConfig(
       s"icons=$icons",
       s"statistics=$statistics",
       s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}",
-      s"macos-max-watch-roots=${macOsMaxWatchRoots}"
+      s"macos-max-watch-roots=${macOsMaxWatchRoots}",
+      s"loglevel=${loglevel}"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

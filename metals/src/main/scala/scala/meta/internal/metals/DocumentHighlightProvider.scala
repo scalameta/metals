@@ -4,6 +4,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
@@ -54,6 +55,7 @@ final class DocumentHighlightProvider(
   ): Set[String] = {
 
     val symbolInfo = doc.symbols.find(_.symbol == occ.symbol)
+
     symbolInfo match {
       case Some(info) =>
         if (info.isClass) Set(info.symbol.dropRight(1) + ".")
@@ -63,6 +65,10 @@ final class DocumentHighlightProvider(
             info.symbol.contains("copy"))
         ) {
           parameterAlternatives(info)
+        } else if (
+          info.isMethod && info.isVar && info.symbol.startsWith("local")
+        ) {
+          localVarAlternatives(info, doc)
         } else if (info.isMethod) {
           methodAlternatives(info)
         } else {
@@ -72,14 +78,55 @@ final class DocumentHighlightProvider(
     }
   }
 
-  private def methodAlternatives(info: SymbolInformation): Set[String] = {
+  /**
+   * Set of all local symbols declared in the same scope as `symbol`
+   */
+  private def findLocalsInScope(
+      symbol: String,
+      doc: TextDocument
+  ): Set[String] = {
+    val owner = doc.symbols
+      .filter(_.isClass)
+      .flatMap(getSymLinks(_))
+      .find(_.contains(symbol))
+    owner match {
+      case Some(symbols) => symbols
+      case None => Set.empty
+    }
+  }
 
+  private def getSymLinks(info: SymbolInformation): Option[Set[String]] = {
+    info.signature match {
+      case classSig: ClassSignature =>
+        classSig.declarations.map(_.symlinks.toSet)
+      case _ => None
+    }
+  }
+
+  /**
+   * Set of all alternatives symbols for local var `info` (var declared in local class)
+   */
+  private def localVarAlternatives(
+      info: SymbolInformation,
+      doc: TextDocument
+  ): Set[String] = {
+    val setterSuffix = "_="
+    val symbolName = info.displayName.stripSuffix(setterSuffix)
+
+    val locals = findLocalsInScope(info.symbol, doc)
+    val localAlternatives = doc.symbols
+      .filter(sym => locals.contains(sym.symbol))
+      .filter(_.displayName.stripSuffix(setterSuffix) == symbolName)
+      .map(_.symbol)
+    localAlternatives.toSet
+  }
+
+  private def methodAlternatives(info: SymbolInformation): Set[String] = {
     def isInObject(desc: Descriptor) =
       desc match {
         case Descriptor.Term(_) => true
         case _ => false
       }
-
     val setterSuffix = "_="
     Symbol(info.symbol) match {
       case GlobalSymbol(
@@ -134,6 +181,7 @@ final class DocumentHighlightProvider(
       packageName: String,
       areParamsInObject: Boolean
   ): Set[String] = {
+
     val setterSuffix = "_="
     val paramsDescriptor =
       if (areParamsInObject) Descriptor.Term(className)
