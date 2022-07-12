@@ -108,10 +108,13 @@ class ExtractValueCodeAction(
         Some(expr)
       case Term.Interpolate(_, _, args) =>
         args.find { arg => arg.pos.encloses(range) }
+<<<<<<< HEAD
       case Term.While(expr, _) =>
         Some(expr)
       case Term.Do(_, expr) =>
         Some(expr)
+=======
+>>>>>>> 8a3abaecf0 (Extend extract value by new cases)
       case _ => None
     }
   }
@@ -134,10 +137,13 @@ class ExtractValueCodeAction(
         expr.pos.encloses(range)
       case Term.Interpolate(_, _, args) =>
         args.exists { arg => arg.pos.encloses(range) }
+<<<<<<< HEAD
       case Term.While(expr, _) =>
         expr.pos.encloses(range)
       case Term.Do(_, expr) =>
         expr.pos.encloses(range)
+=======
+>>>>>>> 8a3abaecf0 (Extend extract value by new cases)
       case _ => false
     }
   }

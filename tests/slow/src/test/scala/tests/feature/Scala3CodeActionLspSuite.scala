@@ -382,6 +382,110 @@ class Scala3CodeActionLspSuite
   )
 
   check(
+    "extract-if-cond",
+    """|object Main:
+       |  def main(i : Int) =
+       |    if(2 > <<3>>) 5 else 4
+       |
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title}
+        |""".stripMargin,
+    """|object Main:
+       |  def main(i : Int) =
+       |    val newValue = 2 > 3
+       |    if(newValue) 5 else 4
+       |
+       |""".stripMargin
+  )
+
+  check(
+    "extract-if-res",
+    """|object Main:
+       |  def main(i : Int) =
+       |  if(2 > 3) 5 <<+>> 1 else 4
+       |
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title}
+        |""".stripMargin,
+    """|object Main:
+       |  def main(i : Int) =
+       |    val newValue = 5 + 1
+       |    if(2 > 3) newValue else 4
+       |
+       |""".stripMargin
+  )
+
+  check(
+    "extract-tuple",
+    """|object Main:
+       |  def main(i : Int) =
+       |    val a = (1,<<2>>,3)
+       |
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title}
+        |""".stripMargin,
+    """|object Main:
+       |  def main(i : Int) =
+       |    val newValue = 2
+       |    val a = (1,newValue,3)
+       |
+       |""".stripMargin
+  )
+
+  check(
+    "extract-match",
+    """|object Main:
+       |  def main(i : Int) =
+       |    1 + <<2>> + 3 match {
+       |      case _ => 6
+       |    }
+       |
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title}
+        |""".stripMargin,
+    """|object Main:
+       |  def main(i : Int) =
+       |    val newValue = 1 + 2 + 3
+       |    newValue match {
+       |      case _ => 6
+       |    }
+       |""".stripMargin
+  )
+
+  check(
+    "extract-throw",
+    """|object Main:
+       |  def main(i : Int) =
+       |    throw new Exce<<p>>tion("message")
+       |
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title}
+        |""".stripMargin,
+    """|object Main:
+       |  def main(i : Int) =
+       |    val newValue = new Exception("message")
+       |    throw newValue
+       |
+       |""".stripMargin
+  )
+
+  check(
+    "extract-return",
+    """|object Main:
+       |  def main(i : Int): Int =
+       |    return <<1>> + 2
+       |
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title}
+        |""".stripMargin,
+    """|object Main:
+       |  def main(i : Int): Int =
+       |    val newValue = 1 + 2
+       |    return newValue
+       |""".stripMargin
+  )
+
+  check(
     "insert-companion-object-of-braceless-enum-inside-parent-object",
     """|object Baz:
        |  enum F<<>>oo:
