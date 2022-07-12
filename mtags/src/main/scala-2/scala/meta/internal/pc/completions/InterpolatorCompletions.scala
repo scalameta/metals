@@ -109,14 +109,14 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       interpolatorEdit ++ dollarEdits
     }
 
-    def newText(sym: Symbol): String = {
+    def newText(sym: Symbol, identifier: String): String = {
       val out = new StringBuilder()
-      val symbolName = sym.getterName.decoded
-      val identifier = Identifier.backtickWrap(symbolName)
       val symbolNeedsBraces =
         interpolator.needsBraces ||
           identifier.startsWith("`") ||
-          sym.isNonNullaryMethod
+          sym.isNonNullaryMethod ||
+          // if we need to add prefix
+          identifier.contains(".")
       if (symbolNeedsBraces && !hasOpeningBrace) {
         out.append('{')
       }
@@ -129,17 +129,30 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     }
 
     override def contribute: List[Member] = {
-      metalsScopeMembers(pos).collect {
+      (workspaceSymbolListMembers(interpolator.name, pos) ++
+        metalsScopeMembers(pos)).collect {
         case s: ScopeMember
             if CompletionFuzzy.matches(interpolator.name, s.sym.name) =>
-          val edit = new l.TextEdit(nameRange, newText(s.sym))
           val filterText = s.sym.getterName.decoded
-          new TextEditMember(
-            filterText,
-            edit,
-            s.sym,
-            additionalTextEdits = additionalEdits()
-          )
+          s match {
+            case _: WorkspaceMember =>
+              new WorkspaceInterpolationMember(
+                s.sym,
+                additionalEdits(),
+                newText(s.sym, _),
+                Some(nameRange)
+              )
+            case _ =>
+              val symbolName = s.sym.getterName.decoded
+              val identifier = Identifier.backtickWrap(symbolName)
+              val edit = new l.TextEdit(nameRange, newText(s.sym, identifier))
+              new TextEditMember(
+                filterText,
+                edit,
+                s.sym,
+                additionalTextEdits = additionalEdits()
+              )
+          }
       }
     }
   }
