@@ -132,6 +132,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
       compat: Map[String, String] = Map.empty,
+      itemIndex: Int = 0,
   )(implicit loc: Location): Unit = {
     test(name) {
       val items = getItems(original).filter(item => filter(item.getLabel))
@@ -141,7 +142,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           s"expected single completion item, obtained ${items.length} items.\n${items}"
         )
       }
-      val item = items.head
+      if (items.size <= itemIndex) fail("Not enough completion items")
+      val item = items(itemIndex)
       val (code, _) = params(original)
       val obtained = TextEdits.applyEdits(code, item)
       assertNoDiff(

@@ -62,9 +62,9 @@ class CompletionProvider(
     val oldText = params.text().substring(start, end)
     val stripSuffix = pos.withStart(start).withEnd(end).toLSP
 
-    def textEdit(newText: String) = {
+    def textEdit(newText: String, range: l.Range = editRange): l.TextEdit = {
       if (newText == oldText) new l.TextEdit(stripSuffix, newText)
-      else new l.TextEdit(editRange, newText)
+      else new l.TextEdit(range, newText)
     }
 
     val history = new ShortenedNames()
@@ -145,10 +145,16 @@ class CompletionProvider(
           item.setTextEdit(i.edit)
           item.setAdditionalTextEdits(i.autoImports.asJava)
         case w: WorkspaceMember =>
+          def createTextEdit(identifier: String) =
+            textEdit(w.wrap(identifier), w.editRange.getOrElse(editRange))
+
           importPosition match {
             case None =>
+              if (w.additionalTextEdits.nonEmpty) {
+                item.setAdditionalTextEdits(w.additionalTextEdits.asJava)
+              }
               // No import position, fully qualify the name in-place.
-              item.setTextEdit(textEdit(w.sym.fullNameSyntax + suffix))
+              item.setTextEdit(createTextEdit(w.sym.fullNameSyntax + suffix))
             case Some(value) =>
               val (short, edits) = ShortenedNames.synthesize(
                 TypeRef(
@@ -160,8 +166,10 @@ class CompletionProvider(
                 context,
                 value
               )
-              item.setAdditionalTextEdits(edits.asJava)
-              item.setTextEdit(textEdit(short + suffix))
+              item.setAdditionalTextEdits(
+                (edits ++ w.additionalTextEdits).asJava
+              )
+              item.setTextEdit(createTextEdit(short + suffix))
           }
         case _
             if isImportPosition(
@@ -499,22 +507,6 @@ class CompletionProvider(
         expected(e)
       case e: StringIndexOutOfBoundsException =>
         expected(e)
-    }
-  }
-
-  private def workspaceSymbolListMembers(
-      query: String,
-      pos: Position,
-      visit: Member => Boolean
-  ): SymbolSearch.Result = {
-    if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
-    else {
-      val context = doLocateContext(pos)
-      val visitor = new CompilerSearchVisitor(
-        context,
-        sym => visit(new WorkspaceMember(sym))
-      )
-      search.search(query, buildTargetIdentifier, visitor)
     }
   }
 

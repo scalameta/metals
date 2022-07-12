@@ -608,4 +608,36 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filterText = "hello world",
   )
+
+  checkEdit(
+    "auto-imports".tag(IgnoreScala3),
+    """|object Main {
+       |  "this is an interesting $Paths@@"
+       |}
+       |""".stripMargin,
+    """|import java.nio.file.Paths
+       |object Main {
+       |  s"this is an interesting $Paths$0"
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "auto-imports-prefix".tag(IgnoreScala3),
+    """|
+       |class Paths
+       |object Main {
+       |  "this is an interesting $Paths@@"
+       |}
+       |""".stripMargin,
+    """|import java.nio.file
+       |
+       |class Paths
+       |object Main {
+       |  s"this is an interesting ${file.Paths$0}"
+       |}
+       |""".stripMargin,
+    assertSingleItem = false,
+    itemIndex = 1,
+  )
 }
