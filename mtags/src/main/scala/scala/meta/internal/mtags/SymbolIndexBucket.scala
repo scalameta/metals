@@ -5,7 +5,6 @@ import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
 import scala.util.Properties
 
 import scala.meta.Dialect
@@ -14,7 +13,6 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.SymbolIndexBucket.loadFromSourceJars
-import scala.meta.internal.mtags.SymbolIndexBucket.sourceJars
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
