@@ -48,7 +48,7 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
         s"""|
             |/metals.json
             |{
-            |  "a": { "scalaVersion" : "${V.scala213}", "scalacOptions" : ["-Xsource:3"] }
+            |  "a": { "scalaVersion" : "${V.scala213}", "scalacOptions" : ["-Xsource:3.0"] }
             |}
             |/a/src/main/scala/a/Main.scala
             |package b
@@ -59,6 +59,8 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
             |    println("")
             |    println("")
             |    println("")
+            |    true &&
+            |    false
             |  }
             |  val args = List.empty[String]
             |  func(args*) 
@@ -77,6 +79,8 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
            |    println("")
            |    println("")
            |    println("")
+           |    true &&
+           |    false
            |  }<<region<<
            |  val args = List.empty[String]
            |  func(args*) 

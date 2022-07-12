@@ -69,7 +69,8 @@ case class ScalaTarget(
 
   def scalaBinaryVersion: String = scalaInfo.getScalaBinaryVersion()
 
-  private def containsSource3 = scalac.getOptions().contains("-Xsource:3")
+  private def containsSource3 =
+    scalac.getOptions().asScala.exists(opt => opt.startsWith("-Xsource:3"))
 
   def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
 
