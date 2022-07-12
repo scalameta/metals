@@ -28,7 +28,7 @@ final class WorkspaceSymbolProvider(
     excludedPackageHandler: () => ExcludedPackagesHandler,
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
     classpathSearchIndexer: ClasspathSearch.Indexer =
-      ClasspathSearch.Indexer.default
+      ClasspathSearch.Indexer.default,
 ) {
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
@@ -52,7 +52,7 @@ final class WorkspaceSymbolProvider(
   def search(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
-      target: Option[BuildTargetIdentifier]
+      target: Option[BuildTargetIdentifier],
   ): SymbolSearch.Result = {
     workspaceSearch(query, visitor, target)
     inDependencies.search(query, visitor)
@@ -73,7 +73,7 @@ final class WorkspaceSymbolProvider(
 
   def didChange(
       source: AbsolutePath,
-      symbols: Seq[WorkspaceSymbolInformation]
+      symbols: Seq[WorkspaceSymbolInformation],
   ): Unit = {
     val bloom = Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
@@ -94,14 +94,14 @@ final class WorkspaceSymbolProvider(
     inDependencies = classpathSearchIndexer.index(
       jars.map(_.toNIO).toSeq,
       excludedPackageHandler(),
-      bucketSize
+      bucketSize,
     )
   }
 
   private def workspaceSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
-      id: Option[BuildTargetIdentifier]
+      id: Option[BuildTargetIdentifier],
   ): Unit = {
     for {
       (path, index) <- id match {
@@ -124,14 +124,14 @@ final class WorkspaceSymbolProvider(
         path,
         symbol.symbol,
         symbol.kind,
-        symbol.range
+        symbol.range,
       )
     }
   }
 
   private def searchUnsafe(
       textQuery: String,
-      token: CancelChecker
+      token: CancelChecker,
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     val visitor =
@@ -140,7 +140,7 @@ final class WorkspaceSymbolProvider(
         query,
         token,
         index,
-        saveClassFileToDisk
+        saveClassFileToDisk,
       )
     search(query, visitor, None)
     visitor.allResults()

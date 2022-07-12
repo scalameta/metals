@@ -9,7 +9,7 @@ import scala.meta.io.AbsolutePath
 final class WorksheetDependencySources(conn: () => Connection) {
   def setWorksheet(
       dependencySource: AbsolutePath,
-      worksheetSource: AbsolutePath
+      worksheetSource: AbsolutePath,
   ): Int = {
     conn().update(
       "merge into worksheet_dependency_source key(text_document_uri) values (?, ?);"

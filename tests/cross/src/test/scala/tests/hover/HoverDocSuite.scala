@@ -64,8 +64,8 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   check(
@@ -96,7 +96,7 @@ class HoverDocSuite extends BaseHoverSuite {
            |**Returns:** the first element of this traversable collection if it is nonempty,
            |          `None` if it is empty.
            |""".stripMargin
-    )
+    ),
   )
 
 }

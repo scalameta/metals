@@ -6,7 +6,7 @@ import dotty.tools.dotc.core.Symbols.Symbol
 
 case class Params(
     labels: Seq[String],
-    kind: Params.Kind
+    kind: Params.Kind,
 )
 
 object Params:

@@ -14,7 +14,7 @@ class CompletionErrorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "thing(): Any",
-    topLines = Some(1)
+    topLines = Some(1),
   )
 
   check(
@@ -34,7 +34,7 @@ class CompletionErrorSuite extends BaseCompletionSuite {
     topLines = Some(1),
     compat = Map(
       "2.12" -> "invalid: InvalidDependency.type"
-    )
+    ),
   )
 
 }

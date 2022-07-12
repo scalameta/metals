@@ -19,7 +19,7 @@ case class ScalaTarget(
     scalaInfo: ScalaBuildTarget,
     scalac: ScalacOptionsItem,
     autoImports: Option[Seq[String]],
-    sbtVersion: Option[String]
+    sbtVersion: Option[String],
 ) {
 
   def isSbt = sbtVersion.isDefined

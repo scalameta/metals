@@ -22,7 +22,7 @@ class SystemProcessSuite extends FunSuite {
       cmd,
       AbsolutePath(sys.props.get("user.dir").get),
       redirectErrorOutput = false,
-      Map.empty
+      Map.empty,
     )
     val exitCode = Await.result(ps.complete, 1.seconds)
     assertEquals(exitCode, 22)
@@ -38,7 +38,7 @@ class SystemProcessSuite extends FunSuite {
       cmd,
       AbsolutePath(sys.props.get("user.dir").get),
       redirectErrorOutput = false,
-      Map.empty
+      Map.empty,
     )
     ps.cancel
     val exitCode = Await.result(ps.complete, 5.seconds)
@@ -50,7 +50,7 @@ class SystemProcessSuite extends FunSuite {
       List("absurd", "process"),
       AbsolutePath(sys.props.get("user.dir").get),
       redirectErrorOutput = false,
-      Map.empty
+      Map.empty,
     )
     val exitCode = Await.result(ps.complete, 1.seconds)
     assertEquals(exitCode, 1)

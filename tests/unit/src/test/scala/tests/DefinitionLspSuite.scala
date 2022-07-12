@@ -81,7 +81,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |    assert/*Assertions.scala*/(condition/*L6*/)
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didChange("b/src/main/scala/a/MainSuite.scala") { text =>
         ">>>>>>>\n\n" + text.replaceFirst("\"a\"", "testName")
@@ -120,7 +120,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |    assert/*Assertions.scala*/(condition/*L8*/)
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -177,7 +177,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |    println/*Predef.scala*/(A/*A.scala:1*/.name/*A.scala:2*/)
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -204,7 +204,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |object Main/*L0*/ {
            |  val x/*L1*/: Int/*Int.scala*/ = math.max/*package.scala*/(1, 2)
            |}
-        """.stripMargin
+        """.stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/a/Main.scala")(
         _.replace("max(1, 2)", "max")
@@ -215,7 +215,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |object Main/*L0*/ {
            |  val x/*L1*/: Int/*Int.scala*/ = math.max/*package.scala*/
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -254,7 +254,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
           |object Main/*L1*/ {
           |  val user/*L2*/ = User/*User.scala:2*/.apply/*User.scala:2*/("John")
           |}
-          |""".stripMargin
+          |""".stripMargin,
       )
     } yield ()
   }
@@ -288,7 +288,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |  val name/*L2*/ = "John"
            |  println/*Predef.scala*/(name/*L2*/)
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -318,7 +318,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       _ <- server.didOpen("scala/collection/IterableOnce.scala")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        ""
+        "",
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
@@ -382,7 +382,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |class Main/*L2*/ {
            |  val foo/*L3*/ = new Foo/*FooB.scala:2*/
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

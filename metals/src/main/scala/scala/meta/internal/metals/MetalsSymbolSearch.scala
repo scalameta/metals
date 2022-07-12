@@ -23,7 +23,7 @@ import org.eclipse.lsp4j.Location
 class MetalsSymbolSearch(
     docs: Docstrings,
     wsp: WorkspaceSymbolProvider,
-    defn: DefinitionProvider
+    defn: DefinitionProvider,
 ) extends SymbolSearch {
   // A cache for definitionSourceToplevels.
   // The key is an absolute path to the dependency source file, and
@@ -37,7 +37,7 @@ class MetalsSymbolSearch(
 
   override def documentation(
       symbol: String,
-      parents: ParentSymbols
+      parents: ParentSymbols,
   ): Optional[SymbolDocumentation] =
     docs.documentation(symbol, parents)
 
@@ -52,7 +52,7 @@ class MetalsSymbolSearch(
    */
   override def definitionSourceToplevels(
       symbol: String,
-      source: URI
+      source: URI,
   ): ju.List[String] = {
     val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
     defn
@@ -69,7 +69,7 @@ class MetalsSymbolSearch(
                 .sortBy(sym =>
                   (
                     sym.range.getStart().getLine(),
-                    sym.range.getStart().getCharacter()
+                    sym.range.getStart().getCharacter(),
                   )
                 )
                 .map(_.symbol)
@@ -81,7 +81,7 @@ class MetalsSymbolSearch(
         } else {
           dependencySourceCache.getOrElseUpdate(
             path,
-            Mtags.toplevels(input).asJava
+            Mtags.toplevels(input).asJava,
           )
         }
       })
@@ -91,12 +91,12 @@ class MetalsSymbolSearch(
   override def search(
       query: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor
+      visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
     wsp.search(
       WorkspaceSymbolQuery.exact(query),
       visitor,
-      Some(new BuildTargetIdentifier(buildTargetIdentifier))
+      Some(new BuildTargetIdentifier(buildTargetIdentifier)),
     )
   }
 }

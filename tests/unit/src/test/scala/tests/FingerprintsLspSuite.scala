@@ -47,7 +47,7 @@ class FingerprintsLspSuite extends BaseLspSuite("fingerprints") {
            |a/src/main/scala/a/Names.scala:5:42: error: not found: value surname2
            |  override def toString() = name + " " + surname2
            |                                         ^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didClose("a/src/main/scala/a/Adresses.scala")
       _ <- server.shutdown()
@@ -65,7 +65,7 @@ class FingerprintsLspSuite extends BaseLspSuite("fingerprints") {
            |a/src/main/scala/a/Names.scala:5:42: error: not found: value surname2
            |  override def toString() = name + " " + surname2
            |                                         ^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = assertNoDiff(
         newServer.workspaceReferences().referencesFormat,
@@ -123,7 +123,7 @@ class FingerprintsLspSuite extends BaseLspSuite("fingerprints") {
            |a/src/main/scala/a/Names.scala:5:16: a/Names#toString().
            |  override def toString() = name + " " + surname2
            |               ^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- newServer.shutdown()
     } yield ()

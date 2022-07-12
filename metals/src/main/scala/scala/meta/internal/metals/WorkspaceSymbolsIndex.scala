@@ -13,5 +13,5 @@ case class WorkspaceSymbolsIndex(
     // NOTE(olafur) the original plan was to compress these in memory
     // to reduce memory usage but measurements in large repos like akka
     // show that it still uses <5mb in total.
-    symbols: Seq[WorkspaceSymbolInformation]
+    symbols: Seq[WorkspaceSymbolInformation],
 )

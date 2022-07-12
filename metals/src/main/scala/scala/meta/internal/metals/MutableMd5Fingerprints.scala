@@ -32,20 +32,20 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
   def add(
       path: AbsolutePath,
       text: String,
-      md5: Option[String] = None
+      md5: Option[String] = None,
   ): Unit = {
     add(path, Fingerprint(text, md5.getOrElse(MD5.compute(text))))
   }
 
   private def add(
       path: AbsolutePath,
-      fingerprint: Fingerprint
+      fingerprint: Fingerprint,
   ): Unit = {
     val value = fingerprints.computeIfAbsent(
       path,
       { _ =>
         new ConcurrentLinkedQueue()
-      }
+      },
     )
     value.add(fingerprint)
   }
@@ -75,7 +75,7 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
   override def loadLastValid(
       path: AbsolutePath,
       soughtMd5: String,
-      charset: Charset
+      charset: Charset,
   ): Option[String] = {
     val text = FileIO.slurp(path, charset)
     val md5 = MD5.compute(text)

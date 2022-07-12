@@ -10,7 +10,7 @@ class DetectionSuite extends BaseSuite {
   def check(
       layout: String,
       testFunction: AbsolutePath => Boolean,
-      isTrue: Boolean = true
+      isTrue: Boolean = true,
   )(implicit loc: Location): Unit = {
     val workspace = FileLayout.fromString(layout)
     workspace.toFile.deleteOnExit()
@@ -35,7 +35,7 @@ class DetectionSuite extends BaseSuite {
       check(
         layout,
         p => BuildTools.default(p).isSbt,
-        isTrue
+        isTrue,
       )
     }
   }
@@ -44,7 +44,7 @@ class DetectionSuite extends BaseSuite {
     "build.sbt",
     """|/build.sbt
        |lazy val a = project
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSbt(
@@ -53,14 +53,14 @@ class DetectionSuite extends BaseSuite {
        |sbt.version = 0.13
        |/project/build.scala
        |import sbt._
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSbt(
     "sbt.version",
     """|/project/build.properties
        |sbt.version = 0.13
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNotSbt(
@@ -69,21 +69,21 @@ class DetectionSuite extends BaseSuite {
        |import sbt._
        |/project/plugins.sbt
        |addSbtPlugin(plugin)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNotSbt(
     "mill",
     """|/mill.sc
        |import mill._
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNotSbt(
     "gradle",
     """|/build.gradle
        |import gradle._
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNotSbt(
@@ -92,7 +92,7 @@ class DetectionSuite extends BaseSuite {
        |[scala]
        |version: custom
        |suffix_version: 2.12
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /**
@@ -106,13 +106,13 @@ class DetectionSuite extends BaseSuite {
   def checkGradle(
       name: String,
       layout: String,
-      isTrue: Boolean = true
+      isTrue: Boolean = true,
   )(implicit loc: Location): Unit = {
     test(s"gradle-$name") {
       check(
         layout,
         p => BuildTools.default(p).isGradle,
-        isTrue
+        isTrue,
       )
     }
   }
@@ -121,28 +121,28 @@ class DetectionSuite extends BaseSuite {
     "build.sbt",
     """|/build.sbt
        |lazy val a = project
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNotGradle(
     "mill",
     """|/mill.sc
        |import mill._
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkGradle(
     "build.gradle",
     """|/build.gradle
        |project.name = 'test'
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkGradle(
     "build.gradle.kts",
     """|/build.gradle.kts
        |project.ext['version'] = '123'
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /**
@@ -156,13 +156,13 @@ class DetectionSuite extends BaseSuite {
   def checkMaven(
       name: String,
       layout: String,
-      isTrue: Boolean = true
+      isTrue: Boolean = true,
   )(implicit loc: Location): Unit = {
     test(s"maven-$name") {
       check(
         layout,
         p => BuildTools.default(p).isMaven,
-        isTrue
+        isTrue,
       )
     }
   }
@@ -171,14 +171,14 @@ class DetectionSuite extends BaseSuite {
     "build.sbt",
     """|/build.sbt
        |lazy val a = project
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNotMaven(
     "mill",
     """|/mill.sc
        |import mill._
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkMaven(
@@ -190,7 +190,7 @@ class DetectionSuite extends BaseSuite {
        |  <artifactId>my-app</artifactId>
        |  <version>1</version>
        |</project>
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /**
@@ -206,7 +206,7 @@ class DetectionSuite extends BaseSuite {
           val bt = BuildTools.default(p)
           bt.isSbt && bt.isMill
         },
-        isTrue
+        isTrue,
       )
     }
   }
@@ -217,6 +217,6 @@ class DetectionSuite extends BaseSuite {
        |lazy val a = project
        |/build.sc
        |import mill._
-       |""".stripMargin
+       |""".stripMargin,
   )
 }

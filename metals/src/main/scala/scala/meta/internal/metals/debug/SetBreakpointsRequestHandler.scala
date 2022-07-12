@@ -15,7 +15,7 @@ import org.eclipse.lsp4j.debug.SourceBreakpoint
 
 private[debug] final class SetBreakpointsRequestHandler(
     classFinder: ClassFinder,
-    scalaVersionSelector: ScalaVersionSelector
+    scalaVersionSelector: ScalaVersionSelector,
 ) {
 
   private val previousBreakpointClassNames =
@@ -23,7 +23,7 @@ private[debug] final class SetBreakpointsRequestHandler(
 
   def apply(
       sourcePath: AbsolutePath,
-      request: SetBreakpointsArguments
+      request: SetBreakpointsArguments,
   ): Iterable[SetBreakpointsArguments] = {
     /* Get symbol for each breakpoint location to figure out the
      * class file that we need to register the breakpoint for.
@@ -33,7 +33,7 @@ private[debug] final class SetBreakpointsRequestHandler(
         case Language.JAVA =>
           val topLevels = Mtags.allToplevels(
             sourcePath.toInput,
-            scalaVersionSelector.getDialect(sourcePath)
+            scalaVersionSelector.getDialect(sourcePath),
           )
           request.getBreakpoints.map { breakpoint =>
             val symbol =
@@ -55,7 +55,7 @@ private[debug] final class SetBreakpointsRequestHandler(
           createPartition(
             request,
             fullyQualifiedClassName,
-            breakpoints.map(_._1).toArray
+            breakpoints.map(_._1).toArray,
           )
         )
       case (None, nonRegisteredBreakpoints) =>
@@ -88,7 +88,7 @@ private[debug] final class SetBreakpointsRequestHandler(
 
   private def createEmptyPartition(
       request: SetBreakpointsArguments,
-      uri: String
+      uri: String,
   ) = {
     val source = DebugProtocol.copy(request.getSource)
     source.setPath(uri)
@@ -103,7 +103,7 @@ private[debug] final class SetBreakpointsRequestHandler(
   private def createPartition(
       request: SetBreakpointsArguments,
       fqcn: String,
-      breakpoints: Array[SourceBreakpoint]
+      breakpoints: Array[SourceBreakpoint],
   ) = {
     val source = DebugProtocol.copy(request.getSource)
     source.setPath(s"dap-fqcn:$fqcn")

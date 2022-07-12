@@ -12,7 +12,7 @@ class SemanticdbTreePrinter(
     isHover: Boolean,
     printSymbol: String => String,
     createSymtab: => PrinterSymtab,
-    rightArrow: String
+    rightArrow: String,
 ) {
 
   lazy val symtab = createSymtab
@@ -104,7 +104,7 @@ class SemanticdbTreePrinter(
   def printTypeArgs(
       typeArgs: Seq[s.Type],
       isTuple: Boolean = false,
-      isFunction: Boolean = false
+      isFunction: Boolean = false,
   ): String =
     typeArgs match {
       case Nil => ""
@@ -141,7 +141,7 @@ class SemanticdbTreePrinter(
 
   def printTree(
       t: s.Tree,
-      isExplicitTuple: => Boolean = false
+      isExplicitTuple: => Boolean = false,
   ): Option[String] =
     t match {
       case s.Tree.Empty => None
@@ -173,7 +173,7 @@ class SemanticdbTreePrinter(
       textDocument: s.TextDocument,
       synthetic: s.Synthetic,
       userConfig: UserConfiguration,
-      isInlineProvider: Boolean = false
+      isInlineProvider: Boolean = false,
   ): Seq[(String, s.Range)] = {
 
     def isExplicitTuple(range: s.Range) =
@@ -192,7 +192,7 @@ class SemanticdbTreePrinter(
      */
     def tryTree(
         tree: s.Tree,
-        ignoreTypesTrees: Boolean = true
+        ignoreTypesTrees: Boolean = true,
     ): Seq[(String, s.Range)] =
       tree match {
         /**
@@ -225,7 +225,7 @@ class SemanticdbTreePrinter(
                   syntheticString,
                   range
                     .withEndCharacter(range.startCharacter)
-                    .withEndLine(range.startLine)
+                    .withEndLine(range.startLine),
                 )
               )
             else
@@ -234,9 +234,9 @@ class SemanticdbTreePrinter(
                   syntheticString + "(",
                   range
                     .withEndCharacter(range.startCharacter)
-                    .withEndLine(range.startLine)
+                    .withEndLine(range.startLine),
                 ),
-                (")", range)
+                (")", range),
               )
           }
           for {

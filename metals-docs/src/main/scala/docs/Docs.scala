@@ -66,7 +66,7 @@ object Docs {
       s"""|{
           |  "release": "${release.version}",
           |  "snapshot": "${snapshot.version}"
-          |}""".stripMargin.getBytes()
+          |}""".stripMargin.getBytes(),
     )
 
     val settings = mdoc
@@ -82,7 +82,7 @@ object Docs {
           "SBT_BLOOP_VERSION" -> V.sbtBloopVersion,
           "SCALAMETA_VERSION" -> V.scalametaVersion,
           "SCALA211_VERSION" -> V.scala211,
-          "SCALA_VERSION" -> V.scala213
+          "SCALA_VERSION" -> V.scala213,
         )
       )
       .withOut(docsOut)

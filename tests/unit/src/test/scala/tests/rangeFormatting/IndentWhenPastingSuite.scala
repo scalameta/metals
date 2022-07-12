@@ -16,13 +16,13 @@ class IndentWhenPastingSuite
     /** tabSize: */
     2,
     /** insertSpaces */
-    true
+    true,
   )
   val tabsFormattingOptions: FormattingOptions = new FormattingOptions(
     /** tabSize: */
     1,
     /** insertSpaces */
-    false
+    false,
   )
 
   val blank = " "
@@ -43,7 +43,7 @@ class IndentWhenPastingSuite
       |end Main
       |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -58,7 +58,7 @@ class IndentWhenPastingSuite
       |  val a: String = "a"
       |end Main""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -79,7 +79,7 @@ class IndentWhenPastingSuite
       |    case Blue  extends Color(0x0000FF)
       |end Main""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -104,7 +104,7 @@ class IndentWhenPastingSuite
       |  end SubMain
       |end Main""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -129,7 +129,7 @@ class IndentWhenPastingSuite
       |  end SubMain
       |end Main""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -154,7 +154,7 @@ class IndentWhenPastingSuite
       |  end SubMain
       |end Main""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -179,7 +179,7 @@ class IndentWhenPastingSuite
        |end Main
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -214,7 +214,7 @@ class IndentWhenPastingSuite
        |end Main
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -241,7 +241,7 @@ class IndentWhenPastingSuite
       |  end SubMain
       |end Main""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -264,7 +264,7 @@ class IndentWhenPastingSuite
       |    case Blue  extends Color(0x0000FF)
       |end Main""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -283,7 +283,7 @@ class IndentWhenPastingSuite
        |end Main
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -316,7 +316,7 @@ class IndentWhenPastingSuite
        |end Main
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -339,7 +339,7 @@ class IndentWhenPastingSuite
        |end Main
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -358,7 +358,7 @@ class IndentWhenPastingSuite
        |end Main
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -381,7 +381,7 @@ class IndentWhenPastingSuite
        |}
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -400,7 +400,7 @@ class IndentWhenPastingSuite
        |end Main
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -419,7 +419,7 @@ class IndentWhenPastingSuite
         |end Main
         |""".stripMargin,
     scalaVersion,
-    tabsFormattingOptions
+    tabsFormattingOptions,
   )
 
   check(
@@ -434,7 +434,7 @@ class IndentWhenPastingSuite
       |  outFileval outFile = ""
       |end Main""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -453,7 +453,7 @@ class IndentWhenPastingSuite
       |  ) = ""
       |}""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -472,7 +472,7 @@ class IndentWhenPastingSuite
       |  ) = ""
       |}""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -491,7 +491,7 @@ class IndentWhenPastingSuite
       |  ] = ""
       |}""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -516,7 +516,7 @@ class IndentWhenPastingSuite
        |}
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -547,7 +547,7 @@ class IndentWhenPastingSuite
        |}
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   check(
@@ -564,7 +564,7 @@ class IndentWhenPastingSuite
        |}
        |""".stripMargin,
     scalaVersion,
-    formattingOptions
+    formattingOptions,
   )
 
   def check(
@@ -573,7 +573,7 @@ class IndentWhenPastingSuite
       paste: String,
       expectedCase: String,
       scalaVersion: String = scalaVersion,
-      formattingOptions: FormattingOptions
+      formattingOptions: FormattingOptions,
   )(implicit loc: Location): Unit = {
 
     val base = testCase.replaceAll("(@@)", "")
@@ -593,7 +593,7 @@ class IndentWhenPastingSuite
           expected,
           paste,
           workspace,
-          Some(formattingOptions)
+          Some(formattingOptions),
         )
       } yield ()
     }

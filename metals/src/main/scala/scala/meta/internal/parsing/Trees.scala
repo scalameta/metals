@@ -23,7 +23,7 @@ import org.eclipse.{lsp4j => l}
  */
 final class Trees(
     buffers: Buffers,
-    scalaVersionSelector: ScalaVersionSelector
+    scalaVersionSelector: ScalaVersionSelector,
 ) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
@@ -40,7 +40,7 @@ final class Trees(
 
   private def enclosedChildren(
       children: List[Tree],
-      pos: Position
+      pos: Position,
   ): Option[Tree] = {
     children
       .find { child =>
@@ -59,7 +59,7 @@ final class Trees(
   def findLastEnclosingAt[T <: Tree: ClassTag](
       source: AbsolutePath,
       lspPos: l.Position,
-      predicate: T => Boolean = (_: T) => true
+      predicate: T => Boolean = (_: T) => true,
   ): Option[T] = {
 
     def loop(t: Tree, pos: Position): Option[T] = {
@@ -97,7 +97,7 @@ final class Trees(
                 pos.toLSP,
                 message,
                 DiagnosticSeverity.Error,
-                "scalameta"
+                "scalameta",
               )
             )
           case Parsed.Success(tree) =>
@@ -115,7 +115,7 @@ final class Trees(
 
   private def parse(
       path: AbsolutePath,
-      dialect: Dialect
+      dialect: Dialect,
   ): Option[Parsed[Tree]] = {
     for {
       text <- buffers.get(path).orElse(path.readTextOpt)

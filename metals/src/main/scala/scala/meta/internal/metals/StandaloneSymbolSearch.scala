@@ -28,7 +28,7 @@ class StandaloneSymbolSearch(
     trees: Trees,
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
-    workspaceFallback: Option[SymbolSearch] = None
+    workspaceFallback: Option[SymbolSearch] = None,
 ) extends SymbolSearch {
 
   private val dependencySourceCache =
@@ -36,7 +36,7 @@ class StandaloneSymbolSearch(
   private val classpathSearch =
     ClasspathSearch.fromClasspath(
       classpath.map(_.toNIO),
-      excludedPackages()
+      excludedPackages(),
     )
 
   private val index = OnDemandSymbolIndex.empty()
@@ -55,12 +55,12 @@ class StandaloneSymbolSearch(
       semanticdbsFallback = None,
       trees,
       buildTargets,
-      saveSymbolFileToDisk
+      saveSymbolFileToDisk,
     )
 
   def documentation(
       symbol: String,
-      parents: ParentSymbols
+      parents: ParentSymbols,
   ): ju.Optional[SymbolDocumentation] =
     docs
       .documentation(symbol, parents)
@@ -88,7 +88,7 @@ class StandaloneSymbolSearch(
         val input = symDef.path.toInput
         dependencySourceCache.getOrElseUpdate(
           symDef.path,
-          mtags.toplevels(input).asJava
+          mtags.toplevels(input).asJava,
         )
       }
       .orElse(workspaceFallback.map(_.definitionSourceToplevels(sym, source)))
@@ -98,7 +98,7 @@ class StandaloneSymbolSearch(
   def search(
       query: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor
+      visitor: SymbolSearchVisitor,
   ): Result = {
     val res = classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
     workspaceFallback
@@ -118,14 +118,14 @@ object StandaloneSymbolSearch {
       userConfig: () => UserConfiguration,
       trees: Trees,
       buildTargets: BuildTargets,
-      saveSymbolFileToDisk: Boolean
+      saveSymbolFileToDisk: Boolean,
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
         scalaVersion,
         sources.map(AbsolutePath(_)),
         classpath.map(AbsolutePath(_)),
-        userConfig().javaHome
+        userConfig().javaHome,
       )
 
     new StandaloneSymbolSearch(
@@ -136,7 +136,7 @@ object StandaloneSymbolSearch {
       excludedPackages,
       trees,
       buildTargets,
-      saveSymbolFileToDisk
+      saveSymbolFileToDisk,
     )
   }
   def apply(
@@ -147,7 +147,7 @@ object StandaloneSymbolSearch {
       userConfig: () => UserConfiguration,
       trees: Trees,
       buildTargets: BuildTargets,
-      saveSymbolFileToDisk: Boolean
+      saveSymbolFileToDisk: Boolean,
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
@@ -160,7 +160,7 @@ object StandaloneSymbolSearch {
       excludedPackages,
       trees,
       buildTargets,
-      saveSymbolFileToDisk
+      saveSymbolFileToDisk,
     )
   }
 
@@ -177,7 +177,7 @@ object StandaloneSymbolSearch {
       scalaVersion: String,
       sources: Seq[AbsolutePath],
       classpath: Seq[AbsolutePath],
-      javaHome: Option[String]
+      javaHome: Option[String],
   ): (Seq[AbsolutePath], Seq[AbsolutePath]) = {
     val missingScala: Boolean = {
       val libraryName =
@@ -196,7 +196,7 @@ object StandaloneSymbolSearch {
         val (scalaSources, scalaClasspath) = getScala(scalaVersion)
         (
           (scalaSources :+ absPath) ++ sources,
-          classpath ++ scalaClasspath
+          classpath ++ scalaClasspath,
         )
       case (false, Left(_)) => (sources, classpath)
       case (false, Right(absPath)) =>

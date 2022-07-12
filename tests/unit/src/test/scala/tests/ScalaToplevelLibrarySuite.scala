@@ -20,7 +20,7 @@ class ScalaToplevelLibrarySuite extends BaseSuite {
     // [scalameta] erased modifier support isn't implemeneted yet
     "/scala/CanThrow.scala",
     // error in the parser
-    "/dotty/tools/dotc/transform/patmat/Space.scala"
+    "/dotty/tools/dotc/transform/patmat/Space.scala",
   )
 
   scala2TestClasspath.foreach { entry =>
@@ -59,12 +59,12 @@ class ScalaToplevelLibrarySuite extends BaseSuite {
   private def assertTopLevels(
       obtained: List[String],
       expected: List[String],
-      input: Input.VirtualFile
+      input: Input.VirtualFile,
   ): Unit = {
     assertNoDiff(
       obtained.mkString("\n"),
       expected.mkString("\n"),
-      s"${input.path}"
+      s"${input.path}",
     )
   }
 

@@ -42,7 +42,7 @@ final class TestSuitesProvider(
     buffers: Buffers,
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
-    client: MetalsLanguageClient
+    client: MetalsLanguageClient,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider {
 
@@ -82,7 +82,7 @@ final class TestSuitesProvider(
       .map { case (buildTarget, entries) =>
         BuildTargetUpdate(
           buildTarget,
-          entries.map(_.suiteDetails.asRemoveEvent)
+          entries.map(_.suiteDetails.asRemoveEvent),
         )
       }
       .toList
@@ -116,7 +116,7 @@ final class TestSuitesProvider(
         index.allSuites.map { case (buildTarget, entries) =>
           BuildTargetUpdate(
             buildTarget,
-            entries.map(_.suiteDetails.asAddEvent).toList
+            entries.map(_.suiteDetails.asAddEvent).toList,
           )
         }.toList
     }
@@ -134,7 +134,7 @@ final class TestSuitesProvider(
    */
   private def refreshTestCases(
       file: AbsolutePath,
-      doc: TextDocument
+      doc: TextDocument,
   ): Future[Unit] = Future {
     val suiteLocationChanged =
       if (index.contains(file))
@@ -159,7 +159,7 @@ final class TestSuitesProvider(
 
   private def getTestSuitesLocationUpdates(
       path: AbsolutePath,
-      doc: TextDocument
+      doc: TextDocument,
   ): List[BuildTargetUpdate] = {
     val events = for {
       metadata <- index.getMetadata(path).toList
@@ -173,7 +173,7 @@ final class TestSuitesProvider(
       val event = UpdateSuiteLocation(
         fullyQualifiedClassName = entry.suiteDetails.fullyQualifiedName.value,
         className = entry.suiteDetails.className.value,
-        location = loc
+        location = loc,
       )
       (entry.buildTarget, event)
     }
@@ -183,7 +183,7 @@ final class TestSuitesProvider(
       .map { case (buildTarget, events) =>
         BuildTargetUpdate(
           buildTarget,
-          events.map { case (_, event) => event }
+          events.map { case (_, event) => event },
         )
       }
       .toList
@@ -199,7 +199,7 @@ final class TestSuitesProvider(
    */
   private def getTestCasesForPath(
       path: AbsolutePath,
-      textDocument: Option[TextDocument]
+      textDocument: Option[TextDocument],
   ): List[BuildTargetUpdate] = {
     val buildTargetUpdates =
       for {
@@ -228,7 +228,7 @@ final class TestSuitesProvider(
   private def getTestCasesForSuites(
       path: AbsolutePath,
       suites: Seq[TestSuiteDetails],
-      doc: Option[TextDocument]
+      doc: Option[TextDocument],
   ): Seq[AddTestCases] = {
     doc
       .orElse(semanticdbs.textDocument(path).documentIncludingStale)
@@ -242,7 +242,7 @@ final class TestSuitesProvider(
                 semanticdb,
                 path,
                 suite.fullyQualifiedName,
-                suite.symbol
+                suite.symbol,
               )
             case Unknown => Vector.empty
           }
@@ -252,7 +252,7 @@ final class TestSuitesProvider(
             val event = AddTestCases(
               fullyQualifiedClassName = suite.fullyQualifiedName.value,
               className = suite.className.value,
-              testCases = testCases.asJava
+              testCases = testCases.asJava,
             )
             Some(event)
           } else None
@@ -278,7 +278,7 @@ final class TestSuitesProvider(
       .map { buildTarget =>
         SymbolsPerTarget(
           buildTarget,
-          buildTargetClasses.classesOf(buildTarget.getId).testClasses
+          buildTargetClasses.classesOf(buildTarget.getId).testClasses,
         )
       }
 
@@ -306,7 +306,7 @@ final class TestSuitesProvider(
       getBuildTargetUpdates(
         deletedSuites = deletedSuites,
         addedSuites = addedSuites,
-        addedTestCases = addedTestCases
+        addedTestCases = addedTestCases,
       )
 
     updateClientIfNonEmpty(buildTargetUpdates)
@@ -362,7 +362,7 @@ final class TestSuitesProvider(
                 currentTarget.target,
                 mtags.Symbol(symbol),
                 fullyQualifiedName,
-                testSymbolInfo
+                testSymbolInfo,
               )
               entryOpt match {
                 case Some(entry) =>
@@ -384,7 +384,7 @@ final class TestSuitesProvider(
   private def getBuildTargetUpdates(
       deletedSuites: Map[BuildTarget, List[TestExplorerEvent]],
       addedSuites: Map[BuildTarget, List[TestExplorerEvent]],
-      addedTestCases: Map[BuildTarget, List[TestExplorerEvent]]
+      addedTestCases: Map[BuildTarget, List[TestExplorerEvent]],
   ): List[BuildTargetUpdate] = {
     // because events are being prepended, iterate through them in reversed order
     // (testcases, add, remove)
@@ -409,7 +409,7 @@ final class TestSuitesProvider(
       buildTarget: BuildTarget,
       symbol: mtags.Symbol,
       fullyQualifiedName: FullyQualifiedName,
-      testSymbolInfo: BuildTargetClasses.TestSymbolInfo
+      testSymbolInfo: BuildTargetClasses.TestSymbolInfo,
   ): Option[TestEntry] = {
     val symbolDefinition = symbolIndex
       .definition(symbol)
@@ -429,13 +429,13 @@ final class TestSuitesProvider(
           framework = testSymbolInfo.framework,
           className = ClassName(className),
           symbol = symbol,
-          location = location
+          location = location,
         )
 
         TestEntry(
           buildTarget = buildTarget,
           path = definition.path,
-          suiteDetails = suiteInfo
+          suiteDetails = suiteInfo,
         )
       }
     entryOpt

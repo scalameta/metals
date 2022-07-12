@@ -26,7 +26,7 @@ class FlatMapToForComprehensionSuite
        |        }
        |}
        |""".stripMargin,
-    selectedActionIndex = 1
+    selectedActionIndex = 1,
   )
 
   check(
@@ -69,7 +69,7 @@ class FlatMapToForComprehensionSuite
        |        }
        |}
        |""".stripMargin,
-    selectedActionIndex = 1
+    selectedActionIndex = 1,
   )
 
   check(
@@ -152,7 +152,7 @@ class FlatMapToForComprehensionSuite
        |
        |}
        |""".stripMargin,
-    selectedActionIndex = 1
+    selectedActionIndex = 1,
   )
 
   check(
@@ -215,7 +215,7 @@ class FlatMapToForComprehensionSuite
        |
        |}
        |""".stripMargin,
-    selectedActionIndex = 1
+    selectedActionIndex = 1,
   )
 
   check(
@@ -231,7 +231,7 @@ class FlatMapToForComprehensionSuite
        |}
        |""".stripMargin,
     expectError = true,
-    expectNoDiagnostics = false
+    expectNoDiagnostics = false,
   )
 
 }

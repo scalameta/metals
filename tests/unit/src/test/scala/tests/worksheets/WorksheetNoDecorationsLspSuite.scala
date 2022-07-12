@@ -34,7 +34,7 @@ class WorksheetNoDecorationsLspSuite
           |val x = 1  /*>  : Int = 1  */
           |val foo = "bar"  /*>  : String = "bar"  */
           |println("metals")  /*>  metals  */
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- assertHovers(
         "a/src/main/scala/foo/Main.worksheet.sc",
@@ -45,7 +45,7 @@ class WorksheetNoDecorationsLspSuite
           |""".stripMargin,
         """x: Int = 1""".hover,
         """foo: String = "bar"""".hover,
-        """// metals""".hover
+        """// metals""".hover,
       )
     } yield ()
   }
@@ -72,7 +72,7 @@ class WorksheetNoDecorationsLspSuite
           |val x = 2  /*>  : Int = 2  */
           |val foo = "baz"  /*>  : String = "baz"  */
           |println("meta ls")  /*>  meta ls  */
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- assertHovers(
         "a/src/main/scala/foo/Main.worksheet.sc",
@@ -83,7 +83,7 @@ class WorksheetNoDecorationsLspSuite
           |""".stripMargin,
         """x: Int = 2""".hover,
         """foo: String = "baz"""".hover,
-        """// meta ls""".hover
+        """// meta ls""".hover,
       )
     } yield ()
   }

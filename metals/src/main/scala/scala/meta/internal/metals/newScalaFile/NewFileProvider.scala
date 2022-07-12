@@ -30,7 +30,7 @@ class NewFileProvider(
     client: MetalsLanguageClient,
     packageProvider: PackageProvider,
     focusedDocument: () => Option[AbsolutePath],
-    selector: ScalaVersionSelector
+    selector: ScalaVersionSelector,
 )(implicit
     ec: ExecutionContext
 ) {
@@ -39,7 +39,7 @@ class NewFileProvider(
       directoryUri: Option[URI],
       name: Option[String],
       fileType: Option[String],
-      isScala: Boolean
+      isScala: Boolean,
   ): Future[Unit] = {
     val directory = directoryUri
       .map { uri =>
@@ -79,7 +79,7 @@ class NewFileProvider(
   private def createFile(
       directory: Option[AbsolutePath],
       fileType: NewFileType,
-      name: Option[String]
+      name: Option[String],
   ) = {
     fileType match {
       case kind @ (Class | CaseClass | Object | Trait | Enum) =>
@@ -118,7 +118,7 @@ class NewFileProvider(
       .metalsQuickPick(
         MetalsQuickPickParams(
           kinds.map(_.toQuickPickItem).asJava,
-          placeHolder = NewScalaFile.selectTheKindOfFileMessage
+          placeHolder = NewScalaFile.selectTheKindOfFileMessage,
         )
       )
       .asScala
@@ -136,7 +136,7 @@ class NewFileProvider(
       Trait,
       PackageObject,
       Worksheet,
-      AmmoniteScript
+      AmmoniteScript,
     )
     val withEnum =
       if (isScala3) allFileTypes :+ Enum else allFileTypes
@@ -147,7 +147,7 @@ class NewFileProvider(
     val allFileTypes = List(
       JavaClass,
       JavaInterface,
-      JavaEnum
+      JavaEnum,
     )
     val withRecord =
       if (Properties.isJavaAtLeast("14")) allFileTypes :+ JavaRecord
@@ -166,7 +166,7 @@ class NewFileProvider(
 
   private def getName(
       kind: NewFileType,
-      name: Option[String]
+      name: Option[String],
   ): Future[Option[String]] = {
     name match {
       case Some(v) if v.trim.length > 0 => Future.successful(name)
@@ -178,7 +178,7 @@ class NewFileProvider(
       directory: Option[AbsolutePath],
       name: String,
       kind: NewFileType,
-      ext: String
+      ext: String,
   ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + ext)
     // name can be actually be "foo/Name", where "foo" is a folder to create
@@ -202,7 +202,7 @@ class NewFileProvider(
 
   private def createEmptyFileWithPackage(
       directory: Option[AbsolutePath],
-      name: String
+      name: String,
   ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + ".scala")
     val pkg = packageProvider
@@ -224,7 +224,7 @@ class NewFileProvider(
           path,
           packageProvider
             .packageStatement(path)
-            .getOrElse(NewFileTemplate.empty)
+            .getOrElse(NewFileTemplate.empty),
         )
       }
       .getOrElse(
@@ -239,7 +239,7 @@ class NewFileProvider(
   private def createEmptyFile(
       directory: Option[AbsolutePath],
       name: String,
-      extension: String
+      extension: String,
   ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + extension)
     createFileAndWriteText(path, NewFileTemplate.empty)
@@ -247,7 +247,7 @@ class NewFileProvider(
 
   private def createFileAndWriteText(
       path: AbsolutePath,
-      template: NewFileTemplate
+      template: NewFileTemplate,
   ): Future[(AbsolutePath, Range)] = {
     val result = if (path.exists) {
       Future.failed(
@@ -264,7 +264,7 @@ class NewFileProvider(
         scribe.error("Cannot create file", e)
         client.showMessage(
           MessageType.Error,
-          s"Cannot create file:\n ${e.toString()}"
+          s"Cannot create file:\n ${e.toString()}",
         )
       }
     }

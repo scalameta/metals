@@ -22,7 +22,7 @@ import org.eclipse.lsp4j.SelectionRange
  */
 class SelectionRangeProvider(
     driver: InteractiveDriver,
-    params: ju.List[OffsetParams]
+    params: ju.List[OffsetParams],
 ):
 
   /**
@@ -58,7 +58,7 @@ class SelectionRangeProvider(
 
   private def setParent(
       child: SelectionRange,
-      parent: SelectionRange
+      parent: SelectionRange,
   ): SelectionRange =
     // If the parent and the child have the same exact range we just skip it.
     // This happens in a lot of various places. For example:

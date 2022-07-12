@@ -2,7 +2,7 @@ package tests
 
 case class PrettyPrintTree(
     value: String,
-    children: List[PrettyPrintTree] = Nil
+    children: List[PrettyPrintTree] = Nil,
 ) {
   def isEmpty: Boolean = value.isEmpty() && children.isEmpty
   def render(indent: String, sb: StringBuilder): Unit = {

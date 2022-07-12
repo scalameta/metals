@@ -57,38 +57,38 @@ abstract class CompletionBench {
           |import Java
           |import scala.collection.mutable
           |        """.stripMargin,
-        "import Java@@"
+        "import Java@@",
       ),
       "scopeDeep" -> SourceCompletion.fromZipPath(
         akka,
         replicator,
-        "val nonSensitiveKeys = Join@@ConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.settings)"
+        "val nonSensitiveKeys = Join@@ConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.settings)",
       ),
       "memberDeep" -> SourceCompletion.fromZipPath(
         akka,
         replicator,
-        "val nonSensitiveKeys = JoinConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.@@settings)"
+        "val nonSensitiveKeys = JoinConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.@@settings)",
       ),
       "scopeTypers" -> SourceCompletion.fromZipPath(
         scala,
         typers,
-        "if (argProtos.isDefinedAt(id@@x)) argProtos(idx) else NoType"
+        "if (argProtos.isDefinedAt(id@@x)) argProtos(idx) else NoType",
       ),
       "memberTypers" -> SourceCompletion.fromZipPath(
         scala,
         typers,
-        "if (argProtos.isDefi@@nedAt(idx)) argProtos(idx) else NoType"
+        "if (argProtos.isDefi@@nedAt(idx)) argProtos(idx) else NoType",
       ),
       "scopeFastparse" -> SourceCompletion.fromZipPath(
         fastparse,
         exprs,
-        "def InfixPattern = P( S@@implePattern ~ (Id ~/ SimplePattern).rep | `_*` )"
+        "def InfixPattern = P( S@@implePattern ~ (Id ~/ SimplePattern).rep | `_*` )",
       ),
       "memberFastparse" -> SourceCompletion.fromZipPath(
         fastparse,
         exprs,
-        "def CaseClause: P[Unit] = P( `case` ~ !(`class` | `object`) ~/ Pattern ~ ExprCtx.Gua@@rd.? ~ `=>` ~ CaseBlock  )"
-      )
+        "def CaseClause: P[Unit] = P( `case` ~ !(`class` | `object`) ~/ Pattern ~ ExprCtx.Gua@@rd.? ~ `=>` ~ CaseBlock  )",
+      ),
     )
   }
   @Param(
@@ -117,7 +117,7 @@ abstract class CompletionBench {
     new TestingSymbolSearch(
       ClasspathSearch.fromClasspath(
         classpath,
-        ExcludedPackagesHandler.default
+        ExcludedPackagesHandler.default,
       )
     )
   }
@@ -134,7 +134,7 @@ abstract class CompletionBench {
       CompilerOffsetParams(
         URI.create("file://A.scala"),
         code,
-        code.length - 2
+        code.length - 2,
       )
     ).get()
   }

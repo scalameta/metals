@@ -20,7 +20,7 @@ trait AdjustLspData {
   def adjustRange(range: LspRange): LspRange =
     new LspRange(
       adjustPos(range.getStart),
-      adjustPos(range.getEnd)
+      adjustPos(range.getEnd),
     )
 
   def adjustTextEdits(
@@ -74,7 +74,7 @@ trait AdjustLspData {
 
 case class AdjustedLspData(
     adjustPosition: Position => Position,
-    filterOutLocations: Location => Boolean
+    filterOutLocations: Location => Boolean,
 ) extends AdjustLspData {
 
   override def adjustLocations(
@@ -121,7 +121,7 @@ object AdjustedLspData {
 
   def create(
       f: Position => Position,
-      filterOutLocations: Location => Boolean = _ => false
+      filterOutLocations: Location => Boolean = _ => false,
   ): AdjustLspData =
     AdjustedLspData(
       pos => {
@@ -130,7 +130,7 @@ object AdjustedLspData {
           pos
         else newPos
       },
-      filterOutLocations
+      filterOutLocations,
     )
 
   val default: AdjustLspData = DefaultAdjustedData

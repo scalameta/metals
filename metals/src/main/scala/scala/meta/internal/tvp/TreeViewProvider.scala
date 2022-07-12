@@ -20,7 +20,7 @@ trait TreeViewProvider {
   ): MetalsTreeViewChildrenResult = MetalsTreeViewChildrenResult(Array.empty)
   def reveal(
       path: AbsolutePath,
-      pos: l.Position
+      pos: l.Position,
   ): Option[TreeViewNodeRevealResult] = None
   def onCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams

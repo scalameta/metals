@@ -11,19 +11,19 @@ object Corpus {
   def scala(): AbsolutePath = {
     download(
       "scala-sources.zip",
-      "https://github.com/scala/scala/archive/v2.12.10.zip"
+      "https://github.com/scala/scala/archive/v2.12.10.zip",
     )
   }
   def fastparse(): AbsolutePath = {
     download(
       "fastparse-sources.zip",
-      "https://github.com/lihaoyi/fastparse/archive/2.1.0.zip"
+      "https://github.com/lihaoyi/fastparse/archive/2.1.0.zip",
     )
   }
   def akka(): AbsolutePath = {
     download(
       "akka-sources.zip",
-      "https://github.com/akka/akka/archive/v2.5.19.zip"
+      "https://github.com/akka/akka/archive/v2.5.19.zip",
     )
   }
   private def download(name: String, url: String): AbsolutePath = {

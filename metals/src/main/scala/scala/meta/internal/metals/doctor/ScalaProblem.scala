@@ -50,7 +50,7 @@ case class FutureScalaVersion(version: String) extends ScalaProblem {
 case class SemanticDBDisabled(
     scalaVersion: String,
     bloopVersion: String,
-    unsupportedBloopVersion: Boolean
+    unsupportedBloopVersion: Boolean,
 ) extends ScalaProblem {
   override def message: String = {
     if (unsupportedBloopVersion) {

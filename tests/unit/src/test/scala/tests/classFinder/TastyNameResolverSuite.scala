@@ -19,7 +19,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |class C
        |trait D
        |""".stripMargin,
-    "a.B"
+    "a.B",
   )
 
   check(
@@ -29,7 +29,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |>>class C
        |trait D
        |""".stripMargin,
-    "a.C"
+    "a.C",
   )
 
   check(
@@ -39,7 +39,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |class C
        |>>trait D
        |""".stripMargin,
-    "a.D"
+    "a.D",
   )
 
   check(
@@ -48,7 +48,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |class C
        |>>trait D
        |""".stripMargin,
-    "D"
+    "D",
   )
 
   check(
@@ -58,7 +58,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |>>class C
        |trait D
        |""".stripMargin,
-    "a.b.C"
+    "a.b.C",
   )
 
   check(
@@ -69,7 +69,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |>>class C
        |trait D
        |""".stripMargin,
-    "a.b.C"
+    "a.b.C",
   )
 
   check(
@@ -81,7 +81,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |>>class C
        |trait D
        |""".stripMargin,
-    "a.b.c.d.e.C"
+    "a.b.c.d.e.C",
   )
 
   check(
@@ -92,7 +92,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |}
        |
        |""".stripMargin,
-    "a.Outer"
+    "a.Outer",
   )
 
   check(
@@ -103,7 +103,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |}
        |
        |""".stripMargin,
-    "a.Outer"
+    "a.Outer",
   )
 
   check(
@@ -114,7 +114,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |}
        |
        |""".stripMargin,
-    "a.Outer"
+    "a.Outer",
   )
 
   check(
@@ -127,7 +127,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
        |}
        |
        |""".stripMargin,
-    "a.Outer1"
+    "a.Outer1",
   )
 
   def check(
@@ -135,7 +135,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
       original: String,
       expected: String,
       filename: String = "Main.scala",
-      scalaVersion: String = V.scala213
+      scalaVersion: String = V.scala213,
   ): Unit =
     test(name) {
       val (buffers, classFinder) = init(scalaVersion)

@@ -27,7 +27,7 @@ class ShellRunner(
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
     time: Time,
-    statusBar: StatusBar
+    statusBar: StatusBar,
 )(implicit
     executionContext: scala.concurrent.ExecutionContext
 ) extends Cancelable {
@@ -46,7 +46,7 @@ class ShellRunner(
       redirectErrorOutput: Boolean = false,
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
-      propagateError: Boolean = false
+      propagateError: Boolean = false,
   ): Future[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
@@ -61,7 +61,7 @@ class ShellRunner(
       JavaBinary(userConfig().javaHome),
       "-classpath",
       classpath,
-      main
+      main,
     ) ::: arguments
     run(
       main,
@@ -70,7 +70,7 @@ class ShellRunner(
       redirectErrorOutput,
       processOut = processOut,
       processErr = processErr,
-      propagateError = propagateError
+      propagateError = propagateError,
     )
   }
 
@@ -83,7 +83,7 @@ class ShellRunner(
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
-      logInfo: Boolean = true
+      logInfo: Boolean = true,
   ): Future[Int] = {
     val elapsed = new Timer(time)
 
@@ -95,7 +95,7 @@ class ShellRunner(
       env,
       Some(processOut),
       Some(processErr),
-      propagateError
+      propagateError,
     )
     // NOTE(olafur): older versions of VS Code don't respect cancellation of
     // window/showMessageRequest, meaning the "cancel build import" button
@@ -122,7 +122,7 @@ class ShellRunner(
     val processFuture = ps.complete
     statusBar.trackFuture(
       s"Running '$commandRun'",
-      processFuture
+      processFuture,
     )
     processFuture.map { code =>
       taskResponse.cancel(false)
@@ -144,7 +144,7 @@ object ShellRunner {
       additionalEnv: Map[String, String] = Map.empty,
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
-      maybeJavaHome: Option[String]
+      maybeJavaHome: Option[String],
   ): Option[String] = {
 
     val sbOut = new StringBuilder()
@@ -159,7 +159,7 @@ object ShellRunner {
         sbOut.append(Properties.lineSeparator)
       }),
       Some(processErr),
-      propagateError
+      propagateError,
     )
 
     val exit = Await.result(ps.complete, 10 second)

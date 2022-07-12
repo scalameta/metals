@@ -32,7 +32,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |
            |**Throws**
            |- `NoSuchElementException`:
-           |""".stripMargin.hover
+           |""".stripMargin.hover,
       )
     } yield ()
   }
@@ -47,7 +47,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
             |  // @@
             |}
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.assertHover(
         "a/src/main/scala/a/Main.scala",
@@ -65,7 +65,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |
            |**Throws**
            |- `NoSuchElementException`:
-           |""".stripMargin.hover
+           |""".stripMargin.hover,
       )
     } yield ()
   }
@@ -97,7 +97,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |def foo(x: Int): Int
            |```
            |test
-           |""".stripMargin.hover
+           |""".stripMargin.hover,
       )
     } yield ()
   }
@@ -129,7 +129,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |def foo(x: Int): Int
            |```
            |test
-           |""".stripMargin.hover
+           |""".stripMargin.hover,
       )
       _ <- server.didSave("a/src/main/scala/a/Def.scala")(s =>
         s.replace("test", "test2")
@@ -145,7 +145,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |def foo(x: Int): Int
            |```
            |test2
-           |""".stripMargin.hover
+           |""".stripMargin.hover,
       )
     } yield ()
   }
@@ -182,7 +182,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |**Throws**
            |- `NoSuchElementException`:
            |""".stripMargin.hover,
-        root = workspace.resolve(Directories.readonly)
+        root = workspace.resolve(Directories.readonly),
       )
     } yield ()
   }

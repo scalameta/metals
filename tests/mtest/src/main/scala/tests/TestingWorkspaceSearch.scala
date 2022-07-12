@@ -29,7 +29,7 @@ class TestingWorkspaceSearch {
               Paths.get(path),
               c.symbol,
               c.kind,
-              c.range
+              c.range,
             )
           }
       }

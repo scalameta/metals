@@ -27,7 +27,7 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
         """|foldMap[A, B](fa: Option[A])(f: A => B)(using B: cats.kernel.Monoid[B]): B
            |              ^^^^^^^^^^^^^
            |""".stripMargin
-    )
+    ),
   )
 
 }

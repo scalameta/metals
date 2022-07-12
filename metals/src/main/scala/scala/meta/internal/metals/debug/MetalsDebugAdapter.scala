@@ -12,11 +12,11 @@ import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 private[debug] sealed trait MetalsDebugAdapter {
   def adaptSetBreakpointsRequest(
       sourcePath: AbsolutePath,
-      request: SetBreakpointsArguments
+      request: SetBreakpointsArguments,
   ): Iterable[SetBreakpointsArguments]
   def adaptStackFrameSource(
       sourcePath: String,
-      sourceName: String
+      sourceName: String,
   ): Option[AbsolutePath]
 }
 
@@ -25,22 +25,22 @@ private[debug] sealed trait MetalsDebugAdapter {
  */
 private[debug] class MetalsDebugAdapter1x(
     sourcePathProvider: SourcePathProvider,
-    handleSetBreakpointsRequest: SetBreakpointsRequestHandler
+    handleSetBreakpointsRequest: SetBreakpointsRequestHandler,
 ) extends MetalsDebugAdapter {
 
   override def adaptSetBreakpointsRequest(
       sourcePath: AbsolutePath,
-      request: SetBreakpointsArguments
+      request: SetBreakpointsArguments,
   ): Iterable[SetBreakpointsArguments] = {
     handleSetBreakpointsRequest(
       sourcePath: AbsolutePath,
-      request: SetBreakpointsArguments
+      request: SetBreakpointsArguments,
     )
   }
 
   override def adaptStackFrameSource(
       sourcePath: String,
-      sourceName: String
+      sourceName: String,
   ): Option[AbsolutePath] = {
     sourcePathProvider.findPathFor(sourcePath, sourceName)
   }
@@ -52,7 +52,7 @@ private[debug] object MetalsDebugAdapter {
       buildTargets: BuildTargets,
       classFinder: ClassFinder,
       scalaVersionSelector: ScalaVersionSelector,
-      targets: Seq[BuildTargetIdentifier]
+      targets: Seq[BuildTargetIdentifier],
   ): MetalsDebugAdapter1x = {
     val sourcePathProvider =
       new SourcePathProvider(definitionProvider, buildTargets, targets.toList)
@@ -64,7 +64,7 @@ private[debug] object MetalsDebugAdapter {
   def `2.x`(
       buildTargets: BuildTargets,
       targets: Seq[BuildTargetIdentifier],
-      supportVirtualDocuments: Boolean
+      supportVirtualDocuments: Boolean,
   ): MetalsDebugAdapter2x = {
     val sourcePathAdapter =
       SourcePathAdapter(buildTargets, targets, supportVirtualDocuments)
@@ -89,7 +89,7 @@ private[debug] class MetalsDebugAdapter2x(sourcePathAdapter: SourcePathAdapter)
 
   override def adaptSetBreakpointsRequest(
       sourcePath: AbsolutePath,
-      request: SetBreakpointsArguments
+      request: SetBreakpointsArguments,
   ): Iterable[SetBreakpointsArguments] = {
     // try to find a BSP uri corresponding to the source path or don't send the request
     sourcePathAdapter.toDapURI(sourcePath).map { sourceUri =>
@@ -100,7 +100,7 @@ private[debug] class MetalsDebugAdapter2x(sourcePathAdapter: SourcePathAdapter)
 
   override def adaptStackFrameSource(
       sourcePath: String,
-      sourceName: String
+      sourceName: String,
   ): Option[AbsolutePath] = {
     sourcePathAdapter.toMetalsPath(sourcePath)
   }

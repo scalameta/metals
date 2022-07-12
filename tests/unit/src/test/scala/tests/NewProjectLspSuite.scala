@@ -66,27 +66,27 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
   check("basic-template")(
     pickedProject = Some("scala/scalatest-example.g8"),
     name = None,
-    expectedContent = scalatestTemplate()
+    expectedContent = scalatestTemplate(),
   )
 
   check("custom-name")(
     pickedProject = Some("scala/scalatest-example.g8"),
     name = Some("my-custom-name"),
-    expectedContent = scalatestTemplate("my-custom-name")
+    expectedContent = scalatestTemplate("my-custom-name"),
   )
 
   check("custom-template")(
     pickedProject = None,
     name = Some("My-Custom-Name"),
     customTemplate = Some("scala/scalatest-example.g8"),
-    expectedContent = scalatestTemplate("my-custom-name")
+    expectedContent = scalatestTemplate("my-custom-name"),
   )
 
   check("website-template")(
     pickedProject = None,
     name = None,
     templateFromg8Site = Some("scala/scalatest-example.g8"),
-    expectedContent = scalatestTemplate()
+    expectedContent = scalatestTemplate(),
   )
 
   test("template-regex") {
@@ -119,55 +119,55 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
           id = "jimschubert/finatra.g8",
           label = "jimschubert/finatra.g8",
           description =
-            "A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager"
+            "A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager",
         ),
         MetalsQuickPickItem(
           id = "jimschubert/finatra.g8",
           label = "jimschubert/finatra.g8",
           description =
-            "A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager"
+            "A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager",
         ),
         MetalsQuickPickItem(
           id = "lagom/lagom-java.g8",
           label = "lagom/lagom-java.g8",
           description =
-            "A [Lagom](https://www.lagomframework.com/) Java seed template for sbt"
+            "A [Lagom](https://www.lagomframework.com/) Java seed template for sbt",
         ),
         MetalsQuickPickItem(
           id = "jimschubert/finatra.g8",
           label = "jimschubert/finatra.g8",
-          description = ""
+          description = "",
         ),
         MetalsQuickPickItem(
           id = "earldouglas/xsbt-web-plugin.g8",
           label = "earldouglas/xsbt-web-plugin.g8",
           description =
-            "Seed Template for [xsbt-web-plugin](https://github.com/earldouglas/xsbt-web-plugin)"
+            "Seed Template for [xsbt-web-plugin](https://github.com/earldouglas/xsbt-web-plugin)",
         ),
         MetalsQuickPickItem(
           id = "elbaulp/elbaulp-scala.g8",
           label = "elbaulp/elbaulp-scala.g8",
           description =
-            "Simple Scala project with Property Checks, ScalaTest and log4j"
+            "Simple Scala project with Property Checks, ScalaTest and log4j",
         ),
         MetalsQuickPickItem(
           id = "adinapoli/sbt-revolver.g8",
           label = "adinapoli/sbt-revolver.g8",
-          description = "**2012**. Generic sbt project with sbt-revolver"
-        )
-      )
+          description = "**2012**. Generic sbt project with sbt-revolver",
+        ),
+      ),
     )
   }
 
   test("full-page") {
     val obtained = NewProjectProvider.templatesFromText(
       NewProjectLspSuite.stableWikiPage,
-      ""
+      "",
     )
     assertEquals(
       obtained.size,
       161,
-      "We expected 161 templates to be extracted from the sample wiki page."
+      "We expected 161 templates to be extracted from the sample wiki page.",
     )
   }
 
@@ -176,7 +176,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
       name: Option[String],
       expectedContent: String,
       customTemplate: Option[String] = None,
-      templateFromg8Site: Option[String] = None
+      templateFromg8Site: Option[String] = None,
   )(implicit loc: Location): Unit =
     test(testName) {
 
@@ -210,7 +210,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
 
       def onDirectorySelect(
           params: ShowMessageRequestParams,
-          findAction: String => Option[MessageActionItem]
+          findAction: String => Option[MessageActionItem],
       ) = {
         val file =
           Try(Paths.get(params.getMessage())).map(AbsolutePath.apply).toOption
@@ -295,7 +295,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
           ignoreVersions(output),
           ignoreVersions(expectedContent),
           // note(@tgodzik) The template is pretty stable for last couple of years except for versions.
-          "This test is based on https://github.com/scala/scalatest-example.g8, it might have changed."
+          "This test is based on https://github.com/scala/scalatest-example.g8, it might have changed.",
         )
       }
 

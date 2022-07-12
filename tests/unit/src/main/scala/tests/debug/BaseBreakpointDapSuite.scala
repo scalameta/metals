@@ -13,7 +13,7 @@ import tests.BuildToolLayout
 abstract class BaseBreakpointDapSuite(
     suiteName: String,
     initializer: BuildServerInitializer,
-    buildToolLayout: BuildToolLayout
+    buildToolLayout: BuildToolLayout,
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
 
   assertBreakpoints("preceding-class")(
@@ -680,7 +680,7 @@ abstract class BaseBreakpointDapSuite(
          |  }
          |}
          |""".stripMargin,
-      workspace
+      workspace,
     )
     val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
 
@@ -703,7 +703,7 @@ abstract class BaseBreakpointDapSuite(
         LibraryBreakpoints(
           server
             .toPathFromSymbol("scala.Predef", "scala/Predef.scala"),
-          List(404)
+          List(404),
         )
       )
     )
@@ -718,7 +718,7 @@ abstract class BaseBreakpointDapSuite(
          |  }
          |}
          |""".stripMargin,
-      scalaVersion
+      scalaVersion,
     )
 
     for {
@@ -746,7 +746,7 @@ abstract class BaseBreakpointDapSuite(
          |  }
          |}
          |""".stripMargin,
-      workspace
+      workspace,
     )
 
     val modifiedBreakpoints = DebugWorkspaceLayout(
@@ -761,7 +761,7 @@ abstract class BaseBreakpointDapSuite(
          |  }
          |}
          |""".stripMargin,
-      workspace
+      workspace,
     )
     val workspaceLayout =
       buildToolLayout(firstBreakpoints.toString, scalaVersion)
@@ -793,7 +793,7 @@ abstract class BaseBreakpointDapSuite(
          |  }
          |}
          |""".stripMargin,
-      workspace
+      workspace,
     )
     val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
 

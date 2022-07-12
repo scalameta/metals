@@ -38,7 +38,7 @@ case class ScalafixProvider(
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
     buildClient: MetalsBuildClient,
-    interactive: InteractiveSemanticdbs
+    interactive: InteractiveSemanticdbs,
 )(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
@@ -65,7 +65,7 @@ case class ScalafixProvider(
               target,
               contents,
               produceSemanticdb = true,
-              List(organizeImportRuleName)
+              List(organizeImportRuleName),
             )
         val evaluatedCorrectly = testEvaluation.forall {
           case Success(evaluation) => evaluation.isSuccessful()
@@ -76,7 +76,7 @@ case class ScalafixProvider(
         case e: Throwable =>
           scribe.debug(
             s"Scalafix issue while warming up due to issue: ${e.getMessage()}",
-            e
+            e,
           )
       } finally {
         if (tmp.exists) tmp.delete()
@@ -93,7 +93,7 @@ case class ScalafixProvider(
       runScalafixRules(
         file,
         target,
-        definedRules.toList
+        definedRules.toList,
       )
     }
     result.getOrElse(Future.successful(Nil))
@@ -101,12 +101,12 @@ case class ScalafixProvider(
 
   def organizeImports(
       file: AbsolutePath,
-      scalaTarget: ScalaTarget
+      scalaTarget: ScalaTarget,
   ): Future[List[l.TextEdit]] = {
     runScalafixRules(
       file,
       scalaTarget,
-      List(organizeImportRuleName)
+      List(organizeImportRuleName),
     )
   }
 
@@ -114,7 +114,7 @@ case class ScalafixProvider(
       file: AbsolutePath,
       scalaTarget: ScalaTarget,
       rules: List[String],
-      retried: Boolean = false
+      retried: Boolean = false,
   ): Future[List[l.TextEdit]] = {
     val fromDisk = file.toInput
     val inBuffers = file.toInputFromBuffers(buffers)
@@ -126,14 +126,14 @@ case class ScalafixProvider(
           scalaTarget,
           inBuffers.value,
           retried || isUnsaved(inBuffers.text, fromDisk.text),
-          rules
+          rules,
         )
 
       scalafixEvaluation match {
         case Failure(exception) =>
           reportScalafixError(
             "Unable to run scalafix, please check logs for more info.",
-            exception
+            exception,
           )
           Future.failed(exception)
         case Success(results)
@@ -148,7 +148,7 @@ case class ScalafixProvider(
           )
           languageClient.showMessage(
             MessageType.Warning,
-            msg
+            msg,
           )
           Future.successful(Nil)
         case Success(results) if !scalafixSucceded(results) =>
@@ -184,7 +184,7 @@ case class ScalafixProvider(
 
   private def createTemporarySemanticdb(
       file: AbsolutePath,
-      contents: String
+      contents: String,
   ) = {
     interactive
       .textDocument(file, Some(contents))
@@ -275,13 +275,13 @@ case class ScalafixProvider(
       case Some(path) if !path.isFile && defaultLocation.isFile =>
         languageClient.showMessage(
           MessageType.Warning,
-          s"No configuration at $path, using default at $defaultLocation."
+          s"No configuration at $path, using default at $defaultLocation.",
         )
         Some(defaultLocation.toNIO)
       case Some(path) if !path.isFile =>
         languageClient.showMessage(
           MessageType.Warning,
-          s"No configuration at $path, using Scalafix defaults."
+          s"No configuration at $path, using Scalafix defaults.",
         )
         defaultConfig
       case Some(path) => Some(path.toNIO)
@@ -325,7 +325,7 @@ case class ScalafixProvider(
       scalaTarget: ScalaTarget,
       inBuffers: String,
       produceSemanticdb: Boolean,
-      rules: List[String]
+      rules: List[String],
   ): Try[ScalafixEvaluation] = {
     val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
     val scalaBinaryVersion =
@@ -359,7 +359,7 @@ case class ScalafixProvider(
         scalaBinaryVersion,
         scalaVersion,
         userConfig(),
-        rules
+        rules,
       )
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
@@ -370,7 +370,7 @@ case class ScalafixProvider(
       api <- getScalafix(scalaBinaryVersion)
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
         scalafixRulesKey,
-        api.getClass.getClassLoader
+        api.getClass.getClassLoader,
       )
     } yield {
       val scalacOptions = {
@@ -407,7 +407,7 @@ case class ScalafixProvider(
 
   private def reportScalafixError(
       message: String,
-      exception: Throwable
+      exception: Throwable,
   ): Unit = {
     val params = new MessageParams(MessageType.Error, message)
     scribe.error(message, exception)
@@ -416,7 +416,7 @@ case class ScalafixProvider(
 
   private def textEditsFrom(
       newFileContent: String,
-      input: Input
+      input: Input,
   ): List[l.TextEdit] = {
     val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
     if (newFileContent != input.text) {
@@ -444,7 +444,7 @@ case class ScalafixProvider(
 
   private def getRuleClassLoader(
       scalfixRulesKey: ScalafixRulesClasspathKey,
-      scalafixClassLoader: ClassLoader
+      scalafixClassLoader: ClassLoader,
   ): Try[URLClassLoader] = {
     rulesClassloaderCache.get(scalfixRulesKey) match {
       case Some(value) => Success(value)
@@ -459,7 +459,7 @@ case class ScalafixProvider(
             ).map { paths =>
               val classloader = Embedded.toClassLoader(
                 Classpath(paths.map(AbsolutePath(_))),
-                scalafixClassLoader
+                scalafixClassLoader,
               )
               rulesClassloaderCache.update(scalfixRulesKey, classloader)
               classloader
@@ -487,7 +487,7 @@ object ScalafixProvider {
 
   case class ScalafixRulesClasspathKey(
       scalaBinaryVersion: ScalaBinaryVersion,
-      usedRulesWithClasspath: Set[Dependency]
+      usedRulesWithClasspath: Set[Dependency],
   )
 
   object ScalafixRulesClasspathKey {
@@ -495,7 +495,7 @@ object ScalafixProvider {
         scalaBinaryVersion: String,
         scalaVersion: String,
         userConfig: UserConfiguration,
-        rules: List[String]
+        rules: List[String],
     ): ScalafixRulesClasspathKey = {
       val rulesClasspath =
         rulesDependencies(scalaVersion, scalaBinaryVersion, userConfig, rules)
@@ -510,14 +510,14 @@ object ScalafixProvider {
       scalaVersion: String,
       scalaBinaryVersion: String,
       userConfig: UserConfiguration,
-      rules: List[String]
+      rules: List[String],
   ): Set[Dependency] = {
     val fromSettings = userConfig.scalafixRulesDependencies.flatMap {
       dependencyString =>
         Try {
           Dependency.parse(
             dependencyString,
-            coursierapi.ScalaVersion.of(scalaVersion)
+            coursierapi.ScalaVersion.of(scalaVersion),
           )
         } match {
           case Failure(exception) =>
@@ -533,7 +533,7 @@ object ScalafixProvider {
       Dependency.of(
         "com.github.liancheng",
         s"organize-imports_$scalaBinaryVersion",
-        BuildInfo.organizeImportVersion
+        BuildInfo.organizeImportVersion,
       )
     ) ++ fromSettings ++ rules.flatMap(builtInRuleDeps.get)
     // only get newest versions for each dependency
@@ -549,31 +549,31 @@ object ScalafixProvider {
     val scaluzziDep = Dependency.of(
       "com.github.vovapolu",
       s"scaluzzi_$binaryVersion",
-      "latest.release"
+      "latest.release",
     )
 
     val scalafixUnifiedDep = Dependency.of(
       "com.github.xuwei-k",
       s"scalafix-rules_$binaryVersion",
-      "latest.release"
+      "latest.release",
     )
 
     val scalafixPixivRule = Dependency.of(
       "net.pixiv",
       s"scalafix-pixiv-rule_$binaryVersion",
-      "latest.release"
+      "latest.release",
     )
 
     val depsList = List(
       "EmptyCollectionsUnified" -> Dependency.of(
         "io.github.ghostbuster91.scalafix-unified",
         s"unified_$binaryVersion",
-        "latest.release"
+        "latest.release",
       ),
       "UseNamedParameters" -> Dependency.of(
         "com.github.jatcwang",
         s"scalafix-named-params_$binaryVersion",
-        "latest.release"
+        "latest.release",
       ),
       "MissingFinal" -> scaluzziDep,
       "Disable" -> scaluzziDep,
@@ -612,7 +612,7 @@ object ScalafixProvider {
       "CheckIsEmpty" -> scalafixPixivRule,
       "NonCaseException" -> scalafixPixivRule,
       "UnifyEmptyList" -> scalafixPixivRule,
-      "SingleConditionMatch" -> scalafixPixivRule
+      "SingleConditionMatch" -> scalafixPixivRule,
     )
     val depsMaps = depsList.toMap
     // make sure there are no duplicate rules

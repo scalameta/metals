@@ -24,7 +24,7 @@ case class SourceCompletion(filename: String, code: String, offset: Int) {
       CompilerOffsetParams(
         Paths.get(filename).toUri(),
         code + randomSuffix,
-        offset
+        offset,
       )
     ).get()
   }
@@ -34,7 +34,7 @@ object SourceCompletion {
   def fromZipPath(
       zip: AbsolutePath,
       path: String,
-      query: String
+      query: String,
   ): SourceCompletion = {
     val text =
       FileIO.withJarFileSystem(zip, create = false, close = true)(root =>
@@ -57,6 +57,6 @@ object SourceCompletion {
       InputStreamIO.readBytes(
         this.getClass.getResourceAsStream(s"/$path")
       ),
-      StandardCharsets.UTF_8
+      StandardCharsets.UTF_8,
     )
 }

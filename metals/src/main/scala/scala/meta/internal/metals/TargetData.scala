@@ -154,13 +154,13 @@ final class TargetData {
         classpathEntry <- classpathEntries
         if isVisited.add(classpathEntry)
       } yield classpathEntry,
-      PackageIndex.bootClasspath.iterator
+      PackageIndex.bootClasspath.iterator,
     ).flatten
   }
 
   def addSourceItem(
       sourceItem: AbsolutePath,
-      buildTarget: BuildTargetIdentifier
+      buildTarget: BuildTargetIdentifier,
   ): Unit = {
     val dealiased = sourceItem.dealias
     if (dealiased != sourceItem)
@@ -168,7 +168,7 @@ final class TargetData {
 
     val queue = sourceItemsToBuildTarget.getOrElseUpdate(
       dealiased,
-      new ConcurrentLinkedQueue()
+      new ConcurrentLinkedQueue(),
     )
     queue.add(buildTarget)
     sourceBuildTargetsCache.clear()
@@ -176,7 +176,7 @@ final class TargetData {
 
   def addSourceItem(
       sourceItem: SourceItem,
-      buildTarget: BuildTargetIdentifier
+      buildTarget: BuildTargetIdentifier,
   ): Unit = {
     val sourceItemPath = sourceItem.getUri.toAbsolutePath(followSymlink = false)
 
@@ -247,7 +247,7 @@ final class TargetData {
             scalaBuildTarget,
             scalac,
             autoImports,
-            sbtTarget.map(_.getSbtVersion())
+            sbtTarget.map(_.getSbtVersion()),
           )
         }
       }
@@ -264,7 +264,7 @@ final class TargetData {
 
   def addDependencySource(
       sourcesJar: AbsolutePath,
-      target: BuildTargetIdentifier
+      target: BuildTargetIdentifier,
   ): Unit = {
     sourceJarNameToJarFile(sourcesJar.filename) = sourcesJar
     val acc = inverseDependencySources.getOrElse(sourcesJar, Set.empty)
@@ -273,7 +273,7 @@ final class TargetData {
 
   def addMappedSource(
       path: AbsolutePath,
-      mapped: TargetData.MappedSource
+      mapped: TargetData.MappedSource,
   ): Unit =
     actualSources(path) = mapped
 

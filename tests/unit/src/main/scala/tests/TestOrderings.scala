@@ -7,14 +7,14 @@ object TestOrderings {
     override def compare(a: l.Range, b: l.Range): Int = {
       val byLine = Integer.compare(
         a.getStart.getLine,
-        b.getStart.getLine
+        b.getStart.getLine,
       )
       if (byLine != 0) {
         byLine
       } else {
         val byCharacter = Integer.compare(
           a.getStart.getCharacter,
-          b.getStart.getCharacter
+          b.getStart.getCharacter,
         )
         byCharacter
       }

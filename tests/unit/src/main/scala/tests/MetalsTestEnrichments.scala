@@ -84,14 +84,14 @@ object MetalsTestEnrichments {
         Nil.asJava,
         Nil.asJava,
         Nil.asJava,
-        new BuildTargetCapabilities(true, true, true)
+        new BuildTargetCapabilities(true, true, true),
       )
       val scalaTarget = new ScalaBuildTarget(
         "org.scala-lang",
         BuildInfo.scalaVersion,
         BuildInfo.scalaVersion.split('.').take(2).mkString("."),
         ScalaPlatform.JVM,
-        Nil.asJava
+        Nil.asJava,
       )
       val gson = new Gson
       val data = gson.toJsonTree(scalaTarget)
@@ -103,7 +103,7 @@ object MetalsTestEnrichments {
         bti,
         Nil.asJava,
         libraries.flatMap(_.classpath.entries).map(_.toURI.toString).asJava,
-        ""
+        "",
       )
       data0.addScalacOptions(
         new ScalacOptionsResult(List(item).asJava)
@@ -115,7 +115,7 @@ object MetalsTestEnrichments {
     def formatMessage(
         severity: String,
         message: String,
-        input: m.Input
+        input: m.Input,
     ): String = {
       try {
         val start = range.getStart
@@ -125,7 +125,7 @@ object MetalsTestEnrichments {
           start.getLine,
           start.getCharacter,
           end.getLine,
-          end.getCharacter
+          end.getCharacter,
         )
         pos.formatMessage(severity, message)
       } catch {
@@ -143,7 +143,7 @@ object MetalsTestEnrichments {
       diag.getRange.formatMessage(
         diag.getSeverity.toString.toLowerCase(),
         diag.getMessage,
-        input
+        input,
       )
     }
   }
@@ -174,13 +174,13 @@ object MetalsTestEnrichments {
             startRange.getLine,
             startRange.getCharacter,
             startRange.getLine,
-            startRange.getCharacter
+            startRange.getCharacter,
           )
         ),
         // include end line for testing purposes
         symbol =
           s"${info.getContainerName}${info.getName}(${info.getKind}):${endRange.getLine + 1}",
-        role = s.SymbolOccurrence.Role.DEFINITION
+        role = s.SymbolOccurrence.Role.DEFINITION,
       )
     }
   }

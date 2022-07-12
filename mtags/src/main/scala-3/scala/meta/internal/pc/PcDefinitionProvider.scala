@@ -30,7 +30,7 @@ import org.eclipse.lsp4j.Location
 class PcDefinitionProvider(
     driver: InteractiveDriver,
     params: OffsetParams,
-    search: SymbolSearch
+    search: SymbolSearch,
 ):
 
   def definitions(): DefinitionResult =
@@ -38,7 +38,7 @@ class PcDefinitionProvider(
     val filePath = Paths.get(uri)
     val diagnostics = driver.run(
       uri,
-      SourceFile.virtual(filePath.toString, params.text)
+      SourceFile.virtual(filePath.toString, params.text),
     )
     val unit = driver.currentCtx.run.units.head
     val tree = unit.tpdTree
@@ -56,7 +56,7 @@ class PcDefinitionProvider(
       path: List[Tree],
       pos: SourcePosition,
       driver: InteractiveDriver,
-      indexed: IndexedContext
+      indexed: IndexedContext,
   ): DefinitionResult =
     import indexed.ctx
     MetalsInteractive.enclosingSymbols(path, pos, indexed) match
@@ -73,7 +73,7 @@ class PcDefinitionProvider(
                 case Some(loc) =>
                   DefinitionResultImpl(
                     SemanticdbSymbols.symbolName(sym),
-                    List(loc).asJava
+                    List(loc).asJava,
                   )
             case None =>
               DefinitionResultImpl.empty
@@ -85,7 +85,7 @@ class PcDefinitionProvider(
             }
           DefinitionResultImpl(
             SemanticdbSymbols.symbolName(sym),
-            res
+            res,
           )
         end if
       case Nil => DefinitionResultImpl.empty

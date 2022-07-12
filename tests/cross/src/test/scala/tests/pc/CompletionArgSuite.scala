@@ -17,7 +17,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|assertion = : Boolean
        |Main arg
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   check(
@@ -29,7 +29,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|message = : => Any
        |Main arg1
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   checkEdit(
@@ -41,7 +41,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|object Main {
        |  assert(assertion = true, message = )
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -53,7 +53,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|message = : => Any
        |Main arg2
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   def user: String =
@@ -77,7 +77,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg3
        |User arg3
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(4),
   )
 
   // We should get NamedArg `address` from args in scala3, and remove `address` from completion, but it doesn't appear.
@@ -95,7 +95,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |followers = : Int
        |Main arg4
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
   )
 
   check(
@@ -119,7 +119,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
            |Main arg5
            |User arg5
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -134,7 +134,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |age = : Int
        |followers = : Int
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
   )
 
   check(
@@ -153,7 +153,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         """|x = : A
            |Main arg7
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -166,7 +166,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|suffix = : String
        |Main arg8
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   // In scala3, we get NoSymbol for `until`, so we get no completions here.
@@ -185,7 +185,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|end = : Int
        |Main arg9
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   check(
@@ -197,7 +197,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|address = : String
        |""".stripMargin,
-    topLines = Option(1)
+    topLines = Option(1),
   )
 
   check(
@@ -208,7 +208,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|banana = : Int
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -218,7 +218,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  curry(bana@@)
         |}
         |""".stripMargin,
-    ""
+    "",
   )
 
   check(
@@ -228,7 +228,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     // assert that `evidence$1` is excluded.
-    ""
+    "",
   )
 
   checkSnippet( // see: https://github.com/scalameta/metals/issues/2400
@@ -241,7 +241,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|$$foo = 
        |""".stripMargin,
-    topLines = Option(1)
+    topLines = Option(1),
   )
 
   // known issue: the second parameter with $ become | (returned from compiler)
@@ -257,7 +257,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|$$foo = 
        |$$foo = ${1:???}, | = ${2:???}
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   check(
@@ -275,7 +275,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3" ->
         """|isResourceFile = : Boolean
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -296,7 +296,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         """|argument: Int
            |argument = : Int
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -317,7 +317,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         """|argument: Int
            |argument = : Int
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -342,7 +342,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3" ->
         """|argument = : Int
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -363,7 +363,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3" ->
         """|`type` = : Int
            |""".stripMargin
-    )
+    ),
   )
 
   checkEditLine(
@@ -377,7 +377,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(rele@@)",
-    "foo(relevant)"
+    "foo(relevant)",
   )
 
   checkEditLine(
@@ -390,7 +390,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1:number}, other = ${2:hello})"
+    "foo(argument = ${1:number}, other = ${2:hello})",
   )
 
   checkEditLine(
@@ -408,7 +408,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(animal = ${1:dog}, furniture = ${2:chair})"
+    "foo(animal = ${1:dog}, furniture = ${2:chair})",
   )
 
   checkEditLine(
@@ -422,7 +422,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1|???,argument,number|}, other = ${2:hello})"
+    "foo(argument = ${1|???,argument,number|}, other = ${2:hello})",
   )
 
   checkEditLine(
@@ -436,7 +436,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1:number}, other = ${2:???}, isTrue = ${3:???}, opt = ${4:???})"
+    "foo(argument = ${1:number}, other = ${2:???}, isTrue = ${3:???}, opt = ${4:???})",
   )
 
   checkEditLine(
@@ -451,7 +451,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})"
+    "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})",
   )
 
   checkEditLine(
@@ -464,7 +464,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "f(auto@@)",
-    "f(a = ${1|???,str1,str|}, b = ${2|???,str1,str|}, `type` = ${3|???,str1,str|})"
+    "f(a = ${1|???,str1,str|}, b = ${2|???,str1,str|}, `type` = ${3|???,str1,str|})",
   )
 
 }

@@ -9,7 +9,7 @@ import scala.concurrent.Future
 final class TimerProvider(time: Time)(implicit ec: ExecutionContext) {
   def timed[T](
       didWhat: String,
-      reportStatus: Boolean = false
+      reportStatus: Boolean = false,
   )(thunk: => Future[T]): Future[T] = {
     withTimer(didWhat, reportStatus)(thunk).map { case (_, value) =>
       value
@@ -19,7 +19,7 @@ final class TimerProvider(time: Time)(implicit ec: ExecutionContext) {
   def timedThunk[T](
       didWhat: String,
       onlyIf: Boolean = true,
-      thresholdMillis: Long = 0
+      thresholdMillis: Long = 0,
   )(thunk: => T): T = {
     val elapsed = new Timer(time)
     val result = thunk

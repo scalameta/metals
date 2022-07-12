@@ -31,7 +31,7 @@ class BspBuildChangedSuite extends BaseLspSuite("bsp-build-changed") {
           | required: Int
           |  val x: Int = ""
           |               ^^
-        """.stripMargin
+        """.stripMargin,
       )
       _ = {
         server.server.buildServerPromise = Promise()
@@ -52,7 +52,7 @@ class BspBuildChangedSuite extends BaseLspSuite("bsp-build-changed") {
           """|trace: initialize
              |trace: shutdown
              |trace: initialize
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
     } yield ()

@@ -70,7 +70,7 @@ class WorksheetProvider(
     publisher: WorksheetPublisher,
     compilers: Compilers,
     compilations: Compilations,
-    scalaVersionSelector: ScalaVersionSelector
+    scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -146,7 +146,7 @@ class WorksheetProvider(
 
   def evaluateAndPublish(
       path: AbsolutePath,
-      token: CancelToken
+      token: CancelToken,
   ): Future[Unit] = {
     val possibleBuildTarget = buildTargets.inverseSources(path)
     val previouslyCompiled = compilations.previouslyCompiled.toSeq
@@ -219,7 +219,7 @@ class WorksheetProvider(
 
   private def evaluateAsync(
       path: AbsolutePath,
-      token: CancelToken
+      token: CancelToken,
   ): Future[Option[EvaluatedWorksheet]] = {
     val result = new CompletableFuture[Option[EvaluatedWorksheet]]()
     def completeEmptyResult() = result.complete(None)
@@ -254,7 +254,7 @@ class WorksheetProvider(
       statusBar.trackFuture(
         s"Evaluating ${path.filename}",
         result.asScala,
-        showTimer = true
+        showTimer = true,
       )
       token.checkCanceled()
       // NOTE(olafurpg) Run evaluation in a custom thread so that we can
@@ -282,7 +282,7 @@ class WorksheetProvider(
             onError(e)
             ()
         }
-      }
+      },
     )
     result.asScala.recover(onError)
   }
@@ -297,7 +297,7 @@ class WorksheetProvider(
   private def interruptThreadOnCancel(
       path: AbsolutePath,
       result: CompletableFuture[Option[EvaluatedWorksheet]],
-      thread: Thread
+      thread: Thread,
   ): Unit = {
     // Last resort, if everything else fails we use `Thread.stop()`.
     val stopThread = new Runnable {
@@ -318,7 +318,7 @@ class WorksheetProvider(
             new MetalsSlowTaskParams(
               s"Evaluating worksheet '${path.filename}'",
               quietLogs = true,
-              secondsElapsed = userConfig().worksheetCancelTimeout
+              secondsElapsed = userConfig().worksheetCancelTimeout,
             )
           )
           cancel.asScala.foreach { c =>
@@ -338,7 +338,7 @@ class WorksheetProvider(
     threadStopper.schedule(
       interruptThread,
       userConfig().worksheetCancelTimeout,
-      TimeUnit.SECONDS
+      TimeUnit.SECONDS,
     )
   }
 
@@ -370,7 +370,7 @@ class WorksheetProvider(
 
     exportableEvaluations.update(
       input,
-      evaluatedWorksheet
+      evaluatedWorksheet,
     )
 
     if (newDigest != previousDigest) {
@@ -381,7 +381,7 @@ class WorksheetProvider(
       compilers.restartWorksheetPresentationCompiler(
         path,
         classpath,
-        sourceDeps.filter(_.toString().endsWith("-sources.jar"))
+        sourceDeps.filter(_.toString().endsWith("-sources.jar")),
       )
     }
 
@@ -394,7 +394,7 @@ class WorksheetProvider(
     diagnostics.onPublishDiagnostics(
       path,
       toPublish,
-      isReset = true
+      isReset = true,
     )
     evaluatedWorksheet
   }
@@ -426,7 +426,7 @@ class WorksheetProvider(
             val message = Messages.Worksheets.unsupportedScalaVersion(
               scalaVersion,
               BuildInfo.scala212,
-              ScalaVersions.recommendedVersion(scalaVersion)
+              ScalaVersions.recommendedVersion(scalaVersion),
             )
             languageClient.showMessage(message)
             scribe.warn(message.getMessage())
@@ -485,7 +485,7 @@ object WorksheetProvider {
       pos => {
         new Position(pos.getLine() - 1, pos.getCharacter() - ident.size)
       },
-      filterOutLocations = { loc => !loc.getUri().isWorksheet }
+      filterOutLocations = { loc => !loc.getUri().isWorksheet },
     )
     Some((modifiedInput, adjustLspData))
   }
@@ -496,7 +496,7 @@ object WorksheetProvider {
     worksheetScala3AdjustmentsForPC(originInput).map { case (input, adjust) =>
       def adjustRequest(position: Position) = new Position(
         position.getLine() + 1,
-        position.getCharacter() + 2
+        position.getCharacter() + 2,
       )
       (input, adjustRequest, adjust)
 

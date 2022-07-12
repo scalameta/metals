@@ -35,14 +35,14 @@ final class ReferenceProvider(
     definition: DefinitionProvider,
     remote: RemoteLanguageServer,
     trees: Trees,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
 ) extends SemanticdbFeatureProvider {
   private var referencedPackages: BloomFilter[CharSequence] =
     BloomFilters.create(10000)
 
   case class IndexEntry(
       id: BuildTargetIdentifier,
-      bloom: BloomFilter[CharSequence]
+      bloom: BloomFilter[CharSequence],
   )
   val index: TrieMap[Path, IndexEntry] = TrieMap.empty
 
@@ -61,7 +61,7 @@ final class ReferenceProvider(
       val bloom = BloomFilter.create(
         Funnels.stringFunnel(StandardCharsets.UTF_8),
         Integer.valueOf((count + syntheticsCount) * 2),
-        0.01
+        0.01,
       )
 
       val entry = IndexEntry(id, bloom)
@@ -94,7 +94,7 @@ final class ReferenceProvider(
   def references(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
-      includeSynthetics: Synthetic => Boolean = _ => true
+      includeSynthetics: Synthetic => Boolean = _ => true,
   ): List[ReferencesResult] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
@@ -115,7 +115,7 @@ final class ReferenceProvider(
             alternatives,
             params.getContext.isIncludeDeclaration,
             findRealRange,
-            includeSynthetics
+            includeSynthetics,
           )
           ReferencesResult(occurrence.symbol, locations)
         }
@@ -135,7 +135,7 @@ final class ReferenceProvider(
   private def referenceAlternatives(
       symbol: String,
       fromSource: AbsolutePath,
-      referenceDoc: TextDocument
+      referenceDoc: TextDocument,
   ): Set[String] = {
     val definitionDoc = if (referenceDoc.symbols.exists(_.symbol == symbol)) {
       Some((fromSource, referenceDoc))
@@ -206,7 +206,7 @@ final class ReferenceProvider(
       isSymbol: Set[String],
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
-      includeSynthetics: Synthetic => Boolean
+      includeSynthetics: Synthetic => Boolean,
   ): Seq[Location] = {
     buildTargets.inverseSources(source) match {
       case None => Seq.empty
@@ -229,7 +229,7 @@ final class ReferenceProvider(
           semanticdbDistance = buffers.tokenEditDistance(
             sourcePath,
             semanticdb.text,
-            trees
+            trees,
           )
           uri = sourcePath.toURI.toString
           reference <-
@@ -242,7 +242,7 @@ final class ReferenceProvider(
                 isIncludeDeclaration,
                 findRealRange,
                 includeSynthetics,
-                sourcePath.isJava
+                sourcePath.isJava,
               )
             } catch {
               case NonFatal(e) =>
@@ -264,7 +264,7 @@ final class ReferenceProvider(
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
-      includeSynthetics: Synthetic => Boolean
+      includeSynthetics: Synthetic => Boolean,
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
     val isLocal = occ.symbol.isLocal
@@ -288,7 +288,7 @@ final class ReferenceProvider(
           isIncludeDeclaration,
           findRealRange,
           includeSynthetics,
-          source.isJava
+          source.isJava,
         )
       else Seq.empty
 
@@ -299,7 +299,7 @@ final class ReferenceProvider(
           isSymbol,
           isIncludeDeclaration,
           findRealRange,
-          includeSynthetics
+          includeSynthetics,
         )
       else
         Seq.empty
@@ -314,7 +314,7 @@ final class ReferenceProvider(
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean,
-      isJava: Boolean
+      isJava: Boolean,
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -386,7 +386,7 @@ class SymbolAlternatives(symbol: String, name: String) {
       info.displayName == name &&
       symbol == Symbols.Global(
         info.symbol.owner,
-        Descriptor.Type(info.displayName)
+        Descriptor.Type(info.displayName),
       )
 
   // Returns true if `info` is the java constructor matching the occurrence class symbol.
@@ -406,7 +406,7 @@ class SymbolAlternatives(symbol: String, name: String) {
     info.displayName == name &&
     symbol == Symbols.Global(
       info.symbol.owner,
-      Descriptor.Term(info.displayName)
+      Descriptor.Term(info.displayName),
     )
   }
 
@@ -418,7 +418,7 @@ class SymbolAlternatives(symbol: String, name: String) {
       case GlobalSymbol(
             // This means it's the primary constructor
             GlobalSymbol(owner, Descriptor.Method("<init>", "()")),
-            Descriptor.Parameter(_)
+            Descriptor.Parameter(_),
           ) =>
         Symbols.Global(owner.value, Descriptor.Term(name))
       case _ =>
@@ -435,7 +435,7 @@ class SymbolAlternatives(symbol: String, name: String) {
         Symbols.Global(
           // This means it's the primary constructor
           Symbols.Global(owner.value, Descriptor.Method("<init>", "()")),
-          Descriptor.Parameter(name)
+          Descriptor.Parameter(name),
         )
       case _ =>
         ""
@@ -450,24 +450,24 @@ class SymbolAlternatives(symbol: String, name: String) {
         case GlobalSymbol(
               GlobalSymbol(
                 GlobalSymbol(owner, Descriptor.Term(obj)),
-                Descriptor.Method("apply", _)
+                Descriptor.Method("apply", _),
               ),
-              _
+              _,
             ) =>
           Symbols.Global(
             Symbols.Global(owner.value, Descriptor.Type(obj)),
-            Descriptor.Term(name)
+            Descriptor.Term(name),
           )
         case GlobalSymbol(
               GlobalSymbol(
                 GlobalSymbol(owner, Descriptor.Type(obj)),
-                Descriptor.Method("copy", _)
+                Descriptor.Method("copy", _),
               ),
-              _
+              _,
             ) =>
           Symbols.Global(
             Symbols.Global(owner.value, Descriptor.Type(obj)),
-            Descriptor.Term(name)
+            Descriptor.Term(name),
           )
         case _ =>
           ""
@@ -481,7 +481,7 @@ class SymbolAlternatives(symbol: String, name: String) {
         case GlobalSymbol(owner, Descriptor.Method(setter, disambiguator)) =>
           Symbols.Global(
             owner.value,
-            Descriptor.Method(setter.stripSuffix("_="), disambiguator)
+            Descriptor.Method(setter.stripSuffix("_="), disambiguator),
           )
         case _ =>
           ""

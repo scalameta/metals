@@ -91,7 +91,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
            |object Foo {
            |  def main(args: Array[String]): Unit = {}
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- assertCodeLenses(
         "a/src/main/scala/Bar.scala",
@@ -100,7 +100,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
            |object Bar {
            |  def main(args: Array[String]): Unit = {}
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -136,7 +136,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
            |    System.out.println("Hello from Java!");
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -185,7 +185,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
           |object Main {
           |  def main(args: Array[String]): Unit = {}
           |}
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/Main.scala")(text =>
         text.replace("object Main", "class Main")
@@ -214,7 +214,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
           |object Main {
           |  def main(args: Array[String]): Unit = ???
           |}
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/Main.scala")(text =>
         text.replace("}", "")
@@ -225,7 +225,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
           |object Main {
           |  def main(args: Array[String]): Unit = ???
           |
-          |""".stripMargin
+          |""".stripMargin,
       )
     } yield ()
   }
@@ -323,7 +323,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
            |}
            |<< bar>>
            |case class W(bar: Int) extends Z
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         s"""|package a
@@ -351,7 +351,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
            |}
            |<< bar>>
            |case class W(bar: Int) extends Z
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

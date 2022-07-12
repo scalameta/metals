@@ -39,7 +39,7 @@ final class FileWatcher(
     workspaceDeferred: () => AbsolutePath,
     buildTargets: BuildTargets,
     watchFilter: Path => Boolean,
-    onFileWatchEvent: FileWatcherEvent => Unit
+    onFileWatchEvent: FileWatcherEvent => Unit,
 ) extends Cancelable {
   import FileWatcher._
 
@@ -56,7 +56,7 @@ final class FileWatcher(
       workspaceDeferred().toNIO,
       collectPathsToWatch(buildTargets),
       onFileWatchEvent,
-      watchFilter
+      watchFilter,
     )
   }
 }
@@ -64,7 +64,7 @@ final class FileWatcher(
 object FileWatcher {
   private case class PathsToWatch(
       files: Set[Path],
-      directories: Set[Path]
+      directories: Set[Path],
   )
 
   private def collectPathsToWatch(buildTargets: BuildTargets): PathsToWatch = {
@@ -95,7 +95,7 @@ object FileWatcher {
 
     PathsToWatch(
       files.toSet,
-      directories.toSet
+      directories.toSet,
     )
   }
 
@@ -117,7 +117,7 @@ object FileWatcher {
       workspace: Path,
       pathsToWatch: PathsToWatch,
       callback: FileWatcherEvent => Unit,
-      watchFilter: Path => Boolean
+      watchFilter: Path => Boolean,
   ): () => Unit = {
     val watchEventQueue: BlockingQueue[FileWatcherEvent] =
       new LinkedBlockingQueue[FileWatcherEvent]
@@ -143,7 +143,7 @@ object FileWatcher {
 
         val watcher = initWatcher(
           path => watchFilter(path) && isWatched(path),
-          watchEventQueue
+          watchEventQueue,
         )
         watchRoots.foreach { root =>
           scribe.debug(s"Registering root for file watching: $root")
@@ -202,7 +202,7 @@ object FileWatcher {
    */
   private def initWatcher(
       watchFilter: Path => Boolean,
-      queue: BlockingQueue[FileWatcherEvent]
+      queue: BlockingQueue[FileWatcherEvent],
   ): PathWatcher[PathWatchers.Event] = {
     val watcher = PathWatchers.get( /*follow symlinks*/ true)
 

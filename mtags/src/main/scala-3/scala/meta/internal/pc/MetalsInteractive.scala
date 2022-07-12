@@ -42,7 +42,7 @@ object MetalsInteractive:
                 stats,
                 nested,
                 pkg.symbol.moduleClass,
-                outer.packageContext(tree, tree.symbol)
+                outer.packageContext(tree, tree.symbol),
               )
           case tree: DefDef =>
             assert(tree.symbol.exists)
@@ -76,7 +76,7 @@ object MetalsInteractive:
                 tree.body,
                 nested,
                 tree.symbol,
-                outer.inClassContext(self.symbol)
+                outer.inClassContext(self.symbol),
               )
           case _ =>
             outer
@@ -87,7 +87,7 @@ object MetalsInteractive:
       stats: List[Tree],
       stat: Tree,
       exprOwner: Symbol,
-      ctx: Context
+      ctx: Context,
   ): Context = stats match
     case Nil =>
       ctx
@@ -98,7 +98,7 @@ object MetalsInteractive:
         rest,
         stat,
         exprOwner,
-        ctx.importContext(imp, inContext(ctx) { imp.symbol })
+        ctx.importContext(imp, inContext(ctx) { imp.symbol }),
       )
     case _ :: rest =>
       contextOfStat(rest, stat, exprOwner, ctx)
@@ -119,7 +119,7 @@ object MetalsInteractive:
   def isOnName(
       path: List[Tree],
       sourcePos: SourcePosition,
-      source: SourceFile
+      source: SourceFile,
   )(using Context): Boolean =
     def contains(tree: Tree): Boolean = tree match
       case select: Select =>
@@ -149,7 +149,7 @@ object MetalsInteractive:
     StdNames.nme.map,
     StdNames.nme.withFilter,
     StdNames.nme.flatMap,
-    StdNames.nme.foreach
+    StdNames.nme.foreach,
   )
   def isForSynthetic(gtree: Tree)(using Context): Boolean =
     def isForComprehensionSyntheticName(select: Select): Boolean =
@@ -166,7 +166,7 @@ object MetalsInteractive:
       path: List[Tree],
       pos: SourcePosition,
       indexed: IndexedContext,
-      skipCheckOnName: Boolean = false
+      skipCheckOnName: Boolean = false,
   ): List[Symbol] =
     enclosingSymbolsWithExpressionType(path, pos, indexed, skipCheckOnName)
       .map(_._1)
@@ -180,7 +180,7 @@ object MetalsInteractive:
       path: List[Tree],
       pos: SourcePosition,
       indexed: IndexedContext,
-      skipCheckOnName: Boolean = false
+      skipCheckOnName: Boolean = false,
   ): List[(Symbol, Type)] =
     import indexed.ctx
     path match
@@ -256,7 +256,7 @@ object MetalsInteractive:
             MetalsInteractive.isOnName(
               path,
               pos,
-              indexed.ctx.source
+              indexed.ctx.source,
             )
           then List((head.symbol, head.typeOpt))
           else Nil
@@ -267,7 +267,7 @@ object MetalsInteractive:
               tl,
               pos,
               indexed,
-              skipCheckOnName
+              skipCheckOnName,
             )
           else recovered.map(sym => (sym, sym.info))
         end if
@@ -279,7 +279,7 @@ object MetalsInteractive:
 
   private def recoverError(
       tree: Tree,
-      indexed: IndexedContext
+      indexed: IndexedContext,
   ): List[Symbol] =
     import indexed.ctx
 

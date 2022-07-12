@@ -28,7 +28,7 @@ class JavaInteractiveSemanticdb(
     jdkVersion: JdkVersion,
     pluginJars: List[Path],
     workspace: AbsolutePath,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
 ) {
 
   private val readonly = workspace.resolve(Directories.readonly)
@@ -66,7 +66,7 @@ class JavaInteractiveSemanticdb(
         "-cp",
         (pluginJars ++ targetClasspath).mkString(File.pathSeparator),
         "-d",
-        targetRoot.toString
+        targetRoot.toString,
       )
     val pluginOption =
       s"-Xplugin:semanticdb -sourceroot:${sourceRoot} -targetroot:${targetRoot}"
@@ -80,7 +80,7 @@ class JavaInteractiveSemanticdb(
       false,
       Map.empty,
       Some(outLine => stdout += outLine),
-      Some(errLine => stdout += errLine)
+      Some(errLine => stdout += errLine),
     )
 
     val future = ps.complete.recover { case NonFatal(e) =>
@@ -112,7 +112,7 @@ class JavaInteractiveSemanticdb(
     val out = doc.copy(
       uri = source.toURI.toString(),
       text = text,
-      md5 = MD5.compute(text)
+      md5 = MD5.compute(text),
     )
 
     workDir.deleteRecursively()
@@ -122,7 +122,7 @@ class JavaInteractiveSemanticdb(
   private def patchModuleFlags(
       source: AbsolutePath,
       sourceRoot: AbsolutePath,
-      originalSource: AbsolutePath
+      originalSource: AbsolutePath,
   ): List[String] = {
     // Jigsaw doesn't allow compiling source with package
     // that is declared in some existing module.
@@ -166,7 +166,7 @@ class JavaInteractiveSemanticdb(
       val compilerPackages = List(
         "com.sun.tools.javac.api", "com.sun.tools.javac.code",
         "com.sun.tools.javac.model", "com.sun.tools.javac.tree",
-        "com.sun.tools.javac.util"
+        "com.sun.tools.javac.util",
       )
       compilerPackages.flatMap(pkg =>
         List(s"-J--add-exports", s"-Jjdk.compiler/$pkg=ALL-UNNAMED")
@@ -182,7 +182,7 @@ object JavaInteractiveSemanticdb {
       javaHome: AbsolutePath,
       workspace: AbsolutePath,
       buildTargets: BuildTargets,
-      jdkVersion: JdkVersion
+      jdkVersion: JdkVersion,
   ): Option[JavaInteractiveSemanticdb] = {
 
     def pathToJavac(p: AbsolutePath): AbsolutePath = {
@@ -206,7 +206,7 @@ object JavaInteractiveSemanticdb {
         jdkVersion,
         pluginJars,
         workspace,
-        buildTargets
+        buildTargets,
       )
       Some(instance)
     } else {
@@ -244,7 +244,7 @@ object JdkVersion {
         List(javaHome.resolve("bin/java").toString, "-version"),
         javaHome,
         redirectErrorOutput = true,
-        maybeJavaHome = Some(javaHome.toString())
+        maybeJavaHome = Some(javaHome.toString()),
       )
       .flatMap { javaVersionResponse =>
         "\\d+\\.\\d+\\.\\d+".r
@@ -258,7 +258,7 @@ object JdkVersion {
     if (releaseFile.exists) {
       val properties = ConfigFactory.parseFile(
         releaseFile.toFile,
-        ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES)
+        ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES),
       )
       try {
         val version = properties

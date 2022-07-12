@@ -21,7 +21,7 @@ abstract class BaseCodeActionLspSuite(
       input: String,
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil,
-      filterAction: CodeAction => Boolean = _ => true
+      filterAction: CodeAction => Boolean = _ => true,
   )(implicit loc: Location): Unit = {
     val fileContent = input.replace("<<", "").replace(">>", "")
     check(
@@ -31,7 +31,7 @@ abstract class BaseCodeActionLspSuite(
       fileContent,
       scalafixConf = scalafixConf,
       scalacOptions = scalacOptions,
-      filterAction = filterAction
+      filterAction = filterAction,
     )
   }
 
@@ -52,7 +52,7 @@ abstract class BaseCodeActionLspSuite(
       fileName: String = "A.scala",
       changeFile: String => String = identity,
       expectError: Boolean = false,
-      filterAction: CodeAction => Boolean = _ => true
+      filterAction: CodeAction => Boolean = _ => true,
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -89,7 +89,7 @@ abstract class BaseCodeActionLspSuite(
               changeFile(input),
               expectedActions,
               kind,
-              filterAction = filterAction
+              filterAction = filterAction,
             )
             .recover {
               case _: Throwable if expectError => Nil

@@ -14,7 +14,7 @@ case class TreeViewNode(
     @Nullable icon: String = null,
     @Nullable tooltip: String = null,
     // One of "collapsed", "expanded" or "none"
-    @Nullable collapseState: String = null
+    @Nullable collapseState: String = null,
 ) {
   def isDirectory: Boolean = label.endsWith("/")
   def isCollapsed: Boolean =
@@ -27,7 +27,7 @@ case class TreeViewNode(
 object TreeViewNode {
   def fromCommand(
       command: BaseCommand,
-      icon: String = TreeViewNode.command
+      icon: String = TreeViewNode.command,
   ): TreeViewNode =
     TreeViewNode(
       viewId = "commands",
@@ -36,16 +36,16 @@ object TreeViewNode {
       command = MetalsCommand(
         command.title,
         "metals." + command.id,
-        command.description
+        command.description,
       ),
       tooltip = command.description,
-      icon = icon
+      icon = icon,
     )
   def command: String = "debug-start"
   def empty(viewId: String): TreeViewNode = TreeViewNode(viewId, null, viewId)
   def sortAlphabetically(
       result: Array[TreeViewNode],
-      custom: (TreeViewNode, TreeViewNode) => Int = (_, _) => 0
+      custom: (TreeViewNode, TreeViewNode) => Int = (_, _) => 0,
   ): Array[TreeViewNode] = {
     ju.Arrays.sort(
       result,
@@ -58,7 +58,7 @@ object TreeViewNode {
           if (byCustom != 0) byCustom
           else IdentifierComparator.compare(a.label, b.label)
         }
-      }
+      },
     )
     result
   }

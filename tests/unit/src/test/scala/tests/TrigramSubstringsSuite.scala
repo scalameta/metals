@@ -30,7 +30,7 @@ class TrigramSubstringsSuite extends BaseSuite {
       |abd
       |acd
       |bcd
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkUppercase(
@@ -45,7 +45,7 @@ class TrigramSubstringsSuite extends BaseSuite {
        |FsMBu
        |FsMbU
        |FsmBU
-       |""".stripMargin
+       |""".stripMargin,
   )
 
 }

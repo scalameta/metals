@@ -36,7 +36,7 @@ class BuildServerConnectionLspSuite
            | required: String
            |  val n: String = 42
            |                  ^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -73,7 +73,7 @@ class BuildServerConnectionLspSuite
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(Messages.BloopVersionChange.params().getMessage()).mkString("\n")
+        List(Messages.BloopVersionChange.params().getMessage()).mkString("\n"),
       )
     }
   }

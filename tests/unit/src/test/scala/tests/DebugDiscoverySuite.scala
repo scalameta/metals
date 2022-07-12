@@ -18,7 +18,7 @@ class DebugDiscoverySuite
     extends BaseDapSuite(
       "debug-discovery",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     ) {
   private val mainPath = "a/src/main/scala/a/Main.scala"
   private val fooPath = "a/src/main/scala/a/Foo.scala"
@@ -47,7 +47,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(mainPath).toURI.toString,
-          "run"
+          "run",
         ).toJson
       )
       _ <- debugger.initialize
@@ -80,7 +80,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(mainPath).toURI.toString,
-          "runOrTestFile"
+          "runOrTestFile",
         ).toJson
       )
       _ <- debugger.initialize
@@ -113,7 +113,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(fooPath).toURI.toString,
-          "runOrTestFile"
+          "runOrTestFile",
         ).toJson
       )
       _ <- debugger.initialize
@@ -145,13 +145,13 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(notATestPath).toURI.toString,
-            "runOrTestFile"
+            "runOrTestFile",
           ).toJson
         )
         .recover { case e @ DebugProvider.NoRunOptionException => e }
     } yield assertNoDiff(
       result.toString(),
-      DebugProvider.NoRunOptionException.toString()
+      DebugProvider.NoRunOptionException.toString(),
     )
   }
 
@@ -181,7 +181,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(mainPath).toURI.toString,
-          "run"
+          "run",
         ).toJson
       )
       _ <- debugger.initialize
@@ -212,7 +212,7 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(mainPath).toURI.toString,
-            "run"
+            "run",
           ).toJson
         )
         .recover { case e: BuildTargetContainsNoMainException =>
@@ -220,7 +220,7 @@ class DebugDiscoverySuite
         }
     } yield assertNoDiff(
       result.toString,
-      BuildTargetContainsNoMainException("a").toString()
+      BuildTargetContainsNoMainException("a").toString(),
     )
   }
 
@@ -244,7 +244,7 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(mainPath).toURI.toString,
-            "run"
+            "run",
           ).toJson
         )
         .recover { case WorkspaceErrorsException =>
@@ -252,7 +252,7 @@ class DebugDiscoverySuite
         }
     } yield assertNoDiff(
       result.toString,
-      WorkspaceErrorsException.toString()
+      WorkspaceErrorsException.toString(),
     )
   }
 
@@ -285,7 +285,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(mainPath).toURI.toString,
-          "run"
+          "run",
         ).toJson
       )
       _ <- debugger.initialize
@@ -321,13 +321,13 @@ class DebugDiscoverySuite
           new DebugDiscoveryParams(
             path = server.toPath(mainPath).toURI.toString,
             runType = "run",
-            envFile = fakePath
+            envFile = fakePath,
           ).toJson
         )
         .recover { case e: InvalidEnvFileException => e }
     } yield assertNoDiff(
       result.toString,
-      InvalidEnvFileException(AbsolutePath(fakePath)).toString()
+      InvalidEnvFileException(AbsolutePath(fakePath)).toString(),
     )
   }
 
@@ -353,7 +353,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(fooPath).toURI.toString,
-          "testFile"
+          "testFile",
         ).toJson
       )
       _ <- debugger.initialize
@@ -391,7 +391,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(barPath).toURI.toString,
-          "testTarget"
+          "testTarget",
         ).toJson
       )
       _ <- debugger.initialize
@@ -423,13 +423,13 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(notATestPath).toURI.toString,
-            "testTarget"
+            "testTarget",
           ).toJson
         )
         .recover { case e: NoTestsFoundException => e }
     } yield assertNoDiff(
       result.toString(),
-      NoTestsFoundException("build target", "a").toString()
+      NoTestsFoundException("build target", "a").toString(),
     )
   }
 
@@ -457,7 +457,7 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(fooPath).toURI.toString,
-            "testFile"
+            "testFile",
           ).toJson
         )
         .recover { case SemanticDbNotFoundException =>
@@ -465,7 +465,7 @@ class DebugDiscoverySuite
         }
     } yield assertNoDiff(
       result.toString,
-      SemanticDbNotFoundException.toString()
+      SemanticDbNotFoundException.toString(),
     )
   }
 }

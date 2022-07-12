@@ -493,7 +493,7 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
         displayName = displayName,
         signature = sig(linkMode),
         annotations = annotations,
-        access = access
+        access = access,
       )
     }
   }

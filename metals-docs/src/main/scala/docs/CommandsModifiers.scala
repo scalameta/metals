@@ -27,7 +27,7 @@ class CommandsModifiers extends StringModifier {
   override def process(
       info: String,
       code: Input,
-      reporter: Reporter
+      reporter: Reporter,
   ): String = {
     info match {
       case "client" =>

@@ -14,7 +14,7 @@ abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """
       |akka.japi.pf.FSMStateFunctionBuilder Class
       |akka.persistence.fsm.japi.pf.FSMStateFunctionBuilder Class
-    """.stripMargin
+    """.stripMargin,
   )
   check(
     "fsmb",
@@ -27,12 +27,12 @@ abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |akka.persistence.fsm.japi.pf.FSMStateFunctionBuilder Class
        |akka.persistence.fsm.japi.pf.FSMStopBuilder Class
        |akka.persistence.serialization.MessageFormats#PersistentFSMSnapshotOrBuilder Interface
-       |""".stripMargin
+       |""".stripMargin,
   )
   // Making lowercase queries "more precise" doesn't help because it grows the search state.
   check(
     "fsmbuilder",
-    ""
+    "",
   )
   check(
     "FSM",
@@ -125,7 +125,7 @@ abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |jdocs.actor.fsm.FSMDocTest#DummyFSM Class
        |jdocs.actor.fsm.FSMDocTest#MyFSM Class
        |jdocs.akka.typed.FSMDocTest Class
-    """.stripMargin
+    """.stripMargin,
   )
 
 }

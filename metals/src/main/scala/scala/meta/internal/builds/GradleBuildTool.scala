@@ -75,7 +75,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
           "--console=plain",
           "--init-script",
           initScriptPath.toString,
-          "bloopInstall"
+          "bloopInstall",
         )
       }
     }
@@ -109,7 +109,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
 object GradleBuildTool {
   def isGradleRelatedPath(
       workspace: AbsolutePath,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Boolean = {
     val buildSrc = workspace.toNIO.resolve("buildSrc")
     val filename = path.toNIO.getFileName.toString

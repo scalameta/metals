@@ -11,7 +11,7 @@ class TextEditorModifier extends StringModifier {
   override def process(
       editor: String,
       input: Input,
-      reporter: Reporter
+      reporter: Reporter,
   ): String = {
     val autoImportNote = if (editor == "emacs") {
       """Type "Import build" or press `Tab` and select "Import build""""

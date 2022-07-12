@@ -35,7 +35,7 @@ abstract class BaseAnalyzeStacktraceSuite(name: String)
       stacktrace: String,
       filename: String = "Main.scala",
       scalaVersion: String = V.scala213,
-      dependency: String = ""
+      dependency: String = "",
   )(implicit loc: munit.Location): Unit = {
     val locationParser = new JsonParser.Of[l.Location]
     test(name) {

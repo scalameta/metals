@@ -47,7 +47,7 @@ final class RunTestCodeLens(
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
     isBloopOrSbt: () => Boolean,
-    trees: Trees
+    trees: Trees,
 ) extends CodeLens {
 
   override def isEnabled: Boolean = clientConfig.isDebuggingProvider()
@@ -95,7 +95,7 @@ final class RunTestCodeLens(
                       TypeRef(
                         _,
                         "scala/Array#",
-                        Vector(TypeRef(_, "java/lang/String#", _))
+                        Vector(TypeRef(_, "java/lang/String#", _)),
                       )
                     ) =>
                   true
@@ -113,7 +113,7 @@ final class RunTestCodeLens(
   private def javaLenses(
       occurence: SymbolOccurrence,
       textDocument: TextDocument,
-      target: BuildTargetIdentifier
+      target: BuildTargetIdentifier,
   ): Seq[l.Command] = {
     if (occurence.symbol.endsWith("#main().")) {
       textDocument.symbols
@@ -128,8 +128,8 @@ final class RunTestCodeLens(
               new b.ScalaMainClass(
                 occurence.symbol.stripSuffix("#main().").replace("/", "."),
                 Nil.asJava,
-                Nil.asJava
-              )
+                Nil.asJava,
+              ),
             )
           else
             Nil
@@ -145,7 +145,7 @@ final class RunTestCodeLens(
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
       distance: TokenEditDistance,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Seq[l.CodeLens] = {
     for {
       occurrence <- textDocument.occurrences
@@ -184,7 +184,7 @@ final class RunTestCodeLens(
   private def testClasses(
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
-      symbol: String
+      symbol: String,
   ): List[l.Command] =
     if (userConfig().testUserInterface == TestUserInterfaceKind.CodeLenses)
       classes.testClasses
@@ -198,7 +198,7 @@ final class RunTestCodeLens(
 
   private def testCommand(
       target: b.BuildTargetIdentifier,
-      className: String
+      className: String,
   ): List[l.Command] = {
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
@@ -208,13 +208,13 @@ final class RunTestCodeLens(
 
     List(
       command("test", StartRunSession, params),
-      command("debug test", StartDebugSession, params)
+      command("debug test", StartDebugSession, params),
     )
   }
 
   private def mainCommand(
       target: b.BuildTargetIdentifier,
-      main: b.ScalaMainClass
+      main: b.ScalaMainClass,
   ): List[l.Command] = {
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
@@ -224,14 +224,14 @@ final class RunTestCodeLens(
 
     List(
       command("run", StartRunSession, params),
-      command("debug", StartDebugSession, params)
+      command("debug", StartDebugSession, params),
     )
   }
 
   private def sessionParams(
       target: b.BuildTargetIdentifier,
       dataKind: String,
-      data: JsonElement
+      data: JsonElement,
   ): b.DebugSessionParams = {
     new b.DebugSessionParams(List(target).asJava, dataKind, data)
   }
@@ -239,7 +239,7 @@ final class RunTestCodeLens(
   private def command(
       name: String,
       command: BaseCommand,
-      params: b.DebugSessionParams
+      params: b.DebugSessionParams,
   ): l.Command = {
     new l.Command(name, command.id, singletonList(params))
   }

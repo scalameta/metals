@@ -34,7 +34,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
           assertCompletion(
             "completeThisUniqueNa@@",
             "completeThisUniqueName(): Int",
-            project = project
+            project = project,
           )
         )
       )

@@ -25,7 +25,7 @@ final class BuildTools(
     workspace: AbsolutePath,
     bspGlobalDirectories: List[AbsolutePath],
     userConfig: () => UserConfiguration,
-    explicitChoiceMade: () => Boolean
+    explicitChoiceMade: () => Boolean,
 ) {
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicity chosen
@@ -68,7 +68,7 @@ final class BuildTools(
       "settings.gradle",
       "settings.gradle.kts",
       "build.gradle",
-      "build.gradle.kts"
+      "build.gradle.kts",
     )
     defaultGradlePaths.exists(workspace.resolve(_).isFile)
   }
@@ -81,7 +81,7 @@ final class BuildTools(
       SbtBuildTool(workspaceVersion = None, userConfig),
       GradleBuildTool(userConfig),
       MavenBuildTool(userConfig),
-      MillBuildTool(userConfig)
+      MillBuildTool(userConfig),
     )
   }
 
@@ -133,6 +133,6 @@ object BuildTools {
       workspace,
       Nil,
       () => UserConfiguration(),
-      explicitChoiceMade = () => false
+      explicitChoiceMade = () => false,
     )
 }

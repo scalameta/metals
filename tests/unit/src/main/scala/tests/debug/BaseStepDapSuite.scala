@@ -17,7 +17,7 @@ import tests.TestingServer
 abstract class BaseStepDapSuite(
     suiteName: String,
     initializer: BuildServerInitializer,
-    buildToolLayout: BuildToolLayout
+    buildToolLayout: BuildToolLayout,
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
 
   override protected def initializationOptions: Option[InitializationOptions] =
@@ -42,7 +42,7 @@ abstract class BaseStepDapSuite(
     instrument = steps =>
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepOut)
-        .at("a/src/main/scala/Main.scala", line = 10)(Continue)
+        .at("a/src/main/scala/Main.scala", line = 10)(Continue),
   )
 
   assertSteps("step-over")(
@@ -61,7 +61,7 @@ abstract class BaseStepDapSuite(
     instrument = steps =>
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepOver)
-        .at("a/src/main/scala/Main.scala", line = 6)(Continue)
+        .at("a/src/main/scala/Main.scala", line = 6)(Continue),
   )
 
   assertSteps("step-into-java")(
@@ -88,7 +88,7 @@ abstract class BaseStepDapSuite(
       steps
         .at("a/src/main/scala/a/ScalaMain.scala", line = 5)(StepIn)
         .at("a/src/main/java/a/JavaClass.java", line = 5)(StepOut)
-        .at("a/src/main/scala/a/ScalaMain.scala", line = 6)(Continue)
+        .at("a/src/main/scala/a/ScalaMain.scala", line = 6)(Continue),
   )
 
   assertSteps("step-into-scala-lib", withoutVirtualDocs = true)(
@@ -108,9 +108,9 @@ abstract class BaseStepDapSuite(
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
         .atDependency(
           server.toPathFromSymbol("scala.Predef", "scala/Predef.scala"),
-          line = 427
+          line = 427,
         )(Continue)
-    }
+    },
   )
 
   assertSteps("step-into-java-lib", withoutVirtualDocs = true)(
@@ -134,9 +134,9 @@ abstract class BaseStepDapSuite(
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
         .atDependency(
           server.toPathFromSymbol("java.io.PrintStream", javaLibFile),
-          javaLibLine
+          javaLibLine,
         )(Continue)
-    }
+    },
   )
 
   assertSteps("stops-on-different-class-in-same-file")(
@@ -161,13 +161,13 @@ abstract class BaseStepDapSuite(
     instrument = steps =>
       steps
         .at("a/src/main/scala/a/Main.scala", line = 6)(Continue)
-        .at("a/src/main/scala/a/Main.scala", line = 13)(Continue)
+        .at("a/src/main/scala/a/Main.scala", line = 13)(Continue),
   )
 
   def assertSteps(name: TestOptions, withoutVirtualDocs: Boolean = false)(
       sources: String,
       main: String,
-      instrument: StepNavigator => StepNavigator
+      instrument: StepNavigator => StepNavigator,
   )(implicit loc: Location): Unit = {
     test(name, withoutVirtualDocs) {
       cleanWorkspace()

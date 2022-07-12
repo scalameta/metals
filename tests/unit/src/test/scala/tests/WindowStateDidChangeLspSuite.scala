@@ -35,7 +35,7 @@ class WindowStateDidChangeLspSuite
         """|a/src/main/scala/a/A.scala:4:1: error: illegal start of simple expression
            |}
            |^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

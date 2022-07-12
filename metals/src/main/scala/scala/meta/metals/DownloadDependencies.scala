@@ -63,7 +63,7 @@ object DownloadDependencies {
     Files.write(
       config,
       s"""|version = ${BuildInfo.scalafmtVersion}
-          |runner.dialect = scala3""".stripMargin.getBytes
+          |runner.dialect = scala3""".stripMargin.getBytes,
     )
     scalafmt.format(config, tmp, "object Foo { }")
     Files.deleteIfExists(tmp)

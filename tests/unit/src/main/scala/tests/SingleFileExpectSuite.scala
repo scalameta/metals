@@ -22,7 +22,7 @@ abstract class SingleFileExpectSuite(filename: String)
     println(s"write: $path")
     Files.write(
       path.toNIO,
-      obtained().getBytes(StandardCharsets.UTF_8)
+      obtained().getBytes(StandardCharsets.UTF_8),
     )
   }
 

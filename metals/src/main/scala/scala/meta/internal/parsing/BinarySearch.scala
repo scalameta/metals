@@ -25,7 +25,7 @@ object BinarySearch {
    */
   def array[T](
       array: Array[T],
-      compare: (T, Int) => ComparisonResult
+      compare: (T, Int) => ComparisonResult,
   ): Option[T] = {
     @tailrec def loop(lo: Int, hi: Int): Option[T] =
       if (lo > hi) None

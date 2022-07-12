@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 object GradleDigest extends Digestable {
   override protected def digestWorkspace(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     val buildSrc = workspace.resolve("buildSrc")
     val buildSrcDigest = if (buildSrc.isDirectory) {
@@ -27,7 +27,7 @@ object GradleDigest extends Digestable {
 
   def digestSubProjects(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     val directories = workspace.list.filter(_.isDirectory).toList
 

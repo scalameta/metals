@@ -63,14 +63,14 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               "_empty_/NoPackage#",
               QuickLocation(
                 classUriFor("app/src/main/scala/NoPackage.scala"),
-                (1, 6, 1, 15)
+                (1, 6, 1, 15),
               ).toLsp,
-              canResolveChildren = true
+              canResolveChildren = true,
             )
-          ).asJava
+          ).asJava,
         )
       )
-    }
+    },
   )
 
   testDiscover(
@@ -105,14 +105,14 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               "a/b/c/MunitTestSuite#",
               QuickLocation(
                 classUriFor("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
-                (3, 6, 3, 20)
+                (3, 6, 3, 20),
               ).toLsp,
-              canResolveChildren = true
+              canResolveChildren = true,
             )
-          ).asJava
+          ).asJava,
         )
       )
-    }
+    },
   )
 
   testDiscover(
@@ -156,7 +156,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       "app/src/main/scala/NoPackage.scala",
       "app/src/main/scala/foo/Foo.scala",
       "app/src/main/scala/foo/bar/FooBar.scala",
-      "app/src/main/scala/another/AnotherPackage.scala"
+      "app/src/main/scala/another/AnotherPackage.scala",
     ),
     () => {
       List(
@@ -170,9 +170,9 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               "foo/bar/FooBar#",
               QuickLocation(
                 classUriFor("app/src/main/scala/foo/bar/FooBar.scala"),
-                (2, 6, 2, 12)
+                (2, 6, 2, 12),
               ).toLsp,
-              true
+              true,
             ),
             AddTestSuite(
               "foo.Foo",
@@ -180,9 +180,9 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               "foo/Foo#",
               QuickLocation(
                 classUriFor("app/src/main/scala/foo/Foo.scala"),
-                (2, 6, 2, 9)
+                (2, 6, 2, 9),
               ).toLsp,
-              true
+              true,
             ),
             AddTestSuite(
               "another.AnotherPackage",
@@ -190,9 +190,9 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               "another/AnotherPackage#",
               QuickLocation(
                 classUriFor("app/src/main/scala/another/AnotherPackage.scala"),
-                (2, 6, 2, 20)
+                (2, 6, 2, 20),
               ).toLsp,
-              true
+              true,
             ),
             AddTestSuite(
               "NoPackage",
@@ -200,14 +200,14 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               "_empty_/NoPackage#",
               QuickLocation(
                 classUriFor("app/src/main/scala/NoPackage.scala"),
-                (0, 6, 0, 15)
+                (0, 6, 0, 15),
               ).toLsp,
-              true
-            )
-          ).asJava
+              true,
+            ),
+          ).asJava,
         )
       )
-    }
+    },
   )
 
   testDiscover(
@@ -242,16 +242,16 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                   "test1",
                   QuickLocation(
                     classUriFor("app/src/main/scala/JunitTestSuite.scala"),
-                    (3, 6, 3, 11)
-                  ).toLsp
+                    (3, 6, 3, 11),
+                  ).toLsp,
                 )
-              ).asJava
+              ).asJava,
             )
-          ).asJava
+          ).asJava,
         )
       )
     },
-    () => Some(classUriFor("app/src/main/scala/JunitTestSuite.scala"))
+    () => Some(classUriFor("app/src/main/scala/JunitTestSuite.scala")),
   )
 
   testDiscover(
@@ -319,8 +319,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (4, 2, 4, 6)
-                  ).toLsp
+                    (4, 2, 4, 6),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "test2",
@@ -328,8 +328,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (5, 2, 5, 6)
-                  ).toLsp
+                    (5, 2, 5, 6),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "test3",
@@ -337,8 +337,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (6, 2, 6, 6)
-                  ).toLsp
+                    (6, 2, 6, 6),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "check-test",
@@ -346,8 +346,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (8, 2, 8, 7)
-                  ).toLsp
+                    (8, 2, 8, 7),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "check-braceless",
@@ -355,8 +355,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (10, 2, 10, 16)
-                  ).toLsp
+                    (10, 2, 10, 16),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "check-curried",
@@ -364,8 +364,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (12, 2, 12, 14)
-                  ).toLsp
+                    (12, 2, 12, 14),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "tagged",
@@ -373,16 +373,16 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (14, 2, 14, 6)
-                  ).toLsp
-                )
-              ).asJava
+                    (14, 2, 14, 6),
+                  ).toLsp,
+                ),
+              ).asJava,
             )
-          ).asJava
+          ).asJava,
         )
       )
     },
-    () => Some(classUriFor("app/src/main/scala/a/b/c/MunitTestSuite.scala"))
+    () => Some(classUriFor("app/src/main/scala/a/b/c/MunitTestSuite.scala")),
   )
 
   testDiscover(
@@ -418,16 +418,16 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/MunitTestSuite.scala"
                     ),
-                    (2, 2, 2, 6)
-                  ).toLsp
+                    (2, 2, 2, 6),
+                  ).toLsp,
                 )
-              ).asJava
+              ).asJava,
             )
-          ).asJava
+          ).asJava,
         )
       )
     },
-    () => Some(classUriFor("app/src/main/scala/MunitTestSuite.scala"))
+    () => Some(classUriFor("app/src/main/scala/MunitTestSuite.scala")),
   )
 
   testDiscover(
@@ -481,8 +481,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/MunitTestSuite.scala"
                     ),
-                    (5, 2, 5, 6)
-                  ).toLsp
+                    (5, 2, 5, 6),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "test-base",
@@ -490,8 +490,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/MunitTestSuite.scala"
                     ),
-                    (6, 2, 6, 17)
-                  ).toLsp
+                    (6, 2, 6, 17),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "test-parent-1",
@@ -499,8 +499,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/MunitTestSuite.scala"
                     ),
-                    (7, 2, 7, 18)
-                  ).toLsp
+                    (7, 2, 7, 18),
+                  ).toLsp,
                 ),
                 TestCaseEntry(
                   "test-parent-2",
@@ -508,16 +508,16 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/MunitTestSuite.scala"
                     ),
-                    (8, 2, 8, 19)
-                  ).toLsp
-                )
-              ).asJava
+                    (8, 2, 8, 19),
+                  ).toLsp,
+                ),
+              ).asJava,
             )
-          ).asJava
+          ).asJava,
         )
       )
     },
-    () => Some(classUriFor("app/src/main/scala/MunitTestSuite.scala"))
+    () => Some(classUriFor("app/src/main/scala/MunitTestSuite.scala")),
   )
 
   checkEvents(
@@ -553,7 +553,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               className,
               symbol,
               QuickLocation(classUriFor(file), (1, 6, 1, 20)).toLsp,
-              canResolveChildren = true
+              canResolveChildren = true,
             ),
             AddTestCases(
               fcqn,
@@ -561,14 +561,14 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               List(
                 TestCaseEntry(
                   "test1",
-                  QuickLocation(classUriFor(file), (3, 6, 3, 11)).toLsp
+                  QuickLocation(classUriFor(file), (3, 6, 3, 11)).toLsp,
                 )
-              ).asJava
-            )
-          ).asJava
+              ).asJava,
+            ),
+          ).asJava,
         )
       )
-    }
+    },
   )
 
   /**
@@ -583,7 +583,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       layout: String,
       files: List[String],
       expected: () => List[BuildTargetUpdate],
-      uri: () => Option[String] = () => None
+      uri: () => Option[String] = () => None,
   )(implicit
       loc: munit.Location
   ): Unit = {
@@ -608,7 +608,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       name: TestOptions,
       layout: String,
       file: String,
-      expected: () => List[BuildTargetUpdate]
+      expected: () => List[BuildTargetUpdate],
   )(implicit
       loc: munit.Location
   ): Unit = {

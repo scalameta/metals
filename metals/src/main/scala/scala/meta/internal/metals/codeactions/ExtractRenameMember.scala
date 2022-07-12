@@ -90,7 +90,7 @@ class ExtractRenameMember(
               memberType <- getMemberType(defn.member)
               title = ExtractRenameMember.title(
                 memberType,
-                defn.member.name.value
+                defn.member.name.value,
               )
             } yield extractClassAction(uri, defn.member, title)
 
@@ -131,7 +131,7 @@ class ExtractRenameMember(
 
   case class EndableMember(
       member: Member,
-      maybeEndMarker: Option[Term.EndMarker]
+      maybeEndMarker: Option[Term.EndMarker],
   )
 
   private def isSealed(t: Tree): Boolean = t match {
@@ -167,7 +167,7 @@ class ExtractRenameMember(
 
   private def notSealed(
       member: Member,
-      sealedNames: List[String]
+      sealedNames: List[String],
   ): Boolean = {
     val memberExtendsSealed: Boolean =
       parents(member).exists(sealedNames.contains(_))
@@ -186,7 +186,7 @@ class ExtractRenameMember(
       tree: Tree,
       range: l.Range,
       endableMember: EndableMember,
-      maybeCompanionEndableMember: Option[EndableMember]
+      maybeCompanionEndableMember: Option[EndableMember],
   ): (String, Int) = {
     // List of sequential packages or imports before the member definition
     val packages: ListBuffer[Pkg] = ListBuffer()
@@ -251,7 +251,7 @@ class ExtractRenameMember(
       structure
         .filter(_.nonEmpty)
         .mkString("\n\n"),
-      defnLine
+      defnLine,
     )
   }
 
@@ -280,7 +280,7 @@ class ExtractRenameMember(
 
   private def renameFileAsMemberAction(
       uri: String,
-      member: Member
+      member: Member,
   ): l.CodeAction = {
     val className = member.name.value
     val newUri = newPathFromClass(uri, member).toURI.toString
@@ -305,7 +305,7 @@ class ExtractRenameMember(
   private def extractClassAction(
       uri: String,
       member: Member,
-      title: String
+      title: String,
   ): l.CodeAction = {
 
     val range = member.name.pos.toLSP
@@ -317,7 +317,7 @@ class ExtractRenameMember(
       ServerCommands.ExtractMemberDefinition.toLSP(
         new l.TextDocumentPositionParams(
           new l.TextDocumentIdentifier(uri),
-          range.getStart()
+          range.getStart(),
         )
       )
     )
@@ -360,7 +360,7 @@ class ExtractRenameMember(
         tree,
         range,
         memberDefn,
-        companion
+        companion,
       )
       newFilePath = newPathFromClass(uri, memberDefn.member)
       if !newFilePath.exists
@@ -371,7 +371,7 @@ class ExtractRenameMember(
         newFileUri,
         fileContent,
         memberDefn,
-        companion
+        companion,
       )
       val newFileMemberRange = new l.Range()
       val pos = new l.Position(defnLine, 0)
@@ -380,7 +380,7 @@ class ExtractRenameMember(
       val workspaceEdit = new WorkspaceEdit(Map(uri -> edits.asJava).asJava)
       CodeActionCommandResult(
         new ApplyWorkspaceEditParams(workspaceEdit),
-        Option(new Location(newFileUri, newFileMemberRange))
+        Option(new Location(newFileUri, newFileMemberRange)),
       )
     }
 
@@ -403,7 +403,7 @@ class ExtractRenameMember(
       newUri: String,
       content: String,
       endableMember: EndableMember,
-      maybeEndableMemberCompanion: Option[EndableMember]
+      maybeEndableMemberCompanion: Option[EndableMember],
   ): List[l.TextEdit] = {
     val newPath = newUri.toAbsolutePath
 

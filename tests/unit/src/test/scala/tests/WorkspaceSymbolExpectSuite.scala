@@ -32,7 +32,7 @@ class WorkspaceSymbolExpectSuite
             fail(unknownSymbols.mkString("\n"))
           }
           obtained
-        }
+        },
       )
     }
   }

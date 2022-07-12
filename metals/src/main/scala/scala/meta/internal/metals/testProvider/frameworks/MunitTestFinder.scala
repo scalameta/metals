@@ -28,7 +28,7 @@ import scala.meta.io.AbsolutePath
 class MunitTestFinder(
     trees: Trees,
     symbolIndex: GlobalSymbolIndex,
-    semanticdbs: Semanticdbs
+    semanticdbs: Semanticdbs,
 ) {
 
   // depending on the munit version test method symbol varies.
@@ -46,7 +46,7 @@ class MunitTestFinder(
       doc: TextDocument,
       path: AbsolutePath,
       suiteName: FullyQualifiedName,
-      symbol: mtags.Symbol
+      symbol: mtags.Symbol,
   ): Vector[TestCaseEntry] = {
     val uri = path.toURI
     val parentMethods = extractTestMethodsFromParents(doc, symbol.value)
@@ -111,7 +111,7 @@ class MunitTestFinder(
    */
   private def extractTestMethodsFromParents(
       doc: TextDocument,
-      classSymbol: String
+      classSymbol: String,
   ): Set[String] = {
     // format: off
     // semanticDB contains information about DIRECT parent classes of suite
@@ -167,7 +167,7 @@ class MunitTestFinder(
   private def isValid(
       name: Type.Name,
       currentPackage: Vector[String],
-      searched: String
+      searched: String,
   ): Boolean = {
     val fullyQualifiedName = currentPackage.appended(name.value).mkString(".")
     fullyQualifiedName == searched
@@ -181,7 +181,7 @@ class MunitTestFinder(
    */
   private def extractTemplateFrom(
       tree: Tree,
-      fullyQualifiedName: String
+      fullyQualifiedName: String,
   ): Option[Template] = {
 
     /**
@@ -189,7 +189,7 @@ class MunitTestFinder(
      */
     def loop(
         t: Tree,
-        currentPackage: Vector[String]
+        currentPackage: Vector[String],
     ): Option[Template] = {
       t match {
         case cls: Defn.Class
@@ -285,7 +285,7 @@ class MunitTestFinder(
    */
   private def extractPotentialTestMethods(
       clsTemplate: Template,
-      occurences: Vector[SymbolOccurrence]
+      occurences: Vector[SymbolOccurrence],
   ): Set[String] = clsTemplate.children.collect {
     case dfn: Defn.Def if hasTestCall(dfn, occurences) => dfn.name.value
   }.toSet
@@ -296,7 +296,7 @@ class MunitTestFinder(
    */
   private def hasTestCall(
       tree: Tree,
-      occurences: Vector[SymbolOccurrence]
+      occurences: Vector[SymbolOccurrence],
   ): Boolean = {
 
     @tailrec
@@ -326,7 +326,7 @@ class MunitTestFinder(
   @tailrec
   private def extractPackageName(
       term: Term,
-      acc: List[String] = Nil
+      acc: List[String] = Nil,
   ): Vector[String] =
     term match {
       case Term.Name(value) => (value :: acc).toVector

@@ -11,7 +11,7 @@ class FuzzySuite extends BaseSuite {
       val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
       Predef.assert(
         obtained,
-        s"query '$query' is not substring of symbol '$symbol'"
+        s"query '$query' is not substring of symbol '$symbol'",
       )
     }
   }
@@ -21,7 +21,7 @@ class FuzzySuite extends BaseSuite {
       val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
       Predef.assert(
         !obtained,
-        s"query '$query' was a substring of symbol '$symbol'"
+        s"query '$query' was a substring of symbol '$symbol'",
       )
     }
   }
@@ -81,7 +81,7 @@ class FuzzySuite extends BaseSuite {
        |Test
        |jdocs
        |persistence
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkWords(
@@ -92,25 +92,25 @@ class FuzzySuite extends BaseSuite {
        |M
        |S
        |State
-    """.stripMargin
+    """.stripMargin,
   )
   checkWords(
     "FSM",
     """|F
        |M
        |S
-       |""".stripMargin
+       |""".stripMargin,
   )
   checkWords(
     "FSM",
     """|F
        |M
        |S
-       |""".stripMargin
+       |""".stripMargin,
   )
   checkWords(
     "lowercase",
-    "lowercase"
+    "lowercase",
   )
   checkOK("Stop", "SaStop")
   checkOK("StopBu", "SaStopBuilder")
@@ -127,7 +127,7 @@ class FuzzySuite extends BaseSuite {
        |akka
        |persistence
        |serialization
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   test("estimatedSize") {

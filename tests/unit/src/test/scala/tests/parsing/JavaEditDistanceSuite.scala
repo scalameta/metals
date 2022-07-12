@@ -15,7 +15,7 @@ class JavaEditDistanceSuite extends BaseSuite {
          |public class A{
          |  abstract void hello()
          |}
-         |""".stripMargin
+         |""".stripMargin,
     )
 
     val revised = Input.VirtualFile(
@@ -25,7 +25,7 @@ class JavaEditDistanceSuite extends BaseSuite {
          |public class A{
          |  abstract void hello()
          |}
-         |""".stripMargin
+         |""".stripMargin,
     )
 
     val distance = TokenEditDistance(original, revised, trees = null)
@@ -45,7 +45,7 @@ class JavaEditDistanceSuite extends BaseSuite {
          |public class A{
          |
          |}
-         |""".stripMargin
+         |""".stripMargin,
     )
 
     val revised = Input.VirtualFile(
@@ -54,7 +54,7 @@ class JavaEditDistanceSuite extends BaseSuite {
          |public class A{
          |
          |}
-         |""".stripMargin
+         |""".stripMargin,
     )
 
     val distance = TokenEditDistance(original, revised, trees = null)

@@ -93,7 +93,7 @@ object AutoImports:
       text: String,
       tree: Tree,
       indexedContext: IndexedContext,
-      config: PresentationCompilerConfig
+      config: PresentationCompilerConfig,
   ): AutoImportsGenerator =
 
     import indexedContext.ctx
@@ -111,13 +111,13 @@ object AutoImports:
       pos,
       importPos,
       indexedContext,
-      renames
+      renames,
     )
   end generator
 
   case class AutoImportEdits(
       nameEdit: Option[l.TextEdit],
-      importEdit: Option[l.TextEdit]
+      importEdit: Option[l.TextEdit],
   ):
 
     def edits: List[l.TextEdit] = List(nameEdit, importEdit).flatten
@@ -144,7 +144,7 @@ object AutoImports:
       pos: SourcePosition,
       importPosition: AutoImportPosition,
       indexedContext: IndexedContext,
-      renames: Symbol => Option[String]
+      renames: Symbol => Option[String],
   ):
 
     import indexedContext.ctx
@@ -179,7 +179,7 @@ object AutoImports:
         case AutoImport.SpecifiedOwner(sym) =>
           AutoImportEdits(
             specifyOwnerEdit(sym, sym.owner.showName),
-            mkImportEdit
+            mkImportEdit,
           )
         case AutoImport.Renamed(sym, ownerRename)
             if indexedContext.hasRename(sym.owner, ownerRename) =>
@@ -208,7 +208,7 @@ object AutoImports:
 
     private def importEdit(
         values: List[AutoImport],
-        importPosition: AutoImportPosition
+        importPosition: AutoImportPosition,
     )(using Context): l.TextEdit =
       val indent = " " * importPosition.indent
       val topPadding =
@@ -240,13 +240,13 @@ object AutoImports:
   private def autoImportPosition(
       pos: SourcePosition,
       text: String,
-      tree: Tree
+      tree: Tree,
   )(using Context): AutoImportPosition =
 
     @tailrec
     def lastPackageDef(
         prev: Option[PackageDef],
-        tree: Tree
+        tree: Tree,
     ): Option[PackageDef] =
       tree match
         case curr @ PackageDef(_, (next: PackageDef) :: Nil)

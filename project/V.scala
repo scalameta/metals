@@ -69,7 +69,7 @@ object V {
     "2.13.1",
     "2.13.2",
     "2.13.3",
-    "2.13.4"
+    "2.13.4",
   )
 
   def nonDeprecatedScala2Versions = Seq(
@@ -82,7 +82,7 @@ object V {
     "2.12.11",
     "2.13.5",
     "2.13.6",
-    "2.13.7"
+    "2.13.7",
   )
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
@@ -120,6 +120,6 @@ object V {
       ammonite212Version,
       scala213,
       ammonite213Version,
-      scala3
+      scala3,
     ).toList
 }

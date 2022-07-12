@@ -26,7 +26,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
               .flatMap { _ =>
                 assertNoDiff(
                   client.workspaceDiagnostics,
-                  assert.expectedDiagnostics
+                  assert.expectedDiagnostics,
                 )
                 runAsserts(tail)
               }
@@ -70,7 +70,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
           |project/plugins.sbt:1:6: error: repeated modifier
           |lazy lazy val x = 1
           |     ^^^^
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- server.didClose("Main.scala")
       _ <- server.didClose("project/plugins.sbt")
@@ -84,7 +84,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
           |project/plugins.sbt:1:6: error: repeated modifier
           |lazy lazy val x = 1
           |     ^^^^
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- server.didSave("project/plugins.sbt")(_ => "lazy val x = 1\n")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -111,7 +111,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
            |a/src/main/scala/Main.scala:2:8: error: identifier expected but 'object' found.
            |object object B
            |       ^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didChange("a/src/main/scala/Main.scala")(t => "\n" + t)
       _ = assertNoDiff(
@@ -122,7 +122,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
            |a/src/main/scala/Main.scala:3:8: error: identifier expected but 'object' found.
            |object object B
            |       ^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -156,7 +156,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
            | required: Int
            |    val b: Int = ""
            |                 ^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -168,7 +168,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
           |/A.scala
           |object A { val x = }
           |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("A.scala")
       _ = assertNoDiff(
@@ -176,7 +176,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
         """|A.scala:1:20: error: illegal start of simple expression
            |object A { val x = }
            |                   ^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -212,7 +212,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
         """|a/src/main/scala/A.scala:2:16: error: unclosed string literal
            |  val x: Int = "
            |               ^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didChange("a/src/main/scala/A.scala")(
         _.replace("\"", "\"\"\n  // close")
@@ -235,7 +235,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
          | required: Int
          |  "".lengthCompare()
          |                  ^^
-         |""".stripMargin
+         |""".stripMargin,
     ),
     Assert(
       _.replace(".lengthCompare()", "."),
@@ -247,8 +247,8 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
          |a/src/main/scala/A.scala:3:1: error: identifier expected but } found
          |}
          |^
-         |""".stripMargin
-    )
+         |""".stripMargin,
+    ),
   )
 
   check(
@@ -263,8 +263,8 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
          |Unspecified value parameter len.
          |  "".lengthCompare()
          |  ^^^^^^^^^^^^^^^^^^
-         |""".stripMargin
-    )
+         |""".stripMargin,
+    ),
   )
 
   check(
@@ -280,8 +280,8 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
          | required: Int
          |  val x: Int = "a" // comment
          |                            ^
-         |""".stripMargin
-    )
+         |""".stripMargin,
+    ),
   )
 
   check(
@@ -297,8 +297,8 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
          | required: Int
          |  val x: Int = "a" + "c"
          |               ^^^^^^^^^
-         |""".stripMargin
-    )
+         |""".stripMargin,
+    ),
   )
 
   check(
@@ -314,8 +314,8 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
          | required: Int
          |  val x: In
          |          ^
-         |""".stripMargin
-    )
+         |""".stripMargin,
+    ),
   )
 
   test("literal-types") {
@@ -361,7 +361,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
         """|a/src/main/scala/A.scala:2:9: error: Cannot prove that (1 : Int) =:= (2 : Int).
            |val x = mark[1 =:= 2]
            |        ^^^^^^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

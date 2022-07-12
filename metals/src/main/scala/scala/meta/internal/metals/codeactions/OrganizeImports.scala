@@ -20,14 +20,14 @@ import org.eclipse.{lsp4j => l}
 
 sealed abstract class OrganizeImports(
     scalafixProvider: ScalafixProvider,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
   protected def title: String
   protected def isCallAllowed(
       file: AbsolutePath,
-      params: CodeActionParams
+      params: CodeActionParams,
   ): Boolean
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
@@ -50,7 +50,7 @@ sealed abstract class OrganizeImports(
 
   private def organizeImportsEdits(
       path: AbsolutePath,
-      scalaVersion: ScalaTarget
+      scalaVersion: ScalaTarget,
   ): Future[Seq[l.CodeAction]] = {
     scalafixProvider
       .organizeImports(path, scalaVersion)
@@ -77,11 +77,11 @@ class SourceOrganizeImports(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
     diagnostics: Diagnostics,
-    languageClient: MetalsLanguageClient
+    languageClient: MetalsLanguageClient,
 )(implicit ec: ExecutionContext)
     extends OrganizeImports(
       scalafixProvider,
-      buildTargets
+      buildTargets,
     ) {
 
   override val kind: String = SourceOrganizeImports.kind
@@ -89,14 +89,14 @@ class SourceOrganizeImports(
 
   override protected def isCallAllowed(
       file: AbsolutePath,
-      params: CodeActionParams
+      params: CodeActionParams,
   ): Boolean = {
     val validCall = isScalaOrSbt(file) && isSourceOrganizeImportCalled(params)
     if (validCall) {
       if (diagnostics.hasDiagnosticError(file)) {
         languageClient.showMessage(
           l.MessageType.Warning,
-          s"Fix ${file.toNIO.getFileName} before trying to organize your imports"
+          s"Fix ${file.toNIO.getFileName} before trying to organize your imports",
         )
         scribe.info("Can not organize imports if file has error")
         false
@@ -124,18 +124,18 @@ object SourceOrganizeImports {
 class OrganizeImportsQuickFix(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
-    diagnostics: Diagnostics
+    diagnostics: Diagnostics,
 )(implicit ec: ExecutionContext)
     extends OrganizeImports(
       scalafixProvider,
-      buildTargets
+      buildTargets,
     ) {
 
   override val kind: String = OrganizeImportsQuickFix.kind
   override protected val title: String = OrganizeImportsQuickFix.title
   override protected def isCallAllowed(
       file: AbsolutePath,
-      params: CodeActionParams
+      params: CodeActionParams,
   ): Boolean = {
     val hasUnused = params
       .getContext()

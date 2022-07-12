@@ -15,7 +15,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|substring(beginIndex: Int): String
        |substring(beginIndex: Int, endIndex: Int): String
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -33,7 +33,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
         """|join(delimiter: CharSequence, elements: CharSequence*): String
            |join(delimiter: CharSequence, elements: Iterable[? <: CharSequence]): String
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -47,7 +47,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|setValue(value: Int): Int
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -63,7 +63,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "3" ->
         """|singletonList[T](o: T): java.util.List[T]
            |""".stripMargin
-    )
+    ),
   )
   check(
     "java5",
@@ -107,7 +107,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
          |`OptionalInt` may have unpredictable results and should be avoided.
          |OptionalInt java.util
          |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
   )
 
   check(
@@ -119,7 +119,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|reportWarning(pos: Int, msg: String, out: PrintStream = Console.out): Unit
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -135,7 +135,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "3" ->
         """|sliding[B >: Int](size: Int, step: Int = 1): $1$.GroupedIterator[B]
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -154,7 +154,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |- `x`: the object to print.
        |println(x: Any): Unit
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
   )
 
   val commonlyUsedTypesPre2134: String =
@@ -240,8 +240,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |${predefDocString(commonlyUsedTypesPost2134)}
            |Predef scala
            |Predef - scala.runtime.stdLibPatches
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   val iteratorDocs213: String =
@@ -394,8 +394,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "2.13" -> iteratorAndSpecificIterableFactoryDocs213(
         withLinearSeqIterator = false
       ),
-      "3" -> iteratorDocs213
-    )
+      "3" -> iteratorDocs213,
+    ),
   )
 
   def executionDocstringPre2134: String =
@@ -431,8 +431,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "2.12" ->
         s"""|$executionDocstringPre2134
             |global: ExecutionContext
-            |""".stripMargin
-    )
+            |""".stripMargin,
+    ),
   )
 
   val baseTryDocs: String =
@@ -495,7 +495,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
             |method will ensure any non-fatal exception is caught and a
             |`Failure` object is returned.
             |Try[T](r: => T): Try[T]""".stripMargin
-    )
+    ),
   )
   check(
     "scala7",
@@ -545,8 +545,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |StringBuilder(underlying: StringBuilder): StringBuilder
            |StringBuilder(capacity: Int): StringBuilder
            |StringBuilder(initCapacity: Int, initValue: String): StringBuilder
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   val vectorDocs213: String =
@@ -609,8 +609,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> vectorDocs213,
-      "3" -> vectorDocs213
-    )
+      "3" -> vectorDocs213,
+    ),
   )
 
   val post212CatchDocs: String =
@@ -654,8 +654,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> post212CatchDocs,
-      "3" -> s"${post212CatchDocs}Catch[T](pf: Catcher[T], fin: Option[Finally], rethrow: Throwable => Boolean): Catch[T]"
-    )
+      "3" -> s"${post212CatchDocs}Catch[T](pf: Catcher[T], fin: Option[Finally], rethrow: Throwable => Boolean): Catch[T]",
+    ),
   )
 
   check(
@@ -673,7 +673,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
         """|Failure scala.util
            |Failure[T](exception: Throwable): Failure[T]
            |""".stripMargin
-    )
+    ),
   )
 
   // New completions not yet implemented for Scala 3
@@ -707,7 +707,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        | are independent of those for the original thread.
        |DynamicVariable scala.util
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
   )
 
   val isDefinedLatestDocs: String =
@@ -740,8 +740,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.12.8" -> isDefinedOlderDocs,
-      "2.13" -> isDefinedLatestDocs
-    )
+      "2.13" -> isDefinedLatestDocs,
+    ),
   )
   check(
     "scala13",
@@ -794,8 +794,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
                 |
                 |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
                 |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int, V1]
-                |""".stripMargin
-    )
+                |""".stripMargin,
+    ),
   )
 
   check(
@@ -809,6 +809,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|myNumbers: Vector[Int]
-       |""".stripMargin
+       |""".stripMargin,
   )
 }

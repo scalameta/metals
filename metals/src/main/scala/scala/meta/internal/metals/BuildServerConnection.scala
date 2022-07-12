@@ -41,7 +41,7 @@ class BuildServerConnection private (
     languageClient: LanguageClient,
     reconnectNotification: DismissedNotifications#Notification,
     config: MetalsServerConfig,
-    workspace: AbsolutePath
+    workspace: AbsolutePath,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -83,7 +83,7 @@ class BuildServerConnection private (
   def usesScalaDebugAdapter2x: Boolean = {
     def supportNewDebugAdapter = SemVer.isCompatibleVersion(
       "1.4.10",
-      version
+      version,
     )
     isSbt || (isBloop && supportNewDebugAdapter)
   }
@@ -118,7 +118,7 @@ class BuildServerConnection private (
         case e: Throwable =>
           scribe.error(
             s"build shutdown: ${conn.displayName}",
-            e
+            e,
           )
       }
     }
@@ -174,7 +174,7 @@ class BuildServerConnection private (
       val onFail = Some(
         (
           resultOnJavacOptionsUnsupported,
-          "Java targets not supported by server"
+          "Java targets not supported by server",
         )
       )
       register(server => server.buildTargetJavacOptions(params), onFail).asScala
@@ -270,7 +270,7 @@ class BuildServerConnection private (
   }
   private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T],
-      onFail: => Option[(T, String)] = None
+      onFail: => Option[(T, String)] = None,
   ): CompletableFuture[T] = {
     val original = connection
     val actionFuture = original
@@ -322,7 +322,7 @@ object BuildServerConnection {
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
       serverName: String,
-      retry: Int = 5
+      retry: Int = 5,
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -358,7 +358,7 @@ object BuildServerConnection {
           result.getDisplayName(),
           stopListening,
           result.getVersion(),
-          result.getCapabilities()
+          result.getCapabilities(),
         )
       }
     }
@@ -371,7 +371,7 @@ object BuildServerConnection {
           languageClient,
           reconnectNotification,
           config,
-          workspace
+          workspace,
         )
       }
       .recoverWith { case e: TimeoutException =>
@@ -385,7 +385,7 @@ object BuildServerConnection {
             reconnectNotification,
             config,
             serverName,
-            retry - 1
+            retry - 1,
           )
         } else {
           Future.failed(e)
@@ -396,7 +396,7 @@ object BuildServerConnection {
   final case class BspExtraBuildParams(
       javaSemanticdbVersion: String,
       semanticdbVersion: String,
-      supportedScalaVersions: java.util.List[String]
+      supportedScalaVersions: java.util.List[String],
   )
 
   /**
@@ -405,12 +405,12 @@ object BuildServerConnection {
   private def initialize(
       workspace: AbsolutePath,
       server: MetalsBuildServer,
-      serverName: String
+      serverName: String,
   ): InitializeBuildResult = {
     val extraParams = BspExtraBuildParams(
       BuildInfo.javaSemanticdbVersion,
       BuildInfo.scalametaVersion,
-      BuildInfo.supportedScala2Versions.asJava
+      BuildInfo.supportedScala2Versions.asJava,
     )
 
     val initializeResult = server.buildInitialize {
@@ -421,7 +421,7 @@ object BuildServerConnection {
         workspace.toURI.toString,
         new BuildClientCapabilities(
           List("scala", "java").asJava
-        )
+        ),
       )
       val gson = new Gson
       val data = gson.toJsonTree(extraParams)
@@ -447,7 +447,7 @@ object BuildServerConnection {
       displayName: String,
       cancelServer: Cancelable,
       version: String,
-      capabilities: BuildServerCapabilities
+      capabilities: BuildServerCapabilities,
   ) {
 
     def cancelables: List[Cancelable] =
@@ -466,5 +466,5 @@ case class SocketConnection(
     output: ClosableOutputStream,
     input: InputStream,
     cancelables: List[Cancelable],
-    finishedPromise: Promise[Unit]
+    finishedPromise: Promise[Unit],
 )

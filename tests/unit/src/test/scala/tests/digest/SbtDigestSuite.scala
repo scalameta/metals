@@ -19,7 +19,7 @@ class SbtDigestSuite extends BaseDigestSuite {
     """
       |/build.sbt
       |lazy val x = 2
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -38,7 +38,7 @@ class SbtDigestSuite extends BaseDigestSuite {
     """
       |/build.sbt
       |lazy val x = 2
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -51,7 +51,7 @@ class SbtDigestSuite extends BaseDigestSuite {
       |/build.sbt
       |lazy val x =
       | 2 // this is two
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -64,7 +64,7 @@ class SbtDigestSuite extends BaseDigestSuite {
     """
       |/build.sbt
       |lazy val x = 2
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -79,7 +79,7 @@ class SbtDigestSuite extends BaseDigestSuite {
       |/project/Build.scala
       |package a.b
       |class A
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -100,7 +100,7 @@ class SbtDigestSuite extends BaseDigestSuite {
       |/project/project/Build2.scala
       |package a.b
       |class A
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -114,7 +114,7 @@ class SbtDigestSuite extends BaseDigestSuite {
       |lazy val x = 2
       |/project/build.properties
       |sbt.version=2.0
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkDiff(
@@ -130,6 +130,6 @@ class SbtDigestSuite extends BaseDigestSuite {
       |lazy val x = 2
       |/project/build.properties
       |sbt.version=2.0
-      |""".stripMargin
+      |""".stripMargin,
   )
 }

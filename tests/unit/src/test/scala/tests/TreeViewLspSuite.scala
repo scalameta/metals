@@ -22,7 +22,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
    */
   val expectedLibraries: SortedSet[String] = {
     lazy val jdk8Libraries = SortedSet(
-      "charsets", "jce", "jsse", "resources", "rt"
+      "charsets", "jce", "jsse", "resources", "rt",
     )
 
     val otherLibraries = SortedSet(
@@ -33,7 +33,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       "org.eclipse.lsp4j.jsonrpc", "org.eclipse.xtend.lib",
       "org.eclipse.xtend.lib.macro", "org.eclipse.xtext.xbase.lib",
       "scala-library", "scala-reflect", "semanticdb-javac",
-      "simulacrum-scalafix-annotations_2.13", "sourcecode_2.13"
+      "simulacrum-scalafix-annotations_2.13", "sourcecode_2.13",
     )
 
     if (scala.util.Properties.isJavaAtLeast(9.toString)) {
@@ -93,11 +93,11 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         s"""|${TreeViewProvider.Project} <root>
             |${TreeViewProvider.Build} <root>
             |${TreeViewProvider.Compile} <root>
-            |""".stripMargin
+            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}",
-        ""
+        "",
       )
       _ <- server.didOpen("a/src/main/scala/a/First.scala")
       _ <- server.didOpen("b/src/main/scala/b/Third.scala")
@@ -105,17 +105,17 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         s"projects:${server.buildTarget("a")}",
         """|_empty_/ -
            |a/ -
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}!/_empty_/",
         """|Zero class +
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}!/_empty_/Zero#",
         """|a val
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}!/a/",
@@ -123,20 +123,20 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
            |First object
            |Second class -
            |Second object
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}!/a/First#",
         """|a() method
            |b val
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}!/a/Second#",
         """|a() method
            |b val
            |c var
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -160,17 +160,17 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       _ = {
         server.assertTreeViewChildren(
           s"libraries:${server.jar("sourcecode")}",
-          "sourcecode/ +"
+          "sourcecode/ +",
         )
         server.assertTreeViewChildren(
           s"libraries:",
-          expectedLibrariesString
+          expectedLibrariesString,
         )
         server.assertTreeViewChildren(
           s"libraries:${server.jar("scala-library")}!/scala/Some#",
           """|value val
              |get() method
-             |""".stripMargin
+             |""".stripMargin,
         )
         server.assertTreeViewChildren(
           s"libraries:${server.jar("lsp4j")}!/org/eclipse/lsp4j/FileChangeType#",
@@ -181,31 +181,31 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
              |valueOf() method
              |getValue() method
              |forValue() method
-             |""".stripMargin
+             |""".stripMargin,
         )
         server.assertTreeViewChildren(
           s"libraries:${server.jar("circe-core")}!/_root_/",
           """|io/ +
-             |""".stripMargin
+             |""".stripMargin,
         )
         server.assertTreeViewChildren(
           s"libraries:${server.jar("cats-core")}!/cats/instances/symbol/",
           """|package object
-             |""".stripMargin
+             |""".stripMargin,
         )
         assertNoDiff(
           server.workspaceSymbol("sourcecode.File", includeKind = true),
           """|sourcecode.File Class
              |sourcecode.File Object
              |sourcecode.FileMacros Interface
-             |""".stripMargin
+             |""".stripMargin,
         )
         assertNoDiff(
           server.workspaceSymbol("lsp4j.LanguageClient", includeKind = true),
           """|org.eclipse.lsp4j.services.LanguageClient Interface
              |org.eclipse.lsp4j.services.LanguageClientAware Interface
              |org.eclipse.lsp4j.services.LanguageClientExtensions Interface
-             |""".stripMargin
+             |""".stripMargin,
         )
         assertNoDiff(
           server.treeViewReveal(
@@ -214,7 +214,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             isIgnored = { label =>
               label.endsWith(".jar") &&
               !label.contains("sourcecode")
-            }
+            },
           ),
           s"""|root
               |  Projects (0)
@@ -258,7 +258,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |        Util object
               |        File class
               |          value val
-              |""".stripMargin
+              |""".stripMargin,
         )
         assertNoDiff(
           server.treeViewReveal(
@@ -267,7 +267,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             isIgnored = { label =>
               label.endsWith(".jar") &&
               !label.contains("lsp4j")
-            }
+            },
           ),
           s"""|root
               |  Projects (0)
@@ -469,7 +469,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |                workspaceFolders() method
               |                configuration() method
               |                semanticHighlighting() method
-              |""".stripMargin
+              |""".stripMargin,
         )
       }
     } yield ()
@@ -502,7 +502,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       _ <- server.didOpen("b/src/main/scala/b/Second.scala")
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("b")}",
-        "b/ +"
+        "b/ +",
       )
 
       // shutdown and restart a new LSP server
@@ -518,7 +518,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       // and may be not an issue with other clients.
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("b")}",
-        ""
+        "",
       )
 
       // Trigger a compilation in an unrelated project to ensure that the
@@ -530,7 +530,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       // no-op.
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("b")}",
-        "b/ +"
+        "b/ +",
       )
 
     } yield ()

@@ -9,7 +9,7 @@ import scala.meta.io.AbsolutePath
 
 final class StepNavigator(
     root: AbsolutePath,
-    steps: Seq[(Location, DebugStep)]
+    steps: Seq[(Location, DebugStep)],
 ) extends Stoppage.Handler {
   private val expectedSteps = mutable.Queue(steps: _*)
 
@@ -80,7 +80,7 @@ object StepNavigator {
   case class WorkspaceLocation(
       root: AbsolutePath,
       relativePath: String,
-      lineNum: Long
+      lineNum: Long,
   ) extends Location {
 
     override def pathEquals(actual: String): Boolean =
@@ -93,7 +93,7 @@ object StepNavigator {
   }
   case class DependencyLocation(
       path: AbsolutePath,
-      lineNum: Long
+      lineNum: Long,
   ) extends Location {
 
     override def pathEquals(actual: String): Boolean =

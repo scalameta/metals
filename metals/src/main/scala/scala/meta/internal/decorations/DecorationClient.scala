@@ -16,11 +16,11 @@ trait DecorationClient {
 case class DecorationOptions(
     range: Range,
     @Nullable hoverMessage: MarkupContent = null,
-    @Nullable renderOptions: ThemableDecorationInstanceRenderOptions = null
+    @Nullable renderOptions: ThemableDecorationInstanceRenderOptions = null,
 )
 
 case class PublishDecorationsParams(
     uri: String,
     options: Array[DecorationOptions],
-    @Nullable isInline: java.lang.Boolean
+    @Nullable isInline: java.lang.Boolean,
 )

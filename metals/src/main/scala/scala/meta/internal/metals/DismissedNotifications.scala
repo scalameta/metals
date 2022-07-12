@@ -33,7 +33,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
     AmmoniteImportAuto,
     ReconnectAmmonite,
     UpdateScalafmtConf,
-    UpdateBloopJson
+    UpdateBloopJson,
   )
 
   def resetAll(): Unit = {

@@ -17,7 +17,7 @@ case class ImportedBuild(
     scalacOptions: ScalacOptionsResult,
     javacOptions: JavacOptionsResult,
     sources: SourcesResult,
-    dependencySources: DependencySourcesResult
+    dependencySources: DependencySourcesResult,
 ) {
   def ++(other: ImportedBuild): ImportedBuild = {
     val updatedBuildTargets = new WorkspaceBuildTargetsResult(
@@ -40,7 +40,7 @@ case class ImportedBuild(
       updatedScalacOptions,
       updatedJavacOptions,
       updatedSources,
-      updatedDependencySources
+      updatedDependencySources,
     )
   }
 
@@ -57,7 +57,7 @@ object ImportedBuild {
       new ScalacOptionsResult(ju.Collections.emptyList()),
       new JavacOptionsResult(ju.Collections.emptyList()),
       new SourcesResult(ju.Collections.emptyList()),
-      new DependencySourcesResult(ju.Collections.emptyList())
+      new DependencySourcesResult(ju.Collections.emptyList()),
     )
 
   def fromConnection(
@@ -82,7 +82,7 @@ object ImportedBuild {
         scalacOptions,
         javacOptions,
         sources,
-        dependencySources
+        dependencySources,
       )
     }
 

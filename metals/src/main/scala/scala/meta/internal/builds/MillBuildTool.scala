@@ -66,7 +66,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   private def bloopImportArgs(millVersion: String) = {
     val isImportSupported = SemVer.isCompatibleVersion(
       "0.9.10",
-      millVersion
+      millVersion,
     ) && (SemVer.isLaterVersion(millVersion, "0.10.0-M1") || SemVer
       .isCompatibleVersion("0.10.0-M4", millVersion))
 

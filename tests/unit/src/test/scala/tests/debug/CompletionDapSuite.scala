@@ -13,7 +13,7 @@ class CompletionDapSuite
     extends BaseDapSuite(
       "debug-completion",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     ) {
 
   assertCompletion(
@@ -27,7 +27,7 @@ class CompletionDapSuite
                              |toRadians: Double
                              |toString(): String
                              |""".stripMargin,
-    expectedEdit = "1.toShort"
+    expectedEdit = "1.toShort",
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -52,7 +52,7 @@ class CompletionDapSuite
                              |main(args: Array[String]): Unit
                              |""".stripMargin,
     expectedEdit = "Preceding(num = )",
-    topLines = Some(4)
+    topLines = Some(4),
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -78,7 +78,7 @@ class CompletionDapSuite
          |until(end: Int, step: Int): Range
          |""".stripMargin,
     expectedEdit = "1.until(@@)",
-    topLines = Some(4)
+    topLines = Some(4),
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -100,7 +100,7 @@ class CompletionDapSuite
     expectedCompletions = "",
     expectedEdit = "",
     topLines = Some(4),
-    noResults = true
+    noResults = true,
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -124,7 +124,7 @@ class CompletionDapSuite
       expectedEdit: String,
       main: Option[String] = None,
       topLines: Option[Int] = None,
-      noResults: Boolean = false
+      noResults: Boolean = false,
   )(
       source: String
   )(implicit loc: Location): Unit = {

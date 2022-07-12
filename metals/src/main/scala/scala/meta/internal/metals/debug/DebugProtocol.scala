@@ -57,7 +57,7 @@ object DebugProtocol {
 
   def syntheticResponse(
       request: RequestMessage,
-      args: SetBreakpointsResponse
+      args: SetBreakpointsResponse,
   ): ResponseMessage = {
     val response = new DebugResponseMessage
     response.setId(request.getId)
@@ -68,7 +68,7 @@ object DebugProtocol {
 
   def stacktraceOutputResponse(
       output: OutputEventArguments,
-      location: l.Location
+      location: l.Location,
   ): DebugNotificationMessage = {
     val source = new Source()
     source.setName(location.getUri().toAbsolutePath.filename)
@@ -86,7 +86,7 @@ object DebugProtocol {
 
   def syntheticFailure(
       request: DebugResponseMessage,
-      cause: String
+      cause: String,
   ): ResponseMessage = {
     val error = new ResponseError(ResponseErrorCode.InternalError, cause, null)
 

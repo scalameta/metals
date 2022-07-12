@@ -18,7 +18,7 @@ class PrettyPrintTreeSuite extends BaseSuite {
   check(
     "shallow",
     t("root"),
-    "root"
+    "root",
   )
   check(
     "deep",
@@ -26,20 +26,20 @@ class PrettyPrintTreeSuite extends BaseSuite {
     """root
       |  child1
       |  child2
-      |""".stripMargin
+      |""".stripMargin,
   )
   check(
     "deeper",
     t(
       "root",
       t("child1", t("grandchild1")),
-      t("child2", t("grandchild2"))
+      t("child2", t("grandchild2")),
     ),
     """|root
        |  child1
        |    grandchild1
        |  child2
        |    grandchild2
-       |""".stripMargin
+       |""".stripMargin,
   )
 }

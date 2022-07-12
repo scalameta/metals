@@ -12,7 +12,7 @@ class JdkVersionSuite extends FunSuite {
       JdkVersion.fromShell(javaHome),
       JdkVersion
         .fromReleaseFile(javaHome)
-        .orElse(JdkVersion.parse(System.getProperty("java.version")))
+        .orElse(JdkVersion.parse(System.getProperty("java.version"))),
     )
   }
 }

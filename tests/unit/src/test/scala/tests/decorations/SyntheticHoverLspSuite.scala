@@ -49,7 +49,7 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
            |```scala
            |hello()(com.example.Main.andy, boston)
            |```
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/com/example/Main.scala",
@@ -58,7 +58,7 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
            |```scala
            |scala.Predef.augmentString("foo").map[scala.Double](c => c.toDouble)
            |```
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

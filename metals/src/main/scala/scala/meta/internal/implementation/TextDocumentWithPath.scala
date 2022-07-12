@@ -5,5 +5,5 @@ import scala.meta.io.AbsolutePath
 
 case class TextDocumentWithPath(
     textDocument: TextDocument,
-    filePath: AbsolutePath
+    filePath: AbsolutePath,
 )

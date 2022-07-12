@@ -47,7 +47,7 @@ class ConvertPatternMatchLspSuite
        |    case 3 => x = 3; Nil
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -86,7 +86,7 @@ class ConvertPatternMatchLspSuite
        |  }
        |}
        |""".stripMargin,
-    filterAction = filterAction
+    filterAction = filterAction,
   )
 
   checkNoAction(
@@ -98,7 +98,7 @@ class ConvertPatternMatchLspSuite
        |  }
        |}
        |""".stripMargin,
-    filterAction = filterAction
+    filterAction = filterAction,
   )
 
 }

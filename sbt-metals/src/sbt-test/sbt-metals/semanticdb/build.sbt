@@ -14,7 +14,7 @@ lazy val a = project
         compile.value
       }
     },
-    inConfig(Test) { checkSemanticdb := assertSemanticdbForScala2.value }
+    inConfig(Test) { checkSemanticdb := assertSemanticdbForScala2.value },
   )
 
 // scala 3
@@ -23,7 +23,7 @@ lazy val b = project
   .settings(
     scalaVersion := "3.0.1",
     inConfig(Compile) { checkSemanticdb := assertSemanticdbForScala3.value },
-    inConfig(Test) { checkSemanticdb := assertSemanticdbForScala3.value }
+    inConfig(Test) { checkSemanticdb := assertSemanticdbForScala3.value },
   )
 
 // not supported scala version
@@ -32,7 +32,7 @@ lazy val c = project
   .settings(
     scalaVersion := "2.12.7",
     inConfig(Compile) { checkSemanticdb := assertSemanticdbDisabled.value },
-    inConfig(Compile) { checkSemanticdb := assertSemanticdbDisabled.value }
+    inConfig(Compile) { checkSemanticdb := assertSemanticdbDisabled.value },
   )
 
 // bsp disabled
@@ -41,7 +41,7 @@ lazy val d = project
   .settings(
     bspEnabled := false,
     inConfig(Compile) { checkSemanticdb := assertSemanticdbDisabled.value },
-    inConfig(Test) { checkSemanticdb := assertSemanticdbDisabled.value }
+    inConfig(Test) { checkSemanticdb := assertSemanticdbDisabled.value },
   )
 
 ThisBuild / checkSemanticdb := {
@@ -78,7 +78,7 @@ def assertSemanticdbForScala2 = Def.task {
 
   assert(
     jOptions.exists(_.startsWith("-Xplugin:semanticdb")),
-    "no javac-semanticdb plugin"
+    "no javac-semanticdb plugin",
   )
 }
 
@@ -111,7 +111,7 @@ def assertPlugin(
     scalacOptions: Seq[String],
     pluginName: String,
     scalaVersion: String,
-    pluginVersion: String
+    pluginVersion: String,
 ): Unit = {
   val options = scalacOptions.filter(opt =>
     opt.startsWith("-Xplugin") && opt.contains(pluginName)
@@ -123,7 +123,7 @@ def assertPlugin(
         options.head.endsWith(
           s"${pluginName}_$scalaVersion-$pluginVersion.jar"
         ),
-        s"incorrect version of $pluginName"
+        s"incorrect version of $pluginName",
       )
     case _ =>
       throw new Exception(s"compiler plugin $pluginName found more than once")
@@ -142,7 +142,7 @@ def assertOption(scalacOptions: Seq[String], expectedOption: String): Unit = {
 def assertOptionValue(
     scalacOptions: Seq[String],
     expectedOption: String,
-    expectedValue: String
+    expectedValue: String,
 ): Unit = {
   val options = scalacOptions.filter(_.startsWith(expectedOption))
   options.size match {
@@ -155,7 +155,7 @@ def assertOptionValue(
         else option.stripPrefix(expectedOption).stripPrefix(":")
       assert(
         value == expectedValue,
-        s"wrong value for $expectedOption (actual: $value, expected: $expectedValue)"
+        s"wrong value for $expectedOption (actual: $value, expected: $expectedValue)",
       )
     case _ =>
       throw new Exception(s"duplicated $expectedOption")

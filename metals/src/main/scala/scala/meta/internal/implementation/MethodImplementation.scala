@@ -8,7 +8,7 @@ object MethodImplementation {
   def findParentSymbol(
       bottomSymbolInformation: SymbolInformation,
       parentClassSig: ClassSignature,
-      findSymbol: String => Option[SymbolInformation]
+      findSymbol: String => Option[SymbolInformation],
   ): Option[String] = {
     val validMethods = for {
       declarations <- parentClassSig.declarations.toIterable
@@ -22,7 +22,7 @@ object MethodImplementation {
   def findInherited(
       parentSymbol: SymbolInformation,
       classLocation: ClassLocation,
-      findSymbolInCurrentContext: String => Option[SymbolInformation]
+      findSymbolInCurrentContext: String => Option[SymbolInformation],
   ): Option[String] = {
     val classSymbolInfo = findSymbolInCurrentContext(classLocation.symbol)
 
@@ -40,7 +40,7 @@ object MethodImplementation {
 
   private def isOverriddenMethod(
       methodSymbolInfo: SymbolInformation,
-      parentSymbol: SymbolInformation
+      parentSymbol: SymbolInformation,
   ): Boolean = {
     methodSymbolInfo.overriddenSymbols.contains(parentSymbol.symbol)
   }

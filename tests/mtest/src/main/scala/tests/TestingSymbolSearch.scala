@@ -29,11 +29,11 @@ class TestingSymbolSearch(
     classpath: ClasspathSearch = ClasspathSearch.empty,
     docs: Docstrings = Docstrings.empty,
     workspace: TestingWorkspaceSearch = TestingWorkspaceSearch.empty,
-    index: GlobalSymbolIndex = OnDemandSymbolIndex.empty()
+    index: GlobalSymbolIndex = OnDemandSymbolIndex.empty(),
 ) extends SymbolSearch {
   override def documentation(
       symbol: String,
-      parents: ParentSymbols
+      parents: ParentSymbols,
   ): Optional[SymbolDocumentation] = {
     docs.documentation(symbol, parents)
   }
@@ -50,7 +50,7 @@ class TestingSymbolSearch(
         ju.Collections.singletonList(
           new Location(
             uri,
-            new Range(new Position(0, 0), new Position(0, 0))
+            new Range(new Position(0, 0), new Position(0, 0)),
           )
         )
     }
@@ -58,7 +58,7 @@ class TestingSymbolSearch(
 
   override def definitionSourceToplevels(
       symbol: String,
-      source: URI
+      source: URI,
   ): ju.List[String] = {
     index.definition(Symbol(symbol)) match {
       case None =>
@@ -69,7 +69,7 @@ class TestingSymbolSearch(
         val content = new String(Files.readAllBytes(value.path.toNIO))
         val input = Input.VirtualFile(
           filename,
-          content
+          content,
         )
         Mtags.toplevels(input).asJava
     }
@@ -78,7 +78,7 @@ class TestingSymbolSearch(
   override def search(
       textQuery: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor
+      visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
     workspace.search(query, visitor)

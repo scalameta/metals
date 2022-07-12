@@ -14,7 +14,7 @@ object SaveExpect {
       new DocumentSymbolScala3Suite,
       new FoldingRangeScala2Suite,
       new FoldingRangeScala3Suite,
-      new WorkspaceSymbolExpectSuite
+      new WorkspaceSymbolExpectSuite,
     ).foreach { suite =>
       val header = suite.suiteName.length + 2
       println("=" * header)

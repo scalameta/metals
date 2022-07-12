@@ -63,21 +63,21 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "foo.as@@Json.noSpaces",
-        "io/circe/syntax/package.scala"
+        "io/circe/syntax/package.scala",
       )
 
       // via Ammonite-generated Semantic DB
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "foo.asJson.no@@Spaces",
-        "io/circe/Json.scala"
+        "io/circe/Json.scala",
       )
 
       // via presentation compiler, using the Ammonite build target classpath
       _ <- assertDefinitionAtLocation(
         "io/circe/Json.scala",
         "final def noSpaces: String = Printer.no@@Spaces.print(this)",
-        "io/circe/Printer.scala"
+        "io/circe/Printer.scala",
       )
 
       // via Ammonite-generated Semantic DB and indexing of Ammonite-generated source of $file dependencies
@@ -85,7 +85,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         "main.sc",
         "decode[F@@oo](json)",
         "main.sc",
-        6
+        6,
       )
 
     } yield ()
@@ -144,7 +144,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield {
       assertNoDiff(
         client.workspaceErrorShowMessages,
-        s"Error fetching Ammonite ${V.ammoniteVersion} for scala ${fakeScalaVersion}"
+        s"Error fetching Ammonite ${V.ammoniteVersion} for scala ${fakeScalaVersion}",
       )
     }
   }
@@ -268,7 +268,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
                                   |others""".stripMargin
       completionList <- server.completion(
         "b/otherMain.sc",
-        "import $file.other@@"
+        "import $file.other@@",
       )
       _ = assertNoDiff(completionList, expectedCompletionList)
 
@@ -303,7 +303,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       expectedCompletionList = "Script.sc"
       completionList <- server.completion(
         "foo.sc",
-        "import $file.foos.Script@@"
+        "import $file.foos.Script@@",
       )
       _ = assertNoDiff(completionList, expectedCompletionList)
 
@@ -477,21 +477,21 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "foo.as@@Json.noSpaces",
-        "io/circe/syntax/package.scala"
+        "io/circe/syntax/package.scala",
       )
 
       // via Ammonite-generated Semantic DB
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "foo.asJson.no@@Spaces",
-        "io/circe/Json.scala"
+        "io/circe/Json.scala",
       )
 
       // via presentation compiler, using the Ammonite build target classpath
       _ <- assertDefinitionAtLocation(
         "io/circe/Json.scala",
         "final def noSpaces: String = Printer.no@@Spaces.print(this)",
-        "io/circe/Printer.scala"
+        "io/circe/Printer.scala",
       )
 
       // via Ammonite-generated Semantic DB and indexing of Ammonite-generated source of $file dependencies
@@ -499,21 +499,21 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         "main.sc",
         "decode[F@@oo](json)",
         "main.sc",
-        4
+        4,
       )
 
       // via Ammonite-generated Semantic DB and indexing of Ammonite-generated source of $file dependencies
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "sealed trait Foo extends Has@@ReallyFoo",
-        "lib2.sc"
+        "lib2.sc",
       )
 
       // via Ammonite-generated Semantic DB and indexing of Ammonite-generated source of $file dependencies
       _ <- assertDefinitionAtLocation(
         "lib2.sc",
         "trait HasReallyFoo extends Has@@Foo",
-        "lib1.sc"
+        "lib1.sc",
       )
 
     } yield ()

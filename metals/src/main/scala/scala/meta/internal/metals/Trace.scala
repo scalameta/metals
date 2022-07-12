@@ -34,7 +34,7 @@ object Trace {
 
   def protocolTracePath(
       protocolName: String,
-      workspace: AbsolutePath = localDirectory
+      workspace: AbsolutePath = localDirectory,
   ): AbsolutePath = {
     val traceFilename = s"${protocolName.toLowerCase}.trace.json"
     workspace.resolve(traceFilename)
@@ -46,7 +46,7 @@ object Trace {
    */
   def setupTracePrinter(
       protocolName: String,
-      workspace: AbsolutePath = PathIO.workingDirectory
+      workspace: AbsolutePath = PathIO.workingDirectory,
   ): Option[PrintWriter] = {
     val metalsDir = workspace.resolve(".metals")
     val tracePaths = (metalsDir :: globalDirectory.toList).map(dir =>
@@ -61,7 +61,7 @@ object Trace {
           val fos = Files.newOutputStream(
             head.toNIO,
             StandardOpenOption.CREATE,
-            StandardOpenOption.TRUNCATE_EXISTING // don't append infinitely to existing file
+            StandardOpenOption.TRUNCATE_EXISTING, // don't append infinitely to existing file
           )
           Some(new PrintWriter(fos))
         case _ :: tail =>

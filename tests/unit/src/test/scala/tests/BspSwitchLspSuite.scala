@@ -22,7 +22,7 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
         assertConnectedToBuildServer("Bill")
         assertNoDiff(
           client.workspaceShowMessages,
-          BspSwitch.onlyOneServer("Bill").getMessage()
+          BspSwitch.onlyOneServer("Bill").getMessage(),
         )
       }
       _ = {
@@ -35,7 +35,7 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
         assertConnectedToBuildServer("Bob")
         assertNoDiff(
           client.workspaceMessageRequests,
-          BspSwitch.message
+          BspSwitch.message,
         )
         assertNoDiff(client.workspaceShowMessages, "")
 

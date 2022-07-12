@@ -24,7 +24,7 @@ class BatchedFunctionSuite extends BaseSuite {
         mkString(List("a")),
         // Following requests will be buffered and run together
         mkString(List("b")),
-        mkString(List("c"))
+        mkString(List("c")),
       )
     }
 
@@ -35,7 +35,7 @@ class BatchedFunctionSuite extends BaseSuite {
           |a
           |bc
           |bc
-        """.stripMargin
+        """.stripMargin,
       )
     }
   }

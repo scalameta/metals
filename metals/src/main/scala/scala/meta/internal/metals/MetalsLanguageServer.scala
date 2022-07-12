@@ -115,7 +115,7 @@ class MetalsLanguageServer(
     mtagsResolver: MtagsResolver = MtagsResolver.default(),
     onStartCompilation: () => Unit = () => (),
     classpathSearchIndexer: ClasspathSearch.Indexer =
-      ClasspathSearch.Indexer.default
+      ClasspathSearch.Indexer.default,
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -144,7 +144,7 @@ class MetalsLanguageServer(
     Cancelable.cancelAll(
       List(
         Cancelable(() => ec.shutdown()),
-        Cancelable(() => sh.shutdown())
+        Cancelable(() => sh.shutdown()),
       )
     )
   }
@@ -179,14 +179,14 @@ class MetalsLanguageServer(
 
   private val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
-    buildTargets
+    buildTargets,
   )
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
     initialConfig,
     buffers,
-    buildTargets
+    buildTargets,
   )
 
   val compilations: Compilations = new Compilations(
@@ -202,7 +202,7 @@ class MetalsLanguageServer(
     },
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets),
-    onStartCompilation
+    onStartCompilation,
   )
   private val fileWatcher = register(
     new FileWatcher(
@@ -210,7 +210,7 @@ class MetalsLanguageServer(
       () => workspace,
       buildTargets,
       fileWatchFilter,
-      params => didChangeWatchedFiles(params)
+      params => didChangeWatchedFiles(params),
     )
   )
   private val indexingPromise: Promise[Unit] = Promise[Unit]()
@@ -220,7 +220,7 @@ class MetalsLanguageServer(
       buildServerPromise.future
         .flatMap(_ => parseTreesAndPublishDiags(paths))
         .ignoreValue,
-      Cancelable.empty
+      Cancelable.empty,
     )
   )
   private val onBuildChanged =
@@ -285,7 +285,7 @@ class MetalsLanguageServer(
   private val sourceMapper = SourceMapper(
     buildTargets,
     buffers,
-    () => workspace
+    () => workspace,
   )
 
   def loadedPresentationCompilerCount(): Int =
@@ -322,7 +322,7 @@ class MetalsLanguageServer(
       () => languageClient,
       time,
       progressTicks,
-      clientConfig
+      clientConfig,
     )
     embedded = register(
       new Embedded(
@@ -375,19 +375,19 @@ class MetalsLanguageServer(
         workspaceReload = new WorkspaceReload(
           workspace,
           languageClient,
-          tables
+          tables,
         )
         buildTools = new BuildTools(
           workspace,
           bspGlobalDirectories,
           () => userConfig,
-          () => tables.buildServers.selectedServer().nonEmpty
+          () => tables.buildServers.selectedServer().nonEmpty,
         )
         fileSystemSemanticdbs = new FileSystemSemanticdbs(
           buildTargets,
           charset,
           workspace,
-          fingerprints
+          fingerprints,
         )
 
         val optJavaHome =
@@ -403,7 +403,7 @@ class MetalsLanguageServer(
               javaHome,
               workspace,
               buildTargets,
-              jdkVersion
+              jdkVersion,
             )
           } yield javaSemanticDb
 
@@ -418,7 +418,7 @@ class MetalsLanguageServer(
             () => compilers,
             clientConfig,
             () => semanticDBIndexer,
-            javaInteractiveSemanticdb
+            javaInteractiveSemanticdb,
           )
         )
         warnings = new Warnings(
@@ -427,14 +427,14 @@ class MetalsLanguageServer(
           statusBar,
           clientConfig.icons,
           buildTools,
-          compilations.isCurrentlyCompiling
+          compilations.isCurrentlyCompiling,
         )
         diagnostics = new Diagnostics(
           buffers,
           languageClient,
           clientConfig.initialConfig.statistics,
           Option(workspace),
-          trees
+          trees,
         )
         buildClient = new ForwardingMetalsBuildClient(
           languageClient,
@@ -451,7 +451,7 @@ class MetalsLanguageServer(
             treeView.onBuildTargetDidCompile(target)
             worksheetProvider.onBuildTargetDidCompile(target)
           },
-          onBuildTargetDidChangeFunc = maybeQuickConnectToBuildServer
+          onBuildTargetDidChangeFunc = maybeQuickConnectToBuildServer,
         )
         shellRunner = register(
           new ShellRunner(languageClient, () => userConfig, time, statusBar)
@@ -461,12 +461,12 @@ class MetalsLanguageServer(
           languageClient,
           buildTools,
           tables,
-          shellRunner
+          shellRunner,
         )
         bspConfigGenerator = new BspConfigGenerator(
           workspace,
           languageClient,
-          shellRunner
+          shellRunner,
         )
         newProjectProvider = new NewProjectProvider(
           languageClient,
@@ -474,13 +474,13 @@ class MetalsLanguageServer(
           clientConfig,
           shellRunner,
           clientConfig.icons,
-          workspace
+          workspace,
         )
         bloopServers = new BloopServers(
           buildClient,
           languageClient,
           tables,
-          clientConfig.initialConfig
+          clientConfig.initialConfig,
         )
         bspServers = new BspServers(
           workspace,
@@ -489,11 +489,11 @@ class MetalsLanguageServer(
           buildClient,
           tables,
           bspGlobalDirectories,
-          clientConfig.initialConfig
+          clientConfig.initialConfig,
         )
         buildToolSelector = new BuildToolSelector(
           languageClient,
-          tables
+          tables,
         )
         bspConnector = new BspConnector(
           bloopServers,
@@ -504,12 +504,12 @@ class MetalsLanguageServer(
           () => userConfig,
           statusBar,
           bspConfigGenerator,
-          () => bspSession.map(_.mainConnection)
+          () => bspSession.map(_.mainConnection),
         )
         semanticdbs = AggregateSemanticdbs(
           List(
             fileSystemSemanticdbs,
-            interactiveSemanticdbs
+            interactiveSemanticdbs,
           )
         )
         definitionProvider = new DefinitionProvider(
@@ -524,7 +524,7 @@ class MetalsLanguageServer(
           trees,
           buildTargets,
           scalaVersionSelector,
-          saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported()
+          saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
         )
         formattingProvider = new FormattingProvider(
           workspace,
@@ -535,19 +535,19 @@ class MetalsLanguageServer(
           statusBar,
           clientConfig.icons,
           tables,
-          buildTargets
+          buildTargets,
         )
         javaFormattingProvider = new JavaFormattingProvider(
           buffers,
           () => userConfig,
-          buildTargets
+          buildTargets,
         )
         newFileProvider = new NewFileProvider(
           workspace,
           languageClient,
           packageProvider,
           () => focusedDocument,
-          scalaVersionSelector
+          scalaVersionSelector,
         )
         referencesProvider = new ReferenceProvider(
           workspace,
@@ -556,7 +556,7 @@ class MetalsLanguageServer(
           definitionProvider,
           remote,
           trees,
-          buildTargets
+          buildTargets,
         )
         implementationProvider = new ImplementationProvider(
           semanticdbs,
@@ -566,13 +566,13 @@ class MetalsLanguageServer(
           buffers,
           definitionProvider,
           trees,
-          scalaVersionSelector
+          scalaVersionSelector,
         )
 
         supermethods = new Supermethods(
           languageClient,
           definitionProvider,
-          implementationProvider
+          implementationProvider,
         )
 
         val runTestLensProvider =
@@ -583,14 +583,14 @@ class MetalsLanguageServer(
             clientConfig,
             () => userConfig,
             () => bspSession.exists(_.main.isBloopOrSbt),
-            trees
+            trees,
           )
 
         val goSuperLensProvider = new SuperMethodCodeLens(
           buffers,
           () => userConfig,
           clientConfig,
-          trees
+          trees,
         )
 
         stacktraceAnalyzer = new StacktraceAnalyzer(
@@ -598,13 +598,13 @@ class MetalsLanguageServer(
           buffers,
           definitionProvider,
           clientConfig.icons,
-          clientConfig.commandInHtmlFormat()
+          clientConfig.commandInHtmlFormat(),
         )
         val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
         codeLensProvider = new CodeLensProvider(
           List(runTestLensProvider, goSuperLensProvider, worksheetCodeLens),
           semanticdbs,
-          stacktraceAnalyzer
+          stacktraceAnalyzer,
         )
         renameProvider = new RenameProvider(
           referencesProvider,
@@ -615,7 +615,7 @@ class MetalsLanguageServer(
           buffers,
           compilations,
           clientConfig,
-          trees
+          trees,
         )
         syntheticsDecorator = new SyntheticsDecorationProvider(
           workspace,
@@ -627,7 +627,7 @@ class MetalsLanguageServer(
           () => focusedDocument,
           clientConfig,
           () => userConfig,
-          trees
+          trees,
         )
         testProvider = new TestSuitesProvider(
           buildTargets,
@@ -638,21 +638,21 @@ class MetalsLanguageServer(
           buffers,
           clientConfig,
           () => userConfig,
-          languageClient
+          languageClient,
         )
         semanticDBIndexer = new SemanticdbIndexer(
           List(
             referencesProvider,
             implementationProvider,
             syntheticsDecorator,
-            testProvider
+            testProvider,
           ),
           buildTargets,
-          workspace
+          workspace,
         )
         documentHighlightProvider = new DocumentHighlightProvider(
           definitionProvider,
-          semanticdbs
+          semanticdbs,
         )
         workspaceSymbols = new WorkspaceSymbolProvider(
           workspace,
@@ -660,12 +660,12 @@ class MetalsLanguageServer(
           definitionIndex,
           saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
           () => excludedPackageHandler,
-          classpathSearchIndexer = classpathSearchIndexer
+          classpathSearchIndexer = classpathSearchIndexer,
         )
         symbolSearch = new MetalsSymbolSearch(
           symbolDocs,
           workspaceSymbols,
-          definitionProvider
+          definitionProvider,
         )
         compilers = register(
           new Compilers(
@@ -683,7 +683,7 @@ class MetalsLanguageServer(
             scalaVersionSelector,
             trees,
             mtagsResolver,
-            sourceMapper
+            sourceMapper,
           )
         )
         debugProvider = new DebugProvider(
@@ -702,7 +702,7 @@ class MetalsLanguageServer(
           semanticdbs,
           compilers,
           () => bspSession.exists(_.main.isBloopOrSbt),
-          statusBar
+          statusBar,
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -713,7 +713,7 @@ class MetalsLanguageServer(
           languageClient,
           buildTargets,
           buildClient,
-          interactiveSemanticdbs
+          interactiveSemanticdbs,
         )
         codeActionProvider = new CodeActionProvider(
           compilers,
@@ -722,7 +722,7 @@ class MetalsLanguageServer(
           scalafixProvider,
           trees,
           diagnostics,
-          languageClient
+          languageClient,
         )
 
         doctor = new Doctor(
@@ -737,7 +737,7 @@ class MetalsLanguageServer(
           clientConfig,
           mtagsResolver,
           () => userConfig.javaHome,
-          maybeJdkVersion
+          maybeJdkVersion,
         )
 
         fileDecoderProvider = new FileDecoderProvider(
@@ -750,7 +750,7 @@ class MetalsLanguageServer(
           interactiveSemanticdbs,
           languageClient,
           clientConfig,
-          classFinder
+          classFinder,
         )
         popupChoiceReset = new PopupChoiceReset(
           workspace,
@@ -759,7 +759,7 @@ class MetalsLanguageServer(
           doctor,
           () => slowConnectToBuildServer(forceImport = true),
           bspConnector,
-          () => quickConnectToBuildServer()
+          () => quickConnectToBuildServer(),
         )
 
         val worksheetPublisher =
@@ -782,7 +782,7 @@ class MetalsLanguageServer(
             worksheetPublisher,
             compilers,
             compilations,
-            scalaVersionSelector
+            scalaVersionSelector,
           )
         )
         ammonite = register(
@@ -801,7 +801,7 @@ class MetalsLanguageServer(
             () => focusedDocument,
             () => buildTools,
             clientConfig.initialConfig,
-            scalaVersionSelector
+            scalaVersionSelector,
           )
         )
         buildTargets.addData(ammonite.buildTargetsData)
@@ -815,14 +815,14 @@ class MetalsLanguageServer(
             clientConfig.initialConfig.statistics,
             id => compilations.compileTarget(id),
             sh,
-            () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false)
+            () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false),
           )
         }
         findTextInJars = new FindTextInDependencyJars(
           buildTargets,
           () => workspace,
           languageClient,
-          saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported()
+          saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
         )
     }
   }
@@ -878,7 +878,7 @@ class MetalsLanguageServer(
         capabilities.setCompletionProvider(
           new CompletionOptions(
             clientConfig.isCompletionItemResolve,
-            List(".", "*").asJava
+            List(".", "*").asJava,
           )
         )
         capabilities.setWorkspaceSymbolProvider(true)
@@ -890,7 +890,7 @@ class MetalsLanguageServer(
               List(
                 CodeActionKind.QuickFix,
                 CodeActionKind.Refactor,
-                CodeActionKind.SourceOrganizeImports
+                CodeActionKind.SourceOrganizeImports,
               ).asJava
             )
           )
@@ -931,7 +931,7 @@ class MetalsLanguageServer(
               "workspace/didChangeWatchedFiles",
               clientConfig.globSyntax.registrationOptions(
                 this.workspace
-              )
+              ),
             )
           ).asJava
         )
@@ -954,7 +954,7 @@ class MetalsLanguageServer(
           () => render(),
           e => completeCommand(e),
           () => doctor.problemsHtmlPage(url),
-          (uri) => fileDecoderProvider.getTastyForURI(uri)
+          (uri) => fileDecoderProvider.getTastyForURI(uri),
         )
       )
       httpServer = Some(server)
@@ -966,7 +966,7 @@ class MetalsLanguageServer(
         clientConfig.icons,
         time,
         sh,
-        clientConfig
+        clientConfig,
       )
       render = () => newClient.renderHtml
       completeCommand = e => newClient.completeCommand(e)
@@ -996,7 +996,7 @@ class MetalsLanguageServer(
             slowConnectToBuildServer(forceImport = false).ignoreValue,
             Future(workspaceSymbols.indexClasspath()),
             Future(startHttpServer()),
-            Future(formattingProvider.load())
+            Future(formattingProvider.load()),
           )
         )
         .ignoreValue
@@ -1046,7 +1046,7 @@ class MetalsLanguageServer(
     try {
       Await.result(
         shutdownPromise.get().future,
-        Duration(3, TimeUnit.SECONDS)
+        Duration(3, TimeUnit.SECONDS),
       )
     } catch {
       case NonFatal(e) =>
@@ -1089,7 +1089,7 @@ class MetalsLanguageServer(
       _ <- Future.sequence(
         List(
           syntheticsDecorator.publishSynthetics(path),
-          testProvider.didOpen(path)
+          testProvider.didOpen(path),
         )
       )
     } yield ()
@@ -1108,7 +1108,7 @@ class MetalsLanguageServer(
         Future.sequence(
           List(
             compilers.load(List(path)),
-            compilations.compileFile(path)
+            compilations.compileFile(path),
           )
         )
       }
@@ -1116,7 +1116,7 @@ class MetalsLanguageServer(
         .sequence(
           List(
             compileAndLoad,
-            publishSynthetics
+            publishSynthetics,
           )
         )
         .ignoreValue
@@ -1167,14 +1167,14 @@ class MetalsLanguageServer(
                 path.isWorksheet ||
                   buildTargets.isInverseDependency(
                     target,
-                    compilations.currentlyCompiling.toList
+                    compilations.currentlyCompiling.toList,
                   )
 
               def isAffectedByLastCompilation: Boolean =
                 !compilations.wasPreviouslyCompiled(target) &&
                   buildTargets.isInverseDependency(
                     target,
-                    compilations.previouslyCompiled.toList
+                    compilations.previouslyCompiled.toList,
                   )
 
               val needsCompile =
@@ -1248,7 +1248,7 @@ class MetalsLanguageServer(
         List(
           Future(renameProvider.runSave()),
           parseTrees(path),
-          onChange(List(path))
+          onChange(List(path)),
         )
       )
       .ignoreValue
@@ -1329,13 +1329,13 @@ class MetalsLanguageServer(
                   session.version,
                   userConfig.bloopVersion.nonEmpty,
                   old.bloopVersion.isDefined,
-                  () => autoConnectToBuildServer
+                  () => autoConnectToBuildServer,
                 )
                 .flatMap { _ =>
                   bloopServers.ensureDesiredJvmSettings(
                     userConfig.bloopJvmProperties,
                     userConfig.javaHome,
-                    () => autoConnectToBuildServer()
+                    () => autoConnectToBuildServer(),
                   )
                 }
             } else if (
@@ -1435,7 +1435,7 @@ class MetalsLanguageServer(
         List(
           Future(indexer.reindexWorkspaceSources(paths)),
           compilations.compileFiles(paths),
-          onBuildChanged(paths).ignoreValue
+          onBuildChanged(paths).ignoreValue,
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
@@ -1566,7 +1566,7 @@ class MetalsLanguageServer(
   // user to run references again to see updated results.
   private def compileAndLookForNewReferences(
       params: ReferenceParams,
-      result: List[ReferencesResult]
+      result: List[ReferencesResult],
   ): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val old = path.toInputFromBuffers(buffers)
@@ -1579,7 +1579,7 @@ class MetalsLanguageServer(
           edit
             .toRevised(
               params.getPosition.getLine,
-              params.getPosition.getCharacter
+              params.getPosition.getCharacter,
             )
             .foldResult(
               pos => {
@@ -1588,7 +1588,7 @@ class MetalsLanguageServer(
                 Some(params)
               },
               () => Some(params),
-              () => None
+              () => None,
             )
         }
       newParams match {
@@ -1673,7 +1673,7 @@ class MetalsLanguageServer(
     CancelTokens { _ =>
       timerProvider.timedThunk(
         "code lens generation",
-        thresholdMillis = 1.second.toMillis
+        thresholdMillis = 1.second.toMillis,
       ) {
         val path = params.getTextDocument.getUri.toAbsolutePath
         codeLensProvider.findLenses(path).toList.asJava
@@ -1777,7 +1777,7 @@ class MetalsLanguageServer(
         fileDecoderProvider
           .chooseClassFromFile(
             params.textDocument.getUri().toAbsolutePath,
-            params.kind == "class"
+            params.kind == "class",
           )
           .asJavaObject
       case ServerCommands.RunDoctor() =>
@@ -1796,7 +1796,7 @@ class MetalsLanguageServer(
         (for {
           isSwitched <- bspConnector.switchBuildServer(
             workspace,
-            () => slowConnectToBuildServer(forceImport = true)
+            () => slowConnectToBuildServer(forceImport = true),
           )
           _ <- {
             if (isSwitched) quickConnectToBuildServer()
@@ -1826,7 +1826,7 @@ class MetalsLanguageServer(
             ClientCommands.GotoLocation.toExecuteCommandParams(
               ClientCommands.WindowLocation(
                 location.getUri(),
-                location.getRange()
+                location.getRange(),
               )
             )
           )
@@ -1844,7 +1844,7 @@ class MetalsLanguageServer(
               ClientCommands.GotoLocation.toExecuteCommandParams(
                 ClientCommands.WindowLocation(
                   location.getUri(),
-                  location.getRange()
+                  location.getRange(),
                 )
               )
             )
@@ -1857,13 +1857,13 @@ class MetalsLanguageServer(
           val pos = new l.Position(linesCount, 0)
           val location = new Location(
             log.toURI.toString(),
-            new l.Range(pos, pos)
+            new l.Range(pos, pos),
           )
           languageClient.metalsExecuteClientCommand(
             ClientCommands.GotoLocation.toExecuteCommandParams(
               ClientCommands.WindowLocation(
                 location.getUri(),
-                location.getRange()
+                location.getRange(),
               )
             )
           )
@@ -1908,8 +1908,8 @@ class MetalsLanguageServer(
             "Starting debug server",
             debugProvider.start(
               params,
-              scalaVersionSelector
-            )
+              scalaVersionSelector,
+            ),
           )
         } yield {
           statusBar.addMessage("Started debug server!")
@@ -2016,7 +2016,7 @@ class MetalsLanguageServer(
             edits <- compilers.convertToNamedArguments(
               position,
               argIndices,
-              token
+              token,
             )
             if (!edits.isEmpty())
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
@@ -2037,7 +2037,7 @@ class MetalsLanguageServer(
               ClientCommands.GotoLocation.toExecuteCommandParams(
                 ClientCommands.WindowLocation(
                   location.getUri(),
-                  location.getRange()
+                  location.getRange(),
                 )
               )
             )
@@ -2109,7 +2109,7 @@ class MetalsLanguageServer(
       treeView
         .reveal(
           params.getTextDocument().getUri().toAbsolutePath,
-          params.getPosition()
+          params.getPosition(),
         )
         .orNull
     }.asJava
@@ -2129,7 +2129,7 @@ class MetalsLanguageServer(
 
     def ensureAndConnect(
         buildTool: BuildServerProvider,
-        status: BspConfigGenerationStatus
+        status: BspConfigGenerationStatus,
     ): Unit =
       status match {
         case Generated =>
@@ -2166,8 +2166,8 @@ class MetalsLanguageServer(
             args =>
               bspConfigGenerator.runUnconditionally(
                 buildTool,
-                args
-              )
+                args,
+              ),
           )
           .map(status => ensureAndConnect(buildTool, status))
       case buildTools =>
@@ -2176,7 +2176,7 @@ class MetalsLanguageServer(
           .map {
             case (
                   buildTool: BuildServerProvider,
-                  status: BspConfigGenerationStatus
+                  status: BspConfigGenerationStatus,
                 ) =>
               ensureAndConnect(buildTool, status)
           }
@@ -2187,7 +2187,7 @@ class MetalsLanguageServer(
     def isCompatibleVersion(buildTool: BuildTool) = {
       val isCompatibleVersion = SemVer.isCompatibleVersion(
         buildTool.minimumVersion,
-        buildTool.version
+        buildTool.version,
       )
       if (isCompatibleVersion) {
         Some(buildTool)
@@ -2246,7 +2246,7 @@ class MetalsLanguageServer(
   private def slowConnectToBloopServer(
       forceImport: Boolean,
       buildTool: BuildTool,
-      checksum: String
+      checksum: String,
   ): Future[BuildChange] =
     for {
       result <- {
@@ -2426,13 +2426,13 @@ class MetalsLanguageServer(
         Indexer.BuildTool(
           "main",
           mainBuildTargetsData,
-          ImportedBuild.fromList(lastImportedBuilds)
+          ImportedBuild.fromList(lastImportedBuilds),
         ),
         Indexer.BuildTool(
           "ammonite",
           ammonite.buildTargetsData,
-          ammonite.lastImportedBuild
-        )
+          ammonite.lastImportedBuild,
+        ),
       ),
     clientConfig,
     definitionIndex,
@@ -2455,7 +2455,7 @@ class MetalsLanguageServer(
     sh,
     symbolDocs,
     scalaVersionSelector,
-    sourceMapper
+    sourceMapper,
   )
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
@@ -2465,7 +2465,7 @@ class MetalsLanguageServer(
         val messageParams = IncompatibleBloopVersion.params(
           bspServerVersion,
           BuildInfo.bloopVersion,
-          isChangedInSettings = userConfig.bloopVersion != None
+          isChangedInSettings = userConfig.bloopVersion != None,
         )
         languageClient.showMessageRequest(messageParams).asScala.foreach {
           case action if action == IncompatibleBloopVersion.shutdown =>
@@ -2517,7 +2517,7 @@ class MetalsLanguageServer(
   def definitionOrReferences(
       positionParams: TextDocumentPositionParams,
       token: CancelToken = EmptyCancelToken,
-      definitionOnly: Boolean = false
+      definitionOnly: Boolean = false,
   ): Future[DefinitionResult] = {
     val source = positionParams.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename || source.isJavaFilename) {
@@ -2528,7 +2528,7 @@ class MetalsLanguageServer(
         positionOccurrence = definitionProvider.positionOccurrence(
           source,
           positionParams.getPosition,
-          doc
+          doc,
         )
         occ <- positionOccurrence.occurrence
       } yield occ) match {
@@ -2537,7 +2537,7 @@ class MetalsLanguageServer(
             val refParams = new ReferenceParams(
               positionParams.getTextDocument(),
               positionParams.getPosition(),
-              new ReferenceContext(false)
+              new ReferenceContext(false),
             )
             val results = referencesResult(refParams)
             if (results.flatMap(_.locations).isEmpty) {
@@ -2551,7 +2551,7 @@ class MetalsLanguageServer(
                   locations = results.flatMap(_.locations).asJava,
                   symbol = results.head.symbol,
                   definition = None,
-                  semanticdb = None
+                  semanticdb = None,
                 )
               )
             }
@@ -2579,14 +2579,14 @@ class MetalsLanguageServer(
    */
   def definitionResult(
       position: TextDocumentPositionParams,
-      token: CancelToken = EmptyCancelToken
+      token: CancelToken = EmptyCancelToken,
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename || source.isJavaFilename) {
       val result =
         timerProvider.timedThunk(
           "definition",
-          clientConfig.initialConfig.statistics.isDefinition
+          clientConfig.initialConfig.statistics.isDefinition,
         )(
           definitionProvider.definition(source, position, token)
         )
@@ -2620,7 +2620,7 @@ class MetalsLanguageServer(
         case NonFatal(e) =>
           scribe.error("unexpected error during source scanning", e)
       },
-      toIndexSource = path => sourceMapper.mappedTo(path).getOrElse(path)
+      toIndexSource = path => sourceMapper.mappedTo(path).getOrElse(path),
     )
   }
 

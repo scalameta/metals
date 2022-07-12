@@ -16,7 +16,7 @@ object MetalsSignatures:
   def signatures(
       search: SymbolSearch,
       path: List[tpd.Tree],
-      pos: SourcePosition
+      pos: SourcePosition,
   )(using Context): (Int, Int, List[(Signature, Denotation)]) =
     val (paramN, callableN, alternatives) =
       Signatures.callInfo(path, pos.span)

@@ -66,7 +66,7 @@ abstract class BasePCSuite extends BaseSuite {
         .fromClasspath(myclasspath, ExcludedPackagesHandler.default),
       new Docstrings(index),
       workspace,
-      index
+      index,
     )
 
     val scalacOpts = scalacOptions(myclasspath)
@@ -108,7 +108,7 @@ abstract class BasePCSuite extends BaseSuite {
 
   private def indexScalaLibrary(
       index: GlobalSymbolIndex,
-      scalaVersion: String
+      scalaVersion: String,
   ): Unit = {
     val sources = Fetch
       .create()
@@ -125,7 +125,7 @@ abstract class BasePCSuite extends BaseSuite {
             case v if isScala3Version(v) => BuildInfoVersions.scala213
             case v if v.startsWith("2.12") => v
             case _ => BuildInfoVersions.scala212
-          }
+          },
         )
       )
       .fetch()
@@ -150,7 +150,7 @@ abstract class BasePCSuite extends BaseSuite {
         "Append Scala version",
         { test =>
           test.withName(test.name + "_" + scalaVersion)
-        }
+        },
       ),
       new TestTransform(
         "Ignore Scala version",
@@ -163,7 +163,7 @@ abstract class BasePCSuite extends BaseSuite {
           if (isIgnoredScalaVersion)
             test.withTags(test.tags + munit.Ignore)
           else test
-        }
+        },
       ),
       new TestTransform(
         "Run for Scala version",
@@ -176,8 +176,8 @@ abstract class BasePCSuite extends BaseSuite {
             }
             .getOrElse(test)
 
-        }
-      )
+        },
+      ),
     )
 
   def params(code: String, filename: String = "test.scala"): (String, Int) = {
@@ -192,7 +192,7 @@ abstract class BasePCSuite extends BaseSuite {
 
   def hoverParams(
       code: String,
-      filename: String = "test.scala"
+      filename: String = "test.scala",
   ): (String, Int, Int) = {
     val code2 = code.replace("@@", "").replace("%<%", "").replace("%>%", "")
     val positionOffset =

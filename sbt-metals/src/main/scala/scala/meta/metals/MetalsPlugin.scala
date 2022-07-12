@@ -44,7 +44,7 @@ object MetalsPlugin extends AutoPlugin {
           "-P:semanticdb:synthetics:on",
           // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
           "-P:semanticdb:failures:warning",
-          s"-P:semanticdb:sourceroot:${(ThisBuild / baseDirectory).value}"
+          s"-P:semanticdb:sourceroot:${(ThisBuild / baseDirectory).value}",
         )
     },
     javaSemanticdbEnabled := bspEnabled.value,
@@ -76,14 +76,14 @@ object MetalsPlugin extends AutoPlugin {
         val configurations = Seq(
           Configurations.CompileInternal,
           Configurations.TestInternal,
-          Configurations.IntegrationTestInternal
+          Configurations.IntegrationTestInternal,
         ).map(_.name).filter(existing.contains).mkString(",")
         List(
           "com.sourcegraph" % "semanticdb-javac" % BuildInfo.javaSemanticdbVersion % configurations
         )
       } else
         Nil
-    }
+    },
   )
 
   private def processJavaHome: File = file(System.getProperty("java.home"))
@@ -105,7 +105,7 @@ object MetalsPlugin extends AutoPlugin {
         val compilerPackages = List(
           "com.sun.tools.javac.api", "com.sun.tools.javac.code",
           "com.sun.tools.javac.model", "com.sun.tools.javac.tree",
-          "com.sun.tools.javac.util"
+          "com.sun.tools.javac.util",
         )
         compilerPackages.flatMap(pkg =>
           List(s"-J--add-exports", s"-Jjdk.compiler/$pkg=ALL-UNNAMED")

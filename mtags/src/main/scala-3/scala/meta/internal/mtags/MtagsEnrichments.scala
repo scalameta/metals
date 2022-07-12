@@ -91,7 +91,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
     def toLSP: l.Range =
       new l.Range(
         offsetToPos(pos.start),
-        offsetToPos(pos.end)
+        offsetToPos(pos.end),
       )
 
     def withEnd(end: Int): SourcePosition =
@@ -166,7 +166,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
       val sym = toSemanticdbSymbol(symbol)
       val documentation = search.documentation(
         sym,
-        () => symbol.allOverriddenSymbols.map(toSemanticdbSymbol).toList.asJava
+        () => symbol.allOverriddenSymbols.map(toSemanticdbSymbol).toList.asJava,
       )
       if documentation.isPresent then Some(documentation.get())
       else None
@@ -196,7 +196,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
         case MultiDenotation(denot1, denot2) =>
           List(
             denot1.allSymbols,
-            denot2.allSymbols
+            denot2.allSymbols,
           ).flatten
         case NoDenotation => Nil
         case _ =>

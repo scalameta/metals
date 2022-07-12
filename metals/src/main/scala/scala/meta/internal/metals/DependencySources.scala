@@ -10,7 +10,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 final class DependencySources(conn: () => Connection) {
   def setBuildTarget(
       dependencySource: AbsolutePath,
-      buildTarget: BuildTargetIdentifier
+      buildTarget: BuildTargetIdentifier,
   ): Int = {
     conn().update(
       "merge into dependency_source key(text_document_uri) values (?, ?);"

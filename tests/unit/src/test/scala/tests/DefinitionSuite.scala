@@ -29,7 +29,7 @@ abstract class DefinitionSuiteBase(
     inputProps: InputProperties,
     directory: String,
     dialect: Dialect,
-    badFileNames: List[String] = List.empty
+    badFileNames: List[String] = List.empty,
 ) extends DirectoryExpectSuite(directory) {
 
   override lazy val input: InputProperties = inputProps
@@ -45,7 +45,7 @@ abstract class DefinitionSuiteBase(
     input.dependencySources.entries.foreach { jar =>
       index.addSourceJar(
         jar,
-        ScalaVersions.dialectForDependencyJar(jar.filename)
+        ScalaVersions.dialectForDependencyJar(jar.filename),
       )
     }
 
@@ -116,7 +116,7 @@ abstract class DefinitionSuiteBase(
                               scribe.error(
                                 token.pos.formatMessage(
                                   "error",
-                                  s"missing definition for $symbol"
+                                  s"missing definition for $symbol",
                                 )
                               )
                             }
@@ -142,7 +142,7 @@ abstract class DefinitionSuiteBase(
           })
           val obtained = sb.toString()
           obtained
-        }
+        },
       )
     }
   }
@@ -174,7 +174,7 @@ class DefinitionScala2Suite
       dialect = dialects.Scala213,
       badFileNames = List(
         "ForComprehensions.scala" // local symbols in large for comprehensions cause problems
-      )
+      ),
     )
 
 class DefinitionScala3Suite
@@ -184,5 +184,5 @@ class DefinitionScala3Suite
       dialect = dialects.Scala3,
       badFileNames = List(
         "Extension.scala"
-      )
+      ),
     )

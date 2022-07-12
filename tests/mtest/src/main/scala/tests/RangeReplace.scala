@@ -11,7 +11,7 @@ trait RangeReplace {
       base: String,
       range: Range,
       prefix: String = "<<",
-      suffix: String = ">>"
+      suffix: String = ">>",
   ): String = {
     val input = Input.String(base)
     val pos = range.toMeta(input)

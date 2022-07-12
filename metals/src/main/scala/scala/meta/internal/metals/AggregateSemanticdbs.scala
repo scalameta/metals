@@ -14,7 +14,7 @@ final case class AggregateSemanticdbs(underlying: List[Semanticdbs])
   override def textDocument(path: AbsolutePath): TextDocumentLookup = {
     def loop(
         xs: List[Semanticdbs],
-        errors: List[TextDocumentLookup]
+        errors: List[TextDocumentLookup],
     ): TextDocumentLookup =
       xs match {
         case Nil =>

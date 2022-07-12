@@ -8,5 +8,5 @@ class SbtBreakpointDapSuite
     extends BaseBreakpointDapSuite(
       "sbt-debug-breakpoint",
       SbtServerInitializer,
-      SbtBuildLayout
+      SbtBuildLayout,
     )

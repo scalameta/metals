@@ -23,7 +23,7 @@ sealed trait BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       layout: String,
-      expectError: Boolean
+      expectError: Boolean,
   )(implicit ec: ExecutionContext): Future[InitializeResult]
 }
 
@@ -38,7 +38,7 @@ object QuickBuildInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       layout: String,
-      expectError: Boolean
+      expectError: Boolean,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     QuickBuild.bloopInstall(workspace)
     for {
@@ -64,7 +64,7 @@ object BloopImportInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       layout: String,
-      expectError: Boolean
+      expectError: Boolean,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()
@@ -92,7 +92,7 @@ object SbtServerInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       layout: String,
-      expectError: Boolean
+      expectError: Boolean,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     val sbtVersion =
       SbtBuildTool
@@ -115,7 +115,7 @@ object SbtServerInitializer extends BuildServerInitializer {
 
   private def generateBspConfig(
       workspace: AbsolutePath,
-      sbtVersion: String
+      sbtVersion: String,
   ): Unit = {
     val bspFolder = workspace.resolve(".bsp")
     val sbtJson = bspFolder.resolve("sbt.json")
@@ -132,14 +132,14 @@ object SbtServerInitializer extends BuildServerInitializer {
         sbtLaunchJar.toString,
         "xsbt.boot.Boot",
         "-bsp",
-        s"--sbt-launch-jar=$sbtLaunchJar"
+        s"--sbt-launch-jar=$sbtLaunchJar",
       )
       val connectionDetails = new BspConnectionDetails(
         "sbt",
         argv.asJava,
         sbtVersion,
         "2.0.0-M5",
-        List("scala").asJava
+        List("scala").asJava,
       )
       val gson = new Gson()
       sbtJson.writeText(gson.toJson(connectionDetails))
@@ -154,7 +154,7 @@ object MillServerInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       layout: String,
-      expectError: Boolean
+      expectError: Boolean,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()

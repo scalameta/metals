@@ -29,7 +29,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 
 private[debug] final class RemoteServer(
     socket: Socket,
-    listener: RemoteServer.Listener
+    listener: RemoteServer.Listener,
 )(implicit ec: ExecutionContext)
     extends IDebugProtocolServer
     with Cancelable {
@@ -165,7 +165,7 @@ private[debug] final class RemoteServer(
 
   private def sendRequest[A, B: ClassTag](
       endpoint: String,
-      arg: A
+      arg: A,
   ): CompletableFuture[B] = {
     val request = new Request()
     request.setId(id.getAndIncrement())

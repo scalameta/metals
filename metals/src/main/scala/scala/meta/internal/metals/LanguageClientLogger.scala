@@ -17,7 +17,7 @@ object LanguageClientLogger extends Writer {
   override def write(
       record: LogRecord,
       output: LogOutput,
-      outputFormat: OutputFormat
+      outputFormat: OutputFormat,
   ): Unit = {
     languageClient.foreach { client =>
       client.logMessage(new MessageParams(MessageType.Log, output.plainText))

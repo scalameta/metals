@@ -20,7 +20,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
   private def normalizeSpacesAndTabs(
       line: String,
       opts: FmtOptions,
-      firstLineStart: Option[Int] = None
+      firstLineStart: Option[Int] = None,
   ): String = {
     import opts._
     val (prePasted, pastedLine) = line.splitAt(firstLineStart.getOrElse(0))
@@ -94,14 +94,14 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
             currentIndentationLevel,
             pastedLines,
             opts,
-            originalStart
+            originalStart,
           )
 
         if (formatted.nonEmpty)
           Some(
             new TextEdit(
               pastedRange,
-              formatted.mkString(System.lineSeparator)
+              formatted.mkString(System.lineSeparator),
             ) :: Nil
           )
         else
@@ -116,7 +116,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       expectedIndent: Int,
       lines: Array[String],
       opts: FmtOptions,
-      startCharacter: Int
+      startCharacter: Int,
   ): Array[String] = {
 
     /*
@@ -141,7 +141,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       case (line, 0) =>
         PastedLine.firstOrEmpty(
           normalizeSpacesAndTabs(line, opts, Some(startCharacter)),
-          startCharacter
+          startCharacter,
         )
       case (line, _) =>
         PastedLine.plainOrEmpty(normalizeSpacesAndTabs(line, opts))
@@ -175,7 +175,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       def reformat(
           expectedIdent: Int,
           overIndent: Int,
-          opts: FmtOptions
+          opts: FmtOptions,
       ): String = ""
     }
 
@@ -186,7 +186,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
     case class FirstLine(
         beforePaste: String,
         pasted: String,
-        full: String
+        full: String,
     ) extends NonEmpty {
 
       val pastedIndent: Int = codeStartPosition(pasted).getOrElse(0)
@@ -194,7 +194,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       def reformat(
           expectedIdent: Int,
           overIndent: Int,
-          opts: FmtOptions
+          opts: FmtOptions,
       ): String = {
         val identToStart = codeStartPosition(full).getOrElse(0)
 
@@ -221,7 +221,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
         else
           opts.blank.stringRepeat(expected) + line.substring(
             overIndent,
-            line.length
+            line.length,
           )
       }
     }
@@ -236,7 +236,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
         FirstLine(
           beforePaste,
           pasted,
-          line
+          line,
         )
       }
     }

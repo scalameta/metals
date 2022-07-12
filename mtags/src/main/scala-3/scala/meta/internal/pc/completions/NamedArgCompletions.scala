@@ -23,7 +23,7 @@ object NamedArgCompletions:
 
   def contribute(
       pos: SourcePosition,
-      path: List[Tree]
+      path: List[Tree],
   )(using ctx: Context): List[CompletionValue] =
     path match
       case (ident: Ident) :: (app: Apply) :: _ => // fun(arg@@)
@@ -38,7 +38,7 @@ object NamedArgCompletions:
   private def contribute(
       ident: Option[Ident],
       apply: Apply,
-      pos: SourcePosition
+      pos: SourcePosition,
   )(using Context): List[CompletionValue] =
     def isUselessLiteral(arg: Tree): Boolean =
       arg match
@@ -107,7 +107,7 @@ object NamedArgCompletions:
     params.map(p =>
       CompletionValue.namedArg(
         s"${p.nameBackticked} = ",
-        p
+        p,
       )
     )
   end contribute

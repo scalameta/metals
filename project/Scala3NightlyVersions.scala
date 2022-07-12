@@ -7,7 +7,7 @@ object Scala3NightlyVersions {
     Set(
       "3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY",
       "3.2.0-RC1-bin-20220308-29073f1-NIGHTLY",
-      "3.1.3-RC1-bin-20220406-73cda0c-NIGHTLY"
+      "3.1.3-RC1-bin-20220406-73cda0c-NIGHTLY",
     ).flatMap(DottyVersion.parse)
 
   /**
@@ -52,7 +52,7 @@ object Scala3NightlyVersions {
       patch: Int,
       rc: Option[Int],
       nigthlyDate: Option[Int],
-      original: String
+      original: String,
   ) {
 
     def >(o: DottyVersion): Boolean = {
@@ -73,7 +73,7 @@ object Scala3NightlyVersions {
         minor,
         patch,
         rc.getOrElse(Int.MaxValue),
-        nigthlyDate.getOrElse(Int.MaxValue)
+        nigthlyDate.getOrElse(Int.MaxValue),
       )
   }
 

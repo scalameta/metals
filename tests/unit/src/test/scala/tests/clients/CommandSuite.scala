@@ -26,12 +26,12 @@ class CommandSuite extends BaseSuite {
     assertNoDiff(
       ServerCommands.GotoPosition.toCommandLink(location, format),
       s"""subl:lsp_metals_goto_position {"parameters": $locationJson}"""
-        .replaceAll("\"", "&#x22;")
+        .replaceAll("\"", "&#x22;"),
     )
     assertNoDiff(
       ServerCommands.GotoSymbol.toCommandLink(symbol, format),
       s"""subl:lsp_metals_goto {"parameters": $symbolJson}"""
-        .replaceAll("\"", "&#x22;")
+        .replaceAll("\"", "&#x22;"),
     )
   }
 
@@ -41,11 +41,11 @@ class CommandSuite extends BaseSuite {
     val expectedParamsSymbol = URLEncoder.encode(symbolJson)
     assertNoDiff(
       ServerCommands.GotoPosition.toCommandLink(location, format),
-      s"command:metals.goto-position?$expectedParamsLocation"
+      s"command:metals.goto-position?$expectedParamsLocation",
     )
     assertNoDiff(
       ServerCommands.GotoSymbol.toCommandLink(symbol, format),
-      s"command:metals.goto?$expectedParamsSymbol"
+      s"command:metals.goto?$expectedParamsSymbol",
     )
   }
 }

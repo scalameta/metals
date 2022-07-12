@@ -23,7 +23,7 @@
   // anonymous classes
   /*example.NamedArguments.b(Method):27*/@deprecated(
     message = "a",
-    since = susan
+    since = susan,
   ) def b = 1
 
   // vararg

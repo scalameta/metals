@@ -15,7 +15,7 @@ import tests.BuildToolLayout
 abstract class BaseStackFrameDapSuite(
     suiteName: String,
     initializer: BuildServerInitializer,
-    buildToolLayout: BuildToolLayout
+    buildToolLayout: BuildToolLayout,
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
 
   assertStackFrame("method-parameters")(
@@ -30,9 +30,9 @@ abstract class BaseStackFrameDapSuite(
     expectedFrames = List(
       inScopeLocal(
         assertNoDiff(_, "args: String[]"),
-        assertNoDiff(_, "this: Main$")
+        assertNoDiff(_, "this: Main$"),
       )
-    )
+    ),
   )
 
   assertStackFrame("primitives")(
@@ -66,9 +66,9 @@ abstract class BaseStackFrameDapSuite(
         assertNoDiff(_, "aDouble: double = 1.000000"),
         assertNoDiff(_, "bool: boolean = true"),
         assertNoDiff(_, "aChar: char = a"),
-        assertNoDiff(_, "this: Main$")
+        assertNoDiff(_, "this: Main$"),
       )
-    )
+    ),
   )
 
   assertStackFrame("overridden-toString")(
@@ -92,9 +92,9 @@ abstract class BaseStackFrameDapSuite(
           assert(v.contains("foo: Foo"))
           assert(v.contains("\"foo\""))
         },
-        assertNoDiff(_, "this: Main$")
+        assertNoDiff(_, "this: Main$"),
       )
-    )
+    ),
   )
 
   assertStackFrame("symbolic-id")(
@@ -118,9 +118,9 @@ abstract class BaseStackFrameDapSuite(
           assert(v.contains("list: $colon$colon"))
           assert(v.contains("\"List(1, 2)\""))
         },
-        assertNoDiff(_, "this: Main$")
+        assertNoDiff(_, "this: Main$"),
       )
-    )
+    ),
   )
 
   assertStackFrame("foreach")(
@@ -136,13 +136,13 @@ abstract class BaseStackFrameDapSuite(
     expectedFrames = List(
       inScopeLocal(
         assertNoDiff(_, "value: int = 1"),
-        assertNoDiff(_, "MODULE$: Main$")
+        assertNoDiff(_, "MODULE$: Main$"),
       ),
       inScopeLocal(
         assertNoDiff(_, "value: int = 2"),
-        assertNoDiff(_, "MODULE$: Main$")
-      )
-    )
+        assertNoDiff(_, "MODULE$: Main$"),
+      ),
+    ),
   )
 
   assertStackFrame("for-comprehension")(
@@ -161,22 +161,22 @@ abstract class BaseStackFrameDapSuite(
       // before calculating `z`
       inScopeLocal(
         assertNoDiff(_, "x: int = 1"),
-        assertNoDiff(_, "MODULE$: Main$")
+        assertNoDiff(_, "MODULE$: Main$"),
       ),
       // after calculating `z`
       inScopeLocal(
         assertNoDiff(_, "x: int = 1"),
         assertNoDiff(_, "z: int = 3"),
-        assertNoDiff(_, "MODULE$: Main$")
+        assertNoDiff(_, "MODULE$: Main$"),
       ),
       inScopeLocal(
         v => {
           assert(v.contains("x$1: Tuple2$mcII$sp"))
           assert(v.contains("\"(1,3)\""))
         },
-        assertNoDiff(_, "MODULE$: Main$")
-      )
-    )
+        assertNoDiff(_, "MODULE$: Main$"),
+      ),
+    ),
   )
 
   def inScopeLocal(
@@ -192,7 +192,7 @@ abstract class BaseStackFrameDapSuite(
 
   def assertStackFrame(
       name: TestOptions,
-      disabled: Boolean = false
+      disabled: Boolean = false,
   )(source: String, expectedFrames: List[Variables => Unit])(implicit
       loc: Location
   ): Unit = {

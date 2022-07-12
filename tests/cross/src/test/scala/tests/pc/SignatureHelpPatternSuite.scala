@@ -21,7 +21,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
         """|map[B, That](f: ((Int, Int)) => B)(implicit bf: CanBuildFrom[List[(Int, Int)],B,That]): That
            |             ^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -37,7 +37,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|(Int)
        | ^^^
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -58,7 +58,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
         """|(a: T, b: T)
            | ^^^^
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -79,7 +79,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
         """|(a: C[T])
            | ^^^^^^^
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -102,7 +102,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
         """|(a: Int, b: String)
            | ^^^^^^
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -124,7 +124,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|(Int, String)
        | ^^^
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -144,7 +144,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|(Int, Int)
        | ^^^
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -164,7 +164,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|(Int, Int)
        |      ^^^
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -186,7 +186,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
         """|(name: String, age: Int)
            | ^^^^^^^^^^^^
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -206,7 +206,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|(String, Int)
        | ^^^^^^
-       | """.stripMargin
+       | """.stripMargin,
   )
 
   check(
@@ -233,8 +233,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
                   |""".stripMargin,
       "3" -> """|(List[String])
                 | ^^^^^^^^^^^^
-                |""".stripMargin
-    )
+                |""".stripMargin,
+    ),
   )
 
   check(
@@ -253,7 +253,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|(String, String)
        |         ^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -283,8 +283,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|(String, String)
            |         ^^^^^^
-           |""".stripMargin
-    )
+           |""".stripMargin,
+    ),
   )
 
   check(
@@ -304,7 +304,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|(Int)
        | ^^^
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -328,7 +328,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
         """|(Option[Int])
            | ^^^^^^^^^^^
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -343,7 +343,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|unapply[A](a: A): Some[(A, A)]
        |           ^^^^
-       | """.stripMargin
+       | """.stripMargin,
   )
 
 }

@@ -16,7 +16,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 private[debug] final class SourcePathAdapter(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
-    supportVirtualDocuments: Boolean
+    supportVirtualDocuments: Boolean,
 ) {
   // when virtual documents are supported there is no need to save jars on disk
   private val saveJarFileToDisk = !supportVirtualDocuments
@@ -67,13 +67,13 @@ private[debug] object SourcePathAdapter {
   def apply(
       buildTargets: BuildTargets,
       targets: Seq[BuildTargetIdentifier],
-      supportVirtualDocuments: Boolean
+      supportVirtualDocuments: Boolean,
   ): SourcePathAdapter = {
     val workspace = buildTargets.workspaceDirectory(targets.head).get
     new SourcePathAdapter(
       workspace,
       buildTargets,
-      supportVirtualDocuments
+      supportVirtualDocuments,
     )
   }
 }

@@ -54,7 +54,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
            |  def main(args: Array[String]): Unit = 
            |    println("Hello again!")
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         s"""|package a
@@ -82,7 +82,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
            |  def main(args: Array[String]): Unit = 
            |    println("Hello again!")
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         s"""|package a
@@ -112,7 +112,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
            |//  def main(args: Array[String]): Unit = 
            |//    println("Hello again!")
            |//}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

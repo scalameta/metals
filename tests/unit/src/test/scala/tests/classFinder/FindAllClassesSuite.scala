@@ -29,9 +29,9 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
     List(
       "Class Foo a.Foo.tasty",
       "Class Bar a.Bar.tasty",
-      "Toplevel package a.Main$package.tasty"
+      "Toplevel package a.Main$package.tasty",
     ),
-    scalaVersion = V.scala3
+    scalaVersion = V.scala3,
   )
 
   check(
@@ -54,10 +54,10 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
       "Class Foo a.Foo.class", "Object Foo a.Foo$.class",
       "Class InnerClass a.Foo$InnerClass.class", "Class Bar a.Bar.class",
       "Class InnerClass a.Bar$InnerClass.class",
-      "Toplevel package a.Main$package.class"
+      "Toplevel package a.Main$package.class",
     ),
     checkInnerClasses = true,
-    scalaVersion = V.scala3
+    scalaVersion = V.scala3,
   )
 
   for (scalaVer <- List(V.scala3, V.scala213, V.scala212, V.scala211)) {
@@ -106,10 +106,10 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
         "Object Bar2 a.Bar$Bar2$.class", "Object Bar3 a.Bar$Bar2$Bar3$.class",
         "Class VeryInnerClass a.Bar$Bar2$Bar3$VeryInnerClass.class",
         "Trait VeryInnerTrait a.Bar$Bar2$Bar3$VeryInnerTrait.class",
-        "Object VeryInnerObject a.Bar$Bar2$Bar3$VeryInnerObject$.class"
+        "Object VeryInnerObject a.Bar$Bar2$Bar3$VeryInnerObject$.class",
       ),
       checkInnerClasses = true,
-      scalaVersion = scalaVer
+      scalaVersion = scalaVer,
     )
   }
 
@@ -119,7 +119,7 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
       expected: List[String],
       checkInnerClasses: Boolean = false,
       filename: String = "Main.scala",
-      scalaVersion: String = V.scala213
+      scalaVersion: String = V.scala213,
   )(implicit loc: Location): Unit =
     test(name) {
       val (buffers, classFinder) = init(scalaVersion)
@@ -131,7 +131,7 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
       assertEquals(
         classes.get
           .map(c => s"${c.friendlyName} ${c.description}"),
-        expected
+        expected,
       )
     }
 

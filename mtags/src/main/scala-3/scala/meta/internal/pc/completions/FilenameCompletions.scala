@@ -11,7 +11,7 @@ object FilenameCompletions:
 
   def contribute(
       filename: String,
-      td: TypeDef
+      td: TypeDef,
   )(using ctx: Context): List[CompletionValue] =
     val owner = td.symbol.owner
     lazy val scope =
@@ -24,7 +24,7 @@ object FilenameCompletions:
       List(
         CompletionValue.keyword(
           s"${td.symbol.showKind} ${filename}",
-          filename
+          filename,
         )
       )
     else Nil

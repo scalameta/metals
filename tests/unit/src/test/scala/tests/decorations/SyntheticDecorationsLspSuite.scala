@@ -14,7 +14,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       InitializationOptions.Default.copy(
         inlineDecorationProvider = Some(true),
         decorationProvider = Some(true),
-        commandInHtmlFormat = Some(CommandHTMLFormat.VSCode)
+        commandInHtmlFormat = Some(CommandHTMLFormat.VSCode),
       )
     )
 
@@ -85,7 +85,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    println("")
            |  }(ec)
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       // Implicit parameters
       expectedParamsAndy = URLEncoder.encode("""["_empty_/Main.andy."]""")
@@ -102,7 +102,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         s"""|**Synthetics**:
             |
             |([andy](command:metals.goto?$expectedParamsAndy), [boston](command:metals.metals-goto-location?$expectedParamsBoston))
-            |""".stripMargin
+            |""".stripMargin,
       )
       // Implicit conversions
       augmentStringParams = URLEncoder.encode(
@@ -114,7 +114,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         s"""|**Synthetics**:
             |
             |[augmentString](command:metals.goto?$augmentStringParams)
-            |""".stripMargin
+            |""".stripMargin,
       )
       // Normal hover without synthetics
       _ <- server.assertHoverAtLine(
@@ -123,7 +123,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         """|```scala
            |val ordered: String
            |```
-           |""".stripMargin
+           |""".stripMargin,
       )
       orderingParams = URLEncoder.encode("""["scala/math/Ordering.Char."]""")
       charParams = URLEncoder.encode("""["scala/Char#"]""")
@@ -135,7 +135,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
             |
             |([Char](command:metals.goto?$orderingParams))
             |[[Char](command:metals.goto?$charParams)]
-            |""".stripMargin
+            |""".stripMargin,
       )
     } yield ()
   }
@@ -181,7 +181,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  hello()(andy)
            |  ("1" + "2").map(c => c.toDouble)
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = client.decorations.clear()
       _ <- server.didChangeConfiguration(
@@ -203,7 +203,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  hello()
            |  ("1" + "2").map[Double](c: Char => c.toDouble)
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = client.decorations.clear()
       _ <- server.didChangeConfiguration(
@@ -225,7 +225,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  hello()
            |  (augmentString("1" + "2")).map(c => c.toDouble)
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       // no decorations should show up with everything set to false
       _ <- server.didChangeConfiguration(
@@ -246,7 +246,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  hello()
            |  ("1" + "2").map(c => c.toDouble)
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -285,7 +285,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    .stripSuffix("#"))
            |    .stripPrefix("_empty_.")
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       augmentStringParams = URLEncoder.encode(
         """["scala/Predef.augmentString()."]"""
@@ -296,7 +296,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         s"""|**Synthetics**:
             |
             |[augmentString](command:metals.goto?$augmentStringParams)
-            |""".stripMargin
+            |""".stripMargin,
       )
     } yield ()
   }
@@ -329,7 +329,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         """|object Main{
            |  val value: String = augmentString("asd.").stripSuffix(".")
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       augmentStringParams = URLEncoder.encode(
         """["scala/Predef.augmentString()."]"""
@@ -340,7 +340,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         s"""|**Synthetics**:
             |
             |[augmentString](command:metals.goto?$augmentStringParams)
-            |""".stripMargin
+            |""".stripMargin,
       )
       _ <- server.didSave("standalone/Main.scala") { _ =>
         s"""|object Main{
@@ -355,7 +355,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  augmentString("asd.").stripSuffix(".")
            |  augmentString("asd.").stripSuffix(".")
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -463,7 +463,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  convert(){str: String => str.stripMargin}
            |  convert(){str : String => str.stripMargin}
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -529,7 +529,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    override def run(): Unit = {}
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -565,7 +565,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         """|object Main{
            |  val abc: Int = 123
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       // introduce a change
       _ <- server.didChange("a/src/main/scala/Main.scala") { text =>
@@ -577,7 +577,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |object Main{
            |  val abc: Int = 123
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       // introduce a parsing error
       _ <- server.didChange("a/src/main/scala/Main.scala") { text =>
@@ -590,7 +590,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |object Main{
            |  val abc: Int = 123
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -671,7 +671,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |
            |  def run(args: List[String]): IO[ExitCode] = ???
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -697,7 +697,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |implicit val name = "Susan".stripMargin // : String = "Susan"
            |val greeting = s"Hello $name" // : String = "Hello Susan"
            |method // : String = "SusanSusan"
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didChangeConfiguration(
         """{
@@ -713,7 +713,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |implicit val name: String = augmentString("Susan").stripMargin // : String = "Susan"
            |val greeting: String = s"Hello $name" // : String = "Hello Susan"
            |method(name) // : String = "SusanSusan"
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -780,7 +780,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  Option[Int](5).map[Int](DataType[String](_, "").next(evidence))
            |
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       expectedParams = URLEncoder.encode(
         """["_empty_/Example.evidence."]"""
@@ -790,7 +790,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         "    num2 <- opts(2)@@",
         s"""|**Synthetics**:
             |
-            |([evidence](command:metals.goto?$expectedParams))""".stripMargin
+            |([evidence](command:metals.goto?$expectedParams))""".stripMargin,
       )
     } yield ()
   }

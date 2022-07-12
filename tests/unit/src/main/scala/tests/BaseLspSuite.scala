@@ -33,7 +33,7 @@ import org.eclipse.lsp4j.InitializeResult
  */
 abstract class BaseLspSuite(
     suiteName: String,
-    initializer: BuildServerInitializer = QuickBuildInitializer
+    initializer: BuildServerInitializer = QuickBuildInitializer,
 ) extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default
@@ -73,7 +73,7 @@ abstract class BaseLspSuite(
 
   def initialize(
       layout: String,
-      expectError: Boolean = false
+      expectError: Boolean = false,
   ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
@@ -107,7 +107,7 @@ abstract class BaseLspSuite(
     val buffers = Buffers()
     val config = serverConfig.copy(
       executeClientCommand = ExecuteClientCommandConfig.on,
-      icons = this.icons
+      icons = this.icons,
     )
 
     val initOptions = initializationOptions
@@ -125,7 +125,7 @@ abstract class BaseLspSuite(
       time,
       initOptions,
       mtagsResolver,
-      onStartCompilation
+      onStartCompilation,
     )(ex)
     server.server.userConfig = this.userConfig
   }

@@ -48,7 +48,7 @@ final class FormattingProvider(
     statusBar: StatusBar,
     icons: Icons,
     tables: Tables,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -62,7 +62,7 @@ final class FormattingProvider(
     client.publishDiagnostics(
       new l.PublishDiagnosticsParams(
         config.toURI.toString,
-        Collections.emptyList()
+        Collections.emptyList(),
       )
     )
   }
@@ -86,7 +86,7 @@ final class FormattingProvider(
         scalafmt.format(
           scalafmtConf.toNIO,
           Paths.get("Main.scala"),
-          "object Main  {}"
+          "object Main  {}",
         )
       } catch {
         case e: ScalafmtDynamicError =>
@@ -100,7 +100,7 @@ final class FormattingProvider(
 
   def format(
       path: AbsolutePath,
-      token: CancelChecker
+      token: CancelChecker,
   ): Future[util.List[l.TextEdit]] = {
     scalafmt = scalafmt.withReporter(activeReporter)
     reset(token)
@@ -258,7 +258,7 @@ final class FormattingProvider(
 
     def hasCorrectDialectOverride(
         files: List[AbsolutePath],
-        dialect: ScalafmtDialect
+        dialect: ScalafmtDialect,
     ): Boolean = {
       config.fileOverrides.nonEmpty &&
       files.forall(p => config.overrideFor(p).exists(d => ord.gteq(dialect, d)))
@@ -267,7 +267,7 @@ final class FormattingProvider(
     def inferDialectForSourceItem(
         sourceItem: AbsolutePath,
         buildTargetIds: List[BuildTargetIdentifier],
-        default: ScalafmtDialect
+        default: ScalafmtDialect,
     ): Option[ScalafmtDialect] = {
       if (buildTargetIds.nonEmpty && sourceItem.exists) {
         val required =
@@ -344,7 +344,7 @@ final class FormattingProvider(
         minDialect,
         maxDialect,
         upgradeType,
-        config
+        config,
       )
       Some(out)
     } else None
@@ -373,7 +373,7 @@ final class FormattingProvider(
               val updatedText = rewrite.rewrite(text)
               Files.write(
                 scalafmtConf.toNIO,
-                updatedText.getBytes(StandardCharsets.UTF_8)
+                updatedText.getBytes(StandardCharsets.UTF_8),
               )
             } else if (item == Messages.notNow) {
               tables.dismissedNotifications.UpdateScalafmtConf
@@ -425,13 +425,13 @@ final class FormattingProvider(
               new l.Diagnostic(
                 new l.Range(
                   new l.Position(0, 0),
-                  new l.Position(pos.endLine, pos.endColumn)
+                  new l.Position(pos.endLine, pos.endColumn),
                 ),
                 message,
                 l.DiagnosticSeverity.Error,
-                "scalafmt"
+                "scalafmt",
               )
-            )
+            ),
           )
         )
       }
@@ -475,7 +475,7 @@ final class FormattingProvider(
       downloadingScalafmt = Promise()
       statusBar.trackSlowFuture(
         "Loading Scalafmt",
-        downloadingScalafmt.future
+        downloadingScalafmt.future,
       )
       System.out
     }
@@ -501,7 +501,7 @@ object FormattingProvider {
       minDialect: ScalafmtDialect,
       maxDialect: ScalafmtDialect,
       rewriteType: RewriteType,
-      config: ScalafmtConfig
+      config: ScalafmtConfig,
   ) {
 
     def canUpdate: Boolean =
@@ -517,7 +517,7 @@ object FormattingProvider {
           ScalafmtConfig.update(
             text,
             version = updVersion,
-            runnerDialect = Some(maxDialect)
+            runnerDialect = Some(maxDialect),
           )
         case RewriteType.FileOverrideDialect =>
           val fileOverride =
@@ -527,7 +527,7 @@ object FormattingProvider {
                 if (scala.util.Properties.isWin)
                   path.toString.replace(
                     FileSystems.getDefault.getSeparator,
-                    "/"
+                    "/",
                   )
                 else
                   path.toString
@@ -538,7 +538,7 @@ object FormattingProvider {
             text,
             version = updVersion,
             runnerDialect = Some(minDialect),
-            fileOverride = fileOverride
+            fileOverride = fileOverride,
           )
         case RewriteType.Manual => text
       }

@@ -40,7 +40,7 @@ final class BspServers(
     buildClient: MetalsBuildClient,
     tables: Tables,
     bspGlobalInstallDirectories: List[AbsolutePath],
-    config: MetalsServerConfig
+    config: MetalsServerConfig,
 )(implicit ec: ExecutionContextExecutorService) {
 
   def resolve(): BspResolvedResult = {
@@ -62,7 +62,7 @@ final class BspServers(
 
   def newServer(
       projectDirectory: AbsolutePath,
-      details: BspConnectionDetails
+      details: BspConnectionDetails,
   ): Future[BuildServerConnection] = {
 
     def newConnection(): Future[SocketConnection] = {
@@ -76,16 +76,16 @@ final class BspServers(
         processOut = None,
         processErr = Some(l => scribe.info("BSP server: " + l)),
         discardInput = false,
-        threadNamePrefix = s"bsp-${details.getName}"
+        threadNamePrefix = s"bsp-${details.getName}",
       )
 
       val output = new ClosableOutputStream(
         proc.outputStream,
-        s"${details.getName} output stream"
+        s"${details.getName} output stream",
       )
       val input = new QuietInputStream(
         proc.inputStream,
-        s"${details.getName} input stream"
+        s"${details.getName} input stream",
       )
 
       val finished = Promise[Unit]()
@@ -101,7 +101,7 @@ final class BspServers(
           List(
             Cancelable(() => proc.cancel)
           ),
-          finished
+          finished,
         )
       }
     }
@@ -113,7 +113,7 @@ final class BspServers(
       newConnection,
       tables.dismissedNotifications.ReconnectBsp,
       config,
-      details.getName()
+      details.getName(),
     )
   }
 
@@ -135,7 +135,7 @@ final class BspServers(
         },
         details => {
           List(details)
-        }
+        },
       )
     } yield {
       details

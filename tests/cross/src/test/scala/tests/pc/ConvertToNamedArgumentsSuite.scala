@@ -26,7 +26,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
     List(0, 1),
     """|object A{
        |  val a = scala.math.max(x = 1, y = 2)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   def checkEdit(
@@ -34,7 +34,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
       original: String,
       argIndices: List[Int],
       expected: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit location: Location): Unit =
     test(name) {
       val edits = convertToNamedArgs(original, argIndices)
@@ -46,13 +46,13 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
   def convertToNamedArgs(
       original: String,
       argIndices: List[Int],
-      filename: String = "file:/A.scala"
+      filename: String = "file:/A.scala",
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler
       .convertToNamedArguments(
         CompilerOffsetParams(URI.create(filename), code, offset, cancelToken),
-        argIndices.map(new Integer(_)).asJava
+        argIndices.map(new Integer(_)).asJava,
       )
       .get()
     result.asScala.toList

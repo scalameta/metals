@@ -9,14 +9,14 @@ import tests.BuildToolLayout
 abstract class BaseCrossDebugSuite(
     suiteName: String,
     initializer: BuildServerInitializer,
-    buildToolLayout: BuildToolLayout
+    buildToolLayout: BuildToolLayout,
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
 
   override def scalaVersion: String = V.scala3
 
   assertBreakpoints(
     "outer",
-    main = Some("a.helloWorld")
+    main = Some("a.helloWorld"),
   )(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
@@ -32,7 +32,7 @@ abstract class BaseCrossDebugSuite(
 
   assertBreakpoints(
     "unapply",
-    main = Some("a.helloWorld")
+    main = Some("a.helloWorld"),
   )(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
@@ -55,7 +55,7 @@ abstract class BaseCrossDebugSuite(
 
   assertBreakpoints(
     "object-in-toplevel-method",
-    main = Some("a.helloWorld")
+    main = Some("a.helloWorld"),
   )(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
@@ -77,7 +77,7 @@ abstract class BaseCrossDebugSuite(
 
   assertBreakpoints(
     "optional-braces",
-    main = Some("a.hello")
+    main = Some("a.hello"),
   )(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
@@ -96,7 +96,7 @@ abstract class BaseCrossDebugSuite(
 
   assertBreakpoints(
     "optional-braces-main",
-    main = Some("a.hello")
+    main = Some("a.hello"),
   )(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a

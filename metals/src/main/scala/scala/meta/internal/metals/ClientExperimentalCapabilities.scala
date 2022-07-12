@@ -24,7 +24,7 @@ final case class ClientExperimentalCapabilities(
     quickPickProvider: Option[Boolean],
     slowTaskProvider: Option[Boolean],
     statusBarProvider: Option[String],
-    treeViewProvider: Option[Boolean]
+    treeViewProvider: Option[Boolean],
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -46,7 +46,7 @@ object ClientExperimentalCapabilities {
     None,
     None,
     None,
-    None
+    None,
   )
 
   def from(
@@ -82,7 +82,7 @@ object ClientExperimentalCapabilities {
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
       slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider"),
       statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
-      treeViewProvider = jsonObj.getBooleanOption("treeViewProvider")
+      treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
     )
   }
 }

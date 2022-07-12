@@ -41,7 +41,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -71,7 +71,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -126,7 +126,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
            |  }
            |}
            |""".stripMargin
-    )
+    ),
   )
 
   checkEdit(
@@ -153,7 +153,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -184,7 +184,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    override def foo(x: Int): Int = x
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -214,7 +214,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -232,7 +232,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       |
       |  }
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
@@ -257,7 +257,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       |
       |  }
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
@@ -282,7 +282,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       |
       |  }
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
@@ -311,7 +311,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       |
       |  }
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
@@ -339,7 +339,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -370,7 +370,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -390,7 +390,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  override def foo: ju.List[Int] = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -416,7 +416,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  val java = 42
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -435,7 +435,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  override val baz: String = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -468,7 +468,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |       override def foo(x: Int): Int = x
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -503,7 +503,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |           val test = 1
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -538,7 +538,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |           type T = Int
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -569,7 +569,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |          def bar(x: String): Int = x
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -600,7 +600,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -633,7 +633,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |      def this() = { this(4) }
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -659,7 +659,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |      }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -681,7 +681,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  override def foo(x: Int): Int = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -723,7 +723,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |   }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -749,7 +749,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |   }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -780,7 +780,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -813,7 +813,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -844,7 +844,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |	}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -874,7 +874,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |	}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -905,7 +905,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def foo(x: Int): Int = x
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -936,7 +936,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def foo(x: Int): Int = x
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -962,7 +962,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |	def foo(x: Int): Int = x
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -990,7 +990,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  extension (x: Int) override def bar: String = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -1018,14 +1018,14 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  extension (x: Int) override def bar: String = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   def checkEdit(
       name: TestOptions,
       original: String,
       expected: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit =
     test(name) {
       val edits = getAutoImplement(original)
@@ -1034,13 +1034,13 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       val obtained = TextEdits.applyEdits(code, edits)
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion)
+        getExpected(expected, compat, scalaVersion),
       )
     }
 
   def getAutoImplement(
       original: String,
-      filename: String = "A.scala"
+      filename: String = "A.scala",
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler

@@ -45,18 +45,18 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       )
       _ = assertNoDiff(
         server.workspaceSymbol("PazQux.Inner"),
-        "a.b.PazQux.Inner"
+        "a.b.PazQux.Inner",
       )
       _ = assertNoDiff(
         server.workspaceSymbol("a.b.PazQux"),
-        "a.b.PazQux"
+        "a.b.PazQux",
       )
       _ <- server.didSave("a/src/main/scala/a/B.scala")(
         _.replace("class B", "  class HaddockBax")
       )
       _ = assertNoDiff(
         server.workspaceSymbol("Had"),
-        "a.HaddockBax"
+        "a.HaddockBax",
       )
     } yield ()
   }
@@ -124,7 +124,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         server.workspaceSymbol("UserBax", includeKind = true),
         """a.UserBaxx Class
           |a.UserBaxx Object
-          |""".stripMargin
+          |""".stripMargin,
       )
     } yield ()
   }
@@ -155,11 +155,11 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         """|a/src/main/scala/a/A.scala:4:24: info: reference
            |  val x: Option[Int] = None
            |                       ^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       optionReferences <- server.references(
         "scala/Option.scala",
-        " None"
+        " None",
       )
       optionSourceAbsolutePath = server
         .toPath("scala/Option.scala")
@@ -223,7 +223,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
             |                   ^^^^
             |$optionSourcePath:626:13: info: reference
             |case object None extends Option[Nothing] {
-            |            ^^^^""".stripMargin
+            |            ^^^^""".stripMargin,
       )
     } yield ()
   }
@@ -248,7 +248,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         server.workspaceSymbol("Properties"),
         s"""|a.Properties
             |${Messages.WorkspaceSymbolDependencies.title}
-            |""".stripMargin
+            |""".stripMargin,
       )
       _ = {
         // Assert "Properties;" searches workspace + libraries
@@ -257,18 +257,18 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         assertContains(file, "scala.util.Properties")
         assertNotContains(
           file,
-          Messages.WorkspaceSymbolDependencies.title
+          Messages.WorkspaceSymbolDependencies.title,
         )
         // Assert we automatically fallback to library dependencies on no match.
         assertContains(
           server.workspaceSymbol("Future"),
-          "scala.concurrent.Future"
+          "scala.concurrent.Future",
         )
         // Assert we don't suggest to "add ';' to search library dependencies"
         // because "MetalsUniqueName" has no matches in library dependencies.
         assertNoDiff(
           server.workspaceSymbol("MetalsUniqueName"),
-          "a.MetalsUniqueName"
+          "a.MetalsUniqueName",
         )
       }
     } yield ()
@@ -289,7 +289,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       _ <- server.didOpen("a/src/main/scala/a/Before.scala")
       _ = assertNoDiff(
         server.workspaceSymbol("MyObjectSymbol", includeFilename = true),
-        """a.MyObjectSymbol Before.scala"""
+        """a.MyObjectSymbol Before.scala""",
       )
       _ = {
         val before = server.toPath("a/src/main/scala/a/Before.scala").toNIO
@@ -302,7 +302,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       _ = assertNoDiff(
         server.workspaceSymbol("MyObjectSymbol", includeFilename = true),
         // Assert "Before.scala" is removed from the results
-        """a.MyObjectSymbol After.scala"""
+        """a.MyObjectSymbol After.scala""",
       )
     } yield ()
   }
@@ -336,7 +336,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |scala.jdk.javaapi.FutureConverters
            |java.util.concurrent.CompletableFuture
            |java.util.concurrent.ScheduledThreadPoolExecutor#ScheduledFutureTask
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didChangeConfiguration(
         """|{
@@ -356,7 +356,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |scala.jdk.FutureConverters
            |scala.jdk.javaapi.FutureConverters
            |scala.concurrent.impl.FutureConvertersImpl
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -376,7 +376,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         server.workspaceSymbol("<:<"),
         """|scala.<:<
            |scala.<:<
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

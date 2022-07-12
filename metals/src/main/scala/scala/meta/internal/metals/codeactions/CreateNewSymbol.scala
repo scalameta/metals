@@ -14,7 +14,7 @@ class CreateNewSymbol() extends CodeAction {
 
   override def contribute(
       params: l.CodeActionParams,
-      token: CancelToken
+      token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     lazy val parentUri =
@@ -22,7 +22,7 @@ class CreateNewSymbol() extends CodeAction {
 
     def createNewSymbol(
         diagnostic: l.Diagnostic,
-        name: String
+        name: String,
     ): l.CodeAction = {
       val codeAction = new l.CodeAction()
       codeAction.setTitle(CreateNewSymbol.title(name))

@@ -31,7 +31,7 @@ class WorkspaceSearchVisitor(
     query: WorkspaceSymbolQuery,
     token: CancelChecker,
     index: GlobalSymbolIndex,
-    saveClassFileToDisk: Boolean
+    saveClassFileToDisk: Boolean,
 ) extends SymbolSearchVisitor {
   private val fromWorkspace = new ju.ArrayList[l.SymbolInformation]()
   private val fromClasspath = new ju.ArrayList[l.SymbolInformation]()
@@ -66,8 +66,8 @@ class WorkspaceSearchVisitor(
           SymbolKind.Event,
           new l.Location(
             dependencies.toURI.toString(),
-            new l.Range(new l.Position(0, 0), new l.Position(0, 0))
-          )
+            new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
+          ),
         )
       )
     }
@@ -83,7 +83,7 @@ class WorkspaceSearchVisitor(
   private def definition(
       pkg: String,
       filename: String,
-      index: GlobalSymbolIndex
+      index: GlobalSymbolIndex,
   ): Option[SymbolDefinition] = {
     val nme = Classfile.name(filename)
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))
@@ -101,7 +101,7 @@ class WorkspaceSearchVisitor(
       path: Path,
       symbol: String,
       kind: SymbolKind,
-      range: l.Range
+      range: l.Range,
   ): Int = {
     val (desc, owner) = DescriptorParser(symbol)
     fromWorkspace.add(
@@ -109,7 +109,7 @@ class WorkspaceSearchVisitor(
         desc.name.value,
         kind,
         new l.Location(path.toUri.toString, range),
-        owner.replace('/', '.')
+        owner.replace('/', '.'),
       )
     )
     1

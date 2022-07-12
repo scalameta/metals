@@ -11,7 +11,7 @@ case class InputProperties(
     sourceroot: AbsolutePath,
     sourceDirectories: List[AbsolutePath],
     classpath: Classpath,
-    dependencySources: Classpath
+    dependencySources: Classpath,
 ) {
 
   def scalaFiles: List[InputFile] = {
@@ -28,7 +28,7 @@ case class InputProperties(
         file = file,
         file.text,
         directory,
-        semanticdbRelativePath = file.toRelative(sourceroot)
+        semanticdbRelativePath = file.toRelative(sourceroot),
       )
     }
   }
@@ -57,7 +57,7 @@ object InputProperties {
       sourceroot = AbsolutePath(getKey("sourceroot")),
       sourceDirectories = Classpath(getKey("sourceDirectories")).entries,
       classpath = Classpath(getKey("classpath")),
-      dependencySources = Classpath(getKey("dependencySources"))
+      dependencySources = Classpath(getKey("dependencySources")),
     )
   }
 

@@ -18,7 +18,7 @@ trait TestHovers {
             expressionType,
             symbolSignature,
             "",
-            forceExpressionType = true
+            forceExpressionType = true,
           )
         case _ =>
           string
@@ -34,7 +34,7 @@ trait TestHovers {
             expressionType,
             symbolSignature,
             "",
-            forceExpressionType = true
+            forceExpressionType = true,
           )
         case _ =>
           string
@@ -44,7 +44,7 @@ trait TestHovers {
   def renderAsString(
       code: String,
       hover: Option[Hover],
-      includeRange: Boolean
+      includeRange: Boolean,
   ): String = {
     hover match {
       case Some(value) =>
@@ -53,7 +53,7 @@ trait TestHovers {
           case Some(value) if includeRange =>
             codeFence(
               value.toMeta(Input.String(code)).text,
-              "range"
+              "range",
             )
           case _ => ""
         }

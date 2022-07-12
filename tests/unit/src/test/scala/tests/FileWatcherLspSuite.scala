@@ -58,7 +58,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
            |package a
            |object A
            |object ScalaFileEvent
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = {
         // Should generate an event
@@ -67,7 +67,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
           s"""
              |package a;
              |public class JavaFileEvent {}
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
       _ = {
@@ -78,7 +78,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
              |package d
              |object D
              |object SingleFileEvent
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
       _ = {
@@ -91,7 +91,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
           s"""
              |#include <stdio.h>
              |void main(char **args) { printf("Hello World!\n"); }
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
       _ <- server.didOpen("b/src/main/scala/B.scala")
@@ -109,7 +109,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
            |  println/*Predef.scala*/(new a.JavaFileEvent/*JavaFileEvent.java:2*/)
            |  println/*Predef.scala*/(d.SingleFileEvent/*D.scala:3*/)
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = assertIsNotDirectory(workspace.resolve("a/src/main/scala-2.12"))
       _ = assertIsNotDirectory(workspace.resolve("b/src/main/scala-2.12"))

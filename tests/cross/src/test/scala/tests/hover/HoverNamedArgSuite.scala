@@ -34,7 +34,7 @@ class HoverNamedArgSuite extends BaseHoverSuite {
            |**Parameters**
            |- `named`: the argument
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -45,7 +45,7 @@ class HoverNamedArgSuite extends BaseHoverSuite {
       |  foo(nam@@ed = 2)
       |}
       |""".stripMargin,
-    ""
+    "",
   )
 
   check(
@@ -59,7 +59,7 @@ class HoverNamedArgSuite extends BaseHoverSuite {
     "",
     compat = Map(
       "3" -> "named: Int".hover
-    )
+    ),
   )
 
   check(
@@ -73,6 +73,6 @@ class HoverNamedArgSuite extends BaseHoverSuite {
     "def this(name: String, age: Int): User".hover,
     compat = Map(
       "3" -> "name: String".hover
-    )
+    ),
   )
 }

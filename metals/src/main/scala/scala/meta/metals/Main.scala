@@ -54,7 +54,7 @@ object Main {
       ec,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
-      initialConfig = initialConfig
+      initialConfig = initialConfig,
     )
     try {
       val launcher = new Launcher.Builder[MetalsLanguageClient]()

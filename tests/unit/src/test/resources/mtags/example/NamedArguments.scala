@@ -23,7 +23,7 @@ object NamedArguments/*example.NamedArguments.*/ {
   // anonymous classes
   @deprecated(
     message = "a",
-    since = susan
+    since = susan,
   ) def b/*example.NamedArguments.b().*/ = 1
 
   // vararg

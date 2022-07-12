@@ -17,7 +17,7 @@ import org.eclipse.{lsp4j => l}
 
 final class FoldingRangeExtractor(
     distance: TokenEditDistance,
-    foldOnlyLines: Boolean
+    foldOnlyLines: Boolean,
 ) {
   private val spanThreshold = 2
   private val distanceToEnclosingThreshold = 3
@@ -109,7 +109,7 @@ final class FoldingRangeExtractor(
 
   private def extractCommentRanges(
       tokens: Iterator[Token],
-      ranges: FoldingRanges
+      ranges: FoldingRanges,
   ): Unit = {
 
     @tailrec
@@ -211,7 +211,7 @@ final class FoldingRangeExtractor(
               tree.pos.input,
               tree.pos.input
                 .lineToOffset(tree.pos.startLine) - System.lineSeparator().size,
-              tree.pos.end
+              tree.pos.end,
             )
           } else if (span(block.pos) - 1 > spanThreshold) {
             Some(tree.pos)

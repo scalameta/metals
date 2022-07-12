@@ -72,18 +72,18 @@ class BloopJavaHomeLspSuite extends BaseLspSuite("java-home") {
            | required: String
            |object A { val x : String = 1 }
            |                            ^
-           |""".stripMargin
+           |""".stripMargin,
       )
       bloopJsonText = jsonFilePath.map(_.readText).getOrElse("")
       _ = assert(
         server.client.messageRequests.isEmpty(),
-        "No message should show up"
+        "No message should show up",
       )
       _ = assertNoDiff(
         bloopJsonText,
         ujson.Obj
           .apply("javaHome" -> javaHome)
-          .toString()
+          .toString(),
       )
     } yield ()
   }
@@ -109,18 +109,18 @@ class BloopJavaHomeLspSuite extends BaseLspSuite("java-home") {
            | required: String
            |object A { val x : String = 1 }
            |                            ^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = assert(
         server.client.messageRequests.isEmpty(),
-        "No message should show up"
+        "No message should show up",
       )
       bloopJsonText = jsonFilePath.map(_.readText).getOrElse("")
       _ = assertNoDiff(
         bloopJsonText,
         ujson.Obj
           .apply("javaHome" -> javaHome)
-          .toString()
+          .toString(),
       )
     } yield ()
   }

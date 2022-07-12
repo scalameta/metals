@@ -25,7 +25,7 @@ class ClasspathTreeView[Value, Key](
     valueTitle: Value => String,
     valueTooltip: Value => String,
     toplevels: () => Iterator[Value],
-    loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation]
+    loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation],
 ) {
   val rootUri: String = scheme + ":"
   def root: TreeViewNode =
@@ -33,7 +33,7 @@ class ClasspathTreeView[Value, Key](
       viewId,
       rootUri,
       title + s" (${toplevels().size})",
-      collapseState = MetalsTreeItemCollapseState.collapsed
+      collapseState = MetalsTreeItemCollapseState.collapsed,
     )
 
   def matches(uri: String): Boolean = uri.startsWith(rootUri)
@@ -117,7 +117,7 @@ class ClasspathTreeView[Value, Key](
           tooltip = child.symbol,
           collapseState = collapseState,
           command = command,
-          icon = icon
+          icon = icon,
         )
       }.toArray
 
@@ -128,9 +128,9 @@ class ClasspathTreeView[Value, Key](
             // Sort package objects at the top.
             -java.lang.Boolean.compare(
               a.label == "package",
-              b.label == "package"
+              b.label == "package",
             )
-          }
+          },
         )
       } else {
         // Don't sort type members such as def/val/var in order to preserve
@@ -142,7 +142,7 @@ class ClasspathTreeView[Value, Key](
 
   def toUri(
       jar: Key,
-      symbol: String = Symbols.RootPackage
+      symbol: String = Symbols.RootPackage,
   ): NodeUri =
     NodeUri(jar, symbol)
 
@@ -165,7 +165,7 @@ class ClasspathTreeView[Value, Key](
       uri,
       valueTitle(value),
       tooltip = valueTooltip(value),
-      collapseState = MetalsTreeItemCollapseState.collapsed
+      collapseState = MetalsTreeItemCollapseState.collapsed,
     )
   }
 
@@ -174,7 +174,7 @@ class ClasspathTreeView[Value, Key](
    */
   case class NodeUri(
       key: Key,
-      symbol: String = Symbols.RootPackage
+      symbol: String = Symbols.RootPackage,
   ) {
     override def toString(): String = toUri
     def withSymbol(newSymbol: String): NodeUri =

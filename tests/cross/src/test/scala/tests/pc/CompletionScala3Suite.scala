@@ -19,7 +19,7 @@ class CompletionScala3Suite extends BaseCompletionSuite {
     """|other = : Int
        |otxxx: Int
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
   )
 
   // https://github.com/scalameta/metals/issues/2810
@@ -40,6 +40,6 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |""".stripMargin,
     """|map[B](f: A => B): Foo[B]
        |""".stripMargin,
-    topLines = Some(1)
+    topLines = Some(1),
   )
 }

@@ -34,7 +34,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
         |public interface CharSequence {
         |                 ^^^^^^^^^^^^
         |""".stripMargin,
-    withoutVirtualDocs = true
+    withoutVirtualDocs = true,
   )
 
   check(
@@ -46,7 +46,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
         |abstract class AbstractStringBuilder implements Appendable, CharSequence {
         |               ^^^^^^^^^^^^^^^^^^^^^
-        |""".stripMargin
+        |""".stripMargin,
   )
 
   check(
@@ -58,7 +58,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
         |abstract class AbstractStringBuilder implements Appendable, CharSequence {
         |               ^^^^^^^^^^^^^^^^^^^^^
-        |""".stripMargin
+        |""".stripMargin,
   )
 
   check(
@@ -73,7 +73,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |""".stripMargin,
     dependencies = List(
       "org.jboss.xnio:xnio-nio:3.8.7.Final"
-    )
+    ),
   )
 
   check(
@@ -88,7 +88,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |""".stripMargin,
     dependencies = List(
       "org.jboss.xnio:xnio-nio:3.8.7.Final"
-    )
+    ),
   )
 
   def check(
@@ -97,7 +97,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
       input: String,
       expected: String,
       dependencies: List[String] = Nil,
-      withoutVirtualDocs: Boolean = false
+      withoutVirtualDocs: Boolean = false,
   )(implicit loc: Location): Unit = {
     test(name, withoutVirtualDocs) {
       val parsed = FileLayout.mapFromString(input)
@@ -135,7 +135,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
             new l.TextDocumentPositionParams(
               new l.TextDocumentIdentifier(uri),
               uri,
-              pos
+              pos,
             )
           )
           .asScala
@@ -147,7 +147,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
 
   private def depSourcePosition(
       uri: String,
-      query: String
+      query: String,
   ): l.Position = {
     val characterInc = query.indexOf("@@")
     if (characterInc == -1) {

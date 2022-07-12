@@ -39,7 +39,7 @@ final class ForwardingMetalsBuildClient(
     time: Time,
     didCompile: CompileReport => Unit,
     onBuildTargetDidCompile: BuildTargetIdentifier => Unit,
-    onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit
+    onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -47,7 +47,7 @@ final class ForwardingMetalsBuildClient(
       timer: Timer,
       promise: Promise[CompileReport],
       isNoOp: Boolean,
-      progress: TaskProgress = TaskProgress.empty
+      progress: TaskProgress = TaskProgress.empty,
   ) extends TreeViewCompilation {
     def progressPercentage = progress.percentage
   }
@@ -141,7 +141,7 @@ final class ForwardingMetalsBuildClient(
             s"Compiling $name",
             promise.future,
             showTimer = true,
-            progress = Some(compilation.progress)
+            progress = Some(compilation.progress),
           )
         }
       case _ =>

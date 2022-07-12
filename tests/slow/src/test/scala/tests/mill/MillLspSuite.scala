@@ -33,8 +33,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -60,8 +60,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
         List(
           // Project has .bloop directory so user is asked to "re-import project"
           importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
     }
   }
@@ -90,7 +90,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ <- server.didSave("build.sc") { text =>
         text.replace(
           "/*DEPS*/",
-          "def ivyDeps = Agg(ivy\"com.lihaoyi::sourcecode::0.1.9\")"
+          "def ivyDeps = Agg(ivy\"com.lihaoyi::sourcecode::0.1.9\")",
         )
       }
       _ <-
@@ -110,18 +110,18 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
         """|/build.sc
            |, syntax error
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
-        ImportProjectFailed.getMessage
+        ImportProjectFailed.getMessage,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
@@ -137,8 +137,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -171,7 +171,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
           |foo/src/Warning.scala:1:1: error: Unused import
           |import scala.concurrent.Future // unused
           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        """.stripMargin
+        """.stripMargin,
       )
       // we should still have references despite fatal warning
       _ = assertNoDiff(
@@ -179,7 +179,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
         """|_empty_/A.
            |_empty_/A.B.
            |_empty_/Warning.
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

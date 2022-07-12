@@ -17,7 +17,7 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 
 final class DocumentHighlightProvider(
     definitionProvider: DefinitionProvider,
-    semanticdbs: Semanticdbs
+    semanticdbs: Semanticdbs,
 ) {
 
   def documentHighlight(
@@ -31,7 +31,7 @@ final class DocumentHighlightProvider(
       positionOccurrence = definitionProvider.positionOccurrence(
         source,
         params.getPosition,
-        doc
+        doc,
       )
       occ <- positionOccurrence.occurrence.toList
       alternatives = findAllAlternatives(doc, occ)
@@ -51,7 +51,7 @@ final class DocumentHighlightProvider(
 
   private def findAllAlternatives(
       doc: TextDocument,
-      occ: SymbolOccurrence
+      occ: SymbolOccurrence,
   ): Set[String] = {
 
     val symbolInfo = doc.symbols.find(_.symbol == occ.symbol)
@@ -83,7 +83,7 @@ final class DocumentHighlightProvider(
    */
   private def findLocalsInScope(
       symbol: String,
-      doc: TextDocument
+      doc: TextDocument,
   ): Set[String] = {
     val owner = doc.symbols
       .filter(_.isClass)
@@ -108,7 +108,7 @@ final class DocumentHighlightProvider(
    */
   private def localVarAlternatives(
       info: SymbolInformation,
-      doc: TextDocument
+      doc: TextDocument,
   ): Set[String] = {
     val setterSuffix = "_="
     val symbolName = info.displayName.stripSuffix(setterSuffix)
@@ -131,23 +131,23 @@ final class DocumentHighlightProvider(
     Symbol(info.symbol) match {
       case GlobalSymbol(
             GlobalSymbol(owner, descriptor),
-            Descriptor.Method(setter, "()")
+            Descriptor.Method(setter, "()"),
           ) =>
         generateAlternativeSymbols(
           setter.stripSuffix(setterSuffix),
           descriptor.value,
           owner.value,
-          isInObject(descriptor)
+          isInObject(descriptor),
         )
       case GlobalSymbol(
             GlobalSymbol(owner, descriptor),
-            Descriptor.Term(name)
+            Descriptor.Term(name),
           ) =>
         generateAlternativeSymbols(
           name,
           descriptor.value,
           owner.value,
-          isInObject(descriptor)
+          isInObject(descriptor),
         )
       case _ => Set.empty
     }
@@ -159,15 +159,15 @@ final class DocumentHighlightProvider(
       case GlobalSymbol(
             GlobalSymbol(
               GlobalSymbol(owner, descriptor),
-              Descriptor.Method(name, _)
+              Descriptor.Method(name, _),
             ),
-            desc
+            desc,
           ) if copyOrApply(name) =>
         generateAlternativeSymbols(
           desc.value,
           descriptor.value,
           owner.value,
-          areParamsInObject = false
+          areParamsInObject = false,
         )
 
       case _ =>
@@ -179,7 +179,7 @@ final class DocumentHighlightProvider(
       paramName: String,
       className: String,
       packageName: String,
-      areParamsInObject: Boolean
+      areParamsInObject: Boolean,
   ): Set[String] = {
 
     val setterSuffix = "_="
@@ -189,30 +189,30 @@ final class DocumentHighlightProvider(
     Set(
       Symbols.Global(
         Symbols.Global(packageName, Descriptor.Type(className)),
-        Descriptor.Term(paramName)
+        Descriptor.Term(paramName),
       ),
       Symbols.Global(
         Symbols.Global(
           Symbols.Global(packageName, Descriptor.Type(className)),
-          Descriptor.Method("copy", "()")
+          Descriptor.Method("copy", "()"),
         ),
-        Descriptor.Parameter(paramName)
+        Descriptor.Parameter(paramName),
       ),
       Symbols.Global(
         Symbols.Global(
           Symbols.Global(packageName, Descriptor.Term(className)),
-          Descriptor.Method("apply", "()")
+          Descriptor.Method("apply", "()"),
         ),
-        Descriptor.Parameter(paramName)
+        Descriptor.Parameter(paramName),
       ),
       Symbols.Global(
         Symbols.Global(packageName, paramsDescriptor),
-        Descriptor.Method(paramName, "()")
+        Descriptor.Method(paramName, "()"),
       ),
       Symbols.Global(
         Symbols.Global(packageName, paramsDescriptor),
-        Descriptor.Method(paramName + setterSuffix, "()")
-      )
+        Descriptor.Method(paramName + setterSuffix, "()"),
+      ),
     )
   }
 }

@@ -25,7 +25,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |object FormatMe {
             | val x = 1  }
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- server.formatting("a/src/main/scala/a/Main.scala")
@@ -34,7 +34,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         server.bufferContents("a/src/main/scala/a/Main.scala"),
         """|object FormatMe {
            |  val x = 1
-           |}""".stripMargin
+           |}""".stripMargin,
       )
     } yield ()
   }
@@ -48,20 +48,20 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |object FormatMe {
             | val x = 1  }
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- server.formatting("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        MissingScalafmtConf.createScalafmtConfMessage
+        MissingScalafmtConf.createScalafmtConfMessage,
       )
       // check that the formatting request has been ignored
       _ = assertNoDiff(
         server.bufferContents("a/src/main/scala/a/Main.scala"),
         """|object FormatMe {
            | val x = 1  }
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -82,7 +82,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |object FormatMe {
             | val x = 1  }
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- server.formatting("a/src/main/scala/a/Main.scala")
@@ -90,7 +90,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         server.textContents(".scalafmt.conf"),
         s"""|version = "${V.scalafmtVersion}"
             |runner.dialect = scala213
-            |""".stripMargin
+            |""".stripMargin,
       )
     } yield ()
   }
@@ -108,7 +108,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |object FormatMe {
             | val x = 1  }
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- {
@@ -117,7 +117,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
           "scalafmt-config-path",
           new JsonPrimitive(
             workspace.resolve("./project/.scalafmt.conf").toString()
-          )
+          ),
         )
         server.didChangeConfiguration(config.toString)
       }
@@ -126,7 +126,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         server.bufferContents("a/src/main/scala/a/Main.scala"),
         """|object FormatMe {
            |  val x = 1
-           |}""".stripMargin
+           |}""".stripMargin,
       )
     } yield ()
   }
@@ -146,7 +146,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |  name: String,
             |  age: Int,
             |)""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- server.formatting("a/src/main/scala/a/Main.scala")
@@ -156,7 +156,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         """|case class User(
            |    name: String,
            |    age: Int
-           |)""".stripMargin
+           |)""".stripMargin,
       )
     } yield ()
   }
@@ -173,7 +173,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
            |/Main.scala
            |object  Main
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.formatting("Main.scala")
       _ = assertNoDiff(
@@ -182,7 +182,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
           |.scalafmt.conf:1:1: error: failed to resolve Scalafmt version 'does-not-exist'
           |version="does-not-exist"
           |^^^^^^^^^^^^^^^^^^^^^^^^
-        """.stripMargin
+        """.stripMargin,
       )
     } yield ()
   }
@@ -199,7 +199,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |/Main.scala
             |object  Main
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen(".scalafmt.conf")
       _ <- server.formatting("Main.scala")
@@ -214,7 +214,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |> version=${V.scalafmtVersion}
             |> runner.dialect = scala213
             |> align=does-not-exist
-        """.stripMargin
+        """.stripMargin,
       )
     } yield ()
   }
@@ -240,28 +240,28 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |/ResourceSpec.scala
             |object ResourceSpec
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("Main.scala")
       _ <- server.formatting("Main.scala")
       // check Main.scala has been ignored (doesn't match includeFilters)
       _ = assertNoDiff(
         server.bufferContents("Main.scala"),
-        "  object   Main"
+        "  object   Main",
       )
       _ <- server.didOpen("UserSpec.scala")
       _ <- server.formatting("UserSpec.scala")
       // check UserSpec.scala has been ignored (matches excludeFilters)
       _ = assertNoDiff(
         server.bufferContents("UserSpec.scala"),
-        "  object   UserSpec"
+        "  object   UserSpec",
       )
       _ <- server.didOpen("ResourceSpec.scala")
       _ <- server.formatting("ResourceSpec.scala")
       // check ResourceSpec.scala has been formatted
       _ = assertNoDiff(
         server.bufferContents("ResourceSpec.scala"),
-        "object ResourceSpec"
+        "object ResourceSpec",
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
@@ -278,14 +278,14 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |/project/plugins.sbt
             |  object   Plugins
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("project/plugins.sbt")
       _ <- server.formatting("project/plugins.sbt")
       // check plugins.sbt has been formatted
       _ = assertNoDiff(
         server.bufferContents("project/plugins.sbt"),
-        "object Plugins"
+        "object Plugins",
       )
     } yield ()
   }
@@ -309,31 +309,31 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |/Main.scala
             |object   Main
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("Main.scala")
       _ <- server.formatting("Main.scala")
       _ = {
         assertNoDiff(
           client.workspaceMessageRequests,
-          MissingScalafmtVersion.messageRequestMessage
+          MissingScalafmtVersion.messageRequestMessage,
         )
         assertNoDiff(
           client.workspaceShowMessages,
-          MissingScalafmtVersion.fixedVersion(isAgain = false).getMessage
+          MissingScalafmtVersion.fixedVersion(isAgain = false).getMessage,
         )
         assertNoDiff(client.workspaceDiagnostics, "")
         // check file was formatted after version was inserted.
         assertNoDiff(
           server.bufferContents("Main.scala"),
-          "object Main\n"
+          "object Main\n",
         )
         assertNoDiff(
           server.textContents(".scalafmt.conf"),
           s"""|version = "${V.scalafmtVersion}"
               |maxColumn=40
               |runner.dialect = scala213
-              |""".stripMargin
+              |""".stripMargin,
         )
       }
     } yield ()
@@ -363,7 +363,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         server.textContents(".scalafmt.conf"),
         s"""|version = "${V.scalafmtVersion}"
             |runner.dialect = scala3
-            |""".stripMargin
+            |""".stripMargin,
       )
 
     } yield ()
@@ -394,7 +394,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         server.textContents(".scalafmt.conf"),
         s"""|version = "${V.scalafmtVersion}"
             |runner.dialect = scala213source3
-            |""".stripMargin
+            |""".stripMargin,
       )
 
     } yield ()
@@ -432,7 +432,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         server.textContents(".scalafmt.conf"),
         s"""|version = "${V.scalafmtVersion}"
             |runner.dialect = scala212
-            |""".stripMargin
+            |""".stripMargin,
       )
 
     } yield ()
@@ -473,7 +473,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |     runner.dialect = scala3
             |  }
             |}
-            |""".stripMargin
+            |""".stripMargin,
       )
 
     } yield ()
@@ -497,34 +497,34 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |/Main.scala
             |object   Main
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- server.didOpen("Main.scala")
       _ <- server.formatting("Main.scala")
       _ = {
         assertNoDiff(
           client.workspaceMessageRequests,
-          MissingScalafmtVersion.messageRequestMessage
+          MissingScalafmtVersion.messageRequestMessage,
         )
         assertNoDiff(
           client.workspaceShowMessages,
-          ""
+          "",
         )
         // check file was not formatted because version is still missing.
         assertNoDiff(
           server.bufferContents("Main.scala"),
-          "object   Main"
+          "object   Main",
         )
         assertNoDiff(
           server.textContents(".scalafmt.conf"),
-          "maxColumn=40"
+          "maxColumn=40",
         )
         assertNoDiff(
           client.workspaceDiagnostics,
           s"""|.scalafmt.conf:1:1: error: missing setting 'version'. To fix this problem, add the following line to .scalafmt.conf: 'version=${V.scalafmtVersion}'.
               |maxColumn=40
               |^^^^^^^^^^^^
-              |""".stripMargin
+              |""".stripMargin,
         )
       }
     } yield ()

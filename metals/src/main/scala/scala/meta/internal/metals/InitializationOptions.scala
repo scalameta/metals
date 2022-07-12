@@ -75,7 +75,7 @@ final case class InitializationOptions(
     openNewWindowProvider: Option[Boolean],
     copyWorksheetOutputProvider: Option[Boolean],
     disableColorOutput: Option[Boolean],
-    doctorVisibilityProvider: Option[Boolean]
+    doctorVisibilityProvider: Option[Boolean],
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -112,7 +112,7 @@ object InitializationOptions {
     None,
     None,
     None,
-    None
+    None,
   )
 
   def from(
@@ -168,7 +168,7 @@ object InitializationOptions {
         jsonObj.getBooleanOption("copyWorksheetOutputProvider"),
       disableColorOutput = jsonObj.getBooleanOption("disableColorOutput"),
       doctorVisibilityProvider =
-        jsonObj.getBooleanOption("doctorVisibilityProvider")
+        jsonObj.getBooleanOption("doctorVisibilityProvider"),
     )
   }
 
@@ -201,7 +201,7 @@ object InitializationOptions {
         _.getStringOption("parameterHintsCommand")
       ),
       snippetAutoIndent =
-        compilerObj.flatMap(_.getBooleanOption("snippetAutoIndent"))
+        compilerObj.flatMap(_.getBooleanOption("snippetAutoIndent")),
     )
   }
 
@@ -229,7 +229,7 @@ object CommandHTMLFormat {
 
     override def createLink(
         commandId: String,
-        arguments: List[String]
+        arguments: List[String],
     ): String = {
       // sublime expect commands to follow the under_scores format
       val id = commandId.replaceAll("-", "_")
@@ -246,7 +246,7 @@ object CommandHTMLFormat {
 
     override def createLink(
         commandId: String,
-        arguments: List[String]
+        arguments: List[String],
     ): String = {
       val encodedArguments =
         if (arguments.isEmpty) ""

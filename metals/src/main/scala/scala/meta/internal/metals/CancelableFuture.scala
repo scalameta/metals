@@ -5,7 +5,7 @@ import scala.concurrent.Future
 
 case class CancelableFuture[T](
     future: Future[T],
-    cancelable: Cancelable = Cancelable.empty
+    cancelable: Cancelable = Cancelable.empty,
 ) extends Cancelable {
   def map[U](f: T => U)(implicit ec: ExecutionContext): CancelableFuture[U] =
     CancelableFuture(future.map(f), cancelable)
@@ -27,6 +27,6 @@ object CancelableFuture {
   )(implicit ec: ExecutionContext): CancelableFuture[Seq[T]] =
     CancelableFuture(
       Future.sequence(futures.map(_.future)),
-      new MutableCancelable().addAll(futures.map(_.cancelable))
+      new MutableCancelable().addAll(futures.map(_.cancelable)),
     )
 }

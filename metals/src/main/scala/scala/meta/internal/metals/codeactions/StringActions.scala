@@ -18,7 +18,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
   override def contribute(
       params: l.CodeActionParams,
-      token: CancelToken
+      token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     val uri = params.getTextDocument.getUri
@@ -61,7 +61,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
                 List(
                   stripMarginAction(
                     uri,
-                    new l.Range(s.pos.toLSP.getStart, e.pos.toLSP.getEnd)
+                    new l.Range(s.pos.toLSP.getStart, e.pos.toLSP.getEnd),
                   )
                 )
               case _ =>
@@ -102,7 +102,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
   def stripMarginAction(
       uri: String,
-      range: l.Range
+      range: l.Range,
   ): l.CodeAction = {
     range.getStart.setCharacter(range.getStart.getCharacter + 1)
     val startRange = new l.Range(range.getStart, range.getStart)
@@ -111,7 +111,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
     val edits = List(
       new l.TextEdit(startRange, quotify("''|")),
-      new l.TextEdit(endRange, quotify("''.stripMargin"))
+      new l.TextEdit(endRange, quotify("''.stripMargin")),
     )
 
     codeRefactorAction(StringActions.multilineTitle, uri, edits)
@@ -119,7 +119,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
   def interpolateAction(
       uri: String,
-      token: Token.Constant.String
+      token: Token.Constant.String,
   ): l.CodeAction = {
     val range = token.pos.toLSP
     val start = range.getStart()
@@ -133,7 +133,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
       val dollarPos =
         new l.Position(
           start.getLine() + newlinesBeforeDolar.size,
-          updatedCharacter
+          updatedCharacter,
         )
       val dollarRange = new l.Range(dollarPos, dollarPos)
       new l.TextEdit(dollarRange, "$")
@@ -148,7 +148,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
   def removeInterpolationAction(
       uri: String,
-      range: l.Range
+      range: l.Range,
   ): l.CodeAction = {
     range.getStart.setCharacter(range.getStart.getCharacter - 1)
     range.getEnd.setCharacter(range.getStart.getCharacter + 1)
@@ -168,7 +168,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
   def codeRefactorAction(
       title: String,
       uri: String,
-      edits: List[l.TextEdit]
+      edits: List[l.TextEdit],
   ): l.CodeAction = {
     val codeAction = new l.CodeAction()
     codeAction.setTitle(title)

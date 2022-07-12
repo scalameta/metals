@@ -23,7 +23,7 @@ trait SemanticdbFeatureProvider {
 class SemanticdbIndexer(
     providers: List[SemanticdbFeatureProvider],
     buildTargets: BuildTargets,
-    workspace: AbsolutePath
+    workspace: AbsolutePath,
 ) {
 
   def onTargetRoots(): Unit = {

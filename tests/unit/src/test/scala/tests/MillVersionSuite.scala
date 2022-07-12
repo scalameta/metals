@@ -7,7 +7,7 @@ class MillVersionSuite extends BaseSuite {
 
   def check(
       layout: String,
-      expected: String
+      expected: String,
   ): Unit = {
     test(expected) {
       val root = FileLayout.fromString(layout)
@@ -21,7 +21,7 @@ class MillVersionSuite extends BaseSuite {
     """|.mill-version
        |0.10.2
        |""".stripMargin,
-    "0.10.2"
+    "0.10.2",
   )
 
   check(
@@ -42,7 +42,7 @@ class MillVersionSuite extends BaseSuite {
        |
        |DEFAULT_MILL_VERSION=0.9.12
        |""".stripMargin,
-    "0.9.12"
+    "0.9.12",
   )
 
 }

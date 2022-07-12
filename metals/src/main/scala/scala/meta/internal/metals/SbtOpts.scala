@@ -41,7 +41,7 @@ object SbtOpts {
     "-sbt-boot" -> "-Dsbt.boot.directory=",
     "-sbt-dir" -> "-Dsbt.global.base=",
     "-ivy" -> "-Dsbt.ivy.home=",
-    "-jvm-debug" -> debuggerOpts
+    "-jvm-debug" -> debuggerOpts,
   )
 
   private def process(opts: List[String]): List[String] = {

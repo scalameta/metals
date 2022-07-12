@@ -9,7 +9,7 @@ import org.eclipse.{lsp4j => l}
 case class SymbolReference(
     symbol: String,
     location: l.Location,
-    pos: m.Position
+    pos: m.Position,
 ) {
   def format: String = pos.formatMessage(symbol, "")
   override def toString: String = format

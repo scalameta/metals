@@ -23,7 +23,7 @@ class InverseDependenciesSuite extends BaseSuite {
   def check(
       name: String,
       original: Graph,
-      expected: String
+      expected: String,
   )(implicit loc: Location): Unit = {
     test(name) {
       val obtained = BuildTargets.inverseDependencies(
@@ -32,11 +32,11 @@ class InverseDependenciesSuite extends BaseSuite {
           original.inverseDependencies
             .get(key.getUri)
             .map(_.map(new BuildTargetIdentifier(_)).toSeq)
-        }
+        },
       )
       assertNoDiff(
         obtained.leaves.toSeq.map(_.getUri).sorted.mkString("\n"),
-        expected
+        expected,
       )
     }
   }
@@ -45,7 +45,7 @@ class InverseDependenciesSuite extends BaseSuite {
     "basic",
     root("a")
       .dependsOn("b", "a"),
-    "b"
+    "b",
   )
 
   check(
@@ -53,7 +53,7 @@ class InverseDependenciesSuite extends BaseSuite {
     root("a")
       .dependsOn("b", "a")
       .dependsOn("c", "b"),
-    "c"
+    "c",
   )
 
   check(
@@ -65,13 +65,13 @@ class InverseDependenciesSuite extends BaseSuite {
     """
       |c
       |d
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   check(
     "alone",
     root("a"),
-    "a"
+    "a",
   )
 
   check(
@@ -81,7 +81,7 @@ class InverseDependenciesSuite extends BaseSuite {
       .dependsOn("c", "a")
       .dependsOn("d", "b")
       .dependsOn("d", "c"),
-    "d"
+    "d",
   )
 
 }

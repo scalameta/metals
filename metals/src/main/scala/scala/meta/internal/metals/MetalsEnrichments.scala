@@ -127,7 +127,7 @@ object MetalsEnrichments
         onPosition =
           pos => Some(new l.Position(pos.startLine, pos.startColumn)),
         onUnchanged = () => Some(dirty),
-        onNoMatch = () => None
+        onNoMatch = () => None,
       )
 
     def toLocation(dirty: l.Location): Option[l.Location] =
@@ -138,19 +138,19 @@ object MetalsEnrichments
               dirty.getUri,
               new l.Range(
                 new l.Position(pos.startLine, pos.startColumn),
-                new l.Position(pos.endLine, pos.endColumn)
-              )
+                new l.Position(pos.endLine, pos.endColumn),
+              ),
             )
           )
         },
         () => Some(dirty),
-        () => None
+        () => None,
       )
 
     def foldResult[B](
         onPosition: m.Position => B,
         onUnchanged: () => B,
-        onNoMatch: () => B
+        onNoMatch: () => B,
     ): B =
       result match {
         case Right(pos) => onPosition(pos)
@@ -262,7 +262,7 @@ object MetalsEnrichments
           s.getName,
           s.getKind,
           new l.Location(uri, s.getRange),
-          if (owner == Symbols.RootPackage) "" else owner
+          if (owner == Symbols.RootPackage) "" else owner,
         )
         val newOwner: String = s.getKind match {
           case l.SymbolKind.Package =>
@@ -367,7 +367,7 @@ object MetalsEnrichments
 
     private def toFileOnDisk0(
         workspace: AbsolutePath,
-        retryCount: Int
+        retryCount: Int,
     ): AbsolutePath = {
       def toJarMeta(jar: AbsolutePath): String = {
         val time = Files.getLastModifiedTime(jar.toNIO).toMillis()
@@ -508,7 +508,7 @@ object MetalsEnrichments
     def createAndGetDirectories(): Seq[AbsolutePath] = {
       def createDirectoriesRec(
           absolutePath: AbsolutePath,
-          toCreate: Seq[AbsolutePath]
+          toCreate: Seq[AbsolutePath],
       ): Seq[AbsolutePath] = {
         if (absolutePath.exists)
           toCreate.map(path => AbsolutePath(Files.createDirectory(path.toNIO)))
@@ -537,14 +537,14 @@ object MetalsEnrichments
       Files.write(
         tmp,
         text.getBytes(StandardCharsets.UTF_8),
-        StandardOpenOption.TRUNCATE_EXISTING
+        StandardOpenOption.TRUNCATE_EXISTING,
       )
       try {
         Files.move(
           tmp,
           path.toNIO,
           StandardCopyOption.REPLACE_EXISTING,
-          StandardCopyOption.ATOMIC_MOVE
+          StandardCopyOption.ATOMIC_MOVE,
         )
       } catch {
         case NonFatal(_) =>
@@ -557,7 +557,7 @@ object MetalsEnrichments
       Files.write(
         path.toNIO,
         text.getBytes(StandardCharsets.UTF_8),
-        StandardOpenOption.APPEND
+        StandardOpenOption.APPEND,
       )
     }
 
@@ -585,7 +585,7 @@ object MetalsEnrichments
     def lastIndexBetween(
         char: Char,
         lowerBound: Int,
-        upperBound: Int
+        upperBound: Int,
     ): Int = {
       val safeLowerBound = Math.max(0, lowerBound)
       var index = upperBound
@@ -725,7 +725,7 @@ object MetalsEnrichments
         range.startLine,
         range.startCharacter,
         range.endLine,
-        range.endCharacter
+        range.endCharacter,
       )
   }
 
@@ -736,7 +736,7 @@ object MetalsEnrichments
         range.getStart.getLine,
         range.getStart.getCharacter,
         range.getEnd.getLine,
-        range.getEnd.getCharacter
+        range.getEnd.getCharacter,
       )
 
     def toLSP: l.Range =
@@ -750,7 +750,7 @@ object MetalsEnrichments
 
     def encloses(
         pos: l.Position,
-        includeLastCharacter: Boolean = false
+        includeLastCharacter: Boolean = false,
     ): Boolean =
       occ.range.isDefined &&
         occ.range.get.encloses(pos, includeLastCharacter)
@@ -762,7 +762,7 @@ object MetalsEnrichments
         diag.getRange.toLSP,
         fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
         diag.getSeverity.toLSP,
-        if (diag.getSource == null) "scalac" else diag.getSource
+        if (diag.getSource == null) "scalac" else diag.getSource,
         // We omit diag.getCode since Bloop's BSP implementation uses 'code' with different semantics
         // than LSP. See https://github.com/scalacenter/bloop/issues/1134 for details
       )

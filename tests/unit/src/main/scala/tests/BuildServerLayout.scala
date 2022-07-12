@@ -9,7 +9,7 @@ sealed trait BuildToolLayout {
 object QuickBuildLayout extends BuildToolLayout {
   override def apply(
       sourceLayout: String,
-      scalaVersion: String
+      scalaVersion: String,
   ): String = {
     s"""|/metals.json
         |{ 
@@ -28,7 +28,7 @@ object SbtBuildLayout extends BuildToolLayout {
 
   override def apply(
       sourceLayout: String,
-      scalaVersion: String
+      scalaVersion: String,
   ): String = {
     s"""|/project/build.properties
         |sbt.version=${V.sbtVersion}
@@ -56,7 +56,7 @@ object MillBuildLayout extends BuildToolLayout {
   def apply(
       sourceLayout: String,
       scalaVersion: String,
-      millVersion: String
+      millVersion: String,
   ): String =
     s"""|/.mill-version
         |$millVersion

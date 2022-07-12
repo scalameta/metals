@@ -11,7 +11,7 @@ import ch.epfl.scala.bsp4j.JavacOptionsItem
 
 case class JavaTarget(
     info: BuildTarget,
-    javac: JavacOptionsItem
+    javac: JavacOptionsItem,
 ) {
   def displayName: String = info.getDisplayName()
 

@@ -9,7 +9,7 @@ import munit.Location
 
 abstract class BaseImportSuite(
     suiteName: String,
-    initializer: BuildServerInitializer = BloopImportInitializer
+    initializer: BuildServerInitializer = BloopImportInitializer,
 ) extends BaseLspSuite(suiteName, initializer) {
 
   def buildTool: BuildTool

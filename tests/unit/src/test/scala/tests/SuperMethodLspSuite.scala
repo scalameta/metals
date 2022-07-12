@@ -209,7 +209,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
     checkSuperMethodMulti(
       codeA,
-      codeB
+      codeB,
     )
   }
 
@@ -230,7 +230,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
   def checkSuperMethodMulti(
       codeA: String,
-      codeB: String
+      codeB: String,
   ): Future[Unit] = {
     val header = s"""
                     |/metals.json
@@ -256,7 +256,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       (contextB, assertsB) = parseWithUri(codeB, pathB)
       result <- server.assertGotoSuperMethod(
         assertsA ++ assertsB,
-        contextA ++ contextB
+        contextA ++ contextB,
       )
 
     } yield result
@@ -289,7 +289,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       externalDep = Map(
         50 -> (new Position(
           60,
-          6
+          6,
         ), workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.13-0.12.0-sources.jar/io/circe/Decoder.scala")
       )
 
@@ -304,7 +304,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
   private def parseWithUri(
       code: String,
-      uri: String
+      uri: String,
   ): (Map[Int, (Position, String)], Map[Int, Option[Int]]) = {
     val (mapping, asserts) = parse(code)
     (mapping.mapValues((_, uri)).toMap, asserts)

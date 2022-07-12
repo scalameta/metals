@@ -21,7 +21,7 @@ class CrossReferenceSuite extends BaseRangesSuite("cross-reference-suite") {
        |}
        |
        |""".stripMargin,
-    scalaVersion = Some(V.scala3)
+    scalaVersion = Some(V.scala3),
   )
 
   check(
@@ -37,14 +37,14 @@ class CrossReferenceSuite extends BaseRangesSuite("cross-reference-suite") {
        |}
        |
        |""".stripMargin,
-    scalaVersion = Some(V.scala3)
+    scalaVersion = Some(V.scala3),
   )
 
   override def assertCheck(
       filename: String,
       edit: String,
       expected: Map[String, String],
-      base: Map[String, String]
+      base: Map[String, String],
   ): Future[Unit] = {
     server.assertReferences(filename, edit, expected, base)
   }

@@ -10,11 +10,11 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 final class SourcePathProvider(
     definitionProvider: DefinitionProvider,
     buildTargets: BuildTargets,
-    targets: List[BuildTargetIdentifier]
+    targets: List[BuildTargetIdentifier],
 ) {
   def findPathFor(
       sourcePath: String,
-      sourceName: String
+      sourceName: String,
   ): Option[AbsolutePath] = {
     searchAsClassPathSymbol(sourcePath).orElse(searchAsSourceFile(sourceName))
   }

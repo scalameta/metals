@@ -86,7 +86,7 @@ class DefinitionCrossLspSuite
       _ <- server.didOpen("scala/Predef.scala")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        "Preparing presentation compiler"
+        "Preparing presentation compiler",
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()

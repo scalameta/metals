@@ -9,7 +9,7 @@ class ChosenBuildServerSuite extends BaseTablesSuite {
     assertDiffEqual(buildServers.chooseServer("a", "bill"), 1)
     assertDiffEqual(
       buildServers.selectedServer("a").get,
-      "bill"
+      "bill",
     )
   }
   test("explicit") {
@@ -17,11 +17,11 @@ class ChosenBuildServerSuite extends BaseTablesSuite {
     assertDiffEqual(buildServers.chooseServer("bill"), 1)
     assertDiffEqual(
       buildServers.selectedServer().get,
-      "bill"
+      "bill",
     )
     assertDiffEqual(
       buildServers.selectedServer("EXPLICIT").get,
-      "bill"
+      "bill",
     )
   }
   test("reset") {
@@ -29,12 +29,12 @@ class ChosenBuildServerSuite extends BaseTablesSuite {
     assertDiffEqual(buildServers.chooseServer("bill"), 1)
     assertDiffEqual(
       buildServers.selectedServer().get,
-      "bill"
+      "bill",
     )
     buildServers.reset()
     assertDiffEqual(
       buildServers.selectedServer(),
-      None
+      None,
     )
   }
 }

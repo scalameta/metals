@@ -18,7 +18,7 @@ case class RangeFormatterParams(
     formattingOptions: FormattingOptions,
     startPos: meta.Position,
     endPos: meta.Position,
-    tokens: Option[Tokens]
+    tokens: Option[Tokens],
 ) extends FormatterParams {
   lazy val splitLines: Array[String] = sourceText.split("\\r?\\n")
 }
@@ -32,11 +32,11 @@ trait RangeFormatter {
 class RangeFormattingProvider(
     buffers: Buffers,
     trees: Trees,
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
 ) {
   val formatters: List[RangeFormatter] = List(
     MultilineString(userConfig),
-    IndentOnPaste(userConfig)
+    IndentOnPaste(userConfig),
   )
 
   def format(
@@ -59,7 +59,7 @@ class RangeFormattingProvider(
             formattingOptions,
             startPos,
             endPos,
-            tokensOpt
+            tokensOpt,
           )
         formatters.acceptFirst(formater =>
           formater.contribute(rangeFormatterParams)

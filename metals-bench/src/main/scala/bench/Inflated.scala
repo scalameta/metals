@@ -30,7 +30,7 @@ object Inflated {
     FileIO.withJarFileSystem(
       file,
       create = false,
-      close = true
+      close = true,
     ) { root =>
       var lines = 0L
       val buf = List.newBuilder[Input.VirtualFile]

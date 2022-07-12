@@ -48,7 +48,7 @@ sealed trait CompletionValue:
     forSymOnly(
       sym =>
         if sym.isDeprecated then List(CompletionItemTag.Deprecated) else Nil,
-      Nil
+      Nil,
     )
 
   final def description(printer: MetalsPrinter): String =
@@ -77,13 +77,13 @@ object CompletionValue:
   case class Compiler(
       label: String,
       symbol: Symbol,
-      override val snippetSuffix: Option[String]
+      override val snippetSuffix: Option[String],
   ) extends Symbolic
   case class Scope(label: String, symbol: Symbol) extends Symbolic
   case class Workspace(
       label: String,
       symbol: Symbol,
-      override val snippetSuffix: Option[String]
+      override val snippetSuffix: Option[String],
   ) extends Symbolic
 
   /**
@@ -100,7 +100,7 @@ object CompletionValue:
       symbol: Symbol,
       shortenedNames: List[ShortName],
       override val filterText: Option[String],
-      start: Int
+      start: Int,
   ) extends Symbolic:
   end Override
 
@@ -114,7 +114,7 @@ object CompletionValue:
       override val insertText: Option[String],
       override val additionalEdits: List[TextEdit],
       override val range: Option[Range],
-      override val filterText: Option[String]
+      override val filterText: Option[String],
   ) extends Symbolic
 
   case class Document(label: String, doc: String, description: String)
@@ -129,7 +129,7 @@ object CompletionValue:
   def document(
       label: String,
       insertText: String,
-      description: String
+      description: String,
   ): CompletionValue =
     Document(label, insertText, description)
 

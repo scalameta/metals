@@ -18,7 +18,7 @@ import scala.meta.io.AbsolutePath
 final class WorkspaceReload(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
-    tables: Tables
+    tables: Tables,
 ) {
 
   private val notification = tables.dismissedNotifications.ImportChanges
@@ -36,7 +36,7 @@ final class WorkspaceReload(
 
   def persistChecksumStatus(
       status: Status,
-      buildTool: BuildTool
+      buildTool: BuildTool,
   ): Unit = {
     buildTool.digest(workspace).foreach { checksum =>
       tables.digests.setStatus(checksum, status)
@@ -45,7 +45,7 @@ final class WorkspaceReload(
 
   def requestReload(
       buildTool: BuildTool,
-      digest: String
+      digest: String,
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
     tables.digests.setStatus(digest, Status.Requested)
     val (params, yes) =

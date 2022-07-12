@@ -8,7 +8,7 @@ class SuperMethodSuite extends BaseSuite {
     checkConvert("akka/actor/Actor#preStart().", "akka.actor.Actor#preStart")
     checkConvert(
       "java/lang/Throwable#getMessage().",
-      "java.lang.Throwable#getMessage"
+      "java.lang.Throwable#getMessage",
     )
     // overloaded method
     checkConvert("a/MultiMethods#check(+3).", "a.MultiMethods#check")
@@ -22,7 +22,7 @@ class SuperMethodSuite extends BaseSuite {
   def checkConvert(current: String, converted: String): Unit = {
     assertNoDiff(
       Supermethods.formatMethodSymbolForQuickPick(current),
-      converted
+      converted,
     )
   }
 }

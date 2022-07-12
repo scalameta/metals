@@ -30,7 +30,7 @@ class RemoteLanguageServer(
     userConfig: () => UserConfiguration,
     serverConfig: MetalsServerConfig,
     buffers: Buffers,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext) {
   val timeout: Duration = Duration(serverConfig.remoteTimeout)
   def isEnabledForPath(path: AbsolutePath): Boolean =
@@ -55,7 +55,7 @@ class RemoteLanguageServer(
         locations <- postLocationRequest(
           url,
           params.toJsonObject,
-          "textDocument/references"
+          "textDocument/references",
         )
       } yield ReferencesResult(Symbols.None, locations.asScala.toSeq)
     }
@@ -68,7 +68,7 @@ class RemoteLanguageServer(
         locations <- postLocationRequest(
           url,
           params.toJsonObject,
-          "textDocument/definition"
+          "textDocument/definition",
         )
       } yield DefinitionResult(locations, Symbols.None, None, None)
     }
@@ -83,13 +83,13 @@ class RemoteLanguageServer(
   private def postLocationRequest(
       url: String,
       params: JsonObject,
-      method: String
+      method: String,
   ): Option[ju.List[Location]] = {
     val maybeResponse = Try(
       requests.post(
         url,
         data = asRemoteParameters(params, method).toString(),
-        headers = List("Content-Type" -> "application/json")
+        headers = List("Content-Type" -> "application/json"),
       )
     )
     maybeResponse.toEither.left.foreach { error =>
@@ -115,7 +115,7 @@ class RemoteLanguageServer(
    */
   private def asRemoteParameters(
       params: JsonObject,
-      method: String
+      method: String,
   ): JsonObject = {
     val textDocument = params.get("textDocument").getAsJsonObject()
     val absolutePath = textDocument.get("uri").getAsString.toAbsolutePath

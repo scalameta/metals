@@ -17,7 +17,7 @@ import org.eclipse.{lsp4j => l}
 final case class ClassWithPos(
     path: String,
     friendlyName: String,
-    description: String
+    description: String,
 )
 
 class ClassFinder(trees: Trees) {
@@ -31,7 +31,7 @@ class ClassFinder(trees: Trees) {
 
   def findAllClasses(
       path: AbsolutePath,
-      checkInnerClasses: Boolean
+      checkInnerClasses: Boolean,
   ): Option[List[ClassWithPos]] =
     for {
       tree <- trees.get(path)
@@ -82,7 +82,7 @@ class ClassFinder(trees: Trees) {
   private def findClass(
       path: AbsolutePath,
       pos: l.Position,
-      checkInnerClasses: Boolean
+      checkInnerClasses: Boolean,
   ): Option[String] = trees
     .get(path)
     .map { tree =>
@@ -96,7 +96,7 @@ class ClassFinder(trees: Trees) {
       tree: Tree,
       pos: Position,
       fileName: String,
-      inspectInnerClasses: Boolean
+      inspectInnerClasses: Boolean,
   ): String = {
     @tailrec
     def loop(tree: Tree, symbol: String, isInsideClass: Boolean): String = {
@@ -111,7 +111,7 @@ class ClassFinder(trees: Trees) {
         case _: Defn.Def if !isInsideClass =>
           (
             symbol + delimeter + fileName.stripSuffix(".scala") + "$package",
-            false
+            false,
           )
 
         case Pkg(ref, _) =>

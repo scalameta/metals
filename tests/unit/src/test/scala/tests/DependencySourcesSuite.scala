@@ -12,19 +12,19 @@ class DependencySourcesSuite extends BaseTablesSuite {
     val buildTarget2 = new BuildTargetIdentifier("core2")
     assertDiffEqual(
       dependencySources.setBuildTarget(textDocument, buildTarget),
-      1
+      1,
     )
     assertDiffEqual(
       dependencySources.getBuildTarget(textDocument).get,
-      buildTarget
+      buildTarget,
     )
     assertDiffEqual(
       dependencySources.setBuildTarget(textDocument, buildTarget2),
-      1
+      1,
     )
     assertDiffEqual(
       dependencySources.getBuildTarget(textDocument).get,
-      buildTarget2
+      buildTarget2,
     )
   }
 }

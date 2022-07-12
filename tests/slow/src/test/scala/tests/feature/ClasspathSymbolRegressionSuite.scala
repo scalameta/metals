@@ -28,7 +28,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.tools.nsc.backend.jvm.opt.LocalOptImpls.RemoveHandlersResult.NoneRemoved Object
        |scala.tools.nsc.settings.ScalaSettings#CachePolicy.None Object
        |scala.tools.nsc.transform.async.ExprBuilder#StateTransitionStyle.None Object
-       |""".stripMargin
+       |""".stripMargin,
   )
   check(
     "Map.Entry",
@@ -55,7 +55,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.commons.collections.ReferenceMap#Entry Class
        |org.apache.commons.collections.ReferenceMap#EntryIterator Class
        |org.apache.commons.lang.IntHashMap#Entry Class
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -73,7 +73,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.spark.sql.execution.streaming.FileStreamSinkLog Object
        |org.apache.spark.sql.execution.streaming.FileStreamSource Class
        |org.apache.spark.sql.execution.streaming.FileStreamSource Object
-       |""".stripMargin
+       |""".stripMargin,
   )
   check(
     "File",
@@ -104,7 +104,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.reflect.io.File Object
        |sourcecode.File Class
        |sourcecode.File Object
-       |""".stripMargin
+       |""".stripMargin,
   )
   check(
     "Files",
@@ -122,7 +122,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.glassfish.jersey.server.internal.scanning.FilesScanner Class
        |org.jline.builtins.Completers#FilesCompleter Class
        |scala.meta.internal.io.ListFiles Class
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -154,7 +154,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
        |scala.tools.nsc.typechecker.Implicits Interface
        |scala.tools.nsc.typechecker.ImplicitsStats Interface
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -163,7 +163,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.collection.concurrent.TrieMap Object
        |scala.collection.concurrent.TrieMapIterator Class
        |scala.collection.concurrent.TrieMapSerializationEnd Object
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -171,13 +171,13 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """|scala.meta.inputs.Position.None Object
        |scala.meta.inputs.Position.Range Class
        |scala.meta.inputs.Position.Range Object
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
     "Input.None",
     """|scala.meta.inputs.Input.None Object
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -186,7 +186,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.typesafe.config.ConfigException#IO Class
        |org.eclipse.jetty.util.IO Class
        |org.mortbay.util.IO Class
-       |""".stripMargin
+       |""".stripMargin,
   )
 
 }

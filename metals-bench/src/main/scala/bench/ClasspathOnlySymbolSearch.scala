@@ -22,7 +22,7 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
     extends SymbolSearch {
   override def documentation(
       symbol: String,
-      parents: ParentSymbols
+      parents: ParentSymbols,
   ): Optional[SymbolDocumentation] =
     Optional.empty()
 
@@ -31,14 +31,14 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
 
   override def definitionSourceToplevels(
       symbol: String,
-      source: URI
+      source: URI,
   ): ju.List[String] =
     ju.Collections.emptyList()
 
   override def search(
       query: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor
+      visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
     classpath.search(WorkspaceSymbolQuery.exact(query), visitor)
   }

@@ -10,7 +10,7 @@ import scala.meta.internal.metals.Cancelable
 final class DebugServer(
     val sessionName: String,
     val uri: URI,
-    connect: () => Future[DebugProxy]
+    connect: () => Future[DebugProxy],
 )(implicit ec: ExecutionContext)
     extends Cancelable {
   @volatile private var isCancelled = false

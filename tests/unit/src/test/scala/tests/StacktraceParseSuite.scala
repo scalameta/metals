@@ -8,7 +8,7 @@ class StacktraceParseSuite extends BaseSuite {
   testConversion("p1.p2.Class.method", "p1/p2/Class#")
   testConversion(
     "p1.p2.OutsideClass$InsideClass.method",
-    "p1/p2/OutsideClass#"
+    "p1/p2/OutsideClass#",
   )
 
   // --- TRAIT ---
@@ -18,25 +18,25 @@ class StacktraceParseSuite extends BaseSuite {
   // <package> -> <package> -> <trait> -> <trait> -> <method>
   testConversion(
     "p1.p2.OutsideTrait$InsideTrait.method$",
-    "p1/p2/OutsideTrait#"
+    "p1/p2/OutsideTrait#",
   )
   testConversion(
     "p1.p2.OutsideTrait$InsideTrait.method",
-    "p1/p2/OutsideTrait#"
+    "p1/p2/OutsideTrait#",
   )
 
   // --- OBJECT ---
   testConversion("p1.p2.Object$.method", "p1/p2/Object.")
   testConversion(
     "p1.p2.ObjectParent$ObjectException$.method",
-    "p1/p2/ObjectParent."
+    "p1/p2/ObjectParent.",
   )
 
   // exception in template body
   testConversion("p1.p2.ConstructorClass.<init>", "p1/p2/ConstructorClass#")
   testConversion(
     "p1.p2.ConstructorObject$.<init>",
-    "p1/p2/ConstructorObject."
+    "p1/p2/ConstructorObject.",
   )
 
   // exception inside anonymous block
@@ -50,12 +50,12 @@ class StacktraceParseSuite extends BaseSuite {
   // non-module jdk
   testConversion(
     "java.util.concurrent.FutureTask.run",
-    "java/util/concurrent/FutureTask#"
+    "java/util/concurrent/FutureTask#",
   )
   // module jdk
   testConversion(
     "java.base/java.util.concurrent.FutureTask.run",
-    "java/util/concurrent/FutureTask#"
+    "java/util/concurrent/FutureTask#",
   )
 
   def testConversion(line: String, expected: String): Unit = {

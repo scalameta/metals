@@ -92,7 +92,7 @@ object ScalaVersions {
    */
   def dialectForScalaVersion(
       scalaVersion: String,
-      includeSource3: Boolean
+      includeSource3: Boolean,
   ): Dialect = {
     val scalaBinaryVersion = scalaBinaryVersionFromFullVersion(scalaVersion)
     scalaBinaryVersion match {
@@ -108,7 +108,7 @@ object ScalaVersions {
 
   def fmtDialectForScalaVersion(
       scalaVersion: String,
-      includeSource3: Boolean
+      includeSource3: Boolean,
   ): ScalafmtDialect = {
     ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion) match {
       case "3" => ScalafmtDialect.Scala3
@@ -158,7 +158,7 @@ object ScalaVersions {
   def dialectForDependencyJar(filename: String): Dialect =
     dialectForScalaVersion(
       scalaBinaryVersionFromJarName(filename),
-      includeSource3 = true
+      includeSource3 = true,
     )
 
 }

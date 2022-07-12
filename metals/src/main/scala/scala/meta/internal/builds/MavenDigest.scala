@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 object MavenDigest extends Digestable {
   override protected def digestWorkspace(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     workspace.listRecursive.forall {
       case file if file.filename == "pom.xml" =>
