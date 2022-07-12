@@ -39,6 +39,7 @@ final case class SymbolLocation(
 class SymbolIndexBucket(
     toplevels: TrieMap[String, Set[AbsolutePath]],
     definitions: TrieMap[String, Set[SymbolLocation]],
+    sourceJars: ClasspathLoader,
     toIndexSource: AbsolutePath => AbsolutePath = identity,
     mtags: Mtags,
     dialect: Dialect
@@ -242,6 +243,7 @@ object SymbolIndexBucket {
     new SymbolIndexBucket(
       TrieMap.empty,
       TrieMap.empty,
+      sourceJars,
       toIndexSource,
       mtags,
       dialect
