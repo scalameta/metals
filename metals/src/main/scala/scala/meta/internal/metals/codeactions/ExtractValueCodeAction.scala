@@ -33,24 +33,18 @@ class ExtractValueCodeAction(
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val applyOpt = trees.findLastEnclosingAt[Term.Apply](
+    val termOpt = trees.findLastEnclosingAt[Term](
       path,
       range.getStart(),
-      appl => appl.args.exists(_.pos.encloses(range)),
+      t => existsRangeEnclosing(t, range)
     )
-
     val textEdits = for {
-      apply <- applyOpt
-      stats <- lastEnclosingStatsList(apply)
-      argumentOpt <- apply.args.find { arg => arg.pos.encloses(range) }
-      argument = argumentOpt match {
-        // named paramaeter
-        case Term.Assign(_, rhs) => rhs
-        case other => other
-      }
+      term <- termOpt
+      stats <- lastEnclosingStatsList(term)
+      argument <- findRangeEnclosing(term, range)
       // avoid extracting lambdas (this needs actual type information)
       if isNotLambda(argument)
-      stat <- stats.find(stat => stat.pos.encloses(apply.pos))
+      stat <- stats.find(stat => stat.pos.encloses(term.pos))
       name = createNewName(stats)
       source <- buffers.get(path)
     } yield {
@@ -63,8 +57,12 @@ class ExtractValueCodeAction(
       val valueTextWithBraces = withBraces(stat, source, valueText, blank)
       // we need to add additional () in case of  `apply{}`
       val replacementText =
-        if (argument.is[Term.Block] && !applyHasParens(apply)) s"($name)"
-        else name
+        term match {
+          case apply: Term.Apply
+              if argument.is[Term.Block] && !applyHasParens(apply) =>
+            s"($name)"
+          case _ => name
+        }
       val replacedArgument = new l.TextEdit(argument.pos.toLSP, replacementText)
       valueTextWithBraces :+ replacedArgument
     }
@@ -80,6 +78,67 @@ class ExtractValueCodeAction(
         )
         Seq(codeAction)
       case None => Nil
+    }
+  }
+  private def applyArgument(argument: Term): Term =
+    argument match {
+      // named paramaeter
+      case Term.Assign(_, rhs) => rhs
+      case other => other
+    }
+
+  private def findRangeEnclosing(
+      term: Term,
+      range: l.Range
+  ): Option[Term] = {
+    term match {
+      case Term.Apply(_, args) =>
+        args
+          .find { arg => arg.pos.encloses(range) }
+          .map(applyArgument(_))
+      case Term.If(cond, thenp, thenf) =>
+        List(cond, thenp, thenf).find { _.pos.encloses(range) }
+      case Term.Tuple(args) =>
+        args.find { arg => arg.pos.encloses(range) }
+      case Term.Throw(expr) =>
+        Some(expr)
+      case Term.Return(expr) =>
+        Some(expr)
+      case Term.Match(expr, _) =>
+        Some(expr)
+      case Term.Interpolate(_, _, args) =>
+        args.find { arg => arg.pos.encloses(range) }
+      case Term.While(expr, _) =>
+        Some(expr)
+      case Term.Do(_, expr) =>
+        Some(expr)
+      case _ => None
+    }
+  }
+  private def existsRangeEnclosing(
+      term: Term,
+      range: l.Range
+  ): Boolean = {
+    term match {
+      case Term.Apply(_, args) =>
+        args.exists { arg => arg.pos.encloses(range) }
+      case Term.If(cond, thenp, thenf) =>
+        List(cond, thenp, thenf).exists { _.pos.encloses(range) }
+      case Term.Tuple(args) =>
+        args.exists { arg => arg.pos.encloses(range) }
+      case Term.Throw(expr) =>
+        expr.pos.encloses(range)
+      case Term.Return(expr) =>
+        expr.pos.encloses(range)
+      case Term.Match(expr, _) =>
+        expr.pos.encloses(range)
+      case Term.Interpolate(_, _, args) =>
+        args.exists { arg => arg.pos.encloses(range) }
+      case Term.While(expr, _) =>
+        expr.pos.encloses(range)
+      case Term.Do(_, expr) =>
+        expr.pos.encloses(range)
+      case _ => false
     }
   }
 
@@ -223,7 +282,7 @@ class ExtractValueCodeAction(
   }
 
   private def lastEnclosingStatsList(
-      apply: Term.Apply
+      apply: Term
   ): Option[(List[Tree])] = {
 
     @tailrec
