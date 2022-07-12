@@ -46,7 +46,7 @@ final class CodeActionProvider(
     new ExtractValueCodeAction(trees, buffers),
     new CreateCompanionObjectCodeAction(trees, buffers),
     new ConvertToNamedArguments(trees),
-    new FlatMapToForComprehensionCodeAction(trees, buffers)
+    new FlatMapToForComprehensionCodeAction(trees, buffers),
   )
 
   def codeActions(

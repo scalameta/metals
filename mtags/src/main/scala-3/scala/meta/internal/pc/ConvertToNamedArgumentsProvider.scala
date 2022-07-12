@@ -17,7 +17,7 @@ import org.eclipse.{lsp4j as l}
 final class ConvertToNamedArgumentsProvider(
     driver: InteractiveDriver,
     params: OffsetParams,
-    argIndices: Set[Int]
+    argIndices: Set[Int],
 ):
 
   def convertToNamedArguments: List[l.TextEdit] =
@@ -25,7 +25,7 @@ final class ConvertToNamedArgumentsProvider(
     val filePath = Paths.get(uri)
     driver.run(
       uri,
-      SourceFile.virtual(filePath.toString, params.text)
+      SourceFile.virtual(filePath.toString, params.text),
     )
     val unit = driver.currentCtx.run.units.head
     val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)

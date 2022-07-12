@@ -208,7 +208,7 @@ case class ScalaPresentationCompiler(
       new ConvertToNamedArgumentsProvider(
         pc.compiler(),
         params,
-        argIndices.asScala.map(_.toInt).toSet
+        argIndices.asScala.map(_.toInt).toSet,
       ).convertToNamedArguments.asJava
     }
   override def selectionRange(
