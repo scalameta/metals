@@ -75,14 +75,14 @@ class FlatMapToForComprehensionCodeAction(
       .map(
         _.syntax
           .split(Array('\n'))
-          .map(line => s"$indentation   $middleIndent$line")
+          .map(line => s"$indentation  $middleIndent$line")
           .mkString("\n")
       )
       .mkString("\n")
 
     val yieldTermIndentedString = yieldTerm.syntax
       .split(Array('\n'))
-      .map(line => s"$indentation   $middleIndent$line")
+      .map(line => s"$indentation  $middleIndent$line")
       .mkString("\n")
 
     val forYieldString =
@@ -146,28 +146,22 @@ class FlatMapToForComprehensionCodeAction(
   private def findOuterMostApply(
       currentTermApply: Term.Apply,
       lastValidTermApply: Option[Term.Apply],
-  ): (Option[Term.Apply], Boolean) = {
+  ): Option[Term.Apply] = {
 
     val interestingSelects =
       Set("map", "flatMap", "filter", "filterNot", "withFilter")
 
     currentTermApply.fun match {
-      case term if term.isNot[Term.Select] => (lastValidTermApply, true)
+      case term if term.isNot[Term.Select] => lastValidTermApply
       case termSelect: Term.Select
           if !interestingSelects.contains(termSelect.name.value) =>
-        (lastValidTermApply, true)
+        lastValidTermApply
       case _: Term.Select =>
-        currentTermApply.parent match {
-          case Some(termSelect: Term.Select) =>
-            termSelect.parent match {
-              case Some(next @ Term.Apply(_: Term.Select, _)) =>
-                findOuterMostApply(next, Some(currentTermApply))
-              case _ =>
-                (Some(currentTermApply), true)
-            }
-          case _ => (Some(currentTermApply), false)
+        currentTermApply.parent.flatMap(_.parent) match {
+          case Some(next @ Term.Apply(_: Term.Select, _)) =>
+            findOuterMostApply(next, Some(currentTermApply))
+          case _ => Some(currentTermApply)
         }
-
     }
   }
 
@@ -177,32 +171,32 @@ class FlatMapToForComprehensionCodeAction(
       indentation: String,
   ): Option[l.CodeAction] = {
 
-    val (maybeOuterMostApply, shouldBrace) = findOuterMostApply(termApply, None)
-    maybeOuterMostApply.flatMap { outerMostApply =>
-      val nameGenerator = MetalsNames(outerMostApply, "generatedByMetals")
-      val (forElements, maybeYieldTerm) =
-        extractChainedForYield(
-          None,
-          None,
-          List.empty,
-          outerMostApply,
-          nameGenerator,
-        )
-
-      if (forElements.nonEmpty) {
-        maybeYieldTerm.map { yieldTerm =>
-          constructCodeAction(
-            forElements,
-            yieldTerm,
-            indentation,
-            path,
-            outerMostApply.pos.toLSP.getStart,
-            outerMostApply.pos.toLSP.getEnd,
-            shouldBrace,
+    findOuterMostApply(termApply, None)
+      .flatMap { outerMostApply =>
+        val nameGenerator = MetalsNames(outerMostApply, "generatedByMetals")
+        val (forElements, maybeYieldTerm) =
+          extractChainedForYield(
+            None,
+            None,
+            List.empty,
+            outerMostApply,
+            nameGenerator,
           )
-        }
-      } else None
-    }
+
+        if (forElements.nonEmpty) {
+          maybeYieldTerm.map { yieldTerm =>
+            constructCodeAction(
+              forElements,
+              yieldTerm,
+              indentation,
+              path,
+              outerMostApply.pos.toLSP.getStart,
+              outerMostApply.pos.toLSP.getEnd,
+              outerMostApply.parent.exists(_.is[Term.Select]),
+            )
+          }
+        } else None
+      }
 
   }
 

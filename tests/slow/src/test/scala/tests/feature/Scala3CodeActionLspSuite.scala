@@ -45,9 +45,9 @@ class Scala3CodeActionLspSuite
        | def hello(using ctx: Context)(i: Int): Int = i
        | val res = {
        |   for {
-       |      generatedByMetals0 <- List(1, 2, 3)
+       |     generatedByMetals0 <- List(1, 2, 3)
        |   } yield {
-       |      hello(using ctx)(generatedByMetals0)
+       |     hello(using ctx)(generatedByMetals0)
        |   }
        | }.isEmpty
        |}

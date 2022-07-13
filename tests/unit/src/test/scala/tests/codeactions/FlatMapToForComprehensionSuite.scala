@@ -18,9 +18,9 @@ class FlatMapToForComprehensionSuite
         |""".stripMargin,
     """|object A {
        |    val res3 = for {
-       |           generatedByMetals0 <- List(1, 2, 3)
+       |          generatedByMetals0 <- List(1, 2, 3)
        |        } yield {
-       |           10 + generatedByMetals0
+       |          10 + generatedByMetals0
        |        }
        |}
        |""".stripMargin,
@@ -58,10 +58,10 @@ class FlatMapToForComprehensionSuite
        |    }
        |
        |    val res3 = for {
-       |           generatedByMetals0 <- new B().generateList()
-       |           generatedByMetals1 <- goToLink(first, second, third, generatedByMetals0)
+       |          generatedByMetals0 <- new B().generateList()
+       |          generatedByMetals1 <- goToLink(first, second, third, generatedByMetals0)
        |        } yield {
-       |           generatedByMetals1
+       |          generatedByMetals1
        |        }
        |}
        |""".stripMargin,
@@ -117,31 +117,31 @@ class FlatMapToForComprehensionSuite
        |
        |    val res3 = {
        |          for {
-       |             generatedByMetals13 <- list
-       |             a = 10.+(generatedByMetals13)
-       |             generatedByMetals12 <- {
-       |               val m = 6
-       |               Some(a + 1).map(b => b + 3 + 4)
-       |             }
-       |             if check(generatedByMetals12)
-       |             generatedByMetals11 = generatedByMetals12
-       |             if !true
-       |             generatedByMetals10 = generatedByMetals11
-       |             c = 7
-       |             generatedByMetals9 = c - 1
-       |             d = 5 + double(generatedByMetals9, 7).toFloat.toInt / 8 + 6
-       |             if d > 1
-       |             generatedByMetals8 = d
-       |             generatedByMetals7 = double(generatedByMetals8, 5)
-       |             generatedByMetals6 = curried(6)(generatedByMetals7)
-       |             generatedByMetals5 = curried(generatedByMetals6)(9)
-       |             generatedByMetals4 = curried(3)(generatedByMetals5)
-       |             generatedByMetals3 = double(generatedByMetals4, 4).toFloat.toDouble
-       |             generatedByMetals2 = generatedByMetals3.toInt.compare(3)
-       |             generatedByMetals1 = generatedByMetals2 > 2
-       |             generatedByMetals0 = !negate(generatedByMetals1)
+       |            generatedByMetals13 <- list
+       |            a = 10.+(generatedByMetals13)
+       |            generatedByMetals12 <- {
+       |              val m = 6
+       |              Some(a + 1).map(b => b + 3 + 4)
+       |            }
+       |            if check(generatedByMetals12)
+       |            generatedByMetals11 = generatedByMetals12
+       |            if !true
+       |            generatedByMetals10 = generatedByMetals11
+       |            c = 7
+       |            generatedByMetals9 = c - 1
+       |            d = 5 + double(generatedByMetals9, 7).toFloat.toInt / 8 + 6
+       |            if d > 1
+       |            generatedByMetals8 = d
+       |            generatedByMetals7 = double(generatedByMetals8, 5)
+       |            generatedByMetals6 = curried(6)(generatedByMetals7)
+       |            generatedByMetals5 = curried(generatedByMetals6)(9)
+       |            generatedByMetals4 = curried(3)(generatedByMetals5)
+       |            generatedByMetals3 = double(generatedByMetals4, 4).toFloat.toDouble
+       |            generatedByMetals2 = generatedByMetals3.toInt.compare(3)
+       |            generatedByMetals1 = generatedByMetals2 > 2
+       |            generatedByMetals0 = !negate(generatedByMetals1)
        |          } yield {
-       |             true && !negate(generatedByMetals0) && false
+       |            true && !negate(generatedByMetals0) && false
        |          }
        |        }
        |        .sortBy(x => x)
@@ -186,25 +186,25 @@ class FlatMapToForComprehensionSuite
        |    val list = List(1, 2, 3)
        |
        |    val res3 = for {
-       |           a <- list
-       |           generatedByMetals6 <- {
-       |             val m = 6
-       |             Some(a + 1).map(b => b + 3 + 4)
-       |           }
-       |           if check(generatedByMetals6)
-       |           generatedByMetals5 = generatedByMetals6
-       |           if !true
-       |           generatedByMetals4 = generatedByMetals5
-       |           c = 7
-       |           generatedByMetals3 = c - 1
-       |           d = double(generatedByMetals3, 4).toFloat.toInt
-       |           if d > 1
-       |           generatedByMetals2 = d
-       |           generatedByMetals1 = 5 + double(generatedByMetals2, 7).toFloat.toInt / 8 + 6
-       |           m = generatedByMetals1.toInt.compare(3)
-       |           generatedByMetals0 <- Some(m * 3)
+       |          a <- list
+       |          generatedByMetals6 <- {
+       |            val m = 6
+       |            Some(a + 1).map(b => b + 3 + 4)
+       |          }
+       |          if check(generatedByMetals6)
+       |          generatedByMetals5 = generatedByMetals6
+       |          if !true
+       |          generatedByMetals4 = generatedByMetals5
+       |          c = 7
+       |          generatedByMetals3 = c - 1
+       |          d = double(generatedByMetals3, 4).toFloat.toInt
+       |          if d > 1
+       |          generatedByMetals2 = d
+       |          generatedByMetals1 = 5 + double(generatedByMetals2, 7).toFloat.toInt / 8 + 6
+       |          m = generatedByMetals1.toInt.compare(3)
+       |          generatedByMetals0 <- Some(m * 3)
        |        } yield {
-       |           generatedByMetals0
+       |          generatedByMetals0
        |        }
        |
        |}
