@@ -7,6 +7,61 @@ class FlatMapToForComprehensionSuite
     extends BaseCodeActionLspSuite("forComprehension") {
 
   check(
+    "partial-function-for-comprehension",
+    """|object A {
+       |  import scala.xml._
+       |  case class Extractable(first: String, second: List[(Int, String)])
+       |  val result = List((1, (2, 3, 4)), (1 , (2, 3.1, 4.1))).map(m => (m._1, m._2))
+       |  .flatMap{
+       |    case (j, (k: Int, l , n)) => Some(j + 1, (k + 1, l , n))
+       |  }
+       |  .flatMap{
+       |    case (a, (b, c , d)) => Some(a + 1, (b + 1, c , a))
+       |  }
+       |  .map{
+       |    case (e, (f, g:Int, _)) if e > 3 => e + f + g
+       |    case (h, (i, _, _)) => h + i
+       |  }.m<<>>ap( num => <p>{num}</p>)
+       |  .map{
+       |    case <p>{number}</p> => s"the value is $number"
+       |  }
+       |  .map{
+       |    case s"the value is $numVal" => Extractable( numVal, List((numVal.toInt, numVal)))
+       |  }
+       |  .map{
+       |    case Extractable( first, List((second: Int, third))) => first + third
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |  import scala.xml._
+       |  case class Extractable(first: String, second: List[(Int, String)])
+       |  val result = for {
+       |    m <- List((1, (2, 3, 4)), (1, (2, 3.1d, 4.1d)))
+       |    (j, (k: Int, l, n)) = (m._1, m._2)
+       |    (a, (b, c, d)) <- Some(j + 1, (k + 1, l, n))
+       |    generatedByMetals0 <- Some(a + 1, (b + 1, c, a))
+       |    num = generatedByMetals0 match {
+       |      case (e, (f, g: Int, _)) if e > 3 =>
+       |        e + f + g
+       |      case (h, (i, _, _)) =>
+       |        h + i
+       |    }
+       |    <p>{number}</p> = <p>{num}</p>
+       |    s"the value is ${numVal}" = s"the value is $number"
+       |    Extractable(first, List((second: Int, third))) = Extractable(numVal, List((numVal.toInt, numVal)))
+       |  } yield {
+       |    first + third
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
     "simple-for-comprehension",
     """|object A {
        |    val res3 = List(1, 2, 3)
