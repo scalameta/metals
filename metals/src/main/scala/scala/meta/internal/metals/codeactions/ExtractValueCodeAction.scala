@@ -38,6 +38,7 @@ class ExtractValueCodeAction(
       range.getStart(),
       t => existsRangeEnclosing(t, range)
     )
+
     val textEdits = for {
       term <- termOpt
       stats <- lastEnclosingStatsList(term)
@@ -64,12 +65,12 @@ class ExtractValueCodeAction(
           case _ => name
         }
       val replacedArgument = new l.TextEdit(argument.pos.toLSP, replacementText)
-      valueTextWithBraces :+ replacedArgument
+      (valueTextWithBraces :+ replacedArgument, argument.toString())
     }
     textEdits match {
-      case Some(edits) =>
+      case Some((edits, title)) =>
         val codeAction = new l.CodeAction()
-        codeAction.setTitle(ExtractValueCodeAction.title)
+        codeAction.setTitle(ExtractValueCodeAction.title(title))
         codeAction.setKind(this.kind)
         codeAction.setEdit(
           new l.WorkspaceEdit(
@@ -331,5 +332,8 @@ class ExtractValueCodeAction(
 }
 
 object ExtractValueCodeAction {
-  val title = "Extract value"
+  def title(expr: String): String = {
+    if (expr.length <= 10) s"Extract value $expr"
+    else s"Extract value ${expr.take(10)}(...)"
+  }
 }

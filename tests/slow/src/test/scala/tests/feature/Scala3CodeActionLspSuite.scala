@@ -159,7 +159,7 @@ class Scala3CodeActionLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -181,7 +181,7 @@ class Scala3CodeActionLspSuite
        |    def inner(i : Int) = method2(i + 23 + <<123>>)
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -201,7 +201,7 @@ class Scala3CodeActionLspSuite
        |    method2(i + 23 + <<123>>)
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -223,7 +223,7 @@ class Scala3CodeActionLspSuite
        |  method2(i + 23 + <<123>>)
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -246,7 +246,7 @@ class Scala3CodeActionLspSuite
        |def main(i : Int) = method2(i + 23 + <<123>>)
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|def method2(i: Int) = {
        |  val a = 1
@@ -267,7 +267,7 @@ class Scala3CodeActionLspSuite
        |    if(2 > <<3>>) 5 else 4
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("2 > 3")}
         |""".stripMargin,
     """|object Main:
        |  def main(i : Int) =
@@ -284,7 +284,7 @@ class Scala3CodeActionLspSuite
        |  if(2 > 3) 5 <<+>> 1 else 4
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("5 + 1")}
         |""".stripMargin,
     """|object Main:
        |  def main(i : Int) =
@@ -301,7 +301,7 @@ class Scala3CodeActionLspSuite
        |    val a = (1,<<2>>,3)
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("2")}
         |""".stripMargin,
     """|object Main:
        |  def main(i : Int) =
@@ -320,7 +320,7 @@ class Scala3CodeActionLspSuite
        |    }
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("1 + 2 + 3")}
         |""".stripMargin,
     """|object Main:
        |  def main(i : Int) =
@@ -338,7 +338,7 @@ class Scala3CodeActionLspSuite
        |    throw new Exce<<p>>tion("message")
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("new Except(...)")}
         |""".stripMargin,
     """|object Main:
        |  def main(i : Int) =
@@ -355,7 +355,7 @@ class Scala3CodeActionLspSuite
        |    while(2 > <<3>>) { }
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("2 > 3")}
         |""".stripMargin,
     """|object Main:
        |  def main(i : Int) =
@@ -372,7 +372,7 @@ class Scala3CodeActionLspSuite
        |    return <<1>> + 2
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("1 + 2")}
         |""".stripMargin,
     """|object Main:
        |  def main(i : Int): Int =
