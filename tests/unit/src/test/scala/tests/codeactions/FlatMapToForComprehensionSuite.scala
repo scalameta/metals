@@ -9,7 +9,6 @@ class FlatMapToForComprehensionSuite
   check(
     "partial-function-for-comprehension",
     """|object A {
-       |  import scala.xml._
        |  case class Extractable(first: String, second: List[(Int, String)])
        |  val result = List((1, (2, 3, 4)), (1 , (2, 3.1, 4.1))).map(m => (m._1, m._2))
        |  .flatMap{
@@ -21,10 +20,7 @@ class FlatMapToForComprehensionSuite
        |  .map{
        |    case (e, (f, g:Int, _)) if e > 3 => e + f + g
        |    case (h, (i, _, _)) => h + i
-       |  }.m<<>>ap( num => <p>{num}</p>)
-       |  .map{
-       |    case <p>{number}</p> => s"the value is $number"
-       |  }
+       |  }.m<<>>ap( num => s"the value is $num")
        |  .map{
        |    case s"the value is $numVal" => Extractable( numVal, List((numVal.toInt, numVal), (4, "15")))
        |  }
@@ -37,7 +33,6 @@ class FlatMapToForComprehensionSuite
         |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
         |""".stripMargin,
     """|object A {
-       |  import scala.xml._
        |  case class Extractable(first: String, second: List[(Int, String)])
        |  val result = for {
        |    m <- List((1, (2, 3, 4)), (1, (2, 3.1d, 4.1d)))
@@ -50,8 +45,7 @@ class FlatMapToForComprehensionSuite
        |      case (h, (i, _, _)) =>
        |        h + i
        |    }
-       |    <p>{number}</p> = <p>{num}</p>
-       |    s"the value is ${numVal}" = s"the value is $number"
+       |    s"the value is ${numVal}" = s"the value is $num"
        |    Extractable(first, (r, s) :: List((second: Int, third))) = Extractable(numVal, List((numVal.toInt, numVal), (4, "15")))
        |  } yield {
        |    first + r + s + second + third
