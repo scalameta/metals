@@ -44,12 +44,15 @@ class ExtractValueCodeAction(
       }
       trees.get(path).map(loop(_)).getOrElse(Nil).reverse
     }
-    val textEdits = {
+    val textEdits =
       for {
-        head <- allTrees.headOption
-        stats <- lastEnclosingStatsList(head)
+        term <- allTrees
+        stats <- lastEnclosingStatsList(term)
+        argument <- findRangeEnclosing(term, range)
+        // avoid extracting lambdas (this needs actual type information)
+        if isNotLambda(argument)
+        stat <- stats.find(stat => stat.pos.encloses(term.pos))
         name = createNewName(stats)
-        stat <- stats.find(stat => stat.pos.encloses(head.pos))
         source <- buffers.get(path)
       } yield {
         val blank =
@@ -58,28 +61,20 @@ class ExtractValueCodeAction(
         val indent = blank.stringRepeat(indentationLength(source, stat.pos))
         val keyword = if (stat.isInstanceOf[Enumerator]) "" else "val "
         // we will insert `val newValue = ???` before the existing statement containing apply
-        for {
-          term <- allTrees
-          argument <- findRangeEnclosing(term, range)
-          // avoid extracting lambdas (this needs actual type information)
-          if isNotLambda(argument)
-        } yield {
-          val valueText = s"${indent}$keyword$name = ${argument.toString()}"
-          val valueTextWithBraces = withBraces(stat, source, valueText, blank)
-          // we need to add additional () in case of  `apply{}`
-          val replacementText =
-            term match {
-              case apply: Term.Apply
-                  if argument.is[Term.Block] && !applyHasParens(apply) =>
-                s"($name)"
-              case _ => name
-            }
-          val replacedArgument =
-            new l.TextEdit(argument.pos.toLSP, replacementText)
-          (replacedArgument :: valueTextWithBraces, argument.toString())
-        }
+        val valueText = s"${indent}$keyword$name = ${argument.toString()}"
+        val valueTextWithBraces = withBraces(stat, source, valueText, blank)
+        // we need to add additional () in case of  `apply{}`
+        val replacementText =
+          term match {
+            case apply: Term.Apply
+                if argument.is[Term.Block] && !applyHasParens(apply) =>
+              s"($name)"
+            case _ => name
+          }
+        val replacedArgument =
+          new l.TextEdit(argument.pos.toLSP, replacementText)
+        (replacedArgument :: valueTextWithBraces, argument.toString())
       }
-    }.getOrElse(Nil)
 
     textEdits.map { case (edits, title) =>
       val codeAction = new l.CodeAction()
