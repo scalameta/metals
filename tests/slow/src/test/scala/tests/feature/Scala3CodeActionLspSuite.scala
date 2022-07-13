@@ -274,7 +274,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = 2 > 3
        |    if(newValue) 5 else 4
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -291,7 +291,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = 5 + 1
        |    if(2 > 3) newValue else 4
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -308,7 +308,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = 2
        |    val a = (1,newValue,3)
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -328,7 +328,7 @@ class Scala3CodeActionLspSuite
        |    newValue match {
        |      case _ => 6
        |    }
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -345,7 +345,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = new Exception("message")
        |    throw newValue
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -362,7 +362,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = 2 > 3
        |    while(newValue) { }
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -378,7 +378,7 @@ class Scala3CodeActionLspSuite
        |  def main(i : Int): Int =
        |    val newValue = 1 + 2
        |    return newValue
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -395,7 +395,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = 2 > 3
        |    if(newValue) 5 else 4
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -412,7 +412,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = 5 + 1
        |    if(2 > 3) newValue else 4
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -429,7 +429,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = 2
        |    val a = (1,newValue,3)
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -449,7 +449,7 @@ class Scala3CodeActionLspSuite
        |    newValue match {
        |      case _ => 6
        |    }
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -466,7 +466,7 @@ class Scala3CodeActionLspSuite
        |    val newValue = new Exception("message")
        |    throw newValue
        |
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -482,7 +482,7 @@ class Scala3CodeActionLspSuite
        |  def main(i : Int): Int =
        |    val newValue = 1 + 2
        |    return newValue
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(

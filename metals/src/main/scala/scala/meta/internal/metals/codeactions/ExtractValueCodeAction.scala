@@ -33,18 +33,18 @@ class ExtractValueCodeAction(
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val allTrees: Seq[Term] = {
-      def loop(t: Tree): Seq[Term] = {
+    val allTrees = {
+      def loop(t: Tree): List[Term] = {
         t.children.find(_.pos.encloses(range)) match {
           case Some(tr: Term) if existsRangeEnclosing(tr, range) =>
-            loop(tr) :+ tr
+            tr :: loop(tr)
           case Some(tr) => loop(tr)
           case None => Nil
         }
       }
-      trees.get(path).map(loop(_)).getOrElse(Nil)
+      trees.get(path).map(loop(_)).getOrElse(Nil).reverse
     }
-    val textEdits: Option[Seq[(Seq[l.TextEdit], String)]] = {
+    val textEdits = {
       for {
         head <- allTrees.headOption
         stats <- lastEnclosingStatsList(head)
@@ -76,26 +76,23 @@ class ExtractValueCodeAction(
             }
           val replacedArgument =
             new l.TextEdit(argument.pos.toLSP, replacementText)
-          (valueTextWithBraces :+ replacedArgument, argument.toString())
+          (replacedArgument :: valueTextWithBraces, argument.toString())
         }
       }
+    }.getOrElse(Nil)
+
+    textEdits.map { case (edits, title) =>
+      val codeAction = new l.CodeAction()
+      codeAction.setTitle(ExtractValueCodeAction.title(title))
+      codeAction.setKind(this.kind)
+      codeAction.setEdit(
+        new l.WorkspaceEdit(
+          Map(path.toURI.toString -> edits.asJava).asJava
+        )
+      )
+      codeAction
     }
 
-    textEdits match {
-      case Some(actions) =>
-        actions.map { case (edits, title) =>
-          val codeAction = new l.CodeAction()
-          codeAction.setTitle(ExtractValueCodeAction.title(title))
-          codeAction.setKind(this.kind)
-          codeAction.setEdit(
-            new l.WorkspaceEdit(
-              Map(path.toURI.toString -> edits.asJava).asJava
-            )
-          )
-          codeAction
-        }
-      case None => Nil
-    }
   }
   private def applyArgument(argument: Term): Term =
     argument match {
@@ -106,7 +103,7 @@ class ExtractValueCodeAction(
 
   private def findRangeEnclosing(
       term: Term,
-      range: l.Range
+      range: l.Range,
   ): Option[Term] = {
     term match {
       case Term.Apply(_, args) =>
@@ -125,19 +122,16 @@ class ExtractValueCodeAction(
         Some(expr)
       case Term.Interpolate(_, _, args) =>
         args.find { arg => arg.pos.encloses(range) }
-<<<<<<< HEAD
       case Term.While(expr, _) =>
         Some(expr)
       case Term.Do(_, expr) =>
         Some(expr)
-=======
->>>>>>> 8a3abaecf0 (Extend extract value by new cases)
       case _ => None
     }
   }
   private def existsRangeEnclosing(
       term: Tree,
-      range: l.Range
+      range: l.Range,
   ): Boolean = {
     term match {
       case Term.Apply(_, args) =>
@@ -154,13 +148,10 @@ class ExtractValueCodeAction(
         expr.pos.encloses(range)
       case Term.Interpolate(_, _, args) =>
         args.exists { arg => arg.pos.encloses(range) }
-<<<<<<< HEAD
       case Term.While(expr, _) =>
         expr.pos.encloses(range)
       case Term.Do(_, expr) =>
         expr.pos.encloses(range)
-=======
->>>>>>> 8a3abaecf0 (Extend extract value by new cases)
       case _ => false
     }
   }
@@ -180,7 +171,7 @@ class ExtractValueCodeAction(
       source: String,
       valueString: String,
       blank: Char,
-  ): Seq[l.TextEdit] = {
+  ): List[l.TextEdit] = {
 
     def defnEqualsPos(defn: Defn.Def): Option[Position] = defn.tokens.reverse
       .collectFirst {
@@ -210,7 +201,7 @@ class ExtractValueCodeAction(
       if (stat.canUseBracelessSyntax(source)) {
         // we need to create a new indented region
         if (noIndentation) {
-          Seq(
+          List(
             new l.TextEdit(
               startBlockPos,
               s"""|
@@ -228,7 +219,7 @@ class ExtractValueCodeAction(
             else 0
           val indentStat = blank.stringRepeat(statAdditionalIndentation)
 
-          Seq(
+          List(
             new l.TextEdit(
               statStart,
               s"""|$indentStat${valueString.trim()}
@@ -256,7 +247,7 @@ class ExtractValueCodeAction(
         endBracePos.setStart(endBracePos.getEnd())
         val endBraceEdit =
           new l.TextEdit(endBracePos, s"\n$defnLineIndentation}")
-        Seq(startBlockEdit, endBraceEdit)
+        List(startBlockEdit, endBraceEdit)
       }
     }
 
@@ -266,7 +257,7 @@ class ExtractValueCodeAction(
       val start = range.getStart()
       start.setCharacter(0)
       range.setEnd(start)
-      Seq(new l.TextEdit(range, s"$valueString\n"))
+      List(new l.TextEdit(range, s"$valueString\n"))
     }
 
   }
@@ -350,6 +341,6 @@ class ExtractValueCodeAction(
 object ExtractValueCodeAction {
   def title(expr: String): String = {
     if (expr.length <= 10) s"Extract value $expr"
-    else s"Extract value ${expr.take(10)}(...)"
+    else s"Extract ${expr.take(10)} ... as value"
   }
 }

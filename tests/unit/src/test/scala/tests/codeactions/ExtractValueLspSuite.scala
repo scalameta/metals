@@ -138,17 +138,18 @@ class ExtractValueLspSuite
     """|object Main {
        |  def method2(i: Int) : Int = ???
        |  def method1(s: String): Unit = {
-       |    println("Hello!"); method2(1  + method2(1 + <<2>>))
+       |    println("Hello!"); method2(1 + method2(1 + <<2>>))
        |  }
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("1 + 2")}
+        |${ExtractValueCodeAction.title("1 + method2(1 + 2)")}
         |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) : Int = ???
        |  def method1(s: String): Unit = {
        |    val newValue = 1 + 2
-       |    println("Hello!"); method2(1  + method2(newValue))
+       |    println("Hello!"); method2(1 + method2(newValue))
        |  }
        |}
        |""".stripMargin,
