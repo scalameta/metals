@@ -66,30 +66,39 @@ class FlatMapToForComprehensionCodeAction(
       path: AbsolutePath,
       startPos: l.Position,
       endPos: l.Position,
+      braced: Boolean,
   ): l.CodeAction = {
+
+    val middleIndent = if (braced) "  " else ""
 
     val indentedElems = forElementsList
       .map(
         _.syntax
           .split(Array('\n'))
-          .map(line => s"$indentation   $line")
+          .map(line => s"$indentation   $middleIndent$line")
           .mkString("\n")
       )
       .mkString("\n")
 
     val yieldTermIndentedString = yieldTerm.syntax
       .split(Array('\n'))
-      .map(line => s"$indentation   $line")
+      .map(line => s"$indentation   $middleIndent$line")
       .mkString("\n")
 
     val forYieldString =
-      s"""|{
-          |$indentation for {
-          |$indentedElems
-          |$indentation } yield {
-          |$yieldTermIndentedString
-          |$indentation }
-          |$indentation}""".stripMargin
+      if (braced)
+        s"""|{
+            |$indentation  for {
+            |$indentedElems
+            |$indentation  } yield {
+            |$yieldTermIndentedString
+            |$indentation  }
+            |$indentation}""".stripMargin
+      else s"""|for {
+               |$indentedElems
+               |$indentation} yield {
+               |$yieldTermIndentedString
+               |$indentation}""".stripMargin
 
     val codeAction = new l.CodeAction()
     val range =
@@ -137,22 +146,28 @@ class FlatMapToForComprehensionCodeAction(
   private def findOuterMostApply(
       currentTermApply: Term.Apply,
       lastValidTermApply: Option[Term.Apply],
-  ): Option[Term.Apply] = {
+  ): (Option[Term.Apply], Boolean) = {
 
     val interestingSelects =
       Set("map", "flatMap", "filter", "filterNot", "withFilter")
 
     currentTermApply.fun match {
-      case term if term.isNot[Term.Select] => lastValidTermApply
+      case term if term.isNot[Term.Select] => (lastValidTermApply, true)
       case termSelect: Term.Select
           if !interestingSelects.contains(termSelect.name.value) =>
-        lastValidTermApply
+        (lastValidTermApply, true)
       case _: Term.Select =>
-        currentTermApply.parent.flatMap(_.parent) match {
-          case Some(next @ Term.Apply(_: Term.Select, _)) =>
-            findOuterMostApply(next, Some(currentTermApply))
-          case _ => Some(currentTermApply)
+        currentTermApply.parent match {
+          case Some(termSelect: Term.Select) =>
+            termSelect.parent match {
+              case Some(next @ Term.Apply(_: Term.Select, _)) =>
+                findOuterMostApply(next, Some(currentTermApply))
+              case _ =>
+                (Some(currentTermApply), true)
+            }
+          case _ => (Some(currentTermApply), false)
         }
+
     }
   }
 
@@ -162,7 +177,8 @@ class FlatMapToForComprehensionCodeAction(
       indentation: String,
   ): Option[l.CodeAction] = {
 
-    findOuterMostApply(termApply, None).flatMap { outerMostApply =>
+    val (maybeOuterMostApply, shouldBrace) = findOuterMostApply(termApply, None)
+    maybeOuterMostApply.flatMap { outerMostApply =>
       val nameGenerator = MetalsNames(outerMostApply, "generatedByMetals")
       val (forElements, maybeYieldTerm) =
         extractChainedForYield(
@@ -182,6 +198,7 @@ class FlatMapToForComprehensionCodeAction(
             path,
             outerMostApply.pos.toLSP.getStart,
             outerMostApply.pos.toLSP.getEnd,
+            shouldBrace,
           )
         }
       } else None

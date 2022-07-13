@@ -35,7 +35,7 @@ class Scala3CodeActionLspSuite
       | class Context
       | val ctx = new Context
       | def hello(using ctx: Context)(i: Int): Int = i
-      | val res = List(1,2,3).ma<<>>p(hello(using ctx)(_))
+      | val res = List(1,2,3).ma<<>>p(hello(using ctx)(_)).isEmpty
       |}""".stripMargin,
     s"""${RewriteBracesParensCodeAction.toBraces("map")}
        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}""".stripMargin,
@@ -44,12 +44,12 @@ class Scala3CodeActionLspSuite
        | val ctx = new Context
        | def hello(using ctx: Context)(i: Int): Int = i
        | val res = {
-       |  for {
-       |    generatedByMetals0 <- List(1, 2, 3)
-       |  } yield {
-       |    hello(using ctx)(generatedByMetals0)
-       |  }
-       | }
+       |   for {
+       |      generatedByMetals0 <- List(1, 2, 3)
+       |   } yield {
+       |      hello(using ctx)(generatedByMetals0)
+       |   }
+       | }.isEmpty
        |}
        |""".stripMargin,
     1,
