@@ -7,9 +7,12 @@ import scala.meta.Defn
 import scala.meta.Enumerator
 import scala.meta.Pat
 import scala.meta.Term
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
@@ -17,10 +20,39 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
-class InsertInferredType(trees: Trees) extends CodeAction {
+class InsertInferredType(
+    trees: Trees,
+    compilers: Compilers,
+    languageClient: MetalsLanguageClient,
+) extends CodeAction {
+
+  type CommandData = l.TextDocumentPositionParams
+
+  override def command
+      : Option[ParametrizedCommand[l.TextDocumentPositionParams]] =
+    Some(ServerCommands.InsertInferredType)
 
   import InsertInferredType._
   override def kind: String = l.CodeActionKind.QuickFix
+
+  override def handleCommand(
+      textDocumentParams: l.TextDocumentPositionParams,
+      token: CancelToken,
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    val uri = textDocumentParams.getTextDocument().getUri()
+    for {
+      edits <- compilers.insertInferredType(
+        textDocumentParams,
+        token,
+      )
+      if (!edits.isEmpty())
+      workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+      _ <- languageClient
+        .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))
+        .asScala
+    } yield ()
+
+  }
 
   override def contribute(
       params: l.CodeActionParams,

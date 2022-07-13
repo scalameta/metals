@@ -22,7 +22,8 @@ final class CodeActionProvider(
     languageClient: MetalsLanguageClient,
 )(implicit ec: ExecutionContext) {
 
-  private val extractMemberAction = new ExtractRenameMember(trees)
+  private val extractMemberAction =
+    new ExtractRenameMember(trees, languageClient)
 
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
@@ -41,7 +42,7 @@ final class CodeActionProvider(
       buildTargets,
       diagnostics,
     ),
-    new InsertInferredType(trees),
+    new InsertInferredType(trees, compilers, languageClient),
     new PatternMatchRefactor(trees),
     new RewriteBracesParensCodeAction(trees),
     new ExtractValueCodeAction(trees, buffers),
@@ -65,19 +66,34 @@ final class CodeActionProvider(
       }
 
     val actions = allActions.collect {
-      case action if isRequestedKind(action) => action.contribute(params, token)
+      case action if isRequestedKind(action) =>
+        action.contribute(params, token).map { codeActions =>
+          // make sure that code action contains the defined command, needed ? TODO
+          action.command.foreach { cmd =>
+            codeActions.foreach { codeA =>
+              assert(codeA.getCommand().getCommand() == cmd.id)
+            }
+          }
+          codeActions
+        }
     }
 
     Future.sequence(actions).map(_.flatten)
   }
 
   def executeCommands(
-      codeActionCommandData: CodeActionCommandData
-  ): Future[CodeActionCommandResult] = {
-    codeActionCommandData match {
-      case data: ExtractMemberDefinitionData =>
-        extractMemberAction.executeCommand(data)
-      case data => Future.failed(new IllegalArgumentException(data.toString))
-    }
+      params: l.ExecuteCommandParams,
+      token: CancelToken,
+  ): Future[Unit] = {
+    val running = for {
+      action <- allActions
+      actionCommand <- action.command
+      data <- actionCommand.unapply(params)
+    } yield action.handleCommand(data, token)
+    Future.sequence(running).map(_ => ())
   }
+
+  def allActionCommands: List[ParametrizedCommand[_]] =
+    allActions.flatMap(_.command)
+
 }

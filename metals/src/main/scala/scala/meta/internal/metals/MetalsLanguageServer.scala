@@ -55,7 +55,6 @@ import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.codeactions.CodeActionProvider
-import scala.meta.internal.metals.codeactions.ExtractMemberDefinitionData
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
@@ -863,7 +862,10 @@ class MetalsLanguageServer(
         val capabilities = new ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new ExecuteCommandOptions(
-            ServerCommands.all.map(_.id).asJava
+            (ServerCommands.all ++ codeActionProvider.allActionCommands)
+              .map(_.id)
+              .distinct
+              .asJava
           )
         )
         capabilities.setFoldingRangeProvider(true)
@@ -2078,22 +2080,6 @@ class MetalsLanguageServer(
           Future.successful(()).asJavaObject
         }
 
-      case ServerCommands.InsertInferredType(textDocumentParams) =>
-        CancelTokens.future { token =>
-          val uri = textDocumentParams.getTextDocument().getUri()
-          for {
-            edits <- compilers.insertInferredType(textDocumentParams, token)
-            _ = logging.logErrorWhen(
-              edits.isEmpty(),
-              s"Could not infer type at ${textDocumentParams.getPosition()} in file\n${buffers
-                  .get(uri.toAbsolutePath)}",
-            )
-            workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
-            _ <- languageClient
-              .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
-              .asScala
-          } yield ().asInstanceOf[Object]
-        }
       case ServerCommands.ExtractMethod(
             ServerCommands.ExtractMethodParams(doc, range, extractionPos)
           ) =>
@@ -2112,7 +2098,6 @@ class MetalsLanguageServer(
               .asScala
           } yield ().asInstanceOf[Object]
         }
-
       case ServerCommands.ConvertToNamedArguments(
             ServerCommands.ConvertToNamedArgsRequest(position, argIndices)
           ) =>
@@ -2135,26 +2120,13 @@ class MetalsLanguageServer(
               .asScala
           } yield ().asInstanceOf[Object]
         }
-
-      case ServerCommands.ExtractMemberDefinition(textDocumentParams) =>
-        val data = ExtractMemberDefinitionData(textDocumentParams)
-        val future = for {
-          result <- codeActionProvider.executeCommands(data)
-          _ <- languageClient.applyEdit(result.edits).asScala
-        } yield {
-          result.goToLocation.foreach { location =>
-            languageClient.metalsExecuteClientCommand(
-              ClientCommands.GotoLocation.toExecuteCommandParams(
-                ClientCommands.WindowLocation(
-                  location.getUri(),
-                  location.getRange(),
-                )
-              )
-            )
-          }
+      case actionCommand
+          if codeActionProvider.allActionCommands.exists(
+            _.id == actionCommand.getCommand()
+          ) =>
+        CancelTokens.future { token =>
+          codeActionProvider.executeCommands(params, token).withObjectValue
         }
-
-        future.asJavaObject
       case cmd =>
         ServerCommands.all
           .find(command => command.id == cmd.getCommand())
