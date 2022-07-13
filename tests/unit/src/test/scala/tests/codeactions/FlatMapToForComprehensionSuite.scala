@@ -26,10 +26,10 @@ class FlatMapToForComprehensionSuite
        |    case <p>{number}</p> => s"the value is $number"
        |  }
        |  .map{
-       |    case s"the value is $numVal" => Extractable( numVal, List((numVal.toInt, numVal)))
+       |    case s"the value is $numVal" => Extractable( numVal, List((numVal.toInt, numVal), (4, "15")))
        |  }
        |  .map{
-       |    case Extractable( first, List((second: Int, third))) => first + third
+       |    case Extractable( first, (r, s)::List((second: Int, third))) => first + r + s + second + third
        |  }
        |}
        |""".stripMargin,
@@ -52,9 +52,9 @@ class FlatMapToForComprehensionSuite
        |    }
        |    <p>{number}</p> = <p>{num}</p>
        |    s"the value is ${numVal}" = s"the value is $number"
-       |    Extractable(first, List((second: Int, third))) = Extractable(numVal, List((numVal.toInt, numVal)))
+       |    Extractable(first, (r, s) :: List((second: Int, third))) = Extractable(numVal, List((numVal.toInt, numVal), (4, "15")))
        |  } yield {
-       |    first + third
+       |    first + r + s + second + third
        |  }
        |}
        |""".stripMargin,

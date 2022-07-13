@@ -265,7 +265,7 @@ class FlatMapToForComprehensionCodeAction(
 
   private def isSimple(pat: Pat): Boolean = { // this is to decide whether to
     // put pat in the left side of an Enumerator
-    pat match { // TODO help required @Vadim
+    pat match {
       case _: Pat.Extract | _: Pat.ExtractInfix | _: Pat.Interpolate | _: Lit |
           _: Term.Name | _: Pat.Typed | _: Pat.Var =>
         true
@@ -490,7 +490,7 @@ class FlatMapToForComprehensionCodeAction(
   }
 
   private def turnPatToTerm(pat: Pat): Option[Term] = {
-    pat match { // TODO @Vadim help requested on handling the cases
+    pat match {
       // None is returned, when it does not make sense to
       // put the Term on the left side of an assignment
       case Pat.Extract(fun, args) =>
@@ -502,7 +502,7 @@ class FlatMapToForComprehensionCodeAction(
             pat,
             name,
             value,
-          ) => // Could not produce test case. What is an exaqmple of that?
+          ) =>
         val patTerm = turnPatToTerm(pat)
         val valueTerms = value.map(turnPatToTerm)
         if (patTerm.isDefined && valueTerms.forall(_.isDefined))
