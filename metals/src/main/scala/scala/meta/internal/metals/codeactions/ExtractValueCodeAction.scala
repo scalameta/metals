@@ -33,14 +33,19 @@ class ExtractValueCodeAction(
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val termOpt = trees.findLastEnclosingAt[Term](
-      path,
-      range.getStart(),
-      t => existsRangeEnclosing(t, range)
-    )
-
-    val textEdits = for {
-      term <- termOpt
+    val allTrees: Seq[Term] = {
+      def loop(t: Tree): Seq[Term] = {
+        t.children.find(_.pos.encloses(range)) match {
+          case Some(tr: Term) if existsRangeEnclosing(tr, range) =>
+            loop(tr) :+ tr
+          case Some(tr) => loop(tr)
+          case None => Nil
+        }
+      }
+      trees.get(path).map(loop(_)).getOrElse(Nil)
+    }
+    val textEdits: Seq[(Seq[l.TextEdit], String)] = for {
+      term <- allTrees
       stats <- lastEnclosingStatsList(term)
       argument <- findRangeEnclosing(term, range)
       // avoid extracting lambdas (this needs actual type information)
@@ -67,8 +72,8 @@ class ExtractValueCodeAction(
       val replacedArgument = new l.TextEdit(argument.pos.toLSP, replacementText)
       (valueTextWithBraces :+ replacedArgument, argument.toString())
     }
-    textEdits match {
-      case Some((edits, title)) =>
+    textEdits.flatMap(_ match {
+      case (edits, title) =>
         val codeAction = new l.CodeAction()
         codeAction.setTitle(ExtractValueCodeAction.title(title))
         codeAction.setKind(this.kind)
@@ -77,9 +82,9 @@ class ExtractValueCodeAction(
             Map(path.toURI.toString -> edits.asJava).asJava
           )
         )
-        Seq(codeAction)
-      case None => Nil
-    }
+        Some(codeAction)
+      case _ => None
+    })
   }
   private def applyArgument(argument: Term): Term =
     argument match {
@@ -120,7 +125,7 @@ class ExtractValueCodeAction(
     }
   }
   private def existsRangeEnclosing(
-      term: Term,
+      term: Tree,
       range: l.Range
   ): Boolean = {
     term match {
