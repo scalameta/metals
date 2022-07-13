@@ -23,8 +23,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                      dialogues that don't implement window/showMessageRequest yet.
  * @param isInputBoxEnabled whether the client supports the `metals/inputBox` extension.
  * @param isVerbose turn on verbose logging.
- * @param isAutoServer whether or not `AUTO_SERVER` should be set for h2.
- * `*                    http://www.h2database.com/html/features.html#auto_mixed_mode
  * @param remoteTimeout timeout period for retrieving references while using `RemoteLanguageServer`.
  * @param openFilesOnRenames whether or not file should be opened when a rename occurs
  *                           in an unopened file.
@@ -66,10 +64,6 @@ final case class MetalsServerConfig(
     isVerbose: Boolean = MetalsServerConfig.binaryOption(
       "metals.verbose",
       default = false,
-    ),
-    isAutoServer: Boolean = MetalsServerConfig.binaryOption(
-      "metals.h2.auto-server",
-      default = true,
     ),
     remoteTimeout: String = System.getProperty(
       "metals.timeout",

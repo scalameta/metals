@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.sql.Connection
 import java.sql.DriverManager
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.control.NonFatal
 
@@ -17,8 +18,10 @@ import org.flywaydb.core.api.FlywayException
 final class Tables(
     workspace: AbsolutePath,
     time: Time,
-    clientConfig: ClientConfiguration,
 ) extends Cancelable {
+
+  import Tables.ConnectionState
+
   val jarSymbols = new JarTopLevels(() => connection)
   val digests =
     new Digests(() => connection, time)
@@ -35,19 +38,40 @@ final class Tables(
   val fingerprints =
     new Fingerprints(() => connection)
 
-  def connect(): Unit = {
-    this._connection =
-      if (clientConfig.initialConfig.isAutoServer) tryAutoServer()
-      else tryAutoServer()
-  }
-  def cancel(): Unit = connection.close()
-  private var _connection: Connection = _
-  private def connection: Connection = {
-    if (_connection == null || _connection.isClosed) {
-      connect()
+  private val ref: AtomicReference[ConnectionState] =
+    new AtomicReference(ConnectionState.Empty)
+
+  def connect(): Connection = {
+    ref.get() match {
+      case empty @ ConnectionState.Empty =>
+        if (ref.compareAndSet(empty, ConnectionState.InProgress)) {
+          val conn = tryAutoServer()
+          ref.set(ConnectionState.Connected(conn))
+          conn
+        } else
+          connect()
+      case Tables.ConnectionState.InProgress =>
+        Thread.sleep(100)
+        connect()
+      case Tables.ConnectionState.Connected(conn) =>
+        conn
     }
-    _connection
   }
+
+  def cancel(): Unit = {
+    ref.get() match {
+      case v @ ConnectionState.Connected(conn) =>
+        if (ref.compareAndSet(v, ConnectionState.Empty)) {
+          conn.close()
+        }
+      case ConnectionState.InProgress =>
+        Thread.sleep(100)
+        cancel()
+      case _ =>
+    }
+  }
+
+  private def connection: Connection = connect()
 
   // The try/catch dodge-ball court in these methods is not glamorous, I'm sure it can be refactored for more
   // readability and extensibility but it seems to get the job done for now. The most important goals are:
@@ -134,4 +158,14 @@ final class Tables(
     }
   }
 
+}
+
+object Tables {
+
+  sealed trait ConnectionState
+  object ConnectionState {
+    case object Empty extends ConnectionState
+    case object InProgress extends ConnectionState
+    final case class Connected(conn: Connection) extends ConnectionState
+  }
 }

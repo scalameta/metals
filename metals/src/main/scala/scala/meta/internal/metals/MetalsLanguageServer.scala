@@ -370,7 +370,7 @@ class MetalsLanguageServer(
           initializeParams.supportsHierarchicalDocumentSymbols
         )
         buildTargets.setWorkspaceDirectory(workspace)
-        tables = register(new Tables(workspace, time, clientConfig))
+        tables = register(new Tables(workspace, time))
         buildTargets.setTables(tables)
         workspaceReload = new WorkspaceReload(
           workspace,
