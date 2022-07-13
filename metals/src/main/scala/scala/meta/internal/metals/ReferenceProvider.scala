@@ -255,6 +255,25 @@ final class ReferenceProvider(
     }
   }
 
+  private[metals] def pathsWithReferences(
+      source: AbsolutePath,
+      isSymbol: Set[String]
+  ): Set[AbsolutePath] = {
+    buildTargets.inverseSources(source) match {
+      case None => Set.empty
+      case Some(id) =>
+        val allowedBuildTargets = buildTargets.allInverseDependencies(id)
+        val result = for {
+          (path, entry) <- index.iterator
+          if allowedBuildTargets.contains(entry.id) &&
+            isSymbol.exists(entry.bloom.mightContain)
+          sourcePath = AbsolutePath(path)
+          if sourcePath.exists
+        } yield sourcePath
+        result.toSet
+    }
+  }
+
   private def references(
       source: AbsolutePath,
       params: ReferenceParams,
