@@ -66,30 +66,39 @@ class FlatMapToForComprehensionCodeAction(
       path: AbsolutePath,
       startPos: l.Position,
       endPos: l.Position,
+      braced: Boolean,
   ): l.CodeAction = {
+
+    val middleIndent = if (braced) "  " else ""
 
     val indentedElems = forElementsList
       .map(
         _.syntax
           .split(Array('\n'))
-          .map(line => s"$indentation   $line")
+          .map(line => s"$indentation  $middleIndent$line")
           .mkString("\n")
       )
       .mkString("\n")
 
     val yieldTermIndentedString = yieldTerm.syntax
       .split(Array('\n'))
-      .map(line => s"$indentation   $line")
+      .map(line => s"$indentation  $middleIndent$line")
       .mkString("\n")
 
     val forYieldString =
-      s"""|{
-          |$indentation for {
-          |$indentedElems
-          |$indentation } yield {
-          |$yieldTermIndentedString
-          |$indentation }
-          |$indentation}""".stripMargin
+      if (braced)
+        s"""|{
+            |$indentation  for {
+            |$indentedElems
+            |$indentation  } yield {
+            |$yieldTermIndentedString
+            |$indentation  }
+            |$indentation}""".stripMargin
+      else s"""|for {
+               |$indentedElems
+               |$indentation} yield {
+               |$yieldTermIndentedString
+               |$indentation}""".stripMargin
 
     val codeAction = new l.CodeAction()
     val range =
@@ -162,30 +171,32 @@ class FlatMapToForComprehensionCodeAction(
       indentation: String,
   ): Option[l.CodeAction] = {
 
-    findOuterMostApply(termApply, None).flatMap { outerMostApply =>
-      val nameGenerator = MetalsNames(outerMostApply, "generatedByMetals")
-      val (forElements, maybeYieldTerm) =
-        extractChainedForYield(
-          None,
-          None,
-          List.empty,
-          outerMostApply,
-          nameGenerator,
-        )
-
-      if (forElements.nonEmpty) {
-        maybeYieldTerm.map { yieldTerm =>
-          constructCodeAction(
-            forElements,
-            yieldTerm,
-            indentation,
-            path,
-            outerMostApply.pos.toLSP.getStart,
-            outerMostApply.pos.toLSP.getEnd,
+    findOuterMostApply(termApply, None)
+      .flatMap { outerMostApply =>
+        val nameGenerator = MetalsNames(outerMostApply, "generatedByMetals")
+        val (forElements, maybeYieldTerm) =
+          extractChainedForYield(
+            None,
+            None,
+            List.empty,
+            outerMostApply,
+            nameGenerator,
           )
-        }
-      } else None
-    }
+
+        if (forElements.nonEmpty) {
+          maybeYieldTerm.map { yieldTerm =>
+            constructCodeAction(
+              forElements,
+              yieldTerm,
+              indentation,
+              path,
+              outerMostApply.pos.toLSP.getStart,
+              outerMostApply.pos.toLSP.getEnd,
+              outerMostApply.parent.exists(_.is[Term.Select]),
+            )
+          }
+        } else None
+      }
 
   }
 
