@@ -1,9 +1,11 @@
 package scala.meta.internal.metals.codeactions
 
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -15,6 +17,15 @@ trait CodeAction {
    * listed in [[org.eclipse.lsp4j.CodeActionKind]]
    */
   def kind: String
+
+  type CommandData
+  type ActionCommand = ParametrizedCommand[CommandData]
+  def command: Option[ActionCommand] = None
+
+  @nowarn
+  def handleCommand(data: CommandData, token: CancelToken)(implicit
+      ec: ExecutionContext
+  ): Future[Unit] = Future.unit
 
   def contribute(
       params: l.CodeActionParams,

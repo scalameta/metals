@@ -32,6 +32,9 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
     if (argIndices.isEmpty) firstApplyWithUnnamedArgs(apply.parent)
     else Some(ApplyTermWithArgIndices(apply, argIndices))
   }
+  // type T = ServerCommands.ConvertToNamedArguments
+  // override def command: Option[Nothing] = Some(ServerCommands.ConvertToNamedArguments)
+
   def firstApplyWithUnnamedArgs(
       term: Option[Tree]
   ): Option[ApplyTermWithArgIndices] = {

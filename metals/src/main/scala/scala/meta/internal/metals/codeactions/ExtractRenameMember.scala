@@ -15,7 +15,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember.CodeActionCommandNotFoundException
 import scala.meta.internal.metals.codeactions.ExtractRenameMember.getMemberType
@@ -28,11 +28,19 @@ import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.ClientCommands
 
 class ExtractRenameMember(
-    trees: Trees
+    trees: Trees,
+    languageClient: MetalsLanguageClient,
 )(implicit ec: ExecutionContext)
     extends CodeAction {
+
+  override type CommandData = l.TextDocumentPositionParams
+
+  override def command: Option[ActionCommand] =
+    Some(ServerCommands.ExtractMemberDefinition)
 
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext
@@ -320,11 +328,32 @@ class ExtractRenameMember(
     )
   }
 
-  def executeCommand(
-      data: ExtractMemberDefinitionData
+  override def handleCommand(
+      textDocumentParams: l.TextDocumentPositionParams,
+      token: CancelToken,
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    for {
+      result <- calculate(textDocumentParams)
+      _ <- languageClient.applyEdit(result.edits).asScala
+    } yield {
+      result.goToLocation.foreach { location =>
+        languageClient.metalsExecuteClientCommand(
+          ClientCommands.GotoLocation.toExecuteCommandParams(
+            ClientCommands.WindowLocation(
+              location.getUri(),
+              location.getRange(),
+            )
+          )
+        )
+      }
+    }
+
+  }
+
+  private def calculate(
+      params: l.TextDocumentPositionParams
   ): Future[CodeActionCommandResult] = Future {
-    val uri = data.uri
-    val params = data.params
+    val uri = params.getTextDocument().getUri()
 
     def isCompanion(
         member: Member
@@ -381,7 +410,7 @@ class ExtractRenameMember(
 
     opt.getOrElse(
       throw CodeActionCommandNotFoundException(
-        s"Could not execute command ${data.actionType}"
+        s"Could not execute command ${ServerCommands.ExtractMemberDefinition.id}"
       )
     )
   }
