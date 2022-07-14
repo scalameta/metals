@@ -408,7 +408,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = '''
-       |  
+       |  '''
        |}""".stripMargin,
     triggerCharacter = "\n",
   )
@@ -422,7 +422,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = s'''
-       |  
+       |  '''
        |}""".stripMargin,
     triggerCharacter = "\n",
   )
@@ -436,7 +436,21 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = sql'''
-       |  
+       |  '''
+       |}""".stripMargin,
+    triggerCharacter = "\n",
+  )
+
+  check(
+    "multiple-3-quotes-sql",
+    s"""
+       |object Main {
+       |  val str = sql'''SELECT *''' + sql'''FROM @@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = sql'''SELECT *''' + sql'''FROM 
+       |  '''
        |}""".stripMargin,
     triggerCharacter = "\n",
   )
