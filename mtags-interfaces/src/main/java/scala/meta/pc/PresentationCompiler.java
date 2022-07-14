@@ -101,6 +101,11 @@ public abstract class PresentationCompiler {
     public abstract CompletableFuture<List<TextEdit>> insertInferredType(OffsetParams params);
 
     /**
+     * Extract method in selected range
+     */
+    public abstract CompletableFuture<List<TextEdit>> extractMethod(OffsetParams params);
+
+    /**
      * Return named arguments for the apply method that encloses the given position.
      */
     public abstract CompletableFuture<List<TextEdit>> convertToNamedArguments(OffsetParams params, List<Integer> argIndices);

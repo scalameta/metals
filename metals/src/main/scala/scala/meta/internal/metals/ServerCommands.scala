@@ -477,6 +477,16 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val ExtractMethod = new ParametrizedCommand[TextDocumentPositionParams](
+      "extract-method",
+      "Extract method from range",
+      """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
+         |calculate the type and insert it in the correct location.
+         |""".stripMargin,
+      """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+         |""".stripMargin,
+    )
+
   final case class ConvertToNamedArgsRequest(
       position: TextDocumentPositionParams,
       argIndices: ju.List[Integer],
