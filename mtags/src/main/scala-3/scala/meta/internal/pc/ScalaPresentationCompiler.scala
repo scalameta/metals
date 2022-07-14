@@ -34,7 +34,7 @@ import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.util.*
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.{lsp4j as l}
-import java.{util => ju}
+import java.{util as ju}
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -213,12 +213,18 @@ case class ScalaPresentationCompiler(
       new InferredTypeProvider(params, pc.compiler(), config, search)
         .inferredTypeEdits()
         .asJava
-  }
+    }
 
   override def extractMethod(
-        params: OffsetParams,
-    ): CompletableFuture[ju.List[l.TextEdit]] =
-      CompletableFuture.completedFuture(Nil.asJava)
+      params: OffsetParams
+  ): CompletableFuture[ju.List[l.TextEdit]] =
+    pprint.pprintln("Pc dla scali 3")
+    val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
+    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+      new ExtractMethodProvider(params, pc.compiler(), config)
+        .extractMethod()
+        .asJava
+    }
 
   override def convertToNamedArguments(
       params: OffsetParams,

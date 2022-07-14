@@ -598,6 +598,7 @@ object ServerCommands {
       PresentationCompilerRestart,
       ResetChoicePopup,
       ResetNotifications,
+      ExtractMethod,
       RestartBuildServer,
       RunDoctor,
       RunScalafix,
