@@ -2018,7 +2018,11 @@ class MetalsLanguageServer(
               argIndices,
               token,
             )
-            if (!edits.isEmpty())
+            _ = if (edits.isEmpty())
+              scribe.info(
+                s"Could not find the correct names for arguments at $position with indices ${argIndices.asScala
+                    .mkString(",")}"
+              )
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
             _ <- languageClient
               .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))

@@ -213,6 +213,11 @@ final class RenameProvider(
             renamedImportOccurrences(source, symbolOccurrence)
           else allReferences
 
+        if (fallbackOccurences.isEmpty) {
+          scribe.debug(s"Symbol occurence was $symbolOccurrence")
+          scribe.debug(s"The definition found was $definition")
+        }
+
         val allChanges = for {
           (path, locs) <- fallbackOccurences.toList.distinct
             .groupBy(_.getUri().toAbsolutePath)
@@ -415,7 +420,10 @@ final class RenameProvider(
     if (colonNotAllowed) {
       client.showMessage(forbiddenColonRename(name, newName))
     }
-    (!desc.isMethod || (!colonNotAllowed && !isForbidden))
+    val canRename = (!desc.isMethod || (!colonNotAllowed && !isForbidden))
+    if (!canRename)
+      scribe.debug(s"Cannot rename $symbol with new name $newName")
+    canRename
   }
 
   private def findRenamedImportOccurrenceAtPosition(
