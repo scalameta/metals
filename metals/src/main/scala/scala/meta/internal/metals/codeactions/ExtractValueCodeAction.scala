@@ -335,7 +335,7 @@ class ExtractValueCodeAction(
 
 object ExtractValueCodeAction {
   def title(expr: String): String = {
-    if (expr.length <= 10) s"Extract value $expr"
-    else s"Extract ${expr.take(10)} ... as value"
+    if (expr.length <= 10) s"Extract `$expr` as value"
+    else s"Extract `${expr.take(10)}` ... as value"
   }
 }

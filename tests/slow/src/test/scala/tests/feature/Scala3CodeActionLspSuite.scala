@@ -382,6 +382,42 @@ class Scala3CodeActionLspSuite
   )
 
   check(
+    "multiple-apply",
+    """|object Main:
+       |  def method(a: Int) = a + 1
+       |  method(method(meth<<o>>d(5)))
+       |
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("method(5)")}
+        |${ExtractValueCodeAction.title("method(method(5)")}
+        |""".stripMargin,
+    """|object Main:
+       |  def method(a: Int) = a + 1
+       |  val newValue = method(5)
+       |  method(method(newValue))
+       |
+       |""".stripMargin,
+  )
+
+  check(
+    "apply-if",
+    """|object Main:
+       |  def method(a: Int) = a + 1
+       |  if(method(<<1>>) > 2) 2 else 3
+       |
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("1")}
+        |${ExtractValueCodeAction.title("method(1) > 2")}
+        |""".stripMargin,
+    """|object Main:
+       |  def method(a: Int) = a + 1
+       |  val newValue = 1
+       |  if(method(newValue) > 2) 2 else 3
+       |
+       |""".stripMargin,
+  )
+
+  check(
     "insert-companion-object-of-braceless-enum-inside-parent-object",
     """|object Baz:
        |  enum F<<>>oo:
