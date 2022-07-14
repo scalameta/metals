@@ -109,8 +109,10 @@ case class MultilineString(userConfig: () => UserConfiguration)
           escaped = !escaped
         }
       } else if (char == '\\') {
+        quoteNum = 0
         escaped = !escaped
       } else {
+        quoteNum = 0
         escaped = false
       }
     }
@@ -407,7 +409,6 @@ case class MultilineString(userConfig: () => UserConfiguration)
   ): Option[List[TextEdit]] = {
     val splitLines = params.splitLines
     val position = params.position
-    splitLines(position.getLine())
     val triggerChar = params.triggerChar
     (params.tokens, triggerChar) match {
       case (Some(tokens), "\n") =>
@@ -425,8 +426,6 @@ case class MultilineString(userConfig: () => UserConfiguration)
           .find(_.nonEmpty)
       case (None, "\"") if onlyFourQuotes(splitLines, position) =>
         Some(replaceWithSixQuotes(position))
-      case (None, "\"") =>
-        None
       case (None, "\n")
           if doubleQuoteNotClosed(splitLines, position) && !wasTripleQuoted(
             splitLines,
