@@ -127,7 +127,8 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
         |  "a" : {
         |    "scalaVersion": "$actualScalaVersion",
         |    "compilerPlugins": ${toJsonArray(compilerPlugins)},
-        |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
+        |    "libraryDependencies": ${toJsonArray(libraryDependencies)},
+        |    "scalacOptions" : ["-Ymacro-annotations"]
         |  },
         |  "b" : {
         |    "scalaVersion": "$actualScalaVersion",

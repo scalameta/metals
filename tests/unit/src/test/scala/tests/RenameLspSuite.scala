@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.InitializationOptions
 
-abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
+class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
@@ -813,8 +813,6 @@ abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
     newName = "NewSymbol",
   )
   override protected def libraryDependencies: List[String] =
-    List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
+    List("org.scalatest::scalatest:3.2.12", "io.circe::circe-generic:0.14.1")
 
-  override protected def compilerPlugins: List[String] =
-    List("org.scalamacros:::paradise:2.1.1")
 }
