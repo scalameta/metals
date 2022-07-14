@@ -115,6 +115,7 @@ class ScalaToplevelMtags(
             case _ => exitIndented(region, indent)
           }
         } else region
+      // println(data)
 
       data.token match {
         case PACKAGE =>
@@ -129,6 +130,30 @@ class ScalaToplevelMtags(
             )
           } else
             loop(indent, false, currRegion, newExpectTemplate)
+        case GIVEN if includeInnerClasses =>
+          acceptTrivia()
+          val tmpPos = newPosition
+          val tmpName = newIdentifier
+          scanner.nextToken()
+          val (name, pos) = scanner.curr.token match {
+            case COLON =>
+              (tmpName.name, tmpName.pos)
+            case LBRACKET => // anonymous given instance
+              acceptTrivia() // read until "with" of "given Ord[Int] with"
+              val tpname = scanner.curr.name
+              (s"given_${tmpName.name}_$tpname", tmpPos)
+            case other => fail(s"Expect : or [, but ${other}")
+          }
+          val newOwner = withOwner(currRegion.owner) {
+            term(name, pos, Kind.OBJECT, 0)
+          }
+          scanner.nextToken()
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion,
+            newExpectExtensionTemplate(newOwner)
+          )
         case IDENTIFIER
             if dialect.allowExtensionMethods && data.name == "extension" =>
           val nextOwner =
@@ -205,6 +230,18 @@ class ScalaToplevelMtags(
               if (isAfterNewline) indent + 1 else indent
             scanner.nextToken()
             loop(nextIndentLevel, isAfterNewline, region, expectTemplate)
+          }
+        case WITH =>
+          expectTemplate match {
+            case Some(expect) if needToParseExtension(expect) =>
+              val next =
+                expect.startIndentedRegion(currRegion, expect.isExtension)
+              resetRegion(next)
+              scanner.nextToken()
+              loop(0, isAfterNewline = true, next, None)
+            case _ =>
+              scanner.nextToken()
+              loop(indent, isAfterNewline = false, currRegion, expectTemplate)
           }
         case COLON if dialect.allowSignificantIndentation =>
           (expectTemplate, nextIsNL) match {

@@ -69,7 +69,7 @@ final class AutoImportsProvider(
             val nameEdit = new TextEdit(namePos, short)
             nameEdit :: edits
         }
-        AutoImportsResultImpl(pkg, edits.asJava)
+        AutoImportsResultImpl(pkg, edits.asJava, java.util.Optional.empty())
     }
   }
 

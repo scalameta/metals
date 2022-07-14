@@ -50,7 +50,10 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
 
             val codeAction = new l.CodeAction()
 
-            codeAction.setTitle(ImportMissingSymbol.title(name, i.packageName))
+            val importName = i.name.asScala.getOrElse(name)
+            codeAction.setTitle(
+              ImportMissingSymbol.title(importName, i.packageName)
+            )
             codeAction.setKind(l.CodeActionKind.QuickFix)
             codeAction.setDiagnostics(List(diagnostic).asJava)
             codeAction.setEdit(edit)

@@ -83,10 +83,14 @@ final class AutoImportsProvider(
 
       for
         sym <- results
-        edits <- generator.forSymbol(sym)
+        importOwner = sym.owner.companionModule.is(Given)
+        impSym = if importOwner then sym.owner else sym
+        edits <- generator.forSymbol(impSym)
       yield AutoImportsResultImpl(
-        sym.owner.showFullName,
+        impSym.owner.showFullName,
         edits.asJava,
+        if importOwner then Some(impSym.name.show).asJava
+        else ju.Optional.empty(),
       )
     else List.empty
     end if

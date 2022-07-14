@@ -34,6 +34,7 @@ object SemanticdbSymbols:
       else
         val (desc, parent) = DescriptorParser(s)
         val parentSymbol = loop(parent)
+        // TODO: toplevel
 
         def tryMember(sym: Symbol): List[Symbol] =
           sym match
