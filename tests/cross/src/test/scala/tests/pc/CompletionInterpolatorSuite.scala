@@ -640,4 +640,22 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     assertSingleItem = false,
     itemIndex = 1,
   )
+
+  checkEdit(
+    "auto-imports-prefix-with-interpolator".tag(IgnoreScala3),
+    """|
+       |class Paths
+       |object Main {
+       |  s"this is an interesting $Paths@@"
+       |}
+       |""".stripMargin,
+    """|import java.nio.file
+       |
+       |class Paths
+       |object Main {
+       |  s"this is an interesting ${file.Paths}"
+       |}
+       |""".stripMargin,
+    assertSingleItem = false
+  )
 }
