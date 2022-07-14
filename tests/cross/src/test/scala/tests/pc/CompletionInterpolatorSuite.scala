@@ -354,6 +354,26 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  check(
+    "member-label".tag(IgnoreScala3),
+    """|object Main {
+       |  
+       |  s"Hello $List.e@@ "
+       |}
+       |""".stripMargin,
+    """|empty[A]: List[A]
+       |equals(x$1: Object): Boolean
+       |""".stripMargin,
+    compat = Map(
+      "2.12" ->
+        """|empty[A]: List[A]
+           |equals(x$1: Any): Boolean
+           |""".stripMargin
+    ),
+    topLines = Some(6),
+    includeDetail = false,
+  )
+
   checkEdit(
     "member1",
     """|object Main {
@@ -656,6 +676,6 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"this is an interesting ${file.Paths}"
        |}
        |""".stripMargin,
-    assertSingleItem = false
+    assertSingleItem = false,
   )
 }
