@@ -1021,6 +1021,81 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "given-object-creation".tag(IgnoreScala2),
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given <<Foo>> with
+       |  def foo(x: Int): Int = x
+       |""".stripMargin,
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given Foo with
+       |
+       |  override def bar(x: String): String = ???
+       |
+       |  def foo(x: Int): Int = x
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "given-object-creation-braces".tag(IgnoreScala2),
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given <<Foo>> with {}
+       |""".stripMargin,
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given Foo with {
+       |
+       |  override def foo(x: Int): Int = ???
+       |
+       |  override def bar(x: String): String = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "given-object-with".tag(IgnoreScala2),
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given <<Foo>>
+       |""".stripMargin,
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given Foo with
+       |
+       |  override def foo(x: Int): Int = ???
+       |
+       |  override def bar(x: String): String = ???
+       |""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

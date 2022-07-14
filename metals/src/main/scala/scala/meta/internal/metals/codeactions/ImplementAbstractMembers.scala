@@ -30,6 +30,9 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
           case d @ ScalacDiagnostic.MissingImplementation(_)
               if params.getRange().overlapsWith(d.getRange()) =>
             implementAbstractMembers(d, params, token)
+          case d @ ScalacDiagnostic.DeclarationOfGivenInstanceNotAllowed(_)
+              if (params.getRange().overlapsWith(d.getRange())) =>
+            implementAbstractMembers(d, params, token)
         }
     )
   }

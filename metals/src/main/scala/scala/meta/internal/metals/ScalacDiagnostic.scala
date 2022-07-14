@@ -39,4 +39,14 @@ object ScalacDiagnostic {
         case _ => None
       }
   }
+
+  object DeclarationOfGivenInstanceNotAllowed {
+    private val regex =
+      """Declaration of given instance given_.+ not allowed here.*""".r
+    def unapply(d: l.Diagnostic): Option[String] =
+      d.getMessage() match {
+        case regex() => Some(d.getMessage())
+        case _ => None
+      }
+  }
 }
