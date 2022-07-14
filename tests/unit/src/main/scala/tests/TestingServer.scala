@@ -401,8 +401,16 @@ final case class TestingServer(
         },
       )
     }
-    def newRef(symbol: String, loc: Location): SymbolReference =
-      SymbolReference(symbol, loc, loc.getRange.toMeta(readInput(loc.getUri)))
+    def newRef(symbol: String, loc: Location): SymbolReference = {
+      val pos = loc.getRange
+        .toMeta(readInput(loc.getUri))
+        .getOrElse(
+          throw new RuntimeException(
+            s"${loc.getRange()} not contained in ${loc.getUri()}"
+          )
+        )
+      SymbolReference(symbol, loc, pos)
+    }
     for {
       source <- workspaceSources()
       input = source.toInputFromBuffers(buffers)
@@ -1385,7 +1393,13 @@ final case class TestingServer(
           val input = path
             .toInputFromBuffers(buffers)
             .copy(path = shortPath)
-          val pos = l.getRange.toMeta(input)
+          val pos = l.getRange
+            .toMeta(input)
+            .getOrElse(
+              throw new RuntimeException(
+                s"Cannot find ${l.getRange()} in ${l.getUri()}"
+              )
+            )
           pos.formatMessage("info", "reference")
         }
         .mkString("\n")

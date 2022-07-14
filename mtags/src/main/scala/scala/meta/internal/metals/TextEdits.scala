@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.meta.Position
 import scala.meta.inputs.Input
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -15,8 +16,11 @@ object TextEdits {
     if (edits.isEmpty) text
     else {
       val input = Input.String(text)
-      val positions = edits
-        .map(edit => edit -> edit.getRange.toMeta(input))
+      val positions: List[(TextEdit, Position)] = edits
+        .map(edit => (edit, edit.getRange.toMeta(input)))
+        .collect { case (edit, Some(pos)) =>
+          edit -> pos
+        }
         .sortBy(_._2.start)
       var curr = 0
       val out = new java.lang.StringBuilder()

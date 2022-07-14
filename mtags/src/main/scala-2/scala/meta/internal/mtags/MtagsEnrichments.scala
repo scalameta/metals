@@ -156,28 +156,28 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionRangeLspInverse(range: l.Range) {
-    def toMeta(input: m.Input): m.Position = {
-      m.Position.Range(
-        input,
-        range.getStart.getLine,
-        range.getStart.getCharacter,
-        range.getEnd.getLine,
-        range.getEnd.getCharacter
-      )
-    }
-
     def toLocation(uri: URI): l.Location = new l.Location(uri.toString(), range)
   }
 
   implicit class XtensionPositionLspInverse(pos: l.Position) {
-    def toMeta(input: m.Input): m.Position = {
-      m.Position.Range(
-        input,
-        pos.getLine,
-        pos.getCharacter,
-        pos.getLine,
-        pos.getCharacter
-      )
+
+    /**
+     * LSP position translated to scalameta position. Might return None if
+     * pos is not contained in input
+     *
+     * @param input file input the position relates to
+     * @return scalameta position with offset if the pos is contained in the file
+     */
+    def toMeta(input: m.Input): Option[m.Position] = {
+      Try(
+        m.Position.Range(
+          input,
+          pos.getLine,
+          pos.getCharacter,
+          pos.getLine,
+          pos.getCharacter
+        )
+      ).toOption
     }
   }
 }

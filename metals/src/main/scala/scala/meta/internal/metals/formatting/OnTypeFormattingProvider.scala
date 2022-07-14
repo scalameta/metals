@@ -47,27 +47,28 @@ class OnTypeFormattingProvider(
     val path = params.getTextDocument.getUri.toAbsolutePath
     val range = new Range(params.getPosition, params.getPosition)
     val triggerChar = params.getCh
-    val position = params.getPosition
-    buffers
-      .get(path)
-      .map { sourceText =>
-        val virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
-        val startPos = range.getStart.toMeta(virtualFile)
-        val endPos = range.getEnd.toMeta(virtualFile)
-        val tokensOpt = trees.tokenized(virtualFile).toOption
-        val onTypeformatterParams =
-          OnTypeFormatterParams(
-            sourceText,
-            position,
-            triggerChar,
-            startPos,
-            endPos,
-            tokensOpt,
-          )
-        formatters.acceptFirst(formater =>
-          formater.contribute(onTypeformatterParams)
+    val position = params.getPosition()
+
+    val edits = for {
+      sourceText <- buffers.get(path)
+      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
+      startPos <- range.getStart.toMeta(virtualFile)
+      endPos <- range.getEnd.toMeta(virtualFile)
+    } yield {
+      val tokensOpt = trees.tokenized(virtualFile).toOption
+      val onTypeformatterParams =
+        OnTypeFormatterParams(
+          sourceText,
+          position,
+          triggerChar,
+          startPos,
+          endPos,
+          tokensOpt,
         )
-      }
-      .getOrElse(Nil)
+      formatters.acceptFirst(formater =>
+        formater.contribute(onTypeformatterParams)
+      )
+    }
+    edits.getOrElse(Nil)
   }
 }

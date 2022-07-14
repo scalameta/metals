@@ -146,93 +146,93 @@ object TokenEditDistance {
 
     private val logger: Logger = Logger.getLogger(this.getClass.getName)
     def toRevised(range: l.Range): Option[l.Range] = {
-      val pos = range.toMeta(originalInput)
-      val matchingTokens = matching.lift
+      range.toMeta(originalInput).flatMap { pos =>
+        val matchingTokens = matching.lift
 
-      // Perform two binary searches to find the revised start/end positions.
-      // NOTE. I tried abstracting over the two searches since they are so similar
-      // but it resulted in less maintainable code.
+        // Perform two binary searches to find the revised start/end positions.
+        // NOTE. I tried abstracting over the two searches since they are so similar
+        // but it resulted in less maintainable code.
 
-      var startFallback = false
-      val startMatch = BinarySearch.array(
-        matching,
-        (mt: MatchingToken[A], i) => {
-          val result = compare(mt.original.pos, pos.start)
-          result match {
-            case BinarySearch.Smaller =>
-              matchingTokens(i + 1) match {
-                case Some(next) =>
-                  compare(next.original.pos, pos.start) match {
-                    case BinarySearch.Greater =>
-                      startFallback = true
-                      // The original token is not available in the revised document
-                      // so we use the nearest token instead.
-                      BinarySearch.Equal
-                    case _ =>
-                      result
-                  }
-                case None =>
-                  startFallback = true
-                  BinarySearch.Equal
-              }
-            case _ =>
-              result
-          }
-        },
-      )
-
-      var endFallback = false
-      val endMatch = BinarySearch.array(
-        matching,
-        (mt: MatchingToken[A], i) => {
-          // End offsets are non-inclusive so we decrement by one.
-          val offset = math.max(pos.start, pos.end - 1)
-          val result = compare(mt.original.pos, offset)
-          result match {
-            case BinarySearch.Greater =>
-              matchingTokens(i - 1) match {
-                case Some(next) =>
-                  compare(next.original.pos, offset) match {
-                    case BinarySearch.Smaller =>
-                      endFallback = true
-                      BinarySearch.Equal
-                    case _ =>
-                      result
-                  }
-                case None =>
-                  endFallback = true
-                  BinarySearch.Equal
-              }
-            case _ =>
-              result
-          }
-        },
-      )
-
-      (startMatch, endMatch) match {
-        case (Some(start), Some(end)) =>
-          val revised =
-            if (startFallback && endFallback) {
-              val offset = end.revised.start
-              Position.Range(revisedInput, offset - 1, offset)
-            } else if (start.revised == end.revised) {
-              start.revised.pos
-            } else {
-              val endOffset = end.revised match {
-                case t if t.isLF => t.start
-                case t => t.end
-              }
-              Position.Range(revisedInput, start.revised.start, endOffset)
+        var startFallback = false
+        val startMatch = BinarySearch.array(
+          matching,
+          (mt: MatchingToken[A], i) => {
+            val result = compare(mt.original.pos, pos.start)
+            result match {
+              case BinarySearch.Smaller =>
+                matchingTokens(i + 1) match {
+                  case Some(next) =>
+                    compare(next.original.pos, pos.start) match {
+                      case BinarySearch.Greater =>
+                        startFallback = true
+                        // The original token is not available in the revised document
+                        // so we use the nearest token instead.
+                        BinarySearch.Equal
+                      case _ =>
+                        result
+                    }
+                  case None =>
+                    startFallback = true
+                    BinarySearch.Equal
+                }
+              case _ =>
+                result
             }
-          Some(revised.toLSP)
-        case (start, end) =>
-          logger.warning(
-            s"stale range: ${start.map(_.show)} ${end.map(_.show)}"
-          )
-          None
+          },
+        )
+
+        var endFallback = false
+        val endMatch = BinarySearch.array(
+          matching,
+          (mt: MatchingToken[A], i) => {
+            // End offsets are non-inclusive so we decrement by one.
+            val offset = math.max(pos.start, pos.end - 1)
+            val result = compare(mt.original.pos, offset)
+            result match {
+              case BinarySearch.Greater =>
+                matchingTokens(i - 1) match {
+                  case Some(next) =>
+                    compare(next.original.pos, offset) match {
+                      case BinarySearch.Smaller =>
+                        endFallback = true
+                        BinarySearch.Equal
+                      case _ =>
+                        result
+                    }
+                  case None =>
+                    endFallback = true
+                    BinarySearch.Equal
+                }
+              case _ =>
+                result
+            }
+          },
+        )
+
+        (startMatch, endMatch) match {
+          case (Some(start), Some(end)) =>
+            val revised =
+              if (startFallback && endFallback) {
+                val offset = end.revised.start
+                Position.Range(revisedInput, offset - 1, offset)
+              } else if (start.revised == end.revised) {
+                start.revised.pos
+              } else {
+                val endOffset = end.revised match {
+                  case t if t.isLF => t.start
+                  case t => t.end
+                }
+                Position.Range(revisedInput, start.revised.start, endOffset)
+              }
+            Some(revised.toLSP)
+          case (start, end) =>
+            logger.warning(
+              s"stale range: ${start.map(_.show)} ${end.map(_.show)}"
+            )
+            None
+        }
       }
     }
-
     def toRevised(
         originalLine: Int,
         originalColumn: Int,

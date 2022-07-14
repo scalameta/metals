@@ -45,26 +45,27 @@ class RangeFormattingProvider(
     val path = params.getTextDocument.getUri.toAbsolutePath
     val range = params.getRange
     val formattingOptions = params.getOptions
-    buffers
-      .get(path)
-      .map { sourceText =>
-        val virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
-        val startPos = range.getStart.toMeta(virtualFile)
-        val endPos = range.getEnd.toMeta(virtualFile)
-        val tokensOpt = trees.tokenized(virtualFile).toOption
-        val rangeFormatterParams =
-          RangeFormatterParams(
-            sourceText,
-            range,
-            formattingOptions,
-            startPos,
-            endPos,
-            tokensOpt,
-          )
-        formatters.acceptFirst(formater =>
-          formater.contribute(rangeFormatterParams)
+    val edits = for {
+      sourceText <- buffers.get(path)
+      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
+      startPos <- range.getStart.toMeta(virtualFile)
+      endPos <- range.getEnd.toMeta(virtualFile)
+    } yield {
+      val tokensOpt = trees.tokenized(virtualFile).toOption
+      val rangeFormatterParams =
+        RangeFormatterParams(
+          sourceText,
+          range,
+          formattingOptions,
+          startPos,
+          endPos,
+          tokensOpt,
         )
-      }
-      .getOrElse(Nil)
+      formatters.acceptFirst(formater =>
+        formater.contribute(rangeFormatterParams)
+      )
+    }
+
+    edits.getOrElse(Nil)
   }
 }

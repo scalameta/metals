@@ -259,12 +259,13 @@ final class Diagnostics(
       )
     }
     if (result.isEmpty) {
-      val pos = d.getRange.toMeta(snapshot)
-      val message = pos.formatMessage(
-        s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
-        d.getMessage,
-      )
-      scribe.info(message)
+      d.getRange.toMeta(snapshot).foreach { pos =>
+        val message = pos.formatMessage(
+          s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
+          d.getMessage,
+        )
+        scribe.info(message)
+      }
     }
     result
   }

@@ -512,12 +512,13 @@ object Bill {
         val path = params.getTextDocument.getUri.toAbsolutePath
         val input = path.toInput
         params.getDiagnostics.asScala.foreach { diag =>
-          val pos = diag.getRange.toMeta(input)
-          val message = pos.formatMessage(
-            diag.getSeverity.toString.toLowerCase(),
-            diag.getMessage,
-          )
-          println(message)
+          diag.getRange.toMeta(input).foreach { pos =>
+            val message = pos.formatMessage(
+              diag.getSeverity.toString.toLowerCase(),
+              diag.getMessage,
+            )
+            println(message)
+          }
         }
       }
       override def onBuildTargetDidChange(params: DidChangeBuildTarget): Unit =

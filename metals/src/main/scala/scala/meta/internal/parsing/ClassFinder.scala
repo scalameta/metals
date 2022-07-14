@@ -83,14 +83,15 @@ class ClassFinder(trees: Trees) {
       path: AbsolutePath,
       pos: l.Position,
       checkInnerClasses: Boolean,
-  ): Option[String] = trees
-    .get(path)
-    .map { tree =>
-      val input = tree.pos.input
-      val metaPos = pos.toMeta(input)
-      findClassForOffset(tree, metaPos, path.filename, checkInnerClasses)
-    }
-    .filter(_.nonEmpty)
+  ): Option[String] = {
+    for {
+      tree <- trees.get(path)
+      input = tree.pos.input
+      metaPos <- pos.toMeta(input)
+      cls = findClassForOffset(tree, metaPos, path.filename, checkInnerClasses)
+      if cls.nonEmpty
+    } yield cls
+  }
 
   private def findClassForOffset(
       tree: Tree,
