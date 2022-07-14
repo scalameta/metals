@@ -60,7 +60,7 @@ abstract class BaseWorksheetLspSuite(
           generate,
           getExpected(
             "generate: Name",
-            Map(V.scala3 -> "generate=> sourcecode.Name"),
+            Map("3" -> "generate=> sourcecode.Name"),
             scalaVersion,
           ),
         )
@@ -72,7 +72,7 @@ abstract class BaseWorksheetLspSuite(
                |val name = sourcecode.Name.generate.value // : String = "name"
                |""".stripMargin,
             Map(
-              V.scala3 ->
+              "3" ->
                 """|identity(42) // : Int = 42
                    |val name = sourcecode.Name.generate.value // : String = name
                    |""".stripMargin
@@ -112,7 +112,7 @@ abstract class BaseWorksheetLspSuite(
              |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|import java.nio.file.Files
                  |val name = "Susan" // : String = Susan
                  |val greeting = s"Hello $name" // : String = Hello Susan
@@ -157,7 +157,7 @@ abstract class BaseWorksheetLspSuite(
              |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|import java.nio.file.Files
                  |val name = "Susan" // : String = Susan
                  |val greeting = s"Hello $name" // : String = Hello Susan
@@ -197,7 +197,7 @@ abstract class BaseWorksheetLspSuite(
              |```
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|import java.nio.file.Files
                  |val name = "Susan"
                  |```scala
@@ -296,7 +296,7 @@ abstract class BaseWorksheetLspSuite(
              |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
                  |	at repl.MdocSession$App.<init>(Main.worksheet.sc:12)
                  |	at repl.MdocSession$.app(Main.worksheet.sc:3)
@@ -429,7 +429,7 @@ abstract class BaseWorksheetLspSuite(
              |             ^^
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|a/src/main/scala/a/Main.worksheet.sc:1:14: error:
                  |Found:    ("" : String)
                  |Required: Int
@@ -456,7 +456,7 @@ abstract class BaseWorksheetLspSuite(
              |             ^^
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|a/src/main/scala/a/Main.worksheet.sc:2:1: error: illegal start of simple expression
                  |val x: Int = ""
                  |^^^
@@ -534,7 +534,7 @@ abstract class BaseWorksheetLspSuite(
                   |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
                   |val y/*L3*/ = List/*package.scala*/.fill/*Factory.scala*/(2)(2)
                   |""".stripMargin,
-            V.scala3 ->
+            "3" ->
               """|/Main.worksheet.sc
                  |import java.time.Instant/*Instant.java*/
                  |
@@ -577,7 +577,7 @@ abstract class BaseWorksheetLspSuite(
                  |type Structural = {
                  |^
                  |""".stripMargin,
-            V.scala3 ->
+            "3" ->
               """|a/src/main/scala/Main.worksheet.sc:5:1: error:
                  |Found:    App.this.Structural
                  |Required: Selectable
@@ -683,16 +683,16 @@ abstract class BaseWorksheetLspSuite(
                                |
                                |val hellos = List(hi1, hi2)
                                |// hellos: List[Hi] = List(Hi(a = 1, b = 2, c = 3), Hi(a = 4, b = 5, c = 6))""".stripMargin,
-              V.scala3 -> """|
-                             |case class Hi(a: Int, b: Int, c: Int)
-                             |val hi1 =
-                             |  Hi(1, 2, 3)
-                             |// hi1: Hi = Hi(1,2,3)
-                             |val hi2 = Hi(4, 5, 6)
-                             |// hi2: Hi = Hi(4,5,6)
-                             |
-                             |val hellos = List(hi1, hi2)
-                             |// hellos: List[Hi] = List(Hi(1,2,3), Hi(4,5,6))""".stripMargin,
+              "3" -> """|
+                        |case class Hi(a: Int, b: Int, c: Int)
+                        |val hi1 =
+                        |  Hi(1, 2, 3)
+                        |// hi1: Hi = Hi(1,2,3)
+                        |val hi2 = Hi(4, 5, 6)
+                        |// hi2: Hi = Hi(4,5,6)
+                        |
+                        |val hellos = List(hi1, hi2)
+                        |// hellos: List[Hi] = List(Hi(1,2,3), Hi(4,5,6))""".stripMargin,
             ),
             scalaVersion,
           )
@@ -732,16 +732,16 @@ abstract class BaseWorksheetLspSuite(
                                |
                                |val hellos = List(hi1, hi2)
                                |// hellos: List[Hi] = List(Hi(a = 7, b = 8, c = 9), Hi(a = 4, b = 5, c = 6))""".stripMargin,
-              V.scala3 -> """|
-                             |case class Hi(a: Int, b: Int, c: Int)
-                             |val hi1 =
-                             |  Hi(7, 8, 9)
-                             |// hi1: Hi = Hi(7,8,9)
-                             |val hi2 = Hi(4, 5, 6)
-                             |// hi2: Hi = Hi(4,5,6)
-                             |
-                             |val hellos = List(hi1, hi2)
-                             |// hellos: List[Hi] = List(Hi(7,8,9), Hi(4,5,6))""".stripMargin,
+              "3" -> """|
+                        |case class Hi(a: Int, b: Int, c: Int)
+                        |val hi1 =
+                        |  Hi(7, 8, 9)
+                        |// hi1: Hi = Hi(7,8,9)
+                        |val hi2 = Hi(4, 5, 6)
+                        |// hi2: Hi = Hi(4,5,6)
+                        |
+                        |val hellos = List(hi1, hi2)
+                        |// hellos: List[Hi] = List(Hi(7,8,9), Hi(4,5,6))""".stripMargin,
             ),
             scalaVersion,
           )
