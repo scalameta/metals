@@ -82,6 +82,13 @@ class CompletionProvider(
         case t: TextEditMember if t.detail.isDefined => t.detail.get
         case _ => detailString(member, history)
       }
+
+      def labelWithSig =
+        if (member.sym.isMethod || member.sym.isValue) {
+          ident + detail
+        } else {
+          ident
+        }
       val label = member match {
         case _: NamedArgMember =>
           val escaped = if (isSnippet) ident.replace("$", "$$") else ident
@@ -89,15 +96,10 @@ class CompletionProvider(
         case o: OverrideDefMember =>
           o.label
         case o: TextEditMember =>
-          o.label.getOrElse(ident)
+          o.label.getOrElse(labelWithSig)
         case o: WorkspaceMember =>
           s"$ident - ${o.sym.owner.fullName}"
-        case _ =>
-          if (member.sym.isMethod || member.sym.isValue) {
-            ident + detail
-          } else {
-            ident
-          }
+        case _ => labelWithSig
       }
       val item = new CompletionItem(label)
       if (metalsConfig.isCompletionItemDetailEnabled && !detail.isEmpty()) {
