@@ -64,18 +64,18 @@ trait MtagsIndexer {
         )
     }
   }
-  def term(name: String, pos: m.Position, kind: Kind, properties: Int): Unit =
+  def term(name: String, pos: m.Position, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Term(name), pos, kind, properties)
-  def term(name: Term.Name, kind: Kind, properties: Int): Unit =
+  def term(name: Term.Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Term(name.value), name.pos, kind, properties)
-  def tparam(name: Name, kind: Kind, properties: Int): Unit =
+  def tparam(name: Name, kind: Kind, properties: Int): String =
     addSignature(
       Descriptor.TypeParameter(name.value),
       name.pos,
       kind,
       properties
     )
-  def param(name: Name, kind: Kind, properties: Int): Unit =
+  def param(name: Name, kind: Kind, properties: Int): String =
     addSignature(
       Descriptor.Parameter(name.value),
       name.pos,
@@ -86,7 +86,7 @@ trait MtagsIndexer {
       disambiguator: String,
       pos: m.Position,
       properties: Int
-  ): Unit =
+  ): String =
     addSignature(
       Descriptor.Method(Names.Constructor.value, disambiguator),
       pos,
@@ -98,7 +98,7 @@ trait MtagsIndexer {
       disambiguator: String,
       pos: m.Position,
       properties: Int
-  ): Unit =
+  ): String =
     addSignature(
       Descriptor.Method(name, disambiguator),
       pos,
@@ -110,7 +110,7 @@ trait MtagsIndexer {
       disambiguator: String,
       kind: Kind,
       properties: Int
-  ): Unit = {
+  ): String = {
     val methodName = name match {
       case Name.Anonymous() => Names.Constructor.value
       case _ => name.value
@@ -122,11 +122,11 @@ trait MtagsIndexer {
       properties
     )
   }
-  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int): Unit =
+  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Type(name), pos, kind, properties)
-  def tpe(name: Name, kind: Kind, properties: Int): Unit =
+  def tpe(name: Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Type(name.value), name.pos, kind, properties)
-  def pkg(name: String, pos: m.Position): Unit = {
+  def pkg(name: String, pos: m.Position): String = {
     addSignature(Descriptor.Package(name), pos, Kind.PACKAGE, 0)
   }
   def pkg(ref: Term): Unit =
@@ -142,7 +142,7 @@ trait MtagsIndexer {
       definition: m.Position,
       kind: s.SymbolInformation.Kind,
       properties: Int
-  ): Unit = {
+  ): String = {
     val previousOwner = currentOwner
     currentOwner = symbol(signature)
     myLastCurrentOwner = currentOwner
@@ -163,6 +163,7 @@ trait MtagsIndexer {
       displayName = signature.name.value
     )
     visitOccurrence(occ, info, previousOwner)
+    syntax
   }
   def symbol(signature: Descriptor): String =
     if (currentOwner.eq(Symbols.EmptyPackage) && signature.isPackage)

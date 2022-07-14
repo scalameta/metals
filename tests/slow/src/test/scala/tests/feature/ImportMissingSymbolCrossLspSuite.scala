@@ -81,4 +81,46 @@ class ImportMissingSymbolCrossLspSuite
     } yield ()
   }
 
+  test("scala3-toplevel-extension-import-from-deps") {
+    val path = "b/src/main/scala/x/B.scala"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a":{"scalaVersion" : "${V.scala3}"},
+            |  "b":{
+            |    "scalaVersion" : "${V.scala3}",
+            |    "dependsOn": ["a"]
+            |  }
+            |}
+            |/a/src/main/scala/example/A.scala
+            |package example
+            |
+            |extension (str: String)
+            |  def identity = str
+            |
+            |extension (num: Int)
+            |  def incr = num + 1
+            |
+            |/$path
+            |package x
+            |def main =
+            |  println(1.incr)
+            |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      _ <- server.assertCodeAction(
+        path,
+        s"""|package x
+            |def main =
+            |  println(1.<<incr>>)
+            |""".stripMargin,
+        s"""|${ImportMissingSymbol.title("incr", "example.A$package")}
+            |${ExtractValueCodeAction.title}
+            |""".stripMargin,
+        Nil,
+      )
+    } yield ()
+  }
+
 }

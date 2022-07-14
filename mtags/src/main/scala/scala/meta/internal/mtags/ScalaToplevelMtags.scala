@@ -78,8 +78,8 @@ class ScalaToplevelMtags(
       Some(ExpectTemplate(indent, currentOwner, false, false))
     def newExpectPkgTemplate: Some[ExpectTemplate] =
       Some(ExpectTemplate(indent, currentOwner, true, false))
-    def newExpectExtensionTemplate: Some[ExpectTemplate] =
-      Some(ExpectTemplate(indent, currentOwner, false, true))
+    def newExpectExtensionTemplate(owner: String): Some[ExpectTemplate] =
+      Some(ExpectTemplate(indent, owner, false, true))
     def needEmitFileOwner(region: Region): Boolean =
       !sourceTopLevelAdded && region.produceSourceToplevel
     def needToParseBody(expect: ExpectTemplate): Boolean =
@@ -120,12 +120,25 @@ class ScalaToplevelMtags(
             loop(indent, false, currRegion, newExpectTemplate)
         case IDENTIFIER
             if dialect.allowExtensionMethods && data.name == "extension" =>
+          val nextOwner =
+            if (
+              dialect.allowToplevelStatements &&
+              needEmitFileOwner(currRegion)
+            ) {
+              sourceTopLevelAdded = true
+              val pos = newPosition
+              val srcName = input.filename.stripSuffix(".scala")
+              val name = s"$srcName$$package"
+              withOwner(currRegion.owner) {
+                term(name, pos, Kind.OBJECT, 0)
+              }
+            } else currentOwner
           scanner.nextToken()
           loop(
             indent,
             isAfterNewline = false,
             currRegion,
-            newExpectExtensionTemplate
+            newExpectExtensionTemplate(nextOwner)
           )
         case CLASS | TRAIT | OBJECT | ENUM if needEmitMember(currRegion) =>
           emitMember(false, currRegion.owner)
