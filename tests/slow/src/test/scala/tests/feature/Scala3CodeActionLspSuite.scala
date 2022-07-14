@@ -314,20 +314,20 @@ class Scala3CodeActionLspSuite
   check(
     "extract-match",
     """|object Main:
-       |  def main(i : Int) =
-       |    1 + <<2>> + 3 match {
+       |  def main(i : Int) = {
+       |    1 + <<2>> + 3 match 
        |      case _ => 6
-       |    }
+       |  }
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("1 + 2 + 3")}
         |""".stripMargin,
     """|object Main:
-       |  def main(i : Int) =
+       |  def main(i : Int) = {
        |    val newValue = 1 + 2 + 3
-       |    newValue match {
+       |    newValue match 
        |      case _ => 6
-       |    }
+       |  }
        |""".stripMargin,
   )
 
