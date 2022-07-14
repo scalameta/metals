@@ -161,12 +161,35 @@ class MetalsGlobal(
       pos: Position,
       visit: Member => Boolean
   ): SymbolSearch.Result = {
+
+    lazy val isInStringInterpolation = {
+      lastVisitedParentTrees match {
+        case Apply(
+              Select(Apply(Ident(TermName("StringContext")), _), _),
+              _
+            ) :: _ =>
+          true
+        case _ => false
+      }
+    }
+
     if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
     else {
       val context = doLocateContext(pos)
       val visitor = new CompilerSearchVisitor(
         context,
-        sym => visit(new WorkspaceMember(sym))
+        sym =>
+          visit {
+            if (isInStringInterpolation)
+              new WorkspaceInterpolationMember(
+                sym,
+                Nil,
+                edit => s"{$edit}",
+                None
+              )
+            else
+              new WorkspaceMember(sym)
+          }
       )
       search.search(query, buildTargetIdentifier, visitor)
     }
