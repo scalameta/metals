@@ -66,6 +66,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   private def getIndexOfLastQuote(line: String): Option[(Int, Boolean)] = {
+
     var lastQuote = -1
     var escaped = false
     var quoteClosed = true
@@ -87,10 +88,41 @@ case class MultilineString(userConfig: () => UserConfiguration)
     if (lastQuote != -1) Some((lastQuote, quoteClosed)) else None
   }
 
+  private def getIndexOfLastTripleQuote(
+      line: String
+  ): Option[(Int, Boolean)] = {
+    var lastTripleQuote = -1
+    var escaped = false
+    var tripleQuoteClosed = true
+    var quoteNum = 0
+    for (i <- 0 until line.size) {
+      val char = line(i)
+      if (char == '"') {
+        if (!escaped) {
+          quoteNum = quoteNum + 1
+          if (quoteNum == 3) {
+            lastTripleQuote = i
+            tripleQuoteClosed = !tripleQuoteClosed
+            quoteNum = 0
+          }
+        } else {
+          escaped = !escaped
+        }
+      } else if (char == '\\') {
+        escaped = !escaped
+      } else {
+        escaped = false
+      }
+    }
+    if (lastTripleQuote != -1) Some((lastTripleQuote, tripleQuoteClosed))
+    else None
+  }
+
   private def onlyFourQuotes(
       splitLines: Array[String],
       position: Position,
   ): Boolean = {
+
     val currentLine = splitLines(position.getLine)
     val pos = position.getCharacter
     val onlyFour = 4
@@ -100,9 +132,9 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   private def hasNQuotes(start: Int, text: String, n: Int): Boolean =
-    (start until start + n).forall(i =>
+    (start until start + n).forall { i =>
       if (i < 0 || i > text.length) false else text(i) == quote
-    )
+    }
 
   private def indentWhenNoStripMargin(
       expr: StringLiteralExpr,
@@ -228,6 +260,16 @@ case class MultilineString(userConfig: () => UserConfiguration)
   ): Boolean = {
     val lineBefore = splitLines(position.getLine - 1)
     getIndexOfLastQuote(lineBefore).exists { case (_, quoteClosed) =>
+      !quoteClosed
+    }
+  }
+
+  private def wasTripleQuoted(
+      splitLines: Array[String],
+      position: Position,
+  ): Boolean = {
+    val currentLine = splitLines(position.getLine - 1)
+    getIndexOfLastTripleQuote(currentLine).exists { case (_, quoteClosed) =>
       !quoteClosed
     }
   }
@@ -365,6 +407,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
   ): Option[List[TextEdit]] = {
     val splitLines = params.splitLines
     val position = params.position
+    splitLines(position.getLine())
     val triggerChar = params.triggerChar
     (params.tokens, triggerChar) match {
       case (Some(tokens), "\n") =>
@@ -382,7 +425,13 @@ case class MultilineString(userConfig: () => UserConfiguration)
           .find(_.nonEmpty)
       case (None, "\"") if onlyFourQuotes(splitLines, position) =>
         Some(replaceWithSixQuotes(position))
-      case (None, "\n") if doubleQuoteNotClosed(splitLines, position) =>
+      case (None, "\"") =>
+        None
+      case (None, "\n")
+          if doubleQuoteNotClosed(splitLines, position) && !wasTripleQuoted(
+            splitLines,
+            position,
+          ) =>
         Some(fixStringNewline(position, splitLines))
       case _ => None
     }
