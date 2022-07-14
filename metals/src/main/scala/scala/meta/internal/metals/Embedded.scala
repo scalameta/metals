@@ -39,11 +39,17 @@ final class Embedded(
     mdocs.clear()
   }
 
-  def mdoc(scalaBinaryVersion: String): Mdoc = {
+  def mdoc(scalaVersion: String): Mdoc = {
+    val isScala3 = ScalaVersions.isScala3Version(scalaVersion)
+    val scalaBinaryVersion =
+      ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+    val scalaVersionKey = if (isScala3) scalaVersion else scalaBinaryVersion
+    val resolveSpecificVersionCompiler =
+      if (isScala3) Some(scalaVersion) else None
     val classloader = mdocs.getOrElseUpdate(
-      scalaBinaryVersion,
+      scalaVersionKey,
       statusBar.trackSlowTask("Preparing worksheets") {
-        newMdocClassLoader(scalaBinaryVersion)
+        newMdocClassLoader(scalaBinaryVersion, resolveSpecificVersionCompiler)
       },
     )
     serviceLoader(
@@ -89,7 +95,8 @@ final class Embedded(
   }
 
   private def newMdocClassLoader(
-      scalaBinaryVersion: String
+      scalaBinaryVersion: String,
+      scalaVersion: Option[String],
   ): URLClassLoader = {
     val resolutionParams = ResolutionParams
       .create()
@@ -98,10 +105,32 @@ final class Embedded(
      * load coursierapi.Logger and instead will use the already loaded one
      */
     resolutionParams.addExclusion("io.get-coursier", "interface")
+
+    /**
+     * For scala 3 the code is backwards compatible, but mdoc itself depends on
+     * specific Scala version, which is the earliest we need to support.
+     * This trick makes sure that we are able to run worksheets on later versions
+     * by forcing mdoc to use that specific compiler version.
+     *
+     * This should work as long as the compiler interfaces we are using do not change.
+     *
+     * It would probably be best to use stable interfaces from the compiler.
+     */
+    val fullResolution = scalaVersion match {
+      case None => resolutionParams
+      case Some(version) =>
+        resolutionParams.forceVersions(
+          List(
+            Dependency.of("org.scala-lang", "scala3-library_3", version),
+            Dependency.of("org.scala-lang", "scala3-compiler_3", version),
+            Dependency.of("org.scala-lang", "tasty-core_3", version),
+          ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+        )
+    }
     val jars =
       Embedded.downloadMdoc(
         scalaBinaryVersion,
-        Some(resolutionParams),
+        Some(fullResolution),
       )
 
     val parent = new MdocClassLoader(this.getClass.getClassLoader)

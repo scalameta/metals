@@ -102,11 +102,9 @@ class WorksheetProvider(
         }
       )
       .getOrElse {
-        val binary =
-          ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
         val mdoc =
           embedded
-            .mdoc(binary)
+            .mdoc(scalaVersion)
             .withClasspath(Embedded.scalaLibrary(scalaVersion).asJava)
         val ref = MdocRef(scalaVersion, mdoc)
         mdocs.update(MdocKey.Default, ref)
@@ -443,9 +441,7 @@ class WorksheetProvider(
           .filterNot(_.contains("org.wartremover.warts.NonUnitStatements"))
           .asJava
         val mdoc = embedded
-          .mdoc(
-            ScalaVersions.scalaBinaryVersionFromFullVersion(info.scalaVersion)
-          )
+          .mdoc(info.scalaVersion)
           .withClasspath(info.fullClasspath.distinct.asJava)
           .withScalacOptions(scalacOptions)
         mdocs(key) = MdocRef(scalaVersion, mdoc)
