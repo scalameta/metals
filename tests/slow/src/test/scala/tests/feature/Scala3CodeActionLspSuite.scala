@@ -21,9 +21,6 @@ class Scala3CodeActionLspSuite
     extends BaseCodeActionLspSuite("cross-code-actions") {
 
   override protected val scalaVersion: String = BuildInfo.scala3
-  val filterAction: CodeAction => Boolean = { act: CodeAction =>
-    ConvertToNamedArguments.title(".*").r matches act.getTitle()
-  }
 
   checkNoAction(
     "val",
