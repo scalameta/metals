@@ -476,7 +476,7 @@ object ServerCommands {
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
        |""".stripMargin,
   )
-
+        
   val ExtractMethod = new ParametrizedCommand[TextDocumentPositionParams](
       "extract-method",
       "Extract method from range",

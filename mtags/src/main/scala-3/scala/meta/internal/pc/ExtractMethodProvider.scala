@@ -5,12 +5,14 @@ import java.nio.file.Paths
 
 import scala.annotation.tailrec
 import scala.meta as m
+import org.eclipse.{lsp4j => l}
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.SymbolSearch
 import scala.meta.pc.PresentationCompilerConfig
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.untpd
@@ -22,6 +24,7 @@ import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.TextEdit
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Names.TermName
+import dotty.tools.dotc.core.Types.Type
 
 /**
  * Tries to calculate edits needed to insert the inferred type annotation
@@ -44,6 +47,7 @@ final class ExtractMethodProvider(
     params: OffsetParams,
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
+    symbolSearch: SymbolSearch,
 ) {
 
   def extractMethod(): List[TextEdit] = {
@@ -53,6 +57,8 @@ final class ExtractMethodProvider(
     driver.run(uri, source)
     val unit = driver.currentCtx.run.units.head
     val pos = driver.sourcePosition(params)
+    pprint.pprintln(pos)
+
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
 
@@ -77,33 +83,64 @@ final class ExtractMethodProvider(
     // //       block.stats.filter(_.isDef)
     // //   }
     // // }
-    
-    // def localVariables(ts: Seq[tpd.Tree]): Seq[Seq[(TermName, String)]] = {
-    //   ts.map(
-    //     _ match
-    //       case d: ValDef[_] => Seq((d.name, d.tpt.tpe.toString()))
-    //       case d: DefDef[_] => localVariablesInDefDef(d)
-    //       case b: Block[_] => localVariables(b.stats).flatten
-    //       case t: Template[_] => localVariablesInDefDef(t.constr) ++ localVariables(t.body).flatten
-    //       case _ => Nil
-    //   )
-    // }
+    val printer = MetalsPrinter.standard(
+          indexedCtx,
+          symbolSearch,
+          includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
+        )
+    def localVariables(ts: Seq[tpd.Tree]): Seq[(TermName, String)] = {
+      ts.flatMap(
+        _ match
+          case vl @ ValDef(sym, tpt, _) => Seq((sym, printer.tpe(tpt.tpe)))
+          // case dl @ DefDef(name, _, tpt, rhs) => 
+          //   val paramss = localVariablesInDefDef(dl)
+          //   val paramTypes = paramss.map(_.map(_._2)).map(ls => s"(${ls.mkString(", ")})").mkString
+          //  Seq((name, paramTypes + " => " + printer.tpe(tpt.tpe))) ++ paramss.flatten
+          case b: Block[_] => localVariables(b.stats)
+          case t: Template[_] => /*localVariablesInDefDef(t.constr).flatten ++ */ localVariables(t.body)
+          case _ => Nil
+      )
+    }
 
-    // def localVariablesInDefDef[T](d: DefDef[_]): List[(TermName, String)] = {
-    //   val inparams = d.paramss.flatten.flatMap( p =>
+    // def localVariablesInDefDef[T](d: DefDef[_]): List[List[(TermName, String)]] = {
+    //   val inparams = d.paramss.map(_.flatMap( p =>
     //     p match {
-    //       case v: ValDef[_] => Some(v.name, v.tpt.tpe.toString())
+    //       case vl @ ValDef(sym, tpt, _) => Some((sym, printer.tpe(tpt.tpe)))
     //       case _ => None
     //     }
-    //   )
-    //   (d.name, d.tpt.toString()) :: inparams
+    //   ))
+    //   inparams
     // }
+    
 
+    def namesInVal(t: tpd.Tree): Set[TermName] = {
+      t match
+        case Apply(fun, args) => namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
+        case TypeApply(fun, args) => namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
+        case Select(qualifier, name) => namesInVal(qualifier) + name.toTermName
+        case Ident(name) => Set(name.toTermName)
+        case _ => Set()
+    }
+    
+    val newValue = path.headOption
+    pprint.pprintln(newValue)
+    val namesInAppl = newValue.map(namesInVal(_))
+    val locals = localVariables(path).reverse.toMap
+    pprint.pprintln(namesInAppl)
+    pprint.pprintln(locals)
+    val withType = namesInAppl.map(s => locals.filter((key, tp) => s.contains(key)))
+    val typs = withType.map(ts => ts.map((k,v) => s"$k: $v").mkString(", ")).getOrElse("nonetype") match {
+      case "" => "empty"
+      case o => o
+    }
+    pprint.pprintln(typs)
 
-    // val newValue = path.headOption
-    // pprint.pprintln(newValue)
-    // val locals = localVariables(path)
-    // pprint.pprintln(path.zip(locals))
-    Nil
+    List(
+      new l.TextEdit(
+        pos.toLSP, typs
+      )
+    )
   }
+
+  
 }

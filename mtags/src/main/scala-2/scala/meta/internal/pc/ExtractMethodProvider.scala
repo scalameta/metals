@@ -11,15 +11,26 @@ final class ExtractMethodProvider(
     params: OffsetParams
 ) {
   import compiler._
-    def extractMethod: List[l.TextEdit] = {
-      val unit = addCompilationUnit(
-        code = params.text(),
-        filename = params.uri().toString(),
-        cursor = None
-      )
-
-      val typedTree = typedTreeAt(unit.position(params.offset))
-      pprint.pprintln(typedTree)
-      Nil
-    }
+  def extractMethod: List[l.TextEdit] = {
+    val unit = addCompilationUnit(
+      code = params.text(),
+      filename = params.uri().toString(),
+      cursor = None
+    )
+    val pos = unit.position(params.offset())
+    val typedTree = typedTreeAt(pos)
+    pprint.pprintln(typedTree)
+    val context = doLocateImportContext(pos)
+    val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
+    val history = new ShortenedNames(
+      lookupSymbol = name =>
+        context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
+      config = renameConfig,
+      renames = re
+    )
+    def prettyType(tpe: Type) =
+      metalsToLongString(tpe.widen.finalResultType, history)
+    
+    Nil
+  }
 }
