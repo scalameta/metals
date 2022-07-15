@@ -16,7 +16,7 @@ class ExtractValueLspSuite
        |
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("1 + 2")}
         |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -43,7 +43,7 @@ class ExtractValueLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -73,7 +73,7 @@ class ExtractValueLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int): Option[String]  = ???
@@ -98,7 +98,7 @@ class ExtractValueLspSuite
        |  }
        |}
        |""".stripMargin,
-    ExtractValueCodeAction.title,
+    ExtractValueCodeAction.title("i + 23 + 1(...)"),
     """|object Main {
        |  def method2(param: Int) = ???
        |  def main = {
@@ -120,7 +120,7 @@ class ExtractValueLspSuite
        |    method2(i + 23 + <<123>>)
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -138,17 +138,18 @@ class ExtractValueLspSuite
     """|object Main {
        |  def method2(i: Int) : Int = ???
        |  def method1(s: String): Unit = {
-       |    println("Hello!"); method2(1  + method2(1 + <<2>>))
+       |    println("Hello!"); method2(1 + method2(1 + <<2>>))
        |  }
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("1 + 2")}
+        |${ExtractValueCodeAction.title("1 + method2(1 + 2)")}
         |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) : Int = ???
        |  def method1(s: String): Unit = {
        |    val newValue = 1 + 2
-       |    println("Hello!"); method2(1  + method2(newValue))
+       |    println("Hello!"); method2(1 + method2(newValue))
        |  }
        |}
        |""".stripMargin,
@@ -163,7 +164,7 @@ class ExtractValueLspSuite
        |  method2({ 1 + <<2>> })
        |}
        |""".stripMargin,
-    ExtractValueCodeAction.title,
+    ExtractValueCodeAction.title("{ 1 + 2 }"),
     """|object Main {
        |  def method2(i: Int) = ???
        |  val (newValue, newValue1) = (0, 1)
@@ -181,7 +182,7 @@ class ExtractValueLspSuite
         |\tmethod2(<<List>>(1, 2, 3).map(_ + 1).sum)
         |}
         |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("List(1, 2,(...)")}
         |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     s"""|object Main {
         |\tdef method2(i: Int) = ???
@@ -191,4 +192,154 @@ class ExtractValueLspSuite
         |""".stripMargin,
   )
 
+  check(
+    "extract-if-cond",
+    """|object Main{
+       |  if(2 > <<3>>) 5 else 4
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("2 > 3")}
+        |""".stripMargin,
+    """|object Main{
+       |  val newValue = 2 > 3
+       |  if(newValue) 5 else 4
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "extract-if-res",
+    """|object Main{
+       |  if(2 > 3) 5 <<+>> 1 else 4
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("5 + 1")}
+        |""".stripMargin,
+    """|object Main{
+       |  val newValue = 5 + 1
+       |  if(2 > 3) newValue else 4
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "extract-tuple",
+    """|object Main{
+       |  val a = (1,<<2>>,3)
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("2")}
+        |""".stripMargin,
+    """|object Main{
+       |  val newValue = 2
+       |  val a = (1,newValue,3)
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "extract-match",
+    """|object Main{
+       |  1 + <<2>> + 3 match {
+       |    case _ => 6
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("1 + 2 + 3")}
+        |""".stripMargin,
+    """|object Main{
+       |  val newValue = 1 + 2 + 3
+       |  newValue match {
+       |    case _ => 6
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "extract-throw",
+    """|object Main{
+       |  throw new Exce<<p>>tion("message")
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("new Except(...)")}
+        |""".stripMargin,
+    """|object Main{
+       |  val newValue = new Exception("message")
+       |  throw newValue
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "extract-while",
+    """|object Main{
+       |  while(2 > <<3>>) { }
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("2 > 3")}
+        |""".stripMargin,
+    """|object Main{
+       |  val newValue = 2 > 3
+       |  while(newValue) { }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "extract-return",
+    """|object Main{
+       |  def main(i: Int): Int = {
+       |    return <<1>> + 2
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("1 + 2")}
+        |""".stripMargin,
+    """|object Main{
+       |  def main(i: Int): Int = {
+       |    val newValue = 1 + 2
+       |    return newValue
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "multiple-apply",
+    """|object Main{
+       |  def method(a: Int) = a + 1
+       |  method(method(meth<<o>>d(5)))
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("method(5)")}
+        |${ExtractValueCodeAction.title("method(method(5)")}
+        |${ConvertToNamedArguments.title("method")}
+        |""".stripMargin,
+    """|object Main{
+       |  def method(a: Int) = a + 1
+       |  val newValue = method(5)
+       |  method(method(newValue))
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "apply-if",
+    """|object Main{
+       |  def method(a: Int) = a + 1
+       |  if(method(<<1>>) > 2) 2 else 3
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("1")}
+        |${ExtractValueCodeAction.title("method(1) > 2")}
+        |${ConvertToNamedArguments.title("method")}
+        |""".stripMargin,
+    """|object Main{
+       |  def method(a: Int) = a + 1
+       |  val newValue = 1
+       |  if(method(newValue) > 2) 2 else 3
+       |}
+       |""".stripMargin,
+  )
 }

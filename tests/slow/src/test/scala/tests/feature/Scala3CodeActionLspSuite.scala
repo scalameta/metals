@@ -159,7 +159,7 @@ class Scala3CodeActionLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -181,7 +181,7 @@ class Scala3CodeActionLspSuite
        |    def inner(i : Int) = method2(i + 23 + <<123>>)
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -201,7 +201,7 @@ class Scala3CodeActionLspSuite
        |    method2(i + 23 + <<123>>)
        |}
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -223,7 +223,7 @@ class Scala3CodeActionLspSuite
        |  method2(i + 23 + <<123>>)
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -246,7 +246,7 @@ class Scala3CodeActionLspSuite
        |def main(i : Int) = method2(i + 23 + <<123>>)
        |
        |""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
+    s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
         |""".stripMargin,
     """|def method2(i: Int) = {
        |  val a = 1

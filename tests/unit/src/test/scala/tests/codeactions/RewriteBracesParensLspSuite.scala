@@ -16,7 +16,7 @@ class RewriteBracesParensLspSuite
        |}
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("foo")}
-        |${ExtractValueCodeAction.title}
+        |${ExtractValueCodeAction.title("5")}
         |${ConvertToNamedArguments.title("foo")}""".stripMargin,
     """|object Main {
        |  def foo(n: Int) = ???
@@ -71,7 +71,7 @@ class RewriteBracesParensLspSuite
        |}
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toParens("foo")}
-        |${ExtractValueCodeAction.title}""".stripMargin,
+        |${ExtractValueCodeAction.title("{5}")}""".stripMargin,
     """|object Main {
        |  def foo(n: Int) = ???
        |  foo(5)

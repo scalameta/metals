@@ -33,53 +33,121 @@ class ExtractValueCodeAction(
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val applyOpt = trees.findLastEnclosingAt[Term.Apply](
-      path,
-      range.getStart(),
-      appl => appl.args.exists(_.pos.encloses(range)),
-    )
-
-    val textEdits = for {
-      apply <- applyOpt
-      stats <- lastEnclosingStatsList(apply)
-      argumentOpt <- apply.args.find { arg => arg.pos.encloses(range) }
-      argument = argumentOpt match {
-        // named paramaeter
-        case Term.Assign(_, rhs) => rhs
-        case other => other
+    val allTrees = {
+      def loop(t: Tree): List[Term] = {
+        t.children.find(_.pos.encloses(range)) match {
+          case Some(tr: Term) if existsRangeEnclosing(tr, range) =>
+            tr :: loop(tr)
+          case Some(tr) => loop(tr)
+          case None => Nil
+        }
       }
-      // avoid extracting lambdas (this needs actual type information)
-      if isNotLambda(argument)
-      stat <- stats.find(stat => stat.pos.encloses(apply.pos))
-      name = createNewName(stats)
-      source <- buffers.get(path)
-    } yield {
-      val blank =
-        if (source(stat.pos.start - stat.pos.startColumn) == '\t') '\t' else ' '
-      val indent = blank.stringRepeat(indentationLength(source, stat.pos))
-      val keyword = if (stat.isInstanceOf[Enumerator]) "" else "val "
-      // we will insert `val newValue = ???` before the existing statement containing apply
-      val valueText = s"${indent}$keyword$name = ${argument.toString()}"
-      val valueTextWithBraces = withBraces(stat, source, valueText, blank)
-      // we need to add additional () in case of  `apply{}`
-      val replacementText =
-        if (argument.is[Term.Block] && !applyHasParens(apply)) s"($name)"
-        else name
-      val replacedArgument = new l.TextEdit(argument.pos.toLSP, replacementText)
-      valueTextWithBraces :+ replacedArgument
+      trees.get(path).map(loop(_)).getOrElse(Nil).reverse
     }
-    textEdits match {
-      case Some(edits) =>
-        val codeAction = new l.CodeAction()
-        codeAction.setTitle(ExtractValueCodeAction.title)
-        codeAction.setKind(this.kind)
-        codeAction.setEdit(
-          new l.WorkspaceEdit(
-            Map(path.toURI.toString -> edits.asJava).asJava
-          )
+    val textEdits =
+      for {
+        term <- allTrees
+        stats <- lastEnclosingStatsList(term)
+        argument <- findRangeEnclosing(term, range)
+        // avoid extracting lambdas (this needs actual type information)
+        if isNotLambda(argument)
+        stat <- stats.find(stat => stat.pos.encloses(term.pos))
+        name = createNewName(stats)
+        source <- buffers.get(path)
+      } yield {
+        val blank =
+          if (source(stat.pos.start - stat.pos.startColumn) == '\t') '\t'
+          else ' '
+        val indent = blank.stringRepeat(indentationLength(source, stat.pos))
+        val keyword = if (stat.isInstanceOf[Enumerator]) "" else "val "
+        // we will insert `val newValue = ???` before the existing statement containing apply
+        val valueText = s"${indent}$keyword$name = ${argument.toString()}"
+        val valueTextWithBraces = withBraces(stat, source, valueText, blank)
+        // we need to add additional () in case of  `apply{}`
+        val replacementText =
+          term match {
+            case apply: Term.Apply
+                if argument.is[Term.Block] && !applyHasParens(apply) =>
+              s"($name)"
+            case _ => name
+          }
+        val replacedArgument =
+          new l.TextEdit(argument.pos.toLSP, replacementText)
+        (replacedArgument :: valueTextWithBraces, argument.toString())
+      }
+
+    textEdits.map { case (edits, title) =>
+      val codeAction = new l.CodeAction()
+      codeAction.setTitle(ExtractValueCodeAction.title(title))
+      codeAction.setKind(this.kind)
+      codeAction.setEdit(
+        new l.WorkspaceEdit(
+          Map(path.toURI.toString -> edits.asJava).asJava
         )
-        Seq(codeAction)
-      case None => Nil
+      )
+      codeAction
+    }
+
+  }
+  private def applyArgument(argument: Term): Term =
+    argument match {
+      // named parameter
+      case Term.Assign(_, rhs) => rhs
+      case other => other
+    }
+
+  private def findRangeEnclosing(
+      term: Term,
+      range: l.Range,
+  ): Option[Term] = {
+    term match {
+      case Term.Apply(_, args) =>
+        args
+          .find { arg => arg.pos.encloses(range) }
+          .map(applyArgument(_))
+      case Term.If(cond, thenp, thenf) =>
+        List(cond, thenp, thenf).find { _.pos.encloses(range) }
+      case Term.Tuple(args) =>
+        args.find { arg => arg.pos.encloses(range) }
+      case Term.Throw(expr) =>
+        Some(expr)
+      case Term.Return(expr) =>
+        Some(expr)
+      case Term.Match(expr, _) =>
+        Some(expr)
+      case Term.Interpolate(_, _, args) =>
+        args.find { arg => arg.pos.encloses(range) }
+      case Term.While(expr, _) =>
+        Some(expr)
+      case Term.Do(_, expr) =>
+        Some(expr)
+      case _ => None
+    }
+  }
+  private def existsRangeEnclosing(
+      term: Tree,
+      range: l.Range,
+  ): Boolean = {
+    term match {
+      case Term.Apply(_, args) =>
+        args.exists { arg => arg.pos.encloses(range) }
+      case Term.If(cond, thenp, thenf) =>
+        List(cond, thenp, thenf).exists { _.pos.encloses(range) }
+      case Term.Tuple(args) =>
+        args.exists { arg => arg.pos.encloses(range) }
+      case Term.Throw(expr) =>
+        expr.pos.encloses(range)
+      case Term.Return(expr) =>
+        expr.pos.encloses(range)
+      case Term.Match(expr, _) =>
+        expr.pos.encloses(range)
+      case Term.Interpolate(_, _, args) =>
+        args.exists { arg => arg.pos.encloses(range) }
+      case Term.While(expr, _) =>
+        expr.pos.encloses(range)
+      case Term.Do(_, expr) =>
+        expr.pos.encloses(range)
+      case _ => false
     }
   }
 
@@ -98,7 +166,7 @@ class ExtractValueCodeAction(
       source: String,
       valueString: String,
       blank: Char,
-  ): Seq[l.TextEdit] = {
+  ): List[l.TextEdit] = {
 
     def defnEqualsPos(defn: Defn.Def): Option[Position] = defn.tokens.reverse
       .collectFirst {
@@ -128,7 +196,7 @@ class ExtractValueCodeAction(
       if (stat.canUseBracelessSyntax(source)) {
         // we need to create a new indented region
         if (noIndentation) {
-          Seq(
+          List(
             new l.TextEdit(
               startBlockPos,
               s"""|
@@ -146,7 +214,7 @@ class ExtractValueCodeAction(
             else 0
           val indentStat = blank.stringRepeat(statAdditionalIndentation)
 
-          Seq(
+          List(
             new l.TextEdit(
               statStart,
               s"""|$indentStat${valueString.trim()}
@@ -174,7 +242,7 @@ class ExtractValueCodeAction(
         endBracePos.setStart(endBracePos.getEnd())
         val endBraceEdit =
           new l.TextEdit(endBracePos, s"\n$defnLineIndentation}")
-        Seq(startBlockEdit, endBraceEdit)
+        List(startBlockEdit, endBraceEdit)
       }
     }
 
@@ -184,7 +252,7 @@ class ExtractValueCodeAction(
       val start = range.getStart()
       start.setCharacter(0)
       range.setEnd(start)
-      Seq(new l.TextEdit(range, s"$valueString\n"))
+      List(new l.TextEdit(range, s"$valueString\n"))
     }
 
   }
@@ -223,7 +291,7 @@ class ExtractValueCodeAction(
   }
 
   private def lastEnclosingStatsList(
-      apply: Term.Apply
+      apply: Term
   ): Option[(List[Tree])] = {
 
     @tailrec
@@ -266,5 +334,8 @@ class ExtractValueCodeAction(
 }
 
 object ExtractValueCodeAction {
-  val title = "Extract value"
+  def title(expr: String): String = {
+    if (expr.length <= 10) s"Extract `$expr` as value"
+    else s"Extract `${expr.take(10)}` ... as value"
+  }
 }
