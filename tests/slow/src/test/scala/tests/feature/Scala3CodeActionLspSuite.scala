@@ -14,7 +14,6 @@ import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 
 import munit.Location
 import munit.TestOptions
-import org.eclipse.lsp4j.CodeAction
 import tests.codeactions.BaseCodeActionLspSuite
 
 class Scala3CodeActionLspSuite
