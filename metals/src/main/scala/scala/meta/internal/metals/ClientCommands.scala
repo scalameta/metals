@@ -249,6 +249,13 @@ object ClientCommands {
       |""".stripMargin,
   )
 
+  val LibraryFileSystemReady = new Command(
+    "metals-library-filesystem-ready",
+    "Library FS ready",
+    """|Notifies the client that the library filesystem is ready to be navigated.
+       |""".stripMargin,
+  )
+
   val RefreshModel = new Command(
     "metals-model-refresh",
     "Refresh model",
@@ -333,6 +340,7 @@ object ClientCommands {
       FocusDiagnostics,
       GotoLocation,
       EchoCommand,
+      LibraryFileSystemReady,
       RefreshModel,
       ShowStacktrace,
       CopyWorksheetOutput,

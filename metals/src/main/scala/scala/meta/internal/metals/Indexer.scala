@@ -43,6 +43,7 @@ import ch.epfl.scala.{bsp4j => b}
 final case class Indexer(
     workspaceReload: () => WorkspaceReload,
     doctor: () => Doctor,
+    lspFileSystemProvider: () => LSPFileSystemProvider,
     languageClient: DelegatingLanguageClient,
     bspSession: () => Option[BspSession],
     executionContext: ExecutionContextExecutorService,
@@ -57,6 +58,7 @@ final case class Indexer(
     referencesProvider: () => ReferenceProvider,
     workspaceSymbols: () => WorkspaceSymbolProvider,
     buildTargets: BuildTargets,
+    uriMapper: URIMapper,
     interactiveSemanticdbs: () => InteractiveSemanticdbs,
     buildClient: () => ForwardingMetalsBuildClient,
     semanticDBIndexer: () => SemanticdbIndexer,
@@ -180,6 +182,7 @@ final case class Indexer(
       treeView().reset()
       worksheetProvider().reset()
       symbolSearch().reset()
+      uriMapper.reset()
     }
     val allBuildTargetsData = buildData()
     for (buildTool <- allBuildTargetsData)
@@ -200,6 +203,22 @@ final case class Indexer(
           data.addSourceItem(source, item.getTarget)
         }
       }
+    // add jars/jdks to metalsfs filesystem and notify client
+    for (buildTool <- allBuildTargetsData) {
+      for {
+        item <- buildTool.importedBuild.dependencySources.getItems.asScala
+        sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
+      } {
+        uriMapper.addSourceJar(sourceUri.toAbsolutePath)
+      }
+      buildTool.data.allWorkspaceJars.foreach(uriMapper.addWorkspaceJar)
+    }
+    JdkSources(userConfig().javaHome) match {
+      case Right(zip) => uriMapper.addJDK(zip)
+      case _ => {}
+    }
+    lspFileSystemProvider().sendLibraryFileSystemReady()
+
     timerProvider.timedThunk(
       "post update build targets stuff",
       clientConfig.initialConfig.statistics.isIndex,
@@ -257,6 +276,7 @@ final case class Indexer(
           buildTool.importedBuild.dependencySources,
         )
       }
+
     // Schedule removal of unused toplevel symbols from cache
     if (usedJars.nonEmpty)
       sh.schedule(

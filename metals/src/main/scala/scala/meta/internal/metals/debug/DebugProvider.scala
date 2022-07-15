@@ -40,6 +40,7 @@ import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.URIMapper
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -74,6 +75,7 @@ class DebugProvider(
     definitionProvider: DefinitionProvider,
     buildServerConnect: () => Option[BuildServerConnection],
     buildTargets: BuildTargets,
+    uriMapper: URIMapper,
     buildTargetClasses: BuildTargetClasses,
     compilations: Compilations,
     languageClient: MetalsLanguageClient,
@@ -162,6 +164,7 @@ class DebugProvider(
           MetalsDebugAdapter.`2.x`(
             buildTargets,
             targets,
+            uriMapper,
             supportVirtualDocuments = clientConfig.isVirtualDocumentSupported(),
           )
         } else {

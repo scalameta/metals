@@ -33,8 +33,10 @@ import org.eclipse.{lsp4j => l}
  * @param isExitOnShutdown whether the client needs Metals to shut down manually on exit.
  * @param isHttpEnabled whether the client needs Metals to start an HTTP client interface.
  * @param isVirtualDocumentSupported whether the client supports VirtualDocuments.
- *                                   For opening source jars in read-only
+ *                                   For showing decompiled class files, tasty files and
+ *                                   showing jar files
  * `*                    https://code.visualstudio.com/api/extension-guides/virtual-documents
+ * @param isLibraryFileSystemSupported whether client supports the library filesystem
  * @param openFilesOnRenameProvider whether or not the client supports opening files on rename.
  * @param quickPickProvider if the client implements `metals/quickPick`.
  * @param renameFileThreshold amount of files that should be opened during rename if client
@@ -65,6 +67,7 @@ final case class InitializationOptions(
     isHttpEnabled: Option[Boolean],
     commandInHtmlFormat: Option[CommandHTMLFormat],
     isVirtualDocumentSupported: Option[Boolean],
+    isLibraryFileSystemSupported: Option[Boolean],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
     renameFileThreshold: Option[Int],
@@ -89,6 +92,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -155,6 +159,8 @@ object InitializationOptions {
         .flatMap(CommandHTMLFormat.fromString),
       isVirtualDocumentSupported =
         jsonObj.getBooleanOption("isVirtualDocumentSupported"),
+      isLibraryFileSystemSupported =
+        jsonObj.getBooleanOption("isLibraryFileSystemSupported"),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),

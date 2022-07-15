@@ -110,7 +110,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
               None
             }
           }
-          client.applyCodeAction(selectedActionIndex, codeActions, server)
+          client.applyCodeAction(selectedActionIndex, codeActions)
         }
         _ <- server.didSave(path)(identity)
         _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()

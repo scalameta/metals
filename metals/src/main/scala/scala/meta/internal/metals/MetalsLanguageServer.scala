@@ -278,6 +278,8 @@ class MetalsLanguageServer(
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
   private var fileDecoderProvider: FileDecoderProvider = _
+  private var lspFileSystemProvider: LSPFileSystemProvider = _
+  private val uriMapper: URIMapper = URIMapper()
   private var testProvider: TestSuitesProvider = _
   private var workspaceReload: WorkspaceReload = _
   private var buildToolSelector: BuildToolSelector = _
@@ -411,6 +413,7 @@ class MetalsLanguageServer(
           new InteractiveSemanticdbs(
             workspace,
             buildTargets,
+            uriMapper,
             charset,
             languageClient,
             tables,
@@ -691,6 +694,7 @@ class MetalsLanguageServer(
           definitionProvider,
           () => bspSession.map(_.mainConnection),
           buildTargets,
+          uriMapper,
           buildTargetClasses,
           compilations,
           languageClient,
@@ -744,6 +748,7 @@ class MetalsLanguageServer(
           workspace,
           compilers,
           buildTargets,
+          uriMapper,
           () => userConfig,
           shellRunner,
           fileSystemSemanticdbs,
@@ -751,6 +756,12 @@ class MetalsLanguageServer(
           languageClient,
           clientConfig,
           classFinder,
+        )
+        lspFileSystemProvider = new LSPFileSystemProvider(
+          languageClient,
+          uriMapper,
+          fileDecoderProvider,
+          clientConfig,
         )
         popupChoiceReset = new PopupChoiceReset(
           workspace,
@@ -810,6 +821,7 @@ class MetalsLanguageServer(
             () => workspace,
             languageClient,
             buildTargets,
+            uriMapper,
             () => buildClient.ongoingCompilations(),
             definitionIndex,
             clientConfig.initialConfig.statistics,
@@ -1058,7 +1070,8 @@ class MetalsLanguageServer(
 
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
+    val localURI = uriMapper.convertToLocal(params.getTextDocument.getUri)
+    val path = localURI.toAbsolutePath
     // In some cases like peeking definition didOpen might be followed up by close
     // and we would lose the notion of the focused document
     focusedDocument.foreach(recentlyFocusedFiles.add)
@@ -1066,7 +1079,11 @@ class MetalsLanguageServer(
     recentlyOpenedFiles.add(path)
 
     // Update md5 fingerprint from file contents on disk
-    fingerprints.add(path, FileIO.slurp(path, charset))
+    fingerprints.add(
+      path,
+      if (path.isJarFileSystem) params.getTextDocument.getText
+      else FileIO.slurp(path, charset),
+    )
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
 
@@ -1081,7 +1098,10 @@ class MetalsLanguageServer(
      * that we don't try to generate it for project files
      */
     val interactive = buildServerPromise.future.map { _ =>
-      interactiveSemanticdbs.textDocument(path)
+      interactiveSemanticdbs.textDocument(
+        path,
+        if (path.isJarFileSystem) Some(params.getTextDocument.getText) else None,
+      )
     }
     // We need both parser and semanticdb for synthetic decorations
     val publishSynthetics = for {
@@ -1143,7 +1163,8 @@ class MetalsLanguageServer(
 
     uriOpt match {
       case Some(uri) => {
-        val path = uri.toAbsolutePath
+        val localURI = uriMapper.convertToLocal(uri)
+        val path = localURI.toAbsolutePath
         focusedDocument = Some(path)
         buildTargets
           .inverseSources(path)
@@ -1227,14 +1248,15 @@ class MetalsLanguageServer(
 
   @JsonNotification("textDocument/didClose")
   def didClose(params: DidCloseTextDocumentParams): Unit = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    if (focusedDocument.contains(path)) {
+    val localPath =
+      uriMapper.convertToLocal(params.getTextDocument.getUri).toAbsolutePath
+    if (focusedDocument.contains(localPath)) {
       focusedDocument = recentlyFocusedFiles.pollRecent()
     }
-    buffers.remove(path)
-    compilers.didClose(path)
-    trees.didClose(path)
-    diagnostics.onNoSyntaxError(path)
+    buffers.remove(localPath)
+    compilers.didClose(localPath)
+    trees.didClose(localPath)
+    diagnostics.onNoSyntaxError(localPath)
   }
 
   @JsonNotification("textDocument/didSave")
@@ -1464,22 +1486,27 @@ class MetalsLanguageServer(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens { _ =>
-      implementationProvider.implementations(position).asJava
+      val localPosition = uriMapper.convertToLocal(position)
+      implementationProvider
+        .implementations(localPosition)
+        .map(location => uriMapper.convertToMetalsFS(location))
+        .asJava
     }
 
   @JsonRequest("textDocument/hover")
   def hover(params: HoverExtParams): CompletableFuture[Hover] = {
     CancelTokens.future { token =>
+      val localParams = uriMapper.convertToLocal(params)
       compilers
-        .hover(params, token)
+        .hover(localParams, token)
         .map { hover =>
-          syntheticsDecorator.addSyntheticsHover(params, hover)
+          syntheticsDecorator.addSyntheticsHover(localParams, hover)
         }
         .map(
           _.orElse {
-            val path = params.textDocument.getUri.toAbsolutePath
+            val path = localParams.textDocument.getUri.toAbsolutePath
             if (path.isWorksheet)
-              worksheetProvider.hover(path, params.getPosition)
+              worksheetProvider.hover(path, localParams.getPosition)
             else
               None
           }.orNull
@@ -1491,7 +1518,10 @@ class MetalsLanguageServer(
   def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    CancelTokens { _ => documentHighlightProvider.documentHighlight(params) }
+    CancelTokens { _ =>
+      val mappedParams = uriMapper.convertToLocal(params)
+      documentHighlightProvider.documentHighlight(mappedParams)
+    }
 
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
@@ -1500,8 +1530,13 @@ class MetalsLanguageServer(
     JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
   ] =
     CancelTokens { _ =>
+      val localURI =
+        uriMapper.convertToLocal(params.getTextDocument().getUri())
       documentSymbolProvider
-        .documentSymbols(params.getTextDocument().getUri().toAbsolutePath)
+        .documentSymbols(localURI.toAbsolutePath)
+        .map(symbolInfos =>
+          symbolInfos.map(symbolInfo => uriMapper.convertToMetalsFS(symbolInfo))
+        )
         .asJava
     }
 
@@ -1511,7 +1546,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens.future { token =>
       val path = params.getTextDocument.getUri.toAbsolutePath
-      if (path.isJava)
+      if (path.isJava || path.isClassfile)
         javaFormattingProvider.format(params)
       else
         formattingProvider.format(path, token)
@@ -1523,7 +1558,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
       val path = params.getTextDocument.getUri.toAbsolutePath
-      if (path.isJava)
+      if (path.isJava || path.isClassfile)
         javaFormattingProvider.format()
       else
         onTypeFormattingProvider.format(params).asJava
@@ -1535,7 +1570,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
       val path = params.getTextDocument.getUri.toAbsolutePath
-      if (path.isJava)
+      if (path.isJava || path.isClassfile)
         javaFormattingProvider.format(params)
       else
         rangeFormattingProvider.format(params).asJava
@@ -1559,7 +1594,13 @@ class MetalsLanguageServer(
   def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ => referencesResult(params).flatMap(_.locations).asJava }
+    CancelTokens { _ =>
+      referencesResult(uriMapper.convertToLocal(params))
+        .flatMap(
+          _.locations.map(location => uriMapper.convertToMetalsFS(location))
+        )
+        .asJava
+    }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
@@ -1663,7 +1704,8 @@ class MetalsLanguageServer(
       params: CodeActionParams
   ): CompletableFuture[util.List[l.CodeAction]] =
     CancelTokens.future { token =>
-      codeActionProvider.codeActions(params, token).map(_.asJava)
+      val localParams = uriMapper.convertToLocal(params)
+      codeActionProvider.codeActions(localParams, token).map(_.asJava)
     }
 
   @JsonRequest("textDocument/codeLens")
@@ -1675,8 +1717,9 @@ class MetalsLanguageServer(
         "code lens generation",
         thresholdMillis = 1.second.toMillis,
       ) {
-        val path = params.getTextDocument.getUri.toAbsolutePath
-        codeLensProvider.findLenses(path).toList.asJava
+        val localURI =
+          uriMapper.convertToLocal(params.getTextDocument().getUri())
+        codeLensProvider.findLenses(localURI.toAbsolutePath).toList.asJava
       }
     }
 
@@ -1685,7 +1728,9 @@ class MetalsLanguageServer(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
     CancelTokens.future { token =>
-      val path = params.getTextDocument().getUri().toAbsolutePath
+      val localURI =
+        uriMapper.convertToLocal(params.getTextDocument().getUri())
+      val path = localURI.toAbsolutePath
       if (path.isScala)
         parseTrees.currentFuture.map(_ =>
           foldingRangeProvider.getRangedForScala(path)
@@ -1713,7 +1758,10 @@ class MetalsLanguageServer(
     CancelTokens.future { token =>
       indexingPromise.future.map { _ =>
         val timer = new Timer(time)
-        val result = workspaceSymbols.search(params.getQuery, token).asJava
+        val result = workspaceSymbols
+          .search(params.getQuery, token)
+          .map(symbol => uriMapper.convertToMetalsFS(symbol))
+          .asJava
         if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
           scribe.info(
             s"time: found ${result.size()} results for query '${params.getQuery}' in $timer"
@@ -1724,7 +1772,16 @@ class MetalsLanguageServer(
     }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {
-    workspaceSymbols.search(query)
+    val params = new WorkspaceSymbolParams(query)
+    workspaceSymbol(params).join.asScala.toList
+  }
+
+  def convertToMetalsFS(uri: String): String = {
+    uriMapper.convertToMetalsFS(uri)
+  }
+
+  def convertToLocal(uri: String): String = {
+    uriMapper.convertToLocal(uri)
   }
 
   @JsonRequest("workspace/executeCommand")
@@ -1780,6 +1837,12 @@ class MetalsLanguageServer(
             params.kind == "class",
           )
           .asJavaObject
+      case ServerCommands.FileSystemStat(uriAsStr) =>
+        lspFileSystemProvider.getSystemStat(uriAsStr).asJavaObject
+      case ServerCommands.FileSystemReadFile(uriAsStr) =>
+        lspFileSystemProvider.readFile(uriAsStr).asJavaObject
+      case ServerCommands.FileSystemReadDirectory(uriAsStr) =>
+        lspFileSystemProvider.readDirectory(uriAsStr).asJavaObject
       case ServerCommands.RunDoctor() =>
         Future {
           doctor.onVisibilityDidChange(true)
@@ -1825,7 +1888,7 @@ class MetalsLanguageServer(
           languageClient.metalsExecuteClientCommand(
             ClientCommands.GotoLocation.toExecuteCommandParams(
               ClientCommands.WindowLocation(
-                location.getUri(),
+                uriMapper.convertToMetalsFS(location.getUri()),
                 location.getRange(),
               )
             )
@@ -1843,7 +1906,7 @@ class MetalsLanguageServer(
             languageClient.metalsExecuteClientCommand(
               ClientCommands.GotoLocation.toExecuteCommandParams(
                 ClientCommands.WindowLocation(
-                  location.getUri(),
+                  uriMapper.convertToMetalsFS(location.getUri()),
                   location.getRange(),
                 )
               )
@@ -2110,9 +2173,10 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[TreeViewNodeRevealResult] =
     Future {
+      val localURI = uriMapper.convertToLocal(params.getTextDocument().getUri())
       treeView
         .reveal(
-          params.getTextDocument().getUri().toAbsolutePath,
+          localURI.toAbsolutePath,
           params.getPosition(),
         )
         .orNull
@@ -2122,7 +2186,10 @@ class MetalsLanguageServer(
   def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
   ): CompletableFuture[util.List[Location]] = {
-    findTextInJars.find(params).map(_.asJava).asJava
+    findTextInJars
+      .find(params)
+      .map(_.map(location => uriMapper.convertToMetalsFS(location)).asJava)
+      .asJava
   }
 
   private def generateBspConfig(): Future[Unit] = {
@@ -2417,6 +2484,7 @@ class MetalsLanguageServer(
   private val indexer = Indexer(
     () => workspaceReload,
     () => doctor,
+    () => lspFileSystemProvider,
     languageClient,
     () => bspSession,
     executionContext,
@@ -2443,6 +2511,7 @@ class MetalsLanguageServer(
     () => referencesProvider,
     () => workspaceSymbols,
     buildTargets,
+    uriMapper,
     () => interactiveSemanticdbs,
     () => buildClient,
     () => semanticDBIndexer,
@@ -2523,15 +2592,16 @@ class MetalsLanguageServer(
       token: CancelToken = EmptyCancelToken,
       definitionOnly: Boolean = false,
   ): Future[DefinitionResult] = {
-    val source = positionParams.getTextDocument.getUri.toAbsolutePath
-    if (source.isScalaFilename || source.isJavaFilename) {
+    val localPositionParams = uriMapper.convertToLocal(positionParams)
+    val source = localPositionParams.getTextDocument.getUri.toAbsolutePath
+    if (source.isScalaFilename || source.isJavaFilename || source.isClassfile) {
       val semanticDBDoc =
         semanticdbs.textDocument(source).documentIncludingStale
-      (for {
+      val result = (for {
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
           source,
-          positionParams.getPosition,
+          localPositionParams.getPosition,
           doc,
         )
         occ <- positionOccurrence.occurrence
@@ -2539,8 +2609,8 @@ class MetalsLanguageServer(
         case Some(occ) =>
           if (occ.role.isDefinition && !definitionOnly) {
             val refParams = new ReferenceParams(
-              positionParams.getTextDocument(),
-              positionParams.getPosition(),
+              localPositionParams.getTextDocument(),
+              localPositionParams.getPosition(),
               new ReferenceContext(false),
             )
             val results = referencesResult(refParams)
@@ -2548,7 +2618,7 @@ class MetalsLanguageServer(
               // Fallback again to the original behavior that returns
               // the definition location itself if no reference locations found,
               // for avoiding the confusing messages like "No definition found ..."
-              definitionResult(positionParams, token)
+              definitionResult(localPositionParams, token)
             } else {
               Future.successful(
                 DefinitionResult(
@@ -2560,7 +2630,7 @@ class MetalsLanguageServer(
               )
             }
           } else {
-            definitionResult(positionParams, token)
+            definitionResult(localPositionParams, token)
           }
         case None =>
           if (semanticDBDoc.isEmpty) {
@@ -2568,8 +2638,15 @@ class MetalsLanguageServer(
           }
           // Even if it failed to retrieve the symbol occurrence from semanticdb,
           // try to find its definitions from presentation compiler.
-          definitionResult(positionParams, token)
+          definitionResult(localPositionParams, token)
       }
+      result.map(definition =>
+        definition.copy(locations =
+          definition.locations.asScala
+            .map(location => uriMapper.convertToMetalsFS(location))
+            .asJava
+        )
+      )
     } else {
       // Ignore non-scala files.
       Future.successful(DefinitionResult.empty)
@@ -2586,7 +2663,7 @@ class MetalsLanguageServer(
       token: CancelToken = EmptyCancelToken,
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
-    if (source.isScalaFilename || source.isJavaFilename) {
+    if (source.isScalaFilename || source.isJavaFilename || source.isClassfile) {
       val result =
         timerProvider.timedThunk(
           "definition",

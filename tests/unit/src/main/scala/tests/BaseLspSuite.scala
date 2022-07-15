@@ -114,7 +114,7 @@ abstract class BaseLspSuite(
       .getOrElse(TestingServer.TestDefault)
       .copy(isVirtualDocumentSupported = Some(useVirtualDocs))
 
-    client = new TestingClient(workspace, buffers)
+    client = new TestingClient(workspace, () => server, buffers)
     server = new TestingServer(
       workspace,
       client,

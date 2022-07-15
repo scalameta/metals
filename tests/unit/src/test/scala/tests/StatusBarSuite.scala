@@ -11,7 +11,7 @@ import scala.meta.internal.metals.StatusBar
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime
-  val client = new TestingClient(PathIO.workingDirectory, Buffers())
+  val client = new TestingClient(PathIO.workingDirectory, () => null, Buffers())
   var status = new StatusBar(
     () => client,
     time,

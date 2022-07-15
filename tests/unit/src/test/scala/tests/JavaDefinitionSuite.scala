@@ -153,7 +153,8 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     if (characterInc == -1) {
       throw new Exception("Query must contain @@")
     } else {
-      val path = AbsolutePath.fromAbsoluteUri(URI.create(uri))
+      val localUri = server.convertToLocal(uri)
+      val path = AbsolutePath.fromAbsoluteUri(URI.create(localUri))
       val raw = query.replaceAll("@@", "").trim()
       val result = FileIO
         .slurp(path, StandardCharsets.UTF_8)
@@ -173,7 +174,8 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
   }
 
   private def renderLocation(loc: l.Location): String = {
-    val path = AbsolutePath.fromAbsoluteUri(URI.create(loc.getUri()))
+    val localURI = server.convertToLocal(loc.getUri())
+    val path = AbsolutePath.fromAbsoluteUri(URI.create(localURI))
     val relativePath =
       path.jarPath
         .map(jarPath => s"${jarPath.filename}${path}")

@@ -100,7 +100,7 @@ private[debug] final class DebugProxy(
       client.consume(DebugProtocol.syntheticResponse(request, response))
     case request @ SetBreakpointRequest(args) =>
       val originalSource = DebugProtocol.copy(args.getSource)
-      val metalsSourcePath = clientAdapter.toMetalsPath(originalSource.getPath)
+      val metalsSourceURI = clientAdapter.toMetalsURI(originalSource.getPath)
 
       args.getBreakpoints.foreach { breakpoint =>
         val line = clientAdapter.normalizeLineForServer(breakpoint.getLine)
@@ -108,7 +108,7 @@ private[debug] final class DebugProxy(
       }
 
       val requests =
-        debugAdapter.adaptSetBreakpointsRequest(metalsSourcePath, args)
+        debugAdapter.adaptSetBreakpointsRequest(metalsSourceURI, args)
       server
         .sendPartitioned(requests.map(DebugProtocol.syntheticRequest))
         .map(_.map(DebugProtocol.parseResponse[SetBreakpointsResponse]))
@@ -122,9 +122,10 @@ private[debug] final class DebugProxy(
         frame <- lastFrames.find(_.getId() == args.getFrameId())
       } yield {
         val originalSource = frame.getSource()
-        val sourceUri = clientAdapter.toMetalsPath(originalSource.getPath)
+        val sourceUri = clientAdapter.toMetalsURI(originalSource.getPath)
+        val sourcePath = sourceUri.toAbsolutePath
         compilers.debugCompletions(
-          sourceUri,
+          sourcePath,
           new Position(frame.getLine() - 1, 0),
           EmptyCancelToken,
           args,
@@ -178,11 +179,11 @@ private[debug] final class DebugProxy(
         stackFrame <- args.getStackFrames
         frameSource <- Option(stackFrame.getSource)
         sourcePath <- Option(frameSource.getPath)
-        metalsSource <- debugAdapter.adaptStackFrameSource(
+        metalsSourceUri <- debugAdapter.adaptStackFrameSource(
           sourcePath,
           frameSource.getName,
         )
-      } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSource))
+      } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSourceUri))
       response.setResult(args.toJson)
       lastFrames = args.getStackFrames()
       client.consume(response)

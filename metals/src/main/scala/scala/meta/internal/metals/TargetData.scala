@@ -81,7 +81,8 @@ final class TargetData {
   }
   def all: Iterator[BuildTarget] =
     buildTargetInfo.values.toIterator
-
+  def allJDKs: Iterator[String] =
+    scalaTargetInfo.flatMap(_._2.jvmHome).iterator
   def allBuildTargetIds: Seq[BuildTargetIdentifier] =
     buildTargetInfo.keys.toSeq
   def allScala: Iterator[ScalaTarget] =
