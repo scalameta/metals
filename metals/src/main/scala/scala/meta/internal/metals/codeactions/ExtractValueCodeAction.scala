@@ -91,7 +91,7 @@ class ExtractValueCodeAction(
   }
   private def applyArgument(argument: Term): Term =
     argument match {
-      // named paramaeter
+      // named parameter
       case Term.Assign(_, rhs) => rhs
       case other => other
     }
