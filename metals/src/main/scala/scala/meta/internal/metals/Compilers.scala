@@ -324,7 +324,7 @@ class Compilers(
         val offsetParams = CompilerOffsetParams(
           path.toURI,
           modified,
-          lineStart + expressionOffset(expressionText, indentation),
+          lineStart + expressionOffset(expressionText, indentation) + 1,
           token,
         )
 

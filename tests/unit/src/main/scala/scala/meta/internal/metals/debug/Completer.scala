@@ -23,7 +23,7 @@ final class Completer(expression: String) extends Stoppage.Handler {
       frameId,
       response = _,
       line,
-      column + 1,
+      column,
     )
   }
 

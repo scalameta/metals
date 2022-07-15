@@ -180,6 +180,32 @@ class CompletionDapSuite
        |""".stripMargin
   )
 
+  assertCompletion(
+    "single-dot",
+    expression = "Main.@@",
+    expectedCompletions = """|name: Option[String]
+                             |args: Array[String]
+                             |executionStart: Long
+                             |main(args: Array[String]): Unit
+                             |""".stripMargin,
+    expectedEdit = "Main.name",
+    topLines = Some(4),
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main extends App{
+       |
+       |  val name: Option[String] = Option("Tom")
+       |>>println(name)
+       |
+       |
+       |  System.exit(0)
+       |}
+       |
+       |""".stripMargin
+  )
+
   def assertCompletion(
       name: TestOptions,
       expression: String,
