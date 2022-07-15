@@ -7,7 +7,6 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.SymbolOccurrence.Role
-import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.{semanticdb => s}
 
 import scala.meta.internal.parsing.Trees
@@ -21,16 +20,16 @@ import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyOutgoingCall
 import org.eclipse.lsp4j.CallHierarchyItem
-import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.{lsp4j => l}
 import scala.meta.Tree
 import scala.meta.Defn
-import scala.meta.Term
 import scala.meta.Pat
 import scala.meta.Ctor
 import scala.meta.Name
-import scala.meta.Type
 import com.google.gson.JsonElement
+import scala.meta.Member
+import scala.meta.Term
+import scala.meta.Mod
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,
@@ -38,6 +37,7 @@ final case class CallHierarchyProvider(
     buffers: Buffers,
     definition: DefinitionProvider,
     references: ReferenceProvider,
+    icons: Icons,
     remote: RemoteLanguageServer,
     trees: Trees,
     buildTargets: BuildTargets
@@ -49,26 +49,44 @@ final case class CallHierarchyProvider(
 
   override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = ()
 
-  case class CallHierarchyItemInfo(displayName: String, symbol: String)
+  case class CallHierarchyItemInfo(
+      symbols: Array[String],
+      visited: Array[String]
+  )
 
-  private def findDefinition(from: Tree): Option[Tree] = from match {
-    case definition @ (_: Defn.Def | _: Defn.Val | _: Defn.Var |
-        _: Ctor.Secondary) =>
-      Some(definition)
-    case name: Type.Name =>
-      for {
-        parent <- name.parent
-        ctor <- parent.children.find(_.is[Ctor.Primary])
-      } yield ctor
-    case other =>
-      other.parent.flatMap(p => findDefinition(p))
-  }
+  private def extractNameFromDefinition(tree: Tree): Option[(Tree, Name)] =
+    tree match {
+      case v: Defn.Val =>
+        v.pats match {
+          case (pat: Pat.Var) :: Nil => Some((v, pat.name))
+          case _ => None
+        }
+      case v: Defn.Var =>
+        v.pats match {
+          case (pat: Pat.Var) :: Nil => Some((v, pat.name))
+          case _ => None
+        }
+      case member: Defn with Member => Some((member, member.name))
+      case ctor: Ctor => Some((ctor, ctor.name))
+      case _ => None
+    }
+
+  private def findDefinition(from: Option[Tree]): Option[(Tree, Name)] =
+    from
+      .filterNot(_.is[Term.Param])
+      .flatMap(tree =>
+        extractNameFromDefinition(tree) match {
+          case result @ Some(_) => result
+          case None => findDefinition(tree.parent)
+        }
+      )
 
   private def symbolOccurenceToCallHierarchyItem(
       source: AbsolutePath,
       doc: TextDocument,
       occurence: SymbolOccurrence,
-      range: l.Range
+      range: l.Range,
+      visited: Array[String]
   ): Option[CallHierarchyItem] =
     doc.symbols
       .find(_.symbol == occurence.symbol)
@@ -80,14 +98,18 @@ final case class CallHierarchyProvider(
           range,
           occurence.toLocation(source.toURI.toString).getRange
         )
-        val symbol =
+        val symbols = (Set(info.symbol) union (
           if (info.isClass)
             info.signature
               .asInstanceOf[s.ClassSignature]
               .declarations
               .flatMap(_.symlinks.find(_.endsWith("`<init>`().")))
-              .getOrElse(info.symbol)
-          else info.symbol
+              .toSet union (
+              // For the case class, the symbols of the occurrences found are not _empty_/Example2# but _empty_/Example2.
+              if (info.isCase) Set(info.symbol.replace("#", ".")) else Set.empty
+            )
+          else Set(info.symbol)
+        )).toArray
 
         val displayName =
           if (info.isConstructor && info.displayName == "<init>")
@@ -96,16 +118,17 @@ final case class CallHierarchyProvider(
               info.symbol.lastIndexOf("#")
             )
           else info.displayName
-
-        chi.setData(CallHierarchyItemInfo(displayName, symbol))
         chi.setName(displayName)
 
+        if (visited.dropRight(1).contains(occurence.symbol))
+          chi.setDetail(s"${icons.sync}")
+
+        chi.setData(CallHierarchyItemInfo(symbols, visited))
         chi
       })
 
   def prepare(params: CallHierarchyPrepareParams): List[CallHierarchyItem] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         val results: List[ResolvedSymbolOccurrence] =
@@ -115,12 +138,13 @@ final case class CallHierarchyProvider(
             occurence <- result.occurrence
             range <- occurence.range
             tree <- trees.findLastEnclosingAt(source, range.toLSP.getStart)
-            definition <- findDefinition(tree)
+            (definition, _) <- findDefinition(Some(tree))
             chi <- symbolOccurenceToCallHierarchyItem(
               source,
               doc,
               result.occurrence.get,
-              definition.pos.toLSP
+              definition.pos.toLSP,
+              Array(occurence.symbol)
             )
           } yield chi
         }
@@ -128,6 +152,12 @@ final case class CallHierarchyProvider(
         Nil
     }
   }
+
+  private def containsDuplicates[T](visited: Seq[T]) =
+    visited.view
+      .scanLeft(Set.empty[T])((set, a) => set + a)
+      .zip(visited.view)
+      .exists { case (set, a) => set contains a }
 
   private def findIncomingCalls(
       source: AbsolutePath,
@@ -141,18 +171,17 @@ final case class CallHierarchyProvider(
         parent: Option[Name],
         parentRange: Option[l.Range]
     ): List[(SymbolOccurrence, l.Range, l.Range)] = tree match {
-      case name: Name =>
-        val occurences = definition
-          .positionOccurrences(source, name.pos.toLSP.getEnd, doc)
-          .flatMap(_.occurrence.filter(_.role == Role.REFERENCE))
-
+      case name: Name
+          if definition
+            .positionOccurrences(source, name.pos.toLSP.getEnd, doc)
+            .flatMap(
+              _.occurrence.filter(occ =>
+                occ.role == Role.REFERENCE && info.symbols.contains(occ.symbol)
+              )
+            )
+            .nonEmpty =>
         parent match {
-          case Some(parent)
-              if occurences.exists(occ =>
-                occ.symbol == info.symbol ||
-                  (parent.is[Term.Apply] && info.symbol
-                    .startsWith(occ.symbol.dropRight(1)))
-              ) =>
+          case Some(parent) =>
             definition
               .positionOccurrences(source, parent.pos.toLSP.getStart, doc)
               .flatMap(_.occurrence)
@@ -162,40 +191,16 @@ final case class CallHierarchyProvider(
               search(child, parent, parentRange)
             }
         }
-
-      case method: Defn.Def =>
-        method.children.flatMap { child =>
-          search(child, Some(method.name), Some(method.pos.toLSP))
+      case _ => {
+        extractNameFromDefinition(tree) match {
+          case Some((definition, name)) =>
+            tree.children.flatMap(child =>
+              search(child, Some(name), Some(definition.pos.toLSP))
+            )
+          case None =>
+            tree.children.flatMap(child => search(child, parent, parentRange))
         }
-      case constructor: Ctor.Secondary =>
-        constructor.children.flatMap { child =>
-          search(
-            child,
-            Some(constructor.name: Name),
-            Some(constructor.pos.toLSP)
-          )
-        }
-      case function: Term.Function =>
-        function.children.flatMap { child =>
-          val name = function.parent.flatMap {
-            case v: Defn.Val =>
-              v.pats match {
-                case (pat: Pat.Var) :: Nil => Some(pat.name)
-                case _ => None
-              }
-            case v: Defn.Var =>
-              v.pats match {
-                case (pat: Pat.Var) :: Nil => Some(pat.name)
-                case _ => None
-              }
-            case _ => None
-          }
-          search(child, name, function.parent.map(_.pos.toLSP))
-        }
-      case other =>
-        other.children.flatMap { child =>
-          search(child, parent, parentRange)
-        }
+      }
     }
     search(root, None, None)
       .groupBy(_._1)
@@ -215,7 +220,7 @@ final case class CallHierarchyProvider(
     references
       .pathsWithReferences(
         params.getItem.getUri.toAbsolutePath,
-        Set(info.symbol)
+        info.symbols.toSet
       )
       .toList
       .flatMap(source => {
@@ -232,14 +237,23 @@ final case class CallHierarchyProvider(
                 )
               )
               .getOrElse(Nil)
-            results.flatMap { case (occurence, range, ranges) =>
-              symbolOccurenceToCallHierarchyItem(source, doc, occurence, range)
-                .map(chi =>
-                  new CallHierarchyIncomingCall(
-                    chi,
-                    ranges.asJava
-                  )
+            results.flatMap {
+              case (occurence, range, ranges)
+                  if !containsDuplicates(info.visited) =>
+                symbolOccurenceToCallHierarchyItem(
+                  source,
+                  doc,
+                  occurence,
+                  range,
+                  info.visited :+ occurence.symbol
                 )
+                  .map(chi =>
+                    new CallHierarchyIncomingCall(
+                      chi,
+                      ranges.asJava
+                    )
+                  )
+              case _ => None
             }
           case None =>
             Nil
@@ -250,8 +264,7 @@ final case class CallHierarchyProvider(
   private def findOutgoingCalls(
       source: AbsolutePath,
       doc: TextDocument,
-      root: Tree,
-      info: CallHierarchyItemInfo
+      root: Tree
   ) = {
     def findDefinitionOccurence(
         symbol: String
@@ -264,9 +277,7 @@ final case class CallHierarchyProvider(
             doc <- semanticdbs.textDocument(source).documentIncludingStale
             occ <- doc.occurrences.find(occ =>
               occ.symbol == symbol && occ.role == Role.DEFINITION && doc.symbols
-                .exists(symInfo =>
-                  symInfo.symbol == symbol && (symInfo.isConstructor || symInfo.isMethod)
-                )
+                .exists(symInfo => symInfo.symbol == symbol)
             )
           } yield (occ, source, doc)
         )
@@ -285,16 +296,23 @@ final case class CallHierarchyProvider(
               .flatMap(rso =>
                 rso.occurrence.flatMap(occ =>
                   findDefinitionOccurence(occ.symbol)
+                    // For the case class, the symbols of the occurrences found are not _empty_/Example2# but _empty_/Example2.
+                    .orElse(
+                      if (occ.symbol.endsWith(".") && !occ.symbol.contains("#"))
+                        findDefinitionOccurence(occ.symbol.replace(".", "#"))
+                      else
+                        None
+                    )
                 )
               )
-              .headOption
-            if info.symbol != definitionOccurence.symbol // problematic with recursive case
+              .sortBy(_._1.symbol.length * -1)
+              .headOption // The most specific occurrence is the longest
             definitionRange <- definitionOccurence.range
             definitionName <- trees.findLastEnclosingAt(
               definitionSource,
               definitionRange.toLSP.getStart
             )
-            definition <- findDefinition(definitionName)
+            (definition, _) <- findDefinition(Some(definitionName))
           } yield (
             definitionOccurence,
             name.pos.toLSP,
@@ -302,10 +320,17 @@ final case class CallHierarchyProvider(
             definitionSource,
             definitionDoc
           )).toList
+        case t
+            if extractNameFromDefinition(t).isDefined || t.is[Term.Param] || t
+              .is[Pat.Var] =>
+          Nil
         case other =>
           other.children.flatMap(search)
       }
-    search(root)
+
+    (if (root.is[Mod.Case]) root.parent.get else root).children
+      .filterNot(_.is[Name])
+      .flatMap(search)
       .groupBy(_._1)
       .map { case (k, v) => (k, v.head._3, v.map(_._2), v.head._4, v.head._5) }
       .toList
@@ -329,25 +354,27 @@ final case class CallHierarchyProvider(
             findOutgoingCalls(
               source,
               doc,
-              root,
-              info
+              root
             )
           )
           .getOrElse(Nil)
 
         results.flatMap {
-          case (occurence, range, ranges, definitionSource, definitionDoc) =>
+          case (occurence, range, ranges, definitionSource, definitionDoc)
+              if !containsDuplicates(info.visited) =>
             symbolOccurenceToCallHierarchyItem(
               definitionSource,
               definitionDoc,
               occurence,
-              range
+              range,
+              info.visited :+ occurence.symbol
             ).map(chi =>
               new CallHierarchyOutgoingCall(
                 chi,
                 ranges.asJava
               )
             )
+          case _ => None
         }
       case None =>
         Nil
