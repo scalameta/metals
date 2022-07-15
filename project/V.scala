@@ -8,10 +8,11 @@ object V {
   val scala3 = "3.1.3"
   val nextScala3RC = "3.2.0-RC2"
   val sbtScala = "2.12.14"
-  val ammonite212Version = "2.12.15"
-  val ammonite213Version = "2.13.7"
+  val ammonite212Version = "2.12.16"
+  val ammonite213Version = "2.13.8"
+  val ammonite3Version = "3.1.3"
 
-  val ammonite = "2.5.4"
+  val ammonite = "2.5.4-13-1ebd00a6"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.2"
   val bloopNightly = bloop
@@ -122,5 +123,6 @@ object V {
       ammonite213Version,
       scala3,
       nextScala3RC,
+      ammonite3Version,
     ).toList
 }

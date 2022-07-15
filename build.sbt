@@ -392,7 +392,7 @@ lazy val metals = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.2",
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.3",
       "org.scala-lang.modules" %% "scala-xml" % "2.1.0",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
     ),
@@ -428,6 +428,7 @@ lazy val metals = project
       "scala212" -> V.scala212,
       "ammonite212" -> V.ammonite212Version,
       "ammonite213" -> V.ammonite213Version,
+      "ammonite3" -> V.ammonite3Version,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
     ),

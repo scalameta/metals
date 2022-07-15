@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
+import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IndexedContext.Result
@@ -132,7 +133,10 @@ object IndexedContext:
     def accesibleMembers(site: Type)(using Context): List[Symbol] =
       site.allMembers
         .filter(denot =>
-          denot.symbol.isAccessibleFrom(site, superAccess = false)
+          try denot.symbol.isAccessibleFrom(site, superAccess = false)
+          catch
+            case NonFatal(e) =>
+              false
         )
         .map(_.symbol)
         .toList

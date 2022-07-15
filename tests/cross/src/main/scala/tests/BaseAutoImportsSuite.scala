@@ -42,6 +42,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       original: String,
       expected: String,
       selection: Int = 0,
+      compat: Map[String, String] = Map.empty,
   )(implicit
       loc: Location
   ): Unit =
@@ -51,6 +52,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       original,
       expected,
       selection,
+      compat,
     )
 
   def checkEditSelection(
@@ -59,6 +61,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       original: String,
       expected: String,
       selection: Int,
+      compat: Map[String, String] = Map.empty,
   )(implicit
       loc: Location
   ): Unit =
@@ -68,7 +71,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       val edits = imports(selection).edits().asScala.toList
       val (code, _, _) = params(original)
       val obtained = TextEdits.applyEdits(code, edits)
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
 
   def getAutoImports(

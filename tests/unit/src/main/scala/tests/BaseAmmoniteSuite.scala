@@ -26,7 +26,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     }
   }
 
-  test("simple script") {
+  test("simple-script") {
     // single script with import $ivy-s
     for {
       _ <- initialize(
@@ -39,9 +39,9 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |}
            |/main.sc
            | // scala $scalaVersion
-           |import $$ivy.`io.circe::circe-core:0.12.3`
-           |import $$ivy.`io.circe::circe-generic:0.12.3`
-           |import $$ivy.`io.circe::circe-parser:0.12.3`
+           |import $$ivy.`io.circe::circe-core:0.14.2`
+           |import $$ivy.`io.circe::circe-generic:0.14.2`
+           |import $$ivy.`io.circe::circe-parser:0.14.2`
            |import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
            |
            |sealed trait Foo
@@ -162,9 +162,9 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |}
            |/main.sc
            | // scala $scalaVersion
-           |import $$ivy.`io.circe::circe-core:0.12.3`
-           |import $$ivy.`io.circe::circe-generic:0.12.3`
-           |import $$ivy.`io.circe::circe-parser:0.12.3`
+           |import $$ivy.`io.circe::circe-core:0.14.2`
+           |import $$ivy.`io.circe::circe-generic:0.14.2`
+           |import $$ivy.`io.circe::circe-parser:0.14.2`
            |import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
            |
            |sealed trait Foo
@@ -220,95 +220,97 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
-  test("file-completion") {
-    for {
-      _ <- initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion"
-           |  }
-           |}
-           |/b/otherMain.sc
-           | // scala $scalaVersion
-           |import $$file.other
-           |
-           |/b/otherScript.sc
-           | // scala $scalaVersion
-           |val a = ""
-           |           
-           |/b/other.sc
-           | // scala $scalaVersion
-           |val a = ""
-           |
-           |/b/others/Script.sc
-           | // scala $scalaVersion
-           |val a = ""
-           |
-           |/b/notThis.sc
-           | // scala $scalaVersion
-           |val a = ""
-           |
-           |""".stripMargin
-      )
-      _ <- server.didOpen("b/otherMain.sc")
-      _ <- server.didOpen("b/other.sc")
-      _ <- server.didOpen("b/otherScript.sc")
-      _ <- server.didOpen("b/others/Script.sc")
-      _ <- server.didOpen("b/notThis.sc")
-      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
-      _ <- server.didSave("b/otherMain.sc")(identity)
-      _ <- server.didSave("b/other.sc")(identity)
-      _ <- server.didSave("b/otherScript.sc")(identity)
-      _ <- server.didSave("b/others/Script.sc")(identity)
-      _ <- server.didSave("b/notThis.sc")(identity)
-      expectedCompletionList = """|other.sc
-                                  |otherScript.sc
-                                  |others""".stripMargin
-      completionList <- server.completion(
-        "b/otherMain.sc",
-        "import $file.other@@",
-      )
-      _ = assertNoDiff(completionList, expectedCompletionList)
+  if (scalaVersion != V.ammonite3)
+    test("file-completion") {
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{
+             |  "a": {
+             |    "scalaVersion": "$scalaVersion"
+             |  }
+             |}
+             |/b/otherMain.sc
+             | // scala $scalaVersion
+             |import $$file.other
+             |
+             |/b/otherScript.sc
+             | // scala $scalaVersion
+             |val a = ""
+             |           
+             |/b/other.sc
+             | // scala $scalaVersion
+             |val a = ""
+             |
+             |/b/others/Script.sc
+             | // scala $scalaVersion
+             |val a = ""
+             |
+             |/b/notThis.sc
+             | // scala $scalaVersion
+             |val a = ""
+             |
+             |""".stripMargin
+        )
+        _ <- server.didOpen("b/otherMain.sc")
+        _ <- server.didOpen("b/other.sc")
+        _ <- server.didOpen("b/otherScript.sc")
+        _ <- server.didOpen("b/others/Script.sc")
+        _ <- server.didOpen("b/notThis.sc")
+        _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
+        _ <- server.didSave("b/otherMain.sc")(identity)
+        _ <- server.didSave("b/other.sc")(identity)
+        _ <- server.didSave("b/otherScript.sc")(identity)
+        _ <- server.didSave("b/others/Script.sc")(identity)
+        _ <- server.didSave("b/notThis.sc")(identity)
+        expectedCompletionList = """|other.sc
+                                    |otherScript.sc
+                                    |others""".stripMargin
+        completionList <- server.completion(
+          "b/otherMain.sc",
+          "import $file.other@@",
+        )
+        _ = assertNoDiff(completionList, expectedCompletionList)
 
-    } yield ()
-  }
+      } yield ()
+    }
 
-  test("file-completion-path") {
-    for {
-      _ <- initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion"
-           |  }
-           |}
-           |/foos/Script.sc
-           | // scala $scalaVersion
-           |val a = ""
-           |
-           |/foo.sc
-           | // scala $scalaVersion
-           |import $$file.foos.Script
-           |""".stripMargin
-      )
-      _ <- server.didOpen("foo.sc")
-      _ <- server.didOpen("foos/Script.sc")
-      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
-      _ <- server.didSave("foo.sc")(identity)
-      _ <- server.didSave("foos/Script.sc")(identity)
+  if (scalaVersion != V.ammonite3)
+    test("file-completion-path") {
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{
+             |  "a": {
+             |    "scalaVersion": "$scalaVersion"
+             |  }
+             |}
+             |/foos/Script.sc
+             | // scala $scalaVersion
+             |val a = ""
+             |
+             |/foo.sc
+             | // scala $scalaVersion
+             |import $$file.foos.Script
+             |""".stripMargin
+        )
+        _ <- server.didOpen("foo.sc")
+        _ <- server.didOpen("foos/Script.sc")
+        _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
+        _ <- server.didSave("foo.sc")(identity)
+        _ <- server.didSave("foos/Script.sc")(identity)
 
-      expectedCompletionList = "Script.sc"
-      completionList <- server.completion(
-        "foo.sc",
-        "import $file.foos.Script@@",
-      )
-      _ = assertNoDiff(completionList, expectedCompletionList)
+        expectedCompletionList = "Script.sc"
+        completionList <- server.completion(
+          "foo.sc",
+          "import $file.foos.Script@@",
+        )
+        _ = assertNoDiff(completionList, expectedCompletionList)
 
-    } yield ()
-  }
+      } yield ()
+    }
 
   test("completion") {
     for {
@@ -322,9 +324,9 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |}
            |/main.sc
            | // scala $scalaVersion
-           |import $$ivy.`io.circe::circe-core:0.12.3`
-           |import $$ivy.`io.circe::circe-generic:0.12.3`
-           |import $$ivy.`io.circe::circe-parser:0.12.3`
+           |import $$ivy.`io.circe::circe-core:0.14.2`
+           |import $$ivy.`io.circe::circe-generic:0.14.2`
+           |import $$ivy.`io.circe::circe-parser:0.14.2`
            |import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
            |
            |sealed trait Foo
@@ -385,10 +387,16 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
 
   test("simple errored script") {
     val expectedDiagnostics =
-      """errored.sc:15:25: error: not found: type Fooz
-        |val decodedFoo = decode[Fooz](json)
-        |                        ^^^^
-        |""".stripMargin
+      if (scalaVersion.startsWith("2"))
+        """errored.sc:15:25: error: not found: type Fooz
+          |val decodedFoo = decode[Fooz](json)
+          |                        ^^^^
+          |""".stripMargin
+      else
+        """errored.sc:15:25: error: Not found: type Fooz
+          |val decodedFoo = decode[Fooz](json)
+          |                        ^^^^
+          |""".stripMargin
     for {
       _ <- initialize(
         s"""
@@ -400,9 +408,9 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |}
            |/errored.sc
            | // scala $scalaVersion
-           |import $$ivy.`io.circe::circe-core:0.12.3`
-           |import $$ivy.`io.circe::circe-generic:0.12.3`
-           |import $$ivy.`io.circe::circe-parser:0.12.3`
+           |import $$ivy.`io.circe::circe-core:0.14.2`
+           |import $$ivy.`io.circe::circe-generic:0.14.2`
+           |import $$ivy.`io.circe::circe-parser:0.14.2`
            |import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
            |
            |sealed trait Foo
@@ -446,9 +454,9 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |}
            |
            |/lib2.sc
-           |import $$ivy.`io.circe::circe-core:0.12.3`
-           |import $$ivy.`io.circe::circe-generic:0.12.3`
-           |import $$ivy.`io.circe::circe-parser:0.12.3`
+           |import $$ivy.`io.circe::circe-core:0.14.2`
+           |import $$ivy.`io.circe::circe-generic:0.14.2`
+           |import $$ivy.`io.circe::circe-parser:0.14.2`
            |import $$file.lib1, lib1.HasFoo
            |
            |trait HasReallyFoo extends HasFoo
