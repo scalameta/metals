@@ -199,13 +199,18 @@ case class ScalaPresentationCompiler(
         .inferredTypeEdits()
         .asJava
     }
-
   override def convertToNamedArguments(
       params: OffsetParams,
       argIndices: ju.List[Integer],
   ): CompletableFuture[ju.List[l.TextEdit]] =
-    CompletableFuture.completedFuture(Nil.asJava)
-
+    val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
+    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+      new ConvertToNamedArgumentsProvider(
+        pc.compiler(),
+        params,
+        argIndices.asScala.map(_.toInt).toSet,
+      ).convertToNamedArguments.asJava
+    }
   override def selectionRange(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[l.SelectionRange]] =

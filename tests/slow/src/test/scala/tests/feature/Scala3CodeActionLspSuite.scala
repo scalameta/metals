@@ -1,6 +1,7 @@
 package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
@@ -160,6 +161,7 @@ class Scala3CodeActionLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -182,6 +184,7 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -202,6 +205,7 @@ class Scala3CodeActionLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -224,6 +228,7 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -247,6 +252,7 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|def method2(i: Int) = {
        |  val a = 1
@@ -327,6 +333,21 @@ class Scala3CodeActionLspSuite
        |""".stripMargin,
     expectError = true,
     expectNoDiagnostics = false,
+  )
+
+  check(
+    "named-basic",
+    """|object Something {
+       |  case class Foo(param1: Int, param2: Int, param3: Int)
+       |  Foo<<(>>1, 2, param3 = 3)
+       |  Foo(4,5,6)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo(...)")}",
+    """|object Something {
+       |  case class Foo(param1: Int, param2: Int, param3: Int)
+       |  Foo(param1 = 1, param2 = 2, param3 = 3)
+       |  Foo(4,5,6)
+       |}""".stripMargin,
   )
 
   check(
