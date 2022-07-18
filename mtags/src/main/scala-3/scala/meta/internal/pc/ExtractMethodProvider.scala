@@ -5,7 +5,7 @@ import java.nio.file.Paths
 
 import scala.annotation.tailrec
 import scala.meta as m
-import org.eclipse.{lsp4j => l}
+import org.eclipse.{lsp4j as l}
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
@@ -48,16 +48,16 @@ final class ExtractMethodProvider(
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
     symbolSearch: SymbolSearch,
-) {
+):
 
-  def extractMethod(): List[TextEdit] = {
+  def extractMethod(): List[TextEdit] =
+    // pprint.pprintln("Tu wszedlem")
     val uri = params.uri
     val filePath = Paths.get(uri)
     val source = SourceFile.virtual(filePath.toString, params.text)
     driver.run(uri, source)
     val unit = driver.currentCtx.run.units.head
     val pos = driver.sourcePosition(params)
-    pprint.pprintln(pos)
 
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
@@ -65,82 +65,109 @@ final class ExtractMethodProvider(
     given locatedCtx: Context = driver.localContext(params)
     val indexedCtx = IndexedContext(locatedCtx)
 
-    // pprint.pprintln("Wszedlem do providera")
+    def isBlockOrTemplate(t: tpd.Tree) =
+      t match
+        case temp: Template[?] => true
+        case block: Block[?] => true
+        case _ => false
 
-    // // def isBlockOrTemplate(t: tpd.Tree) = {
-    // //   t match {
-    // //     case temp : Template[_] => true
-    // //     case block: Block[_] => true
-    // //     case _ => false
-    // //   }
-    // // }
-      
-    // // def defs(t: tpd.Tree): Seq[tpd.Tree] = {
-    // //   t match {
-    // //     case template: Template[_] =>
-    // //       template.body.filter(_.isDef)
-    // //     case block: Block[_] => 
-    // //       block.stats.filter(_.isDef)
-    // //   }
-    // // }
+    def defs(t: tpd.Tree): Option[Seq[tpd.Tree]] =
+      t match
+        case template: Template[?] =>
+          Some(template.body.filter(_.isDef))
+        case block: Block[?] =>
+          Some(block.stats.filter(_.isDef))
+        case _ => None
+
     val printer = MetalsPrinter.standard(
-          indexedCtx,
-          symbolSearch,
-          includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
-        )
-    def localVariables(ts: Seq[tpd.Tree]): Seq[(TermName, String)] = {
+      indexedCtx,
+      symbolSearch,
+      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
+    )
+    def localVariables(ts: Seq[tpd.Tree]): Seq[(TermName, String)] =
       ts.flatMap(
         _ match
           case vl @ ValDef(sym, tpt, _) => Seq((sym, printer.tpe(tpt.tpe)))
-          // case dl @ DefDef(name, _, tpt, rhs) => 
+          // case dl @ DefDef(name, _, tpt, rhs) =>
           //   val paramss = localVariablesInDefDef(dl)
           //   val paramTypes = paramss.map(_.map(_._2)).map(ls => s"(${ls.mkString(", ")})").mkString
           //  Seq((name, paramTypes + " => " + printer.tpe(tpt.tpe))) ++ paramss.flatten
-          case b: Block[_] => localVariables(b.stats)
-          case t: Template[_] => /*localVariablesInDefDef(t.constr).flatten ++ */ localVariables(t.body)
+          case b: Block[?] => localVariables(b.stats)
+          case t: Template[
+                ?
+              ] => /*localVariablesInDefDef(t.constr).flatten ++ */
+            localVariables(t.body)
           case _ => Nil
       )
-    }
 
-    // def localVariablesInDefDef[T](d: DefDef[_]): List[List[(TermName, String)]] = {
-    //   val inparams = d.paramss.map(_.flatMap( p =>
-    //     p match {
-    //       case vl @ ValDef(sym, tpt, _) => Some((sym, printer.tpe(tpt.tpe)))
-    //       case _ => None
-    //     }
-    //   ))
-    //   inparams
-    // }
-    
-
-    def namesInVal(t: tpd.Tree): Set[TermName] = {
+    def namesInVal(t: tpd.Tree): Set[TermName] =
       t match
-        case Apply(fun, args) => namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
-        case TypeApply(fun, args) => namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
+        case Apply(fun, args) =>
+          namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
+        case TypeApply(fun, args) =>
+          namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
         case Select(qualifier, name) => namesInVal(qualifier) + name.toTermName
         case Ident(name) => Set(name.toTermName)
         case _ => Set()
-    }
+
+    def getName(t: tpd.Tree): Option[TermName] =
+      t match
+        case Ident(name) => Some(name.toTermName)
+        case _ => None
     
-    val newValue = path.headOption
-    pprint.pprintln(newValue)
-    val namesInAppl = newValue.map(namesInVal(_))
-    val locals = localVariables(path).reverse.toMap
-    pprint.pprintln(namesInAppl)
-    pprint.pprintln(locals)
-    val withType = namesInAppl.map(s => locals.filter((key, tp) => s.contains(key)))
-    val typs = withType.map(ts => ts.map((k,v) => s"$k: $v").mkString(", ")).getOrElse("nonetype") match {
-      case "" => "empty"
-      case o => o
+    def nameDef(newName: TermName, t: tpd.Tree): Boolean =
+      t match
+        case dl @ DefDef(name, _, _, _) if name.asTermName == newName => true
+        case _ => false
+
+    def extracted(t: tpd.Tree): Option[tpd.Tree] = {
+      t match
+        case d @ DefDef(name, _,_,rhs) => Some(d.rhs) // problem z typem
+        case _ => None
     }
-    pprint.pprintln(typs)
 
-    List(
-      new l.TextEdit(
-        pos.toLSP, typs
-      )
-    )
-  }
 
-  
-}
+    pprint.pprintln(path.headOption)
+    val edits = for
+      ident <- path.headOption
+      name <- getName(ident)
+      stat <- path.find(isBlockOrTemplate(_))
+      allDefs <- defs(stat)
+      nameDef <- allDefs.find(nameDef(name, _))
+      apply <- extracted(nameDef)
+      _ = pprint.pprintln(apply)
+    yield {
+      val namesInAppl = namesInVal(apply)
+      val locals = localVariables(path).reverse.toMap
+      pprint.pprintln("in appls")
+      pprint.pprintln(namesInAppl)
+      
+      pprint.pprintln("locals")
+      pprint.pprintln(locals)
+      val withType =
+        locals.filter((key, tp) => namesInAppl.contains(key))
+      val typs = withType
+        .map((k, v) => s"$k: $v").toList.sorted.mkString(", ")
+      val tps = typs
+      val applParams = withType.keys.toList.sorted.mkString(", ")
+       pprint.pprintln("Typy")
+       pprint.pprintln(tps)
+      val nameShift = name.toString.length() + 1
+      val defSpan = nameDef.startPos.span.shift(nameShift + 4)
+      val defPos = new SourcePosition(source, defSpan).toLSP
+      val applSpan = pos.startPos.span.shift(nameShift)
+      val applPos = new SourcePosition(source, applSpan).toLSP
+
+      List(
+            new l.TextEdit(
+              defPos, typs
+            ),
+            new l.TextEdit(
+              applPos, applParams
+            )
+          )
+      
+    }
+    edits.getOrElse(Nil)
+  end extractMethod
+end ExtractMethodProvider

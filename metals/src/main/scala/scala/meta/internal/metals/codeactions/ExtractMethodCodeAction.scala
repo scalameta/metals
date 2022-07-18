@@ -4,23 +4,20 @@ import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Name
+import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
-import scala.meta.internal.metals.Buffers
 import scala.meta.inputs.Position
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.tokens.Token
-
+import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
-import scala.meta.Defn
-import scala.meta.Template
-import scala.meta.Name
 
 class ExtractMethodCodeAction(
     trees: Trees,
@@ -32,26 +29,28 @@ class ExtractMethodCodeAction(
   ): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
-
-    // val toExtract: Option[Term.Apply] = {
-    //   val tree: Option[Tree] = trees.get(path)
-    //   def loop(t: Tree): Option[Term.Apply] = {
-    //     t.children.find(_.pos.encloses(range)) match {
-    //       case Some(child) =>
-    //         loop(child)
-    //       case None =>
-    //         if (t.is[Term.Apply]) Some(t.asInstanceOf[Term.Apply]) else None
-    //     }
-    //   }
-    //   tree.flatMap(loop(_))
-    // }
-    val applyOpt = trees.findLastEnclosingAt[Term.Apply](
-      path,
-      range.getStart(),
-    )
+    
+    val toExtract: Option[Term] = {
+          val tree: Option[Tree] = trees.get(path)
+          def loop(appl: Tree): Option[Term] = {
+            appl.children.find(_.pos.encloses(range)) match {
+              case Some(child) =>
+                loop(child)
+              case None =>
+                if (appl.is[Term.Apply] | appl.is[Term.ApplyInfix] | appl.is[Term.ApplyUnary]) Some(appl.asInstanceOf[Term]) else None
+            }
+          }
+          tree.flatMap(loop(_))
+        }
+    
+    // val applyOpt = trees.findLastEnclosingAt[Term](
+    //   path,
+    //   range.getEnd(),
+    //   appl => appl.is[Term.Apply] | appl.is[Term.ApplyInfix] | appl.is[Term.ApplyUnary]
+    // )
 
     val edits = for {
-      apply <- applyOpt
+      apply <- toExtract
       stats <- lastEnclosingStatsList(apply)
       name = createNewName(stats)
       stat <- stats.find(stat => stat.pos.encloses(apply.pos))
@@ -61,24 +60,14 @@ class ExtractMethodCodeAction(
         if (source(stat.pos.start - stat.pos.startColumn) == '\t') '\t' else ' '
       val indent = blank.stringRepeat(indentationLength(source, stat.pos))
       val defText = s"${indent}def $name() = ${apply.toString()}"
-      val defParamsOffset = defText.indexOf('(')
       val replacementText = s"$name()"
-      val replacementParamsOffset =
-        apply.pos.endColumn - apply.pos.startColumn + name.length + 1
-      val paramsPos = new l.Position(
-        apply.pos.endLine + 1,
-        apply.pos.endColumn + replacementParamsOffset,
-      )
-      val defPos = new l.Position(stat.pos.endLine, defText.length-2)
-
       val replacedText = new l.TextEdit(apply.pos.toLSP, replacementText)
       val defEdit = withBraces(stat, defText)
-      ((replacedText, paramsPos), (defEdit, defPos))
+      (replacedText, defEdit, apply)
     }
 
-    applyOpt
-      .zip(edits)
-      .map { case (apply, ((replacedText, paramsPos), (defEdit, defPos))) =>
+    edits
+      .map { case (replacedText, defEdit, apply) =>
         val codeAction = new l.CodeAction(ExtractMethodCodeAction.title)
         codeAction.setKind(l.CodeActionKind.RefactorExtract)
         codeAction.setEdit(
@@ -88,7 +77,7 @@ class ExtractMethodCodeAction(
         )
         val applPos = new l.TextDocumentPositionParams(
           params.getTextDocument(),
-          defPos    // TU ZAMIENIC NA RANGE, POTEM W COMPILERZE TEZ ZEBY BYLO COMPILERRANGEPARAMS
+          new l.Position(apply.pos.startLine + (apply.pos.endLine - apply.pos.startLine) + 1, apply.pos.startColumn)
         )
         codeAction.setCommand(
           ServerCommands.ExtractMethod.toLSP(
@@ -123,7 +112,7 @@ class ExtractMethodCodeAction(
   }
 
   private def lastEnclosingStatsList(
-      apply: Term.Apply
+      apply: Term
   ): Option[(List[Tree])] = {
 
     @tailrec
@@ -131,11 +120,6 @@ class ExtractMethodCodeAction(
       tree.parent match {
         case Some(t: Template) => Some(t.stats)
         case Some(b: Term.Block) => Some(b.stats)
-        case Some(fy: Term.ForYield)
-            if !fy.enums.headOption.exists(_.pos.encloses(apply.pos)) =>
-          Some(fy.enums)
-        case Some(f: Term.For) => Some(f.enums)
-        case Some(df: Defn.Def) => Some(List(df.body))
         case Some(other) => loop(other)
         case None => None
       }
@@ -152,9 +136,11 @@ class ExtractMethodCodeAction(
         case child => loop(child)
       }
     }
-    val newValuePrefix = "newValue"
+    val newValuePrefix = "newMethod"
     val names = stats.flatMap(loop).toSet
+    // pprint.pprintln("names")
 
+    // pprint.pprintln(names)
     if (!names(newValuePrefix)) newValuePrefix
     else {
       var i = 0
