@@ -93,7 +93,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
 
   checkSnippet(
     // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
-    "type-empty".tag(IgnoreScala3),
+    "type-empty"
+      .tag(IgnoreScala3),
     """
       |object Main {
       |  type MyType = List[Int]
@@ -106,7 +107,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
 
   checkSnippet(
     // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
-    "type-new-empty".tag(IgnoreScala3),
+    "type-new-empty"
+      .tag(IgnoreScala3),
     """
       |object Main {
       |  class Gen[T]
@@ -132,14 +134,14 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
-        """|IndexedSeq
-           |IndexedSeq
+        """|IndexedSeq[$0]
            |""".stripMargin
     ),
   )
 
   checkSnippet(
-    "type2".tag(IgnoreScala3),
+    "type2"
+      .tag(IgnoreScala3),
     s"""|object Main {
         |  new scala.IndexedSeq@@
         |}
@@ -164,11 +166,10 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |ArrayDequeOps
            |""".stripMargin,
       // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
-      "3" ->
-        """|ArrayDeque($0)
-           |ArrayDeque
-           |ArrayDeque
-           |ArrayDequeOps
+      "3" -> // ArrayDeque upper is for java, the lower for scala
+        """|ArrayDeque[$0]
+           |ArrayDeque[$0]
+           |ArrayDequeOps[$0]
            |""".stripMargin,
     ),
   )
@@ -181,12 +182,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|SimpleFileVisitor[$0]
        |""".stripMargin,
-    compat = Map(
-      // scala 3 new completions not implemented, so no way to distinguish if we are at a type position
-      "3" ->
-        """|SimpleFileVisitor
-           |""".stripMargin
-    ),
+    // compat = Map(
+    //   // scala 3 new completions not implemented, so no way to distinguish if we are at a type position
+    //   "3" ->
+    //     """|SimpleFileVisitor
+    //        |""".stripMargin
+    // ),
   )
 
   checkSnippet(
@@ -207,8 +208,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         // scala 3 new completions not implemented, so no way to distinguish if we are at a type position
         """|Iterable
-           |Iterable
-           |IterableOnce
+           |Iterable[$0] {}
+           |IterableOnce[$0] {}
            |""".stripMargin,
     ),
   )
@@ -230,9 +231,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
-        """|Iterable
-           |Iterable
-           |IterableOnce
+        """|Iterable[$0]
+           |IterableOnce[$0]
            |""".stripMargin,
     ),
   )
@@ -254,9 +254,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |""".stripMargin,
       // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
       "3" ->
-        """|Iterable
-           |Iterable
-           |IterableOnce
+        """|Iterable[$0]
+           |IterableOnce[$0]
            |""".stripMargin,
     ),
   )
@@ -373,12 +372,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
        |""".stripMargin,
     // additional completion when apply method is present
     compat = Map(
-      "3" ->
+      "3" -> // TODO: please double check
         """|Try
            |Try($0)
-           |TryBlock
-           |TryModule
-           |TryMethods
            |TryMethods
            |""".stripMargin
     ),

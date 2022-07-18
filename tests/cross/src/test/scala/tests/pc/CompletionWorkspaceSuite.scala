@@ -111,7 +111,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|package `import-conflict3`
        |import java.util.concurrent.Future
        |case class Foo(
-       |  name: scala.concurrent.Future
+       |  name: scala.concurrent.Future[$0]
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
@@ -128,7 +128,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|package `import-conflict4`
        |import java.util.concurrent._
        |case class Foo(
-       |  name: scala.concurrent.Future
+       |  name: scala.concurrent.Future[$0]
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
@@ -146,7 +146,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |import java.util.concurrent.{Future => _, _}
        |import scala.concurrent.Future
        |case class Foo(
-       |  name: Future
+       |  name: Future[$0]
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
@@ -178,7 +178,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """package pkg
       |
       |import java.util.concurrent.CompletableFuture
-      |object Main extends CompletableFuture
+      |object Main extends CompletableFuture[$0]
       |""".stripMargin,
   )
 
@@ -190,7 +190,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """package pkg
       |
       |import java.util.concurrent.CompletableFuture
-      |object Main extends CompletableFuture
+      |object Main extends CompletableFuture[$0]
       |""".stripMargin,
   )
 
@@ -300,7 +300,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|import java.util.ArrayDeque
        |object Main {
        |  def foo(): Unit = null match {
-       |    case x: ArrayDeque =>
+       |    case x: ArrayDeque[$0] =>
        |  }
        |}
        |""".stripMargin,
@@ -318,7 +318,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|import scala.util.Failure
        |object Main {
        |  def foo(): Unit = {
-       |    val x: Failure
+       |    val x: Failure[$0]
        |  }
        |}
        |""".stripMargin,
@@ -682,12 +682,6 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |Future - java.util.concurrent
        |""".stripMargin,
     topLines = Some(2),
-    compat = Map(
-      "3" ->
-        """|Future scala.concurrent
-           |Future[T](body: => T)(implicit executor: ExecutionContext): Future[T]
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -703,11 +697,5 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |Future - scala.concurrent
        |""".stripMargin,
     topLines = Some(2),
-    compat = Map(
-      "3" ->
-        """|Future java.util.concurrent
-           |Future[T](body: => T)(implicit executor: ExecutionContext): scala.concurrent.Future[T]
-           |""".stripMargin
-    ),
   )
 }

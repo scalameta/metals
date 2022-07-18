@@ -353,7 +353,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |ProcessBuilder - scala.sys.process
        |CertPathBuilder - java.security.cert
        |CertPathBuilderSpi - java.security.cert
-       |ProcessBuilderImpl - scala.sys.process
        |CertPathBuilderResult - java.security.cert
        |PKIXBuilderParameters - java.security.cert
        |PooledConnectionBuilder - javax.sql
@@ -384,7 +383,6 @@ class CompletionSuite extends BaseCompletionSuite {
       "3" ->
         """|TrieMap scala.collection.concurrent
            |TrieMap[K, V](elems: (K, V)*): CC[K, V]
-           |TrieMapSerializationEnd - scala.collection.concurrent
            |""".stripMargin,
     ),
   )
@@ -910,9 +908,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|ListBuffer[A](elems: A*): CC[A]
-           |ListBuffer - scala.collection.mutable
-           |""".stripMargin
+        """ListBuffer - scala.collection.mutable
+          |""".stripMargin
     ),
   )
 
@@ -926,8 +923,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|ListBuffer[A](elems: A*): CC[A]
-           |ListBuffer - scala.collection.mutable
+        """|ListBuffer - scala.collection.mutable
            |""".stripMargin
     ),
   )
@@ -965,8 +961,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |Some[A](value: A): Some[A]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
-           |SomeToExpr - scala.quoted.ToExpr
-           |SomeFromExpr - scala.quoted.FromExpr
            |""".stripMargin,
       "3" ->
         """|Some scala
@@ -994,8 +988,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |Some[A](value: A): Some[A]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
-           |SomeToExpr - scala.quoted.ToExpr
-           |SomeFromExpr - scala.quoted.FromExpr
            |""".stripMargin,
       "3" ->
         """|Some scala

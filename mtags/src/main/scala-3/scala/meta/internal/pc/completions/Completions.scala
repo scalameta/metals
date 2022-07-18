@@ -63,6 +63,45 @@ class Completions(
     case (_: Ident) :: (_: SeqLiteral) :: _ => false
     case _ => true
 
+  private def calculateTypeInstanceAndNewPositions =
+
+    path match
+      case head :: tail
+          if head.isInstanceOf[Select] || head.isInstanceOf[Ident] =>
+        tail match
+          case (v: ValOrDefDef) :: _ =>
+            if v.tpt.sourcePos.contains(pos) then isTypePosition = true
+          //    pprint.log(path)
+          case New(selectOrIdent) :: _
+              if selectOrIdent.isInstanceOf[Select] || selectOrIdent
+                .isInstanceOf[Ident] =>
+            if selectOrIdent.sourcePos.contains(pos) then
+              //     pprint.log(selectOrIdent)
+              isNewPosition = true
+          case (a @ AppliedTypeTree(_, args)) :: _ =>
+            if args.exists(_.sourcePos.contains(pos)) then
+              //     pprint.log(a)
+              isTypePosition = true
+          case (_: Import) :: _ =>
+          case _ =>
+            //  pprint.log(tail)
+            isInstantiationOrMethodCallPos = true
+        //     pprint.log(tail)
+        end match
+
+      case (_: TypeTree) :: TypeApply(Select(newQualifier: New, _), _) :: _
+          if newQualifier.sourcePos.contains(pos) =>
+        //    pprint.log(newQualifier)
+        isNewPosition = true
+
+      case _ =>
+    end match
+  end calculateTypeInstanceAndNewPositions
+
+  private var isTypePosition = false
+  private var isNewPosition = false
+  private var isInstantiationOrMethodCallPos = false
+
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
     val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
     val (all, result) =
@@ -109,33 +148,87 @@ class Completions(
   inline private def undoBacktick(label: String): String =
     label.stripPrefix("`").stripSuffix("`")
 
-  private def findSuffix(methodSymbol: Symbol): Option[String] =
-    if shouldAddSnippet && methodSymbol.is(Flags.Method) then
-      lazy val extensionParam = methodSymbol.extensionParam
+  private def getParams(symbol: Symbol) =
+    lazy val extensionParam = symbol.extensionParam
+    if symbol.is(Flags.Extension) then
+      symbol.paramSymss.filter(
+        !_.contains(extensionParam)
+      )
+    else symbol.paramSymss
 
-      val paramss =
-        if methodSymbol.is(Flags.Extension) then
-          methodSymbol.paramSymss.filter(
-            !_.contains(extensionParam)
-          )
-        else methodSymbol.paramSymss
+  private def findSuffix(symbol: Symbol): Option[String] =
+    val bracesSuffix =
+      if shouldAddSnippet && symbol.is(
+          Flags.Method
+        ) && !isTypePosition
+      then
+        val paramss = getParams(symbol)
+        paramss match
+          case Nil => ""
+          case List(Nil) => "()"
+          case _ if config.isCompletionSnippetsEnabled =>
+            val onlyParameterless = paramss.forall(_.isEmpty)
+            lazy val onlyImplicitOrTypeParams = paramss.forall(
+              _.exists { sym =>
+                sym.isType || sym.is(Implicit) || sym.is(Given)
+              }
+            )
+            if onlyParameterless then "()" * paramss.length
+            else if onlyImplicitOrTypeParams then ""
+            else "($0)"
+          case _ => ""
+        end match
+      else ""
 
-      paramss match
-        case Nil => None
-        case List(Nil) => Some("()")
-        case _ if config.isCompletionSnippetsEnabled =>
-          val onlyParameterless = paramss.forall(_.isEmpty)
-          lazy val onlyImplicitOrTypeParams = paramss.forall(
-            _.exists { sym =>
-              sym.isType || sym.is(Implicit) || sym.is(Given)
-            }
-          )
-          if onlyParameterless then Some("()" * paramss.length)
-          else if onlyImplicitOrTypeParams then None
-          else Some("($0)")
-        case _ => None
-      end match
-    else None
+    // symbol.info.typeParams.foreach(param =>
+    //   pprint.log(param.paramInfo)
+    // )
+
+    val bracketSuffix =
+      if shouldAddSnippet
+        && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
+        && (symbol.info.typeParams.nonEmpty
+          || (symbol.isAllOf(
+            Flags.JavaModule
+          ) && symbol.companionClass.typeParams.nonEmpty))
+      then
+        //  pprint.log(symbol.info.typeParamNamed)
+        "[$0]"
+        //  val typeParamsLists = getParams(symbol).filter(
+        //        _.exists { sym =>
+        //          sym.isType
+        //        }
+        //      )
+
+        //  typeParamsLists match
+        //    case Nil => ""
+        //    case List(Nil) => ""
+        //    case _ if config.isCompletionSnippetsEnabled =>
+        //      val onlyParameterless = typeParamsLists.forall(_.isEmpty)
+        //      if onlyParameterless then "[]"
+        //      //* typeParams.length
+        //      else
+        //        "[$0]"
+        //    case _ => ""
+        //  end match
+      else ""
+
+    val templateSuffix =
+      if shouldAddSnippet && isNewPosition && (symbol.info.typeSymbol.is(
+          Flags.Trait
+        ) || symbol.info.typeSymbol.isAllOf(
+          Flags.JavaInterface
+        ) || symbol.info.typeSymbol.isAllOf(
+          Flags.PureInterface
+        ) || symbol.info.typeSymbol.is(Flags.Abstract)
+          || symbol.info.typeSymbol.isOneOf(Flags.AbstractOrTrait))
+      then " {}"
+      else ""
+
+    val concludedSuffix = bracketSuffix + bracesSuffix + templateSuffix
+    if concludedSuffix.nonEmpty then Some(concludedSuffix) else None
+
+  end findSuffix
 
   def completionsWithSuffix(
       sym: Symbol,
@@ -160,11 +253,12 @@ class Completions(
     methodSymbols.map { methodSymbol =>
       val suffix = findSuffix(methodSymbol)
       val name = undoBacktick(label)
-      toCompletionValue(
+      val compVal = toCompletionValue(
         name,
         methodSymbol,
         suffix,
       )
+      compVal
     }
   end completionsWithSuffix
 
@@ -182,6 +276,8 @@ class Completions(
       .getFileName()
       .toString()
       .stripSuffix(".scala")
+
+    calculateTypeInstanceAndNewPositions
 
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
@@ -358,15 +454,41 @@ class Completions(
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
+              val suffix = symOnly.snippetSuffix.getOrElse("")
               val id =
                 if sym.isClass || sym.is(Module) then
+                  // pprint.log(s"$sym was class or module")
                   // drop #|. at the end to avoid duplication
                   name.substring(0, name.length - 1)
-                else name
+                  // + sym.toString
+                else
+                  // pprint.log(s"$sym was something else")
 
+                  name
+                  // + sym.toString
+                // + suffix
+
+//              if (name.contains("SomeToExpr") || name.contains("SomeFromExpr")){
+//              {
+//                pprint.log(head)
+//                pprint.log(isTypePosition)
+//                pprint.log(isNewPosition)
+//                pprint.log(isInstantiationOrMethodCallPos)
+////              }
+//              }
               val include =
                 !isUninterestingSymbol(sym) &&
                   isNotLocalForwardReference(sym)
+                  && (!sym.toString.startsWith(
+                    "object "
+                  ) || (!isTypePosition && !isNewPosition))
+                  && (!isTypePosition || !sym.toString.startsWith("method "))
+                  && (!isInstantiationOrMethodCallPos || (!sym.toString
+                    .startsWith("class ") && !sym.toString.startsWith(
+                    "trait "
+                  )))
+//              if include then
+//                 pprint.log((head, id))
 
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
