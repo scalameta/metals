@@ -1999,7 +1999,11 @@ class MetalsLanguageServer(
           val uri = textDocumentParams.getTextDocument().getUri()
           for {
             edits <- compilers.insertInferredType(textDocumentParams, token)
-            if (!edits.isEmpty())
+            _ = if (edits.isEmpty())
+              scribe.error(
+                s"Could not infer type at ${textDocumentParams.getPosition()} in file\n${buffers
+                    .get(uri.toAbsolutePath)}"
+              )
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
             _ <- languageClient
               .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
@@ -2019,7 +2023,7 @@ class MetalsLanguageServer(
               token,
             )
             _ = if (edits.isEmpty())
-              scribe.info(
+              scribe.error(
                 s"Could not find the correct names for arguments at $position with indices ${argIndices.asScala
                     .mkString(",")}"
               )
