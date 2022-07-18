@@ -161,7 +161,7 @@ class Scala3CodeActionLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
-        |${ConvertToNamedArguments.title("method2")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -184,7 +184,7 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
-        |${ConvertToNamedArguments.title("method2")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -205,7 +205,7 @@ class Scala3CodeActionLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
-        |${ConvertToNamedArguments.title("method2")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -228,7 +228,7 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
-        |${ConvertToNamedArguments.title("method2")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -252,7 +252,7 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
-        |${ConvertToNamedArguments.title("method2")}
+        |${ConvertToNamedArguments.title("method2(...)")}
         |""".stripMargin,
     """|def method2(i: Int) = {
        |  val a = 1
@@ -336,6 +336,21 @@ class Scala3CodeActionLspSuite
   )
 
   check(
+    "named-basic",
+    """|object Something {
+       |  case class Foo(param1: Int, param2: Int, param3: Int)
+       |  Foo<<(>>1, 2, param3 = 3)
+       |  Foo(4,5,6)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo(...)")}",
+    """|object Something {
+       |  case class Foo(param1: Int, param2: Int, param3: Int)
+       |  Foo(param1 = 1, param2 = 2, param3 = 3)
+       |  Foo(4,5,6)
+       |}""".stripMargin,
+  )
+
+  check(
     "given-object-creation",
     """|package a
        |
@@ -388,137 +403,6 @@ class Scala3CodeActionLspSuite
        |  override def bar(x: String): String = ???
        |""".stripMargin,
     expectNoDiagnostics = false,
-  )
-
-  check(
-    "named-basic",
-    """|object Something {
-       |  case class Foo(param1: Int, param2: Int, param3: Int)
-       |  Foo<<(>>1, 2, param3 = 3)
-       |  Foo(4,5,6)
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("Foo")}",
-    """|object Something {
-       |  case class Foo(param1: Int, param2: Int, param3: Int)
-       |  Foo(param1 = 1, param2 = 2, param3 = 3)
-       |  Foo(4,5,6)
-       |}""".stripMargin,
-  )
-
-  check(
-    "named-arg-first-position",
-    """|object Something {
-       |  case class Foo(param1: Int, param2: Int, param3: Int)
-       |  Foo<<(>>param1 = 1, 2, 3)
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("Foo")}",
-    """|object Something {
-       |  case class Foo(param1: Int, param2: Int, param3: Int)
-       |  Foo(param1 = 1, param2 = 2, param3 = 3)
-       |}""".stripMargin,
-  )
-
-  check(
-    "named-def",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int, param3: Int) = None
-       |  foo<<(>>1, 2, param3 = 3)
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("foo")}",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int, param3: Int) = None
-       |  foo(param1 = 1, param2 = 2, param3 = 3)
-       |}""".stripMargin,
-  )
-
-  check(
-    "named-multiple-arg-lists",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
-       |  foo<<(>>1, 2, param3 = 3)(4)
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("foo")}",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
-       |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
-       |}""".stripMargin,
-  )
-
-  check(
-    "named-multiple-arg-lists-start-of-2nd",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
-       |  foo(1, 2, param3 = 3)<<(>>4)
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("foo")}",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
-       |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
-       |}""".stripMargin,
-  )
-
-  check(
-    "named-multiple-arg-lists-only-2nd",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
-       |  foo(1, 2, param3 = 3)(<<4>>)
-       |  foo(5,6,7)(8)
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("foo(1, 2, param3 = 3)")}",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
-       |  foo(1, 2, param3 = 3)(param4 = 4)
-       |  foo(5,6,7)(8)
-       |}""".stripMargin,
-    filterAction = filterAction,
-  )
-
-  check(
-    "named-implicit-passed-explicitly",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
-       |  foo(1, 2)(<<3>>)
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("foo(1, 2)")}",
-    """|object Something {
-       |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
-       |  foo(1, 2)(param3 = 3)
-       |}""".stripMargin,
-    filterAction = filterAction,
-  )
-
-  check(
-    "named-arg-in-middle",
-    """|object Something {
-       |  case class Foo(param1: Int, param2: Int, param3: Int)
-       |  Foo<<(>>1, param2 = 2, 3)
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("Foo")}",
-    """|object Something {
-       |  case class Foo(param1: Int, param2: Int, param3: Int)
-       |  Foo(param1 = 1, param2 = 2, param3 = 3)
-       |}""".stripMargin,
-  )
-
-  checkNoAction(
-    "named-dont-convert-block",
-    """|object Something {
-       |  def f(x: Seq[Int]) = x.map <<{>> _.toLong }
-       |}""".stripMargin,
-  )
-
-  check(
-    "named-go-to-parent-apply",
-    """|object Something {
-       |  case class Foo(param1: Int, param2: Int, param3: String)
-       |  Foo(1, 2, 3.t<<>>oString())
-       |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("Foo")}",
-    """|object Something {
-       |  case class Foo(param1: Int, param2: Int, param3: String)
-       |  Foo(param1 = 1, param2 = 2, param3 = 3.toString())
-       |}""".stripMargin,
-    filterAction = filterAction,
   )
 
   def checkExtractedMember(
