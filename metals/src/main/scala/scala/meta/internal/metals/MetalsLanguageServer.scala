@@ -573,6 +573,7 @@ class MetalsLanguageServer(
           definitionProvider,
           referencesProvider,
           clientConfig.icons,
+          () => compilers,
           remote,
           trees,
           buildTargets
@@ -1674,26 +1675,25 @@ class MetalsLanguageServer(
   def prepareCallHierarchy(
       params: CallHierarchyPrepareParams
   ): CompletableFuture[util.List[CallHierarchyItem]] =
-    CancelTokens { _ =>
-      callHierarchyProvider.prepare(params).asJava
+    CancelTokens.future { token =>
+      callHierarchyProvider.prepare(params, token).map(_.asJava)
     }
 
   @JsonRequest("callHierarchy/incomingCalls")
   def callHierarchyIncomingCalls(
       params: CallHierarchyIncomingCallsParams
   ): CompletableFuture[util.List[CallHierarchyIncomingCall]] =
-    CancelTokens { _ =>
-      callHierarchyProvider.incomingCalls(params).asJava
+    CancelTokens.future { token =>
+      callHierarchyProvider.incomingCalls(params, token).map(_.asJava)
     }
 
   @JsonRequest("callHierarchy/outgoingCalls")
   def callHierarchyOutgoingCalls(
       params: CallHierarchyOutgoingCallsParams
-  ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] = {
-    CancelTokens { _ =>
-      callHierarchyProvider.outgoingCalls(params).asJava
+  ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] =
+    CancelTokens.future { token =>
+      callHierarchyProvider.outgoingCalls(params, token).map(_.asJava)
     }
-  }
 
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =

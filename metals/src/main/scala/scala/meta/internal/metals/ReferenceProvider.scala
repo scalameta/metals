@@ -255,7 +255,7 @@ final class ReferenceProvider(
     }
   }
 
-  private[metals] def pathsWithReferences(
+  private[metals] def pathsMightContainSymbol(
       source: AbsolutePath,
       isSymbol: Set[String]
   ): Set[AbsolutePath] = {
