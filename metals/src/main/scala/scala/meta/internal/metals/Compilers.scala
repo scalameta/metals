@@ -277,6 +277,27 @@ class Compilers(
       expression: d.CompletionsArguments,
   ): Future[Seq[d.CompletionItem]] = {
 
+    /**
+     * Find the offset of the cursor inside the modified expression.
+     * We need it to give the compiler the right offset.
+     *
+     * @param modified modified expression with indentation inserted
+     * @param indentation indentation of the current breakpoint
+     * @return offset where the compiler should insert completions
+     */
+    def expressionOffset(modified: String, indentation: String) = {
+      val line = expression.getLine()
+      val column = expression.getColumn()
+      modified.split("\n").zipWithIndex.take(line).foldLeft(0) {
+        case (offset, (lineText, index)) =>
+          if (index + 1 == line) {
+            if (line > 1)
+              offset + column + indentation.size - 1
+            else
+              offset + column - 1
+          } else offset + lineText.size + 1
+      }
+    }
     loadCompiler(path)
       .map { compiler =>
         val input = path.toInputFromBuffers(buffers)
@@ -287,18 +308,43 @@ class Compilers(
           metaPos.start + 1,
         )
 
-        val indentation = lineStart - metaPos.start
+        val indentationSize = lineStart - metaPos.start
+        val indentationChar =
+          if (oldText.lift(lineStart - 1).exists(_ == '\t')) '\t' else ' '
+        val indentation = indentationChar.toString * indentationSize
+
+        val expressionText =
+          expression.getText().replace("\n", s"\n$indentation")
+
+        val prev = oldText.substring(0, lineStart)
+        val succ = oldText.substring(lineStart)
         // insert expression at the start of breakpoint's line and move the lines one down
-        val modified =
-          s"${oldText.substring(0, lineStart)};${expression
-              .getText()}\n${" " * indentation}${oldText.substring(lineStart)}"
+        val modified = s"$prev;$expressionText\n$indentation$succ"
 
         val offsetParams = CompilerOffsetParams(
           path.toURI,
           modified,
-          lineStart + expression.getColumn(),
+          lineStart + expressionOffset(expressionText, indentation) + 1,
           token,
         )
+
+        val previousLines = expression
+          .getText()
+          .split("\n")
+
+        // we need to adjust start to point at the start of the replacement in the expression
+        val adjustStart =
+          /* For multiple line we need to insert at the correct offset and
+           * then adjust column by indentation that was added to the expression
+           */
+          if (previousLines.size > 1)
+            previousLines
+              .take(expression.getLine() - 1)
+              .map(_.size + 1)
+              .sum - indentationSize
+          // for one line we only need to adjust column with indentation + ; that was added to the expression
+          else -(1 + indentationSize)
+
         compiler
           .complete(offsetParams)
           .asScala
@@ -307,7 +353,7 @@ class Compilers(
               .map(
                 toDebugCompletionItem(
                   _,
-                  indentation + 1,
+                  adjustStart,
                 )
               )
           )
@@ -771,7 +817,7 @@ class Compilers(
 
   private def toDebugCompletionItem(
       item: CompletionItem,
-      indentation: Int,
+      adjustStart: Int,
   ): d.CompletionItem = {
     val debugItem = new d.CompletionItem()
     debugItem.setLabel(item.getLabel())
@@ -781,10 +827,9 @@ class Compilers(
       case Right(insertReplace) =>
         (insertReplace.getNewText, insertReplace.getReplace)
     }
-    val start = range.getStart().getCharacter() - indentation
-    val end = range.getEnd().getCharacter() - indentation
+    val start = range.getStart().getCharacter + adjustStart
 
-    val length = end - start
+    val length = range.getEnd().getCharacter() - range.getStart().getCharacter()
     debugItem.setLength(length)
 
     // remove snippets, since they are not supported in DAP
