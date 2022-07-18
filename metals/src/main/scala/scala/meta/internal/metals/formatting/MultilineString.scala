@@ -65,7 +65,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
     space * index
   }
 
-  private def getIndexOfLastQuote(line: String): Option[(Int, Boolean)] = {
+  private def getIndexOfLastOpenQuote(line: String): Option[(Int, Boolean)] = {
 
     var lastQuote = -1
     var escaped = false
@@ -88,12 +88,13 @@ case class MultilineString(userConfig: () => UserConfiguration)
     if (lastQuote != -1) Some((lastQuote, quoteClosed)) else None
   }
 
-  private def getIndexOfLastTripleQuote(
-      line: String
+  private def getIndexOfLastOpenTripleQuote(
+      closedFromPreviousLines: Boolean,
+      line: String,
   ): Option[(Int, Boolean)] = {
     var lastTripleQuote = -1
     var escaped = false
-    var tripleQuoteClosed = true
+    var tripleQuoteClosed = closedFromPreviousLines
     var quoteNum = 0
     for (i <- 0 until line.size) {
       val char = line(i)
@@ -134,9 +135,9 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   private def hasNQuotes(start: Int, text: String, n: Int): Boolean =
-    (start until start + n).forall { i =>
-      if (i < 0 || i > text.length) false else text(i) == quote
-    }
+    (start until start + n).forall(i =>
+      if (i < 0 || i >= text.length) false else text(i) == quote
+    )
 
   private def indentWhenNoStripMargin(
       expr: StringLiteralExpr,
@@ -261,7 +262,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
       position: Position,
   ): Boolean = {
     val lineBefore = splitLines(position.getLine - 1)
-    getIndexOfLastQuote(lineBefore).exists { case (_, quoteClosed) =>
+    getIndexOfLastOpenQuote(lineBefore).exists { case (_, quoteClosed) =>
       !quoteClosed
     }
   }
@@ -270,10 +271,19 @@ case class MultilineString(userConfig: () => UserConfiguration)
       splitLines: Array[String],
       position: Position,
   ): Boolean = {
-    val currentLine = splitLines(position.getLine - 1)
-    getIndexOfLastTripleQuote(currentLine).exists { case (_, quoteClosed) =>
-      !quoteClosed
+    var closedFromPreviousLines = true
+    var existed = false
+    for (i <- 0 until position.getLine()) {
+      val currentLine = splitLines(i)
+      getIndexOfLastOpenTripleQuote(closedFromPreviousLines, currentLine)
+        .foreach { case (_, quoteClosed) =>
+          closedFromPreviousLines = quoteClosed
+          existed = true
+        }
     }
+    if (existed)
+      !closedFromPreviousLines
+    else false
   }
 
   private def fixStringNewline(
@@ -298,7 +308,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
       )
         defaultIndent + 2
       else defaultIndent
-    val interpolationString = getIndexOfLastQuote(previousLine)
+    val interpolationString = getIndexOfLastOpenQuote(previousLine)
       .map { case (lastQuoteIndex, _) =>
         if (lastQuoteIndex > 0 && previousLine(lastQuoteIndex - 1) == 's') "s"
         else ""
@@ -321,9 +331,8 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   private def addTripleQuote(pos: Position): List[TextEdit] = {
-    val pos1 = new Position(pos.getLine, pos.getCharacter)
-    val pos2 = new Position(pos.getLine, pos.getCharacter + 1)
-    List(new TextEdit(new Range(pos1, pos2), "\"\"\""))
+    val endPos = new Position(pos.getLine, pos.getCharacter + 1)
+    List(new TextEdit(new Range(pos, endPos), "\"\"\""))
   }
 
   private def formatPipeLine(
