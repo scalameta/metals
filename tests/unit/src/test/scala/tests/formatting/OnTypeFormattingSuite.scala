@@ -375,7 +375,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   )
 
   check(
-    "4-quotes",
+    "3-quotes",
     s"""
        |object Main {
        |  val str = '''@@
@@ -387,7 +387,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     triggerCharacter = "\"",
   )
   check(
-    "4-quotes-interpolation",
+    "3-quotes-interpolation",
     s"""
        |object Main {
        |  val str = s'''@@
@@ -397,6 +397,52 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val str = s''''''
        |}""".stripMargin,
     triggerCharacter = "\"",
+  )
+
+  check(
+    "3-quotes-trigger-newLine",
+    s"""
+       |object Main {
+       |  val str = '''@@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  '''
+       |}""".stripMargin,
+    triggerCharacter = "\n",
+  )
+
+  check(
+    "3-quotes-sql-interpolat",
+    s"""
+       |object Main {
+       |  val str = sql'''@@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = sql'''
+       |  '''
+       |}""".stripMargin,
+    triggerCharacter = "\n",
+  )
+
+  check(
+    "multiple-3-quotes-sql",
+    s"""
+       |object Main {
+       |  val str = sql'''SELECT 1
+       |  FROM
+       |  ''' + sql''' mytable @@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = sql'''SELECT 1
+       |  FROM
+       |  ''' + sql''' mytable 
+       |  '''
+       |}""".stripMargin,
+    triggerCharacter = "\n",
   )
 
   check(
