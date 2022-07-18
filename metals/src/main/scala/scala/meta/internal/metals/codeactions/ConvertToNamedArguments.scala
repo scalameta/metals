@@ -39,6 +39,24 @@ class ConvertToNamedArguments(trees: Trees, buildTargets: BuildTargets)
     }
   }
 
+  private def methodName(t: Term, isFirst: Boolean = false): String = {
+    t match {
+      // a.foo(a)
+      case Term.Select(_, name) =>
+        name.value
+      // foo(a)(b@@)
+      case Term.Apply(fun, _) if isFirst =>
+        methodName(fun) + "(...)"
+      // foo(a@@)(b)
+      case appl: Term.Apply =>
+        methodName(appl.fun) + "()"
+      // foo(a)
+      case Term.Name(name) =>
+        name
+      case _ =>
+        t.syntax
+    }
+  }
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
@@ -65,7 +83,8 @@ class ConvertToNamedArguments(trees: Trees, buildTargets: BuildTargets)
       maybeApply
         .map { apply =>
           {
-            val codeAction = new l.CodeAction(title(apply.app.fun.syntax))
+            val codeAction =
+              new l.CodeAction(title(methodName(apply.app, isFirst = true)))
             codeAction.setKind(l.CodeActionKind.RefactorRewrite)
             val position = new l.TextDocumentPositionParams(
               params.getTextDocument(),
@@ -90,5 +109,6 @@ class ConvertToNamedArguments(trees: Trees, buildTargets: BuildTargets)
 
 object ConvertToNamedArguments {
   case class ApplyTermWithArgIndices(app: Term.Apply, argIndices: List[Int])
-  def title(funcName: String): String = s"Convert $funcName to named arguments"
+  def title(funcName: String): String =
+    s"Convert '$funcName' to named arguments"
 }

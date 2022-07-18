@@ -17,7 +17,7 @@ class ExtractValueLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("1 + 2")}
-        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
+        |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  def method1(s: String): Unit = {
@@ -44,7 +44,7 @@ class ExtractValueLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
-        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
+        |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  
@@ -74,7 +74,7 @@ class ExtractValueLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
-        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
+        |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int): Option[String]  = ???
        |  
@@ -121,7 +121,7 @@ class ExtractValueLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("i + 23 + 1(...)")}
-        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
+        |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  
@@ -144,7 +144,7 @@ class ExtractValueLspSuite
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("1 + 2")}
         |${ExtractValueCodeAction.title("1 + method2(1 + 2)")}
-        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
+        |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) : Int = ???
        |  def method1(s: String): Unit = {
@@ -183,7 +183,7 @@ class ExtractValueLspSuite
         |}
         |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("List(1, 2,(...)")}
-        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
+        |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     s"""|object Main {
         |\tdef method2(i: Int) = ???
         |\tval newValue = List(1, 2, 3).map(_ + 1).sum
@@ -314,7 +314,7 @@ class ExtractValueLspSuite
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("method(5)")}
         |${ExtractValueCodeAction.title("method(method(5)")}
-        |${ConvertToNamedArguments.title("method")}
+        |${ConvertToNamedArguments.title("method(...)")}
         |""".stripMargin,
     """|object Main{
        |  def method(a: Int) = a + 1
@@ -333,7 +333,7 @@ class ExtractValueLspSuite
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("1")}
         |${ExtractValueCodeAction.title("method(1) > 2")}
-        |${ConvertToNamedArguments.title("method")}
+        |${ConvertToNamedArguments.title("method(...)")}
         |""".stripMargin,
     """|object Main{
        |  def method(a: Int) = a + 1
