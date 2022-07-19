@@ -19,6 +19,8 @@ See the website: https://scalameta.org/metals/
 See the contributing guide:
 https://scalameta.org/metals/docs/contributors/getting-started.html
 
+To learn more about how Metals works, see [./architecture.md](./architecture.md). It explains the high-level layout of the source code. Do skim through that document.
+
 ### Team
 
 The current maintainers (people who can merge pull requests) are:
