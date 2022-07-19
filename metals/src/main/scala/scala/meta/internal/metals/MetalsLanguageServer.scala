@@ -64,6 +64,8 @@ import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
+import scala.meta.internal.metals.logging.LanguageClientLogger
+import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.watcher.FileWatcher
@@ -1999,11 +2001,11 @@ class MetalsLanguageServer(
           val uri = textDocumentParams.getTextDocument().getUri()
           for {
             edits <- compilers.insertInferredType(textDocumentParams, token)
-            _ = if (edits.isEmpty())
-              scribe.error(
-                s"Could not infer type at ${textDocumentParams.getPosition()} in file\n${buffers
-                    .get(uri.toAbsolutePath)}"
-              )
+            _ = logging.logErrorWhen(
+              edits.isEmpty(),
+              s"Could not infer type at ${textDocumentParams.getPosition()} in file\n${buffers
+                  .get(uri.toAbsolutePath)}",
+            )
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
             _ <- languageClient
               .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
@@ -2022,11 +2024,11 @@ class MetalsLanguageServer(
               argIndices,
               token,
             )
-            _ = if (edits.isEmpty())
-              scribe.error(
-                s"Could not find the correct names for arguments at $position with indices ${argIndices.asScala
-                    .mkString(",")}"
-              )
+            _ = logging.logErrorWhen(
+              edits.isEmpty(),
+              s"Could not find the correct names for arguments at $position with indices ${argIndices.asScala
+                  .mkString(",")}",
+            )
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
             _ <- languageClient
               .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))

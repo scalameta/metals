@@ -7,7 +7,7 @@ import scala.tools.nsc.interactive.Global
 import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath

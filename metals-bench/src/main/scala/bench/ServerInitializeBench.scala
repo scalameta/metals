@@ -9,7 +9,7 @@ import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsLanguageServer
-import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.InitializeParams

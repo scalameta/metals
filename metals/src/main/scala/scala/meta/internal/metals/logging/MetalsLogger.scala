@@ -1,9 +1,10 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.logging
 
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
