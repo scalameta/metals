@@ -80,12 +80,23 @@ class ScalaToplevelMtags(
       Some(ExpectTemplate(indent, currentOwner, true, false))
     def newExpectExtensionTemplate(owner: String): Some[ExpectTemplate] =
       Some(ExpectTemplate(indent, owner, false, true))
+    def newExpectIgnoreBody: Some[ExpectTemplate] =
+      Some(
+        ExpectTemplate(
+          indent = indent,
+          owner = currentOwner,
+          isPackageBody = false,
+          isExtension = false,
+          ignoreBody = true
+        )
+      )
+
     def needEmitFileOwner(region: Region): Boolean =
       !sourceTopLevelAdded && region.produceSourceToplevel
     def needToParseBody(expect: ExpectTemplate): Boolean =
-      includeInnerClasses || expect.isPackageBody
+      (includeInnerClasses || expect.isPackageBody) && !expect.ignoreBody
     def needToParseExtension(expect: ExpectTemplate): Boolean =
-      includeInnerClasses && expect.isExtension
+      includeInnerClasses && expect.isExtension && !expect.ignoreBody
     def nextIsNL: Boolean = {
       scanner.nextToken()
       isNewline
@@ -150,7 +161,7 @@ class ScalaToplevelMtags(
           withOwner(currRegion.owner) {
             term(name.name, name.pos, Kind.OBJECT, 0)
           }
-          loop(indent, isAfterNewline = false, region, expectTemplate)
+          loop(indent, isAfterNewline = false, region, newExpectIgnoreBody)
         case DEF | VAL | VAR | GIVEN | TYPE
             if dialect.allowToplevelStatements &&
               needEmitFileOwner(currRegion) =>
@@ -173,12 +184,18 @@ class ScalaToplevelMtags(
         case WHITESPACE if dialect.allowSignificantIndentation =>
           if (isNewline) {
             expectTemplate match {
+              // extension (x: Int)|
+              //   def foo() = ...
               case Some(expect) if needToParseExtension(expect) =>
                 val next =
                   expect.startIndentedRegion(currRegion, expect.isExtension)
                 resetRegion(next)
                 scanner.nextToken()
                 loop(0, isAfterNewline = true, next, None)
+              // basically for braceless def
+              case Some(expect) if expect.ignoreBody =>
+                val nextIndent = acceptWhileIndented(expect.indent)
+                loop(nextIndent, isAfterNewline = false, currRegion, None)
               case _ =>
                 scanner.nextToken()
                 loop(0, isAfterNewline = true, region, expectTemplate)
@@ -434,7 +451,8 @@ object ScalaToplevelMtags {
       indent: Int,
       owner: String,
       isPackageBody: Boolean,
-      isExtension: Boolean = false
+      isExtension: Boolean = false,
+      ignoreBody: Boolean = false
   ) {
 
     /**

@@ -1,5 +1,6 @@
 package tests.feature
 
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
@@ -74,7 +75,8 @@ class ImportMissingSymbolCrossLspSuite
             |  println(1.<<incr>>)
             |""".stripMargin,
         s"""|${ImportMissingSymbol.title("incr", "example.IntEnrichment")}
-            |${ExtractValueCodeAction.title}
+            |${ExtractValueCodeAction.title("1.incr")}
+            |${ConvertToNamedArguments.title("println(...)")}
             |""".stripMargin,
         Nil,
       )
@@ -116,7 +118,8 @@ class ImportMissingSymbolCrossLspSuite
             |  println(1.<<incr>>)
             |""".stripMargin,
         s"""|${ImportMissingSymbol.title("incr", "example.A$package")}
-            |${ExtractValueCodeAction.title}
+            |${ExtractValueCodeAction.title("1.incr")}
+            |${ConvertToNamedArguments.title("println(...)")}
             |""".stripMargin,
         Nil,
       )

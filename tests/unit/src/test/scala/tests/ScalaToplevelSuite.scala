@@ -249,6 +249,49 @@ class ScalaToplevelSuite extends BaseSuite {
     dialect = dialects.Scala213,
   )
 
+  check(
+    "extesion-methods",
+    """|package a
+       |
+       |object A:
+       |  extension (s: String)
+       |    def foo: Int = ???
+       |    def bar: String =
+       |      def hmm: Int = ???  // <- shouldn't be returned
+       |      ???
+       |
+       |""".stripMargin,
+    List(
+      "a/",
+      "a/A.",
+      "a/A.bar.",
+      "a/A.foo.",
+    ),
+    all = true,
+    dialect = dialects.Scala3,
+  )
+
+  check(
+    "toplevel-extesion",
+    """|package a
+       |
+       |extension (s: String)
+       |  def foo: Int = ???
+       |  def bar: String =
+       |    def hmm: Int = ???  // <- shouldn't be returned
+       |    ???
+       |
+       |""".stripMargin,
+    List(
+      "a/",
+      "a/Test$package.",
+      "a/Test$package.bar.",
+      "a/Test$package.foo.",
+    ),
+    all = true,
+    dialect = dialects.Scala3,
+  )
+
   def check(
       options: TestOptions,
       code: String,
