@@ -49,10 +49,17 @@ trait TestHovers {
     hover match {
       case Some(value) =>
         val types = value.getContents.getRight.getValue()
+
         val range = Option(value.getRange) match {
           case Some(value) if includeRange =>
+            val input = Input.String(code)
+            val pos = value
+              .toMeta(input)
+              .getOrElse(
+                throw new RuntimeException(s"$value was not contained in file")
+              )
             codeFence(
-              value.toMeta(Input.String(code)).text,
+              pos.text,
               "range",
             )
           case _ => ""

@@ -89,7 +89,7 @@ class FindTextInDependencyJarsSuite
       expected: String,
   ): Unit = {
     val rendered = locations
-      .map { loc =>
+      .flatMap { loc =>
         val uri = URI.create(loc.getUri())
         val input = if (uri.getScheme() == "jar") {
           val jarPath = uri.toAbsolutePath
@@ -107,8 +107,8 @@ class FindTextInDependencyJarsSuite
         loc
           .getRange()
           .toMeta(input)
-          .formatMessage("info", "result")
       }
+      .map(_.formatMessage("info", "result"))
       .mkString("\n")
     assertNoDiff(rendered, expected)
   }

@@ -76,7 +76,14 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
   ): String = {
     val input = Input.String(text)
 
-    val pos = selectionRange.getRange().toMeta(input)
+    val pos = selectionRange
+      .getRange()
+      .toMeta(input)
+      .getOrElse(
+        throw new RuntimeException(
+          s"Range ${selectionRange.getRange()} not contained in:\n$text"
+        )
+      )
     val out = new java.lang.StringBuilder()
     out.append(text, 0, pos.start)
     out.append(">>region>>")

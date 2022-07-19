@@ -301,62 +301,67 @@ class Compilers(
     loadCompiler(path)
       .map { compiler =>
         val input = path.toInputFromBuffers(buffers)
-        val metaPos = breakpointPosition.toMeta(input)
-        val oldText = metaPos.input.text
-        val lineStart = oldText.indexWhere(
-          c => c != ' ' && c != '\t',
-          metaPos.start + 1,
-        )
+        breakpointPosition.toMeta(input) match {
+          case Some(metaPos) =>
+            val oldText = metaPos.input.text
+            val lineStart = oldText.indexWhere(
+              c => c != ' ' && c != '\t',
+              metaPos.start + 1,
+            )
 
-        val indentationSize = lineStart - metaPos.start
-        val indentationChar =
-          if (oldText.lift(lineStart - 1).exists(_ == '\t')) '\t' else ' '
-        val indentation = indentationChar.toString * indentationSize
+            val indentationSize = lineStart - metaPos.start
+            val indentationChar =
+              if (oldText.lift(lineStart - 1).exists(_ == '\t')) '\t' else ' '
+            val indentation = indentationChar.toString * indentationSize
 
-        val expressionText =
-          expression.getText().replace("\n", s"\n$indentation")
+            val expressionText =
+              expression.getText().replace("\n", s"\n$indentation")
 
-        val prev = oldText.substring(0, lineStart)
-        val succ = oldText.substring(lineStart)
-        // insert expression at the start of breakpoint's line and move the lines one down
-        val modified = s"$prev;$expressionText\n$indentation$succ"
+            val prev = oldText.substring(0, lineStart)
+            val succ = oldText.substring(lineStart)
+            // insert expression at the start of breakpoint's line and move the lines one down
+            val modified = s"$prev;$expressionText\n$indentation$succ"
 
-        val offsetParams = CompilerOffsetParams(
-          path.toURI,
-          modified,
-          lineStart + expressionOffset(expressionText, indentation) + 1,
-          token,
-        )
+            val offsetParams = CompilerOffsetParams(
+              path.toURI,
+              modified,
+              lineStart + expressionOffset(expressionText, indentation) + 1,
+              token,
+            )
 
-        val previousLines = expression
-          .getText()
-          .split("\n")
+            val previousLines = expression
+              .getText()
+              .split("\n")
 
-        // we need to adjust start to point at the start of the replacement in the expression
-        val adjustStart =
-          /* For multiple line we need to insert at the correct offset and
-           * then adjust column by indentation that was added to the expression
-           */
-          if (previousLines.size > 1)
-            previousLines
-              .take(expression.getLine() - 1)
-              .map(_.size + 1)
-              .sum - indentationSize
-          // for one line we only need to adjust column with indentation + ; that was added to the expression
-          else -(1 + indentationSize)
+            // we need to adjust start to point at the start of the replacement in the expression
+            val adjustStart =
+              /* For multiple line we need to insert at the correct offset and
+               * then adjust column by indentation that was added to the expression
+               */
+              if (previousLines.size > 1)
+                previousLines
+                  .take(expression.getLine() - 1)
+                  .map(_.size + 1)
+                  .sum - indentationSize
+              // for one line we only need to adjust column with indentation + ; that was added to the expression
+              else -(1 + indentationSize)
 
-        compiler
-          .complete(offsetParams)
-          .asScala
-          .map(list =>
-            list.getItems.asScala.toSeq
-              .map(
-                toDebugCompletionItem(
-                  _,
-                  adjustStart,
-                )
+            compiler
+              .complete(offsetParams)
+              .asScala
+              .map(list =>
+                list.getItems.asScala.toSeq
+                  .map(
+                    toDebugCompletionItem(
+                      _,
+                      adjustStart,
+                    )
+                  )
               )
-          )
+          case None =>
+            scribe.debug(s"$breakpointPosition was not found in $path ")
+            Future.successful(Nil)
+        }
       }
       .getOrElse(Future.successful(Nil))
   }
@@ -629,7 +634,8 @@ class Compilers(
         .toInputFromBuffers(buffers)
         .copy(path = params.getTextDocument.getUri)
 
-      val positions = params.getPositions().map(_.toMeta(input))
+      val positions =
+        params.getPositions().asScala.flatMap(_.toMeta(input)).asJava
 
       fn(compiler, positions)
     }
@@ -639,14 +645,13 @@ class Compilers(
       params: TextDocumentPositionParams
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path).map { compiler =>
+    loadCompiler(path).flatMap { compiler =>
       val (input, pos, adjust) =
         sourceAdjustments(
           params,
           compiler.scalaVersion(),
         )
-      val metaPos = pos.toMeta(input)
-      fn(compiler, metaPos, adjust)
+      pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
     }
   }
 
@@ -655,13 +660,13 @@ class Compilers(
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
 
     val path = params.textDocument.getUri.toAbsolutePath
-    loadCompiler(path).map { compiler =>
+    loadCompiler(path).flatMap { compiler =>
       if (params.range != null) {
         val (input, range, adjust) = sourceAdjustments(
           params,
           compiler.scalaVersion(),
         )
-        fn(compiler, range.toMeta(input), adjust)
+        range.toMeta(input).map(fn(compiler, _, adjust))
 
       } else {
         val positionParams =
@@ -673,7 +678,7 @@ class Compilers(
           positionParams,
           compiler.scalaVersion(),
         )
-        fn(compiler, pos.toMeta(input), adjust)
+        pos.toMeta(input).map(fn(compiler, _, adjust))
       }
     }
   }

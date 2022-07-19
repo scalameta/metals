@@ -186,6 +186,11 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     loc
       .getRange()
       .toMeta(input)
+      .getOrElse(
+        throw new RuntimeException(
+          s"Range ${loc.getRange()} is not available for ${loc.getUri()}"
+        )
+      )
       .formatMessage("info", "result", noPos = true)
   }
 }

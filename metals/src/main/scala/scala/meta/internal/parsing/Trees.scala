@@ -73,10 +73,11 @@ final class Trees(
       }
     }
 
-    get(source).flatMap { tree =>
-      val pos = lspPos.toMeta(tree.pos.input)
-      loop(tree, pos)
-    }
+    for {
+      tree <- get(source)
+      pos <- lspPos.toMeta(tree.pos.input)
+      lastEnc <- loop(tree, pos)
+    } yield lastEnc
 
   }
 

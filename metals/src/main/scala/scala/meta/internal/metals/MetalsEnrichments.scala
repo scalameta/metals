@@ -719,25 +719,29 @@ object MetalsEnrichments
         None
     }
 
-    def toMeta(input: m.Input): m.Position =
-      m.Position.Range(
-        input,
-        range.startLine,
-        range.startCharacter,
-        range.endLine,
-        range.endCharacter,
-      )
+    def toMeta(input: m.Input): Option[m.Position] =
+      Try(
+        m.Position.Range(
+          input,
+          range.startLine,
+          range.startCharacter,
+          range.endLine,
+          range.endCharacter,
+        )
+      ).toOption
   }
 
   implicit class XtensionRangeBsp(range: b.Range) {
-    def toMeta(input: m.Input): m.Position =
-      m.Position.Range(
-        input,
-        range.getStart.getLine,
-        range.getStart.getCharacter,
-        range.getEnd.getLine,
-        range.getEnd.getCharacter,
-      )
+    def toMeta(input: m.Input): Option[m.Position] =
+      Try(
+        m.Position.Range(
+          input,
+          range.getStart.getLine,
+          range.getStart.getCharacter,
+          range.getEnd.getLine,
+          range.getEnd.getCharacter,
+        )
+      ).toOption
 
     def toLSP: l.Range =
       new l.Range(range.getStart.toLSP, range.getEnd.toLSP)

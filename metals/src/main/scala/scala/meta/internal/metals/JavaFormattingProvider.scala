@@ -121,7 +121,13 @@ final class JavaFormattingProvider(
     val range = params.getRange
     val path = params.getTextDocument.getUri.toAbsolutePath
     val input = path.toInputFromBuffers(buffers)
-    runFormat(path, input, options, range.toMeta(input)).asJava
+    range.toMeta(input) match {
+      case Some(rng) =>
+        runFormat(path, input, options, rng).asJava
+      case None =>
+        scribe.debug(s"range $range was not found in $path")
+        Nil.asJava
+    }
   }
 
   def format(): util.List[l.TextEdit] = java.util.Collections.emptyList()

@@ -239,17 +239,19 @@ trait CommonMtagsEnrichments {
       range.getStart().isNone &&
         range.getEnd().isNone
 
-    def toMeta(input: m.Input): m.Position =
+    def toMeta(input: m.Input): Option[m.Position] =
       if (range.isNone) {
-        m.Position.None
+        None
       } else {
-        m.Position.Range(
-          input,
-          range.getStart.getLine,
-          range.getStart.getCharacter,
-          range.getEnd.getLine,
-          range.getEnd.getCharacter
-        )
+        Try(
+          m.Position.Range(
+            input,
+            range.getStart.getLine,
+            range.getStart.getCharacter,
+            range.getEnd.getLine,
+            range.getEnd.getCharacter
+          )
+        ).toOption
       }
 
     def encloses(position: l.Position): Boolean = {
