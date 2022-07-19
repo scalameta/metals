@@ -2045,18 +2045,20 @@ class MetalsLanguageServer(
               .asScala
           } yield ().asInstanceOf[Object]
         }
-      case ServerCommands.ExtractMethod(textDocumentParams) =>
-              CancelTokens.future { token =>
-                val uri = textDocumentParams.getTextDocument().getUri()
-                for {
-                  edits <- compilers.extractMethod(textDocumentParams, token)
-                  if (!edits.isEmpty())
-                  workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
-                  _ <- languageClient
-                    .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
-                    .asScala
-                } yield ().asInstanceOf[Object]
-              }
+      case ServerCommands.ExtractMethod(
+            ServerCommands.ExtractMethodParams(position, applRange)
+          ) =>
+        CancelTokens.future { token =>
+          val uri = position.getTextDocument().getUri()
+          for {
+            edits <- compilers.extractMethod(position, applRange, token)
+            if (!edits.isEmpty())
+            workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+            _ <- languageClient
+              .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
+              .asScala
+          } yield ().asInstanceOf[Object]
+        }
 
       case ServerCommands.ConvertToNamedArguments(
             ServerCommands.ConvertToNamedArgsRequest(position, argIndices)

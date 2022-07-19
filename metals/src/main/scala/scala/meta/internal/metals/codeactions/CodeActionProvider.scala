@@ -46,8 +46,8 @@ final class CodeActionProvider(
     new RewriteBracesParensCodeAction(trees),
     new ExtractValueCodeAction(trees, buffers),
     new CreateCompanionObjectCodeAction(trees, buffers),
-    new ExtractMethodCodeAction(trees, buffers),
-    new ConvertToNamedArguments(trees, buildTargets),
+    new ExtractMethodCodeAction(trees),
+    new ConvertToNamedArguments(trees),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
   )
 

@@ -6,7 +6,8 @@ import org.eclipse.{lsp4j => l}
 
 final class ExtractMethodProvider(
     val compiler: MetalsGlobal,
-    params: OffsetParams
+    params: OffsetParams,
+    applRange: Int
 ) {
   import compiler._
   def extractMethod: List[l.TextEdit] = {
@@ -15,120 +16,134 @@ final class ExtractMethodProvider(
       filename = params.uri().toString(),
       cursor = None
     )
-    val pos = unit.position(params.offset())
-    val typedTree = typedTreeAt(pos)
-    pprint.pprintln(typedTree)
+    val startPos = unit.position(params.offset())
+    val pos = startPos.withEnd(startPos.start + applRange)
+    val appl = typedTreeAt(pos)
+    val context = doLocateImportContext(pos)
+    val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
 
-    // def isBlockOrTemplate(t: Tree) =
-    //   t match {
-    //     case _: Template => true
-    //     case _: Block => true
-    //     case _ => false
-    //   }
+    val history = new ShortenedNames(
+      lookupSymbol = name =>
+        context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
+      config = renameConfig,
+      renames = re
+    )
+    def prettyType(tpe: Type) =
+      metalsToLongString(tpe.widen.finalResultType, history)
 
-    // def defs(t: Tree): Option[Seq[Tree]] =
-    //   t match {
-    //     case template: Template =>
-    //       Some(template.body.filter(_.isDef))
-    //     case block: Block =>
-    //       Some(block.stats.filter(_.isDef))
-    //     case _ => None
-    //   }
-    // val printer = MetalsPrinter.standard(
-    //   indexedCtx,
-    //   symbolSearch,
-    //   includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater
-    // )
+    def encloses(outer: Position, inner: Position): Boolean =
+      outer.start <= inner.start && outer.end >= inner.end
 
-    // def localVariables(ts: Seq[Tree]): Seq[(TermName, String)] =
-    //   ts.flatMap(
-    //     _ match {
-    //       case vl @ ValDef(_, sym, tpt, _) => Seq((sym, printer.tpe(tpt.tpe)))
-    //       // case dl @ DefDef(name, _, tpt, rhs) =>
-    //       //   val paramss = localVariablesInDefDef(dl)
-    //       //   val paramTypes = paramss.map(_.map(_._2)).map(ls => s"(${ls.mkString(", ")})").mkString
-    //       //  Seq((name, paramTypes + " => " + printer.tpe(tpt.tpe))) ++ paramss.flatten
-    //       case b: Block => localVariables(b.stats)
-    //       case t: Template => /*localVariablesInDefDef(t.constr).flatten ++ */
-    //         localVariables(t.body)
-    //       case _ => Nil
-    //     }
-    //   )
+    def pathTo(appl: Tree, tree: Tree): List[Tree] = {
+      def loop(tree: Tree): List[Tree] = {
+        tree.children
+          .filter(_.pos.isDefined)
+          .find(t => encloses(t.pos, appl.pos)) match {
+          case Some(t) =>
+            t :: loop(t)
+          case None => Nil
+        }
+      }
+      loop(tree).reverse
+    }
 
-    // def namesInVal(t: Tree): Set[TermName] =
-    //   t match {
-    //     case Apply(fun, args) =>
-    //       namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
-    //     case TypeApply(fun, args) =>
-    //       namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
-    //     case Select(qualifier, name) => namesInVal(qualifier) + name.toTermName
-    //     case Ident(name) => Set(name.toTermName)
-    //     case _ => Set()
-    //   }
+    def namesInVal(t: Tree): Set[TermName] = {
+      t match {
+        case Apply(fun, args) =>
+          namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
+        case Select(_, name) =>
+          Set(name.toTermName)
+        case _ => Set()
+      }
+    }
 
-    // def getName(t: Tree): Option[TermName] =
-    //   t match {
-    //     case Ident(name) => Some(name.toTermName)
-    //     case _ => None
-    //   }
-    // def nameDef(newName: TermName, t: Tree): Boolean =
-    //   t match {
-    //     case dl @ DefDef(_, name, _, _, _, _) if name == newName => true
-    //     case _ => false
-    //   }
-    // def extracted(t: Tree): Option[Tree] = {
-    //   t match {
-    //     case d @ DefDef(_, name, _, _, _, rhs) => Some(rhs) // problem z typem
-    //     case _ => None
-    //   }
-    // }
-    
-    // val edits = 
-    //   for {
-    //   ident <- Some(typedTree)
-    //   name <- getName(ident)
-    //   stat <- path.find(isBlockOrTemplate(_))
-    //   allDefs <- defs(stat)
-    //   nameDef <- allDefs.find(nameDef(name, _))
-    //   apply <- extracted(nameDef)
-      
-    //   }yield {
-    //     val namesInAppl = namesInVal(apply)
-    //     val locals = localVariables(path).reverse.toMap
-    //     pprint.pprintln("in appls")
-    //     pprint.pprintln(namesInAppl)
+    def localVariables(ts: List[Tree]): List[(TermName, String)] = {
+      ts.flatMap(t =>
+        t match {
+          case Block(stats, expr) => localVariables(stats :+ expr)
+          case Template(_, _, body) => localVariables(body)
+          case ValDef(_, name, tpt, _) => List((name, prettyType(tpt.tpe)))
+          case _ => Nil
+        }
+      )
+    }
 
-    //     pprint.pprintln("locals")
+    def isBlockOrTemplate(t: Tree): Boolean =
+      t match {
+        case _: Block => true
+        case _: Template => true
+        case _ => false
+      }
 
-    //     pprint.pprintln(locals)
-    //     val withType =
-    //       locals.filter((key, tp) => namesInAppl.contains(key))
-    //     val typs = withType
-    //       .map((k, v) => s"$k: $v")
-    //       .mkString(", ")
-    //     val tps = typs
-    //     val applParams = withType.keys.mkString(", ")
-    //     pprint.pprintln("Typy")
-    //     pprint.pprintln(tps)
-    //     val nameShift = name.toString.length() + 1
-    //     val defSpan = nameDef.startPos.span.shift(nameShift + 4)
-    //     val defPos = new SourcePosition(source, defSpan).toLSP
-    //     val applSpan = pos.startPos.span.shift(nameShift)
-    //     val applPos = new SourcePosition(source, applSpan).toLSP
+    def stats(t: Tree): List[Tree] =
+      t match {
+        case Block(stats, expr) => stats :+ expr
+        case Template(_, _, body) => body
+        case _ => Nil
+      }
 
-    //     List(
-    //       new l.TextEdit(
-    //         defPos,
-    //         typs
-    //       ),
-    //       new l.TextEdit(
-    //         applPos,
-    //         applParams
-    //       )
-    //     )
-
-    //   }
-
-    Nil
+    def genName(ts: List[Tree]): String = {
+      val names = ts
+        .flatMap(
+          _ match {
+            case DefDef(_, name, _, _, _, _) => Some(name.toString())
+            case _ => None
+          }
+        )
+        .toSet
+      if (!names("newMethod")) "newMethod"
+      else {
+        Range(0, 10)
+          .map(i => s"newMethod$i")
+          .find(!names(_))
+          .getOrElse("newMethod")
+      }
+    }
+    val path = pathTo(appl, unit.body)
+    val edits = {
+      for {
+        stats <- path.find(isBlockOrTemplate(_)).map(stats)
+        stat <- stats.find(t => encloses(t.pos, appl.pos))
+      } yield {
+        val namesInAppl = namesInVal(appl)
+        val locals = localVariables(path).reverse.toMap
+        val text = params.text()
+        val indent2 = stat.pos.column - (stat.pos.point - stat.pos.start) - 1
+        val blank2 =
+          if (text(stat.pos.start - indent2) == '\t') "\t"
+          else " "
+        val withType =
+          locals
+            .filter { case (key: TermName, _: String) =>
+              namesInAppl.contains(key)
+            }
+            .toList
+            .sorted
+        val typs = withType
+          .map { case (k, v) => s"$k: $v" }
+          .mkString(", ")
+        val applType = prettyType(appl.tpe)
+        val applParams = withType.map(_._1).mkString(", ")
+        val name = genName(stats)
+        val defText = s"${blank2 * indent2}def $name($typs): $applType = ${text
+            .slice(appl.pos.start, appl.pos.end)}\n"
+        val replacedText = s"$name($applParams)"
+        val defPos = new l.Position(new Integer(stat.pos.line - 1), 0)
+        List(
+          new l.TextEdit(
+            new l.Range(
+              appl.pos.toLSP.getStart(),
+              appl.pos.toLSP.getEnd()
+            ),
+            replacedText
+          ),
+          new l.TextEdit(
+            new l.Range(defPos, defPos),
+            defText
+          )
+        )
+      }
+    }
+    edits.getOrElse(Nil)
   }
 }

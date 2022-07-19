@@ -428,17 +428,18 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
   def extractMethod(
-        params: TextDocumentPositionParams,
-        token: CancelToken,
-    ): Future[ju.List[TextEdit]] = {
-      withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-        pc.extractMethod(CompilerOffsetParams.fromPos(pos, token))
-          .asScala
-          .map { edits =>
-            adjust.adjustTextEdits(edits)
-          }
-      }
-    }.getOrElse(Future.successful(Nil.asJava))
+      params: TextDocumentPositionParams,
+      applRange: Integer,
+      token: CancelToken,
+  ): Future[ju.List[TextEdit]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.extractMethod(CompilerRangeParams.fromPos(pos, token), applRange)
+        .asScala
+        .map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
+    }
+  }.getOrElse(Future.successful(Nil.asJava))
 
   def convertToNamedArguments(
       position: TextDocumentPositionParams,
