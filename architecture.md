@@ -23,14 +23,14 @@ In addition to the LSP endpoints, this file contains many components, for exampl
 
 Metals features are powered by presentation compilers, if you hit `Compilers.scala` it is the client of compilers.
 
-`mtags` module is the Scala version specific module used to interact with the Scala presentation compiler. You can find the Java interfaces under `mtags-interface` project.
+`mtags` module is the Scala version specific module used to interact with the Scala presentation compiler using Java defined interfaces. You can find the interfaces under `mtags-interface` project.
 
 For example, `ScalaPresentationCompiler.java` in `mtags-interface` is the interface for `ScalaPresentationCompiler.scala` under `scala-2` and `scala-3` directories of `mtags` module.
 
 For more details
 
 - [An introduction to the Scala presentation compiler](https://www.chris-kipp.io/blog/an-intro-to-the-scala-presentation-compiler)
-- Presentation compilers' endpoint
+- Presentation compilers' endpoint, which are the class from the compiler jar that Metals uses.
   - Scala3 `InteractiveDriver.scala` and `Interactive.scala` in [lampepfl/dotty](https://github.com/lampepfl/dotty)
   - Scala2: `interactive/Global.scala` in [scala/scala](https://github.com/scala/scala)
 
