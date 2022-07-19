@@ -28,23 +28,6 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j as l}
 
-/**
- * Tries to calculate edits needed to insert the inferred type annotation
- * in all the places that it is possible such as:
- * - value or variable declaration
- * - methods
- * - pattern matches
- * - for comprehensions
- * - lambdas
- *
- * The provider will not check if the type does not exist, since there is no way to
- * get that data from the presentation compiler. The actual check is being done via
- * scalameta parser in InsertInferredType code action.
- *
- * @param params position and actual source
- * @param driver Scala 3 interactive compiler driver
- * @param config presentation compielr configuration
- */
 final class ExtractMethodProvider(
     params: OffsetParams,
     applRange: Int,
@@ -104,13 +87,9 @@ final class ExtractMethodProvider(
       ts.flatMap(
         _ match
           case vl @ ValDef(sym, tpt, _) => Seq((sym, printer.tpe(tpt.tpe)))
-          // case dl @ DefDef(name, _, tpt, rhs) =>
-          //   val paramss = localVariablesInDefDef(dl)
-          //   val paramTypes = paramss.map(_.map(_._2)).map(ls => s"(${ls.mkString(", ")})").mkString
-          //  Seq((name, paramTypes + " => " + printer.tpe(tpt.tpe))) ++ paramss.flatten
+
           case b @ Block(stats, expr) => localVariables(stats :+ expr)
           case t @ Template(_, _, _, _) =>
-            /*localVariablesInDefDef(t.constr).flatten ++ */
             localVariables(t.body)
           case _ => Nil
       )

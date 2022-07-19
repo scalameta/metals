@@ -483,10 +483,10 @@ object ServerCommands {
   val ExtractMethod = new ParametrizedCommand[ExtractMethodParams](
     "extract-method",
     "Extract method from range",
-    """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
-       |calculate the type and insert it in the correct location.
+    """|Whenever a user chooses code action to extract method, this command is later ran to
+       |calculate parameters for the new method with types.
        |""".stripMargin,
-    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams) and `applRange` Integer
        |""".stripMargin,
   )
 

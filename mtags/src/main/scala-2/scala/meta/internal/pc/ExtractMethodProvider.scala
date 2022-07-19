@@ -93,7 +93,8 @@ final class ExtractMethodProvider(
         .toSet
       if (!names("newMethod")) "newMethod"
       else {
-        Range(0, 10)
+        scala.collection.immutable
+          .Range(0, 10)
           .map(i => s"newMethod$i")
           .find(!names(_))
           .getOrElse("newMethod")
