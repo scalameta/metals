@@ -38,8 +38,8 @@ class FlatMapToForComprehensionSuite
        |    m <- List((1, (2, 3, 4)), (1, (2, 3.1d, 4.1d)))
        |    (j, (k: Int, l, n)) = (m._1, m._2)
        |    (a, (b, c, d)) <- Some(j + 1, (k + 1, l, n))
-       |    generatedByMetals0 <- Some(a + 1, (b + 1, c, a))
-       |    num = generatedByMetals0 match {
+       |    generatedByMetals <- Some(a + 1, (b + 1, c, a))
+       |    num = generatedByMetals match {
        |      case (e, (f, g: Int, _)) if e > 3 =>
        |        e + f + g
        |      case (h, (i, _, _)) =>
@@ -67,9 +67,9 @@ class FlatMapToForComprehensionSuite
         |""".stripMargin,
     """|object A {
        |    val res3 = for {
-       |          generatedByMetals0 <- List(1, 2, 3)
+       |          generatedByMetals <- List(1, 2, 3)
        |        } yield {
-       |          10 + generatedByMetals0
+       |          10 + generatedByMetals
        |        }
        |}
        |""".stripMargin,
@@ -107,8 +107,8 @@ class FlatMapToForComprehensionSuite
        |    }
        |
        |    val res3 = for {
-       |          generatedByMetals0 <- new B().generateList()
-       |          generatedByMetals1 <- goToLink(first, second, third, generatedByMetals0)
+       |          generatedByMetals <- new B().generateList()
+       |          generatedByMetals1 <- goToLink(first, second, third, generatedByMetals)
        |        } yield {
        |          generatedByMetals1
        |        }
@@ -188,9 +188,9 @@ class FlatMapToForComprehensionSuite
        |            generatedByMetals3 = double(generatedByMetals4, 4).toFloat.toDouble
        |            generatedByMetals2 = generatedByMetals3.toInt.compare(3)
        |            generatedByMetals1 = generatedByMetals2 > 2
-       |            generatedByMetals0 = !negate(generatedByMetals1)
+       |            generatedByMetals = !negate(generatedByMetals1)
        |          } yield {
-       |            true && !negate(generatedByMetals0) && false
+       |            true && !negate(generatedByMetals) && false
        |          }
        |        }
        |        .sortBy(x => x)
@@ -251,9 +251,9 @@ class FlatMapToForComprehensionSuite
        |          generatedByMetals2 = d
        |          generatedByMetals1 = 5 + double(generatedByMetals2, 7).toFloat.toInt / 8 + 6
        |          m = generatedByMetals1.toInt.compare(3)
-       |          generatedByMetals0 <- Some(m * 3)
+       |          generatedByMetals <- Some(m * 3)
        |        } yield {
-       |          generatedByMetals0
+       |          generatedByMetals
        |        }
        |
        |}
