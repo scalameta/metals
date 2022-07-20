@@ -250,7 +250,7 @@ class ScalaToplevelSuite extends BaseSuite {
   )
 
   check(
-    "extesion-methods",
+    "extension-methods",
     """|package a
        |
        |object A:
@@ -272,7 +272,7 @@ class ScalaToplevelSuite extends BaseSuite {
   )
 
   check(
-    "toplevel-extesion",
+    "toplevel-extension",
     """|package a
        |
        |extension (s: String)
