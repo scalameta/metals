@@ -10,7 +10,7 @@ In Visual Studio Code, to use them you can click on the yellow light bulb appear
 
 For other editors this should also be available via specified shortcut.
 
-Here is a list of the code actions supported by Metals. Some of these code actions support much more complex use cases, which you would eventually discover through your code, by clicking on the magic 💡, as it appears, to get your surprise!
+Here is a list of the code actions supported by Metals.
 
 ## Convert To Named Arguments
 
@@ -69,7 +69,7 @@ Because, of course, you often do not remember the package where it is located, w
 
 ## Insert Inferred Type
 
-This code action tries to infer the type of variables according to the context, and insert them for you.
+This code action infers the type of variables according to the context, and insert them for you.
 
 ![Insert Inferred Type](./gifs/InsertInferredType.gif)
 
