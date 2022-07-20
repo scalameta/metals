@@ -93,28 +93,19 @@ case class MultilineString(userConfig: () => UserConfiguration)
       line: String,
   ): Option[(Int, Boolean)] = {
     var lastTripleQuote = -1
-    var escaped = false
     var tripleQuoteClosed = closedFromPreviousLines
     var quoteNum = 0
     for (i <- 0 until line.size) {
       val char = line(i)
       if (char == '"') {
-        if (!escaped) {
-          quoteNum = quoteNum + 1
-          if (quoteNum == 3) {
-            lastTripleQuote = i
-            tripleQuoteClosed = !tripleQuoteClosed
-            quoteNum = 0
-          }
-        } else {
-          escaped = !escaped
+        quoteNum = quoteNum + 1
+        if (quoteNum == 3) {
+          lastTripleQuote = i
+          tripleQuoteClosed = !tripleQuoteClosed
+          quoteNum = 0
         }
-      } else if (char == '\\') {
-        quoteNum = 0
-        escaped = !escaped
       } else {
         quoteNum = 0
-        escaped = false
       }
     }
     if (lastTripleQuote != -1) Some((lastTripleQuote, tripleQuoteClosed))
@@ -442,17 +433,14 @@ case class MultilineString(userConfig: () => UserConfiguration)
       case (None, "\"") if onlyFourQuotes(splitLines, position) =>
         Some(replaceWithSixQuotes(position))
       case (None, "\n")
-          if doubleQuoteNotClosed(splitLines, position) && !wasTripleQuoted(
-            splitLines,
-            position,
-          ) =>
-        Some(fixStringNewline(position, splitLines))
-      case (None, "\n")
           if wasTripleQuoted(
             splitLines,
             position,
           ) =>
         Some(addTripleQuote(position))
+      case (None, "\n") if doubleQuoteNotClosed(splitLines, position) =>
+        Some(fixStringNewline(position, splitLines))
+
       case _ => None
     }
   }
