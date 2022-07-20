@@ -2351,7 +2351,7 @@ class MetalsLanguageServer(
       _ = maybeSession.map(session =>
         if (!session.main.isSbt)
           tables.dismissedNotifications.ImportChanges.reset()
-        else {}
+        else ()
       )
       _ = treeView.init()
     } yield result)
