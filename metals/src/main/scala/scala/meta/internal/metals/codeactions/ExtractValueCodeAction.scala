@@ -6,7 +6,6 @@ import scala.concurrent.Future
 
 import scala.meta.Defn
 import scala.meta.Enumerator
-import scala.meta.Name
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
@@ -47,12 +46,13 @@ class ExtractValueCodeAction(
     val textEdits =
       for {
         term <- allTrees
+        names = MetalsNames(term, "newValue")
         stats <- lastEnclosingStatsList(term)
         argument <- findRangeEnclosing(term, range)
         // avoid extracting lambdas (this needs actual type information)
         if isNotLambda(argument)
         stat <- stats.find(stat => stat.pos.encloses(term.pos))
-        name = createNewName(stats)
+        name = names.createNewName()
         source <- buffers.get(path)
       } yield {
         val blank =
@@ -309,27 +309,6 @@ class ExtractValueCodeAction(
       }
     }
     loop(apply)
-  }
-
-  private def createNewName(stats: Seq[Tree]): String = {
-
-    // We don't want to use any name that is already being used in the scope
-    def loop(t: Tree): List[String] = {
-      t.children.flatMap {
-        case n: Name => List(n.toString())
-        case child => loop(child)
-      }
-    }
-    val newValuePrefix = "newValue"
-    val names = stats.flatMap(loop).toSet
-
-    if (!names(newValuePrefix)) newValuePrefix
-    else {
-      var i = 0
-      while (names(s"$newValuePrefix$i"))
-        i += 1
-      s"$newValuePrefix$i"
-    }
   }
 }
 

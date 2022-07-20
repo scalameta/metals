@@ -105,6 +105,7 @@ class Completions(
   private def findSuffix(methodSymbol: Symbol): Option[String] =
     if shouldAddSnippet && methodSymbol.is(Flags.Method) then
       lazy val extensionParam = methodSymbol.extensionParam
+
       val paramss =
         if methodSymbol.is(Flags.Extension) then
           methodSymbol.paramSymss.filter(

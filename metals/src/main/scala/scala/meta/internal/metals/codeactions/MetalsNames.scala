@@ -44,7 +44,7 @@ case class MetalsNames(tree: Tree, prefix: String) {
   }
 
   def createNewName(): String = {
-    val name = s"$prefix$currentIndex"
+    val name = if (currentIndex == 0) prefix else s"$prefix$currentIndex"
     currentIndex += 1
     if (allNames(name)) createNewName()
     else name
