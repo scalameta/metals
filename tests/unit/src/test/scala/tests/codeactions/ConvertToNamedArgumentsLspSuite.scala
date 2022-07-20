@@ -24,6 +24,7 @@ class ConvertToNamedArgumentsLspSuite
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)
        |}""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(
@@ -37,6 +38,7 @@ class ConvertToNamedArgumentsLspSuite
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)
        |}""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(
@@ -50,6 +52,7 @@ class ConvertToNamedArgumentsLspSuite
        |  def foo(param1: Int, param2: Int, param3: Int) = None
        |  foo(param1 = 1, param2 = 2, param3 = 3)
        |}""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(
@@ -62,6 +65,7 @@ class ConvertToNamedArgumentsLspSuite
        |  List(1, 2, 3).map(a => a + 1).filter(_ == 2).slice(from = 0, until = 1)
        |}
        |""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(
@@ -75,6 +79,7 @@ class ConvertToNamedArgumentsLspSuite
        |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
        |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
        |}""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(
@@ -126,6 +131,7 @@ class ConvertToNamedArgumentsLspSuite
        |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
        |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
        |}""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(
@@ -197,6 +203,7 @@ class ConvertToNamedArgumentsLspSuite
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)
        |}""".stripMargin,
+    filterAction = filterAction,
   )
 
   checkNoAction(
@@ -205,6 +212,7 @@ class ConvertToNamedArgumentsLspSuite
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo<<(>>param1 = 1, param2 = <<>>2, param3 = 3)
        |}""".stripMargin,
+    filterAction = filterAction,
   )
 
   checkNoAction(
@@ -212,6 +220,7 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  def f(x: Seq[Int]) = x.map <<{>> _.toLong }
        |}""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(

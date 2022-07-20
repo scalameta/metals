@@ -3,10 +3,11 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Defn
+import scala.meta.Pat
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
-import scala.meta.Pat
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -15,7 +16,6 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
-import scala.meta.Defn
 
 class ExtractMethodCodeAction(
     trees: Trees

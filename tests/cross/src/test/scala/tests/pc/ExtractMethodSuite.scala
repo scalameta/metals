@@ -13,10 +13,6 @@ import tests.BaseCodeActionSuite
 
 class ExtractMethodSuite extends BaseCodeActionSuite {
 
-  // override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
-  //   IgnoreScala2
-  // )
-
   checkEdit(
     "single-param",
     """|object A{
@@ -38,14 +34,22 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
     """|object A{
        |  val b = 4
        |  def method(i: Int, j: Int) = i + j
-       |  val a = 123 + <<method(b, 10)>>
+       |  val a = {
+       |    val b = 2
+       |    123 + <<method(b, 10)>>
+       |  }
+       | 
        |}""".stripMargin,
-    0,
+    1,
     """|object A{
        |  val b = 4
        |  def method(i: Int, j: Int) = i + j
-       |  def newMethod(): Int = method(b, 10)
-       |  val a = 123 + newMethod()
+       |  def newMethod(b: Int): Int = method(b, 10)
+       |  val a = {
+       |    val b = 2
+       |    123 + newMethod(b)
+       |  }
+       | 
        |}""".stripMargin,
   )
 

@@ -106,7 +106,6 @@ final class ExtractMethodProvider(
         case Ident(name) => Set(name.toTermName)
         case _ => Set()
 
-    
     val edits =
       for
         apply <- path.headOption
