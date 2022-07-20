@@ -2348,10 +2348,12 @@ class MetalsLanguageServer(
         case None =>
           Future.successful(BuildChange.None)
       }
-      _ = {
-        tables.dismissedNotifications.ImportChanges.reset()
-        treeView.init()
-      }
+      _ = maybeSession.map(session =>
+        if (!session.main.isSbt)
+          tables.dismissedNotifications.ImportChanges.reset()
+        else {}
+      )
+      _ = treeView.init()
     } yield result)
       .recover { case NonFatal(e) =>
         disconnectOldBuildServer()
