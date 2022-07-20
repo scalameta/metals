@@ -140,6 +140,7 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
       .extractMethod(
         CompilerOffsetParams(URI.create(filename), code2, offset, cancelToken),
         applRange,
+        0,
       )
       .get()
     result.asScala.toList

@@ -5,6 +5,7 @@ import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
+import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 import scala.meta.internal.metals.codeactions.ImplementAbstractMembers
 import scala.meta.internal.metals.codeactions.InsertInferredType
@@ -342,7 +343,8 @@ class Scala3CodeActionLspSuite
        |  Foo<<(>>1, 2, param3 = 3)
        |  Foo(4,5,6)
        |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("Foo(...)")}",
+    s"""|${ConvertToNamedArguments.title("Foo(...)")}
+        |${ExtractMethodCodeAction.title("Foo(1, 2, param3 = 3)")}""".stripMargin,
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)

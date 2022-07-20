@@ -479,6 +479,7 @@ object ServerCommands {
   final case class ExtractMethodParams(
       position: TextDocumentPositionParams,
       applRange: Integer,
+      lv: Integer,
   )
   val ExtractMethod = new ParametrizedCommand[ExtractMethodParams](
     "extract-method",

@@ -1,13 +1,12 @@
 package scala.meta.internal.metals.codeactions
 
-import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.Case
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.Pat
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -16,6 +15,7 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
+import scala.meta.Defn
 
 class ExtractMethodCodeAction(
     trees: Trees
@@ -44,58 +44,110 @@ class ExtractMethodCodeAction(
       tree.flatMap(loop(_))
     }
 
-    val edits = for {
-      apply <- toExtract
-      stats <- lastEnclosingStatsList(apply)
-    } yield {
-      val applRange = apply.pos.end - apply.pos.start
-      (apply, applRange)
+    def correctPath(ts: List[(Tree, Int)]) = {
+      !ts.exists(t =>
+        t._1 match {
+          case vl: Defn.Val =>
+            vl.pats.head match {
+              case _: Pat.Var => false
+              case _ => true
+            }
+          case vr: Defn.Var =>
+            vr.pats.head match {
+              case _: Pat.Var => false
+              case _ => true
+            }
+          case _ => false
+        }
+      )
     }
 
+    val scopeOptions = toExtract
+      .map(
+        enclosingList(_).zipWithIndex.flatMap(e => enclosingDef(e._1, e._2))
+      )
+
+    
+    
+    val edits = toExtract.zip(scopeOptions)
     edits
-      .map { case (apply, applRange) =>
-        val codeAction =
-          new l.CodeAction(ExtractMethodCodeAction.title(apply.toString()))
-        codeAction.setKind(l.CodeActionKind.RefactorExtract)
-        val applPos = new l.TextDocumentPositionParams(
-          params.getTextDocument(),
-          new l.Position(apply.pos.startLine, apply.pos.startColumn),
-        )
-        codeAction.setCommand(
-          ServerCommands.ExtractMethod.toLSP(
-            ServerCommands.ExtractMethodParams(
-              applPos,
-              new Integer(applRange),
+      .map { case (apply: Term, scopes: List[(Tree, Int)]) =>
+        if(correctPath(scopes)) {
+          val applRange = apply.pos.end - apply.pos.start
+          scopes.map { case (defn, lv) =>
+            val scopeName = defnTitle(defn)
+            val codeAction = new l.CodeAction(
+              ExtractMethodCodeAction.title(apply.toString(), scopeName)
             )
-          )
-        )
-        Seq(codeAction)
+            codeAction.setKind(l.CodeActionKind.RefactorExtract)
+            val applPos = new l.TextDocumentPositionParams(
+              params.getTextDocument(),
+              new l.Position(apply.pos.startLine, apply.pos.startColumn),
+            )
+            codeAction.setCommand(
+              ServerCommands.ExtractMethod.toLSP(
+                ServerCommands.ExtractMethodParams(
+                  applPos,
+                  new Integer(applRange),
+                  new Integer(lv),
+                )
+              )
+            )
+            codeAction
+          }
+        } else Nil
       }
       .getOrElse(Nil)
 
   }
-
-  private def lastEnclosingStatsList(
+  private def defnTitle(defn: Tree): String = {
+    defn match {
+      case vl: Defn.Val =>
+        vl.pats.head match {
+          case Pat.Var(name) => s"val `${name}`"
+          case _ => "val"
+        }
+      case vr: Defn.Var =>
+        vr.pats.head match {
+          case Pat.Var(name) => s"var `${name}`"
+          case _ => "var"
+        }
+      case df: Defn.Def => s"method `${df.name}`"
+      case cl: Defn.Class => s"class `${cl.name}`"
+      case en: Defn.Enum => s"enum ${en.name}`"
+      case ob: Defn.Object => s"object `${ob.name}`"
+      case _ => "block"
+    }
+  }
+  private def enclosingList(
       apply: Term
-  ): Option[(List[Tree])] = {
+  ): (List[Tree]) = {
 
-    @tailrec
-    def loop(tree: Tree): Option[List[Tree]] = {
+    def loop(tree: Tree): List[Tree] = {
       tree.parent match {
-        case Some(t: Template) => Some(t.stats)
-        case Some(b: Term.Block) => Some(b.stats)
-        case Some(_: Case) => None
+        case Some(t: Template) => t :: loop(t)
+        case Some(b: Term.Block) => b :: loop(b)
         case Some(other) => loop(other)
-        case None => None
+        case None => Nil
       }
     }
     loop(apply)
   }
+
+  private def enclosingDef(
+      apply: Tree,
+      lv: Int,
+  ): Option[(Tree, Int)] = {
+    apply.parent match {
+      case Some(d: Defn) => Some(d, lv)
+      case _ => None
+    }
+  }
 }
 
 object ExtractMethodCodeAction {
-  def title(expr: String): String = {
-    if (expr.length <= 10) s"Extract `$expr` as method"
-    else s"Extract `${expr.take(10)}` ... as method"
+  def title(expr: String, scopeName: String): String = {
+    if (expr.length <= 10) s"Extract `$expr` as method in $scopeName"
+    else s"Extract `${expr.take(10)}` ... as method in $scopeName"
   }
 }

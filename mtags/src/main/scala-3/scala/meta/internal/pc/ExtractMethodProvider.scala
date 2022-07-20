@@ -31,6 +31,7 @@ import org.eclipse.{lsp4j as l}
 final class ExtractMethodProvider(
     params: OffsetParams,
     applRange: Int,
+    lv: Int,
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
     symbolSearch: SymbolSearch,
@@ -51,11 +52,12 @@ final class ExtractMethodProvider(
 
     def isBlockOrTemplate(t: tpd.Tree): Boolean =
       t match
-        case temp: Template[?] => true
-        case block: Block[?] => true
+        case temp @ Template(_, _, _, _) => true
+        case block @ Block(_, expr: Closure[?]) => false
+        case block @ Block(_, _) => true
         case _ => false
 
-    def stats(t: tpd.Tree): List[tpd.Tree] =
+    def statsInBlock(t: tpd.Tree): List[tpd.Tree] =
       t match
         case temp @ Template(_, _, _, preBody) => temp.body
         case block @ Block(stats, expr) => stats :+ expr
@@ -104,10 +106,13 @@ final class ExtractMethodProvider(
         case Ident(name) => Set(name.toTermName)
         case _ => Set()
 
+    
     val edits =
       for
         apply <- path.headOption
-        stats <- path.find(isBlockOrTemplate).map(stats)
+        blocks = path.filter(isBlockOrTemplate)
+        block = blocks(lv) if blocks.length >= lv
+        stats = statsInBlock(block)
         stat <- stats.find(_.endPos.end >= apply.endPos.end)
       yield
         val namesInAppl = namesInVal(apply)
@@ -117,7 +122,9 @@ final class ExtractMethodProvider(
           if source(stat.startPos.start - indent2) == '\t'
           then "\t"
           else " "
-        val locals = localVariables(path).reverse.toMap
+        val locals = localVariables(
+          path.take(path.indexOf(block))
+        ).reverse.toMap
         val withType =
           locals.filter((key, tp) => namesInAppl.contains(key)).toList.sorted
         val typs = withType

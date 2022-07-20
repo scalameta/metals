@@ -7,7 +7,8 @@ import org.eclipse.{lsp4j => l}
 final class ExtractMethodProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams,
-    applRange: Int
+    applRange: Int,
+    lv: Int
 ) {
   import compiler._
   def extractMethod: List[l.TextEdit] = {
@@ -75,7 +76,7 @@ final class ExtractMethodProvider(
         case _ => false
       }
 
-    def stats(t: Tree): List[Tree] =
+    def statsInBlock(t: Tree): List[Tree] =
       t match {
         case Block(stats, expr) => stats :+ expr
         case Template(_, _, body) => body
@@ -100,14 +101,19 @@ final class ExtractMethodProvider(
           .getOrElse("newMethod")
       }
     }
-    val path = pathTo(appl, unit.body)
+
     val edits = {
+      val path = pathTo(appl, unit.body)
+      val blocks = path.filter(isBlockOrTemplate(_))
       for {
-        stats <- path.find(isBlockOrTemplate(_)).map(stats)
+        block <- if (blocks.length >= lv) Some(blocks(lv)) else None
+        stats = statsInBlock(block)
         stat <- stats.find(t => encloses(t.pos, appl.pos))
       } yield {
         val namesInAppl = namesInVal(appl)
-        val locals = localVariables(path).reverse.toMap
+        val locals = localVariables(
+          path.take(path.indexOf(block))
+        ).reverse.toMap
         val text = params.text()
         val indent2 = stat.pos.column - (stat.pos.point - stat.pos.start) - 1
         val blank2 =
