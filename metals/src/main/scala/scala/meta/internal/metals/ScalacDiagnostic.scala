@@ -4,6 +4,15 @@ import org.eclipse.{lsp4j => l}
 
 object ScalacDiagnostic {
 
+  object NotAMember {
+    private val regex = """(?s)value (.+) is not a member of.*""".r
+    def unapply(d: l.Diagnostic): Option[String] =
+      d.getMessage() match {
+        case regex(name) => Some(name)
+        case _ => None
+      }
+  }
+
   object SymbolNotFound {
     private val regex = """(n|N)ot found: (value|type)?\s?(\w+)""".r
     def unapply(d: l.Diagnostic): Option[String] =

@@ -97,6 +97,9 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
             case diag @ ScalacDiagnostic.SymbolNotFound(name)
                 if params.getRange().overlapsWith(diag.getRange()) =>
               importMissingSymbol(diag, name)
+            case d @ ScalacDiagnostic.NotAMember(name)
+                if params.getRange().overlapsWith(d.getRange()) =>
+              importMissingSymbol(d, name)
           }
       )
       .map { actions =>
