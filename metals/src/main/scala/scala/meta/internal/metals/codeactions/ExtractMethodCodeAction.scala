@@ -44,35 +44,15 @@ class ExtractMethodCodeAction(
       tree.flatMap(loop(_))
     }
 
-    def correctPath(ts: List[(Tree, Int)]) = {
-      !ts.exists(t =>
-        t._1 match {
-          case vl: Defn.Val =>
-            vl.pats.head match {
-              case _: Pat.Var => false
-              case _ => true
-            }
-          case vr: Defn.Var =>
-            vr.pats.head match {
-              case _: Pat.Var => false
-              case _ => true
-            }
-          case _ => false
-        }
-      )
-    }
-
     val scopeOptions = toExtract
       .map(
         enclosingList(_).zipWithIndex.flatMap(e => enclosingDef(e._1, e._2))
       )
 
-    
-    
     val edits = toExtract.zip(scopeOptions)
     edits
       .map { case (apply: Term, scopes: List[(Tree, Int)]) =>
-        if(correctPath(scopes)) {
+        if (correctPath(scopes)) {
           val applRange = apply.pos.end - apply.pos.start
           scopes.map { case (defn, lv) =>
             val scopeName = defnTitle(defn)
@@ -100,6 +80,7 @@ class ExtractMethodCodeAction(
       .getOrElse(Nil)
 
   }
+
   private def defnTitle(defn: Tree): String = {
     defn match {
       case vl: Defn.Val =>
@@ -142,6 +123,24 @@ class ExtractMethodCodeAction(
       case Some(d: Defn) => Some(d, lv)
       case _ => None
     }
+  }
+  // We have to check if there are no val (a,b) = {...} on path
+  private def correctPath(ts: List[(Tree, Int)]) = {
+    !ts.exists(t =>
+      t._1 match {
+        case vl: Defn.Val =>
+          vl.pats.head match {
+            case _: Pat.Var => false
+            case _ => true
+          }
+        case vr: Defn.Var =>
+          vr.pats.head match {
+            case _: Pat.Var => false
+            case _ => true
+          }
+        case _ => false
+      }
+    )
   }
 }
 

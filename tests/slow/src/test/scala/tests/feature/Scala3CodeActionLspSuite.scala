@@ -344,7 +344,7 @@ class Scala3CodeActionLspSuite
        |  Foo(4,5,6)
        |}""".stripMargin,
     s"""|${ConvertToNamedArguments.title("Foo(...)")}
-        |${ExtractMethodCodeAction.title("Foo(1, 2, param3 = 3)")}""".stripMargin,
+        |${ExtractMethodCodeAction.title("Foo(1, 2, param3 = 3)", "method `Foo`")}""".stripMargin,
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)

@@ -24,27 +24,14 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
        |  def method(i: Int) = i + 1
        |  val a = <<123 + method(b)>>
        |}""".stripMargin,
+    0,
     """|object A{
        |  val b = 4
        |  def method(i: Int) = i + 1
-       |  def newMethod(b: Int): Int = 123 + method(b)
-       |  val a = newMethod(b)
+       |  def newMethod(): Int = 123 + method(b)
+       |  val a = newMethod()
        |}""".stripMargin,
   )
-  // checkEdit(
-  //   "tabs",
-  //   """|object A{
-  //      |\tval b = 4
-  //      |\tdef method(i: Int) = i + 1
-  //      |\t\tval a = <<123 + method(b)>>
-  //      |}""".stripMargin,
-  //   """|object A{
-  //      |\tval b = 4
-  //      |\tdef method(i: Int) = i + 1
-  //      |\t\tdef newMethod(b: Int): Int = 123 + method(b)
-  //      |\t\tval a = newMethod(b)
-  //      |}""".stripMargin,
-  // )
 
   checkEdit(
     "const",
@@ -53,11 +40,12 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
        |  def method(i: Int, j: Int) = i + j
        |  val a = 123 + <<method(b, 10)>>
        |}""".stripMargin,
+    0,
     """|object A{
        |  val b = 4
        |  def method(i: Int, j: Int) = i + j
-       |  def newMethod(b: Int): Int = method(b, 10)
-       |  val a = 123 + newMethod(b)
+       |  def newMethod(): Int = method(b, 10)
+       |  val a = 123 + newMethod()
        |}""".stripMargin,
   )
 
@@ -69,6 +57,7 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
        |  def method(i: Int) = i + i
        |  val a = <<method(5)>>
        |}""".stripMargin,
+    0,
     """|object A{
        |  def newMethod() = 1
        |  def newMethod0(a: Int) = a + 1
@@ -84,16 +73,24 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
        |  val b = 4
        |  val c = 3
        |  def method(i: Int, j: Int) = i + 1
-       |  val a = <<123 + method(c, b) + method(b,c)>>
+       |  val a = { 
+       |    val c = 5
+       |    <<123 + method(c, b) + method(b,c)>>
+       |  }
        |}""".stripMargin,
+    1,
     """|object A{
        |  val b = 4
        |  val c = 3
        |  def method(i: Int, j: Int) = i + 1
-       |  def newMethod(b: Int, c: Int): Int = 123 + method(c, b) + method(b,c)
-       |  val a = newMethod(b, c)
+       |  def newMethod(c: Int): Int = 123 + method(c, b) + method(b,c)
+       |  val a = { 
+       |    val c = 5
+       |    newMethod(c)
+       |  }
        |}""".stripMargin,
   )
+
   checkEdit(
     "wrong-param".tag(IgnoreScala2),
     """|object A{
@@ -101,23 +98,51 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
        |  def method(i: Int, j: Int) = i * j
        |  val a = 123 + <<method(b, List(1,2,3))>>
        |}""".stripMargin,
+    0,
     """|object A{
        |  val b = 4
        |  def method(i: Int, j: Int) = i * j
-       |  def newMethod(b: Int): Int = method(b, List(1,2,3))
-       |  val a = 123 + newMethod(b)
+       |  def newMethod(): Int = method(b, List(1,2,3))
+       |  val a = 123 + newMethod()
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "higher-scope",
+    """|object A{
+       |  val b = 4
+       |  def method(i: Int, j: Int) = i + 1
+       |  val a = {
+       |    def f() = {
+       |      val d = 3
+       |      <<method(d, b)>>
+       |    }
+       |  }
+       |}""".stripMargin,
+    1,
+    """|object A{
+       |  val b = 4
+       |  def method(i: Int, j: Int) = i + 1
+       |  val a = {
+       |    def newMethod(d: Int): Int = method(d, b)
+       |    def f() = {
+       |      val d = 3
+       |      newMethod(d)
+       |    }
+       |  }
        |}""".stripMargin,
   )
 
   def checkEdit(
       name: TestOptions,
       original: String,
+      lv: Int,
       expected: String,
       compat: Map[String, String] = Map.empty,
   )(implicit location: Location): Unit =
     test(name) {
 
-      val edits = getAutoImplement(original)
+      val edits = getAutoImplement(original, lv)
       val (code, _, _) = params(original)
       val obtained = TextEdits.applyEdits(code, edits)
       assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
@@ -125,6 +150,7 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
 
   def getAutoImplement(
       original: String,
+      lv: Int,
       filename: String = "file:/A.scala",
   ): List[l.TextEdit] = {
     val targetRegex = "<<(.+)>>".r
@@ -140,7 +166,7 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
       .extractMethod(
         CompilerOffsetParams(URI.create(filename), code2, offset, cancelToken),
         applRange,
-        0,
+        lv,
       )
       .get()
     result.asScala.toList

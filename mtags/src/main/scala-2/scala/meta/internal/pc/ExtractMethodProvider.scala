@@ -54,6 +54,7 @@ final class ExtractMethodProvider(
           namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
         case Select(_, name) =>
           Set(name.toTermName)
+        case Ident(name) => Set(name.toTermName)
         case _ => Set()
       }
     }
