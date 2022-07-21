@@ -556,8 +556,8 @@ object BuildTargets {
                 // in Bloop to compile only `B` than `A+B`.
                 leaves += head
             }
-            loop(tail)
           }
+          loop(tail)
       }
     loop(root)
     InverseDependencies(isVisited, leaves)

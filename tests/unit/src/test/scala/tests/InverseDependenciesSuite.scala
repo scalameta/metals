@@ -7,25 +7,32 @@ import scala.meta.internal.metals.BuildTargets
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import munit.Location
+import munit.TestOptions
 
 class InverseDependenciesSuite extends BaseSuite {
+
   class Graph(val root: String) {
     val inverseDependencies: mutable.Map[String, ListBuffer[String]] =
-      mutable.Map.empty[String, ListBuffer[String]]
-    def dependsOn(project: String, dependency: String): this.type = {
+      mutable.Map.empty
+
+    def dependsOn(project: String, dependency: String): Graph = {
       val dependencies =
         inverseDependencies.getOrElseUpdate(dependency, ListBuffer.empty)
       dependencies += project
       this
     }
   }
+
   def root(x: String): Graph = new Graph(x)
+
   def check(
-      name: String,
-      original: Graph,
-      expected: String,
+      name: TestOptions,
+      byNameOriginal: => Graph,
+      expectedLeaves: List[String],
+      expectedAll: List[String] = List.empty,
   )(implicit loc: Location): Unit = {
     test(name) {
+      val original = byNameOriginal
       val obtained = BuildTargets.inverseDependencies(
         List(new BuildTargetIdentifier(original.root)),
         { key =>
@@ -34,9 +41,17 @@ class InverseDependenciesSuite extends BaseSuite {
             .map(_.map(new BuildTargetIdentifier(_)).toSeq)
         },
       )
-      assertNoDiff(
-        obtained.leaves.toSeq.map(_.getUri).sorted.mkString("\n"),
-        expected,
+
+      assertEquals(
+        obtained.leaves.toList.map(_.getUri).sorted,
+        expectedLeaves,
+        "leaves don't match",
+      )
+
+      assertEquals(
+        obtained.visited.toList.map(_.getUri).sorted,
+        expectedAll,
+        "visited don't match",
       )
     }
   }
@@ -45,7 +60,8 @@ class InverseDependenciesSuite extends BaseSuite {
     "basic",
     root("a")
       .dependsOn("b", "a"),
-    "b",
+    expectedLeaves = List("b"),
+    expectedAll = List("a", "b"),
   )
 
   check(
@@ -53,7 +69,8 @@ class InverseDependenciesSuite extends BaseSuite {
     root("a")
       .dependsOn("b", "a")
       .dependsOn("c", "b"),
-    "c",
+    expectedLeaves = List("c"),
+    expectedAll = List("a", "b", "c"),
   )
 
   check(
@@ -62,16 +79,15 @@ class InverseDependenciesSuite extends BaseSuite {
       .dependsOn("b", "a")
       .dependsOn("d", "a")
       .dependsOn("c", "b"),
-    """
-      |c
-      |d
-      |""".stripMargin,
+    expectedLeaves = List("c", "d"),
+    expectedAll = List("a", "b", "c", "d"),
   )
 
   check(
     "alone",
     root("a"),
-    "a",
+    expectedLeaves = List("a"),
+    expectedAll = List("a"),
   )
 
   check(
@@ -81,7 +97,36 @@ class InverseDependenciesSuite extends BaseSuite {
       .dependsOn("c", "a")
       .dependsOn("d", "b")
       .dependsOn("d", "c"),
-    "d",
+    expectedLeaves = List("d"),
+    expectedAll = List("a", "b", "c", "d"),
   )
 
+  /**
+   * z aggregates all modules
+   *
+   *    a  a      a
+   *    ^  ^      ^
+   *    |  |      |
+   *    b  |      c
+   *    |  |    ^ ^ ^
+   *    |  |    | | |
+   *    |  |    | d e
+   *    |  |    | |
+   *    z  z     z
+   * }}}
+   */
+  check(
+    "aggregate",
+    root("a")
+      .dependsOn("z", "a")
+      .dependsOn("b", "a")
+      .dependsOn("z", "b")
+      .dependsOn("c", "a")
+      .dependsOn("z", "c")
+      .dependsOn("d", "c")
+      .dependsOn("z", "d")
+      .dependsOn("e", "c"),
+    expectedLeaves = List("e", "z"),
+    expectedAll = List("a", "b", "c", "d", "e", "z"),
+  )
 }
