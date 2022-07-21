@@ -484,6 +484,37 @@ class Scala3CodeActionLspSuite
        |""".stripMargin,
   )
 
+  check(
+    "simple-block",
+    """|object A{
+       |  val b = 4
+       |  def method(i: Int, j: Int) = i + 1
+       |  val d = 4
+       |  val a = {
+       |    def f() = {
+       |      <<method(d, b)>>
+       |    }
+       |  }
+       |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("method(d, b)", "method `f`")}
+        |${ExtractMethodCodeAction.title("method(d, b)", "val `a`")}
+        |${ExtractMethodCodeAction.title("method(d, b)", "object `A`")}
+        |${ConvertToNamedArguments.title("method(...)")}
+        |""".stripMargin,
+    """|object A{
+       |  val b = 4
+       |  def method(i: Int, j: Int) = i + 1
+       |  val d = 4
+       |  val a = {
+       |    def newMethod(): Int = method(d, b)
+       |    def f() = {
+       |      newMethod()
+       |    }
+       |  }
+       |}""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
   def checkExtractedMember(
       name: TestOptions,
       input: String,

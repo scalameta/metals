@@ -22,6 +22,7 @@ final class ExtractMethodProvider(
     val appl = typedTreeAt(pos)
     val context = doLocateImportContext(pos)
     val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
+    val text = params.text()
 
     val history = new ShortenedNames(
       lookupSymbol = name =>
@@ -72,17 +73,21 @@ final class ExtractMethodProvider(
       )
     }
 
-    def isBlockOrTemplate(t: Tree): Boolean =
+    def isBlockOrTemplate(t: Tree): Boolean = {
       t match {
         case _: Block => true
         case _: Template => true
+        case d @ ValOrDefDef(_, _, _, rhs) if (!isBlockOrTemplate(rhs)) =>
+          text.slice(d.pos.start, rhs.pos.start).contains('{')
         case _ => false
       }
+    }
 
     def statsInBlock(t: Tree): List[Tree] =
       t match {
         case Block(stats, expr) => stats :+ expr
         case Template(_, _, body) => body
+        case ValOrDefDef(_, _, _, rhs) => List(rhs)
         case _ => Nil
       }
 
@@ -117,7 +122,6 @@ final class ExtractMethodProvider(
         val locals = localVariables(
           path.take(path.indexOf(block))
         ).reverse.toMap
-        val text = params.text()
         val indent2 = stat.pos.column - (stat.pos.point - stat.pos.start) - 1
         val blank2 =
           if (text(stat.pos.start - indent2) == '\t') "\t"
