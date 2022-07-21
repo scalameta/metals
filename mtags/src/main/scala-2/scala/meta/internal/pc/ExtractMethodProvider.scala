@@ -48,12 +48,14 @@ final class ExtractMethodProvider(
       loop(tree).reverse
     }
 
-    def namesInVal(t: Tree): Set[TermName] = {
+    def namesInApply(t: Tree): Set[TermName] = {
       t match {
         case Apply(fun, args) =>
-          namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
-        case Select(_, name) =>
-          Set(name.toTermName)
+          namesInApply(fun) ++ args.flatMap(namesInApply(_)).toSet
+        case TypeApply(fun, args) =>
+          namesInApply(fun) ++ args.flatMap(namesInApply(_)).toSet
+        case Select(qualifier, name) =>
+          Set(name.toTermName) ++ namesInApply(qualifier)
         case Ident(name) => Set(name.toTermName)
         case _ => Set()
       }
@@ -111,7 +113,7 @@ final class ExtractMethodProvider(
         stats = statsInBlock(block)
         stat <- stats.find(t => encloses(t.pos, appl.pos))
       } yield {
-        val namesInAppl = namesInVal(appl)
+        val namesInAppl = namesInApply(appl)
         val locals = localVariables(
           path.take(path.indexOf(block))
         ).reverse.toMap
@@ -127,14 +129,15 @@ final class ExtractMethodProvider(
             }
             .toList
             .sorted
-        val typs = withType
+        val defParams = withType
           .map { case (k, v) => s"$k: $v" }
           .mkString(", ")
         val applType = prettyType(appl.tpe)
         val applParams = withType.map(_._1).mkString(", ")
         val name = genName(stats)
-        val defText = s"${blank2 * indent2}def $name($typs): $applType = ${text
-            .slice(appl.pos.start, appl.pos.end)}\n"
+        val defText =
+          s"${blank2 * indent2}def $name($defParams): $applType = ${text
+              .slice(appl.pos.start, appl.pos.end)}\n"
         val replacedText = s"$name($applParams)"
         val defPos = new l.Position(new Integer(stat.pos.line - 1), 0)
         List(

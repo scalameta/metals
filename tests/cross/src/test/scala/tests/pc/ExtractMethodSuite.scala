@@ -137,6 +137,26 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
        |}""".stripMargin,
   )
 
+  checkEdit(
+    "closure-block",
+    """|object A{
+       |  val a = {
+       |    val b = List(1,2,3)
+       |    val c = <<b.map(_ + 1)>>
+       |  }
+       | 
+       |}""".stripMargin,
+    1,
+    """|object A{
+       |  def newMethod(b: List[Int]): List[Int] = b.map(_ + 1)
+       |  val a = {
+       |    val b = List(1,2,3)
+       |    val c = newMethod(b)
+       |  }
+       | 
+       |}""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
