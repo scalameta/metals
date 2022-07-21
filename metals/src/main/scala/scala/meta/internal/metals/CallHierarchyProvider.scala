@@ -6,7 +6,6 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.semanticdb.SymbolOccurrence.Role
 import scala.meta.internal.{semanticdb => s}
 
 import scala.meta.internal.parsing.Trees
@@ -104,68 +103,97 @@ final case class CallHierarchyProvider(
         .findFirstMatchIn(hoverContent.getValue)
     } yield `match`.group(1))
 
-  private def symbolOccurenceToCallHierarchyItem(
+  trait CanBuildCallHierarchyItem {
+    def symbol: Option[String]
+    def range: Option[l.Range]
+  }
+
+  object CanBuildCallHierarchyItem {
+    def unapply(item: CanBuildCallHierarchyItem): Option[(String, l.Range)] =
+      (for {
+        symbol <- item.symbol
+        range <- item.range
+      } yield (symbol, range))
+  }
+
+  case class SymbolOccurenceCHI(occurence: SymbolOccurrence)
+      extends CanBuildCallHierarchyItem {
+    lazy val symbol = Some(occurence.symbol)
+    lazy val range = occurence.range.map(_.toLSP)
+  }
+
+  case class SelectTreeCHI(selectTree: s.SelectTree)
+      extends CanBuildCallHierarchyItem {
+    lazy val symbol = selectTree.id.map(_.symbol)
+    lazy val range = selectTree match {
+      case s.SelectTree(s.OriginalTree(range), _) => range.map(_.toLSP)
+      case _ => None
+    }
+  }
+
+  private def buildCallHierarchyItemFrom(
       source: AbsolutePath,
       doc: TextDocument,
-      occurence: SymbolOccurrence,
+      item: CanBuildCallHierarchyItem,
       range: l.Range,
       visited: Array[String],
       token: CancelToken
-  )(implicit ec: ExecutionContext): Future[Option[CallHierarchyItem]] =
-    compilers()
-      .hover(
-        new HoverExtParams(
-          source.toTextDocumentIdentifier,
-          null,
-          occurence.range.get.toLSP
-        ),
-        token
-      )
-      .map(hover =>
-        doc.symbols
-          .find(_.symbol == occurence.symbol)
-          .map(info => {
+  )(implicit ec: ExecutionContext): Future[Option[CallHierarchyItem]] = {
+    item match {
+      case CanBuildCallHierarchyItem(symbol, itemRange) =>
+        compilers()
+          .hover(
+            new HoverExtParams(
+              source.toTextDocumentIdentifier,
+              null,
+              itemRange
+            ),
+            token
+          )
+          .map(hover =>
+            doc.symbols
+              .find(_.symbol == symbol)
+              .map(info => {
 
-            val chi = new CallHierarchyItem(
-              info.displayName,
-              info.kind.toLSP,
-              source.toURI.toString,
-              range,
-              occurence.toLocation(source.toURI.toString).getRange
-            )
-            val symbols = (Set(info.symbol) union (
-              if (info.isClass)
-                info.signature
-                  .asInstanceOf[s.ClassSignature]
-                  .declarations
-                  .flatMap(_.symlinks.find(_.endsWith("`<init>`().")))
-                  .toSet union (
-                  // For the case class, the symbols of the occurrences found are not _empty_/Example2# but _empty_/Example2.
-                  if (info.isCase) Set(info.symbol.replace("#", "."))
+                val chi = new CallHierarchyItem(
+                  info.displayName,
+                  info.kind.toLSP,
+                  source.toURI.toString,
+                  range,
+                  itemRange
+                )
+                val symbols = (Set(info.symbol) union (
+                  if (info.isClass)
+                    info.signature
+                      .asInstanceOf[s.ClassSignature]
+                      .declarations
+                      .flatMap(_.symlinks.find(_.endsWith("`<init>`().")))
+                      .toSet
                   else Set.empty
+                )).toArray
+
+                val displayName =
+                  if (info.isConstructor && info.displayName == "<init>")
+                    info.symbol.slice(
+                      info.symbol.lastIndexOf("/") + 1,
+                      info.symbol.lastIndexOf("#")
+                    )
+                  else info.displayName
+                chi.setName(displayName)
+
+                chi.setDetail(
+                  (if (visited.dropRight(1).contains(symbol))
+                     icons.sync + " "
+                   else "") + getSignatureFromHover(hover).getOrElse("")
                 )
-              else Set(info.symbol)
-            )).toArray
 
-            val displayName =
-              if (info.isConstructor && info.displayName == "<init>")
-                info.symbol.slice(
-                  info.symbol.lastIndexOf("/") + 1,
-                  info.symbol.lastIndexOf("#")
-                )
-              else info.displayName
-            chi.setName(displayName)
-
-            chi.setDetail(
-              (if (visited.dropRight(1).contains(occurence.symbol))
-                 icons.sync + " "
-               else "") + getSignatureFromHover(hover).getOrElse("")
-            )
-
-            chi.setData(CallHierarchyItemInfo(symbols, visited))
-            chi
-          })
-      )
+                chi.setData(CallHierarchyItemInfo(symbols, visited))
+                chi
+              })
+          )
+      case _ => Future.successful(None)
+    }
+  }
 
   def prepare(params: CallHierarchyPrepareParams, token: CancelToken)(implicit
       ec: ExecutionContext
@@ -179,14 +207,14 @@ final case class CallHierarchyProvider(
           .sequence(results.flatMap { result =>
             for {
               occurence <- result.occurrence
-              if occurence.role == Role.DEFINITION
+              if occurence.role.isDefinition
               range <- occurence.range
               tree <- trees.findLastEnclosingAt(source, range.toLSP.getStart)
               (definition, _) <- findDefinition(Some(tree))
-              chi = symbolOccurenceToCallHierarchyItem(
+              chi = buildCallHierarchyItemFrom(
                 source,
                 doc,
-                result.occurrence.get,
+                SymbolOccurenceCHI(occurence),
                 definition.pos.toLSP,
                 Array(occurence.symbol),
                 token
@@ -210,7 +238,7 @@ final case class CallHierarchyProvider(
       doc: TextDocument,
       root: Tree,
       info: CallHierarchyItemInfo
-  ): List[(SymbolOccurrence, l.Range, List[l.Range])] = {
+  ): List[(CanBuildCallHierarchyItem, l.Range, Seq[l.Range])] = {
 
     def search(
         tree: Tree,
@@ -222,7 +250,7 @@ final case class CallHierarchyProvider(
             .positionOccurrences(source, name.pos.toLSP.getEnd, doc)
             .flatMap(
               _.occurrence.filter(occ =>
-                occ.role == Role.REFERENCE && info.symbols.contains(occ.symbol)
+                occ.role.isReference && info.symbols.contains(occ.symbol)
               )
             )
             .nonEmpty =>
@@ -248,9 +276,38 @@ final case class CallHierarchyProvider(
         }
       }
     }
+
     search(root, None, None)
       .groupBy(_._1)
-      .map { case (k, v) => (k, v.head._3, v.map(_._2)) }
+      .map { case (k, v) => (SymbolOccurenceCHI(k), v.head._3, v.map(_._2)) }
+      .toList
+  }
+
+  private def findIncomingCallsSynthetics(
+      source: AbsolutePath,
+      doc: TextDocument,
+      info: CallHierarchyItemInfo
+  ): List[(CanBuildCallHierarchyItem, l.Range, Seq[l.Range])] = {
+    doc.synthetics
+      .flatMap(syn =>
+        (syn.tree match {
+          case selectTree: s.SelectTree => Some(selectTree)
+          case s.TypeApplyTree(selectTree: s.SelectTree, _) => Some(selectTree)
+          case _ => None
+        }).collect {
+          case st @ s.SelectTree(s.OriginalTree(range), id)
+              if id.exists(id => info.symbols.contains(id.symbol)) => (
+            for {
+              range <- range
+              tree <- trees.findLastEnclosingAt(source, range.toLSP.getStart)
+              (definition, name) <- findDefinition(Some(tree))
+            } yield (st, name.pos.toLSP, definition.pos.toLSP)
+          )
+        }
+      )
+      .flatten
+      .groupBy(_._1)
+      .map { case (k, v) => (SelectTreeCHI(k), v.head._3, v.map(_._2)) }
       .toList
   }
 
@@ -283,20 +340,27 @@ final case class CallHierarchyProvider(
                       doc,
                       root,
                       info
+                    ) ++ findIncomingCallsSynthetics(
+                      source,
+                      doc,
+                      info
                     )
                   )
                   .getOrElse(Nil)
 
                 Future
                   .sequence(results.map {
-                    case (occurence, range, ranges)
-                        if !containsDuplicates(info.visited) =>
-                      symbolOccurenceToCallHierarchyItem(
+                    case (
+                          item @ CanBuildCallHierarchyItem(symbol, _),
+                          range,
+                          ranges
+                        ) if !containsDuplicates(info.visited) =>
+                      buildCallHierarchyItemFrom(
                         source,
                         doc,
-                        occurence,
+                        item,
                         range,
-                        info.visited :+ occurence.symbol,
+                        info.visited :+ symbol,
                         token
                       )
                         .mapOptionInside(chi =>
@@ -331,7 +395,7 @@ final case class CallHierarchyProvider(
           for {
             doc <- semanticdbs.textDocument(source).documentIncludingStale
             occ <- doc.occurrences.find(occ =>
-              occ.symbol == symbol && occ.role == Role.DEFINITION && doc.symbols
+              occ.symbol == symbol && occ.role.isDefinition && doc.symbols
                 .exists(symInfo => symInfo.symbol == symbol)
             )
           } yield (occ, source, doc)
@@ -350,13 +414,6 @@ final case class CallHierarchyProvider(
               .flatMap(rso =>
                 rso.occurrence.flatMap(occ =>
                   findDefinitionOccurence(occ.symbol)
-                    // For the case class, the symbols of the occurrences found are not _empty_/Example2# but _empty_/Example2.
-                    .orElse(
-                      if (occ.symbol.endsWith(".") && !occ.symbol.contains("#"))
-                        findDefinitionOccurence(occ.symbol.replace(".", "#"))
-                      else
-                        None
-                    )
                 )
               )
               .sortBy(_._1.symbol.length * -1)
@@ -386,7 +443,9 @@ final case class CallHierarchyProvider(
       .filterNot(_.is[Name])
       .flatMap(search)
       .groupBy(_._1)
-      .map { case (k, v) => (k, v.head._3, v.map(_._2), v.head._4, v.head._5) }
+      .map { case (k, v) =>
+        (SymbolOccurenceCHI(k), v.head._3, v.map(_._2), v.head._4, v.head._5)
+      }
       .toList
   }
 
@@ -416,14 +475,19 @@ final case class CallHierarchyProvider(
 
         Future
           .sequence(results.map {
-            case (occurence, range, ranges, definitionSource, definitionDoc)
-                if !containsDuplicates(info.visited) =>
-              symbolOccurenceToCallHierarchyItem(
+            case (
+                  item @ CanBuildCallHierarchyItem(symbol, _),
+                  range,
+                  ranges,
+                  definitionSource,
+                  definitionDoc
+                ) if !containsDuplicates(info.visited) =>
+              buildCallHierarchyItemFrom(
                 definitionSource,
                 definitionDoc,
-                occurence,
+                item,
                 range,
-                info.visited :+ occurence.symbol,
+                info.visited :+ symbol,
                 token
               ).mapOptionInside(chi =>
                 new CallHierarchyOutgoingCall(
