@@ -99,4 +99,19 @@ class HoverDocSuite extends BaseHoverSuite {
     ),
   )
 
+  check(
+    "java-method",
+    """|import java.nio.file.Paths
+       |
+       |object O{
+       |  <<Paths.g@@et("")>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def get(first: String, more: String*): Path
+       |```
+       |Converts a path string, or a sequence of strings that when joined form
+       |a path string, to a `Path`.
+       |""".stripMargin,
+  )
 }
