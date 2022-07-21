@@ -10,6 +10,7 @@ import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.core.Contexts.Context
@@ -157,12 +158,10 @@ class MetalsPrinter(
         implicitEvidenceParams.toList
       )
 
-    lazy val defaultValues =
+    lazy val paramsDocs =
       symbolSearch.symbolDocumentation(gsym) match
         case Some(info) =>
-          (info.parameters.asScala ++ info.typeParameters.asScala)
-            .map(_.defaultValue)
-            .toSeq
+          (info.typeParameters.asScala ++ info.parameters.asScala).toSeq
         case _ =>
           Seq.empty
 
@@ -181,7 +180,7 @@ class MetalsPrinter(
                 param,
                 implicitEvidencesByTypeParam,
                 index,
-                defaultValues,
+                paramsDocs,
                 nameToInfo,
               ) :: Nil
           index += 1
@@ -327,10 +326,15 @@ class MetalsPrinter(
       param: Symbol,
       implicitEvidences: Map[Symbol, List[String]],
       index: Int,
-      defaultValues: => Seq[String],
+      defaultValues: => Seq[SymbolDocumentation],
       nameToInfo: Map[Name, Type],
   ): String =
-    val keywordName = dotcPrinter.name(param)
+    val docInfo = defaultValues.lift(index)
+    val rawKeywordName = dotcPrinter.name(param)
+    val keywordName = docInfo match
+      case Some(info) if rawKeywordName.startsWith("x$") =>
+        info.displayName()
+      case _ => rawKeywordName
     val info = nameToInfo
       .get(param.name)
       .flatMap { info =>
@@ -364,8 +368,9 @@ class MetalsPrinter(
       val default =
         if includeDefaultParam == MetalsPrinter.IncludeDefaultParam.Include && isDefaultParam
         then
-          val defaultValue = defaultValues.lift(index) match
-            case Some(value) if !value.isEmpty => value
+          val defaultValue = docInfo match
+            case Some(value) if !value.defaultValue().isEmpty =>
+              value.defaultValue()
             case _ => "..."
           s" = $defaultValue"
         // to be populated later, otherwise we would spend too much time in completions
