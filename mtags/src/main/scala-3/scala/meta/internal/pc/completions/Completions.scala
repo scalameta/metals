@@ -298,6 +298,19 @@ class Completions(
                 ).forall(visit),
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
+      case CompletionKind.Members if query.nonEmpty =>
+        val visitor = new CompilerSearchVisitor(
+          query,
+          sym =>
+            if sym.is(ExtensionMethod) then
+              completionsWithSuffix(
+                sym,
+                sym.decodedName,
+                CompletionValue.Workspace(_, _, _),
+              ).forall(visit)
+            else false,
+        )
+        Some(search.search(query, buildTargetIdentifier, visitor))
       case _ => None
     end match
   end enrichWithSymbolSearch
