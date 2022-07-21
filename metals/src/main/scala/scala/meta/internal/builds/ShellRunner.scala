@@ -42,13 +42,15 @@ class ShellRunner(
       redirectErrorOutput: Boolean = false,
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
-      propagateError: Boolean = false
+      propagateError: Boolean = false,
+      extraRepos : Array[Repository] = Array()
   ): Future[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
     val classpath = Fetch
       .create()
       .withDependencies(dependency)
+      .addRepositories(extraRepos: _*)
       .fetch()
       .asScala
       .mkString(classpathSeparator)
