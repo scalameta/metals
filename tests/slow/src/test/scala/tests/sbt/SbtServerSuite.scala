@@ -95,10 +95,11 @@ class SbtServerSuite
 
   test("reload") {
     cleanWorkspace()
+    client.importBuildChanges = ImportBuildChanges.yes
     for {
       _ <- initialize(SbtBuildLayout("", V.scala213))
       // reload build after build.sbt changes
-      _ = client.importBuildChanges = ImportBuildChanges.yes
+      _ <- server.executeCommand(ServerCommands.ResetNotifications)
       _ <- server.didSave("build.sbt") { text =>
         s"""$text
            |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
