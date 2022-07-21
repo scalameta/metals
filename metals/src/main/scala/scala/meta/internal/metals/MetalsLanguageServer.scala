@@ -93,6 +93,7 @@ import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
 import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -167,6 +168,8 @@ class MetalsLanguageServer(
   private val recentlyOpenedFiles = new ActiveFiles(time)
   private val recentlyFocusedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
+
+  @volatile
   var userConfig: UserConfiguration = UserConfiguration()
   var excludedPackageHandler: ExcludedPackagesHandler =
     ExcludedPackagesHandler.default
@@ -991,17 +994,19 @@ class MetalsLanguageServer(
       statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
       tables.connect()
       registerNiceToHaveFilePatterns()
-      val result = Future
-        .sequence(
-          List[Future[Unit]](
-            quickConnectToBuildServer().ignoreValue,
-            slowConnectToBuildServer(forceImport = false).ignoreValue,
-            Future(workspaceSymbols.indexClasspath()),
-            Future(startHttpServer()),
-            Future(formattingProvider.load()),
+      val result = syncUserconfiguration().flatMap(_ =>
+        Future
+          .sequence(
+            List[Future[Unit]](
+              quickConnectToBuildServer().ignoreValue,
+              slowConnectToBuildServer(forceImport = false).ignoreValue,
+              Future(workspaceSymbols.indexClasspath()),
+              Future(startHttpServer()),
+              Future(formattingProvider.load()),
+            )
           )
-        )
-        .ignoreValue
+          .ignoreValue
+      )
       result
     } else {
       scribe.warn("Ignoring duplicate 'initialized' notification.")
@@ -1279,7 +1284,14 @@ class MetalsLanguageServer(
   def didChangeConfiguration(
       params: DidChangeConfigurationParams
   ): CompletableFuture[Unit] = {
-    val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
+    val fullJson = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
+    val metalsSection =
+      Option(fullJson.getAsJsonObject("metals")).getOrElse(new JsonObject)
+
+    updateConfiguration(metalsSection).asJava
+  }
+
+  private def updateConfiguration(json: JsonObject): Future[Unit] = {
     UserConfiguration.fromJson(json, clientConfig) match {
       case Left(errors) =>
         errors.foreach { error => scribe.error(s"config error: $error") }
@@ -1360,7 +1372,7 @@ class MetalsLanguageServer(
           .getOrElse(Future.successful(()))
         Future.sequence(List(restartBuildServer, resetDecorations)).map(_ => ())
     }
-  }.asJava
+  }
 
   @JsonNotification("workspace/didChangeWatchedFiles")
   def didChangeWatchedFiles(
@@ -2632,6 +2644,33 @@ class MetalsLanguageServer(
       },
       toIndexSource = path => sourceMapper.mappedTo(path).getOrElse(path),
     )
+  }
+
+  private def syncUserconfiguration(): Future[Unit] = {
+    val supportsConfiguration = for {
+      params <- initializeParams
+      capabilities <- Option(params.getCapabilities)
+      workspace <- Option(capabilities.getWorkspace)
+      out <- Option(workspace.getConfiguration())
+    } yield out.booleanValue()
+
+    if (supportsConfiguration.getOrElse(false)) {
+      val item = new ConfigurationItem()
+      item.setSection("metals")
+      val params = new ConfigurationParams(List(item).asJava)
+      languageClient
+        .configuration(params)
+        .asScala
+        .flatMap { items =>
+          items.asScala.headOption match {
+            case Some(item) =>
+              val json = item.asInstanceOf[JsonElement].getAsJsonObject()
+              updateConfiguration(json)
+            case None =>
+              Future.unit
+          }
+        }
+    } else Future.unit
   }
 
 }
