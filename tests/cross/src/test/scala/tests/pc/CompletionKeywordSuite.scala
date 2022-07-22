@@ -192,40 +192,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |package foo
       |
       |object A {
-      |  val x: Option[Int] = ???
-      |  val a = {
-      |    x ma@@
-      |  }
+      |  val x: Option[Int] =
+      |  x m@@
       |}
       |""".stripMargin,
     """|match
-       |""".stripMargin,
-    filter = _ == "match",
-  )
-
-  checkEdit(
-    "match-edit".tag(IgnoreScala2),
-    """
-      |package foo
-      |
-      |object A {
-      |  val abc: Option[Int] = ???
-      |  val a = {
-      |    abc ma@@
-      |  }
-      |}
-      |""".stripMargin,
-    s"""
-       |package foo
-       |
-       |object A {
-       |  val abc: Option[Int] = ???
-       |  val a = {
-       |    abc match
-       |\tcase $$0
-       |
-       |  }
-       |}
        |""".stripMargin,
     filter = _ == "match",
   )

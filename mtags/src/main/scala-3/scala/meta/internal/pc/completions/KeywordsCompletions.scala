@@ -22,8 +22,14 @@ object KeywordsCompletions:
           case kw if (kw.isPackage || kw.isTemplate) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }
+<<<<<<< HEAD
       case Select(qual, name) :: _ if "match".startsWith(name.toString()) =>
         List(CompletionValue.keyword("match", "match\n\tcase $0\n"))
+=======
+      case Select(qual, name) :: (appl: Apply) :: _
+          if "match".startsWith(name.toString()) =>
+        List(CompletionValue.keyword("match", "match {\n\tcase $0\n}"))
+>>>>>>> 10ac37aa17 (Add match keyword completion)
       case _ =>
         val isExpression = this.isExpression(path)
         val isBlock = this.isBlock(path)
