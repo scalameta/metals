@@ -187,21 +187,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
-    "match",
-    """
-      |package foo
-      |
-      |object A {
-      |  val x: Option[Int] =
-      |  x m@@
-      |}
-      |""".stripMargin,
-    """|match
-       |""".stripMargin,
-    filter = _ == "match",
-  )
-
-  check(
     "given-def",
     """
       |package foo
