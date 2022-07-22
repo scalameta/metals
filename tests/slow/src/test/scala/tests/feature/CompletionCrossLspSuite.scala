@@ -92,6 +92,11 @@ class CompletionCrossLspSuite
            |""".stripMargin,
         filter = _.contains("plus"),
       )
+      _ <- assertCompletion(
+        "\"plus is not available for string\".plu@@",
+        "",
+        filter = _.contains("plus"),
+      )
     } yield ()
   }
 }

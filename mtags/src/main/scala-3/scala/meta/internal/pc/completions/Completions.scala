@@ -74,12 +74,19 @@ class Completions(
             (advanced, SymbolSearch.Result.COMPLETE)
           case Select(qual, _) :: _ if qual.tpe.isErroneous =>
             (advanced, SymbolSearch.Result.COMPLETE)
+          case Select(qual, _) :: _ =>
+            val (_, compilerCompletions) = Completion.completions(pos)
+            val (compiler, result) = compilerCompletions
+              .flatMap(toCompletionValues)
+              .filterInteresting(qual.typeOpt.widenDealias)
+            (advanced ++ compiler, result)
           case _ =>
             val (_, compilerCompletions) = Completion.completions(pos)
             val (compiler, result) = compilerCompletions
               .flatMap(toCompletionValues)
               .filterInteresting()
             (advanced ++ compiler, result)
+        end match
 
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)
@@ -271,7 +278,8 @@ class Completions(
     else sym.info.widenTermRefExpr.show
 
   private def enrichWithSymbolSearch(
-      visit: CompletionValue => Boolean
+      visit: CompletionValue => Boolean,
+      qualType: Type = ctx.definitions.AnyType,
   ): Option[SymbolSearch.Result] =
     val query = completionPos.query
     completionPos.kind match
@@ -302,7 +310,9 @@ class Completions(
         val visitor = new CompilerSearchVisitor(
           query,
           sym =>
-            if sym.is(ExtensionMethod) then
+            if sym.is(ExtensionMethod) &&
+              qualType.widenDealias <:< sym.extensionParam.info.widenDealias
+            then
               completionsWithSuffix(
                 sym,
                 sym.decodedName,
@@ -333,7 +343,9 @@ class Completions(
       else sym.fullName.stripModuleClassSuffix.show
 
   extension (l: List[CompletionValue])
-    def filterInteresting(): (List[CompletionValue], SymbolSearch.Result) =
+    def filterInteresting(
+        qualType: Type = ctx.definitions.AnyType
+    ): (List[CompletionValue], SymbolSearch.Result) =
 
       val isSeen = mutable.Set.empty[String]
       val buf = List.newBuilder[CompletionValue]
@@ -370,7 +382,9 @@ class Completions(
 
       l.foreach(visit)
       val searchResult =
-        enrichWithSymbolSearch(visit).getOrElse(SymbolSearch.Result.COMPLETE)
+        enrichWithSymbolSearch(visit, qualType).getOrElse(
+          SymbolSearch.Result.COMPLETE
+        )
       (buf.result, searchResult)
 
   private lazy val isUninterestingSymbol: Set[Symbol] = Set[Symbol](
