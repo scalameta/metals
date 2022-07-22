@@ -201,6 +201,29 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     filter = _ == "match",
   )
 
+  checkEdit(
+    "match-edit".tag(IgnoreScala2),
+    """
+      |package foo
+      |
+      |object A {
+      |  val abc: Option[Int] = ???
+      |  abc ma@@
+      |}
+      |""".stripMargin,
+    s"""
+       |package foo
+       |
+       |object A {
+       |  val abc: Option[Int] = ???
+       |  abc match
+       |\tcase $$0
+       |
+       |}
+       |""".stripMargin,
+    filter = _ == "match",
+  )
+
   check(
     "given-def",
     """

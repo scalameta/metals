@@ -25,7 +25,7 @@ object KeywordsCompletions:
         }
       case Select(qual, name) :: (appl: Apply) :: _
           if "match".startsWith(name.toString()) =>
-        List(CompletionValue.keyword("match", "match {\n\tcase $0\n}"))
+        List(CompletionValue.keyword("match", "match\n\tcase $0\n"))
       case _ =>
         val isExpression = this.isExpression(path)
         val isBlock = this.isBlock(path)
