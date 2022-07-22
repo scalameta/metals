@@ -2354,10 +2354,7 @@ class MetalsLanguageServer(
         case None =>
           Future.successful(BuildChange.None)
       }
-      _ = {
-        tables.dismissedNotifications.ImportChanges.reset()
-        treeView.init()
-      }
+      _ = treeView.init()
     } yield result)
       .recover { case NonFatal(e) =>
         disconnectOldBuildServer()
