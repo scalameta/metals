@@ -52,30 +52,28 @@ class ExtractMethodCodeAction(
     val edits = toExtract.zip(scopeOptions)
     edits
       .map { case (apply: Term, scopes: List[(Tree, Int)]) =>
-        if (correctPath(scopes)) {
-          val applRange = apply.pos.end - apply.pos.start
-          scopes.map { case (defn, lv) =>
-            val scopeName = defnTitle(defn)
-            val codeAction = new l.CodeAction(
-              ExtractMethodCodeAction.title(apply.toString(), scopeName)
-            )
-            codeAction.setKind(l.CodeActionKind.RefactorExtract)
-            val applPos = new l.TextDocumentPositionParams(
-              params.getTextDocument(),
-              new l.Position(apply.pos.startLine, apply.pos.startColumn),
-            )
-            codeAction.setCommand(
-              ServerCommands.ExtractMethod.toLSP(
-                ServerCommands.ExtractMethodParams(
-                  applPos,
-                  new Integer(applRange),
-                  new Integer(lv),
-                )
+        val applRange = apply.pos.end - apply.pos.start
+        scopes.map { case (defn, lv) =>
+          val scopeName = defnTitle(defn)
+          val codeAction = new l.CodeAction(
+            ExtractMethodCodeAction.title(apply.toString(), scopeName)
+          )
+          codeAction.setKind(l.CodeActionKind.RefactorExtract)
+          val applPos = new l.TextDocumentPositionParams(
+            params.getTextDocument(),
+            new l.Position(apply.pos.startLine, apply.pos.startColumn),
+          )
+          codeAction.setCommand(
+            ServerCommands.ExtractMethod.toLSP(
+              ServerCommands.ExtractMethodParams(
+                applPos,
+                new Integer(applRange),
+                new Integer(lv),
               )
             )
-            codeAction
-          }
-        } else Nil
+          )
+          codeAction
+        }
       }
       .getOrElse(Nil)
 
@@ -123,24 +121,6 @@ class ExtractMethodCodeAction(
       case Some(d: Defn) => Some(d, lv)
       case _ => None
     }
-  }
-  // We have to check if there are no val (a,b) = {...} on path
-  private def correctPath(ts: List[(Tree, Int)]) = {
-    !ts.exists(t =>
-      t._1 match {
-        case vl: Defn.Val =>
-          vl.pats.head match {
-            case _: Pat.Var => false
-            case _ => true
-          }
-        case vr: Defn.Var =>
-          vr.pats.head match {
-            case _: Pat.Var => false
-            case _ => true
-          }
-        case _ => false
-      }
-    )
   }
 }
 

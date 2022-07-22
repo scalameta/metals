@@ -157,6 +157,26 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
        |}""".stripMargin,
   )
 
+  checkEdit(
+    "tuple".tag(IgnoreScalaVersion("3.1.3", "3.2.0")),
+    """|object A{
+       |  def method(i: Int) = i + 1
+       |  val (t1, t2) = {
+       |    val b = 4
+       |    123 + <<method(b)>>
+       |  }
+       |}""".stripMargin,
+    1,
+    """|object A{
+       |  def method(i: Int) = i + 1
+       |  def newMethod(b: Int): Int = method(b)
+       |  val (t1, t2) = {
+       |    val b = 4
+       |    123 + newMethod(b)
+       |  }
+       |}""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

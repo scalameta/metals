@@ -112,13 +112,14 @@ final class ExtractMethodProvider(
         blocks = path.filter(isBlockOrTemplate)
         block = blocks(lv) if blocks.length >= lv
         stats = statsInBlock(block)
+        firstStat <- stats.headOption
         stat <- stats.find(_.endPos.end >= apply.endPos.end)
       yield
         val namesInAppl = namesInVal(apply)
         val text = params.text()
-        val indent2 = stat.startPos.startColumn
-        val blank2 =
-          if source(stat.startPos.start - indent2) == '\t'
+        val indent = firstStat.startPos.startColumn
+        val blank =
+          if source(stat.startPos.start - indent) == '\t'
           then "\t"
           else " "
         val locals = localVariables(
@@ -132,7 +133,7 @@ final class ExtractMethodProvider(
         val applType = printer.tpe(apply.tpe)
         val applParams = withType.map(_._1).mkString(", ")
         val name = genName(stats)
-        val defText = s"${blank2 * indent2}def $name($typs): $applType = ${text
+        val defText = s"${blank * indent}def $name($typs): $applType = ${text
             .slice(apply.startPos.start, apply.endPos.end)}\n"
         val replacedText = s"$name($applParams)"
         val defPos = Position(new Integer(stat.startPos.startLine), 0)
