@@ -31,6 +31,7 @@ sealed trait CompletionValue:
       case _: CompletionValue.Document => CompletionItemKind.Snippet
       case _: CompletionValue.NamedArg => CompletionItemKind.Field
       case _: CompletionValue.Override => CompletionItemKind.Method
+      case _: CompletionValue.Extension => CompletionItemKind.Method
       case v: (CompletionValue.Compiler | CompletionValue.Workspace |
             CompletionValue.Scope | CompletionValue.Interpolator) =>
         val symbol = v.symbol
@@ -51,10 +52,12 @@ sealed trait CompletionValue:
       Nil,
     )
 
-  final def description(printer: MetalsPrinter): String =
+  final def description(printer: MetalsPrinter)(using Context): String =
     this match
       case _: CompletionValue.Override =>
         "" // Override doesn't need description as it already has full signature in label
+      case ext: CompletionValue.Extension =>
+        s"${printer.completionSymbol(ext.symbol)} (extension)"
       case so: CompletionValue.Symbolic =>
         printer.completionSymbol(so.symbol)
       case CompletionValue.NamedArg(_, tpe) =>
@@ -81,6 +84,15 @@ object CompletionValue:
   ) extends Symbolic
   case class Scope(label: String, symbol: Symbol) extends Symbolic
   case class Workspace(
+      label: String,
+      symbol: Symbol,
+      override val snippetSuffix: Option[String],
+  ) extends Symbolic
+
+  /**
+   * CompletionValue for extension methods via SymbolSearch
+   */
+  case class Extension(
       label: String,
       symbol: Symbol,
       override val snippetSuffix: Option[String],

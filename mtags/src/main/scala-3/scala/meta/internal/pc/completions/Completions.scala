@@ -316,7 +316,7 @@ class Completions(
               completionsWithSuffix(
                 sym,
                 sym.decodedName,
-                CompletionValue.Workspace(_, _, _),
+                CompletionValue.Extension(_, _, _),
               ).forall(visit)
             else false,
         )

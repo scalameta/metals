@@ -93,6 +93,12 @@ class CompletionCrossLspSuite
         filter = _.contains("plus"),
       )
       _ <- assertCompletion(
+        "1.plu@@",
+        """|plus(other: Int): Int (extension)
+           |""".stripMargin,
+        filter = _.contains("plus"),
+      )
+      _ <- assertCompletion(
         "\"plus is not available for string\".plu@@",
         "",
         filter = _.contains("plus"),

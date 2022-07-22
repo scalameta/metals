@@ -252,7 +252,10 @@ class CompletionsProvider(
 
     val completionTextSuffix = completion.snippetSuffix.getOrElse("")
     completion match
-      case CompletionValue.Workspace(label, sym, suffix) =>
+      case v: (CompletionValue.Workspace | CompletionValue.Extension) =>
+        val label = v.label
+        val sym = v.symbol
+        val suffix = v.snippetSuffix
         path match
           case (_: Ident) :: (_: Import) :: _ =>
             mkWorkspaceItem(
@@ -287,6 +290,7 @@ class CompletionsProvider(
                       ident,
                       sym.fullNameBackticked + completionTextSuffix,
                     )
+        end match
       case CompletionValue.Override(
             label,
             value,
