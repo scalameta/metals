@@ -358,7 +358,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     "member-label".tag(
       IgnoreScalaVersion.forRangeUntil(
         "3.2.0-RC1",
-        "3.2.1",
+        "3.2.0",
       )
     ),
     """|object Main {
@@ -402,7 +402,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
       .tag(
         IgnoreScalaVersion.forRangeUntil(
           "3.2.0-RC1",
-          "3.2.1",
+          "3.2.0",
         )
       ),
     """|object Main {
@@ -639,7 +639,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "auto-imports".tag(IgnoreScala3),
+    "auto-imports",
     """|object Main {
        |  "this is an interesting $Paths@@"
        |}
@@ -652,7 +652,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "auto-imports-prefix".tag(IgnoreScala3),
+    "auto-imports-prefix",
     """|
        |class Paths
        |object Main {
@@ -667,11 +667,25 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     assertSingleItem = false,
-    itemIndex = 1,
+    // Scala 3 has an additional Paths() completion
+    itemIndex = if (scalaVersion.startsWith("2")) 1 else 2,
+    compat = Map(
+      "3" ->
+        """|class Paths
+           |object Main {
+           |  s"this is an interesting {java.nio.file.Paths}"
+           |}
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
-    "auto-imports-prefix-with-interpolator".tag(IgnoreScala3),
+    "auto-imports-prefix-with-interpolator".tag(
+      IgnoreScalaVersion.forRangeUntil(
+        "3.2.0-RC1",
+        "3.2.0",
+      )
+    ),
     """|
        |class Paths
        |object Main {
@@ -685,6 +699,16 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"this is an interesting ${file.Paths}"
        |}
        |""".stripMargin,
+    // Scala 3 has an additional Paths object completion
+    itemIndex = if (scalaVersion.startsWith("2")) 0 else 1,
     assertSingleItem = false,
+    compat = Map(
+      "3" ->
+        """|class Paths
+           |object Main {
+           |  s"this is an interesting ${java.nio.file.Paths}"
+           |}
+           |""".stripMargin
+    ),
   )
 }

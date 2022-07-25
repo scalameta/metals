@@ -1,15 +1,23 @@
 package scala.meta.internal.pc.completions
 
+import scala.collection.mutable.ListBuffer
+
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.mtags.MtagsEnrichments.given
+import scala.meta.internal.pc.AutoImports.AutoImport
+import scala.meta.internal.pc.CompilerSearchVisitor
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.InterpolationSplice
+import scala.meta.internal.pc.printer.MetalsPrinter
+import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Names.TermName
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.interactive.Completion
@@ -27,6 +35,9 @@ object InterpolatorCompletions:
       path: List[Tree],
       completions: Completions,
       snippetsEnabled: Boolean,
+      search: SymbolSearch,
+      config: PresentationCompilerConfig,
+      buildTargetIdentifier: String,
   )(using Context) =
     val text = pos.source.content().mkString
     InterpolationSplice(pos.span.point, pos.source.content(), text) match
@@ -41,6 +52,9 @@ object InterpolatorCompletions:
           snippetsEnabled,
           hasStringInterpolator =
             path.tail.headOption.exists(_.isInstanceOf[SeqLiteral]),
+          search,
+          config,
+          buildTargetIdentifier,
         )
       case None =>
         InterpolatorCompletions.contributeMember(
@@ -146,6 +160,7 @@ object InterpolatorCompletions:
               Some(cursor.withStart(identOrSelect.span.start).toLSP),
               // Needed for VS Code which will not show the completion otherwise
               Some(identOrSelect.show + "." + label),
+              isWorkspace = false,
             ),
         )
     }.flatten
@@ -185,6 +200,9 @@ object InterpolatorCompletions:
       completions: Completions,
       areSnippetsSupported: Boolean,
       hasStringInterpolator: Boolean,
+      search: SymbolSearch,
+      config: PresentationCompilerConfig,
+      buildTargetIdentifier: String,
   )(using ctx: Context): List[CompletionValue] =
 
     val text = position.source.content().mkString
@@ -226,9 +244,27 @@ object InterpolatorCompletions:
       out.toString
     end newText
 
-    indexedContext.scopeSymbols.collect {
+    val workspaceSymbols = ListBuffer.empty[Symbol]
+    val visitor = new CompilerSearchVisitor(
+      interpolator.name,
+      sym =>
+        indexedContext.lookupSym(sym) match
+          case IndexedContext.Result.InScope => false
+          case _ =>
+            if sym.is(Flags.Module) then workspaceSymbols += sym
+            true,
+    )
+    if interpolator.name.nonEmpty then
+      search.search(interpolator.name, buildTargetIdentifier, visitor)
+
+    def collectCompletions(
+        isWorkspace: Boolean
+    ): PartialFunction[Symbol, List[CompletionValue]] =
       case sym
-          if CompletionFuzzy.matches(interpolator.name, sym.name.decoded) =>
+          if CompletionFuzzy.matches(
+            interpolator.name,
+            sym.name.decoded,
+          ) && !sym.isType =>
         val label = sym.name.decoded
         completions.completionsWithSuffix(
           sym,
@@ -241,9 +277,17 @@ object InterpolatorCompletions:
               additionalEdits(),
               Some(nameRange),
               None,
+              isWorkspace,
             ),
         )
-    }.flatten
+    end collectCompletions
+
+    val fromWorkspace =
+      workspaceSymbols.toList.collect(collectCompletions(isWorkspace = true))
+    val fromLocal = indexedContext.scopeSymbols.collect(
+      collectCompletions(isWorkspace = false)
+    )
+    (fromLocal ++ fromWorkspace).flatten
   end contributeScope
 
 end InterpolatorCompletions
