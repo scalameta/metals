@@ -408,6 +408,9 @@ class Completions(
             path,
             this,
             config.isCompletionSnippetsEnabled(),
+            search,
+            config,
+            buildTargetIdentifier,
           )
           .filterInteresting(enrich = false)
           ._1

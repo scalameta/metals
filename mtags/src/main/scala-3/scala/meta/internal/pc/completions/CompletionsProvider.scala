@@ -17,7 +17,9 @@ import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import org.eclipse.lsp4j.CompletionItem
@@ -257,46 +259,85 @@ class CompletionsProvider(
     val ident = completion.label
 
     val completionTextSuffix = completion.snippetSuffix.getOrElse("")
+
+    lazy val isInStringInterpolation =
+      path match
+        // s"My name is $name"
+        case (_: Ident) :: (_: SeqLiteral) :: (_: Typed) :: Apply(
+              Select(Apply(Select(Select(_, name), _), _), _),
+              _,
+            ) :: _ =>
+          name == StdNames.nme.StringContext
+        // "My name is $name"
+        case Literal(Constant(_: String)) :: _ =>
+          true
+        case _ =>
+          false
+
+    def mkItemWithImports(
+        v: CompletionValue.Workspace | CompletionValue.Extension |
+          CompletionValue.Interpolator
+    ) =
+      val label = v.label
+      val sym = v.symbol
+      val suffix = v.snippetSuffix
+      path match
+        case (_: Ident) :: (_: Import) :: _ =>
+          mkWorkspaceItem(
+            ident,
+            sym.fullNameBackticked,
+          )
+        case _ =>
+          autoImports.editsForSymbol(sym) match
+            case Some(edits) =>
+              edits match
+                case AutoImportEdits(Some(nameEdit), other) =>
+                  mkItem0(
+                    ident,
+                    nameEdit,
+                    isFromWorkspace = true,
+                    v.additionalEdits ++ other.toList,
+                  )
+                case _ =>
+                  mkItem(
+                    ident,
+                    v.insertText.getOrElse(
+                      ident.backticked + completionTextSuffix
+                    ),
+                    isFromWorkspace = true,
+                    v.additionalEdits ++ edits.edits,
+                    range = v.range,
+                  )
+            case None =>
+              val r = indexedContext.lookupSym(sym)
+              r match
+                case IndexedContext.Result.InScope =>
+                  mkItem(
+                    ident,
+                    ident.backticked + completionTextSuffix,
+                    additionalEdits = v.additionalEdits,
+                  )
+                case _ if isInStringInterpolation =>
+                  mkWorkspaceItem(
+                    ident,
+                    "{" + sym.fullNameBackticked + completionTextSuffix + "}",
+                    additionalEdits = v.additionalEdits,
+                  )
+                case _ =>
+                  mkWorkspaceItem(
+                    ident,
+                    sym.fullNameBackticked + completionTextSuffix,
+                    additionalEdits = v.additionalEdits,
+                  )
+              end match
+      end match
+    end mkItemWithImports
+
     completion match
       case v: (CompletionValue.Workspace | CompletionValue.Extension) =>
-        val label = v.label
-        val sym = v.symbol
-        val suffix = v.snippetSuffix
-        path match
-          case (_: Ident) :: (_: Import) :: _ =>
-            mkWorkspaceItem(
-              ident,
-              sym.fullNameBackticked,
-            )
-          case _ =>
-            autoImports.editsForSymbol(sym) match
-              case Some(edits) =>
-                edits match
-                  case AutoImportEdits(Some(nameEdit), other) =>
-                    mkItem0(
-                      ident,
-                      nameEdit,
-                      isFromWorkspace = true,
-                      other.toList,
-                    )
-                  case _ =>
-                    mkItem(
-                      ident,
-                      ident.backticked + completionTextSuffix,
-                      isFromWorkspace = true,
-                      edits.edits,
-                    )
-              case None =>
-                val r = indexedContext.lookupSym(sym)
-                r match
-                  case IndexedContext.Result.InScope =>
-                    mkItem(ident, ident.backticked + completionTextSuffix)
-                  case _ =>
-                    mkWorkspaceItem(
-                      ident,
-                      sym.fullNameBackticked + completionTextSuffix,
-                    )
-        end match
+        mkItemWithImports(v)
+      case v: CompletionValue.Interpolator if v.isWorkspace =>
+        mkItemWithImports(v)
       case CompletionValue.Override(
             label,
             value,

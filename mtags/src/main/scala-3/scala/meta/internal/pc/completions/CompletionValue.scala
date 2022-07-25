@@ -136,6 +136,7 @@ object CompletionValue:
       override val additionalEdits: List[TextEdit],
       override val range: Option[Range],
       override val filterText: Option[String],
+      isWorkspace: Boolean,
   ) extends Symbolic
 
   case class Document(label: String, doc: String, description: String)
