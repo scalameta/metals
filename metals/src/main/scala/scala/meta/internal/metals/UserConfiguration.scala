@@ -290,8 +290,6 @@ object UserConfiguration {
       properties: Properties = System.getProperties,
   ): Either[List[String], UserConfiguration] = {
     val errors = ListBuffer.empty[String]
-    val base: JsonObject =
-      Option(json.getAsJsonObject("metals")).getOrElse(new JsonObject)
 
     def getKey[A](
         key: String,
@@ -311,7 +309,7 @@ object UserConfiguration {
     def getSubKey(key: String): Option[JsonObject] =
       getKey(
         key,
-        base,
+        json,
         { value =>
           Try(value.getAsJsonObject())
             .fold(
@@ -324,7 +322,7 @@ object UserConfiguration {
         },
       )
     def getStringKey(key: String): Option[String] =
-      getStringKeyOnObj(key, base)
+      getStringKeyOnObj(key, json)
 
     def getStringKeyOnObj(
         key: String,
@@ -349,7 +347,7 @@ object UserConfiguration {
     def getBooleanKey(key: String): Option[Boolean] =
       getKey(
         key,
-        base,
+        json,
         { value =>
           Try(value.getAsBoolean())
             .fold(
@@ -375,7 +373,7 @@ object UserConfiguration {
     def getStringListKey(key: String): Option[List[String]] =
       getKey[List[String]](
         key,
-        base,
+        json,
         { elem =>
           if (elem.isJsonArray()) {
             val parsed = elem.getAsJsonArray().asScala.flatMap { value =>
@@ -398,7 +396,7 @@ object UserConfiguration {
     def getStringMap(key: String): Option[Map[String, String]] =
       getKey(
         key,
-        base,
+        json,
         { value =>
           Try {
             for {
@@ -532,7 +530,7 @@ object UserConfiguration {
 
   def parse(config: String): JsonObject = {
     import JsonParser._
-    s"""{"metals": $config}""".parseJson.getAsJsonObject
+    config.parseJson.getAsJsonObject
   }
 
 }

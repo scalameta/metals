@@ -1,12 +1,14 @@
 package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
+import java.{util => ju}
 
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
+import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
@@ -106,4 +108,9 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
 
   override def refreshModel(): CompletableFuture[Unit] =
     underlying.refreshModel()
+
+  override def configuration(
+      configurationParams: ConfigurationParams
+  ): CompletableFuture[ju.List[Object]] =
+    underlying.configuration(configurationParams)
 }

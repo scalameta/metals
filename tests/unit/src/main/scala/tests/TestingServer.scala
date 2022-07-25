@@ -71,6 +71,7 @@ import scala.meta.io.RelativePath
 import _root_.org.eclipse.lsp4j.DocumentSymbolCapabilities
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import munit.Tag
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeActionContext
@@ -705,7 +706,12 @@ final case class TestingServer(
 
   def didChangeConfiguration(config: String): Future[Unit] = {
     val json = UserConfiguration.parse(config)
-    val params = new DidChangeConfigurationParams(json)
+
+    // lsp -didChangeConfiguration method should be called with a wrapped object
+    val didChangeJson = new JsonObject()
+    didChangeJson.add("metals", json)
+
+    val params = new DidChangeConfigurationParams(didChangeJson)
     server.didChangeConfiguration(params).asScala
   }
 
