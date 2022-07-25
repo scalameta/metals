@@ -794,4 +794,62 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
     } yield ()
   }
+
+  test("type-aliases") {
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/Main.scala
+           |object O {
+           | type Foo3[T, R] = (T, R, "")
+           | def hello: Option[(Int, String)] = {
+           |  type Foo = (Int, String)
+           |  type Foo2[T] = (T, String)
+           |  def foo: Option[Foo] = ???
+           |  def foo2: Option[Foo2[Int]] = Option((1, ""))
+           |  def foo3: Option[Foo3[Int, String]] = Option((1, "", ""))
+           |  for {
+           |    a <- foo
+           |    b <- foo2
+           |    c <- foo3
+           |  } yield a
+           | }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions-and-classes": true,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object O {
+           | type Foo3[T, R] = (T, R, "")
+           | def hello: Option[(Int, String)] = {
+           |  type Foo = (Int, String)
+           |  type Foo2[T] = (T, String)
+           |  def foo: Option[Foo] = ???
+           |  def foo2: Option[Foo2[Int]] = Option[(Int, String)]((1, ""))
+           |  def foo3: Option[Foo3[Int, String]] = Option[(Int, String, )]((1, "", ""))
+           |  for {
+           |    a: Foo <- foo
+           |    b: Foo2[Int] <- foo2
+           |    c: Foo3[Int, String] <- foo3
+           |  } yield a
+           | }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }

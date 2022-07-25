@@ -31,8 +31,6 @@ class SemanticdbTreePrinter(
         val isFunction = symbol.startsWith("scala/Function")
         val sym =
           if (tuple || isFunction) ""
-          // don't print unnamed types
-          else if (symbol.startsWith("local")) "_"
           else printSymbol(symbol)
         val typeArgs = printTypeArgs(typeArguments, tuple, isFunction)
         s"${printPrefix(prefix)}${sym}${typeArgs}"
