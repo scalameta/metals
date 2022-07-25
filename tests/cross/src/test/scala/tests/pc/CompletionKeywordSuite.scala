@@ -187,6 +187,53 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+<<<<<<< HEAD
+=======
+    "match",
+    """
+      |package foo
+      |
+      |object A {
+      |  val x: Option[Int] = ???
+      |  val a = {
+      |    x ma@@
+      |  }
+      |}
+      |""".stripMargin,
+    """|match
+       |""".stripMargin,
+    filter = _ == "match",
+  )
+
+  checkEdit(
+    "match-edit".tag(IgnoreScala2),
+    """
+      |package foo
+      |
+      |object A {
+      |  val abc: Option[Int] = ???
+      |  val a = {
+      |    abc ma@@
+      |  }
+      |}
+      |""".stripMargin,
+    s"""
+       |package foo
+       |
+       |object A {
+       |  val abc: Option[Int] = ???
+       |  val a = {
+       |    abc match
+       |\tcase $$0
+       |
+       |  }
+       |}
+       |""".stripMargin,
+    filter = _ == "match",
+  )
+
+  check(
+>>>>>>> 639c492a8f (Fix for 3.1.1)
     "given-def",
     """
       |package foo
