@@ -386,7 +386,7 @@ final class SyntheticsDecorationProvider(
       textDoc.symbols
         .find(_.symbol == symbol)
         .map(_.displayName)
-        .getOrElse(symbol)
+        .getOrElse("_")
     else symbol.desc.name.value
   }
 
