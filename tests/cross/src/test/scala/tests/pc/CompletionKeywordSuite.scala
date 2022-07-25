@@ -192,8 +192,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |package foo
       |
       |object A {
-      |  val x: Option[Int] =
-      |  x m@@
+      |  val x: Option[Int] = ???
+      |  val a = {
+      |    x ma@@
+      |  }
       |}
       |""".stripMargin,
     """|match
@@ -208,7 +210,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |
       |object A {
       |  val abc: Option[Int] = ???
-      |  abc ma@@
+      |  val a = {
+      |    abc ma@@
+      |  }
       |}
       |""".stripMargin,
     s"""
@@ -216,9 +220,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
        |
        |object A {
        |  val abc: Option[Int] = ???
-       |  abc match
+       |  val a = {
+       |    abc match
        |\tcase $$0
        |
+       |  }
        |}
        |""".stripMargin,
     filter = _ == "match",
