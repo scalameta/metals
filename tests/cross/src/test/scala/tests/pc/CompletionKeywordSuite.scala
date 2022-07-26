@@ -486,11 +486,28 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+    "extends",
+    """
+      |package foo
+      |
+      |class Foo ext@@{
+      |}
+    """.stripMargin,
+    """|extension
+       |extends
+       |""".stripMargin,
+    compat = Map(
+      "2" -> "extends"
+    ),
+  )
+
+  check(
     "topLevel",
     "@@",
     """|abstract class
        |case class
        |class
+       |extends
        |final
        |import
        |object
@@ -526,6 +543,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                 |sealed abstract class
                 |sealed class
                 |implicit
+                |extends
                 |""".stripMargin
     ),
   )

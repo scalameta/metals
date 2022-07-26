@@ -106,10 +106,9 @@ object Keyword {
     Keyword("macro"), // in-frequently used language feature
     // The keywords below were left out in the first iteration of implementing keyword completions
     // since they appear in positions that are a bit more difficult to detect on the syntax tree.
-    Keyword("extends"),
     Keyword("with"),
     Keyword("catch"),
-    Keyword("extends"),
+    Keyword("extends", isPackage = true),
     Keyword("finally"),
     Keyword("then")
   )
