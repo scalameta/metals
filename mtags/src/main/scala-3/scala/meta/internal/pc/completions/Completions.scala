@@ -64,7 +64,7 @@ class Completions(
     case (_: Ident) :: (_: SeqLiteral) :: _ => false
     case _ => true
 
-  private def calculateTypeInstanceAndNewPositions =
+  private def calculateTypeInstanceAndNewPositions() =
 
     path match
       case head :: tail
@@ -439,7 +439,6 @@ class Completions(
                 if sym.isClass || sym.is(Module) then
                   // drop #|. at the end to avoid duplication
                   name.substring(0, name.length - 1)
-                  // + sym.toString
                 else name
 
               val include =
