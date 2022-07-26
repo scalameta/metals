@@ -77,6 +77,11 @@ final class FoldingRanges(foldOnlyLines: Boolean) {
     add(range, adjust = true)
   }
 
+  def add(kind: String, range: FoldingRange, adjust: Boolean): Unit = {
+    range.setKind(kind)
+    add(range, adjust)
+  }
+
   def addAsIs(kind: String, range: FoldingRange): Unit = {
     range.setKind(kind)
     add(range, adjust = false)
