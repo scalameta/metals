@@ -32,6 +32,7 @@ import dotty.tools.dotc.util.NameTransformer
 import dotty.tools.dotc.util.NoSourcePosition
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
+import dotty.tools.dotc.util.Spans.Span
 import dotty.tools.dotc.util.SrcPos
 
 class Completions(
@@ -68,30 +69,32 @@ class Completions(
     path match
       case head :: tail
           if head.isInstanceOf[Select] || head.isInstanceOf[Ident] =>
+        shouldAddSquareBracket =
+          val span: Span = head.srcPos.span
+          if span.exists then
+            var i = span.end
+            while i < (text.length() - 1) && text(i).isWhitespace do i = i + 1
+
+            if (i < text.length()) then text(i) != '['
+            else true
+          else false
         tail match
           case (v: ValOrDefDef) :: _ =>
             if v.tpt.sourcePos.contains(pos) then isTypePosition = true
-          //    pprint.log(path)
           case New(selectOrIdent) :: _
               if selectOrIdent.isInstanceOf[Select] || selectOrIdent
                 .isInstanceOf[Ident] =>
-            if selectOrIdent.sourcePos.contains(pos) then
-              //     pprint.log(selectOrIdent)
-              isNewPosition = true
+            if selectOrIdent.sourcePos.contains(pos) then isNewPosition = true
           case (a @ AppliedTypeTree(_, args)) :: _ =>
-            if args.exists(_.sourcePos.contains(pos)) then
-              //     pprint.log(a)
-              isTypePosition = true
+            if args.exists(_.sourcePos.contains(pos)) then isTypePosition = true
+            else shouldAddSquareBracket = false
           case (_: Import) :: _ =>
           case _ =>
-            //  pprint.log(tail)
             isInstantiationOrMethodCallPos = true
-        //     pprint.log(tail)
         end match
 
       case (_: TypeTree) :: TypeApply(Select(newQualifier: New, _), _) :: _
           if newQualifier.sourcePos.contains(pos) =>
-        //    pprint.log(newQualifier)
         isNewPosition = true
 
       case _ =>
@@ -101,6 +104,7 @@ class Completions(
   private var isTypePosition = false
   private var isNewPosition = false
   private var isInstantiationOrMethodCallPos = false
+  private var shouldAddSquareBracket = true
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
     val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
@@ -180,37 +184,14 @@ class Completions(
         end match
       else ""
 
-    // symbol.info.typeParams.foreach(param =>
-    //   pprint.log(param.paramInfo)
-    // )
-
     val bracketSuffix =
-      if shouldAddSnippet
+      if shouldAddSnippet && shouldAddSquareBracket
         && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
         && (symbol.info.typeParams.nonEmpty
           || (symbol.isAllOf(
             Flags.JavaModule
           ) && symbol.companionClass.typeParams.nonEmpty))
-      then
-        //  pprint.log(symbol.info.typeParamNamed)
-        "[$0]"
-        //  val typeParamsLists = getParams(symbol).filter(
-        //        _.exists { sym =>
-        //          sym.isType
-        //        }
-        //      )
-
-        //  typeParamsLists match
-        //    case Nil => ""
-        //    case List(Nil) => ""
-        //    case _ if config.isCompletionSnippetsEnabled =>
-        //      val onlyParameterless = typeParamsLists.forall(_.isEmpty)
-        //      if onlyParameterless then "[]"
-        //      //* typeParams.length
-        //      else
-        //        "[$0]"
-        //    case _ => ""
-        //  end match
+      then "[$0]"
       else ""
 
     val templateSuffix =
@@ -253,12 +234,11 @@ class Completions(
     methodSymbols.map { methodSymbol =>
       val suffix = findSuffix(methodSymbol)
       val name = undoBacktick(label)
-      val compVal = toCompletionValue(
+      toCompletionValue(
         name,
         methodSymbol,
         suffix,
       )
-      compVal
     }
   end completionsWithSuffix
 
@@ -457,25 +437,11 @@ class Completions(
               val suffix = symOnly.snippetSuffix.getOrElse("")
               val id =
                 if sym.isClass || sym.is(Module) then
-                  // pprint.log(s"$sym was class or module")
                   // drop #|. at the end to avoid duplication
                   name.substring(0, name.length - 1)
                   // + sym.toString
-                else
-                  // pprint.log(s"$sym was something else")
+                else name
 
-                  name
-                  // + sym.toString
-                // + suffix
-
-//              if (name.contains("SomeToExpr") || name.contains("SomeFromExpr")){
-//              {
-//                pprint.log(head)
-//                pprint.log(isTypePosition)
-//                pprint.log(isNewPosition)
-//                pprint.log(isInstantiationOrMethodCallPos)
-////              }
-//              }
               val include =
                 !isUninterestingSymbol(sym) &&
                   isNotLocalForwardReference(sym)
@@ -487,8 +453,6 @@ class Completions(
                     .startsWith("class ") && !sym.toString.startsWith(
                     "trait "
                   )))
-//              if include then
-//                 pprint.log((head, id))
 
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)

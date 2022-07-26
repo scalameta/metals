@@ -445,18 +445,18 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "annotation-def",
+    "annotation-def-with-middle-space",
     """|
        |object Main {
        |  @noinline
-       |  def foo: ArrayBuffer@@[Int] = ???
+       |  def foo: ArrayBuffer@@ [Int] = ???
        |}
        |""".stripMargin,
     """|import scala.collection.mutable.ArrayBuffer
        |
        |object Main {
        |  @noinline
-       |  def foo: ArrayBuffer[Int] = ???
+       |  def foo: ArrayBuffer [Int] = ???
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable",
@@ -581,7 +581,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "parent-object-scala2".tag(IgnoreScala3),
+    "parent-object",
     """|object Main {
        |  Implicits@@
        |}
@@ -592,6 +592,14 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Implicits - scala.concurrent.ExecutionContext",
+    compat = Map {
+      "3" ->
+        """|import scala.concurrent.ExecutionContext.Implicits
+           |object Main {
+           |  Implicits
+           |}
+           |""".stripMargin
+    },
   )
 
   // this test was intended to check that import is rendered correctly - without `$` symbol
