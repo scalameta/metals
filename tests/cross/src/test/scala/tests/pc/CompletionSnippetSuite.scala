@@ -182,12 +182,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|SimpleFileVisitor[$0]
        |""".stripMargin,
-    // compat = Map(
-    //   // scala 3 new completions not implemented, so no way to distinguish if we are at a type position
-    //   "3" ->
-    //     """|SimpleFileVisitor
-    //        |""".stripMargin
-    // ),
   )
 
   checkSnippet(

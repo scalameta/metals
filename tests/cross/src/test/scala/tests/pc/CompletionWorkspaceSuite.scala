@@ -115,6 +115,15 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    compat = Map(
+      "2" ->
+        """|package `import-conflict3`
+           |import java.util.concurrent.Future
+           |case class Foo(
+           |  name: scala.concurrent.Future
+           |)
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -132,6 +141,15 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    compat = Map(
+      "2" ->
+        """|package `import-conflict4`
+           |import java.util.concurrent._
+           |case class Foo(
+           |  name: scala.concurrent.Future
+           |)
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -150,6 +168,16 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    compat = Map(
+      "2" ->
+        """|package `import-no-conflict`
+           |import java.util.concurrent.{Future => _, _}
+           |import scala.concurrent.Future
+           |case class Foo(
+           |  name: Future
+           |)
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -180,6 +208,14 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |import java.util.concurrent.CompletableFuture
       |object Main extends CompletableFuture[$0]
       |""".stripMargin,
+    compat = Map(
+      "2" ->
+        """package pkg
+          |
+          |import java.util.concurrent.CompletableFuture
+          |object Main extends CompletableFuture
+          |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -192,6 +228,14 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |import java.util.concurrent.CompletableFuture
       |object Main extends CompletableFuture[$0]
       |""".stripMargin,
+    compat = Map(
+      "2" ->
+        """package pkg
+          |
+          |import java.util.concurrent.CompletableFuture
+          |object Main extends CompletableFuture
+          |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -305,6 +349,16 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _.contains("java.util"),
+    compat = Map(
+      "2" ->
+        """|import java.util.ArrayDeque
+           |object Main {
+           |  def foo(): Unit = null match {
+           |    case x: ArrayDeque =>
+           |  }
+           |}
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -323,6 +377,16 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _.contains("scala.util"),
+    compat = Map(
+      "2" ->
+        """|import scala.util.Failure
+           |object Main {
+           |  def foo(): Unit = {
+           |    val x: Failure
+           |  }
+           |}
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
