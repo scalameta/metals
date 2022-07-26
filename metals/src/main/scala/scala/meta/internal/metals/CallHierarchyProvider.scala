@@ -23,7 +23,6 @@ import org.eclipse.{lsp4j => l}
 import scala.meta.Tree
 import scala.meta.Defn
 import scala.meta.Pat
-import scala.meta.Ctor
 import scala.meta.Name
 import com.google.gson.JsonElement
 import scala.meta.Member
@@ -31,6 +30,10 @@ import scala.meta.Term
 import scala.meta.pc.CancelToken
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.meta.Decl
+import scala.meta.Type
+import scala.meta.Init
+import scala.meta.Template
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,
@@ -74,30 +77,38 @@ final case class CallHierarchyProvider(
       visited: Array[String]
   )
 
+  private def extractNameFromDefinitionPats[V <: Tree { def pats: List[Pat] }](
+      v: V
+  ) =
+    v.pats match {
+      case (pat: Pat.Var) :: Nil => Some((v, pat.name))
+      case _ => None
+    }
+
   private def extractNameFromDefinition(tree: Tree): Option[(Tree, Name)] =
     tree match {
-      case v: Defn.Val =>
-        v.pats match {
-          case (pat: Pat.Var) :: Nil => Some((v, pat.name))
-          case _ => None
-        }
-      case v: Defn.Var =>
-        v.pats match {
-          case (pat: Pat.Var) :: Nil => Some((v, pat.name))
-          case _ => None
-        }
-      case member: Defn with Member => Some((member, member.name))
-      case ctor: Ctor => Some((ctor, ctor.name))
+      case v: Defn.Val => extractNameFromDefinitionPats(v)
+      case v: Defn.Var => extractNameFromDefinitionPats(v)
+      case v: Decl.Val => extractNameFromDefinitionPats(v)
+      case v: Decl.Var => extractNameFromDefinitionPats(v)
+      case member: Member => Some((member, member.name))
       case _ => None
     }
 
   private def isTypeDeclaration(tree: Tree): Boolean =
     (tree.parent
       .map {
+        case t: Template => t.inits.contains(tree)
+        case p: Term.Param => p.decltpe.contains(tree)
+        case at: Term.ApplyType => at.targs.contains(tree)
+        case p: Type.Param => p.tbounds == tree
         case v: Defn.Val => v.decltpe.contains(tree)
         case v: Defn.Var => v.decltpe.contains(tree)
         case ga: Defn.GivenAlias => ga.decltpe == tree
-        case d: Defn.Def => d.decltpe.contains(tree)
+        case d: Defn.Def =>
+          d.decltpe.contains(tree) || d.tparams.contains(tree)
+        case _: Type.Bounds => true
+        case t @ (_: Type | _: Name | _: Init) => isTypeDeclaration(t)
         case _ => false
       })
       .getOrElse(false)
@@ -238,7 +249,6 @@ final case class CallHierarchyProvider(
   ): List[
     (CanBuildCallHierarchyItem[SymbolOccurrence], l.Range, Seq[l.Range])
   ] = {
-
     def search(
         tree: Tree,
         parent: Option[Name],
@@ -428,6 +438,9 @@ final case class CallHierarchyProvider(
         TextDocument
     )
   ] = {
+
+    val realRoot = findDefinition(Some(root))
+
     def search(
         tree: Tree
     ): List[(SymbolOccurrence, l.Range, l.Range, AbsolutePath, TextDocument)] =
@@ -444,6 +457,9 @@ final case class CallHierarchyProvider(
               .sortBy(_._1.symbol.length * -1)
               .headOption // The most specific occurrence is the longest
             definitionRange <- definitionOccurence.range
+            if !(definitionDoc == doc && realRoot.exists(
+              _._1.pos.encloses(definitionRange.toLSP)
+            ))
             definitionName <- trees.findLastEnclosingAt(
               definitionSource,
               definitionRange.toLSP.getStart
@@ -464,7 +480,7 @@ final case class CallHierarchyProvider(
           other.children.flatMap(search)
       }
 
-    findDefinition(Some(root)) match {
+    realRoot match {
       case Some((definition, _)) =>
         groupOutgoingCalls[SymbolOccurrence](
           definition.children
@@ -522,6 +538,8 @@ final case class CallHierarchyProvider(
                         ) =>
                       for {
                         definitionRange <- definitionOccurence.range
+                        if !(definitionDoc == doc && definition.pos
+                          .encloses(definitionRange.toLSP))
                         definitionName <- trees.findLastEnclosingAt(
                           definitionSource,
                           definitionRange.toLSP.getStart
