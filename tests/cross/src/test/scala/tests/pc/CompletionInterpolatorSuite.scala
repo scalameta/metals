@@ -355,7 +355,12 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   check(
-    "member-label",
+    "member-label".tag(
+      IgnoreScalaVersion.forRangeUntil(
+        "3.2.0-RC1",
+        "3.2.1",
+      )
+    ),
     """|object Main {
        |  
        |  s"Hello $List.e@@ "
@@ -394,13 +399,12 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "member2",
-    // .tag(
-    //   IgnoreScalaVersion.forRangeUntil(
-    //     "3.2.0-RC1",
-    //     "3.2.1",
-    //   )
-    // ),
+    "member2".tag(
+      IgnoreScalaVersion.forRangeUntil(
+        "3.2.0-RC1",
+        "3.2.1",
+      )
+    ),
     """|object Main {
        |  s"Hello $Main.toStr@@!"
        |}
