@@ -64,7 +64,7 @@ class ExtractMethodCodeAction(
           val defnPos =
             stats(block).find(_.pos.end >= head.pos.end).getOrElse(defn)
           val scopeName = defnTitle(defn)
-          
+
           val codeAction = new l.CodeAction(
             ExtractMethodCodeAction.title(scopeName)
           )

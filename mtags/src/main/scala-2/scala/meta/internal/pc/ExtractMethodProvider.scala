@@ -1,10 +1,11 @@
 package scala.meta.internal.pc
 
+import scala.collection.mutable
+
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionLspRange
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.{lsp4j => l}
-import scala.collection.mutable
 
 final class ExtractMethodProvider(
     val compiler: MetalsGlobal,
@@ -78,10 +79,10 @@ final class ExtractMethodProvider(
         ).toSet
       }
       val usedNames = defsOnPath(path)
-      if(!usedNames("newMethod")) "newMethod"
+      if (!usedNames("newMethod")) "newMethod"
       else {
         var i = 0
-        while(usedNames(s"newMethod$i")) {
+        while (usedNames(s"newMethod$i")) {
           i += 1
         }
         s"newMethod$i"
@@ -115,10 +116,11 @@ final class ExtractMethodProvider(
         oldIndent: Int
     ): String = {
       var i = 0
+      val additional = if (newIndent.indexOf("\t") != -1) "\t" else "  "
       while ((line(i) == ' ' || line(i) == '\t') && i < oldIndent) {
         i += 1
       }
-      newIndent + '\t' + line.drop(i)
+      newIndent + additional + line.drop(i)
     }
 
     val path = pathTo(unit.body, range)
@@ -143,7 +145,7 @@ final class ExtractMethodProvider(
           .mkString(", ")
         val newAppl = typedTreeAt(appl.pos)
         val applType =
-          if (newAppl.tpe != null) s": ${prettyType(newAppl.tpe)}" else ""
+          if (newAppl.tpe != null) s": ${prettyType(newAppl.tpe.widen)}" else ""
         val applParams = withType.map(_._1).mkString(", ")
         val name = genName(path)
         val text = params.text()

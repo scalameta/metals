@@ -19,7 +19,7 @@ class ExtractMethodLspSuite
         |  val b = 4
         |  def method(i: Int) = i + 1
         |  def newMethod(): Int =
-        |  \t123 + method(b)
+        |    123 + method(b)
         |
         |  val a = newMethod()
         |}""".stripMargin,
@@ -42,10 +42,9 @@ class ExtractMethodLspSuite
     s"""|object A{
         |  def method(i: Int, j: Int) = i + j
         |  def newMethod(): Int = {
-        |  \tval b = 2
-        |  \t123 + method(b, 10)
+        |    val b = 2
+        |    123 + method(b, 10)
         |  }
-        |  end newMethod
         |  val a = {
         |    val c = 1
         |    newMethod()
@@ -71,8 +70,8 @@ class ExtractMethodLspSuite
     s"""|object A{
         |  def method(i: Int, j: Int) = i + j
         |  def newMethod(c: Int): Int = {
-        |  \tval b = 2
-        |  \t123 + method(c, 10)
+        |    val b = 2
+        |    123 + method(c, 10)
         |  }
         |  val a = {
         |    val c = 1
@@ -98,7 +97,7 @@ class ExtractMethodLspSuite
         |  def newMethod0(a: Int) = a + 1
         |  def method(i: Int) = i + i
         |  def newMethod1(): Int =
-        |  \tmethod(5)
+        |    method(5)
         |
         |  val a = newMethod1()
         |}""".stripMargin,
@@ -123,7 +122,7 @@ class ExtractMethodLspSuite
         |  val c = 3
         |  def method(i: Int, j: Int) = i + 1
         |  def newMethod(c: Int): Int =
-        |  \t123 + method(c, b) + method(b,c)
+        |    123 + method(c, b) + method(b,c)
         |
         |  val a = { 
         |    val c = 5
@@ -155,8 +154,8 @@ class ExtractMethodLspSuite
         |  def method(i: Int, j: Int, k: Int) = i + j + k
         |  val a = {
         |    def newMethod(c: Int): Int = {
-        |    \tval d = 3
-        |    \tmethod(d, b, c)
+        |      val d = 3
+        |      method(d, b, c)
         |    }
         |    def f() = {
         |      val c = 1

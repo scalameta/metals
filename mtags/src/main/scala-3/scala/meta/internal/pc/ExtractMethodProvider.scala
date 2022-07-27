@@ -107,8 +107,9 @@ final class ExtractMethodProvider(
 
     def adjustIndent(line: String, newIndent: String, oldIndent: Int): String =
       var i = 0
+      val additional = if newIndent.indexOf("\t") != -1 then "\t" else "  "
       while (line(i) == ' ' || line(i) == '\t') && i < oldIndent do i += 1
-      newIndent + '\t' + line.drop(i)
+      newIndent + additional + line.drop(i)
 
     val edits =
       for
@@ -129,7 +130,7 @@ final class ExtractMethodProvider(
         val typs = withType
           .map((k, v) => s"$k: $v")
           .mkString(", ")
-        val applType = printer.tpe(appl.tpe)
+        val applType = printer.tpe(appl.tpe.widenUnion)
         val applParams = withType.map(_._1).mkString(", ")
         val name = genName(path)
         val text = params.text()
@@ -142,7 +143,7 @@ final class ExtractMethodProvider(
           .mkString("\n")
         val defText =
           if extracted.length > 1 then
-            s"def $name($typs): $applType =\n${textToExtract}\n${newIndent}end $name\n$newIndent"
+            s"def $name($typs): $applType =\n${textToExtract}\n\n$newIndent"
           else s"def $name($typs): $applType =\n${textToExtract}\n\n$newIndent"
         val replacedText = s"$name($applParams)"
         List(

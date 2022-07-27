@@ -691,7 +691,7 @@ class Compilers(
 
   private def withPCAndAdjustLsp[T](
       ident: TextDocumentIdentifier,
-      range: LspRange
+      range: LspRange,
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
     val path = ident.getUri.toAbsolutePath
     loadCompiler(path).flatMap { compiler =>

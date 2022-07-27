@@ -39,7 +39,6 @@ import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
 
-
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
@@ -147,7 +146,7 @@ case class ScalaPresentationCompiler(
   }
   override def extractMethod(
       params: OffsetParams,
-      range: Range, 
+      range: Range,
       defnPos: Range
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
