@@ -167,6 +167,17 @@ class Completions(
     else symbol.paramSymss
 
   private def findSuffix(symbol: Symbol): Option[String] =
+
+    val bracketSuffix =
+      if shouldAddSnippet && noSquareBracketExists
+        && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
+        && (symbol.info.typeParams.nonEmpty
+          || (symbol.isAllOf(
+            Flags.JavaModule
+          ) && symbol.companionClass.typeParams.nonEmpty))
+      then "[$0]"
+      else ""
+
     val bracesSuffix =
       if shouldAddSnippet && symbol.is(
           Flags.Method
@@ -185,19 +196,10 @@ class Completions(
             )
             if onlyParameterless then "()" * paramss.length
             else if onlyImplicitOrTypeParams then ""
+            else if bracketSuffix == "[$0]" then "()"
             else "($0)"
           case _ => ""
         end match
-      else ""
-
-    val bracketSuffix =
-      if shouldAddSnippet && noSquareBracketExists
-        && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
-        && (symbol.info.typeParams.nonEmpty
-          || (symbol.isAllOf(
-            Flags.JavaModule
-          ) && symbol.companionClass.typeParams.nonEmpty))
-      then "[$0]"
       else ""
 
     val templateSuffix =
@@ -209,7 +211,9 @@ class Completions(
           Flags.PureInterface
         ) || symbol.info.typeSymbol.is(Flags.Abstract)
           || symbol.info.typeSymbol.isOneOf(Flags.AbstractOrTrait))
-      then " {}"
+      then
+        if bracketSuffix.nonEmpty || bracesSuffix.contains("$0") then " {}"
+        else " {$0}"
       else ""
 
     val concludedSuffix = bracketSuffix + bracesSuffix + templateSuffix
