@@ -1,6 +1,9 @@
 package scala.meta.internal.pc
 
 import java.nio.file.Paths
+
+import scala.collection.mutable
+import scala.collection.mutable.Builder
 import scala.meta as m
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -9,7 +12,9 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
 
+import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
+import dotty.tools.dotc.ast.tpd.TreeTraverser
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Names.TermName
 import dotty.tools.dotc.interactive.Interactive
@@ -18,10 +23,6 @@ import dotty.tools.dotc.util.SourceFile
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j as l}
-import scala.collection.mutable.Builder
-import dotty.tools.dotc.ast.Trees.*
-import dotty.tools.dotc.ast.tpd.TreeTraverser
-import scala.collection.mutable
 
 final class ExtractMethodProvider(
     params: OffsetParams,
@@ -134,7 +135,7 @@ final class ExtractMethodProvider(
         val applParams = withType.map(_._1).mkString(", ")
         val name = genName(path)
         val text = params.text()
-        val newIndent = stat.startPos.startColumnPadding.toCharArray().mkString
+        val newIndent = stat.startPos.startColumnPadding
         val oldIndent = head.startPos.startColumnPadding.length()
         val textToExtract = text
           .slice(pos.start, pos.end)

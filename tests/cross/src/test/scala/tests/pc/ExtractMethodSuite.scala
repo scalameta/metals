@@ -14,8 +14,8 @@ import tests.BaseCodeActionSuite
 class ExtractMethodSuite extends BaseCodeActionSuite {
 
   checkEdit(
-    "single-param",
-    s"""|object A{
+    "single-param".tag(IgnoreScala3),
+    s"""|  object A{
         |  val b = 4
         |  def method(i: Int) = i + 1
         |  val a = {
