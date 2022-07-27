@@ -6,6 +6,7 @@ import javax.annotation.Nullable
 import scala.meta.internal.metals.newScalaFile.NewFileTypes
 
 import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.lsp4j
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
@@ -477,9 +478,9 @@ object ServerCommands {
        |""".stripMargin,
   )
   final case class ExtractMethodParams(
-      position: TextDocumentPositionParams,
-      applRange: Integer,
-      lv: Integer,
+      param: TextDocumentIdentifier,
+      range: lsp4j.Range, // from LSP
+      extractPosition: lsp4j.Range,
   )
   val ExtractMethod = new ParametrizedCommand[ExtractMethodParams](
     "extract-method",

@@ -39,6 +39,7 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
@@ -428,13 +429,13 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
   def extractMethod(
-      params: TextDocumentPositionParams,
-      applRange: Integer,
-      lv: Integer,
+      params: TextDocumentIdentifier,
+      range: LspRange,
+      defnPos: LspRange,
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.extractMethod(CompilerRangeParams.fromPos(pos, token), applRange, lv)
+    withPCAndAdjustLsp(params, range) { (pc, pos, adjust) =>
+      pc.extractMethod(CompilerRangeParams.fromPos(pos, token), range, defnPos)
         .asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
@@ -685,6 +686,21 @@ class Compilers(
           compiler.scalaVersion(),
         )
       pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
+    }
+  }
+
+  private def withPCAndAdjustLsp[T](
+      ident: TextDocumentIdentifier,
+      range: LspRange
+  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+    val path = ident.getUri.toAbsolutePath
+    loadCompiler(path).flatMap { compiler =>
+      val (input, toAdjust, adjust) =
+        sourceAdjustments(
+          ident.getUri(),
+          compiler.scalaVersion(),
+        )
+      range.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
     }
   }
 

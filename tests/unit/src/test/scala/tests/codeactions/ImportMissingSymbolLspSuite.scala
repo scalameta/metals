@@ -89,7 +89,7 @@ class ImportMissingSymbolLspSuite
         |${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
-        |${ExtractMethodCodeAction.title("Future.successful(Instant.now", "object `A`")}
+        |${ExtractMethodCodeAction.title("object `A`")}
         |${ConvertToNamedArguments.title("successful(...)")}
         |""".stripMargin,
     """|package a
@@ -215,7 +215,7 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Instant")}
-        |${ExtractMethodCodeAction.title("Future.successful(Instant.now", "object `A`")}
+        |${ExtractMethodCodeAction.title("object `A`")}
         |${ConvertToNamedArguments.title("successful(...)")}
         |""".stripMargin,
     """|package a

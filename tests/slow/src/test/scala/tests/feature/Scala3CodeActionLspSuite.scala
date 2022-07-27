@@ -343,7 +343,7 @@ class Scala3CodeActionLspSuite
        |  Foo<<(>>1, 2, param3 = 3)
        |  Foo(4,5,6)
        |}""".stripMargin,
-    s"""|${ExtractMethodCodeAction.title("Foo(1, 2, param3 = 3)", "object `Something`")}
+    s"""|${ExtractMethodCodeAction.title("object `Something`")}
         |${ConvertToNamedArguments.title("Foo(...)")}""".stripMargin,
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
@@ -483,35 +483,163 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
   )
+  check(
+    "simple-expr",
+    s"""|object A{
+        |  val b = 4
+        |  def method(i: Int) = i + 1
+        |  val a = <<123 + method(b)>>
+        |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("object `A`")}
+        |""".stripMargin,
+    s"""|object A{
+        |  val b = 4
+        |  def method(i: Int) = i + 1
+        |  def newMethod(): Int =
+        |  \t123 + method(b)
+        |
+        |  val a = newMethod()
+        |}""".stripMargin,
+  )
 
   check(
-    "simple-block",
-    """|object A{
-       |  val b = 4
-       |  def method(i: Int, j: Int) = i + 1
-       |  val d = 4
-       |  val a = {
-       |    def f() = {
-       |      <<method(d, b)>>
-       |    }
-       |  }
-       |}""".stripMargin,
-    s"""|${ExtractMethodCodeAction.title("method(d, b)", "method `f`")}
-        |${ExtractMethodCodeAction.title("method(d, b)", "val `a`")}
-        |${ExtractMethodCodeAction.title("method(d, b)", "object `A`")}
+    "no-param",
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  val a = {
+        |    val c = 1
+        |    <<val b = 2
+        |    123 + method(b, 10)>>
+        |  }
+        |
+        |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("val `a`")}
+        |${ExtractMethodCodeAction.title("object `A`")}
+        |""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  def newMethod(): Int =
+        |  \tval b = 2
+        |  \t123 + method(b, 10)
+        |  end newMethod
+        |  val a = {
+        |    val c = 1
+        |    newMethod()
+        |  }
+        |
+        |}""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "single-param",
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  val a = {
+        |    val c = 1
+        |    <<val b = 2
+        |    123 + method(c, 10)>>
+        |  }
+        |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("val `a`")}
+        |${ExtractMethodCodeAction.title("object `A`")}
+        |""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  def newMethod(c: Int): Int =
+        |  \tval b = 2
+        |  \t123 + method(c, 10)
+        |  end newMethod
+        |  val a = {
+        |    val c = 1
+        |    newMethod(c)
+        |  }
+        |}""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "name-gen",
+    s"""|object A{
+        |  def newMethod() = 1
+        |  def newMethod0(a: Int) = a + 1
+        |  def method(i: Int) = i + i
+        |  val a = <<method(5)>>
+        |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("object `A`")}
         |${ConvertToNamedArguments.title("method(...)")}
         |""".stripMargin,
-    """|object A{
-       |  val b = 4
-       |  def method(i: Int, j: Int) = i + 1
-       |  val d = 4
-       |  val a = {
-       |    def newMethod(): Int = method(d, b)
-       |    def f() = {
-       |      newMethod()
-       |    }
-       |  }
-       |}""".stripMargin,
+    s"""|object A{
+        |  def newMethod() = 1
+        |  def newMethod0(a: Int) = a + 1
+        |  def method(i: Int) = i + i
+        |  def newMethod1(): Int =
+        |  \tmethod(5)
+        |
+        |  val a = newMethod1()
+        |}""".stripMargin,
+  )
+
+  check(
+    "multi-param",
+    s"""|object A{
+        |  val b = 4
+        |  val c = 3
+        |  def method(i: Int, j: Int) = i + 1
+        |  val a = { 
+        |    val c = 5
+        |    <<123 + method(c, b) + method(b,c)>>
+        |  }
+        |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("val `a`")}
+        |${ExtractMethodCodeAction.title("object `A`")}
+        |""".stripMargin,
+    s"""|object A{
+        |  val b = 4
+        |  val c = 3
+        |  def method(i: Int, j: Int) = i + 1
+        |  def newMethod(c: Int): Int =
+        |  \t123 + method(c, b) + method(b,c)
+        |
+        |  val a = { 
+        |    val c = 5
+        |    newMethod(c)
+        |  }
+        |}""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "higher-scope",
+    s"""|object A{
+        |  val b = 4
+        |  def method(i: Int, j: Int, k: Int) = i + j + k
+        |  val a = {
+        |    def f() = {
+        |      val c = 1
+        |      <<val d = 3
+        |      method(d, b, c)>>
+        |    }
+        |  }
+        |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("method `f`")}
+        |${ExtractMethodCodeAction.title("val `a`")}
+        |${ExtractMethodCodeAction.title("object `A`")}
+        |""".stripMargin,
+    s"""|object A{
+        |  val b = 4
+        |  def method(i: Int, j: Int, k: Int) = i + j + k
+        |  val a = {
+        |    def newMethod(c: Int): Int =
+        |    \tval d = 3
+        |    \tmethod(d, b, c)
+        |    end newMethod
+        |    def f() = {
+        |      val c = 1
+        |      newMethod(c)
+        |    }
+        |  }
+        |}""".stripMargin,
     selectedActionIndex = 1,
   )
 

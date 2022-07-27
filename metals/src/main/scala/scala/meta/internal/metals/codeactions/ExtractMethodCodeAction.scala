@@ -27,48 +27,58 @@ class ExtractMethodCodeAction(
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val toExtract: Option[Term] = {
+    val toExtract: Option[List[Tree]] = {
       val tree: Option[Tree] = trees.get(path)
-      def loop(appl: Tree): Option[Term] = {
+      def loop(appl: Tree): Option[Tree] = {
         appl.children.find(_.pos.encloses(range)) match {
           case Some(child) =>
             loop(child)
           case None =>
-            if (
-              appl.is[Term.Apply] | appl.is[Term.ApplyInfix] | appl
-                .is[Term.ApplyUnary]
-            ) Some(appl.asInstanceOf[Term])
-            else None
+            Some(appl)
         }
       }
-      tree.flatMap(loop(_))
+      val enclosing = tree.flatMap(loop(_))
+      enclosing.map(_ match {
+        case Term.Block(stats) =>
+          stats.filter((s: Tree) => range.encloses(s.pos.toLSP))
+        case Template(_, _, _, stats) =>
+          stats.filter((s: Tree) => range.encloses(s.pos.toLSP))
+        case ap if returnsValue(ap) => List(ap)
+        case _ => Nil
+      })
     }
 
-    val scopeOptions = toExtract
-      .map(
-        enclosingList(_).zipWithIndex.flatMap(e => enclosingDef(e._1, e._2))
-      )
-
-    val edits = toExtract.zip(scopeOptions)
+    val edits = {
+      for {
+        exprs <- toExtract
+        last <- exprs.lastOption
+        head <- exprs.headOption if returnsValue(last)
+        scopeOptions = enclosingList(head).flatMap(enclosingDef(_))
+      } yield {
+        (scopeOptions, last, head)
+      }
+    }
     edits
-      .map { case (apply: Term, scopes: List[(Tree, Int)]) =>
-        val applRange = apply.pos.end - apply.pos.start
-        scopes.map { case (defn, lv) =>
+      .map { case (scopes: List[(Tree, Tree)], apply: Tree, head: Tree) =>
+        scopes.map { case (defn, block) =>
+          val defnPos =
+            stats(block).find(_.pos.end >= head.pos.end).getOrElse(defn)
           val scopeName = defnTitle(defn)
+          
           val codeAction = new l.CodeAction(
-            ExtractMethodCodeAction.title(apply.toString(), scopeName)
+            ExtractMethodCodeAction.title(scopeName)
           )
           codeAction.setKind(l.CodeActionKind.RefactorExtract)
-          val applPos = new l.TextDocumentPositionParams(
-            params.getTextDocument(),
-            new l.Position(apply.pos.startLine, apply.pos.startColumn),
-          )
+
           codeAction.setCommand(
             ServerCommands.ExtractMethod.toLSP(
               ServerCommands.ExtractMethodParams(
-                applPos,
-                new Integer(applRange),
-                new Integer(lv),
+                params.getTextDocument(),
+                new l.Range(
+                  head.pos.toLSP.getStart(),
+                  apply.pos.toLSP.getEnd(),
+                ),
+                defnPos.pos.toLSP,
               )
             )
           )
@@ -98,8 +108,22 @@ class ExtractMethodCodeAction(
       case _ => "block"
     }
   }
+
+  private def returnsValue(t: Tree) = {
+    t match {
+      case _: Term.ApplyUnary => true
+      case _: Term.Apply => true
+      case _: Term.ApplyInfix => true
+      case _: Term.Match => true
+      case _: Term.If => true
+      case _: Term.Throw => true
+      case _: Term.Return => true
+      case _ => false
+    }
+  }
+
   private def enclosingList(
-      apply: Term
+      apply: Tree
   ): (List[Tree]) = {
 
     def loop(tree: Tree): List[Tree] = {
@@ -112,21 +136,26 @@ class ExtractMethodCodeAction(
     }
     loop(apply)
   }
+  private def stats(t: Tree): List[Tree] = {
+    t match {
+      case t: Template => t.stats
+      case b: Term.Block => b.stats
+      case other => List(other)
+    }
+  }
 
   private def enclosingDef(
-      apply: Tree,
-      lv: Int,
-  ): Option[(Tree, Int)] = {
+      apply: Tree
+  ): Option[(Tree, Tree)] = {
     apply.parent match {
-      case Some(d: Defn) => Some(d, lv)
+      case Some(d: Defn) => Some(d, apply)
       case _ => None
     }
   }
 }
 
 object ExtractMethodCodeAction {
-  def title(expr: String, scopeName: String): String = {
-    if (expr.length <= 10) s"Extract `$expr` as method in $scopeName"
-    else s"Extract `${expr.take(10)}` ... as method in $scopeName"
+  def title(scopeName: String): String = {
+    s"Extract selection as method in $scopeName"
   }
 }

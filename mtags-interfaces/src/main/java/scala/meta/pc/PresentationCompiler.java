@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
 
 import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.DocumentRangeFormattingParams;
@@ -103,7 +104,7 @@ public abstract class PresentationCompiler {
     /**
      * Extract method in selected range
      */
-    public abstract CompletableFuture<List<TextEdit>> extractMethod(OffsetParams params, Integer applRange, Integer lv);
+    public abstract CompletableFuture<List<TextEdit>> extractMethod(OffsetParams params, Range range, Range defnPos);
 
     /**
      * Return named arguments for the apply method that encloses the given position.

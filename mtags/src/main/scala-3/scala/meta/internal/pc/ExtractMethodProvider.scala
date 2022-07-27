@@ -1,37 +1,32 @@
 package scala.meta.internal.pc
 
-import java.net.URI
 import java.nio.file.Paths
-
-import scala.annotation.tailrec
 import scala.meta as m
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
-import scala.meta.internal.pc.printer.DotcPrinter
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
 
-import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Names.TermName
-import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
-import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j as l}
+import scala.collection.mutable.Builder
+import dotty.tools.dotc.ast.Trees.*
+import dotty.tools.dotc.ast.tpd.TreeTraverser
+import scala.collection.mutable
 
 final class ExtractMethodProvider(
     params: OffsetParams,
-    applRange: Int,
-    lv: Int,
+    range: l.Range,
+    defnPos: l.Range,
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
     symbolSearch: SymbolSearch,
@@ -43,25 +38,11 @@ final class ExtractMethodProvider(
     val source = SourceFile.virtual(filePath.toString, params.text)
     driver.run(uri, source)
     val unit = driver.currentCtx.run.units.head
-    val startPos = driver.sourcePosition(params)
-    val pos = startPos.withEnd(startPos.end + applRange)
+    val pos = driver.sourcePosition(params)
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
     given locatedCtx: Context = driver.localContext(params)
     val indexedCtx = IndexedContext(locatedCtx)
-
-    def isBlockOrTemplate(t: tpd.Tree): Boolean =
-      t match
-        case temp @ Template(_, _, _, _) => true
-        case block @ Block(_, expr: Closure[?]) => false
-        case block @ Block(_, _) => true
-        case _ => false
-
-    def statsInBlock(t: tpd.Tree): List[tpd.Tree] =
-      t match
-        case temp @ Template(_, _, _, preBody) => temp.body
-        case block @ Block(stats, expr) => stats :+ expr
-        case _ => Nil
 
     val printer = MetalsPrinter.standard(
       indexedCtx,
@@ -69,84 +50,108 @@ final class ExtractMethodProvider(
       includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
     )
 
-    def genName(ts: Seq[tpd.Tree]): String =
-      val names = ts
-        .flatMap(
-          _ match
-            case dl @ DefDef(name, _, _, _) => Some(name.toString)
-            case _ => None
-        )
-        .toSet
-      if !names("newMethod") then "newMethod"
-      else
-        Range(0, 10)
-          .map(i => s"newMethod$i")
-          .find(!names.contains(_))
-          .getOrElse("newMethod")
-    end genName
-
-    def localVariables(ts: Seq[tpd.Tree]): Seq[(TermName, String)] =
+    def valsOnPath(ts: List[tpd.Tree]): List[(TermName, String)] =
       ts.flatMap(
         _ match
-          case vl @ ValDef(sym, tpt, _) => Seq((sym, printer.tpe(tpt.tpe)))
-
-          case b @ Block(stats, expr) => localVariables(stats :+ expr)
+          case ValDef(name, tpt, _) => List((name, printer.tpe(tpt.tpe)))
+          case b @ Block(stats, expr) => valsOnPath(stats :+ expr)
           case t @ Template(_, _, _, _) =>
-            localVariables(t.body)
+            valsOnPath(t.body)
           case _ => Nil
       )
-
-    def namesInVal(t: tpd.Tree): Set[TermName] =
+    def extractFromBlock(t: tpd.Tree): List[tpd.Tree] =
       t match
-        case Apply(fun, args) =>
-          namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
-        case TypeApply(fun, args) =>
-          namesInVal(fun) ++ args.flatMap(namesInVal(_)).toSet
-        case Select(qualifier, name) => namesInVal(qualifier) + name.toTermName
-        case Ident(name) => Set(name.toTermName)
-        case _ => Set()
+        case Block(stats, expr) =>
+          (stats :+ expr).filter(stat => range.encloses(toLSP(stat.sourcePos)))
+        case temp: Template[?] =>
+          temp.body.filter(stat => range.encloses(toLSP(stat.sourcePos)))
+        case other => List(other)
+
+    def localRefs(ts: List[tpd.Tree]): Set[TermName] =
+      val names = Set.newBuilder[TermName]
+      val valDefs = mutable.Set[TermName]()
+      class NamesCollector extends TreeTraverser:
+        override def traverse(t: tpd.Tree)(using Context): Unit =
+          t match
+            case Select(qualifier, name) =>
+              if !valDefs(name.toTermName) then names += name.toTermName
+              traverse(qualifier)
+            case Ident(name) =>
+              if !valDefs(name.toTermName) then names += name.toTermName
+            case vl @ ValDef(name, _, _) =>
+              valDefs += name
+              traverse(vl.rhs)
+            case _ => traverseChildren(t)
+      val traverser = new NamesCollector
+      ts.map(traverser.traverse(_))
+      names.result()
+    end localRefs
+
+    def genName(path: List[tpd.Tree]): String =
+      def defsOnPath(ts: List[tpd.Tree]): Set[String] =
+        ts.flatMap(
+          _ match
+            case DefDef(name, _, _, _) => Seq(name.toString())
+            case b @ Block(stats, expr) => defsOnPath(stats :+ expr)
+            case t @ Template(_, _, _, _) =>
+              defsOnPath(t.body)
+            case _ => Nil
+        ).toSet
+      val usedNames = defsOnPath(path)
+      if !usedNames("newMethod") then "newMethod"
+      else
+        var i = 0
+        while usedNames(s"newMethod$i") do i += 1
+        s"newMethod$i"
+    end genName
+
+    def adjustIndent(line: String, newIndent: String, oldIndent: Int): String =
+      var i = 0
+      while (line(i) == ' ' || line(i) == '\t') && i < oldIndent do i += 1
+      newIndent + '\t' + line.drop(i)
 
     val edits =
       for
-        apply <- path.headOption
-        blocks = path.filter(isBlockOrTemplate)
-        block = blocks(lv) if blocks.length >= lv
-        stats = statsInBlock(block)
-        firstStat <- stats.headOption
-        stat <- stats.find(_.endPos.end >= apply.endPos.end)
+        enclosing <- path.headOption
+        extracted = extractFromBlock(enclosing)
+        head <- extracted.headOption
+        appl <- extracted.lastOption
+        shortenedPath =
+          path.takeWhile(src => defnPos.encloses(toLSP(src.sourcePos)))
+        stat = shortenedPath.lastOption.getOrElse(head)
       yield
-        val namesInAppl = namesInVal(apply)
-        val text = params.text()
-        val indent = firstStat.startPos.startColumn
-        val blank =
-          if source(stat.startPos.start - indent) == '\t'
-          then "\t"
-          else " "
-        val locals = localVariables(
-          path.take(path.indexOf(block))
-        ).reverse.toMap
+        val noLongerAvailable = valsOnPath(shortenedPath)
+        val refsExtract = localRefs(extracted)
         val withType =
-          locals.filter((key, tp) => namesInAppl.contains(key)).toList.sorted
+          noLongerAvailable
+            .filter((key, tp) => refsExtract.contains(key))
+            .sorted
         val typs = withType
           .map((k, v) => s"$k: $v")
           .mkString(", ")
-        val applType = printer.tpe(apply.tpe)
+        val applType = printer.tpe(appl.tpe)
         val applParams = withType.map(_._1).mkString(", ")
-        val name = genName(stats)
-        val defText = s"${blank * indent}def $name($typs): $applType = ${text
-            .slice(apply.startPos.start, apply.endPos.end)}\n"
+        val name = genName(path)
+        val text = params.text()
+        val newIndent = stat.startPos.startColumnPadding.toCharArray().mkString
+        val oldIndent = head.startPos.startColumnPadding.length()
+        val textToExtract = text
+          .slice(pos.start, pos.end)
+          .split("\n")
+          .map(adjustIndent(_, newIndent, oldIndent))
+          .mkString("\n")
+        val defText =
+          if extracted.length > 1 then
+            s"def $name($typs): $applType =\n${textToExtract}\n${newIndent}end $name\n$newIndent"
+          else s"def $name($typs): $applType =\n${textToExtract}\n\n$newIndent"
         val replacedText = s"$name($applParams)"
-        val defPos = Position(new Integer(stat.startPos.startLine), 0)
         List(
           new l.TextEdit(
-            l.Range(
-              apply.startPos.toLSP.getStart(),
-              apply.endPos.toLSP.getEnd(),
-            ),
+            range,
             replacedText,
           ),
           new l.TextEdit(
-            l.Range(defPos, defPos),
+            l.Range(defnPos.getStart(), defnPos.getStart()),
             defText,
           ),
         )

@@ -34,9 +34,11 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -145,16 +147,16 @@ case class ScalaPresentationCompiler(
   }
   override def extractMethod(
       params: OffsetParams,
-      applRange: Integer,
-      lv: Integer
+      range: Range, 
+      defnPos: Range
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
       new ExtractMethodProvider(
         pc.compiler(),
         params,
-        applRange.toInt,
-        lv.toInt
+        range,
+        defnPos
       ).extractMethod.asJava
     }
   }
