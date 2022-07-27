@@ -67,9 +67,8 @@ class Completions(
   private def calculateTypeInstanceAndNewPositions() =
 
     path match
-      case head :: tail
-          if head.isInstanceOf[Select] || head.isInstanceOf[Ident] =>
-        shouldAddSquareBracket =
+      case (head: (Select | Ident)) :: tail =>
+        noSquareBracketExists =
           val span: Span = head.srcPos.span
           if span.exists then
             var i = span.end
@@ -81,13 +80,11 @@ class Completions(
         tail match
           case (v: ValOrDefDef) :: _ =>
             if v.tpt.sourcePos.contains(pos) then isTypePosition = true
-          case New(selectOrIdent) :: _
-              if selectOrIdent.isInstanceOf[Select] || selectOrIdent
-                .isInstanceOf[Ident] =>
+          case New(selectOrIdent: (Select | Ident)) :: _ =>
             if selectOrIdent.sourcePos.contains(pos) then isNewPosition = true
           case (a @ AppliedTypeTree(_, args)) :: _ =>
             if args.exists(_.sourcePos.contains(pos)) then isTypePosition = true
-            else shouldAddSquareBracket = false
+            else noSquareBracketExists = false
           case (_: Import) :: _ =>
           case _ =>
             isInstantiationOrMethodCallPos = true
@@ -104,7 +101,7 @@ class Completions(
   private var isTypePosition = false
   private var isNewPosition = false
   private var isInstantiationOrMethodCallPos = false
-  private var shouldAddSquareBracket = true
+  private var noSquareBracketExists = true
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
     val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
@@ -185,7 +182,7 @@ class Completions(
       else ""
 
     val bracketSuffix =
-      if shouldAddSnippet && shouldAddSquareBracket
+      if shouldAddSnippet && noSquareBracketExists
         && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
         && (symbol.info.typeParams.nonEmpty
           || (symbol.isAllOf(
@@ -257,7 +254,7 @@ class Completions(
       .toString()
       .stripSuffix(".scala")
 
-    calculateTypeInstanceAndNewPositions
+    calculateTypeInstanceAndNewPositions()
 
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
