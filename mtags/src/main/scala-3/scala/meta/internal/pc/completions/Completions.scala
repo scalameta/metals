@@ -64,11 +64,20 @@ class Completions(
     case (_: Ident) :: (_: SeqLiteral) :: _ => false
     case _ => true
 
-  private def calculateTypeInstanceAndNewPositions() =
+  private lazy val (
+    isTypePosition,
+    isNewPosition,
+    isInstantiationOrMethodCallPos,
+    noSquareBracketExists,
+  ) = calculateTypeInstanceAndNewPositions(path)
+
+  private def calculateTypeInstanceAndNewPositions(
+      path: List[Tree]
+  ): (Boolean, Boolean, Boolean, Boolean) =
 
     path match
       case (head: (Select | Ident)) :: tail =>
-        noSquareBracketExists =
+        val hasNoSquareBracket =
           val span: Span = head.srcPos.span
           if span.exists then
             var i = span.end
@@ -79,29 +88,29 @@ class Completions(
           else false
         tail match
           case (v: ValOrDefDef) :: _ =>
-            if v.tpt.sourcePos.contains(pos) then isTypePosition = true
+            if v.tpt.sourcePos.contains(pos) then
+              (true, false, false, hasNoSquareBracket)
+            else (false, false, false, hasNoSquareBracket)
           case New(selectOrIdent: (Select | Ident)) :: _ =>
-            if selectOrIdent.sourcePos.contains(pos) then isNewPosition = true
+            if selectOrIdent.sourcePos.contains(pos) then
+              (false, true, false, hasNoSquareBracket)
+            else (false, false, false, hasNoSquareBracket)
           case (a @ AppliedTypeTree(_, args)) :: _ =>
-            if args.exists(_.sourcePos.contains(pos)) then isTypePosition = true
-            else noSquareBracketExists = false
-          case (_: Import) :: _ =>
+            if args.exists(_.sourcePos.contains(pos)) then
+              (true, false, false, hasNoSquareBracket)
+            else (false, false, false, false)
+          case (_: Import) :: _ => (false, false, false, hasNoSquareBracket)
           case _ =>
-            isInstantiationOrMethodCallPos = true
+            (false, false, true, hasNoSquareBracket)
         end match
 
       case (_: TypeTree) :: TypeApply(Select(newQualifier: New, _), _) :: _
           if newQualifier.sourcePos.contains(pos) =>
-        isNewPosition = true
+        (false, true, false, true)
 
-      case _ =>
+      case _ => (false, false, false, true)
     end match
   end calculateTypeInstanceAndNewPositions
-
-  private var isTypePosition = false
-  private var isNewPosition = false
-  private var isInstantiationOrMethodCallPos = false
-  private var noSquareBracketExists = true
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
     val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
@@ -253,8 +262,6 @@ class Completions(
       .getFileName()
       .toString()
       .stripSuffix(".scala")
-
-    calculateTypeInstanceAndNewPositions()
 
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
