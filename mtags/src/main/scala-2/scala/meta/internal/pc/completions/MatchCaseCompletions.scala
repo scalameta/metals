@@ -108,12 +108,12 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       }
 
       // Step 1: walk through scope members.
-      metalsScopeMembers(pos).iterator
+      metalsScopeMembers(pos).iterator  // dla scali 3 Interactive.scopeSymbols
         .foreach(m => visit(m.sym.dealiased, Identifier(m.sym.name), Nil))
 
       // Step 2: walk through known direct subclasses of sealed types.
-      val autoImport = autoImportPosition(pos, text)
-      parents.selector.typeSymbol.foreachKnownDirectSubClass { sym =>
+      val autoImport = autoImportPosition(pos, text) 
+      parents.selector.typeSymbol.foreachKnownDirectSubClass { sym => // tu uzyjemy .children
         autoImport match {
           case Some(value) =>
             val (shortName, edits) =

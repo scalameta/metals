@@ -330,7 +330,7 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-
+    // pprint.pprintln(path.take(3))
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
@@ -433,6 +433,39 @@ class Completions(
           ),
           true,
         )
+      // CASE COMPLETIONS
+
+      
+      // x match
+      //   cas@@
+      // case (id @ Ident(name)) :: Block(stats, expr) :: _
+      //     if "case"
+      //       .startsWith(name.toString()) && isLastMatch(stats) && expr == id =>
+      //   CaseKeywordCompletion(
+      //     stats.last.asInstanceOf[Match].selector,
+      //     pos,
+      //   )
+      case (ident @ Ident(name)) :: Block(
+            _,
+            expr,
+          ) :: (_: CaseDef) :: (m: Match) :: parent :: _
+          if ident == expr && "case"
+            .startsWith(name.toString()) =>
+          val sel = m.selector
+          pprint.pprintln(sel.denot)
+          pprint.pprintln(sel.tpe.typeSymbol)
+          pprint.pprintln(sel.tpe.typeSymbol.children)
+          (Nil, false)
+        //CaseKeywordCompletion(m.selector, pos)
+      
+      // case (_: CaseDef) :: (m: Match) :: _ =>
+      //   CaseKeywordCompletion(m.selector, pos)
+
+      // case Ident(_) :: (c: CaseDef) :: (m: Match) =>
+      //   CasePatternCompletion(c, m)
+      
+      // case Ident(_) :: Typed(_,_) :: (c: CaseDef) :: (m: Match) =>
+      //   CasePatternCompletion(c,m) 
       case _ =>
         val args = NamedArgCompletions.contribute(
           pos,
@@ -441,6 +474,7 @@ class Completions(
           config.isCompletionSnippetsEnabled,
         )
         val keywords = KeywordsCompletions.contribute(path, completionPos)
+      //  val matchCompletions = MatchKeywordCompletion(path, completionPos)
         (args ++ keywords, false)
     end match
   end advancedCompletions
@@ -463,6 +497,10 @@ class Completions(
           .startsWith("$file")
       case _ => false
   end isAmmoniteFileCompletionPosition
+  private def isLastMatch(stats: List[Tree]): Boolean =
+    stats.lastOption match
+      case Some(m: Match) => true
+      case _ => false
 
   private def description(sym: Symbol): String =
     if sym.isType then sym.showFullName
