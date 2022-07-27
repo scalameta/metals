@@ -33,12 +33,12 @@ final class FoldingRangeExtractor(
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
     if (span(tree.pos) > spanThreshold) {
       val newEnclosing = tree match {
-        case Foldable(pos)
+        case Foldable((pos, adjust))
             if span(enclosing) - span(pos) > distanceToEnclosingThreshold =>
           distance.toRevised(pos.toLSP) match {
             case Some(revisedPos) =>
               val range = createRange(revisedPos)
-              ranges.add(Region, range)
+              ranges.add(Region, range, adjust)
               pos
             case None => enclosing
           }
@@ -148,7 +148,7 @@ final class FoldingRangeExtractor(
   }
 
   private object Foldable {
-    def unapply(tree: Tree): Option[Position] =
+    def unapply(tree: Tree): Option[(Position, Boolean)] =
       tree match {
         case _: Term.Select => None
         case _: Term.Function => None
@@ -156,13 +156,13 @@ final class FoldingRangeExtractor(
         case _: Defn => None
 
         case _: Lit.String =>
-          range(tree.pos.input, tree.pos.start + 3, tree.pos.end)
+          Some(range(tree.pos.input, tree.pos.start + 3, tree.pos.end), true)
 
         case term: Term.Match =>
           for {
             token <- term.expr.findFirstTrailing(_.is[KwMatch])
-            pos <- range(tree.pos.input, token.pos.end, term.pos.end)
-          } yield pos
+            pos = range(tree.pos.input, token.pos.end, term.pos.end)
+          } yield (pos, true)
 
         case c: Case =>
           val startingPoint = c.cond.getOrElse(c.pat)
@@ -177,8 +177,8 @@ final class FoldingRangeExtractor(
           }
           for {
             token <- startingPoint.findFirstTrailing(_.is[Token.RightArrow])
-            pos <- range(tree.pos.input, token.pos.end, bodyEnd)
-          } yield pos
+            pos = range(tree.pos.input, token.pos.end, bodyEnd)
+          } yield (pos, true)
 
         case term: Term.Try => // range for the `catch` clause
           for {
@@ -188,33 +188,45 @@ final class FoldingRangeExtractor(
             tryPos =
               Position
                 .Range(tree.pos.input, startToken.pos.end, endToken.pos.end)
-          } yield tryPos
+          } yield (tryPos, true)
 
         case For(endPosition) =>
           val start = tree.pos.start + 3
           val end = endPosition.start
-          range(tree.pos.input, start, end)
+          Some(range(tree.pos.input, start, end), true)
 
         case template: Template =>
+          val adjust = !isScala3BlockWithoutOptionalBraces(template)
           template.inits.lastOption match {
             case Some(init) =>
-              range(tree.pos.input, init.pos.end, template.pos.end)
+              Some(
+                range(tree.pos.input, init.pos.end, template.pos.end),
+                adjust,
+              )
             case None =>
-              range(tree.pos.input, template.pos.start, template.pos.end)
+              Some(
+                range(tree.pos.input, template.pos.start, template.pos.end),
+                adjust,
+              )
           }
 
         case block: Term.Block => {
-          if (
+          val braceless =
             isScala3BlockWithoutOptionalBraces(block) && block.pos.startLine > 0
-          ) {
-            range(
-              tree.pos.input,
-              tree.pos.input
-                .lineToOffset(tree.pos.startLine) - System.lineSeparator().size,
-              tree.pos.end,
+          if (braceless) {
+            Some(
+              range(
+                tree.pos.input,
+                tree.pos.input
+                  .lineToOffset(tree.pos.startLine) - System
+                  .lineSeparator()
+                  .size,
+                tree.pos.end,
+              ),
+              false, // if braceless add as is
             )
           } else if (span(block.pos) - 1 > spanThreshold) {
-            Some(tree.pos)
+            Some((tree.pos, true))
           } else {
             None
           }
@@ -222,18 +234,25 @@ final class FoldingRangeExtractor(
         case _: Stat =>
           tree.parent.collect {
             case _: Term.Block | _: Term.Function | _: Template | _: Defn =>
-              tree.pos
+              (tree.pos, true)
           }
         case _ => None
       }
 
-    private def isScala3BlockWithoutOptionalBraces(block: Term.Block) = {
-      val firstChar = block.pos.input.chars(block.pos.start)
-      block.pos.startLine != block.pos.endLine && firstChar != '{'
+    private def isScala3BlockWithoutOptionalBraces(tree: Tree) = {
+      tree match {
+        case block: Term.Block =>
+          val firstChar = block.pos.input.chars(block.pos.start)
+          block.pos.startLine != block.pos.endLine && firstChar != '{'
+        case temp: Template =>
+          val endChar = temp.pos.input.chars(temp.pos.end)
+          temp.pos.startLine != temp.pos.endLine && endChar != '}'
+        case _ => false
+      }
     }
 
-    private def range(input: Input, start: Int, end: Int): Option[Position] =
-      Some(Position.Range(input, start, end))
+    private def range(input: Input, start: Int, end: Int): Position =
+      Position.Range(input, start, end)
 
     private object For {
       def unapply(tree: Tree): Option[Position] =
