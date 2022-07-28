@@ -320,8 +320,9 @@ class Completions(
               ).forall(visit)
             else false,
         )
-        Some(search.search(query, buildTargetIdentifier, visitor))
-      case _ => None
+        Some(search.searchMethods(query, buildTargetIdentifier, visitor))
+      case CompletionKind.Members => // query.isEmpry
+        Some(SymbolSearch.Result.INCOMPLETE)
     end match
   end enrichWithSymbolSearch
 

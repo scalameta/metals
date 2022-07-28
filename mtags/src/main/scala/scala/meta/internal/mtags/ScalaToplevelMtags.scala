@@ -159,7 +159,15 @@ class ScalaToplevelMtags(
           acceptTrivia()
           val name = newIdentifier
           withOwner(currRegion.owner) {
-            term(name.name, name.pos, Kind.OBJECT, 0)
+            term(
+              name.name,
+              name.pos,
+              // hack: (exclusively) making symbol kind of extension methods to Kind.Method
+              // so that we can tell it's an extension method in Indexer.scala
+              // TODO: add properties that represents "extension" method to semanticdb schema
+              Kind.METHOD,
+              0
+            )
           }
           loop(indent, isAfterNewline = false, region, newExpectIgnoreBody)
         case DEF | VAL | VAR | GIVEN | TYPE

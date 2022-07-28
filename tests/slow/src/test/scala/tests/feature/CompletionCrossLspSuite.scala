@@ -81,7 +81,7 @@ class CompletionCrossLspSuite
       _ <- server.didOpen("a/src/main/scala/a/B.scala")
       _ = assertNoDiagnostics()
       _ <- assertCompletionEdit(
-        "1.plu@@",
+        "1.p@@",
         """|package a
            |
            |import b.plus
@@ -93,7 +93,7 @@ class CompletionCrossLspSuite
         filter = _.contains("plus"),
       )
       _ <- assertCompletion(
-        "1.plu@@",
+        "1.pl@@",
         """|plus(other: Int): Int (extension)
            |""".stripMargin,
         filter = _.contains("plus"),

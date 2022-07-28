@@ -59,13 +59,17 @@ object MetalsTestEnrichments {
       } {
         val input = source.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+        val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         SemanticdbDefinition.foreach(input, dialect) {
           case defn @ SemanticdbDefinition(info, _, _) =>
             if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
               symbols += defn.toCached
             }
+            if (info.kind == s.SymbolInformation.Kind.METHOD) {
+              methodSymbols += defn.toCached
+            }
         }
-        wsp.didChange(source, symbols.toSeq)
+        wsp.didChange(source, symbols.toSeq, methodSymbols.toSeq)
       }
     }
     def indexLibraries(libraries: Seq[Library]): Unit = {

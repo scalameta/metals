@@ -32,6 +32,10 @@ final class WorkspaceSymbolProvider(
 ) {
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
+
+  // symbols for extension methods
+  val inWorkspaceMethods: TrieMap[Path, Seq[WorkspaceSymbolInformation]] =
+    TrieMap.empty[Path, Seq[WorkspaceSymbolInformation]]
   var inDependencies: ClasspathSearch =
     ClasspathSearch.empty
 
@@ -58,6 +62,16 @@ final class WorkspaceSymbolProvider(
     inDependencies.search(query, visitor)
   }
 
+  def searchMethods(
+      query: String,
+      visitor: SymbolSearchVisitor,
+      target: Option[BuildTargetIdentifier],
+  ): SymbolSearch.Result = {
+    workspaceMethodSearch(query, visitor, target)
+    if (query.isEmpty()) SymbolSearch.Result.INCOMPLETE
+    else SymbolSearch.Result.COMPLETE
+  }
+
   def indexClasspath(): Unit = {
     try {
       indexClasspathUnsafe()
@@ -74,9 +88,21 @@ final class WorkspaceSymbolProvider(
   def didChange(
       source: AbsolutePath,
       symbols: Seq[WorkspaceSymbolInformation],
+      methodSymbols: Seq[WorkspaceSymbolInformation],
   ): Unit = {
     val bloom = Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
+
+    // methodSymbols will be searched when we type `qual.x@@`
+    // where we want to match by prefix-match query.
+    // Do not index by bloom filter for (extension) method symbols here because
+    // - currently, we don't index each prefix of the name to bloom filter, so we can't find `incr` by `i`
+    //   if we index it by bloom filter and lookup against it.
+    // - symbol search will take O(N), if we don't use bloom filter, but
+    //   inWorkspaceMethods stores extension methods only, and the number of symbols (N) are quite limited.
+    //   Therefore, we can expect symbol lookup for extension methods could be fast enough without bloom-filter.
+    if (methodSymbols.nonEmpty)
+      inWorkspaceMethods(source.toNIO) = methodSymbols
   }
 
   def buildTargetSymbols(
@@ -96,6 +122,35 @@ final class WorkspaceSymbolProvider(
       excludedPackageHandler(),
       bucketSize,
     )
+  }
+
+  private def workspaceMethodSearch(
+      query: String,
+      visitor: SymbolSearchVisitor,
+      id: Option[BuildTargetIdentifier],
+  ): Unit = {
+    for {
+      (path, symbols) <- id match {
+        case None =>
+          inWorkspaceMethods.iterator
+        case Some(target) =>
+          for {
+            source <- buildTargets.buildTargetTransitiveSources(target)
+            symbols <- inWorkspaceMethods.get(source.toNIO)
+          } yield (source.toNIO, symbols)
+      }
+      isDeleted = !Files.isRegularFile(path)
+      _ = if (isDeleted) inWorkspaceMethods.remove(path)
+      if !isDeleted
+      symbol <- symbols
+      if Fuzzy.matches(query, symbol.symbol)
+    }
+      visitor.visitWorkspaceSymbol(
+        path,
+        symbol.symbol,
+        symbol.kind,
+        symbol.range,
+      )
   }
 
   private def workspaceSearch(

@@ -29,6 +29,12 @@ case class WorkspaceSymbolQuery(
     WorkspaceSymbolQuery.isRelevantKind(info.kind) &&
     this.matches(info.symbol)
   }
+
+  def matches(info: SymbolInformation, additionalKinds: Kind): Boolean = {
+    (WorkspaceSymbolQuery.isRelevantKind(info.kind)
+      || info.kind == additionalKinds) &&
+    this.matches(info.symbol)
+  }
 }
 
 object WorkspaceSymbolQuery {

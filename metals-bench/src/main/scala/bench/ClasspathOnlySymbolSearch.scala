@@ -42,4 +42,12 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
   ): SymbolSearch.Result = {
     classpath.search(WorkspaceSymbolQuery.exact(query), visitor)
   }
+
+  override def searchMethods(
+      query: String,
+      buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result = {
+    SymbolSearch.Result.COMPLETE
+  }
 }

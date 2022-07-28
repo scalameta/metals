@@ -105,6 +105,16 @@ class StandaloneSymbolSearch(
       .map(_.search(query, buildTargetIdentifier, visitor))
       .getOrElse(res)
   }
+
+  def searchMethods(
+      query: String,
+      buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor,
+  ): Result = {
+    workspaceFallback
+      .map(_.searchMethods(query, buildTargetIdentifier, visitor))
+      .getOrElse(Result.COMPLETE)
+  }
 }
 
 object StandaloneSymbolSearch {
