@@ -292,6 +292,23 @@ class ScalaToplevelSuite extends BaseSuite {
     dialect = dialects.Scala3,
   )
 
+  check(
+    "inline-extension",
+    """|package a
+       |
+       |extension (s: String) def foo: Int = ???
+       |extension (i: Int) def bar: Int = ???
+       |extension (l: Long)
+       |  def baz: Long = ???
+       |""".stripMargin,
+    List(
+      "a/", "a/Test$package.", "a/Test$package.foo.", "a/Test$package.bar.",
+      "a/Test$package.baz.",
+    ),
+    all = true,
+    dialect = dialects.Scala3,
+  )
+
   def check(
       options: TestOptions,
       code: String,
