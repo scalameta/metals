@@ -681,9 +681,6 @@ class CompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|concat[T: ClassTag](xss: Array[T]*): Array[T]
        |""".stripMargin,
-    compat = Map(
-      "3" -> "concat[T: ClassTag](xss: Array[T]*): Array[T]"
-    ),
   )
 
   check(
@@ -907,9 +904,6 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|selectDynamic(field: String): Foo
        |""".stripMargin,
-    compat = Map(
-      "3" -> "selectDynamic(field: String): Foo"
-    ),
   )
 
   check(
@@ -920,11 +914,6 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """ListBuffer - scala.collection.mutable
-          |""".stripMargin
-    ),
   )
 
   check(
@@ -935,15 +924,14 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|ListBuffer - scala.collection.mutable
-           |""".stripMargin
-    ),
   )
 
   check(
-    "type2".tag(IgnoreScala3),
+    "type2"
+      // covering it for Scala 3 has to do with covering the
+      // CompletionKind.Member case in enrichWithSymbolSearch.
+      // The non-members have to get filtered out.
+      .tag(IgnoreScala3),
     s"""|object Main {
         |  new scala.Iterable@@
         |}
