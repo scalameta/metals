@@ -28,24 +28,28 @@ class ExtractMethodCodeAction(
     val range = params.getRange()
 
     val toExtract: Option[List[Tree]] = {
-      val tree: Option[Tree] = trees.get(path)
-      def loop(appl: Tree): Option[Tree] = {
-        appl.children.find(_.pos.encloses(range)) match {
-          case Some(child) =>
-            loop(child)
-          case None =>
-            Some(appl)
+      if (range.getStart() == range.getEnd()) {
+        None
+      } else {
+        val tree: Option[Tree] = trees.get(path)
+        def loop(appl: Tree): Option[Tree] = {
+          appl.children.find(_.pos.encloses(range)) match {
+            case Some(child) =>
+              loop(child)
+            case None =>
+              Some(appl)
+          }
         }
+        val enclosing = tree.flatMap(loop(_))
+        enclosing.map(_ match {
+          case Term.Block(stats) =>
+            stats.filter((s: Tree) => range.encloses(s.pos.toLSP))
+          case Template(_, _, _, stats) =>
+            stats.filter((s: Tree) => range.encloses(s.pos.toLSP))
+          case ap if returnsValue(ap) => List(ap)
+          case _ => Nil
+        })
       }
-      val enclosing = tree.flatMap(loop(_))
-      enclosing.map(_ match {
-        case Term.Block(stats) =>
-          stats.filter((s: Tree) => range.encloses(s.pos.toLSP))
-        case Template(_, _, _, stats) =>
-          stats.filter((s: Tree) => range.encloses(s.pos.toLSP))
-        case ap if returnsValue(ap) => List(ap)
-        case _ => Nil
-      })
     }
 
     val edits = {

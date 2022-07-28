@@ -1,7 +1,6 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
-import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
@@ -53,7 +52,6 @@ class RewriteBracesParensLspSuite
        |}
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("foreach")}
-        |${ExtractMethodCodeAction.title("object `Main`")}
         |${ConvertToNamedArguments.title("foreach(...)")}""".stripMargin,
     """|object Main {
        |  val x = List(1, 2, 3)
@@ -107,8 +105,7 @@ class RewriteBracesParensLspSuite
        |}
        |""".stripMargin,
     s"""|${PatternMatchRefactor.convertPatternMatch}
-        |${RewriteBracesParensCodeAction.toParens("foreach")}
-        |${ExtractMethodCodeAction.title("object `Main`")}""".stripMargin,
+        |${RewriteBracesParensCodeAction.toParens("foreach")}""".stripMargin,
     """|object Main {
        |  val x = List(1, 2, 3)
        |  x.foreach(_ match {
