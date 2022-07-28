@@ -14,7 +14,7 @@ import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.ast.tpd.TreeTraverser
+import dotty.tools.dotc.ast.tpd.DeepFolder
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Names.TermName
 import dotty.tools.dotc.interactive.Interactive
@@ -70,22 +70,22 @@ final class ExtractMethodProvider(
 
     def localRefs(ts: List[tpd.Tree]): Set[TermName] =
       val names = Set.newBuilder[TermName]
-      val valDefs = mutable.Set[TermName]()
-      class NamesCollector extends TreeTraverser:
-        override def traverse(t: tpd.Tree)(using Context): Unit =
-          t match
-            case Select(qualifier, name) =>
-              if !valDefs(name.toTermName) then names += name.toTermName
-              traverse(qualifier)
-            case Ident(name) =>
-              if !valDefs(name.toTermName) then names += name.toTermName
-            case vl @ ValDef(name, _, _) =>
-              valDefs += name
-              traverse(vl.rhs)
-            case _ => traverseChildren(t)
-      val traverser = new NamesCollector
-      ts.map(traverser.traverse(_))
-      names.result()
+      def collectNames(defns: Set[TermName], tree: tpd.Tree): Set[TermName] =
+        tree match
+          case Ident(name) =>
+            if !defns(name.toTermName) then names += name.toTermName
+            defns
+          case Select(qualifier, name) =>
+            if !defns(name.toTermName) then names += name.toTermName
+            defns
+          case ValDef(name, _, _) =>
+            defns + name.toTermName
+          case _ => defns
+
+      val traverser = new DeepFolder[Set[TermName]](collectNames)
+      ts.foldLeft(Set.empty[TermName])(traverser(_, _))
+      val res = names.result()
+      res
     end localRefs
 
     def genName(path: List[tpd.Tree]): String =
@@ -123,6 +123,7 @@ final class ExtractMethodProvider(
         stat = shortenedPath.lastOption.getOrElse(head)
       yield
         val noLongerAvailable = valsOnPath(shortenedPath)
+        pprint.pprintln(noLongerAvailable)
         val refsExtract = localRefs(extracted)
         val withType =
           noLongerAvailable

@@ -1,7 +1,5 @@
 package scala.meta.internal.pc
 
-import scala.collection.mutable
-
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionLspRange
 import scala.meta.pc.OffsetParams
 
@@ -79,20 +77,25 @@ final class ExtractMethodProvider(
 
     def localRefs(ts: List[Tree]): Set[TermName] = {
       val names = Set.newBuilder[TermName]
-      def traverse(defns: Set[TermName], tree: Tree): Set[TermName] = tree match {
-        case Ident(name) =>
-          if (!defns(name.toTermName)) names += name.toTermName
-          defns
-        case Select(qualifier, name) =>
-          if (!defns(name.toTermName)) names += name.toTermName
-          traverse(defns, qualifier)
-          defns
-        case ValDef(_, name, _, rhs) =>
-          traverse(defns + name.toTermName, rhs)
-        case _ => tree.children.foldLeft(defns)(traverse(_, _))
-      }
-      ts.foldLeft(Set.empty[TermName])(traverse(_,_))
-      names.result()
+      def traverse(defns: Set[TermName], tree: Tree): Set[TermName] =
+        tree match {
+          case Ident(name) =>
+            if (!defns(name.toTermName)) names += name.toTermName
+            defns
+          case Select(qualifier, name) =>
+            if (!defns(name.toTermName)) names += name.toTermName
+            traverse(defns, qualifier)
+            defns
+          case ValDef(_, name, _, rhs) =>
+            traverse(defns, rhs)
+            defns + name.toTermName
+          case _ =>
+            tree.children.foldLeft(defns)(traverse(_, _))
+            defns
+        }
+      ts.foldLeft(Set.empty[TermName])(traverse(_, _))
+      val res = names.result()
+      res
     }
 
     def adjustIndent(

@@ -14,73 +14,307 @@ import tests.BaseCodeActionSuite
 class ExtractMethodSuite extends BaseCodeActionSuite {
 
   checkEdit(
-    "single-param".tag(IgnoreScala3),
-    s"""|  object A{
+    "simple-expr",
+    s"""|object A{
         |  val b = 4
         |  def method(i: Int) = i + 1
-        |  val a = {
-        |    <<123 + method(b)>>
-        |  }
+        |  <@val a = <<123 + method(b)>>@>
         |}""".stripMargin,
-    List(3, 2, 5, 2),
     s"""|object A{
         |  val b = 4
         |  def method(i: Int) = i + 1
         |  def newMethod(): Int =
         |    123 + method(b)
         |
+        |  val a = newMethod()
+        |}""".stripMargin,
+  )
+
+  checkEdit(
+    "no-param",
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  <@val a = {
+        |    val c = 1
+        |    <<val b = 2
+        |    123 + method(b, 10)>>
+        |  }@>
+        |
+        |}""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  def newMethod(): Int = {
+        |    val b = 2
+        |    123 + method(b, 10)
+        |  }
         |  val a = {
+        |    val c = 1
         |    newMethod()
         |  }
+        |
         |}""".stripMargin,
+    Map(">=3.0.0" -> s"""|object A{
+                         |  def method(i: Int, j: Int) = i + j
+                         |  def newMethod(): Int =
+                         |    val b = 2
+                         |    123 + method(b, 10)
+                         |
+                         |  val a = {
+                         |    val c = 1
+                         |    newMethod()
+                         |  }
+                         |
+                         |}""".stripMargin),
+  )
+
+  checkEdit(
+    "single-param",
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  <@val a = {
+        |    val c = 1
+        |    <<val b = 2
+        |    123 + method(c, 10)>>
+        |  }@>
+        |}""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  def newMethod(c: Int): Int = {
+        |    val b = 2
+        |    123 + method(c, 10)
+        |  }
+        |  val a = {
+        |    val c = 1
+        |    newMethod(c)
+        |  }
+        |}""".stripMargin,
+    Map(">=3.0.0" -> s"""|object A{
+                         |  def method(i: Int, j: Int) = i + j
+                         |  def newMethod(c: Int): Int =
+                         |    val b = 2
+                         |    123 + method(c, 10)
+                         |
+                         |  val a = {
+                         |    val c = 1
+                         |    newMethod(c)
+                         |  }
+                         |}""".stripMargin),
+  )
+
+  checkEdit(
+    "name-gen",
+    s"""|object A{
+        |  def newMethod() = 1
+        |  def newMethod0(a: Int) = a + 1
+        |  def method(i: Int) = i + i
+        |  <@val a = <<method(5)>>@>
+        |}""".stripMargin,
+    s"""|object A{
+        |  def newMethod() = 1
+        |  def newMethod0(a: Int) = a + 1
+        |  def method(i: Int) = i + i
+        |  def newMethod1(): Int =
+        |    method(5)
+        |
+        |  val a = newMethod1()
+        |}""".stripMargin,
+  )
+
+  checkEdit(
+    "multi-param",
+    s"""|object A{
+        |  val b = 4
+        |  val c = 3
+        |  def method(i: Int, j: Int) = i + 1
+        |  <@val a = { 
+        |    val c = 5
+        |    <<123 + method(c, b) + method(b,c)>>
+        |  }@>
+        |}""".stripMargin,
+    s"""|object A{
+        |  val b = 4
+        |  val c = 3
+        |  def method(i: Int, j: Int) = i + 1
+        |  def newMethod(c: Int): Int =
+        |    123 + method(c, b) + method(b,c)
+        |
+        |  val a = { 
+        |    val c = 5
+        |    newMethod(c)
+        |  }
+        |}""".stripMargin,
+  )
+
+  checkEdit(
+    "higher-scope",
+    s"""|object A{
+        |  val b = 4
+        |  def method(i: Int, j: Int, k: Int) = i + j + k
+        |  val a = {
+        |    <@def f() = {
+        |      val c = 1
+        |      <<val d = 3
+        |      method(d, b, c)>>
+        |    }@>
+        |  }
+        |}""".stripMargin,
+    s"""|object A{
+        |  val b = 4
+        |  def method(i: Int, j: Int, k: Int) = i + j + k
+        |  val a = {
+        |    def newMethod(c: Int): Int = {
+        |      val d = 3
+        |      method(d, b, c)
+        |    }
+        |    def f() = {
+        |      val c = 1
+        |      newMethod(c)
+        |    }
+        |  }
+        |}""".stripMargin,
+    Map(">=3.0.0" -> s"""|object A{
+                         |  val b = 4
+                         |  def method(i: Int, j: Int, k: Int) = i + j + k
+                         |  val a = {
+                         |    def newMethod(c: Int): Int =
+                         |      val d = 3
+                         |      method(d, b, c)
+                         |
+                         |    def f() = {
+                         |      val c = 1
+                         |      newMethod(c)
+                         |    }
+                         |  }
+                         |}""".stripMargin),
+  )
+
+  checkEdit(
+    "match",
+    s"""|object A {
+        |  <@val a = {
+        |    val b = 4
+        |    <<b + 2 match {
+        |      case _ => b
+        |    }>>
+        |  }@>
+        |}""".stripMargin,
+    s"""|object A {
+        |  def newMethod(b: Int): Int =
+        |    b + 2 match {
+        |      case _ => b
+        |    }
+        |
+        |  val a = {
+        |    val b = 4
+        |    newMethod(b)
+        |  }
+        |}""".stripMargin,
+  )
+
+  checkEdit(
+    "nested-declarations".tag(IgnoreScala3),
+    s"""|object A {
+        |  <@val a = {
+        |    val c = 1
+        |    <<val b = {
+        |      val c = 2
+        |      c + 1
+        |    }
+        |    c + 2>>
+        |  }@>
+        |}""".stripMargin,
+    s"""|object A {
+        |  def newMethod(c: Int): Int = {
+        |    val b = {
+        |      val c = 2
+        |      c + 1
+        |    }
+        |    c + 2
+        |  }
+        |  val a = {
+        |    val c = 1
+        |    newMethod(c)
+        |  }
+        |}""".stripMargin,
+    Map(">=3.0.0" -> s"""|object A {
+                         |  def newMethod(c: Int) =
+                         |    val b = {
+                         |      val c = 2
+                         |      c + 1
+                         |    }
+                         |    c + 2
+                         |
+                         |  val a = {
+                         |    val c = 1
+                         |    newMethod(c)
+                         |  }
+                         |}""".stripMargin),
   )
 
   def checkEdit(
       name: TestOptions,
       original: String,
-      defLine: List[Int],
       expected: String,
       compat: Map[String, String] = Map.empty,
   )(implicit location: Location): Unit =
     test(name) {
 
-      val edits = getAutoImplement(original, defLine)
-      val code = original.replace("<<", "").replace(">>", "")
+      val edits = getAutoImplement(original)
+      val code = original
+        .replace("<<", "")
+        .replace(">>", "")
+        .replace("<@", "")
+        .replace("@>", "")
       val obtained = TextEdits.applyEdits(code, edits)
       assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
 
   def getAutoImplement(
       original: String,
-      defLine: List[Int],
       filename: String = "file:/A.scala",
   ): List[l.TextEdit] = {
-    val code2 = original.replace("<<", "").replace(">>", "")
-    val lines = original.split("\n")
-    val firstLine = lines.indexWhere(_.contains("<<"))
-    val lastLine = lines.indexWhere(_.contains(">>"))
-    val firstChar = lines(firstLine).indexOf("<<")
-    val lastChar =
-      if (firstLine == lastLine) lines(lastLine).indexOf(">>") - 2
-      else lines(lastLine).indexOf(">>")
+    val code2 = original
+      .replace("<<", "")
+      .replace(">>", "")
+      .replace("<@", "")
+      .replace("@>", "")
+    val findRange = original.replace("<@", "").replace("@>", "")
+    val rangeLines = findRange.split("\n")
+    val firstLineRange = rangeLines.indexWhere(_.contains("<<"))
+    val lastLineRange = rangeLines.indexWhere(_.contains(">>"))
+    val firstCharRange = rangeLines(firstLineRange).indexOf("<<")
+    val lastCharRange =
+      if (firstLineRange == lastLineRange)
+        rangeLines(lastLineRange).indexOf(">>") - 2
+      else rangeLines(lastLineRange).indexOf(">>")
     val range = new l.Range(
-      new l.Position(firstLine, firstChar),
-      new l.Position(lastLine, lastChar),
+      new l.Position(firstLineRange, firstCharRange),
+      new l.Position(lastLineRange, lastCharRange),
+    )
+    val findDefnRange = original.replace("<<", "").replace(">>", "")
+    val defnRangeLines = findDefnRange.split("\n")
+    val firstLineDefnRange = defnRangeLines.indexWhere(_.contains("<@"))
+    val lastLineDefnRange = defnRangeLines.indexWhere(_.contains("@>"))
+    val firstCharDefnRange = defnRangeLines(firstLineDefnRange).indexOf("<@")
+    val lastCharDefnRange =
+      if (firstLineDefnRange == lastLineDefnRange)
+        defnRangeLines(lastLineDefnRange).indexOf("@>") - 2
+      else defnRangeLines(lastLineDefnRange).indexOf("@>")
+    val defnRange = new l.Range(
+      new l.Position(firstLineDefnRange, firstCharDefnRange),
+      new l.Position(lastLineDefnRange, lastCharDefnRange),
     )
     val result = presentationCompiler
       .extractMethod(
         CompilerRangeParams(
           URI.create(filename),
           code2,
-          original.indexOf("<<"),
-          original.indexOf(">>") - 2,
+          findRange.indexOf("<<"),
+          findRange.indexOf(">>") - 2,
           cancelToken,
         ),
         range,
-        new l.Range(
-          new l.Position(defLine(0), defLine(1)),
-          new l.Position(defLine(2), defLine(3)),
-        ),
+        defnRange,
       )
       .get()
     result.asScala.toList

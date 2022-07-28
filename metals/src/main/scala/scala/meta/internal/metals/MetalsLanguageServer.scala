@@ -2050,9 +2050,13 @@ class MetalsLanguageServer(
           ) =>
         CancelTokens.future { token =>
           val uri = doc.getUri()
+
           for {
             edits <- compilers.extractMethod(doc, range, defnRange, token)
-            if (!edits.isEmpty())
+            _ = logging.logErrorWhen(
+              edits.isEmpty(),
+              s"Could not extract method from range \n${range}\nin file ${uri.toAbsolutePath}",
+            )
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
             _ <- languageClient
               .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
