@@ -99,12 +99,11 @@ abstract class CompilerAccess[Reporter, Compiler](
             isFinished.compareAndSet(false, true) &&
             isDefined
           ) {
-            _compiler.presentationCompilerThread.foreach(_.interrupt())
-            if (
-              _compiler.presentationCompilerThread.isEmpty || !_compiler.presentationCompilerThread
-                .contains(thread)
-            ) {
-              thread.interrupt()
+            _compiler.presentationCompilerThread match {
+              case None => // don't interrupt if we don't have separate thread
+              case Some(pcThread) =>
+                pcThread.interrupt()
+                if (thread != pcThread) thread.interrupt()
             }
           }
         }
