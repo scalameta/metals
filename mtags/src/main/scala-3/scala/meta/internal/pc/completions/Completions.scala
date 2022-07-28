@@ -347,15 +347,18 @@ class Completions(
         val values = FilenameCompletions.contribute(filename, td)
         (values, true)
       case (lit @ Literal(Constant(_: String))) :: _ =>
-        val completions = InterpolatorCompletions.contribute(
-          pos,
-          completionPos,
-          indexedContext,
-          lit,
-          path,
-          this,
-          config.isCompletionSnippetsEnabled(),
-        )
+        val completions = InterpolatorCompletions
+          .contribute(
+            pos,
+            completionPos,
+            indexedContext,
+            lit,
+            path,
+            this,
+            config.isCompletionSnippetsEnabled(),
+          )
+          .filterInteresting(false)
+          ._1
         (completions, true)
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
@@ -441,7 +444,8 @@ class Completions(
 
   extension (l: List[CompletionValue])
     def filterInteresting(
-        qualType: Type = ctx.definitions.AnyType
+        qualType: Type = ctx.definitions.AnyType,
+        enrich: Boolean = true,
     ): (List[CompletionValue], SymbolSearch.Result) =
 
       val isSeen = mutable.Set.empty[String]
@@ -488,11 +492,12 @@ class Completions(
       end visit
 
       l.foreach(visit)
-      val searchResult =
-        enrichWithSymbolSearch(visit, qualType).getOrElse(
-          SymbolSearch.Result.COMPLETE
-        )
-      (buf.result, searchResult)
+
+      if enrich then
+        val searchResult =
+          enrichWithSymbolSearch(visit, qualType).getOrElse(SymbolSearch.Result.COMPLETE)
+        (buf.result, searchResult)
+      else (buf.result, SymbolSearch.Result.COMPLETE)
 
   private lazy val isUninterestingSymbol: Set[Symbol] = Set[Symbol](
     defn.Any_==,

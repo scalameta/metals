@@ -376,7 +376,6 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|empty[A]: List[A]
-           |eq(x$0: Object): Boolean
            |equals(x$0: Any): Boolean
            |""".stripMargin,
     ),
