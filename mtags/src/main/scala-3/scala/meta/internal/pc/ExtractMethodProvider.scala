@@ -27,7 +27,7 @@ import org.eclipse.{lsp4j as l}
 final class ExtractMethodProvider(
     params: OffsetParams,
     range: l.Range,
-    defnPos: l.Range,
+    defnRange: l.Range,
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
     symbolSearch: SymbolSearch,
@@ -119,7 +119,7 @@ final class ExtractMethodProvider(
         head <- extracted.headOption
         appl <- extracted.lastOption
         shortenedPath =
-          path.takeWhile(src => defnPos.encloses(toLSP(src.sourcePos)))
+          path.takeWhile(src => defnRange.encloses(toLSP(src.sourcePos)))
         stat = shortenedPath.lastOption.getOrElse(head)
       yield
         val noLongerAvailable = valsOnPath(shortenedPath)
@@ -153,7 +153,7 @@ final class ExtractMethodProvider(
             replacedText,
           ),
           new l.TextEdit(
-            l.Range(defnPos.getStart(), defnPos.getStart()),
+            l.Range(defnRange.getStart(), defnRange.getStart()),
             defText,
           ),
         )

@@ -2046,12 +2046,12 @@ class MetalsLanguageServer(
           } yield ().asInstanceOf[Object]
         }
       case ServerCommands.ExtractMethod(
-            ServerCommands.ExtractMethodParams(doc, range, defnPos)
+            ServerCommands.ExtractMethodParams(doc, range, defnRange)
           ) =>
         CancelTokens.future { token =>
           val uri = doc.getUri()
           for {
-            edits <- compilers.extractMethod(doc, range, defnPos, token)
+            edits <- compilers.extractMethod(doc, range, defnRange, token)
             if (!edits.isEmpty())
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
             _ <- languageClient

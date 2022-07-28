@@ -104,7 +104,7 @@ public abstract class PresentationCompiler {
     /**
      * Extract method in selected range
      */
-    public abstract CompletableFuture<List<TextEdit>> extractMethod(OffsetParams params, Range range, Range defnPos);
+    public abstract CompletableFuture<List<TextEdit>> extractMethod(OffsetParams params, Range range, Range defnRange);
 
     /**
      * Return named arguments for the apply method that encloses the given position.

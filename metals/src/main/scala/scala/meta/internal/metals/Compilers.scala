@@ -431,11 +431,11 @@ class Compilers(
   def extractMethod(
       params: TextDocumentIdentifier,
       range: LspRange,
-      defnPos: LspRange,
+      defnRange: LspRange,
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params, range) { (pc, pos, adjust) =>
-      pc.extractMethod(CompilerRangeParams.fromPos(pos, token), range, defnPos)
+      pc.extractMethod(CompilerRangeParams.fromPos(pos, token), range, defnRange)
         .asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)

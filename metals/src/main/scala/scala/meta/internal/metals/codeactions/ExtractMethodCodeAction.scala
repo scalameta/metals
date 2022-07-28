@@ -61,7 +61,7 @@ class ExtractMethodCodeAction(
     edits
       .map { case (scopes: List[(Tree, Tree)], apply: Tree, head: Tree) =>
         scopes.map { case (defn, block) =>
-          val defnPos =
+          val defnRange =
             stats(block).find(_.pos.end >= head.pos.end).getOrElse(defn)
           val scopeName = defnTitle(defn)
 
@@ -78,7 +78,7 @@ class ExtractMethodCodeAction(
                   head.pos.toLSP.getStart(),
                   apply.pos.toLSP.getEnd(),
                 ),
-                defnPos.pos.toLSP,
+                defnRange.pos.toLSP,
               )
             )
           )

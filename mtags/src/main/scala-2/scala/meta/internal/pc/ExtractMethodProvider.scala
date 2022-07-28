@@ -11,7 +11,7 @@ final class ExtractMethodProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams,
     range: l.Range,
-    defnPos: l.Range
+    defnRange: l.Range
 ) {
   import compiler._
   def extractMethod: List[l.TextEdit] = {
@@ -33,18 +33,6 @@ final class ExtractMethodProvider(
     def prettyType(tpe: Type) =
       metalsToLongString(tpe.widen.finalResultType, history)
 
-    def pathTo(tree: Tree, range: l.Range): List[Tree] = {
-      def loop(tree: Tree): List[Tree] = {
-        tree.children
-          .filter(_.pos.isDefined)
-          .find(t => t.pos.toLSP.encloses(range)) match {
-          case Some(t) =>
-            t :: loop(t)
-          case None => Nil
-        }
-      }
-      loop(tree).reverse
-    }
     def extractFromBlock(t: Tree): List[Tree] =
       t match {
         case Block(stats, expr) =>
@@ -91,22 +79,19 @@ final class ExtractMethodProvider(
 
     def localRefs(ts: List[Tree]): Set[TermName] = {
       val names = Set.newBuilder[TermName]
-      val defns = mutable.Set[TermName]()
-
-      def traverse(tree: Tree): Unit = tree match {
+      def traverse(defns: Set[TermName], tree: Tree): Set[TermName] = tree match {
         case Ident(name) =>
           if (!defns(name.toTermName)) names += name.toTermName
+          defns
         case Select(qualifier, name) =>
           if (!defns(name.toTermName)) names += name.toTermName
-          traverse(qualifier)
+          traverse(defns, qualifier)
+          defns
         case ValDef(_, name, _, rhs) =>
-          defns.add(name)
-          traverse(rhs)
-        case _ => tree.children.foreach(traverse(_))
+          traverse(defns + name.toTermName, rhs)
+        case _ => tree.children.foldLeft(defns)(traverse(_, _))
       }
-
-      ts.map(traverse(_))
-
+      ts.foldLeft(Set.empty[TermName])(traverse(_,_))
       names.result()
     }
 
@@ -123,7 +108,7 @@ final class ExtractMethodProvider(
       newIndent + additional + line.drop(i)
     }
 
-    val path = pathTo(unit.body, range)
+    val path = compiler.lastVisitedParentTrees
     val edits =
       for {
         enclosing <- path.find(_.pos.toLSP.encloses(range))
@@ -131,7 +116,7 @@ final class ExtractMethodProvider(
         head <- extracted.headOption
         appl <- extracted.lastOption
         shortenedPath =
-          path.takeWhile(src => defnPos.encloses(src.pos.toLSP))
+          path.takeWhile(src => defnRange.encloses(src.pos.toLSP))
         stat = shortenedPath.lastOption.getOrElse(head)
       } yield {
         val noLongerAvailable = valsOnPath(shortenedPath)
@@ -172,7 +157,7 @@ final class ExtractMethodProvider(
             replacedText
           ),
           new l.TextEdit(
-            new l.Range(defnPos.getStart(), defnPos.getStart()),
+            new l.Range(defnRange.getStart(), defnRange.getStart()),
             defText
           )
         )

@@ -147,7 +147,7 @@ case class ScalaPresentationCompiler(
   override def extractMethod(
       params: OffsetParams,
       range: Range,
-      defnPos: Range
+      defnRange: Range
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
@@ -155,7 +155,7 @@ case class ScalaPresentationCompiler(
         pc.compiler(),
         params,
         range,
-        defnPos
+        defnRange
       ).extractMethod.asJava
     }
   }
