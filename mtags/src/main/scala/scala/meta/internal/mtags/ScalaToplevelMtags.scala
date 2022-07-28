@@ -174,13 +174,14 @@ class ScalaToplevelMtags(
         // inline extension method `extension (...) def foo = ...`
         case DEF if expectTemplate.map(needToParseExtension).getOrElse(false) =>
           expectTemplate match {
-            case None => fail("never happens")
+            case None =>
+              fail(
+                "failed while reading 'def' in 'extension (...) def ...', expectTemplate should be set by reading 'extension'."
+              )
             case Some(expect) =>
-              val next =
-                expect.startIndentedRegion(currRegion, expect.isExtension)
               acceptTrivia()
               val name = newIdentifier
-              withOwner(next.owner) {
+              withOwner(expect.owner) {
                 term(name.name, name.pos, Kind.OBJECT, 0)
               }
               loop(indent, isAfterNewline = false, region, None)
