@@ -203,14 +203,26 @@ class Completions(
       else ""
 
     val templateSuffix =
-      if shouldAddSnippet && isNewPosition && (symbol.info.typeSymbol.is(
-          Flags.Trait
-        ) || symbol.info.typeSymbol.isAllOf(
-          Flags.JavaInterface
-        ) || symbol.info.typeSymbol.isAllOf(
-          Flags.PureInterface
-        ) || symbol.info.typeSymbol.is(Flags.Abstract)
+      if shouldAddSnippet && isNewPosition
+        && (symbol.toString.startsWith(
+          "trait"
+        ) // trait A{ def doSomething: Int}
+        // object B{ new A@@}
+        // Note: I realised that the value of Flag.Trait is flaky and
+        // leads to the failure of one of the DocSuite tests
+          || symbol.info.typeSymbol.isAllOf(
+            Flags.JavaInterface // in Java:  interface A {}
+            // in Scala 3: object B { new A@@}
+          ) || symbol.info.typeSymbol.isAllOf(
+            Flags.PureInterface // in Java: abstract class Shape { abstract void draw();}
+            // Shape has only abstract members, so can be represented by a Java interface
+            // in Scala 3: object B{ new Shap@@ }
+          ) || symbol.info.typeSymbol.is(Flags.Abstract)
+          // abstract class A(i: Int){ def doSomething: Int}
+          // object B{ new A@@}
           || symbol.info.typeSymbol.isOneOf(Flags.AbstractOrTrait))
+        // just in case the abstract or trait flags in dotty api
+        // are not correctly set
       then
         if bracketSuffix.nonEmpty || bracesSuffix.contains("$0") then " {}"
         else " {$0}"
@@ -452,14 +464,15 @@ class Completions(
               val include =
                 !isUninterestingSymbol(sym) &&
                   isNotLocalForwardReference(sym)
-                  && (!sym.toString.startsWith(
-                    "object "
+                  && (!sym.info.typeSymbol.is(
+                    Flags.Module
                   ) || (!isTypePosition && !isNewPosition))
-                  && (!isTypePosition || !sym.toString.startsWith("method "))
-                  && (!isInstantiationOrMethodCallPos || (!sym.toString
-                    .startsWith("class ") && !sym.toString.startsWith(
-                    "trait "
-                  )))
+                  && (!isTypePosition || !sym.is(Flags.Method))
+                  // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
+                  && (!isInstantiationOrMethodCallPos || (!sym.isClass && !sym.toString
+                    .startsWith(
+                      "trait "
+                    )))
 
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)

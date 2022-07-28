@@ -92,7 +92,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
-    // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
+    // Dotty does not currently support fuzzy completions. Please take a look at
+    // https://github.com/lampepfl/dotty-feature-requests/issues/314
     "type-empty"
       .tag(IgnoreScala3),
     """
@@ -106,7 +107,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
-    // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
+    // Dotty does not currently support fuzzy completions. Please take a look at
+    // https://github.com/lampepfl/dotty-feature-requests/issues/314
     "type-new-empty"
       .tag(IgnoreScala3),
     """
@@ -133,13 +135,14 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
         """|IndexedSeq[$0]
            |""".stripMargin
     ),
   )
 
   checkSnippet(
+    // handling this in Scala 3 requires covering CompletionKind.Member in enrichWithSymbols
+    // and filtering out the non-member items.
     "type2"
       .tag(IgnoreScala3),
     s"""|object Main {
@@ -165,7 +168,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |ArrayDeque
            |ArrayDequeOps
            |""".stripMargin,
-      // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
       "3" -> // ArrayDeque upper is for java, the lower for scala
         """|ArrayDeque[$0]
            |ArrayDeque[$0]
@@ -200,9 +202,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |IterableOnce[$0] {}
            |""".stripMargin,
       "3" ->
-        // scala 3 new completions not implemented, so no way to distinguish if we are at a type position
-        """|Iterable
-           |Iterable[$0] {}
+        """|Iterable[$0] {}
            |IterableOnce[$0] {}
            |""".stripMargin,
     ),
@@ -224,7 +224,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |IterableOnce[$0]
            |""".stripMargin,
       "3" ->
-        // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
         """|Iterable[$0]
            |IterableOnce[$0]
            |""".stripMargin,
@@ -246,7 +245,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |Iterable[$0]
            |IterableOnce[$0]
            |""".stripMargin,
-      // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
       "3" ->
         """|Iterable[$0]
            |IterableOnce[$0]
@@ -366,7 +364,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
        |""".stripMargin,
     // additional completion when apply method is present
     compat = Map(
-      "3" -> // TODO: please double check
+      // Note: the class and trait items in here are invalid. So
+      // they are filtered out.
+      "3" ->
         """|Try
            |Try($0)
            |TryMethods
