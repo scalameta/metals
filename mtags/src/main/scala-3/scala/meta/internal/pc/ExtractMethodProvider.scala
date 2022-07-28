@@ -55,6 +55,8 @@ final class ExtractMethodProvider(
       ts.flatMap(
         _ match
           case ValDef(name, tpt, _) => List((name, printer.tpe(tpt.tpe)))
+          case df @ DefDef(_, _, _, _) =>
+            valsOnPath(df.termParamss.flatten)
           case b @ Block(stats, expr) => valsOnPath(stats :+ expr)
           case t @ Template(_, _, _, _) =>
             valsOnPath(t.body)
@@ -123,7 +125,6 @@ final class ExtractMethodProvider(
         stat = shortenedPath.lastOption.getOrElse(head)
       yield
         val noLongerAvailable = valsOnPath(shortenedPath)
-        pprint.pprintln(noLongerAvailable)
         val refsExtract = localRefs(extracted)
         val withType =
           noLongerAvailable

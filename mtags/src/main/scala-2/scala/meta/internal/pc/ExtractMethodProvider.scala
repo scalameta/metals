@@ -44,9 +44,14 @@ final class ExtractMethodProvider(
       ts.flatMap(t =>
         t match {
           case Block(stats, expr) => valsOnPath(stats :+ expr)
-          case Template(_, _, body) => valsOnPath(body)
+          case Template(_, _, body) =>
+            valsOnPath(body)
+          case df: DefDef =>
+            valsOnPath(df.vparamss.flatten)
           case ValDef(_, name, tpt, _) if tpt.tpe != null =>
             List((name, prettyType(tpt.tpe)))
+          case ValDef(_, name, Ident(tpe), _) =>
+            List((name, tpe.toString()))
           case _ => Nil
         }
       )
@@ -122,7 +127,7 @@ final class ExtractMethodProvider(
           path.takeWhile(src => defnRange.encloses(src.pos.toLSP))
         stat = shortenedPath.lastOption.getOrElse(head)
       } yield {
-        val noLongerAvailable = valsOnPath(shortenedPath)
+        val noLongerAvailable = valsOnPath(shortenedPath).distinct
         val refsExtract = localRefs(extracted)
         val withType =
           noLongerAvailable.filter { case (key, _) =>

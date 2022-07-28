@@ -251,6 +251,46 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
                          |}""".stripMargin),
   )
 
+  checkEdit(
+    "class-param",
+    s"""|object A{
+        |  <@def f1() = {
+        |    class B(b: Int) {
+        |      def f2() = <<b + 2>>
+        |    }
+        |  }@>
+        |}""".stripMargin,
+    s"""|object A{
+        |  def newMethod(b: Int): Int =
+        |    b + 2
+        |
+        |  def f1() = {
+        |    class B(b: Int) {
+        |      def f2() = newMethod(b)
+        |    }
+        |  }
+        |}""".stripMargin,
+  )
+
+  checkEdit(
+    "method-param",
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  <@def f1(a: Int) = {
+        |    <<method(a)>>
+        |  }@>
+        |}""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  def newMethod(a: Int): Int =
+        |    method(a)
+        |
+        |  def f1(a: Int) = {
+        |    newMethod(a)
+        |  }
+        |}""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
