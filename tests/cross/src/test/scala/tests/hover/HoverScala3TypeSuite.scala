@@ -197,4 +197,41 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |def apply[A, B](value: A): Left[A, B]
        |""".stripMargin.hover,
   )
+
+  check(
+    "selectable",
+    """|trait Sel extends Selectable:
+       |  def selectDynamic(name: String): Any = ???
+       |  def applyDynamic(name: String)(args: Any*): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { def foo2: Int}]
+       |val foo2 = sel.fo@@o2
+       |""".stripMargin,
+    """|def foo2: Int
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "selectable2",
+    """|trait Sel extends Selectable:
+       |  def selectDynamic(name: String): Any = ???
+       |  def applyDynamic(name: String)(args: Any*): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { def bar2(x: Int): Int }]
+       |val bar2 = sel.ba@@r2(3)
+       |""".stripMargin,
+    """|def bar2(x: Int): Int
+       |""".stripMargin.hover,
+  )
+  check(
+    "selectable-full",
+    """|trait Sel extends Selectable:
+       |  def foo1: Int = ???
+       |  def bar1(x: Int): Int = ???
+       |  def selectDynamic(name: String): Any = ???
+       |  def applyDynamic(name: String)(args: Any*): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { def foo2: Int; def bar2(x: Int): Int }]
+       |val bar2 = sel.fo@@o2
+       |""".stripMargin,
+    """|def foo2: Int
+       |""".stripMargin.hover,
+  )
 }
