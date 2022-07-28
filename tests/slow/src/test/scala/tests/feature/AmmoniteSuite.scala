@@ -5,6 +5,8 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 class Ammonite213Suite extends tests.BaseAmmoniteSuite(V.ammonite213)
 
+class Ammonite3Suite extends tests.BaseAmmoniteSuite(V.ammonite3)
+
 class Ammonite212Suite extends tests.BaseAmmoniteSuite(V.ammonite212) {
 
   test("global-version-fallback") {

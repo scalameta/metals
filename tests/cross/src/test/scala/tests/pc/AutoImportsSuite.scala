@@ -258,7 +258,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkAmmoniteEdit(
-    "first-auto-import-amm-script".tag(IgnoreScala3),
+    "first-auto-import-amm-script",
     ammoniteWrapper(
       """val p: <<Path>> = ???
         |""".stripMargin
@@ -272,10 +272,18 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
         """val p: Path = ???
           |""".stripMargin
       ),
+    compat = Map(
+      "3" ->
+        ammoniteWrapper(
+          """|import java.nio.file.Path
+             |val p: Path = ???
+             |""".stripMargin
+        )
+    ),
   )
 
   checkAmmoniteEdit(
-    "second-auto-import-amm-script".tag(IgnoreScala3),
+    "second-auto-import-amm-script",
     ammoniteWrapper(
       """import java.nio.file.Files
         |val p: <<Path>> = ???

@@ -16,6 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
@@ -181,15 +182,22 @@ final class Ammonite(
             scalaVersionSelector.fallbackScalaVersion(isAmmonite = true),
         )
       )
-    val res = AmmoniteFetcher(versions)
-      .withInterpOnly(false)
-      .withProgressBars(false)
-      .withResolutionParams(
-        coursierapi.ResolutionParams
-          .create()
-          .withScalaVersion(versions.scalaVersion)
-      )
-      .command()
+    val res = Try {
+      AmmoniteFetcher(versions)
+        .withInterpOnly(false)
+        .withProgressBars(false)
+        .withResolutionParams(
+          coursierapi.ResolutionParams
+            .create()
+            .withScalaVersion(versions.scalaVersion)
+        )
+        .command()
+    } match {
+      case Success(v) => v
+      // some coursier exceptions are not wrapped in the Fetcher exception
+      case Failure(e) =>
+        Left(new AmmoniteFetcherException(e.getMessage(), e) {})
+    }
     res match {
       case Left(e) =>
         scribe.error(
