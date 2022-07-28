@@ -31,7 +31,7 @@ final class ExtractMethodProvider(
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
     symbolSearch: SymbolSearch,
-):
+) extends ExtractMethodUtils:
 
   def extractMethod(): List[TextEdit] =
     val uri = params.uri
@@ -51,10 +51,11 @@ final class ExtractMethodProvider(
       includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
     )
 
-    def valsOnPath(ts: List[tpd.Tree]): List[(TermName, String)] =
+    def valsOnPath(ts: List[tpd.Tree]): List[(String, String)] =
       ts.flatMap(
         _ match
-          case ValDef(name, tpt, _) => List((name, printer.tpe(tpt.tpe)))
+          case ValDef(name, tpt, _) =>
+            List((name.toString, printer.tpe(tpt.tpe)))
           case df @ DefDef(_, _, _, _) =>
             valsOnPath(df.termParamss.flatten)
           case b @ Block(stats, expr) => valsOnPath(stats :+ expr)
@@ -70,49 +71,34 @@ final class ExtractMethodProvider(
           temp.body.filter(stat => range.encloses(toLSP(stat.sourcePos)))
         case other => List(other)
 
-    def localRefs(ts: List[tpd.Tree]): Set[TermName] =
-      val names = Set.newBuilder[TermName]
-      def collectNames(defns: Set[TermName], tree: tpd.Tree): Set[TermName] =
+    def localRefs(ts: List[tpd.Tree]): Set[String] =
+      val names = Set.newBuilder[String]
+      def collectNames(defns: Set[String], tree: tpd.Tree): Set[String] =
         tree match
           case Ident(name) =>
-            if !defns(name.toTermName) then names += name.toTermName
+            if !defns(name.toString()) then names += name.toString()
             defns
           case Select(qualifier, name) =>
-            if !defns(name.toTermName) then names += name.toTermName
+            if !defns(name.toString()) then names += name.toString()
             defns
           case ValDef(name, _, _) =>
-            defns + name.toTermName
+            defns + name.toString()
           case _ => defns
 
-      val traverser = new DeepFolder[Set[TermName]](collectNames)
-      ts.foldLeft(Set.empty[TermName])(traverser(_, _))
-      val res = names.result()
-      res
+      val traverser = new DeepFolder[Set[String]](collectNames)
+      ts.foldLeft(Set.empty[String])(traverser(_, _))
+      names.result()
     end localRefs
 
-    def genName(path: List[tpd.Tree]): String =
-      def defsOnPath(ts: List[tpd.Tree]): Set[String] =
-        ts.flatMap(
-          _ match
-            case DefDef(name, _, _, _) => Seq(name.toString())
-            case b @ Block(stats, expr) => defsOnPath(stats :+ expr)
-            case t @ Template(_, _, _, _) =>
-              defsOnPath(t.body)
-            case _ => Nil
-        ).toSet
-      val usedNames = defsOnPath(path)
-      if !usedNames("newMethod") then "newMethod"
-      else
-        var i = 0
-        while usedNames(s"newMethod$i") do i += 1
-        s"newMethod$i"
-    end genName
-
-    def adjustIndent(line: String, newIndent: String, oldIndent: Int): String =
-      var i = 0
-      val additional = if newIndent.indexOf("\t") != -1 then "\t" else "  "
-      while (line(i) == ' ' || line(i) == '\t') && i < oldIndent do i += 1
-      newIndent + additional + line.drop(i)
+    def defsOnPath(ts: List[tpd.Tree]): Set[String] =
+      ts.flatMap(
+        _ match
+          case DefDef(name, _, _, _) => Seq(name.toString())
+          case b @ Block(stats, expr) => defsOnPath(stats :+ expr)
+          case t @ Template(_, _, _, _) =>
+            defsOnPath(t.body)
+          case _ => Nil
+      ).toSet
 
     val edits =
       for
@@ -124,30 +110,20 @@ final class ExtractMethodProvider(
           path.takeWhile(src => defnRange.encloses(toLSP(src.sourcePos)))
         stat = shortenedPath.lastOption.getOrElse(head)
       yield
-        val noLongerAvailable = valsOnPath(shortenedPath)
-        val refsExtract = localRefs(extracted)
-        val withType =
-          noLongerAvailable
-            .filter((key, tp) => refsExtract.contains(key))
-            .sorted
-        val typs = withType
-          .map((k, v) => s"$k: $v")
-          .mkString(", ")
+        val (methodParams, applParams) =
+          asParams(valsOnPath(shortenedPath).distinct, localRefs(extracted))
         val applType = printer.tpe(appl.tpe.widenUnion)
-        val applParams = withType.map(_._1).mkString(", ")
-        val name = genName(path)
+        val name = genName(defsOnPath(path), "newMethod")
         val text = params.text()
         val newIndent = stat.startPos.startColumnPadding
-        val oldIndent = head.startPos.startColumnPadding.length()
-        val textToExtract = text
-          .slice(pos.start, pos.end)
-          .split("\n")
-          .map(adjustIndent(_, newIndent, oldIndent))
-          .mkString("\n")
+        val oldIndentLen = head.startPos.startColumnPadding.length()
+        val toExtract =
+          textToExtract(text, pos.start, pos.end, newIndent, oldIndentLen)
         val defText =
           if extracted.length > 1 then
-            s"def $name($typs): $applType =\n${textToExtract}\n\n$newIndent"
-          else s"def $name($typs): $applType =\n${textToExtract}\n\n$newIndent"
+            s"def $name($methodParams): $applType =\n${toExtract}\n\n$newIndent"
+          else
+            s"def $name($methodParams): $applType =\n${toExtract}\n\n$newIndent"
         val replacedText = s"$name($applParams)"
         List(
           new l.TextEdit(
