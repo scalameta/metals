@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.DurationInt
@@ -145,7 +146,7 @@ object ShellRunner {
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       maybeJavaHome: Option[String],
-  ): Option[String] = {
+  )(implicit ec: ExecutionContext): Option[String] = {
 
     val sbOut = new StringBuilder()
     val env = additionalEnv ++ maybeJavaHome.map("JAVA_HOME" -> _).toMap

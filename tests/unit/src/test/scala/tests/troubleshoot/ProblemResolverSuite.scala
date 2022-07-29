@@ -3,6 +3,8 @@ package tests.troubleshoot
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -34,6 +36,8 @@ import munit.TestOptions
 import tests.TestMtagsResolver
 
 class ProblemResolverSuite extends FunSuite {
+
+  implicit val ctx: ExecutionContext = this.munitExecutionContext
 
   checkRecommendation(
     "unsupported-scala-version",

@@ -61,6 +61,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
           files.map(file => server.didOpen(s"${file._1}"))
         )
         _ <- assertCheck(filename, edit, expected, base)
+        _ <- server.shutdown()
       } yield ()
     }
   }

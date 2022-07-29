@@ -1341,6 +1341,7 @@ final case class TestingServer(
       query: String,
       base: Map[String, String],
   ): Future[Map[String, String]] = {
+    Debug.printEnclosing()
     for {
       (_, params) <- offsetParams(filename, query, workspace)
       implementations <- server.implementation(params).asScala

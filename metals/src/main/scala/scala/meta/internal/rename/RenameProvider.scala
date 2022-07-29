@@ -2,7 +2,6 @@ package scala.meta.internal.rename
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import scala.collection.parallel.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -59,7 +58,7 @@ final class RenameProvider(
     trees: Trees,
 )(implicit executionContext: ExecutionContext) {
 
-  private val awaitingSave = new ConcurrentLinkedQueue[() => Unit]
+  private val awaitingSave = new ConcurrentLinkedQueue[() => Future[Unit]]
 
   def prepareRename(
       params: TextDocumentPositionParams,
@@ -252,10 +251,12 @@ final class RenameProvider(
     }
   }
 
-  def runSave(): Unit =
-    synchronized {
-      ConcurrentQueue.pollAll(awaitingSave).foreach(waiting => waiting())
+  def runSave(): Future[Unit] = {
+    val all = synchronized {
+      ConcurrentQueue.pollAll(awaitingSave)
     }
+    Future.sequence(all.map(waiting => waiting())).ignoreValue
+  }
 
   /**
    * In case of import renames, we can only rename the symbol in file.
@@ -374,12 +375,16 @@ final class RenameProvider(
 
   private def changeClosedFiles(
       fileEdits: Map[AbsolutePath, List[TextEdit]]
-  ) = {
-    fileEdits.toArray.par.foreach { case (file, changes) =>
-      val text = file.readText
-      val newText = TextEdits.applyEdits(text, changes)
-      file.writeText(newText)
-    }
+  ): Future[Unit] = {
+    Future
+      .sequence(fileEdits.toList.map { case (file, changes) =>
+        Future {
+          val text = file.readText
+          val newText = TextEdits.applyEdits(text, changes)
+          file.writeText(newText)
+        }
+      })
+      .ignoreValue
   }
 
   private def implementations(

@@ -5,7 +5,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.mutable
-import scala.collection.parallel.CollectionConverters._
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers
@@ -288,7 +287,7 @@ final class ImplementationProvider(
         classContext,
         source.toNIO,
       )
-      file <- locationsByFile.keySet.toArray.par
+      file <- locationsByFile.keySet.toArray
       locations = locationsByFile(file)
       implPath = AbsolutePath(file)
       implDocument <- findSemanticdb(implPath).toIterable

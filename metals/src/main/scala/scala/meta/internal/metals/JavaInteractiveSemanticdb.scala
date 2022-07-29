@@ -5,7 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Properties
 import scala.util.Try
@@ -29,7 +29,7 @@ class JavaInteractiveSemanticdb(
     pluginJars: List[Path],
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
-) {
+)(implicit ec: ExecutionContext) {
 
   private val readonly = workspace.resolve(Directories.readonly)
 
@@ -183,7 +183,7 @@ object JavaInteractiveSemanticdb {
       workspace: AbsolutePath,
       buildTargets: BuildTargets,
       jdkVersion: JdkVersion,
-  ): Option[JavaInteractiveSemanticdb] = {
+  )(implicit ec: ExecutionContext): Option[JavaInteractiveSemanticdb] = {
 
     def pathToJavac(p: AbsolutePath): AbsolutePath = {
       val binaryName = if (Properties.isWin) "javac.exe" else "javac"
@@ -230,7 +230,7 @@ object JdkVersion {
 
   def maybeJdkVersionFromJavaHome(
       maybeJavaHome: Option[AbsolutePath]
-  ): Option[JdkVersion] = {
+  )(implicit ec: ExecutionContext): Option[JdkVersion] = {
     maybeJavaHome.flatMap { javaHome =>
       fromReleaseFile(javaHome).orElse {
         fromShell(javaHome)
@@ -238,7 +238,9 @@ object JdkVersion {
     }
   }
 
-  def fromShell(javaHome: AbsolutePath): Option[JdkVersion] = {
+  def fromShell(
+      javaHome: AbsolutePath
+  )(implicit ec: ExecutionContext): Option[JdkVersion] = {
     ShellRunner
       .runSync(
         List(javaHome.resolve("bin/java").toString, "-version"),

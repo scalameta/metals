@@ -1257,7 +1257,7 @@ class MetalsLanguageServer(
     Future
       .sequence(
         List(
-          Future(renameProvider.runSave()),
+          renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
         )

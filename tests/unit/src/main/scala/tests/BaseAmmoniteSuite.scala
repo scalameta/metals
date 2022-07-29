@@ -404,7 +404,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
           |decode[Foozz](json)
           |       ^^^^^
           |""".stripMargin
-      
+
     for {
       _ <- initialize(
         s"""
