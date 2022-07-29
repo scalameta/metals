@@ -119,6 +119,10 @@ class Completions(
   ): CursorPositionCondition =
     path match
       case (head: (Select | Ident)) :: tail =>
+        // this method of calculating hasNoSquareBracket instead of using the
+        // path for the purpose is due to the issue that trees after typer
+        // lose information in dotty:
+        // https://github.com/lampepfl/dotty/issues/15750
         val hasNoSquareBracket =
           val span: Span = head.srcPos.span
           if span.exists then
