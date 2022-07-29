@@ -141,6 +141,16 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
+    "empty-params-with-implicit".only,
+    s"""|object Main {
+        |  def doSomething()(implicit x: Int) = x
+        |  val bar = doSomethi@@
+        |}
+        |""".stripMargin,
+    "doSomething($0)",
+  )
+
+  checkSnippet(
     // handling this in Scala 3 requires covering CompletionKind.Member in enrichWithSymbols
     // and filtering out the non-member items.
     "type2"
