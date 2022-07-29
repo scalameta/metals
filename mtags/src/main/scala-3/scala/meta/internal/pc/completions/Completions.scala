@@ -64,17 +64,59 @@ class Completions(
     case (_: Ident) :: (_: SeqLiteral) :: _ => false
     case _ => true
 
-  private lazy val (
-    isTypePosition,
-    isNewPosition,
-    isInstantiationOrMethodCallPos,
-    noSquareBracketExists,
-  ) = calculateTypeInstanceAndNewPositions(path)
+  /**
+   * It shows the conditions of the code in the cursor position, with
+   * respect to assessing
+   *  1. whether it makes semantic sense to complete
+   *  the position with symbols that are `class`, `trait`,
+   *  `abstract`, `object`, or method
+   *  1. whether it would make syntactic sense to add `[]` `()` or `{}`
+   *  suffixes to the symbols suggested for completion.
+   *
+   *  Note: In the comments `@@` represents the cursor position.
+   *
+   * @param isTypePosition if this is the position for defining a type such as
+   *                       `val a: In@@` or `def i: scala.IndexedSe@@`
+   * @param isNewPosition if it is the position for instantiation after
+   *                      the new keword, as in `new Fil@@`
+   * @param isInstantiationOrMethodCallPos if it is the position for method call or
+   *                                       instantiation as in `object A{ MyCaseClas@@ }`
+   * @param noSquareBracketExists if there is already a square bracket in the position as in
+   *                              `val a: IndexedMa@@[]`
+   */
+  private case class CursorPositionCondition(
+      isTypePosition: Boolean,
+      isNewPosition: Boolean,
+      isInstantiationOrMethodCallPos: Boolean,
+      noSquareBracketExists: Boolean,
+  ):
+
+    def isObjectValidForPos = (!isTypePosition && !isNewPosition)
+
+    /**
+     * classes abd traits are type symbols. They are not suitable for
+     *        instantiation or method call positions. Only apply methods or objects
+     *        can be used in such positions.
+     */
+    def isClassOrTraitValidForPos = !isInstantiationOrMethodCallPos
+    def isMethodValidForPos = !isTypePosition
+
+    def isParanethesisValidForPos = !isTypePosition
+    def isSquareBracketsValidForPos = noSquareBracketExists
+      && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
+
+    /**
+     * as in ```new MyTrait@@```
+     */
+    def isCurlyBracesValidForPos = isNewPosition
+  end CursorPositionCondition
+
+  private lazy val cursorPositionCondition =
+    calculateTypeInstanceAndNewPositions(path)
 
   private def calculateTypeInstanceAndNewPositions(
       path: List[Tree]
-  ): (Boolean, Boolean, Boolean, Boolean) =
-
+  ): CursorPositionCondition =
     path match
       case (head: (Select | Ident)) :: tail =>
         val hasNoSquareBracket =
@@ -89,26 +131,29 @@ class Completions(
         tail match
           case (v: ValOrDefDef) :: _ =>
             if v.tpt.sourcePos.contains(pos) then
-              (true, false, false, hasNoSquareBracket)
-            else (false, false, false, hasNoSquareBracket)
+              CursorPositionCondition(true, false, false, hasNoSquareBracket)
+            else
+              CursorPositionCondition(false, false, false, hasNoSquareBracket)
           case New(selectOrIdent: (Select | Ident)) :: _ =>
             if selectOrIdent.sourcePos.contains(pos) then
-              (false, true, false, hasNoSquareBracket)
-            else (false, false, false, hasNoSquareBracket)
+              CursorPositionCondition(false, true, false, hasNoSquareBracket)
+            else
+              CursorPositionCondition(false, false, false, hasNoSquareBracket)
           case (a @ AppliedTypeTree(_, args)) :: _ =>
             if args.exists(_.sourcePos.contains(pos)) then
-              (true, false, false, hasNoSquareBracket)
-            else (false, false, false, false)
-          case (_: Import) :: _ => (false, false, false, hasNoSquareBracket)
+              CursorPositionCondition(true, false, false, hasNoSquareBracket)
+            else CursorPositionCondition(false, false, false, false)
+          case (_: Import) :: _ =>
+            CursorPositionCondition(false, false, false, hasNoSquareBracket)
           case _ =>
-            (false, false, true, hasNoSquareBracket)
+            CursorPositionCondition(false, false, true, hasNoSquareBracket)
         end match
 
       case (_: TypeTree) :: TypeApply(Select(newQualifier: New, _), _) :: _
           if newQualifier.sourcePos.contains(pos) =>
-        (false, true, false, true)
+        CursorPositionCondition(false, true, false, true)
 
-      case _ => (false, false, false, true)
+      case _ => CursorPositionCondition(false, false, false, true)
     end match
   end calculateTypeInstanceAndNewPositions
 
@@ -169,8 +214,7 @@ class Completions(
   private def findSuffix(symbol: Symbol): Option[String] =
 
     val bracketSuffix =
-      if shouldAddSnippet && noSquareBracketExists
-        && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
+      if shouldAddSnippet && cursorPositionCondition.isSquareBracketsValidForPos
         && (symbol.info.typeParams.nonEmpty
           || (symbol.isAllOf(
             Flags.JavaModule
@@ -181,7 +225,7 @@ class Completions(
     val bracesSuffix =
       if shouldAddSnippet && symbol.is(
           Flags.Method
-        ) && !isTypePosition
+        ) && cursorPositionCondition.isParanethesisValidForPos
       then
         val paramss = getParams(symbol)
         paramss match
@@ -203,7 +247,9 @@ class Completions(
       else ""
 
     val templateSuffix =
-      if shouldAddSnippet && isNewPosition
+      if shouldAddSnippet && cursorPositionCondition.isCurlyBracesValidForPos
+        // just in case the abstract or trait flags in dotty api
+        // are not correctly set
         && (symbol.toString.startsWith(
           "trait"
         ) // trait A{ def doSomething: Int}
@@ -221,8 +267,6 @@ class Completions(
           // abstract class A(i: Int){ def doSomething: Int}
           // object B{ new A@@}
           || symbol.info.typeSymbol.isOneOf(Flags.AbstractOrTrait))
-        // just in case the abstract or trait flags in dotty api
-        // are not correctly set
       then
         if bracketSuffix.nonEmpty || bracesSuffix.contains("$0") then " {}"
         else " {$0}"
@@ -470,10 +514,12 @@ class Completions(
                   isNotLocalForwardReference(sym)
                   && (!sym.info.typeSymbol.is(
                     Flags.Module
-                  ) || (!isTypePosition && !isNewPosition))
-                  && (!isTypePosition || !sym.is(Flags.Method))
+                  ) || cursorPositionCondition.isObjectValidForPos)
+                  && (cursorPositionCondition.isMethodValidForPos || !sym.is(
+                    Flags.Method
+                  ))
                   // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
-                  && (!isInstantiationOrMethodCallPos || (!sym.isClass && !sym.toString
+                  && (cursorPositionCondition.isClassOrTraitValidForPos || (!sym.isClass && !sym.toString
                     .startsWith(
                       "trait "
                     )))
