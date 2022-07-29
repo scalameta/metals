@@ -134,15 +134,22 @@ class ScalaToplevelMtags(
           val nextOwner =
             if (
               dialect.allowToplevelStatements &&
-              needEmitFileOwner(currRegion)
+              currRegion.produceSourceToplevel
             ) {
-              sourceTopLevelAdded = true
-              val pos = newPosition
               val srcName = input.filename.stripSuffix(".scala")
               val name = s"$srcName$$package"
-              withOwner(currRegion.owner) {
-                term(name, pos, Kind.OBJECT, 0)
+              val owner = withOwner(currRegion.owner) {
+                symbol(Descriptor.Term(name))
               }
+
+              if (needEmitFileOwner(currRegion)) {
+                sourceTopLevelAdded = true
+                val pos = newPosition
+                withOwner(currRegion.owner) {
+                  term(name, pos, Kind.OBJECT, 0)
+                }
+              }
+              owner
             } else currentOwner
           scanner.nextToken()
           loop(
@@ -155,13 +162,30 @@ class ScalaToplevelMtags(
           emitMember(false, currRegion.owner)
           loop(indent, isAfterNewline = false, currRegion, newExpectTemplate)
         // also covers extension methods because of `def` inside
-        case DEF if dialect.allowExtensionMethods && currRegion.isExtension =>
+        case DEF
+            // extension group
+            if (dialect.allowExtensionMethods && currRegion.isExtension) =>
           acceptTrivia()
           val name = newIdentifier
           withOwner(currRegion.owner) {
             term(name.name, name.pos, Kind.OBJECT, 0)
           }
           loop(indent, isAfterNewline = false, region, newExpectIgnoreBody)
+        // inline extension method `extension (...) def foo = ...`
+        case DEF if expectTemplate.map(needToParseExtension).getOrElse(false) =>
+          expectTemplate match {
+            case None =>
+              fail(
+                "failed while reading 'def' in 'extension (...) def ...', expectTemplate should be set by reading 'extension'."
+              )
+            case Some(expect) =>
+              acceptTrivia()
+              val name = newIdentifier
+              withOwner(expect.owner) {
+                term(name.name, name.pos, Kind.OBJECT, 0)
+              }
+              loop(indent, isAfterNewline = false, region, None)
+          }
         case DEF | VAL | VAR | GIVEN | TYPE
             if dialect.allowToplevelStatements &&
               needEmitFileOwner(currRegion) =>
