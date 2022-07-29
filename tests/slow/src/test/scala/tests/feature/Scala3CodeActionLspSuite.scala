@@ -405,6 +405,26 @@ class Scala3CodeActionLspSuite
     expectNoDiagnostics = false,
   )
 
+  check(
+    "wrong-type",
+    """|package a
+       |
+       |object A:
+       |  val str = ""
+       |  val alpha:Int=s<<>>tr
+       |
+       |""".stripMargin,
+    s"""|${InsertInferredType.adjustType("(a.A.str : String)")}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A:
+       |  val str = ""
+       |  val alpha: String=str
+       |
+       |""".stripMargin,
+  )
+
   def checkExtractedMember(
       name: TestOptions,
       input: String,

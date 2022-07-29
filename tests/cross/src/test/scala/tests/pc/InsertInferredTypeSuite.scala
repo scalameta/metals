@@ -32,6 +32,77 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "wrong-val",
+    """|object A{
+       |  val <<alpha>> :  String = 123
+       |}""".stripMargin,
+    """|object A{
+       |  val alpha: Int = 123
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "wrong-val2",
+    """|object A{
+       |  val <<alpha>> :  String = List(1, 2, 3)
+       |}""".stripMargin,
+    """|object A{
+       |  val alpha: List[Int] = List(1, 2, 3)
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "wrong-val3",
+    """|object A{
+       |  val <<alpha>> :  List[Int] = ""
+       |}""".stripMargin,
+    """|object A{
+       |  val alpha: String = ""
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "wrong-def",
+    """|object A{
+       |  def <<alpha>> :  String = 123
+       |}""".stripMargin,
+    """|object A{
+       |  def alpha: Int = 123
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "wrong-def2",
+    """|object A{
+       |  def <<alpha>> :  String = List(1, 2, 3)
+       |}""".stripMargin,
+    """|object A{
+       |  def alpha: List[Int] = List(1, 2, 3)
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "wrong-def3",
+    """|object A{
+       |  def <<alpha>> :  List[Int] = ""
+       |}""".stripMargin,
+    """|object A{
+       |  def alpha: String = ""
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "wrong-def-toplevel".tag(IgnoreScala2),
+    """|def hello =
+       |  val <<a>> :  List[Int] = ""
+       |""".stripMargin,
+    """|def hello =
+       |  val a: String = ""
+       |
+       |""".stripMargin,
+  )
+
+  checkEdit(
     "toplevel".tag(IgnoreScala2),
     """|def <<alpha>> = List("")
        |""".stripMargin,

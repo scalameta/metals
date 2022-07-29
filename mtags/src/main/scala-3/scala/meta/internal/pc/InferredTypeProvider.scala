@@ -18,6 +18,7 @@ import scala.meta.tokens.{Token as T}
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
@@ -29,6 +30,7 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j as l
 
 /**
  * Tries to calculate edits needed to insert the inferred type annotation
@@ -54,10 +56,16 @@ final class InferredTypeProvider(
     symbolSearch: SymbolSearch,
 ):
 
-  def inferredTypeEdits(): List[TextEdit] =
+  def inferredTypeEdits(
+      text: Option[String] = None,
+      adjustedEndPos: Option[l.Position] = None,
+      retryType: Boolean = true,
+  ): List[TextEdit] =
     val uri = params.uri
     val filePath = Paths.get(uri)
-    val source = SourceFile.virtual(filePath.toString, params.text)
+
+    val source =
+      SourceFile.virtual(filePath.toString, text.getOrElse(params.text))
     driver.run(uri, source)
     val unit = driver.currentCtx.run.units.head
     val pos = driver.sourcePosition(params)
@@ -74,6 +82,11 @@ final class InferredTypeProvider(
       config,
     )
     val shortenedNames = new ShortenedNames(indexedCtx)
+
+    def removeType(nameEnd: Int, tptEnd: Int) =
+      val txt = params.text()
+      txt.substring(0, nameEnd) +
+        txt.substring(tptEnd + 1, params.text().length())
 
     def imports: List[TextEdit] =
       shortenedNames.imports(autoImportsGen)
@@ -129,12 +142,15 @@ final class InferredTypeProvider(
        *     turns into
        * `.map((a: Int) => a + a)`
        */
-      case Some(vl @ ValDef(sym, tpt, _)) =>
+      case Some(vl @ ValDef(sym, tpt, rhs)) =>
         val isParam = path.tail.headOption.exists(_.symbol.isAnonymousFunction)
         def baseEdit(withParens: Boolean): TextEdit =
-          val endPos = findNamePos(params.text, vl).endPos
+          val keywordOffset = if vl.symbol.is(Flags.Param) then 0 else 4
+          val endPos =
+            findNamePos(params.text, vl, keywordOffset).endPos.toLSP
+          adjustedEndPos.foreach(endPos.setEnd(_))
           new TextEdit(
-            endPos.toLSP,
+            endPos,
             ": " + printType(tpt.tpe) + {
               if withParens then ")" else ""
             },
@@ -191,23 +207,44 @@ final class InferredTypeProvider(
                 vl.startPos.start,
               )
             case _ => simpleType
-        tpt.tpe match
-          case applied: AppliedType =>
-            tupleType(applied)
-          case _ =>
-            simpleType
 
+        rhs match
+          case t: Tree[?]
+              if t.typeOpt.isErroneous && retryType && !tpt.sourcePos.span.isZeroExtent =>
+            inferredTypeEdits(
+              Some(removeType(vl.namePos.end, tpt.sourcePos.end - 1)),
+              Some(tpt.sourcePos.toLSP.getEnd()),
+              retryType = false,
+            )
+          case _ =>
+            tpt.tpe match
+              case applied: AppliedType =>
+                tupleType(applied)
+              case _ =>
+                simpleType
+        end match
       /* `def a[T](param : Int) = param`
        *     turns into
        * `def a[T](param : Int): Int = param`
        */
-      case Some(DefDef(name, _, tpt, rhs)) =>
-        val typeNameEdit =
+      case Some(df @ DefDef(name, _, tpt, rhs)) =>
+        def typeNameEdit =
+          val end = tpt.endPos.toLSP
+          adjustedEndPos.foreach(end.setEnd(_))
           new TextEdit(
-            tpt.endPos.toLSP,
+            end,
             ": " + printType(tpt.tpe),
           )
-        typeNameEdit :: imports
+        rhs match
+          case t: Tree[?]
+              if t.typeOpt.isErroneous && retryType && !tpt.sourcePos.span.isZeroExtent =>
+            inferredTypeEdits(
+              Some(removeType(df.namePos.end, tpt.sourcePos.end - 1)),
+              Some(tpt.sourcePos.toLSP.getEnd()),
+              retryType = false,
+            )
+          case _ =>
+            typeNameEdit :: imports
 
       /* `case t =>`
        *  turns into
@@ -262,7 +299,11 @@ final class InferredTypeProvider(
     end match
   end inferredTypeEdits
 
-  private def findNamePos(text: String, tree: untpd.NamedDefTree)(using
+  private def findNamePos(
+      text: String,
+      tree: untpd.NamedDefTree,
+      kewordOffset: Int,
+  )(using
       Context
   ): SourcePosition =
     val realName = tree.name.stripModuleClassSuffix.toString.toList
@@ -292,11 +333,12 @@ final class InferredTypeProvider(
         case _ =>
           None
 
-    val macthedByText =
-      if realName.nonEmpty then lookup(tree.sourcePos.start, None, false)
+    val matchedByText =
+      if realName.nonEmpty then
+        lookup(tree.sourcePos.start + kewordOffset, None, false)
       else None
 
-    macthedByText.getOrElse(tree.namePos)
+    matchedByText.getOrElse(tree.namePos)
   end findNamePos
 
 end InferredTypeProvider
