@@ -300,4 +300,13 @@ object MetalsInteractive:
       case Apply(TypeApply(select: Select, _), _) => select
     }
   end ApplySelect
+
+  object TreeApply:
+    def unapply(tree: Tree): Option[(Tree, List[Tree])] =
+      tree match
+        case TypeApply(qual, args) => Some(qual -> args)
+        case Apply(qual, args) => Some(qual -> args)
+        case UnApply(qual, implicits, args) => Some(qual -> (implicits ++ args))
+        case AppliedTypeTree(qual, args) => Some(qual -> args)
+        case _ => None
 end MetalsInteractive

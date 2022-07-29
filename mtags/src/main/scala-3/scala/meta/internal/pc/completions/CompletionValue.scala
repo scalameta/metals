@@ -33,6 +33,7 @@ sealed trait CompletionValue:
       case _: CompletionValue.Override => CompletionItemKind.Method
       case _: CompletionValue.Extension => CompletionItemKind.Method
       case _: CompletionValue.Autofill => CompletionItemKind.Enum
+      case _: CompletionValue.CaseKeyword => CompletionItemKind.Method
       case v: (CompletionValue.Compiler | CompletionValue.Workspace |
             CompletionValue.Scope | CompletionValue.Interpolator) =>
         val symbol = v.symbol
@@ -149,6 +150,16 @@ object CompletionValue:
       override val filterText: Option[String],
       isWorkspace: Boolean = false,
       isExtension: Boolean = false,
+  ) extends Symbolic
+
+  case class CaseKeyword(
+      symbol: Symbol,
+      label: String,
+      override val insertText: Option[String],
+      override val additionalEdits: List[TextEdit],
+      override val range: Option[Range],
+      override val filterText: Option[String],
+      val command: Option[String],
   ) extends Symbolic
 
   case class Document(label: String, doc: String, description: String)

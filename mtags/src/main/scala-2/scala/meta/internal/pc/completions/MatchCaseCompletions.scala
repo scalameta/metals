@@ -112,16 +112,17 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         .foreach(m => visit(m.sym.dealiased, Identifier(m.sym.name), Nil))
 
       // Step 2: walk through known direct subclasses of sealed types.
-      val autoImport = autoImportPosition(pos, text) 
-      parents.selector.typeSymbol.foreachKnownDirectSubClass { sym => // tu uzyjemy .children
-        autoImport match {
-          case Some(value) =>
-            val (shortName, edits) =
-              ShortenedNames.synthesize(sym, pos, context, value)
-            visit(sym, shortName, edits)
-          case scala.None =>
-            visit(sym, sym.fullNameSyntax, Nil)
-        }
+      val autoImport = autoImportPosition(pos, text)
+      parents.selector.typeSymbol.foreachKnownDirectSubClass {
+        sym => // tu uzyjemy .children
+          autoImport match {
+            case Some(value) =>
+              val (shortName, edits) =
+                ShortenedNames.synthesize(sym, pos, context, value)
+              visit(sym, shortName, edits)
+            case scala.None =>
+              visit(sym, sym.fullNameSyntax, Nil)
+          }
       }
 
       // Step 3: special handle case when selector is a tuple or `FunctionN`.
@@ -318,7 +319,6 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     val prefix = name.decoded.stripSuffix(CURSOR)
     Set("c", "ca", "cas", "case").contains(prefix)
   }
-
   private def toCaseMember(
       name: String,
       sym: Symbol,

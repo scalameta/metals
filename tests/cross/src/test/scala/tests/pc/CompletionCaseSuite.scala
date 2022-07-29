@@ -7,8 +7,8 @@ import tests.BaseCompletionSuite
 
 class CompletionCaseSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
+  // override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+  //   Some(IgnoreScala3)
 
   def paramHint: Option[String] = Some("param-hint")
 
@@ -372,7 +372,11 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       "2.13" ->
         """|case head :: next => scala.collection.immutable
            |case Nil => scala.collection.immutable
-           |""".stripMargin
+           |""".stripMargin,
+      "3" ->
+        """|case head :: next => scala.collection.immutable
+           |case Nil => scala.collection.immutable
+           |""".stripMargin,
     ),
   )
 
@@ -401,16 +405,16 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     topLines = Some(1),
   )
 
-  check(
-    "brace-negative",
-    """
-      |object Main {
-      |  List(1 -> 2).map(@@)
-      |}
-      |""".stripMargin,
-    "f = : ((Int, Int)) => B",
-    topLines = Some(1),
-  )
+  // check(
+  //   "brace-negative",
+  //   """
+  //     |object Main {
+  //     |  List(1 -> 2).map(@@)
+  //     |}
+  //     |""".stripMargin,
+  //   "f = : ((Int, Int)) => B",
+  //   topLines = Some(1),
+  // )
 
   checkEditLine(
     "brace-function2",

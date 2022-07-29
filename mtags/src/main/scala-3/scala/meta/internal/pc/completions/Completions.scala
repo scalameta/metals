@@ -330,7 +330,7 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-    // pprint.pprintln(path.take(3))
+    // pprint.pprintln(path.take(2))
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
@@ -435,37 +435,78 @@ class Completions(
         )
       // CASE COMPLETIONS
 
-      
       // x match
       //   cas@@
-      // case (id @ Ident(name)) :: Block(stats, expr) :: _
-      //     if "case"
-      //       .startsWith(name.toString()) && isLastMatch(stats) && expr == id =>
-      //   CaseKeywordCompletion(
-      //     stats.last.asInstanceOf[Match].selector,
-      //     pos,
-      //   )
+      case (id @ Ident(name)) :: Block(stats, expr) :: parent :: _
+          if "case"
+            .startsWith(name.toString()) && isLastMatch(stats) && expr == id =>
+        (
+          CaseKeywordCompletion.contribute(
+            stats.last.asInstanceOf[Match].selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+          ),
+          true,
+        )
       case (ident @ Ident(name)) :: Block(
             _,
             expr,
           ) :: (_: CaseDef) :: (m: Match) :: parent :: _
           if ident == expr && "case"
             .startsWith(name.toString()) =>
-          val sel = m.selector
-          pprint.pprintln(sel.denot)
-          pprint.pprintln(sel.tpe.typeSymbol)
-          pprint.pprintln(sel.tpe.typeSymbol.children)
-          (Nil, false)
-        //CaseKeywordCompletion(m.selector, pos)
-      
-      // case (_: CaseDef) :: (m: Match) :: _ =>
-      //   CaseKeywordCompletion(m.selector, pos)
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+          ),
+          true,
+        )
+
+      case (_: CaseDef) :: (m: Match) :: parent :: _ =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+          ),
+          true,
+        )
+
+      case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
+            fun,
+            args,
+          )) :: _
+          if stats.isEmpty && ident == expr && "case".startsWith(
+            name.toString()
+          ) =>
+        (
+          CaseKeywordCompletion.contribute(
+            EmptyTree,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            appl,
+          ),
+          true,
+        )
 
       // case Ident(_) :: (c: CaseDef) :: (m: Match) =>
       //   CasePatternCompletion(c, m)
-      
+
       // case Ident(_) :: Typed(_,_) :: (c: CaseDef) :: (m: Match) =>
-      //   CasePatternCompletion(c,m) 
+      //   CasePatternCompletion(c,m)
+
       case _ =>
         val args = NamedArgCompletions.contribute(
           pos,
@@ -474,7 +515,12 @@ class Completions(
           config.isCompletionSnippetsEnabled,
         )
         val keywords = KeywordsCompletions.contribute(path, completionPos)
-      //  val matchCompletions = MatchKeywordCompletion(path, completionPos)
+        // val matchCompletions =
+        //   path match
+        //   case Select(qual, name) :: _ if "match".startsWith(name.toString()) =>
+        //     MatchKeywordCompletion.contribute(qual, completionPos, path.last, indexedContext, config)
+        //   case _ => Nil
+
         (args ++ keywords, false)
     end match
   end advancedCompletions
@@ -585,6 +631,7 @@ class Completions(
           head match
             case doc: CompletionValue.Document => (doc.label, true)
             case over: CompletionValue.Override => (over.label, true)
+            case ck: CompletionValue.CaseKeyword => (ck.label, true)
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)

@@ -80,9 +80,9 @@ class CompletionProvider(
       val detail = member match {
         case o: OverrideDefMember => o.detail
         case t: TextEditMember if t.detail.isDefined => t.detail.get
-        case _ => detailString(member, history)
+        case _ =>
+          detailString(member, history)
       }
-
       def labelWithSig =
         if (member.sym.isMethod || member.sym.isValue) {
           ident + detail
