@@ -4,7 +4,7 @@ import tests.BaseAutoImportsSuite
 
 class AutoImportExtensionMethodsSuite extends BaseAutoImportsSuite {
 
-  override def ignoreScalaVersion = Some(IgnoreScala2)
+  override def ignoreScalaVersion: Some[IgnoreScalaVersion] = Some(IgnoreScala2)
 
   check(
     "basic",
