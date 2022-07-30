@@ -257,7 +257,7 @@ final class ReferenceProvider(
 
   private[metals] def pathsMightContainSymbol(
       source: AbsolutePath,
-      isSymbol: Set[String]
+      isSymbol: Set[String],
   ): Set[AbsolutePath] = {
     buildTargets.inverseSources(source) match {
       case None => Set.empty
