@@ -215,11 +215,7 @@ class Completions(
     else symbol.paramSymss
 
   private def isAbstractType(symbol: Symbol) =
-    (symbol.toString
-      .startsWith( // just in case the abstract or trait flags in dotty api
-        // are not correctly set
-        "trait"
-      ) // trait A{ def doSomething: Int}
+    (symbol.info.typeSymbol.is(Trait) // trait A{ def doSomething: Int}
     // object B{ new A@@}
     // Note: I realised that the value of Flag.Trait is flaky and
     // leads to the failure of one of the DocSuite tests
@@ -230,10 +226,12 @@ class Completions(
         Flags.PureInterface // in Java: abstract class Shape { abstract void draw();}
         // Shape has only abstract members, so can be represented by a Java interface
         // in Scala 3: object B{ new Shap@@ }
-      ) || symbol.info.typeSymbol.is(Flags.Abstract)
-      // abstract class A(i: Int){ def doSomething: Int}
-      // object B{ new A@@}
-      || symbol.info.typeSymbol.isOneOf(Flags.AbstractOrTrait))
+      ) || (symbol.info.typeSymbol.is(Flags.Abstract) &&
+        symbol.isClass) // so as to exclude abstract methods
+    // abstract class A(i: Int){ def doSomething: Int}
+    // object B{ new A@@}
+    )
+  end isAbstractType
 
   private def findSuffix(symbol: Symbol): Option[String] =
 
@@ -551,15 +549,14 @@ class Completions(
       ) || cursorPositionCondition.isObjectValidForPos
 
     private def isNotAMethodOrMethodIsValidForPos(sym: Symbol) =
-      (cursorPositionCondition.isMethodValidForPos || !sym.is(
+      cursorPositionCondition.isMethodValidForPos || !sym.is(
         Flags.Method
-      )) // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
+      ) // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
 
     private def isNotClassOrTraitOrTheyAreValidForPos(sym: Symbol) =
-      (cursorPositionCondition.isClassOrTraitValidForPos || (!sym.isClass && !sym.toString
-        .startsWith(
-          "trait "
-        )))
+      cursorPositionCondition.isClassOrTraitValidForPos || (!sym.isClass && !sym.info.typeSymbol
+        .is(Trait))
+
   end extension
 
   private lazy val isUninterestingSymbol: Set[Symbol] = Set[Symbol](
