@@ -141,7 +141,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
-    "empty-params-with-implicit".only,
+    "empty-params-with-implicit",
     s"""|object Main {
         |  def doSomething()(implicit x: Int) = x
         |  val bar = doSomethi@@

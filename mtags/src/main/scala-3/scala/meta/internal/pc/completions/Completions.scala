@@ -94,8 +94,8 @@ class Completions(
     def isObjectValidForPos = (!isTypePosition && !isNewPosition)
 
     /**
-     * classes abd traits are type symbols. They are not suitable for
-     *        instantiation or method call positions. Only apply methods or objects
+     * classes and traits are type symbols. They are not suitable for
+     *        instantiation or method call positions. Only apply methods and objects
      *        can be used in such positions.
      */
     def isClassOrTraitValidForPos = !isInstantiationOrMethodCallPos
@@ -119,10 +119,9 @@ class Completions(
   ): CursorPositionCondition =
     path match
       case (head: (Select | Ident)) :: tail =>
-        // this method of calculating hasNoSquareBracket instead of using the
-        // path for the purpose is due to the issue that trees after typer
-        // lose information in dotty:
         // https://github.com/lampepfl/dotty/issues/15750
+        // due to this issue in dotty, because of which trees after typer lose information,
+        // we have to calculate hasNoSquareBracket manually:
         val hasNoSquareBracket =
           val span: Span = head.srcPos.span
           if span.exists then
@@ -210,10 +209,31 @@ class Completions(
   private def getParams(symbol: Symbol) =
     lazy val extensionParam = symbol.extensionParam
     if symbol.is(Flags.Extension) then
-      symbol.paramSymss.filter(
-        !_.contains(extensionParam)
+      symbol.paramSymss.filterNot(
+        _.contains(extensionParam)
       )
     else symbol.paramSymss
+
+  private def isAbstractType(symbol: Symbol) =
+    (symbol.toString
+      .startsWith( // just in case the abstract or trait flags in dotty api
+        // are not correctly set
+        "trait"
+      ) // trait A{ def doSomething: Int}
+    // object B{ new A@@}
+    // Note: I realised that the value of Flag.Trait is flaky and
+    // leads to the failure of one of the DocSuite tests
+      || symbol.info.typeSymbol.isAllOf(
+        Flags.JavaInterface // in Java:  interface A {}
+        // in Scala 3: object B { new A@@}
+      ) || symbol.info.typeSymbol.isAllOf(
+        Flags.PureInterface // in Java: abstract class Shape { abstract void draw();}
+        // Shape has only abstract members, so can be represented by a Java interface
+        // in Scala 3: object B{ new Shap@@ }
+      ) || symbol.info.typeSymbol.is(Flags.Abstract)
+      // abstract class A(i: Int){ def doSomething: Int}
+      // object B{ new A@@}
+      || symbol.info.typeSymbol.isOneOf(Flags.AbstractOrTrait))
 
   private def findSuffix(symbol: Symbol): Option[String] =
 
@@ -252,25 +272,7 @@ class Completions(
 
     val templateSuffix =
       if shouldAddSnippet && cursorPositionCondition.isCurlyBracesValidForPos
-        // just in case the abstract or trait flags in dotty api
-        // are not correctly set
-        && (symbol.toString.startsWith(
-          "trait"
-        ) // trait A{ def doSomething: Int}
-        // object B{ new A@@}
-        // Note: I realised that the value of Flag.Trait is flaky and
-        // leads to the failure of one of the DocSuite tests
-          || symbol.info.typeSymbol.isAllOf(
-            Flags.JavaInterface // in Java:  interface A {}
-            // in Scala 3: object B { new A@@}
-          ) || symbol.info.typeSymbol.isAllOf(
-            Flags.PureInterface // in Java: abstract class Shape { abstract void draw();}
-            // Shape has only abstract members, so can be represented by a Java interface
-            // in Scala 3: object B{ new Shap@@ }
-          ) || symbol.info.typeSymbol.is(Flags.Abstract)
-          // abstract class A(i: Int){ def doSomething: Int}
-          // object B{ new A@@}
-          || symbol.info.typeSymbol.isOneOf(Flags.AbstractOrTrait))
+        && isAbstractType(symbol)
       then
         if bracketSuffix.nonEmpty || bracesSuffix.contains("$0") then " {}"
         else " {$0}"
@@ -516,17 +518,9 @@ class Completions(
               val include =
                 !isUninterestingSymbol(sym) &&
                   isNotLocalForwardReference(sym)
-                  && (!sym.info.typeSymbol.is(
-                    Flags.Module
-                  ) || cursorPositionCondition.isObjectValidForPos)
-                  && (cursorPositionCondition.isMethodValidForPos || !sym.is(
-                    Flags.Method
-                  ))
-                  // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
-                  && (cursorPositionCondition.isClassOrTraitValidForPos || (!sym.isClass && !sym.toString
-                    .startsWith(
-                      "trait "
-                    )))
+                  && isNotAModuleOrModuleIsValidForPos(sym)
+                  && isNotAMethodOrMethodIsValidForPos(sym)
+                  && isNotClassOrTraitOrTheyAreValidForPos(sym)
 
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
@@ -548,6 +542,25 @@ class Completions(
           enrichWithSymbolSearch(visit, qualType).getOrElse(SymbolSearch.Result.COMPLETE)
         (buf.result, searchResult)
       else (buf.result, SymbolSearch.Result.COMPLETE)
+
+    end filterInteresting
+
+    private def isNotAModuleOrModuleIsValidForPos(sym: Symbol) =
+      !sym.info.typeSymbol.is(
+        Flags.Module
+      ) || cursorPositionCondition.isObjectValidForPos
+
+    private def isNotAMethodOrMethodIsValidForPos(sym: Symbol) =
+      (cursorPositionCondition.isMethodValidForPos || !sym.is(
+        Flags.Method
+      )) // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
+
+    private def isNotClassOrTraitOrTheyAreValidForPos(sym: Symbol) =
+      (cursorPositionCondition.isClassOrTraitValidForPos || (!sym.isClass && !sym.toString
+        .startsWith(
+          "trait "
+        )))
+  end extension
 
   private lazy val isUninterestingSymbol: Set[Symbol] = Set[Symbol](
     defn.Any_==,
