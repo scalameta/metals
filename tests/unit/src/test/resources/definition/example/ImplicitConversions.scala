@@ -23,6 +23,6 @@ class ImplicitConversions/*ImplicitConversions.scala*/ {
      |$message/*ImplicitConversions.scala*/
      |$number/*ImplicitConversions.scala*/""".stripMargin/*StringOps.scala*/
 
-  val a/*ImplicitConversions.scala*/: Int/*Int.scala*/ = char/*Char.scala*/
-  val b/*ImplicitConversions.scala*/: Long/*Long.scala*/ = char/*Char.scala*/
+  val a/*ImplicitConversions.scala*/: Int/*Int.scala*/ = char/*ImplicitConversions.scala*/
+  val b/*ImplicitConversions.scala*/: Long/*Long.scala*/ = char/*ImplicitConversions.scala*/
 }
