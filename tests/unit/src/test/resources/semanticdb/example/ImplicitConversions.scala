@@ -23,6 +23,6 @@ class ImplicitConversions/*example.ImplicitConversions#*/ {
      |$message/*example.ImplicitConversions#message.*/
      |$number/*example.ImplicitConversions#number.*/""".stripMargin/*scala.collection.StringOps#stripMargin(+1).*/
 
-  val a/*example.ImplicitConversions#a.*/: Int/*scala.Int#*/ = char/*scala.Char#toInt().*/
-  val b/*example.ImplicitConversions#b.*/: Long/*scala.Long#*/ = char/*scala.Char#toLong().*/
+  val a/*example.ImplicitConversions#a.*/: Int/*scala.Int#*/ = char/*example.ImplicitConversions#char.*/
+  val b/*example.ImplicitConversions#b.*/: Long/*scala.Long#*/ = char/*example.ImplicitConversions#char.*/
 }

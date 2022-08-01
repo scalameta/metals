@@ -7,13 +7,13 @@ object StructuralTypes/*StructuralTypes.scala*/ {
   }
 
   val user/*StructuralTypes.scala*/ = null.asInstanceOf[User/*StructuralTypes.scala*/]
-  user/*StructuralTypes.scala*/.name/*<no symbol>*/
-  user/*StructuralTypes.scala*/.age/*<no symbol>*/
+  user/*StructuralTypes.scala*/.name/*StructuralTypes.semanticdb*/
+  user/*StructuralTypes.scala*/.age/*StructuralTypes.semanticdb*/
 
   val V/*StructuralTypes.scala*/: Object/*Object.java*/ {
     def scalameta/*StructuralTypes.semanticdb*/: String/*Predef.scala*/
   } = new {
     def scalameta/*StructuralTypes.semanticdb*/ = "4.0"
   }
-  V/*StructuralTypes.scala*/.scalameta/*<no symbol>*/
+  V/*StructuralTypes.scala*/.scalameta/*StructuralTypes.semanticdb*/
 }
