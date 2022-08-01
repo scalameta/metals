@@ -30,6 +30,7 @@ import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
@@ -430,11 +431,35 @@ final case class Indexer(
         val reluri = source.toIdeallyRelativeURI(sourceItem)
         val input = sourceToIndex0.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+        val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         SemanticdbDefinition.foreach(input, dialect) {
           case SemanticdbDefinition(info, occ, owner) =>
-            if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
+            // TODO: Do not index (extension) METHOD, they will be indexed later
+            // we index methods for auto-import missing extension methods feature for now
+            // but those feature should use methodSymbols
+            // see: https://github.com/scalameta/metals/issues/4212
+            if (
+              WorkspaceSymbolProvider.isRelevantKind(
+                info.kind
+              ) || info.kind == Kind.METHOD
+            ) {
               occ.range.foreach { range =>
                 symbols += WorkspaceSymbolInformation(
+                  info.symbol,
+                  info.kind,
+                  range.toLSP,
+                )
+              }
+            }
+            // what we really want to index are "extension" methods
+            // However, we filter by `Kind.Method` because semanticdb doesn't have properties
+            // that represents "extension".
+            // Knowing `SemanticdbDefinition.foreach` uses `ScalaToplevelMtags` and it puts
+            // `Kind.Method` only to extension methods, we can safely filter extension methods
+            // by `info.kind == Kind.Method`. (TODO: add exntension properties to semanticdb schema).
+            if (info.kind == Kind.METHOD) {
+              occ.range.foreach { range =>
+                methodSymbols += WorkspaceSymbolInformation(
                   info.symbol,
                   info.kind,
                   range.toLSP,
@@ -454,7 +479,7 @@ final case class Indexer(
               )
             }
         }
-        workspaceSymbols().didChange(source, symbols.toSeq)
+        workspaceSymbols().didChange(source, symbols.toSeq, methodSymbols.toSeq)
 
         // Since the `symbols` here are toplevel symbols,
         // we cannot use `symbols` for expiring the cache for all symbols in the source.

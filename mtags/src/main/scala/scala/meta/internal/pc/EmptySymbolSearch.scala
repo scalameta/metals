@@ -20,6 +20,14 @@ object EmptySymbolSearch extends SymbolSearch {
     SymbolSearch.Result.COMPLETE
   }
 
+  override def searchMethods(
+      query: String,
+      buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
+    SymbolSearch.Result.COMPLETE
+  }
+
   def definition(symbol: String, source: URI): ju.List[Location] = {
     ju.Collections.emptyList()
   }

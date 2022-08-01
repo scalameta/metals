@@ -99,4 +99,16 @@ class MetalsSymbolSearch(
       Some(new BuildTargetIdentifier(buildTargetIdentifier)),
     )
   }
+
+  override def searchMethods(
+      query: String,
+      buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result = {
+    wsp.searchMethods(
+      query,
+      visitor,
+      Some(new BuildTargetIdentifier(buildTargetIdentifier)),
+    )
+  }
 }
