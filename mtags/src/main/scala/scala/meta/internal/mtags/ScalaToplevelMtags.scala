@@ -165,6 +165,7 @@ class ScalaToplevelMtags(
               // hack: (exclusively) making symbol kind of extension methods to Kind.Method
               // so that we can tell it's an extension method in Indexer.scala
               // TODO: add properties that represents "extension" method to semanticdb schema
+              // see: https://github.com/scalameta/scalameta/issues/2799
               Kind.METHOD,
               0
             )

@@ -437,6 +437,7 @@ final case class Indexer(
             // TODO: Do not index (extension) METHOD, they will be indexed later
             // we index methods for auto-import missing extension methods feature for now
             // but those feature should use methodSymbols
+            // see: https://github.com/scalameta/metals/issues/4212
             if (
               WorkspaceSymbolProvider.isRelevantKind(
                 info.kind
