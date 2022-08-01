@@ -5,6 +5,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers
@@ -43,7 +45,8 @@ final class ImplementationProvider(
     definitionProvider: DefinitionProvider,
     trees: Trees,
     scalaVersionSelector: ScalaVersionSelector,
-) extends SemanticdbFeatureProvider {
+)(implicit ec: ExecutionContext)
+    extends SemanticdbFeatureProvider {
   import ImplementationProvider._
 
   private val globalTable = new GlobalClassTable(buildTargets)
@@ -104,7 +107,7 @@ final class ImplementationProvider(
 
   def implementations(
       params: TextDocumentPositionParams
-  ): List[Location] = {
+  ): Future[List[Location]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     val locations = for {
       (symbolOccurrence, currentDocument) <-
@@ -153,7 +156,9 @@ final class ImplementationProvider(
         inheritanceContext,
       )
     }
-    locations.flatten.toList
+    Future.sequence(locations).map {
+      _.flatten.toList
+    }
   }
 
   def topMethodParents(
@@ -257,7 +262,7 @@ final class ImplementationProvider(
       symbol: String,
       source: AbsolutePath,
       inheritanceContext: Option[InheritanceContext],
-  ): Iterable[Location] = {
+  ): Future[Seq[Location]] = {
 
     def findImplementationSymbol(
         parentSymbolInfo: SymbolInformation,
@@ -278,7 +283,43 @@ final class ImplementationProvider(
 
     val allLocations = new ConcurrentLinkedQueue[Location]
 
-    for {
+    def findImplementationLocations(
+        files: Set[Path],
+        locationsByFile: Map[Path, Set[ClassLocation]],
+        parentSymbol: SymbolInformation,
+    ) =
+      Future {
+        for {
+          file <- files
+          locations = locationsByFile(file)
+          implPath = AbsolutePath(file)
+          implDocument <- findSemanticdb(implPath).toIterable
+          distance = buffer.tokenEditDistance(
+            implPath,
+            implDocument.text,
+            trees,
+          )
+          implLocation <- locations
+          implSymbol <- findImplementationSymbol(
+            parentSymbol,
+            implDocument,
+            implLocation,
+          )
+          if !findSymbol(implDocument, implSymbol).exists(
+            _.kind == SymbolInformation.Kind.TYPE
+          )
+          implOccurrence <- findDefOccurrence(
+            implDocument,
+            implSymbol,
+            source,
+          )
+          range <- implOccurrence.range
+          revised <- distance.toRevised(range.toLSP)
+        } { allLocations.add(new Location(file.toUri.toString, revised)) }
+      }
+
+    lazy val cores = Runtime.getRuntime().availableProcessors()
+    val splitJobs = for {
       classContext <- inheritanceContext.toIterable
       parentSymbol <- classContext.findSymbol(symbol).toIterable
       symbolClass <- classFromSymbol(parentSymbol, classContext.findSymbol)
@@ -287,29 +328,13 @@ final class ImplementationProvider(
         classContext,
         source.toNIO,
       )
-      file <- locationsByFile.keySet.toArray
-      locations = locationsByFile(file)
-      implPath = AbsolutePath(file)
-      implDocument <- findSemanticdb(implPath).toIterable
-      distance = buffer.tokenEditDistance(implPath, implDocument.text, trees)
-      implLocation <- locations
-      implSymbol <- findImplementationSymbol(
-        parentSymbol,
-        implDocument,
-        implLocation,
+      files <- locationsByFile.keySet.grouped(
+        Math.max(locationsByFile.size / cores, 1)
       )
-      if !findSymbol(implDocument, implSymbol).exists(
-        _.kind == SymbolInformation.Kind.TYPE
-      )
-      implOccurrence <- findDefOccurrence(
-        implDocument,
-        implSymbol,
-        source,
-      )
-      range <- implOccurrence.range
-      revised <- distance.toRevised(range.toLSP)
-    } { allLocations.add(new Location(file.toUri.toString, revised)) }
-    allLocations.asScala
+    } yield findImplementationLocations(files, locationsByFile, parentSymbol)
+    Future.sequence(splitJobs).map { _ =>
+      allLocations.asScala.toSeq
+    }
   }
 
   private def findSemanticdb(fileSource: AbsolutePath): Option[TextDocument] = {

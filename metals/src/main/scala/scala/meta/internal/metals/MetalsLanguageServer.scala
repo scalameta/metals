@@ -1481,8 +1481,8 @@ class MetalsLanguageServer(
   def implementation(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ =>
-      implementationProvider.implementations(position).asJava
+    CancelTokens.future { _ =>
+      implementationProvider.implementations(position).map(_.asJava)
     }
 
   @JsonRequest("textDocument/hover")
