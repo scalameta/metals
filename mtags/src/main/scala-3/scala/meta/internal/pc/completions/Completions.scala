@@ -405,7 +405,7 @@ class Completions(
             this,
             config.isCompletionSnippetsEnabled(),
           )
-          .filterInteresting(false)
+          .filterInteresting(enrich = false)
           ._1
         (completions, true)
       // From Scala 3.1.3-RC3 (as far as I know), path contains
@@ -537,7 +537,9 @@ class Completions(
 
       if enrich then
         val searchResult =
-          enrichWithSymbolSearch(visit, qualType).getOrElse(SymbolSearch.Result.COMPLETE)
+          enrichWithSymbolSearch(visit, qualType).getOrElse(
+            SymbolSearch.Result.COMPLETE
+          )
         (buf.result, searchResult)
       else (buf.result, SymbolSearch.Result.COMPLETE)
 
@@ -554,7 +556,9 @@ class Completions(
       ) // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
 
     private def isNotClassOrTraitOrTheyAreValidForPos(sym: Symbol) =
-      cursorPositionCondition.isClassOrTraitValidForPos || (!sym.isClass && !sym.info.typeSymbol
+      cursorPositionCondition.isClassOrTraitValidForPos || sym.is(
+        Flags.Method
+      ) || (!sym.isClass && !sym.info.typeSymbol
         .is(Trait))
 
   end extension
