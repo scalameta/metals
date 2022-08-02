@@ -67,6 +67,8 @@ However, previously, Metals couldn't auto-complete extension methods, and develo
 
 Now, Metals provides auto-completion for the extension methods and auto-import them!
 
+![extension-methods](https://i.imgur.com/EAbVHeH.gif)
+
 ## [Scala 3] ConvertToNamedParameters code action
 
 [Metals 0.11.7 added `ConvertToNamedParameters` code action to Scala2](https://scalameta.org/metals/blog/2022/07/04/aluminium#scala-2-add-converttonamedarguments-code-action).
