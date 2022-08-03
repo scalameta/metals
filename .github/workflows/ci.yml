@@ -24,23 +24,18 @@ jobs:
         shard: [1, 2]
         include:
           - os: ubuntu-latest
-            java: "adopt@1.8"
+            java: "8"
             shard: 1
           - os: ubuntu-latest
-            java: "adopt@1.8"
+            java: "8"
             shard: 2
-          - os: ubuntu-latest
-            CACHE_PATH: ~/.cache/coursier/v1
-          - os: macOS-latest
-            CACHE_PATH: ~/Library/Caches/Coursier/v1
-          - os: windows-latest
-            CACHE_PATH: ~\AppData\Local\Coursier\Cache\v1
     steps:
       - uses: actions/checkout@v3
-      - uses: olafurpg/setup-scala@v13
+      - uses: actions/setup-java@v3
         with:
+          distribution: 'temurin'
           java-version: ${{ matrix.java }}
-      - uses: coursier/cache-action@v6.3
+          cache: 'sbt'
       - name: Run unit tests
         run: |
           bin/test.sh unit/test
@@ -116,10 +111,11 @@ jobs:
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: olafurpg/setup-scala@v13
+      - uses: actions/setup-java@v3
         with:
+          distribution: 'temurin'
           java-version: "17"
-      - uses: coursier/cache-action@v6.3
+          cache: 'sbt'
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
         env:

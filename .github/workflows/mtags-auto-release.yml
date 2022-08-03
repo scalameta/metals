@@ -25,10 +25,11 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.metals_ref }}
           token: ${{ secrets.GH_TOKEN }}
-      - uses: olafurpg/setup-scala@v13
+      - uses: actions/setup-java@v3
         with:
-          java-version: adopt@1.11
-      - uses: coursier/cache-action@v6.3
+          distribution: 'temurin'
+          java-version: 11
+          cache: 'sbt'
       - name: "Test and push tag"
         run: |
           sbt 'test-mtags-dyn ${{ github.event.inputs.scala_version }}'
