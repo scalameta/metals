@@ -56,16 +56,21 @@ final class InferredTypeProvider(
     symbolSearch: SymbolSearch,
 ):
 
+  case class AdjustTypeOpts(
+      text: String,
+      adjustedEndPos: l.Position,
+  )
+
   def inferredTypeEdits(
-      text: Option[String] = None,
-      adjustedEndPos: Option[l.Position] = None,
-      retryType: Boolean = true,
+      adjustOpt: Option[AdjustTypeOpts] = None
   ): List[TextEdit] =
+    val retryType = adjustOpt.isEmpty
     val uri = params.uri
     val filePath = Paths.get(uri)
 
+    val sourceText = adjustOpt.map(_.text).getOrElse(params.text)
     val source =
-      SourceFile.virtual(filePath.toString, text.getOrElse(params.text))
+      SourceFile.virtual(filePath.toString, sourceText)
     driver.run(uri, source)
     val unit = driver.currentCtx.run.units.head
     val pos = driver.sourcePosition(params)
@@ -84,9 +89,8 @@ final class InferredTypeProvider(
     val shortenedNames = new ShortenedNames(indexedCtx)
 
     def removeType(nameEnd: Int, tptEnd: Int) =
-      val txt = params.text()
-      txt.substring(0, nameEnd) +
-        txt.substring(tptEnd + 1, params.text().length())
+      sourceText.substring(0, nameEnd) +
+        sourceText.substring(tptEnd + 1, sourceText.length())
 
     def imports: List[TextEdit] =
       shortenedNames.imports(autoImportsGen)
@@ -148,7 +152,7 @@ final class InferredTypeProvider(
           val keywordOffset = if vl.symbol.is(Flags.Param) then 0 else 4
           val endPos =
             findNamePos(params.text, vl, keywordOffset).endPos.toLSP
-          adjustedEndPos.foreach(endPos.setEnd(_))
+          adjustOpt.foreach(adjust => endPos.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             endPos,
             ": " + printType(tpt.tpe) + {
@@ -212,9 +216,12 @@ final class InferredTypeProvider(
           case t: Tree[?]
               if t.typeOpt.isErroneous && retryType && !tpt.sourcePos.span.isZeroExtent =>
             inferredTypeEdits(
-              Some(removeType(vl.namePos.end, tpt.sourcePos.end - 1)),
-              Some(tpt.sourcePos.toLSP.getEnd()),
-              retryType = false,
+              Some(
+                AdjustTypeOpts(
+                  removeType(vl.namePos.end, tpt.sourcePos.end - 1),
+                  tpt.sourcePos.toLSP.getEnd(),
+                )
+              )
             )
           case _ =>
             tpt.tpe match
@@ -230,18 +237,26 @@ final class InferredTypeProvider(
       case Some(df @ DefDef(name, _, tpt, rhs)) =>
         def typeNameEdit =
           val end = tpt.endPos.toLSP
-          adjustedEndPos.foreach(end.setEnd(_))
+          adjustOpt.foreach(adjust => end.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             end,
             ": " + printType(tpt.tpe),
           )
+
+        def lastColon =
+          var i = tpt.startPos.start
+          while i >= 0 && sourceText(i) != ':' do i -= 1
+          i
         rhs match
           case t: Tree[?]
               if t.typeOpt.isErroneous && retryType && !tpt.sourcePos.span.isZeroExtent =>
             inferredTypeEdits(
-              Some(removeType(df.namePos.end, tpt.sourcePos.end - 1)),
-              Some(tpt.sourcePos.toLSP.getEnd()),
-              retryType = false,
+              Some(
+                AdjustTypeOpts(
+                  removeType(lastColon, tpt.sourcePos.end - 1),
+                  tpt.sourcePos.toLSP.getEnd(),
+                )
+              )
             )
           case _ =>
             typeNameEdit :: imports

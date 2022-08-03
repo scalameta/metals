@@ -29,14 +29,19 @@ final class InferredTypeProvider(
 ) {
   import compiler._
 
+  case class AdjustTypeOpts(
+      text: String,
+      adjustedEndPos: l.Position
+  )
+
   def inferredTypeEdits(
-      text: Option[String] = None,
-      adjustedEndPos: Option[l.Position] = None,
-      retryType: Boolean = true
+      adjustOpt: Option[AdjustTypeOpts] = None
   ): List[TextEdit] = {
+    val retryType = adjustOpt.isEmpty
+    val sourceText = adjustOpt.map(_.text).getOrElse(params.text())
 
     val unit = addCompilationUnit(
-      code = text.getOrElse(params.text()),
+      code = sourceText,
       filename = params.uri().toString(),
       cursor = None
     )
@@ -73,9 +78,8 @@ final class InferredTypeProvider(
     }
 
     def removeType(nameEnd: Int, tptEnd: Int) = {
-      val txt = params.text()
-      txt.substring(0, nameEnd) +
-        txt.substring(tptEnd + 1, params.text().length())
+      sourceText.substring(0, nameEnd) +
+        sourceText.substring(tptEnd + 1, sourceText.length())
     }
 
     typedTree match {
@@ -86,14 +90,18 @@ final class InferredTypeProvider(
       case vl @ ValDef(_, name, tpt, rhs) if !vl.symbol.isParameter =>
         val nameEnd = findNameEnd(tpt.pos.start, name)
         val nameEndPos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLSP
-        adjustedEndPos.foreach(nameEndPos.setEnd(_))
-        val typeNameEdit = new TextEdit(nameEndPos, ": " + prettyType(tpt.tpe))
+        adjustOpt.foreach(adjust => nameEndPos.setEnd(adjust.adjustedEndPos))
+        lazy val typeNameEdit =
+          new TextEdit(nameEndPos, ": " + prettyType(tpt.tpe))
         // if type is defined and erronous try to replace it with the right one
         if (tpt.pos.isRange && rhs.tpe.isError && retryType)
           inferredTypeEdits(
-            Some(removeType(vl.namePos.end, tpt.pos.end - 1)),
-            Some(tpt.pos.toLSP.getEnd()),
-            retryType = false
+            Some(
+              AdjustTypeOpts(
+                removeType(vl.namePos.end, tpt.pos.end - 1),
+                tpt.pos.toLSP.getEnd()
+              )
+            )
           )
         else typeNameEdit :: additionalImports
 
@@ -145,33 +153,38 @@ final class InferredTypeProvider(
        * `def a[T](param : Int): Int = param`
        */
       case df @ DefDef(_, name, _, _, tpt, rhs) =>
-        val nameEnd = findNameEnd(tpt.pos.start, name)
+        val nameEnd = findNameEnd(df.namePos.start, name)
 
         // search for `)` or `]` or defaut to name's end to insert type
+        val lastParamOffset =
+          if (tpt.pos.isRange) tpt.pos.start else rhs.pos.start
         val searchString = params
           .text()
-          .substring(nameEnd, rhs.pos.start) // cotains the parameters and =
+          .substring(nameEnd, lastParamOffset) // cotains the parameters and =
         val lastTokenPos = searchString.tokenize.toOption
-          .flatMap(tokens =>
+          .flatMap { tokens =>
             tokens.tokens.reverseIterator
               .find(t => t.is[T.RightParen] || t.is[T.RightBracket])
               .map(t => nameEnd + t.pos.end)
-          )
+          }
           .getOrElse(nameEnd)
 
         val insertPos =
           rhs.pos.withStart(lastTokenPos).withEnd(lastTokenPos).toLSP
-        adjustedEndPos.foreach(insertPos.setEnd(_))
+        adjustOpt.foreach(adjust => insertPos.setEnd(adjust.adjustedEndPos))
         val typeNameEdit =
           new TextEdit(insertPos, ": " + prettyType(tpt.tpe))
         // if type is defined and erronous try to replace it with the right one
-        if (tpt.pos.isRange && rhs.tpe.isError && retryType)
+        if (tpt.pos.isRange && rhs.tpe.isError && retryType) {
           inferredTypeEdits(
-            Some(removeType(df.namePos.end + 1, tpt.pos.end - 1)),
-            Some(tpt.pos.toLSP.getEnd()),
-            retryType = false
+            Some(
+              AdjustTypeOpts(
+                removeType(lastTokenPos, tpt.pos.end),
+                tpt.pos.toLSP.getEnd()
+              )
+            )
           )
-        else
+        } else
           typeNameEdit :: additionalImports
 
       /* `case t =>`

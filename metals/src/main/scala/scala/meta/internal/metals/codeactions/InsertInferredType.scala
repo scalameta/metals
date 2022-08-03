@@ -78,7 +78,7 @@ class InsertInferredType(trees: Trees) extends CodeAction {
       title <- inferTypeTitle(name)
     } yield insertInferTypeAction(title)
 
-    def adjustTypeTree(tree: Defn): Option[l.Range] = tree match {
+    def typedDefnTreePos(tree: Defn): Option[l.Range] = tree match {
       case Defn.Def(_, name, _, _, tpe, _) if tpe.isDefined =>
         Some(name.pos.toLSP)
       case Defn.GivenAlias(_, name, _, _, _, _) =>
@@ -110,7 +110,7 @@ class InsertInferredType(trees: Trees) extends CodeAction {
       (mismatchedType, diag) <- typeMismatch
       defn <-
         trees.findLastEnclosingAt[Defn](path, diag.getRange().getStart())
-      pos <- adjustTypeTree(defn)
+      pos <- typedDefnTreePos(defn)
     } yield adjustTypeAction(mismatchedType, pos)
 
     List(actions, adjustType).flatten

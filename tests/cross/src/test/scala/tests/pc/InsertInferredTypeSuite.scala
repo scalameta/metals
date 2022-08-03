@@ -32,9 +32,19 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "wrong-def-params",
+    """|object A{
+       |  def <<alpha>>(a: Int, b: String): String = 123
+       |}""".stripMargin,
+    """|object A{
+       |  def alpha(a: Int, b: String): Int = 123
+       |}""".stripMargin,
+  )
+
+  checkEdit(
     "wrong-val",
     """|object A{
-       |  val <<alpha>> :  String = 123
+       |  val <<alpha>>:  String = 123
        |}""".stripMargin,
     """|object A{
        |  val alpha: Int = 123
