@@ -15,16 +15,16 @@ concurrency:
 jobs:
   lsif:
     runs-on: ubuntu-latest
-    name: "Upload LSIF"
+    name: "Upload SCIP"
     steps:
       - uses: actions/checkout@v3
-      - uses: coursier/setup-action@v1.2.0-M2
+      - uses: coursier/setup-action@v1.2.0
       - run: cs launch --contrib scip-java -- index
-      - name: src lsif upload
+      - name: src scip upload
         run: |
           mkdir -p bin
           curl -L https://sourcegraph.com/.api/src-cli/src_linux_amd64 -o bin/src
           chmod +x bin/src
-          ./bin/src lsif upload -trace=3 -ignore-upload-failure -github-token $GITHUB_TOKEN
+          ./bin/src code-intel upload -trace=3 -ignore-upload-failure -github-token $GITHUB_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
