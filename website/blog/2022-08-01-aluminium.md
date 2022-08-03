@@ -85,7 +85,19 @@ Metals now supports offers Scaladoc completions in Scala3. When Typing `/**` you
 
 ## [Scala 3] Completions in string interpolation
 
+In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would need to do it all manually. Now it is possible to get an automatic conversion to string interpolation when users type `$value` as well as automatic wrapping in `{}` when accessing members of such value.
+
+![scala3-interpolation](https://i.imgur.com/EyFKpiv.gif)
+
 ## [Scala 2] Automatically import types in string interpolations
+
+Previously, the only suggestions for string interpolations would come from the currently available symbols in scope. This meant that if you wanted to bring something from another package, you would need to do it manually.
+
+This problem is now resolved. Users can easily get symbols automatically imported as if working in a normal code.
+
+![scala2-inteprolation](https://i.imgur.com/cCWTQnj.gif)
+
+The feature also works for Scala 3.
 
 ## More stable code navigation across subprojects
 
