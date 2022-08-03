@@ -5,7 +5,7 @@ authorURL: https://twitter.com/<login>
 authorImageURL: https://github.com/<login>.png
 ---
 
-We're happy to announce the release of Metals v0.11.8, which brings a number of improvements for both Scala 2 and Scala3.
+We're happy to announce the release of Metals v0.11.8, which brings a number of improvements for both Scala 2 and Scala 3.
 
 <table>
 <tbody>
@@ -46,13 +46,13 @@ Check out [https://scalameta.org/metals/](https://scalameta.org/metals/), and
 give Metals a try!
 
 - [Scala 3] Type completion
-- [Scala 3] Auto complete and import extension methods
+- [Scala 3] Auto import and completion for extension methods
 - [Scala 3] ConvertToNamedParameters code action
 - [Scala 3] ScaladocCompletion for Scala3
-- [Scala 3] Add interpolation completions
+- [Scala 3] Completions in string interpolation
 - [Scala 2] Automatically import types in string interpolations
 - More stable code navigation across subprojects
-- Code Action documents
+- Code Action documentation
 - Support Scala 3.2.0-RC3, Scala 3.2.0-RC2
 
 and a lot of bugfixes!
@@ -61,11 +61,11 @@ and a lot of bugfixes!
 
 ## [Scala 3] Auto complete and import extension methods
 
-Scala3 introduced `extension methods` that allows defining new methods to the existing types.
+Scala3 introduced `extension methods` that allow defining new methods to your existing types.
 
-However, previously, Metals couldn't auto-complete extension methods, and developers have to find an appropriate extension methods from workspace and import it by hand. It is quite time-consuming.
+However, previously, Metals couldn't auto-complete extension methods, and developers have to find an appropriate extension method from their workspace and import it by hand. It is was time-consuming and not alway beginner friendly.
 
-Now, Metals provides auto-completion for the extension methods and auto-import them!
+Now, Metals provides auto-completion for extension methods and auto-imports them!
 
 ![extension-methods](https://i.imgur.com/EAbVHeH.gif)
 
@@ -79,7 +79,7 @@ Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this f
 
 ## [Scala 3] Scaladoc completion
 
-Metals now supports auto completing scaladoc completion in Scala3. Typing `/**`, you can auto-complete scaladoc template for the method, class, and etc!
+Metals now supports offers Scaladoc completions in Scala3. When Typing `/**` you get an option to auto-complete a scaladoc template for the method, class, and etc!
 
 ![scala-doc-completion](https://i.imgur.com/MEJUXr3.gif)
 
@@ -98,7 +98,7 @@ If you're interested in technical details, please check out the PR [\#4176](http
 ## Code Action documents
 
 Have you ever wondered what kind of refactorings are available in Metals?
-Check out the new document! You can learn the list of code actions with examples.
+Check out this new page in the documentation! You can see a list of all the code actions in Metals with examples.
 https://scalameta.org/metals/docs/codeactions/codeactions
 
 Big thanks to [zmerr](https://github.com/vzmerr) for writing this documentation.
