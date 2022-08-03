@@ -59,13 +59,13 @@ and a lot of bugfixes!
 
 ## [Scala 3] Type Competion
 
-## [Scala 3] Auto complete and import extension methods
+## [Scala 3] Auto import and completion for extension methods
 
 Scala3 introduced `extension methods` that allow defining new methods to your existing types.
 
-However, previously, Metals couldn't auto-complete extension methods, and developers have to find an appropriate extension method from their workspace and import it by hand. It is was time-consuming and not alway beginner friendly.
+However, previously, Metals couldn't auto-complete extension methods, and developers have to find an appropriate extension method from their workspace and import it by hand. It was time-consuming and not alway beginner friendly.
 
-Now, Metals provides auto-completion for extension methods and auto-imports them!
+Now, Metals provides auto-completion for extension methods and automatically imports them!
 
 ![extension-methods](https://i.imgur.com/EAbVHeH.gif)
 
@@ -83,9 +83,9 @@ Metals now supports offers Scaladoc completions in Scala3. When Typing `/**` you
 
 ![scala-doc-completion](https://i.imgur.com/MEJUXr3.gif)
 
-## [Scala 3] Interpolation completion
+## [Scala 3] Completions in string interpolation
 
-## [Scala 2] Auto import types in string interpolations
+## [Scala 2] Automatically import types in string interpolations
 
 ## More stable code navigation across subprojects
 
@@ -95,7 +95,7 @@ Now, Metals provides more stable code navigation thanks to the work by [@kpodsia
 
 If you're interested in technical details, please check out the PR [\#4176](https://github.com/scalameta/metals/pull/4176).
 
-## Code Action documents
+## Code Action documentation
 
 Have you ever wondered what kind of refactorings are available in Metals?
 Check out this new page in the documentation! You can see a list of all the code actions in Metals with examples.
