@@ -95,7 +95,7 @@ object UserConfiguration {
         """"/usr/local/bin/gradle"""",
         "Gradle script",
         """Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`.
-          |By default, Metals uses gradlew with 5.3.1 gradle version. Update this setting if your `gradle` script requires more customizations
+          |By default, Metals uses gradlew with 7.5.0 gradle version. Update this setting if your `gradle` script requires more customizations
           |like using environment variables.
           |""".stripMargin,
       ),
