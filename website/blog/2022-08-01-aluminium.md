@@ -75,7 +75,7 @@ Now, Metals provides auto-completion for extension methods and automatically imp
 
 ![extension-methods](https://i.imgur.com/EAbVHeH.gif)
 
-## [Scala 3] ConvertToNamedParameters code action
+## [Scala 3] Convert to Named Parameters code action
 
 [Metals 0.11.7 added `ConvertToNamedParameters` code action to Scala2](https://scalameta.org/metals/blog/2022/07/04/aluminium#scala-2-add-converttonamedarguments-code-action).
 
@@ -107,7 +107,7 @@ The feature also works for Scala 3.
 
 ## More stable code navigation across subprojects
 
-Previously, Metals sometimes failed to code navigate such as  in `Find All References` and `Go to Definition`s across projects.
+Previously, Metals sometimes failed to code navigate such as in `Find All References` and `Go to Definition`s across projects.
 
 Now, Metals provides more stable code navigation thanks to the work by [@kpodsiad](https://github.com/kpodsiad)!
 
