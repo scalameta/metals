@@ -405,16 +405,16 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     topLines = Some(1),
   )
 
-  // check(
-  //   "brace-negative",
-  //   """
-  //     |object Main {
-  //     |  List(1 -> 2).map(@@)
-  //     |}
-  //     |""".stripMargin,
-  //   "f = : ((Int, Int)) => B",
-  //   topLines = Some(1),
-  // )
+  check(
+    "brace-negative".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1 -> 2).map(@@)
+      |}
+      |""".stripMargin,
+    "f = : ((Int, Int)) => B",
+    topLines = Some(1),
+  )
 
   checkEditLine(
     "brace-function2",

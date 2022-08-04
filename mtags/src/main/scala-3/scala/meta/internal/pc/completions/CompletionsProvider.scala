@@ -387,15 +387,16 @@ class CompletionsProvider(
             text,
             additionalEdit,
             range,
-            filterText,
+            // filterText,
             command,
           ) =>
         mkItem(
           label,
           text.getOrElse(label),
           additionalEdits = additionalEdit,
+          range = range,
+          // filterText = filterText,
           command = command,
-          filterText = filterText,
         )
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)

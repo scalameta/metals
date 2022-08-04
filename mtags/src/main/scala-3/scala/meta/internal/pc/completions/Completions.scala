@@ -330,7 +330,7 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-    // pprint.pprintln(path.take(2))
+    // pprint.pprintln(path.take(3))
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
@@ -415,10 +415,6 @@ class Completions(
           .filterInteresting(enrich = false)
           ._1
         (completions, true)
-      // From Scala 3.1.3-RC3 (as far as I know), path contains
-      // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
-      case Literal(Constant(null)) :: tl =>
-        advancedCompletions(tl, pos, completionPos)
 
       case (imp @ Import(expr, selectors)) :: _
           if isAmmoniteFileCompletionPosition(imp, rawFileName) =>
@@ -481,6 +477,27 @@ class Completions(
           ),
           true,
         )
+      case (lt @ Literal(
+            Constant(null)
+          )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        advancedCompletions(
+          path.tail,
+          c.startPos,
+          CompletionPos.infer(c.startPos, text, path.tail),
+        )
+
+      // (
+      //   CaseKeywordCompletion.contribute(
+      //     m.selector,
+      //     completionPos,
+      //     path.last,
+      //     indexedContext,
+      //     config,
+      //     parent,
+      //     true,
+      //   ),
+      //   true,
+      // )
 
       case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
             fun,
@@ -501,11 +518,109 @@ class Completions(
           true,
         )
 
-      // case Ident(_) :: (c: CaseDef) :: (m: Match) =>
-      //   CasePatternCompletion(c, m)
+      // Pattern only
+      case (ident @ Ident(name)) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+            true,
+            // if name.toString == "_" || name.toString == "_:" then true else false,
+            // if name.toString == "_" || name.toString == "_:" then false else true,
+          ),
+          true,
+        )
 
-      // case Ident(_) :: Typed(_,_) :: (c: CaseDef) :: (m: Match) =>
-      //   CasePatternCompletion(c,m)
+      case (ident @ Ident(name)) :: Bind(
+            _,
+            _,
+          ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+            true,
+          ),
+          true,
+        )
+
+      case (ident @ Ident(name)) :: Typed(
+            _,
+            _,
+          ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+            true,
+            true,
+          ),
+          true,
+        )
+
+      case Bind(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+            true,
+          ),
+          true,
+        )
+
+      case Typed(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+            true,
+            true,
+          ),
+          true,
+        )
+
+      case (ident @ Ident(name)) :: Typed(_, _) :: Bind(
+            _,
+            _,
+          ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+            true,
+            true,
+          ),
+          true,
+        )
+      // From Scala 3.1.3-RC3 (as far as I know), path contains
+      // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
+      case Literal(Constant(null)) :: tl =>
+        advancedCompletions(tl, pos, completionPos)
+      // case Ident(_) :: (c: CaseDef) :: (m: Match) =>
 
       case _ =>
         val args = NamedArgCompletions.contribute(

@@ -37,11 +37,16 @@ object CaseKeywordCompletion:
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
       parent: Tree,
+      patternOnly: Boolean = false,
+      hasBind: Boolean = false,
+      doFilterText: Boolean = false,
   ): List[CompletionValue] =
+    pprint.pprintln(hasBind)
     import indexedContext.ctx
     val pos = completionPos.sourcePos
     val definitions = indexedContext.ctx.definitions
     val text = pos.source.content().mkString
+    val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
     lazy val autoImportsGen = AutoImports.generator(
       pos,
       text,
@@ -49,6 +54,45 @@ object CaseKeywordCompletion:
       indexedContext,
       config,
     )
+
+    def toCompletionValue(
+        sym: Symbol,
+        name: String,
+        autoImports: List[l.TextEdit],
+    ): CompletionValue.CaseKeyword =
+      sym.info
+      val isModuleLike =
+        sym.is(Flags.Module) || sym.isOneOf(JavaEnumTrait) || sym.isOneOf(
+          JavaEnumValue
+        )
+      val pattern =
+        if (sym.is(Case) || isModuleLike) && !hasBind then
+          val isInfixEligible =
+            indexedContext.lookupSym(sym) == Result.InScope
+              || autoImports.nonEmpty
+          if isInfixEligible && sym.is(Case) && !Character
+              .isUnicodeIdentifierStart(
+                sym.decodedName.head
+              )
+          then
+            tryInfixPattern(sym).getOrElse(
+              unapplyPattern(sym, name, isModuleLike)
+            )
+          else unapplyPattern(sym, name, isModuleLike)
+        else typePattern(sym, name, hasBind)
+
+      val label =
+        if !patternOnly then s"case $pattern =>"
+        else pattern
+      CompletionValue.CaseKeyword(
+        sym,
+        label,
+        Some(label + (if clientSupportsSnippets then " $0" else "")),
+        autoImports,
+        // filterText = if !doFilterText then Some("") else None,
+        range = Some(completionPos.toEditRange),
+      )
+    end toCompletionValue
 
     val parents: Parents = selector match
       case EmptyTree =>
@@ -87,14 +131,12 @@ object CaseKeywordCompletion:
         result += toCompletionValue(
           sym,
           name,
-          indexedContext,
-          completionPos.toEditRange,
           autoImports,
-          config.isCompletionSnippetsEnabled(),
         )
+      end if
     end visit
     val selectorSym = parents.selector.typeSymbol
-    val shortenedNames = ShortenedNames(indexedContext)
+
     indexedContext.scopeSymbols.iterator
       .foreach(s => visit(s.info.dealias.typeSymbol, s.decodedName, Nil))
 
@@ -111,104 +153,73 @@ object CaseKeywordCompletion:
 
     if definitions.isTupleClass(selectorSym)
     then
+      val label =
+        if !patternOnly then s"case ${parents.selector.show} =>"
+        else parents.selector.show
       result += CompletionValue.CaseKeyword(
         selectorSym,
-        s"case ${parents.selector.show} =>",
+        label,
         Some(
-          if config.isCompletionSnippetsEnabled() then "case ($0) =>"
-          else "case () =>"
+          if !patternOnly then
+            if config.isCompletionSnippetsEnabled() then "case ($0) =>"
+            else "case () =>"
+          else if config.isCompletionSnippetsEnabled() then "($0)"
+          else "()"
         ),
         Nil,
-        Some(completionPos.toEditRange),
-        None,
+        range = Some(completionPos.toEditRange),
         command = config.parameterHintsCommand().asScala,
       )
     end if
+
     val res = result.result()
     res
   end contribute
-end CaseKeywordCompletion
 
-private def toCompletionValue(
-    sym: Symbol,
-    name: String,
-    indexedContext: IndexedContext,
-    editRange: l.Range,
-    autoImports: List[l.TextEdit],
-    clientSupportsSnippets: Boolean,
-    isSnippet: Boolean = true,
-)(using Context): CompletionValue =
-  sym.info
-  val isModuleLike =
-    sym.is(Flags.Module) || sym.isOneOf(JavaEnumTrait) || sym.isOneOf(
-      JavaEnumValue
-    )
-  if sym.is(Case) || isModuleLike then
-    val isInfixEligible = indexedContext.lookupSym(sym) == Result.InScope
-      || autoImports.nonEmpty
-
-    val infixPattern: Option[String] =
-      if isInfixEligible && sym.is(Case) && !Character.isUnicodeIdentifierStart(
-          sym.decodedName.head
+  private def tryInfixPattern(sym: Symbol)(using Context): Option[String] =
+    sym.primaryConstructor.paramSymss match
+      case (a :: b :: Nil) :: Nil =>
+        Some(
+          s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
         )
-      then
+      case _ :: (a :: b :: Nil) :: _ =>
+        Some(
+          s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
+        )
+      case _ => None
+  def unapplyPattern(
+      sym: Symbol,
+      name: String,
+      isModuleLike: Boolean,
+  )(using Context): String =
+    val suffix =
+      if isModuleLike then ""
+      else
         sym.primaryConstructor.paramSymss match
-          case (a :: b :: Nil) :: Nil =>
-            Some(
-              s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
-            )
-          case _ :: (a :: b :: Nil) :: _ =>
-            Some(
-              s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
-            )
-          case _ => None
-      else None
-    val pattern = infixPattern.getOrElse {
-      val suffix =
-        if isModuleLike then ""
-        else
-          sym.primaryConstructor.paramSymss match
-            case Nil => "()"
-            case tparams :: params :: _ =>
-              params
-                .map(param => param.showName)
-                .mkString("(", ", ", ")")
-            case head :: _ =>
-              head
-                .map(param => param.showName)
-                .mkString("(", ", ", ")")
-      name + suffix
-    }
-    val label = s"case $pattern =>"
-    CompletionValue.CaseKeyword(
-      sym,
-      label,
-      Some(label + (if isSnippet && clientSupportsSnippets then " $0" else "")),
-      autoImports,
-      Some(editRange),
-      None,
-      None,
-    )
-  else
+          case Nil => "()"
+          case tparams :: params :: _ =>
+            params
+              .map(param => param.showName)
+              .mkString("(", ", ", ")")
+          case head :: _ =>
+            head
+              .map(param => param.showName)
+              .mkString("(", ", ", ")")
+    name + suffix
+  end unapplyPattern
+
+  private def typePattern(
+      sym: Symbol,
+      name: String,
+      hasBind: Boolean = false,
+  )(using Context): String =
     val suffix = sym.typeParams match
       case Nil => ""
       case tparams => tparams.map(_ => "_").mkString("[", ", ", "]")
-    CompletionValue.CaseKeyword(
-      sym,
-      s"case _: $name$suffix =>",
-      Some(
-        if isSnippet && clientSupportsSnippets then
-          s"case $${0:_}: $name$suffix => "
-        else s"case _: $name$suffix =>"
-      ),
-      autoImports,
-      Some(editRange),
-      None,
-      None,
-    )
-  end if
-end toCompletionValue
+    val bind = if hasBind then "" else "_: "
+    bind + name + suffix
 
+end CaseKeywordCompletion
 
 class Parents(val selector: Type, definitions: Definitions)(using Context):
   def this(tpes: List[Type], definitions: Definitions)(using Context) =
