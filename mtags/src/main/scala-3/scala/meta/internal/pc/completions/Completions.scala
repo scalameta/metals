@@ -91,8 +91,6 @@ class Completions(
       noSquareBracketExists: Boolean,
   ):
 
-    def isObjectValidForPos = (!isTypePosition && !isNewPosition)
-
     /**
      * classes and traits are type symbols. They are not suitable for
      *        instantiation or method call positions. Only apply methods and objects
@@ -276,7 +274,12 @@ class Completions(
         else " {$0}"
       else ""
 
-    val concludedSuffix = bracketSuffix + bracesSuffix + templateSuffix
+    val dotSuffix =
+      if shouldAddSnippet && symbol.is(Flags.Module) then "."
+      else ""
+
+    val concludedSuffix =
+      bracketSuffix + bracesSuffix + templateSuffix + dotSuffix
     if concludedSuffix.nonEmpty then Some(concludedSuffix) else None
 
   end findSuffix
