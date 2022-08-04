@@ -47,8 +47,8 @@ give Metals a try!
 
 - [Scala 3] Type completion
 - [Scala 3] Auto import and completion for extension methods
-- [Scala 3] ConvertToNamedParameters code action
-- [Scala 3] ScaladocCompletion for Scala3
+- [Scala 3] Convert to Named Parameters code action
+- [Scala 3] Scaladoc Completion for Scala3
 - [Scala 3] Completions in string interpolation
 - [Scala 2] Automatically import types in string interpolations
 - More stable code navigation across subprojects
@@ -63,7 +63,7 @@ and a lot of bugfixes!
 
 Scala3 introduced `extension methods` that allow defining new methods to your existing types.
 
-However, previously, Metals couldn't auto-complete extension methods, and developers have to find an appropriate extension method from their workspace and import it by hand. It was time-consuming and not alway beginner friendly.
+However, previously, Metals couldn't auto-complete extension methods, and developers have to find an appropriate extension method from their workspace and import it by hand. It was time-consuming and not always beginner friendly.
 
 Now, Metals provides auto-completion for extension methods and automatically imports them!
 
@@ -73,7 +73,7 @@ Now, Metals provides auto-completion for extension methods and automatically imp
 
 [Metals 0.11.7 added `ConvertToNamedParameters` code action to Scala2](https://scalameta.org/metals/blog/2022/07/04/aluminium#scala-2-add-converttonamedarguments-code-action).
 
-Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this feature is now available for Scala3!
+Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this feature is now available for Scala 3!
 
 ![convert-to-named](https://i.imgur.com/9i7MWoQ.gif)
 
@@ -85,7 +85,7 @@ Metals now supports offers Scaladoc completions in Scala3. When Typing `/**` you
 
 ## [Scala 3] Completions in string interpolation
 
-In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would need to do it all manually. Now it is possible to get an automatic conversion to string interpolation when users type `$value` as well as automatic wrapping in `{}` when accessing members of such value.
+In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would have needed to do it all manually. Now it is possible to get an automatic conversion to string interpolation when users type `$value` as well as automatic wrapping in `{}` when accessing members of such value.
 
 ![scala3-interpolation](https://i.imgur.com/EyFKpiv.gif)
 
