@@ -59,6 +59,12 @@ and a lot of bugfixes!
 
 ## [Scala 3] Type Competion
 
+![type-completion](https://i.imgur.com/7kDzoLs.gif)
+
+This newly implemented feature for Scala 3 is not only adding necessary `[]` and `{}` suffixes to type completions; but also, it is filtering out some of the invalid completion results.
+
+As this is a new feature so please let us know if you encounter any missing or invalid results, by opening an issue.
+
 ## [Scala 3] Auto import and completion for extension methods
 
 Scala3 introduced `extension methods` that allow defining new methods to your existing types.
