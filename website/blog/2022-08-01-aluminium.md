@@ -97,7 +97,7 @@ In the previous versions, whenever users wanted to include a value in a string u
 
 ## [Scala 2] Automatically import types in string interpolations
 
-Previously, the only suggestions for string interpolations would come from the currently available symbols in scope. This meant that if you wanted to bring something from another package, you would need to do it manually.
+Previously, the only suggestions for string interpolations was coming from the currently available symbols in scope. This meant that if you wanted to bring something from another package, you would have needed to do it manually.
 
 This problem is now resolved. Users can easily get symbols automatically imported as if working in a normal code.
 
@@ -107,7 +107,7 @@ The feature also works for Scala 3.
 
 ## More stable code navigation across subprojects
 
-Previously, Metals sometimes fail to code navigation such as find-all-references and go-to-defintions across projects.
+Previously, Metals sometimes failed to code navigate such as  in `Find All References` and `Go to Definition`s across projects.
 
 Now, Metals provides more stable code navigation thanks to the work by [@kpodsiad](https://github.com/kpodsiad)!
 
