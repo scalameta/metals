@@ -1480,7 +1480,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "pkg",
+    "pkg".tag(IgnoreScalaVersion.for3LessThan("3.1.3")),
     s"""|object Foo {
         |  scala.coll@@
         |}
@@ -1489,7 +1489,25 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "pkg-scala",
+    "pkg-typed".tag(IgnoreScalaVersion.for3LessThan("3.1.3")),
+    s"""|object Foo {
+        |  val a : scala.coll@@
+        |}
+        |""".stripMargin,
+    "collection scala",
+  )
+
+  check(
+    "pkg-new".tag(IgnoreScalaVersion.for3LessThan("3.1.3")),
+    s"""|object Foo {
+        |  new scala.coll@@
+        |}
+        |""".stripMargin,
+    "collection scala",
+  )
+
+  check(
+    "pkg-scala".tag(IgnoreScalaVersion.for3LessThan("3.1.3")),
     s"""|object Foo {
         |  scala@@
         |}
