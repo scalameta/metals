@@ -85,7 +85,7 @@ Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this f
 
 ## [Scala 3] Scaladoc completion
 
-Metals now supports offers Scaladoc completions in Scala3. When Typing `/**` you get an option to auto-complete a scaladoc template for the method, class, and etc!
+Metals now supports the offering of Scaladoc completions in Scala3. When typing `/**` you get an option to auto-complete a scaladoc template for methods, classes, etc.!
 
 ![scala-doc-completion](https://i.imgur.com/MEJUXr3.gif)
 
