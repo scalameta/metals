@@ -330,7 +330,7 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-    // pprint.pprintln(path.take(3))
+    // pprint.pprintln(path.take(2))
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
@@ -464,8 +464,20 @@ class Completions(
           ),
           true,
         )
+      case (c: CaseDef) :: (m: Match) :: _
+          if completionPos.query.startsWith("match") =>
+        (
+          CaseKeywordCompletion.matchContribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+          ),
+          false,
+        )
 
-      case (_: CaseDef) :: (m: Match) :: parent :: _ =>
+      case (c: CaseDef) :: (m: Match) :: parent :: _ =>
         (
           CaseKeywordCompletion.contribute(
             m.selector,
@@ -616,6 +628,21 @@ class Completions(
           ),
           true,
         )
+
+      case (sel @ Select(qualifier, name)) :: _
+          if "match".startsWith(name.toString()) && text.charAt(
+            completionPos.start - 1
+          ) == ' ' =>
+        (
+          CaseKeywordCompletion.matchContribute(
+            qualifier,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+          ),
+          false,
+        )
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
       case Literal(Constant(null)) :: tl =>
@@ -630,12 +657,6 @@ class Completions(
           config.isCompletionSnippetsEnabled,
         )
         val keywords = KeywordsCompletions.contribute(path, completionPos)
-        // val matchCompletions =
-        //   path match
-        //   case Select(qual, name) :: _ if "match".startsWith(name.toString()) =>
-        //     MatchKeywordCompletion.contribute(qual, completionPos, path.last, indexedContext, config)
-        //   case _ => Nil
-
         (args ++ keywords, false)
     end match
   end advancedCompletions
@@ -769,6 +790,7 @@ class Completions(
                   )
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
+            case mc: CompletionValue.MatchCompletion => (mc.label, true)
             case namedArg: CompletionValue.NamedArg =>
               val id = namedArg.label + "="
               (id, true)

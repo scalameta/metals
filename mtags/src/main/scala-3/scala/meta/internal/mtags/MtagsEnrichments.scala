@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import java.net.URI
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters.*
@@ -30,7 +31,6 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.{lsp4j as l}
-import scala.collection.mutable
 
 object MtagsEnrichments extends CommonMtagsEnrichments:
 

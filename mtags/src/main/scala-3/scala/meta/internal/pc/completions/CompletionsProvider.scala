@@ -398,6 +398,13 @@ class CompletionsProvider(
           // filterText = filterText,
           command = command,
         )
+      case CompletionValue.MatchCompletion(
+            label,
+            text,
+            additionalEdits,
+            desc,
+          ) =>
+        mkItem(label, text.getOrElse(label), additionalEdits = additionalEdits)
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)
         mkItem(

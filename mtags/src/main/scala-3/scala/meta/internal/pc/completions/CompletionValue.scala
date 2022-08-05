@@ -34,6 +34,7 @@ sealed trait CompletionValue:
       case _: CompletionValue.Extension => CompletionItemKind.Method
       case _: CompletionValue.Autofill => CompletionItemKind.Enum
       case _: CompletionValue.CaseKeyword => CompletionItemKind.Method
+      case _: CompletionValue.MatchCompletion => CompletionItemKind.Enum
       case v: (CompletionValue.Compiler | CompletionValue.Workspace |
             CompletionValue.Scope | CompletionValue.Interpolator) =>
         val symbol = v.symbol
@@ -68,6 +69,7 @@ sealed trait CompletionValue:
         printer.completionSymbol(so.symbol)
       case CompletionValue.NamedArg(label, tpe) =>
         printer.tpe(tpe)
+      case mc: CompletionValue.MatchCompletion => mc.desc
       case CompletionValue.Document(_, _, desc) => desc
       case _ => ""
 
@@ -151,6 +153,13 @@ object CompletionValue:
       isWorkspace: Boolean = false,
       isExtension: Boolean = false,
   ) extends Symbolic
+
+  case class MatchCompletion(
+      label: String,
+      override val insertText: Option[String],
+      override val additionalEdits: List[TextEdit],
+      desc: String,
+  ) extends CompletionValue
 
   case class CaseKeyword(
       symbol: Symbol,

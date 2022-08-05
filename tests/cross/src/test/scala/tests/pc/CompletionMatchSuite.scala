@@ -6,8 +6,8 @@ class CompletionMatchSuite extends BaseCompletionSuite {
 
   override def requiresScalaLibrarySources: Boolean = true
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
+  // override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+  //   Some(IgnoreScala3)
 
   check(
     "match",

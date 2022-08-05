@@ -12,6 +12,7 @@ import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext.Result
 import scala.meta.internal.pc.MetalsInteractive.*
+import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd.*
@@ -22,12 +23,13 @@ import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.core.Types.AndType
 import dotty.tools.dotc.core.Types.NoType
 import dotty.tools.dotc.core.Types.Type
+import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import org.eclipse.{lsp4j as l}
-import scala.meta.internal.pc.printer.ShortenedNames
 
 object CaseKeywordCompletion:
   def contribute(
@@ -39,9 +41,8 @@ object CaseKeywordCompletion:
       parent: Tree,
       patternOnly: Boolean = false,
       hasBind: Boolean = false,
-      doFilterText: Boolean = false,
+      // doFilterText: Boolean = false,
   ): List[CompletionValue] =
-    pprint.pprintln(hasBind)
     import indexedContext.ctx
     val pos = completionPos.sourcePos
     val definitions = indexedContext.ctx.definitions
@@ -54,46 +55,13 @@ object CaseKeywordCompletion:
       indexedContext,
       config,
     )
-
-    def toCompletionValue(
-        sym: Symbol,
-        name: String,
-        autoImports: List[l.TextEdit],
-    ): CompletionValue.CaseKeyword =
-      sym.info
-      val isModuleLike =
-        sym.is(Flags.Module) || sym.isOneOf(JavaEnumTrait) || sym.isOneOf(
-          JavaEnumValue
-        )
-      val pattern =
-        if (sym.is(Case) || isModuleLike) && !hasBind then
-          val isInfixEligible =
-            indexedContext.lookupSym(sym) == Result.InScope
-              || autoImports.nonEmpty
-          if isInfixEligible && sym.is(Case) && !Character
-              .isUnicodeIdentifierStart(
-                sym.decodedName.head
-              )
-          then
-            tryInfixPattern(sym).getOrElse(
-              unapplyPattern(sym, name, isModuleLike)
-            )
-          else unapplyPattern(sym, name, isModuleLike)
-        else typePattern(sym, name, hasBind)
-
-      val label =
-        if !patternOnly then s"case $pattern =>"
-        else pattern
-      CompletionValue.CaseKeyword(
-        sym,
-        label,
-        Some(label + (if clientSupportsSnippets then " $0" else "")),
-        autoImports,
-        // filterText = if !doFilterText then Some("") else None,
-        range = Some(completionPos.toEditRange),
-      )
-    end toCompletionValue
-
+    val completionGenerator = CompletionValueGenerator(
+      indexedContext,
+      completionPos,
+      clientSupportsSnippets,
+      patternOnly,
+      hasBind,
+    )
     val parents: Parents = selector match
       case EmptyTree =>
         val seenFromType = parent match
@@ -128,7 +96,7 @@ object CaseKeywordCompletion:
           recordVisit(s.sourceModule)
       if isValid then
         recordVisit(sym)
-        result += toCompletionValue(
+        result += completionGenerator.toCompletionValue(
           sym,
           name,
           autoImports,
@@ -176,6 +144,191 @@ object CaseKeywordCompletion:
     res
   end contribute
 
+  def matchContribute(
+      selector: Tree,
+      completionPos: CompletionPos,
+      typedTree: Tree,
+      indexedContext: IndexedContext,
+      config: PresentationCompilerConfig,
+  ): List[CompletionValue] =
+    import indexedContext.ctx
+    val pos = completionPos.sourcePos
+    val definitions = indexedContext.ctx.definitions
+    val text = pos.source.content().mkString
+    val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
+    lazy val autoImportsGen = AutoImports.generator(
+      pos,
+      text,
+      typedTree,
+      indexedContext,
+      config,
+    )
+    val completionGenerator = CompletionValueGenerator(
+      indexedContext,
+      completionPos,
+      clientSupportsSnippets,
+    )
+    val result = ListBuffer.empty[CompletionValue]
+    val tpe = selector.tpe.widen.bounds.hi match
+      case tr @ TypeRef(_, _) => tr.underlying
+      case t => t
+
+    def subclassesForType(tpe: Type)(using Context): List[Symbol] =
+      tpe.typeSymbol.info
+      val subclasses = ListBuffer.empty[Symbol]
+      val parents = ListBuffer.empty[Symbol]
+      def loop(tpe: Type): Unit =
+        tpe match
+          case AndType(tp1, tp2) =>
+            loop(tp1)
+            loop(tp2)
+          case t => parents += tpe.typeSymbol
+      loop(tpe.widen.bounds.hi)
+      parents.toList.foreach {
+        _.sealedStrictDescendants.foreach(sym =>
+          if !(sym.is(Sealed) && (sym.is(Abstract) || sym.is(Trait))) then
+            subclasses += sym
+        )
+      }
+      val subclassesResult = subclasses.toList
+      subclassesResult
+    end subclassesForType
+
+    val sortedSubclasses = subclassesForType(tpe)
+
+    sortedSubclasses.foreach { case sym =>
+      // val shortType = shortNames.shortType(sym.info)
+      // val edits = shortNames.imports(autoImportsGen)
+      // result += completionGenerator.toCompletionValue(
+      //   sym.info.dealias.typeSymbol,
+      //   sym,
+      //   edits,
+      // )
+      val autoImport = autoImportsGen.forSymbol(sym)
+      autoImport match
+        case Some(value) =>
+          result += completionGenerator.toCompletionValue(
+            sym.info.dealias.typeSymbol,
+            sym.decodedName,
+            value,
+          )
+        case None =>
+          result += completionGenerator.toCompletionValue(
+            sym.info.dealias.typeSymbol,
+            sym.decodedName,
+            Nil,
+          )
+    }
+
+    val basicMatch = CompletionValue.MatchCompletion(
+      "match",
+      Some(
+        if clientSupportsSnippets then "match\n\tcase$0\n"
+        else "match"
+      ),
+      Nil,
+      "",
+    )
+    val members = result.result()
+    val completions = members match
+      case Nil => List(basicMatch)
+      case head :: tail =>
+        val insertText = Some(
+          tail
+            .map(_.label)
+            .mkString(
+              if clientSupportsSnippets then s"match\n\t${head.label} $$0\n\t"
+              else s"match\n\t${head.label}\n\t",
+              "\n\t",
+              "\n",
+            )
+        )
+        val exhaustive = CompletionValue.MatchCompletion(
+          "match (exhaustive)",
+          insertText,
+          members.flatMap(_.additionalEdits),
+          s" ${tpe.show} (${members.length} cases)",
+        )
+        List(basicMatch, exhaustive)
+    completions
+  end matchContribute
+
+end CaseKeywordCompletion
+
+class Parents(val selector: Type, definitions: Definitions)(using Context):
+  def this(tpes: List[Type], definitions: Definitions)(using Context) =
+    this(
+      tpes match
+        case Nil => NoType
+        case head :: Nil => head
+        case _ => definitions.tupleType(tpes)
+      ,
+      definitions,
+    )
+
+  val isParent: Set[Symbol] =
+    Set(selector.typeSymbol, selector.typeSymbol.companion)
+      .filterNot(_ == NoSymbol)
+  val isBottom: Set[Symbol] = Set[Symbol](
+    definitions.NullClass,
+    definitions.NothingClass,
+  )
+  def isSubClass(typeSymbol: Symbol, includeReverse: Boolean)(using
+      Context
+  ): Boolean =
+    !isBottom(typeSymbol) &&
+      isParent.exists { parent =>
+        typeSymbol.isSubClass(parent) ||
+        (includeReverse && parent.isSubClass(typeSymbol))
+      }
+end Parents
+
+class CompletionValueGenerator(
+    indexedContext: IndexedContext,
+    completionPos: CompletionPos,
+    clientSupportsSnippets: Boolean,
+    patternOnly: Boolean = false,
+    hasBind: Boolean = false,
+):
+  def toCompletionValue(
+      sym: Symbol,
+      name: String,
+      autoImports: List[l.TextEdit],
+  )(using Context): CompletionValue.CaseKeyword =
+    sym.info
+    val isModuleLike =
+      sym.is(Flags.Module) || sym.isOneOf(JavaEnumTrait) || sym.isOneOf(
+        JavaEnumValue
+      )
+    val pattern =
+      if (sym.is(Case) || isModuleLike) && !hasBind then
+        val isInfixEligible =
+          indexedContext.lookupSym(sym) == Result.InScope
+            || autoImports.nonEmpty
+        if isInfixEligible && sym.is(Case) && !Character
+            .isUnicodeIdentifierStart(
+              sym.decodedName.head
+            )
+        then
+          tryInfixPattern(sym).getOrElse(
+            unapplyPattern(sym, name, isModuleLike)
+          )
+        else unapplyPattern(sym, name, isModuleLike)
+      else typePattern(sym, name, hasBind)
+
+    val label =
+      if !patternOnly then s"case $pattern =>"
+      else pattern
+    CompletionValue.CaseKeyword(
+      sym,
+      label,
+      Some(label + (if clientSupportsSnippets then " $0" else "")),
+      autoImports,
+      // filterText = if !doFilterText then Some("") else None,
+      range = Some(completionPos.toEditRange),
+    )
+  end toCompletionValue
+
   private def tryInfixPattern(sym: Symbol)(using Context): Option[String] =
     sym.primaryConstructor.paramSymss match
       case (a :: b :: Nil) :: Nil =>
@@ -218,33 +371,4 @@ object CaseKeywordCompletion:
       case tparams => tparams.map(_ => "_").mkString("[", ", ", "]")
     val bind = if hasBind then "" else "_: "
     bind + name + suffix
-
-end CaseKeywordCompletion
-
-class Parents(val selector: Type, definitions: Definitions)(using Context):
-  def this(tpes: List[Type], definitions: Definitions)(using Context) =
-    this(
-      tpes match
-        case Nil => NoType
-        case head :: Nil => head
-        case _ => definitions.tupleType(tpes)
-      ,
-      definitions,
-    )
-
-  val isParent: Set[Symbol] =
-    Set(selector.typeSymbol, selector.typeSymbol.companion)
-      .filterNot(_ == NoSymbol)
-  val isBottom: Set[Symbol] = Set[Symbol](
-    definitions.NullClass,
-    definitions.NothingClass,
-  )
-  def isSubClass(typeSymbol: Symbol, includeReverse: Boolean)(using
-      Context
-  ): Boolean =
-    !isBottom(typeSymbol) &&
-      isParent.exists { parent =>
-        typeSymbol.isSubClass(parent) ||
-        (includeReverse && parent.isSubClass(typeSymbol))
-      }
-end Parents
+end CompletionValueGenerator
