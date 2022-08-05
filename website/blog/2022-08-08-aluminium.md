@@ -11,23 +11,23 @@ We're happy to announce the release of Metals v0.11.8, which brings a number of 
 <tbody>
   <tr>
     <td>Commits since last release</td>
-    <td align="center">78</td>
+    <td align="center">81</td>
   </tr>
   <tr>
     <td>Merged PRs</td>
-    <td align="center">74</td>
+    <td align="center">77</td>
   </tr>
     <tr>
     <td>Contributors</td>
-    <td align="center">14</td>
+    <td align="center">15</td>
   </tr>
   <tr>
     <td>Closed issues</td>
-    <td align="center">22</td>
+    <td align="center">6</td>
   </tr>
   <tr>
     <td>New features</td>
-    <td align="center">6</td>
+    <td align="center"></td>
   </tr>
 </tbody>
 </table>
@@ -119,30 +119,40 @@ Big thanks to everybody who contributed to this release or reported an issue!
 
 ```
 $ git shortlog -sn --no-merges v0.11.7..v0.11.8
-29	Tomasz Godzik
+31	Tomasz Godzik
     10	Rikito Taniguchi
      9	Scala Steward
      6	jkciesluk
      6	Kamil Podsiadło
      5	vzmerr
      3	Vadim Chelyshov
-     2	zmerr
-     2	scalameta-bot
      2	Adrien Piquerez
+     2	scalameta-bot
+     2	zmerr
+     1	Arthur S
      1	Anton Sviridov
      1	tgodzik
      1	Scalameta Bot
-     1	Arthur S
+     1	Chris Kipp
 ```
 
 ## Merged PRs
 
-## [v0.11.8](https://github.com/scalameta/metals/tree/v0.11.8) (2022-08-01)
+## [v0.11.8](https://github.com/scalameta/metals/tree/v0.11.8) (2022-08-08)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.11.7...v0.11.8)
 
 **Merged pull requests:**
 
+- chore(ci): small changes to account for migration from LSIF -> SCIP
+  [\#4222](https://github.com/scalameta/metals/pull/4222)
+  ([ckipp01](https://github.com/ckipp01))
+- chore: Switch to JDK 17 for most tests
+  [\#4219](https://github.com/scalameta/metals/pull/4219)
+  ([tgodzik](https://github.com/tgodzik))
+- bugfix: Print correct method signature for Selectable
+  [\#4202](https://github.com/scalameta/metals/pull/4202)
+  ([tgodzik](https://github.com/tgodzik))
 - Scala 3 type completion
   [\#4174](https://github.com/scalameta/metals/pull/4174)
   ([vzmerr](https://github.com/vzmerr))
