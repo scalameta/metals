@@ -105,14 +105,6 @@ This problem is now resolved. Users can easily get symbols automatically importe
 
 The feature also works for Scala 3.
 
-## More stable code navigation across subprojects
-
-Previously, Metals sometimes failed to code navigate such as in `Find All References` and `Go to Definition`s across projects.
-
-Now, Metals provides more stable code navigation thanks to the work by [@kpodsiad](https://github.com/kpodsiad)!
-
-If you're interested in technical details, please check out the PR [\#4176](https://github.com/scalameta/metals/pull/4176).
-
 ## Code Action documentation
 
 Have you ever wondered what kind of refactorings are available in Metals?
