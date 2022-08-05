@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 package completions
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import scala.collection.mutable
@@ -45,6 +46,7 @@ class Completions(
     indexedContext: IndexedContext,
     path: List[Tree],
     config: PresentationCompilerConfig,
+    workspace: Option[Path],
 ):
 
   implicit val context: Context = ctx
@@ -321,10 +323,12 @@ class Completions(
       pos: SourcePosition,
       completionPos: CompletionPos,
   ): (List[CompletionValue], Boolean) =
-    lazy val filename = Paths
+    lazy val rawPath = Paths
       .get(pos.source.path)
+    lazy val rawFileName = rawPath
       .getFileName()
       .toString()
+    lazy val filename = rawFileName
       .stripSuffix(".scala")
 
     path match
@@ -413,12 +417,44 @@ class Completions(
       case Literal(Constant(null)) :: tl =>
         advancedCompletions(tl, pos, completionPos)
 
+      case (imp @ Import(expr, selectors)) :: _
+          if isAmmoniteFileCompletionPosition(imp, rawFileName) =>
+        (
+          AmmoniteFileCompletions.contribute(
+            expr,
+            selectors,
+            pos.endPos.toLSP,
+            rawPath.toString(),
+            workspace,
+            rawFileName,
+          ),
+          true,
+        )
       case _ =>
         val args = NamedArgCompletions.contribute(pos, path)
         val keywords = KeywordsCompletions.contribute(path, completionPos)
         (args ++ keywords, false)
     end match
   end advancedCompletions
+
+  private def isAmmoniteFileCompletionPosition(
+      tree: Tree,
+      fileName: String,
+  ): Boolean =
+
+    def getQualifierStart(identOrSelect: Tree): String =
+      identOrSelect match
+        case Ident(name) => name.toString
+        case Select(newQual, name) => getQualifierStart(newQual)
+        case _ => ""
+
+    tree match
+      case Import(identOrSelect, _) =>
+        fileName.isAmmoniteGeneratedFile && getQualifierStart(identOrSelect)
+          .toString()
+          .startsWith("$file")
+      case _ => false
+  end isAmmoniteFileCompletionPosition
 
   private def description(sym: Symbol): String =
     if sym.isType then sym.showFullName
@@ -525,6 +561,8 @@ class Completions(
             case namedArg: CompletionValue.NamedArg =>
               val id = namedArg.label + "="
               (id, true)
+            case fileSysMember: CompletionValue.FileSystemMember =>
+              (fileSysMember.fileName, true)
 
         if !isSeen(id) && include then
           isSeen += id

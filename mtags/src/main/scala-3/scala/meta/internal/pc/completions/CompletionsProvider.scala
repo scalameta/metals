@@ -1,6 +1,8 @@
 package scala.meta.internal.pc
 package completions
 
+import java.nio.file.Path
+
 import scala.annotation.tailrec
 import scala.collection.JavaConverters.*
 
@@ -32,6 +34,7 @@ class CompletionsProvider(
     params: OffsetParams,
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String,
+    workspace: Option[Path],
 ):
   def completions(): CompletionList =
     val uri = params.uri
@@ -68,6 +71,7 @@ class CompletionsProvider(
             indexedCtx,
             path,
             config,
+            workspace,
           ).completions()
         val autoImportsGen = AutoImports.generator(
           completionPos.sourcePos,
@@ -142,7 +146,9 @@ class CompletionsProvider(
       // Insert potentially missing `*/` to avoid comment out all codes after the "/**".
       text.substring(0, offset) + "*/" + text.substring(offset)
     else if isEmptyLine(offset, offset) || isDollar then
-      text.substring(0, offset) + "CURSOR" + text.substring(offset)
+      text.substring(0, offset) + Cursor.value + text.substring(
+        offset
+      )
     else text
   end applyCompletionCursor
 
@@ -330,3 +336,6 @@ class CompletionsProvider(
     end match
   end completionItems
 end CompletionsProvider
+
+case object Cursor:
+  val value = "CURSOR"

@@ -43,6 +43,7 @@ sealed trait CompletionValue:
         else if symbol.is(Mutable) then CompletionItemKind.Variable
         else if symbol.is(Method) then CompletionItemKind.Method
         else CompletionItemKind.Field
+      case _: CompletionValue.FileSystemMember => CompletionItemKind.File
   end completionItemKind
 
   final def lspTags(using Context): List[CompletionItemTag] =
@@ -64,6 +65,8 @@ sealed trait CompletionValue:
         printer.tpe(tpe)
       case CompletionValue.Document(_, _, desc) => desc
       case _: CompletionValue.Keyword => ""
+      case fileSysMem: CompletionValue.FileSystemMember =>
+        fileSysMem.fileName
 
   private def forSymOnly[A](f: Symbol => A, orElse: => A): A =
     this match
@@ -119,6 +122,18 @@ object CompletionValue:
   case class NamedArg(label: String, tpe: Type) extends CompletionValue
   case class Keyword(label: String, override val insertText: Option[String])
       extends CompletionValue
+
+  case class FileSystemMember(
+      isDirectory: Boolean,
+      fileName: String,
+      editRange: Range,
+  ) extends CompletionValue:
+    override def range = Some(editRange)
+    override def filterText = Some(fileName)
+    override def additionalEdits = List(
+      new TextEdit(editRange, fileName.stripSuffix(".sc"))
+    )
+    override def label = fileName
 
   case class Interpolator(
       symbol: Symbol,
