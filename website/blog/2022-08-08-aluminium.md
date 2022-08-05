@@ -23,11 +23,11 @@ We're happy to announce the release of Metals v0.11.8, which brings a number of 
   </tr>
   <tr>
     <td>Closed issues</td>
-    <td align="center">6</td>
+    <td align="center">22</td>
   </tr>
   <tr>
     <td>New features</td>
-    <td align="center"></td>
+    <td align="center">6</td>
   </tr>
 </tbody>
 </table>
