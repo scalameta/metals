@@ -179,6 +179,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |ArrayDequeOps
            |""".stripMargin,
       "3" -> // ArrayDeque upper is for java, the lower for scala
+        // unfortunately we are misdetecting all of them as objects
+        // we need a better way to detect objects in scala and java that does
+        // not produce false positives.
         """|ArrayDeque[$0]
            |ArrayDeque[$0]
            |ArrayDequeOps[$0]
@@ -187,6 +190,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
+    // Note: SimpleFileVistor only has a protected constructor, therefor,
+    // it is impossible to instantiate it in Scala.
+    // So unless it has an instantiable member; this completion
+    // does not provide much value, because
+    // `new SimpleFileVisitor[Int]()`
+    // would not compile.
     "type4",
     s"""|object Main {
         |  new SimpleFileVisitor@@
@@ -211,8 +220,11 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |Iterable[$0] {}
            |IterableOnce[$0] {}
            |""".stripMargin,
-      "3" ->
-        """|Iterable[$0] {}
+      "3" -> // Note: We are now allowing objects in new position
+        // but the downside is that not all objects have instantiable members,
+        // so the providing of such completions might not provide value.
+        """|Iterable
+           |Iterable[$0] {}
            |IterableOnce[$0] {}
            |""".stripMargin,
     ),

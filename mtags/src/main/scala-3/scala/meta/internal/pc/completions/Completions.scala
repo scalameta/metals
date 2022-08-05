@@ -274,12 +274,8 @@ class Completions(
         else " {$0}"
       else ""
 
-    val dotSuffix =
-      if shouldAddSnippet && symbol.is(Flags.Module) then "."
-      else ""
-
     val concludedSuffix =
-      bracketSuffix + bracesSuffix + templateSuffix + dotSuffix
+      bracketSuffix + bracesSuffix + templateSuffix
     if concludedSuffix.nonEmpty then Some(concludedSuffix) else None
 
   end findSuffix
