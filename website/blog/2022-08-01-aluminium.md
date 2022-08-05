@@ -1,8 +1,8 @@
 ---
 author: Rikito Taniguchi
 title: Metals v0.11.8 - Aluminium
-authorURL: https://twitter.com/<login>
-authorImageURL: https://github.com/<login>.png
+authorURL: https://twitter.com/tanishiking
+authorImageURL: https://github.com/tanishiking.png
 ---
 
 We're happy to announce the release of Metals v0.11.8, which brings a number of improvements for both Scala 2 and Scala 3.
