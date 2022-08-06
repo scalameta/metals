@@ -5,7 +5,7 @@ authorURL: https://twitter.com/tanishiking
 authorImageURL: https://github.com/tanishiking.png
 ---
 
-We're happy to announce the release of Metals v0.11.8, which brings a number of improvements for both Scala 2 and Scala 3.
+We're happy to announce the release of Metals v0.11.8, bringing a number of improvements for both Scala 2 and Scala 3.
 
 <table>
 <tbody>
@@ -50,10 +50,10 @@ give Metals a try!
 - [Scala 3] Convert to Named Parameters code action
 - [Scala 3] Scaladoc Completion for Scala3
 - [Scala 3] Completions in string interpolation
-- [Scala 2] Automatically import types in string interpolations
+- [Scala 2] Automatic import of types in string interpolations
 - More stable code navigation across subprojects
 - Code Action documentation
-- Support Scala 3.2.0-RC3, Scala 3.2.0-RC2
+- Support of Scala 3.2.0-RC3, Scala 3.2.0-RC2
 
 and a lot of bugfixes!
 
@@ -63,13 +63,13 @@ and a lot of bugfixes!
 
 This newly implemented feature for Scala 3 is not only adding necessary `[]` and `{}` suffixes to type completions; but also, it is filtering out some of the invalid completion results.
 
-As this is a new feature so please let us know if you encounter any missing or invalid results, by opening an issue.
+As this is a new feature, please let us know if you encounter any missing or invalid results, by opening an issue.
 
 ## [Scala 3] Auto import and completion for extension methods
 
-Scala3 introduced `extension methods` that allow defining new methods to your existing types.
+You might know that Scala 3 has introduced `extension methods` that allow defining new methods to your existing types.
 
-However, previously, Metals couldn't auto-complete extension methods, and developers have to find an appropriate extension method from their workspace and import it by hand. It was time-consuming and not always beginner friendly.
+However, previously, Metals couldn't auto-complete extension methods; so developers had to find an appropriate extension method from their workspace and manually import it. But, this was time-consuming and not always beginner friendly.
 
 Now, Metals provides auto-completion for extension methods and automatically imports them!
 
@@ -85,21 +85,21 @@ Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this f
 
 ## [Scala 3] Scaladoc completion
 
-Metals now supports the offering of Scaladoc completions in Scala3. When typing `/**` you get an option to auto-complete a scaladoc template for methods, classes, etc.!
+Metals now supports the offering of Scaladoc completions in Scala 3. When typing `/**` you get an option to auto-complete a scaladoc template for methods, classes, etc.!
 
 ![scala-doc-completion](https://i.imgur.com/MEJUXr3.gif)
 
 ## [Scala 3] Completions in string interpolation
 
-In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would have needed to do it all manually. Now it is possible to get an automatic conversion to string interpolation when users type `$value` as well as automatic wrapping in `{}` when accessing members of such value.
+In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would have needed to do it all manually. Now, it is possible to get an automatic conversion to string interpolation when typing `$value`, as well as automatic wrapping in `{}` when accessing members of such value.
 
 ![scala3-interpolation](https://i.imgur.com/EyFKpiv.gif)
 
 ## [Scala 2] Automatically import types in string interpolations
 
-Previously, the only suggestions for string interpolations was coming from the currently available symbols in scope. This meant that if you wanted to bring something from another package, you would have needed to do it manually.
+Previously, the only suggestions for string interpolations were coming from the currently available symbols in scope. This meant that if you wanted to import something from another package, you would have needed to do it manually.
 
-This problem is now resolved. Users can easily get symbols automatically imported as if working in a normal code.
+This problem is now resolved. Users can easily get such symbols automatically imported, which creates a seamless workflow.
 
 ![scala2-inteprolation](https://i.imgur.com/cCWTQnj.gif)
 
