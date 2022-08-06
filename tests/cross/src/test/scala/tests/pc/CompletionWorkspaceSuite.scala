@@ -141,6 +141,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    // failing because both a class and an object is suggested
     compat = Map(
       "2" ->
         """|package `import-conflict4`
@@ -168,6 +169,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    // failing because both a class and object is suggested
     compat = Map(
       "2" ->
         """|package `import-no-conflict`
@@ -196,6 +198,59 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Await - scala.concurrent",
+    // failing because Await as a class is also suggested.
+    // but that is strange because there is no Await as class in scala api
+//     CompletionItem [
+//   label = "Await - scala.concurrent"
+//   labelDetails = null
+//   kind = Class
+//   tags = SeqWrapper ()
+//   detail = " scala.concurrent"
+//   documentation = null
+//   deprecated = null
+//   preselect = null
+//   sortText = "00001"
+//   filterText = "Await"
+//   insertText = null
+//   insertTextFormat = Snippet
+//   insertTextMode = null
+//   textEdit = Either [
+//     left = TextEdit [
+//     range = Range [
+//       start = Position [
+//         line = 3
+//         character = 2
+//       ]
+//       end = Position [
+//         line = 3
+//         character = 7
+//       ]
+//     ]
+//     newText = "Await"
+//   ]
+//     right = null
+//   ]
+//   textEditText = null
+//   additionalTextEdits = SeqWrapper (
+//     TextEdit [
+//       range = Range [
+//         start = Position [
+//           line = 2
+//           character = 0
+//         ]
+//         end = Position [
+//           line = 2
+//           character = 0
+//         ]
+//       ]
+//       newText = "import scala.concurrent.Await\n"
+//     ]
+//   )
+//   commitCharacters = null
+//   command = null
+//   data = {"symbol":"scala/concurrent/Await#","target":""}
+// ])
+
   )
 
   checkEdit(
@@ -376,6 +431,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
+    // failing because it is correctly returning a class and a companion object
     filter = _.contains("scala.util"),
     compat = Map(
       "2" ->
@@ -602,6 +658,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    // failing because we are getting both the object and the class
   )
 
   checkEdit(
@@ -626,6 +683,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    // failing because we are getting both the object and the class
   )
 
   checkEdit(
@@ -642,6 +700,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    // this test is failing because now we are now correcting obtaining both
+    // object Future and class Future
   )
 
   checkEdit(
@@ -695,6 +755,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Map - scala.collection.mutable",
+    // failing because object and class both are suggested
   )
 
   checkEdit(
@@ -710,6 +771,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Map - scala.collection.mutable",
+    // failing because object and class are both suggested
   )
 
   checkEdit(
@@ -751,9 +813,19 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|Future scala.concurrent
+       |Future scala.concurrent
        |Future - java.util.concurrent
+       |FutureTask - java.util.concurrent
+       |RunnableFuture - java.util.concurrent
+       |ScheduledFuture - java.util.concurrent
+       |FutureConverters - scala.jdk
+       |FutureConverters - scala.jdk
+       |FutureConverters - scala.jdk.javaapi
+       |FutureConverters - scala.jdk.javaapi
+       |CompletableFuture - java.util.concurrent
+       |FutureOps - scala.jdk.FutureConverters
        |""".stripMargin,
-    topLines = Some(2),
+    //  topLines = Some(2), //because we want to get all the results and see if they are valid
   )
 
   check(

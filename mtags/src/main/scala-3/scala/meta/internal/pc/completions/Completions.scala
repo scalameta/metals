@@ -92,6 +92,11 @@ class Completions(
   ):
 
     /**
+     * objects do not take type parameters.
+     */
+    def isObjectValidForPos = noSquareBracketExists
+
+    /**
      * classes and traits are type symbols. They are not suitable for
      *        instantiation or method call positions. Only apply methods and objects
      *        can be used in such positions.
@@ -128,7 +133,10 @@ class Completions(
 
             if (i < text.length()) then text(i) != '['
             else true
-          else false
+          else
+            //    pprint.log("no span")
+            false
+        //  pprint.log(tail)
         tail match
           case (v: ValOrDefDef) :: _ =>
             if v.tpt.sourcePos.contains(pos) then
@@ -143,10 +151,16 @@ class Completions(
           case (a @ AppliedTypeTree(_, args)) :: _ =>
             if args.exists(_.sourcePos.contains(pos)) then
               CursorPositionCondition(true, false, false, hasNoSquareBracket)
-            else CursorPositionCondition(false, false, false, false)
+            else
+              CursorPositionCondition(false, false, false, hasNoSquareBracket)
           case (_: Import) :: _ =>
             CursorPositionCondition(false, false, false, hasNoSquareBracket)
-          case _ =>
+          case Template(constr, parentsOrDerived, self, prebody) :: _ =>
+            if parentsOrDerived.exists(_.sourcePos.contains(pos)) then
+              CursorPositionCondition(true, false, false, hasNoSquareBracket)
+            else CursorPositionCondition(false, false, true, hasNoSquareBracket)
+          case otherTail =>
+            //  pprint.log(otherTail)
             CursorPositionCondition(false, false, true, hasNoSquareBracket)
         end match
 
@@ -154,7 +168,9 @@ class Completions(
           if newQualifier.sourcePos.contains(pos) =>
         CursorPositionCondition(false, true, false, true)
 
-      case _ => CursorPositionCondition(false, false, false, true)
+      case other =>
+        //  pprint.log(other)
+        CursorPositionCondition(false, false, false, true)
     end match
   end calculateTypeInstanceAndNewPositions
 
@@ -506,11 +522,17 @@ class Completions(
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
               val suffix = symOnly.snippetSuffix.getOrElse("")
-              val id =
-                if sym.isClass || sym.is(Module) then
-                  // drop #|. at the end to avoid duplication
-                  name.substring(0, name.length - 1)
-                else name
+              val id = name
+
+              // {
+              //   pprint.log(id)
+              //   pprint.log(sym)
+              //   pprint.log(!isUninterestingSymbol(sym))
+              //   pprint.log(isNotLocalForwardReference(sym))
+              //   pprint.log(isNotAMethodOrMethodIsValidForPos(sym))
+              //   pprint.log(isNotAModuleOrModuleIsValidForPos(sym))
+              //   pprint.log(isNotClassOrTraitOrTheyAreValidForPos(sym))
+              // }
 
               val include =
                 !isUninterestingSymbol(sym) &&
@@ -551,6 +573,7 @@ class Completions(
       !sym.isPackageObject
 
     private def isNotAModuleOrModuleIsValidForPos(sym: Symbol) =
+      // pprint.log(sym.info.typeSymbol.is(Flags.Module))
       !sym.info.typeSymbol.is(
         Flags.Module
       ) || cursorPositionCondition.isObjectValidForPos
@@ -561,9 +584,14 @@ class Completions(
       ) // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
 
     private def isNotClassOrTraitOrTheyAreValidForPos(sym: Symbol) =
-      cursorPositionCondition.isClassOrTraitValidForPos ||
-        sym.is(Flags.Method) ||
-        !sym.isClass && !sym.info.typeSymbol.is(Trait)
+      // pprint.log(sym.info.typeSymbol.is(Trait))
+      // pprint.log(sym.info.typeSymbol.is(Flags.Method))
+      // pprint.log(cursorPositionCondition.isClassOrTraitValidForPos)
+      cursorPositionCondition.isClassOrTraitValidForPos || sym.info.typeSymbol
+        .is(
+          Flags.Method
+        ) || (!sym.isClass && !sym.info.typeSymbol
+        .is(Trait))
 
   end extension
 

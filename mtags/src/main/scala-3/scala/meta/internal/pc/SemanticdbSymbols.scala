@@ -131,7 +131,10 @@ object SemanticdbSymbols:
       else
         addName(sym.name)
         if sym.is(Package) then b.append('/')
-        else if sym.isType || sym.isAllOf(JavaModule) then b.append('#')
+        else if sym.isType || sym.isClass || sym.info.typeSymbol.is(
+            Trait
+          ) || sym.isAllOf(JavaModule)
+        then b.append('#')
         else if sym.isOneOf(Method | Mutable)
           && (!sym.is(StableRealizable) || sym.isConstructor)
         then

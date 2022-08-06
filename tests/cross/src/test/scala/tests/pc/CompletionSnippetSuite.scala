@@ -178,12 +178,13 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |ArrayDeque
            |ArrayDequeOps
            |""".stripMargin,
-      "3" -> // ArrayDeque upper is for java, the lower for scala
-        // unfortunately we are misdetecting all of them as objects
-        // we need a better way to detect objects in scala and java that does
-        // not produce false positives.
+      "3" -> // ArrayDeque upper is for java, the lower for scala.
+        // the items without suffix are objects, so that their type
+        // members can get subsequently selected by the user.
         """|ArrayDeque[$0]
+           |ArrayDeque
            |ArrayDeque[$0]
+           |ArrayDequeOps
            |ArrayDequeOps[$0]
            |""".stripMargin,
     ),
@@ -391,7 +392,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         """|Try
            |Try($0)
-           |TryMethods
            |""".stripMargin
     ),
   )

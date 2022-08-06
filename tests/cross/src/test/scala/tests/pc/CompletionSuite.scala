@@ -913,7 +913,8 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin,
+       |ListBuffer - scala.collection.mutable
+       |""".stripMargin, // class and object
   )
 
   check(
@@ -923,7 +924,8 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin,
+       |ListBuffer - scala.collection.mutable
+       |""".stripMargin, // class and object
   )
 
   check(
