@@ -333,8 +333,12 @@ final class ImplementationProvider(
         classContext.getLocations(symbol).filterNot { loc =>
           // we are not interested in local symbols from outside the workspace
           (loc.symbol.isLocal && loc.file.isEmpty) ||
-          // local symbols inheritance should only be picked up in the same file
-          (loc.symbol.isLocal && loc.file != currentPath)
+          // for local symbols, inheritance should only be picked up in the same file
+          // otherwise there can be a name collision between files
+          // local1' is from file A, local2 extends local1''
+          // but both local2 and local1'' are from file B
+          // clearly, local2 shouldn't be considered for local1'
+          (symbol.isLocal && loc.symbol.isLocal && loc.file != currentPath)
         }
       directImplementations ++ directImplementations
         .flatMap { loc => loop(loc.symbol, loc.file) }

@@ -31,6 +31,11 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |/a/src/main/scala/a/Cat.scala
        |package a
        |class <<Cat>> extends Animal
+       |/a/src/main/scala/a/Human.scala
+       |package a
+       |object Human {
+       |  val person = new <<>>LivingBeing {}
+       |}
        |""".stripMargin,
   )
 
