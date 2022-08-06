@@ -576,7 +576,8 @@ class Completions(
       // pprint.log(sym.info.typeSymbol.is(Flags.Module))
       !sym.info.typeSymbol.is(
         Flags.Module
-      ) || cursorPositionCondition.isObjectValidForPos
+      ) || sym.info.typeSymbol.is(Flags.JavaDefined)
+        || cursorPositionCondition.isObjectValidForPos
 
     private def isNotAMethodOrMethodIsValidForPos(sym: Symbol) =
       cursorPositionCondition.isMethodValidForPos || !sym.is(
