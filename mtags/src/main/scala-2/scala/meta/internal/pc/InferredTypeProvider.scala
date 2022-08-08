@@ -82,6 +82,27 @@ final class InferredTypeProvider(
         sourceText.substring(tptEnd + 1, sourceText.length())
     }
 
+    def adjustType(rhs: Tree, tpt: Tree, lastTokenPos: Int): List[TextEdit] = {
+      // if type is defined and erronous try to replace it with the right one
+      if (rhs.tpe.isError)
+        inferredTypeEdits(
+          Some(
+            AdjustTypeOpts(
+              removeType(lastTokenPos, tpt.pos.end - 1),
+              tpt.pos.toLSP.getEnd()
+            )
+          )
+        )
+      else {
+        val correctedTypeNameEdit =
+          new TextEdit(
+            tpt.pos.withStart(lastTokenPos).toLSP,
+            ": " + prettyType(rhs.tpe)
+          )
+        correctedTypeNameEdit :: additionalImports
+      }
+    }
+
     typedTree match {
       /* `val a = 1` or `var b = 2`
        *     turns into
@@ -94,15 +115,8 @@ final class InferredTypeProvider(
         lazy val typeNameEdit =
           new TextEdit(nameEndPos, ": " + prettyType(tpt.tpe))
         // if type is defined and erronous try to replace it with the right one
-        if (tpt.pos.isRange && rhs.tpe.isError && retryType)
-          inferredTypeEdits(
-            Some(
-              AdjustTypeOpts(
-                removeType(vl.namePos.end, tpt.pos.end - 1),
-                tpt.pos.toLSP.getEnd()
-              )
-            )
-          )
+        if (tpt.pos.isRange && retryType)
+          adjustType(rhs, tpt, vl.namePos.end)
         else typeNameEdit :: additionalImports
 
       /* `.map(a => a + a)`
@@ -174,16 +188,9 @@ final class InferredTypeProvider(
         adjustOpt.foreach(adjust => insertPos.setEnd(adjust.adjustedEndPos))
         val typeNameEdit =
           new TextEdit(insertPos, ": " + prettyType(tpt.tpe))
-        // if type is defined and erronous try to replace it with the right one
-        if (tpt.pos.isRange && rhs.tpe.isError && retryType) {
-          inferredTypeEdits(
-            Some(
-              AdjustTypeOpts(
-                removeType(lastTokenPos, tpt.pos.end),
-                tpt.pos.toLSP.getEnd()
-              )
-            )
-          )
+        if (tpt.pos.isRange && retryType) {
+          // if type is defined and erronous try to replace it with the right one
+          adjustType(rhs, tpt, lastTokenPos)
         } else
           typeNameEdit :: additionalImports
 

@@ -72,6 +72,16 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "wrong-val4",
+    """|object A{
+       |  val <<alpha>> :  List[Int] = s""
+       |}""".stripMargin,
+    """|object A{
+       |  val alpha: String = s""
+       |}""".stripMargin,
+  )
+
+  checkEdit(
     "wrong-def",
     """|object A{
        |  def <<alpha>> :  String = 123
@@ -98,6 +108,16 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |}""".stripMargin,
     """|object A{
        |  def alpha: String = ""
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "wrong-def4",
+    """|object A{
+       |  def <<alpha>> :  List[Int] = s""
+       |}""".stripMargin,
+    """|object A{
+       |  def alpha: String = s""
        |}""".stripMargin,
   )
 
