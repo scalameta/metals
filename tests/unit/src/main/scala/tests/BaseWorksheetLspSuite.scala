@@ -440,6 +440,12 @@ abstract class BaseWorksheetLspSuite(
           scalaVersion,
         ),
       )
+      _ <- server.didClose("a/src/main/scala/a/Main.worksheet.sc")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        "",
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
       _ <- server.didChange("a/src/main/scala/a/Main.worksheet.sc")(
         _.replace("val x", "def y = \nval x")
       )

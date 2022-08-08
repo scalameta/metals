@@ -1241,7 +1241,7 @@ class MetalsLanguageServer(
     buffers.remove(path)
     compilers.didClose(path)
     trees.didClose(path)
-    diagnostics.onNoSyntaxError(path)
+    diagnostics.onClose(path)
   }
 
   @JsonNotification("textDocument/didSave")
