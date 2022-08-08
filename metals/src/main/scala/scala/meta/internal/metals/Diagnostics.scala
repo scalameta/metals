@@ -98,16 +98,20 @@ final class Diagnostics(
         syntaxError(path) = diagnostic
         publishDiagnostics(path)
       case _ =>
-        onNoSyntaxError(path)
+        onClose(path)
     }
   }
 
-  def onNoSyntaxError(path: AbsolutePath): Unit = {
-    syntaxError.remove(path) match {
-      case Some(_) =>
+  def onClose(path: AbsolutePath): Unit = {
+    val diags = if (path.isWorksheet) {
+      diagnostics.remove(path).toList.flatMap(_.asScala) ++
+        syntaxError.remove(path)
+    } else syntaxError.remove(path).toList
+    diags match {
+      case Nil =>
+        () // Do nothing, there was no previous error.
+      case _ =>
         publishDiagnostics(path) // Remove old syntax error.
-      case None =>
-        () // Do nothing, there was no previous syntax error.
     }
   }
 
