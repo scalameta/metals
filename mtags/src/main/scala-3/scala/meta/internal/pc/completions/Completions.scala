@@ -430,9 +430,48 @@ class Completions(
           true,
         )
       // CASE COMPLETIONS
+      // Match completions
+      case (sel @ Select(qualifier, name)) :: _
+          if "match".startsWith(name.toString()) && text.charAt(
+            completionPos.start - 1
+          ) == ' ' =>
+        (
+          CaseKeywordCompletion.matchContribute(
+            qualifier,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+          ),
+          false,
+        )
 
-      // x match
-      //   cas@@
+      case (c: CaseDef) :: (m: Match) :: _
+          if completionPos.query.startsWith("match") =>
+        (
+          CaseKeywordCompletion.matchContribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+          ),
+          false,
+        )
+
+      case (m @ Match(_, CaseDef(Literal(Constant(null)), _, _) :: Nil)) :: _ =>
+        (
+          CaseKeywordCompletion.matchContribute(
+            m.selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+          ),
+          false,
+        )
+
+      // CASE COMPLETIONS
       case (id @ Ident(name)) :: Block(stats, expr) :: parent :: _
           if "case"
             .startsWith(name.toString()) && isLastMatch(stats) && expr == id =>
@@ -464,18 +503,6 @@ class Completions(
           ),
           true,
         )
-      case (c: CaseDef) :: (m: Match) :: _
-          if completionPos.query.startsWith("match") =>
-        (
-          CaseKeywordCompletion.matchContribute(
-            m.selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-          ),
-          false,
-        )
 
       case (c: CaseDef) :: (m: Match) :: parent :: _ =>
         (
@@ -497,19 +524,6 @@ class Completions(
           c.startPos,
           CompletionPos.infer(c.startPos, text, path.tail),
         )
-
-      // (
-      //   CaseKeywordCompletion.contribute(
-      //     m.selector,
-      //     completionPos,
-      //     path.last,
-      //     indexedContext,
-      //     config,
-      //     parent,
-      //     true,
-      //   ),
-      //   true,
-      // )
 
       case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
             fun,
@@ -629,20 +643,6 @@ class Completions(
           true,
         )
 
-      case (sel @ Select(qualifier, name)) :: _
-          if "match".startsWith(name.toString()) && text.charAt(
-            completionPos.start - 1
-          ) == ' ' =>
-        (
-          CaseKeywordCompletion.matchContribute(
-            qualifier,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-          ),
-          false,
-        )
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
       case Literal(Constant(null)) :: tl =>

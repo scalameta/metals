@@ -32,6 +32,22 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import org.eclipse.{lsp4j as l}
 
 object CaseKeywordCompletion:
+
+  /**
+   * A `case` completion showing the valid subtypes of the type being deconstructed.
+   *
+   * @param selector the match expression being deconstructed or `EmptyTree` when
+   *                 not in a match expression (for example `List(1).foreach { case@@ }`.
+   * @param completionPos the position of the completion
+   * @param typedtree typed tree of the file, used for generating auto imports
+   * @param indexedContext
+   * @param config
+   * @param parent the parent tree node of the pattern match, for example `Apply(_, _)` when in
+   *               `List(1).foreach { cas@@ }`, used as fallback to compute the type of the selector when
+   *               it's `EmptyTree`.
+   * @param patternOnly `true` if we want completions without `case` keyword
+   * @param hasBind `true` when `case _: @@ =>`, if hasBind we don't need unapply completions
+   */
   def contribute(
       selector: Tree,
       completionPos: CompletionPos,
@@ -105,9 +121,11 @@ object CaseKeywordCompletion:
     end visit
     val selectorSym = parents.selector.typeSymbol
 
-    indexedContext.scopeSymbols.iterator
+    // Step 1: walk through scope members.
+    indexedContext.scopeSymbols
       .foreach(s => visit(s.info.dealias.typeSymbol, s.decodedName, Nil))
 
+    // Step 2: walk through known direct subclasses of sealed types.
     selectorSym.sealedStrictDescendants.foreach { sym =>
       if !(sym.is(Sealed) && (sym.is(Abstract) || sym.is(Trait))) then
         val autoImport = autoImportsGen.forSymbol(sym)
@@ -119,7 +137,10 @@ object CaseKeywordCompletion:
       else ()
     }
 
-    if definitions.isTupleClass(selectorSym)
+    // Step 3: special handle case when selector is a tuple or `FunctionN`.
+    if definitions.isTupleClass(selectorSym) || definitions.isFunctionClass(
+        selectorSym
+      )
     then
       val label =
         if !patternOnly then s"case ${parents.selector.show} =>"
@@ -144,6 +165,16 @@ object CaseKeywordCompletion:
     res
   end contribute
 
+  /**
+   * A `match` keyword completion to generate an exhaustive pattern match for sealed types.
+   *
+   * @param selector the match expression being deconstructed or `EmptyTree` when
+   *                 not in a match expression (for example `List(1).foreach { case@@ }`.
+   * @param completionPos the position of the completion
+   * @param typedtree typed tree of the file, used for generating auto imports
+   * @param indexedContext
+   * @param config
+   */
   def matchContribute(
       selector: Tree,
       completionPos: CompletionPos,
@@ -177,6 +208,7 @@ object CaseKeywordCompletion:
       tpe.typeSymbol.info
       val subclasses = ListBuffer.empty[Symbol]
       val parents = ListBuffer.empty[Symbol]
+      // Get parent types from refined type
       def loop(tpe: Type): Unit =
         tpe match
           case AndType(tp1, tp2) =>
@@ -195,7 +227,6 @@ object CaseKeywordCompletion:
     end subclassesForType
 
     val sortedSubclasses = subclassesForType(tpe)
-
     sortedSubclasses.foreach { case sym =>
       // val shortType = shortNames.shortType(sym.info)
       // val edits = shortNames.imports(autoImportsGen)
@@ -310,11 +341,23 @@ class CompletionValueGenerator(
               sym.decodedName.head
             )
         then
+          // Deconstructing the symbol as an infix operator, for example `case head :: tail =>`
           tryInfixPattern(sym).getOrElse(
             unapplyPattern(sym, name, isModuleLike)
           )
-        else unapplyPattern(sym, name, isModuleLike)
-      else typePattern(sym, name, hasBind)
+        else
+          unapplyPattern(
+            sym,
+            name,
+            isModuleLike,
+          ) // Apply syntax, example `case ::(head, tail) =>`
+        end if
+      else
+        typePattern(
+          sym,
+          name,
+          hasBind,
+        ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
 
     val label =
       if !patternOnly then s"case $pattern =>"
@@ -340,7 +383,8 @@ class CompletionValueGenerator(
           s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
         )
       case _ => None
-  def unapplyPattern(
+
+  private def unapplyPattern(
       sym: Symbol,
       name: String,
       isModuleLike: Boolean,
