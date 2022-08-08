@@ -814,18 +814,9 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Future scala.concurrent
        |Future scala.concurrent
-       |Future - java.util.concurrent
-       |FutureTask - java.util.concurrent
-       |RunnableFuture - java.util.concurrent
-       |ScheduledFuture - java.util.concurrent
-       |FutureConverters - scala.jdk
-       |FutureConverters - scala.jdk
-       |FutureConverters - scala.jdk.javaapi
-       |FutureConverters - scala.jdk.javaapi
-       |CompletableFuture - java.util.concurrent
-       |FutureOps - scala.jdk.FutureConverters
        |""".stripMargin,
-    //  topLines = Some(2), //because we want to get all the results and see if they are valid
+    topLines = Some(2), // the results after 2 are invalid and can't be
+    // imported in scope. //to be investigated
   )
 
   check(

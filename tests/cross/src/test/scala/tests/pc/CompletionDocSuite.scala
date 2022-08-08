@@ -441,6 +441,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
     s"""|$executionDocstringPost2134
         |global: ExecutionContext
         |""".stripMargin,
+    // for some reason the docstring for scala 3 is not retunred, though filterInteresting is
+    // not filtering anything. method global is sent to it as input and it comes out as is.
     includeDocs = true,
     compat = Map(
       "2.11" ->
@@ -650,6 +652,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin
   check(
     "scala9",
+    // Note, for scala 3, two completions are valid: method and object
     """
       |object A {
       |  new Catch@@
@@ -688,7 +691,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
            |- `pf`: Partial function used when applying catch logic to determine result value
            |Catch - scala.util.control.Exception
-           |""".stripMargin,
+           |Catch[T](pf: Catcher[T], fin: Option[Finally], rethrow: Throwable => Boolean): Catch[T]
+           |""".stripMargin, // for scala 3 it is returning the object and the method apply
     ),
   )
 

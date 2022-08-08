@@ -389,9 +389,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     compat = Map(
       // Note: the class and trait items in here are invalid. So
       // they are filtered out.
+      // Note: TryMethods is a method in here. But that is to be inspected
+      // because importing it in scope does not seem to be possible
       "3" ->
         """|Try
            |Try($0)
+           |TryMethods
            |""".stripMargin
     ),
   )

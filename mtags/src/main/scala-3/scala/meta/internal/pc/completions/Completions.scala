@@ -89,6 +89,7 @@ class Completions(
       isNewPosition: Boolean,
       isInstantiationOrMethodCallPos: Boolean,
       noSquareBracketExists: Boolean,
+      isImportPosition: Boolean,
   ):
 
     /**
@@ -100,13 +101,23 @@ class Completions(
      * classes and traits are type symbols. They are not suitable for
      *        instantiation or method call positions. Only apply methods and objects
      *        can be used in such positions.
+     * after `new`, it is only the apply method of class that's valid
      */
-    def isClassOrTraitValidForPos = !isInstantiationOrMethodCallPos
+    def isClassValidForPos = !isInstantiationOrMethodCallPos && !isNewPosition
+
+    /**
+     * classes and traits are type symbols. They are not suitable for
+     *        instantiation or method call positions. Only apply methods and objects
+     *        can be used in such positions.
+     */
+    def isTraitValidForPos = !isInstantiationOrMethodCallPos
     def isMethodValidForPos = !isTypePosition
 
     def isParanethesisValidForPos = !isTypePosition
+    def doBracketsMakeSense =
+      (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
     def isSquareBracketsValidForPos = noSquareBracketExists
-      && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
+      && doBracketsMakeSense
 
     /**
      * as in ```new MyTrait@@```
@@ -140,37 +151,101 @@ class Completions(
         tail match
           case (v: ValOrDefDef) :: _ =>
             if v.tpt.sourcePos.contains(pos) then
-              CursorPositionCondition(true, false, false, hasNoSquareBracket)
+              CursorPositionCondition(
+                true,
+                false,
+                false,
+                hasNoSquareBracket,
+                false,
+              )
             else
-              CursorPositionCondition(false, false, false, hasNoSquareBracket)
+              CursorPositionCondition(
+                false,
+                false,
+                false,
+                hasNoSquareBracket,
+                false,
+              )
           case New(selectOrIdent: (Select | Ident)) :: _ =>
             if selectOrIdent.sourcePos.contains(pos) then
-              CursorPositionCondition(false, true, false, hasNoSquareBracket)
+              CursorPositionCondition(
+                false,
+                true,
+                false,
+                hasNoSquareBracket,
+                false,
+              )
             else
-              CursorPositionCondition(false, false, false, hasNoSquareBracket)
+              CursorPositionCondition(
+                false,
+                false,
+                false,
+                hasNoSquareBracket,
+                false,
+              )
           case (a @ AppliedTypeTree(_, args)) :: _ =>
             if args.exists(_.sourcePos.contains(pos)) then
-              CursorPositionCondition(true, false, false, hasNoSquareBracket)
+              CursorPositionCondition(
+                true,
+                false,
+                false,
+                hasNoSquareBracket,
+                false,
+              )
             else
-              CursorPositionCondition(false, false, false, hasNoSquareBracket)
-          case (_: Import) :: _ =>
-            CursorPositionCondition(false, false, false, hasNoSquareBracket)
+              CursorPositionCondition(
+                false,
+                false,
+                false,
+                hasNoSquareBracket,
+                false,
+              )
+          case (i: Import) :: _ if i.sourcePos.contains(pos) =>
+            CursorPositionCondition(
+              false,
+              false,
+              false,
+              hasNoSquareBracket,
+              true,
+            )
           case Template(constr, parentsOrDerived, self, prebody) :: _ =>
             if parentsOrDerived.exists(_.sourcePos.contains(pos)) then
-              CursorPositionCondition(true, false, false, hasNoSquareBracket)
-            else CursorPositionCondition(false, false, true, hasNoSquareBracket)
+              CursorPositionCondition(
+                true,
+                false,
+                false,
+                hasNoSquareBracket,
+                false,
+              )
+            else
+              CursorPositionCondition(
+                false,
+                false,
+                true,
+                hasNoSquareBracket,
+                false,
+              )
           case otherTail =>
-            //  pprint.log(otherTail)
-            CursorPositionCondition(false, false, true, hasNoSquareBracket)
+            // pprint.log(otherTail)
+            CursorPositionCondition(
+              false,
+              false,
+              true,
+              hasNoSquareBracket,
+              false,
+            )
         end match
 
       case (_: TypeTree) :: TypeApply(Select(newQualifier: New, _), _) :: _
           if newQualifier.sourcePos.contains(pos) =>
-        CursorPositionCondition(false, true, false, true)
+        CursorPositionCondition(false, true, false, true, false)
+
+      case (i: Import) :: _ if i.sourcePos.contains(pos) =>
+        CursorPositionCondition(false, false, false, true, true)
 
       case other =>
-        //  pprint.log(other)
-        CursorPositionCondition(false, false, false, true)
+        // pprint.log(other)
+        CursorPositionCondition(false, false, false, true, false)
     end match
   end calculateTypeInstanceAndNewPositions
 
@@ -522,17 +597,26 @@ class Completions(
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
               val suffix = symOnly.snippetSuffix.getOrElse("")
-              val id = name
+              val id =
+                if isDuplicateObjectAndClassOrTraitAllowed(
+                    sym
+                  ) || !sym.isClass && !sym.info.typeSymbol.is(Trait) && !sym
+                    .is(Module)
+                then name
+                else name.substring(0, name.length - 1)
 
-              // {
-              //   pprint.log(id)
-              //   pprint.log(sym)
-              //   pprint.log(!isUninterestingSymbol(sym))
-              //   pprint.log(isNotLocalForwardReference(sym))
-              //   pprint.log(isNotAMethodOrMethodIsValidForPos(sym))
-              //   pprint.log(isNotAModuleOrModuleIsValidForPos(sym))
-              //   pprint.log(isNotClassOrTraitOrTheyAreValidForPos(sym))
-              // }
+//              {
+//                pprint.log(id)
+//                pprint.log(sym)
+//                pprint.log(name)
+//                pprint.log(!isUninterestingSymbol(sym))
+//                pprint.log(isNotLocalForwardReference(sym))
+//                pprint.log(isNotAMethodOrMethodIsValidForPos(sym))
+//                pprint.log(isNotAModuleOrModuleIsValidForPos(sym))
+//                pprint.log(isNotTraitOrItIsValidForPos(sym))
+//                pprint.log(isNotClassOrItIsValidForPos(sym))
+//                pprint.log(isDuplicateObjectAndClassOrTraitAllowed(sym))
+//              }
 
               val include =
                 !isUninterestingSymbol(sym) &&
@@ -542,7 +626,8 @@ class Completions(
                       isNotPackageObject(sym)
                       && isNotAModuleOrModuleIsValidForPos(sym)
                       && isNotAMethodOrMethodIsValidForPos(sym)
-                      && isNotClassOrTraitOrTheyAreValidForPos(sym)
+                      && isNotTraitOrItIsValidForPos(sym)
+                      && isNotClassOrItIsValidForPos(sym)
                   )
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
@@ -584,15 +669,38 @@ class Completions(
         Flags.Method
       ) // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
 
-    private def isNotClassOrTraitOrTheyAreValidForPos(sym: Symbol) =
-      // pprint.log(sym.info.typeSymbol.is(Trait))
-      // pprint.log(sym.info.typeSymbol.is(Flags.Method))
-      // pprint.log(cursorPositionCondition.isClassOrTraitValidForPos)
-      cursorPositionCondition.isClassOrTraitValidForPos || sym.info.typeSymbol
+    private def isNotClassOrItIsValidForPos(sym: Symbol) =
+      cursorPositionCondition.isClassValidForPos || sym.info.typeSymbol
         .is(
           Flags.Method
-        ) || (!sym.isClass && !sym.info.typeSymbol
-        .is(Trait))
+        ) || sym.is(
+        Method
+      ) || !sym.isClass
+
+    private def isNotTraitOrItIsValidForPos(sym: Symbol) =
+      cursorPositionCondition.isTraitValidForPos || sym.info.typeSymbol
+        .is(
+          Flags.Method
+        ) || sym.is(
+        Method
+      ) || !sym.info.typeSymbol
+        .is(Trait)
+
+    /**
+     * !(
+     *     isNew isType or isInstantiation position?
+     *      && shouldAddSnippet && (class/Trait should have []
+     *     || classOrTrait should have () ||
+     *     classOrTrait should have {} )
+     * )
+     * @param sym
+     * @return
+     */
+    private def isDuplicateObjectAndClassOrTraitAllowed(sym: Symbol) = // TODO
+      shouldAddSnippet && ((cursorPositionCondition.doBracketsMakeSense && (sym.info.typeParams.nonEmpty
+        || sym.companionClass.typeParams.nonEmpty)) ||
+        (cursorPositionCondition.isCurlyBracesValidForPos
+          && isAbstractType(sym)))
 
   end extension
 

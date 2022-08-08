@@ -345,6 +345,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "fuzzy1",
+    // Note: ProcessBuilderImpl is private so returning it is useless.
     """
       |object A {
       |  new PBuil@@
@@ -353,26 +354,13 @@ class CompletionSuite extends BaseCompletionSuite {
        |ProcessBuilder - scala.sys.process
        |CertPathBuilder - java.security.cert
        |CertPathBuilderSpi - java.security.cert
+       |ProcessBuilderImpl - scala.sys.process
        |CertPathBuilderResult - java.security.cert
        |PKIXBuilderParameters - java.security.cert
        |PooledConnectionBuilder - javax.sql
        |CertPathBuilderException - java.security.cert
        |PKIXCertPathBuilderResult - java.security.cert
        |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|ProcessBuilder java.lang
-           |ProcessBuilder - scala.sys.process
-           |CertPathBuilder - java.security.cert
-           |CertPathBuilderSpi - java.security.cert
-           |ProcessBuilderImpl - scala.sys.process
-           |CertPathBuilderResult - java.security.cert
-           |PKIXBuilderParameters - java.security.cert
-           |PooledConnectionBuilder - javax.sql
-           |CertPathBuilderException - java.security.cert
-           |PKIXCertPathBuilderResult - java.security.cert
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -599,6 +587,9 @@ class CompletionSuite extends BaseCompletionSuite {
       |  import scala.Function@@
       |}
       |""".stripMargin,
+    // for scala 3 because PartialFunction is not showing up,
+    // but we are not filteing it in filterInteresting either.
+    // TODO: Why??
     // assert that we don't sort lexicographically: Function1, Function11, ..., Function2, ...
     """|Function scala
        |Function0 scala
