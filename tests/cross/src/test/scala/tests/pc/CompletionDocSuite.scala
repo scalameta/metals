@@ -441,7 +441,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     s"""|$executionDocstringPost2134
         |global: ExecutionContext
         |""".stripMargin,
-    // for some reason the docstring for scala 3 is not retunred, though filterInteresting is
+    // for some reason the docstring for scala 3 is not returned, though filterInteresting is
     // not filtering anything. method global is sent to it as input and it comes out as is.
     includeDocs = true,
     compat = Map(

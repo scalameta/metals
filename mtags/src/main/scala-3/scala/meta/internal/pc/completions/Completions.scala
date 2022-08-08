@@ -89,7 +89,6 @@ class Completions(
       isNewPosition: Boolean,
       isInstantiationOrMethodCallPos: Boolean,
       noSquareBracketExists: Boolean,
-      isImportPosition: Boolean,
   ):
 
     /**
@@ -152,100 +151,90 @@ class Completions(
           case (v: ValOrDefDef) :: _ =>
             if v.tpt.sourcePos.contains(pos) then
               CursorPositionCondition(
-                true,
-                false,
-                false,
-                hasNoSquareBracket,
-                false,
+                isTypePosition = true,
+                isNewPosition = false,
+                isInstantiationOrMethodCallPos = false,
+                noSquareBracketExists = hasNoSquareBracket,
               )
             else
               CursorPositionCondition(
-                false,
-                false,
-                false,
-                hasNoSquareBracket,
-                false,
+                isTypePosition = false,
+                isNewPosition = false,
+                isInstantiationOrMethodCallPos = false,
+                noSquareBracketExists = hasNoSquareBracket,
               )
           case New(selectOrIdent: (Select | Ident)) :: _ =>
             if selectOrIdent.sourcePos.contains(pos) then
               CursorPositionCondition(
-                false,
-                true,
-                false,
-                hasNoSquareBracket,
-                false,
+                isTypePosition = false,
+                isNewPosition = true,
+                isInstantiationOrMethodCallPos = false,
+                noSquareBracketExists = hasNoSquareBracket,
               )
             else
               CursorPositionCondition(
-                false,
-                false,
-                false,
-                hasNoSquareBracket,
-                false,
+                isTypePosition = false,
+                isNewPosition = false,
+                isInstantiationOrMethodCallPos = false,
+                noSquareBracketExists = hasNoSquareBracket,
               )
           case (a @ AppliedTypeTree(_, args)) :: _ =>
             if args.exists(_.sourcePos.contains(pos)) then
               CursorPositionCondition(
-                true,
-                false,
-                false,
-                hasNoSquareBracket,
-                false,
+                isTypePosition = true,
+                isNewPosition = false,
+                isInstantiationOrMethodCallPos = false,
+                noSquareBracketExists = hasNoSquareBracket,
               )
             else
               CursorPositionCondition(
-                false,
-                false,
-                false,
-                hasNoSquareBracket,
-                false,
+                isTypePosition = false,
+                isNewPosition = false,
+                isInstantiationOrMethodCallPos = false,
+                noSquareBracketExists = hasNoSquareBracket,
               )
           case (i: Import) :: _ if i.sourcePos.contains(pos) =>
             CursorPositionCondition(
-              false,
-              false,
-              false,
-              hasNoSquareBracket,
-              true,
+              isTypePosition = false,
+              isNewPosition = false,
+              isInstantiationOrMethodCallPos = false,
+              noSquareBracketExists = hasNoSquareBracket,
             )
           case Template(constr, parentsOrDerived, self, prebody) :: _ =>
             if parentsOrDerived.exists(_.sourcePos.contains(pos)) then
               CursorPositionCondition(
-                true,
-                false,
-                false,
-                hasNoSquareBracket,
-                false,
+                isTypePosition = true,
+                isNewPosition = false,
+                isInstantiationOrMethodCallPos = false,
+                noSquareBracketExists = hasNoSquareBracket,
               )
             else
               CursorPositionCondition(
-                false,
-                false,
-                true,
-                hasNoSquareBracket,
-                false,
+                isTypePosition = false,
+                isNewPosition = false,
+                isInstantiationOrMethodCallPos = true,
+                noSquareBracketExists = hasNoSquareBracket,
               )
           case otherTail =>
             // pprint.log(otherTail)
             CursorPositionCondition(
-              false,
-              false,
-              true,
-              hasNoSquareBracket,
-              false,
+              isTypePosition = false,
+              isNewPosition = false,
+              isInstantiationOrMethodCallPos = true,
+              noSquareBracketExists = hasNoSquareBracket,
             )
         end match
 
       case (_: TypeTree) :: TypeApply(Select(newQualifier: New, _), _) :: _
           if newQualifier.sourcePos.contains(pos) =>
-        CursorPositionCondition(false, true, false, true, false)
+        CursorPositionCondition(false, true, false, true)
 
       case (i: Import) :: _ if i.sourcePos.contains(pos) =>
-        CursorPositionCondition(false, false, false, true, true)
+        CursorPositionCondition(false, false, false, true)
 
       case other =>
         // pprint.log(other)
-        CursorPositionCondition(false, false, false, true, false)
+        CursorPositionCondition(false, false, false, true)
     end match
   end calculateTypeInstanceAndNewPositions
 
@@ -322,14 +311,17 @@ class Completions(
     )
   end isAbstractType
 
+  private def symbolTakesTypeParams(symbol: Symbol) =
+    symbol.info.typeParams.nonEmpty
+      || (symbol.isAllOf(
+        Flags.JavaModule
+      ) && symbol.companionClass.typeParams.nonEmpty)
+
   private def findSuffix(symbol: Symbol): Option[String] =
 
     val bracketSuffix =
       if shouldAddSnippet && cursorPositionCondition.isSquareBracketsValidForPos
-        && (symbol.info.typeParams.nonEmpty
-          || (symbol.isAllOf(
-            Flags.JavaModule
-          ) && symbol.companionClass.typeParams.nonEmpty))
+        && symbolTakesTypeParams(symbol)
       then "[$0]"
       else ""
 
@@ -684,7 +676,7 @@ class Completions(
         ) || sym.is(
         Method
       ) || !sym.info.typeSymbol
-        .is(Trait)
+        .is(Trait) || sym.isTerm
 
     /**
      * !(

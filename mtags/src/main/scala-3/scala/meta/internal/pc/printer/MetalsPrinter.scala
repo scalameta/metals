@@ -121,7 +121,17 @@ class MetalsPrinter(
       " " + dotcPrinter.fullName(typeSymbol.owner)
     else if sym.is(Flags.Method) then
       defaultMethodSignature(sym, info, onlyMethodParams = true)
+    else if sym.isClass && (sym.info.typeParams.nonEmpty
+        || (sym.isAllOf(
+          Flags.JavaModule
+        ) && sym.companionClass.typeParams.nonEmpty))
+    then
+      s"[ ${sym.info.typeParams.map(_.paramName).mkString(", ")}"
+      // TODO: where to add this to tpe?
+      tpe(info)
     else tpe(info)
+    end if
+  end completionSymbol
 
   /**
    * Compute method signature for the given (method) symbol.

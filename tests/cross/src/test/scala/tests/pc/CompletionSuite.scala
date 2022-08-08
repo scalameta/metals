@@ -587,9 +587,11 @@ class CompletionSuite extends BaseCompletionSuite {
       |  import scala.Function@@
       |}
       |""".stripMargin,
-    // for scala 3 because PartialFunction is not showing up,
+    // for scala 3 PartialFunction is not showing up,
     // but we are not filteing it in filterInteresting either.
-    // TODO: Why??
+    // TODO: According to @tgodzik This might be related to a bug in
+    // the fuzzy generation of symbols in the workspace in Metals
+
     // assert that we don't sort lexicographically: Function1, Function11, ..., Function2, ...
     """|Function scala
        |Function0 scala
