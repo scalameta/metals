@@ -25,21 +25,6 @@ trait ExtractMethodUtils {
     }
   }
 
-  def asParams(
-      noLongerAvailable: List[(String, String)],
-      localRefs: Set[String]
-  ): (String, String) = {
-    val withType =
-      noLongerAvailable.filter { case (key, _) =>
-        localRefs.contains(key)
-      }.sorted
-    val methodParams = withType
-      .map { case (name, tpe) => s"$name: $tpe" }
-      .mkString(", ")
-    val applParams = withType.map(_._1).mkString(", ")
-    (methodParams, applParams)
-  }
-
   def textToExtract(
       text: String,
       start: Int,

@@ -227,7 +227,6 @@ case class ScalaPresentationCompiler(
         defnRange,
         pc.compiler(),
         config,
-        search,
       )
         .extractMethod()
         .asJava

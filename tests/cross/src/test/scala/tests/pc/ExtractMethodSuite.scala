@@ -3,7 +3,7 @@ package tests.pc
 import java.net.URI
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.CompilerRangeParams
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 
 import munit.Location
@@ -123,24 +123,24 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
   checkEdit(
     "multi-param",
     s"""|object A{
-        |  val b = 4
         |  val c = 3
         |  def method(i: Int, j: Int) = i + 1
         |  <@val a = { 
         |    val c = 5
+        |    val b = 4
         |    <<123 + method(c, b) + method(b,c)>>
         |  }@>
         |}""".stripMargin,
     s"""|object A{
-        |  val b = 4
         |  val c = 3
         |  def method(i: Int, j: Int) = i + 1
-        |  def newMethod(c: Int): Int =
+        |  def newMethod(b: Int, c: Int): Int =
         |    123 + method(c, b) + method(b,c)
         |
         |  val a = { 
         |    val c = 5
-        |    newMethod(c)
+        |    val b = 4
+        |    newMethod(b, c)
         |  }
         |}""".stripMargin,
   )
@@ -212,7 +212,7 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "nested-declarations".tag(IgnoreScala3),
+    "nested-declarations",
     s"""|object A {
         |  <@val a = {
         |    val c = 1
@@ -237,7 +237,7 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
         |  }
         |}""".stripMargin,
     Map(">=3.0.0" -> s"""|object A {
-                         |  def newMethod(c: Int) =
+                         |  def newMethod(c: Int): Int =
                          |    val b = {
                          |      val c = 2
                          |      c + 1
@@ -286,6 +286,25 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
         |    method(a)
         |
         |  def f1(a: Int) = {
+        |    newMethod(a)
+        |  }
+        |}""".stripMargin,
+  )
+
+  checkEdit(
+    "method-type",
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  <@def f1[T](a: T) = {
+        |    <<a>>
+        |  }@>
+        |}""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  def newMethod[T](a: T): T =
+        |    a
+        |
+        |  def f1[T](a: T) = {
         |    newMethod(a)
         |  }
         |}""".stripMargin,
@@ -346,11 +365,10 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
     )
     val result = presentationCompiler
       .extractMethod(
-        CompilerRangeParams(
+        CompilerOffsetParams(
           URI.create(filename),
           code2,
           findRange.indexOf("<<"),
-          findRange.indexOf(">>") - 2,
           cancelToken,
         ),
         range,

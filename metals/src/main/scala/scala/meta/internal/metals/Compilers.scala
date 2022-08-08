@@ -436,7 +436,7 @@ class Compilers(
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params, range) { (pc, pos, adjust) =>
       pc.extractMethod(
-        CompilerRangeParams.fromPos(pos, token),
+        CompilerOffsetParams.fromPos(pos, token),
         range,
         adjust.adjustRange(defnRange),
       ).asScala
