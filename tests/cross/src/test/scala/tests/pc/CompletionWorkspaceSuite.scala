@@ -100,6 +100,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     filter = _ == "Files - java.nio.file",
   )
 
+
   checkEdit(
     "import-conflict3",
     """|package `import-conflict3`
@@ -108,23 +109,33 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: Future@@
        |)
        |""".stripMargin,
+     """|package `import-conflict3`
+        |import java.util.concurrent.Future
+        |case class Foo(
+        |  name: scala.concurrent.Future
+        |)
+        |""".stripMargin,
+    filter = _ == "Future - scala.concurrent",
+    assertSingleItem = false
+  )
+
+   check(
+    "companion",
     """|package `import-conflict3`
        |import java.util.concurrent.Future
+       |object Aaa
+       |class Aaa[T](a: T)
        |case class Foo(
-       |  name: scala.concurrent.Future[$0]
+       |  name: Aa@@
        |)
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent",
-    compat = Map(
-      "2" ->
-        """|package `import-conflict3`
-           |import java.util.concurrent.Future
-           |case class Foo(
-           |  name: scala.concurrent.Future
-           |)
-           |""".stripMargin
-    ),
+     """|Aaa import-conflict3
+        |Aaa import-conflict3
+        |""".stripMargin,
+
   )
+
+  
 
   checkEdit(
     "import-conflict4",
@@ -151,6 +162,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
            |)
            |""".stripMargin
     ),
+    assertSingleItem = false
   )
 
   checkEdit(
@@ -180,6 +192,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
            |)
            |""".stripMargin
     ),
+    assertSingleItem = false
   )
 
   checkEdit(
@@ -443,6 +456,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
            |}
            |""".stripMargin
     ),
+    assertSingleItem = false
   )
 
   checkEdit(
