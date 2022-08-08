@@ -488,6 +488,15 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
+    "import4",
+    """
+      |import scala.collection.AbstractIterator@@
+      |""".stripMargin,
+    """|AbstractIterator scala.collection
+       |""".stripMargin,
+  )
+
+  check(
     "accessible",
     """
       |package a
@@ -1522,4 +1531,42 @@ class CompletionSuite extends BaseCompletionSuite {
     ),
   )
 
+  check(
+    "class-members-trait-issue",
+    s"""|package x
+        |class Foo(
+        |  first: java.util.List[Int],
+        |  second: String,
+        |) {
+        |  fir@@
+        |  def abc: Int = 23
+        |}
+        |""".stripMargin,
+    """|first: java.util.List[Int]
+       |""".stripMargin,
+    compat = Map(
+      "2" ->
+        """|first: List[Int]
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "object-at-type-pos",
+    s"""|object Foo {
+        |  class FFF
+        |}
+        |object Main {
+        |  def f1(a: Fo@@)
+        |}
+        |""".stripMargin,
+    """|Foo object-at-type-pos
+       |""".stripMargin,
+    compat = Map(
+      "2" ->
+        """|Foo `object-at-type-pos`
+           |""".stripMargin
+    ),
+    topLines = Some(1),
+  )
 }

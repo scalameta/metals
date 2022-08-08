@@ -64,99 +64,105 @@ class Completions(
     case (_: Ident) :: (_: SeqLiteral) :: _ => false
     case _ => true
 
-  /**
-   * It shows the conditions of the code in the cursor position, with
-   * respect to assessing
-   *  1. whether it makes semantic sense to complete
-   *  the position with symbols that are `class`, `trait`,
-   *  `abstract`, `object`, or method
-   *  1. whether it would make syntactic sense to add `[]` `()` or `{}`
-   *  suffixes to the symbols suggested for completion.
-   *
-   *  Note: In the comments `@@` represents the cursor position.
-   *
-   * @param isTypePosition if this is the position for defining a type such as
-   *                       `val a: In@@` or `def i: scala.IndexedSe@@`
-   * @param isNewPosition if it is the position for instantiation after
-   *                      the new keword, as in `new Fil@@`
-   * @param isInstantiationOrMethodCallPos if it is the position for method call or
-   *                                       instantiation as in `object A{ MyCaseClas@@ }`
-   * @param noSquareBracketExists if there is already a square bracket in the position as in
-   *                              `val a: IndexedMa@@[]`
-   */
-  private case class CursorPositionCondition(
-      isTypePosition: Boolean,
-      isNewPosition: Boolean,
-      isInstantiationOrMethodCallPos: Boolean,
-      noSquareBracketExists: Boolean,
-  ):
+  enum CursorPos:
+    case Type(hasTypeParams: Boolean, hasNewKw: Boolean)
+    case Term
+    case Import
 
-    def isObjectValidForPos = (!isTypePosition && !isNewPosition)
+    def include(sym: Symbol)(using Context): Boolean =
+      val generalExclude =
+        isUninterestingSymbol(sym) ||
+          !isNotLocalForwardReference(sym) ||
+          sym.isPackageObject
 
-    /**
-     * classes and traits are type symbols. They are not suitable for
-     *        instantiation or method call positions. Only apply methods and objects
-     *        can be used in such positions.
-     */
-    def isClassOrTraitValidForPos = !isInstantiationOrMethodCallPos
-    def isMethodValidForPos = !isTypePosition
+      if generalExclude then false
+      else
+        this match
+          case Type(_, _) if sym.isType => true
+          case Type(_, _) if sym.isTerm =>
+            /* Type might be referenced by a path over an object:
+             * ```
+             * object sample:
+             *    class X
+             * val a: samp@@le.X = ???
+             * ```
+             * ignore objects that has companion class
+             *
+             * Also ignore objects that doesn't have any members.
+             * By some reason traits might have a fake companion object(example: scala.sys.process.ProcessBuilderImpl)
+             */
+            val allowModule =
+              sym.is(Module) &&
+                (sym.companionClass == NoSymbol && sym.info.allMembers.nonEmpty)
+            allowModule
+          case Term if sym.isTerm || sym.is(Package) => true
+          case Import => true
+          case _ => false
+      end if
+    end include
 
-    def isParanethesisValidForPos = !isTypePosition
-    def isSquareBracketsValidForPos = noSquareBracketExists
-      && (isTypePosition || isNewPosition || isInstantiationOrMethodCallPos)
+    def allowBracketSuffix: Boolean =
+      this match
+        case Type(hasTypeParams, _) => !hasTypeParams
+        case _ => false
 
-    /**
-     * as in ```new MyTrait@@```
-     */
-    def isCurlyBracesValidForPos = isNewPosition
-  end CursorPositionCondition
+    def allowTemplateSuffix: Boolean =
+      this match
+        case Type(_, hasNewKw) => hasNewKw
+        case _ => false
 
-  private lazy val cursorPositionCondition =
+  end CursorPos
+
+  private lazy val cursorPos =
     calculateTypeInstanceAndNewPositions(path)
 
   private def calculateTypeInstanceAndNewPositions(
       path: List[Tree]
-  ): CursorPositionCondition =
+  ): CursorPos =
     path match
+      case (_: Import) :: _ => CursorPos.Import
+      case _ :: (_: Import) :: _ => CursorPos.Import
       case (head: (Select | Ident)) :: tail =>
         // https://github.com/lampepfl/dotty/issues/15750
         // due to this issue in dotty, because of which trees after typer lose information,
         // we have to calculate hasNoSquareBracket manually:
-        val hasNoSquareBracket =
+        val hasSquareBracket =
           val span: Span = head.srcPos.span
           if span.exists then
             var i = span.end
             while i < (text.length() - 1) && text(i).isWhitespace do i = i + 1
 
-            if (i < text.length()) then text(i) != '['
-            else true
+            if (i < text.length()) then text(i) == '['
+            else false
           else false
+
+        def typePos = CursorPos.Type(hasSquareBracket, hasNewKw = false)
+        def newTypePos =
+          CursorPos.Type(hasSquareBracket, hasNewKw = true)
+
         tail match
-          case (v: ValOrDefDef) :: _ =>
-            if v.tpt.sourcePos.contains(pos) then
-              CursorPositionCondition(true, false, false, hasNoSquareBracket)
-            else
-              CursorPositionCondition(false, false, false, hasNoSquareBracket)
-          case New(selectOrIdent: (Select | Ident)) :: _ =>
-            if selectOrIdent.sourcePos.contains(pos) then
-              CursorPositionCondition(false, true, false, hasNoSquareBracket)
-            else
-              CursorPositionCondition(false, false, false, hasNoSquareBracket)
-          case (a @ AppliedTypeTree(_, args)) :: _ =>
-            if args.exists(_.sourcePos.contains(pos)) then
-              CursorPositionCondition(true, false, false, hasNoSquareBracket)
-            else CursorPositionCondition(false, false, false, false)
-          case (_: Import) :: _ =>
-            CursorPositionCondition(false, false, false, hasNoSquareBracket)
+          case (v: ValOrDefDef) :: _ if v.tpt.sourcePos.contains(pos) =>
+            typePos
+          case New(selectOrIdent: (Select | Ident)) :: _
+              if selectOrIdent.sourcePos.contains(pos) =>
+            newTypePos
+          case (a @ AppliedTypeTree(_, args)) :: _
+              if args.exists(_.sourcePos.contains(pos)) =>
+            typePos
+          case (Template(constr, parents, self, _)) :: _
+              if (constr :: self :: parents).exists(
+                _.sourcePos.contains(pos)
+              ) =>
+            typePos
           case _ =>
-            CursorPositionCondition(false, false, true, hasNoSquareBracket)
+            CursorPos.Term
         end match
 
       case (_: TypeTree) :: TypeApply(Select(newQualifier: New, _), _) :: _
           if newQualifier.sourcePos.contains(pos) =>
-        CursorPositionCondition(false, true, false, true)
+        CursorPos.Type(hasTypeParams = false, hasNewKw = true)
 
-      case _ => CursorPositionCondition(false, false, false, true)
+      case _ => CursorPos.Term
     end match
   end calculateTypeInstanceAndNewPositions
 
@@ -234,20 +240,14 @@ class Completions(
   end isAbstractType
 
   private def findSuffix(symbol: Symbol): Option[String] =
-
     val bracketSuffix =
-      if shouldAddSnippet && cursorPositionCondition.isSquareBracketsValidForPos
-        && (symbol.info.typeParams.nonEmpty
-          || (symbol.isAllOf(
-            Flags.JavaModule
-          ) && symbol.companionClass.typeParams.nonEmpty))
+      if shouldAddSnippet &&
+        cursorPos.allowBracketSuffix && symbol.info.typeParams.nonEmpty
       then "[$0]"
       else ""
 
     val bracesSuffix =
-      if shouldAddSnippet && symbol.is(
-          Flags.Method
-        ) && cursorPositionCondition.isParanethesisValidForPos
+      if shouldAddSnippet && symbol.is(Flags.Method)
       then
         val paramss = getParams(symbol)
         paramss match
@@ -269,7 +269,7 @@ class Completions(
       else ""
 
     val templateSuffix =
-      if shouldAddSnippet && cursorPositionCondition.isCurlyBracesValidForPos
+      if shouldAddSnippet && cursorPos.allowTemplateSuffix
         && isAbstractType(symbol)
       then
         if bracketSuffix.nonEmpty || bracesSuffix.contains("$0") then " {}"
@@ -432,7 +432,9 @@ class Completions(
     completionPos.kind match
       case CompletionKind.Empty =>
         val filtered = indexedContext.scopeSymbols
-          .filter(sym => !sym.is(Synthetic) && !sym.isConstructor)
+          .filter(sym =>
+            !sym.isConstructor && (!sym.is(Synthetic) || sym.is(Module))
+          )
 
         filtered.map { sym =>
           visit(CompletionValue.scope(sym.decodedName, sym))
@@ -506,23 +508,12 @@ class Completions(
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
-              val suffix = symOnly.snippetSuffix.getOrElse("")
               val id =
                 if sym.isClass || sym.is(Module) then
                   // drop #|. at the end to avoid duplication
                   name.substring(0, name.length - 1)
                 else name
-
-              val include =
-                !isUninterestingSymbol(sym) &&
-                  isNotLocalForwardReference(sym) && (
-                    // to not duplicate with package itself
-                    sym.is(Package) ||
-                      isNotPackageObject(sym)
-                      && isNotAModuleOrModuleIsValidForPos(sym)
-                      && isNotAMethodOrMethodIsValidForPos(sym)
-                      && isNotClassOrTraitOrTheyAreValidForPos(sym)
-                  )
+              val include = cursorPos.include(sym)
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
             case namedArg: CompletionValue.NamedArg =>
@@ -547,25 +538,6 @@ class Completions(
       else (buf.result, SymbolSearch.Result.COMPLETE)
 
     end filterInteresting
-
-    private def isNotPackageObject(sym: Symbol) =
-      !sym.isPackageObject
-
-    private def isNotAModuleOrModuleIsValidForPos(sym: Symbol) =
-      !sym.info.typeSymbol.is(
-        Flags.Module
-      ) || cursorPositionCondition.isObjectValidForPos
-
-    private def isNotAMethodOrMethodIsValidForPos(sym: Symbol) =
-      cursorPositionCondition.isMethodValidForPos || !sym.is(
-        Flags.Method
-      ) // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
-
-    private def isNotClassOrTraitOrTheyAreValidForPos(sym: Symbol) =
-      cursorPositionCondition.isClassOrTraitValidForPos ||
-        sym.is(Flags.Method) ||
-        !sym.isClass && !sym.info.typeSymbol.is(Trait)
-
   end extension
 
   private lazy val isUninterestingSymbol: Set[Symbol] = Set[Symbol](
