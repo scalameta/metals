@@ -516,8 +516,6 @@ class Completions(
               val include =
                 !isUninterestingSymbol(sym) &&
                   isNotLocalForwardReference(sym)
-                  // to not duplicate with package itself
-                  && isNotPackageObject(sym)
                   && isNotAModuleOrModuleIsValidForPos(sym)
                   && isNotAMethodOrMethodIsValidForPos(sym)
                   && isNotClassOrTraitOrTheyAreValidForPos(sym)
@@ -547,9 +545,6 @@ class Completions(
 
     end filterInteresting
 
-    private def isNotPackageObject(sym: Symbol) =
-      !sym.isPackageObject
-
     private def isNotAModuleOrModuleIsValidForPos(sym: Symbol) =
       !sym.info.typeSymbol.is(
         Flags.Module
@@ -561,9 +556,10 @@ class Completions(
       ) // !sym.info.typeSymbol.is(Flags.Method) does not detect Java methods
 
     private def isNotClassOrTraitOrTheyAreValidForPos(sym: Symbol) =
-      cursorPositionCondition.isClassOrTraitValidForPos ||
-        sym.is(Flags.Method) || sym.is(Package) ||
-        !sym.isClass && !sym.info.typeSymbol.is(Trait)
+      cursorPositionCondition.isClassOrTraitValidForPos || sym.is(
+        Flags.Method
+      ) || (!sym.isClass && !sym.info.typeSymbol
+        .is(Trait))
 
   end extension
 

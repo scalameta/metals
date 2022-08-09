@@ -1479,29 +1479,4 @@ class CompletionSuite extends BaseCompletionSuite {
     "",
   )
 
-  check(
-    "pkg",
-    s"""|object Foo {
-        |  scala.coll@@
-        |}
-        |""".stripMargin,
-    "collection scala",
-  )
-
-  check(
-    "pkg-scala",
-    s"""|object Foo {
-        |  scala@@
-        |}
-        |""".stripMargin,
-    """|scala <root>
-       |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|scala _root_
-           |`package` - scala
-           |""".stripMargin
-    ),
-  )
-
 }
