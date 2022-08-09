@@ -30,7 +30,7 @@ import org.eclipse.{lsp4j as l}
 final class ExtractMethodProvider(
     params: OffsetParams,
     range: l.Range,
-    defnRange: l.Range,
+    extractionPos: l.Position,
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
 ) extends ExtractMethodUtils:
@@ -76,7 +76,11 @@ final class ExtractMethodProvider(
         head <- extracted.headOption
         appl <- extracted.lastOption
         shortenedPath =
-          path.takeWhile(src => defnRange.encloses(toLSP(src.sourcePos)))
+          path.takeWhile(src =>
+            !toLSP(src.sourcePos).encloses(
+              extractionPos
+            ) || extractionPos == toLSP(src.sourcePos).getStart()
+          )
         stat = shortenedPath.lastOption.getOrElse(head)
       yield
         val applType = appl.tpe.widenUnion.show
@@ -84,9 +88,10 @@ final class ExtractMethodProvider(
           .filter(_.isDefinedInCurrentRun)
         val noLongerAvailable = scopeSymbols
           .filter(s =>
-            defnRange.encloses(s.sourcePos.toLSP) && !range.encloses(
-              s.sourcePos.toLSP
-            )
+            toLSP(stat.sourcePos).encloses(s.sourcePos.toLSP) && !range
+              .encloses(
+                s.sourcePos.toLSP
+              )
           )
         val names = localRefs(extracted)
         val name = genName(scopeSymbols.map(_.decodedName).toSet, "newMethod")
@@ -127,7 +132,7 @@ final class ExtractMethodProvider(
             replacedText,
           ),
           new l.TextEdit(
-            l.Range(defnRange.getStart(), defnRange.getStart()),
+            l.Range(extractionPos, extractionPos),
             defText,
           ),
         )

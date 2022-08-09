@@ -16,6 +16,8 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
 import org.eclipse.lsp4j.SelectionRange;
+import org.eclipse.lsp4j.Position;
+
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -104,7 +106,7 @@ public abstract class PresentationCompiler {
     /**
      * Extract method in selected range
      */
-    public abstract CompletableFuture<List<TextEdit>> extractMethod(OffsetParams params, Range range, Range defnRange);
+    public abstract CompletableFuture<List<TextEdit>> extractMethod(OffsetParams params, Range range, Position extractionPos);
 
     /**
      * Return named arguments for the apply method that encloses the given position.

@@ -2046,13 +2046,13 @@ class MetalsLanguageServer(
           } yield ().asInstanceOf[Object]
         }
       case ServerCommands.ExtractMethod(
-            ServerCommands.ExtractMethodParams(doc, range, defnRange)
+            ServerCommands.ExtractMethodParams(doc, range, extractionPos)
           ) =>
         CancelTokens.future { token =>
           val uri = doc.getUri()
 
           for {
-            edits <- compilers.extractMethod(doc, range, defnRange, token)
+            edits <- compilers.extractMethod(doc, range, extractionPos, token)
             _ = logging.logErrorWhen(
               edits.isEmpty(),
               s"Could not extract method from range \n${range}\nin file ${uri.toAbsolutePath}",

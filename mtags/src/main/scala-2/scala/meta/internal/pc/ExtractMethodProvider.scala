@@ -10,7 +10,7 @@ final class ExtractMethodProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams,
     range: l.Range,
-    defnRange: l.Range
+    extractionPos: l.Position
 ) extends ExtractMethodUtils {
   import compiler._
   def extractMethod: List[l.TextEdit] = {
@@ -60,25 +60,31 @@ final class ExtractMethodProvider(
         enclosing <- path.find(_.pos.toLSP.encloses(range))
         extracted = extractFromBlock(enclosing)
         head <- extracted.headOption
-        appl <- extracted.lastOption
+        expr <- extracted.lastOption
         shortenedPath =
-          path.takeWhile(src => defnRange.encloses(src.pos.toLSP))
+          path.takeWhile(src =>
+            !src.pos.toLSP.encloses(
+              extractionPos
+            ) || extractionPos == src.pos.toLSP.getStart()
+          )
         stat = shortenedPath.lastOption.getOrElse(head)
       } yield {
         val scopeSymbols =
           metalsScopeMembers(pos).map(_.sym).filter(_.pos.isDefined)
         val noLongerAvailable = scopeSymbols
           .filter(sym =>
-            defnRange.encloses(sym.pos.toLSP) && !range.encloses(sym.pos.toLSP)
+            stat.pos.toLSP.encloses(sym.pos.toLSP) && !range.encloses(
+              sym.pos.toLSP
+            )
           )
         val names = localRefs(extracted)
         val paramsToExtract = noLongerAvailable
           .filter(sym => names.contains(sym.name))
           .map(sym => (sym.name, sym.info))
           .sortBy(_._1.decoded)
-        val newAppl = typedTreeAt(appl.pos)
-        val applType =
-          if (newAppl.tpe != null) s": ${prettyType(newAppl.tpe.widen)}" else ""
+        val newExpr = typedTreeAt(expr.pos)
+        val exprType =
+          if (newExpr.tpe != null) s": ${prettyType(newExpr.tpe.widen)}" else ""
         val name = genName(scopeSymbols.map(_.decodedName).toSet, "newMethod")
         val methodParams = paramsToExtract
           .map { case (name, tpe) => s"${name.decoded}: ${prettyType(tpe)}" }
@@ -90,7 +96,7 @@ final class ExtractMethodProvider(
           case Nil => ""
           case params => params.mkString("[", ", ", "]")
         }
-        val applParams = paramsToExtract.map(_._1.decoded).mkString(", ")
+        val exprParams = paramsToExtract.map(_._1.decoded).mkString(", ")
         val text = params.text()
         val indent = stat.pos.column - (stat.pos.point - stat.pos.start) - 1
         val blank = text(stat.pos.start - indent).toString()
@@ -100,23 +106,23 @@ final class ExtractMethodProvider(
         val toExtract = textToExtract(
           text,
           head.pos.start,
-          appl.pos.end,
+          expr.pos.end,
           newIndent,
           oldIndentLen
         )
         val defText =
           if (extracted.length > 1)
-            s"def $name$typeParams($methodParams)$applType = {\n${toExtract}\n${newIndent}}\n$newIndent"
+            s"def $name$typeParams($methodParams)$exprType = {\n${toExtract}\n${newIndent}}\n$newIndent"
           else
-            s"def $name$typeParams($methodParams)$applType =\n${toExtract}\n\n$newIndent"
-        val replacedText = s"$name($applParams)"
+            s"def $name$typeParams($methodParams)$exprType =\n${toExtract}\n\n$newIndent"
+        val replacedText = s"$name($exprParams)"
         List(
           new l.TextEdit(
             range,
             replacedText
           ),
           new l.TextEdit(
-            new l.Range(defnRange.getStart(), defnRange.getStart()),
+            new l.Range(extractionPos, extractionPos),
             defText
           )
         )

@@ -429,16 +429,18 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
   def extractMethod(
-      params: TextDocumentIdentifier,
+      doc: TextDocumentIdentifier,
       range: LspRange,
-      defnRange: LspRange,
+      extractionPos: LspPosition,
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(params, range) { (pc, pos, adjust) =>
+    val params =
+      new TextDocumentPositionParams(doc, doc.getUri(), range.getEnd())
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.extractMethod(
         CompilerOffsetParams.fromPos(pos, token),
-        range,
-        adjust.adjustRange(defnRange),
+        adjust.adjustRange(range),
+        adjust.adjustPos(extractionPos),
       ).asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
@@ -689,21 +691,6 @@ class Compilers(
           compiler.scalaVersion(),
         )
       pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
-    }
-  }
-
-  private def withPCAndAdjustLsp[T](
-      ident: TextDocumentIdentifier,
-      range: LspRange,
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
-    val path = ident.getUri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
-      val (input, toAdjust, adjust) =
-        sourceAdjustments(
-          ident.getUri(),
-          compiler.scalaVersion(),
-        )
-      range.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
     }
   }
 

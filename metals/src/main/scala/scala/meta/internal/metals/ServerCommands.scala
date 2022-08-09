@@ -479,16 +479,18 @@ object ServerCommands {
   )
   final case class ExtractMethodParams(
       param: TextDocumentIdentifier,
-      range: lsp4j.Range, // from LSP
-      extractPosition: lsp4j.Range,
+      range: lsp4j.Range,
+      extractPosition: lsp4j.Position,
   )
   val ExtractMethod = new ParametrizedCommand[ExtractMethodParams](
     "extract-method",
     "Extract method from range",
     """|Whenever a user chooses code action to extract method, this command is later ran to
-       |calculate parameters for the new method with types.
+       |calculate parameters for the newly created method and create its definition.
        |""".stripMargin,
-    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams) and `applRange` Integer
+    """|LSP [`TextDocumentIdentifier`], (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentIdentifier), 
+       |LSP [`Range`], range of the code you'd like to extract as method,
+       |LSP [`Position`], position where the definition of extracted method will be created.
        |""".stripMargin,
   )
 
