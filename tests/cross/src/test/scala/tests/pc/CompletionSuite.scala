@@ -353,26 +353,13 @@ class CompletionSuite extends BaseCompletionSuite {
        |ProcessBuilder - scala.sys.process
        |CertPathBuilder - java.security.cert
        |CertPathBuilderSpi - java.security.cert
+       |ProcessBuilderImpl - scala.sys.process
        |CertPathBuilderResult - java.security.cert
        |PKIXBuilderParameters - java.security.cert
        |PooledConnectionBuilder - javax.sql
        |CertPathBuilderException - java.security.cert
        |PKIXCertPathBuilderResult - java.security.cert
        |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|ProcessBuilder java.lang
-           |ProcessBuilder - scala.sys.process
-           |CertPathBuilder - java.security.cert
-           |CertPathBuilderSpi - java.security.cert
-           |ProcessBuilderImpl - scala.sys.process
-           |CertPathBuilderResult - java.security.cert
-           |PKIXBuilderParameters - java.security.cert
-           |PooledConnectionBuilder - javax.sql
-           |CertPathBuilderException - java.security.cert
-           |PKIXCertPathBuilderResult - java.security.cert
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -397,6 +384,7 @@ class CompletionSuite extends BaseCompletionSuite {
       "3" ->
         """|TrieMap scala.collection.concurrent
            |TrieMap[K, V](elems: (K, V)*): CC[K, V]
+           |TrieMapSerializationEnd - scala.collection.concurrent
            |""".stripMargin,
     ),
   )
@@ -681,6 +669,9 @@ class CompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|concat[T: ClassTag](xss: Array[T]*): Array[T]
        |""".stripMargin,
+    compat = Map(
+      "3" -> "concat[T: ClassTag](xss: Array[T]*): Array[T]"
+    ),
   )
 
   check(
@@ -904,6 +895,9 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|selectDynamic(field: String): Foo
        |""".stripMargin,
+    compat = Map(
+      "3" -> "selectDynamic(field: String): Foo"
+    ),
   )
 
   check(
@@ -914,6 +908,12 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|ListBuffer[A](elems: A*): CC[A]
+           |ListBuffer - scala.collection.mutable
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -924,14 +924,16 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|ListBuffer[A](elems: A*): CC[A]
+           |ListBuffer - scala.collection.mutable
+           |""".stripMargin
+    ),
   )
 
   check(
-    "type2"
-      // covering it for Scala 3 has to do with covering the
-      // CompletionKind.Member case in enrichWithSymbolSearch.
-      // The non-members have to get filtered out.
-      .tag(IgnoreScala3),
+    "type2".tag(IgnoreScala3),
     s"""|object Main {
         |  new scala.Iterable@@
         |}
@@ -963,6 +965,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |Some[A](value: A): Some[A]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
+           |SomeToExpr - scala.quoted.ToExpr
+           |SomeFromExpr - scala.quoted.FromExpr
            |""".stripMargin,
       "3" ->
         """|Some scala
@@ -990,6 +994,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |Some[A](value: A): Some[A]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
+           |SomeToExpr - scala.quoted.ToExpr
+           |SomeFromExpr - scala.quoted.FromExpr
            |""".stripMargin,
       "3" ->
         """|Some scala
@@ -1477,49 +1483,6 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "",
-  )
-
-  check(
-    "pkg".tag(IgnoreScalaVersion.for3LessThan("3.1.3")),
-    s"""|object Foo {
-        |  scala.coll@@
-        |}
-        |""".stripMargin,
-    "collection scala",
-  )
-
-  check(
-    "pkg-typed".tag(IgnoreScalaVersion.for3LessThan("3.1.3")),
-    s"""|object Foo {
-        |  val a : scala.coll@@
-        |}
-        |""".stripMargin,
-    "collection scala",
-  )
-
-  check(
-    "pkg-new".tag(IgnoreScalaVersion.for3LessThan("3.1.3")),
-    s"""|object Foo {
-        |  new scala.coll@@
-        |}
-        |""".stripMargin,
-    "collection scala",
-  )
-
-  check(
-    "pkg-scala".tag(IgnoreScalaVersion.for3LessThan("3.1.3")),
-    s"""|object Foo {
-        |  scala@@
-        |}
-        |""".stripMargin,
-    """|scala <root>
-       |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|scala _root_
-           |`package` - scala
-           |""".stripMargin
-    ),
   )
 
 }

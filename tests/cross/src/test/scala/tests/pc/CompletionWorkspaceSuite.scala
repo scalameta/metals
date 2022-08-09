@@ -111,19 +111,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|package `import-conflict3`
        |import java.util.concurrent.Future
        |case class Foo(
-       |  name: scala.concurrent.Future[$0]
+       |  name: scala.concurrent.Future
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
-    compat = Map(
-      "2" ->
-        """|package `import-conflict3`
-           |import java.util.concurrent.Future
-           |case class Foo(
-           |  name: scala.concurrent.Future
-           |)
-           |""".stripMargin
-    ),
   )
 
   checkEdit(
@@ -137,19 +128,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|package `import-conflict4`
        |import java.util.concurrent._
        |case class Foo(
-       |  name: scala.concurrent.Future[$0]
+       |  name: scala.concurrent.Future
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
-    compat = Map(
-      "2" ->
-        """|package `import-conflict4`
-           |import java.util.concurrent._
-           |case class Foo(
-           |  name: scala.concurrent.Future
-           |)
-           |""".stripMargin
-    ),
   )
 
   checkEdit(
@@ -164,20 +146,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |import java.util.concurrent.{Future => _, _}
        |import scala.concurrent.Future
        |case class Foo(
-       |  name: Future[$0]
+       |  name: Future
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
-    compat = Map(
-      "2" ->
-        """|package `import-no-conflict`
-           |import java.util.concurrent.{Future => _, _}
-           |import scala.concurrent.Future
-           |case class Foo(
-           |  name: Future
-           |)
-           |""".stripMargin
-    ),
   )
 
   checkEdit(
@@ -206,16 +178,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """package pkg
       |
       |import java.util.concurrent.CompletableFuture
-      |object Main extends CompletableFuture[$0]
+      |object Main extends CompletableFuture
       |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """package pkg
-          |
-          |import java.util.concurrent.CompletableFuture
-          |object Main extends CompletableFuture
-          |""".stripMargin
-    ),
   )
 
   checkEdit(
@@ -226,16 +190,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """package pkg
       |
       |import java.util.concurrent.CompletableFuture
-      |object Main extends CompletableFuture[$0]
+      |object Main extends CompletableFuture
       |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """package pkg
-          |
-          |import java.util.concurrent.CompletableFuture
-          |object Main extends CompletableFuture
-          |""".stripMargin
-    ),
   )
 
   checkEdit(
@@ -344,21 +300,11 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|import java.util.ArrayDeque
        |object Main {
        |  def foo(): Unit = null match {
-       |    case x: ArrayDeque[$0] =>
+       |    case x: ArrayDeque =>
        |  }
        |}
        |""".stripMargin,
     filter = _.contains("java.util"),
-    compat = Map(
-      "2" ->
-        """|import java.util.ArrayDeque
-           |object Main {
-           |  def foo(): Unit = null match {
-           |    case x: ArrayDeque =>
-           |  }
-           |}
-           |""".stripMargin
-    ),
   )
 
   checkEdit(
@@ -372,21 +318,11 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|import scala.util.Failure
        |object Main {
        |  def foo(): Unit = {
-       |    val x: Failure[$0]
+       |    val x: Failure
        |  }
        |}
        |""".stripMargin,
     filter = _.contains("scala.util"),
-    compat = Map(
-      "2" ->
-        """|import scala.util.Failure
-           |object Main {
-           |  def foo(): Unit = {
-           |    val x: Failure
-           |  }
-           |}
-           |""".stripMargin
-    ),
   )
 
   checkEdit(
@@ -509,18 +445,18 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "annotation-def-with-middle-space",
+    "annotation-def",
     """|
        |object Main {
        |  @noinline
-       |  def foo: ArrayBuffer@@ [Int] = ???
+       |  def foo: ArrayBuffer@@[Int] = ???
        |}
        |""".stripMargin,
     """|import scala.collection.mutable.ArrayBuffer
        |
        |object Main {
        |  @noinline
-       |  def foo: ArrayBuffer [Int] = ???
+       |  def foo: ArrayBuffer[Int] = ???
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable",
@@ -645,7 +581,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "parent-object",
+    "parent-object-scala2".tag(IgnoreScala3),
     """|object Main {
        |  Implicits@@
        |}
@@ -656,14 +592,6 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Implicits - scala.concurrent.ExecutionContext",
-    compat = Map {
-      "3" ->
-        """|import scala.concurrent.ExecutionContext.Implicits
-           |object Main {
-           |  Implicits
-           |}
-           |""".stripMargin
-    },
   )
 
   // this test was intended to check that import is rendered correctly - without `$` symbol
@@ -754,6 +682,12 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |Future - java.util.concurrent
        |""".stripMargin,
     topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|Future scala.concurrent
+           |Future[T](body: => T)(implicit executor: ExecutionContext): Future[T]
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -769,5 +703,11 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |Future - scala.concurrent
        |""".stripMargin,
     topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|Future java.util.concurrent
+           |Future[T](body: => T)(implicit executor: ExecutionContext): scala.concurrent.Future[T]
+           |""".stripMargin
+    ),
   )
 }

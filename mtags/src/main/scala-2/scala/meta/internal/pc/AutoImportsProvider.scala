@@ -21,12 +21,9 @@ final class AutoImportsProvider(
       filename = params.uri().toString(),
       cursor = Some(params.offset())
     )
-    typeCheck(unit)
-
     val pos = unit.position(params.offset)
     // make sure the compilation unit is loaded
     typedTreeAt(pos)
-
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos)
     val isSeen = mutable.Set.empty[String]
