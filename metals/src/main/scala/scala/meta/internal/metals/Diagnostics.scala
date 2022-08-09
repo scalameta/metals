@@ -267,6 +267,7 @@ final class Diagnostics(
         d.getSeverity,
         d.getSource,
       )
+      if (d.getCode() != null) ld.setCode(d.getCode())
       ld.setData(d.getData)
       ld
     }
