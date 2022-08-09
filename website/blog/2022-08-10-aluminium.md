@@ -11,11 +11,11 @@ We're happy to announce the release of Metals v0.11.8, bringing a number of impr
 <tbody>
   <tr>
     <td>Commits since last release</td>
-    <td align="center">81</td>
+    <td align="center">103</td>
   </tr>
   <tr>
     <td>Merged PRs</td>
-    <td align="center">77</td>
+    <td align="center">79</td>
   </tr>
     <tr>
     <td>Contributors</td>
@@ -27,7 +27,7 @@ We're happy to announce the release of Metals v0.11.8, bringing a number of impr
   </tr>
   <tr>
     <td>New features</td>
-    <td align="center">6</td>
+    <td align="center">5</td>
   </tr>
 </tbody>
 </table>
@@ -50,7 +50,6 @@ give Metals a try!
 - [Scala 3] Scaladoc Completion for Scala3
 - [Scala 3] Completions in string interpolation
 - [Scala 2] Automatic import of types in string interpolations
-- More stable code navigation across subprojects
 - Code Action documentation
 - Support of Scala 3.2.0-RC3, Scala 3.2.0-RC2
 
@@ -94,7 +93,7 @@ This problem is now resolved. Users can easily get such symbols automatically im
 
 ![scala2-inteprolation](https://i.imgur.com/cCWTQnj.gif)
 
-The feature also works for Scala 3.
+The feature is also being worked on for Scala 3.
 
 ## Code Action documentation
 
@@ -110,8 +109,8 @@ Big thanks to everybody who contributed to this release or reported an issue!
 
 ```
 $ git shortlog -sn --no-merges v0.11.7..v0.11.8
-31	Tomasz Godzik
-    10	Rikito Taniguchi
+33	Tomasz Godzik
+    30	Rikito Taniguchi
      9	Scala Steward
      6	jkciesluk
      6	Kamil Podsiadło
@@ -129,12 +128,18 @@ $ git shortlog -sn --no-merges v0.11.7..v0.11.8
 
 ## Merged PRs
 
-## [v0.11.8](https://github.com/scalameta/metals/tree/v0.11.8) (2022-08-08)
+## [v0.11.8](https://github.com/scalameta/metals/tree/v0.11.8) (2022-08-10)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.11.7...v0.11.8)
 
 **Merged pull requests:**
 
+- [Scala 3] Revert type completions feature
+  [\#4236](https://github.com/scalameta/metals/pull/4236)
+  ([tanishiking](https://github.com/tanishiking))
+- bugfix: Show package completions
+  [\#4223](https://github.com/scalameta/metals/pull/4223)
+  ([tgodzik](https://github.com/tgodzik))
 - chore(ci): small changes to account for migration from LSIF -> SCIP
   [\#4222](https://github.com/scalameta/metals/pull/4222)
   ([ckipp01](https://github.com/ckipp01))
