@@ -27,6 +27,8 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -258,20 +260,24 @@ final class ReferenceProvider(
   private[metals] def pathsMightContainSymbol(
       source: AbsolutePath,
       isSymbol: Set[String],
-  ): Set[AbsolutePath] = {
-    buildTargets.inverseSources(source) match {
-      case None => Set.empty
-      case Some(id) =>
-        val allowedBuildTargets = buildTargets.allInverseDependencies(id)
-        val result = for {
-          (path, entry) <- index.iterator
-          if allowedBuildTargets.contains(entry.id) &&
-            isSymbol.exists(entry.bloom.mightContain)
-          sourcePath = AbsolutePath(path)
-          if sourcePath.exists
-        } yield sourcePath
-        result.toSet
-    }
+  )(implicit ec: ExecutionContext): Future[Set[AbsolutePath]] = {
+    buildTargets
+      .inverseSourcesBsp(source)
+      .map(bti =>
+        bti match {
+          case None => Set.empty
+          case Some(id) =>
+            val allowedBuildTargets = buildTargets.allInverseDependencies(id)
+            val result = for {
+              (path, entry) <- index.iterator
+              if allowedBuildTargets.contains(entry.id) &&
+                isSymbol.exists(entry.bloom.mightContain)
+              sourcePath = AbsolutePath(path)
+              if sourcePath.exists
+            } yield sourcePath
+            result.toSet
+        }
+      )
   }
 
   private def references(
