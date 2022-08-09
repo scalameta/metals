@@ -515,14 +515,13 @@ class Completions(
 
               val include =
                 !isUninterestingSymbol(sym) &&
-                  isNotLocalForwardReference(sym) && (
-                    // to not duplicate with package itself
-                    sym.is(Package) ||
-                      isNotPackageObject(sym)
-                      && isNotAModuleOrModuleIsValidForPos(sym)
-                      && isNotAMethodOrMethodIsValidForPos(sym)
-                      && isNotClassOrTraitOrTheyAreValidForPos(sym)
-                  )
+                  isNotLocalForwardReference(sym)
+                  // to not duplicate with package itself
+                  && isNotPackageObject(sym)
+                  && isNotAModuleOrModuleIsValidForPos(sym)
+                  && isNotAMethodOrMethodIsValidForPos(sym)
+                  && isNotClassOrTraitOrTheyAreValidForPos(sym)
+
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
             case namedArg: CompletionValue.NamedArg =>
@@ -563,7 +562,7 @@ class Completions(
 
     private def isNotClassOrTraitOrTheyAreValidForPos(sym: Symbol) =
       cursorPositionCondition.isClassOrTraitValidForPos ||
-        sym.is(Flags.Method) ||
+        sym.is(Flags.Method) || sym.is(Package) ||
         !sym.isClass && !sym.info.typeSymbol.is(Trait)
 
   end extension
