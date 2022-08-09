@@ -61,15 +61,15 @@ and a lot of bugfixes!
 
 ![type-completion](https://i.imgur.com/7kDzoLs.gif)
 
-This newly implemented feature for Scala 3 is not only adding necessary `[]` and `{}` suffixes to type completions; but also, it is filtering out some of the invalid completion results.
+This newly implemented feature for Scala 3 is not only adding necessary `[]` and `{}` suffixes to type completions; but also filtering out some of the invalid completion results.
 
-As this is a new feature, please let us know if you encounter any missing or invalid results, by opening an issue.
+As this is a new feature, please let us know if you encounter any missing or invalid results by opening an issue.
 
 ## [Scala 3] Auto import and completion for extension methods
 
 You might know that Scala 3 has introduced `extension methods` that allow defining new methods to your existing types.
 
-However, previously, Metals couldn't auto-complete extension methods; so developers had to find an appropriate extension method from their workspace and manually import it. But, this was time-consuming and not always beginner friendly.
+Previously, Metals couldn't auto-complete extension methods; so developers had to find an appropriate extension method from their workspace and manually import it. But, this was time-consuming and not always beginner friendly.
 
 Now, Metals provides auto-completion for extension methods and automatically imports them!
 
@@ -85,19 +85,19 @@ Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this f
 
 ## [Scala 3] Scaladoc completion
 
-Metals now supports the offering of Scaladoc completions in Scala 3. When typing `/**` you get an option to auto-complete a scaladoc template for methods, classes, etc.!
+Metals now supports offering Scaladoc completions in Scala 3. When typing `/**` you get an option to auto-complete a scaladoc template for methods, classes, etc.!
 
 ![scala-doc-completion](https://i.imgur.com/MEJUXr3.gif)
 
 ## [Scala 3] Completions in string interpolation
 
-In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would have needed to do it all manually. Now, it is possible to get an automatic conversion to string interpolation when typing `$value`, as well as automatic wrapping in `{}` when accessing members of such value.
+In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would need to do it all manually. Now, it is possible to get an automatic conversion to string interpolation when typing `$value`, as well as automatic wrapping in `{}` when accessing members of such value.
 
 ![scala3-interpolation](https://i.imgur.com/EyFKpiv.gif)
 
 ## [Scala 2] Automatically import types in string interpolations
 
-Previously, the only suggestions for string interpolations were coming from the currently available symbols in scope. This meant that if you wanted to import something from another package, you would have needed to do it manually.
+Previously, the only suggestions for string interpolations were coming from the currently available symbols in scope. This meant that if you wanted to import something from another package, you would need to do it manually.
 
 This problem is now resolved. Users can easily get such symbols automatically imported, which creates a seamless workflow.
 
