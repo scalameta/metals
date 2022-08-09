@@ -355,12 +355,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   check(
-    "member-label".tag(
-      IgnoreScalaVersion.forRangeUntil(
-        "3.2.0-RC1",
-        "3.2.1",
-      )
-    ),
+    "member-label".tag(IgnoreScala3),
     """|object Main {
        |  
        |  s"Hello $List.e@@ "
@@ -373,11 +368,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
       "2.12" ->
         """|empty[A]: List[A]
            |equals(x$1: Any): Boolean
-           |""".stripMargin,
-      "3" ->
-        """|empty[A]: List[A]
-           |equals(x$0: Any): Boolean
-           |""".stripMargin,
+           |""".stripMargin
     ),
     topLines = Some(6),
     includeDetail = false,

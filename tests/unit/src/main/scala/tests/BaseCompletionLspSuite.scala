@@ -164,6 +164,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |""".stripMargin,
             "3" ->
               """|TrieMap - scala.collection.concurrent
+                 |TrieMapSerializationEnd - scala.collection.concurrent
                  |TrieMap[K, V](elems: (K, V)*): CC[K, V]
                  |""".stripMargin,
           ),
