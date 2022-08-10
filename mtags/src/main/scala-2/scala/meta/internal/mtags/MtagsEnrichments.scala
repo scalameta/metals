@@ -6,6 +6,7 @@ import java.nio.file.Paths
 import java.util.concurrent.CancellationException
 
 import scala.collection.mutable
+import scala.reflect.internal.util.Position
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -179,5 +180,10 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
         )
       ).toOption
     }
+  }
+
+  implicit class XtensionPosition(pos: Position) {
+    def encloses(other: Position): Boolean =
+      pos.start <= other.start && pos.end >= other.end
   }
 }

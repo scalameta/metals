@@ -32,12 +32,12 @@ class ExtractMethodCodeAction(
         None
       } else {
         val tree: Option[Tree] = trees.get(path)
-        def loop(appl: Tree): Option[Tree] = {
-          appl.children.find(_.pos.encloses(range)) match {
+        def loop(expr: Tree): Option[Tree] = {
+          expr.children.find(_.pos.encloses(range)) match {
             case Some(child) =>
               loop(child)
             case None =>
-              Some(appl)
+              Some(expr)
           }
         }
         val enclosing = tree.flatMap(loop(_))
@@ -63,7 +63,7 @@ class ExtractMethodCodeAction(
       }
     }
     edits
-      .map { case (scopes: List[(Tree, Tree)], apply: Tree, head: Tree) =>
+      .map { case (scopes: List[(Tree, Tree)], expr: Tree, head: Tree) =>
         scopes.map { case (defn, block) =>
           val defnPos =
             stats(block).find(_.pos.end >= head.pos.end).getOrElse(defn)
@@ -80,7 +80,7 @@ class ExtractMethodCodeAction(
                 params.getTextDocument(),
                 new l.Range(
                   head.pos.toLSP.getStart(),
-                  apply.pos.toLSP.getEnd(),
+                  expr.pos.toLSP.getEnd(),
                 ),
                 defnPos.pos.toLSP.getStart(),
               )
@@ -127,7 +127,7 @@ class ExtractMethodCodeAction(
   }
 
   private def enclosingList(
-      apply: Tree
+      expr: Tree
   ): (List[Tree]) = {
 
     def loop(tree: Tree): List[Tree] = {
@@ -138,7 +138,7 @@ class ExtractMethodCodeAction(
         case None => Nil
       }
     }
-    loop(apply)
+    loop(expr)
   }
   private def stats(t: Tree): List[Tree] = {
     t match {
@@ -149,10 +149,10 @@ class ExtractMethodCodeAction(
   }
 
   private def enclosingDef(
-      apply: Tree
+      expr: Tree
   ): Option[(Tree, Tree)] = {
-    apply.parent match {
-      case Some(d: Defn) => Some(d, apply)
+    expr.parent match {
+      case Some(d: Defn) => Some(d, expr)
       case _ => None
     }
   }

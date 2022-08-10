@@ -1,25 +1,29 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.mtags.MtagsEnrichments.XtensionLspRange
+import scala.reflect.internal.util.Position
+
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.ExtractMethodUtils
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
 
 import org.eclipse.{lsp4j => l}
 
 final class ExtractMethodProvider(
     val compiler: MetalsGlobal,
-    params: OffsetParams,
-    range: l.Range,
-    extractionPos: l.Position
+    range: RangeParams,
+    extractionPos: OffsetParams
 ) extends ExtractMethodUtils {
   import compiler._
   def extractMethod: List[l.TextEdit] = {
+    val text = range.text()
+    val params = range.toOffset
     val unit = addCompilationUnit(
-      code = params.text(),
-      filename = params.uri().toString(),
+      code = text,
+      filename = params.uri.toString(),
       cursor = None
     )
-    val pos = unit.position(params.offset())
+    val pos = unit.position(params.offset)
     val context = doLocateImportContext(pos)
     val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
     typedTreeAt(pos)
@@ -32,12 +36,21 @@ final class ExtractMethodProvider(
     def prettyType(tpe: Type) =
       metalsToLongString(tpe.widen.finalResultType, history)
 
+    val rangeSourcePos = Position.range(
+      pos.source,
+      range.offset(),
+      range.offset(),
+      range.endOffset()
+    )
+    val extractionSourcePos =
+      Position.offset(pos.source, extractionPos.offset())
+
     def extractFromBlock(t: Tree): List[Tree] =
       t match {
         case Block(stats, expr) =>
-          (stats :+ expr).filter(stat => range.encloses(stat.pos.toLSP))
+          (stats :+ expr).filter(stat => rangeSourcePos.encloses(stat.pos))
         case temp: Template =>
-          temp.body.filter(stat => range.encloses(stat.pos.toLSP))
+          temp.body.filter(stat => rangeSourcePos.encloses(stat.pos))
         case other => List(other)
       }
 
@@ -57,25 +70,19 @@ final class ExtractMethodProvider(
     val path = compiler.lastVisitedParentTrees
     val edits =
       for {
-        enclosing <- path.find(_.pos.toLSP.encloses(range))
+        enclosing <- path.find(src => src.pos.encloses(rangeSourcePos))
         extracted = extractFromBlock(enclosing)
         head <- extracted.headOption
         expr <- extracted.lastOption
         shortenedPath =
-          path.takeWhile(src =>
-            !src.pos.toLSP.encloses(
-              extractionPos
-            ) || extractionPos == src.pos.toLSP.getStart()
-          )
+          path.takeWhile(src => extractionPos.offset() <= src.pos.start)
         stat = shortenedPath.lastOption.getOrElse(head)
       } yield {
         val scopeSymbols =
           metalsScopeMembers(pos).map(_.sym).filter(_.pos.isDefined)
         val noLongerAvailable = scopeSymbols
           .filter(sym =>
-            stat.pos.toLSP.encloses(sym.pos.toLSP) && !range.encloses(
-              sym.pos.toLSP
-            )
+            stat.pos.encloses(sym.pos) && !rangeSourcePos.encloses(sym.pos)
           )
         val names = localRefs(extracted)
         val paramsToExtract = noLongerAvailable
@@ -97,7 +104,6 @@ final class ExtractMethodProvider(
           case params => params.mkString("[", ", ", "]")
         }
         val exprParams = paramsToExtract.map(_._1.decoded).mkString(", ")
-        val text = params.text()
         val indent = stat.pos.column - (stat.pos.point - stat.pos.start) - 1
         val blank = text(stat.pos.start - indent).toString()
         val newIndent = blank * indent
@@ -118,11 +124,11 @@ final class ExtractMethodProvider(
         val replacedText = s"$name($exprParams)"
         List(
           new l.TextEdit(
-            range,
+            rangeSourcePos.toLSP,
             replacedText
           ),
           new l.TextEdit(
-            new l.Range(extractionPos, extractionPos),
+            extractionSourcePos.toLSP,
             defText
           )
         )

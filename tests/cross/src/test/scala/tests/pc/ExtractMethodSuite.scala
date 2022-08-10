@@ -2,10 +2,9 @@ package tests.pc
 
 import java.net.URI
 
-import scala.meta.inputs.Input
-import scala.meta.inputs.Position
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.metals.TextEdits
 
 import munit.Location
@@ -319,12 +318,7 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
       compat: Map[String, String] = Map.empty,
   )(implicit location: Location): Unit =
     test(name) {
-
-      val edits = getAutoImplement(original)
-      val code = original
-        .replace("<<", "")
-        .replace(">>", "")
-        .replace("@@", "")
+      val (edits, code) = getAutoImplement(original)
       val obtained = TextEdits.applyEdits(code, edits)
       assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
@@ -332,43 +326,31 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
   def getAutoImplement(
       original: String,
       filename: String = "file:/A.scala",
-  ): List[l.TextEdit] = {
-    val code2 = original
+  ): (List[l.TextEdit], String) = {
+    val withoutExtractionPos = original.replace("@@", "")
+    val onlyRangeClose = withoutExtractionPos
       .replace("<<", "")
-      .replace(">>", "")
-      .replace("@@", "")
-    val lines = original.split("\n")
-    val metaRange = Position.Range(
-      Input.String(code2),
-      original
-        .replace("@@", "")
-        .indexOf("<<"),
-      original
-        .replace("<<", "")
-        .replace("@@", "")
-        .indexOf(">>"),
+    val code = onlyRangeClose.replace(">>", "")
+    val extractionPos = CompilerOffsetParams(
+      URI.create(filename),
+      code,
+      original.indexOf("@@"),
+      cancelToken,
     )
-    val range = new l.Range(
-      new l.Position(metaRange.startLine, metaRange.startColumn),
-      new l.Position(metaRange.endLine, metaRange.endColumn),
+    val rangeParams = CompilerRangeParams(
+      URI.create(filename),
+      code,
+      withoutExtractionPos.indexOf("<<"),
+      onlyRangeClose.indexOf(">>"),
+      cancelToken,
     )
-    val extractionPosLine = lines.indexWhere(_.contains("@@"))
-    val extractionPosChar =
-      lines(extractionPosLine).replace("<<", "").replace(">>", "").indexOf("@@")
-    val extractionPos = new l.Position(extractionPosLine, extractionPosChar)
     val result = presentationCompiler
       .extractMethod(
-        CompilerOffsetParams(
-          URI.create(filename),
-          code2,
-          metaRange.end,
-          cancelToken,
-        ),
-        range,
+        rangeParams,
         extractionPos,
       )
       .get()
-    result.asScala.toList
+    (result.asScala.toList, code)
   }
 
 }

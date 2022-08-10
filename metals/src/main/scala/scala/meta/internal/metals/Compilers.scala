@@ -436,15 +436,15 @@ class Compilers(
   ): Future[ju.List[TextEdit]] = {
     val params =
       new TextDocumentPositionParams(doc, doc.getUri(), range.getEnd())
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.extractMethod(
-        CompilerOffsetParams.fromPos(pos, token),
-        adjust.adjustRange(range),
-        adjust.adjustPos(extractionPos),
-      ).asScala
-        .map { edits =>
-          adjust.adjustTextEdits(edits)
-        }
+    withPCAndAdjustLsp(params, range, extractionPos) {
+      (pc, metaRange, metaExtractionPos, adjust) =>
+        pc.extractMethod(
+          CompilerRangeParams.fromPos(metaRange, token),
+          CompilerOffsetParams.fromPos(metaExtractionPos, token),
+        ).asScala
+          .map { edits =>
+            adjust.adjustTextEdits(edits)
+          }
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
@@ -691,6 +691,32 @@ class Compilers(
           compiler.scalaVersion(),
         )
       pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
+    }
+  }
+
+  private def withPCAndAdjustLsp[T](
+      params: TextDocumentPositionParams,
+      range: LspRange,
+      extractionPos: LspPosition,
+  )(
+      fn: (
+          PresentationCompiler,
+          Position,
+          Position,
+          AdjustLspData,
+      ) => T
+  ): Option[T] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    loadCompiler(path).flatMap { compiler =>
+      val (input, _, adjust) =
+        sourceAdjustments(
+          params,
+          compiler.scalaVersion(),
+        )
+      for {
+        metaRange <- adjust.adjustRange(range).toMeta(input)
+        metaExtractionPos <- adjust.adjustPos(extractionPos).toMeta(input)
+      } yield fn(compiler, metaRange, metaExtractionPos, adjust)
     }
   }
 

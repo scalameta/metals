@@ -26,6 +26,7 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
@@ -34,8 +35,6 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
@@ -146,15 +145,13 @@ case class ScalaPresentationCompiler(
     }
   }
   override def extractMethod(
-      params: OffsetParams,
-      range: Range,
-      extractionPos: Position
+      range: RangeParams,
+      extractionPos: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+    compilerAccess.withInterruptableCompiler(empty, range.token) { pc =>
       new ExtractMethodProvider(
         pc.compiler(),
-        params,
         range,
         extractionPos
       ).extractMethod.asJava

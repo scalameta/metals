@@ -9,14 +9,12 @@ import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
 
 import org.eclipse.lsp4j.Diagnostic;
-import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.DocumentRangeFormattingParams;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
 import org.eclipse.lsp4j.SelectionRange;
-import org.eclipse.lsp4j.Position;
 
 
 import java.net.URI;
@@ -105,8 +103,10 @@ public abstract class PresentationCompiler {
 
     /**
      * Extract method in selected range
+     * @param range range to extract from
+     * @param extractionPos position in file to extract to
      */
-    public abstract CompletableFuture<List<TextEdit>> extractMethod(OffsetParams params, Range range, Position extractionPos);
+    public abstract CompletableFuture<List<TextEdit>> extractMethod(RangeParams range, OffsetParams extractionPos);
 
     /**
      * Return named arguments for the apply method that encloses the given position.
