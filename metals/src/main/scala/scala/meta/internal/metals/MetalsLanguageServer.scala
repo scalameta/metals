@@ -48,6 +48,7 @@ import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
