@@ -11,11 +11,11 @@ We're happy to announce the release of Metals v0.11.8, bringing a number of impr
 <tbody>
   <tr>
     <td>Commits since last release</td>
-    <td align="center">103</td>
+    <td align="center">84</td>
   </tr>
   <tr>
     <td>Merged PRs</td>
-    <td align="center">79</td>
+    <td align="center">80</td>
   </tr>
     <tr>
     <td>Contributors</td>
@@ -110,7 +110,7 @@ Big thanks to everybody who contributed to this release or reported an issue!
 ```
 $ git shortlog -sn --no-merges v0.11.7..v0.11.8
 33	Tomasz Godzik
-    30	Rikito Taniguchi
+    11	Rikito Taniguchi
      9	Scala Steward
      6	jkciesluk
      6	Kamil Podsiadło
