@@ -695,7 +695,7 @@ class Compilers(
   }
 
   private def withPCAndAdjustLsp[T](
-      params: TextDocumentPositionParams,
+      uri: String,
       range: LspRange,
       extractionPos: LspPosition,
   )(
@@ -706,17 +706,17 @@ class Compilers(
           AdjustLspData,
       ) => T
   ): Option[T] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
+    val path = uri.toAbsolutePath
     loadCompiler(path).flatMap { compiler =>
-      val (input, _, adjust) =
+      val (input, adjustRequest, adjustResponse)=
         sourceAdjustments(
-          params,
+          uri,
           compiler.scalaVersion(),
         )
       for {
-        metaRange <- adjust.adjustRange(range).toMeta(input)
-        metaExtractionPos <- adjust.adjustPos(extractionPos).toMeta(input)
-      } yield fn(compiler, metaRange, metaExtractionPos, adjust)
+        metaRange <- adjustRequest.adjustRange(range).toMeta(input)
+        metaExtractionPos <- adjustRequest.adjustPos(extractionPos).toMeta(input)
+      } yield fn(compiler, metaRange, metaExtractionPos, adjustResponse)
     }
   }
 
