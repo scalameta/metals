@@ -562,7 +562,7 @@ class Completions(
               val id = namedArg.label + "="
               (id, true)
             case fileSysMember: CompletionValue.FileSystemMember =>
-              (fileSysMember.fileName, true)
+              (fileSysMember.label, true)
 
         if !isSeen(id) && include then
           isSeen += id

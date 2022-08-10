@@ -13,6 +13,8 @@ import scala.meta.io.AbsolutePath
 import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd.ImportSelector
+import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.core.StdNames.*
 import org.eclipse.{lsp4j as l}
 
 object AmmoniteFileCompletions:
@@ -22,7 +24,7 @@ object AmmoniteFileCompletions:
       case Select(qual, name) =>
         val pathPart = name.toString()
         translateImportToPath(qual) + "/" + {
-          if pathPart == "$up" then ".."
+          if pathPart == "^" then ".."
           else pathPart
         }
       case Ident(_) =>
@@ -32,11 +34,11 @@ object AmmoniteFileCompletions:
   def contribute(
       select: Tree,
       selector: List[ImportSelector],
-      editRange: l.Range,
+      posRange: l.Range,
       rawPath: String,
       workspace: Option[Path],
       rawFileName: String,
-  ): List[CompletionValue] =
+  )(using Context): List[CompletionValue] =
 
     val fileName = rawFileName
       .split("/")
@@ -47,18 +49,22 @@ object AmmoniteFileCompletions:
       .split("\\$file")
       .toList
 
+    val editRange = selector.headOption.map { sel =>
+      if sel.sourcePos.span.isZeroExtent then posRange
+      else sel.imported.sourcePos.toLSP
+    }
     val query = selector.collectFirst { case sel: ImportSelector =>
-      sel.name.toString.replace(Cursor.value, "")
-
+      if sel.name.isEmpty || sel.name == nme.ERROR then ""
+      else sel.name.toString.replace(Cursor.value, "")
     }
 
     def parent =
       val name = "^"
 
       CompletionValue.FileSystemMember(
-        isDirectory = true,
         name,
         editRange,
+        isDirectory = true,
       )
 
     (split, workspace) match
@@ -70,24 +76,20 @@ object AmmoniteFileCompletions:
           current.getParent.resolve(importPath)
         )
         val parentTextEdit =
-          if query
-              .exists(
-                _.isEmpty()
-              ) && currentPath.parentOpt.isDefined && currentPath.isDirectory
+          if query.exists(_.isEmpty()) &&
+            currentPath.parentOpt.isDefined && currentPath.isDirectory
           then List(parent)
           else Nil
         currentPath.list.toList
           .filter(_.filename.stripSuffix(".sc") != fileName)
           .collect {
             case file
-                if (file.isDirectory || file.isAmmoniteScript) && query
-                  .exists(
-                    CompletionFuzzy.matches(_, file.filename)
-                  ) =>
+                if (file.isDirectory || file.isAmmoniteScript) &&
+                  query.exists(CompletionFuzzy.matches(_, file.filename)) =>
               CompletionValue.FileSystemMember(
-                isDirectory = file.isDirectory,
                 file.filename,
                 editRange,
+                isDirectory = file.isDirectory,
               )
           } ++ parentTextEdit
       case _ =>

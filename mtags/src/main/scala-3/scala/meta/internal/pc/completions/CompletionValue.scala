@@ -64,9 +64,7 @@ sealed trait CompletionValue:
       case CompletionValue.NamedArg(_, tpe) =>
         printer.tpe(tpe)
       case CompletionValue.Document(_, _, desc) => desc
-      case _: CompletionValue.Keyword => ""
-      case fileSysMem: CompletionValue.FileSystemMember =>
-        fileSysMem.fileName
+      case _ => ""
 
   private def forSymOnly[A](f: Symbol => A, orElse: => A): A =
     this match
@@ -124,16 +122,12 @@ object CompletionValue:
       extends CompletionValue
 
   case class FileSystemMember(
+      filename: String,
+      override val range: Option[Range],
       isDirectory: Boolean,
-      fileName: String,
-      editRange: Range,
   ) extends CompletionValue:
-    override def range = Some(editRange)
-    override def filterText = Some(fileName)
-    override def additionalEdits = List(
-      new TextEdit(editRange, fileName.stripSuffix(".sc"))
-    )
-    override def label = fileName
+    override def label: String = filename
+    override def insertText: Option[String] = Some(filename.stripSuffix(".sc"))
 
   case class Interpolator(
       symbol: Symbol,
