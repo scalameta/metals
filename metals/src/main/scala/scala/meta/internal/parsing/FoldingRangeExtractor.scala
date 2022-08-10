@@ -245,8 +245,10 @@ final class FoldingRangeExtractor(
           val firstChar = block.pos.input.chars(block.pos.start)
           block.pos.startLine != block.pos.endLine && firstChar != '{'
         case temp: Template =>
-          val endChar = temp.pos.input.chars(temp.pos.end)
-          temp.pos.startLine != temp.pos.endLine && endChar != '}'
+          def endChar = temp.pos.input.chars(temp.pos.end)
+          def endsAtEndOfLine = temp.pos.end >= temp.pos.input.chars.size
+          temp.pos.startLine != temp.pos.endLine &&
+          (endsAtEndOfLine || endChar != '}')
         case _ => false
       }
     }

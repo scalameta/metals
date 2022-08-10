@@ -15,3 +15,10 @@ def endmarker(): Unit =
   ???
   ???
 end endmarker
+
+object foo:
+  println("")
+  println("")
+  println("")
+  println("")
+  println("")
