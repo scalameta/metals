@@ -38,16 +38,23 @@ final class ExtractMethodProvider(
 
   def extractMethod(): List[TextEdit] =
     val text = range.text()
-    val params = range.toOffset
-    val uri = params.uri
+    val uri = range.uri
     val filePath = Paths.get(uri)
     val source = SourceFile.virtual(filePath.toString, text)
     driver.run(uri, source)
     val unit = driver.currentCtx.run.units.head
-    val pos = driver.sourcePosition(params)
+    val pos =
+      val rangePos = driver.sourcePosition(range)
+      rangePos.withEnd(rangePos.start)
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
-    given locatedCtx: Context = driver.localContext(params)
+    given locatedCtx: Context =
+      val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
+      val tpdPath =
+        Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
+          newctx
+        )
+      MetalsInteractive.contextOfPath(tpdPath)(using newctx)
     val indexedCtx = IndexedContext(locatedCtx)
     val rangeSourcePos =
       SourcePosition(source, Span(range.offset(), range.endOffset()))

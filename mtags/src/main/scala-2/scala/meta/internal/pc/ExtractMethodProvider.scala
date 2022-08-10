@@ -17,13 +17,12 @@ final class ExtractMethodProvider(
   import compiler._
   def extractMethod: List[l.TextEdit] = {
     val text = range.text()
-    val params = range.toOffset
     val unit = addCompilationUnit(
       code = text,
-      filename = params.uri.toString(),
+      filename = range.uri.toString(),
       cursor = None
     )
-    val pos = unit.position(params.offset)
+    val pos = unit.position(range.offset)
     val context = doLocateImportContext(pos)
     val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
     typedTreeAt(pos)

@@ -434,9 +434,7 @@ class Compilers(
       extractionPos: LspPosition,
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
-    val params =
-      new TextDocumentPositionParams(doc, doc.getUri(), range.getEnd())
-    withPCAndAdjustLsp(params, range, extractionPos) {
+    withPCAndAdjustLsp(doc.getUri(), range, extractionPos) {
       (pc, metaRange, metaExtractionPos, adjust) =>
         pc.extractMethod(
           CompilerRangeParams.fromPos(metaRange, token),
@@ -708,14 +706,17 @@ class Compilers(
   ): Option[T] = {
     val path = uri.toAbsolutePath
     loadCompiler(path).flatMap { compiler =>
-      val (input, adjustRequest, adjustResponse)=
+      val (input, adjustRequest, adjustResponse) =
         sourceAdjustments(
           uri,
           compiler.scalaVersion(),
         )
       for {
-        metaRange <- adjustRequest.adjustRange(range).toMeta(input)
-        metaExtractionPos <- adjustRequest.adjustPos(extractionPos).toMeta(input)
+        metaRange <- new LspRange(
+          adjustRequest(range.getStart()),
+          adjustRequest(range.getEnd()),
+        ).toMeta(input)
+        metaExtractionPos <- adjustRequest(extractionPos).toMeta(input)
       } yield fn(compiler, metaRange, metaExtractionPos, adjustResponse)
     }
   }

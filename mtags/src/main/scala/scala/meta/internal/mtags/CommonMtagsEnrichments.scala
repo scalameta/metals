@@ -134,14 +134,6 @@ trait CommonMtagsEnrichments {
           CompilerRangeParams(params.uri, params.text, start, end, params.token)
       }
     }
-
-    def toOffset: OffsetParams =
-      CompilerOffsetParams(
-        params.uri,
-        params.text(),
-        params.offset(),
-        params.token()
-      )
   }
 
   implicit class XtensionSemanticdbRange(range: s.Range) {
