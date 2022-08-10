@@ -107,8 +107,16 @@ class ExtractMethodCodeAction(
         }
       case df: Defn.Def => s"method `${df.name}`"
       case cl: Defn.Class => s"class `${cl.name}`"
-      case en: Defn.Enum => s"enum ${en.name}`"
+      case en: Defn.Enum => s"enum `${en.name}`"
       case ob: Defn.Object => s"object `${ob.name}`"
+      case gv: Defn.Given => s"given `${gv.name}`"
+      case ga: Defn.GivenAlias => s"given alias `${ga.name}`"
+      case ec: Defn.EnumCase => s"enum case `${ec.name}`"
+      case ma: Defn.Macro => s"macro `${ma.name}`"
+      case ty: Defn.Type => s"type `${ty.name}`"
+      case tr: Defn.Trait => s"trait `${tr.name}`"
+      case _: Defn.RepeatedEnumCase => "reapeted enum case"
+      case _: Defn.ExtensionGroup => "extension group"
       case _ => "block"
     }
   }
