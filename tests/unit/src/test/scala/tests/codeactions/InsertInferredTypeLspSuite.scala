@@ -33,6 +33,42 @@ class InsertInferredTypeLspSuite
   )
 
   check(
+    "wrong-type",
+    """|package a
+       |
+       |object A {
+       |  val alpha:String= 1<<>>23
+       |}
+       |""".stripMargin,
+    s"""|${InsertInferredType.adjustType("Int(123)")}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val alpha: Int= 123
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "wrong-type2",
+    """|package a
+       |
+       |object A {
+       |  def alpha:String= 1<<>>23
+       |}
+       |""".stripMargin,
+    s"""|${InsertInferredType.adjustType("Int(123)")}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  def alpha: Int= 123
+       |}
+       |""".stripMargin,
+  )
+
+  check(
     "def",
     """|package a
        |
