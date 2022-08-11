@@ -51,6 +51,12 @@ final case class CallHierarchyProvider(
 
   override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = ()
 
+  /**
+   * Data that is preserved between a call hierarchy prepare and incoming calls or outgoing calls request.
+   *
+   * @param symbols The set of symbols concerned by the request.
+   * @param visited Symbols that are already visited to handle recursive cases.
+   */
   private case class CallHierarchyItemInfo(
       symbols: Array[String],
       visited: Array[String],
@@ -59,12 +65,12 @@ final case class CallHierarchyProvider(
   private def buildCallHierarchyItemFrom(
       source: AbsolutePath,
       doc: TextDocument,
-      item: CanBuildCallHierarchyItem[_],
+      canBuildHierarchyItem: CanBuildCallHierarchyItem[_],
       range: l.Range,
       visited: Array[String],
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Option[CallHierarchyItem]] = {
-    item match {
+    canBuildHierarchyItem match {
       case CanBuildCallHierarchyItem(symbol, itemRange) =>
         compilers()
           .hover(
@@ -79,47 +85,56 @@ final case class CallHierarchyProvider(
             doc.symbols
               .find(_.symbol == symbol)
               .map(info => {
-
-                val chi = new CallHierarchyItem(
+                val item = new CallHierarchyItem(
                   info.displayName,
                   info.kind.toLSP,
                   source.toURI.toString,
                   range,
                   itemRange,
                 )
+
                 val symbols = (Set(info.symbol) union (
                   if (info.isClass)
                     info.signature
                       .asInstanceOf[s.ClassSignature]
                       .declarations
-                      .flatMap(_.symlinks.find(_.endsWith("`<init>`().")))
+                      .flatMap(
+                        _.symlinks.find(_.endsWith("`<init>`()."))
+                      ) // Class constructors can be included in the symbols to look at.
                       .toSet
                   else Set.empty
                 )).toArray
 
                 val displayName =
-                  if (info.isConstructor && info.displayName == "<init>")
+                  if (
+                    info.isConstructor && info.displayName == "<init>"
+                  ) // Get the name of the class for constructors
                     info.symbol.slice(
                       info.symbol.lastIndexOf("/") + 1,
                       info.symbol.lastIndexOf("#"),
                     )
                   else info.displayName
-                chi.setName(displayName)
 
-                chi.setDetail(
+                item.setName(displayName)
+
+                item.setDetail(
                   (if (visited.dropRight(1).contains(symbol))
                      icons.sync + " "
                    else "") + getSignatureFromHover(hover).getOrElse("")
                 )
 
-                chi.setData(CallHierarchyItemInfo(symbols, visited))
-                chi
+                item.setData(CallHierarchyItemInfo(symbols, visited))
+
+                item
               })
           )
       case _ => Future.successful(None)
     }
   }
 
+  /**
+   * Prepare call hierarchy request by returning a call hierarchy item, resolved for the given text document position.
+   */
   def prepare(params: CallHierarchyPrepareParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[List[CallHierarchyItem]] = {
@@ -136,15 +151,14 @@ final case class CallHierarchyProvider(
               range <- occurence.range
               tree <- trees.findLastEnclosingAt(source, range.toLSP.getStart)
               (definition, _) <- findDefinition(Some(tree))
-              chi = buildCallHierarchyItemFrom(
-                source,
-                doc,
-                SymbolOccurenceCHI(occurence),
-                definition.pos.toLSP,
-                Array(occurence.symbol),
-                token,
-              )
-            } yield chi
+            } yield buildCallHierarchyItemFrom(
+              source,
+              doc,
+              SymbolOccurenceCHI(occurence),
+              definition.pos.toLSP,
+              Array(occurence.symbol),
+              token,
+            )
           })
           .map(_.flatten)
       case None =>
@@ -166,24 +180,22 @@ final case class CallHierarchyProvider(
       case name: Name
           if !isTypeDeclaration(name) && definition
             .positionOccurrences(source, name.pos.toLSP.getEnd, doc)
-            .flatMap(
-              _.occurrence.filter(occ =>
+            .exists(
+              _.occurrence.exists(occ =>
                 occ.role.isReference && info.symbols.contains(occ.symbol)
               )
-            )
-            .nonEmpty =>
+            ) =>
         parent match {
           case Some(parent) =>
             definition
               .positionOccurrences(source, parent.pos.toLSP.getStart, doc)
-              .flatMap(_.occurrence)
-              .map(occurence =>
+              .collect { case ResolvedSymbolOccurrence(_, Some(occurence)) =>
                 FindIncomingCallsResult(
                   SymbolOccurenceCHI(occurence),
                   parentRange.get,
                   List(name.pos.toLSP),
                 )
-              )
+              }
           case _ =>
             name.children.flatMap { child =>
               search(child, parent, parentRange)
@@ -213,10 +225,9 @@ final case class CallHierarchyProvider(
       doc.synthetics
         .flatMap(syn =>
           extractSelectTree(syn.tree).collect {
-            case st @ s.SelectTree(s.OriginalTree(range), id)
+            case st @ s.SelectTree(s.OriginalTree(Some(range)), id)
                 if id.exists(id => info.symbols.contains(id.symbol)) => (
               for {
-                range <- range
                 tree <- trees.findLastEnclosingAt(source, range.toLSP.getStart)
                 (definition, name) <- findDefinition(Some(tree))
               } yield FindIncomingCallsResult(
@@ -231,6 +242,9 @@ final case class CallHierarchyProvider(
         .toList
     )
 
+  /**
+   * Resolve incoming calls for a given call hierarchy item.
+   */
   def incomingCalls(
       params: CallHierarchyIncomingCallsParams,
       token: CancelToken,
@@ -389,9 +403,9 @@ final case class CallHierarchyProvider(
       case Some((definition, _)) =>
         Future
           .sequence(
-            definition.children
-              .filterNot(_.is[Name])
-              .map(search)
+            definition.children.collect {
+              case t if t.isNot[Name] => search(t)
+            }
           )
           .map(results => FindOutgoingCallsResult.group(results.flatten))
       case None => Future.successful(Nil)
@@ -476,6 +490,9 @@ final case class CallHierarchyProvider(
       case None => Future.successful(Nil)
     }).map(results => FindOutgoingCallsResult.group(results))
 
+  /**
+   * Resolve outgoing calls for a given call hierarchy item.
+   */
   def outgoingCalls(
       params: CallHierarchyOutgoingCallsParams,
       token: CancelToken,

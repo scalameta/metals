@@ -15,8 +15,9 @@ import scala.meta.Type
 import scala.meta.Init
 import scala.meta.Template
 
+/** Utility functions for call hierarchy requests. */
 private[callHierarchy] trait CallHierarchyHelpers {
-  def extractNameFromDefinitionPats[V <: Tree { def pats: List[Pat] }](
+  private def extractNameFromDefinitionPats[V <: Tree { def pats: List[Pat] }](
       v: V
   ) =
     v.pats match {
@@ -34,6 +35,7 @@ private[callHierarchy] trait CallHierarchyHelpers {
       case _ => None
     }
 
+  /** Type declarations are not considered in call hierarchy request. This function helps to filter them */
   def isTypeDeclaration(tree: Tree): Boolean =
     (tree.parent
       .map {
