@@ -103,6 +103,7 @@ case class ScalaPresentationCompiler(
         params,
         config,
         buildTargetIdentifier,
+        workspace,
       ).completions()
 
     }
