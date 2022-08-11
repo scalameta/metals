@@ -15,3 +15,10 @@ def endmarker(): Unit =>>region>>
   ???
   ???<<region<<
 end endmarker
+
+object foo>>region>>:
+  println("")
+  println("")
+  println("")
+  println("")
+  println("")<<region<<
