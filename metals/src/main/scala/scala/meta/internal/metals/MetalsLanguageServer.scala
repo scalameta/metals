@@ -1968,6 +1968,11 @@ class MetalsLanguageServer(
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
 
+      case ServerCommands.SetupNotebookKernelForThisProject() => 
+        scribe.info("Executing SetupNotebookKernelForThisProject")
+        Future.successful(()).asJavaObject
+        //notebookKernelProvider.setupNotebookKernelForThisProject()
+
       case ServerCommands.CopyWorksheetOutput(path) =>
         val worksheetPath = path.toAbsolutePath
         val output = worksheetProvider.copyWorksheetOutput(worksheetPath)

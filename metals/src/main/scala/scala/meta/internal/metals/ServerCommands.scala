@@ -540,6 +540,11 @@ object ServerCommands {
     "Stay up to date with the latest release announcements and learn new Scala code editing tricks."
   )
 
+  val SetupNotebookKernelForThisProject = new Command(
+    "setup-notebook",
+    "Setup an almond kernel",
+    "Setup an almond kernel"
+  )
   val StartAmmoniteBuildServer = new Command(
     "ammonite-start",
     "Start Ammonite build server",
@@ -583,6 +588,7 @@ object ServerCommands {
       DisconnectBuildServer,
       ListBuildTargets,
       ScanWorkspaceSources,
+      SetupNotebookKernelForThisProject,
       StartAmmoniteBuildServer,
       StartDebugAdapter,
       StopAmmoniteBuildServer,
