@@ -43,7 +43,7 @@ class ShellRunner(
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
-      extraRepos : Array[Repository] = Array()
+      extraRepos: Array[Repository] = Array()
   ): Future[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
