@@ -326,7 +326,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             if (realPos.isRange) {
               val end =
                 if (lastArgument.contains(arg)) tree.pos.end
-                else arg.pos.end
+                else realPos.end
               val extraEndOffset = unit.source.content(pos.point - 1) match {
                 case ')' | ']' => 0
                 case _ =>
@@ -535,12 +535,36 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         } else {
           Map.empty[Name, Int]
         }
-      def byNamedArgumentPosition(symbol: Symbol): Int = {
-        byName.getOrElse(symbol.name, Int.MaxValue)
+      // if no by name are present then we don't want to change the order
+      val firstByName = if (byName.isEmpty) Int.MaxValue else byName.values.min
+
+      /**
+       * We try to adjust the ordering when by name params are present.
+       * For example:
+       * ```
+       *   def hello(a: Int, b: Int, c: Int, d: Int, e: Int) = ???
+       *   hello(1, 2, d = 5, @@)
+       * ```
+       * 1 and 2 correspond to a and b, so signature help should show
+       * them at the correct place at the start.
+       *
+       * d = 5 is a by name parameter so we want to show it next in
+       * the signature.
+       *
+       * Since we already have by name parameter we want to show
+       * `c` and `e` at the end of the signature help.
+       */
+      def byNamedArgumentPosition(symbol: Symbol, pos: Int): Int = {
+        if (pos >= firstByName)
+          // if we are past byname means we can only write by names
+          byName.getOrElse(symbol.name, Int.MaxValue)
+        else
+          // anything that is not by name needs to go at the start
+          byName.getOrElse(symbol.name, Int.MinValue)
       }
       val sortedByName = params.zipWithIndex
         .sortBy { case (sym, pos) =>
-          (byNamedArgumentPosition(sym), pos)
+          (byNamedArgumentPosition(sym, pos), pos)
         }
         .map { case (sym, _) =>
           sym

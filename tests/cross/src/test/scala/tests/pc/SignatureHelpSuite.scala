@@ -491,6 +491,92 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
+    "case-class",
+    """
+      |import java.{util => ju}
+      |import javax.annotation.Nullable
+      |
+      |
+      |case class TreeViewNode(
+      |    viewId: String,
+      |    @Nullable nodeUri: String,
+      |    label: String,
+      |    @Nullable command: String = null,
+      |    @Nullable icon: String = null,
+      |    @Nullable tooltip: String = null,
+      |    // One of "collapsed", "expanded" or "none"
+      |    @Nullable collapseState: String = null,
+      |)
+      |
+      |object O{
+      |  val viewId = ""
+      |  val rootUri = ""
+      |  val title = ""
+      |  def root: TreeViewNode =
+      |    TreeViewNode(
+      |      vi@@ewId,
+      |      rootUri,
+      |      title,
+      |      collapseState = "",
+      |    )
+      |}
+      |
+      |
+    """.stripMargin,
+    """|apply(viewId: String, nodeUri: String, label: String, command: String = ..., icon: String = ..., tooltip: String = ..., collapseState: String = ...): TreeViewNode
+       |      ^^^^^^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|apply(viewId: String, nodeUri: String, label: String, command: String, icon: String, tooltip: String, collapseState: String): case-class.TreeViewNode
+           |      ^^^^^^^^^^^^^^
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "case-class2",
+    """
+      |import java.{util => ju}
+      |import javax.annotation.Nullable
+      |
+      |
+      |case class TreeViewNode(
+      |    viewId: String,
+      |    @Nullable nodeUri: String,
+      |    label: String,
+      |    @Nullable command: String = null,
+      |    // One of "collapsed", "expanded" or "none"
+      |    @Nullable collapseState: String = null,
+      |)
+      |
+      |object O{
+      |  def root: TreeViewNode =
+      |    val viewId = ""
+      |    val rootUri = ""
+      |    val title = ""
+      |    TreeViewNode(
+      |      vi@@ewId,
+      |      rootUri,
+      |      title,
+      |      collapseState = "",
+      |    )
+      |}
+      |
+      |
+    """.stripMargin,
+    """|apply(<viewId: String>, <nodeUri: String>, <label: String>, <collapseState: String = ...>, <command: String = ...>): TreeViewNode
+       |      ^^^^^^^^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|apply(viewId: String, nodeUri: String, label: String, command: String, collapseState: String): case-class2.TreeViewNode
+           |      ^^^^^^^^^^^^^^
+           |""".stripMargin
+    ),
+  )
+
+  check(
     "named",
     """
       |case class User(name: String = "John", age: Int = 42)
