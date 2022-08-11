@@ -6,6 +6,7 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.OriginalTree
 
+/** Object that can be used to build call hierarchy item. */
 private[callHierarchy] trait CanBuildCallHierarchyItem[A] {
   def symbol: Option[String]
   def range: Option[lsp4j.Range]
