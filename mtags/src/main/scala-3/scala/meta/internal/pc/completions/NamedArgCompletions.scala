@@ -1,6 +1,7 @@
 package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.IndexedContext
 
 import dotty.tools.dotc.ast.tpd.Apply
 import dotty.tools.dotc.ast.tpd.Block
@@ -16,10 +17,9 @@ import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.NameKinds.DefaultGetterName
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.core.Types.Type
-import scala.meta.internal.pc.IndexedContext
 
 object NamedArgCompletions:
 

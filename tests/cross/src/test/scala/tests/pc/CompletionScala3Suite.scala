@@ -17,9 +17,10 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |  Widget(name = "foo", @@
        |""".stripMargin,
     """|other = : Int
+       |other = otxxx : Int
        |otxxx: Int
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(3),
   )
 
   // https://github.com/scalameta/metals/issues/2810
