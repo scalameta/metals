@@ -61,8 +61,9 @@ sealed trait CompletionValue:
         s"${printer.completionSymbol(ext.symbol)} (extension)"
       case so: CompletionValue.Symbolic =>
         printer.completionSymbol(so.symbol)
-      case CompletionValue.NamedArg(_, tpe) =>
-        printer.tpe(tpe)
+      case CompletionValue.NamedArg(label, tpe, _) =>
+        if label.startsWith("Autofill") then ""
+        else printer.tpe(tpe)
       case CompletionValue.Document(_, _, desc) => desc
       case _ => ""
 
@@ -117,7 +118,11 @@ object CompletionValue:
   ) extends Symbolic:
   end Override
 
-  case class NamedArg(label: String, tpe: Type) extends CompletionValue
+  case class NamedArg(
+      label: String,
+      tpe: Type,
+      override val insertText: Option[String],
+  ) extends CompletionValue
   case class Keyword(label: String, override val insertText: Option[String])
       extends CompletionValue
 
@@ -141,8 +146,10 @@ object CompletionValue:
   case class Document(label: String, doc: String, description: String)
       extends CompletionValue
 
-  def namedArg(label: String, sym: Symbol)(using Context): CompletionValue =
-    NamedArg(label, sym.info.widenTermRefExpr)
+  def namedArg(label: String, sym: Symbol, insertText: Option[String] = None)(
+      using Context
+  ): CompletionValue =
+    NamedArg(label, sym.info.widenTermRefExpr, insertText)
 
   def keyword(label: String, insertText: String): CompletionValue =
     Keyword(label, Some(insertText))

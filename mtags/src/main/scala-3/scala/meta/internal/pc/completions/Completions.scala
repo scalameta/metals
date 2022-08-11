@@ -284,7 +284,12 @@ class Completions(
           true,
         )
       case _ =>
-        val args = NamedArgCompletions.contribute(pos, path)
+        val args = NamedArgCompletions.contribute(
+          pos,
+          path,
+          indexedContext,
+          config.isCompletionSnippetsEnabled,
+        )
         val keywords = KeywordsCompletions.contribute(path, completionPos)
         (args ++ keywords, false)
     end match
