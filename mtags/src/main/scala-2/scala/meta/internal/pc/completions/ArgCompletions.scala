@@ -18,11 +18,23 @@ trait ArgCompletions { this: MetalsGlobal =>
   ) extends CompletionPosition {
     val editRange: l.Range =
       pos.withStart(ident.pos.start).withEnd(pos.start).toLSP
-    val method: Tree = typedTreeAt(apply.fun.pos)
+    val funPos = apply.fun.pos
+    val method: Tree = typedTreeAt(funPos)
     val methodSym = method.symbol
     lazy val baseParams: List[Symbol] =
-      if (method.tpe == null) Nil
-      else {
+      if (method.tpe == null) {
+        method match {
+          case Ident(name) =>
+            metalsScopeMembers(funPos)
+              .collectFirst {
+                case m: Member
+                    if m.symNameDropLocal == name && m.sym != NoSymbol && m.sym.paramss.nonEmpty =>
+                  m.sym.paramss.head
+              }
+              .getOrElse(Nil)
+          case _ => Nil
+        }
+      } else {
         method.tpe.paramss.headOption
           .getOrElse(methodSym.paramss.flatten)
       }

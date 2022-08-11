@@ -467,4 +467,19 @@ class CompletionArgSuite extends BaseCompletionSuite {
     "f(a = ${1|???,str1,str|}, b = ${2|???,str1,str|}, `type` = ${3|???,str1,str|})",
   )
 
+  check(
+    "nested-apply".tag(IgnoreScala3),
+    s"""|object Main{
+        |  def foo(argument1: Int, argument2: Int): Int = arg1 + arg2
+        |  val x: Int = 3
+        |  foo(foo(@@), )
+        |}
+        |""".stripMargin,
+    """|argument1 = : Int
+       |argument2 = : Int
+       |argument1 = x : Int
+       |argument2 = x : Int
+       |""".stripMargin,
+    topLines = Some(4),
+  )
 }
