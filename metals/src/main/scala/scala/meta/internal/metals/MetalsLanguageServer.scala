@@ -1982,46 +1982,54 @@ class MetalsLanguageServer(
 
         scribe.info("Found classpath ")
         scribe.info("targetClasspath " + targetClasspath.mkString("\n"))
-        val jvmReprRepo =   coursierapi.MavenRepository.of("https://maven.imagej.net/content/repositories/public/")
-        //TODO check scala version is valid. For now use 2.13.7        
+        val jvmReprRepo = coursierapi.MavenRepository.of(
+          "https://maven.imagej.net/content/repositories/public/"
+        )
+        // TODO check scala version is valid. For now use 2.13.7
         val scalaVersion = "2.13.7"
-        
+
         val projectName = "How do I get this"
         val almondDep = Dependency.of(
           "sh.almond",
           s"scala-kernel_$scalaVersion",
           BuildInfo.almondVersion
         )
-        scribe.info("almond dep " + almondDep.getModule().getAttributes().keySet())
+        scribe.info(
+          "almond dep " + almondDep.getModule().getAttributes().keySet()
+        )
         scribe.info(almondDep.getConfiguration())
-        scribe.info(almondDep.getClassifier())        
+        scribe.info(almondDep.getClassifier())
         val projectId = "Find a project ID"
 
-        
         try {
           shellRunner.runJava(
-            almondDep, 
-            "almond.ScalaKernel", 
-            source, 
+            almondDep,
+            "almond.ScalaKernel",
+            source,
             List(
-              "--install", 
-              "--command", 
-              "java -jar /Users/simon/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/sh/almond/scala-kernel_2.13.7/0.13.0/scala-kernel_2.13.7-0.13.0.jar", 
-              "--id", projectId, 
-              "--display-name", s"Scala $scalaVersion $projectName", 
-              "--global", "false", 
-              //"--jupyter-path", "/Users/simon/Library/Jupyter/kernels/",
-              "--copy-launcher", "true",
+              "--install",
+              "--command",
+              "java -jar /Users/simon/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/sh/almond/scala-kernel_2.13.7/0.13.0/scala-kernel_2.13.7-0.13.0.jar",
+              "--id",
+              projectId,
+              "--display-name",
+              s"Scala $scalaVersion $projectName",
+              "--global",
+              "false",
+              // "--jupyter-path", "/Users/simon/Library/Jupyter/kernels/",
+              "--copy-launcher",
+              "true",
               "--force"
-            ), 
-            false, 
-            extraRepos=Array(jvmReprRepo)
+            ),
+            false,
+            extraRepos = Array(jvmReprRepo)
           )
-        } 
-        catch {
+        } catch {
           case e: Exception =>
             scribe.error(s"Error installing kernel ", e)
-            scribe.error(s"Swallowing the above exception so metals doesn't crash")
+            scribe.error(
+              s"Swallowing the above exception so metals doesn't crash"
+            )
         }
 
         Future.successful(()).asJavaObject
