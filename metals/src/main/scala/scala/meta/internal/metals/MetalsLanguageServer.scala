@@ -99,6 +99,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
+import coursierapi.Dependency
+import scala.meta.Term
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1968,10 +1970,61 @@ class MetalsLanguageServer(
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
 
-      case ServerCommands.SetupNotebookKernelForThisProject() => 
+      case ServerCommands.SetupNotebookKernelForThisProject() =>
         scribe.info("Executing SetupNotebookKernelForThisProject")
+        val source = sourceMapper.workspace()
+        scribe.info(source.toString)
+        val targetClasspath = buildTargets
+          .inferBuildTarget(source)
+          .flatMap(buildTargets.targetJarClasspath)
+          .getOrElse(Nil)
+          .map(_.toString)
+
+        scribe.info("Found classpath ")
+        scribe.info("targetClasspath " + targetClasspath.mkString("\n"))
+        val jvmReprRepo =   coursierapi.MavenRepository.of("https://maven.imagej.net/content/repositories/public/")
+        //TODO check scala version is valid. For now use 2.13.7        
+        val scalaVersion = "2.13.7"
+        
+        val projectName = "How do I get this"
+        val almondDep = Dependency.of(
+          "sh.almond",
+          s"scala-kernel_$scalaVersion",
+          BuildInfo.almondVersion
+        )
+        scribe.info("almond dep " + almondDep.getModule().getAttributes().keySet())
+        scribe.info(almondDep.getConfiguration())
+        scribe.info(almondDep.getClassifier())        
+        val projectId = "Find a project ID"
+
+        
+        try {
+          shellRunner.runJava(
+            almondDep, 
+            "almond.ScalaKernel", 
+            source, 
+            List(
+              "--install", 
+              "--command", 
+              "java -jar /Users/simon/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/sh/almond/scala-kernel_2.13.7/0.13.0/scala-kernel_2.13.7-0.13.0.jar", 
+              "--id", projectId, 
+              "--display-name", s"Scala $scalaVersion $projectName", 
+              "--global", "false", 
+              //"--jupyter-path", "/Users/simon/Library/Jupyter/kernels/",
+              "--copy-launcher", "true",
+              "--force"
+            ), 
+            false, 
+            extraRepos=Array(jvmReprRepo)
+          )
+        } 
+        catch {
+          case e: Exception =>
+            scribe.error(s"Error installing kernel ", e)
+            scribe.error(s"Swallowing the above exception so metals doesn't crash")
+        }
+
         Future.successful(()).asJavaObject
-        //notebookKernelProvider.setupNotebookKernelForThisProject()
 
       case ServerCommands.CopyWorksheetOutput(path) =>
         val worksheetPath = path.toAbsolutePath
