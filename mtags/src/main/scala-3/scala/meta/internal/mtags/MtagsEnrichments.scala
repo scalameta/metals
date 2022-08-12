@@ -3,7 +3,6 @@ package scala.meta.internal.mtags
 import java.net.URI
 
 import scala.annotation.tailrec
-import scala.collection.mutable
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters.*

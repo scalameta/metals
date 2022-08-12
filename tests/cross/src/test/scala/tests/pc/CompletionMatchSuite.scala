@@ -31,9 +31,10 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |match (exhaustive) Option[Int] (2 cases)
        |""".stripMargin,
   )
-
+  
+  // In Scala3 it's allowed to write xxx.match
   check(
-    "dot",
+    "dot".tag(IgnoreScala3),
     """
       |object A {
       |  Option(1).match@@

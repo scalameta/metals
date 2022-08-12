@@ -51,7 +51,7 @@ object CaseKeywordCompletion:
   def contribute(
       selector: Tree,
       completionPos: CompletionPos,
-      typedTree: Tree,
+      typedTree2: Tree,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
       parent: Tree,
@@ -61,6 +61,7 @@ object CaseKeywordCompletion:
   ): List[CompletionValue] =
     import indexedContext.ctx
     val pos = completionPos.sourcePos
+    val typedTree = indexedContext.ctx.compilationUnit.tpdTree
     val definitions = indexedContext.ctx.definitions
     val text = pos.source.content().mkString
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
@@ -178,12 +179,13 @@ object CaseKeywordCompletion:
   def matchContribute(
       selector: Tree,
       completionPos: CompletionPos,
-      typedTree: Tree,
+      typedTree2: Tree,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val pos = completionPos.sourcePos
+    val typedTree = indexedContext.ctx.compilationUnit.tpdTree
     val definitions = indexedContext.ctx.definitions
     val text = pos.source.content().mkString
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()

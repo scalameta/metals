@@ -330,7 +330,7 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-    // pprint.pprintln(path.take(2))
+    // pprint.pprintln(path.take(3))
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
@@ -431,38 +431,10 @@ class Completions(
         )
       // CASE COMPLETIONS
       // Match completions
-      case (sel @ Select(qualifier, name)) :: _
-          if "match".startsWith(name.toString()) && text.charAt(
-            completionPos.start - 1
-          ) == ' ' =>
+      case MatchExtractor(selector) =>
         (
           CaseKeywordCompletion.matchContribute(
-            qualifier,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-          ),
-          false,
-        )
-
-      case (c: CaseDef) :: (m: Match) :: _
-          if completionPos.query.startsWith("match") =>
-        (
-          CaseKeywordCompletion.matchContribute(
-            m.selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-          ),
-          false,
-        )
-
-      case (m @ Match(_, CaseDef(Literal(Constant(null)), _, _) :: Nil)) :: _ =>
-        (
-          CaseKeywordCompletion.matchContribute(
-            m.selector,
+            selector,
             completionPos,
             path.last,
             indexedContext,
@@ -472,29 +444,10 @@ class Completions(
         )
 
       // CASE COMPLETIONS
-      case (id @ Ident(name)) :: Block(stats, expr) :: parent :: _
-          if "case"
-            .startsWith(name.toString()) && isLastMatch(stats) && expr == id =>
+      case CaseExtractor(selector, parent) =>
         (
           CaseKeywordCompletion.contribute(
-            stats.last.asInstanceOf[Match].selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            parent,
-          ),
-          true,
-        )
-      case (ident @ Ident(name)) :: Block(
-            _,
-            expr,
-          ) :: (_: CaseDef) :: (m: Match) :: parent :: _
-          if ident == expr && "case"
-            .startsWith(name.toString()) =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
+            selector,
             completionPos,
             path.last,
             indexedContext,
@@ -504,15 +457,31 @@ class Completions(
           true,
         )
 
-      case (c: CaseDef) :: (m: Match) :: parent :: _ =>
+      case CasePatternExtractor(selector, parent) =>
         (
           CaseKeywordCompletion.contribute(
-            m.selector,
+            selector,
             completionPos,
             path.last,
             indexedContext,
             config,
             parent,
+            true,
+          ),
+          true,
+        )
+
+      case TypedCasePatternExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
+            true,
+            true,
           ),
           true,
         )
@@ -524,124 +493,7 @@ class Completions(
           c.startPos,
           CompletionPos.infer(c.startPos, text, path.tail),
         )
-
-      case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
-            fun,
-            args,
-          )) :: _
-          if stats.isEmpty && ident == expr && "case".startsWith(
-            name.toString()
-          ) =>
-        (
-          CaseKeywordCompletion.contribute(
-            EmptyTree,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            appl,
-          ),
-          true,
-        )
-
       // Pattern only
-      case (ident @ Ident(name)) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            parent,
-            true,
-            // if name.toString == "_" || name.toString == "_:" then true else false,
-            // if name.toString == "_" || name.toString == "_:" then false else true,
-          ),
-          true,
-        )
-
-      case (ident @ Ident(name)) :: Bind(
-            _,
-            _,
-          ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            parent,
-            true,
-          ),
-          true,
-        )
-
-      case (ident @ Ident(name)) :: Typed(
-            _,
-            _,
-          ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            parent,
-            true,
-            true,
-          ),
-          true,
-        )
-
-      case Bind(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            parent,
-            true,
-          ),
-          true,
-        )
-
-      case Typed(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            parent,
-            true,
-            true,
-          ),
-          true,
-        )
-
-      case (ident @ Ident(name)) :: Typed(_, _) :: Bind(
-            _,
-            _,
-          ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            parent,
-            true,
-            true,
-          ),
-          true,
-        )
 
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
@@ -1087,4 +939,94 @@ class Completions(
             else compareByRelevance(o1, o2)
       end compare
 
+  object MatchExtractor:
+    def unapply(path: List[Tree]) =
+      path match
+        case (sel @ Select(qualifier, name)) :: _
+            if "match".startsWith(name.toString()) && text.charAt(
+              completionPos.start - 1
+            ) == ' ' =>
+          Some((qualifier))
+        case (c: CaseDef) :: (m: Match) :: _
+            if completionPos.query.startsWith("match") =>
+          Some(m.selector)
+
+        case (m @ Match(
+              _,
+              CaseDef(Literal(Constant(null)), _, _) :: Nil,
+            )) :: _ =>
+          Some(m.selector)
+        case _ => None
+  end MatchExtractor
+
+  object CaseExtractor:
+    def unapply(path: List[Tree]): Option[(Tree, Tree)] =
+      path match
+        case (id @ Ident(name)) :: Block(stats, expr) :: parent :: _
+            if "case"
+              .startsWith(name.toString()) && isLastMatch(
+              stats
+            ) && expr == id =>
+          val selector = stats.last.asInstanceOf[Match].selector
+          Some((selector, parent))
+        case (ident @ Ident(name)) :: Block(
+              _,
+              expr,
+            ) :: (_: CaseDef) :: (m: Match) :: parent :: _
+            if ident == expr && "case"
+              .startsWith(name.toString()) =>
+          Some((m.selector, parent))
+
+        case (c: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+
+        case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
+              fun,
+              args,
+            )) :: _
+            if stats.isEmpty && ident == expr && "case".startsWith(
+              name.toString()
+            ) =>
+          Some((EmptyTree, appl))
+
+        case _ => None
+  end CaseExtractor
+
+  object CasePatternExtractor:
+    def unapply(path: List[Tree]) =
+      path match
+        case (ident @ Ident(
+              name
+            )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+        case (ident @ Ident(name)) :: Bind(
+              _,
+              _,
+            ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+        case Bind(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+        case _ => None
+
+  end CasePatternExtractor
+
+  object TypedCasePatternExtractor:
+    def unapply(path: List[Tree]) =
+      path match
+        case (ident @ Ident(name)) :: Typed(
+              _,
+              _,
+            ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+
+        case Typed(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+
+        case (ident @ Ident(name)) :: Typed(_, _) :: Bind(
+              _,
+              _,
+            ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+        case _ => None
+  end TypedCasePatternExtractor
 end Completions
