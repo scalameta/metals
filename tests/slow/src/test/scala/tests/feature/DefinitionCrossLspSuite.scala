@@ -84,9 +84,26 @@ class DefinitionCrossLspSuite
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ = server.workspaceDefinitions // trigger definition
       _ <- server.didOpen("scala/Predef.scala")
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        "Preparing presentation compiler",
+      _ <- server.assertHover(
+        "a/src/main/scala/a/Main.scala",
+        """
+          |object Main {
+          |  prin@@tln("hello!")
+          |}""".stripMargin,
+        if (scalaVersion.startsWith("2.12"))
+          """|```scala
+             |def println(x: Any): Unit
+             |```
+             |Prints out an object to the default output, followed by a newline character.
+             |
+             |
+             |**Parameters**
+             |- `x`: the object to print.
+             |""".stripMargin
+        else """|```scala
+               |def println(x: Any): Unit
+               |```
+               |""".stripMargin,
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
