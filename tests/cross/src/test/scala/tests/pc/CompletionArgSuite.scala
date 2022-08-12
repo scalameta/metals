@@ -96,6 +96,18 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg4
        |""".stripMargin,
     topLines = Option(3),
+    compat = Map(
+      "3.1.3" ->
+        """|age = : Int
+           |followers = : Int
+           |Main arg4
+           |""".stripMargin,
+      "3.1" ->
+        """|age = : Int
+           |address = : String
+           |followers = : Int
+           |""".stripMargin,
+    ),
   )
 
   check(
