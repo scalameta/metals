@@ -202,6 +202,15 @@ final class BuildTargets() {
   ): Option[AbsolutePath] =
     buildServerOf(buildTarget).map(_.workspaceDirectory)
 
+  def canCompile(id: BuildTargetIdentifier): Boolean = {
+    targetData(id).exists { data =>
+      data.buildTargetInfo
+        .get(id)
+        .map[Boolean](_.getCapabilities().getCanCompile())
+        .getOrElse(true)
+    }
+  }
+
   /**
    * Returns the first build target containing this source file.
    */

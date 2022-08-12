@@ -189,8 +189,9 @@ final class Compilations(
         buildServer
       }
       .map { case (buildServer, targets) =>
-        val targets0 = targets.map { case (_, target) =>
-          target
+        val targets0 = targets.collect {
+          case (_, target) if buildTargets.canCompile(target) =>
+            target
         }
         (buildServer, targets0)
       }
