@@ -673,7 +673,22 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> post212CatchDocs,
-      "3" -> s"${post212CatchDocs}Catch[T](pf: Catcher[T], fin: Option[Finally], rethrow: Throwable => Boolean): Catch[T]",
+      "3" ->
+        """|> A container class for catch/finally logic.
+           |
+           | Pass a different value for rethrow if you want to probably
+           | unwisely allow catching control exceptions and other throwables
+           | which the rest of the world may expect to get through.
+           |
+           |**Type Parameters**
+           |- `T`: result type of bodies used in try and catch blocks
+           |
+           |**Parameters**
+           |- `fin`: Finally logic which if defined will be invoked after catch logic
+           |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+           |- `pf`: Partial function used when applying catch logic to determine result value
+           |Catch - scala.util.control.Exception
+           |""".stripMargin,
     ),
   )
 
