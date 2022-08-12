@@ -414,6 +414,8 @@ class Completions(
             case namedArg: CompletionValue.NamedArg =>
               val id = namedArg.label + "="
               (id, true)
+            case autofill: CompletionValue.Autofill =>
+              (autofill.label, true)
             case fileSysMember: CompletionValue.FileSystemMember =>
               (fileSysMember.label, true)
 

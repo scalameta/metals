@@ -150,10 +150,9 @@ object NamedArgCompletions:
           }
           .mkString(", ")
         List(
-          CompletionValue.namedArg(
-            label = "Autofill with default values",
-            allParams.head,
-            Some(editText),
+          CompletionValue.Autofill(
+            label = s"Autofill ${methodSym.decodedName} with default values",
+            editText,
           )
         )
       else List.empty

@@ -327,6 +327,7 @@ class CompletionsProvider(
         mkItem(label, text.getOrElse(label))
       case CompletionValue.Document(label, doc, desc) =>
         mkItem(label, doc, filterText = Some(desc))
+      case CompletionValue.Autofill(label, value) => mkItem(label, value)
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)
         mkItem(

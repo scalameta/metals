@@ -32,6 +32,7 @@ sealed trait CompletionValue:
       case _: CompletionValue.NamedArg => CompletionItemKind.Field
       case _: CompletionValue.Override => CompletionItemKind.Method
       case _: CompletionValue.Extension => CompletionItemKind.Method
+      case _: CompletionValue.Autofill => CompletionItemKind.Enum
       case v: (CompletionValue.Compiler | CompletionValue.Workspace |
             CompletionValue.Scope | CompletionValue.Interpolator) =>
         val symbol = v.symbol
@@ -62,8 +63,7 @@ sealed trait CompletionValue:
       case so: CompletionValue.Symbolic =>
         printer.completionSymbol(so.symbol)
       case CompletionValue.NamedArg(label, tpe, _) =>
-        if label.startsWith("Autofill") then ""
-        else printer.tpe(tpe)
+        printer.tpe(tpe)
       case CompletionValue.Document(_, _, desc) => desc
       case _ => ""
 
@@ -123,6 +123,7 @@ object CompletionValue:
       tpe: Type,
       override val insertText: Option[String],
   ) extends CompletionValue
+  case class Autofill (label: String, value: String) extends CompletionValue
   case class Keyword(label: String, override val insertText: Option[String])
       extends CompletionValue
 
