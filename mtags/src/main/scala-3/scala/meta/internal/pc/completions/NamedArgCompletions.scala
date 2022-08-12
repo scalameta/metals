@@ -151,8 +151,7 @@ object NamedArgCompletions:
           .mkString(", ")
         List(
           CompletionValue.Autofill(
-            label = s"Autofill ${methodSym.decodedName} with default values",
-            editText,
+            editText
           )
         )
       else List.empty
@@ -168,7 +167,6 @@ object NamedArgCompletions:
           CompletionValue.namedArg(
             label = editText,
             param,
-            Some(editText),
           )
         }
       }

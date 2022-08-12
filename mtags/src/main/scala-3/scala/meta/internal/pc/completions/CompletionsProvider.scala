@@ -318,16 +318,16 @@ class CompletionsProvider(
           filterText,
           Some(completionPos.copy(start = start).toEditRange),
         )
-      case CompletionValue.NamedArg(label, _, insertText) =>
+      case CompletionValue.NamedArg(label, _) =>
         mkItem(
-          ident,
-          insertText.getOrElse(ident.replace("$", "$$")),
+          label,
+          label.replace("$", "$$"),
         ) // escape $ for snippet
       case CompletionValue.Keyword(label, text) =>
         mkItem(label, text.getOrElse(label))
       case CompletionValue.Document(label, doc, desc) =>
         mkItem(label, doc, filterText = Some(desc))
-      case CompletionValue.Autofill(label, value) => mkItem(label, value)
+      case CompletionValue.Autofill(value) => mkItem(ident, value)
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)
         mkItem(
