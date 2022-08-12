@@ -16,6 +16,7 @@ import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 import scala.meta.dialects._
+import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BuildTool
@@ -36,6 +37,7 @@ import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.lsp4j.Position
 
 /**
  * Coordinates build target data fetching and caching, and the re-computation of various
@@ -194,6 +196,89 @@ final case class Indexer(
         data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
         data.addScalacOptions(importedBuild.scalacOptions)
         data.addJavacOptions(importedBuild.javacOptions)
+
+        // For "wrapped sources", we create dedicated TargetData.MappedSource instances,
+        // able to convert back and forth positions from the user-facing file to
+        // the compiler-facing actual underlying source.
+        for {
+          item <- importedBuild.wrappedSources.getItems.asScala
+          sourceItem <- item.getSources.asScala
+        } {
+
+          /*
+
+            sourceItem tells us how the user-facing sources (typically, an *.sc file)
+            gets wrapped (to a .scala file), so that scalac can compile it fine.
+
+            sourceItem.getTopWrapper needs to be added before the content of the user-facing
+            code, and sourceItem.getBottomWrapper needs to be added after it.
+
+            In the case of Scala CLI, these typically look like, for a file named foo/hello.sc:
+
+                package foo
+                object hello {
+
+            at the top, and at the bottom:
+
+                  def args = hello_sc.args$
+                }
+                object hello_sc {
+                  private var args$opt = Option.empty[Array[String]]
+                  def args$ = args$opt.getOrElse(sys.error("No arguments passed to this script"))
+                  def main(args: Array[String]): Unit = {
+                    args$opt = Some(args)
+                    hello
+                  }
+                }
+
+             Here, we see that this puts the file in a package named 'foo', and this adds a method
+             called 'args', that users can call from their code (alongside with an object hello_sc
+             with a main class, that doesn't matter much from Metals here).
+
+             The toScala and fromScala methods below adjust positions, because of the code
+             added at the top that shifts lines.
+
+             mappedSource allows to wrap things on-the-fly, to pass not-yet-saved code to
+             the interactive compiler.
+           */
+
+          val path = sourceItem.getUri.toAbsolutePath
+          val generatedPath = sourceItem.getGeneratedUri.toAbsolutePath
+          val topWrapperLineCount = sourceItem.getTopWrapper.count(_ == '\n')
+          val toScala: Position => Position =
+            scPos =>
+              new Position(
+                topWrapperLineCount + scPos.getLine,
+                scPos.getCharacter,
+              )
+          val fromScala: Position => Position =
+            scalaPos =>
+              new Position(
+                scalaPos.getLine - topWrapperLineCount,
+                scalaPos.getCharacter,
+              )
+          val mappedSource: TargetData.MappedSource =
+            new TargetData.MappedSource {
+              def path = generatedPath
+              def update(
+                  content: String
+              ): (Input.VirtualFile, Position => Position, AdjustLspData) = {
+                val adjustLspData = AdjustedLspData.create(fromScala)
+                val updatedContent =
+                  sourceItem.getTopWrapper + content + sourceItem.getBottomWrapper
+                (
+                  Input.VirtualFile(
+                    generatedPath.toNIO.toString
+                      .stripSuffix(".scala") + ".sc.scala",
+                    updatedContent,
+                  ),
+                  toScala,
+                  adjustLspData,
+                )
+              }
+            }
+          data.addMappedSource(path, mappedSource)
+        }
         for {
           item <- importedBuild.sources.getItems.asScala
           source <- item.getSources.asScala

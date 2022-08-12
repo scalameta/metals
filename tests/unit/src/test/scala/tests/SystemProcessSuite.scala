@@ -1,6 +1,7 @@
 package tests
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Properties
 
@@ -10,6 +11,8 @@ import scala.meta.io.AbsolutePath
 import munit.FunSuite
 
 class SystemProcessSuite extends FunSuite {
+
+  implicit val ctx: ExecutionContext = this.munitExecutionContext
 
   test("exit code") {
     val cmd =

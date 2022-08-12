@@ -67,6 +67,12 @@ final class Diagnostics(
     keys.foreach { key => publishDiagnostics(key) }
   }
 
+  def reset(paths: Seq[AbsolutePath]): Unit =
+    for (path <- paths if diagnostics.contains(path)) {
+      diagnostics.remove(path)
+      publishDiagnostics(path)
+    }
+
   def resetAmmoniteScripts(): Unit =
     for (key <- diagnostics.keys if key.isAmmoniteScript) {
       diagnostics.remove(key)

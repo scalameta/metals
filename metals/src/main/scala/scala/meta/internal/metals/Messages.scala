@@ -794,15 +794,18 @@ object Messages {
     }
   }
 
-  object ImportAmmoniteScript {
-    val message: String = "Ammonite script detected."
-    val importAll: String = "Import scripts automatically"
-    val doImport: String = "Import"
+  object ImportScalaScript {
+    val message: String = "Scala script detected. Import it as…"
+    val doImportScalaCli: String = "Scala CLI"
+    val doImportAmmonite: String = "Ammonite"
     val dismiss: String = "Dismiss"
-
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams(
-        List(importAll, doImport, dismiss)
+        List(
+          doImportScalaCli,
+          doImportAmmonite,
+          dismiss,
+        )
           .map(new MessageActionItem(_))
           .asJava
       )
@@ -810,12 +813,40 @@ object Messages {
       params.setType(MessageType.Info)
       params
     }
-
-    def ImportFailed(script: String) =
+    def ImportFailed(source: String) =
       new MessageParams(
         MessageType.Error,
-        s"Error importing $script. See the logs for more details.",
+        s"Error importing Scala script $source. See the logs for more details.",
       )
+    def ImportedScalaCli =
+      new MessageParams(
+        MessageType.Info,
+        "Scala CLI project imported.",
+      )
+    def ImportedAmmonite =
+      new MessageParams(
+        MessageType.Info,
+        "Ammonite project imported.",
+      )
+  }
+
+  object ImportAllScripts {
+    val message: String = "Should Metals automatically import scripts?"
+    val importAll: String = "Automatically import"
+    val dismiss: String = "Keep asking"
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams(
+        List(
+          importAll,
+          dismiss,
+        )
+          .map(new MessageActionItem(_))
+          .asJava
+      )
+      params.setMessage(message)
+      params.setType(MessageType.Info)
+      params
+    }
   }
 
   object NewScalaProject {

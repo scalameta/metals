@@ -5,7 +5,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.sys.process.BasicIO
@@ -33,7 +33,7 @@ object SystemProcess {
       propagateError: Boolean = false,
       discardInput: Boolean = true,
       threadNamePrefix: String = "",
-  ): SystemProcess = {
+  )(implicit ec: ExecutionContext): SystemProcess = {
 
     try {
       val builder = new ProcessBuilder(cmd.asJava)
@@ -69,7 +69,7 @@ object SystemProcess {
       processErr: Option[String => Unit],
       discardInput: Boolean,
       threadNamePrefix: String,
-  ): SystemProcess = {
+  )(implicit ec: ExecutionContext): SystemProcess = {
     def readOutput(
         name: String,
         stream: InputStream,

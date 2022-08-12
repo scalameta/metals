@@ -380,6 +380,8 @@ lazy val metals = project
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
+      // for comparing versions
+      "io.get-coursier" %% "versions" % "0.3.1",
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,
@@ -395,6 +397,8 @@ lazy val metals = project
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.3",
       "org.scala-lang.modules" %% "scala-xml" % "2.1.0",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
+      ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
+        .exclude("ch.epfl.scala", "bsp4j"),
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -413,6 +417,7 @@ lazy val metals = project
       "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
+      "scalaCliVersion" -> V.scalaCli,
       "organizeImportVersion" -> V.organizeImportRule,
       "millVersion" -> V.mill,
       "debugAdapterVersion" -> V.debugAdapter,
@@ -607,6 +612,7 @@ lazy val metalsDependencies = project
       "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
       "com.lihaoyi" % "mill-contrib-testng" % V.mill,
+      "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),
     ),
   )
   .disablePlugins(ScalafixPlugin)

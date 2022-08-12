@@ -1,5 +1,6 @@
 package tests
 
+import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Messages
@@ -19,8 +20,8 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   override def newServer(workspaceName: String): Unit = {
     super.newServer(workspaceName)
     server.client.showMessageRequestHandler = { params =>
-      if (params == Messages.ImportAmmoniteScript.params())
-        Some(new MessageActionItem(Messages.ImportAmmoniteScript.dismiss))
+      if (params == Messages.ImportScalaScript.params())
+        Some(new MessageActionItem(Messages.ImportScalaScript.dismiss))
       else
         None
     }
@@ -389,12 +390,19 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         """errored.sc:15:25: error: not found: type Fooz
           |val decodedFoo = decode[Fooz](json)
           |                        ^^^^
+          |errored.sc:18:8: error: not found: type Foozz
+          |decode[Foozz](json)
+          |       ^^^^^
           |""".stripMargin
       else
         """errored.sc:15:25: error: Not found: type Fooz
           |val decodedFoo = decode[Fooz](json)
           |                        ^^^^
+          |errored.sc:18:8: error: Not found: type Foozz
+          |decode[Foozz](json)
+          |       ^^^^^
           |""".stripMargin
+
     for {
       _ <- initialize(
         s"""
@@ -551,7 +559,9 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.server.ammonite.maybeImport(server.toPath("main.sc"))
+      _ <- server.server
+        .maybeImportScript(server.toPath("main.sc"))
+        .getOrElse(Future.unit)
 
       messagesForScript = {
         val msgs = server.client.messageRequests.asScala.toVector
@@ -559,15 +569,17 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         msgs
       }
       _ = assert(
-        messagesForScript.contains(Messages.ImportAmmoniteScript.message)
+        messagesForScript.contains(Messages.ImportScalaScript.message)
       )
 
       _ <- server.didOpen("build.sc")
-      _ <- server.server.ammonite.maybeImport(server.toPath("build.sc"))
+      _ <- server.server
+        .maybeImportScript(server.toPath("build.sc"))
+        .getOrElse(Future.unit)
 
       messagesForBuildSc = server.client.messageRequests.asScala.toVector
       _ = assert(
-        !messagesForBuildSc.contains(Messages.ImportAmmoniteScript.message)
+        !messagesForBuildSc.contains(Messages.ImportScalaScript.message)
       )
 
     } yield ()

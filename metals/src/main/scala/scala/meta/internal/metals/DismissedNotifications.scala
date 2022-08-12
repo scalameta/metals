@@ -20,6 +20,8 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val ReconnectAmmonite = new Notification(10)
   val UpdateScalafmtConf = new Notification(11)
   val UpdateBloopJson = new Notification(12)
+  val ReconnectScalaCli = new Notification(13)
+  val ScalaCliImportAuto = new Notification(14)
 
   val all: List[Notification] = List(
     Only212Navigation,
@@ -34,6 +36,8 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
     ReconnectAmmonite,
     UpdateScalafmtConf,
     UpdateBloopJson,
+    ReconnectScalaCli,
+    ScalaCliImportAuto,
   )
 
   def resetAll(): Unit = {

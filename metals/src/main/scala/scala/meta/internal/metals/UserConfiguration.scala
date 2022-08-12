@@ -52,6 +52,7 @@ case class UserConfiguration(
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     javaFormatConfig: Option[JavaFormatConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
+    scalaCliLauncher: Option[String] = None,
 ) {
 
   def currentBloopVersion: String =
@@ -281,6 +282,17 @@ object UserConfiguration {
         "Eclipse Java formatting profile",
         """|If the Eclipse formatter file contains more than one profile then specify the required profile name.
            |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "scala-cli-launcher",
+        """empty string `""`.""",
+        """"/usr/local/bin/scala-cli"""",
+        "Scala CLI launcher",
+        """Optional absolute path to a `scala-cli` executable to use for running a Scala CLI BSP server.
+          |By default, Metals uses the scala-cli from the PATH, or it's not found, downloads and runs Scala
+          |CLI on the JVM (slower than native Scala CLI). Update this if you want to use a custom Scala CLI
+          |launcher, not available in PATH.
+          |""".stripMargin,
       ),
     )
 

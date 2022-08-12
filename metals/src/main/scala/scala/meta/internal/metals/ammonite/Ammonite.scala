@@ -21,7 +21,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BuildChange
-import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.ammonite.Ammonite.AmmoniteMetalsException
@@ -51,7 +50,6 @@ final class Ammonite(
     indexWorkspace: () => Future[Unit],
     workspace: () => AbsolutePath,
     focusedDocument: () => Option[AbsolutePath],
-    buildTools: () => BuildTools,
     config: MetalsServerConfig,
     scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContextExecutorService)
@@ -213,52 +211,6 @@ final class Ammonite(
         Right((command, path))
     }
   }
-
-  private def isMillBuildSc(path: AbsolutePath): Boolean =
-    path.toNIO.getFileName.toString == "build.sc" &&
-      // for now, this only checks for build.sc, but this could be made more strict in the future
-      // (require ./mill or ./.mill-version)
-      buildTools().isMill
-
-  def maybeImport(path: AbsolutePath): Future[Unit] =
-    if (path.isAmmoniteScript && !isMillBuildSc(path) && !loaded(path)) {
-
-      def doImport(): Unit =
-        start(Some(path)).onComplete {
-          case Failure(e) =>
-            languageClient.showMessage(
-              Messages.ImportAmmoniteScript.ImportFailed(path.toString)
-            )
-            scribe.warn(s"Error importing Ammonite script $path", e)
-          case Success(_) =>
-        }
-
-      val autoImport =
-        tables().dismissedNotifications.AmmoniteImportAuto.isDismissed
-      if (autoImport) {
-        doImport()
-        Future.unit
-      } else {
-        val futureResp = languageClient
-          .showMessageRequest(Messages.ImportAmmoniteScript.params())
-          .asScala
-        futureResp.onComplete {
-          case Failure(e) => scribe.warn("Error requesting Ammonite import", e)
-          case Success(resp) =>
-            resp.getTitle match {
-              case Messages.ImportAmmoniteScript.importAll =>
-                tables().dismissedNotifications.AmmoniteImportAuto
-                  .dismissForever()
-                doImport()
-              case Messages.ImportAmmoniteScript.doImport =>
-                doImport()
-              case _ =>
-            }
-        }
-        futureResp.ignoreValue
-      }
-    } else
-      Future.unit
 
   def reload(): Future[Unit] = stop().asScala.flatMap(_ => start())
 

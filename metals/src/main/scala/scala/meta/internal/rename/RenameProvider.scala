@@ -2,7 +2,6 @@ package scala.meta.internal.rename
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import scala.collection.parallel.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -59,7 +58,7 @@ final class RenameProvider(
     trees: Trees,
 )(implicit executionContext: ExecutionContext) {
 
-  private val awaitingSave = new ConcurrentLinkedQueue[() => Unit]
+  private val awaitingSave = new ConcurrentLinkedQueue[() => Future[Unit]]
 
   def prepareRename(
       params: TextDocumentPositionParams,
@@ -96,166 +95,178 @@ final class RenameProvider(
   ): Future[WorkspaceEdit] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     compilations.compilationFinished(source).flatMap { _ =>
-      definitionProvider.definition(source, params, token).map { definition =>
-        val textParams = new TextDocumentPositionParams(
-          params.getTextDocument(),
-          params.getPosition(),
-        )
+      definitionProvider
+        .definition(source, params, token)
+        .flatMap { definition =>
+          val textParams = new TextDocumentPositionParams(
+            params.getTextDocument(),
+            params.getPosition(),
+          )
 
-        lazy val definitionTextParams =
-          definition.locations.asScala.map { l =>
-            new TextDocumentPositionParams(
-              new TextDocumentIdentifier(l.getUri()),
-              l.getRange().getStart(),
-            )
-          }
-
-        val symbolOccurrence =
-          definitionProvider
-            .symbolOccurrence(source, textParams.getPosition)
-            .orElse(
-              findRenamedImportOccurrenceAtPosition(
-                source,
-                params.getPosition(),
+          lazy val definitionTextParams =
+            definition.locations.asScala.map { l =>
+              new TextDocumentPositionParams(
+                new TextDocumentIdentifier(l.getUri()),
+                l.getRange().getStart(),
               )
-            )
+            }
 
-        val suggestedName = params.getNewName()
-        val withoutBackticks =
-          if (suggestedName.isBackticked)
-            suggestedName.stripBackticks
-          else suggestedName
-        val newName = Identifier.backtickWrap(withoutBackticks)
-
-        def isNotRenamedSymbol(
-            textDocument: TextDocument,
-            occ: SymbolOccurrence,
-        ): Boolean = {
-          def realName = occ.symbol.desc.name.value
-          def foundName =
-            occ.range
-              .flatMap(rng => rng.inString(textDocument.text))
-              .map(_.stripBackticks)
-          occ.symbol.isLocal ||
-          foundName.contains(realName)
-        }
-
-        def shouldCheckImplementation(
-            symbol: String,
-            path: AbsolutePath,
-            textDocument: TextDocument,
-        ) =
-          !symbol.desc.isType && !(symbol.isLocal && implementationProvider
-            .defaultSymbolSearch(path, textDocument)(symbol)
-            .exists(info => info.isTrait || info.isClass))
-
-        val allReferences = for {
-          (occurence, semanticDb) <- symbolOccurrence.toIterable
-          definitionLoc <- definition.locations.asScala.headOption.toIterable
-          definitionPath = definitionLoc.getUri().toAbsolutePath
-          defSemanticdb <- definition.semanticdb.toIterable
-          if canRenameSymbol(occurence.symbol, Option(newName)) &&
-            isWorkspaceSymbol(occurence.symbol, definitionPath) &&
-            isNotRenamedSymbol(semanticDb, occurence)
-          parentSymbols =
-            implementationProvider
-              .topMethodParents(occurence.symbol, defSemanticdb)
-          txtParams <- {
-            if (parentSymbols.nonEmpty) parentSymbols.map(toTextParams)
-            else if (definitionTextParams.nonEmpty) definitionTextParams
-            else List(textParams)
-          }
-          isJava = definitionPath.isJava
-          currentReferences =
-            referenceProvider
-              .references(
-                /**
-                 * isJava - in Java we can include declarations safely and we
-                 * also need to include contructors.
-                 */
-                toReferenceParams(
-                  txtParams,
-                  includeDeclaration = isJava,
-                ),
-                findRealRange = findRealRange(newName),
-                includeSynthetic,
+          val symbolOccurrence =
+            definitionProvider
+              .symbolOccurrence(source, textParams.getPosition)
+              .orElse(
+                findRenamedImportOccurrenceAtPosition(
+                  source,
+                  params.getPosition(),
+                )
               )
-              .flatMap(_.locations)
-          definitionLocation = {
-            if (parentSymbols.isEmpty)
-              definition.locations.asScala
-                .filter(_.getUri().isScalaOrJavaFilename)
-            else parentSymbols
+
+          val suggestedName = params.getNewName()
+          val withoutBackticks =
+            if (suggestedName.isBackticked)
+              suggestedName.stripBackticks
+            else suggestedName
+          val newName = Identifier.backtickWrap(withoutBackticks)
+
+          def isNotRenamedSymbol(
+              textDocument: TextDocument,
+              occ: SymbolOccurrence,
+          ): Boolean = {
+            def realName = occ.symbol.desc.name.value
+            def foundName =
+              occ.range
+                .flatMap(rng => rng.inString(textDocument.text))
+                .map(_.stripBackticks)
+            occ.symbol.isLocal ||
+            foundName.contains(realName)
           }
-          companionRefs = companionReferences(occurence.symbol, source, newName)
-          implReferences = implementations(
-            txtParams,
-            shouldCheckImplementation(
+
+          def shouldCheckImplementation(
+              symbol: String,
+              path: AbsolutePath,
+              textDocument: TextDocument,
+          ) =
+            !symbol.desc.isType && !(symbol.isLocal && implementationProvider
+              .defaultSymbolSearch(path, textDocument)(symbol)
+              .exists(info => info.isTrait || info.isClass))
+
+          val allReferences = for {
+            (occurence, semanticDb) <- symbolOccurrence.toIterable
+            definitionLoc <- definition.locations.asScala.headOption.toIterable
+            definitionPath = definitionLoc.getUri().toAbsolutePath
+            defSemanticdb <- definition.semanticdb.toIterable
+            if canRenameSymbol(occurence.symbol, Option(newName)) &&
+              isWorkspaceSymbol(occurence.symbol, definitionPath) &&
+              isNotRenamedSymbol(semanticDb, occurence)
+            parentSymbols =
+              implementationProvider
+                .topMethodParents(occurence.symbol, defSemanticdb)
+            txtParams <- {
+              if (parentSymbols.nonEmpty) parentSymbols.map(toTextParams)
+              else if (definitionTextParams.nonEmpty) definitionTextParams
+              else List(textParams)
+            }
+            isJava = definitionPath.isJava
+            currentReferences =
+              referenceProvider
+                .references(
+                  /**
+                   * isJava - in Java we can include declarations safely and we
+                   * also need to include contructors.
+                   */
+                  toReferenceParams(
+                    txtParams,
+                    includeDeclaration = isJava,
+                  ),
+                  findRealRange = findRealRange(newName),
+                  includeSynthetic,
+                )
+                .flatMap(_.locations)
+            definitionLocation = {
+              if (parentSymbols.isEmpty)
+                definition.locations.asScala
+                  .filter(_.getUri().isScalaOrJavaFilename)
+              else parentSymbols
+            }
+            companionRefs = companionReferences(
               occurence.symbol,
               source,
-              semanticDb,
-            ),
-            newName,
+              newName,
+            )
+            implReferences = implementations(
+              txtParams,
+              shouldCheckImplementation(
+                occurence.symbol,
+                source,
+                semanticDb,
+              ),
+              newName,
+            )
+          } yield implReferences.map(implLocs =>
+            currentReferences ++ implLocs ++ companionRefs ++ definitionLocation
           )
-          loc <-
-            currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
-        } yield loc
-
-        def isOccurrence(fn: String => Boolean): Boolean = {
-          symbolOccurrence.exists { case (occ, _) =>
-            fn(occ.symbol)
-          }
+          Future
+            .sequence(allReferences)
+            .map(locs => (locs.flatten, symbolOccurrence, definition, newName))
         }
-
-        // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
-        val fallbackOccurences =
-          if (allReferences.isEmpty)
-            renamedImportOccurrences(source, symbolOccurrence)
-          else allReferences
-
-        if (fallbackOccurences.isEmpty) {
-          scribe.debug(s"Symbol occurence was $symbolOccurrence")
-          scribe.debug(s"The definition found was $definition")
-        }
-
-        val allChanges = for {
-          (path, locs) <- fallbackOccurences.toList.distinct
-            .groupBy(_.getUri().toAbsolutePath)
-        } yield {
-          val textEdits = for (loc <- locs) yield {
-            textEdit(isOccurrence, loc, newName)
-          }
-          Seq(path -> textEdits.toList)
-        }
-        val fileChanges = allChanges.flatten.toMap
-        val shouldRenameInBackground =
-          !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.renameFileThreshold
-        val (openedEdits, closedEdits) =
-          if (shouldRenameInBackground) {
-            if (clientConfig.isOpenFilesOnRenameProvider) {
-              client.showMessage(fileThreshold(fileChanges.keySet.size))
+        .map { case (allReferences, symbolOccurrence, definition, newName) =>
+          def isOccurrence(fn: String => Boolean): Boolean = {
+            symbolOccurrence.exists { case (occ, _) =>
+              fn(occ.symbol)
             }
-            fileChanges.partition { case (path, _) =>
-              buffers.contains(path)
-            }
-          } else {
-            (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
           }
 
-        awaitingSave.add(() => changeClosedFiles(closedEdits))
+          // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
+          val fallbackOccurences =
+            if (allReferences.isEmpty)
+              renamedImportOccurrences(source, symbolOccurrence)
+            else allReferences
 
-        val edits = documentEdits(openedEdits)
-        val renames =
-          fileRenames(isOccurrence, fileChanges.keySet, newName)
-        new WorkspaceEdit((edits ++ renames).asJava)
-      }
+          if (fallbackOccurences.isEmpty) {
+            scribe.debug(s"Symbol occurence was $symbolOccurrence")
+            scribe.debug(s"The definition found was $definition")
+          }
+
+          val allChanges = for {
+            (path, locs) <- fallbackOccurences.toList.distinct
+              .groupBy(_.getUri().toAbsolutePath)
+          } yield {
+            val textEdits = for (loc <- locs) yield {
+              textEdit(isOccurrence, loc, newName)
+            }
+            Seq(path -> textEdits.toList)
+          }
+          val fileChanges = allChanges.flatten.toMap
+          val shouldRenameInBackground =
+            !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.renameFileThreshold
+          val (openedEdits, closedEdits) =
+            if (shouldRenameInBackground) {
+              if (clientConfig.isOpenFilesOnRenameProvider) {
+                client.showMessage(fileThreshold(fileChanges.keySet.size))
+              }
+              fileChanges.partition { case (path, _) =>
+                buffers.contains(path)
+              }
+            } else {
+              (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+            }
+
+          awaitingSave.add(() => changeClosedFiles(closedEdits))
+
+          val edits = documentEdits(openedEdits)
+          val renames =
+            fileRenames(isOccurrence, fileChanges.keySet, newName)
+          new WorkspaceEdit((edits ++ renames).asJava)
+        }
     }
   }
 
-  def runSave(): Unit =
-    synchronized {
-      ConcurrentQueue.pollAll(awaitingSave).foreach(waiting => waiting())
+  def runSave(): Future[Unit] = {
+    val all = synchronized {
+      ConcurrentQueue.pollAll(awaitingSave)
     }
+    Future.sequence(all.map(waiting => waiting())).ignoreValue
+  }
 
   /**
    * In case of import renames, we can only rename the symbol in file.
@@ -374,34 +385,42 @@ final class RenameProvider(
 
   private def changeClosedFiles(
       fileEdits: Map[AbsolutePath, List[TextEdit]]
-  ) = {
-    fileEdits.toArray.par.foreach { case (file, changes) =>
-      val text = file.readText
-      val newText = TextEdits.applyEdits(text, changes)
-      file.writeText(newText)
-    }
+  ): Future[Unit] = {
+    Future
+      .sequence(fileEdits.toList.map { case (file, changes) =>
+        Future {
+          val text = file.readText
+          val newText = TextEdits.applyEdits(text, changes)
+          file.writeText(newText)
+        }
+      })
+      .ignoreValue
   }
 
   private def implementations(
       textParams: TextDocumentPositionParams,
       shouldCheckImplementation: Boolean,
       newName: String,
-  ): Seq[Location] = {
+  ): Future[Seq[Location]] = {
     if (shouldCheckImplementation) {
       for {
-        implLoc <- implementationProvider.implementations(textParams)
-        locParams = toReferenceParams(implLoc, includeDeclaration = true)
-        loc <-
-          referenceProvider
-            .references(
-              locParams,
-              findRealRange = findRealRange(newName),
-              includeSynthetic,
-            )
-            .flatMap(_.locations)
-      } yield loc
+        implLocs <- implementationProvider.implementations(textParams)
+      } yield {
+        for {
+          implLoc <- implLocs
+          locParams = toReferenceParams(implLoc, includeDeclaration = true)
+          loc <-
+            referenceProvider
+              .references(
+                locParams,
+                findRealRange = findRealRange(newName),
+                includeSynthetic,
+              )
+              .flatMap(_.locations)
+        } yield loc
+      }
     } else {
-      Nil
+      Future.successful(Nil)
     }
   }
 
