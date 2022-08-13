@@ -119,7 +119,9 @@ class CreateCompanionObjectCodeAction(
       bracelessOK: Boolean,
   ): l.CodeAction = {
     val codeAction = new l.CodeAction()
-    codeAction.setTitle(CreateCompanionObjectCodeAction.companionObjectCreation)
+    codeAction.setTitle(
+      CreateCompanionObjectCodeAction.companionObjectCreation(name)
+    )
     codeAction.setKind(this.kind)
     val range = new l.Range(pos, pos)
 
@@ -190,5 +192,6 @@ class CreateCompanionObjectCodeAction(
 }
 
 object CreateCompanionObjectCodeAction {
-  val companionObjectCreation = "Create companion object"
+  def companionObjectCreation(name: String): String =
+    s"Create companion object for ${name}"
 }

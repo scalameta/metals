@@ -278,7 +278,7 @@ class Scala3CodeActionLspSuite
        |
        |  class Bar {}
        |""".stripMargin,
-    s"""|${CreateCompanionObjectCodeAction.companionObjectCreation}
+    s"""|${CreateCompanionObjectCodeAction.companionObjectCreation("Foo")}
         |""".stripMargin,
     """|object Baz:
        |  enum Foo:
@@ -299,7 +299,7 @@ class Scala3CodeActionLspSuite
     "insert-companion-object-of-braceless-case-class-file-end",
     """|case class F<<>>oo(a: Int):
        |  def b = a""".stripMargin,
-    s"""|${CreateCompanionObjectCodeAction.companionObjectCreation}
+    s"""|${CreateCompanionObjectCodeAction.companionObjectCreation("Foo")}
         |""".stripMargin,
     """|case class Foo(a: Int):
        |  def b = a
