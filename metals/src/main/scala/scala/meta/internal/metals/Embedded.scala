@@ -65,9 +65,7 @@ final class Embedded(
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(mtags.scalaVersion),
-      statusBar.trackSlowTask("Preparing presentation compiler") {
-        newPresentationCompilerClassLoader(mtags, classpath)
-      },
+      newPresentationCompilerClassLoader(mtags, classpath),
     )
     serviceLoader(
       classOf[PresentationCompiler],
