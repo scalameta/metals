@@ -101,6 +101,8 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
 import coursierapi.Dependency
 import scala.meta.Term
+import java.io.File
+import coursierapi.Fetch
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1972,8 +1974,15 @@ class MetalsLanguageServer(
 
       case ServerCommands.SetupNotebookKernelForThisProject() =>
         scribe.info("Executing SetupNotebookKernelForThisProject")
-        val source = sourceMapper.workspace()
+        try {
+        val workspaceRoot1 = sourceMapper.workspace()
+        val source: AbsolutePath = AbsolutePath(
+          new File(
+            "/Users/simon/Code/metals/metals/src/main/scala/scala/meta/internal/metals/MetalsLanguageServer.scala"
+          ).toPath()
+        )
         scribe.info(source.toString)
+        
         val targetClasspath = buildTargets
           .inferBuildTarget(source)
           .flatMap(buildTargets.targetJarClasspath)
@@ -1982,6 +1991,7 @@ class MetalsLanguageServer(
 
         scribe.info("Found classpath ")
         scribe.info("targetClasspath " + targetClasspath.mkString("\n"))
+        scribe.info("classpath ends")
         val jvmReprRepo = coursierapi.MavenRepository.of(
           "https://maven.imagej.net/content/repositories/public/"
         )
@@ -1994,32 +2004,25 @@ class MetalsLanguageServer(
           s"scala-kernel_$scalaVersion",
           BuildInfo.almondVersion
         )
-        scribe.info(
-          "almond dep " + almondDep.getModule().getAttributes().keySet()
-        )
-        scribe.info(almondDep.getConfiguration())
-        scribe.info(almondDep.getClassifier())
-        val projectId = "Find a project ID"
+          scribe.info("figure out path to kernel")
+          val f = Fetch.create()
+          f.addDependencies(almondDep)
+          f.addRepositories(jvmReprRepo)
+          val coursierDeps = f.fetch().map(_.toString())          
+          val classPath = coursierDeps.asScala.mkString(":")
 
-        try {
+          val kernelMainClass = "almond.ScalaKernel"
           shellRunner.runJava(
             almondDep,
-            "almond.ScalaKernel",
-            source,
+            kernelMainClass,
+            workspaceRoot1,
             List(
               "--install",
               "--command",
-              "java -jar /Users/simon/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/sh/almond/scala-kernel_2.13.7/0.13.0/scala-kernel_2.13.7-0.13.0.jar",
-              "--id",
-              projectId,
-              "--display-name",
-              s"Scala $scalaVersion $projectName",
-              "--global",
-              "false",
-              // "--jupyter-path", "/Users/simon/Library/Jupyter/kernels/",
-              "--copy-launcher",
-              "true",
-              "--force"
+              s"""java -cp $classPath $kernelMainClass""",
+              "--id", "metalsAlmond",
+              "--display-name", s"metalsAlmond",
+              "--global", "true","--force", "true"              
             ),
             false,
             extraRepos = Array(jvmReprRepo)
