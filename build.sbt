@@ -199,6 +199,12 @@ val sharedSettings = List(
     if3 = List("-Yrangepos", "-target:jvm-1.8"),
   ),
   scalacOptions ++= lintingOptions(scalaVersion.value),
+  Compile / javacOptions ++= {
+    if (sys.props("java.version").startsWith("1.8"))
+      Nil
+    else
+      Seq("--release", "8")
+  },
 )
 
 publish / skip := true
