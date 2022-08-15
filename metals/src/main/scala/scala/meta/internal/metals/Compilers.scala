@@ -161,6 +161,7 @@ class Compilers(
     Cancelable.cancelEach(cache.values)(_.shutdown())
     Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
     cache.clear()
+    worksheetsCache.clear()
   }
 
   def restartAll(): Unit = {
