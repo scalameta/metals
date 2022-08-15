@@ -289,7 +289,7 @@ abstract class BaseWorksheetLspSuite(
         client.workspaceDiagnostics,
         getExpected(
           """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
-             |	at repl.MdocSession$App.<init>(Main.worksheet.sc:11)
+             |	at repl.MdocSession$MdocApp.<init>(Main.worksheet.sc:11)
              |	at repl.MdocSession$.app(Main.worksheet.sc:3)
              |
              |throw new RuntimeException("boom")
@@ -298,7 +298,7 @@ abstract class BaseWorksheetLspSuite(
           Map(
             "3" ->
               """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
-                 |	at repl.MdocSession$App.<init>(Main.worksheet.sc:12)
+                 |	at repl.MdocSession$MdocApp.<init>(Main.worksheet.sc:12)
                  |	at repl.MdocSession$.app(Main.worksheet.sc:3)
                  |
                  |throw new RuntimeException("boom")
@@ -585,7 +585,7 @@ abstract class BaseWorksheetLspSuite(
                  |""".stripMargin,
             "3" ->
               """|a/src/main/scala/Main.worksheet.sc:5:1: error:
-                 |Found:    App.this.Structural
+                 |Found:    MdocApp.this.Structural
                  |Required: Selectable
                  |new Foo().asInstanceOf[Structural].foo()
                  |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -620,19 +620,19 @@ abstract class BaseWorksheetLspSuite(
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/IncompatibleClassChangeError.worksheet.sc:1:1: error: java.lang.IncompatibleClassChangeError
-           |	at repl.MdocSession$App.<init>(IncompatibleClassChangeError.worksheet.sc:8)
+           |	at repl.MdocSession$MdocApp.<init>(IncompatibleClassChangeError.worksheet.sc:8)
            |	at repl.MdocSession$.app(IncompatibleClassChangeError.worksheet.sc:3)
            |
            |throw new IncompatibleClassChangeError()
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |a/src/main/scala/NoSuchMethodError.worksheet.sc:1:1: error: java.lang.NoSuchMethodError
-           |	at repl.MdocSession$App.<init>(NoSuchMethodError.worksheet.sc:8)
+           |	at repl.MdocSession$MdocApp.<init>(NoSuchMethodError.worksheet.sc:8)
            |	at repl.MdocSession$.app(NoSuchMethodError.worksheet.sc:3)
            |
            |throw new NoSuchMethodError()
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |a/src/main/scala/StackOverflowError.worksheet.sc:1:1: error: java.lang.StackOverflowError
-           |	at repl.MdocSession$App.<init>(StackOverflowError.worksheet.sc:8)
+           |	at repl.MdocSession$MdocApp.<init>(StackOverflowError.worksheet.sc:8)
            |	at repl.MdocSession$.app(StackOverflowError.worksheet.sc:3)
            |
            |throw new StackOverflowError()
