@@ -46,6 +46,19 @@ object Library {
     fetchSources("scala3-suite", dependencies)
   }
 
+  def xnio: Library =
+    fetchSources(
+      "xnio",
+      List(Dependency.of("org.jboss.xnio", "xnio-nio", "3.8.8.Final")),
+    )
+
+  def damlrxjavaSources: List[AbsolutePath] =
+    fetchSources(
+      "daml-rxjava",
+      List(Dependency.of("com.daml", "bindings-rxjava", "2.0.0")),
+    ).sources.entries
+      .filter(_.toString.endsWith("bindings-rxjava-2.0.0-sources.jar"))
+
   def allScala2: List[Library] = {
     import mtags.BuildInfo.scalaCompilerVersion
 
