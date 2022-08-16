@@ -456,21 +456,6 @@ class Completions(
           ),
           true,
         )
-
-      case CasePatternExtractor(selector, parent) =>
-        (
-          CaseKeywordCompletion.contribute(
-            selector,
-            completionPos,
-            path.last,
-            indexedContext,
-            config,
-            parent,
-            true,
-          ),
-          true,
-        )
-
       case TypedCasePatternExtractor(selector, parent) =>
         (
           CaseKeywordCompletion.contribute(
@@ -481,6 +466,20 @@ class Completions(
             config,
             parent,
             true,
+            true,
+          ),
+          true,
+        )
+
+      case CasePatternExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            path.last,
+            indexedContext,
+            config,
+            parent,
             true,
           ),
           true,
@@ -942,15 +941,17 @@ class Completions(
   object MatchExtractor:
     def unapply(path: List[Tree]) =
       path match
+        // foo mat@@
         case (sel @ Select(qualifier, name)) :: _
             if "match".startsWith(name.toString()) && text.charAt(
               completionPos.start - 1
             ) == ' ' =>
           Some((qualifier))
+        // foo match @@
         case (c: CaseDef) :: (m: Match) :: _
             if completionPos.query.startsWith("match") =>
           Some(m.selector)
-
+        // foo ma@tch (no cases)
         case (m @ Match(
               _,
               CaseDef(Literal(Constant(null)), _, _) :: Nil,
@@ -962,6 +963,9 @@ class Completions(
   object CaseExtractor:
     def unapply(path: List[Tree]): Option[(Tree, Tree)] =
       path match
+        // foo match
+        // case None => ()
+        // ca@@
         case (id @ Ident(name)) :: Block(stats, expr) :: parent :: _
             if "case"
               .startsWith(name.toString()) && isLastMatch(
@@ -969,6 +973,10 @@ class Completions(
             ) && expr == id =>
           val selector = stats.last.asInstanceOf[Match].selector
           Some((selector, parent))
+        // List(Option(1)).collect {
+        //   case Some(value) => ()
+        //   ca@@
+        // }
         case (ident @ Ident(name)) :: Block(
               _,
               expr,
@@ -976,10 +984,11 @@ class Completions(
             if ident == expr && "case"
               .startsWith(name.toString()) =>
           Some((m.selector, parent))
-
+        // foo match
+        //  ca@@
         case (c: CaseDef) :: (m: Match) :: parent :: _ =>
           Some((m.selector, parent))
-
+        // List(foo).map { ca@@ }
         case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
               fun,
               args,
@@ -995,15 +1004,18 @@ class Completions(
   object CasePatternExtractor:
     def unapply(path: List[Tree]) =
       path match
+        // case Som@@
         case (ident @ Ident(
               name
             )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
           Some((m.selector, parent))
+        // case abc @ Som@@
         case (ident @ Ident(name)) :: Bind(
               _,
               _,
             ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
           Some((m.selector, parent))
+        // case abc @ @@
         case Bind(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
           Some((m.selector, parent))
         case _ => None
@@ -1013,15 +1025,22 @@ class Completions(
   object TypedCasePatternExtractor:
     def unapply(path: List[Tree]) =
       path match
+        // case _: Som@@ =>
         case (ident @ Ident(name)) :: Typed(
               _,
               _,
             ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
           Some((m.selector, parent))
-
+        // case _: @@ =>
         case Typed(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
           Some((m.selector, parent))
-
+        // case ab: @@ =>
+        case Bind(
+              _,
+              Typed(_, _),
+            ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+        // case ab: Som@@ =>
         case (ident @ Ident(name)) :: Typed(_, _) :: Bind(
               _,
               _,
