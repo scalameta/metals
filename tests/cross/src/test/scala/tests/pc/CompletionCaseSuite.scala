@@ -406,7 +406,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "brace-negative".tag(IgnoreScala3),
+    "brace-negative",
     """
       |object Main {
       |  List(1 -> 2).map(@@)
@@ -414,6 +414,9 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "f = : ((Int, Int)) => B",
     topLines = Some(1),
+    compat = Map(
+      "3" -> "f = : A => B"
+    ),
   )
 
   checkEditLine(
