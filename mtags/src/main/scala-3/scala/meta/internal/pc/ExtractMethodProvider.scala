@@ -33,7 +33,6 @@ final class ExtractMethodProvider(
     range: RangeParams,
     extractionPos: OffsetParams,
     driver: InteractiveDriver,
-    config: PresentationCompilerConfig,
 ) extends ExtractMethodUtils:
 
   def extractMethod(): List[TextEdit] =
