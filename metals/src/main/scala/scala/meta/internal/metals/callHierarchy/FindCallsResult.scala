@@ -3,6 +3,7 @@ package scala.meta.internal.metals.callHierarchy
 import org.eclipse.lsp4j
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.SymbolOccurrence
 
 /**
  * Result of incoming calls finder.
@@ -11,8 +12,8 @@ import scala.meta.internal.semanticdb.TextDocument
  * @param definitionNameRange The range that should be selected.
  * @param fromRanges Ranges at which the calls appear.
  */
-case class FindIncomingCallsResult[T](
-    canBuildHierarchyItem: CanBuildCallHierarchyItem[T],
+case class FindIncomingCallsResult(
+    occurence: SymbolOccurrence,
     definitionNameRange: lsp4j.Range,
     fromRanges: List[lsp4j.Range],
 )
@@ -21,16 +22,16 @@ object FindIncomingCallsResult {
 
   /** Aggregate results of incoming calls finder by grouping the fromRanges. */
   def group[T](
-      results: List[FindIncomingCallsResult[T]]
-  ): List[FindIncomingCallsResult[T]] =
-    results.groupBy(_.canBuildHierarchyItem).values.toList.map {
+      results: List[FindIncomingCallsResult]
+  ): List[FindIncomingCallsResult] =
+    results.groupBy(_.occurence).values.toList.map {
       case result @ FindIncomingCallsResult(
-            canBuildHierarchyItem,
+            occurence,
             definitionNameRange,
             _,
           ) :: _ =>
         FindIncomingCallsResult(
-          canBuildHierarchyItem,
+          occurence,
           definitionNameRange,
           result.flatMap(_.fromRanges),
         )
@@ -48,8 +49,8 @@ object FindIncomingCallsResult {
  * @param source AbsolutePath where the item that is called is defined.
  * @param doc TextDocument where the item that is called is defined.
  */
-case class FindOutgoingCallsResult[T](
-    canBuildHierarchyItem: CanBuildCallHierarchyItem[T],
+case class FindOutgoingCallsResult(
+    occurence: SymbolOccurrence,
     definitionNameRange: lsp4j.Range,
     fromRanges: List[lsp4j.Range],
     source: AbsolutePath,
@@ -60,18 +61,18 @@ object FindOutgoingCallsResult {
 
   /** Aggregate results of outgoing calls finder by grouping the fromRanges. */
   def group[T](
-      results: List[FindOutgoingCallsResult[T]]
-  ): List[FindOutgoingCallsResult[T]] =
-    results.groupBy(_.canBuildHierarchyItem).values.toList.map {
+      results: List[FindOutgoingCallsResult]
+  ): List[FindOutgoingCallsResult] =
+    results.groupBy(_.occurence).values.toList.map {
       case result @ FindOutgoingCallsResult(
-            canBuildHierarchyItem,
+            occurence,
             definitionNameRange,
             _,
             source,
             doc,
           ) :: _ =>
         FindOutgoingCallsResult(
-          canBuildHierarchyItem,
+          occurence,
           definitionNameRange,
           result.flatMap(_.fromRanges),
           source,

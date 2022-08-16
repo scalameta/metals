@@ -10,32 +10,19 @@ import scala.meta.Pat
 import scala.meta.Name
 import scala.meta.Member
 import scala.meta.Term
-import scala.meta.Decl
 import scala.meta.Type
 import scala.meta.Init
 import scala.meta.Template
 
 /** Utility functions for call hierarchy requests. */
 private[callHierarchy] trait CallHierarchyHelpers {
-  private def extractNameFromDefinitionPats[V <: Tree { def pats: List[Pat] }](
-      v: V
-  ) =
-    v.pats match {
-      case (pat: Pat.Var) :: Nil => Some((v, pat.name))
-      case _ => None
-    }
-
-  def extractNameFromDefinition(tree: Tree): Option[(Tree, Name)] =
+  def extractNameFromMember(tree: Tree): Option[(Member, Name)] =
     tree match {
-      case v: Defn.Val => extractNameFromDefinitionPats(v)
-      case v: Defn.Var => extractNameFromDefinitionPats(v)
-      case v: Decl.Val => extractNameFromDefinitionPats(v)
-      case v: Decl.Var => extractNameFromDefinitionPats(v)
       case member: Member => Some((member, member.name))
       case _ => None
     }
 
-  /** Type declarations are not considered in call hierarchy request. This function helps to filter them */
+  /** Type declarations are not considered in call hierarchy request, this function helps to filter them. */
   def isTypeDeclaration(tree: Tree): Boolean =
     (tree.parent
       .map {
@@ -54,14 +41,61 @@ private[callHierarchy] trait CallHierarchyHelpers {
       })
       .getOrElse(false)
 
-  def findDefinition(from: Option[Tree]): Option[(Tree, Name)] =
-    from
-      .filterNot(tree => tree.is[Term.Param] || isTypeDeclaration(tree))
-      .flatMap(tree =>
-        extractNameFromDefinition(tree) match {
-          case result @ Some(_) => result
-          case None => findDefinition(tree.parent)
-        }
+  /**
+   * Go up in the tree to find a specified tree or find any definition.
+   * If the specified item is founded this function will return a couple that contain the item,
+   * otherwise the couple will containm the definition and the name of this definition.
+   */
+  def getSpecifiedOrFindDefinition(
+      from: Option[Tree],
+      specified: Option[Tree] = None,
+      prev: Option[Tree] = None,
+      indices: List[Int] = Nil,
+  ): Option[(Tree, Tree)] =
+    (specified
+      .collect { case tree if from.contains(tree) => (tree, tree) })
+      .orElse(
+        from
+          .filterNot(tree => tree.is[Term.Param] || isTypeDeclaration(tree))
+          .flatMap(tree =>
+            extractNameFromMember(tree) match {
+              case result @ Some(_) => result
+              case None =>
+                tree match {
+                  case v: Defn.Val =>
+                    v.pats.headOption.flatMap(pat =>
+                      traverseTreeWithIndices(pat, indices)
+                        .collect { case pat: Pat.Var =>
+                          (v, pat.name)
+                        }
+                    )
+                  case tuple: Term.Tuple =>
+                    prev.flatMap(prev =>
+                      getSpecifiedOrFindDefinition(
+                        tree.parent,
+                        specified,
+                        Some(tuple),
+                        tuple.args.indexOf(prev) :: indices,
+                      )
+                    )
+                  case apply: Term.Apply =>
+                    prev.flatMap(prev =>
+                      getSpecifiedOrFindDefinition(
+                        tree.parent,
+                        specified,
+                        Some(apply),
+                        apply.args.indexOf(prev) :: indices,
+                      )
+                    )
+                  case _ =>
+                    getSpecifiedOrFindDefinition(
+                      tree.parent,
+                      specified,
+                      Some(tree),
+                    )
+                }
+            }
+          )
       )
 
   def getSignatureFromHover(hover: Option[l.Hover]): Option[String] =
@@ -83,5 +117,74 @@ private[callHierarchy] trait CallHierarchyHelpers {
       case selectTree: s.SelectTree => Some(selectTree)
       case s.TypeApplyTree(selectTree: s.SelectTree, _) => Some(selectTree)
       case _ => None
+    }
+
+  def extractNameAndPathsFromPat(
+      pat: Pat,
+      indices: Vector[Int] = Vector.empty,
+  ): List[(Name, Vector[Int])] =
+    pat match {
+      case v: Pat.Var => List(v.name -> indices)
+      case tuple: Pat.Tuple =>
+        tuple.args.zipWithIndex.flatMap { case (p, i) =>
+          extractNameAndPathsFromPat(p, indices :+ i)
+        }
+      case extract: Pat.Extract =>
+        extract.args.zipWithIndex.flatMap { case (p, i) =>
+          extractNameAndPathsFromPat(p, indices :+ i)
+        }
+      case _ => Nil
+    }
+
+  def traverseTreeWithIndices(t: Tree, indices: List[Int]): Option[Tree] =
+    indices match {
+      case i :: tail =>
+        t match {
+          case tuple: Term.Tuple =>
+            tuple.args
+              .lift(i)
+              .flatMap(term => traverseTreeWithIndices(term, tail))
+          case apply: Term.Apply =>
+            apply.args
+              .lift(i)
+              .flatMap(term => traverseTreeWithIndices(term, tail))
+          case tuple: Pat.Tuple =>
+            tuple.args
+              .lift(i)
+              .flatMap(term => traverseTreeWithIndices(term, tail))
+          case extract: Pat.Extract =>
+            extract.args
+              .lift(i)
+              .flatMap(term => traverseTreeWithIndices(term, tail))
+          case _ => None
+        }
+      case Nil => Some(t)
+    }
+
+  def getIndicesFromPat(
+      tree: Tree,
+      indices: List[Int] = Nil,
+  ): (Tree, List[Int]) = tree match {
+    case v: Defn.Val => (v.rhs, indices)
+    case v: Defn.Var => (v.rhs.getOrElse(v), indices)
+    case _ =>
+      tree.parent match {
+        case Some(tuple @ (_: Pat.Tuple)) =>
+          getIndicesFromPat(tuple, tuple.args.indexOf(tree) :: indices)
+        case Some(extract @ (_: Pat.Extract)) =>
+          getIndicesFromPat(extract, extract.args.indexOf(tree) :: indices)
+        case Some(parent) => getIndicesFromPat(parent, indices)
+        case None => (tree, indices)
+      }
+  }
+
+  /** Find the root where symbols should be searched for. Useful for handling Pats. */
+  def findRealRoot(root: Tree) =
+    getSpecifiedOrFindDefinition(Some(root)).flatMap {
+      case (v @ (_: Pat.Var), name) =>
+        (traverseTreeWithIndices _)
+          .tupled(getIndicesFromPat(v))
+          .map(foundedRoot => (foundedRoot, name))
+      case foundedRoot => Some(foundedRoot)
     }
 }
