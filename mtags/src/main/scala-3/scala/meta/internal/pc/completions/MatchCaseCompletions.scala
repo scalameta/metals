@@ -36,7 +36,7 @@ object CaseKeywordCompletion:
   /**
    * A `case` completion showing the valid subtypes of the type being deconstructed.
    *
-   * @param selector the match expression being deconstructed or `EmptyTree` when
+   * @param selector `selector` of `selector match { cases }`  or `EmptyTree` when
    *                 not in a match expression (for example `List(1).foreach { case@@ }`.
    * @param completionPos the position of the completion
    * @param typedtree typed tree of the file, used for generating auto imports
@@ -85,7 +85,7 @@ object CaseKeywordCompletion:
           case TreeApply(fun, _) if fun.tpe != null && !fun.tpe.isErroneous =>
             fun.tpe
           case _ =>
-            parent.seenFrom(parent.symbol)._1
+            parent.tpe
         seenFromType.paramInfoss match
           case (head :: Nil) :: _
               if definitions.isFunctionType(head) || head.isRef(
@@ -126,7 +126,7 @@ object CaseKeywordCompletion:
     indexedContext.scopeSymbols
       .foreach(s => visit(s.info.dealias.typeSymbol, s.decodedName, Nil))
 
-    // Step 2: walk through known direct subclasses of sealed types.
+    // Step 2: walk through known subclasses of sealed types.
     selectorSym.sealedStrictDescendants.foreach { sym =>
       if !(sym.is(Sealed) && (sym.is(Abstract) || sym.is(Trait))) then
         val autoImport = autoImportsGen.forSymbol(sym)
@@ -207,7 +207,6 @@ object CaseKeywordCompletion:
       case t => t
 
     def subclassesForType(tpe: Type)(using Context): List[Symbol] =
-      tpe.typeSymbol.info
       val subclasses = ListBuffer.empty[Symbol]
       val parents = ListBuffer.empty[Symbol]
       // Get parent types from refined type
