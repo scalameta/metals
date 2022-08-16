@@ -51,7 +51,6 @@ object CaseKeywordCompletion:
   def contribute(
       selector: Tree,
       completionPos: CompletionPos,
-      typedTree2: Tree,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
       parent: Tree,
@@ -179,7 +178,6 @@ object CaseKeywordCompletion:
   def matchContribute(
       selector: Tree,
       completionPos: CompletionPos,
-      typedTree2: Tree,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
   ): List[CompletionValue] =

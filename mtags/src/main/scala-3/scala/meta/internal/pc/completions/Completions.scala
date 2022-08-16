@@ -436,7 +436,6 @@ class Completions(
           CaseKeywordCompletion.matchContribute(
             selector,
             completionPos,
-            path.last,
             indexedContext,
             config,
           ),
@@ -449,7 +448,6 @@ class Completions(
           CaseKeywordCompletion.contribute(
             selector,
             completionPos,
-            path.last,
             indexedContext,
             config,
             parent,
@@ -461,7 +459,6 @@ class Completions(
           CaseKeywordCompletion.contribute(
             selector,
             completionPos,
-            path.last,
             indexedContext,
             config,
             parent,
@@ -476,7 +473,6 @@ class Completions(
           CaseKeywordCompletion.contribute(
             selector,
             completionPos,
-            path.last,
             indexedContext,
             config,
             parent,
