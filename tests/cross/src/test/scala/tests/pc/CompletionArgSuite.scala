@@ -84,7 +84,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   // This might be good to fix in Dotty.
   // see: https://github.com/scalameta/metals/pull/2369
   check(
-    "arg4".tag(IgnoreScala3),
+    "arg4",
     s"""|
         |$user
         |object Main {
@@ -96,6 +96,18 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg4
        |""".stripMargin,
     topLines = Option(3),
+    compat = Map(
+      "3.1.3" ->
+        """|age = : Int
+           |followers = : Int
+           |Main arg4
+           |""".stripMargin,
+      "3.1" ->
+        """|age = : Int
+           |address = : String
+           |followers = : Int
+           |""".stripMargin,
+    ),
   )
 
   check(
@@ -247,7 +259,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   // known issue: the second parameter with $ become | (returned from compiler)
   // see: https://github.com/scalameta/metals/issues/3690
   checkSnippet(
-    "explicit-dollar-autofill".tag(IgnoreScala3),
+    "explicit-dollar-autofill",
     """
       |object Main {
       |  def test($foo: Int, $bar: Int): Int = ???
@@ -258,6 +270,11 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |$$foo = ${1:???}, | = ${2:???}
        |""".stripMargin,
     topLines = Option(2),
+    compat = Map(
+      "3" -> """|$$foo = 
+                |$$foo = ${1:???}, $$bar = ${2:???}
+                |""".stripMargin
+    ),
   )
 
   check(
@@ -271,11 +288,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|isResourceFile = : Boolean
        |isResourceFile = isLargeBanana : Boolean
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|isResourceFile = : Boolean
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -291,12 +303,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = argument : Int
        |""".stripMargin,
     topLines = Some(3),
-    compat = Map(
-      "3" ->
-        """|argument: Int
-           |argument = : Int
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -312,12 +318,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = argument : Int
        |""".stripMargin,
     topLines = Some(3),
-    compat = Map(
-      "3" ->
-        """|argument: Int
-           |argument = : Int
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -338,11 +338,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = number8 : Int
        |""".stripMargin,
     topLines = Some(5),
-    compat = Map(
-      "3" ->
-        """|argument = : Int
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -359,15 +354,10 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |`type` = number2 : Int
        |""".stripMargin,
     topLines = Some(5),
-    compat = Map(
-      "3" ->
-        """|`type` = : Int
-           |""".stripMargin
-    ),
   )
 
   checkEditLine(
-    "auto-no-show".tag(IgnoreScala3),
+    "auto-no-show",
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
@@ -381,7 +371,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto".tag(IgnoreScala3),
+    "auto",
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
@@ -394,7 +384,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-inheritance".tag(IgnoreScala3),
+    "auto-inheritance",
     s"""|object Main {
         |  trait Animal
         |  class Dog extends Animal
@@ -412,7 +402,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-multiple-type".tag(IgnoreScala3),
+    "auto-multiple-type",
     s"""|object Main {
         |  def foo(argument : Int, other : String, last : String = "") : Int = argument
         |  val number = 5
@@ -426,7 +416,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-not-found".tag(IgnoreScala3),
+    "auto-not-found",
     s"""|object Main {
         |  val number = 234
         |  val nothing = throw new Exception
@@ -440,7 +430,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-list".tag(IgnoreScala3),
+    "auto-list",
     s"""|object Main {
         |  def foo(argument : List[String], other : List[Int]) : Int = 0
         |  val list1 = List(1,2,3)
@@ -452,10 +442,13 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "foo(auto@@)",
     "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})",
+    compat = Map(
+      "3" -> "foo(argument = ${1|???,list3,list4|}, other = ${2|???,list1,list2|})"
+    ),
   )
 
   checkEditLine(
-    "wrap-idents".tag(IgnoreScala3),
+    "wrap-idents",
     s"""|object Main {
         |  def f(a: String, b: String, `type`: String) = a + b + `type`
         |  val str = ""
@@ -465,12 +458,15 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "f(auto@@)",
     "f(a = ${1|???,str1,str|}, b = ${2|???,str1,str|}, `type` = ${3|???,str1,str|})",
+    compat = Map(
+      "3" -> "f(a = ${1|???,str,str1|}, b = ${2|???,str,str1|}, `type` = ${3|???,str,str1|})"
+    ),
   )
 
   check(
-    "nested-apply".tag(IgnoreScala3),
+    "nested-apply",
     s"""|object Main{
-        |  def foo(argument1: Int, argument2: Int): Int = arg1 + arg2
+        |  def foo(argument1: Int, argument2: Int): Int = argument1 + argument2
         |  val x: Int = 3
         |  foo(foo(@@), )
         |}
@@ -482,4 +478,5 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(4),
   )
+
 }

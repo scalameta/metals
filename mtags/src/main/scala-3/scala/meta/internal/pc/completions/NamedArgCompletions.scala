@@ -1,6 +1,7 @@
 package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.IndexedContext
 
 import dotty.tools.dotc.ast.tpd.Apply
 import dotty.tools.dotc.ast.tpd.Block
@@ -16,6 +17,7 @@ import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.NameKinds.DefaultGetterName
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.util.SourcePosition
 
@@ -24,14 +26,22 @@ object NamedArgCompletions:
   def contribute(
       pos: SourcePosition,
       path: List[Tree],
+      indexedContext: IndexedContext,
+      clientSupportsSnippets: Boolean,
   )(using ctx: Context): List[CompletionValue] =
     path match
       case (ident: Ident) :: (app: Apply) :: _ => // fun(arg@@)
-        contribute(Some(ident), app, pos)
+        contribute(
+          Some(ident),
+          app,
+          pos,
+          indexedContext,
+          clientSupportsSnippets,
+        )
       case (Literal(Constant(null))) :: (app: Apply) :: _ => // fun(a, @@)
-        contribute(None, app, pos)
+        contribute(None, app, pos, indexedContext, clientSupportsSnippets)
       case (app: Apply) :: _ => // fun(@@)
-        contribute(None, app, pos)
+        contribute(None, app, pos, indexedContext, clientSupportsSnippets)
       case _ =>
         Nil
 
@@ -39,6 +49,8 @@ object NamedArgCompletions:
       ident: Option[Ident],
       apply: Apply,
       pos: SourcePosition,
+      indexedContext: IndexedContext,
+      clientSupportsSnippets: Boolean,
   )(using Context): List[CompletionValue] =
     def isUselessLiteral(arg: Tree): Boolean =
       arg match
@@ -104,12 +116,67 @@ object NamedArgCompletions:
     val params: List[Symbol] =
       allParams.filter(param => param.name.startsWith(prefix))
 
+    val completionSymbols = indexedContext.scopeSymbols
+    def matchingTypesInScope(paramType: Type): List[String] =
+      completionSymbols
+        .collect {
+          case sym
+              if sym.info <:< paramType && sym.isTerm && !sym.info.isNullType && !sym.info.isNothingType && !sym
+                .is(Flags.Method) =>
+            sym.decodedName
+        }
+        .filter(name => name != "Nil" && name != "None")
+        .sorted
+
+    def findDefaultValue(param: Symbol): String =
+      val matchingType = matchingTypesInScope(param.info)
+      if matchingType.size == 1 then s":${matchingType.head}"
+      else if matchingType.size > 1 then s"|???,${matchingType.mkString(",")}|"
+      else ":???"
+
+    def fillAllFields(): List[CompletionValue] =
+      val suffix = "autofill"
+      val shouldShow =
+        allParams.exists(param => param.name.startsWith(prefix))
+      val isExplicitlyCalled = suffix.startsWith(prefix)
+      val hasParamsToFill = allParams.count(!_.is(Flags.HasDefault)) > 1
+      if (shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets
+      then
+        val editText = allParams.zipWithIndex
+          .collect {
+            case (param, index) if !param.is(Flags.HasDefault) => {
+              s"${param.nameBackticked.replace("$", "$$")} = $${${index + 1}${findDefaultValue(param)}}"
+            }
+          }
+          .mkString(", ")
+        List(
+          CompletionValue.Autofill(
+            editText
+          )
+        )
+      else List.empty
+      end if
+    end fillAllFields
+
+    def findPossibleDefaults(): List[CompletionValue] =
+      params.flatMap { param =>
+        val allMembers = matchingTypesInScope(param.info)
+        allMembers.map { memberName =>
+          val editText =
+            param.nameBackticked + " = " + memberName + " "
+          CompletionValue.namedArg(
+            label = editText,
+            param,
+          )
+        }
+      }
+
     params.map(p =>
       CompletionValue.namedArg(
         s"${p.nameBackticked} = ",
         p,
       )
-    )
+    ) ::: findPossibleDefaults() ::: fillAllFields()
   end contribute
 
 end NamedArgCompletions

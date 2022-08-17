@@ -434,7 +434,12 @@ class Completions(
           true,
         )
       case _ =>
-        val args = NamedArgCompletions.contribute(pos, path)
+        val args = NamedArgCompletions.contribute(
+          pos,
+          path,
+          indexedContext,
+          config.isCompletionSnippetsEnabled,
+        )
         val keywords = KeywordsCompletions.contribute(path, completionPos)
         (args ++ keywords, false)
     end match
@@ -567,6 +572,8 @@ class Completions(
             case namedArg: CompletionValue.NamedArg =>
               val id = namedArg.label + "="
               (id, true)
+            case autofill: CompletionValue.Autofill =>
+              (autofill.label, true)
             case fileSysMember: CompletionValue.FileSystemMember =>
               (fileSysMember.label, true)
 
