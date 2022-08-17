@@ -383,7 +383,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     // to avoid newMain annotation
     filter = str => !str.contains("newMain"),
   )
-
+  // couldnt' reproduce
   check(
     "new-pattern",
     """
@@ -398,6 +398,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     "",
     // to avoid newMain annotation
     filter = str => !str.contains("newMain"),
+    compat = Map(
+      "3" ->
+        """|case head :: next => scala.collection.immutable
+           |case Nil => scala.collection.immutable""".stripMargin
+    ),
   )
 
   check(

@@ -958,20 +958,10 @@ class CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin,
     compat = Map(
-      ">=3.1.0" ->
-        """|Some scala
-           |Some[A](value: A): Some[A]
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
-           |""".stripMargin,
       "3" ->
-        """|Some scala
-           |Some[A](value: A): Some[A]
-           |SomeToExpr - scala.quoted.ToExpr
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr - scala.quoted.FromExpr
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
-           |""".stripMargin,
+        """|Some(value) scala
+           |None scala
+           |""".stripMargin
     ),
   )
 
@@ -1015,8 +1005,8 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(2),
     compat = Map(
       "3" ->
-        """|NoManifest scala.reflect
-           |NoClassDefFoundError java.lang
+        """|None scala
+           |Some(value) scala
            |""".stripMargin
     ),
   )
@@ -1040,9 +1030,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3" ->
-        """|Seq scala.collection.immutable
-           |Set scala.collection.immutable
-           |Stream scala.collection.immutable
+        """|Some(value) scala
+           |None scala
            |""".stripMargin,
     ),
   )
@@ -1066,9 +1055,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3" ->
-        """|Seq scala.collection.immutable
-           |Set scala.collection.immutable
-           |Stream scala.collection.immutable
+        """|Some[_] scala
+           |None scala
            |""".stripMargin,
     ),
   )
@@ -1094,10 +1082,7 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Option(3),
     compat = Map(
       "3" ->
-        """|NotString: Int
-           |Nil scala.collection.immutable
-           |NoManifest scala.reflect
-           |""".stripMargin
+        ""
     ),
   )
 
@@ -1114,6 +1099,10 @@ class CompletionSuite extends BaseCompletionSuite {
        |NoManifest scala.reflect
        |""".stripMargin,
     topLines = Option(3),
+    compat = Map(
+      "3" ->
+        ""
+    ),
   )
 
   check(
@@ -1129,6 +1118,10 @@ class CompletionSuite extends BaseCompletionSuite {
        |NoManifest scala.reflect
        |""".stripMargin,
     topLines = Option(3),
+    compat = Map(
+      "3" ->
+        ""
+    ),
   )
 
   check(

@@ -248,9 +248,9 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case Some(value) => scala
        |""".stripMargin,
   )
-
+  // for scala 3.2.1 we see subclasses like `Tuple2$mcCC$sp`. Might be an issue in Dotty
   check(
-    "lambda-function2",
+    "lambda-function2".tag(IgnoreScalaVersion.forLaterThan("3.2.1")),
     """
       |object A {
       |  List(1).foldLeft(0) {
