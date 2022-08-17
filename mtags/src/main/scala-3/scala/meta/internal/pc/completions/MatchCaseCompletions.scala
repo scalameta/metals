@@ -56,7 +56,6 @@ object CaseKeywordCompletion:
       parent: Tree,
       patternOnly: Boolean = false,
       hasBind: Boolean = false,
-      // doFilterText: Boolean = false,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val pos = completionPos.sourcePos
@@ -210,7 +209,7 @@ object CaseKeywordCompletion:
       // Get parent types from refined type
       def loop(tpe: Type): Unit =
         tpe match
-          case AndType(tp1, tp2) =>
+          case AndType(tp1, tp2) => // for refined type like A with B with C
             loop(tp1)
             loop(tp2)
           case t => parents += tpe.typeSymbol
@@ -277,7 +276,7 @@ object CaseKeywordCompletion:
           "match (exhaustive)",
           insertText,
           members.flatMap(_.additionalEdits),
-          s" ${tpe.show} (${members.length} cases)",
+          s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
         )
         List(basicMatch, exhaustive)
     completions

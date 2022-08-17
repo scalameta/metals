@@ -330,7 +330,6 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-    // pprint.pprintln(path.take(3))
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
@@ -429,8 +428,7 @@ class Completions(
           ),
           true,
         )
-      // CASE COMPLETIONS
-      // Match completions
+
       case MatchExtractor(selector) =>
         (
           CaseKeywordCompletion.matchContribute(
@@ -442,7 +440,6 @@ class Completions(
           false,
         )
 
-      // CASE COMPLETIONS
       case CaseExtractor(selector, parent) =>
         (
           CaseKeywordCompletion.contribute(
@@ -454,6 +451,7 @@ class Completions(
           ),
           true,
         )
+
       case TypedCasePatternExtractor(selector, parent) =>
         (
           CaseKeywordCompletion.contribute(
@@ -480,6 +478,8 @@ class Completions(
           ),
           true,
         )
+      // in `case @@` we have to change completionPos to `case` pos,
+      // otherwise after accepting completion we would get `case case None =>`
       case (lt @ Literal(
             Constant(null)
           )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
@@ -488,13 +488,11 @@ class Completions(
           c.startPos,
           CompletionPos.infer(c.startPos, text, path.tail),
         )
-      // Pattern only
 
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
       case Literal(Constant(null)) :: tl =>
         advancedCompletions(tl, pos, completionPos)
-      // case Ident(_) :: (c: CaseDef) :: (m: Match) =>
 
       case _ =>
         val args = NamedArgCompletions.contribute(
