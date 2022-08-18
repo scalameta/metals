@@ -170,7 +170,7 @@ class MetalsLanguageServer(
   private val recentlyOpenedFiles = new ActiveFiles(time)
   private val recentlyFocusedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
-
+  private var isImportInProcess: Boolean = false
   @volatile
   var userConfig: UserConfiguration = UserConfiguration()
   var excludedPackageHandler: ExcludedPackagesHandler =
@@ -1754,8 +1754,13 @@ class MetalsLanguageServer(
         autoConnectToBuildServer().asJavaObject
       case ServerCommands.GenerateBspConfig() =>
         generateBspConfig().asJavaObject
-      case ServerCommands.ImportBuild() =>
-        slowConnectToBuildServer(forceImport = true).asJavaObject
+      case ServerCommands.ImportBuild() => 
+        if (!isImportInProcess) {
+          slowConnectToBuildServer(forceImport = true).asJavaObject
+        } else {
+          Future.successful(languageClient.showMessage( // needs fixes: 1. Hide message after import has ended. 2. Add 'Cancel Build Import' button
+          new MessageParams(MessageType.Warning, s"Import already running. \nPlease cancel the current import to run a new one"), )).asJavaObject
+        }
       case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
@@ -2263,8 +2268,11 @@ class MetalsLanguageServer(
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
+    pprint.log("tu jestem")
+    pprint.log(isImportInProcess)
     for {
       possibleBuildTool <- supportedBuildTool
+      _ = { isImportInProcess = true; () }
       chosenBuildServer = tables.buildServers.selectedServer()
       isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
         _ == BloopServers.name
@@ -2283,6 +2291,7 @@ class MetalsLanguageServer(
         case None =>
           Future.successful(BuildChange.None)
       }
+      _ = { isImportInProcess = false; () }
     } yield buildChange
   }
 
@@ -2290,7 +2299,8 @@ class MetalsLanguageServer(
       forceImport: Boolean,
       buildTool: BuildTool,
       checksum: String,
-  ): Future[BuildChange] =
+  ): Future[BuildChange] = {
+    pprint.log(forceImport) 
     for {
       result <- {
         if (forceImport) bloopInstall.runUnconditionally(buildTool)
@@ -2317,6 +2327,7 @@ class MetalsLanguageServer(
         }
       }
     } yield change
+  }
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     val connected = if (!buildTools.isAutoConnectable) {
