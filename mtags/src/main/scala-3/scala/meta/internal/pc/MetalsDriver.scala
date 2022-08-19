@@ -23,7 +23,7 @@ import dotty.tools.dotc.util.SourceFile
  * the typed tree under the situation like developers
  * sequentially hover on the symbols in the same file without any changes.
  *
- * Note: we decided to cache only if the target URI only if the same as the previous run
+ * Note: we decided to cache only if the target URI is the same as in the previous run
  * because of `InteractiveDriver.currentCtx` that should return the context that
  * refers to the last compiled source file.
  * It would be ideal if we could update currentCtx even when we skip the compilation,
