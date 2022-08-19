@@ -486,7 +486,10 @@ final case class TestingServer(
         }
     })
 
-    assert(call.nonEmpty, s"Expected item \"\"\"$itemExpected\"\"\" was not found.")
+    assert(
+      call.nonEmpty,
+      s"Expected item \"\"\"$itemExpected\"\"\" was not found.",
+    )
 
     val fromRangesExpected = expected.map { case (filename, code) =>
       filename -> """(<|>)(\?)(<|>)""".r.replaceAllIn(

@@ -162,7 +162,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |}
            |
            |""".stripMargin,
-        Some(result("1"))
+        Some(result("1")),
       )
     } yield ()
   }
@@ -192,7 +192,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |}
            |
            |""".stripMargin,
-        Some(result("1"))
+        Some(result("1")),
       )
     } yield ()
   }
@@ -222,7 +222,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |}
            |
            |""".stripMargin,
-        Some(result("1"))
+        Some(result("1")),
       )
       result <- assertIncomingCalls(
         """|/a/src/main/scala/a/Main.scala
@@ -235,7 +235,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |}
            |
            |""".stripMargin,
-        Some(result("1"))
+        Some(result("1")),
       )
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/Main.scala
@@ -248,52 +248,52 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |}
            |
            |""".stripMargin,
-        Some(result("1"))
+        Some(result("1")),
       )
     } yield ()
   }
 
   test("indirect-recursive-outgoing-call") {
-    for { 
-    result <- assertOutgoingCalls(
-      """|/a/src/main/scala/a/Main.scala
-          |package a
-          |
-          |object Main {
-          |  def @@a() { <?<b>?>/*1*/() }
-          |  def <<b>>/*1*/() { c() }
-          |  def c() { a() }
-          |}
-          |
-          |""".stripMargin,
-    )
-    result <- assertOutgoingCalls(
-      """|/a/src/main/scala/a/Main.scala
-          |package a
-          |
-          |object Main {
-          |  def a() { b() }
-          |  def b() { <?<c>?>/*1*/() }
-          |  def <<c>>/*1*/() { a() }
-          |}
-          |
-          |""".stripMargin,
-      Some(result("1"))
-    )
-    result <- assertOutgoingCalls(
-      """|/a/src/main/scala/a/Main.scala
-          |package a
-          |
-          |object Main {
-          |  def <<a>>/*1*/() { b() }
-          |  def b() { c() }
-          |  def c() { <?<a>?>/*1*/() }
-          |}
-          |
-          |""".stripMargin,
-      Some(result("1"))
-    )
-    _ <- assertIncomingCalls(
+    for {
+      result <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  def @@a() { <?<b>?>/*1*/() }
+           |  def <<b>>/*1*/() { c() }
+           |  def c() { a() }
+           |}
+           |
+           |""".stripMargin
+      )
+      result <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  def a() { b() }
+           |  def b() { <?<c>?>/*1*/() }
+           |  def <<c>>/*1*/() { a() }
+           |}
+           |
+           |""".stripMargin,
+        Some(result("1")),
+      )
+      result <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  def <<a>>/*1*/() { b() }
+           |  def b() { c() }
+           |  def c() { <?<a>?>/*1*/() }
+           |}
+           |
+           |""".stripMargin,
+        Some(result("1")),
+      )
+      _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/Main.scala
            |package a
            |
@@ -304,7 +304,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |}
            |
            |""".stripMargin,
-        Some(result("1"))
+        Some(result("1")),
       )
     } yield ()
   }

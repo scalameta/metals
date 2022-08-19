@@ -11,6 +11,7 @@ import scala.meta.internal.{semanticdb => s}
 
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.remotels.RemoteLanguageServer
+import scala.meta.internal.semanticdb.Scala._
 
 import scala.meta.io.AbsolutePath
 
@@ -61,6 +62,8 @@ final case class CallHierarchyProvider(
   private case class CallHierarchyItemInfo(
       symbols: Array[String],
       visited: Array[String],
+      isLocal: Boolean,
+      searchLocal: Boolean,
   )
 
   private def buildCallHierarchyItem(
@@ -124,7 +127,15 @@ final case class CallHierarchyProvider(
                    else "") + getSignatureFromHover(hover).getOrElse("")
                 )
 
-                item.setData(CallHierarchyItemInfo(symbols, visited))
+                val isLocal = symbol.isLocal
+
+                val searchLocal =
+                  isLocal || source.isDependencySource(workspace) ||
+                    buildTargets.inverseSources(source).isEmpty
+
+                item.setData(
+                  CallHierarchyItemInfo(symbols, visited, isLocal, searchLocal)
+                )
 
                 item
               })
@@ -284,13 +295,17 @@ final case class CallHierarchyProvider(
       .get
 
     for {
-      paths <- references
-        .pathsMightContainSymbol(
-          params.getItem.getUri.toAbsolutePath,
-          info.symbols.toSet,
-        )
+      paths <-
+        if (!info.isLocal)
+          references
+            .pathsMightContainSymbol(
+              params.getItem.getUri.toAbsolutePath,
+              info.symbols.toSet,
+            )
+        else Future.successful(Set.empty)
+      localPath = if (info.searchLocal) Set(workspace) else Set.empty
       result <- Future.sequence(
-        paths.toList
+        (paths ++ localPath).toList
           .map(source => {
             semanticdbs.textDocument(source).documentIncludingStale match {
               case Some(doc) =>
@@ -348,8 +363,13 @@ final case class CallHierarchyProvider(
   )(implicit
       ec: ExecutionContext
   ): Future[Option[(SymbolOccurrence, AbsolutePath, TextDocument)]] =
-    references
-      .pathsMightContainSymbol(source, Set(symbol))
+    (if (!symbol.isLocal)
+       references
+         .pathsMightContainSymbol(
+           source,
+           Set(symbol),
+         )
+     else Future.successful(Set(source)))
       .map(paths =>
         paths.view
           .map(source =>

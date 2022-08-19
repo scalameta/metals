@@ -135,7 +135,10 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
         )
         (remaining, checked + (id -> item))
       }
-      _ = assert(remainingCalls.isEmpty, s"Some calls was not checked: ${remainingCalls}.")
+      _ = assert(
+        remainingCalls.isEmpty,
+        s"Some calls was not checked: ${remainingCalls}.",
+      )
     } yield items
   }
 
