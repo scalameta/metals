@@ -5,11 +5,8 @@ import java.{util as ju}
 
 import scala.collection.concurrent.TrieMap
 
-import scala.meta.internal.mtags.MD5
-
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.interactive.SourceTree
 import dotty.tools.dotc.reporting.Diagnostic
 import dotty.tools.dotc.util.SourceFile
 
