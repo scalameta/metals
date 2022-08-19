@@ -59,7 +59,7 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
         files
           .find(_._2.contains("@@"))
           .map { case (fileName, code) =>
-            (fileName, code.replaceAll("""(<<|>>|<\?<|>\?>)""", ""))
+            (fileName, code.replaceAll("""(<<|>>|<\?<|>\?>|\/\*\d\*\/)""", ""))
           }
           .getOrElse {
             throw new IllegalArgumentException(
@@ -78,7 +78,7 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
       .toSet
 
     val base = files.map { case (fileName, code) =>
-      fileName -> code.replaceAll("""(<<|>>|<\?<|>\?>|@@)""", "")
+      fileName -> code.replaceAll("""(<<|>>|<\?<|>\?>|@@|\/\*\d\*\/)""", "")
     }
 
     val expected = files.map { case (fileName, code) =>
@@ -88,8 +88,8 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
           id -> pattern.replaceAllIn(
             codeWithoutCursorPos,
             m =>
-              if (m.group(5) == id) m.toString
-              else m.group(2) + m.group(4),
+              if (m.group(5) == id) m.group(1) + m.group(2) + m.group(3)
+              else m.group(2),
           )
         )
         .toMap
@@ -108,7 +108,7 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
            |  }
            |}
            |${input
-            .replaceAll("""(<<|>>|<\?<|>\?>|@@)""", "")}""".stripMargin
+            .replaceAll("""(<<|>>|<\?<|>\?>|@@|\/\*\d\*\/)""", "")}""".stripMargin
       )
       _ <- Future.sequence(
         files.map(file => server.didOpen(s"${file._1}"))
@@ -135,7 +135,7 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
         )
         (remaining, checked + (id -> item))
       }
-      _ = assert(remainingCalls.isEmpty)
+      _ = assert(remainingCalls.isEmpty, s"Some calls was not checked: ${remainingCalls}.")
     } yield items
   }
 
