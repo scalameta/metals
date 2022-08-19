@@ -54,7 +54,7 @@ case class ScalaPresentationCompiler(
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   private val forbiddenDoubleOptions = Set("-release")
 
-  val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] =
+  val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(
       config,
       sh,
@@ -70,7 +70,7 @@ case class ScalaPresentationCompiler(
       case head :: tail => head :: removeDoubleOptions(tail)
       case Nil => options
 
-  def newDriver: InteractiveDriver =
+  def newDriver: MetalsDriver =
     val implicitSuggestionTimeout = List("-Ximport-suggestion-timeout", "0")
     val defaultFlags = List("-color:never")
     val filteredOptions = removeDoubleOptions(
@@ -81,7 +81,7 @@ case class ScalaPresentationCompiler(
         .mkString(
           File.pathSeparator
         ) :: Nil
-    new InteractiveDriver(settings)
+    new MetalsDriver(settings)
 
   override def getTasty(
       targetUri: URI,

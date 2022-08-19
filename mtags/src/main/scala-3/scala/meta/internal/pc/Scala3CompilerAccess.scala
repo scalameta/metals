@@ -24,7 +24,7 @@ class Scala3CompilerAccess(
     sh: Option[ScheduledExecutorService],
     newCompiler: () => Scala3CompilerWrapper,
 )(using ec: ExecutionContextExecutor)
-    extends CompilerAccess[StoreReporter, InteractiveDriver](
+    extends CompilerAccess[StoreReporter, MetalsDriver](
       config,
       sh,
       newCompiler,
