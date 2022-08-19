@@ -314,7 +314,8 @@ class ExtractValueCodeAction(
 
 object ExtractValueCodeAction {
   def title(expr: String): String = {
-    if (expr.length <= 10) s"Extract `$expr` as value"
-    else s"Extract `${expr.take(10)}` ... as value"
+    val trimmed = expr.trim.stripPrefix("{").stripSuffix("}").trim()
+    if (trimmed.length <= 10) s"Extract `$trimmed` as value"
+    else s"Extract `${trimmed.take(10)}` ... as value"
   }
 }
