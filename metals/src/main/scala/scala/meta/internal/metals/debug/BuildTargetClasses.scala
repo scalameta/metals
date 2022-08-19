@@ -161,12 +161,14 @@ object TestFramework {
     .map {
       case "JUnit" => JUnit4
       case "munit" => MUnit
+      case "ScalaTest" => Scalatest
       case _ => Unknown
     }
     .getOrElse(Unknown)
 }
 case object JUnit4 extends TestFramework(true)
 case object MUnit extends TestFramework(true)
+case object Scalatest extends TestFramework(true)
 case object Unknown extends TestFramework(false)
 
 object BuildTargetClasses {
