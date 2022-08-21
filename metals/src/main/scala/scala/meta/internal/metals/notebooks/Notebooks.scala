@@ -77,7 +77,7 @@ object Notebooks {
       // TODO : https://github.com/coursier/coursier/discussions/2479
       // val classPath = (coursierDeps ++ cp.toSet ).mkString(":")
 
-      scribe.info(coursierDeps.mkString(":"))
+      scribe.info(launcherDeps.mkString(":"))
 
       val kernelMainClass = "almond.ScalaKernel"
       shellRunner.runJava(
