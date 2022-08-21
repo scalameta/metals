@@ -18,7 +18,8 @@ object V {
   val bloopNightly = bloop
   val bsp = "2.1.0-M1"
   val coursier = "2.1.0-M6"
-  val coursierInterfaces = "1.0.6"
+  val coursierInterfaces = "1.0.8"
+  val coursierLauncher = "2.0.16"
   val debugAdapter = "2.2.0-M1"
   val genyVersion = "0.7.1"
   val gradleBloop = bloop
@@ -26,7 +27,7 @@ object V {
   val javaSemanticdb = "0.7.4"
   val jsoup = "1.15.1"
   val kindProjector = "0.13.2"
-  val lsp4jV = "0.14.0"
+  val lsp4jV = "0.15.0"
   val mavenBloop = bloop
   val mill = "0.10.4"
   val mdoc = "2.3.2"
@@ -117,7 +118,7 @@ object V {
     Set(
       // scala211,
       // sbtScala,
-      scala212,
+      //scala212,
       // ammonite212Version,
       scala213,
       // ammonite213Version,

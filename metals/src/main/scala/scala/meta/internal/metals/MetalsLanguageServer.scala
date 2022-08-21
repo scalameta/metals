@@ -103,6 +103,7 @@ import coursierapi.Dependency
 import scala.meta.Term
 import java.io.File
 import coursierapi.Fetch
+import scala.meta.internal.metals.notebooks.Notebooks
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -847,6 +848,14 @@ class MetalsLanguageServer(
             ServerCommands.all.map(_.id).asJava
           )
         )
+        val selectAllNotebooks = new NotebookSelector()
+        selectAllNotebooks.setNotebook("*")
+        val notebookList: util.List[NotebookSelector] = java.util.List.of(
+          selectAllNotebooks
+        )        
+        val notebookSelectors = new NotebookDocumentSyncRegistrationOptions()
+        notebookSelectors.setNotebookSelector(notebookList)
+
         capabilities.setFoldingRangeProvider(true)
         capabilities.setSelectionRangeProvider(true)
         capabilities.setCodeLensProvider(new CodeLensOptions(false))
@@ -873,6 +882,7 @@ class MetalsLanguageServer(
             List(".", "*").asJava
           )
         )
+        capabilities.setNotebookDocumentSync(notebookSelectors)
         capabilities.setWorkspaceSymbolProvider(true)
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
@@ -1047,14 +1057,27 @@ class MetalsLanguageServer(
     }
   }
 
+  @JsonNotification("notebookDocument/didOpen")
+  def didOpenNotebook(params: DidOpenNotebookDocumentParams): Unit = {
+    scribe.info("triggered did open on notebook")    
+    val path = params.getNotebookDocument().getUri.toAbsolutePath
+    scribe.info(path.toString())
+    Future(Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper))
+    scribe.info("finished did open on notebook")
+
+  }
+
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
+    scribe.info("triggered did open")
     val path = params.getTextDocument.getUri.toAbsolutePath
     // In some cases like peeking definition didOpen might be followed up by close
     // and we would lose the notion of the focused document
     focusedDocument.foreach(recentlyFocusedFiles.add)
     focusedDocument = Some(path)
     recentlyOpenedFiles.add(path)
+
+    scribe.info("past focused document")
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -1084,6 +1107,15 @@ class MetalsLanguageServer(
         )
       )
     } yield ()
+
+    scribe.info("past interactive")
+    scribe.info("path: " + path.toString)
+    scribe.info(path.isJupyterNotebook.toString)
+
+    if(path.isJupyterNotebook){
+        scribe.info("found jupyter notebook")
+        Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper)
+    }
 
     if (path.isDependencySource(workspace)) {
       CancelTokens { _ =>
@@ -1972,75 +2004,7 @@ class MetalsLanguageServer(
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
 
-      case ServerCommands.SetupNotebookKernelForThisProject() =>
-        scribe.info("Executing SetupNotebookKernelForThisProject")
-        try {
-          val workspaceRoot1 = sourceMapper.workspace()
-          val source: AbsolutePath = AbsolutePath(
-            new File(
-              "/Users/simon/Code/metals/metals/src/main/scala/scala/meta/internal/metals/MetalsLanguageServer.scala"
-            ).toPath()
-          )
-          scribe.info(source.toString)
-
-          val targetClasspath = buildTargets
-            .inferBuildTarget(source)
-            .flatMap(buildTargets.targetJarClasspath)
-            .getOrElse(Nil)
-            .map(_.toString)
-
-          scribe.info("Found classpath ")
-          scribe.info("targetClasspath " + targetClasspath.mkString("\n"))
-          scribe.info("classpath ends")
-          val jvmReprRepo = coursierapi.MavenRepository.of(
-            "https://maven.imagej.net/content/repositories/public/"
-          )
-          // TODO check scala version is valid. For now use 2.13.7
-          val scalaVersion = "2.13.7"
-
-          val projectName = "How do I get this"
-          val almondDep = Dependency.of(
-            "sh.almond",
-            s"scala-kernel_$scalaVersion",
-            BuildInfo.almondVersion
-          )
-          scribe.info("figure out path to kernel")
-          val f = Fetch.create()
-          f.addDependencies(almondDep)
-          f.addRepositories(jvmReprRepo)
-          val coursierDeps = f.fetch().map(_.toString())
-          val classPath = coursierDeps.asScala.mkString(":")
-
-          val kernelMainClass = "almond.ScalaKernel"
-          shellRunner.runJava(
-            almondDep,
-            kernelMainClass,
-            workspaceRoot1,
-            List(
-              "--install",
-              "--command",
-              s"""java -cp $classPath $kernelMainClass""",
-              "--id",
-              "metalsAlmond",
-              "--display-name",
-              s"metalsAlmond",
-              "--global",
-              "true",
-              "--force",
-              "true"
-            ),
-            false,
-            extraRepos = Array(jvmReprRepo)
-          )
-        } catch {
-          case e: Exception =>
-            scribe.error(s"Error installing kernel ", e)
-            scribe.error(
-              s"Swallowing the above exception so metals doesn't crash"
-            )
-        }
-
-        Future.successful(()).asJavaObject
+  
 
       case ServerCommands.CopyWorksheetOutput(path) =>
         val worksheetPath = path.toAbsolutePath

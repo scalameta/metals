@@ -516,6 +516,9 @@ trait CommonMtagsEnrichments {
     def isJava: Boolean = {
       toLanguage == Language.JAVA
     }
+    def isJupyterNotebook: Boolean = {
+      filename.endsWith(".ipynb")
+    }
     def isSemanticdb: Boolean = {
       path.toNIO.getFileName.toString.endsWith(".semanticdb")
     }
