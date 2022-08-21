@@ -852,7 +852,7 @@ class MetalsLanguageServer(
         selectAllNotebooks.setNotebook("*")
         val notebookList: util.List[NotebookSelector] = java.util.List.of(
           selectAllNotebooks
-        )        
+        )
         val notebookSelectors = new NotebookDocumentSyncRegistrationOptions()
         notebookSelectors.setNotebookSelector(notebookList)
 
@@ -1059,7 +1059,7 @@ class MetalsLanguageServer(
 
   @JsonNotification("notebookDocument/didOpen")
   def didOpenNotebook(params: DidOpenNotebookDocumentParams): Unit = {
-    scribe.info("triggered did open on notebook")    
+    scribe.info("triggered did open on notebook")
     val path = params.getNotebookDocument().getUri.toAbsolutePath
     scribe.info(path.toString())
     Future(Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper))
@@ -1112,9 +1112,9 @@ class MetalsLanguageServer(
     scribe.info("path: " + path.toString)
     scribe.info(path.isJupyterNotebook.toString)
 
-    if(path.isJupyterNotebook){
-        scribe.info("found jupyter notebook")
-        Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper)
+    if (path.isJupyterNotebook) {
+      scribe.info("found jupyter notebook")
+      Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper)
     }
 
     if (path.isDependencySource(workspace)) {
@@ -2003,8 +2003,6 @@ class MetalsLanguageServer(
         ammonite.stop()
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
-
-  
 
       case ServerCommands.CopyWorksheetOutput(path) =>
         val worksheetPath = path.toAbsolutePath

@@ -58,7 +58,8 @@ object Notebooks {
           //val scalaVersionC = ScalaVersion.of( scalaVersion)
           //scribe.info("scala version " + scalaVersionC.toString())
           val f = Fetch.create()
-          f.addDependencies(almondDep)          f.addRepositories(jvmReprRepo)
+          f.addDependencies(almondDep)
+          f.addRepositories(jvmReprRepo)
 
           val launcherDeps = f.fetch().asScala.toList.map(_.toString()).mkString(":")
 

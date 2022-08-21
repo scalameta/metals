@@ -131,16 +131,16 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
         pos = depSourcePosition(uri, query)
 
         locations <- server.server
-           .definition(
-             new l.TextDocumentPositionParams(
-               new l.TextDocumentIdentifier(uri),
-               //uri,
-               pos
-             )
-           )
-           .asScala
-         rendered = locations.asScala.map(renderLocation).mkString("\n")
-         _ = assertNoDiff(rendered, expected)
+          .definition(
+            new l.TextDocumentPositionParams(
+              new l.TextDocumentIdentifier(uri),
+              // uri,
+              pos
+            )
+          )
+          .asScala
+        rendered = locations.asScala.map(renderLocation).mkString("\n")
+        _ = assertNoDiff(rendered, expected)
       } yield ()
     }
   }
