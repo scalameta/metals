@@ -134,7 +134,6 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
           .definition(
             new l.TextDocumentPositionParams(
               new l.TextDocumentIdentifier(uri),
-              uri,
               pos,
             )
           )
