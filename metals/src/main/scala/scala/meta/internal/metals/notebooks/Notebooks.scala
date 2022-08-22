@@ -3,6 +3,7 @@ package scala.meta.internal.metals.notebooks
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.BuildTargets
 import java.io.File
+import scala.meta.internal.metals.JavaBinary
 import coursierapi.Dependency
 import scala.meta.internal.builds.ShellRunner
 import coursierapi.Fetch
@@ -16,6 +17,8 @@ import coursier.launcher.{
   ClassLoaderContent,
   ClassPathEntry
 }
+import java.nio.file.Files
+import scala.meta.internal.metals.UserConfiguration
 
 object Notebooks {
 
@@ -23,12 +26,14 @@ object Notebooks {
       path: AbsolutePath,
       buildTargets: BuildTargets,
       shellRunner: ShellRunner,
-      sourceMapper: SourceMapper
+      sourceMapper: SourceMapper,
+      userConfig: () => UserConfiguration,
   ) = {
     scribe.info(s"Setting up kernel for ${path.toString}")
     try {
       val targets = buildTargets.allScala.map(t => (t, t.baseDirectory)).toList
-      // scribe.info(targets.mkString(","))
+      val kernelMainClass = "almond.ScalaKernel"
+
       val workspaceRoot1 = sourceMapper.workspace()
       val source: AbsolutePath = path
 
@@ -40,16 +45,16 @@ object Notebooks {
       }
 
       val target = parents.maxBy(_._2.length())._1
-      val cp = target.fullClasspath.map(_.toString())
-      val projectId = target.info.getId().toString()
+      val cp = target.fullClasspath
+      //val projectId = target.info.getId().toString()
 
-      scribe.info(pprint.apply(target.info).plainText)
+      // scribe.info(pprint.apply(target.info).plainText)
 
-      scribe.info(target.scalaInfo.getScalaVersion())
+      // scribe.info(target.scalaInfo.getScalaVersion())
 
-      scribe.info(pprint.apply(target).plainText)
+      // scribe.info(pprint.apply(target).plainText)
 
-      scribe.info(projectId)
+      // scribe.info(projectId)
       // val parents = targets.filter(possibleParent => source.toNIO.startsWith(possibleParent.toNIO))
       // scribe.info(parents.toArray.length.toString()  )
       val jvmReprRepo = coursierapi.MavenRepository.of(
@@ -70,24 +75,63 @@ object Notebooks {
       f.addDependencies(almondDep)
       f.addRepositories(jvmReprRepo)
 
-      val launcherDeps =
-        f.fetch().asScala.toList.map(_.toString()).mkString(":")
+      val launcherDeps = f.fetch().asScala.toVector
+
+      def fileToCpResource(aFile: File) = ClassPathEntry.Resource(aFile.getName(), aFile.lastModified(), Files.readAllBytes(aFile.toPath()) )
+
+      val launcherDepCp = launcherDeps.map(fileToCpResource)
+
+      scribe.info(s"Check paths here")
+      val projectDeps = cp.map{aPath => 
+        val asFile = aPath.toFile()        
+        if (asFile.isFile() && !launcherDeps.contains(asFile) ) {          
+          Some(fileToCpResource(aPath.toFile()))
+        } else None
+      }.flatten
+
+      val sharedContent = ClassLoaderContent(launcherDepCp)
+      val mainContent = ClassLoaderContent(projectDeps)
+      val params = coursier.launcher.Parameters.Bootstrap(
+          Seq(mainContent, sharedContent), 
+          kernelMainClass
+        )
+        .withDeterministic(true)
+        .withPreambleOpt(None)
+        .withMainClass(kernelMainClass)
+        //.withHybridAssembly(true)
+
+      val tmpFile = {
+        val prefix = "metalsAlmondTest" 
+        val suffix = ".jar"
+        Files.createTempFile(prefix, suffix)
+      }
+      
+      Runtime.getRuntime.addShutdownHook(
+        new Thread {
+          setDaemon(true)
+          override def run(): Unit =
+            try Files.deleteIfExists(tmpFile)
+            catch {
+              case e: Exception =>
+                scribe.error(s"Ignored error while deleting temporary file $tmpFile: $e")
+            }
+        }
+      )
+      scribe.info("so we have a bootstrap file... but what to do with it? ")
+      BootstrapGenerator.generate(params, tmpFile)        
 
       // I am not clear, if I am capable of actually doing this.
       // TODO : https://github.com/coursier/coursier/discussions/2479
-      // val classPath = (coursierDeps ++ cp.toSet ).mkString(":")
+      scribe.info(tmpFile.toString())
 
-      scribe.info(launcherDeps.mkString(":"))
-
-      val kernelMainClass = "almond.ScalaKernel"
-      shellRunner.runJava(
-        almondDep,
-        kernelMainClass,
-        workspaceRoot1,
+      shellRunner.run(
+        tmpFile.toString(),
         List(
+          JavaBinary(userConfig().javaHome),
+          "coursier.bootstrap.launcher.ResourcesLauncher",
           "--install",
-          "--command",
-          s"""java -cp $launcherDeps $kernelMainClass""",
+          // "--command",
+          // s"""java -jar /Users/simon/Library/Jupyter/kernels/metalsAlmond/launcher.jar""",
           "--id",
           "metalsAlmond",
           "--display-name",
@@ -95,10 +139,11 @@ object Notebooks {
           "--global",
           "true",
           "--force",
-          "true"
-        ),
+          "true",          
+        ),        
+        workspaceRoot1,
         false,
-        extraRepos = Array(jvmReprRepo)
+        //extraRepos = Array(jvmReprRepo)
       )
     } catch {
       case e: Exception =>
@@ -107,6 +152,35 @@ object Notebooks {
           s"Swallowing the above exception so metals doesn't crash"
         )
     }
+      
+      
+    //   shellRunner.runJava(
+    //     almondDep,
+    //     kernelMainClass,
+    //     workspaceRoot1,
+    //     List(
+    //       "--install",
+    //       "--command",
+    //       s"""java -cp $tempDeps $kernelMainClass""",
+    //       "--id",
+    //       "metalsAlmond",
+    //       "--display-name",
+    //       s"metalsAlmond",
+    //       "--global",
+    //       "true",
+    //       "--force",
+    //       "true"
+    //     ),
+    //     false,
+    //     extraRepos = Array(jvmReprRepo)
+    //   )
+    // } catch {
+    //   case e: Exception =>
+    //     scribe.error(s"Error installing kernel ", e)
+    //     scribe.error(
+    //       s"Swallowing the above exception so metals doesn't crash"
+    //     )
+    // }
   }
 
 }

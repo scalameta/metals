@@ -1062,7 +1062,7 @@ class MetalsLanguageServer(
     scribe.info("triggered did open on notebook")
     val path = params.getNotebookDocument().getUri.toAbsolutePath
     scribe.info(path.toString())
-    Future(Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper))
+    Future(Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper, () => userConfig))
     scribe.info("finished did open on notebook")
 
   }
@@ -1107,15 +1107,6 @@ class MetalsLanguageServer(
         )
       )
     } yield ()
-
-    scribe.info("past interactive")
-    scribe.info("path: " + path.toString)
-    scribe.info(path.isJupyterNotebook.toString)
-
-    if (path.isJupyterNotebook) {
-      scribe.info("found jupyter notebook")
-      Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper)
-    }
 
     if (path.isDependencySource(workspace)) {
       CancelTokens { _ =>
