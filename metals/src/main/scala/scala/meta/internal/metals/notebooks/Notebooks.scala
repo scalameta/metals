@@ -127,14 +127,14 @@ object Notebooks {
       scribe.info("so we have a bootstrap file... but what to do with it? ")
       BootstrapGenerator.generate(params, tmpFile)
 
-      // I am not clear, if I am capable of actually doing this.
-      // TODO : https://github.com/coursier/coursier/discussions/2479
       scribe.info(tmpFile.toString())
 
       shellRunner.run(
-        tmpFile.toString(),
+        "",
         List(
-          JavaBinary(userConfig().javaHome),
+          "java",
+          "-jar",
+          tmpFile.toString(),
           "coursier.bootstrap.launcher.ResourcesLauncher",
           "--install",
           // "--command",
@@ -143,8 +143,8 @@ object Notebooks {
           "metalsAlmond",
           "--display-name",
           s"metalsAlmond",
-          "--global",
-          "true",
+          // "--global",
+          // "true",
           "--force",
           "true"
         ),
