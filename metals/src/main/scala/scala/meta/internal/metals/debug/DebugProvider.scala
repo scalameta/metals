@@ -72,7 +72,6 @@ import org.eclipse.lsp4j.MessageType
 class DebugProvider(
     workspace: AbsolutePath,
     definitionProvider: DefinitionProvider,
-    buildServerConnect: () => Option[BuildServerConnection],
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
     compilations: Compilations,
@@ -84,7 +83,6 @@ class DebugProvider(
     clientConfig: ClientConfiguration,
     semanticdbs: Semanticdbs,
     compilers: Compilers,
-    supportsTestSelection: () => Boolean,
     statusBar: StatusBar,
 ) {
 
@@ -103,7 +101,7 @@ class DebugProvider(
     for {
       sessionName <- Future.fromTry(parseSessionName(parameters))
       jvmOptionsTranslatedParams = translateJvmParams(parameters)
-      buildServer <- buildServerConnect()
+      buildServer <- buildServerConnect(parameters)
         .fold[Future[BuildServerConnection]](BuildServerUnavailableError)(
           Future.successful
         )
@@ -222,6 +220,15 @@ class DebugProvider(
         }
       }
       .collect { case Some(main) => main }
+  }
+
+  private def buildServerConnect(parameters: b.DebugSessionParams) = for {
+    targetId <- parameters.getTargets().asScala.headOption
+    buildServer <- buildTargets.buildServerOf(targetId)
+  } yield buildServer
+
+  private def supportsTestSelection(targetId: b.BuildTargetIdentifier) = {
+    buildTargets.buildServerOf(targetId).exists(_.supportsTestSelection)
   }
 
   private def createMainParams(
@@ -556,7 +563,7 @@ class DebugProvider(
       buildTargets.info(request.target) match {
         case Some(buildTarget) =>
           val debugSession =
-            if (supportsTestSelection())
+            if (supportsTestSelection(request.target))
               new b.DebugSessionParams(
                 singletonList(buildTarget.getId),
                 DebugProvider.ScalaTestSelection,

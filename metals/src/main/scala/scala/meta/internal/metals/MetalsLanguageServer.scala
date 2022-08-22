@@ -588,7 +588,6 @@ class MetalsLanguageServer(
             buildTargets,
             clientConfig,
             () => userConfig,
-            () => bspSession.exists(_.main.isBloopOrSbt),
             trees,
           )
 
@@ -695,7 +694,6 @@ class MetalsLanguageServer(
         debugProvider = new DebugProvider(
           workspace,
           definitionProvider,
-          () => bspSession.map(_.mainConnection),
           buildTargets,
           buildTargetClasses,
           compilations,
@@ -707,7 +705,6 @@ class MetalsLanguageServer(
           clientConfig,
           semanticdbs,
           compilers,
-          () => bspSession.exists(_.main.isBloopOrSbt),
           statusBar,
         )
         scalafixProvider = ScalafixProvider(
