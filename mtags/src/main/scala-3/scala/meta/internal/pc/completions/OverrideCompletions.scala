@@ -131,15 +131,25 @@ object OverrideCompletions:
   ): ju.List[l.TextEdit] =
     object FindTypeDef:
       def unapply(path: List[Tree])(using Context): Option[TypeDef] = path match
+        // class <<Foo>> extends ... {}
         case (td: TypeDef) :: _ => Some(td)
         // new Iterable[Int] {}
         case (_: Ident) :: _ :: (_: Template) :: (td: TypeDef) :: _ =>
           Some(td)
-        // new Context {}
+        // given Foo with {}
         case (_: Ident) :: (_: Template) :: (td: TypeDef) :: _ =>
           Some(td)
+        // <<new>> Foo {}
+        case (_: Template) :: (td: TypeDef) :: _ =>
+          Some(td)
+        // abstract class Mutable { ... }
+        // new <<Mutable>> { }
         case (_: Ident) :: (_: New) :: (_: Select) :: (_: Apply) :: (_: Template) :: (td: TypeDef) :: _ =>
           Some(td)
+        // trait Base[T]:
+        //   extension (x: T)
+        //     ...
+        // class <<Concrete>>[T] extends Base[Int]
         case (dd: DefDef) :: (_: Template) :: (td: TypeDef) :: _
             if dd.symbol.isConstructor =>
           Some(td)
@@ -179,6 +189,7 @@ object OverrideCompletions:
       config,
     )
     path match
+      // given <<Foo>>
       case (_: Ident) :: (dd: DefDef) :: _ =>
         implementAll(dd).asJava
       case FindTypeDef(td) =>

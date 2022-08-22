@@ -406,6 +406,38 @@ class Scala3CodeActionLspSuite
   )
 
   check(
+    "implement-anonymous-class",
+    """|package anonymous
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |def main =
+       |  <<new>> Foo {}
+       |
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package anonymous
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |def main =
+       |  new Foo {
+       |
+       |    override def foo(x: Int): Int = ???
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |  }
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+  )
+
+  check(
     "wrong-type",
     """|package a
        |
