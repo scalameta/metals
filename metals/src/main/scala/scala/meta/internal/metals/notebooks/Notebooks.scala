@@ -27,7 +27,7 @@ object Notebooks {
       buildTargets: BuildTargets,
       shellRunner: ShellRunner,
       sourceMapper: SourceMapper,
-      userConfig: () => UserConfiguration,
+      userConfig: () => UserConfiguration
   ) = {
     scribe.info(s"Setting up kernel for ${path.toString}")
     try {
@@ -46,7 +46,7 @@ object Notebooks {
 
       val target = parents.maxBy(_._2.length())._1
       val cp = target.fullClasspath
-      //val projectId = target.info.getId().toString()
+      // val projectId = target.info.getId().toString()
 
       // scribe.info(pprint.apply(target.info).plainText)
 
@@ -77,35 +77,40 @@ object Notebooks {
 
       val launcherDeps = f.fetch().asScala.toVector
 
-      def fileToCpResource(aFile: File) = ClassPathEntry.Resource(aFile.getName(), aFile.lastModified(), Files.readAllBytes(aFile.toPath()) )
+      def fileToCpResource(aFile: File) = ClassPathEntry.Resource(
+        aFile.getName(),
+        aFile.lastModified(),
+        Files.readAllBytes(aFile.toPath())
+      )
 
       val launcherDepCp = launcherDeps.map(fileToCpResource)
 
       scribe.info(s"Check paths here")
-      val projectDeps = cp.map{aPath => 
-        val asFile = aPath.toFile()        
-        if (asFile.isFile() && !launcherDeps.contains(asFile) ) {          
+      val projectDeps = cp.map { aPath =>
+        val asFile = aPath.toFile()
+        if (asFile.isFile() && !launcherDeps.contains(asFile)) {
           Some(fileToCpResource(aPath.toFile()))
         } else None
       }.flatten
 
       val sharedContent = ClassLoaderContent(launcherDepCp)
       val mainContent = ClassLoaderContent(projectDeps)
-      val params = coursier.launcher.Parameters.Bootstrap(
-          Seq(mainContent, sharedContent), 
+      val params = coursier.launcher.Parameters
+        .Bootstrap(
+          Seq(mainContent, sharedContent),
           kernelMainClass
         )
         .withDeterministic(true)
         .withPreambleOpt(None)
         .withMainClass(kernelMainClass)
-        //.withHybridAssembly(true)
+      // .withHybridAssembly(true)
 
       val tmpFile = {
-        val prefix = "metalsAlmondTest" 
+        val prefix = "metalsAlmondTest"
         val suffix = ".jar"
         Files.createTempFile(prefix, suffix)
       }
-      
+
       Runtime.getRuntime.addShutdownHook(
         new Thread {
           setDaemon(true)
@@ -113,12 +118,14 @@ object Notebooks {
             try Files.deleteIfExists(tmpFile)
             catch {
               case e: Exception =>
-                scribe.error(s"Ignored error while deleting temporary file $tmpFile: $e")
+                scribe.error(
+                  s"Ignored error while deleting temporary file $tmpFile: $e"
+                )
             }
         }
       )
       scribe.info("so we have a bootstrap file... but what to do with it? ")
-      BootstrapGenerator.generate(params, tmpFile)        
+      BootstrapGenerator.generate(params, tmpFile)
 
       // I am not clear, if I am capable of actually doing this.
       // TODO : https://github.com/coursier/coursier/discussions/2479
@@ -139,11 +146,11 @@ object Notebooks {
           "--global",
           "true",
           "--force",
-          "true",          
-        ),        
+          "true"
+        ),
         workspaceRoot1,
-        false,
-        //extraRepos = Array(jvmReprRepo)
+        false
+        // extraRepos = Array(jvmReprRepo)
       )
     } catch {
       case e: Exception =>
@@ -152,8 +159,7 @@ object Notebooks {
           s"Swallowing the above exception so metals doesn't crash"
         )
     }
-      
-      
+
     //   shellRunner.runJava(
     //     almondDep,
     //     kernelMainClass,

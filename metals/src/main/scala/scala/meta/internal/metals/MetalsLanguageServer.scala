@@ -1062,7 +1062,15 @@ class MetalsLanguageServer(
     scribe.info("triggered did open on notebook")
     val path = params.getNotebookDocument().getUri.toAbsolutePath
     scribe.info(path.toString())
-    Future(Notebooks.setupKernel(path, buildTargets, shellRunner, sourceMapper, () => userConfig))
+    Future(
+      Notebooks.setupKernel(
+        path,
+        buildTargets,
+        shellRunner,
+        sourceMapper,
+        () => userConfig
+      )
+    )
     scribe.info("finished did open on notebook")
 
   }
