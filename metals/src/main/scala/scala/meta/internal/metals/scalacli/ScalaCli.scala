@@ -199,9 +199,11 @@ class ScalaCli(
           .start()
 
       val b = readFully(process.getInputStream())
-      val version = Version(new String(b, "UTF-8").trim())
+      val version = raw"\d+\.\d+\.\d+".r
+        .findFirstIn(new String(b, "UTF-8"))
+        .map(Version(_))
       val minVersion0 = Version(minVersion)
-      minVersion0.compareTo(version) <= 0
+      version.exists(ver => minVersion0.compareTo(ver) <= 0)
     }
 
     val minVersion = "0.1.3"
