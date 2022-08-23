@@ -23,6 +23,7 @@ import scala.util.Try
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -74,10 +75,12 @@ class BuildServerConnection private (
 
   def isMill: Boolean = name == MillBuildTool.name
 
-  // although hasDebug is already available in BSP capabilities
-  // see https://github.com/build-server-protocol/build-server-protocol/pull/161
-  // most of the bsp servers such as bloop and sbt don't support it.
-  def isBloopOrSbt: Boolean = isBloop || isSbt
+  def isScalaCLI: Boolean = name == ScalaCli.name
+
+  /* Currently only Bloop and sbt support running single test cases
+   * and ScalaCLI uses Bloop underneath.
+   */
+  def supportsTestSelection: Boolean = isBloop || isSbt || isScalaCLI
 
   /* Some users may still use an old version of Bloop that relies on scala-debug-adapter 1.x.
    * This method is used to do the switch between MetalsDebugAdapter1x and MetalsDebugAdapter2x.

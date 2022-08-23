@@ -46,7 +46,6 @@ final class RunTestCodeLens(
     buildTargets: BuildTargets,
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
-    isBloopOrSbt: () => Boolean,
     trees: Trees,
 ) extends CodeLens {
 
@@ -64,7 +63,11 @@ final class RunTestCodeLens(
       val lenses = for {
         buildTargetId <- buildTargets.inverseSources(path)
         buildTarget <- buildTargets.info(buildTargetId)
-        if buildTarget.getCapabilities.getCanDebug || isBloopOrSbt(),
+        connection <- buildTargets.buildServerOf(buildTargetId)
+        // although hasDebug is already available in BSP capabilities
+        // see https://github.com/build-server-protocol/build-server-protocol/pull/161
+        // most of the bsp servers such as bloop and sbt might not support it.
+        if buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt,
       } yield {
         val classes = buildTargetClasses.classesOf(buildTargetId)
         codeLenses(textDocument, buildTargetId, classes, distance, path)

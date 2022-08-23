@@ -362,4 +362,6 @@ object ScalaCli {
   def scalaCliMainClass: String =
     "scala.cli.ScalaCli"
 
+  val name = "ScalaCli"
+
 }
