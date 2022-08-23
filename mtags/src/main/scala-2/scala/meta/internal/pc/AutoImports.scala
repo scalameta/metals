@@ -1,6 +1,5 @@
 package scala.meta.internal.pc
 
-import scala.annotation.tailrec
 import scala.reflect.internal.FatalError
 
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -60,11 +59,30 @@ trait AutoImports { this: MetalsGlobal =>
             )
           }
 
-        def forScript =
-          for {
-            obj <- lastVisitedParentTrees.collectFirst { case mod: ModuleDef =>
-              mod
+        def forScript(isAmmonite: Boolean) = {
+          val startScriptOffest = {
+            if (isAmmonite)
+              ScriptFirstImportPosition.ammoniteScStartOffset(text)
+            else ScriptFirstImportPosition.scalaCliScStartOffset(text)
+          }
+
+          val scriptModuleDefAndPos =
+            startScriptOffest.flatMap { offset =>
+              val startPos = pos.withStart(offset).withEnd(offset)
+              lastVisitedParentTrees
+                .collectFirst {
+                  case mod: ModuleDef if mod.pos.overlaps(startPos) => mod
+                }
+                .map(mod => (mod, offset))
             }
+
+          val moduleDefAndPos = scriptModuleDefAndPos.orElse(
+            lastVisitedParentTrees
+              .collectFirst { case mod: ModuleDef => mod }
+              .map(mod => (mod, 0))
+          )
+          for {
+            (obj, firstImportOffset) <- moduleDefAndPos
           } yield {
             val lastImportOpt = obj.impl.body.iterator
               .dropWhile {
@@ -73,34 +91,33 @@ trait AutoImports { this: MetalsGlobal =>
               }
               .takeWhile(_.isInstanceOf[Import])
               .lastOption
-            val lastImportLine = lastImportOpt
+
+            val offset = lastImportOpt
               .map(_.pos.focusEnd.line)
-              .getOrElse(0) // if no previous import, add the new one at the top
+              .map(pos.source.lineToOffset)
+              .getOrElse(firstImportOffset)
             new AutoImportPosition(
-              pos.source.lineToOffset(lastImportLine),
+              offset,
               text,
               padTop = false
             )
           }
-
-        // Naive way to find the start discounting any first lines that may be
-        // scala-cli directives.
-        @tailrec
-        def findStart(text: String, index: Int): Int = {
-          if (text.startsWith("//")) {
-            val newline = text.indexOf("\n")
-            if (newline != -1)
-              findStart(text.drop(newline + 1), index + newline + 1)
-            else index + newline + 1
-          } else {
-            index
-          }
         }
 
         def fileStart =
-          AutoImportPosition(findStart(text, 0), 0, padTop = false)
+          AutoImportPosition(
+            ScriptFirstImportPosition.skipUsingDirectivesOffset(text),
+            0,
+            padTop = false
+          )
 
-        (if (pos.source.path.endsWith(".sc.scala")) forScript else None)
+        val path = pos.source.path
+        val scriptPos =
+          if (path.endsWith(".sc")) forScript(isAmmonite = false)
+          else if (path.endsWith(".amm.sc.scala")) forScript(isAmmonite = true)
+          else None
+
+        scriptPos
           .orElse(forScalaSource)
           .orElse(Some(fileStart))
     }
