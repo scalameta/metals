@@ -711,4 +711,69 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
            |""".stripMargin
     ),
   )
+
+  checkEdit(
+    "extension".tag(IgnoreScala2),
+    """|package example
+       |
+       |object enrichments:
+       |  extension (num: Int)
+       |    def incr: Int = num + 1
+       |def aaa = 123
+       |def main = s" $aaa.inc@@"
+       |""".stripMargin,
+    """|package example
+       |
+       |import example.enrichments.incr
+       |
+       |object enrichments:
+       |  extension (num: Int)
+       |    def incr: Int = num + 1
+       |def aaa = 123
+       |def main = s" ${aaa.incr$0}"
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "extension2".tag(IgnoreScala2),
+    """|package example
+       |
+       |object enrichments:
+       |  extension (num: Int)
+       |    def plus(other: Int): Int = num + other
+       |
+       |def aaa = 123
+       |def main = s"  $aaa.pl@@"
+       |""".stripMargin,
+    """|package example
+       |
+       |import example.enrichments.plus
+       |
+       |object enrichments:
+       |  extension (num: Int)
+       |    def plus(other: Int): Int = num + other
+       |
+       |def aaa = 123
+       |def main = s"  ${aaa.plus($0)}"
+       |""".stripMargin,
+  )
+
+  check(
+    "filter-by-type".tag(IgnoreScala2),
+    """|package example
+       |
+       |object enrichments:
+       |  extension (num: Int)
+       |    def incr: Int = num + 1
+       |  extension (str: String)
+       |    def identity: String = str
+       |
+       |val foo = "foo"
+       |def main = s" $foo.i@@"
+       |""".stripMargin,
+    """|identity: String (extension)
+       |""".stripMargin, // incr won't be available
+    filter = _.contains("(extension)"),
+  )
+
 }

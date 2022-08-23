@@ -336,7 +336,7 @@ class CompletionsProvider(
     completion match
       case v: (CompletionValue.Workspace | CompletionValue.Extension) =>
         mkItemWithImports(v)
-      case v: CompletionValue.Interpolator if v.isWorkspace =>
+      case v: CompletionValue.Interpolator if v.isWorkspace || v.isExtension =>
         mkItemWithImports(v)
       case CompletionValue.Override(
             label,

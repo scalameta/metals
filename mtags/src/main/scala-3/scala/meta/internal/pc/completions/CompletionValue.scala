@@ -60,6 +60,9 @@ sealed trait CompletionValue:
         "" // Override doesn't need description as it already has full signature in label
       case ext: CompletionValue.Extension =>
         s"${printer.completionSymbol(ext.symbol)} (extension)"
+      case interpolator: CompletionValue.Interpolator
+          if interpolator.isExtension =>
+        s"${printer.completionSymbol(interpolator.symbol)} (extension)"
       case so: CompletionValue.Symbolic =>
         printer.completionSymbol(so.symbol)
       case CompletionValue.NamedArg(label, tpe) =>
@@ -144,7 +147,8 @@ object CompletionValue:
       override val additionalEdits: List[TextEdit],
       override val range: Option[Range],
       override val filterText: Option[String],
-      isWorkspace: Boolean,
+      isWorkspace: Boolean = false,
+      isExtension: Boolean = false,
   ) extends Symbolic
 
   case class Document(label: String, doc: String, description: String)
