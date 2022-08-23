@@ -8,9 +8,15 @@ final case class QuickLocation(
 ) {
   def toLsp: l.Location = new l.Location(
     uri,
-    new l.Range(
-      new l.Position(range._1, range._2),
-      new l.Position(range._3, range._4),
-    ),
+    QuickRange(range).toLsp,
+  )
+}
+
+final case class QuickRange(
+    range: (Int, Int, Int, Int)
+) {
+  def toLsp: l.Range = new l.Range(
+    new l.Position(range._1, range._2),
+    new l.Position(range._3, range._4),
   )
 }

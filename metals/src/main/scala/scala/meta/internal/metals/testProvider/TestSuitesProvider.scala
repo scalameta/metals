@@ -17,10 +17,12 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.JUnit4
 import scala.meta.internal.metals.debug.MUnit
+import scala.meta.internal.metals.debug.Scalatest
 import scala.meta.internal.metals.debug.Unknown
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
@@ -50,6 +52,8 @@ final class TestSuitesProvider(
   private val junitTestFinder = new JunitTestFinder
   private val munitTestFinder =
     new MunitTestFinder(trees, symbolIndex, semanticdbs)
+  private val scalatestTestFinder =
+    new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
 
   private def isEnabled =
     clientConfig.isTestExplorerProvider() &&
@@ -236,13 +240,24 @@ final class TestSuitesProvider(
         suites.flatMap { suite =>
           val testCases = suite.framework match {
             case JUnit4 =>
-              junitTestFinder.findTests(semanticdb, path, suite.symbol)
+              junitTestFinder.findTests(
+                doc = semanticdb,
+                path = path,
+                suiteSymbol = suite.symbol,
+              )
             case MUnit =>
               munitTestFinder.findTests(
-                semanticdb,
-                path,
-                suite.fullyQualifiedName,
-                suite.symbol,
+                doc = semanticdb,
+                path = path,
+                suiteName = suite.fullyQualifiedName,
+                symbol = suite.symbol,
+              )
+            case Scalatest =>
+              scalatestTestFinder.findTests(
+                doc = semanticdb,
+                path = path,
+                suiteName = suite.fullyQualifiedName,
+                symbol = suite.symbol,
               )
             case Unknown => Vector.empty
           }
