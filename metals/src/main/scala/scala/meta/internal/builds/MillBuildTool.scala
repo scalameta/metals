@@ -129,6 +129,10 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
 object MillBuildTool {
   val name: String = "mill-bsp"
+  // Starting with 0.10.6 when using mill-bsp as a build server it automatically emits SemanticDB
+  // even though it's not detected in the scalacOptions. So in this situation we don't want to warn
+  // about it and trust Mill to do its job.
+  val emitsSemanticDbByDefault = "0.10.6"
 
   def isMillRelatedPath(
       path: AbsolutePath

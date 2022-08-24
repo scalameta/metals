@@ -282,6 +282,7 @@ class ProblemResolverSuite extends FunSuite {
       scalacOptionsItem,
       autoImports = None,
       sbtVersion,
+      None,
     )
   }
 }

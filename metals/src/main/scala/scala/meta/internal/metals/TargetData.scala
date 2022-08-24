@@ -236,7 +236,10 @@ final class TargetData {
   def checkIfGeneratedDir(path: AbsolutePath): Boolean =
     buildTargetGeneratedDirs.contains(path)
 
-  def addScalacOptions(result: ScalacOptionsResult): Unit = {
+  def addScalacOptions(
+      result: ScalacOptionsResult,
+      bspConnectionName: Option[BuildServerConnection],
+  ): Unit = {
     result.getItems.asScala.foreach { scalac =>
       info(scalac.getTarget()).foreach { info =>
         info.asScalaBuildTarget.foreach { scalaBuildTarget =>
@@ -248,6 +251,7 @@ final class TargetData {
             scalac,
             autoImports,
             sbtTarget.map(_.getSbtVersion()),
+            bspConnectionName,
           )
         }
       }
