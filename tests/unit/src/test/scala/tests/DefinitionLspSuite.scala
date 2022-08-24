@@ -182,6 +182,61 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
+  test("definition-case-class") {
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": {
+          |    "dependsOn": [ "a" ]
+          |  }
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |case class A(name: String)
+          |object A {
+          |  val name = "John"
+          |  val fun : () => Int = () => 1
+          |}
+          |/b/src/main/scala/a/B.scala
+          |package a
+          |object B {
+          |  def main() = {
+          |    println(A("John"))
+          |    A.fun()
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("b/src/main/scala/a/B.scala")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/A.scala
+           |package a
+           |
+           |case class A/*L2*/(name/*L2*/: String/*Predef.scala*/)
+           |object A/*L3*/ {
+           |  val name/*L4*/ = "John"
+           |  val fun/*L5*/ : () => Int/*Int.scala*/ = () => 1
+           |}
+           |/b/src/main/scala/a/B.scala
+           |package a
+           |object B/*L1*/ {
+           |  def main/*L2*/() = {
+           |    println/*Predef.scala*/(A/*;A.scala:2;A.scala:3*/("John"))
+           |    A/*A.scala:3*/.fun/*A.scala:5*/()
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("stale") {
     for {
       _ <- initialize(

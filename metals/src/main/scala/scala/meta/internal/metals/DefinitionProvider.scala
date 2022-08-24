@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.util.Collections
 import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
@@ -16,8 +15,13 @@ import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.remotels.RemoteLanguageServer
+import scala.meta.internal.semanticdb
+import scala.meta.internal.semanticdb.IdTree
+import scala.meta.internal.semanticdb.OriginalTree
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -121,22 +125,6 @@ final class DefinitionProvider(
     }
   }
 
-  def toLocation(
-      symbol: String,
-      targets: List[BuildTargetIdentifier],
-  ): Option[Location] =
-    for {
-      definitionDestination <- destinationProvider.fromSymbol(
-        symbol,
-        targets.toSet,
-      )
-      if (symbol == definitionDestination.symbol)
-      definitionResult <- definitionDestination.toResult
-      location <- definitionResult.locations.asScala.toList
-        .filter(_.getUri == definitionDestination.uri)
-        .headOption
-    } yield location
-
   /**
    * Returns VirtualFile that contains the definition of
    * the given symbol (of semanticdb).
@@ -185,6 +173,21 @@ final class DefinitionProvider(
     (sourceDistance, snapshotPosition.toPosition(dirtyPosition))
   }
 
+  private def syntheticApplyOccurrence(
+      queryPositionOpt: Option[semanticdb.Range],
+      snapshot: TextDocument,
+  ) = {
+    snapshot.synthetics.collectFirst {
+      case Synthetic(
+            Some(range),
+            SelectTree(_: OriginalTree, Some(IdTree(symbol))),
+          )
+          if queryPositionOpt
+            .exists(queryPos => range == queryPos) =>
+        SymbolOccurrence(Some(range), symbol, SymbolOccurrence.Role.REFERENCE)
+    }
+  }
+
   def positionOccurrence(
       source: AbsolutePath,
       dirtyPosition: Position,
@@ -201,6 +204,7 @@ final class DefinitionProvider(
           // In case of macros we might need to get the postion from the presentation compiler
           .orElse(fromMtags(source, queryPosition))
     } yield occurrence
+
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
   }
 
@@ -239,10 +243,14 @@ final class DefinitionProvider(
       snapshot: TextDocument,
   ): DefinitionResult = {
     val ResolvedSymbolOccurrence(sourceDistance, occurrence) =
-      positionOccurrence(source, dirtyPosition.getPosition, snapshot)
+      positionOccurrence(
+        source,
+        dirtyPosition.getPosition,
+        snapshot,
+      )
 
     // Find symbol definition location.
-    val result: Option[DefinitionResult] = occurrence.flatMap { occ =>
+    def definitionResult(occ: SymbolOccurrence): Option[DefinitionResult] = {
       val isLocal = occ.symbol.isLocal || snapshot.definesSymbol(occ.symbol)
       if (isLocal) {
         // symbol is local so it is defined within the source.
@@ -261,7 +269,16 @@ final class DefinitionProvider(
       }
     }
 
-    result.getOrElse(DefinitionResult.empty(occurrence.fold("")(_.symbol)))
+    val apply =
+      occurrence.flatMap(occ => syntheticApplyOccurrence(occ.range, snapshot))
+    val result = occurrence.flatMap(definitionResult)
+    val applyResults = apply.flatMap(definitionResult)
+    val combined = result ++ applyResults
+
+    if (combined.isEmpty)
+      DefinitionResult.empty(occurrence.fold("")(_.symbol))
+    else
+      combined.reduce(_ ++ _)
   }
 
   private def fromMtags(source: AbsolutePath, dirtyPos: Position) = {
@@ -294,14 +311,14 @@ case class DefinitionDestination(
       result <- revisedPosition.toLocation(location)
     } yield {
       DefinitionResult(
-        Collections.singletonList(result),
+        ju.Collections.singletonList(result),
         symbol,
         path,
         Some(snapshot),
       )
     }
-}
 
+}
 class DestinationProvider(
     index: GlobalSymbolIndex,
     buffers: Buffers,
