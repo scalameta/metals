@@ -261,32 +261,50 @@ object ScalatestStyle {
     styles.find(_.symbols.contains(symbol))
 
   case object AnyFunSuite extends ScalatestStyle {
-    val symbols: Set[String] = Set("org/scalatest/funsuite/AnyFunSuite#")
+    val symbols: Set[String] = Set(
+      "org/scalatest/funsuite/AnyFunSuite#",
+      "org/scalatest/funsuite/AnyFunSuiteLike#",
+    )
     override val leafMethods: Set[String] = Set("test")
   }
 
   case object AnyPropSpec extends ScalatestStyle {
-    val symbols: Set[String] = Set("org/scalatest/propspec/AnyPropSpec#")
+    val symbols: Set[String] = Set(
+      "org/scalatest/propspec/AnyPropSpec#",
+      "org/scalatest/propspec/AnyPropSpecLike#",
+    )
     override val leafMethods: Set[String] = Set("property")
   }
 
   case object AnyFlatSpec extends ScalatestStyle {
-    val symbols: Set[String] = Set("org/scalatest/flatspec/AnyFlatSpec#")
+    val symbols: Set[String] = Set(
+      "org/scalatest/flatspec/AnyFlatSpec#",
+      "org/scalatest/flatspec/AnyFlatSpecLike#",
+    )
   }
 
   case object AnyFunSpec extends ScalatestStyle {
-    val symbols: Set[String] = Set("org/scalatest/funspec/AnyFunSpec#")
+    val symbols: Set[String] = Set(
+      "org/scalatest/funspec/AnyFunSpec#",
+      "org/scalatest/funspec/AnyFunSpecLike#",
+    )
   }
 
   case object AnyWordSpec extends ScalatestStyle {
-    val symbols: Set[String] = Set("org/scalatest/wordspec/AnyWordSpec#")
+    val symbols: Set[String] = Set(
+      "org/scalatest/wordspec/AnyWordSpec#",
+      "org/scalatest/wordspec/AnyWordSpecLike#",
+    )
     override val intermediateMethods: Set[String] =
       Set("when", "should", "must", "can", "which")
     override val leafMethods: Set[String] = Set("in")
   }
 
   case object AnyFreeSpec extends ScalatestStyle {
-    val symbols: Set[String] = Set("org/scalatest/freespec/AnyFreeSpec#")
+    val symbols: Set[String] = Set(
+      "org/scalatest/freespec/AnyFreeSpec#",
+      "org/scalatest/freespec/AnyFreeSpecLike#",
+    )
     override val intermediateMethods: Set[String] = Set("-")
     override val leafMethods: Set[String] = Set("in")
   }
