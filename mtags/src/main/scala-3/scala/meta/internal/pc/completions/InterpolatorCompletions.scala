@@ -18,8 +18,10 @@ import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.TermName
 import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.util.SourcePosition
@@ -65,6 +67,8 @@ object InterpolatorCompletions:
           completionPos,
           completions,
           snippetsEnabled,
+          search,
+          buildTargetIdentifier,
         )
     end match
   end contribute
@@ -115,6 +119,8 @@ object InterpolatorCompletions:
       completionPos: CompletionPos,
       completions: Completions,
       areSnippetsSupported: Boolean,
+      search: SymbolSearch,
+      buildTargetIdentifier: String,
   )(using Context): List[CompletionValue] =
     def newText(
         name: String,
@@ -134,37 +140,66 @@ object InterpolatorCompletions:
         .toString
     end newText
 
-    val memberCompletions = for
+    def extensionMethods(qualType: Type) =
+      val buffer = ListBuffer.empty[Symbol]
+      val visitor = new CompilerSearchVisitor(
+        completionPos.query,
+        sym =>
+          if sym.is(ExtensionMethod) &&
+            qualType.widenDealias <:< sym.extensionParam.info.widenDealias
+          then
+            buffer.append(sym)
+            true
+          else false,
+      )
+      search.searchMethods(completionPos.query, buildTargetIdentifier, visitor)
+      buffer.toList
+    end extensionMethods
+
+    def completionValues(
+        syms: Seq[Symbol],
+        isExtension: Boolean,
+        identOrSelect: Ident | Select,
+    ): Seq[CompletionValue] =
+      syms.collect {
+        case sym
+            if CompletionFuzzy.matches(
+              completionPos.query,
+              sym.name.toString(),
+            ) =>
+          val label = sym.name.decoded
+          completions.completionsWithSuffix(
+            sym,
+            label,
+            (name, sym, suffix) =>
+              CompletionValue.Interpolator(
+                sym,
+                label,
+                Some(newText(name, suffix, identOrSelect)),
+                Nil,
+                Some(cursor.withStart(identOrSelect.span.start).toLSP),
+                // Needed for VS Code which will not show the completion otherwise
+                Some(identOrSelect.show + "." + label),
+                isExtension = isExtension,
+              ),
+          )
+      }.flatten
+
+    val qualType = for
       parent <- path.tail.headOption.toList
       if text.charAt(lit.span.point - 1) != '}'
       identOrSelect <- path
         .collectFirst(interpolatorMemberArg(lit, parent))
         .flatten
-    yield identOrSelect.symbol.info.allMembers.collect {
-      case m
-          if CompletionFuzzy.matches(
-            completionPos.query,
-            m.symbol.name.toString(),
-          ) =>
-        val sym = m.symbol
-        val label = sym.name.decoded
-        completions.completionsWithSuffix(
-          sym,
-          label,
-          (name, sym, suffix) =>
-            CompletionValue.Interpolator(
-              sym,
-              label,
-              Some(newText(name, suffix, identOrSelect)),
-              Nil,
-              Some(cursor.withStart(identOrSelect.span.start).toLSP),
-              // Needed for VS Code which will not show the completion otherwise
-              Some(identOrSelect.show + "." + label),
-              isWorkspace = false,
-            ),
-        )
-    }.flatten
-    memberCompletions.flatten
+    yield identOrSelect
+
+    qualType.flatMap(identOrSelect =>
+      val tp = identOrSelect.symbol.info
+      val members = tp.allMembers.map(_.symbol)
+      val extensionSyms = extensionMethods(tp)
+      completionValues(members, isExtension = false, identOrSelect) ++
+        completionValues(extensionSyms, isExtension = true, identOrSelect)
+    )
   end contributeMember
 
   private def suffixEnding(
