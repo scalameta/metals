@@ -194,7 +194,10 @@ final case class Indexer(
         val importedBuild = buildTool.importedBuild
         data.reset()
         data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
-        data.addScalacOptions(importedBuild.scalacOptions)
+        data.addScalacOptions(
+          importedBuild.scalacOptions,
+          bspSession().map(_.mainConnection),
+        )
         data.addJavacOptions(importedBuild.javacOptions)
 
         // For "wrapped sources", we create dedicated TargetData.MappedSource instances,

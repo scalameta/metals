@@ -110,7 +110,8 @@ object MetalsTestEnrichments {
         "",
       )
       data0.addScalacOptions(
-        new ScalacOptionsResult(List(item).asJava)
+        new ScalacOptionsResult(List(item).asJava),
+        None,
       )
       wsp.buildTargets.addData(data0)
     }
