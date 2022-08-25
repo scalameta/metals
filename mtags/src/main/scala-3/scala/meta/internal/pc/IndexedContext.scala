@@ -31,9 +31,12 @@ sealed trait IndexedContext:
         Result.InScope
       case Some(symbols) if symbols.exists(isTypeAliasOf(_, sym)) =>
         Result.InScope
-      case Some(_) =>
-        Result.Conflict
+      // when all the conflicting symbols came from an old version of the file
+      case Some(symbols) if symbols.nonEmpty && symbols.forall(_.isStale) =>
+        Result.Missing
+      case Some(_) => Result.Conflict
       case None => Result.Missing
+  end lookupSym
 
   final def hasRename(sym: Symbol, as: String): Boolean =
     rename(sym) match
