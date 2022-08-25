@@ -334,6 +334,68 @@ class Completions(
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
+
+      case MatchExtractor(selector) =>
+        (
+          CaseKeywordCompletion.matchContribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+          ),
+          false,
+        )
+
+      case CaseExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+          ),
+          true,
+        )
+
+      case TypedCasePatternExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+            true,
+            true,
+          ),
+          true,
+        )
+
+      case CasePatternExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+            true,
+          ),
+          true,
+        )
+
+      // in `case @@` we have to change completionPos to `case` pos,
+      // otherwise after accepting completion we would get `case case None =>`
+      case (lt @ Literal(
+            Constant(null)
+          )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        advancedCompletions(
+          path.tail,
+          c.startPos,
+          CompletionPos.infer(c.startPos, text, path.tail),
+        )
+
       // class FooImpl extends Foo:
       //   def x|
       case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
@@ -427,66 +489,6 @@ class Completions(
             rawFileName,
           ),
           true,
-        )
-
-      case MatchExtractor(selector) =>
-        (
-          CaseKeywordCompletion.matchContribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-          ),
-          false,
-        )
-
-      case CaseExtractor(selector, parent) =>
-        (
-          CaseKeywordCompletion.contribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-          ),
-          true,
-        )
-
-      case TypedCasePatternExtractor(selector, parent) =>
-        (
-          CaseKeywordCompletion.contribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-            true,
-            true,
-          ),
-          true,
-        )
-
-      case CasePatternExtractor(selector, parent) =>
-        (
-          CaseKeywordCompletion.contribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-            true,
-          ),
-          true,
-        )
-      // in `case @@` we have to change completionPos to `case` pos,
-      // otherwise after accepting completion we would get `case case None =>`
-      case (lt @ Literal(
-            Constant(null)
-          )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        advancedCompletions(
-          path.tail,
-          c.startPos,
-          CompletionPos.infer(c.startPos, text, path.tail),
         )
 
       // From Scala 3.1.3-RC3 (as far as I know), path contains
