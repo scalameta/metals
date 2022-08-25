@@ -263,21 +263,19 @@ final class ReferenceProvider(
   )(implicit ec: ExecutionContext): Future[Set[AbsolutePath]] = {
     buildTargets
       .inverseSourcesBsp(source)
-      .map(bti =>
-        bti match {
-          case None => Set.empty
-          case Some(id) =>
-            val allowedBuildTargets = buildTargets.allInverseDependencies(id)
-            val result = for {
-              (path, entry) <- index.iterator
-              if allowedBuildTargets.contains(entry.id) &&
-                isSymbol.exists(entry.bloom.mightContain)
-              sourcePath = AbsolutePath(path)
-              if sourcePath.exists
-            } yield sourcePath
-            result.toSet
-        }
-      )
+      .map {
+        case None => Set.empty
+        case Some(id) =>
+          val allowedBuildTargets = buildTargets.allInverseDependencies(id)
+          val result = for {
+            (path, entry) <- index.iterator
+            if allowedBuildTargets.contains(entry.id) &&
+              isSymbol.exists(entry.bloom.mightContain)
+            sourcePath = AbsolutePath(path)
+            if sourcePath.exists
+          } yield sourcePath
+          result.toSet
+      }
   }
 
   private def references(
