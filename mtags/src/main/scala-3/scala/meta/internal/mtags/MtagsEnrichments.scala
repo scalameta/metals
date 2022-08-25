@@ -144,6 +144,18 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
       upd.rawParamss = paramsWithFlags
       upd
     end withUpdatedTpe
+
+    // Returns true if this symbol is locally defined from an old version of the source file.
+    def isStale: Boolean =
+      sym.sourcePos.span.exists && {
+        val source = ctx.source
+        if source ne sym.source then
+          !source.content.startsWith(
+            sym.decodedName.toString(),
+            sym.sourcePos.span.point,
+          )
+        else false
+      }
   end extension
 
   extension (name: Name)(using Context)
