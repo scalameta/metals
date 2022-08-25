@@ -230,13 +230,6 @@ object CaseKeywordCompletion:
 
     val sortedSubclasses = subclassesForType(tpe)
     sortedSubclasses.foreach { case sym =>
-      // val shortType = shortNames.shortType(sym.info)
-      // val edits = shortNames.imports(autoImportsGen)
-      // result += completionGenerator.toCompletionValue(
-      //   sym.info.dealias.typeSymbol,
-      //   sym,
-      //   edits,
-      // )
       val autoImport = autoImportsGen.forSymbol(sym)
       autoImport match
         case Some(value) =>

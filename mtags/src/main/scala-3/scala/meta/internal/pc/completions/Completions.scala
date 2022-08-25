@@ -940,7 +940,7 @@ class Completions(
             if "match".startsWith(name.toString()) && text.charAt(
               completionPos.start - 1
             ) == ' ' =>
-          Some((qualifier))
+          Some(qualifier)
         // foo match @@
         case (c: CaseDef) :: (m: Match) :: _
             if completionPos.query.startsWith("match") =>
