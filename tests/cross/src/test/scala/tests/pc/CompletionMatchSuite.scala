@@ -245,7 +245,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "exhaustive-java-enum",
+    "exhaustive-java-enum".tag(IgnoreScalaVersion.for3LessThan("3.2.0")),
     """
       |package example
       |
@@ -270,6 +270,23 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |}
        |}""".stripMargin,
     filter = _.contains("exhaustive"),
+    compat = Map(
+      "3" -> s"""
+                |package example
+                |
+                |import java.nio.file.AccessMode
+                |import java.nio.file.AccessMode.READ
+                |import java.nio.file.AccessMode.WRITE
+                |import java.nio.file.AccessMode.EXECUTE
+                |
+                |object Main {
+                |  (null: AccessMode) match
+                |\tcase READ => $$0
+                |\tcase WRITE =>
+                |\tcase EXECUTE =>
+                |
+                |}""".stripMargin
+    ),
   )
 
   checkEdit(

@@ -214,8 +214,12 @@ object CaseKeywordCompletion:
             loop(tp2)
           case t => parents += tpe.typeSymbol
       loop(tpe.widen.bounds.hi)
-      parents.toList.foreach {
-        _.sealedStrictDescendants.foreach(sym =>
+      parents.toList.foreach { parent =>
+        // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
+        val descendants =
+          if parent.isAllOf(JavaEnumTrait) then parent.children
+          else parent.sealedStrictDescendants
+        descendants.foreach(sym =>
           if !(sym.is(Sealed) && (sym.is(Abstract) || sym.is(Trait))) then
             subclasses += sym
         )
