@@ -120,23 +120,7 @@ object CaseKeywordCompletion:
     end visit
     val selectorSym = parents.selector.typeSymbol
 
-    // Step 1: walk through scope members.
-    indexedContext.scopeSymbols
-      .foreach(s => visit(s.info.dealias.typeSymbol, s.decodedName, Nil))
-
-    // Step 2: walk through known subclasses of sealed types.
-    selectorSym.sealedStrictDescendants.foreach { sym =>
-      if !(sym.is(Sealed) && (sym.is(Abstract) || sym.is(Trait))) then
-        val autoImport = autoImportsGen.forSymbol(sym)
-        autoImport match
-          case Some(value) =>
-            visit(sym.info.dealias.typeSymbol, sym.decodedName, value)
-          case scala.None =>
-            visit(sym.info.dealias.typeSymbol, sym.showFullName, Nil)
-      else ()
-    }
-
-    // Step 3: special handle case when selector is a tuple or `FunctionN`.
+    // Special handle case when selector is a tuple or `FunctionN`.
     if definitions.isTupleClass(selectorSym) || definitions.isFunctionClass(
         selectorSym
       )
@@ -158,6 +142,22 @@ object CaseKeywordCompletion:
         range = Some(completionPos.toEditRange),
         command = config.parameterHintsCommand().asScala,
       )
+    else
+      // Step 1: walk through scope members.
+      indexedContext.scopeSymbols
+        .foreach(s => visit(s.info.dealias.typeSymbol, s.decodedName, Nil))
+
+      // Step 2: walk through known subclasses of sealed types.
+      selectorSym.sealedStrictDescendants.foreach { sym =>
+        if !(sym.is(Sealed) && (sym.is(Abstract) || sym.is(Trait))) then
+          val autoImport = autoImportsGen.forSymbol(sym)
+          autoImport match
+            case Some(value) =>
+              visit(sym.info.dealias.typeSymbol, sym.decodedName, value)
+            case scala.None =>
+              visit(sym.info.dealias.typeSymbol, sym.showFullName, Nil)
+        else ()
+      }
     end if
 
     val res = result.result()
