@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -62,16 +63,14 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
         .map { imports =>
           imports.asScala.map { i =>
             val uri = params.getTextDocument().getUri()
-            val edit = new l.WorkspaceEdit(Map(uri -> i.edits).asJava)
+            val edit = List(uri.toAbsolutePath -> i.edits.asScala.toSeq)
 
-            val codeAction = new l.CodeAction()
-
-            codeAction.setTitle(ImportMissingSymbol.title(name, i.packageName))
-            codeAction.setKind(l.CodeActionKind.QuickFix)
-            codeAction.setDiagnostics(List(diagnostic).asJava)
-            codeAction.setEdit(edit)
-
-            codeAction
+            CodeActionBuilder.build(
+              title = ImportMissingSymbol.title(name, i.packageName),
+              kind = l.CodeActionKind.QuickFix,
+              diagnostics = List(diagnostic),
+              changes = edit,
+            )
           }.toSeq
         }
     }
@@ -84,18 +83,20 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
         .values
         .filter(_.length == 1)
         .flatten
-        .toSeq
+        .toList
 
       if (uniqueCodeActions.length > 1) {
-        val allSymbols: l.CodeAction = new l.CodeAction()
 
         val diags = uniqueCodeActions.flatMap(_.getDiagnostics().asScala)
         val edits = joinActionEdits(uniqueCodeActions)
 
-        allSymbols.setTitle(ImportMissingSymbol.allSymbolsTitle)
-        allSymbols.setKind(l.CodeActionKind.QuickFix)
-        allSymbols.setDiagnostics(diags.asJava)
-        allSymbols.setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
+        val allSymbols: l.CodeAction =
+          CodeActionBuilder.build(
+            title = ImportMissingSymbol.allSymbolsTitle,
+            kind = l.CodeActionKind.QuickFix,
+            diagnostics = diags,
+            changes = List(uri.toAbsolutePath -> edits),
+          )
 
         allSymbols +: codeActions
       } else {

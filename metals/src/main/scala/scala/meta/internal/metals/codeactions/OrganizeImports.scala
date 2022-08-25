@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -12,6 +11,8 @@ import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -55,15 +56,13 @@ sealed abstract class OrganizeImports(
     scalafixProvider
       .organizeImports(path, scalaVersion)
       .map { edits =>
-        val codeAction = new l.CodeAction()
-        codeAction.setTitle(this.title)
-        codeAction.setKind(this.kind)
-        codeAction.setEdit(
-          new l.WorkspaceEdit(
-            Map(path.toURI.toString -> edits.asJava).asJava
+        Seq(
+          CodeActionBuilder.build(
+            title = this.title,
+            kind = this.kind,
+            changes = List(path.toURI.toAbsolutePath -> edits),
           )
         )
-        Seq(codeAction)
       }
   }
 

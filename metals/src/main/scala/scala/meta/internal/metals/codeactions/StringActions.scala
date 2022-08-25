@@ -4,8 +4,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
@@ -170,14 +171,11 @@ class StringActions(buffers: Buffers) extends CodeAction {
       uri: String,
       edits: List[l.TextEdit],
   ): l.CodeAction = {
-    val codeAction = new l.CodeAction()
-    codeAction.setTitle(title)
-    codeAction.setKind(l.CodeActionKind.Refactor)
-    codeAction.setEdit(
-      new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
+    CodeActionBuilder.build(
+      title = title,
+      kind = l.CodeActionKind.Refactor,
+      changes = List(uri.toAbsolutePath -> edits),
     )
-
-    codeAction
   }
 }
 

@@ -4,8 +4,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Term
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -68,14 +69,14 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
         }
 
       val edits = List(new l.TextEdit(range, text))
-      val codeAction = new l.CodeAction()
-      codeAction.setTitle(PatternMatchRefactor.convertPatternMatch)
-      codeAction.setKind(this.kind)
-      codeAction.setEdit(
-        new l.WorkspaceEdit(
-          Map(path.toURI.toString -> edits.asJava).asJava
+
+      val codeAction =
+        CodeActionBuilder.build(
+          title = PatternMatchRefactor.convertPatternMatch,
+          kind = this.kind,
+          changes = List(path -> edits),
         )
-      )
+
       Seq(codeAction)
     case _ => Seq.empty
   }

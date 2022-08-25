@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

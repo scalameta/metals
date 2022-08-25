@@ -7,10 +7,11 @@ import scala.meta.Defn
 import scala.meta.Enumerator
 import scala.meta.Pat
 import scala.meta.Term
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
@@ -37,19 +38,20 @@ class InsertInferredType(trees: Trees) extends CodeAction {
     }
 
     def insertInferTypeAction(title: String): l.CodeAction = {
-      val codeAction = new l.CodeAction()
-      codeAction.setTitle(title)
-      codeAction.setKind(l.CodeActionKind.RefactorRewrite)
       val range = params.getRange().getStart()
-      codeAction.setCommand(
+      val commandTypeAction =
         ServerCommands.InsertInferredType.toLSP(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             range,
           )
         )
+
+      CodeActionBuilder.build(
+        title = title,
+        kind = l.CodeActionKind.RefactorRewrite,
+        command = Some(commandTypeAction),
       )
-      codeAction
     }
 
     def inferTypeTitle(name: Term.Name): Option[String] = name.parent.flatMap {
@@ -92,18 +94,19 @@ class InsertInferredType(trees: Trees) extends CodeAction {
     }
 
     def adjustTypeAction(typ: String, range: l.Range): l.CodeAction = {
-      val codeAction = new l.CodeAction()
-      codeAction.setTitle(InsertInferredType.adjustType(typ))
-      codeAction.setKind(l.CodeActionKind.QuickFix)
-      codeAction.setCommand(
+      val commandTypeAction =
         ServerCommands.InsertInferredType.toLSP(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             range.getStart(),
           )
         )
+
+      CodeActionBuilder.build(
+        title = InsertInferredType.adjustType(typ),
+        kind = l.CodeActionKind.QuickFix,
+        command = Some(commandTypeAction),
       )
-      codeAction
     }
 
     val adjustType = for {
