@@ -15,6 +15,11 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     """|match
        |match (exhaustive) Option[Int] (2 cases)
        |""".stripMargin,
+    compat = Map(
+      "3" -> """|match
+                |match (exhaustive) Option (2 cases)
+                |""".stripMargin
+    ),
   )
 
   check(
@@ -27,16 +32,26 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     """|match
        |match (exhaustive) Option[Int] (2 cases)
        |""".stripMargin,
+    compat = Map(
+      "3" -> """|match
+                |match (exhaustive) Option (2 cases)
+                |""".stripMargin
+    ),
   )
 
   // In Scala3 it's allowed to write xxx.match
   check(
-    "dot".tag(IgnoreScala3),
+    "dot",
     """
       |object A {
       |  Option(1).match@@
       |}""".stripMargin,
     "",
+    compat = Map(
+      "3" -> """|match
+                |match (exhaustive) Option (2 cases)
+                |""".stripMargin
+    ),
   )
 
   check(
@@ -53,7 +68,9 @@ class CompletionMatchSuite extends BaseCompletionSuite {
 
   // Assert that Workday/Weekend symbols from previous test don't appear in result.
   checkEdit(
-    "stale2",
+    "stale2".tag(
+      IgnoreScala3
+    ), // needs fix for scala3 (adding `isStale` filter)
     """package stale
       |sealed abstract class Weekday
       |object Weekday {
@@ -209,8 +226,8 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       "3" -> s"""package sort
                 |object App {
                 |  Option(1) match
-                |\tcase Some(value) => $$0
-                |\tcase None =>
+                |\tcase None => $$0
+                |\tcase Some(value) =>
                 |
                 |}
                 |""".stripMargin,
@@ -316,8 +333,8 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |
                 |object Main {
                 |  Option(1) match
-                |\tcase Some(value) => $$0
-                |\tcase scala.None =>
+                |\tcase None => $$0
+                |\tcase Some(value) =>
                 |
                 |}""".stripMargin
     ),

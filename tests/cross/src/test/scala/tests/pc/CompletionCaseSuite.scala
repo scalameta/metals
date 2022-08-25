@@ -155,7 +155,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       // known-direct subclasses doesn't work well in 2.11 apparently.
-      "2.11" -> ""
+      "2.11" -> "",
+      "3" -> "case Cls(a, b) => sealed-two.Outer",
     ),
   )
 
@@ -172,6 +173,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     """|case scala.util.Left(value) =>
        |case Right(value) => scala.util
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|case Left(value) => scala.util
+           |case Right(value) => scala.util
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
