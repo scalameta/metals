@@ -428,4 +428,6 @@ object Ammonite {
       (updatedInput, updatePos, adjustLspData0)
     }
   }
+
+  val name = "Ammonite"
 }
