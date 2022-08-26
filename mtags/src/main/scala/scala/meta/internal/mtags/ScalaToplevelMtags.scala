@@ -191,7 +191,7 @@ class ScalaToplevelMtags(
               acceptTrivia()
               val name = newIdentifier
               withOwner(expect.owner) {
-                term(name.name, name.pos, Kind.OBJECT, 0)
+                term(name.name, name.pos, Kind.METHOD, 0)
               }
               loop(indent, isAfterNewline = false, region, None)
           }

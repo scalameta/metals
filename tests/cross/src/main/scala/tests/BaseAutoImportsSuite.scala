@@ -12,6 +12,8 @@ import munit.TestOptions
 
 trait BaseAutoImportsSuite extends BaseCodeActionSuite {
 
+  val isExtensionMethods: Boolean = false
+
   def check(
       name: String,
       original: String,
@@ -88,6 +90,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
           offset,
           cancelToken,
         ),
+        isExtensionMethods,
       )
       .get()
     result.asScala.toList

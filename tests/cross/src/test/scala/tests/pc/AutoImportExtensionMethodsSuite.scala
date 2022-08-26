@@ -6,6 +6,8 @@ class AutoImportExtensionMethodsSuite extends BaseAutoImportsSuite {
 
   override def ignoreScalaVersion: Some[IgnoreScalaVersion] = Some(IgnoreScala2)
 
+  override val isExtensionMethods: Boolean = true
+
   check(
     "basic",
     """|object A:

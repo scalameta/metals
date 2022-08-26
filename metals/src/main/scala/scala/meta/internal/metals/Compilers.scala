@@ -385,11 +385,15 @@ class Compilers(
   def autoImports(
       params: TextDocumentPositionParams,
       name: String,
+      findExtensionMethods: Boolean,
       token: CancelToken,
   ): Future[ju.List[AutoImportsResult]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.autoImports(name, CompilerOffsetParams.fromPos(pos, token))
-        .asScala
+      pc.autoImports(
+        name,
+        CompilerOffsetParams.fromPos(pos, token),
+        findExtensionMethods,
+      ).asScala
         .map { list =>
           list.map(adjust.adjustImportResult)
           list

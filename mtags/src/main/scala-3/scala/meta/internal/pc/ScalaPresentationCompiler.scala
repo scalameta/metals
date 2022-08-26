@@ -156,6 +156,7 @@ case class ScalaPresentationCompiler(
   def autoImports(
       name: String,
       params: scala.meta.pc.OffsetParams,
+      isExtension: java.lang.Boolean,
   ): CompletableFuture[
     ju.List[scala.meta.pc.AutoImportsResult]
   ] =
@@ -172,7 +173,7 @@ case class ScalaPresentationCompiler(
         config,
         buildTargetIdentifier,
       )
-        .autoImports()
+        .autoImports(isExtension)
         .asJava
     }
 

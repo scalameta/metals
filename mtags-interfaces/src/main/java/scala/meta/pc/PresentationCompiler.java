@@ -83,7 +83,7 @@ public abstract class PresentationCompiler {
     /**
      * Return the necessary imports for a symbol at the given position.
      */
-    public abstract CompletableFuture<List<AutoImportsResult>> autoImports(String name, OffsetParams params);
+    public abstract CompletableFuture<List<AutoImportsResult>> autoImports(String name, OffsetParams params, Boolean isExtension);
 
     /**
      * Return the missing implements and imports for the symbol at the given position.
