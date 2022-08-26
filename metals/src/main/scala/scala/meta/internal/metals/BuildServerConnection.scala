@@ -23,6 +23,7 @@ import scala.util.Try
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
@@ -76,6 +77,8 @@ class BuildServerConnection private (
   def isMill: Boolean = name == MillBuildTool.name
 
   def isScalaCLI: Boolean = name == ScalaCli.name
+
+  def isAmmonite: Boolean = name == Ammonite.name
 
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
@@ -176,7 +179,7 @@ class BuildServerConnection private (
     val resultOnJavacOptionsUnsupported = new JavacOptionsResult(
       List.empty[JavacOptionsItem].asJava
     )
-    if (isSbt) Future.successful(resultOnJavacOptionsUnsupported)
+    if (isSbt || isAmmonite) Future.successful(resultOnJavacOptionsUnsupported)
     else {
       val onFail = Some(
         (
