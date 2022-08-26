@@ -451,7 +451,7 @@ class Scala3CodeActionLspSuite
         |  val c = 3
         |  def method(i: Int, j: Int) = i + 1
         |  def newMethod(c: Int): Int =
-        |  \t123 + method(c, b) + method(b,c)
+        |    123 + method(c, b) + method(b,c)
         |
         |  val a = { 
         |    val c = 5
@@ -483,9 +483,9 @@ class Scala3CodeActionLspSuite
         |  def method(i: Int, j: Int, k: Int) = i + j + k
         |  val a = {
         |    def newMethod(c: Int): Int =
-        |    \tval d = 3
-        |    \tmethod(d, b, c)
-        |    end newMethod
+        |      val d = 3
+        |      method(d, b, c)
+        |
         |    def f() = {
         |      val c = 1
         |      newMethod(c)

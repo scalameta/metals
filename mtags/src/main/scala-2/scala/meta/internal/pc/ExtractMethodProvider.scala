@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import scala.reflect.internal.util.Position
 
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.pc.ExtractMethodUtils
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 
