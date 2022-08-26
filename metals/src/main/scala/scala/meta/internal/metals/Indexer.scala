@@ -522,15 +522,7 @@ final case class Indexer(
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         SemanticdbDefinition.foreach(input, dialect) {
           case SemanticdbDefinition(info, occ, owner) =>
-            // TODO: Do not index (extension) METHOD, they will be indexed later
-            // we index methods for auto-import missing extension methods feature for now
-            // but those feature should use methodSymbols
-            // see: https://github.com/scalameta/metals/issues/4212
-            if (
-              WorkspaceSymbolProvider.isRelevantKind(
-                info.kind
-              ) || info.kind == Kind.METHOD
-            ) {
+            if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
               occ.range.foreach { range =>
                 symbols += WorkspaceSymbolInformation(
                   info.symbol,

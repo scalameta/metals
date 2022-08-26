@@ -158,7 +158,8 @@ case class ScalaPresentationCompiler(
 
   override def autoImports(
       name: String,
-      params: OffsetParams
+      params: OffsetParams,
+      isExtension: java.lang.Boolean // ignore, because Scala2 doesn't support extension method
   ): CompletableFuture[ju.List[AutoImportsResult]] =
     compilerAccess.withInterruptableCompiler(
       List.empty[AutoImportsResult].asJava,

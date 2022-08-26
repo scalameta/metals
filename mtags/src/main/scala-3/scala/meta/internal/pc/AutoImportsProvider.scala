@@ -33,7 +33,7 @@ final class AutoImportsProvider(
     buildTargetIdentifier: String,
 ):
 
-  def autoImports(): List[AutoImportsResult] =
+  def autoImports(isExtension: Boolean): List[AutoImportsResult] =
     val uri = params.uri
     val filePath = Paths.get(uri)
     driver.run(
@@ -67,7 +67,9 @@ final class AutoImportsProvider(
       sym.name.show == query
 
     val visitor = new CompilerSearchVisitor(name, visit)
-    search.search(name, buildTargetIdentifier, visitor)
+    if isExtension then
+      search.searchMethods(name, buildTargetIdentifier, visitor)
+    else search.search(name, buildTargetIdentifier, visitor)
     val results = symbols.result.filter(isExactMatch(_, name))
 
     if results.nonEmpty then
