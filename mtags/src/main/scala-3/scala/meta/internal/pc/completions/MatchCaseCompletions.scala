@@ -148,15 +148,13 @@ object CaseKeywordCompletion:
         .foreach(s => visit(s.info.dealias.typeSymbol, s.decodedName, Nil))
 
       // Step 2: walk through known subclasses of sealed types.
-      selectorSym.sealedStrictDescendants.foreach { sym =>
-        if !(sym.is(Sealed) && (sym.is(Abstract) || sym.is(Trait))) then
-          val autoImport = autoImportsGen.forSymbol(sym)
-          autoImport match
-            case Some(value) =>
-              visit(sym.info.dealias.typeSymbol, sym.decodedName, value)
-            case scala.None =>
-              visit(sym.info.dealias.typeSymbol, sym.showFullName, Nil)
-        else ()
+      MetalsSealedDesc.strictDesc(selectorSym).foreach { sym =>
+        val autoImport = autoImportsGen.forSymbol(sym)
+        autoImport match
+          case Some(value) =>
+            visit(sym.info.dealias.typeSymbol, sym.decodedName, value)
+          case scala.None =>
+            visit(sym.info.dealias.typeSymbol, sym.showFullName, Nil)
       }
     end if
 
@@ -204,7 +202,6 @@ object CaseKeywordCompletion:
       case t => t
 
     def subclassesForType(tpe: Type)(using Context): List[Symbol] =
-      val subclasses = ListBuffer.empty[Symbol]
       val parents = ListBuffer.empty[Symbol]
       // Get parent types from refined type
       def loop(tpe: Type): Unit =
@@ -214,18 +211,11 @@ object CaseKeywordCompletion:
             loop(tp2)
           case t => parents += tpe.typeSymbol
       loop(tpe.widen.bounds.hi)
-      parents.toList.foreach { parent =>
+      parents.toList.flatMap { parent =>
         // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
-        val descendants =
-          if parent.isAllOf(JavaEnumTrait) then parent.children
-          else parent.sealedStrictDescendants
-        descendants.foreach(sym =>
-          if !(sym.is(Sealed) && (sym.is(Abstract) || sym.is(Trait))) then
-            subclasses += sym
-        )
+        if parent.isAllOf(JavaEnumTrait) then parent.children
+        else MetalsSealedDesc.strictDesc(parent)
       }
-      val subclassesResult = subclasses.toList
-      subclassesResult
     end subclassesForType
 
     val sortedSubclasses = subclassesForType(tpe)

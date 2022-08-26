@@ -7,9 +7,6 @@ import tests.BaseCompletionSuite
 
 class CompletionCaseSuite extends BaseCompletionSuite {
 
-  // override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-  //   Some(IgnoreScala3)
-
   def paramHint: Option[String] = Some("param-hint")
 
   override def config: PresentationCompilerConfig =
@@ -156,6 +153,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     compat = Map(
       // known-direct subclasses doesn't work well in 2.11 apparently.
       "2.11" -> "",
+      // in 3.0 we don't have `sealedStrictDesc`, so completions provide direct subclasses
+      "3.0" -> "case _: AdtTwo => sealed-two.Outer",
       "3" -> "case Cls(a, b) => sealed-two.Outer",
     ),
   )
