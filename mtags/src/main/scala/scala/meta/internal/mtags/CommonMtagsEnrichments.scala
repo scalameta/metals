@@ -96,24 +96,60 @@ trait CommonMtagsEnrichments {
         new l.Position(pos.endLine, pos.endColumn)
       )
     }
+
     def encloses(other: m.Position): Boolean = {
       pos.start <= other.start && pos.end >= other.end
+    }
+
+    def encloses(other: s.Range): Boolean = {
+      isBefore(
+        pos.startLine,
+        pos.startColumn,
+        other.startLine,
+        other.startCharacter
+      ) && isAfter(
+        pos.endLine,
+        pos.endColumn,
+        other.endLine,
+        other.endCharacter
+      )
     }
 
     def encloses(other: l.Range): Boolean = {
       val start = other.getStart()
       val end = other.getEnd()
-      val isBefore =
-        pos.startLine < start.getLine ||
-          (pos.startLine == start.getLine && pos.startColumn <= start
-            .getCharacter())
-
-      val isAfter = pos.endLine > end.getLine() ||
-        (pos.endLine >= end.getLine() && pos.endColumn >= end.getCharacter())
-
-      isBefore && isAfter
+      isBefore(
+        pos.startLine,
+        pos.startColumn,
+        start.getLine,
+        start.getCharacter()
+      ) && isAfter(
+        pos.endLine,
+        pos.endColumn,
+        end.getLine(),
+        end.getCharacter()
+      )
     }
+
+    private def isBefore(
+        startLine: Int,
+        startChar: Int,
+        startLineOther: Int,
+        startCharOther: Int
+    ) =
+      startLine < startLineOther ||
+        (startLine == startLineOther && startChar <= startCharOther)
+
+    private def isAfter(
+        endLine: Int,
+        endChar: Int,
+        endLineOther: Int,
+        endCharOther: Int
+    ) =
+      endLine > endLineOther ||
+        (endLine >= endLineOther && endChar >= endCharOther)
   }
+
   implicit class XtensionRangeParams(params: RangeParams) {
 
     def trimWhitespaceInRange: Option[OffsetParams] = {

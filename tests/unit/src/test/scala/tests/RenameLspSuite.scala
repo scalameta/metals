@@ -812,6 +812,50 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |""".stripMargin,
     newName = "NewSymbol",
   )
+
+  renamed(
+    "hierarchy-inside-method-class2",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  final def bar(n: Int) = {
+       |    sealed trait Hierarchy
+       |    final case class Instance() extends Hierarchy
+       |    val bar: Hierarchy = Instance()
+       |    val bar2: Instance = Instance()
+       |  }
+       |  final def foo(n: Int) = {
+       |    sealed trait Hierarchy
+       |    final case class <<Instance>>() extends Hierarchy
+       |    val bar: Hierarchy = new <<Instance>>()
+       |    val bar2: <<In@@stance>> = <<Instance>>()
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
+
+  renamed(
+    "hierarchy-inside-method-class3",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  final def bar(n: Int) = {
+       |    sealed trait Hierarchy
+       |    final case class Instance() extends Hierarchy
+       |    val bar: Hierarchy = Instance()
+       |    val bar2: Instance = Instance()
+       |  }
+       |  final def foo(n: Int) = {
+       |    sealed trait Hierarchy
+       |    final case class <<Instance>>() extends Hierarchy
+       |    val bar: Hierarchy = new <<Instance>>()
+       |    val bar2: <<Instance>> = <<Ins@@tance>>()
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.12", "io.circe::circe-generic:0.14.1")
 

@@ -6,6 +6,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Importee
+import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.implementation.ImplementationProvider
@@ -150,17 +151,59 @@ final class RenameProvider(
               .defaultSymbolSearch(path, textDocument)(symbol)
               .exists(info => info.isTrait || info.isClass))
 
+          /**
+           * If we have an offset means that the symbol did not exist in
+           * source code, so it was synthetic. Let's revert to the main symbol
+           * to be able to find all occurences easier for example:
+           * ```scala
+           * case class Obj(a : String)
+           * object Main{
+           *   Ob@@j("asd")
+           * }
+           * ```
+           * we can look for all occurrences of Obj and it's companion.
+           *
+           * This is especially important in local context, where it's`
+           * difficult or even impossible to find the semanticdb symbol
+           * of a synthetic object.
+           *
+           * @param location definition location
+           * @return occurrence of the symbol that we can use with semanticdb that the
+           *         symbol resides in.
+           */
+          def fallback(
+              location: Location
+          ): Option[(SymbolOccurrence, TextDocument)] = {
+            if (location.getRange().isOffset)
+              definitionProvider
+                .symbolOccurrence(
+                  location.getUri().toAbsolutePath,
+                  location.getRange().getStart(),
+                )
+            else None
+          }
+
           val allReferences = for {
-            (occurence, semanticDb) <- symbolOccurrence.toIterable
             definitionLoc <- definition.locations.asScala.headOption.toIterable
             definitionPath = definitionLoc.getUri().toAbsolutePath
-            defSemanticdb <- definition.semanticdb.toIterable
+            (occurence, semanticdb) <- fallback(definitionLoc)
+              .orElse(symbolOccurrence)
+              .toIterable
+            occRange <- occurence.range.toIterable
+            // if offset means we landed in definition when using sythetic symbol
+            replaceDefLoc =
+              if (definitionLoc.getRange().isOffset)
+                occRange.toLocation(definitionLoc.getUri())
+              else definitionLoc
+            defSemanticdb <- definition.semanticdb.orElse {
+              if (occurence.symbol.isLocal) Some(semanticdb) else None
+            }.toIterable
             if canRenameSymbol(occurence.symbol, Option(newName)) &&
               isWorkspaceSymbol(occurence.symbol, definitionPath) &&
-              isNotRenamedSymbol(semanticDb, occurence)
+              isNotRenamedSymbol(semanticdb, occurence)
             parentSymbols =
               implementationProvider
-                .topMethodParents(occurence.symbol, defSemanticdb)
+                .topMethodParents(occurence.symbol, semanticdb)
             txtParams <- {
               if (parentSymbols.nonEmpty) parentSymbols.map(toTextParams)
               else if (definitionTextParams.nonEmpty) definitionTextParams
@@ -182,23 +225,23 @@ final class RenameProvider(
                   includeSynthetic,
                 )
                 .flatMap(_.locations)
-            definitionLocation = {
+            definitionLocation =
               if (parentSymbols.isEmpty)
-                definition.locations.asScala
-                  .filter(_.getUri().isScalaOrJavaFilename)
+                Seq(replaceDefLoc)
               else parentSymbols
-            }
             companionRefs = companionReferences(
               occurence.symbol,
               source,
               newName,
+              semanticdb,
+              occRange,
             )
             implReferences = implementations(
               txtParams,
               shouldCheckImplementation(
                 occurence.symbol,
                 source,
-                semanticDb,
+                semanticdb,
               ),
               newName,
             )
@@ -215,7 +258,6 @@ final class RenameProvider(
               fn(occ.symbol)
             }
           }
-
           // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
           val fallbackOccurences =
             if (allReferences.isEmpty)
@@ -341,11 +383,67 @@ final class RenameProvider(
       }
   }
 
-  private def companionReferences(
+  /**
+   * This method is run when we are looking for a locally defined
+   * companion object or class, meaning it's in a block, not accessible
+   * from other files.
+   *
+   * In that case we need to find the local symbol of the companion and
+   * then find all references to it that exist inside of the same block.
+   * This can only be done by name, which is the most problematic part.
+   *
+   * @note current limitation is that shadowing of the same name locally
+   *       inside the same block will not be supported
+   *
+   * @param sym symbol for which we are looking for companion locations
+   * @param source file where these symbols exist
+   * @param defSemanticdb semanticdb of source
+   * @return list of locations of the companion symbol
+   */
+  private def localCompanionReferences(
+      sym: String,
+      source: AbsolutePath,
+      defSemanticdb: TextDocument,
+      currentPos: s.Range,
+  ) = {
+
+    def findDefRange(sym: String) = defSemanticdb.occurrences
+      .find(occ =>
+        occ.symbol == sym && occ.role == SymbolOccurrence.Role.DEFINITION
+      )
+      .flatMap(_.range)
+
+    for {
+      symInfo <- defSemanticdb.symbols.find(_.symbol == sym).toSeq
+      companion <- defSemanticdb.symbols.filter { info =>
+        info.displayName == symInfo.displayName &&
+        (symInfo.isClass && info.isObject || symInfo.isObject && info.isClass)
+      }
+      defOccurenceRange <- findDefRange(sym).toSeq
+      tree <- trees
+        .findLastEnclosingAt[Term.Block](
+          source,
+          defOccurenceRange.toLSP.getStart(),
+          // make sure we are operating in the current scope
+          t => t.pos.encloses(currentPos),
+        )
+        .toSeq
+      blockRange = tree.pos.toSemanticdb
+      info <- defSemanticdb.occurrences
+        .filter { occ =>
+          occ.range.nonEmpty &&
+          blockRange.encloses(occ.range.get) &&
+          occ.symbol == companion.symbol
+        }
+      rng <- info.range
+    } yield rng.toLocation(source.toURI.toString())
+  }
+
+  private def globalCompanionReferences(
       sym: String,
       source: AbsolutePath,
       newName: String,
-  ): Seq[Location] = {
+  ) = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
       loc <-
@@ -363,6 +461,18 @@ final class RenameProvider(
           .flatMap(_.locations) :+ loc
     } yield companionLocs
     results.toList
+  }
+
+  private def companionReferences(
+      sym: String,
+      source: AbsolutePath,
+      newName: String,
+      defSemanticdb: TextDocument,
+      currentPos: s.Range,
+  ): Seq[Location] = {
+    if (sym.isLocal)
+      localCompanionReferences(sym, source, defSemanticdb, currentPos)
+    else globalCompanionReferences(sym, source, newName)
   }
 
   private def companion(sym: String) = {
