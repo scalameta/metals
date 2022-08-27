@@ -1,20 +1,21 @@
 package scala.meta.internal.metals.callHierarchy
 
-import scala.meta.internal.{semanticdb => s}
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.HoverExtParams
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.pc.CancelToken
-import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.HoverExtParams
-import scala.concurrent.Future
-import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.BuildTargets
 
 private[callHierarchy] final class CallHierarchyItemBuilder(
     workspace: AbsolutePath,
@@ -39,7 +40,7 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
 
   private def getClassContructorSymbol(
       info: s.SymbolInformation
-  ): Option[String] =
+  ): List[String] =
     if (info.isClass)
       info.signature
         .asInstanceOf[s.ClassSignature]
@@ -47,7 +48,10 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
         .flatMap(
           _.symlinks.find(_.endsWith("`<init>`()."))
         )
-    else None
+        .toList ++ Option.when(info.isCase)(
+        info.symbol.replace("#", ".apply().")
+      ) // handling case class constructors
+    else Nil
 
   /** Get the name of the class of a constructor */
   private def getName(info: s.SymbolInformation): String =

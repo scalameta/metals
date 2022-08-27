@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.callHierarchy
 
-import scala.meta.Tree
 import scala.meta.Name
+import scala.meta.Tree
 
 /**
  * Where to start looking for occurrences.
@@ -17,7 +17,7 @@ private[callHierarchy] case class NamedRealRoot(
     root: Tree,
     private val _name: Name,
 ) extends RealRoot {
-  val name = Some(_name)
+  val name: Some[Name] = Some(_name)
 }
 
 private[callHierarchy] case class UnamedRealRoot(root: Tree) extends RealRoot {

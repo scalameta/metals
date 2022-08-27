@@ -1,27 +1,29 @@
 package scala.meta.internal.metals.callHierarchy
 
-import scala.meta.io.AbsolutePath
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.semanticdb.TextDocument
+
+import scala.meta.Member
+import scala.meta.Name
+import scala.meta.Pat
+import scala.meta.Term
+import scala.meta.Tree
+import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
-import scala.meta.Tree
-import scala.meta.Name
-import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.parsing.Trees
-import scala.meta.Term
-import scala.meta.Pat
-import scala.meta.Member
-import org.eclipse.lsp4j.Position
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
-import org.eclipse.lsp4j
-import scala.meta.internal.semanticdb.SelectTree
-import scala.meta.internal.semanticdb.OriginalTree
+import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.IdTree
+import scala.meta.internal.semanticdb.OriginalTree
+import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SelectTree
+import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j
+import org.eclipse.lsp4j.Position
 
 class OutgoingCallsFinder(
     semanticdbs: Semanticdbs,
@@ -36,7 +38,7 @@ class OutgoingCallsFinder(
       source: AbsolutePath,
       doc: TextDocument,
   ) {
-    def symbolLength = occurence.symbol.length()
+    def symbolLength: Int = occurence.symbol.length()
 
     def definitionTree: Option[Tree] = for {
       range <- occurence.range
@@ -45,7 +47,9 @@ class OutgoingCallsFinder(
       )
     } yield definitionTree.root
 
-    def toOutgoingCallResult(fromRange: lsp4j.Range) =
+    def toOutgoingCallResult(
+        fromRange: lsp4j.Range
+    ): Option[FindOutgoingCallsResult] =
       definitionTree.map(tree =>
         FindOutgoingCallsResult(
           occurence,
@@ -56,7 +60,10 @@ class OutgoingCallsFinder(
         )
       )
 
-    def isSameDefinition(otherDoc: TextDocument, root: Option[RealRoot]) =
+    def isSameDefinition(
+        otherDoc: TextDocument,
+        root: Option[RealRoot],
+    ): Boolean =
       doc == otherDoc && root.exists {
         case NamedRealRoot(rootTree, rootTreeName) =>
           occurence.range.exists(range =>
@@ -135,8 +142,8 @@ class OutgoingCallsFinder(
             mayDefinitionInfo <- getDefinitionInformationFromPosition(
               name.pos.toLSP.getEnd()
             )
-            if !mayDefinitionInfo.exists(_.isSameDefinition(doc, realRoot))
           } yield mayDefinitionInfo
+            .filterNot(_.isSameDefinition(doc, realRoot))
             .flatMap(_.toOutgoingCallResult(name.pos.toLSP))
             .toList
         case t
@@ -166,12 +173,16 @@ class OutgoingCallsFinder(
               case other => List(search(other))
             })
           )
-          .map(results => FindOutgoingCallsResult.group(results.flatten))
+          .map(results => FindCallsResult.group(results.flatten))
       case None => Future.successful(Nil)
     }
   }
 
-  def isDefinedIn(source: AbsolutePath, definition: Tree, range: lsp4j.Range) =
+  def isDefinedIn(
+      source: AbsolutePath,
+      definition: Tree,
+      range: lsp4j.Range,
+  ): Boolean =
     definition.pos.encloses(range) && getSpecifiedOrFindDefinition(
       trees.findLastEnclosingAt(source, range.getStart),
       Some(definition),
@@ -221,7 +232,7 @@ class OutgoingCallsFinder(
 
         Future
           .sequence(results)
-          .map(results => FindOutgoingCallsResult.group(results.flatten))
+          .map(results => FindCallsResult.group(results.flatten))
       case _ => Future.successful(Nil)
     }
   }

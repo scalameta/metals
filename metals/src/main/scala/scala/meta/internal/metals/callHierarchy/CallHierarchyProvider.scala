@@ -1,27 +1,26 @@
 package scala.meta.internal.metals.callHierarchy
 
-import scala.meta.internal.metals._
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.TextDocuments
-import scala.meta.internal.semanticdb.TextDocument
-
-import scala.meta.internal.parsing.Trees
-
-import scala.meta.io.AbsolutePath
-
-import org.eclipse.lsp4j.CallHierarchyPrepareParams
-import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
-import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
-import org.eclipse.lsp4j.CallHierarchyIncomingCall
-import org.eclipse.lsp4j.CallHierarchyOutgoingCall
-import org.eclipse.lsp4j.CallHierarchyItem
-import scala.meta.Tree
-import com.google.gson.JsonElement
-import scala.meta.pc.CancelToken
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
+import scala.meta.Tree
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals._
+import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.parsing.Trees
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.TextDocuments
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.CancelToken
+
+import com.google.gson.JsonElement
+import org.eclipse.lsp4j.CallHierarchyIncomingCall
+import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
+import org.eclipse.lsp4j.CallHierarchyItem
+import org.eclipse.lsp4j.CallHierarchyOutgoingCall
+import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
+import org.eclipse.lsp4j.CallHierarchyPrepareParams
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,
@@ -60,7 +59,7 @@ final case class CallHierarchyProvider(
         rso: ResolvedSymbolOccurrence,
         source: AbsolutePath,
         doc: TextDocument,
-    ): Future[CallHierarchyItem] = {
+    ): Future[Option[CallHierarchyItem]] = {
       val result = for {
         occurence <- rso.occurrence
         if occurence.role.isDefinition
@@ -75,10 +74,8 @@ final case class CallHierarchyProvider(
         Array(occurence.symbol),
         token,
       )
-
       result
         .getOrElse(Future.successful(None))
-        .collect { case Some(value) => value }
     }
 
     val source = params.getTextDocument.getUri.toAbsolutePath
@@ -86,11 +83,13 @@ final case class CallHierarchyProvider(
       case Some(doc) =>
         val results =
           definition.positionOccurrences(source, params.getPosition, doc)
-        Future.sequence(
-          results.map(result =>
-            resolvedSymbolOccurence2CallHierarchyItem(result, source, doc)
+        Future
+          .sequence(
+            results.map(result =>
+              resolvedSymbolOccurence2CallHierarchyItem(result, source, doc)
+            )
           )
-        )
+          .map(_.flatten)
       case None =>
         Future.successful(Nil)
     }

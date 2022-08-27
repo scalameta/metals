@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -27,8 +29,6 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 
 final class ReferenceProvider(
     workspace: AbsolutePath,

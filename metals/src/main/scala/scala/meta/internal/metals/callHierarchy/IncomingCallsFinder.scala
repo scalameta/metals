@@ -1,21 +1,23 @@
 package scala.meta.internal.metals.callHierarchy
 
-import scala.meta.io.AbsolutePath
-import scala.meta.Tree
+import scala.concurrent.ExecutionContext
+
+import scala.meta.Defn
+import scala.meta.Name
 import scala.meta.Pat
 import scala.meta.Term
-import scala.meta.Name
-import scala.meta.internal.metals.ResolvedSymbolOccurrence
-import scala.meta.Defn
+import scala.meta.Tree
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.semanticdb.SelectTree
-import scala.meta.internal.semanticdb.OriginalTree
+import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.parsing.Trees
-import org.eclipse.lsp4j
+import scala.meta.internal.semanticdb.OriginalTree
+import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.concurrent.ExecutionContext
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j
 
 class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)(implicit
     ec: ExecutionContext
@@ -133,7 +135,7 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)(implicit
         }
       }
     }
-    FindIncomingCallsResult.group(search(root, None, None))
+    FindCallsResult.group(search(root, None, None))
   }
 
   def findSynthetics(
@@ -166,6 +168,6 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)(implicit
       )
       .toList
 
-    FindIncomingCallsResult.group(result)
+    FindCallsResult.group(result)
   }
 }

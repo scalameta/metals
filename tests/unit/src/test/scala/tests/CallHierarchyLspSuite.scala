@@ -335,4 +335,152 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
       )
     } yield ()
   }
+
+  test("primary-constructor") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |class F@@oo(x: Int)
+           |
+           |object Main {
+           |  def <<foo>>/*1*/(x: Int) = new <?<Foo>?>/*1*/(x)
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |class Foo<<>>/*1*/(x: Int)
+           |
+           |object Main {
+           |  def fo@@o(x: Int) = new <?<Foo>?>/*1*/(x)
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("secondary-constructor") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |class Foo(x: Int) {
+           |  def t@@his(x: Int, y: Int) = this(x + y)
+           |}
+           |
+           |object Main {
+           |  def <<foo>>/*1*/(x: Int, y: Int) = new <?<Foo>?>/*1*/(x, y)
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |class Foo(x: Int) {
+           |  def <<this>>/*1*/(x: Int, y: Int) = this(x + y)
+           |}
+           |
+           |object Main {
+           |  def f@@oo(x: Int, y: Int) = new <?<Foo>?>/*1*/(x, y)
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("case-class-constructor") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |case class F@@oo(x: Int)
+           |
+           |object Main {
+           |  def <<foo>>/*1*/(x: Int) = <?<Foo>?>/*1*/(x)
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |case class Foo<<>>/*1*/(x: Int)
+           |
+           |object Main {
+           |  def fo@@o(x: Int) = <?<Foo>?>/*1*/(x)
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("unapply") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/User.scala
+           |package a
+           |
+           |class User(val name: String, val age: Int)
+           |
+           |object User {
+           |  def un@@apply(user: User): Option[(String, Int)] =
+           |     Some(user.name, user.age)
+           |}
+           |
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  def <<foo>>/*1*/(user: User) {
+           |    user match {
+           |      case <?<User>?>/*1*/(name, age) => 
+           |        println(s"My name is $name and I'm $age")
+           |    }
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+
+      _ <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/User.scala
+           |package a
+           |
+           |class User(val name: String, val age: Int)
+           |
+           |object <<User>>/*2*/ {
+           |  def <<unapply>>/*1*/(user: User): Option[(String, Int)] =
+           |     Some(user.name, user.age)
+           |}
+           |
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  def fo@@o(user: User) {
+           |    user match {
+           |      case <?<User>?>/*1,2*/(name, age) => 
+           |        println(s"My name is $name and I'm $age")
+           |    }
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }
