@@ -32,6 +32,7 @@ import scala.meta.pc.VirtualFileParams
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
@@ -47,6 +48,7 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
 ) extends PresentationCompiler {
+
   implicit val executionContext: ExecutionContextExecutor = ec
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
@@ -214,6 +216,16 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc => new PcDefinitionProvider(pc.compiler(), params).definition() }
   }
+
+  override def documentHighlight(
+      params: OffsetParams
+  ): CompletableFuture[util.List[DocumentHighlight]] =
+    compilerAccess.withInterruptableCompiler(
+      List.empty[DocumentHighlight].asJava,
+      params.token()
+    ) { pc =>
+      new PcDocumentHighlightProvider(pc.compiler()).higlights(params).asJava
+    }
 
   override def semanticdbTextDocument(
       uri: URI,

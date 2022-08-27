@@ -131,6 +131,7 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
       |  }
       |}""".stripMargin,
   )
+
   check(
     "local-class",
     """

@@ -657,11 +657,25 @@ class MetalsGlobal(
      */
     def namePos: Position = {
       val start = defn.pos.point
-      val end = start + defn.name.length() - 1
+      val end = start + defn.name.dropLocal.decoded.length()
       Position.range(defn.pos.source, start, start, end)
     }
 
   }
+
+  implicit class XtensionNameTreeMetals(sel: Select) {
+
+    /**
+     * Returns the position of the name/identifier of this definition.
+     */
+    def namePos: Position = {
+      val start = sel.pos.point
+      val end = start + sel.name.getterName.decoded.trim.length()
+      Position.range(sel.pos.source, start, start, end)
+    }
+
+  }
+
   implicit class XtensionSymbolMetals(sym: Symbol) {
     def foreachKnownDirectSubClass(fn: Symbol => Unit): Unit = {
       // NOTE(olafur) The logic in this method is fairly involved because `knownDirectSubClasses`

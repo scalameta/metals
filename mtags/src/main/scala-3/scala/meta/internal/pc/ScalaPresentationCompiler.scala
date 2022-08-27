@@ -32,6 +32,7 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.util.*
+import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.{lsp4j as l}
 
 case class ScalaPresentationCompiler(
@@ -115,6 +116,17 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       PcDefinitionProvider(driver, params, search).definitions()
+    }
+
+  def documentHighlight(
+      params: OffsetParams
+  ): CompletableFuture[ju.List[DocumentHighlight]] =
+    compilerAccess.withNonInterruptableCompiler(
+      List.empty[DocumentHighlight].asJava,
+      params.token,
+    ) { access =>
+      val driver = access.compiler()
+      PcDocumentHighlightProvider.higlights(driver, params).asJava
     }
 
   def shutdown(): Unit =

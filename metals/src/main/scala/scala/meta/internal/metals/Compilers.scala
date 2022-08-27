@@ -33,6 +33,7 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.SelectionRange
@@ -410,6 +411,19 @@ class Compilers(
         .asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
+        }
+    }
+  }.getOrElse(Future.successful(Nil.asJava))
+
+  def documentHighlight(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[ju.List[DocumentHighlight]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.documentHighlight(CompilerOffsetParams.fromPos(pos, token))
+        .asScala
+        .map { highlights =>
+          adjust.adjustDocumentHighlight(highlights)
         }
     }
   }.getOrElse(Future.successful(Nil.asJava))
