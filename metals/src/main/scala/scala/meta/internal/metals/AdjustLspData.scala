@@ -7,6 +7,7 @@ import scala.meta.pc.AutoImportsResult
 
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
@@ -27,6 +28,15 @@ trait AdjustLspData {
       edits: ju.List[TextEdit]
   ): java.util.List[TextEdit] = {
     edits.asScala.map { loc =>
+      loc.setRange(adjustRange(loc.getRange()))
+      loc
+    }.asJava
+  }
+
+  def adjustDocumentHighlight(
+      highlights: ju.List[DocumentHighlight]
+  ): java.util.List[DocumentHighlight] = {
+    highlights.asScala.map { loc =>
       loc.setRange(adjustRange(loc.getRange()))
       loc
     }.asJava

@@ -3,6 +3,7 @@ package scala.meta.pc;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
+import org.eclipse.lsp4j.DocumentHighlight;
 import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
@@ -70,9 +71,13 @@ public abstract class PresentationCompiler {
 
     /**
      * Returns the definition of the symbol at the given position.
-
      */
     public abstract CompletableFuture<DefinitionResult> definition(OffsetParams params);
+
+    /**
+	 * Returns the occurrences of the symbol under the current position in the entire file.
+	 */
+    public abstract CompletableFuture<java.util.List<DocumentHighlight>> documentHighlight(OffsetParams params);
 
     /**
      * Return decoded and pretty printed TASTy content for .scala or .tasty file.

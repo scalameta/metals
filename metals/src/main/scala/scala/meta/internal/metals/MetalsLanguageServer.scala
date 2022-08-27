@@ -270,7 +270,6 @@ class MetalsLanguageServer(
   private var semanticDBIndexer: SemanticdbIndexer = _
   private var implementationProvider: ImplementationProvider = _
   private var renameProvider: RenameProvider = _
-  private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
   private var javaFormattingProvider: JavaFormattingProvider = _
   private var syntheticsDecorator: SyntheticsDecorationProvider = _
@@ -655,10 +654,6 @@ class MetalsLanguageServer(
           ),
           buildTargets,
           workspace,
-        )
-        documentHighlightProvider = new DocumentHighlightProvider(
-          definitionProvider,
-          semanticdbs,
         )
         workspaceSymbols = new WorkspaceSymbolProvider(
           workspace,
@@ -1507,7 +1502,7 @@ class MetalsLanguageServer(
   def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    CancelTokens { _ => documentHighlightProvider.documentHighlight(params) }
+    CancelTokens.future { token => compilers.documentHighlight(params, token) }
 
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(

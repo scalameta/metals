@@ -3,20 +3,10 @@ package tests
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TextEdits
 
-import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.WorkspaceEdit
 
 object TestRanges extends RangeReplace {
-
-  def renderHighlightsAsString(
-      code: String,
-      highlights: List[DocumentHighlight],
-  ): String = {
-    highlights.foldLeft(code) { (base, highlight) =>
-      replaceInRange(base, highlight.getRange)
-    }
-  }
 
   def renderLocationsAsString(
       sourceFiles: Map[String, String],
