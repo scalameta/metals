@@ -227,7 +227,7 @@ object ClientCommands {
       |  canResolveChildren: boolean;
       |}
       |
-      |export interface AddTestCases {
+      |export interface UpdateSuiteLocation {
       |  kind: "updateSuiteLocation";
       |  fullyQualifiedClassName: FullyQualifiedClassName;
       |  className: ClassName;
