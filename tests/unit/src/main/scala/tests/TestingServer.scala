@@ -73,12 +73,12 @@ import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import munit.Tag
-import org.eclipse.lsp4j.CallHierarchyItem
-import org.eclipse.lsp4j.CallHierarchyPrepareParams
-import org.eclipse.lsp4j.CallHierarchyOutgoingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
-import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
+import org.eclipse.lsp4j.CallHierarchyItem
+import org.eclipse.lsp4j.CallHierarchyOutgoingCall
+import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
+import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
@@ -465,6 +465,7 @@ final case class TestingServer(
   def assertCallHierarchy[C](
       expected: Map[String, String],
       base: Map[String, String],
+      specifiedUri: Option[String],
       calls: List[C],
       getItem: C => CallHierarchyItem,
       getFromRanges: C => List[l.Range],
@@ -501,7 +502,7 @@ final case class TestingServer(
     val item = call.headOption
       .map(call => {
         val item = getItem(call)
-        val uri = item.getUri()
+        val uri = specifiedUri.getOrElse(item.getUri())
         TestRanges
           .renderLocationsAsString(
             base,

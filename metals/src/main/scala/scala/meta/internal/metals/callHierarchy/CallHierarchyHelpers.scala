@@ -1,20 +1,20 @@
 package scala.meta.internal.metals.callHierarchy
 
-import scala.meta.internal.{semanticdb => s}
-
-import scala.meta.Tree
-import scala.meta.Defn
-import scala.meta.Pat
-import scala.meta.Name
-import scala.meta.Member
-import scala.meta.Term
-import scala.meta.Type
-import scala.meta.Init
-import scala.meta.Template
-import scala.meta.internal.metals.ReferenceProvider
-import scala.meta.io.AbsolutePath
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
+import scala.meta.Defn
+import scala.meta.Init
+import scala.meta.Member
+import scala.meta.Name
+import scala.meta.Pat
+import scala.meta.Template
+import scala.meta.Term
+import scala.meta.Tree
+import scala.meta.Type
+import scala.meta.internal.metals.ReferenceProvider
+import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.AbsolutePath
 
 /** Utility functions for call hierarchy requests. */
 private[callHierarchy] trait CallHierarchyHelpers {
@@ -102,13 +102,13 @@ private[callHierarchy] trait CallHierarchyHelpers {
       )
   }
 
-  def containsDuplicates[T](visited: Seq[T]) =
+  def containsDuplicates[T](visited: Seq[T]): Boolean =
     visited.view
       .scanLeft(Set.empty[T])((set, a) => set + a)
       .zip(visited.view)
       .exists { case (set, a) => set contains a }
 
-  def extractSelectTree(tree: s.Tree) =
+  def extractSelectTree(tree: s.Tree): Option[s.SelectTree] =
     tree match {
       case selectTree: s.SelectTree => Some(selectTree)
       case s.TypeApplyTree(selectTree: s.SelectTree, _) => Some(selectTree)

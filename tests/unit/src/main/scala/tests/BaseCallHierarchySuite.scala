@@ -4,10 +4,10 @@ import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 
 import munit.Location
-import org.eclipse.lsp4j.CallHierarchyItem
-import org.eclipse.lsp4j.CallHierarchyIncomingCall
-import org.eclipse.lsp4j.CallHierarchyOutgoingCall
 import org.eclipse.lsp4j
+import org.eclipse.lsp4j.CallHierarchyIncomingCall
+import org.eclipse.lsp4j.CallHierarchyItem
+import org.eclipse.lsp4j.CallHierarchyOutgoingCall
 
 abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
 
@@ -50,16 +50,20 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
       input: String,
       scalaVersion: Option[String],
       item: Option[CallHierarchyItem],
+      isOutgoingCall: Boolean,
   )(implicit
       loc: Location
   ): Future[Map[String, CallHierarchyItem]] = {
+    def toEscape(escapeCursorPos: Boolean = true) =
+      """(<<|>>|<\?<|>\?>|\/\*((\d|,)+)\*\/""" + (if (escapeCursorPos) "|@@"
+                                                  else "") + ")"
     val files = FileLayout.mapFromString(input)
     val (filename, edit) =
       if (item.isEmpty)
         files
           .find(_._2.contains("@@"))
           .map { case (fileName, code) =>
-            (fileName, code.replaceAll("""(<<|>>|<\?<|>\?>|\/\*\d\*\/)""", ""))
+            (fileName, code.replaceAll(toEscape(false), ""))
           }
           .getOrElse {
             throw new IllegalArgumentException(
@@ -68,17 +72,17 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
           }
       else ("", "") // never used
 
-    val pattern = """(<\??<)(\w*)(>\??>)(\/\*(\d*)\*\/)""".r
+    val pattern = """(<\??<)(\w*)(>\??>)(\/\*((\d|,)+)\*\/)""".r
 
     val identifiers = files
-      .map { case (_, code) =>
-        pattern.findAllMatchIn(code).map(_.group(5))
+      .flatMap { case (_, code) =>
+        pattern.findAllMatchIn(code).map(_.group(5).split(","))
       }
       .flatten
       .toSet
 
     val base = files.map { case (fileName, code) =>
-      fileName -> code.replaceAll("""(<<|>>|<\?<|>\?>|@@|\/\*\d\*\/)""", "")
+      fileName -> code.replaceAll(toEscape(), "")
     }
 
     val expected = files.map { case (fileName, code) =>
@@ -88,7 +92,8 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
           id -> pattern.replaceAllIn(
             codeWithoutCursorPos,
             m =>
-              if (m.group(5) == id) m.group(1) + m.group(2) + m.group(3)
+              if (m.group(5).split(",").contains(id))
+                m.group(1) + m.group(2) + m.group(3)
               else m.group(2),
           )
         )
@@ -108,16 +113,16 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
            |  }
            |}
            |${input
-            .replaceAll("""(<<|>>|<\?<|>\?>|@@|\/\*\d\*\/)""", "")}""".stripMargin
+            .replaceAll(toEscape(), "")}""".stripMargin
       )
       _ <- Future.sequence(
         files.map(file => server.didOpen(s"${file._1}"))
       )
-      items <- item match {
+      mayItem <- item match {
         case item @ Some(_) => Future.successful(item)
         case None => server.prepareCallHierarchy(filename, edit)
       }
-      calls <- items match {
+      calls <- mayItem match {
         case Some(item) =>
           callGetter.getCalls(item)
         case _ =>
@@ -129,6 +134,7 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
         val (remaining, item) = server.assertCallHierarchy(
           expected.map { case (fileName, codes) => fileName -> codes(id) },
           base,
+          mayItem.map(_.getUri()).filter(_ => isOutgoingCall),
           calls,
           callGetter.getItem _,
           callGetter.getFromRanges _,
@@ -146,21 +152,25 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
       input: String,
       item: Option[CallHierarchyItem] = None,
       scalaVersion: Option[String] = None,
-  )(implicit loc: Location) = assertCallHierarchy(
-    incomingCallGetter,
-    input,
-    scalaVersion,
-    item,
-  )
+  )(implicit loc: Location): Future[Map[String, CallHierarchyItem]] =
+    assertCallHierarchy(
+      incomingCallGetter,
+      input,
+      scalaVersion,
+      item,
+      false,
+    )
 
   def assertOutgoingCalls(
       input: String,
       item: Option[CallHierarchyItem] = None,
       scalaVersion: Option[String] = None,
-  )(implicit loc: Location) = assertCallHierarchy(
-    outgoingCallGetter,
-    input,
-    scalaVersion,
-    item,
-  )
+  )(implicit loc: Location): Future[Map[String, CallHierarchyItem]] =
+    assertCallHierarchy(
+      outgoingCallGetter,
+      input,
+      scalaVersion,
+      item,
+      true,
+    )
 }
