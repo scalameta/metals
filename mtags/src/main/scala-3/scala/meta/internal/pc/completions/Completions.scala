@@ -527,7 +527,7 @@ class Completions(
       case _ => false
   end isAmmoniteFileCompletionPosition
   private def isLastMatch(stats: List[Tree]): Boolean =
-    stats.lastOption.exists(_.is[Term.Match])
+    stats.lastOption.exists(_.isInstanceOf[Match])
 
   private def description(sym: Symbol): String =
     if sym.isType then sym.showFullName

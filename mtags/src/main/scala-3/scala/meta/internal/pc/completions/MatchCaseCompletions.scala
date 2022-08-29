@@ -223,10 +223,10 @@ object CaseKeywordCompletion:
     sortedSubclasses.foreach { case sym =>
       val autoImport = autoImportsGen.forSymbol(sym)
       result += completionGenerator.toCompletionValue(
-            sym.info.dealias.typeSymbol,
-            sym.decodedName,
-            autoImport.getOrElse(Nil),
-          )
+        sym.info.dealias.typeSymbol,
+        sym.decodedName,
+        autoImport.getOrElse(Nil),
+      )
     }
 
     val basicMatch = CompletionValue.MatchCompletion(
