@@ -358,7 +358,7 @@ class Completions(
           true,
         )
 
-      case TypedCasePatternExtractor(selector, parent) =>
+      case TypedCasePatternExtractor(selector, parent, identName) =>
         (
           CaseKeywordCompletion.contribute(
             selector,
@@ -366,13 +366,13 @@ class Completions(
             indexedContext,
             config,
             parent,
-            true,
+            Some(identName),
             true,
           ),
           true,
         )
 
-      case CasePatternExtractor(selector, parent) =>
+      case CasePatternExtractor(selector, parent, identName) =>
         (
           CaseKeywordCompletion.contribute(
             selector,
@@ -380,7 +380,7 @@ class Completions(
             indexedContext,
             config,
             parent,
-            true,
+            Some(identName),
           ),
           true,
         )
@@ -1004,16 +1004,16 @@ class Completions(
         case (ident @ Ident(
               name
             )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, name.decoded))
         // case abc @ Som@@
         case (ident @ Ident(name)) :: Bind(
               _,
               _,
             ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, name.decoded))
         // case abc @ @@
         case Bind(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, ""))
         case _ => None
 
   end CasePatternExtractor
@@ -1026,22 +1026,22 @@ class Completions(
               _,
               _,
             ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, name.decoded))
         // case _: @@ =>
         case Typed(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, ""))
         // case ab: @@ =>
         case Bind(
               _,
               Typed(_, _),
             ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, ""))
         // case ab: Som@@ =>
         case (ident @ Ident(name)) :: Typed(_, _) :: Bind(
               _,
               _,
             ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, name.decoded))
         case _ => None
   end TypedCasePatternExtractor
 end Completions

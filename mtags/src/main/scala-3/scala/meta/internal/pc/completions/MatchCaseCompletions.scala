@@ -45,7 +45,7 @@ object CaseKeywordCompletion:
    * @param parent the parent tree node of the pattern match, for example `Apply(_, _)` when in
    *               `List(1).foreach { cas@@ }`, used as fallback to compute the type of the selector when
    *               it's `EmptyTree`.
-   * @param patternOnly `true` if we want completions without `case` keyword
+   * @param patternOnly `None` for `case@@`, `Some(query)` for `case query@@ =>` or `case ab: query@@ =>`
    * @param hasBind `true` when `case _: @@ =>`, if hasBind we don't need unapply completions
    */
   def contribute(
@@ -54,7 +54,7 @@ object CaseKeywordCompletion:
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
       parent: Tree,
-      patternOnly: Boolean = false,
+      patternOnly: Option[String] = None,
       hasBind: Boolean = false,
   ): List[CompletionValue] =
     import indexedContext.ctx
@@ -99,7 +99,6 @@ object CaseKeywordCompletion:
 
     val result = ListBuffer.empty[CompletionValue]
     val isVisited = mutable.Set.empty[Symbol]
-
     def visit(sym: Symbol, name: String, autoImports: List[l.TextEdit]): Unit =
       val isValid = !isVisited(sym) && !parents.isParent(sym)
         && (sym.is(Case) || sym.is(Flags.Module) || sym.isClass)
@@ -111,11 +110,13 @@ object CaseKeywordCompletion:
           recordVisit(s.sourceModule)
       if isValid then
         recordVisit(sym)
-        result += completionGenerator.toCompletionValue(
-          sym,
-          name,
-          autoImports,
-        )
+        if completionGenerator.fuzzyMatches(name) then
+          result += completionGenerator.toCompletionValue(
+            sym,
+            name,
+            autoImports,
+          )
+        end if
       end if
     end visit
     val selectorSym = parents.selector.typeSymbol
@@ -126,13 +127,13 @@ object CaseKeywordCompletion:
       )
     then
       val label =
-        if !patternOnly then s"case ${parents.selector.show} =>"
+        if patternOnly.isEmpty then s"case ${parents.selector.show} =>"
         else parents.selector.show
       result += CompletionValue.CaseKeyword(
         selectorSym,
         label,
         Some(
-          if !patternOnly then
+          if patternOnly.isEmpty then
             if config.isCompletionSnippetsEnabled() then "case ($0) =>"
             else "case () =>"
           else if config.isCompletionSnippetsEnabled() then "($0)"
@@ -303,9 +304,14 @@ class CompletionValueGenerator(
     indexedContext: IndexedContext,
     completionPos: CompletionPos,
     clientSupportsSnippets: Boolean,
-    patternOnly: Boolean = false,
+    patternOnly: Option[String] = None,
     hasBind: Boolean = false,
 ):
+  def fuzzyMatches(name: String) =
+    patternOnly match
+      case None => true
+      case Some(query) => CompletionFuzzy.matches(query, name)
+
   def toCompletionValue(
       sym: Symbol,
       name: String,
@@ -345,7 +351,7 @@ class CompletionValueGenerator(
         ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
 
     val label =
-      if !patternOnly then s"case $pattern =>"
+      if patternOnly.isEmpty then s"case $pattern =>"
       else pattern
     CompletionValue.CaseKeyword(
       sym,

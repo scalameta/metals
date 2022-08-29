@@ -960,7 +960,6 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         """|Some(value) scala
-           |None scala
            |""".stripMargin
     ),
   )
@@ -1006,7 +1005,6 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         """|None scala
-           |Some(value) scala
            |""".stripMargin
     ),
   )
@@ -1031,7 +1029,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some(value) scala
-           |None scala
            |""".stripMargin,
     ),
   )
@@ -1056,7 +1053,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some[_] scala
-           |None scala
            |""".stripMargin,
     ),
   )
