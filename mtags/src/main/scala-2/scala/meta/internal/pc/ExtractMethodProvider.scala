@@ -1,7 +1,5 @@
 package scala.meta.internal.pc
 
-import scala.reflect.internal.util.Position
-
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
@@ -34,21 +32,12 @@ final class ExtractMethodProvider(
     def prettyType(tpe: Type) =
       metalsToLongString(tpe.widen.finalResultType, history)
 
-    val rangeSourcePos = Position.range(
-      pos.source,
-      range.offset(),
-      range.offset(),
-      range.endOffset()
-    )
-    val extractionSourcePos =
-      Position.offset(pos.source, extractionPos.offset())
-
     def extractFromBlock(t: Tree): List[Tree] =
       t match {
         case Block(stats, expr) =>
-          (stats :+ expr).filter(stat => rangeSourcePos.encloses(stat.pos))
+          (stats :+ expr).filter(stat => range.encloses(stat.pos))
         case temp: Template =>
-          temp.body.filter(stat => rangeSourcePos.encloses(stat.pos))
+          temp.body.filter(stat => range.encloses(stat.pos))
         case other => List(other)
       }
 
@@ -68,7 +57,7 @@ final class ExtractMethodProvider(
     val path = compiler.lastVisitedParentTrees
     val edits =
       for {
-        enclosing <- path.find(src => src.pos.encloses(rangeSourcePos))
+        enclosing <- path.find(src => src.pos.encloses(range))
         extracted = extractFromBlock(enclosing)
         head <- extracted.headOption
         expr <- extracted.lastOption
@@ -79,9 +68,7 @@ final class ExtractMethodProvider(
         val scopeSymbols =
           metalsScopeMembers(pos).map(_.sym).filter(_.pos.isDefined)
         val noLongerAvailable = scopeSymbols
-          .filter(sym =>
-            stat.pos.encloses(sym.pos) && !rangeSourcePos.encloses(sym.pos)
-          )
+          .filter(sym => stat.pos.encloses(sym.pos) && !range.encloses(sym.pos))
         val names = localRefs(extracted)
         val paramsToExtract = noLongerAvailable
           .filter(sym => names.contains(sym.name))
@@ -122,11 +109,11 @@ final class ExtractMethodProvider(
         val replacedText = s"$name($exprParams)"
         List(
           new l.TextEdit(
-            rangeSourcePos.toLSP,
+            head.pos.withEnd(expr.pos.end).toLSP,
             replacedText
           ),
           new l.TextEdit(
-            extractionSourcePos.toLSP,
+            stat.pos.focusStart.toLSP,
             defText
           )
         )

@@ -49,25 +49,15 @@ final class ExtractMethodProvider(
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
     given locatedCtx: Context =
       val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
-      val tpdPath =
-        Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
-          newctx
-        )
-      MetalsInteractive.contextOfPath(tpdPath)(using newctx)
+      MetalsInteractive.contextOfPath(path)(using newctx)
     val indexedCtx = IndexedContext(locatedCtx)
-    val rangeSourcePos =
-      SourcePosition(source, Span(range.offset(), range.endOffset()))
-    val extractionSourcePos =
-      SourcePosition(source, Span(extractionPos.offset()))
 
     def extractFromBlock(t: tpd.Tree): List[tpd.Tree] =
       t match
         case Block(stats, expr) =>
-          (stats :+ expr).filter(stat =>
-            rangeSourcePos.encloses(stat.sourcePos)
-          )
+          (stats :+ expr).filter(stat => range.encloses(stat.sourcePos))
         case temp: Template[?] =>
-          temp.body.filter(stat => rangeSourcePos.encloses(stat.sourcePos))
+          temp.body.filter(stat => range.encloses(stat.sourcePos))
         case other => List(other)
 
     def localRefs(ts: List[tpd.Tree]): Set[Name] =
@@ -85,14 +75,12 @@ final class ExtractMethodProvider(
 
     val edits =
       for
-        enclosing <- path.find(src => src.sourcePos.encloses(rangeSourcePos))
+        enclosing <- path.find(src => src.sourcePos.encloses(range))
         extracted = extractFromBlock(enclosing)
         head <- extracted.headOption
         expr <- extracted.lastOption
         shortenedPath =
-          path.takeWhile(src =>
-            extractionSourcePos.start <= src.sourcePos.start
-          )
+          path.takeWhile(src => extractionPos.offset() <= src.sourcePos.start)
         stat = shortenedPath.lastOption.getOrElse(head)
       yield
         val exprType = expr.tpe.widenUnion.show
@@ -100,7 +88,7 @@ final class ExtractMethodProvider(
           .filter(_.isDefinedInCurrentRun)
         val noLongerAvailable = scopeSymbols
           .filter(s =>
-            stat.sourcePos.encloses(s.sourcePos) && !rangeSourcePos.encloses(
+            stat.sourcePos.encloses(s.sourcePos) && !range.encloses(
               s.sourcePos
             )
           )
@@ -138,11 +126,11 @@ final class ExtractMethodProvider(
         val replacedText = s"$name($exprParams)"
         List(
           new l.TextEdit(
-            toLSP(rangeSourcePos),
+            toLSP(head.sourcePos.withEnd(expr.sourcePos.end)),
             replacedText,
           ),
           new l.TextEdit(
-            toLSP(extractionSourcePos),
+            toLSP(stat.sourcePos.startPos),
             defText,
           ),
         )
