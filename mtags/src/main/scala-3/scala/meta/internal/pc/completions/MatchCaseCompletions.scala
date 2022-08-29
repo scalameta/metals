@@ -399,3 +399,83 @@ class CompletionValueGenerator(
     val bind = if hasBind then "" else "_: "
     bind + name + suffix
 end CompletionValueGenerator
+
+object CaseExtractors:
+  object CaseExtractor:
+    def unapply(path: List[Tree]): Option[(Tree, Tree)] =
+      path match
+        // foo match
+        // case None => ()
+        // ca@@
+        case (id @ Ident(name)) :: Block(stats, expr) :: parent :: _
+            if "case"
+              .startsWith(name.toString()) && stats.lastOption.exists(
+              _.isInstanceOf[Match]
+            ) && expr == id =>
+          val selector = stats.last.asInstanceOf[Match].selector
+          Some((selector, parent))
+        // List(Option(1)).collect {
+        //   case Some(value) => ()
+        //   ca@@
+        // }
+        case (ident @ Ident(name)) :: Block(
+              _,
+              expr,
+            ) :: (_: CaseDef) :: (m: Match) :: parent :: _
+            if ident == expr && "case"
+              .startsWith(name.toString()) =>
+          Some((m.selector, parent))
+        // foo match
+        //  ca@@
+        case (_: CaseDef) :: (m: Match) :: parent :: _ =>
+          Some((m.selector, parent))
+        // List(foo).map { ca@@ }
+        case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
+              fun,
+              args,
+            )) :: _
+            if stats.isEmpty && ident == expr && "case".startsWith(
+              name.toString()
+            ) =>
+          Some((EmptyTree, appl))
+
+        case _ => None
+  end CaseExtractor
+
+  object CasePatternExtractor:
+    def unapply(path: List[Tree])(using Context) =
+      path match
+        // case Som@@
+        case Ident(name) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, name.decoded))
+        // case abc @ Som@@
+        case Ident(name) :: Bind(_, _) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, name.decoded))
+        // case abc @ @@
+        case Bind(_, _) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, ""))
+        case _ => None
+
+  end CasePatternExtractor
+
+  object TypedCasePatternExtractor:
+    def unapply(path: List[Tree])(using Context) =
+      path match
+        // case _: Som@@ =>
+        case Ident(name) :: Typed(_, _) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, name.decoded))
+        // case _: @@ =>
+        case Typed(_, _) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, ""))
+        // case ab: @@ =>
+        case Bind(_, Typed(_, _)) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, ""))
+        // case ab: Som@@ =>
+        case Ident(name) :: Typed(_, _) :: Bind(_, _) :: CaseExtractor(
+              selector,
+              parent,
+            ) =>
+          Some((selector, parent, name.decoded))
+        case _ => None
+  end TypedCasePatternExtractor
+end CaseExtractors
