@@ -81,6 +81,29 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkEdit(
+    "scala-cli-sc-using-directives",
+    """|object main {
+       |/*<script>*///> using scala "3.1.3"
+       |
+       |object x {
+       |  <<Try>>("1".toString)
+       |}
+       |}
+       |
+       |""".stripMargin,
+    """|object main {
+       |/*<script>*///> using scala "3.1.3"
+       |import scala.util.Try
+       |
+       |object x {
+       |  Try("1".toString)
+       |}
+       |}
+       |""".stripMargin,
+    filename = "A.sc",
+  )
+
+  checkEdit(
     "symbol-no-prefix",
     """|package a
        |
@@ -260,25 +283,15 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   checkAmmoniteEdit(
     "first-auto-import-amm-script",
     ammoniteWrapper(
-      """val p: <<Path>> = ???
-        |""".stripMargin
+      """|
+         |val p: <<Path>> = ???
+         |""".stripMargin
     ),
-    // Import added *before* the wrapper here…
-    // This *seems* wrong, but the logic converting the scala file
-    // edits to sc file edits will simply add it at the beginning of
-    // the sc file, as expected.
-    "import java.nio.file.Path\n" +
-      ammoniteWrapper(
-        """val p: Path = ???
-          |""".stripMargin
-      ),
-    compat = Map(
-      "3" ->
-        ammoniteWrapper(
-          """|import java.nio.file.Path
-             |val p: Path = ???
-             |""".stripMargin
-        )
+    ammoniteWrapper(
+      """|import java.nio.file.Path
+         |
+         |val p: Path = ???
+         |""".stripMargin
     ),
   )
 
@@ -297,6 +310,29 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
     ),
   )
 
+  checkAmmoniteEdit(
+    "amm-objects",
+    ammoniteWrapper(
+      """|
+         |object a {
+         |  object b {
+         |    val p: <<Path>> = ???
+         |  }
+         |}
+         |""".stripMargin
+    ),
+    ammoniteWrapper(
+      """|import java.nio.file.Path
+         |
+         |object a {
+         |  object b {
+         |    val p: Path = ???
+         |  }
+         |}
+         |""".stripMargin
+    ),
+  )
+
   private def ammoniteWrapper(code: String): String =
     // Vaguely looks like a scala file that Ammonite generates
     // from a sc file.
@@ -309,6 +345,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
         |}
         |
         |object test{
+        |/*<start>*/
         |$code
         |}
         |""".stripMargin
