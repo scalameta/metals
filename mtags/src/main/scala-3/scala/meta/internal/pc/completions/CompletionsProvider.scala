@@ -387,7 +387,6 @@ class CompletionsProvider(
             text,
             additionalEdit,
             range,
-            // filterText,
             command,
           ) =>
         mkItem(
@@ -395,7 +394,6 @@ class CompletionsProvider(
           text.getOrElse(label),
           additionalEdits = additionalEdit,
           range = range,
-          // filterText = filterText,
           command = command,
         )
       case CompletionValue.MatchCompletion(
