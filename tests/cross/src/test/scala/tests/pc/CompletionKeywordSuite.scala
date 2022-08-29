@@ -383,7 +383,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     // to avoid newMain annotation
     filter = str => !str.contains("newMain"),
   )
-  // couldnt' reproduce
+  // TODO: Should provide empty completions
+  // The issue is that the tree looks the same as for `case @@` (it doesn't see `new`)
   check(
     "new-pattern",
     """

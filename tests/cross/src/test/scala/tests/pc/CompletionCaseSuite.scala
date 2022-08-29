@@ -157,6 +157,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     ),
   )
 
+  // TODO: `Left` has conflicting name in Scope, we should fix it so the result is the same as for scala 2
   check(
     "sealed-conflict",
     """

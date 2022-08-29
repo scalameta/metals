@@ -334,7 +334,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "match-typed",
+    // Ignore for Scala 3, since we don't provide completions for null
+    "match-typed".tag(IgnoreScala3),
     """|object Main {
        |  def foo(): Unit = null match {
        |    case x: ArrayDeque@@ =>
@@ -349,9 +350,6 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _.contains("java.util"),
-    compat = Map(
-      "3" -> ""
-    ),
   )
 
   checkEdit(
