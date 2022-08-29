@@ -1756,10 +1756,13 @@ class MetalsLanguageServer(
         generateBspConfig().asJavaObject
       case ServerCommands.ImportBuild() => 
         if (!isImportInProcess) {
-          slowConnectToBuildServer(forceImport = true).asJavaObject
+          isImportInProcess = true
+          val buildChange = slowConnectToBuildServer(forceImport = true)
+          buildChange.onComplete(_ => isImportInProcess = false)
+          buildChange.asJavaObject
         } else {
-          Future.successful(languageClient.showMessage( // needs fixes: 1. Hide message after import has ended. 2. Add 'Cancel Build Import' button
-          new MessageParams(MessageType.Warning, s"Import already running. \nPlease cancel the current import to run a new one"), )).asJavaObject
+          Future.successful(languageClient.showMessage(
+          new MessageParams(MessageType.Warning, s"Import already running. \nPlease cancel the current import to run a new one."))).asJavaObject
         }
       case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaObject
@@ -2268,11 +2271,8 @@ class MetalsLanguageServer(
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
-    pprint.log("tu jestem")
-    pprint.log(isImportInProcess)
     for {
       possibleBuildTool <- supportedBuildTool
-      _ = { isImportInProcess = true; () }
       chosenBuildServer = tables.buildServers.selectedServer()
       isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
         _ == BloopServers.name
@@ -2291,7 +2291,6 @@ class MetalsLanguageServer(
         case None =>
           Future.successful(BuildChange.None)
       }
-      _ = { isImportInProcess = false; () }
     } yield buildChange
   }
 
@@ -2300,7 +2299,6 @@ class MetalsLanguageServer(
       buildTool: BuildTool,
       checksum: String,
   ): Future[BuildChange] = {
-    pprint.log(forceImport) 
     for {
       result <- {
         if (forceImport) bloopInstall.runUnconditionally(buildTool)
