@@ -6,6 +6,6 @@ import dotty.tools.dotc.core.Symbols.Symbol
 
 object MetalsSealedDesc:
   def strictDesc(sym: Symbol)(using Context): List[Symbol] =
-    sym.sealedStrictDescendants.filter(child =>
-      !(child.is(Sealed) && (child.is(Abstract) || child.is(Trait)))
+    sym.sealedStrictDescendants.filterNot(child =>
+      child.is(Sealed) && (child.is(Abstract) || child.is(Trait))
     )
