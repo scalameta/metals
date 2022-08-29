@@ -101,8 +101,8 @@ class NewFileProvider(
           .mapOption(
             createEmptyFile(directory, _, ".worksheet.sc")
           )
-      case AmmoniteScript =>
-        getName(AmmoniteScript, name)
+      case ScalaScript =>
+        getName(ScalaScript, name)
           .mapOption(
             createEmptyFile(directory, _, ".sc")
           )
@@ -136,7 +136,7 @@ class NewFileProvider(
       Trait,
       PackageObject,
       Worksheet,
-      AmmoniteScript,
+      ScalaScript,
     )
     val withEnum =
       if (isScala3) allFileTypes :+ Enum else allFileTypes

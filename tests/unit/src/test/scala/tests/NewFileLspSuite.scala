@@ -49,17 +49,17 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = "",
   )
 
-  checkScala("new-ammonite-script")(
+  checkScala("new-scala-script")(
     directory = Some("a/src/main/scala/"),
-    fileType = Right(AmmoniteScript),
+    fileType = Right(ScalaScript),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
     expectedContent = "",
   )
 
-  checkScala("new-ammonite-script-name-provided")(
+  checkScala("new-scala-script-name-provided")(
     directory = Some("a/src/main/scala/"),
-    fileType = Right(AmmoniteScript),
+    fileType = Right(ScalaScript),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
     expectedContent = "",
@@ -67,7 +67,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
 
   checkScala("new-ammonite-script-fully-provided")(
     directory = Some("a/src/main/scala/"),
-    fileType = Left(AmmoniteScript),
+    fileType = Left(ScalaScript),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
     expectedContent = "",

@@ -58,10 +58,10 @@ object NewFileTypes {
     override val label: String = "Worksheet"
   }
 
-  case object AmmoniteScript extends NewFileType {
-    override val id: String = "ammonite-script"
+  case object ScalaScript extends NewFileType {
+    override val id: String = "scala-script"
     override val syntax: Option[String] = None
-    override val label: String = "Ammonite Script"
+    override val label: String = "Scala Script(Ammonite or Scala CLI)"
   }
 
   case object JavaClass extends NewFileType {
@@ -98,7 +98,7 @@ object NewFileTypes {
       case ScalaFile.id => Some(ScalaFile)
       case PackageObject.id => Some(PackageObject)
       case Worksheet.id => Some(Worksheet)
-      case AmmoniteScript.id => Some(AmmoniteScript)
+      case ScalaScript.id => Some(ScalaScript)
       case JavaClass.id => Some(JavaClass)
       case JavaInterface.id => Some(JavaInterface)
       case JavaEnum.id => Some(JavaEnum)

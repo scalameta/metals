@@ -394,7 +394,7 @@ object ServerCommands {
     "Create new scala file",
     s"""|Create and open new Scala file.
         |
-        |The currently allowed Scala file types that ca be passed in are:
+        |The currently allowed Scala file types that can be passed in are:
         |
         | - ${NewFileTypes.ScalaFile.id} (${NewFileTypes.ScalaFile.label})
         | - ${NewFileTypes.Class.id} (${NewFileTypes.Class.label})
@@ -404,7 +404,7 @@ object ServerCommands {
         | - ${NewFileTypes.Trait.id} (${NewFileTypes.Trait.label})
         | - ${NewFileTypes.PackageObject.id} (${NewFileTypes.PackageObject.label})
         | - ${NewFileTypes.Worksheet.id} (${NewFileTypes.Worksheet.label})
-        | - ${NewFileTypes.AmmoniteScript.id} (${NewFileTypes.AmmoniteScript.label})
+        | - ${NewFileTypes.ScalaScript.id} (${NewFileTypes.ScalaScript.label})
         |
         |Note: requires 'metals/inputBox' capability from language client.
         |""".stripMargin,
