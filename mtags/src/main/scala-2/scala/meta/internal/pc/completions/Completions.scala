@@ -442,7 +442,6 @@ trait Completions { this: MetalsGlobal =>
     ): CompletionPosition = {
       if (hasLeadingBrace(ident, text)) {
         if (isCasePrefix(ident.name)) {
-
           CaseKeywordCompletion(EmptyTree, editRange, pos, text, apply)
         } else {
           NoneCompletion
