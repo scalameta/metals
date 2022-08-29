@@ -167,7 +167,6 @@ object CompletionValue:
       override val insertText: Option[String],
       override val additionalEdits: List[TextEdit],
       override val range: Option[Range] = None,
-      // override val filterText: Option[String] = None,
       val command: Option[String] = None,
   ) extends Symbolic
 

@@ -68,9 +68,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
 
   // Assert that Workday/Weekend symbols from previous test don't appear in result.
   checkEdit(
-    "stale2".tag(
-      IgnoreScala3
-    ), // needs fix for scala3 (adding `isStale` filter)
+    "stale2",
     """package stale
       |sealed abstract class Weekday
       |object Weekday {
@@ -101,7 +99,9 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive"),
     compat = Map(
       "3" -> s"""|package stale
+                 |
                  |import stale.Weekday.Workday
+                 |
                  |import stale.Weekday.Weekend
                  |sealed abstract class Weekday
                  |object Weekday {
