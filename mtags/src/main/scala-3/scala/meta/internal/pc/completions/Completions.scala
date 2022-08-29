@@ -980,7 +980,7 @@ class Completions(
           Some((m.selector, parent))
         // foo match
         //  ca@@
-        case (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        case (_: CaseDef) :: (m: Match) :: parent :: _ =>
           Some((m.selector, parent))
         // List(foo).map { ca@@ }
         case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
@@ -999,19 +999,14 @@ class Completions(
     def unapply(path: List[Tree]) =
       path match
         // case Som@@
-        case (ident @ Ident(
-              name
-            )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent, name.decoded))
+        case Ident(name) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, name.decoded))
         // case abc @ Som@@
-        case (ident @ Ident(name)) :: Bind(
-              _,
-              _,
-            ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent, name.decoded))
+        case Ident(name) :: Bind(_, _) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, name.decoded))
         // case abc @ @@
-        case Bind(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent, ""))
+        case Bind(_, _) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, ""))
         case _ => None
 
   end CasePatternExtractor
@@ -1020,26 +1015,20 @@ class Completions(
     def unapply(path: List[Tree]) =
       path match
         // case _: Som@@ =>
-        case (ident @ Ident(name)) :: Typed(
-              _,
-              _,
-            ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent, name.decoded))
+        case Ident(name) :: Typed(_, _) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, name.decoded))
         // case _: @@ =>
-        case Typed(_, _) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent, ""))
+        case Typed(_, _) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, ""))
         // case ab: @@ =>
-        case Bind(
-              _,
-              Typed(_, _),
-            ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent, ""))
+        case Bind(_, Typed(_, _)) :: CaseExtractor(selector, parent) =>
+          Some((selector, parent, ""))
         // case ab: Som@@ =>
-        case (ident @ Ident(name)) :: Typed(_, _) :: Bind(
-              _,
-              _,
-            ) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent, name.decoded))
+        case Ident(name) :: Typed(_, _) :: Bind(_, _) :: CaseExtractor(
+              selector,
+              parent,
+            ) =>
+          Some((selector, parent, name.decoded))
         case _ => None
   end TypedCasePatternExtractor
 end Completions
