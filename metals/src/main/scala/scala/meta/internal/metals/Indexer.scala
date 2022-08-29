@@ -196,7 +196,7 @@ final case class Indexer(
         data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
         data.addScalacOptions(
           importedBuild.scalacOptions,
-          bspSession().map(_.mainConnection),
+          buildTool.connection,
         )
         data.addJavacOptions(importedBuild.javacOptions)
 
@@ -607,5 +607,6 @@ object Indexer {
       name: String,
       data: TargetData,
       importedBuild: ImportedBuild,
+      connection: Option[BuildServerConnection],
   )
 }

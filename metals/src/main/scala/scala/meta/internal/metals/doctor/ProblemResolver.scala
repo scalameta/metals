@@ -189,7 +189,8 @@ class ProblemResolver(
       mtagsResolver.isSupportedScalaVersion(version)
 
     val scalaVersionProblem = scalaTarget.scalaVersion match {
-      case version if !isSupportedScalaVersion(version) && scalaTarget.isSbt =>
+      case version
+          if !isSupportedScalaVersion(version) && scalaTarget.isSbtMetaBuild =>
         if (ScalaVersions.isFutureVersion(version))
           Some(FutureSbtVersion)
         else
@@ -214,7 +215,7 @@ class ProblemResolver(
       case version
           if ScalaVersions.isDeprecatedScalaVersion(
             version
-          ) && scalaTarget.isSbt =>
+          ) && scalaTarget.isSbtMetaBuild =>
         Some(DeprecatedSbtVersion)
       case version if ScalaVersions.isDeprecatedScalaVersion(version) =>
         Some(DeprecatedScalaVersion(version))
@@ -248,7 +249,7 @@ class ProblemResolver(
 
       val shouldNotDisplay =
         !isTestExplorerProvider() ||
-          scalaTarget.isSbt ||
+          scalaTarget.isSbtMetaBuild ||
           !returnTestFrameworkName
 
       if (shouldNotDisplay) None
@@ -276,7 +277,7 @@ class ProblemResolver(
     }
 
     def outdatedJunitInterface =
-      if (!isTestExplorerProvider() || scalaTarget.isSbt) None
+      if (!isTestExplorerProvider() || scalaTarget.isSbtMetaBuild) None
       else {
         val novocode = ".*com/novocode/junit-interface.*".r
         val junit = raw".*com/github/sbt/junit-interface/(\d).(\d+).(\d+).*".r

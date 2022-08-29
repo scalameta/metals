@@ -25,7 +25,7 @@ case class ScalaTarget(
     bspConnection: Option[BuildServerConnection],
 ) {
 
-  def isSbt = sbtVersion.isDefined
+  def isSbtMetaBuild: Boolean = sbtVersion.isDefined
 
   def dialect(path: AbsolutePath): Dialect = {
     scalaVersion match {

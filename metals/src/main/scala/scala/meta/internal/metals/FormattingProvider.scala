@@ -292,23 +292,27 @@ final class FormattingProvider(
     val default = config.runnerDialect.getOrElse(ScalafmtDialect.Scala213)
 
     val allTargets = buildTargets.allScala.toList
-    val sbtTargetsIds = allTargets.filter(_.isSbt).map(_.info.getId).toSet
+
+    def ignoreBuildTarget(bt: ScalaTarget): Boolean =
+      bt.isSbtMetaBuild || bt.bspConnection.exists(_.isScalaCLI)
+
+    val (ignored, included) = allTargets.span(ignoreBuildTarget)
+    val ignoredTargets = ignored.map(_.info.getId()).toSet
 
     val itemsRequiresUpgrade =
       buildTargets.sourceItemsToBuildTargets.toList.flatMap {
-        case (path, ids) if !ids.asScala.exists(sbtTargetsIds.contains(_)) =>
+        case (path, ids) if !ids.asScala.exists(ignoredTargets.contains(_)) =>
           inferDialectForSourceItem(path, ids.asScala.toList, default)
             .map(d => (path, d))
         case _ => Nil
       }
     if (itemsRequiresUpgrade.nonEmpty) {
-      val nonSbtTargets = allTargets.filter(!_.isSbt)
       val minDialect =
         config.runnerDialect match {
           case Some(d) => d
           case None =>
             val allPossibleDialects =
-              nonSbtTargets.map(_.fmtDialect)
+              included.map(_.fmtDialect)
             if (allPossibleDialects.nonEmpty)
               allPossibleDialects.min
             else
@@ -316,7 +320,7 @@ final class FormattingProvider(
         }
 
       val needFileOverride =
-        nonSbtTargets.map(_.fmtDialect).distinct.size > 1
+        included.map(_.fmtDialect).distinct.size > 1
 
       val maxDialect = itemsRequiresUpgrade.map(_._2).max
 

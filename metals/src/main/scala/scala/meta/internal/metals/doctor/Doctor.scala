@@ -581,10 +581,10 @@ final class Doctor(
     val canRun = scalaTarget.info.getCapabilities().getCanRun()
     val canTest = scalaTarget.info.getCapabilities().getCanTest()
     val debugging =
-      if (canRun && canTest && !scalaTarget.isSbt) DoctorStatus.check
+      if (canRun && canTest && !scalaTarget.isSbtMetaBuild) DoctorStatus.check
       else DoctorStatus.error
     val sbtRecommendation =
-      if (scalaTarget.isSbt)
+      if (scalaTarget.isSbtMetaBuild)
         Some("Diagnostics and debugging for sbt are not supported currently.")
       else None
     DoctorTargetInfo(

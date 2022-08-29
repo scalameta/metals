@@ -238,7 +238,7 @@ final class TargetData {
 
   def addScalacOptions(
       result: ScalacOptionsResult,
-      bspConnectionName: Option[BuildServerConnection],
+      bspConnection: Option[BuildServerConnection],
   ): Unit = {
     result.getItems.asScala.foreach { scalac =>
       info(scalac.getTarget()).foreach { info =>
@@ -251,7 +251,7 @@ final class TargetData {
             scalac,
             autoImports,
             sbtTarget.map(_.getSbtVersion()),
-            bspConnectionName,
+            bspConnection,
           )
         }
       }
