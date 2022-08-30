@@ -1,16 +1,18 @@
 package scala.meta.internal.metals.codeactions
 
-import org.eclipse.{lsp4j => l}
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
+
+import org.eclipse.{lsp4j => l}
 
 object CodeActionBuilder {
+  type DocumentChange = Either[l.TextDocumentEdit, l.ResourceOperation]
+
   def build(
       title: String,
       kind: String,
       changes: Seq[(AbsolutePath, Seq[l.TextEdit])] = Nil,
-      documentChanges: List[Either[l.TextDocumentEdit, l.ResourceOperation]] =
-        Nil,
+      documentChanges: List[DocumentChange] = Nil,
       command: Option[l.Command] = None,
       diagnostics: List[l.Diagnostic] = Nil,
   ): l.CodeAction = {
