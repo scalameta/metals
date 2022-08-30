@@ -373,7 +373,7 @@ class Completions(
             Some(identName),
             true,
           ),
-          true,
+          false,
         )
 
       case CaseExtractors.CasePatternExtractor(selector, parent, identName) =>
@@ -386,7 +386,7 @@ class Completions(
             parent,
             Some(identName),
           ),
-          true,
+          false,
         )
 
       // in `case @@` we have to change completionPos to `case` pos,
@@ -890,6 +890,16 @@ class Completions(
 
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
         (o1, o2) match
+          case (
+                sym1: CompletionValue.CaseKeyword,
+                sym2: CompletionValue.Compiler,
+              ) =>
+            0
+          case (
+                sym1: CompletionValue.Compiler,
+                sym2: CompletionValue.CaseKeyword,
+              ) =>
+            1
           case (
                 sym1: CompletionValue.Symbolic,
                 sym2: CompletionValue.Symbolic,

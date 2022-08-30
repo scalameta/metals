@@ -960,6 +960,10 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         """|Some(value) scala
+           |Some scala
+           |Some[A](value: A): Some[A]
+           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
+           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     ),
   )
@@ -1002,11 +1006,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |NoManifest scala.reflect
        |""".stripMargin,
     topLines = Some(2),
-    compat = Map(
-      "3" ->
-        """|None scala
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -1029,6 +1028,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some(value) scala
+           |Seq scala.collection.immutable
+           |Set scala.collection.immutable
            |""".stripMargin,
     ),
   )
@@ -1053,6 +1054,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some[_] scala
+           |Seq scala.collection.immutable
+           |Set scala.collection.immutable
            |""".stripMargin,
     ),
   )
@@ -1078,7 +1081,10 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Option(3),
     compat = Map(
       "3" ->
-        ""
+        """|NotString: Int
+           |Nil scala.collection.immutable
+           |NoManifest scala.reflect
+           |""".stripMargin
     ),
   )
 
@@ -1095,10 +1101,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |NoManifest scala.reflect
        |""".stripMargin,
     topLines = Option(3),
-    compat = Map(
-      "3" ->
-        ""
-    ),
   )
 
   check(
@@ -1114,10 +1116,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |NoManifest scala.reflect
        |""".stripMargin,
     topLines = Option(3),
-    compat = Map(
-      "3" ->
-        ""
-    ),
   )
 
   check(
