@@ -311,6 +311,49 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
         |}""".stripMargin,
   )
 
+  checkEdit(
+    "inner-conflict",
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  @@val a = {
+        |    val d = 3
+        |    <<val b = {
+        |      val d = 4
+        |      d + 1
+        |    }
+        |    123 + method(b, 10)>>
+        |  }
+        |}""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int, j: Int) = i + j
+        |  def newMethod(): Int = {
+        |    val b = {
+        |      val d = 4
+        |      d + 1
+        |    }
+        |    123 + method(b, 10)
+        |  }
+        |  val a = {
+        |    val d = 3
+        |    newMethod()
+        |  }
+        |}""".stripMargin,
+    Map(">=3.0.0" -> s"""|object A{
+                         |  def method(i: Int, j: Int) = i + j
+                         |  def newMethod(): Int =
+                         |    val b = {
+                         |      val d = 4
+                         |      d + 1
+                         |    }
+                         |    123 + method(b, 10)
+                         |
+                         |  val a = {
+                         |    val d = 3
+                         |    newMethod()
+                         |  }
+                         |}""".stripMargin),
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
