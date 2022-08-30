@@ -353,6 +353,50 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
                          |  }
                          |}""".stripMargin),
   )
+  // TODO: Add extracting inner methods
+  checkEdit(
+    "extract-def",
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  @@def f1(a: Int) = {
+        |    def m2(b: Int) = b + 1
+        |    <<method(2 + m2(a))>>
+        |  }
+        |}""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  def newMethod(a: Int): Int =
+        |    method(2 + m2(a))
+        |
+        |  def f1(a: Int) = {
+        |    def m2(b: Int) = b + 1
+        |    newMethod(a)
+        |  }
+        |}""".stripMargin,
+  )
+
+  checkEdit(
+    "extract-class",
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  @@class Car(val color: Int) {
+        |    def add(other: Car): Car = {
+        |      <<Car(other.color + color)>>
+        |    }
+        |  }
+        |}""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  def newMethod[Car](color: Int, other: A.Car): A.Car =
+        |    Car(other.color + color)
+        |
+        |  class Car(val color: Int) {
+        |    def add(other: Car): Car = {
+        |      newMethod(color, other)
+        |    }
+        |  }
+        |}""".stripMargin,
+  )
 
   def checkEdit(
       name: TestOptions,

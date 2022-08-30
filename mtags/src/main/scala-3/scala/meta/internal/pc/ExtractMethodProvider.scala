@@ -13,6 +13,7 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 
+import dotty.tools.dotc.core.Flags.Method
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.DeepFolder
@@ -72,11 +73,10 @@ final class ExtractMethodProvider(
       def collectNames(symbols: Set[Symbol], tree: tpd.Tree): Set[Symbol] =
         tree match
           case id @ Ident(_) =>
-            if nonAvailable(id.symbol)
+            if nonAvailable(id.symbol) && id.symbol.isTerm && !id.symbol.is(
+                Method
+              )
             then symbols + id.symbol
-            else symbols
-          case sel @ Select(_, _) =>
-            if nonAvailable(sel.symbol) then symbols + sel.symbol
             else symbols
           case _ => symbols
 
@@ -86,10 +86,12 @@ final class ExtractMethodProvider(
         .toList
         .sortBy(_.decodedName)
       val typeParams =
-        methodParams.map(_.info.typeSymbol).filter(nonAvailable(_))
+        methodParams
+          .map(_.info.typeSymbol)
+          .filter(t => nonAvailable(t))
+          .distinct
       (methodParams, typeParams)
     end localRefs
-
     val edits =
       for
         enclosing <- path.find(src => src.sourcePos.encloses(range))
