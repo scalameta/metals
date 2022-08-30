@@ -5,5 +5,5 @@ import dotty.tools.dotc.core.Symbols.Symbol
 
 object MetalsSealedDesc:
   // For scala 3.0.0 and 3.0.1 method `sealedStrictDescendants` is not available
-  def strictDesc(sym: Symbol)(using Context): List[Symbol] =
+  def sealedStrictDescendants(sym: Symbol)(using Context): List[Symbol] =
     Nil

@@ -450,7 +450,6 @@ trait Completions { this: MetalsGlobal =>
         ArgCompletion(ident, apply, pos, text, completions)
       }
     }
-    // pprint.pprintln(latestEnclosingArg.take(3))
     latestEnclosingArg match {
       case _ if isScaladocCompletion(pos, text) =>
         val associatedDef = onUnitOf(pos.source) { unit =>

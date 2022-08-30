@@ -304,6 +304,43 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "exhaustive-scala-enum".tag(IgnoreScala2),
+    """
+      |package example
+      |enum Color(rank: Int):
+      |  case Red(1)
+      |  case Blue(2)
+      |  case Green(3)
+      |
+      |object Main {
+      |  val x: Color = ???
+      |  x match@@
+      |}""".stripMargin,
+    s"""|package example
+        |
+        |import example.Color.Red
+        |
+        |import example.Color.Blue
+        |
+        |import example.Color.Green
+        |enum Color(rank: Int):
+        |  case Red(1)
+        |  case Blue(2)
+        |  case Green(3)
+        |
+        |object Main {
+        |  val x: Color = ???
+        |  x match
+        |\tcase Red => $$0
+        |\tcase Blue =>
+        |\tcase Green =>
+        |
+        |}
+        |""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
     "exhaustive-fully-qualify",
     """
       |package example

@@ -149,7 +149,7 @@ object CaseKeywordCompletion:
         .foreach(s => visit(s.info.dealias.typeSymbol, s.decodedName, Nil))
 
       // Step 2: walk through known subclasses of sealed types.
-      MetalsSealedDesc.strictDesc(selectorSym).foreach { sym =>
+      MetalsSealedDesc.sealedStrictDescendants(selectorSym).foreach { sym =>
         val autoImport = autoImportsGen.forSymbol(sym)
         autoImport match
           case Some(value) =>
@@ -215,7 +215,7 @@ object CaseKeywordCompletion:
       parents.toList.flatMap { parent =>
         // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
         if parent.isAllOf(JavaEnumTrait) then parent.children
-        else MetalsSealedDesc.strictDesc(parent)
+        else MetalsSealedDesc.sealedStrictDescendants(parent)
       }
     end subclassesForType
 
@@ -339,7 +339,6 @@ class CompletionValueGenerator(
         typePattern(
           sym,
           name,
-          hasBind,
         ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
 
     val label =
@@ -391,7 +390,6 @@ class CompletionValueGenerator(
   private def typePattern(
       sym: Symbol,
       name: String,
-      hasBind: Boolean = false,
   )(using Context): String =
     val suffix = sym.typeParams match
       case Nil => ""
