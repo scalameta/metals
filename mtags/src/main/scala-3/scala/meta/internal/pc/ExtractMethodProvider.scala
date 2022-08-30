@@ -60,17 +60,34 @@ final class ExtractMethodProvider(
           temp.body.filter(stat => range.encloses(stat.sourcePos))
         case other => List(other)
 
-    def localRefs(ts: List[tpd.Tree]): Set[Name] =
-      def collectNames(names: Set[Name], tree: tpd.Tree): Set[Name] =
+    def localRefs(
+        ts: List[tpd.Tree],
+        defnPos: SourcePosition,
+        extractedPos: SourcePosition,
+    ) =
+      def nonAvailable(sym: Symbol): Boolean =
+        val symPos = sym.sourcePos
+        symPos.exists && defnPos.contains(symPos) && !extractedPos
+          .contains(symPos)
+      def collectNames(symbols: Set[Symbol], tree: tpd.Tree): Set[Symbol] =
         tree match
-          case Ident(name) =>
-            names + name
-          case Select(qualifier, name) =>
-            names + name
-          case _ => names
+          case id @ Ident(_) =>
+            if nonAvailable(id.symbol)
+            then symbols + id.symbol
+            else symbols
+          case sel @ Select(_, _) =>
+            if nonAvailable(sel.symbol) then symbols + sel.symbol
+            else symbols
+          case _ => symbols
 
-      val traverser = new DeepFolder[Set[Name]](collectNames)
-      ts.foldLeft(Set.empty[Name])(traverser(_, _))
+      val traverser = new DeepFolder[Set[Symbol]](collectNames)
+      val methodParams = ts
+        .foldLeft(Set.empty[Symbol])(traverser(_, _))
+        .toList
+        .sortBy(_.decodedName)
+      val typeParams =
+        methodParams.map(_.info.typeSymbol).filter(nonAvailable(_))
+      (methodParams, typeParams)
     end localRefs
 
     val edits =
@@ -83,31 +100,21 @@ final class ExtractMethodProvider(
           path.takeWhile(src => extractionPos.offset() <= src.sourcePos.start)
         stat = shortenedPath.lastOption.getOrElse(head)
       yield
+        val defnPos = stat.sourcePos
+        val extractedPos = head.sourcePos.withEnd(expr.sourcePos.end)
         val exprType = expr.tpe.widenUnion.show
-        val scopeSymbols = indexedCtx.scopeSymbols
-          .filter(_.isDefinedInCurrentRun)
-        val noLongerAvailable = scopeSymbols
-          .filter(s =>
-            stat.sourcePos.encloses(s.sourcePos) && !range.encloses(
-              s.sourcePos
-            )
-          )
-        val names = localRefs(extracted)
-        val name = genName(scopeSymbols.map(_.decodedName).toSet, "newMethod")
-        val paramsToExtract = noLongerAvailable
-          .filter(sym => names.contains(sym.name))
-          .map(sym => (sym.name, sym.info))
-          .sortBy(_._1.decoded)
-        val methodParams = paramsToExtract
-          .map { case (name, tpe) => s"${name.decoded}: ${tpe.show}" }
+        val name =
+          genName(indexedCtx.scopeSymbols.map(_.decodedName).toSet, "newMethod")
+        val (methodParams, typeParams) =
+          localRefs(extracted, stat.sourcePos, extractedPos)
+        val methodParamsText = methodParams
+          .map(sym => s"${sym.decodedName}: ${sym.info.show}")
           .mkString(", ")
-        val typeParams = paramsToExtract
-          .map(_._2.typeSymbol)
-          .filter(noLongerAvailable.contains(_))
-          .map(_.name.show) match
+        val typeParamsText = typeParams
+          .map(_.decodedName) match
           case Nil => ""
           case params => params.mkString("[", ", ", "]")
-        val exprParams = paramsToExtract.map(_._1.decoded).mkString(", ")
+        val exprParamsText = methodParams.map(_.decodedName).mkString(", ")
         val newIndent = stat.startPos.startColumnPadding
         val oldIndentLen = head.startPos.startColumnPadding.length()
         val toExtract =
@@ -119,18 +126,15 @@ final class ExtractMethodProvider(
             oldIndentLen,
           )
         val defText =
-          if extracted.length > 1 then
-            s"def $name$typeParams($methodParams): $exprType =\n${toExtract}\n\n$newIndent"
-          else
-            s"def $name$typeParams($methodParams): $exprType =\n${toExtract}\n\n$newIndent"
-        val replacedText = s"$name($exprParams)"
+          s"def $name$typeParamsText($methodParamsText): $exprType =\n${toExtract}\n\n$newIndent"
+        val replacedText = s"$name($exprParamsText)"
         List(
           new l.TextEdit(
-            toLSP(head.sourcePos.withEnd(expr.sourcePos.end)),
+            toLSP(extractedPos),
             replacedText,
           ),
           new l.TextEdit(
-            toLSP(stat.sourcePos.startPos),
+            toLSP(defnPos.startPos),
             defText,
           ),
         )
