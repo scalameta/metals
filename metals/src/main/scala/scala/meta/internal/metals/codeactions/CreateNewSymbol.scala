@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -24,14 +25,15 @@ class CreateNewSymbol() extends CodeAction {
         diagnostic: l.Diagnostic,
         name: String,
     ): l.CodeAction = {
-      val codeAction = new l.CodeAction()
-      codeAction.setTitle(CreateNewSymbol.title(name))
-      codeAction.setKind(l.CodeActionKind.QuickFix)
-      codeAction.setDiagnostics(List(diagnostic).asJava)
-      codeAction.setCommand(
+      val command =
         ServerCommands.NewScalaFile.toLSP(parentUri.toString(), name)
+
+      CodeActionBuilder.build(
+        title = CreateNewSymbol.title(name),
+        kind = l.CodeActionKind.QuickFix,
+        command = Some(command),
+        diagnostics = List(diagnostic),
       )
-      codeAction
     }
 
     val codeActions = params

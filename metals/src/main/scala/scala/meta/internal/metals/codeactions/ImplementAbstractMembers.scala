@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -50,16 +51,13 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
       .implementAbstractMembers(textDocumentPositionParams, token)
       .map { edits =>
         val uri = params.getTextDocument().getUri()
-        val edit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
 
-        val codeAction = new l.CodeAction()
-
-        codeAction.setTitle(ImplementAbstractMembers.title)
-        codeAction.setKind(l.CodeActionKind.QuickFix)
-        codeAction.setDiagnostics(List(diagnostic).asJava)
-        codeAction.setEdit(edit)
-
-        codeAction
+        CodeActionBuilder.build(
+          title = ImplementAbstractMembers.title,
+          kind = l.CodeActionKind.QuickFix,
+          changes = List(uri.toAbsolutePath -> edits.asScala.toSeq),
+          diagnostics = List(diagnostic),
+        )
       }
   }
 }

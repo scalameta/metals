@@ -12,8 +12,9 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -102,22 +103,21 @@ class FlatMapToForComprehensionCodeAction(
                |$yieldTermIndentedString
                |$indentation}""".stripMargin
 
-    val codeAction = new l.CodeAction()
     val range =
       new l.Range(startPos, endPos)
-    codeAction.setTitle(
-      FlatMapToForComprehensionCodeAction.flatMapToForComprehension
-    )
-    codeAction.setKind(this.kind)
+
     val forComprehensionTextEdit = new l.TextEdit(range, forYieldString)
-    codeAction.setEdit(
-      new l.WorkspaceEdit(
-        Map(
-          path.toURI.toString -> List(forComprehensionTextEdit).asJava
-        ).asJava
+
+    val edits =
+      List(
+        path -> List(forComprehensionTextEdit)
       )
+
+    CodeActionBuilder.build(
+      title = FlatMapToForComprehensionCodeAction.flatMapToForComprehension,
+      kind = this.kind,
+      changes = edits,
     )
-    codeAction
   }
 
   /**

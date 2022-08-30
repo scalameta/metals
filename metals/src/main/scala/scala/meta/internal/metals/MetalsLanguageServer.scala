@@ -53,6 +53,7 @@ import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
+import scala.meta.internal.metals.codeactions.CodeActionProvider
 import scala.meta.internal.metals.codeactions.ExtractMemberDefinitionData
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens

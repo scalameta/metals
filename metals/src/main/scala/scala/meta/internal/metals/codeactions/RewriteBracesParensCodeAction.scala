@@ -5,8 +5,9 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 import scala.meta.Term
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -84,7 +85,6 @@ class RewriteBracesParensCodeAction(
               val newRight = if (isParens) "}" else ")"
               val start = new l.TextEdit(leftParen.pos.toLSP, newLeft)
               val end = new l.TextEdit(rightParen.pos.toLSP, newRight)
-              val codeAction = new l.CodeAction()
 
               val name = appl.fun match {
                 case Term.Name(value) => value
@@ -96,14 +96,11 @@ class RewriteBracesParensCodeAction(
                 if (isParens) RewriteBracesParensCodeAction.toBraces(name)
                 else RewriteBracesParensCodeAction.toParens(name)
 
-              codeAction.setTitle(title)
-              codeAction.setKind(this.kind)
-              codeAction.setEdit(
-                new l.WorkspaceEdit(
-                  Map(path.toURI.toString -> List(start, end).asJava).asJava
-                )
+              CodeActionBuilder.build(
+                title = title,
+                kind = this.kind,
+                changes = List(path -> List(start, end)),
               )
-              codeAction
           }
       }
       .flatten

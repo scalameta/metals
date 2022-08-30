@@ -5,9 +5,10 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.Tree
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
@@ -73,14 +74,11 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
     maybeApply
       .map { apply =>
         {
-          val codeAction =
-            new l.CodeAction(title(methodName(apply.app, isFirst = true)))
-          codeAction.setKind(l.CodeActionKind.RefactorRewrite)
           val position = new l.TextDocumentPositionParams(
             params.getTextDocument(),
             new l.Position(apply.app.pos.endLine, apply.app.pos.endColumn),
           )
-          codeAction.setCommand(
+          val command =
             ServerCommands.ConvertToNamedArguments.toLSP(
               ServerCommands
                 .ConvertToNamedArgsRequest(
@@ -88,7 +86,13 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
                   apply.argIndices.map(new Integer(_)).asJava,
                 )
             )
+
+          val codeAction = CodeActionBuilder.build(
+            title = title(methodName(apply.app, isFirst = true)),
+            kind = l.CodeActionKind.RefactorRewrite,
+            command = Some(command),
           )
+
           Future.successful(Seq(codeAction))
         }
       }

@@ -16,6 +16,7 @@ import scala.meta.Tree
 import scala.meta.Type
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember.CodeActionCommandNotFoundException
 import scala.meta.internal.metals.codeactions.ExtractRenameMember.getMemberType
 import scala.meta.internal.parsing.Trees
@@ -290,16 +291,11 @@ class ExtractRenameMember(
       Right(new l.RenameFile(uri, newUri))
     )
 
-    val codeAction = new l.CodeAction()
-    codeAction.setTitle(
-      ExtractRenameMember.renameFileAsClassTitle(fileName, className)
+    CodeActionBuilder.build(
+      title = ExtractRenameMember.renameFileAsClassTitle(fileName, className),
+      kind = l.CodeActionKind.Refactor,
+      documentChanges = edits,
     )
-    codeAction.setKind(l.CodeActionKind.Refactor)
-    codeAction.setEdit(
-      new l.WorkspaceEdit(edits.map(_.asJava).asJava)
-    )
-
-    codeAction
   }
 
   private def extractClassAction(
@@ -307,22 +303,21 @@ class ExtractRenameMember(
       member: Member,
       title: String,
   ): l.CodeAction = {
-
     val range = member.name.pos.toLSP
 
-    val codeAction = new l.CodeAction()
-    codeAction.setTitle(title)
-    codeAction.setKind(l.CodeActionKind.RefactorExtract)
-    codeAction.setCommand(
+    val command =
       ServerCommands.ExtractMemberDefinition.toLSP(
         new l.TextDocumentPositionParams(
           new l.TextDocumentIdentifier(uri),
           range.getStart(),
         )
       )
-    )
 
-    codeAction
+    CodeActionBuilder.build(
+      title,
+      kind = l.CodeActionKind.RefactorExtract,
+      command = Some(command),
+    )
   }
 
   def executeCommand(
