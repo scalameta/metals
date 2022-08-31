@@ -318,6 +318,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     val prefix = name.decoded.stripSuffix(CURSOR)
     Set("c", "ca", "cas", "case").contains(prefix)
   }
+
   private def toCaseMember(
       name: String,
       sym: Symbol,

@@ -330,6 +330,7 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
+
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)

@@ -253,6 +253,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case Some(value) => scala
        |""".stripMargin,
   )
+
   check(
     "lambda-function2",
     """
