@@ -7,6 +7,7 @@ import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.meta as m
 
+import scala.meta.Import.apply
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 
@@ -31,7 +32,7 @@ import org.eclipse.lsp4j.DocumentHighlightKind
 object PcDocumentHighlightProvider:
   private val caseClassSynthetics: Set[Name] = Set(nme.apply, nme.copy)
 
-  def higlights(
+  def highlights(
       driver: InteractiveDriver,
       params: OffsetParams,
   ): List[DocumentHighlight] =
@@ -41,10 +42,24 @@ object PcDocumentHighlightProvider:
     val source =
       SourceFile.virtual(filePath.toString, sourceText)
     driver.run(uri, source)
+    given ctx: Context = driver.currentCtx
     val unit = driver.currentCtx.run.units.head
     val pos = driver.sourcePosition(params)
-    val path =
-      Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
+    val rawPath =
+      Interactive
+        .pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
+        .dropWhile(t => // NamedArg anyway doesn't have symbol
+          t.symbol == NoSymbol && !t.isInstanceOf[NamedArg] ||
+            // same issue https://github.com/lampepfl/dotty/issues/15937 as below
+            t.isInstanceOf[TypeTree]
+        )
+
+    val path = rawPath match
+      // For type it will sometimes go into the wrong tree since TypeTree also contains the same span
+      // https://github.com/lampepfl/dotty/issues/15937
+      case TypeApply(sel: Select, _) :: tail if sel.span.contains(pos.span) =>
+        Interactive.pathTo(sel, pos.span) ::: rawPath
+      case _ => rawPath
 
     def symbolAlternatives(sym: Symbol) =
       val all =
@@ -66,7 +81,6 @@ object PcDocumentHighlightProvider:
         else Set(sym)
       all.filter(_ != NoSymbol)
     end symbolAlternatives
-    given ctx: Context = driver.currentCtx
 
     // First identify the symbol we are at, comments identify @@ as current cursor position
     def soughtSymbols(path: List[Tree]): Option[Set[Symbol]] = path match
@@ -108,6 +122,11 @@ object PcDocumentHighlightProvider:
        */
       case (df: NamedDefTree) :: _ if df.nameSpan.contains(pos.span) =>
         Some(symbolAlternatives(df.symbol))
+      /**
+       * For traversing annotations:
+       * @JsonNo@@tification("")
+       * def params() = ???
+       */
       case (df: MemberDef) :: _ if df.span.contains(pos.span) =>
         val annotTree = df.mods.annotations.find { t =>
           t.span.contains(pos.span)
@@ -118,12 +137,22 @@ object PcDocumentHighlightProvider:
           )
         }.headOption
 
+      /* Import selectors:
+       * import scala.util.Tr@@y
+       */
+      case (imp: Import) :: _ if imp.span.contains(pos.span) =>
+        imp.selector(pos.span).map(symbolAlternatives)
+
       case _ =>
         None
 
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols(path) match
       case Some(sought) =>
+        lazy val owners = sought
+          .flatMap { s => Set(s.owner, s.owner.companionModule) }
+          .filter(_ != NoSymbol)
+        lazy val soughtNames: Set[Name] = sought.map(_.name)
         def collectNames(
             highlights: Set[DocumentHighlight],
             tree: Tree,
@@ -193,6 +222,12 @@ object PcDocumentHighlightProvider:
 
                 case None =>
                   highlights
+              end match
+            /**
+             * For traversing annotations:
+             * @<<JsonNotification>>("")
+             * def params() = ???
+             */
             case mdf: MemberDef if mdf.mods.annotations.nonEmpty =>
               val trees = collectTrees(mdf.mods.annotations)
               val traverser =
@@ -200,6 +235,28 @@ object PcDocumentHighlightProvider:
               trees.foldLeft(highlights) { case (set, tree) =>
                 traverser(set, tree)
               }
+            /**
+             * For traversing import selectors:
+             * import scala.util.<<Try>>
+             */
+            case imp: Import if owners(imp.expr.symbol) =>
+              imp.selectors
+                .collect {
+                  case sel if soughtNames(sel.name) =>
+                    // Show both rename and main together
+                    val spans =
+                      if (!sel.renamed.isEmpty) then
+                        Set(sel.renamed.span, sel.imported.span)
+                      else Set(sel.imported.span)
+                    spans.map { span =>
+                      new DocumentHighlight(
+                        pos.withSpan(span).toLSP,
+                        DocumentHighlightKind.Write,
+                      )
+                    }
+                }
+                .flatten
+                .toSet ++ highlights
             case o =>
               highlights
 
@@ -208,7 +265,7 @@ object PcDocumentHighlightProvider:
         all.toList.distinct
       case None => Nil
     end match
-  end higlights
+  end highlights
 
   // @note (tgodzik) Not sure currently how to get rid of the warning, but looks to correctly
   @nowarn

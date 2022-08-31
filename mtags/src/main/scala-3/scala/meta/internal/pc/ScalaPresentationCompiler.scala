@@ -126,7 +126,7 @@ case class ScalaPresentationCompiler(
       params.token,
     ) { access =>
       val driver = access.compiler()
-      PcDocumentHighlightProvider.higlights(driver, params).asJava
+      PcDocumentHighlightProvider.highlights(driver, params).asJava
     }
 
   def shutdown(): Unit =

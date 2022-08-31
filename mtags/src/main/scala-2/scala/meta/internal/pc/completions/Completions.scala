@@ -627,7 +627,8 @@ trait Completions { this: MetalsGlobal =>
       }
   }
 
-  class MetalsLocator(pos: Position) extends Traverser {
+  class MetalsLocator(pos: Position, acceptTransparent: Boolean = false)
+      extends Traverser {
     def locateIn(root: Tree): Tree = {
       lastVisitedParentTrees = Nil
       traverse(root)
@@ -651,7 +652,7 @@ trait Completions { this: MetalsGlobal =>
     }
 
     protected def isEligible(t: Tree): Boolean = {
-      !t.pos.isTransparent || {
+      !t.pos.isTransparent || acceptTransparent || {
         t match {
           // new User(age = 42, name = "") becomes transparent, which doesn't happen with normal methods
           case Apply(Select(_: New, _), _) => true
