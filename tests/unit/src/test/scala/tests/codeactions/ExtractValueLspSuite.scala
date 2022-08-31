@@ -263,6 +263,7 @@ class ExtractValueLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("new Except(...)")}
+        |${ConvertToNamedArguments.title("Exception(...)")}
         |""".stripMargin,
     """|object Main{
        |  val newValue = new Exception("message")

@@ -76,6 +76,18 @@ class ConvertToNamedArgumentsLspSuite
        |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
        |}""".stripMargin,
   )
+  check(
+    "new-apply",
+    """|object Something {
+       |  class Car(age: Int)
+       |  new Car(<<1>>)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Car(...)")}",
+    """|object Something {
+       |  class Car(age: Int)
+       |  new Car(age = 1)
+       |}""".stripMargin,
+  )
 
   check(
     "multiple-arg-lists-start-of-2nd",

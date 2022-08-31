@@ -26,6 +26,19 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
        |}""".stripMargin,
   )
 
+  checkEdit(
+    "new-apply",
+    """|object Something {
+       |  class Car(age: Int)
+       |  <<new Car(1)>>
+       |}""".stripMargin,
+    List(0),
+    """|object Something {
+       |  class Car(age: Int)
+       |  new Car(age = 1)
+       |}""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
