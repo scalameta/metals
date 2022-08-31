@@ -517,4 +517,69 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |   <<Tr@@y>>(1)
       |}""".stripMargin,
   )
+
+  check(
+    "import3",
+    """
+      |import scala.<<ut@@il>>.Try
+      |object Test {
+      |   scala.<<util>>.Try(1)
+      |}""".stripMargin,
+  )
+
+  check(
+    "import4",
+    """
+      |import scala.<<util>>.Try
+      |object Test {
+      |   scala.<<ut@@il>>.Try(1)
+      |}""".stripMargin,
+  )
+
+  check(
+    "rename1",
+    """
+      |import scala.util.{ <<Try>> => <<ATr@@y>>}
+      |object Test {
+      |   <<ATry>>(1)
+      |}""".stripMargin,
+  )
+
+  check(
+    "rename2",
+    """
+      |import scala.util.{ <<Try>> => <<ATry>>}
+      |object Test {
+      |   <<ATr@@y>>(1)
+      |}""".stripMargin,
+  )
+
+  // @note, we could try and not highlight normal Try,
+  // but this might still be useful
+  check(
+    "rename3",
+    """
+      |import scala.util.{ <<Try>> => <<ATr@@y>>}
+      |object Test {
+      |   scala.util.<<Try>>(1)
+      |}""".stripMargin,
+  )
+
+  check(
+    "rename4",
+    """
+      |import scala.util.{ <<Try>> => <<ATry>>}
+      |object Test {
+      |   scala.util.<<Tr@@y>>(1)
+      |}""".stripMargin,
+  )
+
+  check(
+    "rename5",
+    """
+      |import scala.util.{ <<T@@ry>> => <<ATry>>}
+      |object Test {
+      |   scala.util.<<Try>>(1)
+      |}""".stripMargin,
+  )
 }

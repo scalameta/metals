@@ -224,7 +224,7 @@ case class ScalaPresentationCompiler(
       List.empty[DocumentHighlight].asJava,
       params.token()
     ) { pc =>
-      new PcDocumentHighlightProvider(pc.compiler()).higlights(params).asJava
+      new PcDocumentHighlightProvider(pc.compiler()).highlights(params).asJava
     }
 
   override def semanticdbTextDocument(

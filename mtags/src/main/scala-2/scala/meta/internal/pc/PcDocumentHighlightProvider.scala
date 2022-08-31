@@ -16,7 +16,7 @@ final class PcDocumentHighlightProvider(
 
   private val caseClassSynthetics: Set[Name] = Set(nme.apply, nme.copy)
 
-  def higlights(
+  def highlights(
       params: OffsetParams
   ): List[DocumentHighlight] = {
 
@@ -42,6 +42,9 @@ final class PcDocumentHighlightProvider(
       case sel @ Select(qual, name)
           if name == nme.apply && qual.pos == sel.pos =>
         qual
+      case Import(expr, _) if expr.pos.includes(pos) =>
+        // imports seem to be marked as transparent
+        locateTree(pos, expr, acceptTransparent = true)
       case t => t
     }
 
@@ -80,7 +83,6 @@ final class PcDocumentHighlightProvider(
         case _ => None
       }
     }
-    pprint.log(typedTree)
 
     // First identify the symbol we are at, comments identify @@ as current cursor position
     val soughtSymbols: Option[Set[Symbol]] = typedTree match {
@@ -139,31 +141,22 @@ final class PcDocumentHighlightProvider(
        */
       case (df: DefTree) if df.namePos.includes(pos) =>
         Some(symbolAlternatives(df.symbol))
-      /* all definitions:
-       * def fo@@o = ???
-       * class Fo@@o = ???
-       * etc.
+      /* Import selectors:
+       * import scala.util.Tr@@y
        */
       case (imp: Import) if imp.pos.includes(pos) =>
-        pprint.log(pos)
-        imp.selectors.find{
-          selector =>
-
-            true
-        }
-        None
+        imp.selector(pos).map(symbolAlternatives)
       case _ =>
         None
     }
 
-    pprint.log(soughtSymbols)
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols match {
       case Some(sought) =>
         lazy val owners = sought
           .flatMap(s => symbolAlternatives(s.owner))
           .filter(_ != NoSymbol)
-        lazy val soughtNames = sought.map(_.name)
+        lazy val soughtNames: Set[Name] = sought.map(_.name)
 
         def traverse(
             highlights: Set[DocumentHighlight],
@@ -259,9 +252,37 @@ final class PcDocumentHighlightProvider(
                 case _ => highlights
               }
 
+            /**
+             * For traversing annotations:
+             * @<<JsonNotification>>("")
+             * def params() = ???
+             */
             case df: MemberDef =>
               (tree.children ++ annotationChildren(df))
                 .foldLeft(highlights)(traverse(_, _))
+
+            /**
+             * For traversing import selectors:
+             * import scala.util.<<Try>>
+             */
+            case imp: Import
+                if owners(imp.expr.symbol) && imp.selectors
+                  .exists(sel => soughtNames(sel.name)) =>
+              imp.selectors.foldLeft(traverse(highlights, imp.expr)) {
+                case (highlights, sel) if soughtNames(sel.name) =>
+                  val positions =
+                    if (!sel.rename.isEmpty)
+                      Set(
+                        sel.renamePosition(pos.source),
+                        sel.namePosition(pos.source)
+                      )
+                    else Set(sel.namePosition(pos.source))
+                  highlights ++ positions.map(pos =>
+                    new DocumentHighlight(pos.toLSP)
+                  )
+                case (highlights, _) =>
+                  highlights
+              }
             case _ =>
               tree.children.foldLeft(highlights)(traverse(_, _))
           }

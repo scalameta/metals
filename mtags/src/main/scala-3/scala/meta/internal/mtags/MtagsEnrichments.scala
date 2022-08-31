@@ -16,6 +16,7 @@ import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.Driver
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Denotations.*
 import dotty.tools.dotc.core.Flags.*
@@ -28,6 +29,7 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
+import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.{lsp4j as l}
 
@@ -201,6 +203,11 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
         (denot.info, sym.withUpdatedTpe(denot.info))
       catch case NonFatal(e) => (sym.info, sym)
   end extension
+
+  extension (imp: Import)
+    def selector(span: Span)(using Context): Option[Symbol] =
+      for sel <- imp.selectors.find(_.span.contains(span))
+      yield imp.expr.symbol.info.member(sel.name).symbol
 
   extension (denot: Denotation)
     def allSymbols: List[Symbol] =
