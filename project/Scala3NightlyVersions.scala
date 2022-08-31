@@ -16,7 +16,6 @@ object Scala3NightlyVersions {
    * otherwise there is no point to use these versions.
    */
   def nightlyReleasesAfter(version: String): List[DottyVersion] = {
-
     val lastVersion = DottyVersion.parse(version) match {
       case Some(v) => v
       case None =>
@@ -24,18 +23,8 @@ object Scala3NightlyVersions {
     }
 
     try {
-      coursierapi.Complete
-        .create()
-        .withInput("org.scala-lang:scala3-compiler_3:")
-        .complete()
-        .getCompletions()
-        .asScala
-        .filter(_.endsWith("NIGHTLY"))
-        .flatMap(DottyVersion.parse)
-        .collect {
-          case v if v > lastVersion && !broken.contains(v) => v
-        }
-        .toList
+      fetchScala3NightlyVersions()
+        .filter(_ > lastVersion)
         .sorted
         .takeRight(5)
     } catch {
@@ -44,6 +33,44 @@ object Scala3NightlyVersions {
         e.printStackTrace()
         Nil
     }
+  }
+
+  def nonPublishedNightlyVersions(): List[DottyVersion] = {
+    val all = fetchScala3NightlyVersions()
+    lastPublishedMtagsForNightly() match {
+      case None =>
+        println("Error: Unable to find last nightly mtag")
+        Nil
+      case Some(last) =>
+        all.filter(_ > last)
+    }
+  }
+
+  private def fetchScala3NightlyVersions(): List[DottyVersion] = {
+    coursierapi.Complete
+      .create()
+      .withInput("org.scala-lang:scala3-compiler_3:")
+      .complete()
+      .getCompletions()
+      .asScala
+      .filter(_.endsWith("NIGHTLY"))
+      .flatMap(DottyVersion.parse)
+      .filter(!broken.contains(_))
+      .toList
+  }
+
+  private def lastPublishedMtagsForNightly(): Option[DottyVersion] = {
+    coursierapi.Complete
+      .create()
+      .withInput("org.scalameta:mtags_3")
+      .complete()
+      .getCompletions()
+      .asScala
+      .filter(_.endsWith("NIGHTLY"))
+      .map(_.stripPrefix("mtags_"))
+      .flatMap(DottyVersion.parse)
+      .sorted
+      .lastOption
   }
 
   case class DottyVersion(

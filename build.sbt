@@ -144,6 +144,12 @@ commands ++= Seq(
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
   },
+  // this is one is needed for `.github/workflows/check_scala3_nightly`
+  Command.single("save-non-published-nightlies") { (s, path) =>
+    val versions = Scala3NightlyVersions.nonPublishedNightlyVersions
+    IO.write(file(path), versions.map(_.original).mkString("\n"))
+    s
+  },
 )
 
 // -Xlint is unusable because of
