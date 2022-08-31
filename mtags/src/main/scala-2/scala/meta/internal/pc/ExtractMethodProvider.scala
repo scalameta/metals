@@ -20,15 +20,17 @@ final class ExtractMethodProvider(
       cursor = None
     )
     val pos = unit.position(range.offset)
+    typedTreeAt(pos)
     val context = doLocateImportContext(pos)
     val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
-    typedTreeAt(pos)
     val history = new ShortenedNames(
       lookupSymbol = name =>
         context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
       config = renameConfig,
       renames = re
     )
+    val scopeSymbols =
+      metalsScopeMembers(pos).map(_.sym).filter(_.pos.isDefined).toSet
     def prettyType(tpe: Type) =
       metalsToLongString(tpe.widen.finalResultType, history)
 
@@ -41,18 +43,54 @@ final class ExtractMethodProvider(
         case other => List(other)
       }
 
-    def localRefs(ts: List[Tree]): Set[Name] = {
-      def traverse(names: Set[Name], tree: Tree): Set[Name] =
-        tree match {
-          case Ident(name) =>
-            names + name
-          case Select(qualifier, name) =>
-            traverse(names, qualifier) + name
-          case _ =>
-            tree.children.foldLeft(names)(traverse(_, _))
+    def localRefs(
+        ts: List[Tree],
+        defnPos: Position,
+        extractedPos: Position
+    ) = {
+      def nonAvailable(sym: Symbol): Boolean = {
+        val symPos = sym.pos
+        symPos.isDefined && defnPos.encloses(symPos) && !extractedPos.encloses(
+          symPos
+        )
+      }
+      def symFromIdent(id: Ident): Set[Symbol] = {
+        val sym = id.symbol match {
+          case _: NoSymbol =>
+            context.lookupSymbol(id.name, s => s.isTerm) match {
+              case LookupSucceeded(_, symbol) =>
+                pprint.log(symbol)
+                Set(symbol)
+              case _ => Set.empty[Symbol]
+            }
+          case _ => Set(id.symbol).filter(s => s.isTerm && !s.isMethod)
         }
-      ts.foldLeft(Set.empty[Name])(traverse(_, _))
+        sym.filter(nonAvailable(_))
+      }
+
+      def traverse(symbols: Set[Symbol], tree: Tree): Set[Symbol] =
+        tree match {
+          case id @ Ident(_) =>
+            symbols ++ symFromIdent(id)
+          case _ =>
+            tree.children.foldLeft(symbols)(traverse(_, _))
+        }
+      val methodParams = ts
+        .foldLeft(Set.empty[Symbol])(traverse(_, _))
+        .toList
+        .sortBy(_.decodedName)
+      val typeParams =
+        methodParams
+          .map(_.info.typeSymbol)
+          .filter(tp => nonAvailable(tp) && tp.isTypeParameterOrSkolem)
+          .distinct
+      pprint.log(methodParams.map(_.info.typeSymbol))
+      pprint.log(methodParams.map(_.info.typeSymbol.isSkolem))
+
+      (methodParams, typeParams)
     }
+    pprint.log(scopeSymbols.filter(_.pos.isDefined))
+    pprint.log(scopeSymbols.filter(_.isSkolem))
 
     val path = compiler.lastVisitedParentTrees
     val edits =
@@ -65,32 +103,25 @@ final class ExtractMethodProvider(
           path.takeWhile(src => extractionPos.offset() <= src.pos.start)
         stat = shortenedPath.lastOption.getOrElse(head)
       } yield {
-        val scopeSymbols =
-          metalsScopeMembers(pos).map(_.sym).filter(_.pos.isDefined)
-        val noLongerAvailable = scopeSymbols
-          .filter(sym => stat.pos.encloses(sym.pos) && !range.encloses(sym.pos))
-        val names = localRefs(extracted)
-        val paramsToExtract = noLongerAvailable
-          .filter(sym => names.contains(sym.name))
-          .map(sym => (sym.name, sym.info))
-          .sortBy(_._1.decoded)
-        val newExpr = typedTreeAt(expr.pos)
-        val exprType =
-          if (newExpr.tpe != null) s": ${prettyType(newExpr.tpe.widen)}" else ""
-        val name = genName(scopeSymbols.map(_.decodedName).toSet, "newMethod")
-        val methodParams = paramsToExtract
-          .map { case (name, tpe) => s"${name.decoded}: ${prettyType(tpe)}" }
+        val defnPos = stat.pos
+        val extractedPos = head.pos.withEnd(expr.pos.end)
+        val (methodParams, typeParams) =
+          localRefs(extracted, defnPos, extractedPos)
+        val methodParamsText = methodParams
+          .map(sym => s"${sym.decodedName}: ${prettyType(sym.info)}")
           .mkString(", ")
-        val typeParams = paramsToExtract
-          .map(_._2.typeSymbol)
-          .filter(noLongerAvailable.contains(_))
-          .map(_.name.decoded) match {
+        val typeParamsText = typeParams
+          .map(_.decodedName) match {
           case Nil => ""
           case params => params.mkString("[", ", ", "]")
         }
-        val exprParams = paramsToExtract.map(_._1.decoded).mkString(", ")
-        val indent = stat.pos.column - (stat.pos.point - stat.pos.start) - 1
-        val blank = text(stat.pos.start - indent).toString()
+        val newExpr = typedTreeAt(expr.pos)
+        val exprType =
+          if (newExpr.tpe != null) s": ${prettyType(newExpr.tpe.widen)}" else ""
+        val name = genName(scopeSymbols.map(_.decodedName), "newMethod")
+        val exprParams = methodParams.map(_.decodedName).mkString(", ")
+        val indent = defnPos.column - (defnPos.point - defnPos.start) - 1
+        val blank = text(defnPos.start - indent).toString()
         val newIndent = blank * indent
         val oldIndentLen =
           head.pos.column - (head.pos.point - head.pos.start) - 1
@@ -103,17 +134,17 @@ final class ExtractMethodProvider(
         )
         val defText =
           if (extracted.length > 1)
-            s"def $name$typeParams($methodParams)$exprType = {\n${toExtract}\n${newIndent}}\n$newIndent"
+            s"def $name$typeParamsText($methodParamsText)$exprType = {\n${toExtract}\n${newIndent}}\n$newIndent"
           else
-            s"def $name$typeParams($methodParams)$exprType =\n${toExtract}\n\n$newIndent"
+            s"def $name$typeParamsText($methodParamsText)$exprType =\n${toExtract}\n\n$newIndent"
         val replacedText = s"$name($exprParams)"
         List(
           new l.TextEdit(
-            head.pos.withEnd(expr.pos.end).toLSP,
+            extractedPos.toLSP,
             replacedText
           ),
           new l.TextEdit(
-            stat.pos.focusStart.toLSP,
+            defnPos.focusStart.toLSP,
             defText
           )
         )

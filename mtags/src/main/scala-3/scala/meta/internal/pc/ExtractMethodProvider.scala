@@ -88,8 +88,11 @@ final class ExtractMethodProvider(
       val typeParams =
         methodParams
           .map(_.info.typeSymbol)
-          .filter(t => nonAvailable(t))
+          .filter(t => nonAvailable(t) && t.isTypeParam)
           .distinct
+      pprint.log(methodParams.map(_.info.typeSymbol))
+      pprint.log(methodParams.map(_.info.typeSymbol.isTypeParam))
+
       (methodParams, typeParams)
     end localRefs
     val edits =
@@ -104,13 +107,13 @@ final class ExtractMethodProvider(
       yield
         val defnPos = stat.sourcePos
         val extractedPos = head.sourcePos.withEnd(expr.sourcePos.end)
-        val exprType = expr.tpe.widenUnion.show
+        val exprType = expr.tpe.widenUnion.typeSymbol.showName
         val name =
           genName(indexedCtx.scopeSymbols.map(_.decodedName).toSet, "newMethod")
         val (methodParams, typeParams) =
           localRefs(extracted, stat.sourcePos, extractedPos)
         val methodParamsText = methodParams
-          .map(sym => s"${sym.decodedName}: ${sym.info.show}")
+          .map(sym => s"${sym.decodedName}: ${sym.info.typeSymbol.showName}")
           .mkString(", ")
         val typeParamsText = typeParams
           .map(_.decodedName) match

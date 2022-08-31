@@ -255,20 +255,16 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
   checkEdit(
     "class-param",
     s"""|object A{
-        |  @@def f1() = {
-        |    class B(b: Int) {
-        |      def f2() = <<b + 2>>
-        |    }
+        |  @@class B(val b: Int) {
+        |    def f2 = <<b + 2>>
         |  }
         |}""".stripMargin,
     s"""|object A{
         |  def newMethod(b: Int): Int =
         |    b + 2
         |
-        |  def f1() = {
-        |    class B(b: Int) {
-        |      def f2() = newMethod(b)
-        |    }
+        |  class B(val b: Int) {
+        |    def f2 = newMethod(b)
         |  }
         |}""".stripMargin,
   )
@@ -310,6 +306,24 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
         |  }
         |}""".stripMargin,
   )
+  checkEdit(
+      "method-type-no-param",
+      s"""|object A{
+          |  def method(i: Int) = i + 1
+          |  @@def f1[T](a: T) = {
+          |    <<Set.empty[T]>>
+          |  }
+          |}""".stripMargin,
+      s"""|object A{
+          |  def method(i: Int) = i + 1
+          |  def newMethod[T](): Set[T] =
+          |    Set.empty[T]
+          |
+          |  def f1[T](a: T) = {
+          |    newMethod()
+          |  }
+          |}""".stripMargin,
+    )
 
   checkEdit(
     "inner-conflict",
@@ -381,14 +395,14 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
         |  def method(i: Int) = i + 1
         |  @@class Car(val color: Int) {
         |    def add(other: Car): Car = {
-        |      <<Car(other.color + color)>>
+        |      <<new Car(other.color + color)>>
         |    }
         |  }
         |}""".stripMargin,
     s"""|object A{
         |  def method(i: Int) = i + 1
-        |  def newMethod[Car](color: Int, other: A.Car): A.Car =
-        |    Car(other.color + color)
+        |  def newMethod(color: Int, other: Car): Car =
+        |    new Car(other.color + color)
         |
         |  class Car(val color: Int) {
         |    def add(other: Car): Car = {
