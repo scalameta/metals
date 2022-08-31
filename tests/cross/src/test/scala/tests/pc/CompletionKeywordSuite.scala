@@ -290,6 +290,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|return
        |""".stripMargin,
+    // methods add in 3.2.1
+    filter = item => !item.contains("retains"),
   )
 
   check(
@@ -302,6 +304,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "",
+    // methods add in 3.2.1
+    filter = item => !item.contains("retains"),
   )
 
   check(
@@ -319,6 +323,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> ""
     ),
+    // methods add in 3.2.1
+    filter = item => !item.contains("retains"),
   )
 
   check(
@@ -329,6 +335,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |ret@@
       |""".stripMargin,
     "",
+    // methods add in 3.2.1
+    filter = item => !item.contains("retains"),
   )
 
   check(
