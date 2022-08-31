@@ -342,4 +342,22 @@ class ExtractValueLspSuite
        |}
        |""".stripMargin,
   )
+
+  check(
+    "extract-new",
+    """|class Car(age: Int)
+       |object Main{
+       |  new Car(age = <<1>>)
+       |}
+       |""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("1")}
+        |""".stripMargin,
+    """|class Car(age: Int)
+       |object Main{
+       |  val newValue = 1
+       |  new Car(age = newValue)
+       |}
+       |""".stripMargin,
+  )
+
 }
