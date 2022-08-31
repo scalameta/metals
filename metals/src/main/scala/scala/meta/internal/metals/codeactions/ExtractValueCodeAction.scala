@@ -121,6 +121,10 @@ class ExtractValueCodeAction(
         Some(expr)
       case Term.Do(_, expr) =>
         Some(expr)
+      case Term.New(init) =>
+        init.argss.flatten
+          .find { arg => arg.pos.encloses(range) }
+          .map(applyArgument(_))
       case _ => None
     }
   }
@@ -147,6 +151,8 @@ class ExtractValueCodeAction(
         expr.pos.encloses(range)
       case Term.Do(_, expr) =>
         expr.pos.encloses(range)
+      case Term.New(init) =>
+        init.argss.flatten.exists { arg => arg.pos.encloses(range) }
       case _ => false
     }
   }
