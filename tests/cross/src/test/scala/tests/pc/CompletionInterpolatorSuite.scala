@@ -358,7 +358,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     "member-label".tag(
       IgnoreScalaVersion.forRangeUntil(
         "3.2.0-RC1",
-        "3.2.0",
+        "3.2.1-RC1",
       )
     ),
     """|object Main {
@@ -402,7 +402,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
       .tag(
         IgnoreScalaVersion.forRangeUntil(
           "3.2.0-RC1",
-          "3.2.0",
+          "3.2.1-RC1",
         )
       ),
     """|object Main {
@@ -683,7 +683,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     "auto-imports-prefix-with-interpolator".tag(
       IgnoreScalaVersion.forRangeUntil(
         "3.2.0-RC1",
-        "3.2.0",
+        "3.2.1-RC1",
       )
     ),
     """|

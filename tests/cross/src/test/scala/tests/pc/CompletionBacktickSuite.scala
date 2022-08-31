@@ -15,9 +15,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filterText = "type",
     compat = Map(
-      "3" -> "type: Int",
-      ">=3.2.0" -> "`type`: Int",
-      ">=3.2.1-RC1-bin-20220616-140693d-NIGHTLY" -> "type: Int",
+      "3" -> "type: Int"
     ),
   )
 
