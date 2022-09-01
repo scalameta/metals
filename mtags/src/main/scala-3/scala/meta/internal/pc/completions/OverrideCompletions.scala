@@ -330,7 +330,7 @@ object OverrideCompletions:
       val newEdit =
         edits.mkString(start, s"\n\n$indent", last)
       val implementAll = new l.TextEdit(
-        editPos.toLSP,
+        editPos.toLsp,
         newEdit,
       )
       implementAll +: imports.toList

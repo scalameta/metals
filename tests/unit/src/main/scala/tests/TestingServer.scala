@@ -428,7 +428,7 @@ final case class TestingServer(
         newRef(definition.symbol, location),
         mutable.ListBuffer.empty,
       )
-      buf += new Location(source.toURI.toString, token.pos.toLSP)
+      buf += new Location(source.toURI.toString, token.pos.toLsp)
     }
     val definition = Seq.newBuilder[SymbolReference]
     val references = Seq.newBuilder[SymbolReference]
@@ -729,7 +729,7 @@ final case class TestingServer(
     val point = start + offset
     val pos = m.Position.Range(input, point, point)
     val params =
-      new CompletionParams(path.toTextDocumentIdentifier, pos.toLSP.getStart)
+      new CompletionParams(path.toTextDocumentIdentifier, pos.toLsp.getStart)
     server.completion(params).asScala
   }
 
@@ -765,7 +765,7 @@ final case class TestingServer(
     val params =
       new l.SelectionRangeParams(
         path.toTextDocumentIdentifier,
-        List(pos.toLSP.getStart).asJava,
+        List(pos.toLsp.getStart).asJava,
       )
 
     server.selectionRange(params).asScala
@@ -987,7 +987,7 @@ final case class TestingServer(
       fn(
         text,
         path.toTextDocumentIdentifier,
-        pos.toLSP.getStart,
+        pos.toLsp.getStart,
       )
     }
   }
@@ -1020,7 +1020,7 @@ final case class TestingServer(
       fn(
         text,
         path.toTextDocumentIdentifier,
-        pos.toLSP,
+        pos.toLsp,
       )
     }
   }

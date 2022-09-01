@@ -26,7 +26,7 @@ class CreateNewSymbol() extends CodeAction {
         name: String,
     ): l.CodeAction = {
       val command =
-        ServerCommands.NewScalaFile.toLSP(parentUri.toString(), name)
+        ServerCommands.NewScalaFile.toLsp(parentUri.toString(), name)
 
       CodeActionBuilder.build(
         title = CreateNewSymbol.title(name),

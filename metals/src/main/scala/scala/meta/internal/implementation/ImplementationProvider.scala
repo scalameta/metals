@@ -254,7 +254,7 @@ final class ImplementationProvider(
         parentDoc.text,
         trees,
       )
-      revised <- distance.toRevised(range.toLSP)
+      revised <- distance.toRevised(range.toLsp)
     } yield new Location(source.toNIO.toUri().toString(), revised)
   }
 
@@ -314,7 +314,7 @@ final class ImplementationProvider(
             source,
           )
           range <- implOccurrence.range
-          revised <- distance.toRevised(range.toLSP)
+          revised <- distance.toRevised(range.toLsp)
         } { allLocations.add(new Location(file.toUri.toString, revised)) }
       }
 

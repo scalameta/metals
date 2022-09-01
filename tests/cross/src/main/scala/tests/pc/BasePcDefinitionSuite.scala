@@ -32,7 +32,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       import scala.meta.inputs.Position
       import scala.meta.inputs.Input
       val offsetRange =
-        Position.Range(Input.String(cleanedCode), offset, offset).toLSP
+        Position.Range(Input.String(cleanedCode), offset, offset).toLsp
       val defn = presentationCompiler
         .definition(CompilerOffsetParams(URI.create(uri), cleanedCode, offset))
         .get()

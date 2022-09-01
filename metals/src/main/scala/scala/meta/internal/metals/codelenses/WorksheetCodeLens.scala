@@ -15,7 +15,7 @@ class WorksheetCodeLens(clientConfig: ClientConfiguration) extends CodeLens {
       path: AbsolutePath
   ): Seq[l.CodeLens] = {
     if (path.isWorksheet) {
-      val command = CopyWorksheetOutput.toLSP(path.toURI)
+      val command = CopyWorksheetOutput.toLsp(path.toURI)
       val startPosition = new l.Position(0, 0)
       val range = new l.Range(startPosition, startPosition)
       List(new l.CodeLens(range, command, null))

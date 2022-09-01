@@ -61,7 +61,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
   ) extends CompletionPosition {
     val prefix: String = name.toString.stripSuffix(CURSOR)
     val typed: Tree = typedTreeAt(t.pos)
-    val range: l.Range = pos.withStart(start).withEnd(pos.point).toLSP
+    val range: l.Range = pos.withStart(start).withEnd(pos.point).toLsp
     val lineStart: RunId = pos.source.lineToOffset(pos.line - 1)
 
     override def contribute: List[Member] = {
@@ -337,7 +337,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
       val typed = typedTreeAt(t.pos)
       implementAll(
         typed,
-        inferEditPosition(text, t).toLSP,
+        inferEditPosition(text, t).toLsp,
         t,
         text,
         _ => true

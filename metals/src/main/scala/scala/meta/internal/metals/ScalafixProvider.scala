@@ -418,7 +418,7 @@ case class ScalafixProvider(
       newFileContent: String,
       input: Input,
   ): List[l.TextEdit] = {
-    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
+    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLsp
     if (newFileContent != input.text) {
       List(new l.TextEdit(fullDocumentRange, newFileContent))
     } else {

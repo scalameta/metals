@@ -224,7 +224,7 @@ object TokenEditDistance {
                 }
                 Position.Range(revisedInput, start.revised.start, endOffset)
               }
-            Some(revised.toLSP)
+            Some(revised.toLsp)
           case (start, end) =>
             logger.warning(
               s"stale range: ${start.map(_.show)} ${end.map(_.show)}"

@@ -118,7 +118,7 @@ object ScalatestTestFinder {
           case Term.Apply(appl @ Term.Apply(Term.Name(funName), Lit.String(testname) :: _), _) 
               if style.leafMethods.contains(funName) =>
           // format: on
-        TestCaseEntry(testname, appl.pos.toLSP.toLocation(path.toURI))
+        TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
     }
   }
 
@@ -153,7 +153,7 @@ object ScalatestTestFinder {
           if style.leafMethods.contains(infixOp) => 
         // format: on
           val testname = namePrefix.appended(lhs.value).mkString(" ")
-          TestCaseEntry(testname, lhs.pos.toLSP.toLocation(path.toURI)) :: acc
+          TestCaseEntry(testname, lhs.pos.toLsp.toLocation(path.toURI)) :: acc
 
         case _ =>
           acc
@@ -179,7 +179,7 @@ object ScalatestTestFinder {
         // format: on
           val testname = s"$newPrefix $infixOp $right"
           val test =
-            TestCaseEntry(testname, appl.pos.toLSP.toLocation(path.toURI))
+            TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
           (test :: acc, Some(newPrefix))
 
         // format: off
@@ -189,7 +189,7 @@ object ScalatestTestFinder {
           val prefix = namePrefix.fold("")(_ + " ")
           val testname = s"$prefix$infixOp $right"
           val test =
-            TestCaseEntry(testname, appl.pos.toLSP.toLocation(path.toURI))
+            TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
           (test :: acc, namePrefix)
         case _ => (acc, namePrefix)
       }
@@ -226,7 +226,7 @@ object ScalatestTestFinder {
         // format: on
           val testname = s"$prefix ${name.value}"
           val test =
-            TestCaseEntry(testname, appl.pos.toLSP.toLocation(path.toURI))
+            TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
           test :: acc
 
         case _ =>

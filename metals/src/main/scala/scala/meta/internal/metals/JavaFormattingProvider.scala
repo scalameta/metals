@@ -209,7 +209,7 @@ final class JavaFormattingProvider(
           code
       }
 
-    val fullDocumentRange = fromLSP(input).toLSP
+    val fullDocumentRange = fromLSP(input).toLsp
     if (formatted != code)
       List(new l.TextEdit(fullDocumentRange, formatted))
     else

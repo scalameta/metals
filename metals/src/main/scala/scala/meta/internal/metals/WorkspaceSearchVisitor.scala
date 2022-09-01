@@ -137,7 +137,7 @@ class WorkspaceSearchVisitor(
             if (saveClassFileToDisk) defn.path.toFileOnDisk(workspace)
             else defn.path
           val uri = path.toURI.toString
-          fromClasspath.add(semanticDefn.toLSP(uri))
+          fromClasspath.add(semanticDefn.toLsp(uri))
           isHit = true
         }
       }

@@ -43,7 +43,7 @@ private[debug] final class SetBreakpointsRequestHandler(
         case _ =>
           request.getBreakpoints.map { breakpoint =>
             val sym =
-              classFinder.findClass(sourcePath, breakpoint.toLSP)
+              classFinder.findClass(sourcePath, breakpoint.toLsp)
             (breakpoint, sym)
           }
       }
@@ -120,7 +120,7 @@ private[debug] final class SetBreakpointsRequestHandler(
       breakpoint: SourceBreakpoint
   ): SymbolOccurrence => Long = { occ =>
     val startLine = occ.range.fold(Int.MaxValue)(_.startLine)
-    val breakpointLine = breakpoint.toLSP.getLine
+    val breakpointLine = breakpoint.toLsp.getLine
     if (startLine > breakpointLine) Long.MaxValue
     else breakpointLine - startLine
   }

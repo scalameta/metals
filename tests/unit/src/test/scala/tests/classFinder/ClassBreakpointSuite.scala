@@ -176,7 +176,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
       val pos: scala.meta.Position =
         scala.meta.Position.Range(input, offset, offset)
       buffers.put(path, sourceText)
-      val sym = classFinder.findClass(path, pos.toLSP.getStart())
+      val sym = classFinder.findClass(path, pos.toLsp.getStart())
       assert(sym.isDefined)
       assertNoDiff(sym.get, expected)
     }

@@ -204,7 +204,7 @@ object AutoImports:
 
     private def specifyOwnerEdit(symbol: Symbol, owner: String): l.TextEdit =
       val line = pos.startLine
-      new l.TextEdit(pos.toLSP, s"$owner.${symbol.nameBackticked}")
+      new l.TextEdit(pos.toLsp, s"$owner.${symbol.nameBackticked}")
 
     private def importEdit(
         values: List[AutoImport],
@@ -227,7 +227,7 @@ object AutoImports:
         .map(selector => s"${indent}import $selector")
         .mkString(topPadding, "\n", "\n")
 
-      val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLSP
+      val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLsp
       new l.TextEdit(editPos, formatted)
     end importEdit
 

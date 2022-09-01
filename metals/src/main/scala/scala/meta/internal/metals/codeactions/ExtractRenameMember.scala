@@ -48,7 +48,7 @@ class ExtractRenameMember(
         val definitions = membersDefinitions(tree)
         val sealedNames: List[String] = getSealedNames(tree)
         val defnAtCursor =
-          definitions.find(_.member.name.pos.toLSP.overlapsWith(range))
+          definitions.find(_.member.name.pos.toLsp.overlapsWith(range))
 
         def canRenameDefn(defn: Member): Boolean = {
           val differentNames = defn.name.value != fileName
@@ -196,7 +196,7 @@ class ExtractRenameMember(
     // Using a custom traverser to avoid hitting inner classes by stopping the recursion on the chosen members
     object traverser extends SimpleTraverser {
       override def apply(tree: Tree): Unit = tree match {
-        case p: Pkg if p.pos.toLSP.overlapsWith(range) =>
+        case p: Pkg if p.pos.toLsp.overlapsWith(range) =>
           packages += Pkg(ref = p.ref, stats = Nil)
           super.apply(p)
         case i: Import =>
@@ -303,10 +303,10 @@ class ExtractRenameMember(
       member: Member,
       title: String,
   ): l.CodeAction = {
-    val range = member.name.pos.toLSP
+    val range = member.name.pos.toLsp
 
     val command =
-      ServerCommands.ExtractMemberDefinition.toLSP(
+      ServerCommands.ExtractMemberDefinition.toLsp(
         new l.TextDocumentPositionParams(
           new l.TextDocumentIdentifier(uri),
           range.getStart(),
@@ -348,7 +348,7 @@ class ExtractRenameMember(
       tree <- trees.get(path)
       definitions = membersDefinitions(tree)
       memberDefn <- definitions.find(
-        _.member.name.pos.toLSP.overlapsWith(range)
+        _.member.name.pos.toLsp.overlapsWith(range)
       )
       companion = definitions.find(isCompanion(memberDefn.member))
       (fileContent, defnLine) = newFileContent(
@@ -405,7 +405,7 @@ class ExtractRenameMember(
     newPath.writeText(content)
 
     def removeTreeEdits(t: Tree): List[l.TextEdit] =
-      List(new l.TextEdit(t.pos.toLSP, ""))
+      List(new l.TextEdit(t.pos.toLsp, ""))
 
     val packageEdit = endableMember.member.parent
       .flatMap {

@@ -38,7 +38,7 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       cursor: Position,
       text: String
   ) extends CompletionPosition {
-    val pos: l.Range = ident.pos.withEnd(cursor.point).toLSP
+    val pos: l.Range = ident.pos.withEnd(cursor.point).toLsp
     def newText(sym: Symbol): String = {
       new StringBuilder()
         .append('{')
@@ -91,7 +91,7 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       if (lit.pos.focusEnd.line == pos.line) CURSOR.length else 0
     val nameStart: Position =
       pos.withStart(pos.start - interpolator.name.size)
-    val nameRange = nameStart.toLSP
+    val nameRange = nameStart.toLsp
     val hasClosingBrace: Boolean = text.charAt(pos.point) == '}'
     val hasOpeningBrace: Boolean = text.charAt(
       pos.start - interpolator.name.size - 1
@@ -100,12 +100,12 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     def additionalEdits(): List[l.TextEdit] = {
       val interpolatorEdit =
         if (text.charAt(lit.pos.start - 1) != 's')
-          List(new l.TextEdit(lit.pos.withEnd(lit.pos.start).toLSP, "s"))
+          List(new l.TextEdit(lit.pos.withEnd(lit.pos.start).toLsp, "s"))
         else Nil
       val dollarEdits = for {
         i <- lit.pos.start to (lit.pos.end - CURSOR.length())
         if text.charAt(i) == '$' && i != interpolator.dollar
-      } yield new l.TextEdit(pos.source.position(i).withEnd(i).toLSP, "$")
+      } yield new l.TextEdit(pos.source.position(i).withEnd(i).toLsp, "$")
       interpolatorEdit ++ dollarEdits
     }
 

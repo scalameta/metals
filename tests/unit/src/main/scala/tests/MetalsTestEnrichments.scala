@@ -161,7 +161,7 @@ object MetalsTestEnrichments {
     def toPositionParams(
         identifier: TextDocumentIdentifier
     ): TextDocumentPositionParams = {
-      val range = token.pos.toLSP
+      val range = token.pos.toLsp
       val start = range.getStart
       new TextDocumentPositionParams(identifier, start)
     }

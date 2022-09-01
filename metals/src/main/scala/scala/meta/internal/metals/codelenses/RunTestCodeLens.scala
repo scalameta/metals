@@ -175,7 +175,7 @@ final class RunTestCodeLens(
       if commands.nonEmpty
       range <-
         occurrence.range
-          .flatMap(r => distance.toRevisedStrict(r).map(_.toLSP))
+          .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
           .toList
       command <- commands
     } yield new l.CodeLens(range, command, null)

@@ -33,7 +33,7 @@ final class ConvertToNamedArgumentsProvider(
     def makeTextEdits(params: List[Symbol], args: List[Tree]) = {
       args.zipWithIndex.zip(params).collect {
         case ((arg, index), param) if argIndices.contains(index) => {
-          val position = arg.pos.toLSP
+          val position = arg.pos.toLsp
           position.setEnd(position.getStart())
           new l.TextEdit(position, s"${param.nameString} = ")
         }

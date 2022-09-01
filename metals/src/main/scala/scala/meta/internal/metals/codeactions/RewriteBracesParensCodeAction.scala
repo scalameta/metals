@@ -83,8 +83,8 @@ class RewriteBracesParensCodeAction(
               val isParens = leftParen.text == "("
               val newLeft = if (isParens) "{" else "("
               val newRight = if (isParens) "}" else ")"
-              val start = new l.TextEdit(leftParen.pos.toLSP, newLeft)
-              val end = new l.TextEdit(rightParen.pos.toLSP, newRight)
+              val start = new l.TextEdit(leftParen.pos.toLsp, newLeft)
+              val end = new l.TextEdit(rightParen.pos.toLsp, newRight)
 
               val name = appl.fun match {
                 case Term.Name(value) => value

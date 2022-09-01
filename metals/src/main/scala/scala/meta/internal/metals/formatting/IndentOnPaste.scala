@@ -50,7 +50,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       val endPos = rangeFormatterParams.endPos
       val splitLines = rangeFormatterParams.splitLines
 
-      val rangeStart = startPos.toLSP.getStart
+      val rangeStart = startPos.toLsp.getStart
       val originalStart = rangeStart.getCharacter()
       rangeStart.setCharacter(0)
       // we format full lines even if not everything was pasted
@@ -59,8 +59,8 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
         else endPos.endColumn
       val pastedRange =
         new Range(rangeStart, new Position(endPos.endLine, realEndColumn))
-      val startLine = startPos.toLSP.getStart.getLine
-      val endLine = endPos.toLSP.getEnd.getLine
+      val startLine = startPos.toLsp.getStart.getLine
+      val endLine = endPos.toLsp.getEnd.getLine
 
       val opts =
         if (formattingOptions.isInsertSpaces)

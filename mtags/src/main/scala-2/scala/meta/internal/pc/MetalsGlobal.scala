@@ -623,7 +623,7 @@ class MetalsGlobal(
       pos.point > other.point
     }
 
-    def toLSP: l.Range = {
+    def toLsp: l.Range = {
       if (pos.isRange) {
         new l.Range(toPos(pos.start), toPos(pos.end))
       } else {

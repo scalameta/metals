@@ -146,7 +146,7 @@ final class InteractiveSemanticdbs(
           // Use INFO instead of ERROR severity because these diagnostics are published for readonly
           // files of external dependencies so the user cannot fix them.
           val severity = DiagnosticSeverity.Information
-          new l.Diagnostic(range.toLSP, diag.message, severity, "scala")
+          new l.Diagnostic(range.toLsp, diag.message, severity, "scala")
         }
         if (diagnostics.nonEmpty) {
           statusBar.addMessage(partialNavigation(clientConfig.icons))

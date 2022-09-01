@@ -134,7 +134,7 @@ final class FormattingProvider(
   }
 
   private def runFormat(path: AbsolutePath, input: Input): List[l.TextEdit] = {
-    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
+    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLsp
     val formatted =
       try {
         scalafmt.format(scalafmtConf.toNIO, path.toNIO, input.text)

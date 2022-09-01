@@ -192,8 +192,8 @@ class FlatMapToForComprehensionCodeAction(
               yieldTerm,
               indentation,
               path,
-              outerMostApply.pos.toLSP.getStart,
-              outerMostApply.pos.toLSP.getEnd,
+              outerMostApply.pos.toLsp.getStart,
+              outerMostApply.pos.toLsp.getEnd,
               outerMostApply.parent.exists(_.is[Term.Select]),
             )
           }

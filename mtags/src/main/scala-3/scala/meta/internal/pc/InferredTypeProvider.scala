@@ -125,7 +125,7 @@ final class InferredTypeProvider(
             val tuplePartTpe = applied.args(tupleIndex)
             val typeEndPos = tpl.args(tupleIndex).pos.end
             val namePos = typeEndPos + valdefOffset - 4
-            val lspPos = new SourcePosition(source, Spans.Span(namePos)).toLSP
+            val lspPos = new SourcePosition(source, Spans.Span(namePos)).toLsp
             val typeNameEdit =
               new TextEdit(
                 lspPos,
@@ -151,7 +151,7 @@ final class InferredTypeProvider(
         def baseEdit(withParens: Boolean): TextEdit =
           val keywordOffset = if vl.symbol.is(Flags.Param) then 0 else 4
           val endPos =
-            findNamePos(params.text, vl, keywordOffset).endPos.toLSP
+            findNamePos(params.text, vl, keywordOffset).endPos.toLsp
           adjustOpt.foreach(adjust => endPos.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             endPos,
@@ -172,7 +172,7 @@ final class InferredTypeProvider(
             text(blockStartPos.start) == '('
 
           if isParensFunction && !alreadyHasParens then
-            new TextEdit(blockStartPos.toLSP, "(") :: baseEdit(withParens =
+            new TextEdit(blockStartPos.toLsp, "(") :: baseEdit(withParens =
               true
             ) :: Nil
           else baseEdit(withParens = false) :: Nil
@@ -219,7 +219,7 @@ final class InferredTypeProvider(
               Some(
                 AdjustTypeOpts(
                   removeType(vl.namePos.end, tpt.sourcePos.end - 1),
-                  tpt.sourcePos.toLSP.getEnd(),
+                  tpt.sourcePos.toLsp.getEnd(),
                 )
               )
             )
@@ -236,7 +236,7 @@ final class InferredTypeProvider(
        */
       case Some(df @ DefDef(name, _, tpt, rhs)) =>
         def typeNameEdit =
-          val end = tpt.endPos.toLSP
+          val end = tpt.endPos.toLsp
           adjustOpt.foreach(adjust => end.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             end,
@@ -254,7 +254,7 @@ final class InferredTypeProvider(
               Some(
                 AdjustTypeOpts(
                   removeType(lastColon, tpt.sourcePos.end - 1),
-                  tpt.sourcePos.toLSP.getEnd(),
+                  tpt.sourcePos.toLsp.getEnd(),
                 )
               )
             )
@@ -268,7 +268,7 @@ final class InferredTypeProvider(
       case Some(bind @ Bind(name, body)) =>
         def baseEdit(withParens: Boolean) =
           new TextEdit(
-            bind.endPos.toLSP,
+            bind.endPos.toLsp,
             ": " + printType(body.tpe) + {
               if withParens then ")" else ""
             },
@@ -290,7 +290,7 @@ final class InferredTypeProvider(
               .toOption
               .exists(_.tokens.exists(_.is[T.Comma]))
             if !hasDot then
-              val leftParen = new TextEdit(body.startPos.toLSP, "(")
+              val leftParen = new TextEdit(body.startPos.toLsp, "(")
               leftParen :: baseEdit(withParens = true) :: Nil
             else baseEdit(withParens = false) :: Nil
 
@@ -304,7 +304,7 @@ final class InferredTypeProvider(
        */
       case Some(i @ Ident(name)) =>
         val typeNameEdit = new TextEdit(
-          i.endPos.toLSP,
+          i.endPos.toLsp,
           ": " + printType(i.tpe.widen),
         )
         typeNameEdit :: imports

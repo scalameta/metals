@@ -43,7 +43,7 @@ class SelectionRangeProvider(
       val bareRanges = lastVisitedParentTrees
         .map { tree: Tree =>
           val selectionRange = new SelectionRange()
-          selectionRange.setRange(tree.pos.toLSP)
+          selectionRange.setRange(tree.pos.toLsp)
           selectionRange
         }
 

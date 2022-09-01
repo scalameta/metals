@@ -694,12 +694,12 @@ object MetalsEnrichments
   }
 
   implicit class XtensionSeverityBsp(sev: b.DiagnosticSeverity) {
-    def toLSP: l.DiagnosticSeverity =
+    def toLsp: l.DiagnosticSeverity =
       l.DiagnosticSeverity.forValue(sev.getValue)
   }
 
   implicit class XtensionPositionBSp(pos: b.Position) {
-    def toLSP: l.Position =
+    def toLsp: l.Position =
       new l.Position(pos.getLine, pos.getCharacter)
   }
 
@@ -743,8 +743,8 @@ object MetalsEnrichments
         )
       ).toOption
 
-    def toLSP: l.Range =
-      new l.Range(range.getStart.toLSP, range.getEnd.toLSP)
+    def toLsp: l.Range =
+      new l.Range(range.getStart.toLsp, range.getEnd.toLsp)
   }
 
   implicit class XtensionSymbolOccurrenceProtocol(occ: s.SymbolOccurrence) {
@@ -761,11 +761,11 @@ object MetalsEnrichments
   }
 
   implicit class XtensionDiagnosticBsp(diag: b.Diagnostic) {
-    def toLSP: l.Diagnostic =
+    def toLsp: l.Diagnostic =
       new l.Diagnostic(
-        diag.getRange.toLSP,
+        diag.getRange.toLsp,
         fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
-        diag.getSeverity.toLSP,
+        diag.getSeverity.toLsp,
         if (diag.getSource == null) "scalac" else diag.getSource,
         // We omit diag.getCode since Bloop's BSP implementation uses 'code' with different semantics
         // than LSP. See https://github.com/scalacenter/bloop/issues/1134 for details
@@ -1076,7 +1076,7 @@ object MetalsEnrichments
   ) {
 
     // LSP Position is 0-based, while breakpoints are 1-based
-    def toLSP = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
+    def toLsp = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
   }
 
 }

@@ -165,7 +165,7 @@ object PcDocumentHighlightProvider:
             case ident: Ident
                 if sought(ident.symbol) && !ident.span.isZeroExtent =>
               highlights + new DocumentHighlight(
-                ident.sourcePos.toLSP,
+                ident.sourcePos.toLsp,
                 DocumentHighlightKind.Read,
               )
             /**
@@ -174,7 +174,7 @@ object PcDocumentHighlightProvider:
              */
             case sel: Select if sought(sel.symbol) && !sel.span.isZeroExtent =>
               highlights + new DocumentHighlight(
-                pos.withSpan(sel.nameSpan).toLSP,
+                pos.withSpan(sel.nameSpan).toLsp,
                 DocumentHighlightKind.Read,
               )
             /* all definitions:
@@ -187,7 +187,7 @@ object PcDocumentHighlightProvider:
                   df.symbol
                 ) && !df.span.isZeroExtent && !df.symbol.isSetter =>
               highlights + new DocumentHighlight(
-                pos.withSpan(df.nameSpan).toLSP,
+                pos.withSpan(df.nameSpan).toLsp,
                 DocumentHighlightKind.Write,
               )
             /* Named parameters don't have symbol so we need to check the owner
@@ -216,7 +216,7 @@ object PcDocumentHighlightProvider:
                       .withSpan(
                         arg.span.withEnd(arg.span.start + realName.length)
                       )
-                      .toLSP,
+                      .toLsp,
                     DocumentHighlightKind.Write,
                   )
 
@@ -250,7 +250,7 @@ object PcDocumentHighlightProvider:
                       else Set(sel.imported.span)
                     spans.map { span =>
                       new DocumentHighlight(
-                        pos.withSpan(span).toLSP,
+                        pos.withSpan(span).toLsp,
                         DocumentHighlightKind.Write,
                       )
                     }

@@ -75,8 +75,8 @@ class DocumentSymbolProvider(trees: Trees) {
         new DocumentSymbol(
           if (name.isEmpty) " " else name,
           kind,
-          range.toLSP,
-          selection.toLSP,
+          range.toLsp,
+          selection.toLsp,
           detail,
           new util.ArrayList[DocumentSymbol](),
         )

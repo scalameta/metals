@@ -40,7 +40,7 @@ class InsertInferredType(trees: Trees) extends CodeAction {
     def insertInferTypeAction(title: String): l.CodeAction = {
       val range = params.getRange().getStart()
       val commandTypeAction =
-        ServerCommands.InsertInferredType.toLSP(
+        ServerCommands.InsertInferredType.toLsp(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             range,
@@ -82,20 +82,20 @@ class InsertInferredType(trees: Trees) extends CodeAction {
 
     def typedDefnTreePos(tree: Defn): Option[l.Range] = tree match {
       case Defn.Def(_, name, _, _, tpe, _) if tpe.isDefined =>
-        Some(name.pos.toLSP)
+        Some(name.pos.toLsp)
       case Defn.GivenAlias(_, name, _, _, _, _) =>
-        Some(name.pos.toLSP)
+        Some(name.pos.toLsp)
       case Defn.Val(_, List(Pat.Var(name)), tpe, _) if tpe.isDefined =>
-        Some(name.pos.toLSP)
+        Some(name.pos.toLsp)
       case Defn.Var(_, List(Pat.Var(name)), tpe, _) if tpe.isDefined =>
-        Some(name.pos.toLSP)
+        Some(name.pos.toLsp)
       case _ =>
         None
     }
 
     def adjustTypeAction(typ: String, range: l.Range): l.CodeAction = {
       val commandTypeAction =
-        ServerCommands.InsertInferredType.toLSP(
+        ServerCommands.InsertInferredType.toLsp(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             range.getStart(),

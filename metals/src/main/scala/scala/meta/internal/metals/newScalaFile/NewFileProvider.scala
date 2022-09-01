@@ -256,7 +256,7 @@ class NewFileProvider(
     } else {
       Future {
         path.writeText(template.fileContent)
-        (path, template.cursorPosition.toLSP)
+        (path, template.cursorPosition.toLsp)
       }
     }
     result.failed.foreach {

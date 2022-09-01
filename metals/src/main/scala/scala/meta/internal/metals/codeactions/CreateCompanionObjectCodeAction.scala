@@ -80,7 +80,7 @@ class CreateCompanionObjectCodeAction(
           case _ => None
         }
       }
-    endMarkerPos.getOrElse(t.pos).toLSP.getEnd
+    endMarkerPos.getOrElse(t.pos).toLsp.getEnd
   }
 
   private def getIndentationForPositionInDocument(
@@ -163,7 +163,7 @@ class CreateCompanionObjectCodeAction(
       companionObjectPosion: l.Position,
   ): l.Command = {
     val cursorRange = new l.Range(companionObjectPosion, companionObjectPosion)
-    ServerCommands.GotoPosition.toLSP(
+    ServerCommands.GotoPosition.toLsp(
       new Location(
         uri,
         cursorRange,
