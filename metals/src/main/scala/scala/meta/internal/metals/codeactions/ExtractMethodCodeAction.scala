@@ -67,25 +67,22 @@ class ExtractMethodCodeAction(
           val defnPos =
             stats(block).find(_.pos.end >= head.pos.end).getOrElse(defn)
           val scopeName = defnTitle(defn)
-
-          val codeAction = new l.CodeAction(
-            ExtractMethodCodeAction.title(scopeName)
+          val exprRange = new l.Range(
+            head.pos.toLSP.getStart(),
+            expr.pos.toLSP.getEnd(),
           )
-          codeAction.setKind(l.CodeActionKind.RefactorExtract)
-
-          codeAction.setCommand(
-            ServerCommands.ExtractMethod.toLSP(
-              ServerCommands.ExtractMethodParams(
-                params.getTextDocument(),
-                new l.Range(
-                  head.pos.toLSP.getStart(),
-                  expr.pos.toLSP.getEnd(),
-                ),
-                defnPos.pos.toLSP.getStart(),
-              )
+          val command = ServerCommands.ExtractMethod.toLSP(
+            ServerCommands.ExtractMethodParams(
+              params.getTextDocument(),
+              exprRange,
+              defnPos.pos.toLSP.getStart(),
             )
           )
-          codeAction
+          CodeActionBuilder.build(
+            title = ExtractMethodCodeAction.title(scopeName),
+            kind = this.kind,
+            command = Some(command),
+          )
         }
       }
       .getOrElse(Nil)
