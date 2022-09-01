@@ -349,16 +349,17 @@ class Scala3CodeActionLspSuite
        |  Foo(4,5,6)
        |}""".stripMargin,
   )
+
   check(
-    "convert-new-apply",
+    "convert-new-apply-multiple",
     """|object Something {
-       |  class Foo(param1: Int, param2: Int)
-       |  val a = new Foo(<<1>>, param2 = 2)
+       |  class Foo(param1: Int, param2: Int)(param3: Int)
+       |  val a = new Foo(<<1>>, param2 = 2)(3)
        |}""".stripMargin,
     s"${ConvertToNamedArguments.title("Foo(...)")}",
     """|object Something {
-       |  class Foo(param1: Int, param2: Int)
-       |  val a = new Foo(param1 = 1, param2 = 2)
+       |  class Foo(param1: Int, param2: Int)(param3: Int)
+       |  val a = new Foo(param1 = 1, param2 = 2)(param3 = 3)
        |}""".stripMargin,
   )
 

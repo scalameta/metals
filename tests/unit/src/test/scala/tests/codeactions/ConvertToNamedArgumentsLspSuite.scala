@@ -76,6 +76,7 @@ class ConvertToNamedArgumentsLspSuite
        |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
        |}""".stripMargin,
   )
+
   check(
     "new-apply",
     """|object Something {
@@ -86,6 +87,19 @@ class ConvertToNamedArgumentsLspSuite
     """|object Something {
        |  class Foo(param1: Int, param2: Int)
        |  val a = new Foo(param1 = 1, param2 = 2)
+       |}""".stripMargin,
+  )
+
+  check(
+    "new-apply-multiple",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)(param3: Int)
+       |  val a = new Foo(<<1>>, param2 = 2)(3)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo(...)")}",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)(param3: Int)
+       |  val a = new Foo(param1 = 1, param2 = 2)(param3 = 3)
        |}""".stripMargin,
   )
 
@@ -211,11 +225,11 @@ class ConvertToNamedArgumentsLspSuite
     filterAction = filterAction,
   )
 
-  checkNoAction(
-    "new-multiple-lists",
-    """|object Something {
-       |  class Foo(param1: Int)(param2: Int)
-       |  val a = new Foo(<<1>>)(2)
-       |}""".stripMargin,
-  )
+//   checkNoAction(
+//     "new-multiple-lists",
+//     """|object Something {
+//        |  class Foo(param1: Int)(param2: Int)
+//        |  val a = new Foo(<<1>>)(2)
+//        |}""".stripMargin,
+//   )
 }

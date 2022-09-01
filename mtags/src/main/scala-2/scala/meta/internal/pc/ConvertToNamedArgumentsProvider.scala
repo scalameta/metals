@@ -19,17 +19,32 @@ final class ConvertToNamedArgumentsProvider(
     )
 
     val typedTree = typedTreeAt(unit.position(params.offset))
+    object FromNewApply {
+      def unapply(tree: Tree): Option[(Tree, List[Tree])] =
+        tree match {
+          case fun @ Select(New(_), _) =>
+            Some((fun, Nil))
+          case Apply(FromNewApply(fun, argss), args) =>
+            Some(fun, argss ++ args)
+          case _ => None
+        }
+    }
+
+    def makeTextEdits(params: List[Symbol], args: List[Tree]) = {
+      args.zipWithIndex.zip(params).collect {
+        case ((arg, index), param) if argIndices.contains(index) => {
+          val position = arg.pos.toLSP
+          position.setEnd(position.getStart())
+          new l.TextEdit(position, s"${param.nameString} = ")
+        }
+      }
+    }
+
     typedTree match {
+      case FromNewApply(fun, args) =>
+        makeTextEdits(fun.tpe.paramss.flatten, args)
       case Apply(fun, args) =>
-        args.zipWithIndex
-          .zip(fun.tpe.params)
-          .collect {
-            case ((arg, index), param) if argIndices.contains(index) => {
-              val position = arg.pos.toLSP
-              position.setEnd(position.getStart())
-              new l.TextEdit(position, s"${param.nameString} = ")
-            }
-          }
+        makeTextEdits(fun.tpe.params, args)
       case _ => Nil
     }
   }

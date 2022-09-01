@@ -38,6 +38,18 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
        |  val a = new Foo(param1 = 1, param2 = 2)
        |}""".stripMargin,
   )
+  checkEdit(
+    "new-apply-multiple",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)(param3: Int)
+       |  val a = <<new Foo(1, param2 = 2)(3)>>
+       |}""".stripMargin,
+    List(0, 2),
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)(param3: Int)
+       |  val a = new Foo(param1 = 1, param2 = 2)(param3 = 3)
+       |}""".stripMargin,
+  )
 
   def checkEdit(
       name: TestOptions,

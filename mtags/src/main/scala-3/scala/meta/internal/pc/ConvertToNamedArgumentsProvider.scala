@@ -38,22 +38,39 @@ final class ConvertToNamedArgumentsProvider(
       fun.tpe match
         case m: MethodType => m.paramNamess.map(_.map(_.toString))
         case _ => fun.symbol.rawParamss.map(_.map(_.name.show))
+
+    object FromNewApply:
+      def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[tpd.Tree])] =
+        tree match
+          case fun @ tpd.Select(tpd.New(_), _) =>
+            Some((fun, Nil))
+          case tpd.Apply(FromNewApply(fun, argss), args) =>
+            Some(fun, argss ++ args)
+          case _ => None
+
     def edits(tree: Option[tpd.Tree])(using Context): List[l.TextEdit] =
+      def makeTextEdits(fun: tpd.Tree, args: List[tpd.Tree]) =
+        args.zipWithIndex
+          .zip(paramss(fun).flatten)
+          .collect {
+            case ((arg, index), param) if argIndices.contains(index) => {
+              val position = arg.sourcePos.toLSP
+              position.setEnd(position.getStart())
+              new l.TextEdit(position, s"$param = ")
+            }
+          }
+
       tree match
         case Some(t) =>
           t match
+            case FromNewApply(fun, args) =>
+              makeTextEdits(fun, args)
             case tpd.Apply(fun, args) =>
-              args.zipWithIndex
-                .zip(paramss(fun).flatten)
-                .collect {
-                  case ((arg, index), param) if argIndices.contains(index) => {
-                    val position = arg.sourcePos.toLSP
-                    position.setEnd(position.getStart())
-                    new l.TextEdit(position, s"$param = ")
-                  }
-                }
+              makeTextEdits(fun, args)
             case _ => Nil
         case _ => Nil
+      end match
+    end edits
     edits(tree)(using newctx)
   end convertToNamedArguments
 end ConvertToNamedArgumentsProvider
