@@ -26,8 +26,8 @@ private[callHierarchy] trait CallHierarchyHelpers {
 
   /** Type declarations are not considered in call hierarchy request, this function helps to filter them. */
   def isTypeDeclaration(tree: Tree): Boolean =
-    (tree.parent
-      .map {
+    tree.parent
+      .fold(false) {
         case t: Template => t.inits.contains(tree)
         case p: Term.Param => p.decltpe.contains(tree)
         case at: Term.ApplyType => at.targs.contains(tree)
@@ -40,8 +40,7 @@ private[callHierarchy] trait CallHierarchyHelpers {
         case _: Type.Bounds => true
         case t @ (_: Type | _: Name | _: Init) => isTypeDeclaration(t)
         case _ => false
-      })
-      .getOrElse(false)
+      }
 
   /**
    * Go up in the tree to find a specified tree or find any definition.
@@ -172,7 +171,7 @@ private[callHierarchy] trait CallHierarchyHelpers {
   )(implicit ec: ExecutionContext): Future[List[AbsolutePath]] = {
     val futurePaths =
       if (!isLocal)
-        references.pathsMightContainSymbol(source, symbols)
+        references.allPathsFor(source, symbols)
       else Future.successful(Set.empty[AbsolutePath])
     futurePaths.map(paths => (paths ++ Option.when(searchLocal)(source)).toList)
   }

@@ -38,22 +38,30 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
     item
   }
 
-  private def getClassContructorSymbol(
+  // When we search the call hierarchy of a class, we also need to search the symbol of the primary constructor
+  private def getContructorRelatedSymbol(
       info: s.SymbolInformation
-  ): List[String] =
-    if (info.isClass)
-      info.signature
-        .asInstanceOf[s.ClassSignature]
-        .declarations
-        .flatMap(
-          _.symlinks.find(_.endsWith("`<init>`()."))
+  ): Array[String] =
+    info.signature match {
+      case s.ClassSignature(_, _, _, declarations) =>
+        val constructor = declarations
+          .flatMap(
+            _.symlinks.find(_.endsWith("`<init>`()."))
+          )
+        // for case class apply is like a constructor
+        val applySymbol = Option.when(info.isCase)(
+          info.symbol.replace("#", ".apply().")
         )
-        .toList ++ Option.when(info.isCase)(
-        info.symbol.replace("#", ".apply().")
-      ) // handling case class constructors
-    else Nil
+        Set(Some(info.symbol), constructor, applySymbol).flatten.toArray
+      case _ =>
+        Array(info.symbol)
+    }
 
-  /** Get the name of the class of a constructor */
+  /**
+   * Get the display name from the symbol information.
+   * For constructor, strip the symbol to the class name,
+   * otherwise return symbols's display name.
+   */
   private def getName(info: s.SymbolInformation): String =
     if (info.isConstructor && info.displayName == "<init>")
       info.symbol.slice(
@@ -62,21 +70,27 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
       )
     else info.displayName
 
+  // Regular expression to capture the group inside hovers that indicate the symbol signature.
+  private val symbolSignatureExtractor =
+    """Symbol signature\*\*:\n```scala\n(.*)\n```""".r
+
   private def getDetail(
       signature: String,
       visited: Array[String],
       symbol: String,
   ): String =
+    // We have to remove the last visited symbol to see if it exists previously in the list of visited symbols.
     (if (visited.dropRight(1).contains(symbol)) icons.sync + " "
      else "") + signature
 
   private def getSignatureFromHover(hover: Option[l.Hover]): Option[String] =
-    (for {
+    for {
       hover <- hover
       hoverContent <- hover.getContents().asScala.toOption
-      `match` <- """Symbol signature\*\*:\n```scala\n(.*)\n```""".r
-        .findFirstMatchIn(hoverContent.getValue)
-    } yield `match`.group(1))
+      `match` <- symbolSignatureExtractor.findFirstMatchIn(
+        hoverContent.getValue
+      )
+    } yield Option(`match`.group(1)).getOrElse("") // `group` may return null
 
   private def buildItem(
       symbolInformations: Seq[s.SymbolInformation],
@@ -102,8 +116,7 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
             symbol,
           ),
           CallHierarchyItemInfo(
-            // When we search the call hierarchy of a class, we also need to search the symbol of the primary constructor
-            (Set(symbol) ++ getClassContructorSymbol(info)).toArray,
+            getContructorRelatedSymbol(info),
             visited,
             symbol.isLocal,
             symbol.isLocal || source.isDependencySource(
