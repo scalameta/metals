@@ -9,16 +9,19 @@ import scala.meta as m
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.MetalsInteractive.*
+import scala.meta.internal.pc.printer.MetalsPrinter
+import scala.meta.internal.pc.printer.MetalsPrinter.IncludeDefaultParam
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
+import scala.meta.pc.SymbolSearch
 
-import dotty.tools.dotc.core.Flags.Method
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.DeepFolder
 import dotty.tools.dotc.ast.tpd.TreeTraverser
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Flags.Method
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Names.TermName
 import dotty.tools.dotc.core.Symbols.Symbol
@@ -34,6 +37,7 @@ final class ExtractMethodProvider(
     range: RangeParams,
     extractionPos: OffsetParams,
     driver: InteractiveDriver,
+    search: SymbolSearch,
 ) extends ExtractMethodUtils:
 
   def extractMethod(): List[TextEdit] =
@@ -43,15 +47,15 @@ final class ExtractMethodProvider(
     val source = SourceFile.virtual(filePath.toString, text)
     driver.run(uri, source)
     val unit = driver.currentCtx.run.units.head
-    val pos =
-      val rangePos = driver.sourcePosition(range)
-      rangePos.withEnd(rangePos.start)
+    val pos = driver.sourcePosition(range).startPos
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
     given locatedCtx: Context =
       val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
       MetalsInteractive.contextOfPath(path)(using newctx)
     val indexedCtx = IndexedContext(locatedCtx)
+    val printer =
+      MetalsPrinter.standard(indexedCtx, search, IncludeDefaultParam.Never)
 
     def extractFromBlock(t: tpd.Tree): List[tpd.Tree] =
       t match
@@ -65,7 +69,7 @@ final class ExtractMethodProvider(
         ts: List[tpd.Tree],
         defnPos: SourcePosition,
         extractedPos: SourcePosition,
-    ) =
+    ): (List[Symbol], List[Symbol]) =
       def nonAvailable(sym: Symbol): Boolean =
         val symPos = sym.sourcePos
         symPos.exists && defnPos.contains(symPos) && !extractedPos
@@ -73,27 +77,32 @@ final class ExtractMethodProvider(
       def collectNames(symbols: Set[Symbol], tree: tpd.Tree): Set[Symbol] =
         tree match
           case id @ Ident(_) =>
-            if nonAvailable(id.symbol) && id.symbol.isTerm && !id.symbol.is(
+            val sym = id.symbol
+            // Currently we are not extracting methods and we leave it to the user
+            if nonAvailable(sym) && (sym.isTerm || sym.isTypeParam) && !sym.is(
                 Method
               )
-            then symbols + id.symbol
+            then symbols + sym
             else symbols
           case _ => symbols
 
       val traverser = new DeepFolder[Set[Symbol]](collectNames)
-      val methodParams = ts
+      val allSymbols = ts
         .foldLeft(Set.empty[Symbol])(traverser(_, _))
-        .toList
-        .sortBy(_.decodedName)
-      val typeParams =
-        methodParams
-          .map(_.info.typeSymbol)
-          .filter(t => nonAvailable(t) && t.isTypeParam)
-          .distinct
-      pprint.log(methodParams.map(_.info.typeSymbol))
-      pprint.log(methodParams.map(_.info.typeSymbol.isTypeParam))
 
-      (methodParams, typeParams)
+      val methodParams = allSymbols.toList.filter(_.isTerm)
+      val methodParamTypes = methodParams
+        .map(_.info.typeSymbol)
+        .filter(tp => nonAvailable(tp) && tp.isTypeParam)
+        .distinct
+      // Type parameter can be a type of one of the parameters or a type parameter in extracted code
+      val typeParams =
+        allSymbols.filter(_.isTypeParam) ++ methodParamTypes
+
+      (
+        methodParams.sortBy(_.decodedName),
+        typeParams.toList.sortBy(_.decodedName),
+      )
     end localRefs
     val edits =
       for
@@ -107,13 +116,13 @@ final class ExtractMethodProvider(
       yield
         val defnPos = stat.sourcePos
         val extractedPos = head.sourcePos.withEnd(expr.sourcePos.end)
-        val exprType = expr.tpe.widenUnion.typeSymbol.showName
+        val exprType = printer.tpe(expr.tpe.widen)
         val name =
           genName(indexedCtx.scopeSymbols.map(_.decodedName).toSet, "newMethod")
         val (methodParams, typeParams) =
           localRefs(extracted, stat.sourcePos, extractedPos)
         val methodParamsText = methodParams
-          .map(sym => s"${sym.decodedName}: ${sym.info.typeSymbol.showName}")
+          .map(sym => s"${sym.decodedName}: ${printer.tpe(sym.info)}")
           .mkString(", ")
         val typeParamsText = typeParams
           .map(_.decodedName) match
@@ -124,7 +133,7 @@ final class ExtractMethodProvider(
         val oldIndentLen = head.startPos.startColumnPadding.length()
         val toExtract =
           textToExtract(
-            text,
+            range.text(),
             head.startPos.start,
             expr.endPos.end,
             newIndent,

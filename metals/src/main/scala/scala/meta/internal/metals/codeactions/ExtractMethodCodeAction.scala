@@ -8,7 +8,6 @@ import scala.meta.Pat
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.parsing.Trees

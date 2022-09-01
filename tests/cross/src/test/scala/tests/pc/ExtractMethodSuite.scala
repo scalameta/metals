@@ -307,23 +307,23 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
         |}""".stripMargin,
   )
   checkEdit(
-      "method-type-no-param",
-      s"""|object A{
-          |  def method(i: Int) = i + 1
-          |  @@def f1[T](a: T) = {
-          |    <<Set.empty[T]>>
-          |  }
-          |}""".stripMargin,
-      s"""|object A{
-          |  def method(i: Int) = i + 1
-          |  def newMethod[T](): Set[T] =
-          |    Set.empty[T]
-          |
-          |  def f1[T](a: T) = {
-          |    newMethod()
-          |  }
-          |}""".stripMargin,
-    )
+    "method-type-no-param",
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  @@def f1[T](a: T) = {
+        |    <<Set.empty[T]>>
+        |  }
+        |}""".stripMargin,
+    s"""|object A{
+        |  def method(i: Int) = i + 1
+        |  def newMethod[T](): Set[T] =
+        |    Set.empty[T]
+        |
+        |  def f1[T](a: T) = {
+        |    newMethod()
+        |  }
+        |}""".stripMargin,
+  )
 
   checkEdit(
     "inner-conflict",

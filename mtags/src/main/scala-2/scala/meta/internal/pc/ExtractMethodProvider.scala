@@ -57,13 +57,22 @@ final class ExtractMethodProvider(
       def symFromIdent(id: Ident): Set[Symbol] = {
         val sym = id.symbol match {
           case _: NoSymbol =>
-            context.lookupSymbol(id.name, s => s.isTerm) match {
+            // This case is mostly for class parameters, which are also getters,
+            // so we don't use `!sym.isMethod`
+            context.lookupSymbol(
+              id.name,
+              s =>
+                s.isTerm || s.isTypeParameterOrSkolem // skolem is a type parameter viewed from inside its scopes
+            ) match {
               case LookupSucceeded(_, symbol) =>
-                pprint.log(symbol)
                 Set(symbol)
               case _ => Set.empty[Symbol]
             }
-          case _ => Set(id.symbol).filter(s => s.isTerm && !s.isMethod)
+          case _ =>
+            // Currently we are not extracting methods and we leave it to the user
+            Set(id.symbol).filter(s =>
+              (s.isTerm || s.isTypeParameterOrSkolem) && !s.isMethod
+            )
         }
         sym.filter(nonAvailable(_))
       }
@@ -75,23 +84,24 @@ final class ExtractMethodProvider(
           case _ =>
             tree.children.foldLeft(symbols)(traverse(_, _))
         }
-      val methodParams = ts
+      val allSymbols = ts
         .foldLeft(Set.empty[Symbol])(traverse(_, _))
-        .toList
-        .sortBy(_.decodedName)
+
+      val methodParams = allSymbols.toList.filter(_.isTerm)
+      val methodParamTypes = methodParams
+        .map(_.info.typeSymbol)
+        .filter(tp => nonAvailable(tp) && tp.isTypeParameterOrSkolem)
+        .distinct
+
+      // Type parameter can be a type of one of the parameters or a type parameter in extracted code
       val typeParams =
-        methodParams
-          .map(_.info.typeSymbol)
-          .filter(tp => nonAvailable(tp) && tp.isTypeParameterOrSkolem)
-          .distinct
-      pprint.log(methodParams.map(_.info.typeSymbol))
-      pprint.log(methodParams.map(_.info.typeSymbol.isSkolem))
+        allSymbols.filter(_.isTypeParameterOrSkolem) ++ methodParamTypes
 
-      (methodParams, typeParams)
+      (
+        methodParams.sortBy(_.decodedName),
+        typeParams.toList.sortBy(_.decodedName)
+      )
     }
-    pprint.log(scopeSymbols.filter(_.pos.isDefined))
-    pprint.log(scopeSymbols.filter(_.isSkolem))
-
     val path = compiler.lastVisitedParentTrees
     val edits =
       for {
