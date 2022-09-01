@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: "temurin"
-          java-version: ${{ matrix.java }}
+          java-version: "17"
           cache: "sbt"
       - name: "Query maven-central"
         run: |
