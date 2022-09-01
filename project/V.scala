@@ -23,7 +23,7 @@ object V {
   val gradleBloop = bloop
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.7.4"
-  val jsoup = "1.15.2"
+  val jsoup = "1.15.3"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.15.0"
   val mavenBloop = bloop
