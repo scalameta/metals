@@ -11,7 +11,7 @@ object V {
   val ammonite213Version = "2.13.8"
   val ammonite3Version = "3.1.3"
 
-  val ammonite = "2.5.4-13-1ebd00a6"
+  val ammonite = "2.5.4-19-cd76521f"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.3-28-373a64c9"
   val bloopNightly = bloop
@@ -23,21 +23,21 @@ object V {
   val gradleBloop = bloop
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.7.4"
-  val jsoup = "1.15.2"
+  val jsoup = "1.15.3"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.15.0"
   val mavenBloop = bloop
-  val mill = "0.10.5"
+  val mill = "0.10.7"
   val mdoc = "2.3.3"
   val munit = "1.0.0-M6"
   val organizeImportRule = "0.6.0"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
-  val scalaCli = "0.1.11"
+  val scalaCli = "0.1.12"
   val scalafix = "0.10.1"
   val scalafmt = "3.5.3"
-  val scalameta = "4.5.11"
+  val scalameta = "4.5.13"
   val scribe = "3.10.3"
   val semanticdb = scalameta
   val qdox = "2.0.1"

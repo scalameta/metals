@@ -347,7 +347,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.11.0",
+      "com.geirsson" %% "metaconfig-core" % "0.11.1",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.16",
       // for file watching
@@ -356,7 +356,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.19.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.7.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.1.3",
+      "org.flywaydb" % "flyway-core" % "9.1.6",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.5.0",
