@@ -38,7 +38,7 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
     term match {
       case Some(apply: Term.Apply) =>
         getTermWithArgs(apply, apply.args)
-      case Some(newAppl @ Term.New(init)) =>
+      case Some(newAppl @ Term.New(init)) if init.argss.length <= 1 =>
         getTermWithArgs(newAppl, init.argss.flatten)
       case Some(t) => firstApplyWithUnnamedArgs(t.parent)
       case _ => None

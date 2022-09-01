@@ -349,6 +349,18 @@ class Scala3CodeActionLspSuite
        |  Foo(4,5,6)
        |}""".stripMargin,
   )
+  check(
+    "convert-new-apply",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)
+       |  val a = new Foo(<<1>>, param2 = 2)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo(...)")}",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)
+       |  val a = new Foo(param1 = 1, param2 = 2)
+       |}""".stripMargin,
+  )
 
   check(
     "given-object-creation",

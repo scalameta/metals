@@ -29,13 +29,13 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
   checkEdit(
     "new-apply",
     """|object Something {
-       |  class Car(age: Int)
-       |  <<new Car(1)>>
+       |  class Foo(param1: Int, param2: Int)
+       |  val a = <<new Foo(1, param2 = 2)>>
        |}""".stripMargin,
     List(0),
     """|object Something {
-       |  class Car(age: Int)
-       |  new Car(age = 1)
+       |  class Foo(param1: Int, param2: Int)
+       |  val a = new Foo(param1 = 1, param2 = 2)
        |}""".stripMargin,
   )
 

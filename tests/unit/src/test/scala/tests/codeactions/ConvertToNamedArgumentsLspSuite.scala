@@ -79,13 +79,13 @@ class ConvertToNamedArgumentsLspSuite
   check(
     "new-apply",
     """|object Something {
-       |  class Car(age: Int)
-       |  new Car(<<1>>)
+       |  class Foo(param1: Int, param2: Int)
+       |  val a = new Foo(<<1>>, param2 = 2)
        |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("Car(...)")}",
+    s"${ConvertToNamedArguments.title("Foo(...)")}",
     """|object Something {
-       |  class Car(age: Int)
-       |  new Car(age = 1)
+       |  class Foo(param1: Int, param2: Int)
+       |  val a = new Foo(param1 = 1, param2 = 2)
        |}""".stripMargin,
   )
 
@@ -209,5 +209,13 @@ class ConvertToNamedArgumentsLspSuite
        |  F<<u>>ture.successful(1)
        |}""".stripMargin,
     filterAction = filterAction,
+  )
+
+  checkNoAction(
+    "new-multiple-lists",
+    """|object Something {
+       |  class Foo(param1: Int)(param2: Int)
+       |  val a = new Foo(<<1>>)(2)
+       |}""".stripMargin,
   )
 }
