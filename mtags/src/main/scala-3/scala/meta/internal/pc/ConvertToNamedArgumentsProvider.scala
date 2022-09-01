@@ -34,16 +34,19 @@ final class ConvertToNamedArgumentsProvider(
     val tree = Interactive.pathTo(trees, pos)(using newctx).headOption
     val result = collection.mutable.ListBuffer.empty[l.TextEdit]
 
-    def paramss(fun: tpd.Tree)(using Context): List[List[String]] =
+    def paramss(fun: tpd.Tree)(using Context): List[String] =
       fun.tpe match
-        case m: MethodType => m.paramNamess.map(_.map(_.toString))
-        case _ => fun.symbol.rawParamss.map(_.map(_.name.show))
+        case m: MethodType => m.paramNamess.flatten.map(_.toString)
+        case _ =>
+          fun.symbol.rawParamss.flatten.filter(!_.isTypeParam).map(_.name.show)
 
     object FromNewApply:
       def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[tpd.Tree])] =
         tree match
           case fun @ tpd.Select(tpd.New(_), _) =>
             Some((fun, Nil))
+          case tpd.TypeApply(FromNewApply(fun, argss), _) =>
+            Some(fun, argss)
           case tpd.Apply(FromNewApply(fun, argss), args) =>
             Some(fun, argss ++ args)
           case _ => None
@@ -51,7 +54,7 @@ final class ConvertToNamedArgumentsProvider(
     def edits(tree: Option[tpd.Tree])(using Context): List[l.TextEdit] =
       def makeTextEdits(fun: tpd.Tree, args: List[tpd.Tree]) =
         args.zipWithIndex
-          .zip(paramss(fun).flatten)
+          .zip(paramss(fun))
           .collect {
             case ((arg, index), param) if argIndices.contains(index) => {
               val position = arg.sourcePos.toLSP

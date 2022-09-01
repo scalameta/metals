@@ -102,6 +102,18 @@ class ConvertToNamedArgumentsLspSuite
        |  val a = new Foo(param1 = 1, param2 = 2)(param3 = 3)
        |}""".stripMargin,
   )
+  check(
+    "new-apply-multiple-type",
+    """|object Something {
+       |  class Foo[T](param1: Int, param2: Int)(param3: T)
+       |  val a = new Foo[Int](<<1>>, param2 = 2)(3)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo[Int](...)")}",
+    """|object Something {
+       |  class Foo[T](param1: Int, param2: Int)(param3: T)
+       |  val a = new Foo[Int](param1 = 1, param2 = 2)(param3 = 3)
+       |}""".stripMargin,
+  )
 
   check(
     "multiple-arg-lists-start-of-2nd",
