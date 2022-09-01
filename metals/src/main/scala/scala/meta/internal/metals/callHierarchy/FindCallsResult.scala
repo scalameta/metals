@@ -13,18 +13,19 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j
 
-private[callHierarchy] sealed trait FindCallsResult[T <: FindCallsResult[T]] {
+private[callHierarchy] sealed trait FindCallsResult[T, S <: FindCallsResult[
+  T,
+  _,
+]] {
   def occurence: SymbolOccurrence
   def definitionNameRange: lsp4j.Range
   def fromRanges: List[lsp4j.Range]
-  def aggregate(updatedFromRanges: List[lsp4j.Range]): T
 
-  protected def toLSP[T](
-      source: AbsolutePath,
-      doc: TextDocument,
-      visited: Array[String],
+  protected def toLSP(
+      lspBuilder: (lsp4j.CallHierarchyItem, ju.List[lsp4j.Range]) => T
+  )(source: AbsolutePath, doc: TextDocument)(
       builder: CallHierarchyItemBuilder,
-      lspBuilder: (lsp4j.CallHierarchyItem, ju.List[lsp4j.Range]) => T,
+      visited: Array[String],
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[T] =
     occurence match {
@@ -45,6 +46,8 @@ private[callHierarchy] sealed trait FindCallsResult[T <: FindCallsResult[T]] {
             )
           }
     }
+
+  protected def aggregate(updatedFromRanges: List[lsp4j.Range]): S
 }
 
 /**
@@ -58,12 +61,25 @@ private[callHierarchy] case class FindIncomingCallsResult(
     occurence: SymbolOccurrence,
     definitionNameRange: lsp4j.Range,
     fromRanges: List[lsp4j.Range],
-) extends FindCallsResult[FindIncomingCallsResult] {
+)(implicit ec: ExecutionContext)
+    extends FindCallsResult[
+      lsp4j.CallHierarchyIncomingCall,
+      FindIncomingCallsResult,
+    ] {
 
-  def aggregate(
+  override protected def aggregate(
       updatedFromRanges: List[lsp4j.Range]
   ): FindIncomingCallsResult =
     this.copy(fromRanges = updatedFromRanges)
+
+  private val anonToLSP: (AbsolutePath, TextDocument) => (
+      CallHierarchyItemBuilder,
+      Array[String],
+      CancelToken,
+  ) => Future[lsp4j.CallHierarchyIncomingCall] =
+    toLSP((from, fromRanges) =>
+      new lsp4j.CallHierarchyIncomingCall(from, fromRanges)
+    ) _
 
   def toLSP(
       source: AbsolutePath,
@@ -71,16 +87,8 @@ private[callHierarchy] case class FindIncomingCallsResult(
       builder: CallHierarchyItemBuilder,
       visited: Array[String],
       token: CancelToken,
-  )(implicit ec: ExecutionContext): Future[lsp4j.CallHierarchyIncomingCall] =
-    toLSP(
-      source,
-      doc,
-      visited,
-      builder,
-      (to, fromRanges) => new lsp4j.CallHierarchyIncomingCall(to, fromRanges),
-      token,
-    )
-  // toLSP(source, doc)(builder, visited, token)()
+  ): Future[lsp4j.CallHierarchyIncomingCall] =
+    anonToLSP(source, doc)(builder, visited, token)
 }
 
 /**
@@ -98,26 +106,31 @@ private[callHierarchy] case class FindOutgoingCallsResult(
     fromRanges: List[lsp4j.Range],
     source: AbsolutePath,
     doc: TextDocument,
-) extends FindCallsResult[FindOutgoingCallsResult] {
+)(implicit ec: ExecutionContext)
+    extends FindCallsResult[
+      lsp4j.CallHierarchyOutgoingCall,
+      FindOutgoingCallsResult,
+    ] {
 
-  def aggregate(
+  override protected def aggregate(
       updatedFromRanges: List[lsp4j.Range]
   ): FindOutgoingCallsResult =
     this.copy(fromRanges = updatedFromRanges)
+
+  private val anonToLSP
+      : (CallHierarchyItemBuilder, Array[String], CancelToken) => Future[
+        lsp4j.CallHierarchyOutgoingCall
+      ] =
+    toLSP((to, fromRanges) =>
+      new lsp4j.CallHierarchyOutgoingCall(to, fromRanges)
+    )(source, doc)
 
   def toLSP(
       builder: CallHierarchyItemBuilder,
       visited: Array[String],
       token: CancelToken,
-  )(implicit ec: ExecutionContext): Future[lsp4j.CallHierarchyOutgoingCall] =
-    toLSP(
-      source,
-      doc,
-      visited,
-      builder,
-      (to, fromRanges) => new lsp4j.CallHierarchyOutgoingCall(to, fromRanges),
-      token,
-    )
+  ): Future[lsp4j.CallHierarchyOutgoingCall] =
+    anonToLSP(builder, visited, token)
 }
 
 private[callHierarchy] object FindCallsResult {
@@ -129,15 +142,11 @@ private[callHierarchy] object FindCallsResult {
   }
 
   /** Aggregate results of incoming calls finder by grouping the fromRanges. */
-  def group[T <: FindCallsResult[T]](
+  def group[T <: FindCallsResult[_, T]](
       results: List[T]
-  ): List[T] = {
-    results
-      .groupBy(_.occurence)
-      .values
-      .collect { case result @ first :: _ =>
+  ): List[T] =
+    results.groupBy(_.occurence).values.toList.collect {
+      case result @ first :: _ =>
         first.aggregate(clearRanges(result.flatMap(_.fromRanges)))
-      }
-      .toList
-  }
+    }
 }

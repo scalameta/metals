@@ -203,6 +203,28 @@ final class ReferenceProvider(
     }
   }
 
+  /**
+   * Return all paths to files which contain at least one symbol from isSymbol set.
+   */
+  private def pathsFor(
+      buildTarget: BuildTargetIdentifier,
+      isSymbol: Set[String],
+  ): Iterator[AbsolutePath] = {
+    val allowedBuildTargets = buildTargets.allInverseDependencies(buildTarget)
+    val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+    val result = for {
+      (path, entry) <- index.iterator
+      if allowedBuildTargets.contains(entry.id) &&
+        isSymbol.exists(entry.bloom.mightContain)
+      sourcePath = AbsolutePath(path)
+      if !visited(sourcePath)
+      _ = visited.add(sourcePath)
+      if sourcePath.exists
+    } yield sourcePath
+
+    result
+  }
+
   private def workspaceReferences(
       source: AbsolutePath,
       isSymbol: Set[String],
@@ -213,16 +235,8 @@ final class ReferenceProvider(
     buildTargets.inverseSources(source) match {
       case None => Seq.empty
       case Some(id) =>
-        val allowedBuildTargets = buildTargets.allInverseDependencies(id)
-        val visited = scala.collection.mutable.Set.empty[AbsolutePath]
         val result = for {
-          (path, entry) <- index.iterator
-          if allowedBuildTargets.contains(entry.id) &&
-            isSymbol.exists(entry.bloom.mightContain)
-          sourcePath = AbsolutePath(path)
-          if !visited(sourcePath)
-          _ = visited.add(sourcePath)
-          if sourcePath.exists
+          sourcePath <- pathsFor(id, isSymbol)
           semanticdb <-
             semanticdbs
               .textDocument(sourcePath)
@@ -257,7 +271,10 @@ final class ReferenceProvider(
     }
   }
 
-  private[metals] def pathsMightContainSymbol(
+  /**
+   * Return all paths to files which contain at least one symbol from isSymbol set.
+   */
+  private[metals] def allPathsFor(
       source: AbsolutePath,
       isSymbol: Set[String],
   )(implicit ec: ExecutionContext): Future[Set[AbsolutePath]] = {
@@ -266,15 +283,7 @@ final class ReferenceProvider(
       .map {
         case None => Set.empty
         case Some(id) =>
-          val allowedBuildTargets = buildTargets.allInverseDependencies(id)
-          val result = for {
-            (path, entry) <- index.iterator
-            if allowedBuildTargets.contains(entry.id) &&
-              isSymbol.exists(entry.bloom.mightContain)
-            sourcePath = AbsolutePath(path)
-            if sourcePath.exists
-          } yield sourcePath
-          result.toSet
+          pathsFor(id, isSymbol).toSet
       }
   }
 

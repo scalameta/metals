@@ -10,7 +10,6 @@ import scala.meta.internal.metals._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -32,14 +31,7 @@ final case class CallHierarchyProvider(
     trees: Trees,
     buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext)
-    extends SemanticdbFeatureProvider
-    with CallHierarchyHelpers {
-
-  override def reset(): Unit = ()
-
-  override def onDelete(file: AbsolutePath): Unit = ()
-
-  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = ()
+    extends CallHierarchyHelpers {
 
   private val callHierarchyItemBuilder =
     new CallHierarchyItemBuilder(workspace, icons, compilers, buildTargets)
