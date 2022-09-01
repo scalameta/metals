@@ -354,7 +354,7 @@ class Scala3CodeActionLspSuite
     "convert-new-apply-multiple",
     """|object Something {
        |  class Foo(param1: Int, param2: Int)(param3: Int)
-       |  val a = new Foo(<<1>>, param2 = 2)(3)
+       |  val a = new Foo(1, param2 = 2<<)>>(3)
        |}""".stripMargin,
     s"${ConvertToNamedArguments.title("Foo(...)")}",
     """|object Something {
@@ -366,7 +366,7 @@ class Scala3CodeActionLspSuite
     "new-apply-multiple-type",
     """|object Something {
        |  class Foo[T](param1: Int, param2: Int)(param3: T)
-       |  val a = new Foo[Int](<<1>>, param2 = 2)(3)
+       |  val a = new Foo[Int]<<(>>1, param2 = 2)(3)
        |}""".stripMargin,
     s"${ConvertToNamedArguments.title("Foo[Int](...)")}",
     """|object Something {
