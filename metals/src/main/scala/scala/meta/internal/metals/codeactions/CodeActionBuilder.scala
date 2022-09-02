@@ -22,7 +22,7 @@ object CodeActionBuilder {
     codeAction.setKind(kind)
 
     logging.logErrorWhen(
-      !(changes.nonEmpty && documentChanges.nonEmpty),
+      changes.nonEmpty && documentChanges.nonEmpty,
       "Only changes or documentChanges can be set in code action at the same time",
     )
 
