@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.codeactions
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.logging
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
@@ -20,16 +21,23 @@ object CodeActionBuilder {
     codeAction.setTitle(title)
     codeAction.setKind(kind)
 
-    val workspaceEdits = new l.WorkspaceEdit()
-    workspaceEdits.setChanges(
-      changes
-        .map { case (path, edits) =>
-          path.toURI.toString -> edits.asJava
-        }
-        .toMap
-        .asJava
+    logging.logErrorWhen(
+      !(changes.nonEmpty && documentChanges.nonEmpty),
+      "Only document or documentChanges can be set in code action at the same time",
     )
-    workspaceEdits.setDocumentChanges(documentChanges.map(_.asJava).asJava)
+
+    val workspaceEdits = new l.WorkspaceEdit()
+    if (changes.nonEmpty)
+      workspaceEdits.setChanges(
+        changes
+          .map { case (path, edits) =>
+            path.toURI.toString -> edits.asJava
+          }
+          .toMap
+          .asJava
+      )
+    else if (documentChanges.nonEmpty)
+      workspaceEdits.setDocumentChanges(documentChanges.map(_.asJava).asJava)
 
     codeAction.setEdit(workspaceEdits)
     command.foreach(codeAction.setCommand)
