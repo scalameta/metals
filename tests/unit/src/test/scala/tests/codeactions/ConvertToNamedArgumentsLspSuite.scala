@@ -78,6 +78,44 @@ class ConvertToNamedArgumentsLspSuite
   )
 
   check(
+    "new-apply",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)
+       |  val a = new Foo<<(>>1, param2 = 2)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo(...)")}",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)
+       |  val a = new Foo(param1 = 1, param2 = 2)
+       |}""".stripMargin,
+  )
+
+  check(
+    "new-apply-multiple",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)(param3: Int)
+       |  val a = new Foo(1<<,>> param2 = 2)(3)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo(...)")}",
+    """|object Something {
+       |  class Foo(param1: Int, param2: Int)(param3: Int)
+       |  val a = new Foo(param1 = 1, param2 = 2)(param3 = 3)
+       |}""".stripMargin,
+  )
+  check(
+    "new-apply-multiple-type",
+    """|object Something {
+       |  class Foo[T](param1: Int, param2: Int)(param3: T)
+       |  val a = new Foo[Int](1, param2 = 2)<<(>>3)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo[Int](...)")}",
+    """|object Something {
+       |  class Foo[T](param1: Int, param2: Int)(param3: T)
+       |  val a = new Foo[Int](param1 = 1, param2 = 2)(param3 = 3)
+       |}""".stripMargin,
+  )
+
+  check(
     "multiple-arg-lists-start-of-2nd",
     """|object Something {
        |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
@@ -198,4 +236,5 @@ class ConvertToNamedArgumentsLspSuite
        |}""".stripMargin,
     filterAction = filterAction,
   )
+
 }
