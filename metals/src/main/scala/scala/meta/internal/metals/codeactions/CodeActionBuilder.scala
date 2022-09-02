@@ -23,7 +23,7 @@ object CodeActionBuilder {
 
     logging.logErrorWhen(
       !(changes.nonEmpty && documentChanges.nonEmpty),
-      "Only document or documentChanges can be set in code action at the same time",
+      "Only changes or documentChanges can be set in code action at the same time",
     )
 
     val workspaceEdits = new l.WorkspaceEdit()
