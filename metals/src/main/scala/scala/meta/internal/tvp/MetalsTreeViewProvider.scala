@@ -246,6 +246,11 @@ class MetalsTreeViewProvider(
                   ServerCommands.ResetNotifications,
                   "notifications-clear",
                 ),
+              TreeViewNode
+                .fromCommand(
+                  ServerCommands.AnalyzeStacktrace,
+                  "bug",
+                ),
             )
           case _ =>
             Array()
