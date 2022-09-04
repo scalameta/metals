@@ -20,3 +20,4 @@ jobs:
           author-email: scalameta@gmail.com
           author-name: Scalameta Bot
           repos-file: .github/steward-repos.md
+          other-args: '--add-labels'
