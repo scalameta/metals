@@ -1,6 +1,6 @@
 on:
   schedule:
-    - cron: '0 0 0 * 1,5' # every Monday and Friday
+    - cron: '0 0 * * 1,5' # every Monday and Friday
   workflow_dispatch:
 
 name: Launch Scala Steward
