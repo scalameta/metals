@@ -57,7 +57,7 @@ final case class CallHierarchyProvider(
         if occurence.role.isDefinition
         range <- occurence.range
         tree <- trees.findLastEnclosingAt(source, range.toLSP.getStart)
-        definition <- getSpecifiedOrFindDefinition(tree)
+        definition <- findDefinition(tree)
       } yield callHierarchyItemBuilder.build(
         source,
         doc,
