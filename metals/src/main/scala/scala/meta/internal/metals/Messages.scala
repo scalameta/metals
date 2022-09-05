@@ -112,6 +112,10 @@ object Messages {
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details",
   )
+  val ImportAlreadyRunning = new MessageParams(
+    MessageType.Warning,
+    s"Import already running. \nPlease cancel the current import to run a new one.",
+  )
   val ImportProjectPartiallyFailed = new MessageParams(
     MessageType.Warning,
     "Import project partially failed, limited functionality may work in some parts of the workspace. " +

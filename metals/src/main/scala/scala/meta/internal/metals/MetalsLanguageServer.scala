@@ -170,6 +170,7 @@ class MetalsLanguageServer(
   private val recentlyOpenedFiles = new ActiveFiles(time)
   private val recentlyFocusedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
+  @volatile
   private var isImportInProcess: Boolean = false
   @volatile
   var userConfig: UserConfiguration = UserConfiguration()
@@ -1754,15 +1755,18 @@ class MetalsLanguageServer(
         autoConnectToBuildServer().asJavaObject
       case ServerCommands.GenerateBspConfig() =>
         generateBspConfig().asJavaObject
-      case ServerCommands.ImportBuild() => 
+      case ServerCommands.ImportBuild() =>
         if (!isImportInProcess) {
           isImportInProcess = true
           val buildChange = slowConnectToBuildServer(forceImport = true)
           buildChange.onComplete(_ => isImportInProcess = false)
           buildChange.asJavaObject
         } else {
-          Future.successful(languageClient.showMessage(
-          new MessageParams(MessageType.Warning, s"Import already running. \nPlease cancel the current import to run a new one."))).asJavaObject
+          Future
+            .successful(
+              languageClient.showMessage(Messages.ImportAlreadyRunning)
+            )
+            .asJavaObject
         }
       case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaObject
@@ -2298,7 +2302,7 @@ class MetalsLanguageServer(
       forceImport: Boolean,
       buildTool: BuildTool,
       checksum: String,
-  ): Future[BuildChange] = {
+  ): Future[BuildChange] =
     for {
       result <- {
         if (forceImport) bloopInstall.runUnconditionally(buildTool)
@@ -2325,7 +2329,6 @@ class MetalsLanguageServer(
         }
       }
     } yield change
-  }
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     val connected = if (!buildTools.isAutoConnectable) {
