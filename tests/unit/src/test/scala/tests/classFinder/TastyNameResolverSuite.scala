@@ -148,7 +148,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
         scala.meta.Position.Range(input, offset, offset)
       buffers.put(path, sourceText)
       val tastyPath =
-        classFinder.findTasty(path, pos.toLSP.getStart())
+        classFinder.findTasty(path, pos.toLsp.getStart())
 
       assert(tastyPath.isDefined)
       assertNoDiff(tastyPath.get, expected)

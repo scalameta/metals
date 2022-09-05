@@ -17,7 +17,7 @@ trait ArgCompletions { this: MetalsGlobal =>
       completions: CompletionResult
   ) extends CompletionPosition {
     val editRange: l.Range =
-      pos.withStart(ident.pos.start).withEnd(pos.start).toLSP
+      pos.withStart(ident.pos.start).withEnd(pos.start).toLsp
     val funPos = apply.fun.pos
     val method: Tree = typedTreeAt(funPos)
     val methodSym = method.symbol

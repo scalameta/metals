@@ -124,7 +124,7 @@ final class SyntheticsDecorationProvider(
             synthetic <- textDocument.synthetics
             range <- synthetic.range.toIterable
             currentRange <- edit.toRevisedStrict(range).toIterable
-            lspRange = currentRange.toLSP
+            lspRange = currentRange.toLsp
             if range.encloses(position, includeLastCharacter = true) ||
               !isInlineDecorationProvider // in this case we want to always show the full line
             (fullSnippet, range) <- printer
@@ -137,7 +137,7 @@ final class SyntheticsDecorationProvider(
               .toIterable
             if range.endLine == line
             realRange <- edit.toRevisedStrict(range).toIterable
-            lspRealRange = realRange.toLSP
+            lspRealRange = realRange.toLsp
             if lspRealRange.getEnd.getLine == line
           } yield (lspRealRange, fullSnippet)
 
@@ -368,7 +368,7 @@ final class SyntheticsDecorationProvider(
       range: s.Range,
       format: CommandHTMLFormat,
   ): String = {
-    val location = ClientCommands.WindowLocation(uri, range.toLSP)
+    val location = ClientCommands.WindowLocation(uri, range.toLsp)
     ClientCommands.GotoLocation.toCommandLink(location, format)
   }
 
@@ -433,7 +433,7 @@ final class SyntheticsDecorationProvider(
           )
           .toIterable
         currentRange <- edit.toRevisedStrict(range).toIterable
-        lspRange = currentRange.toLSP
+        lspRange = currentRange.toLsp
       } yield decorationOptions(lspRange, decoration)
 
       val typDecorations =
@@ -554,7 +554,7 @@ final class SyntheticsDecorationProvider(
       decorationPosition = methodPositions.getOrElse(treeRange, treeRange)
       realPosition <- treeToBufferEdit.toRevisedStrict(decorationPosition)
     } yield {
-      val lspRange = realPosition.toLSP
+      val lspRange = realPosition.toLsp
       signature.signature match {
         case m: MethodSignature =>
           val decoration = ": " + decorationPrinter.printType(m.returnType)

@@ -39,7 +39,7 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
       val previousIndent = " " * previousIndentSize
       val baseIndentSize = caseIndentSize - previousIndentSize
 
-      val range = patternMatch.pos.toLSP
+      val range = patternMatch.pos.toLsp
       // if pattern match is in different line than map block overwrite indent
       if (!patternMatchStartAtBlockLine)
         range.getStart.setCharacter(0)

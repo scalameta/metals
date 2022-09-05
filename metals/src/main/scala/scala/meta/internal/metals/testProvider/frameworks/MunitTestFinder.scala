@@ -78,7 +78,7 @@ class MunitTestFinder(
           // test("testname".only|ignore|tag) {}
           case appl: Term.Apply if hasTestCall(appl, occurences) =>
             getTestCallWithTestName(appl).foreach { case (test, testname) =>
-              val location = test.pos.toLSP.toLocation(uri)
+              val location = test.pos.toLsp.toLocation(uri)
               val entry = TestCaseEntry(testname.value, location)
               testcases.addOne(entry)
             }
@@ -87,7 +87,7 @@ class MunitTestFinder(
           case appl: Term.Apply =>
             val nameOpt = extractFunctionName(appl)
             nameOpt.foreach { case (helperFunction, testName) =>
-              val location = helperFunction.pos.toLSP.toLocation(uri)
+              val location = helperFunction.pos.toLsp.toLocation(uri)
               val entry = TestCaseEntry(testName, location)
               testcases.addOne(entry)
             }

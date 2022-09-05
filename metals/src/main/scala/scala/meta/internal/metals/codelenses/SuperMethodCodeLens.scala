@@ -47,7 +47,7 @@ final class SuperMethodCodeLens(
       ).toIterable
       range <-
         occurrence.range
-          .flatMap(r => distance.toRevisedStrict(r).map(_.toLSP))
+          .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
           .toList
     } yield new l.CodeLens(range, gotoSuperMethod, null)
   }
@@ -85,14 +85,14 @@ final class SuperMethodCodeLens(
               `symbol`,
               SymbolOccurrence.Role.DEFINITION,
             ) =>
-          val location = new l.Location(path.toURI.toString(), range.toLSP)
-          val command = ServerCommands.GotoPosition.toLSP(location)
+          val location = new l.Location(path.toURI.toString(), range.toLsp)
+          val command = ServerCommands.GotoPosition.toLsp(location)
           command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
           command
       }
     else
       Some {
-        val command = ServerCommands.GotoSymbol.toLSP(symbol)
+        val command = ServerCommands.GotoSymbol.toLsp(symbol)
         command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
         command
       }

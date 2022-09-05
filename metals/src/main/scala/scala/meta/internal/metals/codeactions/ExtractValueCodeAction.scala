@@ -73,7 +73,7 @@ class ExtractValueCodeAction(
             case _ => name
           }
         val replacedArgument =
-          new l.TextEdit(argument.pos.toLSP, replacementText)
+          new l.TextEdit(argument.pos.toLsp, replacementText)
         (replacedArgument :: valueTextWithBraces, argument.toString())
       }
 
@@ -186,10 +186,10 @@ class ExtractValueCodeAction(
         if (defnLineIndentation.headOption.contains('\t')) "\t"
         else "  "
       val innerIndentation = defnLineIndentation + additionalIndent
-      val statStart = stat.pos.toLSP
+      val statStart = stat.pos.toLsp
       statStart.setEnd(statStart.getStart())
 
-      val startBlockPos = equalsPos.toLSP
+      val startBlockPos = equalsPos.toLsp
       startBlockPos.setStart(startBlockPos.getEnd())
       startBlockPos.setEnd(statStart.getStart())
 
@@ -241,7 +241,7 @@ class ExtractValueCodeAction(
 
         val startBlockEdit =
           new l.TextEdit(startBlockPos, startBlockText)
-        val endBracePos = defn.pos.toLSP
+        val endBracePos = defn.pos.toLsp
         endBracePos.setStart(endBracePos.getEnd())
         val endBraceEdit =
           new l.TextEdit(endBracePos, s"\n$defnLineIndentation}")
@@ -251,7 +251,7 @@ class ExtractValueCodeAction(
 
     edits.getOrElse {
       // otherwise, no braces are needed
-      val range = stat.pos.toLSP
+      val range = stat.pos.toLsp
       val start = range.getStart()
       start.setCharacter(0)
       range.setEnd(start)

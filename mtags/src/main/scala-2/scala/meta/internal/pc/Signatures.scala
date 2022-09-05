@@ -72,7 +72,7 @@ trait Signatures { compiler: MetalsGlobal =>
         val startPos = pos.withPoint(importPosition.offset).focus
         val indent = " " * importPosition.indent
         val edit = new l.TextEdit(
-          startPos.toLSP,
+          startPos.toLsp,
           s"${indent}import ${sym.fullNameSyntax}\n"
         )
         (Identifier(sym.name), edit :: Nil)
@@ -251,7 +251,7 @@ trait Signatures { compiler: MetalsGlobal =>
           }
           .mkString(topPadding, "\n", "\n")
         val startPos = pos.withPoint(lineStart).focus
-        new l.TextEdit(startPos.toLSP, formatted) :: Nil
+        new l.TextEdit(startPos.toLsp, formatted) :: Nil
       } else {
         Nil
       }

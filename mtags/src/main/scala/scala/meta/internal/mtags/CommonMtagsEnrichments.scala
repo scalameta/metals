@@ -90,7 +90,7 @@ trait CommonMtagsEnrichments {
         pos.endColumn
       )
     }
-    def toLSP: l.Range = {
+    def toLsp: l.Range = {
       new l.Range(
         new l.Position(pos.startLine, pos.startColumn),
         new l.Position(pos.endLine, pos.endColumn)
@@ -159,9 +159,9 @@ trait CommonMtagsEnrichments {
       startsBeforeOrAt && endsAtOrAfter
     }
     def toLocation(uri: String): l.Location = {
-      new l.Location(uri, range.toLSP)
+      new l.Location(uri, range.toLsp)
     }
-    def toLSP: l.Range = {
+    def toLsp: l.Range = {
       val start = new l.Position(range.startLine, range.startCharacter)
       val end = new l.Position(range.endLine, range.endCharacter)
       new l.Range(start, end)
@@ -546,7 +546,7 @@ trait CommonMtagsEnrichments {
   }
 
   implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
-    def toLSP: l.SymbolKind =
+    def toLsp: l.SymbolKind =
       kind match {
         case k.LOCAL => l.SymbolKind.Variable
         case k.FIELD => l.SymbolKind.Field

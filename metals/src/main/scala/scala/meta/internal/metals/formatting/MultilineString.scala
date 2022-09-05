@@ -152,7 +152,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
           expr.endPos.end,
         )
       indent(splitLines, position, expr) ++ List(
-        new TextEdit(newPos.toLSP, ".stripMargin")
+        new TextEdit(newPos.toLsp, ".stripMargin")
       )
     } else indent(splitLines, position, expr)
   }

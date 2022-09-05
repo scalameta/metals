@@ -211,7 +211,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
       val hover = new Hover(HoverMarkup(prettyType).toMarkupContent)
       if (range.isRange) {
-        hover.setRange(range.toLSP)
+        hover.setRange(range.toLsp)
       }
       Some(hover)
     } else if (symbol == null || tpe.typeSymbol.isAnonymousClass) None
@@ -265,7 +265,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       )
       val hover = new Hover(markdown.toMarkupContent)
       if (range.isRange) {
-        hover.setRange(range.toLSP)
+        hover.setRange(range.toLsp)
       }
       Some(hover)
     }

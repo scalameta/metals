@@ -90,7 +90,7 @@ class StacktraceAnalyzer(
       location: l.Location,
       range: l.Range,
   ): l.CodeLens = {
-    val command = ServerCommands.GotoPosition.toLSP(location)
+    val command = ServerCommands.GotoPosition.toLsp(location)
     command.setTitle(s"${icons.findsuper} open")
     new l.CodeLens(
       range,

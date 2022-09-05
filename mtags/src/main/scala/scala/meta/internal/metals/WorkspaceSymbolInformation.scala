@@ -10,8 +10,8 @@ case class WorkspaceSymbolInformation(
     sematicdbKind: s.SymbolInformation.Kind,
     range: l.Range
 ) {
-  def kind: l.SymbolKind = sematicdbKind.toLSP
-  def toLSP(uri: String): l.SymbolInformation = {
+  def kind: l.SymbolKind = sematicdbKind.toLsp
+  def toLsp(uri: String): l.SymbolInformation = {
     import scala.meta.internal.semanticdb.Scala._
     val (desc, owner) = DescriptorParser(symbol)
     new l.SymbolInformation(

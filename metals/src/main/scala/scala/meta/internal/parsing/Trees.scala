@@ -95,7 +95,7 @@ final class Trees(
           case Parsed.Error(pos, message, _) =>
             List(
               new Diagnostic(
-                pos.toLSP,
+                pos.toLsp,
                 message,
                 DiagnosticSeverity.Error,
                 "scalameta",

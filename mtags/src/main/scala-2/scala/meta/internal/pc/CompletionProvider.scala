@@ -60,7 +60,7 @@ class CompletionProvider(
     val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
     val oldText = params.text().substring(start, end)
-    val stripSuffix = pos.withStart(start).withEnd(end).toLSP
+    val stripSuffix = pos.withStart(start).withEnd(end).toLsp
 
     def textEdit(newText: String, range: l.Range = editRange): l.TextEdit = {
       if (newText == oldText) new l.TextEdit(stripSuffix, newText)
@@ -403,7 +403,7 @@ class CompletionProvider(
     lazy val editRange = pos
       .withStart(inferIdentStart(pos, params.text()))
       .withEnd(pos.point)
-      .toLSP
+      .toLsp
     val noQuery = "$a"
     def expected(e: Throwable) = {
       completionPosition(

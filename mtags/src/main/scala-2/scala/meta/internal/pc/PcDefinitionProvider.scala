@@ -42,7 +42,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         DefinitionResultImpl(
           semanticdbSymbol(tree.symbol),
           ju.Collections.singletonList(
-            new Location(params.uri().toString(), tree.symbol.pos.focus.toLSP)
+            new Location(params.uri().toString(), tree.symbol.pos.focus.toLsp)
           )
         )
       } else {

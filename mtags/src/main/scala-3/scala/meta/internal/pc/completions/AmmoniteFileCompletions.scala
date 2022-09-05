@@ -51,7 +51,7 @@ object AmmoniteFileCompletions:
 
     val editRange = selector.headOption.map { sel =>
       if sel.sourcePos.span.isZeroExtent then posRange
-      else sel.imported.sourcePos.toLSP
+      else sel.imported.sourcePos.toLsp
     }
     val query = selector.collectFirst { case sel: ImportSelector =>
       if sel.name.isEmpty || sel.name == nme.ERROR then ""

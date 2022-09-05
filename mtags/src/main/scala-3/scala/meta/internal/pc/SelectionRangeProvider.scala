@@ -46,7 +46,7 @@ class SelectionRangeProvider(
       val bareRanges = path
         .map { tree =>
           val selectionRange = new SelectionRange()
-          selectionRange.setRange(tree.sourcePos.toLSP)
+          selectionRange.setRange(tree.sourcePos.toLsp)
           selectionRange
         }
 

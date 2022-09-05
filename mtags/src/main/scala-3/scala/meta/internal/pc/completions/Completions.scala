@@ -426,7 +426,7 @@ class Completions(
           AmmoniteFileCompletions.contribute(
             expr,
             selectors,
-            pos.endPos.toLSP,
+            pos.endPos.toLsp,
             rawPath.toString(),
             workspace,
             rawFileName,

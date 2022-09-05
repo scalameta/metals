@@ -527,7 +527,7 @@ final case class Indexer(
                 symbols += WorkspaceSymbolInformation(
                   info.symbol,
                   info.kind,
-                  range.toLSP,
+                  range.toLsp,
                 )
               }
             }
@@ -542,7 +542,7 @@ final case class Indexer(
                 methodSymbols += WorkspaceSymbolInformation(
                   info.symbol,
                   info.kind,
-                  range.toLSP,
+                  range.toLsp,
                 )
               }
             }

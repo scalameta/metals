@@ -89,14 +89,14 @@ final class InferredTypeProvider(
           Some(
             AdjustTypeOpts(
               removeType(lastTokenPos, tpt.pos.end - 1),
-              tpt.pos.toLSP.getEnd()
+              tpt.pos.toLsp.getEnd()
             )
           )
         )
       else {
         val correctedTypeNameEdit =
           new TextEdit(
-            tpt.pos.withStart(lastTokenPos).toLSP,
+            tpt.pos.withStart(lastTokenPos).toLsp,
             ": " + prettyType(rhs.tpe)
           )
         correctedTypeNameEdit :: additionalImports
@@ -110,7 +110,7 @@ final class InferredTypeProvider(
        */
       case vl @ ValDef(_, name, tpt, rhs) if !vl.symbol.isParameter =>
         val nameEnd = findNameEnd(tpt.pos.start, name)
-        val nameEndPos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLSP
+        val nameEndPos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLsp
         adjustOpt.foreach(adjust => nameEndPos.setEnd(adjust.adjustedEndPos))
         lazy val typeNameEdit =
           new TextEdit(nameEndPos, ": " + prettyType(tpt.tpe))
@@ -125,9 +125,9 @@ final class InferredTypeProvider(
        */
       case vl @ ValDef(_, name, tpt, _) if vl.symbol.isParameter =>
         val nameEnd = findNameEnd(vl.pos.start, name)
-        val namePos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLSP
+        val namePos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLsp
 
-        def leftParenStart = vl.pos.withEnd(vl.pos.start).toLSP
+        def leftParenStart = vl.pos.withEnd(vl.pos.start).toLsp
         def leftParenEdit = new TextEdit(leftParenStart, "(")
 
         def needsParens = lastVisitedParentTrees match {
@@ -184,7 +184,7 @@ final class InferredTypeProvider(
           .getOrElse(nameEnd)
 
         val insertPos =
-          rhs.pos.withStart(lastTokenPos).withEnd(lastTokenPos).toLSP
+          rhs.pos.withStart(lastTokenPos).withEnd(lastTokenPos).toLsp
         adjustOpt.foreach(adjust => insertPos.setEnd(adjust.adjustedEndPos))
         val typeNameEdit =
           new TextEdit(insertPos, ": " + prettyType(tpt.tpe))
@@ -200,7 +200,7 @@ final class InferredTypeProvider(
        */
       case bind @ Bind(name, body) =>
         def openingParenPos = body.pos.withEnd(body.pos.start)
-        def openingParen = new TextEdit(openingParenPos.toLSP, "(")
+        def openingParen = new TextEdit(openingParenPos.toLsp, "(")
 
         val insertStart = findNameEnd(bind.pos.start, name)
         val insertPos = bind.pos.withEnd(insertStart).withStart(insertStart)
@@ -226,7 +226,7 @@ final class InferredTypeProvider(
         val typeNameEdit = {
           val rightParen = if (needsParens) ")" else ""
           new TextEdit(
-            insertPos.toLSP,
+            insertPos.toLsp,
             ": " + prettyType(body.tpe) + rightParen
           )
         }

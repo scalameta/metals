@@ -87,7 +87,7 @@ case class ParametrizedCommand[T: ClassTag](
   ): String =
     commandInHtmlFormat.createLink(id, List(argument.toJson.toString()))
 
-  def toLSP(argument: T): l.Command =
+  def toLsp(argument: T): l.Command =
     new l.Command(title, id, List(argument.toJson.asInstanceOf[AnyRef]).asJava)
 
   def toExecuteCommandParams(argument: T): l.ExecuteCommandParams = {
@@ -109,7 +109,7 @@ case class ListParametrizedCommand[T: ClassTag](
 
   private val parser = new JsonParser.Of[T]
 
-  def toLSP(arguments: T*): l.Command =
+  def toLsp(arguments: T*): l.Command =
     new l.Command(
       title,
       id,

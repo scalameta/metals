@@ -35,7 +35,7 @@ final class FoldingRangeExtractor(
       val newEnclosing = tree match {
         case Foldable((pos, adjust))
             if span(enclosing) - span(pos) > distanceToEnclosingThreshold =>
-          distance.toRevised(pos.toLSP) match {
+          distance.toRevised(pos.toLsp) match {
             case Some(revisedPos) =>
               val range = createRange(revisedPos)
               ranges.add(Region, range, adjust)

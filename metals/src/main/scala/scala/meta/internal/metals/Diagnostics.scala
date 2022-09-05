@@ -142,7 +142,7 @@ final class Diagnostics(
     val path = params.getTextDocument.getUri.toAbsolutePath
     onPublishDiagnostics(
       path,
-      params.getDiagnostics().asScala.map(_.toLSP).toSeq,
+      params.getDiagnostics().asScala.map(_.toLsp).toSeq,
       params.getReset(),
     )
   }

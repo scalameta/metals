@@ -90,7 +90,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
       val column = offset - lineStartOffest
       new l.Position(line, column)
 
-    def toLSP: l.Range =
+    def toLsp: l.Range =
       new l.Range(
         offsetToPos(pos.start),
         offsetToPos(pos.end),
@@ -108,7 +108,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
     def toLocation: Option[l.Location] =
       for
         uri <- InteractiveDriver.toUriOption(pos.source)
-        range <- if pos.exists then Some(pos.toLSP) else None
+        range <- if pos.exists then Some(pos.toLsp) else None
       yield new l.Location(uri.toString, range)
   end extension
 

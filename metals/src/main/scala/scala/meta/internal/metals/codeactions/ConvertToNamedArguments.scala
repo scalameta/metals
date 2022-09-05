@@ -94,7 +94,7 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
             new l.Position(apply.app.pos.endLine, apply.app.pos.endColumn),
           )
           val command =
-            ServerCommands.ConvertToNamedArguments.toLSP(
+            ServerCommands.ConvertToNamedArguments.toLsp(
               ServerCommands
                 .ConvertToNamedArgsRequest(
                   position,

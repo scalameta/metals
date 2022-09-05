@@ -169,7 +169,7 @@ final class PcDocumentHighlightProvider(
              */
             case ident: Ident if sought(ident.symbol) && ident.pos.isRange =>
               highlights + new DocumentHighlight(
-                ident.pos.toLSP,
+                ident.pos.toLsp,
                 DocumentHighlightKind.Read
               )
             /**
@@ -180,7 +180,7 @@ final class PcDocumentHighlightProvider(
                 if tpe.original != null && sought(tpe.original.symbol) &&
                   tpe.pos.isRange =>
               highlights + new DocumentHighlight(
-                typePos(tpe).toLSP,
+                typePos(tpe).toLsp,
                 DocumentHighlightKind.Read
               )
             /**
@@ -190,7 +190,7 @@ final class PcDocumentHighlightProvider(
             case sel: Select if sought(sel.symbol) && sel.pos.isRange =>
               traverse(
                 highlights + new DocumentHighlight(
-                  sel.namePos.toLSP,
+                  sel.namePos.toLsp,
                   DocumentHighlightKind.Read
                 ),
                 sel.qualifier
@@ -206,7 +206,7 @@ final class PcDocumentHighlightProvider(
                 ) && df.pos.isRange =>
               (annotationChildren(df) ++ df.children).foldLeft(
                 highlights + new DocumentHighlight(
-                  df.namePos.toLSP,
+                  df.namePos.toLsp,
                   DocumentHighlightKind.Write
                 )
               )(traverse(_, _))
@@ -225,7 +225,7 @@ final class PcDocumentHighlightProvider(
                   case AssignOrNamedArg(i @ Ident(name), _)
                       if (sought.exists(sym => sym.name == name)) =>
                     new DocumentHighlight(
-                      i.pos.toLSP,
+                      i.pos.toLsp,
                       DocumentHighlightKind.Read
                     )
                 }
@@ -246,7 +246,7 @@ final class PcDocumentHighlightProvider(
               fallbackSymbol(id.name, id.pos) match {
                 case Some(sym) if sought(sym) =>
                   highlights + new DocumentHighlight(
-                    id.pos.toLSP,
+                    id.pos.toLsp,
                     DocumentHighlightKind.Read
                   )
                 case _ => highlights
@@ -278,7 +278,7 @@ final class PcDocumentHighlightProvider(
                       )
                     else Set(sel.namePosition(pos.source))
                   highlights ++ positions.map(pos =>
-                    new DocumentHighlight(pos.toLSP)
+                    new DocumentHighlight(pos.toLsp)
                   )
                 case (highlights, _) =>
                   highlights
