@@ -122,7 +122,7 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
           }
         case _ => {
           extractNameFromMember(tree) match {
-            case Some(NamedRealRoot(member, name)) =>
+            case Some(RealRoot(member, name)) =>
               tree.children.flatMap(child =>
                 search(child, Some(name), Some(member.pos.toLSP))
               )
@@ -143,8 +143,8 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
     def getCallResultFromRange(range: lsp4j.Range) =
       (for {
         tree <- trees.findLastEnclosingAt(source, range.getStart)
-        definition <- getSpecifiedOrFindDefinition(tree)
-        name <- definition.name
+        definition <- findDefinition(tree)
+        name = definition.name
       } yield getCallResultFromPosition(
         source,
         doc,

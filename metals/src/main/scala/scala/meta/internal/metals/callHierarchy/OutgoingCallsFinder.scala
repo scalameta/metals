@@ -43,7 +43,7 @@ class OutgoingCallsFinder(
     def definitionTree: Option[Tree] = for {
       range <- occurence.range
       from <- trees.findLastEnclosingAt(source, range.toLSP.getStart())
-      definitionTree <- getSpecifiedOrFindDefinition(
+      definitionTree <- findDefinition(
         from
       )
     } yield definitionTree.root
@@ -66,7 +66,7 @@ class OutgoingCallsFinder(
         root: Option[RealRoot],
     ): Boolean =
       doc == otherDoc && root.exists {
-        case NamedRealRoot(rootTree, rootTreeName) =>
+        case RealRoot(rootTree, rootTreeName) =>
           occurence.range.exists(range =>
             !(range.toLSP == rootTreeName.pos.toLSP) && rootTree.pos.encloses(
               range.toLSP
@@ -179,20 +179,27 @@ class OutgoingCallsFinder(
     }
   }
 
-  def isDefinedIn(
+  private def isDefinedIn(
       source: AbsolutePath,
       definition: Tree,
       range: lsp4j.Range,
-  ): Boolean =
-    trees
-      .findLastEnclosingAt(source, range.getStart)
-      .flatMap(from =>
-        getSpecifiedOrFindDefinition(
-          from,
-          Some(definition),
-        )
+  ): Boolean = {
+    def closestParent(from: Tree, parents: List[Tree]): Option[Tree] =
+      from.parent.flatMap(p =>
+        parents.find(_ == p).orElse(closestParent(p, parents))
       )
-      .exists(_.root == definition) && definition.pos.encloses(range)
+
+    val isRightDefinition = for {
+      from <- trees.findLastEnclosingAt(source, range.getStart)
+      otherDefinition <- findDefinition(from).map(_.root)
+      closestDefinition <- closestParent(
+        from,
+        List(definition, otherDefinition),
+      )
+    } yield closestDefinition == definition
+
+    isRightDefinition.getOrElse(false) && definition.pos.encloses(range)
+  }
 
   def findSynthetics(
       source: AbsolutePath,

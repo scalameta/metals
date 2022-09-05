@@ -18,9 +18,9 @@ import scala.meta.io.AbsolutePath
 
 /** Utility functions for call hierarchy requests. */
 private[callHierarchy] trait CallHierarchyHelpers {
-  def extractNameFromMember(tree: Tree): Option[NamedRealRoot] =
+  def extractNameFromMember(tree: Tree): Option[RealRoot] =
     tree match {
-      case member: Member => Some(NamedRealRoot(member, member.name))
+      case member: Member => Some(RealRoot(member, member.name))
       case _ => None
     }
 
@@ -47,9 +47,8 @@ private[callHierarchy] trait CallHierarchyHelpers {
    * If the specified item is founded this function will return the `UnamedRealRoot(specified)`,
    * otherwise this function will return the definition in the form of `NamedRealRoot(definition, defintionName)`.
    */
-  def getSpecifiedOrFindDefinition(
+  def findDefinition(
       from: Tree,
-      specified: Option[Tree] = None,
       prev: Option[Tree] = None,
       indices: List[Int] = Nil,
   ): Option[RealRoot] = {
@@ -59,9 +58,8 @@ private[callHierarchy] trait CallHierarchyHelpers {
     ): Option[RealRoot] =
       prev.flatMap(prev =>
         term.parent.flatMap(from =>
-          getSpecifiedOrFindDefinition(
+          findDefinition(
             from,
-            specified,
             Some(term),
             args.indexOf(prev) :: indices,
           )
@@ -74,7 +72,7 @@ private[callHierarchy] trait CallHierarchyHelpers {
         v.pats.headOption.flatMap(pat =>
           traverseTreeWithIndices(pat, indices)
             .collect { case pat: Pat.Var =>
-              NamedRealRoot(v, pat.name)
+              RealRoot(v, pat.name)
             }
         )
       case tuple: Term.Tuple =>
@@ -84,18 +82,14 @@ private[callHierarchy] trait CallHierarchyHelpers {
         findDefinitionFromTermWithArgs(apply, apply.args)
       case _ =>
         tree.parent.flatMap(from =>
-          getSpecifiedOrFindDefinition(
+          findDefinition(
             from,
-            specified,
             Some(tree),
           )
         )
-
     }
 
-    if (specified.contains(from))
-      Some(UnamedRealRoot(from))
-    else if (from.is[Term.Param] || isTypeDeclaration(from))
+    if (from.is[Term.Param] || isTypeDeclaration(from))
       None
     else
       extractNameFromMember(from) match {
@@ -158,11 +152,11 @@ private[callHierarchy] trait CallHierarchyHelpers {
 
   /** Find the root where symbols should be searched for. Useful for handling Pats. */
   def findRealRoot(root: Tree): Option[RealRoot] =
-    getSpecifiedOrFindDefinition(root).flatMap {
-      case NamedRealRoot(v @ (_: Pat.Var), name) =>
+    findDefinition(root).flatMap {
+      case RealRoot(v @ (_: Pat.Var), name) =>
         (traverseTreeWithIndices _)
           .tupled(getIndicesFromPat(v))
-          .map(foundedRoot => NamedRealRoot(foundedRoot, name))
+          .map(foundedRoot => RealRoot(foundedRoot, name))
       case foundedRoot => Some(foundedRoot)
     }
 
