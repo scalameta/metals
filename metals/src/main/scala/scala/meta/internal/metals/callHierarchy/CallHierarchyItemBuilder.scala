@@ -106,10 +106,10 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
       .map(info => {
         buildItem(
           getName(info),
-          info.kind.toLSP,
+          info.kind.toLsp,
           source.toURI.toString(),
           range,
-          selectionRange.toLSP,
+          selectionRange.toLsp,
           getDetail(
             getSignatureFromHover(hover).getOrElse(""),
             visited,
@@ -142,7 +142,7 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
             new HoverExtParams(
               source.toTextDocumentIdentifier,
               null,
-              selectionRange.toLSP,
+              selectionRange.toLsp,
             ),
             token,
           )

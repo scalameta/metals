@@ -42,7 +42,7 @@ class OutgoingCallsFinder(
 
     def definitionTree: Option[Tree] = for {
       range <- occurence.range
-      from <- trees.findLastEnclosingAt(source, range.toLSP.getStart())
+      from <- trees.findLastEnclosingAt(source, range.toLsp.getStart())
       definitionTree <- findDefinition(
         from
       )
@@ -54,7 +54,7 @@ class OutgoingCallsFinder(
       definitionTree.map(tree =>
         FindOutgoingCallsResult(
           occurence,
-          tree.pos.toLSP,
+          tree.pos.toLsp,
           List(fromRange),
           source,
           doc,
@@ -68,8 +68,8 @@ class OutgoingCallsFinder(
       doc == otherDoc && root.exists {
         case RealRoot(rootTree, rootTreeName) =>
           occurence.range.exists(range =>
-            !(range.toLSP == rootTreeName.pos.toLSP) && rootTree.pos.encloses(
-              range.toLSP
+            !(range.toLsp == rootTreeName.pos.toLsp) && rootTree.pos.encloses(
+              range.toLsp
             )
           )
         case _ => false
@@ -141,11 +141,11 @@ class OutgoingCallsFinder(
         case name: Name if !isTypeDeclaration(name) =>
           for {
             mayDefinitionInfo <- getDefinitionInformationFromPosition(
-              name.pos.toLSP.getEnd()
+              name.pos.toLsp.getEnd()
             )
           } yield mayDefinitionInfo
             .filterNot(_.isSameDefinition(doc, realRoot))
-            .flatMap(_.toOutgoingCallResult(name.pos.toLSP))
+            .flatMap(_.toOutgoingCallResult(name.pos.toLsp))
             .toList
         case t
             if extractNameFromMember(t).isDefined || t.is[Term.Param] || t
@@ -232,10 +232,10 @@ class OutgoingCallsFinder(
               case SelectTree(
                     OriginalTree(Some(range)),
                     Some(IdTree(symbol)),
-                  ) if isDefinedIn(source, definition, range.toLSP) =>
+                  ) if isDefinedIn(source, definition, range.toLsp) =>
                 getOutgoingCallResultFromSymbol(
                   symbol,
-                  range.toLSP,
+                  range.toLsp,
                   mayRealRoot,
                 )
               case _ => Future.successful(Nil)

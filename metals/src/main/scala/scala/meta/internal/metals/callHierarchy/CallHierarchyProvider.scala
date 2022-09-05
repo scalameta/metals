@@ -56,13 +56,13 @@ final case class CallHierarchyProvider(
         occurence <- rso.occurrence
         if occurence.role.isDefinition
         range <- occurence.range
-        tree <- trees.findLastEnclosingAt(source, range.toLSP.getStart)
+        tree <- trees.findLastEnclosingAt(source, range.toLsp.getStart)
         definition <- findDefinition(tree)
       } yield callHierarchyItemBuilder.build(
         source,
         doc,
         occurence,
-        definition.root.pos.toLSP,
+        definition.root.pos.toLsp,
         Array(occurence.symbol),
         token,
       )
@@ -123,7 +123,7 @@ final case class CallHierarchyProvider(
             .getOrElse(Nil)
 
           results.map(
-            _.toLSP(source, doc, callHierarchyItemBuilder, info.visited, token)
+            _.toLsp(source, doc, callHierarchyItemBuilder, info.visited, token)
           )
         case _ =>
           Nil
@@ -170,7 +170,7 @@ final case class CallHierarchyProvider(
         )
         results <- Future.sequence(
           (calls ++ callsSynthetics).map(
-            _.toLSP(callHierarchyItemBuilder, info.visited, token)
+            _.toLsp(callHierarchyItemBuilder, info.visited, token)
           )
         )
       } yield results
