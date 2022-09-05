@@ -48,23 +48,28 @@ private[callHierarchy] trait CallHierarchyHelpers {
    * otherwise this function will return the definition in the form of `NamedRealRoot(definition, defintionName)`.
    */
   def getSpecifiedOrFindDefinition(
-      from: Option[Tree],
+      from: Tree,
       specified: Option[Tree] = None,
       prev: Option[Tree] = None,
       indices: List[Int] = Nil,
   ): Option[RealRoot] = {
-    def findDefinitionFromTermWithArgs(term: Term, args: List[Term]) =
+    def findDefinitionFromTermWithArgs(
+        term: Term,
+        args: List[Term],
+    ): Option[RealRoot] =
       prev.flatMap(prev =>
-        getSpecifiedOrFindDefinition(
-          term.parent,
-          specified,
-          Some(term),
-          args.indexOf(prev) :: indices,
+        term.parent.flatMap(from =>
+          getSpecifiedOrFindDefinition(
+            from,
+            specified,
+            Some(term),
+            args.indexOf(prev) :: indices,
+          )
         )
       )
 
     /** Handle the cases of complex pats */
-    def advancedFindDefinition(tree: Tree) = tree match {
+    def advancedFindDefinition(tree: Tree): Option[RealRoot] = tree match {
       case v: Defn.Val =>
         v.pats.headOption.flatMap(pat =>
           traverseTreeWithIndices(pat, indices)
@@ -78,27 +83,27 @@ private[callHierarchy] trait CallHierarchyHelpers {
       case apply: Term.Apply =>
         findDefinitionFromTermWithArgs(apply, apply.args)
       case _ =>
-        getSpecifiedOrFindDefinition(
-          tree.parent,
-          specified,
-          Some(tree),
+        tree.parent.flatMap(from =>
+          getSpecifiedOrFindDefinition(
+            from,
+            specified,
+            Some(tree),
+          )
         )
+
     }
 
-    specified
-      .collect { case tree if from.contains(tree) => UnamedRealRoot(tree) }
-      .orElse(
-        from
-          .filterNot(tree => tree.is[Term.Param] || isTypeDeclaration(tree))
-          .flatMap(tree =>
-            extractNameFromMember(tree) match {
-              case result @ Some(_) =>
-                result // We can consider a definition like an item from which we can extract its direct name
-              case None =>
-                advancedFindDefinition(tree)
-            }
-          )
-      )
+    if (specified.contains(from))
+      Some(UnamedRealRoot(from))
+    else if (from.is[Term.Param] || isTypeDeclaration(from))
+      None
+    else
+      extractNameFromMember(from) match {
+        case result @ Some(_) =>
+          result
+        case None =>
+          advancedFindDefinition(from)
+      }
   }
 
   def containsDuplicates[T](visited: Seq[T]): Boolean =
@@ -153,7 +158,7 @@ private[callHierarchy] trait CallHierarchyHelpers {
 
   /** Find the root where symbols should be searched for. Useful for handling Pats. */
   def findRealRoot(root: Tree): Option[RealRoot] =
-    getSpecifiedOrFindDefinition(Some(root)).flatMap {
+    getSpecifiedOrFindDefinition(root).flatMap {
       case NamedRealRoot(v @ (_: Pat.Var), name) =>
         (traverseTreeWithIndices _)
           .tupled(getIndicesFromPat(v))

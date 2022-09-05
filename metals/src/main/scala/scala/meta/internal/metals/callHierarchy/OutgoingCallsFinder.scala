@@ -42,8 +42,9 @@ class OutgoingCallsFinder(
 
     def definitionTree: Option[Tree] = for {
       range <- occurence.range
+      from <- trees.findLastEnclosingAt(source, range.toLSP.getStart())
       definitionTree <- getSpecifiedOrFindDefinition(
-        trees.findLastEnclosingAt(source, range.toLSP.getStart())
+        from
       )
     } yield definitionTree.root
 
@@ -183,10 +184,15 @@ class OutgoingCallsFinder(
       definition: Tree,
       range: lsp4j.Range,
   ): Boolean =
-    definition.pos.encloses(range) && getSpecifiedOrFindDefinition(
-      trees.findLastEnclosingAt(source, range.getStart),
-      Some(definition),
-    ).exists(_.root == definition)
+    trees
+      .findLastEnclosingAt(source, range.getStart)
+      .flatMap(from =>
+        getSpecifiedOrFindDefinition(
+          from,
+          Some(definition),
+        )
+      )
+      .exists(_.root == definition) && definition.pos.encloses(range)
 
   def findSynthetics(
       source: AbsolutePath,
