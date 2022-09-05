@@ -1,7 +1,5 @@
 package scala.meta.internal.metals.callHierarchy
 
-import scala.concurrent.ExecutionContext
-
 import scala.meta.Defn
 import scala.meta.Name
 import scala.meta.Pat
@@ -19,9 +17,8 @@ import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j
 
-class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)(implicit
-    ec: ExecutionContext
-) extends CallHierarchyHelpers {
+class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
+    extends CallHierarchyHelpers {
   private def getCallResultFromPosition(
       source: AbsolutePath,
       doc: TextDocument,
@@ -146,7 +143,7 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)(implicit
     def getCallResultFromRange(range: lsp4j.Range) =
       (for {
         tree <- trees.findLastEnclosingAt(source, range.getStart)
-        definition <- getSpecifiedOrFindDefinition(Some(tree))
+        definition <- getSpecifiedOrFindDefinition(tree)
         name <- definition.name
       } yield getCallResultFromPosition(
         source,
