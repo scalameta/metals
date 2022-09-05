@@ -19,7 +19,7 @@ private[callHierarchy] sealed trait FindCallsResult[T <: FindCallsResult[T]] {
   def fromRanges: List[lsp4j.Range]
   def aggregate(updatedFromRanges: List[lsp4j.Range]): T
 
-  protected def toLSP[T](
+  protected def toLsp[T](
       source: AbsolutePath,
       doc: TextDocument,
       visited: Array[String],
@@ -65,14 +65,14 @@ private[callHierarchy] case class FindIncomingCallsResult(
   ): FindIncomingCallsResult =
     this.copy(fromRanges = updatedFromRanges)
 
-  def toLSP(
+  def toLsp(
       source: AbsolutePath,
       doc: TextDocument,
       builder: CallHierarchyItemBuilder,
       visited: Array[String],
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[lsp4j.CallHierarchyIncomingCall] =
-    toLSP(
+    toLsp(
       source,
       doc,
       visited,
@@ -80,7 +80,7 @@ private[callHierarchy] case class FindIncomingCallsResult(
       (to, fromRanges) => new lsp4j.CallHierarchyIncomingCall(to, fromRanges),
       token,
     )
-  // toLSP(source, doc)(builder, visited, token)()
+  // toLsp(source, doc)(builder, visited, token)()
 }
 
 /**
@@ -105,12 +105,12 @@ private[callHierarchy] case class FindOutgoingCallsResult(
   ): FindOutgoingCallsResult =
     this.copy(fromRanges = updatedFromRanges)
 
-  def toLSP(
+  def toLsp(
       builder: CallHierarchyItemBuilder,
       visited: Array[String],
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[lsp4j.CallHierarchyOutgoingCall] =
-    toLSP(
+    toLsp(
       source,
       doc,
       visited,

@@ -83,7 +83,7 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
 
       def nameMatchSymbol(name: Name): Boolean =
         definition
-          .positionOccurrences(source, name.pos.toLSP.getEnd, doc)
+          .positionOccurrences(source, name.pos.toLsp.getEnd, doc)
           .exists {
             case ResolvedSymbolOccurrence(
                   _,
@@ -100,23 +100,23 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
               getCallResultFromPosition(
                 source,
                 doc,
-                parent.pos.toLSP.getStart(),
+                parent.pos.toLsp.getStart(),
                 parentRange,
-                name.pos.toLSP,
+                name.pos.toLsp,
               )
             case _ =>
               default
           }
         case v: Defn.Val =>
           v.pats match {
-            case pat :: _ => searchVal(v.pos.toLSP, pat, v.rhs)
+            case pat :: _ => searchVal(v.pos.toLsp, pat, v.rhs)
             case Nil => default
           }
         case v: Defn.Var =>
           v.pats match {
             case pat :: _ =>
               v.rhs
-                .map(rhs => searchVal(v.pos.toLSP, pat, rhs))
+                .map(rhs => searchVal(v.pos.toLsp, pat, rhs))
                 .getOrElse(default)
             case Nil => default
           }
@@ -124,7 +124,7 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
           extractNameFromMember(tree) match {
             case Some(RealRoot(member, name)) =>
               tree.children.flatMap(child =>
-                search(child, Some(name), Some(member.pos.toLSP))
+                search(child, Some(name), Some(member.pos.toLsp))
               )
             case None =>
               default
@@ -148,8 +148,8 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
       } yield getCallResultFromPosition(
         source,
         doc,
-        name.pos.toLSP.getStart,
-        name.pos.toLSP,
+        name.pos.toLsp.getStart,
+        name.pos.toLsp,
         range,
         _.role.isDefinition,
       )).getOrElse(Nil)
@@ -159,7 +159,7 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
         extractSelectTree(syn.tree) match {
           case Some(SelectTree(OriginalTree(Some(range)), id))
               if id.exists(id => info.symbols.contains(id.symbol)) =>
-            getCallResultFromRange(range.toLSP)
+            getCallResultFromRange(range.toLsp)
           case _ => Nil
         }
       )
