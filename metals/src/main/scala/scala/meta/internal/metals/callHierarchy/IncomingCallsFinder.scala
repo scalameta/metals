@@ -132,7 +132,7 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
         }
       }
     }
-    FindCallsResult.group(search(root, None, None))
+    search(root, None, None)
   }
 
   def findSynthetics(
@@ -165,6 +165,6 @@ class IncomingCallsFinder(definition: DefinitionProvider, trees: Trees)
       )
       .toList
 
-    FindCallsResult.group(result)
+    result
   }
 }

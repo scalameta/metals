@@ -427,6 +427,55 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
+  test("apply") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/User.scala
+           |package a
+           |
+           |class User(val name: String, val age: Int)
+           |
+           |object User {
+           |  def ap@@ply(name: String) = new User(name, 0)
+           |}
+           |
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  def <<foo>>/*1*/() {
+           |    User.<?<apply>?>/*1*/("Foo")
+           |    <?<User>?>/*1*/("Bar")
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/User.scala
+           |package a
+           |
+           |class User(val name: String, val age: Int)
+           |
+           |object <<User>>/*2*/ {
+           |  def <<apply>>/*1*/(name: String) = new User(name, 0)
+           |}
+           |
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  def f@@oo() {
+           |    <?<User>?>/*2*/.<?<apply>?>/*1*/("Foo")
+           |    <?<User>?>/*1,2*/("Bar")
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
   test("unapply") {
     for {
       _ <- assertIncomingCalls(
