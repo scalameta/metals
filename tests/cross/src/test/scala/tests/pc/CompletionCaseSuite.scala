@@ -63,6 +63,18 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case HasWings(e) => pkg
        |case Seal => pkg
        |""".stripMargin,
+    compat = Map(
+      "3" -> """|case _: Animal => pkg
+                |case Bird(name) => pkg
+                |case _: Cat => pkg
+                |case _: Dog => pkg
+                |case Elephant => pkg
+                |case _: HasFeet[_, _] => pkg
+                |case _: HasMouth[_] => pkg
+                |case HasWings(e) => pkg
+                |case Seal => pkg
+                |""".stripMargin
+    ),
   )
 
   check(
@@ -486,6 +498,19 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     """|case Blue =>Color
        |case Green =>Color
        |case Red =>Color
+       |""".stripMargin,
+  )
+  check(
+    "single-case-class".tag(IgnoreScala2),
+    """
+      |package example
+      |case class Foo(a: Int, b: Int)
+      |
+      |object A {
+      |  
+      |  List(Foo(1,2)).map{ cas@@ }
+      |}""".stripMargin,
+    """|case Foo(a, b) => example
        |""".stripMargin,
   )
 
