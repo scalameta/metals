@@ -174,7 +174,7 @@ class OutgoingCallsFinder(
               case other => List(search(other))
             })
           )
-          .map(results => FindCallsResult.group(results.flatten))
+          .map(results => results.flatten)
       case None => Future.successful(Nil)
     }
   }
@@ -245,7 +245,7 @@ class OutgoingCallsFinder(
 
         Future
           .sequence(results)
-          .map(results => FindCallsResult.group(results.flatten))
+          .map(results => results.flatten)
       case _ => Future.successful(Nil)
     }
   }

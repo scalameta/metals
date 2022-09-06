@@ -122,9 +122,17 @@ final case class CallHierarchyProvider(
             )
             .getOrElse(Nil)
 
-          results.map(
-            _.toLsp(source, doc, callHierarchyItemBuilder, info.visited, token)
-          )
+          FindCallsResult
+            .group(results)
+            .map(
+              _.toLsp(
+                source,
+                doc,
+                callHierarchyItemBuilder,
+                info.visited,
+                token,
+              )
+            )
         case _ =>
           Nil
       }
@@ -169,9 +177,11 @@ final case class CallHierarchyProvider(
           root,
         )
         results <- Future.sequence(
-          (calls ++ callsSynthetics).map(
-            _.toLsp(callHierarchyItemBuilder, info.visited, token)
-          )
+          FindCallsResult
+            .group(calls ++ callsSynthetics)
+            .map(
+              _.toLsp(callHierarchyItemBuilder, info.visited, token)
+            )
         )
       } yield results
     }
