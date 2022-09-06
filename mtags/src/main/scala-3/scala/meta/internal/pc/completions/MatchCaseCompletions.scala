@@ -147,9 +147,11 @@ object CaseKeywordCompletion:
         && (sym.is(Case) || sym.is(Flags.Module) || sym.isClass)
         && parents.isSubClass(sym, false)
       indexedContext.scopeSymbols
-        .map(_.info.dealias.typeSymbol)
-        .filter(isValid(_))
-        .foreach(s => visit(s, s.decodedName, Nil))
+        .foreach(s => {
+          val ts  = s.info.dealias.typeSymbol
+          if (isValid(ts))
+            visit(ts, ts.decodedName, Nil)
+         )}
 
       // Step 2: walk through known subclasses of sealed types.
       MetalsSealedDesc.sealedStrictDescendants(selectorSym).foreach { sym =>
