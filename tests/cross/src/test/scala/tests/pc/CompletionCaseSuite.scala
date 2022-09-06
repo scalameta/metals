@@ -500,6 +500,26 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case Red =>Color
        |""".stripMargin,
   )
+
+  check(
+    "scala-enum-with-param".tag(IgnoreScala2),
+    """
+      |package example
+      |enum Foo:
+      |  case Bla, Bar
+      |  case Buzz(arg1: Int, arg2: Int)
+      |
+      |object Main {
+      |  val x: Foo = ???
+      |  x match
+      |    case@@
+      |}""".stripMargin,
+    """|case Bar =>Foo
+       |case Bla =>Foo
+       |case Buzz(arg1, arg2) => example.Foo
+       |""".stripMargin,
+  )
+
   check(
     "single-case-class".tag(IgnoreScala2),
     """

@@ -381,7 +381,7 @@ class CompletionValueGenerator(
       isModuleLike: Boolean,
   )(using Context): String =
     val suffix =
-      if isModuleLike then ""
+      if isModuleLike && !(sym.isClass && sym.is(Enum)) then ""
       else
         sym.primaryConstructor.paramSymss match
           case Nil => "()"
