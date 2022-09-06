@@ -471,5 +471,22 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     // Assert we don't use infix syntax because `::` resolves to conflicting symbol in scope.
     "case Outer.::(a, b) => $0",
   )
+  check(
+    "scala-enum".tag(IgnoreScala2),
+    """
+      |package example
+      |enum Color:
+      |  case Red, Blue, Green
+      |
+      |object Main {
+      |  val x: Color = ???
+      |  x match
+      |    case@@
+      |}""".stripMargin,
+    """|case Blue =>Color
+       |case Green =>Color
+       |case Red =>Color
+       |""".stripMargin,
+  )
 
 }

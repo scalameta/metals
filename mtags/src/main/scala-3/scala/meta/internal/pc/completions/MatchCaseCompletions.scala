@@ -100,15 +100,14 @@ object CaseKeywordCompletion:
     val result = ListBuffer.empty[CompletionValue]
     val isVisited = mutable.Set.empty[Symbol]
     def visit(sym: Symbol, name: String, autoImports: List[l.TextEdit]): Unit =
-      val isValid = !isVisited(sym) && !parents.isParent(sym)
-        && (sym.is(Case) || sym.is(Flags.Module) || sym.isClass)
-        && parents.isSubClass(sym, false)
+
       def recordVisit(s: Symbol): Unit =
         if s != NoSymbol && !isVisited(s) then
           isVisited += s
           recordVisit(s.moduleClass)
           recordVisit(s.sourceModule)
-      if isValid then
+
+      if !isVisited(sym) then
         recordVisit(sym)
         if completionGenerator.fuzzyMatches(name) then
           result += completionGenerator.toCompletionValue(
@@ -117,7 +116,6 @@ object CaseKeywordCompletion:
             autoImports,
           )
         end if
-      end if
     end visit
     val selectorSym = parents.selector.typeSymbol
 
@@ -145,17 +143,22 @@ object CaseKeywordCompletion:
       )
     else
       // Step 1: walk through scope members.
+      def isValid(sym: Symbol) = !parents.isParent(sym)
+        && (sym.is(Case) || sym.is(Flags.Module) || sym.isClass)
+        && parents.isSubClass(sym, false)
       indexedContext.scopeSymbols
-        .foreach(s => visit(s.info.dealias.typeSymbol, s.decodedName, Nil))
+        .map(_.info.dealias.typeSymbol)
+        .filter(isValid(_))
+        .foreach(s => visit(s, s.decodedName, Nil))
 
       // Step 2: walk through known subclasses of sealed types.
       MetalsSealedDesc.sealedStrictDescendants(selectorSym).foreach { sym =>
         val autoImport = autoImportsGen.forSymbol(sym)
         autoImport match
           case Some(value) =>
-            visit(sym.info.dealias.typeSymbol, sym.decodedName, value)
+            visit(sym, sym.decodedName, value)
           case scala.None =>
-            visit(sym.info.dealias.typeSymbol, sym.showFullName, Nil)
+            visit(sym, sym.showFullName, Nil)
       }
     end if
 
@@ -223,7 +226,7 @@ object CaseKeywordCompletion:
     sortedSubclasses.foreach { case sym =>
       val autoImport = autoImportsGen.forSymbol(sym)
       result += completionGenerator.toCompletionValue(
-        sym.info.dealias.typeSymbol,
+        sym,
         sym.decodedName,
         autoImport.getOrElse(Nil),
       )
