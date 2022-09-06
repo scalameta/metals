@@ -187,50 +187,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
-    "match",
-    """
-      |package foo
-      |
-      |object A {
-      |  val x: Option[Int] = ???
-      |  val a = {
-      |    x ma@@
-      |  }
-      |}
-      |""".stripMargin,
-    """|match
-       |""".stripMargin,
-    filter = _ == "match",
-  )
-
-  checkEdit(
-    "match-edit".tag(IgnoreScala2),
-    """
-      |package foo
-      |
-      |object A {
-      |  val abc: Option[Int] = ???
-      |  val a = {
-      |    abc ma@@
-      |  }
-      |}
-      |""".stripMargin,
-    s"""
-       |package foo
-       |
-       |object A {
-       |  val abc: Option[Int] = ???
-       |  val a = {
-       |    abc match
-       |\tcase $$0
-       |
-       |  }
-       |}
-       |""".stripMargin,
-    filter = _ == "match",
-  )
-
-  check(
     "given-def",
     """
       |package foo
@@ -435,7 +391,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     // to avoid newMain annotation
     filter = str => !str.contains("newMain"),
   )
-
+  // TODO: Should provide empty completions
+  // The issue is that the tree looks the same as for `case @@` (it doesn't see `new`)
   check(
     "new-pattern",
     """
@@ -450,6 +407,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     "",
     // to avoid newMain annotation
     filter = str => !str.contains("newMain"),
+    compat = Map(
+      "3" ->
+        """|case head :: next => scala.collection.immutable
+           |case Nil => scala.collection.immutable""".stripMargin
+    ),
   )
 
   check(

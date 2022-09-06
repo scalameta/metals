@@ -6,9 +6,6 @@ class CompletionMatchSuite extends BaseCompletionSuite {
 
   override def requiresScalaLibrarySources: Boolean = true
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   check(
     "match",
     """
@@ -18,6 +15,11 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     """|match
        |match (exhaustive) Option[Int] (2 cases)
        |""".stripMargin,
+    compat = Map(
+      "3" -> """|match
+                |match (exhaustive) Option (2 cases)
+                |""".stripMargin
+    ),
   )
 
   check(
@@ -30,8 +32,14 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     """|match
        |match (exhaustive) Option[Int] (2 cases)
        |""".stripMargin,
+    compat = Map(
+      "3" -> """|match
+                |match (exhaustive) Option (2 cases)
+                |""".stripMargin
+    ),
   )
 
+  // In Scala3 it's allowed to write xxx.match
   check(
     "dot",
     """
@@ -39,6 +47,11 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |  Option(1).match@@
       |}""".stripMargin,
     "",
+    compat = Map(
+      "3" -> """|match
+                |match (exhaustive) Option (2 cases)
+                |""".stripMargin
+    ),
   )
 
   check(
@@ -84,6 +97,25 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     filter = _.contains("exhaustive"),
+    compat = Map(
+      "3" -> s"""|package stale
+                 |
+                 |import stale.Weekday.Workday
+                 |
+                 |import stale.Weekday.Weekend
+                 |sealed abstract class Weekday
+                 |object Weekday {
+                 |  case object Workday extends Weekday
+                 |  case object Weekend extends Weekday
+                 |}
+                 |object App {
+                 |  null.asInstanceOf[Weekday] match
+                 |\tcase Workday => $$0
+                 |\tcase Weekend =>
+                 |
+                 |}
+                 |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -108,6 +140,19 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     filter = _.contains("exhaustive"),
+    compat = Map(
+      "3" -> s"""|package stale
+                 |sealed abstract class Weekday
+                 |case object Workday extends Weekday
+                 |case object Weekend extends Weekday
+                 |object App {
+                 |  null.asInstanceOf[Weekday] match
+                 |\tcase Workday => $$0
+                 |\tcase Weekend =>
+                 |
+                 |}
+                 |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -135,6 +180,22 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     filter = _.contains("exhaustive"),
+    compat = Map(
+      "3" ->
+        s"""|package sort
+            |sealed abstract class TestTree
+            |case class Branch1(t1: TestTree) extends TestTree
+            |case class Leaf(v: Int) extends TestTree
+            |case class Branch2(t1: TestTree, t2: TestTree) extends TestTree
+            |object App {
+            |  null.asInstanceOf[TestTree] match
+            |\tcase Branch1(t1) => $$0
+            |\tcase Leaf(v) =>
+            |\tcase Branch2(t1, t2) =>
+            |
+            |}
+            |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -161,7 +222,15 @@ class CompletionMatchSuite extends BaseCompletionSuite {
           |\tcase None =>
           |}
           |}
-          |""".stripMargin
+          |""".stripMargin,
+      "3" -> s"""package sort
+                |object App {
+                |  Option(1) match
+                |\tcase None => $$0
+                |\tcase Some(value) =>
+                |
+                |}
+                |""".stripMargin,
     ),
     filter = _.contains("exhaustive"),
   )
@@ -190,7 +259,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "exhaustive-java-enum",
+    "exhaustive-java-enum".tag(IgnoreScalaVersion.for3LessThan("3.2.0")),
     """
       |package example
       |
@@ -214,6 +283,60 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |\tcase EXECUTE =>
        |}
        |}""".stripMargin,
+    filter = _.contains("exhaustive"),
+    compat = Map(
+      "3" -> s"""
+                |package example
+                |
+                |import java.nio.file.AccessMode
+                |import java.nio.file.AccessMode.READ
+                |import java.nio.file.AccessMode.WRITE
+                |import java.nio.file.AccessMode.EXECUTE
+                |
+                |object Main {
+                |  (null: AccessMode) match
+                |\tcase READ => $$0
+                |\tcase WRITE =>
+                |\tcase EXECUTE =>
+                |
+                |}""".stripMargin
+    ),
+  )
+
+  checkEdit(
+    "exhaustive-scala-enum".tag(IgnoreScala2),
+    """
+      |package example
+      |enum Color(rank: Int):
+      |  case Red(1)
+      |  case Blue(2)
+      |  case Green(3)
+      |
+      |object Main {
+      |  val x: Color = ???
+      |  x match@@
+      |}""".stripMargin,
+    s"""|package example
+        |
+        |import example.Color.Red
+        |
+        |import example.Color.Blue
+        |
+        |import example.Color.Green
+        |enum Color(rank: Int):
+        |  case Red(1)
+        |  case Blue(2)
+        |  case Green(3)
+        |
+        |object Main {
+        |  val x: Color = ???
+        |  x match
+        |\tcase Red => $$0
+        |\tcase Blue =>
+        |\tcase Green =>
+        |
+        |}
+        |""".stripMargin,
     filter = _.contains("exhaustive"),
   )
 
@@ -239,6 +362,19 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |}
        |}""".stripMargin,
     filter = _.contains("exhaustive"),
+    compat = Map(
+      "3" -> s"""
+                |package example
+                |
+                |object None
+                |
+                |object Main {
+                |  Option(1) match
+                |\tcase None => $$0
+                |\tcase Some(value) =>
+                |
+                |}""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -269,6 +405,22 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |}
        |}""".stripMargin,
     filter = _.contains("exhaustive"),
+    compat = Map(
+      "3" -> s"""
+                |package example
+                |
+                |sealed trait Test
+                |case object Foo extends Test
+                |case object Bar extends Test
+                |
+                |object Main {
+                |  def testExhaustive[T <: Test](test: T): Boolean =
+                |    test match
+                |\tcase Foo => $$0
+                |\tcase Bar =>
+                |
+                |}""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -307,5 +459,26 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |}
        |}""".stripMargin,
     filter = _.contains("exhaustive"),
+    compat = Map(
+      "3" -> s"""
+                |package example
+                |
+                |sealed trait TestA
+                |case object Foo extends TestA
+                |case object Bar extends TestA
+                |sealed trait TestB
+                |case object Baz extends TestB
+                |case object Goo extends TestB
+                |
+                |object Main {
+                |  def testExhaustive[T <: TestA with TestB](test: T): Boolean =
+                |    test match
+                |\tcase Foo => $$0
+                |\tcase Bar =>
+                |\tcase Baz =>
+                |\tcase Goo =>
+                |
+                |}""".stripMargin
+    ),
   )
 }

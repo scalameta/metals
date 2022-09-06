@@ -22,6 +22,7 @@ import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
+import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -184,8 +185,8 @@ class CompletionsProvider(
         isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil,
         filterText: Option[String] = None,
+        command: Option[String] = None,
     ): CompletionItem =
-
       val label =
         kind match
           case CompletionItemKind.Method =>
@@ -198,7 +199,6 @@ class CompletionsProvider(
           case _ =>
             ident
       val item = new CompletionItem(label)
-
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
       item.setFilterText(filterText.getOrElse(completion.label))
@@ -230,6 +230,10 @@ class CompletionsProvider(
       if config.isCompletionSnippetsEnabled then
         item.setInsertTextFormat(InsertTextFormat.Snippet)
 
+      command.foreach { command =>
+        item.setCommand(new Command("", command))
+      }
+
       item.setKind(kind)
       item
     end mkItem0
@@ -241,12 +245,20 @@ class CompletionsProvider(
         additionalEdits: List[TextEdit] = Nil,
         filterText: Option[String] = None,
         range: Option[LspRange] = None,
+        command: Option[String] = None,
     ): CompletionItem =
       val nameEdit = new TextEdit(
         range.getOrElse(editRange),
         value,
       )
-      mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits, filterText)
+      mkItem0(
+        ident,
+        nameEdit,
+        isFromWorkspace,
+        additionalEdits,
+        filterText,
+        command,
+      )
     end mkItem
 
     def mkWorkspaceItem(
@@ -369,6 +381,28 @@ class CompletionsProvider(
       case CompletionValue.Document(label, doc, desc) =>
         mkItem(label, doc, filterText = Some(desc))
       case CompletionValue.Autofill(value) => mkItem(ident, value)
+      case CompletionValue.CaseKeyword(
+            _,
+            label,
+            text,
+            additionalEdit,
+            range,
+            command,
+          ) =>
+        mkItem(
+          label,
+          text.getOrElse(label),
+          additionalEdits = additionalEdit,
+          range = range,
+          command = command,
+        )
+      case CompletionValue.MatchCompletion(
+            label,
+            text,
+            additionalEdits,
+            desc,
+          ) =>
+        mkItem(label, text.getOrElse(label), additionalEdits = additionalEdits)
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)
         mkItem(

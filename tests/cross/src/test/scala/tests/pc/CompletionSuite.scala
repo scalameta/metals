@@ -958,20 +958,13 @@ class CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin,
     compat = Map(
-      ">=3.1.0" ->
-        """|Some scala
-           |Some[A](value: A): Some[A]
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
-           |""".stripMargin,
       "3" ->
-        """|Some scala
+        """|Some(value) scala
+           |Some scala
            |Some[A](value: A): Some[A]
-           |SomeToExpr - scala.quoted.ToExpr
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr - scala.quoted.FromExpr
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
-           |""".stripMargin,
+           |""".stripMargin
     ),
   )
 
@@ -1013,12 +1006,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |NoManifest scala.reflect
        |""".stripMargin,
     topLines = Some(2),
-    compat = Map(
-      "3" ->
-        """|NoManifest scala.reflect
-           |NoClassDefFoundError java.lang
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -1040,9 +1027,9 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3" ->
-        """|Seq scala.collection.immutable
+        """|Some(value) scala
+           |Seq scala.collection.immutable
            |Set scala.collection.immutable
-           |Stream scala.collection.immutable
            |""".stripMargin,
     ),
   )
@@ -1066,9 +1053,9 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3" ->
-        """|Seq scala.collection.immutable
+        """|Some[_] scala
+           |Seq scala.collection.immutable
            |Set scala.collection.immutable
-           |Stream scala.collection.immutable
            |""".stripMargin,
     ),
   )

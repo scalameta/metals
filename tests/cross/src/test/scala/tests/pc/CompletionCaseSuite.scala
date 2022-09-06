@@ -7,9 +7,6 @@ import tests.BaseCompletionSuite
 
 class CompletionCaseSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   def paramHint: Option[String] = Some("param-hint")
 
   override def config: PresentationCompilerConfig =
@@ -155,10 +152,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       // known-direct subclasses doesn't work well in 2.11 apparently.
-      "2.11" -> ""
+      "2.11" -> "",
+      "3" -> "case Cls(a, b) => sealed-two.Outer",
     ),
   )
 
+  // TODO: `Left` has conflicting name in Scope, we should fix it so the result is the same as for scala 2
   check(
     "sealed-conflict",
     """
@@ -172,6 +171,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     """|case scala.util.Left(value) =>
        |case Right(value) => scala.util
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|case Left(value) => scala.util
+           |case Right(value) => scala.util
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -365,12 +370,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    cas@@
       |  }
       |}""".stripMargin,
-    """|case head :: tl => scala.collection.immutable
+    """|case head :: next => scala.collection.immutable
        |case Nil => scala.collection.immutable
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|case head :: next => scala.collection.immutable
+      "2.12" ->
+        """|case head :: tl => scala.collection.immutable
            |case Nil => scala.collection.immutable
            |""".stripMargin
     ),
@@ -410,6 +415,9 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "f = : ((Int, Int)) => B",
     topLines = Some(1),
+    compat = Map(
+      "3" -> "f = : A => B"
+    ),
   )
 
   checkEditLine(

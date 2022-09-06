@@ -335,6 +335,72 @@ class Completions(
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
+
+      case MatchExtractor(selector) =>
+        (
+          CaseKeywordCompletion.matchContribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+          ),
+          false,
+        )
+
+      case CaseExtractors.CaseExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+          ),
+          true,
+        )
+
+      case CaseExtractors.TypedCasePatternExtractor(
+            selector,
+            parent,
+            identName,
+          ) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+            Some(identName),
+            true,
+          ),
+          false,
+        )
+
+      case CaseExtractors.CasePatternExtractor(selector, parent, identName) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+            Some(identName),
+          ),
+          false,
+        )
+
+      // in `case @@` we have to change completionPos to `case` pos,
+      // otherwise after accepting completion we would get `case case None =>`
+      case (lt @ Literal(
+            Constant(null)
+          )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
+        advancedCompletions(
+          path.tail,
+          c.startPos,
+          CompletionPos.infer(c.startPos, text, path.tail),
+        )
+
       // class FooImpl extends Foo:
       //   def x|
       case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
@@ -415,10 +481,6 @@ class Completions(
           .filterInteresting(enrich = false)
           ._1
         (completions, true)
-      // From Scala 3.1.3-RC3 (as far as I know), path contains
-      // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
-      case Literal(Constant(null)) :: tl =>
-        advancedCompletions(tl, pos, completionPos)
 
       case (imp @ Import(expr, selectors)) :: _
           if isAmmoniteFileCompletionPosition(imp, rawFileName) =>
@@ -433,6 +495,12 @@ class Completions(
           ),
           true,
         )
+
+      // From Scala 3.1.3-RC3 (as far as I know), path contains
+      // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
+      case Literal(Constant(null)) :: tl =>
+        advancedCompletions(tl, pos, completionPos)
+
       case _ =>
         val args = NamedArgCompletions.contribute(
           pos,
@@ -547,6 +615,7 @@ class Completions(
           head match
             case doc: CompletionValue.Document => (doc.label, true)
             case over: CompletionValue.Override => (over.label, true)
+            case ck: CompletionValue.CaseKeyword => (ck.label, true)
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
@@ -569,6 +638,7 @@ class Completions(
                   )
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
+            case mc: CompletionValue.MatchCompletion => (mc.label, true)
             case namedArg: CompletionValue.NamedArg =>
               val id = namedArg.label + "="
               (id, true)
@@ -822,6 +892,16 @@ class Completions(
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
         (o1, o2) match
           case (
+                sym1: CompletionValue.CaseKeyword,
+                sym2: CompletionValue.Compiler,
+              ) =>
+            0
+          case (
+                sym1: CompletionValue.Compiler,
+                sym2: CompletionValue.CaseKeyword,
+              ) =>
+            1
+          case (
                 sym1: CompletionValue.Symbolic,
                 sym2: CompletionValue.Symbolic,
               ) =>
@@ -864,5 +944,27 @@ class Completions(
             if byApplyParams != 0 then byApplyParams
             else compareByRelevance(o1, o2)
       end compare
+
+  object MatchExtractor:
+    def unapply(path: List[Tree]) =
+      path match
+        // foo mat@@
+        case (sel @ Select(qualifier, name)) :: _
+            if "match".startsWith(name.toString()) && text.charAt(
+              completionPos.start - 1
+            ) == ' ' =>
+          Some(qualifier)
+        // foo match @@
+        case (c: CaseDef) :: (m: Match) :: _
+            if completionPos.query.startsWith("match") =>
+          Some(m.selector)
+        // foo ma@tch (no cases)
+        case (m @ Match(
+              _,
+              CaseDef(Literal(Constant(null)), _, _) :: Nil,
+            )) :: _ =>
+          Some(m.selector)
+        case _ => None
+  end MatchExtractor
 
 end Completions
