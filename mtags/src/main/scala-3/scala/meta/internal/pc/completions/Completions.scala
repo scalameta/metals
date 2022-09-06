@@ -394,11 +394,18 @@ class Completions(
       // otherwise after accepting completion we would get `case case None =>`
       case (lt @ Literal(
             Constant(null)
-          )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        advancedCompletions(
-          path.tail,
-          c.startPos,
-          CompletionPos.infer(c.startPos, text, path.tail),
+          )) :: (c: CaseDef) :: (m: Match) :: parent :: _
+          if text(lt.startPos.start) == ' ' =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+            Some(""),
+          ),
+          false,
         )
 
       // class FooImpl extends Foo:

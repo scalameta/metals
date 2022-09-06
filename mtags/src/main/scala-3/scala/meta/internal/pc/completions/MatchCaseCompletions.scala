@@ -311,6 +311,7 @@ class CompletionValueGenerator(
   def fuzzyMatches(name: String) =
     patternOnly match
       case None => true
+      case Some("") => true
       case Some(query) => CompletionFuzzy.matches(query, name)
 
   def toCompletionValue(
