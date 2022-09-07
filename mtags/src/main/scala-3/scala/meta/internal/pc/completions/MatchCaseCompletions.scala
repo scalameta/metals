@@ -353,10 +353,13 @@ class CompletionValueGenerator(
     val label =
       if patternOnly.isEmpty then s"case $pattern =>"
       else pattern
+    val cursorSuffix =
+      (if patternOnly.nonEmpty then "" else " ") +
+        (if clientSupportsSnippets then "$0" else "")
     CompletionValue.CaseKeyword(
       sym,
       label,
-      Some(label + (if clientSupportsSnippets then " $0" else "")),
+      Some(label + cursorSuffix),
       autoImports,
       // filterText = if !doFilterText then Some("") else None,
       range = Some(completionPos.toEditRange),
