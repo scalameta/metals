@@ -1053,7 +1053,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3" ->
-        """|Some[_] scala
+        """|Some[?] scala
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
            |""".stripMargin,
