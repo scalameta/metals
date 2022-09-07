@@ -347,6 +347,26 @@ class Completions(
           false,
         )
 
+      // in `case @@` we have to change completionPos to `case` pos,
+      // otherwise after accepting completion we would get `case case None =>`
+      case (c @ CaseDef(
+            Literal((Constant(null))),
+            _,
+            _,
+          )) :: (m: Match) :: parent :: _
+          if pos.start - c.sourcePos.start > 4 =>
+        (
+          CaseKeywordCompletion.contribute(
+            m.selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+            Some(""),
+          ),
+          false,
+        )
+
       case CaseExtractors.CaseExtractor(selector, parent) =>
         (
           CaseKeywordCompletion.contribute(
@@ -386,24 +406,6 @@ class Completions(
             config,
             parent,
             Some(identName),
-          ),
-          false,
-        )
-
-      // in `case @@` we have to change completionPos to `case` pos,
-      // otherwise after accepting completion we would get `case case None =>`
-      case (lt @ Literal(
-            Constant(null)
-          )) :: (c: CaseDef) :: (m: Match) :: parent :: _
-          if text(lt.startPos.start) == ' ' =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-            Some(""),
           ),
           false,
         )
