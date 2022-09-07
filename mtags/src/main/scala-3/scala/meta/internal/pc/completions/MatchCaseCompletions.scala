@@ -408,7 +408,7 @@ class CompletionValueGenerator(
   )(using Context): String =
     val suffix = sym.typeParams match
       case Nil => ""
-      case tparams => tparams.map(_ => "_").mkString("[", ", ", "]")
+      case tparams => tparams.map(_ => "?").mkString("[", ", ", "]")
     val bind = if hasBind then "" else "_: "
     bind + name + suffix
 end CompletionValueGenerator
