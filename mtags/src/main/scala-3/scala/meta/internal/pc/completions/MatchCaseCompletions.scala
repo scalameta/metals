@@ -112,11 +112,12 @@ object CaseKeywordCompletion:
       if !isVisited(sym) then
         recordVisit(sym)
         if completionGenerator.fuzzyMatches(name) then
-          result += completionGenerator.toCompletionValue(
+          val completionOption = completionGenerator.toCompletionValue(
             sym,
             name,
             autoImports,
           )
+          completionOption.foreach(result += _)
         end if
     end visit
     val selectorSym = parents.selector.typeSymbol
@@ -233,11 +234,12 @@ object CaseKeywordCompletion:
     val sortedSubclasses = subclassesForType(tpe)
     sortedSubclasses.foreach { case sym =>
       val autoImport = autoImportsGen.forSymbol(sym)
-      result += completionGenerator.toCompletionValue(
+      val completionOption = completionGenerator.toCompletionValue(
         sym,
         sym.decodedName,
         autoImport.getOrElse(Nil),
       )
+      completionOption.foreach(result += _)
     }
 
     val basicMatch = CompletionValue.MatchCompletion(
@@ -320,53 +322,57 @@ class CompletionValueGenerator(
       sym: Symbol,
       name: String,
       autoImports: List[l.TextEdit],
-  )(using Context): CompletionValue.CaseKeyword =
+  )(using Context): Option[CompletionValue.CaseKeyword] =
     sym.info
     val isModuleLike =
       sym.is(Flags.Module) || sym.isOneOf(JavaEnumTrait) || sym.isOneOf(
         JavaEnumValue
-      )
-    val pattern =
-      if (sym.is(Case) || isModuleLike) && !hasBind then
-        val isInfixEligible =
-          indexedContext.lookupSym(sym) == Result.InScope
-            || autoImports.nonEmpty
-        if isInfixEligible && sym.is(Case) && !Character
-            .isUnicodeIdentifierStart(
-              sym.decodedName.head
+      ) || sym.isAllOf(EnumCase)
+    if isModuleLike && hasBind then None
+    else
+      val pattern =
+        if (sym.is(Case) || isModuleLike) && !hasBind then
+          val isInfixEligible =
+            indexedContext.lookupSym(sym) == Result.InScope
+              || autoImports.nonEmpty
+          if isInfixEligible && sym.is(Case) && !Character
+              .isUnicodeIdentifierStart(
+                sym.decodedName.head
+              )
+          then
+            // Deconstructing the symbol as an infix operator, for example `case head :: tail =>`
+            tryInfixPattern(sym).getOrElse(
+              unapplyPattern(sym, name, isModuleLike)
             )
-        then
-          // Deconstructing the symbol as an infix operator, for example `case head :: tail =>`
-          tryInfixPattern(sym).getOrElse(
-            unapplyPattern(sym, name, isModuleLike)
-          )
+          else
+            unapplyPattern(
+              sym,
+              name,
+              isModuleLike,
+            ) // Apply syntax, example `case ::(head, tail) =>`
+          end if
         else
-          unapplyPattern(
+          typePattern(
             sym,
             name,
-            isModuleLike,
-          ) // Apply syntax, example `case ::(head, tail) =>`
-        end if
-      else
-        typePattern(
-          sym,
-          name,
-        ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
+          ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
 
-    val label =
-      if patternOnly.isEmpty then s"case $pattern =>"
-      else pattern
-    val cursorSuffix =
-      (if patternOnly.nonEmpty then "" else " ") +
-        (if clientSupportsSnippets then "$0" else "")
-    CompletionValue.CaseKeyword(
-      sym,
-      label,
-      Some(label + cursorSuffix),
-      autoImports,
-      // filterText = if !doFilterText then Some("") else None,
-      range = Some(completionPos.toEditRange),
-    )
+      val label =
+        if patternOnly.isEmpty then s"case $pattern =>"
+        else pattern
+      val cursorSuffix =
+            (if patternOnly.nonEmpty then "" else " ") +
+              (if clientSupportsSnippets then "$0" else "")
+      Some(
+        CompletionValue.CaseKeyword(
+          sym,
+          label,
+          Some(label + cursorSuffix),
+          autoImports,
+          range = Some(completionPos.toEditRange),
+        )
+      )
+    end if
   end toCompletionValue
 
   private def tryInfixPattern(sym: Symbol)(using Context): Option[String] =

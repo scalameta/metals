@@ -69,8 +69,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
                 |case _: Cat => pkg
                 |case _: Dog => pkg
                 |case Elephant => pkg
-                |case _: HasFeet[_, _] => pkg
-                |case _: HasMouth[_] => pkg
+                |case _: HasFeet[?, ?] => pkg
+                |case _: HasMouth[?] => pkg
                 |case HasWings(e) => pkg
                 |case Seal => pkg
                 |""".stripMargin

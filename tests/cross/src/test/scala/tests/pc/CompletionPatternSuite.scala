@@ -80,20 +80,19 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case _: @@ =>
       |  }
       |}""".stripMargin,
-    """|None scala
-       |Some[_] scala
+    """|Some[?] scala
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(1),
   )
   check(
     "wildcard-ident",
     """
       |object A {
       |  Option(1) match {
-      |    case _: N@@ =>
+      |    case _: S@@ =>
       |  }
       |}""".stripMargin,
-    """|None scala
+    """|Some[?] scala
        |""".stripMargin,
     topLines = Some(1),
   )
@@ -106,10 +105,9 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case ab: @@ =>
       |  }
       |}""".stripMargin,
-    """|None scala
-       |Some[_] scala
+    """|Some[?] scala
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(1),
   )
 
   check(
@@ -120,7 +118,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case ab: S@@ =>
       |  }
       |}""".stripMargin,
-    """|Some[_] scala
+    """|Some[?] scala
        |""".stripMargin,
     topLines = Some(1),
   )
