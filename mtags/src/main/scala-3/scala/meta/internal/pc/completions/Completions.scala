@@ -359,8 +359,8 @@ class Completions(
             indexedContext,
             config,
             parent,
-            Some(identName),
-            true,
+            patternOnly = Some(identName),
+            hasBind = true,
           ),
           false,
         )
@@ -373,7 +373,7 @@ class Completions(
             indexedContext,
             config,
             parent,
-            Some(identName),
+            patternOnly = Some(identName),
           ),
           false,
         )
