@@ -330,13 +330,13 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-    val CaseExtractor = new CaseExtractor(pos, text, completionPos)
+    val MatchCaseExtractor = new MatchCaseExtractor(pos, text, completionPos)
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
 
-      case CaseExtractor.MatchExtractor(selector) =>
+      case MatchCaseExtractor.MatchExtractor(selector) =>
         (
           CaseKeywordCompletion.matchContribute(
             selector,
@@ -347,7 +347,7 @@ class Completions(
           false,
         )
 
-      case CaseExtractor.TypedCasePatternExtractor(
+      case MatchCaseExtractor.TypedCasePatternExtractor(
             selector,
             parent,
             identName,
@@ -365,7 +365,11 @@ class Completions(
           false,
         )
 
-      case CaseExtractor.CasePatternExtractor(selector, parent, identName) =>
+      case MatchCaseExtractor.CasePatternExtractor(
+            selector,
+            parent,
+            identName,
+          ) =>
         (
           CaseKeywordCompletion.contribute(
             selector,
@@ -378,7 +382,7 @@ class Completions(
           false,
         )
 
-      case CaseExtractor.CaseExtractor(selector, parent) =>
+      case MatchCaseExtractor.CaseExtractor(selector, parent) =>
         (
           CaseKeywordCompletion.contribute(
             selector,

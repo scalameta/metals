@@ -361,8 +361,8 @@ class CompletionValueGenerator(
         if patternOnly.isEmpty then s"case $pattern =>"
         else pattern
       val cursorSuffix =
-            (if patternOnly.nonEmpty then "" else " ") +
-              (if clientSupportsSnippets then "$0" else "")
+        (if patternOnly.nonEmpty then "" else " ") +
+          (if clientSupportsSnippets then "$0" else "")
       Some(
         CompletionValue.CaseKeyword(
           sym,
@@ -419,7 +419,7 @@ class CompletionValueGenerator(
     bind + name + suffix
 end CompletionValueGenerator
 
-class CaseExtractor(
+class MatchCaseExtractor(
     pos: SourcePosition,
     text: String,
     completionPos: CompletionPos,
@@ -530,4 +530,4 @@ class CaseExtractor(
           Some((selector, parent, name.decoded))
         case _ => None
   end TypedCasePatternExtractor
-end CaseExtractor
+end MatchCaseExtractor
