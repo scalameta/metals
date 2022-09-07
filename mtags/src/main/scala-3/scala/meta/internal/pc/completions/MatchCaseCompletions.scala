@@ -16,6 +16,7 @@ import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags
@@ -29,6 +30,7 @@ import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
 
 object CaseKeywordCompletion:
@@ -411,7 +413,32 @@ class CompletionValueGenerator(
     bind + name + suffix
 end CompletionValueGenerator
 
-object CaseExtractors:
+class CaseExtractor(
+    pos: SourcePosition,
+    text: String,
+    completionPos: CompletionPos,
+):
+  object MatchExtractor:
+    def unapply(path: List[Tree]) =
+      path match
+        // foo mat@@
+        case (sel @ Select(qualifier, name)) :: _
+            if "match".startsWith(name.toString()) && text.charAt(
+              completionPos.start - 1
+            ) == ' ' =>
+          Some(qualifier)
+        // foo match @@
+        case (c: CaseDef) :: (m: Match) :: _
+            if completionPos.query.startsWith("match") =>
+          Some(m.selector)
+        // foo ma@tch (no cases)
+        case (m @ Match(
+              _,
+              CaseDef(Literal(Constant(null)), _, _) :: Nil,
+            )) :: _ =>
+          Some(m.selector)
+        case _ => None
+  end MatchExtractor
   object CaseExtractor:
     def unapply(path: List[Tree]): Option[(Tree, Tree)] =
       path match
@@ -456,6 +483,14 @@ object CaseExtractors:
   object CasePatternExtractor:
     def unapply(path: List[Tree])(using Context) =
       path match
+        // case @@
+        case (c @ CaseDef(
+              Literal((Constant(null))),
+              _,
+              _,
+            )) :: (m: Match) :: parent :: _
+            if pos.start - c.sourcePos.start > 4 =>
+          Some((m.selector, parent, ""))
         // case Som@@
         case Ident(name) :: CaseExtractor(selector, parent) =>
           Some((selector, parent, name.decoded))
@@ -489,4 +524,4 @@ object CaseExtractors:
           Some((selector, parent, name.decoded))
         case _ => None
   end TypedCasePatternExtractor
-end CaseExtractors
+end CaseExtractor

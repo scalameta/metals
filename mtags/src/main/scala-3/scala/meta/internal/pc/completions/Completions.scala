@@ -330,13 +330,13 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-
+    val CaseExtractor = new CaseExtractor(pos, text, completionPos)
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
 
-      case MatchExtractor(selector) =>
+      case CaseExtractor.MatchExtractor(selector) =>
         (
           CaseKeywordCompletion.matchContribute(
             selector,
@@ -347,39 +347,7 @@ class Completions(
           false,
         )
 
-      // in `case @@` we have to change completionPos to `case` pos,
-      // otherwise after accepting completion we would get `case case None =>`
-      case (c @ CaseDef(
-            Literal((Constant(null))),
-            _,
-            _,
-          )) :: (m: Match) :: parent :: _
-          if pos.start - c.sourcePos.start > 4 =>
-        (
-          CaseKeywordCompletion.contribute(
-            m.selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-            Some(""),
-          ),
-          false,
-        )
-
-      case CaseExtractors.CaseExtractor(selector, parent) =>
-        (
-          CaseKeywordCompletion.contribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-          ),
-          true,
-        )
-
-      case CaseExtractors.TypedCasePatternExtractor(
+      case CaseExtractor.TypedCasePatternExtractor(
             selector,
             parent,
             identName,
@@ -397,7 +365,7 @@ class Completions(
           false,
         )
 
-      case CaseExtractors.CasePatternExtractor(selector, parent, identName) =>
+      case CaseExtractor.CasePatternExtractor(selector, parent, identName) =>
         (
           CaseKeywordCompletion.contribute(
             selector,
@@ -408,6 +376,18 @@ class Completions(
             Some(identName),
           ),
           false,
+        )
+
+      case CaseExtractor.CaseExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+          ),
+          true,
         )
 
       // class FooImpl extends Foo:
@@ -954,27 +934,5 @@ class Completions(
             if byApplyParams != 0 then byApplyParams
             else compareByRelevance(o1, o2)
       end compare
-
-  object MatchExtractor:
-    def unapply(path: List[Tree]) =
-      path match
-        // foo mat@@
-        case (sel @ Select(qualifier, name)) :: _
-            if "match".startsWith(name.toString()) && text.charAt(
-              completionPos.start - 1
-            ) == ' ' =>
-          Some(qualifier)
-        // foo match @@
-        case (c: CaseDef) :: (m: Match) :: _
-            if completionPos.query.startsWith("match") =>
-          Some(m.selector)
-        // foo ma@tch (no cases)
-        case (m @ Match(
-              _,
-              CaseDef(Literal(Constant(null)), _, _) :: Nil,
-            )) :: _ =>
-          Some(m.selector)
-        case _ => None
-  end MatchExtractor
 
 end Completions
