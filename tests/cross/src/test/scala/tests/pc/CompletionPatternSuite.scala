@@ -13,9 +13,9 @@ class CompletionPatternSuite extends BaseCompletionSuite {
     PresentationCompilerConfigImpl().copy(
       _parameterHintsCommand = paramHint
     )
-  
+
   override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-      Some(IgnoreScala2)
+    Some(IgnoreScala2)
 
   checkEdit(
     "empty",
@@ -25,13 +25,13 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case @@ =>
       |  }
       |}""".stripMargin,
-   """
-     |object A {
-     |  Option(1) match {
-     |    case Some(value) $0 =>
-     |  }
-     |}""".stripMargin,
-     filter = _.contains("Some(value)")
+    """
+      |object A {
+      |  Option(1) match {
+      |    case Some(value) $0 =>
+      |  }
+      |}""".stripMargin,
+    filter = _.contains("Some(value)"),
   )
 
   check(
@@ -73,7 +73,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
     topLines = Some(1),
   )
   check(
-    "wildcard1",
+    "wildcard",
     """
       |object A {
       |  Option(1) match {

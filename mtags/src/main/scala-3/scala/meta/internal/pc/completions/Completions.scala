@@ -896,53 +896,54 @@ class Completions(
         priority(o1) - priority(o2)
       end compareInApplyParams
 
+      def prioritizeCaseKeyword(
+          sym1: CompletionValue.Symbolic,
+          sym2: CompletionValue.Symbolic,
+      ): Boolean =
+        sym1.isInstanceOf[CompletionValue.CaseKeyword] && !sym2
+          .isInstanceOf[CompletionValue.CaseKeyword]
+
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
         (o1, o2) match
-          case (
-                sym1: CompletionValue.CaseKeyword,
-                sym2: CompletionValue.Compiler,
-              ) =>
-            0
-          case (
-                sym1: CompletionValue.Compiler,
-                sym2: CompletionValue.CaseKeyword,
-              ) =>
-            1
           case (
                 sym1: CompletionValue.Symbolic,
                 sym2: CompletionValue.Symbolic,
               ) =>
-            val s1 = sym1.symbol
-            val s2 = sym2.symbol
-            val byLocalSymbol = compareLocalSymbols(s1, s2)
-            if byLocalSymbol != 0 then byLocalSymbol
+            if prioritizeCaseKeyword(sym1, sym2) then 0
+            else if prioritizeCaseKeyword(sym2, sym1) then 1
             else
-              val byRelevance = compareByRelevance(o1, o2)
-              if byRelevance != 0 then byRelevance
+              val s1 = sym1.symbol
+              val s2 = sym2.symbol
+              val byLocalSymbol = compareLocalSymbols(s1, s2)
+              if byLocalSymbol != 0 then byLocalSymbol
               else
-                val byFuzzy = Integer.compare(
-                  fuzzyScore(sym1),
-                  fuzzyScore(sym2),
-                )
-                if byFuzzy != 0 then byFuzzy
+                val byRelevance = compareByRelevance(o1, o2)
+                if byRelevance != 0 then byRelevance
                 else
-                  val byIdentifier = IdentifierComparator.compare(
-                    s1.name.show,
-                    s2.name.show,
+                  val byFuzzy = Integer.compare(
+                    fuzzyScore(sym1),
+                    fuzzyScore(sym2),
                   )
-                  if byIdentifier != 0 then byIdentifier
+                  if byFuzzy != 0 then byFuzzy
                   else
-                    val byOwner =
-                      s1.owner.fullName.toString
-                        .compareTo(s2.owner.fullName.toString)
-                    if byOwner != 0 then byOwner
+                    val byIdentifier = IdentifierComparator.compare(
+                      s1.name.show,
+                      s2.name.show,
+                    )
+                    if byIdentifier != 0 then byIdentifier
                     else
-                      val byParamCount = Integer.compare(
-                        s1.paramSymss.flatten.size,
-                        s2.paramSymss.flatten.size,
-                      )
-                      if byParamCount != 0 then byParamCount
-                      else s1.detailString.compareTo(s2.detailString)
+                      val byOwner =
+                        s1.owner.fullName.toString
+                          .compareTo(s2.owner.fullName.toString)
+                      if byOwner != 0 then byOwner
+                      else
+                        val byParamCount = Integer.compare(
+                          s1.paramSymss.flatten.size,
+                          s2.paramSymss.flatten.size,
+                        )
+                        if byParamCount != 0 then byParamCount
+                        else s1.detailString.compareTo(s2.detailString)
+                  end if
                 end if
               end if
             end if
