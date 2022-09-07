@@ -409,8 +409,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     filter = str => !str.contains("newMain"),
     compat = Map(
       "3" ->
-        """|case head :: next => scala.collection.immutable
-           |case Nil => scala.collection.immutable""".stripMargin
+        """|head :: next scala.collection.immutable
+           |Nil scala.collection.immutable""".stripMargin
     ),
   )
 
