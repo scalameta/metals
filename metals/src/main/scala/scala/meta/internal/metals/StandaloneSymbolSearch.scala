@@ -28,6 +28,7 @@ class StandaloneSymbolSearch(
     trees: Trees,
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
+    sourceMapper: SourceMapper,
     workspaceFallback: Option[SymbolSearch] = None,
 ) extends SymbolSearch {
 
@@ -56,6 +57,7 @@ class StandaloneSymbolSearch(
       trees,
       buildTargets,
       saveSymbolFileToDisk,
+      sourceMapper,
     )
 
   def documentation(
@@ -128,6 +130,7 @@ object StandaloneSymbolSearch {
       trees: Trees,
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
+      sourceMapper: SourceMapper,
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
@@ -146,6 +149,7 @@ object StandaloneSymbolSearch {
       trees,
       buildTargets,
       saveSymbolFileToDisk,
+      sourceMapper,
     )
   }
   def apply(
@@ -157,6 +161,7 @@ object StandaloneSymbolSearch {
       trees: Trees,
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
+      sourceMapper: SourceMapper,
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
@@ -170,6 +175,7 @@ object StandaloneSymbolSearch {
       trees,
       buildTargets,
       saveSymbolFileToDisk,
+      sourceMapper,
     )
   }
 
