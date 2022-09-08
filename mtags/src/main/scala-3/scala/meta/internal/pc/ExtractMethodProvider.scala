@@ -144,11 +144,11 @@ final class ExtractMethodProvider(
         val replacedText = s"$name($exprParamsText)"
         List(
           new l.TextEdit(
-            toLSP(extractedPos),
+            extractedPos.toLsp,
             replacedText,
           ),
           new l.TextEdit(
-            toLSP(defnPos.startPos),
+            defnPos.startPos.toLsp,
             defText,
           ),
         )

@@ -79,7 +79,7 @@ final class ExtractMethodProvider(
 
       def traverse(symbols: Set[Symbol], tree: Tree): Set[Symbol] =
         tree match {
-          case id @ Ident(_) =>
+          case id: Ident =>
             symbols ++ symFromIdent(id)
           case _ =>
             tree.children.foldLeft(symbols)(traverse(_, _))
@@ -150,11 +150,11 @@ final class ExtractMethodProvider(
         val replacedText = s"$name($exprParams)"
         List(
           new l.TextEdit(
-            extractedPos.toLSP,
+            extractedPos.toLsp,
             replacedText
           ),
           new l.TextEdit(
-            defnPos.focusStart.toLSP,
+            defnPos.focusStart.toLsp,
             defText
           )
         )

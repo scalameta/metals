@@ -428,6 +428,7 @@ class Compilers(
         }
     }
   }.getOrElse(Future.successful(Nil.asJava))
+
   def extractMethod(
       doc: TextDocumentIdentifier,
       range: LspRange,

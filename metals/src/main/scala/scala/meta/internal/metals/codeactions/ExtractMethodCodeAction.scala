@@ -42,9 +42,9 @@ class ExtractMethodCodeAction(
         val enclosing = tree.flatMap(loop(_))
         enclosing.map(_ match {
           case Term.Block(stats) =>
-            stats.filter((s: Tree) => range.encloses(s.pos.toLSP))
+            stats.filter((s: Tree) => range.encloses(s.pos.toLsp))
           case Template(_, _, _, stats) =>
-            stats.filter((s: Tree) => range.encloses(s.pos.toLSP))
+            stats.filter((s: Tree) => range.encloses(s.pos.toLsp))
           case ap if returnsValue(ap) => List(ap)
           case _ => Nil
         })
@@ -68,14 +68,14 @@ class ExtractMethodCodeAction(
             stats(block).find(_.pos.end >= head.pos.end).getOrElse(defn)
           val scopeName = defnTitle(defn)
           val exprRange = new l.Range(
-            head.pos.toLSP.getStart(),
-            expr.pos.toLSP.getEnd(),
+            head.pos.toLsp.getStart(),
+            expr.pos.toLsp.getEnd(),
           )
-          val command = ServerCommands.ExtractMethod.toLSP(
+          val command = ServerCommands.ExtractMethod.toLsp(
             ServerCommands.ExtractMethodParams(
               params.getTextDocument(),
               exprRange,
-              defnPos.pos.toLSP.getStart(),
+              defnPos.pos.toLsp.getStart(),
             )
           )
           CodeActionBuilder.build(

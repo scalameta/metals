@@ -367,7 +367,8 @@ class ExtractMethodSuite extends BaseCodeActionSuite {
                          |  }
                          |}""".stripMargin),
   )
-  // TODO: Add extracting inner methods
+  // Currently we are not supporting extracting inner methods
+  // Issue: https://github.com/scalameta/metals/issues/4360
   checkEdit(
     "extract-def",
     s"""|object A{
