@@ -323,7 +323,6 @@ class CompletionValueGenerator(
       name: String,
       autoImports: List[l.TextEdit],
   )(using Context): Option[CompletionValue.CaseKeyword] =
-    sym.info
     val isModuleLike =
       sym.is(Flags.Module) || sym.isOneOf(JavaEnumTrait) || sym.isOneOf(
         JavaEnumValue

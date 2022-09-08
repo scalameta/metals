@@ -28,7 +28,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
     """
       |object A {
       |  Option(1) match {
-      |    case Some(value) $0 =>
+      |    case Some(value)$0 =>
       |  }
       |}""".stripMargin,
     filter = _.contains("Some(value)"),
