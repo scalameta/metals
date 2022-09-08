@@ -54,15 +54,10 @@ class ExtractMethodCodeAction(
     val edits = {
       for {
         exprs <- toExtract
-        last <- exprs.lastOption
-        head <- exprs.headOption if returnsValue(last)
-        scopeOptions = enclosingList(head).flatMap(enclosingDef(_))
+        expr <- exprs.lastOption
+        head <- exprs.headOption if returnsValue(expr)
+        scopes = enclosingList(head).flatMap(enclosingDef(_))
       } yield {
-        (scopeOptions, last, head)
-      }
-    }
-    edits
-      .map { case (scopes: List[(Tree, Tree)], expr: Tree, head: Tree) =>
         scopes.map { case (defn, block) =>
           val defnPos =
             stats(block).find(_.pos.end >= head.pos.end).getOrElse(defn)
@@ -85,8 +80,8 @@ class ExtractMethodCodeAction(
           )
         }
       }
-      .getOrElse(Nil)
-
+    }.getOrElse(Nil)
+    edits
   }
 
   private def defnTitle(defn: Tree): String = {
