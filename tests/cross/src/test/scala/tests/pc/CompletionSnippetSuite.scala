@@ -262,6 +262,21 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     ),
   )
 
+  checkSnippet(
+    "type8",
+    s"""|
+        |class Base {
+        |  class Inner
+        |}
+        |object Upper extends Base
+        |object Main {
+        |  def foo(param: Uppe@@)
+        |}
+        |""".stripMargin,
+    """|Upper
+       |""".stripMargin,
+  )
+
   checkEditLine(
     "trailing-paren",
     s"""|object Main {
