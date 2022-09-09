@@ -671,6 +671,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |Catch - scala.util.control.Exception
        |""".stripMargin,
     includeDocs = true,
+    topLines = Some(1), // for Scala3, result contains `Catch` and `Catch[$0]`
     compat = Map(
       "2.13" -> post212CatchDocs,
       "3" ->

@@ -71,38 +71,6 @@ class Completions(
     case Term
     case Import
 
-    def include(sym: Symbol)(using Context): Boolean =
-      val generalExclude =
-        isUninterestingSymbol(sym) ||
-          !isNotLocalForwardReference(sym) ||
-          sym.isPackageObject
-
-      if generalExclude then false
-      else
-        this match
-          case Type(_, _) if sym.isType => true
-          case Type(_, _) if sym.isTerm =>
-            /* Type might be referenced by a path over an object:
-             * ```
-             * object sample:
-             *    class X
-             * val a: samp@@le.X = ???
-             * ```
-             * ignore objects that has companion class
-             *
-             * Also ignore objects that doesn't have any members.
-             * By some reason traits might have a fake companion object(example: scala.sys.process.ProcessBuilderImpl)
-             */
-            val allowModule =
-              sym.is(Module) &&
-                (sym.companionClass == NoSymbol && sym.info.allMembers.nonEmpty)
-            allowModule
-          case Term if sym.isTerm || sym.is(Package) => true
-          case Import => true
-          case _ => false
-      end if
-    end include
-
     def allowBracketSuffix: Boolean =
       this match
         case Type(hasTypeParams, _) => !hasTypeParams
@@ -111,6 +79,11 @@ class Completions(
     def allowTemplateSuffix: Boolean =
       this match
         case Type(_, hasNewKw) => hasNewKw
+        case _ => false
+
+    def allowApplicationSuffix: Boolean =
+      this match
+        case Term => true
         case _ => false
 
   end CursorPos
@@ -297,7 +270,10 @@ class Completions(
 
     // find the apply completion that would need a snippet
     val methodSymbols =
-      if shouldAddSnippet && sym.is(Flags.Module) && !isJavaDefined
+      if shouldAddSnippet &&
+        sym.is(Flags.Module) &&
+        !isJavaDefined &&
+        cursorPos.allowApplicationSuffix
       then
         val applSymbols = sym.info.member(nme.apply).allSymbols
         sym :: applSymbols
@@ -621,12 +597,22 @@ class Completions(
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
-              val id =
+              val nameId =
                 if sym.isClass || sym.is(Module) then
                   // drop #|. at the end to avoid duplication
                   name.substring(0, name.length - 1)
                 else name
-              val include = cursorPos.include(sym)
+              // differentiate between the symbol and the same symbol with snippetSuffix
+              // e.g.
+              // `new SimpleFileVisi@@` will have nameId
+              // java/nio/file/SimpleFileVisitor (object) and
+              // java/nio/file/SimpleFileVisitor (class) with snippetSuffix `[$0]`
+              // we'll see those completion items as different ones and keep both of them.
+              val id = nameId + symOnly.snippetSuffix.getOrElse("")
+              val include =
+                !isUninterestingSymbol(sym) &&
+                  isNotLocalForwardReference(sym) &&
+                  !sym.isPackageObject
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
             case mc: CompletionValue.MatchCompletion => (mc.label, true)

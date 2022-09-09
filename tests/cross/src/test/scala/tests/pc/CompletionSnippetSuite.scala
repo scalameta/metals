@@ -133,11 +133,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     """|IndexedSeq
        |IndexedSeq[$0]
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|IndexedSeq[$0]
-           |""".stripMargin
-    ),
   )
 
   checkSnippet(
@@ -179,8 +174,11 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |ArrayDequeOps
            |""".stripMargin,
       "3" -> // ArrayDeque upper is for java, the lower for scala
-        """|ArrayDeque[$0]
+        """|ArrayDeque
            |ArrayDeque[$0]
+           |ArrayDeque
+           |ArrayDeque[$0]
+           |ArrayDequeOps
            |ArrayDequeOps[$0]
            |""".stripMargin,
     ),
@@ -194,6 +192,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|SimpleFileVisitor[$0]
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|SimpleFileVisitor
+           |SimpleFileVisitor[$0]
+           |""".stripMargin
+    ),
   )
 
   checkSnippet(
@@ -212,7 +216,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |IterableOnce[$0] {}
            |""".stripMargin,
       "3" ->
-        """|Iterable[$0] {}
+        """|Iterable
+           |Iterable[$0] {}
            |IterableOnce[$0] {}
            |""".stripMargin,
     ),
@@ -234,7 +239,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |IterableOnce[$0]
            |""".stripMargin,
       "3" ->
-        """|Iterable[$0]
+        """|Iterable
+           |Iterable[$0]
            |IterableOnce[$0]
            |""".stripMargin,
     ),
@@ -256,7 +262,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |IterableOnce[$0]
            |""".stripMargin,
       "3" ->
-        """|Iterable[$0]
+        """|Iterable
+           |Iterable[$0]
            |IterableOnce[$0]
            |""".stripMargin,
     ),
@@ -394,6 +401,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         """|Try
            |Try($0)
+           |TryBlock
+           |TryModule
+           |TryMethods
            |TryMethods
            |""".stripMargin
     ),

@@ -114,6 +114,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: scala.concurrent.Future[$0]
        |)
        |""".stripMargin,
+    assertSingleItem = false,
+    itemIndex = if (scalaVersion.startsWith("3")) 1 else 0,
     filter = _ == "Future - scala.concurrent",
     compat = Map(
       "2" ->
@@ -140,6 +142,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: scala.concurrent.Future[$0]
        |)
        |""".stripMargin,
+    assertSingleItem = false,
+    itemIndex = if (scalaVersion.startsWith("3")) 1 else 0,
     filter = _ == "Future - scala.concurrent",
     compat = Map(
       "2" ->
@@ -168,6 +172,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    assertSingleItem = false,
+    itemIndex = if (scalaVersion.startsWith("3")) 1 else 0,
     compat = Map(
       "2" ->
         """|package `import-no-conflict`
@@ -208,6 +214,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |import java.util.concurrent.CompletableFuture
       |object Main extends CompletableFuture[$0]
       |""".stripMargin,
+    assertSingleItem = false,
+    itemIndex = if (scalaVersion.startsWith("3")) 1 else 0,
     compat = Map(
       "2" ->
         """package pkg
@@ -228,6 +236,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       |import java.util.concurrent.CompletableFuture
       |object Main extends CompletableFuture[$0]
       |""".stripMargin,
+    assertSingleItem = false,
+    itemIndex = if (scalaVersion.startsWith("3")) 1 else 0,
     compat = Map(
       "2" ->
         """package pkg
@@ -368,6 +378,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _.contains("scala.util"),
+    assertSingleItem = false,
     compat = Map(
       "2" ->
         """|import scala.util.Failure
@@ -742,13 +753,20 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|Future scala.concurrent
+       |Future scala.concurrent
        |Future - java.util.concurrent
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = if (scalaVersion.startsWith("3")) Some(3) else Some(2),
+    compat = Map(
+      "2" ->
+        """|Future scala.concurrent
+           |Future - java.util.concurrent
+           |""".stripMargin
+    ),
   )
 
   check(
-    "ordering-2",
+    "ordering-3",
     """|import java.util.concurrent.Future
        |object Main {
        |  def foo(
@@ -757,8 +775,15 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|Future java.util.concurrent
+       |Future java.util.concurrent
        |Future - scala.concurrent
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = if (scalaVersion.startsWith("3")) Some(3) else Some(2),
+    compat = Map(
+      "2" ->
+        """|Future java.util.concurrent
+           |Future - scala.concurrent
+           |""".stripMargin
+    ),
   )
 }
