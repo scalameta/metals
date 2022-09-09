@@ -393,6 +393,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
   // TODO: Should provide empty completions
   // The issue is that the tree looks the same as for `case @@` (it doesn't see `new`)
+  // Issue: https://github.com/scalameta/metals/issues/4367
   check(
     "new-pattern",
     """
