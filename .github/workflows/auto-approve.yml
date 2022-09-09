@@ -2,6 +2,7 @@ name: Auto approve patch updates
 
 on:
   pull_request_target:
+    types: [labeled]
 
 jobs:
   auto-approve:
