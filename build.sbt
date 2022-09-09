@@ -276,6 +276,8 @@ val mtagsSettings = List(
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+      // for ivy completions
+      "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
     if3 = List(
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,

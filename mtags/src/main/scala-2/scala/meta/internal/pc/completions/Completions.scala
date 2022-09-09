@@ -524,6 +524,9 @@ trait Completions { this: MetalsGlobal =>
       case (imp @ Import(select, selector)) :: _
           if isAmmoniteFileCompletionPosition(imp, pos) =>
         AmmoniteFileCompletions(select, selector, pos, editRange)
+      case (imp @ Import(select, selector)) :: _
+          if isAmmoniteIvyCompletionPosition(imp, pos) =>
+        AmmoniteIvyCompletions(select, selector, pos, editRange)
       case _ =>
         inferCompletionPosition(
           pos,
@@ -536,15 +539,25 @@ trait Completions { this: MetalsGlobal =>
     }
   }
 
-  def isAmmoniteFileCompletionPosition(tree: Tree, pos: Position): Boolean = {
+  private def isAmmoniteCompletionPosition(
+      magicImport: String,
+      tree: Tree,
+      pos: Position
+  ): Boolean = {
     tree match {
       case Import(select, _) =>
         pos.source.file.name.isAmmoniteGeneratedFile && select
           .toString()
-          .startsWith("$file")
+          .startsWith(magicImport)
       case _ => false
     }
   }
+
+  def isAmmoniteFileCompletionPosition(tree: Tree, pos: Position): Boolean =
+    isAmmoniteCompletionPosition("$file", tree, pos)
+
+  def isAmmoniteIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
+    isAmmoniteCompletionPosition("$ivy", tree, pos)
 
   private def inferCompletionPosition(
       pos: Position,
@@ -808,13 +821,14 @@ trait Completions { this: MetalsGlobal =>
     result
   }
 
-  /**
-   * Returns the start offset of the identifier starting as the given offset position.
-   */
-  def inferIdentStart(pos: Position, text: String): Int = {
+  def inferStart(
+      pos: Position,
+      text: String,
+      charPred: Char => Boolean
+  ): Int = {
     def fallback: Int = {
       var i = pos.point - 1
-      while (i >= 0 && Chars.isIdentifierPart(text.charAt(i))) {
+      while (i >= 0 && charPred(text.charAt(i))) {
         i -= 1
       }
       i + 1
@@ -836,6 +850,12 @@ trait Completions { this: MetalsGlobal =>
       }
     loop(lastVisitedParentTrees)
   }
+
+  /**
+   * Returns the start offset of the identifier starting as the given offset position.
+   */
+  def inferIdentStart(pos: Position, text: String): Int =
+    inferStart(pos, text, Chars.isIdentifierPart)
 
   /**
    * Returns the end offset of the identifier starting as the given offset position.
