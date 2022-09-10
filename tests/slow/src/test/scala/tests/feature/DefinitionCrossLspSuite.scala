@@ -5,10 +5,13 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.InitializationOptions
 
+import munit.Location
 import tests.BaseCompletionLspSuite
+import tests.ScriptsAssertions
 
 class DefinitionCrossLspSuite
-    extends BaseCompletionLspSuite("definition-cross") {
+    extends BaseCompletionLspSuite("definition-cross")
+    with ScriptsAssertions {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
@@ -60,6 +63,72 @@ class DefinitionCrossLspSuite
       _ <- server.didOpen("a/src/main/scala/a/Test.scala")
       _ = assertNoDiagnostics()
       _ = server.assertReferenceDefinitionBijection()
+    } yield ()
+  }
+
+  test("scala3-stdLibPatches") {
+    def assertDefinitionUri(
+        file: String,
+        query: String,
+        assertUri: String => Boolean,
+        clue: String,
+    )(implicit l: Location): Future[Unit] = {
+      definitionsAt(file, query).map { locs =>
+        assert(locs.size >= 1, s"Expected at least one location")
+        val uri = locs.head.getUri()
+        assert(assertUri(uri), s"$clue // uri: $uri")
+      }
+    }
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${BuildInfo.scala3}"
+           |  },
+           |  "b": {
+           |    "scalaVersion": "${BuildInfo.scala213}"
+           |  }
+           |
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |
+           |class A {
+           |  // assert if patched in scala.runtime.stdLibPatches.Predef
+           |  assert(false)
+           |  // ??? is defined in scala.Predef
+           |  val x = ???
+           |}
+           |/b/src/main/scala/b/B.scala
+           |package b
+           |
+           |class B {
+           |  assert(false)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- assertDefinitionUri(
+        "a/src/main/scala/a/A.scala",
+        "asse@@rt(false)",
+        uri => uri.contains("scala3-library_3"),
+        "Expected scala3 library location",
+      )
+      _ <- assertDefinitionUri(
+        "a/src/main/scala/a/A.scala",
+        "val x = ??@@?",
+        uri => uri.contains("scala-library"),
+        "Expected scala2 library location",
+      )
+      _ <- assertDefinitionUri(
+        "b/src/main/scala/b/B.scala",
+        "asse@@rt(false)",
+        uri => uri.contains("scala-library"),
+        "Expected scala2 library location",
+      )
     } yield ()
   }
 

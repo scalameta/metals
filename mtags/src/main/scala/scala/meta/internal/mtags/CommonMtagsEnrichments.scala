@@ -530,6 +530,19 @@ trait CommonMtagsEnrichments {
       val file = path.toURI.toString()
       Input.VirtualFile(file, text)
     }
+
+    def jarPath: Option[AbsolutePath] = {
+      val filesystem = path.toNIO.getFileSystem()
+      if (filesystem.provider().getScheme().equals("jar")) {
+        Some(
+          AbsolutePath(
+            Paths.get(filesystem.toString)
+          )
+        )
+      } else {
+        None
+      }
+    }
   }
 
   implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {

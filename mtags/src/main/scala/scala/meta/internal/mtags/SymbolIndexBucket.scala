@@ -42,6 +42,8 @@ class SymbolIndexBucket(
     dialect: Dialect
 ) {
 
+  import SymbolIndexBucket.stdLibPatches
+
   def close(): Unit = sourceJars.close()
 
   def addSourceDirectory(dir: AbsolutePath): List[(String, AbsolutePath)] = {
@@ -62,7 +64,7 @@ class SymbolIndexBucket(
         try {
           root.listRecursive.toList.flatMap {
             case source if source.isScala =>
-              addSourceFile(source, None).map(sym => (sym, source))
+              addSourceFile(source, None, Some(jar)).map(sym => (sym, source))
             case _ =>
               List.empty
           }
@@ -80,7 +82,14 @@ class SymbolIndexBucket(
       symbols: List[(String, AbsolutePath)]
   ): Unit = {
     if (sourceJars.addEntry(jar)) {
-      symbols.foreach { case (sym, path) =>
+      val patched =
+        if (stdLibPatches.isScala3Library(jar))
+          symbols.map { case (sym, path) =>
+            (stdLibPatches.patchSymbol(sym), path)
+          }
+        else symbols
+
+      patched.foreach { case (sym, path) =>
         val acc = toplevels.getOrElse(sym, Set.empty)
         toplevels(sym) = acc + path
       }
@@ -89,11 +98,20 @@ class SymbolIndexBucket(
 
   def addSourceFile(
       source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath]
+      sourceDirectory: Option[AbsolutePath],
+      fromSourceJar: Option[AbsolutePath] = None
   ): List[String] = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
     val symbols = indexSource(source, uri, dialect)
-    symbols.foreach { symbol =>
+
+    val patched =
+      fromSourceJar match {
+        case Some(jar) if stdLibPatches.isScala3Library(jar) =>
+          symbols.map(stdLibPatches.patchSymbol)
+        case _ => symbols
+      }
+
+    patched.foreach { symbol =>
       val acc = toplevels.getOrElse(symbol, Set.empty)
       toplevels(symbol) = acc + source
     }
@@ -196,7 +214,11 @@ class SymbolIndexBucket(
         val language = file.toLanguage
         val toIndexSource0 = toIndexSource(file)
         val input = toIndexSource0.toInput
-        val document = mtags.index(language, input, dialect)
+        val document =
+          stdLibPatches.patchDocument(
+            file,
+            mtags.index(language, input, dialect)
+          )
         s.TextDocuments(List(document))
       case _ =>
         s.TextDocuments(Nil)
@@ -288,4 +310,38 @@ object SymbolIndexBucket {
       mtags,
       dialect
     )
+
+  /**
+   * Scala 3 has a specific package that adds / replaces some symbols in scala.Predef + scala.language
+   * https://github.com/lampepfl/dotty/blob/main/library/src/scala/runtime/stdLibPatches/
+   * We need to do the same to correctly provide location for symbols obtained from semanticdb.
+   */
+  object stdLibPatches {
+    val packageName = "scala/runtime/stdLibPatches"
+
+    def isScala3Library(jar: AbsolutePath): Boolean =
+      jar.filename.startsWith("scala3-library_3")
+
+    def isScala3LibraryPatchSource(file: AbsolutePath): Boolean = {
+      file.jarPath.exists(
+        isScala3Library(_)
+      ) && file.parent.filename == "stdLibPatches"
+    }
+
+    def patchSymbol(sym: String): String =
+      sym.replace(packageName, "scala")
+
+    def patchDocument(
+        file: AbsolutePath,
+        doc: s.TextDocument
+    ): s.TextDocument = {
+      if (isScala3LibraryPatchSource(file)) {
+        val occs =
+          doc.occurrences.map(occ => occ.copy(symbol = patchSymbol(occ.symbol)))
+
+        doc.copy(occurrences = occs)
+      } else doc
+    }
+
+  }
 }

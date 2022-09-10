@@ -6,6 +6,7 @@ import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
+import scala.meta.dialects
 import scala.meta.internal.io.{ListFiles => _}
 import scala.meta.io.AbsolutePath
 
@@ -33,12 +34,12 @@ final class OnDemandSymbolIndex(
     dialectBuckets.values.foreach(_.close())
   }
   private val onErrorOption = onError.andThen(_ => None)
-  private def getOrCreateBucket(dialect: Dialect): SymbolIndexBucket = {
+
+  private def getOrCreateBucket(dialect: Dialect): SymbolIndexBucket =
     dialectBuckets.getOrElseUpdate(
       dialect,
       SymbolIndexBucket.empty(dialect, mtags, toIndexSource)
     )
-  }
 
   override def definition(symbol: Symbol): Option[SymbolDefinition] = {
     try findSymbolDefinition(symbol).headOption
@@ -130,17 +131,23 @@ final class OnDemandSymbolIndex(
   private def findSymbolDefinition(
       querySymbol: Symbol
   ): List[SymbolDefinition] = {
-    dialectBuckets.values.toList.flatMap(_.query(querySymbol))
+    dialectBuckets.values.toList
+      .flatMap(_.query(querySymbol))
+      // prioritize defs where found symbols is exact and comes from scala3
+      .sortBy(d => (!d.isExact, d.dialect != dialects.Scala3))
   }
 
 }
 
 object OnDemandSymbolIndex {
+
   def empty(
       onError: PartialFunction[Throwable, Unit] = { case NonFatal(e) =>
         throw e
       },
       toIndexSource: AbsolutePath => AbsolutePath = identity
-  ): OnDemandSymbolIndex =
+  ): OnDemandSymbolIndex = {
     new OnDemandSymbolIndex(TrieMap.empty, onError, toIndexSource)
+  }
+
 }
