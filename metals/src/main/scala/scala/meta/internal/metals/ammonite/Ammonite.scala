@@ -29,8 +29,8 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 import ammrunner.AmmoniteFetcher
-import ammrunner.AmmoniteFetcherException
 import ammrunner.VersionsOption
+import ammrunner.error.AmmoniteFetcherException
 import ammrunner.{Command => AmmCommand}
 import ammrunner.{Versions => AmmVersions}
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -336,7 +336,7 @@ object Ammonite {
     Future {
       val proc = command
         .withArgs(Seq("--bsp") ++ scripts.map(_.toNIO.toString))
-        .runBg { proc0 =>
+        .run { proc0 =>
           proc0
             .redirectInput(ProcessBuilder.Redirect.PIPE)
             .redirectOutput(ProcessBuilder.Redirect.PIPE)
