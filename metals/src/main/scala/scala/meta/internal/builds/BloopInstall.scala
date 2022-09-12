@@ -110,10 +110,11 @@ final class BloopInstall(
   ): Future[WorkspaceLoadedStatus] =
     synchronized {
       oldInstallResult(digest) match {
-        case Some(result) =>
+        case Some(result)
+            if result != WorkspaceLoadedStatus.Duplicate(Status.Requested) =>
           scribe.info(s"skipping build import with status '${result.name}'")
           Future.successful(result)
-        case None =>
+        case _ =>
           for {
             userResponse <- requestImport(
               buildTools,
