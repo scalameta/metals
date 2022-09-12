@@ -170,8 +170,7 @@ class MetalsLanguageServer(
   private val recentlyOpenedFiles = new ActiveFiles(time)
   private val recentlyFocusedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
-  @volatile
-  private var isImportInProcess: Boolean = false
+  private val isImportInProcess = new AtomicBoolean(false)
   @volatile
   var userConfig: UserConfiguration = UserConfiguration()
   var excludedPackageHandler: ExcludedPackagesHandler =
@@ -1756,10 +1755,9 @@ class MetalsLanguageServer(
       case ServerCommands.GenerateBspConfig() =>
         generateBspConfig().asJavaObject
       case ServerCommands.ImportBuild() =>
-        if (!isImportInProcess) {
-          isImportInProcess = true
+        if (isImportInProcess.compareAndSet(false, true)) {
           val buildChange = slowConnectToBuildServer(forceImport = true)
-          buildChange.onComplete(_ => isImportInProcess = false)
+          buildChange.onComplete(_ => isImportInProcess.set(false))
           buildChange.asJavaObject
         } else {
           Future
