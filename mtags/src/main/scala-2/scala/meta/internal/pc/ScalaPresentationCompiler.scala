@@ -26,6 +26,7 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
@@ -141,6 +142,19 @@ case class ScalaPresentationCompiler(
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
       new InferredTypeProvider(pc.compiler(), params).inferredTypeEdits().asJava
+    }
+  }
+  override def extractMethod(
+      range: RangeParams,
+      extractionPos: OffsetParams
+  ): CompletableFuture[ju.List[TextEdit]] = {
+    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
+    compilerAccess.withInterruptableCompiler(empty, range.token) { pc =>
+      new ExtractMethodProvider(
+        pc.compiler(),
+        range,
+        extractionPos
+      ).extractMethod.asJava
     }
   }
 

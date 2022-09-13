@@ -2,6 +2,7 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
 class ImportMissingSymbolLspSuite
@@ -88,6 +89,7 @@ class ImportMissingSymbolLspSuite
         |${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
+        |${ExtractMethodCodeAction.title("object `A`")}
         |${ConvertToNamedArguments.title("successful(...)")}
         |""".stripMargin,
     """|package a
@@ -213,6 +215,7 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Instant")}
+        |${ExtractMethodCodeAction.title("object `A`")}
         |${ConvertToNamedArguments.title("successful(...)")}
         |""".stripMargin,
     """|package a

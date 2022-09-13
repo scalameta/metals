@@ -6,6 +6,7 @@ import java.nio.file.Paths
 import java.util.concurrent.CancellationException
 
 import scala.collection.mutable
+import scala.reflect.internal.util.Position
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -14,6 +15,7 @@ import scala.{meta => m}
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
 
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
@@ -180,4 +182,18 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       ).toOption
     }
   }
+
+  implicit class XtensionPosition(pos: Position) {
+    def encloses(other: Position): Boolean =
+      pos.start <= other.start && pos.end >= other.end
+
+    def encloses(other: RangeParams): Boolean =
+      pos.start <= other.offset() && pos.end >= other.endOffset()
+  }
+
+  implicit class XtensionRangeParameters(pos: RangeParams) {
+    def encloses(other: Position): Boolean =
+      pos.offset <= other.start && pos.endOffset >= other.end
+  }
+
 }

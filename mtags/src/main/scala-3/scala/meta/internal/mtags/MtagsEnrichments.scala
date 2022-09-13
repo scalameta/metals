@@ -110,7 +110,17 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
         uri <- InteractiveDriver.toUriOption(pos.source)
         range <- if pos.exists then Some(pos.toLsp) else None
       yield new l.Location(uri.toString, range)
+
+    def encloses(other: SourcePosition): Boolean =
+      pos.start <= other.start && pos.end >= other.end
+
+    def encloses(other: RangeParams): Boolean =
+      pos.start <= other.offset() && pos.end >= other.endOffset()
   end extension
+
+  extension (pos: RangeParams)
+    def encloses(other: SourcePosition): Boolean =
+      pos.offset() <= other.start && pos.endOffset() >= other.end
 
   extension (sym: Symbol)(using Context)
     def fullNameBackticked: String =

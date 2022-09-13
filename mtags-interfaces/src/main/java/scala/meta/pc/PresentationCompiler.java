@@ -16,6 +16,7 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
 import org.eclipse.lsp4j.SelectionRange;
 
+
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
@@ -99,6 +100,13 @@ public abstract class PresentationCompiler {
      * Return the missing implements and imports for the symbol at the given position.
      */
     public abstract CompletableFuture<List<TextEdit>> insertInferredType(OffsetParams params);
+
+    /**
+     * Extract method in selected range
+     * @param range range to extract from
+     * @param extractionPos position in file to extract to
+     */
+    public abstract CompletableFuture<List<TextEdit>> extractMethod(RangeParams range, OffsetParams extractionPos);
 
     /**
      * Return named arguments for the apply method that encloses the given position.

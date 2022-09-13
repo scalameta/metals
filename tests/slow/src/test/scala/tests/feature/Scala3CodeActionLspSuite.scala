@@ -3,6 +3,7 @@ package tests.feature
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
+import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
@@ -342,12 +343,14 @@ class Scala3CodeActionLspSuite
        |  Foo<<(>>1, 2, param3 = 3)
        |  Foo(4,5,6)
        |}""".stripMargin,
-    s"${ConvertToNamedArguments.title("Foo(...)")}",
+    s"""|${ExtractMethodCodeAction.title("object `Something`")}
+        |${ConvertToNamedArguments.title("Foo(...)")}""".stripMargin,
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)
        |  Foo(4,5,6)
        |}""".stripMargin,
+    selectedActionIndex = 1,
   )
 
   check(
@@ -430,55 +433,66 @@ class Scala3CodeActionLspSuite
   )
 
   check(
-    "implement-anonymous-class",
-    """|package anonymous
-       |
-       |trait Foo:
-       |  def foo(x: Int): Int
-       |  def bar(x: String): String
-       |
-       |def main =
-       |  <<new>> Foo {}
-       |
-       |""".stripMargin,
-    s"""|${ImplementAbstractMembers.title}
+    "multi-param",
+    s"""|object A{
+        |  val b = 4
+        |  val c = 3
+        |  def method(i: Int, j: Int) = i + 1
+        |  val a = { 
+        |    val c = 5
+        |    <<123 + method(c, b) + method(b,c)>>
+        |  }
+        |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("val `a`")}
+        |${ExtractMethodCodeAction.title("object `A`")}
         |""".stripMargin,
-    """|package anonymous
-       |
-       |trait Foo:
-       |  def foo(x: Int): Int
-       |  def bar(x: String): String
-       |
-       |def main =
-       |  new Foo {
-       |
-       |    override def foo(x: Int): Int = ???
-       |
-       |    override def bar(x: String): String = ???
-       |
-       |  }
-       |""".stripMargin,
-    expectNoDiagnostics = false,
+    s"""|object A{
+        |  val b = 4
+        |  val c = 3
+        |  def method(i: Int, j: Int) = i + 1
+        |  def newMethod(c: Int): Int =
+        |    123 + method(c, b) + method(b,c)
+        |
+        |  val a = { 
+        |    val c = 5
+        |    newMethod(c)
+        |  }
+        |}""".stripMargin,
+    selectedActionIndex = 1,
   )
 
   check(
-    "wrong-type",
-    """|package a
-       |
-       |object A:
-       |  val str = ""
-       |  val alpha:Int=s<<>>tr
-       |
-       |""".stripMargin,
-    s"""|${InsertInferredType.adjustType("(a.A.str : String)")}
+    "higher-scope",
+    s"""|object A{
+        |  val b = 4
+        |  def method(i: Int, j: Int, k: Int) = i + j + k
+        |  val a = {
+        |    def f() = {
+        |      val c = 1
+        |      <<val d = 3
+        |      method(d, b, c)>>
+        |    }
+        |  }
+        |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("method `f`")}
+        |${ExtractMethodCodeAction.title("val `a`")}
+        |${ExtractMethodCodeAction.title("object `A`")}
         |""".stripMargin,
-    """|package a
-       |
-       |object A:
-       |  val str = ""
-       |  val alpha: String=str
-       |
-       |""".stripMargin,
+    s"""|object A{
+        |  val b = 4
+        |  def method(i: Int, j: Int, k: Int) = i + j + k
+        |  val a = {
+        |    def newMethod(c: Int): Int =
+        |      val d = 3
+        |      method(d, b, c)
+        |
+        |    def f() = {
+        |      val c = 1
+        |      newMethod(c)
+        |    }
+        |  }
+        |}""".stripMargin,
+    selectedActionIndex = 1,
   )
 
   def checkExtractedMember(

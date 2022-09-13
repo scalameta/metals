@@ -213,6 +213,24 @@ case class ScalaPresentationCompiler(
         .inferredTypeEdits()
         .asJava
     }
+
+  override def extractMethod(
+      range: RangeParams,
+      extractionPos: OffsetParams,
+  ): CompletableFuture[ju.List[l.TextEdit]] =
+    val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
+    compilerAccess.withInterruptableCompiler(empty, range.token) { pc =>
+      new ExtractMethodProvider(
+        range,
+        extractionPos,
+        pc.compiler(),
+        search,
+      )
+        .extractMethod()
+        .asJava
+    }
+  end extractMethod
+
   override def convertToNamedArguments(
       params: OffsetParams,
       argIndices: ju.List[Integer],

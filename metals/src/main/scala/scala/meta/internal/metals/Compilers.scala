@@ -39,6 +39,7 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
@@ -428,6 +429,24 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
+  def extractMethod(
+      doc: TextDocumentIdentifier,
+      range: LspRange,
+      extractionPos: LspPosition,
+      token: CancelToken,
+  ): Future[ju.List[TextEdit]] = {
+    withPCAndAdjustLsp(doc.getUri(), range, extractionPos) {
+      (pc, metaRange, metaExtractionPos, adjust) =>
+        pc.extractMethod(
+          CompilerRangeParams.fromPos(metaRange, token),
+          CompilerOffsetParams.fromPos(metaExtractionPos, token),
+        ).asScala
+          .map { edits =>
+            adjust.adjustTextEdits(edits)
+          }
+    }
+  }.getOrElse(Future.successful(Nil.asJava))
+
   def convertToNamedArguments(
       position: TextDocumentPositionParams,
       argIndices: ju.List[Integer],
@@ -671,6 +690,35 @@ class Compilers(
           compiler.scalaVersion(),
         )
       pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
+    }
+  }
+
+  private def withPCAndAdjustLsp[T](
+      uri: String,
+      range: LspRange,
+      extractionPos: LspPosition,
+  )(
+      fn: (
+          PresentationCompiler,
+          Position,
+          Position,
+          AdjustLspData,
+      ) => T
+  ): Option[T] = {
+    val path = uri.toAbsolutePath
+    loadCompiler(path).flatMap { compiler =>
+      val (input, adjustRequest, adjustResponse) =
+        sourceAdjustments(
+          uri,
+          compiler.scalaVersion(),
+        )
+      for {
+        metaRange <- new LspRange(
+          adjustRequest(range.getStart()),
+          adjustRequest(range.getEnd()),
+        ).toMeta(input)
+        metaExtractionPos <- adjustRequest(extractionPos).toMeta(input)
+      } yield fn(compiler, metaRange, metaExtractionPos, adjustResponse)
     }
   }
 
