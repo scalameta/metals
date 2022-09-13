@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util
@@ -343,19 +342,6 @@ object MetalsEnrichments
 
     def isInside(prefix: AbsolutePath): Boolean =
       toRelativeInside(prefix).isDefined
-
-    def jarPath: Option[AbsolutePath] = {
-      val filesystem = path.toNIO.getFileSystem()
-      if (filesystem.provider().getScheme().equals("jar")) {
-        Some(
-          AbsolutePath(
-            Paths.get(filesystem.toString)
-          )
-        )
-      } else {
-        None
-      }
-    }
 
     /**
      * Writes zip file contents to disk under $workspace/.metals/readonly.

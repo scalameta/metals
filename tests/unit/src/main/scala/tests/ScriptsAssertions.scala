@@ -9,19 +9,17 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
 
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 trait ScriptsAssertions { self: BaseLspSuite =>
 
-  def assertDefinitionAtLocation(
+  def definitionsAt(
       file: String,
       definitionAt: String,
-      expectedLocation: String,
-      expectedLine: java.lang.Integer = null,
-  ): Future[Unit] = {
-
+  ): Future[List[Location]] = {
     val pos = {
       val content =
         new String(server.toPath(file).readAllBytes, StandardCharsets.UTF_8)
@@ -38,7 +36,6 @@ trait ScriptsAssertions { self: BaseLspSuite =>
         .getOrElse(0)
       content.indexToLspPosition(idx + pipeIdx)
     }
-
     server.server
       .definition(
         new TextDocumentPositionParams(
@@ -47,13 +44,23 @@ trait ScriptsAssertions { self: BaseLspSuite =>
         )
       )
       .asScala
+      .map(_.asScala.toList)
+  }
+
+  def assertDefinitionAtLocation(
+      file: String,
+      definitionAt: String,
+      expectedLocation: String,
+      expectedLine: java.lang.Integer = null,
+  ): Future[Unit] = {
+
+    definitionsAt(file, definitionAt)
       .map { locations =>
-        val locations0 = locations.asScala
         assert(
-          locations0.length == 1,
-          s"Expected a single location ($expectedLocation, ${Option(expectedLine)}), got ${locations0.length} ($locations0)",
+          locations.length == 1,
+          s"Expected a single location ($expectedLocation, ${Option(expectedLine)}), got ${locations.length} ($locations)",
         )
-        val locationUri = new URI(locations0.head.getUri)
+        val locationUri = new URI(locations.head.getUri)
         assert(
           locationUri.getScheme == "file",
           s"Expected file location, got URI $locationUri",
@@ -66,7 +73,7 @@ trait ScriptsAssertions { self: BaseLspSuite =>
           s"Expected location $expectedLocation{$expectedPath}, got $locationPath",
         )
         for (expectedLine0 <- Option(expectedLine)) {
-          val line = locations0.head.getRange.getStart.getLine
+          val line = locations.head.getRange.getStart.getLine
           assert(
             line == expectedLine0,
             s"Expected line $expectedLine0, got $line",

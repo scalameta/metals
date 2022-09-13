@@ -74,7 +74,6 @@ class StandaloneSymbolSearch(
     val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
     destinationProvider
       .fromSymbol(x, sourcePath)
-      .flatMap(_.toResult)
       .map(_.locations)
       .orElse(workspaceFallback.map(_.definition(x, source)))
       .getOrElse(ju.Collections.emptyList())
