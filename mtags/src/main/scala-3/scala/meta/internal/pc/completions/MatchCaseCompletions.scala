@@ -79,25 +79,7 @@ object CaseKeywordCompletion:
       patternOnly,
       hasBind,
     )
-    val parents: Parents = selector match
-      case EmptyTree =>
-        val seenFromType = parent match
-          case TreeApply(fun, _) if fun.tpe != null && !fun.tpe.isErroneous =>
-            fun.tpe
-          case _ =>
-            parent.tpe
-        seenFromType.paramInfoss match
-          case (head :: Nil) :: _
-              if definitions.isFunctionType(head) || head.isRef(
-                definitions.PartialFunctionClass
-              ) =>
-            val dealiased = head.widenDealias
-            val argTypes =
-              head.argTypes.init
-            new Parents(argTypes, definitions)
-          case _ =>
-            new Parents(NoType, definitions)
-      case sel => new Parents(sel.tpe, definitions)
+    val parents: Parents = Parents.makeParents(selector, parent, definitions)
 
     val result = ListBuffer.empty[CompletionValue]
     val isVisited = mutable.Set.empty[Symbol]
@@ -190,6 +172,7 @@ object CaseKeywordCompletion:
       completionPos: CompletionPos,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
+      parent: Tree,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val pos = completionPos.sourcePos
@@ -209,8 +192,15 @@ object CaseKeywordCompletion:
       completionPos,
       clientSupportsSnippets,
     )
+    val isFromPartial = parent match
+      case EmptyTree => false
+      case _ => true
+
     val result = ListBuffer.empty[CompletionValue]
-    val tpe = selector.tpe.widen.bounds.hi match
+    val selectorTpe =
+      Parents.makeParents(selector, parent, definitions).selector
+
+    val tpe = selectorTpe.widen.bounds.hi match
       case tr @ TypeRef(_, _) => tr.underlying
       case t => t
 
@@ -241,38 +231,61 @@ object CaseKeywordCompletion:
       )
       completionOption.foreach(result += _)
     }
-
-    val basicMatch = CompletionValue.MatchCompletion(
-      "match",
-      Some(
-        if clientSupportsSnippets then "match\n\tcase$0\n"
-        else "match"
-      ),
-      Nil,
-      "",
-    )
     val members = result.result()
-    val completions = members match
-      case Nil => List(basicMatch)
-      case head :: tail =>
-        val insertText = Some(
-          tail
-            .map(_.label)
-            .mkString(
-              if clientSupportsSnippets then s"match\n\t${head.label} $$0\n\t"
-              else s"match\n\t${head.label}\n\t",
-              "\n\t",
-              "\n",
-            )
-        )
-        val exhaustive = CompletionValue.MatchCompletion(
-          "match (exhaustive)",
-          insertText,
-          members.flatMap(_.additionalEdits),
-          s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
-        )
-        List(basicMatch, exhaustive)
-    completions
+    if !isFromPartial then
+
+      val basicMatch = CompletionValue.MatchCompletion(
+        "match",
+        Some(
+          if clientSupportsSnippets then "match\n\tcase$0\n"
+          else "match"
+        ),
+        Nil,
+        "",
+      )
+      val completions = members match
+        case Nil => List(basicMatch)
+        case head :: tail =>
+          val insertText = Some(
+            tail
+              .map(_.label)
+              .mkString(
+                if clientSupportsSnippets then s"match\n\t${head.label} $$0\n\t"
+                else s"match\n\t${head.label}\n\t",
+                "\n\t",
+                "\n",
+              )
+          )
+          val exhaustive = CompletionValue.MatchCompletion(
+            "match (exhaustive)",
+            insertText,
+            members.flatMap(_.additionalEdits),
+            s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
+          )
+          List(basicMatch, exhaustive)
+      completions
+    else
+      members match
+        case Nil => Nil
+        case head :: tail =>
+          val insertText = Some(
+            tail
+              .map(_.label)
+              .mkString(
+                if clientSupportsSnippets then s"\n\t${head.label} $$0\n\t"
+                else s"\n\t${head.label}\n\t",
+                "\n\t",
+                "\n",
+              )
+          )
+          List(CompletionValue.MatchCompletion(
+            "match (exhaustive)",
+            insertText,
+            members.flatMap(_.additionalEdits),
+            s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
+          ))
+    end if
+
   end matchContribute
 
 end CaseKeywordCompletion
@@ -303,6 +316,30 @@ class Parents(val selector: Type, definitions: Definitions)(using Context):
         typeSymbol.isSubClass(parent) ||
         (includeReverse && parent.isSubClass(typeSymbol))
       }
+end Parents
+object Parents:
+  def makeParents(selector: Tree, parent: Tree, definitions: Definitions)(using
+      Context
+  ) =
+    selector match
+      case EmptyTree =>
+        val seenFromType = parent match
+          case TreeApply(fun, _) if fun.tpe != null && !fun.tpe.isErroneous =>
+            fun.tpe
+          case _ =>
+            parent.tpe
+        seenFromType.paramInfoss match
+          case (head :: Nil) :: _
+              if definitions.isFunctionType(head) || head.isRef(
+                definitions.PartialFunctionClass
+              ) =>
+            val dealiased = head.widenDealias
+            val argTypes =
+              head.argTypes.init
+            new Parents(argTypes, definitions)
+          case _ =>
+            new Parents(NoType, definitions)
+      case sel => new Parents(sel.tpe, definitions)
 end Parents
 
 class CompletionValueGenerator(

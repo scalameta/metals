@@ -336,13 +336,14 @@ class Completions(
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
 
-      case MatchCaseExtractor.MatchExtractor(selector) =>
+      case MatchCaseExtractor.MatchExtractor(selector, parent) =>
         (
           CaseKeywordCompletion.matchContribute(
             selector,
             completionPos,
             indexedContext,
             config,
+            parent,
           ),
           false,
         )
