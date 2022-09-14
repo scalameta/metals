@@ -55,6 +55,9 @@ module.exports = {
     ]
   ],
   "themeConfig": {
+    "prism": {
+      "additionalLanguages": ["lisp"],
+    },
     "colorMode": {
       "switchConfig": {
         "darkIcon": "🌙",
