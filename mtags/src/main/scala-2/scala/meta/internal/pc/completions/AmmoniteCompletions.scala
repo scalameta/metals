@@ -3,6 +3,7 @@ package scala.meta.internal.pc.completions
 import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
+import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.MetalsGlobal
@@ -125,10 +126,14 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
 
         query match {
           case Some(imp) =>
+            // TODO grab version from Ammonite file header if it exists
+            val scalaVersion = BuildInfo.scalaCompilerVersion
             val api = coursierapi.Complete
               .create()
-              .withScalaVersion("2.13.8")
-              .withScalaBinaryVersion("2.13")
+              .withScalaVersion(scalaVersion)
+              .withScalaBinaryVersion(
+                scalaVersion.split('.').take(2).mkString(".")
+              )
 
             def completions(s: String): List[String] =
               api.withInput(s).complete().getCompletions().asScala.toList
