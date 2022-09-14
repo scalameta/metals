@@ -4,7 +4,7 @@ title: Emacs
 ---
 
 Metals works in Emacs thanks to the
-[`lsp-mode`](https://github.com/emacs-lsp/lsp-mode) package.
+[`lsp-mode`](https://github.com/emacs-lsp/lsp-mode) package (another option is the [Eglot](#eglot) package).
 
 ![Emacs demo](https://i.imgur.com/KJQLMZ7.gif)
 
@@ -17,7 +17,7 @@ Metals works in Emacs thanks to the
 To use Metals in Emacs, place this snippet in your Emacs configuration (for example .emacs.d/init.el) to load
 `lsp-mode` along with its dependencies:
 
-```el
+```elisp
 (require 'package)
 
 ;; Add melpa to your packages repositories
@@ -41,8 +41,7 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 
 ;; Enable scala-mode for highlighting, indentation and motion commands
 (use-package scala-mode
-  :interpreter
-    ("scala" . scala-mode))
+  :interpreter ("scala" . scala-mode))
 
 ;; Enable sbt mode for executing sbt commands
 (use-package sbt-mode
@@ -55,8 +54,7 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
    'self-insert-command
    minibuffer-local-completion-map)
    ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
-   (setq sbt:program-options '("-Dsbt.supershell=false"))
-)
+   (setq sbt:program-options '("-Dsbt.supershell=false")))
 
 ;; Enable nice rendering of diagnostics like compile errors.
 (use-package flycheck
@@ -64,16 +62,17 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 
 (use-package lsp-mode
   ;; Optional - enable lsp-mode automatically in scala files
+  ;; You could also swap out lsp for lsp-deffered in order to defer loading
   :hook  (scala-mode . lsp)
          (lsp-mode . lsp-lens-mode)
   :config
   ;; Uncomment following section if you would like to tune lsp-mode performance according to
   ;; https://emacs-lsp.github.io/lsp-mode/page/performance/
-  ;;       (setq gc-cons-threshold 100000000) ;; 100mb
-  ;;       (setq read-process-output-max (* 1024 1024)) ;; 1mb
-  ;;       (setq lsp-idle-delay 0.500)
-  ;;       (setq lsp-log-io nil)
-  ;;       (setq lsp-completion-provider :capf)
+  ;; (setq gc-cons-threshold 100000000) ;; 100mb
+  ;; (setq read-process-output-max (* 1024 1024)) ;; 1mb
+  ;; (setq lsp-idle-delay 0.500)
+  ;; (setq lsp-log-io nil)
+  ;; (setq lsp-completion-provider :capf)
   (setq lsp-prefer-flymake nil))
 
 ;; Add metals backend for lsp-mode
@@ -88,7 +87,7 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 
 ;; lsp-mode supports snippets, but in order for them to work you need to use yasnippet
 ;; If you don't want to use snippets set lsp-enable-snippet to nil in your lsp-mode settings
-;;   to avoid odd behavior with snippets and indentation
+;; to avoid odd behavior with snippets and indentation
 (use-package yasnippet)
 
 ;; Use company-capf as a completion provider.
@@ -101,15 +100,14 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
   :config
   (setq lsp-completion-provider :capf))
 
+;; Posframe is a pop-up tool that must be manually installed for dap-mode
+(use-package posframe)
+
 ;; Use the Debug Adapter Protocol for running tests and debugging
-(use-package posframe
-  ;; Posframe is a pop-up tool that must be manually installed for dap-mode
-  )
 (use-package dap-mode
   :hook
   (lsp-mode . dap-mode)
-  (lsp-mode . dap-ui-mode)
-  )
+  (lsp-mode . dap-ui-mode))
 ```
 
 > You may need to disable other packages like `ensime` or sbt server to prevent
@@ -149,7 +147,7 @@ location of your errors.
 Note that if you try to do that from `sbt-mode`, you may get an error
 unless you patch `lsp-find-workspace` with the following:
 
-```el
+```elisp
 (defun lsp-find-workspace (server-id &optional file-name)
     "Find workspace for SERVER-ID for FILE-NAME."
     (-when-let* ((session (lsp-session))
@@ -193,7 +191,7 @@ you want to use an alternative to lsp-mode.
 
 To configure Eglot with Metals:
 
-```el
+```elisp
 (require 'package)
 
 ;; Add melpa-stable to your packages repositories
@@ -214,8 +212,7 @@ To configure Eglot with Metals:
 
 ;; Enable scala-mode and sbt-mode
 (use-package scala-mode
-  :interpreter
-    ("scala" . scala-mode))
+  :interpreter ("scala" . scala-mode))
 
 ;; Enable sbt mode for executing sbt commands
 (use-package sbt-mode
@@ -228,8 +225,7 @@ To configure Eglot with Metals:
    'self-insert-command
    minibuffer-local-completion-map)
    ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
-   (setq sbt:program-options '("-Dsbt.supershell=false"))
-)
+   (setq sbt:program-options '("-Dsbt.supershell=false")))
 
 (use-package eglot
   :pin melpa-stable
