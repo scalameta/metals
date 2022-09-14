@@ -59,6 +59,7 @@ final class DefinitionProvider(
     buildTargets: BuildTargets,
     scalaVersionSelector: ScalaVersionSelector,
     saveDefFileToDisk: Boolean,
+    sourceMapper: SourceMapper,
 )(implicit ec: ExecutionContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -70,6 +71,7 @@ final class DefinitionProvider(
     trees,
     buildTargets,
     saveDefFileToDisk,
+    sourceMapper,
   )
 
   def definition(
@@ -326,6 +328,7 @@ class DestinationProvider(
     trees: Trees,
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
+    sourceMapper: SourceMapper,
 ) {
 
   private def bestTextDocument(
@@ -334,20 +337,27 @@ class DestinationProvider(
     val defnRevisedInput = symbolDefinition.path.toInput
     // Read text file from disk instead of editor buffers because the file
     // on disk is more likely to parse.
-    lazy val parsed =
+    lazy val parsed = {
       mtags.index(
         symbolDefinition.path.toLanguage,
         defnRevisedInput,
         symbolDefinition.dialect,
       )
+    }
 
-    if (symbolDefinition.path.isAmmoniteScript || parsed.occurrences.isEmpty) {
+    val path = symbolDefinition.path
+    if (path.isAmmoniteScript || parsed.occurrences.isEmpty) {
       // Fall back to SemanticDB on disk, if any
-      semanticdbsFallback
-        .flatMap {
-          _.textDocument(symbolDefinition.path).documentIncludingStale
-        }
+
+      def fromSemanticdbs(p: AbsolutePath): Option[TextDocument] =
+        semanticdbsFallback.flatMap(_.textDocument(p).documentIncludingStale)
+
+      fromSemanticdbs(path)
+        .orElse(
+          sourceMapper.mappedTo(path).flatMap(fromSemanticdbs)
+        )
         .getOrElse(parsed)
+
     } else {
       parsed
     }

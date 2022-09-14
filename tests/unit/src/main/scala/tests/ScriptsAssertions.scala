@@ -52,7 +52,7 @@ trait ScriptsAssertions { self: BaseLspSuite =>
       definitionAt: String,
       expectedLocation: String,
       expectedLine: java.lang.Integer = null,
-  ): Future[Unit] = {
+  )(implicit l: munit.Location): Future[Unit] = {
 
     definitionsAt(file, definitionAt)
       .map { locations =>

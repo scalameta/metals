@@ -531,6 +531,7 @@ class MetalsLanguageServer(
           buildTargets,
           scalaVersionSelector,
           saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
+          sourceMapper,
         )
         formattingProvider = new FormattingProvider(
           workspace,

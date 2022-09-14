@@ -147,6 +147,7 @@ class Compilers(
                   trees,
                   buildTargets,
                   saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
+                  sourceMapper,
                 )
               ).getOrElse(EmptySymbolSearch),
               "default",
@@ -593,6 +594,7 @@ class Compilers(
             trees,
             buildTargets,
             saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
+            sourceMapper,
             workspaceFallback = Some(search),
           )
           newCompiler(
@@ -624,6 +626,7 @@ class Compilers(
               trees,
               buildTargets,
               saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
+              sourceMapper,
             ),
             path.toString(),
             path,
