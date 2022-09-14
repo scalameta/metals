@@ -126,7 +126,6 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
 
         query match {
           case Some(imp) =>
-            // TODO grab version from Ammonite file header if it exists
             val scalaVersion = BuildInfo.scalaCompilerVersion
             val api = coursierapi.Complete
               .create()
