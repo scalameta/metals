@@ -348,6 +348,37 @@ class Completions(
           false,
         )
 
+      case MatchCaseExtractor.CaseExtractor(selector @ EmptyTree, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+          ) ++ CaseKeywordCompletion.matchContribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+            casePrefix = true,
+          ),
+          true,
+        )
+
+      case MatchCaseExtractor.CaseExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+          ),
+          true,
+        )
+
       case MatchCaseExtractor.TypedCasePatternExtractor(
             selector,
             parent,
@@ -381,18 +412,6 @@ class Completions(
             patternOnly = Some(identName),
           ),
           false,
-        )
-
-      case MatchCaseExtractor.CaseExtractor(selector, parent) =>
-        (
-          CaseKeywordCompletion.contribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-          ),
-          true,
         )
 
       // class FooImpl extends Foo:

@@ -173,6 +173,7 @@ object CaseKeywordCompletion:
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
       parent: Tree,
+      casePrefix: Boolean = false,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val pos = completionPos.sourcePos
@@ -268,6 +269,7 @@ object CaseKeywordCompletion:
       members match
         case Nil => Nil
         case head :: tail =>
+          val prefix = if casePrefix then "case" else "match"
           val insertText = Some(
             tail
               .map(_.label)
@@ -278,12 +280,14 @@ object CaseKeywordCompletion:
                 "\n",
               )
           )
-          List(CompletionValue.MatchCompletion(
-            "match (exhaustive)",
-            insertText,
-            members.flatMap(_.additionalEdits),
-            s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
-          ))
+          List(
+            CompletionValue.MatchCompletion(
+              s"$prefix (exhaustive)",
+              insertText,
+              members.flatMap(_.additionalEdits),
+              s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
+            )
+          )
     end if
 
   end matchContribute
@@ -463,22 +467,30 @@ class MatchCaseExtractor(
   object MatchExtractor:
     def unapply(path: List[Tree]) =
       path match
+        case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
+              fun,
+              args,
+            )) :: _
+            if stats.isEmpty && ident == expr && "match".startsWith(
+              name.toString()
+            ) =>
+          Some((EmptyTree, appl))
         // foo mat@@
         case (sel @ Select(qualifier, name)) :: _
             if "match".startsWith(name.toString()) && text.charAt(
               completionPos.start - 1
             ) == ' ' =>
-          Some(qualifier)
+          Some((qualifier, EmptyTree))
         // foo match @@
         case (c: CaseDef) :: (m: Match) :: _
             if completionPos.query.startsWith("match") =>
-          Some(m.selector)
+          Some((m.selector, EmptyTree))
         // foo ma@tch (no cases)
         case (m @ Match(
               _,
               CaseDef(Literal(Constant(null)), _, _) :: Nil,
             )) :: _ =>
-          Some(m.selector)
+          Some((m.selector, EmptyTree))
         case _ => None
   end MatchExtractor
   object CaseExtractor:
