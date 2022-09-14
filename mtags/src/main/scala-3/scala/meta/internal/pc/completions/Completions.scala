@@ -314,6 +314,8 @@ class Completions(
     }
   end completionsWithSuffix
 
+  
+
   /**
    * @return Tuple of completionValues and flag. If the latter boolean value is true
    *         Metals should provide advanced completions only.
@@ -331,7 +333,11 @@ class Completions(
     lazy val filename = rawFileName
       .stripSuffix(".scala")
     val MatchCaseExtractor = new MatchCaseExtractor(pos, text, completionPos)
+    val ScalaCliCompletions = new ScalaCliCompletions(pos, text)
     path match
+
+      case ScalaCliCompletions(dependency) =>
+        (ScalaCliCompletions.contribute(pos, dependency), true)
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
