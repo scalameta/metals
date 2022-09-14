@@ -173,7 +173,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
   ): l.CodeAction = {
     CodeActionBuilder.build(
       title = title,
-      kind = l.CodeActionKind.Refactor,
+      kind = l.CodeActionKind.RefactorRewrite,
       changes = List(uri.toAbsolutePath -> edits),
     )
   }
