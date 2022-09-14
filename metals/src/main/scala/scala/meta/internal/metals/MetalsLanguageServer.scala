@@ -1405,9 +1405,7 @@ class MetalsLanguageServer(
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
     if (isScalaOrJava && event.eventType == EventType.Delete) {
-      Future {
-        diagnostics.didDelete(path)
-      }.asJava
+      onDelete(path).asJava
     } else if (
       isScalaOrJava &&
       !savedFiles.isRecentlyActive(path) &&
@@ -1448,6 +1446,19 @@ class MetalsLanguageServer(
           compilations.compileFiles(paths),
           onBuildChanged(paths).ignoreValue,
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
+      )
+      .ignoreValue
+  }
+
+  private def onDelete(path: AbsolutePath): Future[Unit] = {
+    Future
+      .sequence(
+        List(
+          compilations.compileFiles(List(path)),
+          Future {
+            diagnostics.didDelete(path)
+          },
+        )
       )
       .ignoreValue
   }
