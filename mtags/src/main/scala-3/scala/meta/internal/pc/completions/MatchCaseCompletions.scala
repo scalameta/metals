@@ -16,6 +16,7 @@ import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags
@@ -29,6 +30,7 @@ import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
 
 object CaseKeywordCompletion:
@@ -110,11 +112,12 @@ object CaseKeywordCompletion:
       if !isVisited(sym) then
         recordVisit(sym)
         if completionGenerator.fuzzyMatches(name) then
-          result += completionGenerator.toCompletionValue(
+          val completionOption = completionGenerator.toCompletionValue(
             sym,
             name,
             autoImports,
           )
+          completionOption.foreach(result += _)
         end if
     end visit
     val selectorSym = parents.selector.typeSymbol
@@ -231,11 +234,12 @@ object CaseKeywordCompletion:
     val sortedSubclasses = subclassesForType(tpe)
     sortedSubclasses.foreach { case sym =>
       val autoImport = autoImportsGen.forSymbol(sym)
-      result += completionGenerator.toCompletionValue(
+      val completionOption = completionGenerator.toCompletionValue(
         sym,
         sym.decodedName,
         autoImport.getOrElse(Nil),
       )
+      completionOption.foreach(result += _)
     }
 
     val basicMatch = CompletionValue.MatchCompletion(
@@ -311,59 +315,63 @@ class CompletionValueGenerator(
   def fuzzyMatches(name: String) =
     patternOnly match
       case None => true
+      case Some("") => true
       case Some(query) => CompletionFuzzy.matches(query, name)
 
   def toCompletionValue(
       sym: Symbol,
       name: String,
       autoImports: List[l.TextEdit],
-  )(using Context): CompletionValue.CaseKeyword =
-    sym.info
+  )(using Context): Option[CompletionValue.CaseKeyword] =
     val isModuleLike =
       sym.is(Flags.Module) || sym.isOneOf(JavaEnumTrait) || sym.isOneOf(
         JavaEnumValue
-      )
-    val pattern =
-      if (sym.is(Case) || isModuleLike) && !hasBind then
-        val isInfixEligible =
-          indexedContext.lookupSym(sym) == Result.InScope
-            || autoImports.nonEmpty
-        if isInfixEligible && sym.is(Case) && !Character
-            .isUnicodeIdentifierStart(
-              sym.decodedName.head
+      ) || sym.isAllOf(EnumCase)
+    if isModuleLike && hasBind then None
+    else
+      val pattern =
+        if (sym.is(Case) || isModuleLike) && !hasBind then
+          val isInfixEligible =
+            indexedContext.lookupSym(sym) == Result.InScope
+              || autoImports.nonEmpty
+          if isInfixEligible && sym.is(Case) && !Character
+              .isUnicodeIdentifierStart(
+                sym.decodedName.head
+              )
+          then
+            // Deconstructing the symbol as an infix operator, for example `case head :: tail =>`
+            tryInfixPattern(sym).getOrElse(
+              unapplyPattern(sym, name, isModuleLike)
             )
-        then
-          // Deconstructing the symbol as an infix operator, for example `case head :: tail =>`
-          tryInfixPattern(sym).getOrElse(
-            unapplyPattern(sym, name, isModuleLike)
-          )
+          else
+            unapplyPattern(
+              sym,
+              name,
+              isModuleLike,
+            ) // Apply syntax, example `case ::(head, tail) =>`
+          end if
         else
-          unapplyPattern(
+          typePattern(
             sym,
             name,
-            isModuleLike,
-          ) // Apply syntax, example `case ::(head, tail) =>`
-        end if
-      else
-        typePattern(
-          sym,
-          name,
-        ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
+          ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
 
-    val label =
-      if patternOnly.isEmpty then s"case $pattern =>"
-      else pattern
-    val cursorSuffix =
-      (if patternOnly.nonEmpty then "" else " ") +
-        (if clientSupportsSnippets then "$0" else "")
-    CompletionValue.CaseKeyword(
-      sym,
-      label,
-      Some(label + cursorSuffix),
-      autoImports,
-      // filterText = if !doFilterText then Some("") else None,
-      range = Some(completionPos.toEditRange),
-    )
+      val label =
+        if patternOnly.isEmpty then s"case $pattern =>"
+        else pattern
+      val cursorSuffix =
+        (if patternOnly.nonEmpty then "" else " ") +
+          (if clientSupportsSnippets then "$0" else "")
+      Some(
+        CompletionValue.CaseKeyword(
+          sym,
+          label,
+          Some(label + cursorSuffix),
+          autoImports,
+          range = Some(completionPos.toEditRange),
+        )
+      )
+    end if
   end toCompletionValue
 
   private def tryInfixPattern(sym: Symbol)(using Context): Option[String] =
@@ -405,12 +413,37 @@ class CompletionValueGenerator(
   )(using Context): String =
     val suffix = sym.typeParams match
       case Nil => ""
-      case tparams => tparams.map(_ => "_").mkString("[", ", ", "]")
+      case tparams => tparams.map(_ => "?").mkString("[", ", ", "]")
     val bind = if hasBind then "" else "_: "
     bind + name + suffix
 end CompletionValueGenerator
 
-object CaseExtractors:
+class MatchCaseExtractor(
+    pos: SourcePosition,
+    text: String,
+    completionPos: CompletionPos,
+):
+  object MatchExtractor:
+    def unapply(path: List[Tree]) =
+      path match
+        // foo mat@@
+        case (sel @ Select(qualifier, name)) :: _
+            if "match".startsWith(name.toString()) && text.charAt(
+              completionPos.start - 1
+            ) == ' ' =>
+          Some(qualifier)
+        // foo match @@
+        case (c: CaseDef) :: (m: Match) :: _
+            if completionPos.query.startsWith("match") =>
+          Some(m.selector)
+        // foo ma@tch (no cases)
+        case (m @ Match(
+              _,
+              CaseDef(Literal(Constant(null)), _, _) :: Nil,
+            )) :: _ =>
+          Some(m.selector)
+        case _ => None
+  end MatchExtractor
   object CaseExtractor:
     def unapply(path: List[Tree]): Option[(Tree, Tree)] =
       path match
@@ -455,6 +488,14 @@ object CaseExtractors:
   object CasePatternExtractor:
     def unapply(path: List[Tree])(using Context) =
       path match
+        // case @@
+        case (c @ CaseDef(
+              Literal((Constant(null))),
+              _,
+              _,
+            )) :: (m: Match) :: parent :: _
+            if pos.start - c.sourcePos.start > 4 =>
+          Some((m.selector, parent, ""))
         // case Som@@
         case Ident(name) :: CaseExtractor(selector, parent) =>
           Some((selector, parent, name.decoded))
@@ -488,4 +529,4 @@ object CaseExtractors:
           Some((selector, parent, name.decoded))
         case _ => None
   end TypedCasePatternExtractor
-end CaseExtractors
+end MatchCaseExtractor

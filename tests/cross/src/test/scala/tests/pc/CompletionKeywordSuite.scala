@@ -393,6 +393,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
   // TODO: Should provide empty completions
   // The issue is that the tree looks the same as for `case @@` (it doesn't see `new`)
+  // Issue: https://github.com/scalameta/metals/issues/4367
   check(
     "new-pattern",
     """
@@ -409,8 +410,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     filter = str => !str.contains("newMain"),
     compat = Map(
       "3" ->
-        """|case head :: next => scala.collection.immutable
-           |case Nil => scala.collection.immutable""".stripMargin
+        """|head :: next scala.collection.immutable
+           |Nil scala.collection.immutable""".stripMargin
     ),
   )
 

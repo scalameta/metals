@@ -69,8 +69,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
                 |case _: Cat => pkg
                 |case _: Dog => pkg
                 |case Elephant => pkg
-                |case _: HasFeet[_, _] => pkg
-                |case _: HasMouth[_] => pkg
+                |case _: HasFeet[?, ?] => pkg
+                |case _: HasMouth[?] => pkg
                 |case HasWings(e) => pkg
                 |case Seal => pkg
                 |""".stripMargin
@@ -170,6 +170,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   // TODO: `Left` has conflicting name in Scope, we should fix it so the result is the same as for scala 2
+  // Issue: https://github.com/scalameta/metals/issues/4368
   check(
     "sealed-conflict",
     """

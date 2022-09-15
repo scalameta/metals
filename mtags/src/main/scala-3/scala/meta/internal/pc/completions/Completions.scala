@@ -330,13 +330,13 @@ class Completions(
       .toString()
     lazy val filename = rawFileName
       .stripSuffix(".scala")
-
+    val MatchCaseExtractor = new MatchCaseExtractor(pos, text, completionPos)
     path match
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
 
-      case MatchExtractor(selector) =>
+      case MatchCaseExtractor.MatchExtractor(selector) =>
         (
           CaseKeywordCompletion.matchContribute(
             selector,
@@ -347,19 +347,7 @@ class Completions(
           false,
         )
 
-      case CaseExtractors.CaseExtractor(selector, parent) =>
-        (
-          CaseKeywordCompletion.contribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-          ),
-          true,
-        )
-
-      case CaseExtractors.TypedCasePatternExtractor(
+      case MatchCaseExtractor.TypedCasePatternExtractor(
             selector,
             parent,
             identName,
@@ -371,13 +359,17 @@ class Completions(
             indexedContext,
             config,
             parent,
-            Some(identName),
-            true,
+            patternOnly = Some(identName),
+            hasBind = true,
           ),
           false,
         )
 
-      case CaseExtractors.CasePatternExtractor(selector, parent, identName) =>
+      case MatchCaseExtractor.CasePatternExtractor(
+            selector,
+            parent,
+            identName,
+          ) =>
         (
           CaseKeywordCompletion.contribute(
             selector,
@@ -385,20 +377,21 @@ class Completions(
             indexedContext,
             config,
             parent,
-            Some(identName),
+            patternOnly = Some(identName),
           ),
           false,
         )
 
-      // in `case @@` we have to change completionPos to `case` pos,
-      // otherwise after accepting completion we would get `case case None =>`
-      case (lt @ Literal(
-            Constant(null)
-          )) :: (c: CaseDef) :: (m: Match) :: parent :: _ =>
-        advancedCompletions(
-          path.tail,
-          c.startPos,
-          CompletionPos.infer(c.startPos, text, path.tail),
+      case MatchCaseExtractor.CaseExtractor(selector, parent) =>
+        (
+          CaseKeywordCompletion.contribute(
+            selector,
+            completionPos,
+            indexedContext,
+            config,
+            parent,
+          ),
+          true,
         )
 
       // class FooImpl extends Foo:
@@ -861,53 +854,54 @@ class Completions(
         priority(o1) - priority(o2)
       end compareInApplyParams
 
+      def prioritizeCaseKeyword(
+          sym1: CompletionValue.Symbolic,
+          sym2: CompletionValue.Symbolic,
+      ): Boolean =
+        sym1.isInstanceOf[CompletionValue.CaseKeyword] && !sym2
+          .isInstanceOf[CompletionValue.CaseKeyword]
+
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
         (o1, o2) match
-          case (
-                sym1: CompletionValue.CaseKeyword,
-                sym2: CompletionValue.Compiler,
-              ) =>
-            0
-          case (
-                sym1: CompletionValue.Compiler,
-                sym2: CompletionValue.CaseKeyword,
-              ) =>
-            1
           case (
                 sym1: CompletionValue.Symbolic,
                 sym2: CompletionValue.Symbolic,
               ) =>
-            val s1 = sym1.symbol
-            val s2 = sym2.symbol
-            val byLocalSymbol = compareLocalSymbols(s1, s2)
-            if byLocalSymbol != 0 then byLocalSymbol
+            if prioritizeCaseKeyword(sym1, sym2) then 0
+            else if prioritizeCaseKeyword(sym2, sym1) then 1
             else
-              val byRelevance = compareByRelevance(o1, o2)
-              if byRelevance != 0 then byRelevance
+              val s1 = sym1.symbol
+              val s2 = sym2.symbol
+              val byLocalSymbol = compareLocalSymbols(s1, s2)
+              if byLocalSymbol != 0 then byLocalSymbol
               else
-                val byFuzzy = Integer.compare(
-                  fuzzyScore(sym1),
-                  fuzzyScore(sym2),
-                )
-                if byFuzzy != 0 then byFuzzy
+                val byRelevance = compareByRelevance(o1, o2)
+                if byRelevance != 0 then byRelevance
                 else
-                  val byIdentifier = IdentifierComparator.compare(
-                    s1.name.show,
-                    s2.name.show,
+                  val byFuzzy = Integer.compare(
+                    fuzzyScore(sym1),
+                    fuzzyScore(sym2),
                   )
-                  if byIdentifier != 0 then byIdentifier
+                  if byFuzzy != 0 then byFuzzy
                   else
-                    val byOwner =
-                      s1.owner.fullName.toString
-                        .compareTo(s2.owner.fullName.toString)
-                    if byOwner != 0 then byOwner
+                    val byIdentifier = IdentifierComparator.compare(
+                      s1.name.show,
+                      s2.name.show,
+                    )
+                    if byIdentifier != 0 then byIdentifier
                     else
-                      val byParamCount = Integer.compare(
-                        s1.paramSymss.flatten.size,
-                        s2.paramSymss.flatten.size,
-                      )
-                      if byParamCount != 0 then byParamCount
-                      else s1.detailString.compareTo(s2.detailString)
+                      val byOwner =
+                        s1.owner.fullName.toString
+                          .compareTo(s2.owner.fullName.toString)
+                      if byOwner != 0 then byOwner
+                      else
+                        val byParamCount = Integer.compare(
+                          s1.paramSymss.flatten.size,
+                          s2.paramSymss.flatten.size,
+                        )
+                        if byParamCount != 0 then byParamCount
+                        else s1.detailString.compareTo(s2.detailString)
+                  end if
                 end if
               end if
             end if
@@ -916,27 +910,5 @@ class Completions(
             if byApplyParams != 0 then byApplyParams
             else compareByRelevance(o1, o2)
       end compare
-
-  object MatchExtractor:
-    def unapply(path: List[Tree]) =
-      path match
-        // foo mat@@
-        case (sel @ Select(qualifier, name)) :: _
-            if "match".startsWith(name.toString()) && text.charAt(
-              completionPos.start - 1
-            ) == ' ' =>
-          Some(qualifier)
-        // foo match @@
-        case (c: CaseDef) :: (m: Match) :: _
-            if completionPos.query.startsWith("match") =>
-          Some(m.selector)
-        // foo ma@tch (no cases)
-        case (m @ Match(
-              _,
-              CaseDef(Literal(Constant(null)), _, _) :: Nil,
-            )) :: _ =>
-          Some(m.selector)
-        case _ => None
-  end MatchExtractor
 
 end Completions
