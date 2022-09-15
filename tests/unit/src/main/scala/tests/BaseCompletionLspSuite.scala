@@ -84,6 +84,11 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
            |object A {
            |  // @@
            |}
+           |/a/src/main/scala/a/inner/FooSample.scala
+           |package a.sample
+           |
+           |class FooSample
+           |object FooSample
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
@@ -179,6 +184,13 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
           |}
           |""".stripMargin,
         """|myLocalVariable: Array[String]
+           |""".stripMargin,
+      )
+      _ <- assertCompletion(
+        """
+          |val a: FooSa@@
+          |""".stripMargin,
+        """|FooSample - a.sample
            |""".stripMargin,
       )
     } yield ()

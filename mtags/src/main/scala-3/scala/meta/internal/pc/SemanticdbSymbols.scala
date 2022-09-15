@@ -44,10 +44,16 @@ object SemanticdbSymbols:
                 case Descriptor.None =>
                   Nil
                 case Descriptor.Type(value) =>
-                  val member = owner.info.decl(typeName(value)).symbol :: Nil
-                  if sym.is(JavaDefined) then
-                    owner.info.decl(termName(value)).symbol :: member
-                  else member
+                  val typeSym = owner.info.decl(typeName(value)).symbol
+                  // Semanticdb describes java static members as a reference from type
+                  //   while scalac puts static members into synthetic companion class - term
+                  // To avoid issues with resolving static members return type and term in case of Java type
+                  // Example:
+                  //   `java/nio/file/Files#exists()` - `exists` is a member of type `Files#`
+                  //   however in scalac this method is defined only in `module Files`
+                  if typeSym.is(JavaDefined) then
+                    typeSym :: owner.info.decl(termName(value)).symbol :: Nil
+                  else typeSym :: Nil
                 case Descriptor.Term(value) =>
                   owner.info.decl(termName(value)).symbol :: Nil
                 case Descriptor.Package(value) =>
