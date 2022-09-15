@@ -20,7 +20,7 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.internal.pc.DefinitionResultImpl
-import scala.meta.internal.pc.completions.CompletionsProvider
+import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
 import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
@@ -98,7 +98,7 @@ case class ScalaPresentationCompiler(
       params.token,
     ) { access =>
       val driver = access.compiler()
-      new CompletionsProvider(
+      new CompletionProvider(
         search,
         driver,
         params,

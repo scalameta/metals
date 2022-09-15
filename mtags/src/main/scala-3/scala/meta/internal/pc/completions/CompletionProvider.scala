@@ -31,7 +31,7 @@ import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.Range as LspRange
 
-class CompletionsProvider(
+class CompletionProvider(
     search: SymbolSearch,
     driver: InteractiveDriver,
     params: OffsetParams,
@@ -414,7 +414,7 @@ class CompletionsProvider(
         )
     end match
   end completionItems
-end CompletionsProvider
+end CompletionProvider
 
 case object Cursor:
   val value = "CURSOR"
