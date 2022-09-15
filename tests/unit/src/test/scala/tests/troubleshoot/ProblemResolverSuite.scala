@@ -47,8 +47,8 @@ class ProblemResolverSuite extends FunSuite {
 
   checkRecommendation(
     "deprecated-scala-version",
-    scalaVersion = "2.12.8",
-    DeprecatedScalaVersion("2.12.8").message,
+    scalaVersion = "2.12.10",
+    DeprecatedScalaVersion("2.12.10").message,
   )
 
   checkRecommendation(
@@ -72,7 +72,7 @@ class ProblemResolverSuite extends FunSuite {
 
   checkRecommendation(
     "deprecated-sbt-version",
-    scalaVersion = "2.12.8",
+    scalaVersion = "2.12.9",
     DeprecatedSbtVersion.message,
     sbtVersion = Some("1.3.0"),
   )
