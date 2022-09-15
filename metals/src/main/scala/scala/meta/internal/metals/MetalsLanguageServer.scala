@@ -1767,17 +1767,7 @@ class MetalsLanguageServer(
       case ServerCommands.GenerateBspConfig() =>
         generateBspConfig().asJavaObject
       case ServerCommands.ImportBuild() =>
-        if (isImportInProcess.compareAndSet(false, true)) {
-          val buildChange = slowConnectToBuildServer(forceImport = true)
-          buildChange.onComplete(_ => isImportInProcess.set(false))
-          buildChange.asJavaObject
-        } else {
-          Future
-            .successful(
-              languageClient.showMessage(Messages.ImportAlreadyRunning)
-            )
-            .asJavaObject
-        }
+        slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
@@ -2302,29 +2292,38 @@ class MetalsLanguageServer(
 
   private def slowConnectToBuildServer(
       forceImport: Boolean
-  ): Future[BuildChange] = {
-    for {
-      possibleBuildTool <- supportedBuildTool
-      chosenBuildServer = tables.buildServers.selectedServer()
-      isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
-        _ == BloopServers.name
-      )
-      buildChange <- possibleBuildTool match {
-        case Some(buildTool) =>
-          buildTool.digest(workspace) match {
-            case None =>
-              scribe.warn(s"Skipping build import, no checksum.")
-              Future.successful(BuildChange.None)
-            case Some(digest) if isBloopOrEmpty =>
-              slowConnectToBloopServer(forceImport, buildTool, digest)
-            case Some(digest) =>
-              indexer.reloadWorkspaceAndIndex(forceImport, buildTool, digest)
-          }
-        case None =>
-          Future.successful(BuildChange.None)
-      }
-    } yield buildChange
-  }
+  ): Future[BuildChange] =
+    if (isImportInProcess.compareAndSet(false, true)) {
+      val buildImport = for {
+        possibleBuildTool <- supportedBuildTool
+        chosenBuildServer = tables.buildServers.selectedServer()
+        isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
+          _ == BloopServers.name
+        )
+        buildChange <- possibleBuildTool match {
+          case Some(buildTool) =>
+            buildTool.digest(workspace) match {
+              case None =>
+                scribe.warn(s"Skipping build import, no checksum.")
+                Future.successful(BuildChange.None)
+              case Some(digest) if isBloopOrEmpty =>
+                slowConnectToBloopServer(forceImport, buildTool, digest)
+              case Some(digest) =>
+                indexer.reloadWorkspaceAndIndex(forceImport, buildTool, digest)
+            }
+          case None =>
+            Future.successful(BuildChange.None)
+        }
+      } yield buildChange
+      buildImport.onComplete(_ => isImportInProcess.set(false))
+      buildImport
+    } else {
+      Future
+        .successful {
+          languageClient.showMessage(Messages.ImportAlreadyRunning)
+          BuildChange.None
+        }
+    }
 
   private def slowConnectToBloopServer(
       forceImport: Boolean,
