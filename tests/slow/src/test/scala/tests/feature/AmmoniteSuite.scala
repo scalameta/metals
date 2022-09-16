@@ -35,6 +35,7 @@ class Ammonite213Suite extends tests.BaseAmmoniteSuite(V.ammonite213) {
       artefactExpectedCompletionList =
         """
           |circe-refined
+          |circe-refined_native0.4
           |circe-refined_sjs0.6
           |circe-refined_sjs1""".stripMargin
       artefactCompletionList <- server.completion(
