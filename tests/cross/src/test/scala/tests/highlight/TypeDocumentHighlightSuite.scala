@@ -151,4 +151,26 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |}""".stripMargin,
   )
 
+  check(
+    "projection1",
+    """|
+       |class A {
+       |    type <<B@@B>> = Int
+       |  }
+       |  object Test {
+       |    val b1: A#<<BB>> = 12
+       |}""".stripMargin,
+  )
+
+  check(
+    "projection2",
+    """|
+       |class A {
+       |    type <<BB>> = Int
+       |  }
+       |  object Test {
+       |    val b1: A#<<B@@B>> = 12
+       |}""".stripMargin,
+  )
+
 }
