@@ -582,4 +582,30 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |   scala.util.<<Try>>(1)
       |}""".stripMargin,
   )
+
+  check(
+    "case-match1",
+    """
+      |import scala.util.Try
+      |import scala.util.Success
+      |object Test {
+      |   Try(1) match {
+      |     case Success(<<va@@lue>>) =>
+      |       <<value>>
+      |   }
+      |}""".stripMargin,
+  )
+
+  check(
+    "case-match2",
+    """
+      |import scala.util.Try
+      |import scala.util.Success
+      |object Test {
+      |   Try(1) match {
+      |     case Success(<<value>>) =>
+      |       <<va@@lue>>
+      |   }
+      |}""".stripMargin,
+  )
 }
