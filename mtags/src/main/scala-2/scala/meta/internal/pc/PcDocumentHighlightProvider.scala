@@ -283,6 +283,15 @@ final class PcDocumentHighlightProvider(
                 case (highlights, _) =>
                   highlights
               }
+            // catch all missed named trees
+            case name: NameTree if sought(name.symbol) && name.pos.isRange =>
+              tree.children.foldLeft(
+                highlights + new DocumentHighlight(
+                  name.namePos.toLsp,
+                  DocumentHighlightKind.Read
+                )
+              )(traverse(_, _))
+
             case _ =>
               tree.children.foldLeft(highlights)(traverse(_, _))
           }
