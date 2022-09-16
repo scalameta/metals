@@ -650,6 +650,9 @@ final case class ScalaTestSuiteSelection(
 case class DebugUnresolvedTestClassParams(
     testClass: String,
     @Nullable buildTarget: String = null,
+    @Nullable jvmOptions: java.util.List[String] = null,
+    @Nullable env: java.util.Map[String, String] = null,
+    @Nullable envFile: String = null,
 )
 
 case class DebugUnresolvedAttachRemoteParams(

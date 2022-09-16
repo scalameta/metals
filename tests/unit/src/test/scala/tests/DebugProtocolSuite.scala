@@ -273,6 +273,60 @@ class DebugProtocolSuite
     } yield assertNoDiff(output, "Welcome Megan Emily Morris from Arkansas")
   }
 
+  test("test-unresolved-params-absolute-envfile") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    val tmpPath = Files.createTempFile("", ".env")
+    tmpPath.toFile.deleteOnExit()
+    val envFile: Path =
+      Files.write(tmpPath, "MIDDLE_NAME=Emily\nLAST_NAME=Morris".getBytes())
+
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Foo.scala
+           |package a
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("foo") {
+           |    val name = sys.props.getOrElse("name", "")
+           |    val greeting = sys.env("GREETING")
+           |    val middleName = sys.env("MIDDLE_NAME")
+           |    val lastName = sys.env("LAST_NAME")
+           |    print(s"$$greeting $$name $$middleName $$lastName")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedTestClassParams(
+          "a.Foo",
+          "a",
+          singletonList("-Dname=Megan"),
+          Map("GREETING" -> "Welcome").asJava,
+          envFile.toString,
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertContains(
+      output,
+      """|1 tests, 1 passed
+         |All tests in a.Foo passed
+         |
+         |Welcome Megan Emily Morris
+         |""".stripMargin,
+    )
+  }
+
   test("run-unrelated-error") {
     cleanCompileCache("a")
     cleanWorkspace()
