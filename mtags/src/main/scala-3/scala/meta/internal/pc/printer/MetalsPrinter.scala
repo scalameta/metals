@@ -180,7 +180,7 @@ class MetalsPrinter(
                 param,
                 implicitEvidencesByTypeParam,
                 index,
-                paramsDocs,
+                if !onlyMethodParams then paramsDocs else Seq.empty,
                 nameToInfo,
               ) :: Nil
           index += 1
