@@ -14,7 +14,7 @@ object V {
 
   val ammonite = "2.5.4-22-4a9e6989"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.3-28-373a64c9"
+  val bloop = "1.5.3-42-75a0d6ee"
   val bloopNightly = bloop
   val bsp = "2.1.0-M1"
   val coursier = "2.1.0-M6"
