@@ -1,0 +1,11 @@
+pull_request_rules:
+  - name: Automatic merge on approval
+    conditions:
+      - "#approved-reviews-by>=1"
+      - author=scalameta-bot
+      - "#check-success>=22"
+      - label=semver-spec-patch
+      - label=library-update
+    actions:
+      merge:
+        method: merge
