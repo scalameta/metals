@@ -2291,7 +2291,8 @@ class MetalsLanguageServer(
   }
 
   private def slowConnectToBuildServer(
-      forceImport: Boolean
+      forceImport: Boolean,
+      isBuildChangeNotification: Boolean = false,
   ): Future[BuildChange] =
     if (isImportInProcess.compareAndSet(false, true)) {
       val buildImport = for {
@@ -2320,7 +2321,9 @@ class MetalsLanguageServer(
     } else {
       Future
         .successful {
-          languageClient.showMessage(Messages.ImportAlreadyRunning)
+          if (!isBuildChangeNotification) {
+            languageClient.showMessage(Messages.ImportAlreadyRunning)
+          }
           BuildChange.None
         }
     }
@@ -2621,7 +2624,10 @@ class MetalsLanguageServer(
   ): Future[BuildChange] = {
     val isBuildChange = paths.exists(buildTools.isBuildRelated(workspace, _))
     if (isBuildChange) {
-      slowConnectToBuildServer(forceImport = false)
+      slowConnectToBuildServer(
+        forceImport = false,
+        isBuildChangeNotification = true,
+      )
     } else {
       Future.successful(BuildChange.None)
     }
