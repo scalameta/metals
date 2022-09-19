@@ -126,13 +126,9 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
 
         query match {
           case Some(imp) =>
-            val scalaVersion = BuildInfo.scalaCompilerVersion
             val api = coursierapi.Complete
               .create()
-              .withScalaVersion(scalaVersion)
-              .withScalaBinaryVersion(
-                scalaVersion.split('.').take(2).mkString(".")
-              )
+              .withScalaVersion(BuildInfo.scalaCompilerVersion)
 
             def completions(s: String): List[String] =
               api.withInput(s).complete().getCompletions().asScala.toList
@@ -151,7 +147,7 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
                 val rangeStart = inferStart(
                   pos,
                   pos.source.content.mkString,
-                  c => Chars.isIdentifierPart(c) || c == '.'
+                  c => Chars.isIdentifierPart(c) || c == '.' || c == '-'
                 )
                 pos.withStart(rangeStart).withEnd(pos.point).toLsp
               }
