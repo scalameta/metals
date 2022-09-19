@@ -234,6 +234,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
           progressMessage,
         ).mkString("\n"),
       )
+      _ <- server.server.buildServerPromise.future
       _ = client.messageRequests.clear() // restart
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertNoDiff(
