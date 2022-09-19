@@ -672,7 +672,7 @@ class MetalsGlobal(
 
   }
 
-  implicit class XtensionNameTreeMetals(sel: Select) {
+  implicit class XtensionNameTreeMetals(sel: NameTreeApi) {
 
     /**
      * Returns the position of the name/identifier of this select.

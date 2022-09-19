@@ -97,11 +97,6 @@ final class PcDocumentHighlightProvider(
         else {
           Some(symbolAlternatives(id.symbol))
         }
-      /* simple selector:
-       * object.val@@ue
-       */
-      case (sel: Select) if sel.namePos.includes(pos) =>
-        Some(symbolAlternatives(sel.symbol))
       /* named argument, which is a bit complex:
        * foo(nam@@e = "123")
        */
@@ -146,6 +141,11 @@ final class PcDocumentHighlightProvider(
        */
       case (imp: Import) if imp.pos.includes(pos) =>
         imp.selector(pos).map(symbolAlternatives)
+      /* simple selector:
+       * object.val@@ue
+       */
+      case (sel: NameTree) if sel.namePos.includes(pos) =>
+        Some(symbolAlternatives(sel.symbol))
       case _ =>
         None
     }
@@ -283,6 +283,15 @@ final class PcDocumentHighlightProvider(
                 case (highlights, _) =>
                   highlights
               }
+            // catch all missed named trees
+            case name: NameTree if sought(name.symbol) && name.pos.isRange =>
+              tree.children.foldLeft(
+                highlights + new DocumentHighlight(
+                  name.namePos.toLsp,
+                  DocumentHighlightKind.Read
+                )
+              )(traverse(_, _))
+
             case _ =>
               tree.children.foldLeft(highlights)(traverse(_, _))
           }
@@ -306,7 +315,7 @@ final class PcDocumentHighlightProvider(
   private def typePos(tpe: TypeTree) = {
     tpe.original match {
       case AppliedTypeTree(tpt, _) => tpt.pos
-      case sel: Select => sel.namePos
+      case sel: NameTree => sel.namePos
       case _ => tpe.pos
     }
   }
