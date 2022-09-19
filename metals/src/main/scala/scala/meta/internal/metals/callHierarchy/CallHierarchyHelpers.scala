@@ -100,6 +100,8 @@ private[callHierarchy] trait CallHierarchyHelpers {
       }
   }
 
+  // When there is a recursive call, a symbol can be present twice in the list of visited elements,
+  // this method is used for their detection.
   def containsDuplicates[T](visited: Seq[T]): Boolean =
     visited.view
       .scanLeft(Set.empty[T])((set, a) => set + a)
