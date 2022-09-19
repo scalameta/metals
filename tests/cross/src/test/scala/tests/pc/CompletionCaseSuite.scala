@@ -35,18 +35,6 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case Some(value) => scala
        |""".stripMargin,
   )
-  check(
-      "comment",
-      """
-        |//> using lib @@
-        |
-        |object A {
-        |  
-        |}""".stripMargin,
-      """|case None => scala
-         |case Some(value) => scala
-         |""".stripMargin,
-    )
 
   check(
     "typed",

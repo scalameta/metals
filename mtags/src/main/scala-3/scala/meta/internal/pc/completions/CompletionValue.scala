@@ -35,6 +35,7 @@ sealed trait CompletionValue:
       case _: CompletionValue.Autofill => CompletionItemKind.Enum
       case _: CompletionValue.CaseKeyword => CompletionItemKind.Method
       case _: CompletionValue.MatchCompletion => CompletionItemKind.Enum
+      case _: CompletionValue.ScalaCLiImport => CompletionItemKind.Keyword
       case v: (CompletionValue.Compiler | CompletionValue.Workspace |
             CompletionValue.Scope | CompletionValue.Interpolator) =>
         val symbol = v.symbol
@@ -143,6 +144,12 @@ object CompletionValue:
     override def label: String = filename
     override def insertText: Option[String] = Some(filename.stripSuffix(".sc"))
 
+  case class ScalaCLiImport(
+      label: String,
+      override val insertText: Option[String],
+      override val range: Option[Range],
+  ) extends CompletionValue:
+    override val filterText: Option[String] = insertText
   case class Interpolator(
       symbol: Symbol,
       label: String,

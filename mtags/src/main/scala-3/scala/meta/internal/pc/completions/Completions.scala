@@ -314,8 +314,6 @@ class Completions(
     }
   end completionsWithSuffix
 
-  
-
   /**
    * @return Tuple of completionValues and flag. If the latter boolean value is true
    *         Metals should provide advanced completions only.
@@ -636,6 +634,7 @@ class Completions(
               (autofill.label, true)
             case fileSysMember: CompletionValue.FileSystemMember =>
               (fileSysMember.label, true)
+            case si: CompletionValue.ScalaCLiImport => (si.label, true)
 
         if !isSeen(id) && include then
           isSeen += id

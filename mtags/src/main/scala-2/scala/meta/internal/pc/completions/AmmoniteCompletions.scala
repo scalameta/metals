@@ -123,7 +123,7 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
           case sel: ImportSelector if sel.name.toString().contains(CURSOR) =>
             sel.name.decode.replace(CURSOR, "")
         }
-
+        pprint.log(query)
         query match {
           case Some(imp) =>
             val api = coursierapi.Complete
@@ -137,6 +137,8 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
               if (imp.endsWith(":") && imp.count(_ == ':') == 1)
                 completions(imp + ":").map(":" + _)
               else List.empty
+            pprint.log(javaCompletions.take(5))
+            pprint.log(scalaCompletions.take(5))
 
             val isInitialCompletion =
               pos.lineContent.trim == s"import $$ivy.$CURSOR"
