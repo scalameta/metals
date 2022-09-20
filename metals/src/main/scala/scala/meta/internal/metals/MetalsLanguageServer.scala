@@ -2042,28 +2042,6 @@ class MetalsLanguageServer(
           languageClient.showMessage(Messages.Worksheets.unableToExport)
           Future.successful(()).asJavaObject
         }
-      case ServerCommands.ConvertToNamedArguments(
-            ServerCommands.ConvertToNamedArgsRequest(position, argIndices)
-          ) =>
-        CancelTokens.future { token =>
-          val uri = position.getTextDocument().getUri()
-          for {
-            edits <- compilers.convertToNamedArguments(
-              position,
-              argIndices,
-              token,
-            )
-            _ = logging.logErrorWhen(
-              edits.isEmpty(),
-              s"Could not find the correct names for arguments at $position with indices ${argIndices.asScala
-                  .mkString(",")}",
-            )
-            workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
-            _ <- languageClient
-              .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
-              .asScala
-          } yield ().asInstanceOf[Object]
-        }
       case actionCommand
           if codeActionProvider.allActionCommands.exists(
             _.id == actionCommand.getCommand()

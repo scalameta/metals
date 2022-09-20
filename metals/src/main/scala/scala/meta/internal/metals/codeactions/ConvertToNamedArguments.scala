@@ -5,19 +5,55 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
+import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
-class ConvertToNamedArguments(trees: Trees) extends CodeAction {
+class ConvertToNamedArguments(
+    trees: Trees,
+    compilers: Compilers,
+    languageClient: MetalsLanguageClient,
+) extends CodeAction {
 
   import ConvertToNamedArguments._
   override val kind: String = l.CodeActionKind.RefactorRewrite
+
+  override type CommandData = ServerCommands.ConvertToNamedArgsRequest
+
+  override def command: Option[ActionCommand] = Some(
+    ServerCommands.ConvertToNamedArguments
+  )
+
+  override def handleCommand(
+      data: ServerCommands.ConvertToNamedArgsRequest,
+      token: CancelToken,
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    val uri = data.position.getTextDocument().getUri()
+    for {
+      edits <- compilers.convertToNamedArguments(
+        data.position,
+        data.argIndices,
+        token,
+      )
+      _ = logging.logErrorWhen(
+        edits.isEmpty(),
+        s"Could not find the correct names for arguments at ${data.position} with indices ${data.argIndices.asScala
+            .mkString(",")}",
+      )
+      workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+      _ <- languageClient
+        .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))
+        .asScala
+    } yield ()
+  }
 
   def getTermWithArgs(
       apply: Term,
@@ -32,8 +68,6 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
     if (argIndices.isEmpty) firstApplyWithUnnamedArgs(apply.parent)
     else Some(ApplyTermWithArgIndices(apply, argIndices))
   }
-  // type T = ServerCommands.ConvertToNamedArguments
-  // override def command: Option[Nothing] = Some(ServerCommands.ConvertToNamedArguments)
 
   def firstApplyWithUnnamedArgs(
       term: Option[Tree]

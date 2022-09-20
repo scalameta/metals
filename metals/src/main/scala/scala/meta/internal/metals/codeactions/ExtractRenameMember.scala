@@ -14,8 +14,10 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember.CodeActionCommandNotFoundException
 import scala.meta.internal.metals.codeactions.ExtractRenameMember.getMemberType
@@ -28,8 +30,6 @@ import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.ClientCommands
 
 class ExtractRenameMember(
     trees: Trees,
@@ -333,10 +333,10 @@ class ExtractRenameMember(
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Unit] = {
     for {
-      result <- calculate(textDocumentParams)
-      _ <- languageClient.applyEdit(result.edits).asScala
+      (edits, goToLocation) <- calculate(textDocumentParams)
+      _ <- languageClient.applyEdit(edits).asScala
     } yield {
-      result.goToLocation.foreach { location =>
+      goToLocation.foreach { location =>
         languageClient.metalsExecuteClientCommand(
           ClientCommands.GotoLocation.toExecuteCommandParams(
             ClientCommands.WindowLocation(
@@ -352,7 +352,7 @@ class ExtractRenameMember(
 
   private def calculate(
       params: l.TextDocumentPositionParams
-  ): Future[CodeActionCommandResult] = Future {
+  ): Future[(ApplyWorkspaceEditParams, Option[Location])] = Future {
     val uri = params.getTextDocument().getUri()
 
     def isCompanion(
@@ -402,7 +402,7 @@ class ExtractRenameMember(
       newFileMemberRange.setStart(pos)
       newFileMemberRange.setEnd(pos)
       val workspaceEdit = new WorkspaceEdit(Map(uri -> edits.asJava).asJava)
-      CodeActionCommandResult(
+      (
         new ApplyWorkspaceEditParams(workspaceEdit),
         Option(new Location(newFileUri, newFileMemberRange)),
       )
