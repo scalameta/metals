@@ -72,7 +72,7 @@ final class PcDocumentHighlightProvider(
             info.member(sym.localName)
           )
         } else Set(sym)
-      all.filter(_ != NoSymbol)
+      all.filter(s => s != NoSymbol && !s.isError)
     }
 
     def fallbackSymbol(name: Name, pos: Position) = {
@@ -158,6 +158,16 @@ final class PcDocumentHighlightProvider(
           .filter(_ != NoSymbol)
         lazy val soughtNames: Set[Name] = sought.map(_.name)
 
+        /*
+         * For comprehsnions have two owners, one for the enumerators and one for
+         * yield. This is a heuristic to find that out.
+         */
+        def isForComprehensionOwner(named: NameTree) =
+          soughtNames(named.name) &&
+            named.symbol.owner.isAnonymousFunction && owners.exists(
+              _.pos.point == named.symbol.owner.pos.point
+            )
+
         def traverse(
             highlights: Set[DocumentHighlight],
             tree: Tree
@@ -167,11 +177,14 @@ final class PcDocumentHighlightProvider(
              * All indentifiers such as:
              * val a = <<b>>
              */
-            case ident: Ident if sought(ident.symbol) && ident.pos.isRange =>
+            case ident: Ident
+                if ident.pos.isRange &&
+                  (sought(ident.symbol) || isForComprehensionOwner(ident)) =>
               highlights + new DocumentHighlight(
                 ident.pos.toLsp,
                 DocumentHighlightKind.Read
               )
+
             /**
              * Needed for type trees such as:
              * type A = [<<b>>]
@@ -201,9 +214,8 @@ final class PcDocumentHighlightProvider(
              * etc.
              */
             case df: MemberDef
-                if sought(
-                  df.symbol
-                ) && df.pos.isRange =>
+                if df.pos.isRange &&
+                  (sought(df.symbol) || isForComprehensionOwner(df)) =>
               (annotationChildren(df) ++ df.children).foldLeft(
                 highlights + new DocumentHighlight(
                   df.namePos.toLsp,
