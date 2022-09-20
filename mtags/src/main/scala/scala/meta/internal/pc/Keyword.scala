@@ -1,4 +1,7 @@
 package scala.meta.internal.pc
+
+import scala.meta.XtensionClassifiable
+import scala.meta.tokens.Token // for token.is
 // scalafmt: { maxColumn = 120 }
 
 case class Keyword(
@@ -20,7 +23,9 @@ case class Keyword(
     // Is this keyword only in Scala 3?
     isScala3: Boolean = false,
     // Optional character to select this completion item, for example "."
-    commitCharacter: Option[String] = None
+    commitCharacter: Option[String] = None,
+    // The (reverse) tokens that should appear before the given position (removing whitespace and EOF)
+    leadingReverseTokens: Option[Iterator[Token] => Boolean] = None
 ) {
 
   def insertText: String =
@@ -43,7 +48,8 @@ case class Keyword(
       isPackage: Boolean,
       isParam: Boolean,
       isScala3: Boolean,
-      allowToplevel: Boolean
+      allowToplevel: Boolean,
+      leadingReverseTokens: => Iterator[Token]
   ): Boolean = {
     val isAllowedInThisScalaVersion = (this.isScala3 && isScala3) || !this.isScala3
     this.name.startsWith(name) && isAllowedInThisScalaVersion && {
@@ -54,7 +60,8 @@ case class Keyword(
       (this.isTemplate && allowToplevel && isPackage) ||
       (this.isPackage && isPackage) ||
       (this.isMethodBody && isMethodBody) ||
-      (this.isParam && isParam)
+      (this.isParam && isParam) ||
+      this.leadingReverseTokens.map(_.apply(leadingReverseTokens)).getOrElse(false)
     }
   }
 }
@@ -99,6 +106,7 @@ object Keyword {
     Keyword("throw", isExpression = true),
     Keyword("implicit", isBlock = true, isTemplate = true),
     Keyword("return", isMethodBody = true),
+    Keyword("extends", leadingReverseTokens = Some(leadingTokensExtend)),
     Keyword("match"), // already implemented by CompletionPosition
     Keyword("case"), // already implemented by CompletionPosition and "case class"
     Keyword("override"), // already implemented by CompletionPosition
@@ -106,12 +114,19 @@ object Keyword {
     Keyword("macro"), // in-frequently used language feature
     // The keywords below were left out in the first iteration of implementing keyword completions
     // since they appear in positions that are a bit more difficult to detect on the syntax tree.
-    Keyword("extends"),
     Keyword("with"),
     Keyword("catch"),
-    Keyword("extends"),
     Keyword("finally"),
     Keyword("then")
   )
 
+  private def leadingTokensExtend(leadingReverseTokens: Iterator[Token]): Boolean = {
+    leadingReverseTokens.filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF]).take(3).toList match {
+      // (class|trait|object) classname ext@@
+      case (_: Token.Ident) :: (_: Token.Ident) :: kw :: Nil =>
+        if (kw.is[Token.KwClass] || kw.is[Token.KwTrait] || kw.is[Token.KwObject]) true
+        else false
+      case _ => false
+    }
+  }
 }

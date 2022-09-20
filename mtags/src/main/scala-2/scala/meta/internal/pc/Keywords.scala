@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.tools.nsc.reporters.StoreReporter
 
+import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 import org.eclipse.{lsp4j => l}
@@ -18,6 +19,12 @@ trait Keywords { this: MetalsGlobal =>
   ): List[Member] = {
 
     lazy val notInComment = checkIfNotInComment(pos, text, latestEnclosing)
+
+    lazy val reverseTokens: Iterator[Token] =
+      text.substring(0, pos.start).tokenize.toOption match {
+        case Some(toks) => toks.tokens.reverseIterator
+        case None => Iterator.empty
+      }
 
     getIdentifierName(latestEnclosing, pos) match {
       case None =>
@@ -55,7 +62,8 @@ trait Keywords { this: MetalsGlobal =>
                 isPackage = isPackage,
                 isParam = isParam,
                 isScala3 = false,
-                allowToplevel = isAmmoniteScript
+                allowToplevel = isAmmoniteScript,
+                leadingReverseTokens = reverseTokens
               ) =>
             mkTextEditMember(kw, editRange)
         }

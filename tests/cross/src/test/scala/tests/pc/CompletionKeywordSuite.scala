@@ -522,4 +522,57 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     "",
   )
 
+  check(
+    "extends-class".tag(
+      IgnoreScala3
+    ), // extends keyword is not yet supported in Scala3
+    """
+      |package foo
+      |
+      |class Foo ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-obj".tag(
+      IgnoreScala3
+    ),
+    """
+      |package foo
+      |
+      |object Foo ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-trait".tag(
+      IgnoreScala3
+    ),
+    """
+      |package foo
+      |
+      |trait Foo ext@@ {}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "no-extends".tag(
+      IgnoreScala3
+    ),
+    """
+      |package foo
+      |
+      |def main = {
+      |  foo.ext@@
+      |}
+    """.stripMargin,
+    "",
+  )
+
 }

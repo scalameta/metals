@@ -44,6 +44,7 @@ object KeywordsCompletions:
                 isParam = isParam,
                 isScala3 = true,
                 allowToplevel = true,
+                leadingReverseTokens = Iterator.empty, // TODO
               ) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }
