@@ -1,7 +1,8 @@
 package scala.meta.internal.pc.completions
 
-import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.mtags.CoursierComplete
+import scala.meta.internal.mtags.MtagsEnrichments.*
+
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.util.SourcePosition
 class ScalaCliCompletions(pos: SourcePosition, text: String):
