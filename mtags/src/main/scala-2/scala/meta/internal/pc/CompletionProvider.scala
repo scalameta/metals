@@ -328,7 +328,8 @@ class CompletionProvider(
         !isFileAmmoniteCompletion() &&
         completion.isCandidate(head) &&
         !head.sym.name.containsName(CURSOR) &&
-        isNotLocalForwardReference
+        isNotLocalForwardReference &&
+        !isAliasCompletion(head)
       ) {
         isSeen += id
         buf += head

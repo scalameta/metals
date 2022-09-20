@@ -16,8 +16,14 @@ object Compat {
     val (startsWith, gt) =
       cases.partition { case (v, _) => !v.startsWith(">=") }
 
-    val fromStartWith = startsWith.collectFirst {
-      case (v, a) if scalaVersion.startsWith(v) => a
+    val fromStartWith = {
+      val filtered = startsWith
+        .filter { case (v, _) => scalaVersion.startsWith(v) }
+      if (filtered.nonEmpty) {
+        val out = filtered.maxBy { case (v, _) => v.length() }._2
+        Some(out)
+      } else
+        None
     }
 
     matchesGte(scalaVersion, gt).orElse(fromStartWith)
