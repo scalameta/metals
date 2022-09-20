@@ -481,4 +481,31 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |}""".stripMargin
     ),
   )
+  check(
+    "exhaustive-map".tag(IgnoreScala2),
+    """
+      |object A {
+      |  List(Option(1)).map{ ca@@ }
+      |}""".stripMargin,
+    """|case (exhaustive) Option (2 cases)
+       |""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
+    "exhaustive-map-edit".tag(IgnoreScala2),
+    """
+      |object A {
+      |  List(Option(1)).map{mat@@}
+      |}""".stripMargin,
+    s"""
+       |object A {
+       |  List(Option(1)).map{
+       |\tcase None => $$0
+       |\tcase Some(value) =>
+       |}
+       |}""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
 }
