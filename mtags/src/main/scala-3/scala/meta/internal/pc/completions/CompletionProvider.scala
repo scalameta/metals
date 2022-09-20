@@ -270,7 +270,7 @@ class CompletionProvider(
 
     val ident = completion.label
 
-    val completionTextSuffix = completion.snippetSuffix.getOrElse("")
+    val completionTextSuffix = completion.snippetSuffix.toEdit
 
     lazy val isInStringInterpolation =
       path match

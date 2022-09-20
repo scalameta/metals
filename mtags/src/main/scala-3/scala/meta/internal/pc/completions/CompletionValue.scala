@@ -20,7 +20,7 @@ import org.eclipse.lsp4j.TextEdit
 sealed trait CompletionValue:
   def label: String
   def insertText: Option[String] = None
-  def snippetSuffix: Option[String] = None
+  def snippetSuffix: CompletionSuffix = CompletionSuffix.empty
   def additionalEdits: List[TextEdit] = Nil
   def range: Option[Range] = None
   def filterText: Option[String] = None
@@ -88,13 +88,13 @@ object CompletionValue:
   case class Compiler(
       label: String,
       symbol: Symbol,
-      override val snippetSuffix: Option[String],
+      override val snippetSuffix: CompletionSuffix,
   ) extends Symbolic
   case class Scope(label: String, symbol: Symbol) extends Symbolic
   case class Workspace(
       label: String,
       symbol: Symbol,
-      override val snippetSuffix: Option[String],
+      override val snippetSuffix: CompletionSuffix,
   ) extends Symbolic
 
   /**
@@ -103,7 +103,7 @@ object CompletionValue:
   case class Extension(
       label: String,
       symbol: Symbol,
-      override val snippetSuffix: Option[String],
+      override val snippetSuffix: CompletionSuffix,
   ) extends Symbolic
 
   /**

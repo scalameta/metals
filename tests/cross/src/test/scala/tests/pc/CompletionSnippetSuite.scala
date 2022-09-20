@@ -488,21 +488,4 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     """.stripMargin,
   )
 
-  // https://github.com/scalameta/metals/issues/4004
-  checkEdit(
-    "extension-param3".tag(IgnoreScala2),
-    s"""|package a
-        |object Foo:
-        |  extension (s: String)
-        |    def bar()() = 0
-        |  val bar = "abc".ba@@
-    """.stripMargin,
-    s"""|package a
-        |object Foo:
-        |  extension (s: String)
-        |    def bar()() = 0
-        |  val bar = "abc".bar()()
-    """.stripMargin,
-  )
-
 }
