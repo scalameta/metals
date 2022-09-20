@@ -9,7 +9,6 @@ import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -28,8 +27,7 @@ class InsertInferredType(
 
   type CommandData = l.TextDocumentPositionParams
 
-  override def command
-      : Option[ParametrizedCommand[l.TextDocumentPositionParams]] =
+  override def command: Option[ActionCommand] =
     Some(ServerCommands.InsertInferredType)
 
   import InsertInferredType._

@@ -8,16 +8,16 @@ import scala.meta.Pat
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.parsing.Trees
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.logging
+import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
 class ExtractMethodCodeAction(
     trees: Trees,
@@ -55,7 +55,7 @@ class ExtractMethodCodeAction(
         .asScala
     } yield ()
   }
-  
+
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
