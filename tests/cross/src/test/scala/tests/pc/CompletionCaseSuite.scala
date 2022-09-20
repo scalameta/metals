@@ -290,6 +290,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
+       |case (exhaustive) Option (2 cases)
        |""".stripMargin,
   )
 
@@ -331,6 +332,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
+       |case (exhaustive) Option (2 cases)
        |""".stripMargin,
   )
 
@@ -344,6 +346,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
+       |case (exhaustive) Option (2 cases)
        |""".stripMargin,
   )
 
