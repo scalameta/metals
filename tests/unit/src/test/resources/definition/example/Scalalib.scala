@@ -1,7 +1,7 @@
 package example
 
 class Scalalib/*Scalalib.scala*/ {
-  val nil/*Scalalib.scala*/ = List/*package.scala*/()
+  val nil/*Scalalib.scala*/ = List/*List.scala*/()
   val lst/*Scalalib.scala*/ = List/*package.scala*/[
     (
         Nothing,
