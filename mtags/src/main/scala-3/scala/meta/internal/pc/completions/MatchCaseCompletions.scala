@@ -166,6 +166,11 @@ object CaseKeywordCompletion:
    * @param typedtree typed tree of the file, used for generating auto imports
    * @param indexedContext
    * @param config
+   * @param parent the parent tree node of the pattern match, for example `Apply(_, _)` when in
+   *               `List(1).foreach { cas@@ }`, used as fallback to compute the type of the selector when
+   *               it's `EmptyTree`.
+   * @param casePrefix when in `List(1).foreach { case@@ }` we want user to see `case (exhaustive) Option (2 cases)`,
+   *                   when false (default) we get `match (exhaustive) Option (2 cases)`
    */
   def matchContribute(
       selector: Tree,
