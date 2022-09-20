@@ -79,7 +79,7 @@ object PcDocumentHighlightProvider:
             info.member(sym.asTerm.name.getterName).symbol,
           )
         else Set(sym)
-      all.filter(_ != NoSymbol)
+      all.filter(s => s != NoSymbol && !s.isError)
     end symbolAlternatives
 
     // First identify the symbol we are at, comments identify @@ as current cursor position
@@ -153,6 +153,17 @@ object PcDocumentHighlightProvider:
           .flatMap { s => Set(s.owner, s.owner.companionModule) }
           .filter(_ != NoSymbol)
         lazy val soughtNames: Set[Name] = sought.map(_.name)
+
+        /*
+         * For comprehsnions have two owners, one for the enumerators and one for
+         * yield. This is a heuristic to find that out.
+         */
+        def isForComprehensionOwner(named: NameTree) =
+          soughtNames(named.name) &&
+            named.symbol.owner.isAnonymousFunction && owners.exists(
+              _.span.point == named.symbol.owner.span.point
+            )
+
         def collectNames(
             highlights: Set[DocumentHighlight],
             tree: Tree,
@@ -163,7 +174,8 @@ object PcDocumentHighlightProvider:
              * val a = <<b>>
              */
             case ident: Ident
-                if sought(ident.symbol) && !ident.span.isZeroExtent =>
+                if !ident.span.isZeroExtent &&
+                  (sought(ident.symbol) || isForComprehensionOwner(ident)) =>
               highlights + new DocumentHighlight(
                 ident.sourcePos.toLsp,
                 DocumentHighlightKind.Read,
@@ -262,7 +274,8 @@ object PcDocumentHighlightProvider:
 
         val traverser = new DeepFolder[Set[DocumentHighlight]](collectNames)
         val all = traverser(Set.empty[DocumentHighlight], unit.tpdTree)
-        all.toList.distinct
+
+        all.toList.distinctBy(_.getRange())
       case None => Nil
     end match
   end highlights
