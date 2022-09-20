@@ -47,7 +47,7 @@ final class CodeActionProvider(
     new RewriteBracesParensCodeAction(trees),
     new ExtractValueCodeAction(trees, buffers),
     new CreateCompanionObjectCodeAction(trees, buffers),
-    new ExtractMethodCodeAction(trees),
+    new ExtractMethodCodeAction(trees, compilers, languageClient),
     new ConvertToNamedArguments(trees),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
   )
@@ -67,15 +67,7 @@ final class CodeActionProvider(
 
     val actions = allActions.collect {
       case action if isRequestedKind(action) =>
-        action.contribute(params, token).map { codeActions =>
-          // make sure that code action contains the defined command, needed ? TODO
-          action.command.foreach { cmd =>
-            codeActions.foreach { codeA =>
-              assert(codeA.getCommand().getCommand() == cmd.id)
-            }
-          }
-          codeActions
-        }
+        action.contribute(params, token)
     }
 
     Future.sequence(actions).map(_.flatten)

@@ -11,15 +11,51 @@ import scala.meta.Tree
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.metals.logging
 import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
 class ExtractMethodCodeAction(
-    trees: Trees
+    trees: Trees,
+    compilers: Compilers,
+    languageClient: MetalsLanguageClient,
 ) extends CodeAction {
+
+  override type CommandData = ServerCommands.ExtractMethodParams
+
+  override def command: Option[ActionCommand] = Some(
+    ServerCommands.ExtractMethod
+  )
   override def kind: String = l.CodeActionKind.RefactorExtract
+
+  override def handleCommand(
+      data: ServerCommands.ExtractMethodParams,
+      token: CancelToken,
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    val doc = data.param
+    val uri = doc.getUri()
+    for {
+      edits <- compilers.extractMethod(
+        doc,
+        data.range,
+        data.extractPosition,
+        token,
+      )
+      _ = logging.logErrorWhen(
+        edits.isEmpty(),
+        s"Could not extract method from range \n${data.range}\nin file ${uri.toAbsolutePath}",
+      )
+      workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+      _ <- languageClient
+        .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))
+        .asScala
+    } yield ()
+  }
+  
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {

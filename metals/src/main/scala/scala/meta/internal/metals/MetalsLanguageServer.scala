@@ -2079,25 +2079,6 @@ class MetalsLanguageServer(
           languageClient.showMessage(Messages.Worksheets.unableToExport)
           Future.successful(()).asJavaObject
         }
-
-      case ServerCommands.ExtractMethod(
-            ServerCommands.ExtractMethodParams(doc, range, extractionPos)
-          ) =>
-        CancelTokens.future { token =>
-          val uri = doc.getUri()
-
-          for {
-            edits <- compilers.extractMethod(doc, range, extractionPos, token)
-            _ = logging.logErrorWhen(
-              edits.isEmpty(),
-              s"Could not extract method from range \n${range}\nin file ${uri.toAbsolutePath}",
-            )
-            workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
-            _ <- languageClient
-              .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
-              .asScala
-          } yield ().asInstanceOf[Object]
-        }
       case ServerCommands.ConvertToNamedArguments(
             ServerCommands.ConvertToNamedArgsRequest(position, argIndices)
           ) =>
