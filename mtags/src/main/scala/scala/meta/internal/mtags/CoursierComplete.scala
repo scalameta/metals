@@ -50,7 +50,7 @@ object CoursierComplete {
     (editStart, editEnd)
   }
   def isScalaCliDep(point: Int, text: String): Option[String] = {
-    if (!text.stripLeading().startsWith("//")) None
+    if (!text.startsWith("//")) None
     else {
       val directive = text.take(point).split("//").last
       if (directive.exists(Chars.isLineBreakChar(_))) None
