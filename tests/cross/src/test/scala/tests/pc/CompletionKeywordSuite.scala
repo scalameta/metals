@@ -523,9 +523,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
-    "extends-class".tag(
-      IgnoreScala3
-    ), // extends keyword is not yet supported in Scala3
+    "extends-class",
     """
       |package foo
       |
@@ -533,12 +531,16 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|extends
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|extension
+           |extends
+           |""".stripMargin
+    ),
   )
 
   check(
-    "extends-obj".tag(
-      IgnoreScala3
-    ),
+    "extends-obj",
     """
       |package foo
       |
@@ -546,12 +548,16 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|extends
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|extension
+           |extends
+           |""".stripMargin
+    ),
   )
 
   check(
-    "extends-trait".tag(
-      IgnoreScala3
-    ),
+    "extends-trait",
     """
       |package foo
       |
@@ -559,12 +565,16 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|extends
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|extension
+           |extends
+           |""".stripMargin
+    ),
   )
 
   check(
-    "no-extends".tag(
-      IgnoreScala3
-    ),
+    "no-extends",
     """
       |package foo
       |

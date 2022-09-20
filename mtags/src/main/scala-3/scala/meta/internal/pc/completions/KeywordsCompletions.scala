@@ -2,11 +2,13 @@ package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.Keyword
+import scala.meta.tokenizers.XtensionTokenizeInputLike
+import scala.meta.tokens.Token
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.{lsp4j as l}
+import org.eclipse.{lsp4j as l} // for tokenize
 
 object KeywordsCompletions:
 
@@ -31,6 +33,14 @@ object KeywordsCompletions:
         val isTemplate = this.isTemplate(path)
         val isPackage = this.isPackage(path)
         val isParam = this.isParam(path)
+        lazy val text = completionPos.cursorPos.source.content.mkString
+        lazy val reverseTokens: Iterator[Token] =
+          text
+            .substring(0, completionPos.cursorPos.start)
+            .tokenize
+            .toOption match
+            case Some(toks) => toks.tokens.reverseIterator
+            case None => Iterator.empty
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -44,7 +54,7 @@ object KeywordsCompletions:
                 isParam = isParam,
                 isScala3 = true,
                 allowToplevel = true,
-                leadingReverseTokens = Iterator.empty, // TODO
+                leadingReverseTokens = reverseTokens,
               ) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }
