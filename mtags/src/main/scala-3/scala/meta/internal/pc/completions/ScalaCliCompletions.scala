@@ -14,23 +14,22 @@ class ScalaCliCompletions(pos: SourcePosition, text: String):
     path match
       case head :: next => None
       case Nil =>
-        if !text.startsWith("//>") then None
+        if !text.stripLeading().startsWith("//") then None
         else
-          val directive = text.take(pos.point).split("//>").last
-          if directive.contains('\n') then None
+          val directive = text.take(pos.point).split("//").last
+          if directive.exists(Chars.isLineBreakChar(_)) then None
           else
+            val reg = """>\s*using\s+lib\s+"?(.*)"?""".r
             directive match
-              case s"${empty}using lib $dep" => Some(dep)
+              case reg(dep) => Some(dep.stripPrefix(s"\"").stripSuffix(s"\""))
               case _ => None
-  def contribute(pos: SourcePosition, dep: String) =
-    val dependency = dep.stripPrefix(s"\"").stripSuffix(s"\"")
+  def contribute(dependency: String) =
     val scalaVersion = BuildInfo.scalaCompilerVersion
     val api = coursierapi.Complete
       .create()
       .withScalaVersion(scalaVersion)
       .withScalaBinaryVersion(
-        if scalaVersion.startsWith("3") then "3"
-        else scalaVersion.split('.').take(2).mkString(".")
+        "3"
       )
     def completions(s: String): List[String] =
       api.withInput(s).complete().getCompletions().asScala.toList
@@ -47,9 +46,17 @@ class ScalaCliCompletions(pos: SourcePosition, text: String):
         }
       do i -= 1
       i + 1
-    val editRange = pos.withStart(editStart).toLsp
+    val editEnd =
+      var i = pos.point
+      val textLen = text.length()
+      while i < text.length() && {
+          val c = text.charAt(i)
+          (Chars.isIdentifierPart(c) || c == '.' || c == '-')
+        }
+      do i += 1
+      i
+    val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
     (javaCompletions ++ scalaCompletions)
-      .map(_.stripPrefix(dependency))
       .map(insertText =>
         CompletionValue.ScalaCLiImport(
           insertText.stripPrefix(":"),

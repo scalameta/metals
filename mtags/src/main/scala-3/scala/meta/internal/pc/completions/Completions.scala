@@ -335,7 +335,7 @@ class Completions(
     path match
 
       case ScalaCliCompletions(dependency) =>
-        (ScalaCliCompletions.contribute(pos, dependency), true)
+        (ScalaCliCompletions.contribute(dependency), true)
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
