@@ -1,10 +1,7 @@
 package scala.meta.internal.pc.completions
 
-import scala.collection.JavaConverters._
-
-import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.pc.MetalsGlobal
-import scala.meta.internal.tokenizers.Chars
 
 import org.eclipse.{lsp4j => l}
 
@@ -14,18 +11,7 @@ trait CliCompletions {
     def unapply(path: List[Tree]): Option[String] =
       path match {
         case Nil =>
-          if (!text.stripLeading().startsWith("//")) None
-          else {
-            val directive = text.take(pos.point).split("//").last
-            if (directive.exists(Chars.isLineBreakChar(_))) None
-            else {
-              val reg = """>\s*using\s+lib\s+"?(.*)"?""".r
-              directive match {
-                case reg(dep) => Some(dep.stripPrefix("\"").stripSuffix("\""))
-                case _ => None
-              }
-            }
-          }
+          CoursierComplete.isScalaCliDep(pos.point, text)
         case _ => None
       }
   }
@@ -37,45 +23,11 @@ trait CliCompletions {
   ) extends CompletionPosition {
 
     override def contribute: List[Member] = {
-      val scalaVersion = BuildInfo.scalaCompilerVersion
-      val api = coursierapi.Complete
-        .create()
-        .withScalaVersion(scalaVersion)
-        .withScalaBinaryVersion(
-          scalaVersion.split('.').take(2).mkString(".")
-        )
-      def completions(s: String): List[String] =
-        api.withInput(s).complete().getCompletions().asScala.toList
-      val javaCompletions = completions(dependency)
-      val scalaCompletions =
-        if (dependency.endsWith(":") && dependency.count(_ == ':') == 1)
-          completions(dependency + ":").map(":" + _)
-        else List.empty
-      val editStart = {
-        var i = pos.point - 1
-        while (
-          i >= 0 && {
-            val c = text.charAt(i)
-            (Chars.isIdentifierPart(c) || c == '.' || c == '-')
-          }
-        ) { i -= 1 }
-        i + 1
-      }
-      val editEnd = {
-        var i = pos.point
-        val textLen = text.length()
-        while (
-          i < textLen && {
-            val c = text.charAt(i)
-            (Chars.isIdentifierPart(c) || c == '.' || c == '-')
-          }
-        ) {
-          i += 1
-        }
-        i
-      }
+      val completions = CoursierComplete.complete(dependency)
+      val (editStart, editEnd) =
+        CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
-      (javaCompletions ++ scalaCompletions)
+      completions
         .map(insertText =>
           new TextEditMember(
             filterText = insertText,
