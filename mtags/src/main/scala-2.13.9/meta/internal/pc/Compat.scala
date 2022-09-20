@@ -14,7 +14,7 @@ trait Compat { this: MetalsGlobal =>
       case s: StoreReporter => Some(s)
       case _ => None
     }
-  
+
   def isAliasCompletion(m: Member): Boolean = m match {
     case tm: TypeMember => tm.aliasInfo.nonEmpty
     case sm: ScopeMember => sm.aliasInfo.nonEmpty
