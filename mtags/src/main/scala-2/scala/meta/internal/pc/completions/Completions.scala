@@ -85,11 +85,11 @@ trait Completions { this: MetalsGlobal =>
    */
   def relevancePenalty(m: Member): Int =
     m match {
-      case TypeMember(sym, _, true, isInherited, _) =>
+      case tm: TypeMember if tm.accessible =>
         computeRelevancePenalty(
-          sym,
+          tm.sym,
           m.implicitlyAdded,
-          isInherited
+          tm.inherited
         )
       case w: WorkspaceMember =>
         MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
@@ -101,9 +101,9 @@ trait Completions { this: MetalsGlobal =>
         ) >>> 15
         if (!w.sym.isAbstract) penalty |= MemberOrdering.IsNotAbstract
         penalty
-      case ScopeMember(sym, _, true, _) =>
+      case sm: ScopeMember if sm.accessible =>
         computeRelevancePenalty(
-          sym,
+          sm.sym,
           m.implicitlyAdded,
           isInherited = false
         )

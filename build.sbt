@@ -290,6 +290,21 @@ val mtagsSettings = List(
   buildInfoKeys := Seq[BuildInfoKey](
     "scalaCompilerVersion" -> scalaVersion.value
   ),
+  Compile / unmanagedSourceDirectories := {
+    val current = (Compile / unmanagedSourceDirectories).value
+    val base = (Compile / sourceDirectory).value
+    val regex = "(\\d+)\\.(\\d+)\\.(\\d+).*".r
+    // Starting from scala 2.13.9 we need to specify
+    // Compat.scala per each patch version
+    // For this case filter out `scala-2.13` directory that comes by default
+    scalaVersion.value match {
+      case regex(major, minor, patch)
+          if major == "2" && minor == "13" && patch.toInt >= 9 =>
+        current.filter(f => f.getName() != "scala-2.13")
+      case _ =>
+        current
+    }
+  },
 )
 
 lazy val mtags3 = project
