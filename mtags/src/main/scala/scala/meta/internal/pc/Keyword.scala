@@ -14,7 +14,7 @@ import scala.meta.tokens.Token // for token.is
  * @param isParam Is located in param definition
  * @param isScala3 Is this keyword only in Scala 3?
  * @param commitCharacter Optional character to select this completion item, for example "."
- * @param leadingReverseTokens The (reverse) tokens that should appear before the given position (removing whitespace and EOF)
+ * @param reversedTokensPredicate The (reverse) tokens that should appear before the given position (removing whitespace and EOF)
  */
 case class Keyword(
     name: String,
@@ -27,7 +27,7 @@ case class Keyword(
     isParam: Boolean = false,
     isScala3: Boolean = false,
     commitCharacter: Option[String] = None,
-    leadingReverseTokens: Option[Iterator[Token] => Boolean] = None
+    reversedTokensPredicate: Option[Iterator[Token] => Boolean] = None
 ) {
 
   def insertText: String =
@@ -63,7 +63,7 @@ case class Keyword(
       (this.isPackage && isPackage) ||
       (this.isMethodBody && isMethodBody) ||
       (this.isParam && isParam) ||
-      this.leadingReverseTokens.map(_.apply(leadingReverseTokens)).getOrElse(false)
+      this.reversedTokensPredicate.exists(pred => pred(leadingReverseTokens))
     }
   }
 }
@@ -108,7 +108,7 @@ object Keyword {
     Keyword("throw", isExpression = true),
     Keyword("implicit", isBlock = true, isTemplate = true),
     Keyword("return", isMethodBody = true),
-    Keyword("extends", leadingReverseTokens = Some(leadingTokensExtend)),
+    Keyword("extends", reversedTokensPredicate = Some(extendsPred)),
     Keyword("match"), // already implemented by CompletionPosition
     Keyword("case"), // already implemented by CompletionPosition and "case class"
     Keyword("override"), // already implemented by CompletionPosition
@@ -122,7 +122,7 @@ object Keyword {
     Keyword("then")
   )
 
-  private def leadingTokensExtend(leadingReverseTokens: Iterator[Token]): Boolean = {
+  private def extendsPred(leadingReverseTokens: Iterator[Token]): Boolean = {
     leadingReverseTokens.filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF]).take(3).toList match {
       // (class|trait|object) classname ext@@
       case (_: Token.Ident) :: (_: Token.Ident) :: kw :: Nil =>
