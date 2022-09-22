@@ -618,4 +618,24 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     "",
   )
 
+  check(
+    "extends-limitation",
+    """
+      |package foo
+      |
+      |// can't provide extends keyword completion if there's newline between class
+      |// because the completion engine tokenize only the line 
+      |class Main
+      |  exten@@
+    """.stripMargin,
+    "",
+    compat =
+      Map( // it works in Scala3 because `completionPos.cursorPos` gives us a `class Main\n exten`
+        "3" ->
+          """|extension
+             |extends
+             |""".stripMargin
+      ),
+  )
+
 }

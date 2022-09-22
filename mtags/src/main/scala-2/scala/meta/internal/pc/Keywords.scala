@@ -20,11 +20,16 @@ trait Keywords { this: MetalsGlobal =>
 
     lazy val notInComment = checkIfNotInComment(pos, text, latestEnclosing)
 
-    lazy val reverseTokens: Iterator[Token] =
-      text.substring(0, pos.start).tokenize.toOption match {
+    lazy val reverseTokens: Iterator[Token] = {
+      // Try not to tokenize the whole file
+      // Maybe we should re-use the tokenize result with `notInComment`
+      val lineStart =
+        if (pos.line > 0) pos.source.lineToOffset(pos.line - 1) else 0
+      text.substring(lineStart, pos.start).tokenize.toOption match {
         case Some(toks) => toks.tokens.reverseIterator
         case None => Iterator.empty
       }
+    }
 
     getIdentifierName(latestEnclosing, pos) match {
       case None =>
