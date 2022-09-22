@@ -522,4 +522,120 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     "",
   )
 
+  check(
+    "extends-class",
+    """
+      |package foo
+      |
+      |class Foo ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|extension
+           |extends
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "extends-obj",
+    """
+      |package foo
+      |
+      |object Foo ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|extension
+           |extends
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "extends-trait",
+    """
+      |package foo
+      |
+      |trait Foo ext@@ {}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|extension
+           |extends
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "extends-with-constructor",
+    """
+      |package foo
+      |
+      |class Foo(x: Int) ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|extension
+           |extends
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "no-extends",
+    """
+      |package foo
+      |
+      |object Main {
+      |  def main = {
+      |    foo.ext@@
+      |  }
+      |}
+    """.stripMargin,
+    "",
+  )
+
+  check(
+    "no-extends-paren",
+    """
+      |package foo
+      |
+      |object Main {
+      |  def main = {
+      |    foo(i) ex@@
+      |  }
+      |}
+    """.stripMargin,
+    "",
+  )
+
+  check(
+    "extends-limitation",
+    """
+      |package foo
+      |
+      |// can't provide extends keyword completion if there's newline between class
+      |// because the completion engine tokenize only the line 
+      |class Main
+      |  exten@@
+    """.stripMargin,
+    "",
+    compat =
+      Map( // it works in Scala3 because `completionPos.cursorPos` gives us a `class Main\n exten`
+        "3" ->
+          """|extension
+             |extends
+             |""".stripMargin
+      ),
+  )
+
 }

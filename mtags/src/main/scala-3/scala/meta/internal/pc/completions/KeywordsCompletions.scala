@@ -2,6 +2,8 @@ package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.Keyword
+import scala.meta.tokenizers.XtensionTokenizeInputLike
+import scala.meta.tokens.Token
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
@@ -31,6 +33,24 @@ object KeywordsCompletions:
         val isTemplate = this.isTemplate(path)
         val isPackage = this.isPackage(path)
         val isParam = this.isParam(path)
+        val isSelect = this.isSelect(path)
+        lazy val text = completionPos.cursorPos.source.content.mkString
+        lazy val reverseTokens: Iterator[Token] =
+          // Try not to tokenize the whole file
+          // Maybe we should re-use the tokenize result with `notInComment`
+          val lineStart =
+            if completionPos.cursorPos.line > 0 then
+              completionPos.sourcePos.source.lineToOffset(
+                completionPos.cursorPos.line - 1
+              )
+            else 0
+          text
+            .substring(lineStart, completionPos.cursorPos.start)
+            .tokenize
+            .toOption match
+            case Some(toks) => toks.tokens.reverseIterator
+            case None => Iterator.empty
+        end reverseTokens
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -43,7 +63,9 @@ object KeywordsCompletions:
                 isPackage = isPackage,
                 isParam = isParam,
                 isScala3 = true,
+                isSelect = isSelect,
                 allowToplevel = true,
+                leadingReverseTokens = reverseTokens,
               ) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }
@@ -84,6 +106,12 @@ object KeywordsCompletions:
   private def isMethodBody(enclosing: List[Tree]): Boolean =
     enclosing match
       case Ident(_) :: (_: DefDef) :: _ => true
+      case _ => false
+
+  private def isSelect(enclosing: List[Tree]): Boolean =
+    enclosing match
+      case (_: Apply) :: (_: Select) :: _ => true
+      case (_: Select) :: _ => true
       case _ => false
 
   private def isDefinition(

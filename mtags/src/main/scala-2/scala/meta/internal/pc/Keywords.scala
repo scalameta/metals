@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.tools.nsc.reporters.StoreReporter
 
+import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 import org.eclipse.{lsp4j => l}
@@ -18,6 +19,17 @@ trait Keywords { this: MetalsGlobal =>
   ): List[Member] = {
 
     lazy val notInComment = checkIfNotInComment(pos, text, latestEnclosing)
+
+    lazy val reverseTokens: Iterator[Token] = {
+      // Try not to tokenize the whole file
+      // Maybe we should re-use the tokenize result with `notInComment`
+      val lineStart =
+        if (pos.line > 0) pos.source.lineToOffset(pos.line - 1) else 0
+      text.substring(lineStart, pos.start).tokenize.toOption match {
+        case Some(toks) => toks.tokens.reverseIterator
+        case None => Iterator.empty
+      }
+    }
 
     getIdentifierName(latestEnclosing, pos) match {
       case None =>
@@ -43,6 +55,7 @@ trait Keywords { this: MetalsGlobal =>
         val isTemplate = this.isTemplate(latestEnclosing)
         val isPackage = this.isPackage(latestEnclosing)
         val isParam = this.isParam(latestEnclosing)
+        val isSelect = this.isSelect(latestEnclosing)
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -55,7 +68,9 @@ trait Keywords { this: MetalsGlobal =>
                 isPackage = isPackage,
                 isParam = isParam,
                 isScala3 = false,
-                allowToplevel = isAmmoniteScript
+                isSelect = isSelect,
+                allowToplevel = isAmmoniteScript,
+                leadingReverseTokens = reverseTokens
               ) =>
             mkTextEditMember(kw, editRange)
         }
@@ -171,6 +186,13 @@ trait Keywords { this: MetalsGlobal =>
       case Ident(_) :: Template(_, _, _) :: _ => true
       case Ident(_) :: ValOrDefDef(_, _, _, _) :: _ => true
       case Ident(_) :: (_: TermTreeApi) :: _ => true
+      case _ => false
+    }
+
+  private def isSelect(enclosing: List[Tree]): Boolean =
+    enclosing match {
+      case (_: Ident) :: (_: Select) :: _ => true
+      case (_: Apply) :: (_: Select) :: _ => true
       case _ => false
     }
 
