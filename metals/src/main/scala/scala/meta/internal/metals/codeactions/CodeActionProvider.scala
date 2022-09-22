@@ -85,7 +85,7 @@ final class CodeActionProvider(
     Future.sequence(running).map(_ => ())
   }
 
-  def allActionCommands: List[ParametrizedCommand[_]] =
-    allActions.flatMap(_.command)
+  def allActionCommandsIds: Set[String] =
+    allActions.flatMap(_.command).map(_.id).toSet
 
 }

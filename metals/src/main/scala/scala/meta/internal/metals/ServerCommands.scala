@@ -620,6 +620,9 @@ object ServerCommands {
       StartScalaCliServer,
       StopScalaCliServer,
     )
+
+  def allIds: Set[String] = all.map(_.id).toSet
+
 }
 
 case class DebugUnresolvedMainClassParams(
