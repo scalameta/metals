@@ -345,7 +345,7 @@ class Completions(
             config,
             parent,
           ),
-          false,
+          true,
         )
       case MatchCaseExtractor.TypedCasePatternExtractor(
             selector,
@@ -382,6 +382,9 @@ class Completions(
           false,
         )
 
+      // `List(foo).map{case@@}`
+      // This is a special case, because we want to show also the exhaustive match completion,
+      // which the user would normally see only after typing `List(foo).map{mat@@}`
       case MatchCaseExtractor.CaseExtractor(selector @ EmptyTree, parent) =>
         (
           CaseKeywordCompletion.contribute(
