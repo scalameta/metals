@@ -113,8 +113,17 @@ final class Compilations(
     } yield ()
 
   def cancel(): Unit = {
-    compileBatch.cancelCurrentRequest()
-    cascadeBatch.cancelCurrentRequest()
+    cascadeBatch.cancelAll()
+    compileBatch.cancelAll()
+    buildTargets.all
+      .flatMap { target =>
+        buildTargets.buildServerOf(target.getId())
+      }
+      .distinct
+      .foreach { conn =>
+        conn.cancelCompilations()
+      }
+
   }
 
   def recompileAll(): Future[Unit] = {

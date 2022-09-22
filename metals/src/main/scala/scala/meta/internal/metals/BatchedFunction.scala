@@ -57,9 +57,11 @@ final class BatchedFunction[A, B](
     unlock()
   }
 
-  def cancelCurrentRequest(): Unit = {
-    current.get().cancelable.cancel()
+  def cancelAll(): Unit = {
+    queue.clear()
+    unlock()
   }
+
   def currentFuture(): Future[B] = {
     current.get().future
   }
