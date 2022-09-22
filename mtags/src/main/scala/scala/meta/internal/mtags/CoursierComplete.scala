@@ -9,13 +9,14 @@ object CoursierComplete {
     val scalaVersion = BuildInfo.scalaCompilerVersion
     val api = coursierapi.Complete
       .create()
-      .withScalaVersion(BuildInfo.scalaCompilerVersion)
+      .withScalaVersion(scalaVersion)
       .withScalaBinaryVersion(
         if (scalaVersion.startsWith("3")) "3"
         else scalaVersion.split('.').take(2).mkString(".")
       )
     def completions(s: String): List[String] =
       api.withInput(s).complete().getCompletions().asScala.toList
+
     val javaCompletions = completions(dependency)
     val scalaCompletions =
       if (dependency.endsWith(":") && dependency.count(_ == ':') == 1)
@@ -55,9 +56,9 @@ object CoursierComplete {
       val directive = text.take(point).split("//").last
       if (directive.exists(Chars.isLineBreakChar(_))) None
       else {
-        val reg = """>\s*using\s+lib\s+"?(.*)"?""".r
+        val reg = """>\s*using\s+lib\s+"?([^"]*)"?.*""".r
         directive match {
-          case reg(dep) => Some(dep.stripPrefix("\"").stripSuffix("\""))
+          case reg(dep) => Some(dep)
           case _ => None
         }
       }
