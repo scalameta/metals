@@ -50,15 +50,19 @@ object CoursierComplete {
     }
     (editStart, editEnd)
   }
+
+  val reg = """>\s*using\s+libs?\s+"?(.*)""".r
   def isScalaCliDep(point: Int, text: String): Option[String] = {
     if (!text.startsWith("//")) None
     else {
       val directive = text.take(point).split("//").last
       if (directive.exists(Chars.isLineBreakChar(_))) None
       else {
-        val reg = """>\s*using\s+lib\s+"?([^"]*)"?.*""".r
         directive match {
-          case reg(dep) => Some(dep)
+          case reg(deps) =>
+            val dep =
+              deps.split(",").last.trim().stripPrefix("\"").stripSuffix("\"")
+            Some(dep)
           case _ => None
         }
       }

@@ -46,4 +46,12 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     "0.14.3",
   )
 
+  check(
+    "multiple-libs",
+    """|//> using lib "io.circe::circe-core:0.14.0", "io.circe::circe-core_na@@"
+       |package A
+       |""".stripMargin,
+    "circe-core_native0.4",
+  )
+
 }
