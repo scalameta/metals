@@ -1,6 +1,11 @@
 package scala.meta.internal.mtags
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.util.matching.Regex
 
 import scala.meta.internal.tokenizers.Chars
 
@@ -14,8 +19,15 @@ object CoursierComplete {
         if (scalaVersion.startsWith("3")) "3"
         else scalaVersion.split('.').take(2).mkString(".")
       )
-    def completions(s: String): List[String] =
-      api.withInput(s).complete().getCompletions().asScala.toList
+    def completions(s: String): List[String] = {
+      val futureCompletions = Future {
+        api.withInput(s).complete().getCompletions().asScala.toList
+      }
+      try Await.result(futureCompletions, 10.seconds)
+      catch {
+        case _: Throwable => Nil
+      }
+    }
 
     val javaCompletions = completions(dependency)
     val scalaCompletions =
@@ -51,7 +63,7 @@ object CoursierComplete {
     (editStart, editEnd)
   }
 
-  val reg = """>\s*using\s+libs?\s+"?(.*)""".r
+  val reg: Regex = """>\s*using\s+libs?\s+"?(.*)""".r
   def isScalaCliDep(point: Int, text: String): Option[String] = {
     if (!text.startsWith("//")) None
     else {
