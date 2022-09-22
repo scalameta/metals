@@ -621,7 +621,7 @@ object ServerCommands {
       StopScalaCliServer,
     )
 
-  def allIds: Set[String] = all.map(_.id).toSet
+  val allIds: Set[String] = all.map(_.id).toSet
 
 }
 
