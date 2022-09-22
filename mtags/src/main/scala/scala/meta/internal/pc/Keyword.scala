@@ -4,27 +4,29 @@ import scala.meta.XtensionClassifiable
 import scala.meta.tokens.Token // for token.is
 // scalafmt: { maxColumn = 120 }
 
+/**
+ * @param isExpression Can this keyword appear in expression position?
+ * @param isBlock Can this keyword appear in a block statement position?
+ * @param isTemplate Can this keyword appear in a template statement position?
+ * @param isPackage Can this keyword appear in a package statement position?
+ * @param isMethodBody Can this keyword appear in a def block statement position?
+ * @param isDefinition Does this keyword define a symbol? For example "def" or "class"
+ * @param isParam Is located in param definition
+ * @param isScala3 Is this keyword only in Scala 3?
+ * @param commitCharacter Optional character to select this completion item, for example "."
+ * @param leadingReverseTokens The (reverse) tokens that should appear before the given position (removing whitespace and EOF)
+ */
 case class Keyword(
     name: String,
-    // Can this keyword appear in expression position?
     isExpression: Boolean = false,
-    // Can this keyword appear in a block statement position?
     isBlock: Boolean = false,
-    // Can this keyword appear in a template statement position?
     isTemplate: Boolean = false,
-    // Can this keyword appear in a package statement position?
     isPackage: Boolean = false,
-    // Can this keyword appear in a def block statement position?
     isMethodBody: Boolean = false,
-    // Does this keyword define a symbol? For example "def" or "class"
     isDefinition: Boolean = false,
-    // Is located in param definition
     isParam: Boolean = false,
-    // Is this keyword only in Scala 3?
     isScala3: Boolean = false,
-    // Optional character to select this completion item, for example "."
     commitCharacter: Option[String] = None,
-    // The (reverse) tokens that should appear before the given position (removing whitespace and EOF)
     leadingReverseTokens: Option[Iterator[Token] => Boolean] = None
 ) {
 
