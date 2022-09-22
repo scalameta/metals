@@ -50,6 +50,7 @@ trait Keywords { this: MetalsGlobal =>
         val isTemplate = this.isTemplate(latestEnclosing)
         val isPackage = this.isPackage(latestEnclosing)
         val isParam = this.isParam(latestEnclosing)
+        val isSelect = this.isSelect(latestEnclosing)
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -62,6 +63,7 @@ trait Keywords { this: MetalsGlobal =>
                 isPackage = isPackage,
                 isParam = isParam,
                 isScala3 = false,
+                isSelect = isSelect,
                 allowToplevel = isAmmoniteScript,
                 leadingReverseTokens = reverseTokens
               ) =>
@@ -179,6 +181,13 @@ trait Keywords { this: MetalsGlobal =>
       case Ident(_) :: Template(_, _, _) :: _ => true
       case Ident(_) :: ValOrDefDef(_, _, _, _) :: _ => true
       case Ident(_) :: (_: TermTreeApi) :: _ => true
+      case _ => false
+    }
+
+  private def isSelect(enclosing: List[Tree]): Boolean =
+    enclosing match {
+      case (_: Ident) :: (_: Select) :: _ => true
+      case (_: Apply) :: (_: Select) :: _ => true
       case _ => false
     }
 

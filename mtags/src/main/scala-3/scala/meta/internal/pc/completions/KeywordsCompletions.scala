@@ -33,6 +33,7 @@ object KeywordsCompletions:
         val isTemplate = this.isTemplate(path)
         val isPackage = this.isPackage(path)
         val isParam = this.isParam(path)
+        val isSelect = this.isSelect(path)
         lazy val text = completionPos.cursorPos.source.content.mkString
         lazy val reverseTokens: Iterator[Token] =
           text
@@ -53,6 +54,7 @@ object KeywordsCompletions:
                 isPackage = isPackage,
                 isParam = isParam,
                 isScala3 = true,
+                isSelect = isSelect,
                 allowToplevel = true,
                 leadingReverseTokens = reverseTokens,
               ) && notInComment =>
@@ -95,6 +97,12 @@ object KeywordsCompletions:
   private def isMethodBody(enclosing: List[Tree]): Boolean =
     enclosing match
       case Ident(_) :: (_: DefDef) :: _ => true
+      case _ => false
+
+  private def isSelect(enclosing: List[Tree]): Boolean =
+    enclosing match
+      case (_: Apply) :: (_: Select) :: _ => true
+      case (_: Select) :: _ => true
       case _ => false
 
   private def isDefinition(

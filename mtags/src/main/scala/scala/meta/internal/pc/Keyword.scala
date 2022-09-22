@@ -50,11 +50,14 @@ case class Keyword(
       isPackage: Boolean,
       isParam: Boolean,
       isScala3: Boolean,
+      isSelect: Boolean,
       allowToplevel: Boolean,
       leadingReverseTokens: => Iterator[Token]
   ): Boolean = {
     val isAllowedInThisScalaVersion = (this.isScala3 && isScala3) || !this.isScala3
-    this.name.startsWith(name) && isAllowedInThisScalaVersion && {
+    this.name.startsWith(name) && isAllowedInThisScalaVersion &&
+    // don't complete keywords if it's in `xxx.key@@`
+    !isSelect && {
       (this.isExpression && isExpression) ||
       (this.isBlock && isBlock) ||
       (this.isDefinition && isDefinition) ||
@@ -128,6 +131,8 @@ object Keyword {
       case (_: Token.Ident) :: (_: Token.Ident) :: kw :: Nil =>
         if (kw.is[Token.KwClass] || kw.is[Token.KwTrait] || kw.is[Token.KwObject]) true
         else false
+      // ... classname() ext@@
+      case (_: Token.Ident) :: (_: Token.RightParen) :: _ => true
       case _ => false
     }
   }

@@ -574,12 +574,45 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+    "extends-with-constructor",
+    """
+      |package foo
+      |
+      |class Foo(x: Int) ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|extension
+           |extends
+           |""".stripMargin
+    ),
+  )
+
+  check(
     "no-extends",
     """
       |package foo
       |
-      |def main = {
-      |  foo.ext@@
+      |object Main {
+      |  def main = {
+      |    foo.ext@@
+      |  }
+      |}
+    """.stripMargin,
+    "",
+  )
+
+  check(
+    "no-extends-paren",
+    """
+      |package foo
+      |
+      |object Main {
+      |  def main = {
+      |    foo(i) ex@@
+      |  }
       |}
     """.stripMargin,
     "",
