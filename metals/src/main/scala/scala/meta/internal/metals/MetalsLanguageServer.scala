@@ -850,10 +850,7 @@ class MetalsLanguageServer(
         val capabilities = new ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new ExecuteCommandOptions(
-            (ServerCommands.all ++ codeActionProvider.allActionCommands)
-              .map(_.id)
-              .distinct
-              .asJava
+            (ServerCommands.allIds ++ codeActionProvider.allActionCommandsIds).toList.asJava
           )
         )
         capabilities.setFoldingRangeProvider(true)
@@ -2043,8 +2040,8 @@ class MetalsLanguageServer(
           Future.successful(()).asJavaObject
         }
       case actionCommand
-          if codeActionProvider.allActionCommands.exists(
-            _.id == actionCommand.getCommand()
+          if codeActionProvider.allActionCommandsIds(
+            actionCommand.getCommand()
           ) =>
         CancelTokens.future { token =>
           codeActionProvider.executeCommands(params, token).withObjectValue
