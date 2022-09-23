@@ -174,6 +174,8 @@ object CaseKeywordCompletion:
       val res = result.result()
 
       selector match
+        // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
+        // which works like exhaustive match.
         case EmptyTree =>
           val sealedMembers = res.filter(c => sealedDescs.contains(c.symbol))
           sealedMembers match
