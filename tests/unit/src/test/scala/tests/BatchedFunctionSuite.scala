@@ -40,17 +40,21 @@ class BatchedFunctionSuite extends BaseSuite {
     }
   }
 
-  test("pause") {
-    implicit val ec = new ExecutionContext {
-      def execute(runnable: Runnable): Unit = runnable.run()
-      def reportFailure(cause: Throwable): Unit = cause.printStackTrace()
-    }
+  implicit val ec: ExecutionContext = new ExecutionContext {
+    def execute(runnable: Runnable): Unit = runnable.run()
+    def reportFailure(cause: Throwable): Unit = cause.printStackTrace()
+  }
 
-    val mkString = BatchedFunction.fromFuture[String, String] { numbers =>
+  def batchedExample(): BatchedFunction[String, String] =
+    BatchedFunction.fromFuture[String, String] { numbers =>
       Future.successful {
         numbers.mkString
       }
     }
+
+  test("pause") {
+
+    val mkString = batchedExample()
 
     val unpaused = mkString(List("a"))
     assertDiffEqual(unpaused.value, Some(Success("a")))
@@ -66,5 +70,30 @@ class BatchedFunctionSuite extends BaseSuite {
 
     assertDiffEqual(paused.value, Some(Success("bc")))
     assertDiffEqual(paused2.value, Some(Success("bc")))
+  }
+
+  test("cancel") {
+    val mkString = batchedExample()
+
+    val unpaused = mkString(List("a"))
+    assertDiffEqual(unpaused.value, Some(Success("a")))
+
+    mkString.pause()
+
+    val paused = mkString("b")
+    assert(!paused.isCompleted)
+    val paused2 = mkString("c")
+    assert(!paused2.isCompleted)
+
+    mkString.cancelAll()
+
+    mkString.unpause()
+
+    assertDiffEqual(paused.value, None)
+    assertDiffEqual(paused2.value, None)
+
+    val unpaused2 = mkString(List("a", "b"))
+    assertDiffEqual(unpaused2.value, Some(Success("ab")))
+
   }
 }
