@@ -35,7 +35,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         |  settings(
         |    inThisBuild(List(
         |      organization := "com.example",
-        |      scalaVersion := "2.13.8"
+        |      scalaVersion := "2.13.9"
         |    )),
         |    name := "scalatest-example"
         |  )
