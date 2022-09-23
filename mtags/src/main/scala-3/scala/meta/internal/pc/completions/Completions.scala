@@ -393,13 +393,6 @@ class Completions(
             indexedContext,
             config,
             parent,
-          ) ++ CaseKeywordCompletion.matchContribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-            casePrefix = true,
           ),
           true,
         )
