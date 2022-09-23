@@ -99,27 +99,6 @@ object CaseKeywordCompletion:
             new Parents(NoType, definitions)
       case sel => new Parents(sel.tpe, definitions)
 
-    val result = ListBuffer.empty[CompletionValue.CaseKeyword]
-    val isVisited = mutable.Set.empty[Symbol]
-    def visit(sym: Symbol, name: String, autoImports: List[l.TextEdit]): Unit =
-
-      def recordVisit(s: Symbol): Unit =
-        if s != NoSymbol && !isVisited(s) then
-          isVisited += s
-          recordVisit(s.moduleClass)
-          recordVisit(s.sourceModule)
-
-      if !isVisited(sym) then
-        recordVisit(sym)
-        if completionGenerator.fuzzyMatches(name) then
-          val completionOption = completionGenerator.toCompletionValue(
-            sym,
-            name,
-            autoImports,
-          )
-          completionOption.foreach(result += _)
-        end if
-    end visit
     val selectorSym = parents.selector.typeSymbol
 
     // Special handle case when selector is a tuple or `FunctionN`.
@@ -147,6 +126,32 @@ object CaseKeywordCompletion:
         )
       )
     else
+      val result = ListBuffer.empty[CompletionValue.CaseKeyword]
+      val isVisited = mutable.Set.empty[Symbol]
+      def visit(
+          sym: Symbol,
+          name: String,
+          autoImports: List[l.TextEdit],
+      ): Unit =
+
+        def recordVisit(s: Symbol): Unit =
+          if s != NoSymbol && !isVisited(s) then
+            isVisited += s
+            recordVisit(s.moduleClass)
+            recordVisit(s.sourceModule)
+
+        if !isVisited(sym) then
+          recordVisit(sym)
+          if completionGenerator.fuzzyMatches(name) then
+            val completionOption = completionGenerator.toCompletionValue(
+              sym,
+              name,
+              autoImports,
+            )
+            completionOption.foreach(result += _)
+          end if
+      end visit
+
       // Step 0: case for selector type
       if !(selectorSym.is(Sealed) &&
           (selectorSym.is(Abstract) || selectorSym.is(Trait)))
