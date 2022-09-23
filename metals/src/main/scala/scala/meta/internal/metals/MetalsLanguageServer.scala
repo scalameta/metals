@@ -133,8 +133,9 @@ class MetalsLanguageServer(
         case Some(session) => session.shutdown()
         case None => Future.successful(())
       }
-      try cancelables.cancel()
-      catch {
+      try {
+        cancelables.cancel()
+      } catch {
         case NonFatal(_) =>
       }
       try buildShutdown.asJava.get(100, TimeUnit.MILLISECONDS)
@@ -699,21 +700,23 @@ class MetalsLanguageServer(
             sourceMapper,
           )
         )
-        debugProvider = new DebugProvider(
-          workspace,
-          definitionProvider,
-          buildTargets,
-          buildTargetClasses,
-          compilations,
-          languageClient,
-          buildClient,
-          classFinder,
-          definitionIndex,
-          stacktraceAnalyzer,
-          clientConfig,
-          semanticdbs,
-          compilers,
-          statusBar,
+        debugProvider = register(
+          new DebugProvider(
+            workspace,
+            definitionProvider,
+            buildTargets,
+            buildTargetClasses,
+            compilations,
+            languageClient,
+            buildClient,
+            classFinder,
+            definitionIndex,
+            stacktraceAnalyzer,
+            clientConfig,
+            semanticdbs,
+            compilers,
+            statusBar,
+          )
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -1972,7 +1975,6 @@ class MetalsLanguageServer(
           )
         } yield {
           statusBar.addMessage("Started debug server!")
-          cancelables.add(server)
           DebugSession(server.sessionName, server.uri.toString)
         }
         session.asJavaObject

@@ -116,9 +116,9 @@ class ShellRunner(
         ps.cancel
       }
     }
-    cancelables
-      .add(() => ps.cancel)
-      .add(() => taskResponse.cancel(false))
+    val newCancelables: List[Cancelable] =
+      List(() => ps.cancel, () => taskResponse.cancel(false))
+    newCancelables.foreach(cancelables.add)
 
     val processFuture = ps.complete
     statusBar.trackFuture(
@@ -131,6 +131,7 @@ class ShellRunner(
         scribe.info(s"time: ran '$commandRun' in $elapsed")
       result.trySuccess(code)
     }
+    result.future.onComplete(_ => newCancelables.foreach(cancelables.remove))
     result.future
   }
 
