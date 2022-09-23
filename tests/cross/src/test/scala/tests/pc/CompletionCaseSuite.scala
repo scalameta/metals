@@ -536,7 +536,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "private-member",
+    "private-member".tag(IgnoreScala2),
     """
       |package example
       |import scala.collection.immutable.Vector
@@ -547,6 +547,20 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |  }
       |}""".stripMargin,
     "",
+  )
+
+  check(
+    "private-member-2".tag(IgnoreScala2),
+    """
+      |package example
+      |object A {
+      |  private enum A:
+      |    case B, C
+      |  def testMe(a: A) = a match
+      |    cas@@
+      |}""".stripMargin,
+    """|case B =>A
+       |case C =>A""".stripMargin,
   )
 
 }
