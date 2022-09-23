@@ -5,6 +5,10 @@ import Tests._
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
+// For testing nightlies
+Global / resolvers += "scala-integration" at
+  "https://scala-ci.typesafe.com/artifactory/scala-integration/"
+
 def localSnapshotVersion = "0.11.9-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 

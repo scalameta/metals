@@ -3,8 +3,6 @@ package tests
 import java.nio.file.Paths
 import java.util.Collections
 
-import scala.collection.Seq
-
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
@@ -49,9 +47,9 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         cancelToken,
       )
     )
-    result.getItems.asScala.sortBy(item =>
-      Option(item.getSortText).getOrElse(item.getLabel())
-    )
+    result.getItems.asScala
+      .sortBy(item => Option(item.getSortText).getOrElse(item.getLabel()))
+      .toSeq
   }
 
   /**

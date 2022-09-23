@@ -1,7 +1,5 @@
 package tests.pc
 
-import scala.collection.Seq
-
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 
