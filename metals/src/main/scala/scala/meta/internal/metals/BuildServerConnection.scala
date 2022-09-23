@@ -142,7 +142,7 @@ class BuildServerConnection private (
       onFail = Some(
         (
           new CompileResult(StatusCode.CANCELLED),
-          s"Cancelling compilation for ${params.getTargets().size()} target",
+          s"Cancelling compilation on ${name} server",
         )
       ),
     )
@@ -312,21 +312,34 @@ class BuildServerConnection private (
       onFail: => Option[(T, String)] = None,
       isCompile: Boolean = false,
   ): CompletableFuture[T] = {
+
+    def runWithCanceling(
+        launcherConnection: BuildServerConnection.LauncherConnection
+    ): Future[T] = {
+      val resultFuture = action(launcherConnection.server)
+      val cancelable = Cancelable { () =>
+        Try(resultFuture.cancel(true))
+      }
+      if (isCompile) ongoingCompilations.add(cancelable)
+      else ongoingRequests.add(cancelable)
+
+      val result = resultFuture.asScala
+
+      result.onComplete { _ =>
+        if (isCompile) ongoingCompilations.remove(cancelable)
+        else ongoingRequests.remove(cancelable)
+      }
+      result
+    }
     val original = connection
     val actionFuture = original
       .flatMap { launcherConnection =>
-        val resultFuture = action(launcherConnection.server)
-        val cancelable = Cancelable { () =>
-          Try(resultFuture.cancel(true))
-        }
-        if (isCompile) ongoingCompilations.add(cancelable)
-        else ongoingRequests.add(cancelable)
-        resultFuture.asScala
+        runWithCanceling(launcherConnection)
       }
       .recoverWith {
         case io: JsonRpcException if io.getCause.isInstanceOf[IOException] =>
           synchronized {
-            reconnect().flatMap(conn => action(conn.server).asScala)
+            reconnect().flatMap(conn => runWithCanceling(conn))
           }
         case t
             if implicitly[ClassTag[T]].runtimeClass.getSimpleName != "Object" =>
