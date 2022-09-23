@@ -3,7 +3,6 @@ pull_request_rules:
     conditions:
       - "#approved-reviews-by>=1"
       - author=scalameta-bot
-      - "#check-success=21"
       - label=semver-spec-patch
       - label=library-update
       - check-success=windows-latest jdk-17 unit tests 1 / 2
