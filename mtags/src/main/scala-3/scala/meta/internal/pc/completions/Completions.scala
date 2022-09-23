@@ -336,17 +336,17 @@ class Completions(
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
 
-      case MatchCaseExtractor.MatchExtractor(selector, parent) =>
+      case MatchCaseExtractor.MatchExtractor(selector) =>
         (
           CaseKeywordCompletion.matchContribute(
             selector,
             completionPos,
             indexedContext,
             config,
-            parent,
           ),
-          true,
+          false,
         )
+
       case MatchCaseExtractor.TypedCasePatternExtractor(
             selector,
             parent,
@@ -380,21 +380,6 @@ class Completions(
             patternOnly = Some(identName),
           ),
           false,
-        )
-
-      // `List(foo).map{case@@}`
-      // This is a special case, because we want to show also the exhaustive match completion,
-      // which the user would normally see only after typing `List(foo).map{mat@@}`
-      case MatchCaseExtractor.CaseExtractor(selector @ EmptyTree, parent) =>
-        (
-          CaseKeywordCompletion.contribute(
-            selector,
-            completionPos,
-            indexedContext,
-            config,
-            parent,
-          ),
-          true,
         )
 
       case MatchCaseExtractor.CaseExtractor(selector, parent) =>

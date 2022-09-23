@@ -42,6 +42,8 @@ object CaseKeywordCompletion:
    *                 not in a match expression (for example `List(1).foreach { case@@ }`.
    * @param completionPos the position of the completion
    * @param typedtree typed tree of the file, used for generating auto imports
+   * @param indexedContext
+   * @param config
    * @param parent the parent tree node of the pattern match, for example `Apply(_, _)` when in
    *               `List(1).foreach { cas@@ }`, used as fallback to compute the type of the selector when
    *               it's `EmptyTree`.
@@ -77,10 +79,25 @@ object CaseKeywordCompletion:
       patternOnly,
       hasBind,
     )
-    val parents: Parents = Parents.makeParents(selector, parent, definitions)
-    val includeExhaustive = selector match
-      case EmptyTree => true
-      case _ => false
+    val parents: Parents = selector match
+      case EmptyTree =>
+        val seenFromType = parent match
+          case TreeApply(fun, _) if fun.tpe != null && !fun.tpe.isErroneous =>
+            fun.tpe
+          case _ =>
+            parent.tpe
+        seenFromType.paramInfoss match
+          case (head :: Nil) :: _
+              if definitions.isFunctionType(head) || head.isRef(
+                definitions.PartialFunctionClass
+              ) =>
+            val dealiased = head.widenDealias
+            val argTypes =
+              head.argTypes.init
+            new Parents(argTypes, definitions)
+          case _ =>
+            new Parents(NoType, definitions)
+      case sel => new Parents(sel.tpe, definitions)
 
     val result = ListBuffer.empty[CompletionValue.CaseKeyword]
     val isVisited = mutable.Set.empty[Symbol]
@@ -155,32 +172,33 @@ object CaseKeywordCompletion:
             visit(sym, sym.showFullName, Nil)
       }
       val res = result.result()
-      if (includeExhaustive) then
-        val sealedMembers = res.filter(c => sealedDescs.contains(c.symbol))
-         sealedMembers match
-          case Nil => res
-          case head :: tail =>
-            val insertText = Some(
-              tail
-                .map(_.label)
-                .mkString(
-                  if clientSupportsSnippets then
-                    s"\n\t${head.label} $$0\n\t"
-                  else s"\n\t${head.label}\n\t",
-                  "\n\t",
-                  "\n",
-                )
-            )
-            val exhaustive = CompletionValue.MatchCompletion(
-              s"case (exhaustive)",
-              insertText,
-              res.flatMap(_.additionalEdits),
-              s" ${selectorSym.decodedName} (${res.length} cases)",
-            )
-            exhaustive :: res
-      else res
-      end if
 
+      selector match
+        case EmptyTree =>
+          val sealedMembers = res.filter(c => sealedDescs.contains(c.symbol))
+          sealedMembers match
+            case Nil => res
+            case head :: tail =>
+              val insertText = Some(
+                tail
+                  .map(_.label)
+                  .mkString(
+                    if clientSupportsSnippets then s"\n\t${head.label} $$0\n\t"
+                    else s"\n\t${head.label}\n\t",
+                    "\n\t",
+                    "\n",
+                  )
+              )
+              val exhaustive = CompletionValue.MatchCompletion(
+                s"case (exhaustive)",
+                insertText,
+                res.flatMap(_.additionalEdits),
+                s" ${selectorSym.decodedName} (${res.length} cases)",
+              )
+              exhaustive :: res
+          end match
+        case _ => res
+      end match
     end if
 
   end contribute
@@ -192,19 +210,12 @@ object CaseKeywordCompletion:
    *                 not in a match expression (for example `List(1).foreach { case@@ }`.
    * @param completionPos the position of the completion
    * @param typedtree typed tree of the file, used for generating auto imports
-   * @param parent the parent tree node of the pattern match, for example `Apply(_, _)` when in
-   *               `List(1).foreach { cas@@ }`, used as fallback to compute the type of the selector when
-   *               it's `EmptyTree`.
-   * @param casePrefix when in `List(1).foreach { case@@ }` we want user to see `case (exhaustive) Option (2 cases)`,
-   *                   when false (default) we get `match (exhaustive) Option (2 cases)`
    */
   def matchContribute(
       selector: Tree,
       completionPos: CompletionPos,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
-      parent: Tree,
-      casePrefix: Boolean = false,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val pos = completionPos.sourcePos
@@ -224,11 +235,8 @@ object CaseKeywordCompletion:
       completionPos,
       clientSupportsSnippets,
     )
-
-    val selectorTpe =
-      Parents.makeParents(selector, parent, definitions).selector
-
-    val tpe = selectorTpe.widen.bounds.hi match
+    val result = ListBuffer.empty[CompletionValue]
+    val tpe = selector.tpe.widen.bounds.hi match
       case tr @ TypeRef(_, _) => tr.underlying
       case t => t
 
@@ -250,13 +258,14 @@ object CaseKeywordCompletion:
     end subclassesForType
 
     val sortedSubclasses = subclassesForType(tpe)
-    val members = sortedSubclasses.flatMap { case sym =>
-      val autoImports = autoImportsGen.forSymbol(sym).getOrElse(Nil)
-      completionGenerator.toCompletionValue(
-        sym = sym,
-        name = sym.decodedName,
-        autoImports = autoImports,
+    sortedSubclasses.foreach { case sym =>
+      val autoImport = autoImportsGen.forSymbol(sym)
+      val completionOption = completionGenerator.toCompletionValue(
+        sym,
+        sym.decodedName,
+        autoImport.getOrElse(Nil),
       )
+      completionOption.foreach(result += _)
     }
 
     val basicMatch = CompletionValue.MatchCompletion(
@@ -268,34 +277,28 @@ object CaseKeywordCompletion:
       Nil,
       "",
     )
-    // When in `List(foo).map{cas@@} we don't want to show basic match completion
-    val (includeBasicMatch, prefix) = selector match
-      case EmptyTree => (Nil, "")
-      case _ => (List(basicMatch), "match")
-
+    val members = result.result()
     val completions = members match
-      case Nil => includeBasicMatch
+      case Nil => List(basicMatch)
       case head :: tail =>
         val insertText = Some(
           tail
             .map(_.label)
             .mkString(
-              if clientSupportsSnippets then s"$prefix\n\t${head.label} $$0\n\t"
-              else s"$prefix\n\t${head.label}\n\t",
+              if clientSupportsSnippets then s"match\n\t${head.label} $$0\n\t"
+              else s"match\n\t${head.label}\n\t",
               "\n\t",
               "\n",
             )
         )
-        val labelPrefix = if casePrefix then "case" else "match"
         val exhaustive = CompletionValue.MatchCompletion(
-          s"$labelPrefix (exhaustive)",
+          "match (exhaustive)",
           insertText,
           members.flatMap(_.additionalEdits),
           s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
         )
-        includeBasicMatch :+ exhaustive
+        List(basicMatch, exhaustive)
     completions
-
   end matchContribute
 
 end CaseKeywordCompletion
@@ -326,34 +329,6 @@ class Parents(val selector: Type, definitions: Definitions)(using Context):
         typeSymbol.isSubClass(parent) ||
         (includeReverse && parent.isSubClass(typeSymbol))
       }
-end Parents
-object Parents:
-  /**
-   * Used to compute selector type, includes fallback if the selector is `EmptyTree`
-   * like in `List(foo).map{@@}
-   */
-  def makeParents(selector: Tree, parent: Tree, definitions: Definitions)(using
-      Context
-  ) =
-    selector match
-      case EmptyTree =>
-        val seenFromType = parent match
-          case TreeApply(fun, _) if fun.tpe != null && !fun.tpe.isErroneous =>
-            fun.tpe
-          case _ =>
-            parent.tpe
-        seenFromType.paramInfoss match
-          case (head :: Nil) :: _
-              if definitions.isFunctionType(head) || head.isRef(
-                definitions.PartialFunctionClass
-              ) =>
-            val dealiased = head.widenDealias
-            val argTypes =
-              head.argTypes.init
-            new Parents(argTypes, definitions)
-          case _ =>
-            new Parents(NoType, definitions)
-      case sel => new Parents(sel.tpe, definitions)
 end Parents
 
 class CompletionValueGenerator(
@@ -477,32 +452,22 @@ class MatchCaseExtractor(
   object MatchExtractor:
     def unapply(path: List[Tree]) =
       path match
-        // List(foo).map { ma@@}
-        // In this case we need to calculate selector using `Parents.makeParent`
-        case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
-              fun,
-              args,
-            )) :: _
-            if stats.isEmpty && ident == expr && "match".startsWith(
-              name.toString()
-            ) =>
-          Some((EmptyTree, appl))
         // foo mat@@
         case (sel @ Select(qualifier, name)) :: _
             if "match".startsWith(name.toString()) && text.charAt(
               completionPos.start - 1
             ) == ' ' =>
-          Some((qualifier, EmptyTree))
+          Some(qualifier)
         // foo match @@
         case (c: CaseDef) :: (m: Match) :: _
             if completionPos.query.startsWith("match") =>
-          Some((m.selector, EmptyTree))
+          Some(m.selector)
         // foo ma@tch (no cases)
         case (m @ Match(
               _,
               CaseDef(Literal(Constant(null)), _, _) :: Nil,
             )) :: _ =>
-          Some((m.selector, EmptyTree))
+          Some(m.selector)
         case _ => None
   end MatchExtractor
   object CaseExtractor:

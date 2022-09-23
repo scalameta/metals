@@ -496,7 +496,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     "exhaustive-map-edit".tag(IgnoreScala2),
     """
       |object A {
-      |  List(Option(1)).map{mat@@}
+      |  List(Option(1)).map{cas@@}
       |}""".stripMargin,
     s"""
        |object A {
