@@ -2,8 +2,6 @@ package tests.pc
 
 import java.nio.file.Path
 
-import scala.collection.Seq
-
 import coursierapi.Dependency
 import tests.BaseCompletionSuite
 import tests.BuildInfoVersions

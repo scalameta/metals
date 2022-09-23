@@ -6,7 +6,6 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
-import scala.collection.Seq
 import scala.util.control.NonFatal
 
 import scala.meta.dialects
@@ -27,11 +26,20 @@ import scala.meta.pc.PresentationCompilerConfig
 
 import coursierapi.Dependency
 import coursierapi.Fetch
+import coursierapi.MavenRepository
+import coursierapi.Repository
 import munit.Tag
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 abstract class BasePCSuite extends BaseSuite {
+
+  val scalaNightlyRepo: MavenRepository =
+    MavenRepository.of(
+      "https://scala-ci.typesafe.com/artifactory/scala-integration/"
+    )
+  val allRepos: Seq[Repository] =
+    Repository.defaults().asScala.toSeq :+ scalaNightlyRepo
 
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
@@ -47,13 +55,16 @@ abstract class BasePCSuite extends BaseSuite {
       else
         PackageIndex.scalaLibrary
 
-    val fetch = Fetch.create()
+    val fetch = Fetch
+      .create()
+      .withRepositories(allRepos: _*)
 
     extraDependencies(scalaVersion).foreach(fetch.addDependencies(_))
     val extraLibraries: Seq[Path] = fetch
       .fetch()
       .asScala
       .map(_.toPath())
+      .toSeq
 
     val myclasspath: Seq[Path] = extraLibraries ++ scalaLibrary
 
@@ -128,6 +139,7 @@ abstract class BasePCSuite extends BaseSuite {
           },
         )
       )
+      .withRepositories(allRepos: _*)
       .fetch()
       .asScala
     sources.foreach { jar =>
