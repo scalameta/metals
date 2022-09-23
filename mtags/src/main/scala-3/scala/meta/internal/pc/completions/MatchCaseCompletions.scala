@@ -157,7 +157,7 @@ object CaseKeywordCompletion:
       def isValid(sym: Symbol) = !parents.isParent(sym)
         && (sym.is(Case) || sym.is(Flags.Module) || sym.isClass)
         && parents.isSubClass(sym, false)
-        && !sym.isPrivate
+        && (sym.isPublic || sym.isAccessibleFrom(selectorSym.info))
       indexedContext.scopeSymbols
         .foreach(s =>
           val ts = s.info.dealias.typeSymbol

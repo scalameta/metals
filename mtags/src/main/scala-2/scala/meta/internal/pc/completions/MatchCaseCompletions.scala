@@ -84,8 +84,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
           (fsym.isCase ||
             fsym.hasModuleFlag ||
             fsym.isInstanceOf[TypeSymbol]) &&
-          parents.isSubClass(fsym, includeReverse = false) &&
-          !sym.isPrivate
+          parents.isSubClass(fsym, includeReverse = false)
         def recordVisit(s: Symbol): Unit = {
           if (s != NoSymbol && !isVisited(s)) {
             isVisited += s

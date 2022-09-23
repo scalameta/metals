@@ -547,7 +547,6 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |  }
       |}""".stripMargin,
     "",
-    filter = t => t.contains("case"),
   )
 
 }
