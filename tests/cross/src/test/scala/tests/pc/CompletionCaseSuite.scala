@@ -535,4 +535,19 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  check(
+    "private-member",
+    """
+      |package example
+      |import scala.collection.immutable.Vector
+      |object A {
+      |  val x: Vector = ???
+      |  x match {
+      |    ca@@  
+      |  }
+      |}""".stripMargin,
+    "",
+    filter = t => t.contains("case"),
+  )
+
 }
