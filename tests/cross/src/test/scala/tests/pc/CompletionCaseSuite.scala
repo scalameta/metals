@@ -556,8 +556,9 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |object A {
       |  private enum A:
       |    case B, C
-      |  def testMe(a: A) = a match
-      |    cas@@
+      |  def testMe(a: A) = 
+      |    a match
+      |      cas@@
       |}""".stripMargin,
     """|case B =>A
        |case C =>A""".stripMargin,
