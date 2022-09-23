@@ -20,6 +20,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
@@ -35,6 +36,7 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -84,9 +86,13 @@ class DebugProvider(
     semanticdbs: Semanticdbs,
     compilers: Compilers,
     statusBar: StatusBar,
-) {
+) extends Cancelable {
 
   import DebugProvider._
+
+  private val debugSessions = new MutableCancelable()
+
+  override def cancel(): Unit = debugSessions.cancel()
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
     buildTargets,
@@ -185,7 +191,11 @@ class DebugProvider(
     }
     val server = new DebugServer(sessionName, uri, proxyFactory)
 
-    server.listen.andThen { case _ => proxyServer.close() }
+    debugSessions.add(server)
+    server.listen.andThen { case _ =>
+      proxyServer.close()
+      debugSessions.remove(server)
+    }
 
     connectedToServer.future.map(_ => server)
   }
