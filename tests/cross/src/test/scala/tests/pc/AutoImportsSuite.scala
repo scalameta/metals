@@ -333,6 +333,23 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
     ),
   )
 
+  checkAmmoniteEdit(
+    "first-auto-import-amm-script-with-header",
+    ammoniteWrapper(
+      """|// scala 2.13.1
+         |
+         |val p: <<Path>> = ???
+         |""".stripMargin
+    ),
+    ammoniteWrapper(
+      """|// scala 2.13.1
+         |import java.nio.file.Path
+         |
+         |val p: Path = ???
+         |""".stripMargin
+    ),
+  )
+
   private def ammoniteWrapper(code: String): String =
     // Vaguely looks like a scala file that Ammonite generates
     // from a sc file.
