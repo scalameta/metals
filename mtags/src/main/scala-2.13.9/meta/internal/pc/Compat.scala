@@ -20,4 +20,7 @@ trait Compat { this: MetalsGlobal =>
     case sm: ScopeMember => sm.aliasInfo.nonEmpty
     case _ => false
   }
+
+  def constantType(c: ConstantType): ConstantType =
+    if (c.value.isSuitableLiteralType) LiteralType(c.value) else c
 }

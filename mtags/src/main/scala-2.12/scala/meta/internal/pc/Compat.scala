@@ -14,4 +14,6 @@ trait Compat { this: MetalsGlobal =>
     }
 
   def isAliasCompletion(m: Member): Boolean = false
+
+  def constantType(c: ConstantType): ConstantType = c
 }

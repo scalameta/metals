@@ -246,4 +246,60 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin,
   )
+
+  test("string-type") {
+    val path = "a/src/main/scala/a/Impl.scala"
+    val fullInput =
+      s"""|/metals.json
+          |{ "a": {} }
+          |/a/src/main/scala/a/Service.scala
+          |package a
+          |
+          |trait Service {
+          |  def markdown(mode: "mode"): String
+          |}
+          |
+          |/$path
+          |package a
+          |
+          |object Impl
+          |""".stripMargin
+
+    cleanWorkspace()
+    for {
+      _ <- initialize(fullInput)
+      _ <- server.didOpen(path)
+      _ <- server.didSave(path)(txt => """|package a
+                                          |
+                                          |object Impl extends Service
+                                          |""".stripMargin)
+      codeActions <-
+        server
+          .assertCodeAction(
+            path,
+            """|package a
+               |
+               |object Impl extends <<Service>>
+               |""".stripMargin,
+            s"""|${ImplementAbstractMembers.title}
+                |""".stripMargin,
+            Nil,
+          )
+          .recover { case _: Throwable =>
+            Nil
+          }
+      _ <- client.applyCodeAction(0, codeActions, server)
+      _ = assertNoDiff(
+        server.bufferContents(path),
+        """|package a
+           |
+           |object Impl extends Service {
+           |
+           |  override def markdown(mode: "mode"): String = ???
+           |
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }

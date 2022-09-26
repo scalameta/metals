@@ -290,9 +290,16 @@ trait Signatures { compiler: MetalsGlobal =>
     private val returnType =
       printType(shortType(gtpe.finalResultType, shortenedNames))
 
-    def printType(tpe: Type): String =
-      if (printLongType) tpe.toLongString
-      else tpe.toString()
+    def printType(tpe: Type): String = {
+      val tpeToPrint = tpe match {
+        case c: ConstantType =>
+          constantType(c)
+        case _ => tpe
+      }
+      if (printLongType) tpeToPrint.toLongString
+      else tpeToPrint.toString()
+    }
+
     def methodDocstring: String = {
       if (isDocs) info.fold("")(_.docstring())
       else ""
