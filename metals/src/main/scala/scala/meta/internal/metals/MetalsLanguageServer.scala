@@ -171,7 +171,7 @@ class MetalsLanguageServer(
   private val recentlyOpenedFiles = new ActiveFiles(time)
   private val recentlyFocusedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
-  private val isImportInProcess = new AtomicBoolean(false)
+  val isImportInProcess = new AtomicBoolean(false)
   @volatile
   var userConfig: UserConfiguration = UserConfiguration()
   var excludedPackageHandler: ExcludedPackagesHandler =
@@ -2260,37 +2260,34 @@ class MetalsLanguageServer(
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] =
-    if (isImportInProcess.compareAndSet(false, true)) {
-      val buildImport = for {
-        possibleBuildTool <- supportedBuildTool
-        chosenBuildServer = tables.buildServers.selectedServer()
-        isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
-          _ == BloopServers.name
-        )
-        buildChange <- possibleBuildTool match {
-          case Some(buildTool) =>
-            buildTool.digest(workspace) match {
-              case None =>
-                scribe.warn(s"Skipping build import, no checksum.")
-                Future.successful(BuildChange.None)
-              case Some(digest) if isBloopOrEmpty =>
-                slowConnectToBloopServer(forceImport, buildTool, digest)
-              case Some(digest) =>
-                indexer.reloadWorkspaceAndIndex(forceImport, buildTool, digest)
-            }
-          case None =>
-            Future.successful(BuildChange.None)
-        }
-      } yield buildChange
-      buildImport.onComplete(_ => isImportInProcess.set(false))
-      buildImport
-    } else {
-      Future
-        .successful {
-          languageClient.showMessage(Messages.ImportAlreadyRunning)
-          BuildChange.None
-        }
-    }
+    for {
+      possibleBuildTool <- supportedBuildTool
+      chosenBuildServer = tables.buildServers.selectedServer()
+      isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
+        _ == BloopServers.name
+      )
+      buildChange <- possibleBuildTool match {
+        case Some(buildTool) =>
+          buildTool.digest(workspace) match {
+            case None =>
+              scribe.warn(s"Skipping build import, no checksum.")
+              Future.successful(BuildChange.None)
+            case Some(digest) if isBloopOrEmpty =>
+              slowConnectToBloopServer(forceImport, buildTool, digest)
+            case Some(digest) =>
+              indexer.reloadWorkspaceAndIndex(forceImport, buildTool, digest)
+          }
+        case None =>
+          Future.successful(BuildChange.None)
+      }
+    } yield buildChange
+  // } else {
+  //   Future
+  //     .successful {
+  //       languageClient.showMessage(Messages.ImportAlreadyRunning)
+  //       BuildChange.None
+  //     }
+  // }
 
   private def slowConnectToBloopServer(
       forceImport: Boolean,
@@ -2299,8 +2296,9 @@ class MetalsLanguageServer(
   ): Future[BuildChange] =
     for {
       result <- {
-        if (forceImport) bloopInstall.runUnconditionally(buildTool)
-        else bloopInstall.runIfApproved(buildTool, checksum)
+        if (forceImport)
+          bloopInstall.runUnconditionally(buildTool, isImportInProcess)
+        else bloopInstall.runIfApproved(buildTool, checksum, isImportInProcess)
       }
       change <- {
         if (result.isInstalled) quickConnectToBuildServer()
