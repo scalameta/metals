@@ -2281,13 +2281,6 @@ class MetalsLanguageServer(
           Future.successful(BuildChange.None)
       }
     } yield buildChange
-  // } else {
-  //   Future
-  //     .successful {
-  //       languageClient.showMessage(Messages.ImportAlreadyRunning)
-  //       BuildChange.None
-  //     }
-  // }
 
   private def slowConnectToBloopServer(
       forceImport: Boolean,
