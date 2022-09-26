@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -34,22 +35,32 @@ final class BloopInstall(
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(
-      buildTool: BuildTool
+      buildTool: BuildTool,
+      isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] = {
-    buildTool.bloopInstall(
-      workspace,
-      args => {
-        scribe.info(s"running '${args.mkString(" ")}'")
-        val process = runArgumentsUnconditionally(buildTool, args)
-        process.foreach { e =>
-          if (e.isFailed) {
-            // Record the exact command that failed to help troubleshooting.
-            scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
+    if (isImportInProcess.compareAndSet(false, true)) {
+      buildTool.bloopInstall(
+        workspace,
+        args => {
+          scribe.info(s"running '${args.mkString(" ")}'")
+          val process = runArgumentsUnconditionally(buildTool, args)
+          process.foreach { e =>
+            if (e.isFailed) {
+              // Record the exact command that failed to help troubleshooting.
+              scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
+            }
           }
+          process.onComplete(_ => isImportInProcess.set(false))
+          process
+        },
+      )
+    } else {
+      Future
+        .successful {
+          languageClient.showMessage(ImportAlreadyRunning)
+          WorkspaceLoadedStatus.Dismissed
         }
-        process
-      },
-    )
+    }
   }
 
   private def runArgumentsUnconditionally(
@@ -107,6 +118,7 @@ final class BloopInstall(
   def runIfApproved(
       buildTool: BuildTool,
       digest: String,
+      isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] =
     synchronized {
       oldInstallResult(digest) match {
@@ -124,7 +136,7 @@ final class BloopInstall(
             )
             installResult <- {
               if (userResponse.isYes) {
-                runUnconditionally(buildTool)
+                runUnconditionally(buildTool, isImportInProcess)
               } else {
                 // Don't spam the user with requests during rapid build changes.
                 notification.dismiss(2, TimeUnit.MINUTES)
