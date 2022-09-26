@@ -152,18 +152,19 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
                 pos.withStart(rangeStart).withEnd(pos.point).toLsp
               }
 
-            (javaCompletions ++ scalaCompletions).map { c =>
-              new TextEditMember(
-                filterText = c,
-                edit = new l.TextEdit(
-                  ivyEditRange,
-                  if (isInitialCompletion) s"`$c$$0`" else c
-                ),
-                sym = select.symbol
-                  .newErrorSymbol(TermName("artefact"))
-                  .setInfo(NoType),
-                label = Some(c.stripPrefix(":"))
-              )
+            (javaCompletions ++ scalaCompletions).zipWithIndex.map {
+              case (c, index) =>
+                new TextEditMember(
+                  filterText = c,
+                  edit = new l.TextEdit(
+                    ivyEditRange,
+                    if (isInitialCompletion) s"`$c$$0`" else c
+                  ),
+                  sym = select.symbol
+                    .newErrorSymbol(TermName(s"artefact$index"))
+                    .setInfo(NoType),
+                  label = Some(c.stripPrefix(":"))
+                )
             }
           case _ => List.empty
         }
