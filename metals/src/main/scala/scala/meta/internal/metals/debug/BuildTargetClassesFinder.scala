@@ -1,9 +1,6 @@
 package scala.meta.internal.metals.debug
 
 import scala.collection.JavaConverters._
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -11,6 +8,7 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.io.AbsolutePath
 
+import cats.data.NonEmptyList
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.{bsp4j => b}
 
@@ -20,40 +18,46 @@ class BuildTargetClassesFinder(
     index: OnDemandSymbolIndex,
 ) {
 
-  // In case of success returns non-empty list
   def findMainClassAndItsBuildTarget(
       className: String,
-      buildTarget: Option[String],
-  ): Try[List[(b.ScalaMainClass, b.BuildTarget)]] = {
-    findClassAndBuildTarget(
-      className,
-      buildTarget,
-      buildTargetClasses.findMainClassByName(_),
-      buildTargetClasses
+      buildTarget: Option[BuildTarget],
+  ): Either[NoClassError, NonEmptyList[
+    (b.ScalaMainClass, b.BuildTarget)
+  ]] = {
+    val fromBuildTargets = findClassAndBuildTarget[b.ScalaMainClass](
+      className = className,
+      buildTarget = buildTarget,
+      findClassesByName = buildTargetClasses.findMainClassByName(_),
+      classesByBuildTarget = buildTargetClasses
         .classesOf(_)
         .mainClasses
         .values,
-      { clazz: b.ScalaMainClass => clazz.getClassName },
-    ).recoverWith { case ex =>
-      val found = ex match {
+      getClassName = { clazz => clazz.getClassName },
+    )
+
+    fromBuildTargets.left.flatMap { error =>
+      val found = error match {
         // We check whether there is a main in dependencies that is not reported via BSP
         case ClassNotFoundInBuildTargetException(className, target) =>
           revertToDependencies(className, Some(target))
-        case _: ClassNotFoundException =>
+        case _: ClassNotFound =>
           revertToDependencies(className, buildTarget = None)
+        case _ => Nil
       }
       found match {
-        case Nil => Failure(ex)
-        case deps => Success(deps)
+        case Nil => Left(error)
+        case head :: tail => Right(NonEmptyList(head, tail))
       }
     }
   }
 
-  // In case of success returns non-empty list
+  /**
+   * For a given className and name of build target find and return matching results.
+   */
   def findTestClassAndItsBuildTarget(
       className: String,
-      buildTarget: Option[String],
-  ): Try[List[(String, b.BuildTarget)]] =
+      buildTarget: Option[BuildTarget],
+  ): Either[NoClassError, NonEmptyList[(String, b.BuildTarget)]] =
     findClassAndBuildTarget[String](
       className,
       buildTarget,
@@ -93,14 +97,14 @@ class BuildTargetClassesFinder(
 
   private def findClassAndBuildTarget[A](
       className: String,
-      buildTarget: Option[String],
+      buildTarget: Option[BuildTarget],
       findClassesByName: String => List[(A, b.BuildTargetIdentifier)],
       classesByBuildTarget: b.BuildTargetIdentifier => Iterable[A],
       getClassName: A => String,
-  ): Try[List[(A, b.BuildTarget)]] =
-    buildTarget.fold {
-      val classes =
-        findClassesByName(className)
+  ): Either[NoClassError, NonEmptyList[(A, b.BuildTarget)]] =
+    buildTarget match {
+      case None =>
+        val classes = findClassesByName(className)
           .collect { case (clazz, BuildTargetIdOf(buildTarget)) =>
             (clazz, buildTarget)
           }
@@ -108,33 +112,15 @@ class BuildTargetClassesFinder(
             buildTargets.buildTargetsOrder(target.getId())
           }
           .reverse
-      if (classes.nonEmpty) Success(classes)
-      else Failure(new ClassNotFoundException(className))
-    } { targetName =>
-      buildTargets
-        .findByDisplayName(targetName)
-        .fold[Try[List[(A, b.BuildTarget)]]] {
-          Failure(
-            new BuildTargetNotFoundException(targetName)
-          )
-        } { target =>
-          classesByBuildTarget(target.getId())
-            .find(
-              getClassName(_) == className
-            )
-            .fold[Try[List[(A, b.BuildTarget)]]] {
-              Failure(
-                ClassNotFoundInBuildTargetException(
-                  className,
-                  target,
-                )
-              )
-            } { clazz =>
-              Success(
-                List(clazz -> target)
-              )
-            }
+        classes match {
+          case head :: tail => Right(NonEmptyList(head, tail))
+          case Nil => Left(ClassNotFound(className))
         }
+      case Some(target) =>
+        classesByBuildTarget(target.getId)
+          .find(clazz => getClassName(clazz) == className)
+          .toRight(ClassNotFoundInBuildTargetException(className, target))
+          .map(clazz => NonEmptyList.of(clazz -> target))
     }
 
   object BuildTargetIdOf {
@@ -144,30 +130,3 @@ class BuildTargetClassesFinder(
   }
 
 }
-
-case class BuildTargetNotFoundException(buildTargetName: String)
-    extends Exception(s"Build target not found: $buildTargetName")
-
-case class BuildTargetUndefinedException()
-    extends Exception("Debugger configuration is missing 'buildTarget' param.")
-
-case class ClassNotFoundInBuildTargetException(
-    className: String,
-    buildTarget: b.BuildTarget,
-) extends Exception(
-      s"Class '$className' not found in build target '${buildTarget.getDisplayName()}'"
-    )
-case class BuildTargetNotFoundForPathException(path: AbsolutePath)
-    extends Exception(
-      s"No build target could be found for the path: ${path.toString()}"
-    )
-case class BuildTargetContainsNoMainException(buildTargetName: String)
-    extends Exception(
-      s"No main could be found in build target: $buildTargetName"
-    )
-case class NoTestsFoundException(
-    testType: String,
-    name: String,
-) extends Exception(
-      s"No tests could be found in ${testType}: $name"
-    )

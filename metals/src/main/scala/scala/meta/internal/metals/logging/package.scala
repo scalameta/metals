@@ -29,4 +29,13 @@ package object logging {
       line: sourcecode.Line,
       mdc: MDC,
   ): Unit = scribeLogWhen(Level.Error, condition, msg)
+
+  @inline
+  def logWarnWhen(condition: Boolean, msg: LoggableMessage)(implicit
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: MDC,
+  ): Unit = scribeLogWhen(Level.Warn, condition, msg)
 }

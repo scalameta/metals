@@ -121,7 +121,6 @@ class NewFileProvider(
           placeHolder = NewScalaFile.selectTheKindOfFileMessage,
         )
       )
-      .asScala
       .flatMapOptionInside(kind => getFromString(kind.itemId))
   }
 

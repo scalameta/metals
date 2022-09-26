@@ -82,11 +82,6 @@ class BuildServerConnection private (
 
   def isAmmonite: Boolean = name == Ammonite.name
 
-  /* Currently only Bloop and sbt support running single test cases
-   * and ScalaCLI uses Bloop underneath.
-   */
-  def supportsTestSelection: Boolean = isBloop || isSbt || isScalaCLI
-
   /* Some users may still use an old version of Bloop that relies on scala-debug-adapter 1.x.
    * This method is used to do the switch between MetalsDebugAdapter1x and MetalsDebugAdapter2x.
    * At some point we should drop the support for those old versions of Bloop and remove

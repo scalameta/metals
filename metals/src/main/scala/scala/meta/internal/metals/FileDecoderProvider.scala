@@ -436,7 +436,6 @@ final class FileDecoderProvider(
       )
       languageClient
         .metalsQuickPick(quickPickParams)
-        .asScala
         .mapOptionInside(_.itemId)
     } else
       Future.successful(Some(classes.head.path))

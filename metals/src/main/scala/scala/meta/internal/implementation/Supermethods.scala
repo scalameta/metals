@@ -106,7 +106,6 @@ class Supermethods(
           placeHolder = "Select super method to jump to",
         )
       )
-      .asScala
       .mapOptionInside(_.itemId)
   }
 

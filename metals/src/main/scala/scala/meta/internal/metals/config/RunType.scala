@@ -16,7 +16,4 @@ object RunType {
       case _ => None
     }
   }
-
-  case class UnknownRunTypeException(runType: String)
-      extends Exception(s"Received invalid runType: ${runType}.")
 }

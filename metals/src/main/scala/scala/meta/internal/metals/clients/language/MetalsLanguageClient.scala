@@ -3,7 +3,10 @@ package scala.meta.internal.metals.clients.language
 import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
 
+import scala.concurrent.Future
+
 import scala.meta.internal.decorations.DecorationClient
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -86,13 +89,13 @@ trait MetalsLanguageClient
    */
   final def metalsQuickPick(
       params: MetalsQuickPickParams
-  ): CompletableFuture[Option[MetalsQuickPickResult]] =
+  ): Future[Option[MetalsQuickPickResult]] =
     rawMetalsQuickPick(params).thenApply { result =>
       if (result.cancelled != null && result.cancelled)
         None
       else
         Option(result.itemId).map(MetalsQuickPickResult(_))
-    }
+    }.asScala
 
   final def showMessage(messageType: MessageType, message: String): Unit = {
     val params = new MessageParams(messageType, message)

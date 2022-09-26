@@ -48,6 +48,7 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.metals.logging.logWarnWhen
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
@@ -58,6 +59,7 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
+import cats.data.NonEmptyList
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -68,8 +70,7 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 
 /**
- * @param supportsTestSelection test selection hasn't been defined in BSP spec yet.
- * Currently it is supported only by bloop.
+ * Class which provide ability to debug (and run via debug) classes and tests.
  */
 class DebugProvider(
     workspace: AbsolutePath,
@@ -87,8 +88,6 @@ class DebugProvider(
     compilers: Compilers,
     statusBar: StatusBar,
 ) extends Cancelable {
-
-  import DebugProvider._
 
   private val debugSessions = new MutableCancelable()
 
@@ -210,6 +209,9 @@ class DebugProvider(
       .map(_.getDisplayName)
       .getOrElse(buildTargetIdentifier.getUri)
 
+  /**
+   * In case when there are multiple main classes, ask user which one should be selected.
+   */
   private def requestMain(
       mainClasses: List[ScalaMainClass]
   )(implicit ec: ExecutionContext): Future[ScalaMainClass] = {
@@ -223,7 +225,6 @@ class DebugProvider(
           placeHolder = Messages.MainClass.message,
         )
       )
-      .asScala
       .collect { case Some(choice) =>
         mainClasses.find { clazz =>
           clazz.getClassName() == choice.itemId
@@ -236,10 +237,6 @@ class DebugProvider(
     targetId <- parameters.getTargets().asScala.headOption
     buildServer <- buildTargets.buildServerOf(targetId)
   } yield buildServer
-
-  private def supportsTestSelection(targetId: b.BuildTargetIdentifier) = {
-    buildTargets.buildServerOf(targetId).exists(_.supportsTestSelection)
-  }
 
   private def envFromFile(
       envFile: Option[String]
@@ -260,17 +257,23 @@ class DebugProvider(
       jvmOptions: Option[ju.List[String]],
       env: List[String],
       envFile: Option[String],
-  )(implicit ec: ExecutionContext) = {
-    main.setArguments(args.getOrElse(ju.Collections.emptyList()))
-    main.setJvmOptions(
+  )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
+    // make a copy of passed main class to not modify the original one
+    val main0 = new ScalaMainClass(
+      main.getClassName(),
+      main.getArguments(),
+      main.getJvmOptions(),
+    )
+    main0.setArguments(args.getOrElse(ju.Collections.emptyList()))
+    main0.setJvmOptions(
       jvmOptions.getOrElse(ju.Collections.emptyList())
     )
     envFromFile(envFile).map { envFromFile =>
-      main.setEnvironmentVariables((envFromFile ::: env).asJava)
+      main0.setEnvironmentVariables((envFromFile ::: env).asJava)
       new b.DebugSessionParams(
         singletonList(target),
         b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        main.toJson,
+        main0.toJson,
       )
     }
   }
@@ -340,6 +343,7 @@ class DebugProvider(
           symbol = symbolInfo.symbol
           testSymbolInfo <- testClasses.get(symbol)
         } yield testSymbolInfo.fullyQualifiedName
+
         val mains = for {
           occurrence <- textDocument.occurrences
           if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
@@ -352,6 +356,7 @@ class DebugProvider(
             List(normal, fromAnnot).flatten
           }
         } yield mainClass
+
         if (mains.nonEmpty) {
           verifyMain(buildTarget, mains.toList, params)
         } else if (tests.nonEmpty) {
@@ -411,7 +416,7 @@ class DebugProvider(
       case (_, None) =>
         Future.failed(BuildTargetNotFoundForPathException(path))
       case (None, _) =>
-        Future.failed(RunType.UnknownRunTypeException(params.runType))
+        Future.failed(UnknownRunTypeException(params.runType))
       case (Some(Run), Some(target)) =>
         verifyMain(target, mainClasses(target).values.toList, params)
       case (Some(RunOrTestFile), Some(target)) =>
@@ -467,16 +472,19 @@ class DebugProvider(
   def resolveMainClassParams(
       params: DebugUnresolvedMainClassParams
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    val buildTarget = inferBuildTarget(Option(params.buildTarget))
+
     val result = withRebuildRetry(() =>
       buildTargetClassesFinder
         .findMainClassAndItsBuildTarget(
           params.mainClass,
-          Option(params.buildTarget),
+          buildTarget,
         )
     ).flatMap {
-      case (_, target) :: _ if buildClient.buildHasErrors(target.getId()) =>
+      case NonEmptyList((_, target), _)
+          if buildClient.buildHasErrors(target.getId()) =>
         Future.failed(WorkspaceErrorsException)
-      case (clazz, target) :: others =>
+      case NonEmptyList((clazz, target), others) =>
         if (others.nonEmpty) {
           reportOtherBuildTargets(
             clazz.getClassName(),
@@ -495,10 +503,6 @@ class DebugProvider(
           env,
           Option(params.envFile),
         )
-
-      // should not really happen due to
-      // `findMainClassAndItsBuildTarget` succeeding with non-empty list
-      case Nil => Future.failed(new ju.NoSuchElementException(params.mainClass))
     }
     result.failed.foreach(reportErrors)
     result
@@ -507,16 +511,20 @@ class DebugProvider(
   def resolveTestClassParams(
       params: DebugUnresolvedTestClassParams
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    val buildTarget = inferBuildTarget(Option(params.buildTarget))
+
     val result = withRebuildRetry(() => {
       buildTargetClassesFinder
         .findTestClassAndItsBuildTarget(
           params.testClass,
-          Option(params.buildTarget),
+          buildTarget,
         )
     }).flatMap {
-      case (_, target) :: _ if buildClient.buildHasErrors(target.getId()) =>
+      case NonEmptyList((_, target), _)
+          if buildClient.buildHasErrors(target.getId()) =>
         Future.failed(WorkspaceErrorsException)
-      case (clazz, target) :: others =>
+
+      case NonEmptyList((clazz, target), others) =>
         if (others.nonEmpty) {
           reportOtherBuildTargets(
             clazz,
@@ -541,13 +549,23 @@ class DebugProvider(
             scalaTestSuite.toJson,
           )
         }
-      // should not really happen due to
-      // `findMainClassAndItsBuildTarget` succeeding with non-empty list
-      case Nil => Future.failed(new ju.NoSuchElementException(params.testClass))
     }
     result.failed.foreach(reportErrors)
     result
   }
+
+  /**
+   * Try to infer a build target from given target name. Log in case of unsuccessful attempt.
+   */
+  private def inferBuildTarget(buildTargetName: Option[String]) =
+    buildTargetName.flatMap { target =>
+      val buildTarget = buildTargets.findByDisplayName(target)
+      logWarnWhen(
+        buildTarget.isEmpty,
+        s"Unable to find build target for $target, trying to proceed anyway",
+      )
+      buildTarget
+    }
 
   def resolveAttachRemoteParams(
       params: DebugUnresolvedAttachRemoteParams
@@ -571,9 +589,6 @@ class DebugProvider(
   /**
    * Validate if build target provided in params exists.
    * On the contrary, test classes aren't validated.
-   *
-   * If build tool doesn't support test selection fallback to the already
-   * defined and supported SCALA_TEST_SUITES request kind.
    */
   def resolveTestSelectionParams(
       request: ScalaTestSuitesDebugRequest
@@ -581,19 +596,11 @@ class DebugProvider(
     val makeDebugSession = () =>
       buildTargets.info(request.target) match {
         case Some(buildTarget) =>
-          val debugSession =
-            if (supportsTestSelection(request.target))
-              new b.DebugSessionParams(
-                singletonList(buildTarget.getId),
-                DebugProvider.ScalaTestSelection,
-                request.requestData.toJson,
-              )
-            else
-              new b.DebugSessionParams(
-                singletonList(buildTarget.getId),
-                b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-                request.requestData.suites.map(_.className).toJson,
-              )
+          val debugSession = new b.DebugSessionParams(
+            singletonList(buildTarget.getId),
+            DebugProvider.ScalaTestSelection,
+            request.requestData.toJson,
+          )
           Future.successful(debugSession)
         case None =>
           val error = BuildTargetNotFoundException(request.target.getUri)
@@ -609,11 +616,16 @@ class DebugProvider(
   }
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
+    case e: DebugProviderError => reportDebugProviderError(e)
+    case NonFatal(e) => scribe.error("error", e)
+  }
+
+  private val reportDebugProviderError: DebugProviderError => Unit = {
     case _ if buildClient.buildHasErrors =>
       languageClient.metalsStatus(
         Messages.DebugErrorsPresent(clientConfig.icons())
       )
-    case t: ClassNotFoundException =>
+    case t: ClassNotFound =>
       languageClient.showMessage(
         Messages.DebugClassNotFound.invalidClass(t.getMessage())
       )
@@ -626,6 +638,21 @@ class DebugProvider(
       languageClient.showMessage(
         Messages.DebugClassNotFound
           .invalidTarget(target)
+      )
+    case e @ SemanticDbNotFoundException =>
+      languageClient.metalsStatus(
+        MetalsStatusParams(
+          text = s"${clientConfig.icons.alert}Build misconfiguration",
+          tooltip = e.getMessage(),
+          command = ClientCommands.RunDoctor.id,
+        )
+      )
+    case e @ InvalidEnvFileException(_) =>
+      languageClient.showMessage(Messages.errorMessageParams(e.getMessage()))
+
+    case e @ NoRunOptionException =>
+      languageClient.showMessage(
+        Messages.errorMessageParams(e.getMessage())
       )
     case e: BuildTargetNotFoundForPathException =>
       languageClient.showMessage(
@@ -643,22 +670,11 @@ class DebugProvider(
       languageClient.showMessage(
         Messages.errorMessageParams(e.getMessage())
       )
-    case e: RunType.UnknownRunTypeException =>
+    case e: UnknownRunTypeException =>
       languageClient.showMessage(
         Messages.errorMessageParams(e.getMessage())
       )
-    case e @ SemanticDbNotFoundException =>
-      languageClient.metalsStatus(
-        MetalsStatusParams(
-          text = s"${clientConfig.icons.alert}Build misconfiguration",
-          tooltip = e.getMessage(),
-          command = ClientCommands.RunDoctor.id,
-        )
-      )
-    case e @ DotEnvFileParser.InvalidEnvFileException(_) =>
-      languageClient.showMessage(Messages.errorMessageParams(e.getMessage()))
-
-    case e @ NoRunOptionException =>
+    case e @ WorkspaceErrorsException =>
       languageClient.showMessage(
         Messages.errorMessageParams(e.getMessage())
       )
@@ -743,24 +759,28 @@ class DebugProvider(
     }
   }
 
+  /**
+   * Execute given function and retries once in case of failures.
+   */
   private def withRebuildRetry[A](
-      f: () => Try[A]
+      f: () => Either[NoClassError, A]
   )(implicit ec: ExecutionContext): Future[A] = {
-    Future.fromTry(f()).recoverWith {
-      case ClassNotFoundInBuildTargetException(_, buildTarget) =>
+    Future(f()).flatMap {
+      case Left(ClassNotFoundInBuildTargetException(_, buildTarget)) =>
         val target = Seq(buildTarget.getId())
         for {
           _ <- compilations.compileTargets(target)
           _ <- buildTargetClasses.rebuildIndex(target)
-          result <- Future.fromTry(f())
+          result <- Future.fromTry(f().toTry)
         } yield result
-      case _: ClassNotFoundException =>
+      case Left(_: ClassNotFound) =>
         val allTargetIds = buildTargets.allBuildTargetIds
         for {
           _ <- compilations.compileTargets(allTargetIds)
           _ <- buildTargetClasses.rebuildIndex(allTargetIds)
-          result <- Future.fromTry(f())
+          result <- Future.fromTry(f().toTry)
         } yield result
+      case Right(other) => Future.successful(other)
     }
   }
 
@@ -829,7 +849,6 @@ object DebugProvider {
     } else {
       None
     }
-
   }
 
   /**
@@ -869,17 +888,4 @@ object DebugProvider {
   }
 
   val ScalaTestSelection = "scala-test-suites-selection"
-
-  case object WorkspaceErrorsException
-      extends Exception(
-        s"Cannot run class, since the workspace has errors."
-      )
-  case object NoRunOptionException
-      extends Exception(
-        s"There is nothing to run or test in the current file."
-      )
-  case object SemanticDbNotFoundException
-      extends Exception(
-        "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
-      )
 }

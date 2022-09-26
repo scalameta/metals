@@ -162,7 +162,6 @@ class NewProjectProvider(
           placeHolder = NewScalaProject.selectTheTemplate,
         )
       )
-      .asScala
       .flatMapOption {
         case kind if kind.itemId == NewProjectProvider.more.id =>
           askForTemplate(allTemplatesFromWeb)
@@ -242,7 +241,6 @@ class NewProjectProvider(
           placeHolder = from.map(_.toString()).getOrElse(""),
         )
       )
-      .asScala
       .flatMapOption {
         case path if path.itemId == currentDir.id =>
           Future.successful(from)
