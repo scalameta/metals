@@ -146,14 +146,18 @@ object CaseKeywordCompletion:
       )
     else
       // Step 0: case for selector type
-      if !(selectorSym.is(Sealed) &&
-          (selectorSym.is(Abstract) || selectorSym.is(Trait)))
-      then visit(selectorSym, selectorSym.decodedName, Nil)
+      selectorSym.info match
+        case NoType => ()
+        case _ =>
+          if !(selectorSym.is(Sealed) &&
+              (selectorSym.is(Abstract) || selectorSym.is(Trait)))
+          then visit(selectorSym, selectorSym.decodedName, Nil)
 
       // Step 1: walk through scope members.
       def isValid(sym: Symbol) = !parents.isParent(sym)
         && (sym.is(Case) || sym.is(Flags.Module) || sym.isClass)
         && parents.isSubClass(sym, false)
+        && (sym.isPublic || sym.isAccessibleFrom(selectorSym.info))
       indexedContext.scopeSymbols
         .foreach(s =>
           val ts = s.info.dealias.typeSymbol
