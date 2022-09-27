@@ -13,7 +13,7 @@ case class CompletionSuffix(
     snippet: SuffixKind,
 ):
   def hasSnippet = snippet != SuffixKind.NoSuffix
-  def map(copyFn: CompletionSuffix => CompletionSuffix) = copyFn(this)
+  def chain(copyFn: CompletionSuffix => CompletionSuffix) = copyFn(this)
   def toEdit: String =
     if !hasSuffix then ""
     else

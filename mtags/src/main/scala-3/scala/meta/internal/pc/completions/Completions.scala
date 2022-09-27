@@ -243,13 +243,13 @@ class Completions(
 
   private def findSuffix(symbol: Symbol): CompletionSuffix =
     CompletionSuffix.empty
-      .map { suffix => // for [] suffix
+      .chain { suffix => // for [] suffix
         if shouldAddSnippet &&
           cursorPos.allowBracketSuffix && symbol.info.typeParams.nonEmpty
         then suffix.copy(bracket = true, snippet = SuffixKind.Bracket)
         else suffix
       }
-      .map { suffix => // for () suffix
+      .chain { suffix => // for () suffix
         if shouldAddSnippet && symbol.is(Flags.Method)
         then
           val paramss = getParams(symbol)
@@ -271,7 +271,7 @@ class Completions(
           end match
         else suffix
       }
-      .map { suffix => // for {} suffix
+      .chain { suffix => // for {} suffix
         if shouldAddSnippet && cursorPos.allowTemplateSuffix
           && isAbstractType(symbol)
         then
