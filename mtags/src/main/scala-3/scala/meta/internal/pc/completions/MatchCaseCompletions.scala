@@ -99,27 +99,6 @@ object CaseKeywordCompletion:
             new Parents(NoType, definitions)
       case sel => new Parents(sel.tpe, definitions)
 
-    val result = ListBuffer.empty[CompletionValue]
-    val isVisited = mutable.Set.empty[Symbol]
-    def visit(sym: Symbol, name: String, autoImports: List[l.TextEdit]): Unit =
-
-      def recordVisit(s: Symbol): Unit =
-        if s != NoSymbol && !isVisited(s) then
-          isVisited += s
-          recordVisit(s.moduleClass)
-          recordVisit(s.sourceModule)
-
-      if !isVisited(sym) then
-        recordVisit(sym)
-        if completionGenerator.fuzzyMatches(name) then
-          val completionOption = completionGenerator.toCompletionValue(
-            sym,
-            name,
-            autoImports,
-          )
-          completionOption.foreach(result += _)
-        end if
-    end visit
     val selectorSym = parents.selector.typeSymbol
 
     // Special handle case when selector is a tuple or `FunctionN`.
@@ -130,21 +109,49 @@ object CaseKeywordCompletion:
       val label =
         if patternOnly.isEmpty then s"case ${parents.selector.show} =>"
         else parents.selector.show
-      result += CompletionValue.CaseKeyword(
-        selectorSym,
-        label,
-        Some(
-          if patternOnly.isEmpty then
-            if config.isCompletionSnippetsEnabled() then "case ($0) =>"
-            else "case () =>"
-          else if config.isCompletionSnippetsEnabled() then "($0)"
-          else "()"
-        ),
-        Nil,
-        range = Some(completionPos.toEditRange),
-        command = config.parameterHintsCommand().asScala,
+      List(
+        CompletionValue.CaseKeyword(
+          selectorSym,
+          label,
+          Some(
+            if patternOnly.isEmpty then
+              if config.isCompletionSnippetsEnabled() then "case ($0) =>"
+              else "case () =>"
+            else if config.isCompletionSnippetsEnabled() then "($0)"
+            else "()"
+          ),
+          Nil,
+          range = Some(completionPos.toEditRange),
+          command = config.parameterHintsCommand().asScala,
+        )
       )
     else
+      val result = ListBuffer.empty[CompletionValue.CaseKeyword]
+      val isVisited = mutable.Set.empty[Symbol]
+      def visit(
+          sym: Symbol,
+          name: String,
+          autoImports: List[l.TextEdit],
+      ): Unit =
+
+        def recordVisit(s: Symbol): Unit =
+          if s != NoSymbol && !isVisited(s) then
+            isVisited += s
+            recordVisit(s.moduleClass)
+            recordVisit(s.sourceModule)
+
+        if !isVisited(sym) then
+          recordVisit(sym)
+          if completionGenerator.fuzzyMatches(name) then
+            val completionOption = completionGenerator.toCompletionValue(
+              sym,
+              name,
+              autoImports,
+            )
+            completionOption.foreach(result += _)
+          end if
+      end visit
+
       // Step 0: case for selector type
       selectorSym.info match
         case NoType => ()
@@ -163,9 +170,9 @@ object CaseKeywordCompletion:
           val ts = s.info.dealias.typeSymbol
           if (isValid(ts)) then visit(ts, ts.decodedName, Nil)
         )
-
       // Step 2: walk through known subclasses of sealed types.
-      MetalsSealedDesc.sealedStrictDescendants(selectorSym).foreach { sym =>
+      val sealedDescs = MetalsSealedDesc.sealedStrictDescendants(selectorSym)
+      sealedDescs.foreach { sym =>
         val autoImport = autoImportsGen.forSymbol(sym)
         autoImport match
           case Some(value) =>
@@ -173,10 +180,38 @@ object CaseKeywordCompletion:
           case scala.None =>
             visit(sym, sym.showFullName, Nil)
       }
+      val res = result.result()
+
+      selector match
+        // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
+        // which works like exhaustive match.
+        case EmptyTree =>
+          val sealedMembers = res.filter(c => sealedDescs.contains(c.symbol))
+          sealedMembers match
+            case Nil => res
+            case head :: tail =>
+              val insertText = Some(
+                tail
+                  .map(_.label)
+                  .mkString(
+                    if clientSupportsSnippets then s"\n\t${head.label} $$0\n\t"
+                    else s"\n\t${head.label}\n\t",
+                    "\n\t",
+                    "\n",
+                  )
+              )
+              val exhaustive = CompletionValue.MatchCompletion(
+                s"case (exhaustive)",
+                insertText,
+                res.flatMap(_.additionalEdits),
+                s" ${selectorSym.decodedName} (${res.length} cases)",
+              )
+              exhaustive :: res
+          end match
+        case _ => res
+      end match
     end if
 
-    val res = result.result()
-    res
   end contribute
 
   /**
@@ -186,8 +221,6 @@ object CaseKeywordCompletion:
    *                 not in a match expression (for example `List(1).foreach { case@@ }`.
    * @param completionPos the position of the completion
    * @param typedtree typed tree of the file, used for generating auto imports
-   * @param indexedContext
-   * @param config
    */
   def matchContribute(
       selector: Tree,
