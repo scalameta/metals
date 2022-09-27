@@ -159,7 +159,7 @@ final class PcDocumentHighlightProvider(
         lazy val soughtNames: Set[Name] = sought.map(_.name)
 
         /*
-         * For comprehsnions have two owners, one for the enumerators and one for
+         * For comprehensions have two owners, one for the enumerators and one for
          * yield. This is a heuristic to find that out.
          */
         def isForComprehensionOwner(named: NameTree) =
