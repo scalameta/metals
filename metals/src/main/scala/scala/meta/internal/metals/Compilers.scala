@@ -40,6 +40,8 @@ import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.SemanticTokens
+import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
@@ -370,6 +372,53 @@ class Compilers(
       }
       .getOrElse(Future.successful(Nil))
   }
+
+  // sasaki dev area is start↓
+
+  def semanticTokens(
+      params: SemanticTokensParams,
+      capableTypes: List[String],
+      capableModifiers: List[String],
+      token: CancelToken
+  ): Future[SemanticTokens] = {
+    scribe.info("Debug: Compiliers.semanticTokens:Start")
+
+    // Probably extra prcess is needed to construct vFile for Scala 3.
+    // See didchange.
+    val path = params.getTextDocument.getUri.toAbsolutePath
+
+    // return empty list for inappropriate file
+    if (path.isScalaScript || path.isSbt) {
+      return Future { new SemanticTokens() }
+    }
+
+    val uri = path.toNIO.toUri()
+    val input = path.toInputFromBuffers(buffers)
+    val vFile = CompilerVirtualFileParams(uri, input.value)
+
+    loadCompiler(path)
+      .map { pc =>
+        pc.semanticTokens(vFile, capableTypes.asJava, capableModifiers.asJava)
+          .asScala
+          .map { plist =>
+            // Thread.sleep(5000) // for debug
+            scribe.info("Result from token : " + plist.size().toString())
+            new SemanticTokens(plist)
+          }
+      }
+      .getOrElse(Future.successful(new SemanticTokens(Nil.asJava)))
+
+    // """|<<object>>/*14*/ <<Main>>/*1*/{
+    //    |  <<def>>/*14*/ <<add>>/*12*/
+    //    |    (<<a>>/*6*/ : <<Int>>/*0*/) = <<i>>/*7*/
+    //    |}""".stripMargin
+
+    // return value
+    // Future.successful(new SemanticTokens(strList))
+
+  }
+
+  // sasaki dev area is over↑
 
   def completions(
       params: CompletionParams,

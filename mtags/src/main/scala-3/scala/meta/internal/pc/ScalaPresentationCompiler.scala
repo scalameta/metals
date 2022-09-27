@@ -85,6 +85,12 @@ case class ScalaPresentationCompiler(
         ) :: Nil
     new MetalsDriver(settings)
 
+  override def semanticTokens(
+      params: VirtualFileParams,
+      capableTypes: java.util.List[String],
+      capableModifiers: java.util.List[String]
+  ): CompletableFuture[ju.List[Integer]] = ???
+
   override def getTasty(
       targetUri: URI,
       isHttpEnabled: Boolean,
