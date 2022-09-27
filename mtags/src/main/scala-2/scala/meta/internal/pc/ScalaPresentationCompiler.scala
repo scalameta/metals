@@ -121,9 +121,6 @@ case class ScalaPresentationCompiler(
 
   def didClose(uri: URI): Unit = {}
 
-
-  /// under development ↓
-
   override def semanticTokens(
       params: VirtualFileParams,
       capableTypes: util.List[String],
@@ -141,119 +138,6 @@ case class ScalaPresentationCompiler(
             ).provide()
     }
   }
-
-  // override def semanticTokens(
-  //     params: VirtualFileParams,
-  //     capableTypes: util.List[String],
-  //     capableModifiers: util.List[String]
-  //  ): CompletableFuture[ju.List[Integer]] = {
-  //   import scala.collection.mutable.ListBuffer
-  //   import scala.meta._
-    
-  //   // Get Typed tree
-  //   compilerAccess.withNonInterruptableCompiler(
-  //     null, params.token
-  //   ) { pc =>
-  //     logger.info("\n Tree-trace start:\n ")
-  //     val cp = pc.compiler()
-  //     val unit =cp.addCompilationUnit(
-  //       params.text(),
-  //       params.uri().toString(),
-  //       None
-  //     )
-  //     cp.typeCheck(unit) // a process such as initializing
-
-  //     val wkTree:cp.Tree = unit.lastBody
-
-  //     import cp._
-  //     val allSymbols = {
-  //       unit.lastBody.collect {
-  //         case df @ cp.DefDef(_, _, _, _, _, _) =>
-  //           val wk = df.namePos
-  //           wk.start -> df.symbol
-  //         case id: Ident =>
-  //           id.pos.start -> id.symbol
-  //         case sel: Select =>
-  //           sel.pos.start -> sel.symbol
-  //       }.toMap
-  //     }
-  //    val sym = allSymbols(id.pos.start)
-               
-
-  //     null
-
-      
-  //   }
-
-  //   Thread.sleep(2000) 
-
-  //   // Get Tokens
-  //   val empty: ju.List[Integer] = new ju.ArrayList[Integer]()
-  //   val buffer = ListBuffer.empty[Integer]
-  //   var currentLine = 0
-  //   var lastNewlineOffset = 0
-  //   var lastAbsLine=0
-  //   var lastCharStartOffset=0
-
-
-  //   val compilerTokens = params.text().tokenize.get
-  //   for (tk <- compilerTokens ) yield{
-
-  //     tk match {
-  //       case _: Token.LF => 
-  //             logString ++= "\n NewLne"
-  //             currentLine += 1
-  //             lastNewlineOffset =tk.pos.end
-  //             logString ++= ", Offset:" + lastNewlineOffset.toString()
-              
-        
-  //       case _ =>
-  //         val tokenType = TokenClassifier.getTokenType(tk,capableTypes.asScala.toList)
-  //         val tokeModifier =  TokenClassifier.getTokenModifier(tk,capableModifiers.asScala.toList)
-
-  //         logString ++= strSep +"tokenType : " + tokenType.toString()
-  //         logString ++= strSep +"tokMeodifier : " + tokeModifier.toString()
-
-  //         if (tokenType == -1 && tokeModifier == 0)
-  //         {/* I want to break from match-statement */ }else  {
-
-  //           //convert lines and StartChar into "relative"
-  //           val deltaLine= currentLine - lastAbsLine
-  //           val absStartChar = tk.pos.start - lastNewlineOffset
-  //           val deltaStartChar= if (deltaLine==0) tk.pos.start - lastCharStartOffset
-  //                               else absStartChar
-  //           val characterSize = tk.text.size
-  //           //update counter
-  //           lastAbsLine = currentLine
-  //           lastCharStartOffset = tk.pos.start
-
-  //           //Build List to return
-  //           buffer.addAll(
-  //             List(
-  //                     deltaLine,//1
-  //                     deltaStartChar, //2
-  //                     characterSize, //3
-  //                     tokenType, // 4
-  //                     tokeModifier //5
-  //                   )
-  //           )
-  //         }
-
-  //     } // end match
-
-  //   }// end for
-
-  //   logger.info(logString)
-
-  //   //Just adjust return type
-  //   compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-  //     buffer.toList.asJava
-  //   }
-
-  // }
-
-
-  /// under development ↑
 
   override def complete(
       params: OffsetParams

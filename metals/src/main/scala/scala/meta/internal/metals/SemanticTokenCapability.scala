@@ -51,8 +51,8 @@ object SemanticTokenCapability {
       new SemanticTokensServerFull(
         false
       ), // Method 'full' is supported, but 'full/delta' is not.
-      false, // Method 'range' is not supported.
-      null // Dynamic registration is not supported.
+      false // Method 'range' is not supported.
+      // Dynamic registration is not supported.
     )
 
 }
