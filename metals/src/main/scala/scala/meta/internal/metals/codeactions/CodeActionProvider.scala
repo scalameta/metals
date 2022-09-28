@@ -50,6 +50,7 @@ final class CodeActionProvider(
     new ExtractMethodCodeAction(trees, compilers, languageClient),
     new ConvertToNamedArguments(trees, compilers, languageClient),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
+    new MillifyDependencyCodeAction(buffers),
   )
 
   def codeActions(

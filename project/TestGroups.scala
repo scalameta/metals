@@ -101,7 +101,8 @@ object TestGroups {
       "tests.MtagsScala3Suite",
       "tests.codeactions.ConvertToNamedArgumentsLspSuite",
       "tests.testProvider.TestSuitesProviderSuite", "tests.MillVersionSuite",
-      "tests.FingerprintsLspSuite", "tests.JdkVersionSuite"),
+      "tests.FingerprintsLspSuite", "tests.JdkVersionSuite",
+      "tests.MillifyDependencyLspSuite"),
   )
 
 }

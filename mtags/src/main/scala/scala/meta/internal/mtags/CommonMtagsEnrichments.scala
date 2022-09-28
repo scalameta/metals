@@ -501,8 +501,9 @@ trait CommonMtagsEnrichments {
     def isScalaScript: Boolean = {
       filename.endsWith(".sc")
     }
+    def isMill: Boolean = isScalaScript && filename == "build.sc"
     def isAmmoniteScript: Boolean =
-      isScalaScript && !isWorksheet && filename != "build.sc"
+      isScalaScript && !isWorksheet && !isMill
     def isWorksheet: Boolean = {
       filename.endsWith(".worksheet.sc")
     }

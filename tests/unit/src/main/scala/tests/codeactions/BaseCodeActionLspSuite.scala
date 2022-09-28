@@ -22,6 +22,7 @@ abstract class BaseCodeActionLspSuite(
       input: String,
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil,
+      fileName: String = "A.scala",
       filterAction: CodeAction => Boolean = _ => true,
   )(implicit loc: Location): Unit = {
     val fileContent = input.replace("<<", "").replace(">>", "")
@@ -32,6 +33,7 @@ abstract class BaseCodeActionLspSuite(
       fileContent,
       scalafixConf = scalafixConf,
       scalacOptions = scalacOptions,
+      fileName = fileName,
       filterAction = filterAction,
     )
   }
