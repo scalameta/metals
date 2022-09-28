@@ -377,7 +377,7 @@ class Compilers(
       params: SemanticTokensParams,
       capableTypes: List[String],
       capableModifiers: List[String],
-      token: CancelToken
+      token: CancelToken,
   ): Future[SemanticTokens] = {
     scribe.info("Debug: Compiliers.semanticTokens:Start")
 
@@ -392,15 +392,17 @@ class Compilers(
       val input = path.toInputFromBuffers(buffers)
       val vFile = CompilerVirtualFileParams(uri, input.value)
 
-      loadCompiler(path).map { pc =>
-        pc.semanticTokens(vFile, capableTypes.asJava, capableModifiers.asJava)
-          .asScala
-          .map { plist =>
-            // Thread.sleep(5000) // for debug
-            scribe.info("Result from token : " + plist.size().toString())
-            new SemanticTokens(plist)
-          }
-      }.getOrElse(Future.successful(new SemanticTokens(Nil.asJava)))
+      loadCompiler(path)
+        .map { pc =>
+          pc.semanticTokens(vFile, capableTypes.asJava, capableModifiers.asJava)
+            .asScala
+            .map { plist =>
+              // Thread.sleep(5000) // for debug
+              scribe.info("Result from token : " + plist.size().toString())
+              new SemanticTokens(plist)
+            }
+        }
+        .getOrElse(Future.successful(new SemanticTokens(Nil.asJava)))
     }
 
   }

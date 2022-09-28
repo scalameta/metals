@@ -1315,9 +1315,9 @@ final case class TestingServer(
   def assertSemanticHighlight(
       filePath: String,
       expected: String,
-      fileContent: String
+      fileContent: String,
   ): Future[Unit] = {
-    try { 
+    try {
 
       import scala.meta.internal.metals.SemanticTokenCapability
       scribe.info("\n Debug:  assertSemanticHighlight: Start")
@@ -1326,42 +1326,43 @@ final case class TestingServer(
       val params = new org.eclipse.lsp4j.SemanticTokensParams(uri)
 
       /**
-        * construct string from token type and mods to decorate codes.
-        */ 
-      def decorationString(typeInd:Int, modInd:Int):String ={
+       * construct string from token type and mods to decorate codes.
+       */
+      def decorationString(typeInd: Int, modInd: Int): String = {
         val buffer = ListBuffer.empty[String]
 
-        //TokenType
+        // TokenType
         if (typeInd != -1) {
           buffer.addAll(List(SemanticTokenCapability.TokenTypes(typeInd)))
-        } 
+        }
 
-        // TokenModifier 
-        // wkList = (e.g.) modInd=32 -> 100000 -> "000001" 
+        // TokenModifier
+        // wkList = (e.g.) modInd=32 -> 100000 -> "000001"
         val wkList = modInd.toBinaryString.toCharArray().toList.reverse
-        for ( i:Int <- 0 to wkList.size -1) {
+        for (i: Int <- 0 to wkList.size - 1) {
           if (wkList(i).toString == "1") {
-            buffer.addAll(List(
-              SemanticTokenCapability.TokenModifiers(i)
-            ))
+            buffer.addAll(
+              List(
+                SemanticTokenCapability.TokenModifiers(i)
+              )
+            )
           }
         }
-        
+
         // return
         buffer.toList.mkString(",")
       }
-
 
       // Getting semantic tokens from testee function
       for {
         obtainedTokens <- server.semanticTokensFull(params).asScala
       } yield {
         scribe.info(
-          "\n\n obtainedToken:   \n" 
-          + obtainedTokens.getData.asScala
-            .grouped(5).map(_.mkString(","))
-            .mkString("\n")
-                                        
+          "\n\n obtainedToken:   \n"
+            + obtainedTokens.getData.asScala
+              .grouped(5)
+              .map(_.mkString(","))
+              .mkString("\n")
         )
         val all = obtainedTokens
           .getData()
@@ -1374,21 +1375,21 @@ final case class TestingServer(
                   deltaStartChar,
                   length,
                   tokenType,
-                  tokenModifier
+                  tokenModifier,
                 ) => // modifiers ignored for now
-
               (
                 new l.Position(deltaLine, deltaStartChar),
                 length,
-                decorationString(tokenType,tokenModifier)
+                decorationString(tokenType, tokenModifier),
               )
-            case _ => throw new RuntimeException("Expected output dvidable by 5")
+            case _ =>
+              throw new RuntimeException("Expected output dvidable by 5")
           }
           .toList
 
         def updatePositions_FromRelativeToAbolute(
             positions: List[(l.Position, Integer, String)],
-            last: l.Position
+            last: l.Position,
         ): Unit = {
           positions match {
             case (head, _, _) :: next =>
@@ -1418,25 +1419,26 @@ final case class TestingServer(
         val obtained = TextEdits.applyEdits(fileContent, edits)
 
         val strlog = s"""
-        |***fileContent***
-        |$fileContent
-        |
-        |***obtained***
-        |$obtained
-        |
-        |***expected***
-        |$expected
-        |""".stripMargin
+                        |***fileContent***
+                        |$fileContent
+                        |
+                        |***obtained***
+                        |$obtained
+                        |
+                        |***expected***
+                        |$expected
+                        |""".stripMargin
         scribe.info(strlog)
 
         Assertions.assertNoDiff(
           obtained,
-          expected
+          expected,
         )
       }
     } catch {
-      case e:Exception => e.printStackTrace()
-      null
+      case e: Exception =>
+        e.printStackTrace()
+        null
     }
 
   }

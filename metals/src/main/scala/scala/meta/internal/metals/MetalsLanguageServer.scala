@@ -1739,11 +1739,10 @@ class MetalsLanguageServer(
         params,
         SemanticTokenCapability.TokenTypes,
         SemanticTokenCapability.TokenModifiers,
-        token
+        token,
       )
     }
   }
-
 
   @JsonRequest("textDocument/prepareCallHierarchy")
   def prepareCallHierarchy(

@@ -132,10 +132,12 @@ case class ScalaPresentationCompiler(
       empty,
       params.token
     ) { pc =>
-          new SemanticTokenProvider(
-              pc.compiler(),
-              params,capableTypes,capableModifiers
-            ).provide()
+      new SemanticTokenProvider(
+        pc.compiler(),
+        params,
+        capableTypes,
+        capableModifiers
+      ).provide()
     }
   }
 

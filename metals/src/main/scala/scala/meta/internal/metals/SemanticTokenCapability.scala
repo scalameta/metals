@@ -26,7 +26,7 @@ object SemanticTokenCapability {
     SemanticTokenTypes.Number,
     SemanticTokenTypes.Regexp,
     SemanticTokenTypes.Operator,
-    SemanticTokenTypes.Decorator
+    SemanticTokenTypes.Decorator,
   )
 
   var TokenModifiers: List[String] = List(
@@ -39,19 +39,19 @@ object SemanticTokenCapability {
     SemanticTokenModifiers.Async,
     SemanticTokenModifiers.Modification,
     SemanticTokenModifiers.Documentation,
-    SemanticTokenModifiers.DefaultLibrary
+    SemanticTokenModifiers.DefaultLibrary,
   )
 
   val defaultServerCapability: SemanticTokensWithRegistrationOptions =
     new org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions(
       new SemanticTokensLegend(
         this.TokenTypes.asJava,
-        this.TokenModifiers.asJava
+        this.TokenModifiers.asJava,
       ), // legend used in this server.
       new SemanticTokensServerFull(
         false
       ), // Method 'full' is supported, but 'full/delta' is not.
-      false // Method 'range' is not supported.
+      false, // Method 'range' is not supported.
       // Dynamic registration is not supported.
     )
 
