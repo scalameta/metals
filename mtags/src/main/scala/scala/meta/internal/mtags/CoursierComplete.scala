@@ -9,16 +9,19 @@ import scala.util.matching.Regex
 
 import scala.meta.internal.tokenizers.Chars
 
+import coursierapi.Complete
+
 object CoursierComplete {
+  lazy val api: Complete = coursierapi.Complete
+    .create()
+    .withScalaVersion(scalaVersion)
+    .withScalaBinaryVersion(
+      if (scalaVersion.startsWith("3")) "3"
+      else scalaVersion.split('.').take(2).mkString(".")
+    )
+  lazy val scalaVersion = BuildInfo.scalaCompilerVersion
   def complete(dependency: String): List[String] = {
-    val scalaVersion = BuildInfo.scalaCompilerVersion
-    val api = coursierapi.Complete
-      .create()
-      .withScalaVersion(scalaVersion)
-      .withScalaBinaryVersion(
-        if (scalaVersion.startsWith("3")) "3"
-        else scalaVersion.split('.').take(2).mkString(".")
-      )
+
     def completions(s: String): List[String] = {
       val futureCompletions = Future {
         api.withInput(s).complete().getCompletions().asScala.toList
@@ -63,21 +66,15 @@ object CoursierComplete {
     (editStart, editEnd)
   }
 
-  val reg: Regex = """>\s*using\s+libs?\s+"?(.*)""".r
-  def isScalaCliDep(point: Int, text: String): Option[String] = {
-    if (!text.startsWith("//")) None
-    else {
-      val directive = text.take(point).split("//").last
-      if (directive.exists(Chars.isLineBreakChar(_))) None
-      else {
-        directive match {
-          case reg(deps) =>
-            val dep =
-              deps.split(",").last.trim().stripPrefix("\"").stripSuffix("\"")
-            Some(dep)
-          case _ => None
-        }
-      }
+  val reg: Regex = """//>\s*using\s+libs?\s+"?(.*)""".r
+  def isScalaCliDep(line: String): Option[String] = {
+    line match {
+      case reg(deps) =>
+        val dep =
+          deps.split(",").last.trim().stripPrefix("\"").stripSuffix("\"")
+        Some(dep)
+      case _ =>
+        None
     }
   }
 }

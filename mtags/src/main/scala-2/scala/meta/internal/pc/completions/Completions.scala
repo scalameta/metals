@@ -436,7 +436,7 @@ trait Completions { this: MetalsGlobal =>
       latestEnclosingArg: List[Tree]
   ): CompletionPosition = {
     val PatternMatch = new PatternMatch(pos)
-    val CliExtractor = new CliExtractor(pos, text)
+    val CliExtractor = new CliExtractor(pos)
     def fromIdentApply(
         ident: Ident,
         apply: Apply

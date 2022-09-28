@@ -7,11 +7,11 @@ import org.eclipse.{lsp4j => l}
 
 trait CliCompletions {
   this: MetalsGlobal =>
-  class CliExtractor(pos: Position, text: String) {
+  class CliExtractor(pos: Position) {
     def unapply(path: List[Tree]): Option[String] =
       path match {
         case Nil =>
-          CoursierComplete.isScalaCliDep(pos.point, text)
+          CoursierComplete.isScalaCliDep(pos.lineContent.stripSuffix(CURSOR))
         case _ => None
       }
   }
@@ -23,7 +23,8 @@ trait CliCompletions {
   ) extends CompletionPosition {
 
     override def contribute: List[Member] = {
-      val completions = CoursierComplete.complete(dependency)
+      val completions =
+        CoursierComplete.complete(dependency.stripSuffix(CURSOR))
       val (editStart, editEnd) =
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
