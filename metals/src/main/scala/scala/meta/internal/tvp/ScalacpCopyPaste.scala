@@ -453,7 +453,6 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
       else sym.symbolName
     }
 
-    @nowarn("msg=parameter value linkMode")
     private def sig(linkMode: LinkMode): s.Signature =
       s.NoSignature // scalacp deviation
 

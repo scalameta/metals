@@ -86,9 +86,23 @@ class SemanticdbTreePrinter(
         }
       case s.MatchType(scrutinee, cases) =>
         s"${printType(scrutinee)} match { ${cases.size} cases }"
+      case s.LambdaType(scope, returnType) =>
+        val params = scope.map(scopeInfo).getOrElse(Nil).map(_.displayName)
+        params match {
+          case Nil =>
+            s"=>> ${printType(returnType)}"
+          case _ =>
+            s"${params.mkString("[", ", ", "]")} =>> ${printType(returnType)}"
+        }
     }
 
-  def printScope(scope: Option[s.Scope]): String = {
+  private def scopeInfo(scope: s.Scope): List[s.SymbolInformation] =
+    if (scope.symlinks.nonEmpty)
+      scope.symlinks.map(symbol => s.SymbolInformation(symbol = symbol)).toList
+    else
+      scope.hardlinks.toList
+
+  private def printScope(scope: Option[s.Scope]): String = {
     if (scope.exists(_.hardlinks.nonEmpty)) "..." else ""
   }
 

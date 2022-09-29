@@ -38,6 +38,8 @@ case class ScalaTarget(
             Scala213Source3
           case Scala212 if containsSource3 =>
             Scala212Source3
+          case Scala3 if other.contains("NIGHTLY") =>
+            Scala3.withAllowFewerBraces(true)
           case other => other
         }
     }
