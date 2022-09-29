@@ -2637,9 +2637,6 @@ class MetalsLanguageServer(
             definitionResult(positionParams, token)
           }
         case None =>
-          if (semanticDBDoc.isEmpty) {
-            warnings.noSemanticdb(source)
-          }
           // Even if it failed to retrieve the symbol occurrence from semanticdb,
           // try to find its definitions from presentation compiler.
           definitionResult(positionParams, token)
