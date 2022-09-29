@@ -89,10 +89,7 @@ object MetalsPlugin extends AutoPlugin {
   private def processJavaHome: File = file(System.getProperty("java.home"))
 
   def requiresSemanticdb: Def.Initialize[Boolean] = Def.setting {
-    bspEnabled.value &&
-    (isScala3.value || BuildInfo.supportedScala2Versions.contains(
-      scalaVersion.value
-    ))
+    bspEnabled.value
   }
 
   def isScala3: Def.Initialize[Boolean] = Def.setting {
