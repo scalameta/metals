@@ -110,7 +110,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
         |  @param f the function to apply if nonempty.
         |""".stripMargin,
     compat = Map(
-      "2.12.8" -> foldOlderDocs2,
       "2.13" ->
         s"""|$foldLatestDocs
             |**Parameters**

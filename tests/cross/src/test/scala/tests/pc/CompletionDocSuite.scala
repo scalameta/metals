@@ -773,8 +773,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     isDefinedLatestDocs,
     includeDocs = true,
     compat = Map(
-      "2.12.8" -> isDefinedOlderDocs,
-      "2.13" -> isDefinedLatestDocs,
+      "2.13" -> isDefinedLatestDocs
     ),
   )
   check(
