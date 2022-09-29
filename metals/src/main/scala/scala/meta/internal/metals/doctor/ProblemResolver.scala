@@ -58,7 +58,6 @@ class ProblemResolver(
     val deprecatedVersions = ListBuffer[String]()
     val futureVersions = ListBuffer[String]()
     var misconfiguredProjects = 0
-    var misconfiguredTestFrameworks = 0
     var unsupportedSbt = false
     var deprecatedSbt = false
     var futureSbt = false
@@ -77,8 +76,7 @@ class ProblemResolver(
         case DeprecatedSbtVersion => deprecatedSbt = true
         case FutureSbtVersion => futureSbt = true
         case MissingJdkSources(_) => misconfiguredProjects += 1
-        case OutdatedJunitInterfaceVersion => misconfiguredTestFrameworks += 1
-        case OutdatedMunitInterfaceVersion => misconfiguredTestFrameworks += 1
+        case _ =>
       }
     }
     for {
@@ -146,10 +144,6 @@ class ProblemResolver(
         None
       }
 
-    val testFrameworks =
-      if (misconfiguredTestFrameworks == 0) None
-      else Some(Messages.CheckDoctor.misconfiguredTestFrameworks)
-
     val allMessages = List(
       deprecatedMessage,
       unsupportedMessage,
@@ -158,7 +152,6 @@ class ProblemResolver(
       unsupportedSbtMessage,
       futureSbtMessage,
       semanticdbMessage,
-      testFrameworks,
     ).flatten
 
     def scalaVersionsMessages = List(
