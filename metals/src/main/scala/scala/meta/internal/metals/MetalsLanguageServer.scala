@@ -1117,30 +1117,33 @@ class MetalsLanguageServer(
         ()
       }
     } else {
-      val triggeredImportOpt =
-        if (path.isAmmoniteScript && buildTargets.inverseSources(path).isEmpty)
-          maybeImportScript(path)
-        else
-          None
-      def load(): Future[Unit] = {
-        val compileAndLoad = buildServerPromise.future.flatMap { _ =>
-          Future.sequence(
-            List(
-              compilers.load(List(path)),
-              compilations.compileFile(path),
-            )
+      buildServerPromise.future.flatMap { _ =>
+        val triggeredImportOpt =
+          if (
+            path.isAmmoniteScript && buildTargets.inverseSources(path).isEmpty
           )
+            maybeImportScript(path)
+          else
+            None
+        def load(): Future[Unit] = {
+          val compileAndLoad =
+            Future.sequence(
+              List(
+                compilers.load(List(path)),
+                compilations.compileFile(path),
+              )
+            )
+          Future
+            .sequence(
+              List(
+                compileAndLoad,
+                publishSynthetics,
+              )
+            )
+            .ignoreValue
         }
-        Future
-          .sequence(
-            List(
-              compileAndLoad,
-              publishSynthetics,
-            )
-          )
-          .ignoreValue
-      }
-      triggeredImportOpt.getOrElse(load()).asJava
+        triggeredImportOpt.getOrElse(load())
+      }.asJava
     }
   }
 
@@ -2043,23 +2046,12 @@ class MetalsLanguageServer(
         ammonite.stop()
 
       case ServerCommands.StartScalaCliServer() =>
-        val f = focusedDocument.map(_.parent) match {
+        val f = focusedDocument match {
           case None => Future.unit
-          case Some(newDir) =>
-            val updated =
-              if (newDir.toNIO.startsWith(workspace.toNIO)) {
-                val relPath = workspace.toNIO.relativize(newDir.toNIO)
-                val segments =
-                  relPath.iterator().asScala.map(_.toString).toVector
-                val idx = segments.indexOf(".metals")
-                if (idx < 0) newDir
-                else
-                  AbsolutePath(
-                    segments.take(idx).foldLeft(workspace.toNIO)(_.resolve(_))
-                  )
-              } else newDir
-            if (scalaCli.roots.contains(updated)) Future.unit
-            else scalaCli.start(scalaCli.roots :+ updated)
+          case Some(path) =>
+            val scalaCliPath = scalaCliDirOrFile(path)
+            if (scalaCli.loaded(scalaCliPath)) Future.unit
+            else scalaCli.start(scalaCliPath)
         }
         f.asJavaObject
       case ServerCommands.StopScalaCliServer() =>
@@ -2473,7 +2465,6 @@ class MetalsLanguageServer(
       buffers,
       () => indexer.profiledIndexWorkspace(() => ()),
       () => diagnostics,
-      () => workspace,
       () => tables,
       () => buildClient,
       languageClient,
@@ -2735,20 +2726,38 @@ class MetalsLanguageServer(
       // (require ./mill or ./.mill-version)
       buildTools.isMill
 
+  /**
+   * In case of Scala-Cli we can either import a single file or an entire directory
+   * However, we have to unsure that there is no clashes with other existing sourceItems
+   */
+  private def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = {
+    val dir = path.parent
+    val nioDir = dir.toNIO
+    val conflictsWithMainBsp =
+      buildTargets.sourceItems.filter(_.exists).exists { item =>
+        val nioItem = item.toNIO
+        nioDir.startsWith(nioItem) || nioItem.startsWith(nioDir)
+      }
+
+    if (conflictsWithMainBsp) path else dir
+  }
+
   def maybeImportScript(path: AbsolutePath): Option[Future[Unit]] = {
-    val directory = path.parent
+    val scalaCliPath = scalaCliDirOrFile(path)
     if (
-      ammonite.loaded(path) || scalaCli.loaded(directory) || isMillBuildSc(path)
+      ammonite.loaded(path) || scalaCli.loaded(scalaCliPath) || isMillBuildSc(
+        path
+      )
     )
       None
     else {
       def doImportScalaCli(): Unit =
-        scalaCli.start(scalaCli.roots :+ directory).onComplete {
+        scalaCli.start(scalaCliPath).onComplete {
           case Failure(e) =>
             languageClient.showMessage(
               Messages.ImportScalaScript.ImportFailed(path.toString)
             )
-            scribe.warn(s"Error importing Scala CLI project $directory", e)
+            scribe.warn(s"Error importing Scala CLI project $scalaCliPath", e)
           case Success(_) =>
             languageClient.showMessage(
               Messages.ImportScalaScript.ImportedScalaCli

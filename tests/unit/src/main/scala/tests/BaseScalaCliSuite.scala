@@ -294,4 +294,45 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
 
     } yield ()
 
+  test("relative-semanticdb-root") {
+    for {
+      _ <- scalaCliInitialize(useBsp = false)(
+        s"""/scripts/MyTests.scala
+           |//> using scala "$scalaVersion"
+           |//> using lib "com.lihaoyi::utest::0.7.9"
+           |//> using lib "com.lihaoyi::pprint::0.6.4"
+           |
+           |import foo.Foo
+           |import utest._
+           |
+           |object MyTests extends TestSuite {
+           |  pprint.log(2)
+           |  val tests = Tests {
+           |    test("foo") {
+           |      assert(2 + 2 == 4)
+           |    }
+           |    test("nope") {
+           |      assert(2 + 2 == (new Foo).value)
+           |    }
+           |  }
+           |}
+           |
+           |/scripts/foo.sc
+           |class Foo {
+           |  def value = 5
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("scripts/MyTests.scala")
+      _ <- server.executeCommand(ServerCommands.StartScalaCliServer)
+
+      // via Scala CLI-generated Semantic DB, to a .sc file
+      _ <- assertDefinitionAtLocation(
+        "scripts/MyTests.scala",
+        "(new Fo@@o).value",
+        "scripts/foo.sc",
+        0,
+      )
+    } yield ()
+  }
 }
