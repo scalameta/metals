@@ -263,6 +263,7 @@ case class QuickBuild(
       resolution = Some(C.Resolution(resolution.toList)),
       resources = None,
       tags = Some(tags),
+      sourceGenerators = None,
     )
   }
 }
