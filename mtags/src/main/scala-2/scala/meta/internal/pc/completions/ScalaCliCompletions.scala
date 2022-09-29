@@ -11,7 +11,7 @@ trait CliCompletions {
     def unapply(path: List[Tree]): Option[String] =
       path match {
         case Nil =>
-          CoursierComplete.isScalaCliDep(pos.lineContent.stripSuffix(CURSOR))
+          CoursierComplete.isScalaCliDep(pos.lineContent.replace(CURSOR, ""))
         case _ => None
       }
   }
@@ -24,7 +24,7 @@ trait CliCompletions {
 
     override def contribute: List[Member] = {
       val completions =
-        CoursierComplete.complete(dependency.stripSuffix(CURSOR))
+        CoursierComplete.complete(dependency)
       val (editStart, editEnd) =
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
