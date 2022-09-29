@@ -9,6 +9,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -32,7 +33,6 @@ import scala.meta.internal.metals.ImportedBuild
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
@@ -51,7 +51,6 @@ class ScalaCli(
     buffers: Buffers,
     indexWorkspace: () => Future[Unit],
     diagnostics: () => Diagnostics,
-    workspace: () => AbsolutePath,
     tables: () => Tables,
     buildClient: () => MetalsBuildClient,
     languageClient: LanguageClient,
@@ -60,84 +59,93 @@ class ScalaCli(
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
-  private val cancelables = new MutableCancelable
+  import ScalaCli.ConnectionState
+
   private val isCancelled = new AtomicBoolean(false)
   def cancel(): Unit =
     if (isCancelled.compareAndSet(false, true))
-      try cancelables.cancel()
+      try disconnectOldBuildServer()
       catch {
         case NonFatal(_) =>
       }
 
-  private var buildServer0 = Option.empty[BuildServerConnection]
-  private var lastImportedBuild0 = ImportedBuild.empty
-  private var roots0 = Seq.empty[AbsolutePath]
+  private val state =
+    new AtomicReference[ConnectionState](ConnectionState.Empty)
+
+  private def ifConnectedOrElse[A](
+      f: ConnectionState.Connected => A
+  )(orElse: => A): A =
+    state.get() match {
+      case conn: ConnectionState.Connected => f(conn)
+      case _ => orElse
+    }
 
   private def allSources(): Seq[AbsolutePath] = {
-    val sourceItems = lastImportedBuild0.sources.getItems.asScala.toVector
-    val sources = sourceItems.flatMap(_.getSources.asScala.map(_.getUri))
-    val roots = sourceItems
-      .flatMap(item => Option(item.getRoots).toSeq)
-      .flatMap(_.asScala)
-    (sources ++ roots).map(new URI(_)).map(AbsolutePath.fromAbsoluteUri(_))
+    ifConnectedOrElse { st =>
+      val sourceItems = st.importedBuild.sources.getItems.asScala.toVector
+      val sources = sourceItems.flatMap(_.getSources.asScala.map(_.getUri))
+      val roots = sourceItems
+        .flatMap(item => Option(item.getRoots).toSeq)
+        .flatMap(_.asScala)
+      val out: Seq[AbsolutePath] = (sources ++ roots)
+        .map(new URI(_))
+        .map(AbsolutePath.fromAbsoluteUri(_))
+      out
+    }(Seq.empty)
   }
 
   val buildTargetsData = new TargetData
+
   def lastImportedBuild: ImportedBuild =
-    lastImportedBuild0
+    ifConnectedOrElse(_.importedBuild)(ImportedBuild.empty)
+
   def buildServer: Option[BuildServerConnection] =
-    buildServer0
-  def roots: Seq[AbsolutePath] =
-    roots0
+    ifConnectedOrElse(conn => Option(conn.connection))(None)
 
   def importBuild(): Future[Unit] =
-    buildServer0 match {
-      case None =>
-        Future.failed(new Exception("No Scala CLI server running"))
-      case Some(conn) =>
-        compilers().cancel()
+    ifConnectedOrElse { st =>
+      compilers().cancel()
 
-        for {
-          build0 <- statusBar().trackFuture(
-            "Importing Scala CLI sources",
-            ImportedBuild.fromConnection(conn),
-          )
-          _ = {
-            lastImportedBuild0 = build0
+      statusBar()
+        .trackFuture(
+          "Importing Scala CLI sources",
+          ImportedBuild.fromConnection(st.connection),
+        )
+        .flatMap { build0 =>
+          if (state.compareAndSet(st, st.copy(importedBuild = build0))) {
             val targets = build0.workspaceBuildTargets.getTargets.asScala
             val connections =
-              targets.iterator.map(_.getId).map((_, conn)).toList
+              targets.iterator.map(_.getId).map((_, st.connection)).toList
             buildTargetsData.resetConnections(connections)
-          }
-          _ <- indexWorkspace()
-          allSources0 = allSources()
-          toCompile = buffers.open.toSeq.filter(p =>
-            allSources0.exists(root =>
-              root == p || p.toNIO.startsWith(root.toNIO)
-            )
-          )
-          _ <- Future.sequence(
-            compilations
-              .cascadeCompileFiles(toCompile) ::
-              compilers().load(toCompile) ::
-              Nil
-          )
-        } yield ()
-    }
+
+            for {
+              _ <- indexWorkspace()
+              allSources0 = allSources()
+              toCompile = buffers.open.toSeq.filter(p =>
+                allSources0
+                  .exists(root => root == p || p.toNIO.startsWith(root.toNIO))
+              )
+              _ <- Future.sequence(
+                compilations
+                  .cascadeCompileFiles(toCompile) ::
+                  compilers().load(toCompile) ::
+                  Nil
+              )
+            } yield ()
+          } else importBuild()
+        }
+    }(Future.failed(new Exception("No Scala CLI server running")))
 
   private def disconnectOldBuildServer(): Future[Unit] = {
-    if (buildServer0.isDefined)
-      scribe.info("disconnected: Scala CLI server")
-    buildServer0 match {
-      case None => Future.unit
-      case Some(value) =>
-        val allSources0 = allSources()
-        buildServer0 = None
-        lastImportedBuild0 = ImportedBuild.empty
-        roots0 = Nil
-        cancelables.cancel()
-        diagnostics().reset(allSources0)
-        value.shutdown()
+    state.get() match {
+      case ConnectionState.Empty => Future.unit
+      case _: ConnectionState.Connecting =>
+        Thread.sleep(100)
+        disconnectOldBuildServer()
+      case st: ConnectionState.Connected =>
+        state.compareAndSet(st, ConnectionState.Empty)
+        diagnostics().reset(allSources())
+        st.connection.shutdown()
     }
   }
 
@@ -231,59 +239,58 @@ class ScalaCli(
   }
 
   def loaded(path: AbsolutePath): Boolean =
-    roots0.contains(path)
+    ifConnectedOrElse(st =>
+      st.path == path || path.toNIO.startsWith(st.path.toNIO)
+    )(false)
 
-  def start(roots: Seq[AbsolutePath]): Future[Unit] = {
-
+  def start(path: AbsolutePath): Future[Unit] = {
     disconnectOldBuildServer().onComplete {
       case Failure(e) =>
         scribe.warn("Error disconnecting old Scala CLI server", e)
       case Success(()) =>
     }
 
-    val command =
-      baseCommand ++ Seq(roots.head.toString) ++ roots.tail.flatMap(p =>
-        Seq(";", p.toString)
+    val command = baseCommand :+ path.toString()
+
+    val connDir = if (path.isDirectory) path else path.parent
+
+    val nextSt = ConnectionState.Connecting(path)
+    if (state.compareAndSet(ConnectionState.Empty, nextSt)) {
+      val futureConn = BuildServerConnection.fromSockets(
+        connDir,
+        buildClient(),
+        languageClient,
+        () => ScalaCli.socketConn(command, connDir),
+        tables().dismissedNotifications.ReconnectScalaCli,
+        config(),
+        "Scala CLI",
+        supportsWrappedSources = Some(true),
       )
 
-    val futureConn = BuildServerConnection.fromSockets(
-      workspace(),
-      buildClient(),
-      languageClient,
-      () => ScalaCli.socketConn(command, workspace()),
-      tables().dismissedNotifications.ReconnectScalaCli,
-      config(),
-      "Scala CLI",
-      supportsWrappedSources = Some(true),
-    )
+      val f = futureConn.flatMap { conn =>
+        state.set(ConnectionState.Connected(path, conn, ImportedBuild.empty))
+        scribe.info(s"Connected to Scala CLI server v${conn.version}")
+        importBuild().map { _ =>
+          BuildChange.Reconnected
+        }
+      }
 
-    val f = futureConn.flatMap(connectToNewBuildServer(_, roots))
-
-    f.transform {
-      case Failure(ex) =>
-        scribe.error("Error starting Scala CLI", ex)
-        Success(())
-      case Success(_) =>
-        scribe.info("Scala CLI started")
-        Success(())
+      f.transform {
+        case Failure(ex) =>
+          scribe.error("Error starting Scala CLI", ex)
+          Success(())
+        case Success(_) =>
+          scribe.info("Scala CLI started")
+          Success(())
+      }
+    } else {
+      scribe.error(s"Multiply Scala CLI start calls. Failed for: $path")
+      Future.unit
     }
   }
 
   def stop(): CompletableFuture[Object] =
     disconnectOldBuildServer().asJavaObject
-
-  private def connectToNewBuildServer(
-      build: BuildServerConnection,
-      roots: Seq[AbsolutePath],
-  ): Future[BuildChange] = {
-    scribe.info(s"Connected to Scala CLI server v${build.version}")
-    cancelables.add(build)
-    buildServer0 = Some(build)
-    roots0 = roots
-    importBuild().map { _ =>
-      BuildChange.Reconnected
-    }
-  }
 
 }
 
@@ -364,4 +371,14 @@ object ScalaCli {
 
   val name = "ScalaCli"
 
+  sealed trait ConnectionState
+  object ConnectionState {
+    case object Empty extends ConnectionState
+    case class Connecting(path: AbsolutePath) extends ConnectionState
+    case class Connected(
+        path: AbsolutePath,
+        connection: BuildServerConnection,
+        importedBuild: ImportedBuild,
+    ) extends ConnectionState
+  }
 }
