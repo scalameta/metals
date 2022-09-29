@@ -1,15 +1,18 @@
 package scala.meta.internal.pc
-import org.eclipse.lsp4j.SemanticTokenModifiers
-import org.checkerframework.common.returnsreceiver.qual.This
-import scala.collection.mutable.ListBuffer
 import java.util
 import java.util.logging.Logger
 import java.{util => ju}
+
+import scala.collection.mutable.ListBuffer
+import scala.reflect.internal.util.Position
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.VirtualFileParams
-import org.eclipse.lsp4j.SemanticTokenTypes
 import scala.meta.tokens._
-import scala.reflect.internal.util.SourceFile
+
+import org.checkerframework.common.returnsreceiver.qual.This
+import org.eclipse.lsp4j.SemanticTokenModifiers
+import org.eclipse.lsp4j.SemanticTokenTypes
 
 /**
  * Corresponds to tests.SemanticHighlightLspSuite
@@ -26,12 +29,12 @@ final class SemanticTokenProvider(
   def getTypeId(p: String): Int = capableTypes.indexOf(p)
 
   // log tools
-  val logger = Logger.getLogger(classOf[This].getName)
+  val logger: Logger = Logger.getLogger(classOf[This].getName)
   val strSep = ", "
   val linSep = "\n"
 
   // initialize semantic tree
-  val unit = cp.addCompilationUnit(
+  val unit: cp.RichCompilationUnit = cp.addCompilationUnit(
     params.text(),
     params.uri().toString(),
     None
@@ -39,7 +42,7 @@ final class SemanticTokenProvider(
   cp.typeCheck(unit) // initializing unit
   val (root, source) = (unit.lastBody, unit.source)
 
-  def unitPos(offset: Int) = unit.position(offset)
+  def unitPos(offset: Int): Position = unit.position(offset)
   val nodes: Set[NodeInfo] = traverser.traverse(Set.empty[NodeInfo], root)
 
   /** main method */
@@ -281,7 +284,7 @@ final class SemanticTokenProvider(
             .flatMap { arg =>
               namedArgCache.get(arg.pos.start)
             }
-            .collectFirst { case cp.AssignOrNamedArg(i @ cp.Ident(name), _) =>
+            .collectFirst { case cp.AssignOrNamedArg(i @ cp.Ident(_), _) =>
               new NodeInfo(i, i.pos)
             }
 
@@ -299,7 +302,7 @@ final class SemanticTokenProvider(
          */
         case id: cp.Ident if id.symbol == cp.NoSymbol =>
           fallbackSymbol(id.name, id.pos) match {
-            case Some(sym) => nodes + new NodeInfo(id, id.pos)
+            case Some(_) => nodes + new NodeInfo(id, id.pos)
             case _ => nodes
           }
 
@@ -319,7 +322,7 @@ final class SemanticTokenProvider(
       }
     }
 
-    def fallbackSymbol(name: cp.Name, pos: cp.Position) = {
+    def fallbackSymbol(name: cp.Name, pos: cp.Position): Option[Symbol] = {
       val context = cp.doLocateImportContext(pos)
       context.lookupSymbol(name, sym => sym.isType) match {
         case cp.LookupSucceeded(_, symbol) =>
@@ -345,7 +348,7 @@ final class SemanticTokenProvider(
       }
     }
     // We need to collect named params since they will not show on fully typed tree
-    lazy val namedArgCache = {
+    lazy val namedArgCache: Map[Int, NamedArg] = {
       val parsedTree = cp.parseTree(source)
       parsedTree.collect { case arg @ cp.AssignOrNamedArg(_, rhs) =>
         rhs.pos.start -> arg

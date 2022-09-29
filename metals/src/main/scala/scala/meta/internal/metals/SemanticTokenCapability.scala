@@ -1,7 +1,8 @@
 package scala.meta.internal.metals
 
-import org.eclipse.lsp4j._
 import scala.collection.JavaConverters._
+
+import org.eclipse.lsp4j._
 
 object SemanticTokenCapability {
   var TokenTypes: List[String] = List(

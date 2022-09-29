@@ -1,6 +1,5 @@
 package tests
 
-import munit.Location
 import munit.TestOptions
 
 /**
@@ -34,7 +33,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |   <<println>>/*method*/(<<msg>>/*parameter*/)
         | }
         |}
-        |""".stripMargin
+        |""".stripMargin,
   )
 
   check(
@@ -53,31 +52,28 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |}
         |
         |
-        |""".stripMargin
+        |""".stripMargin,
   )
 
-  
   check(
     "number literal, Static",
-   s"""|
-       |<<object>>/*keyword*/ <<ab>>/*class*/ {
-       |  <<var>>/*keyword*/  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = <<1>>/*number*/
-       |  <<val>>/*keyword*/  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = <<4.94065645841246544e-324d>>/*number*/
-       |  <<val>>/*keyword*/  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = <<1.40129846432481707e-45>>/*number*/
-       |  <<val>>/*keyword*/  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = <<9223372036854775807L>>/*number*/
-       |}
-       |
-       |<<object>>/*keyword*/ <<sample10>>/*class*/ {
-       |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-       |    <<println>>/*method*/(
-       |     (<<ab>>/*class*/.<<iVar>>/*variable*/ <<+>>/*method,abstract*/ <<ab>>/*class*/.<<iVal>>/*variable,readonly*/).<<toString>>/*method*/
-       |    )
-       |  }
-       |}
-       |""".stripMargin
+    s"""|
+        |<<object>>/*keyword*/ <<ab>>/*class*/ {
+        |  <<var>>/*keyword*/  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = <<1>>/*number*/
+        |  <<val>>/*keyword*/  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = <<4.94065645841246544e-324d>>/*number*/
+        |  <<val>>/*keyword*/  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = <<1.40129846432481707e-45>>/*number*/
+        |  <<val>>/*keyword*/  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = <<9223372036854775807L>>/*number*/
+        |}
+        |
+        |<<object>>/*keyword*/ <<sample10>>/*class*/ {
+        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+        |    <<println>>/*method*/(
+        |     (<<ab>>/*class*/.<<iVar>>/*variable*/ <<+>>/*method,abstract*/ <<ab>>/*class*/.<<iVal>>/*variable,readonly*/).<<toString>>/*method*/
+        |    )
+        |  }
+        |}
+        |""".stripMargin,
   )
-
-
 
   check(
     "abstract(modifier), trait, type parameter",
@@ -115,10 +111,10 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |}
         |
         |
-        |""".stripMargin
+        |""".stripMargin,
   )
 
-  //code is in referred to https://www.scala-lang.org/api/2.13.3/scala/deprecated.html
+  // code is in referred to https://www.scala-lang.org/api/2.13.3/scala/deprecated.html
   check(
     "Deprecated",
     s"""|<<object>>/*keyword*/ <<sample9>>/*class*/ {
@@ -130,27 +126,25 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |     <<println>>/*method*/(<<"Hello, world!">>/*string*/<<+>>/*method*/ <<str>>/*variable,readonly*/)
         |  }
         |}
-        |""".stripMargin
+        |""".stripMargin,
   )
-
 
   check(
-  "import(Out of File)",
-  s"""|
-      |<<import>>/*keyword*/ scala.math.<<sqrt>>/*method*/
-      |<<object>>/*keyword*/ <<sample3>>/*class*/ {
-      |
-      |  <<def>>/*keyword*/ <<sqrtplus1>>/*method*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/)
-      |     = <<sqrt>>/*method*/(<<x>>/*parameter*/).<<toString>>/*method*/()
-      |
-      |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*method*/[<<String>>/*method*/]) ={
-      |    <<println>>/*method*/(<<"Hello, world! : ">>/*string*/ <<+>>/*method*/ <<sqrtplus1>>/*method*/(<<2>>/*number*/))
-      |  }
-      |}
-      |
-      |""".stripMargin
+    "import(Out of File)",
+    s"""|
+        |<<import>>/*keyword*/ scala.math.<<sqrt>>/*method*/
+        |<<object>>/*keyword*/ <<sample3>>/*class*/ {
+        |
+        |  <<def>>/*keyword*/ <<sqrtplus1>>/*method*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/)
+        |     = <<sqrt>>/*method*/(<<x>>/*parameter*/).<<toString>>/*method*/()
+        |
+        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*method*/[<<String>>/*method*/]) ={
+        |    <<println>>/*method*/(<<"Hello, world! : ">>/*string*/ <<+>>/*method*/ <<sqrtplus1>>/*method*/(<<2>>/*number*/))
+        |  }
+        |}
+        |
+        |""".stripMargin,
   )
-
 
   // check(
   //   "String, Char",
@@ -175,7 +169,6 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   //       |""".stripMargin
   // )
 
-
   // check(
   //   "enum",
   //   s"""|
@@ -184,7 +177,6 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   //       |
   //       |""".stripMargin
   // )
-
 
   // check(
   //   "Literal Identifer",
@@ -204,15 +196,13 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   //       |""".stripMargin
   // )
 
-
-
   def check(
       name: TestOptions,
-      expected: String
-  ) = {
+      expected: String,
+  ): Unit = {
     val fileContent =
       expected.replaceAll(raw"/\*[\w,]+\*/", "").replaceAll(raw"\<\<|\>\>", "")
-    
+
     val fileName = "/a/src/main/scala/a/Main.scala"
 
     test(name) {
@@ -224,14 +214,14 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
              |${fileName.trim()}
              |${fileContent}
              |""".stripMargin,
-          expectError = true
+          expectError = true,
         )
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ = assertEmpty(client.workspaceDiagnostics)
         _ <- server.assertSemanticHighlight(
           "a/src/main/scala/a/Main.scala",
           expected,
-          fileContent
+          fileContent,
         )
       } yield ()
     }
