@@ -2727,8 +2727,12 @@ class MetalsLanguageServer(
       buildTools.isMill
 
   /**
-   * In case of Scala-Cli we can either import a single file or an entire directory
-   * However, we have to unsure that there is no clashes with other existing sourceItems
+   * Returns the absolute path or directory that ScalaCLI imports as ScalaCLI scripts.
+   * By default, ScalaCLI tries to import the entire directory as ScalaCLI scripts.
+   * However, we have to ensure that there are no clashes with other existing sourceItems
+   * see: https://github.com/scalameta/metals/issues/4447
+   *
+   * @param path the absolute path of the ScalaCLI script to import
    */
   private def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = {
     val dir = path.parent
