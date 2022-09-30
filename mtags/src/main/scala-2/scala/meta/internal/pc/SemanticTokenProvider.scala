@@ -411,7 +411,7 @@ final class SemanticTokenProvider(
       var mod: Int = 0
       def addPwrToMod(tokenID: String) = {
         val place: Int = capableModifiers.indexOf(tokenID)
-        if (place != -1) mod += scala.math.pow(2, place).toInt
+        if (place != -1) mod += (1 << place)
       }
 
       // get Type
