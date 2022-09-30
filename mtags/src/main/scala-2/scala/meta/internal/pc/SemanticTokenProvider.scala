@@ -166,7 +166,6 @@ final class SemanticTokenProvider(
 
       // extends Symbolic keywords
       case _: Token.Hash => getTypeId(SemanticTokenTypes.Keyword)
-      // case _: Token.Colon => getTypeId(SemanticTokenTypes.Operator)
       case _: Token.Viewbound => getTypeId(SemanticTokenTypes.Operator)
       case _: Token.LeftArrow => getTypeId(SemanticTokenTypes.Operator)
       case _: Token.Subtype => getTypeId(SemanticTokenTypes.Keyword)
