@@ -143,7 +143,6 @@ final class SemanticTokenProvider(
 
     } // end for
 
-    this.logger.info(logString)
 
     buffer.toList.asJava
 
