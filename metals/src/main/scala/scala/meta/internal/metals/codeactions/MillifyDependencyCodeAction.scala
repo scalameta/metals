@@ -58,10 +58,10 @@ class MillifyDependencyCodeAction(buffers: Buffers) extends CodeAction {
                 kind = this.kind,
                 changes = List(path -> List(new l.TextEdit(pos, text))),
               )
-              val millAction =
-                if (path.isMill) List(action(s"ivy\"$replacementText\""))
-                else List.empty
-              action(s"`$replacementText`") :: millAction
+              List(
+                if (path.isMill) action(s"ivy\"$replacementText\"")
+                else action(s"`$replacementText`")
+              )
           }
       }
       .getOrElse(List.empty)
