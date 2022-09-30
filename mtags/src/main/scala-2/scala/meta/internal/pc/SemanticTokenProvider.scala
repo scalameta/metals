@@ -187,21 +187,19 @@ final class SemanticTokenProvider(
 
   }
 
-  class NodeInfo(
-      var tree: cp.Tree,
-      var symbol: cp.Symbol,
-      var pos: scala.reflect.internal.util.Position
-  ) {
-    def this(tree: cp.Tree, pos: cp.Position) = {
-      this(tree, tree.symbol, pos)
-    }
-    def this(imp: cp.Import) = {
-      this(imp, null, null)
-    }
-  }
+  case class NodeInfo(
+      symbol: Symbol,
+      pos: Position
+  )
   object NodeInfo {
-    def apply[T <: cp.Symbol](sym: T): NodeInfo = {
-      new NodeInfo(null, sym, null)
+    def apply(tree: Tree, pos: Position) = {
+      NodeInfo(tree.symbol, pos)
+    }
+    def apply(imp: Import): Option[NodeInfo] = {
+          selector(imp, tk.pos.start) match {
+            case Some(sym) => Some(NodeInfo(sym, tk.pos))
+            case None => None
+          }
     }
   }
 
