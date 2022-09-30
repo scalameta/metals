@@ -21,10 +21,9 @@ final class SemanticTokenProvider(
     protected val cp: MetalsGlobal // compiler
     ,
     val params: VirtualFileParams,
-    val capableTypes: util.List[String],
-    val capableModifiers: util.List[String]
 ) {
-
+    val capableTypes= SemanticTokenCapability.tokenTypes
+    val capableModifiers = SemanticTokenCapability.tokenModifiers
   // alias for long notation
   def getTypeId(p: String): Int = capableTypes.indexOf(p)
 
