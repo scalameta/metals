@@ -27,10 +27,6 @@ final class SemanticTokenProvider(
   // alias for long notation
   def getTypeId(p: String): Int = capableTypes.indexOf(p)
 
-  // log tools
-  val logger: Logger = Logger.getLogger(classOf[This].getName)
-  val strSep = ", "
-  val linSep = "\n"
 
   // initialize semantic tree
   val unit: cp.RichCompilationUnit = cp.addCompilationUnit(
