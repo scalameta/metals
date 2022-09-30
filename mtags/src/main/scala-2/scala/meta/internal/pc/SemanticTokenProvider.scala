@@ -440,7 +440,6 @@ final class SemanticTokenProvider(
           getTypeId(SemanticTokenTypes.Variable) // "val"
         } else -1
 
-      logString += strSep + "type:" + typ.toString()
 
       // Modifiers except by ReadOnly
       if (sym.isAbstract) addPwrToMod(SemanticTokenModifiers.Abstract)
