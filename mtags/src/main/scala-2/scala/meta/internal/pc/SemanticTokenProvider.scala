@@ -168,7 +168,6 @@ final class SemanticTokenProvider(
       case _: Token.Viewbound => getTypeId(SemanticTokenTypes.Operator)
       case _: Token.LeftArrow => getTypeId(SemanticTokenTypes.Operator)
       case _: Token.Subtype => getTypeId(SemanticTokenTypes.Keyword)
-      // case _: Token.Equals => getTypeId(SemanticTokenTypes.Operator)
       case _: Token.RightArrow => getTypeId(SemanticTokenTypes.Operator)
       case _: Token.Supertype => getTypeId(SemanticTokenTypes.Keyword)
       case _: Token.At => getTypeId(SemanticTokenTypes.Keyword)
