@@ -812,6 +812,55 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |""".stripMargin,
     newName = "NewSymbol",
   )
+
+  renamed(
+    "variable",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  var <<v@@5>> = false
+       |
+       |  def f5: Boolean = {
+       |    <<v5>> = true
+       |    <<v5>> == true
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
+
+  renamed(
+    "variable-explicit1",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  var <<v@@5>> = false
+       |
+       |  def f5: Boolean = {
+       |    <<v5>>_=(true)
+       |    <<v5>> == true
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
+
+  renamed(
+    "variable-explicit2",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  var <<v5>> = false
+       |
+       |  def f5: Boolean = {
+       |    `<<v@@5>>_=`(true)
+       |    <<v5>> == true
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.12", "io.circe::circe-generic:0.14.1")
 
