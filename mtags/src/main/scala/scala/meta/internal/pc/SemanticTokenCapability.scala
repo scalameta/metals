@@ -1,11 +1,8 @@
-package scala.meta.internal.metals
-
-import scala.collection.JavaConverters._
-
+package scala.meta.internal.pc
 import org.eclipse.lsp4j._
 
 object SemanticTokenCapability {
-  var TokenTypes: List[String] = List(
+  val TokenTypes: List[String] = List(
     SemanticTokenTypes.Type,
     SemanticTokenTypes.Class,
     SemanticTokenTypes.Enum,
@@ -30,7 +27,7 @@ object SemanticTokenCapability {
     SemanticTokenTypes.Decorator,
   )
 
-  var TokenModifiers: List[String] = List(
+  val TokenModifiers: List[String] = List(
     SemanticTokenModifiers.Declaration,
     SemanticTokenModifiers.Definition,
     SemanticTokenModifiers.Readonly,
@@ -42,18 +39,5 @@ object SemanticTokenCapability {
     SemanticTokenModifiers.Documentation,
     SemanticTokenModifiers.DefaultLibrary,
   )
-
-  val defaultServerCapability: SemanticTokensWithRegistrationOptions =
-    new org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions(
-      new SemanticTokensLegend(
-        this.TokenTypes.asJava,
-        this.TokenModifiers.asJava,
-      ), // legend used in this server.
-      new SemanticTokensServerFull(
-        false
-      ), // Method 'full' is supported, but 'full/delta' is not.
-      false, // Method 'range' is not supported.
-      // Dynamic registration is not supported.
-    )
 
 }

@@ -79,6 +79,7 @@ import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.SemanticTokenCapability._
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semver.SemVer
@@ -889,7 +890,17 @@ class MetalsLanguageServer(
         capabilities.setFoldingRangeProvider(true)
         capabilities.setSelectionRangeProvider(true)
         capabilities.setSemanticTokensProvider(
-          SemanticTokenCapability.defaultServerCapability
+          new org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions(
+            new SemanticTokensLegend(
+              TokenTypes.asJava,
+              TokenModifiers.asJava,
+            ), // legend used in this server.
+            new SemanticTokensServerFull(
+              false
+            ), // Method 'full' is supported, but 'full/delta' is not.
+            false, // Method 'range' is not supported.
+            // Dynamic registration is not supported.
+          )
         )
         capabilities.setCodeLensProvider(new CodeLensOptions(false))
         capabilities.setDefinitionProvider(true)
@@ -1737,8 +1748,6 @@ class MetalsLanguageServer(
     CancelTokens.future { token =>
       compilers.semanticTokens(
         params,
-        SemanticTokenCapability.TokenTypes,
-        SemanticTokenCapability.TokenModifiers,
         token,
       )
     }

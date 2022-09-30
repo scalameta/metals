@@ -60,6 +60,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.SemanticTokenCapability._
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
@@ -1319,7 +1320,6 @@ final case class TestingServer(
   ): Future[Unit] = {
     try {
 
-      import scala.meta.internal.metals.SemanticTokenCapability
       scribe.info("\n Debug:  assertSemanticHighlight: Start")
 
       val uri = toPath(filePath).toTextDocumentIdentifier
@@ -1333,7 +1333,7 @@ final case class TestingServer(
 
         // TokenType
         if (typeInd != -1) {
-          buffer.addAll(List(SemanticTokenCapability.TokenTypes(typeInd)))
+          buffer.addAll(List(TokenTypes(typeInd)))
         }
 
         // TokenModifier
@@ -1343,7 +1343,7 @@ final case class TestingServer(
           if (wkList(i).toString == "1") {
             buffer.addAll(
               List(
-                SemanticTokenCapability.TokenModifiers(i)
+                TokenModifiers(i)
               )
             )
           }
