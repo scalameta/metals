@@ -26,11 +26,11 @@ lazy val b = project
     inConfig(Test) { checkSemanticdb := assertSemanticdbForScala3.value },
   )
 
-// old scala version
+// scala 2.12
 lazy val c = project
   .in(file("c"))
   .settings(
-    scalaVersion := "2.12.8", // latest scalameta doesn't publish for ~2.12.7
+    scalaVersion := "2.12.17",
     inConfig(Compile) {
       checkSemanticdb := {
         assertSemanticdbForScala2.value
