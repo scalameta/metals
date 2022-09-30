@@ -42,7 +42,6 @@ class MillifyDependencyLspSuite
         |${RewriteBracesParensCodeAction.toBraces("Agg")}
         |${ExtractValueCodeAction.title("\"org.scala` ...")}
         |${ConvertToNamedArguments.title("Agg(...)")}
-        |${MillifyDependencyCodeAction.title("`org.scalameta::metals:1.0`")}
         |${MillifyDependencyCodeAction.title("ivy\"org.scalameta::metals:1.0\"")}""".stripMargin,
     """|import mill._, scalalib._
        |
@@ -52,7 +51,7 @@ class MillifyDependencyLspSuite
        |  )
        |}""".stripMargin,
     fileName = "build.sc",
-    selectedActionIndex = 6,
+    selectedActionIndex = 5,
   )
 
   checkNoAction(
