@@ -400,10 +400,6 @@ final class SemanticTokenProvider(
         return (typeOfNonIdentToken(tk), 0, strSep + "Non-Ident")
     }
 
-    var logString = ""
-    logString =
-      logString + linSep + linSep + "  Start:Ident Part getSemanticTypeAndMod"
-    logString = logString + linSep + " txt: " + tk.text
 
     val nodeInfo = pickFromTraversed(tk)
 
