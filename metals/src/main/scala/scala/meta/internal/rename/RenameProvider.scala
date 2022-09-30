@@ -518,24 +518,36 @@ final class RenameProvider(
       symbol: String,
   ): Option[s.Range] = {
     val name = range.inString(text)
-    val symbolName = symbol.desc.name
+    val nameString = symbol.desc.name.toString()
+    val isExplicitVarSetter =
+      name.exists(nm => nm.endsWith("_=") || nm.endsWith("_=`"))
     val isBackticked = name.exists(_.isBackticked)
+
+    val symbolName =
+      if (!isExplicitVarSetter) nameString.stripSuffix("_=")
+      else nameString
     val realName =
       if (isBackticked)
         name.map(_.stripBackticks)
       else name
-    if (symbol.isLocal || realName.contains(symbolName.toString)) {
+
+    if (symbol.isLocal || realName.contains(symbolName)) {
       /* We don't want to remove anything that is backticked, as we don't
        * know whether it's actuall needed (could be a pattern match). Here
        * we make sure that the backticks are not added twice.
        */
-      val realRange = if (isBackticked && !newName.isBackticked) {
+      val withoutBacktick = if (isBackticked && !newName.isBackticked) {
         range
           .withStartCharacter(range.startCharacter + 1)
           .withEndCharacter(range.endCharacter - 1)
       } else {
         range
       }
+
+      val realRange =
+        if (isExplicitVarSetter && !newName.endsWith("_="))
+          withoutBacktick.withEndCharacter(withoutBacktick.endCharacter - 2)
+        else withoutBacktick
       Some(realRange)
     } else {
       scribe.warn(s"Name doesn't match for $symbolName at $range")
