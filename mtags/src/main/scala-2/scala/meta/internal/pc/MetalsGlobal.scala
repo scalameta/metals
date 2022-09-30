@@ -49,7 +49,7 @@ class MetalsGlobal(
     with completions.ScaladocCompletions
     with completions.TypeCompletions
     with completions.OverrideCompletions
-    with completions.CliCompletions
+    with completions.ScalaCliCompletions
     with Signatures
     with Compat
     with GlobalProxy

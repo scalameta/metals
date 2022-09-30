@@ -436,7 +436,7 @@ trait Completions { this: MetalsGlobal =>
       latestEnclosingArg: List[Tree]
   ): CompletionPosition = {
     val PatternMatch = new PatternMatch(pos)
-    val CliExtractor = new CliExtractor(pos)
+    val ScalaCliExtractor = new ScalaCliExtractor(pos)
     def fromIdentApply(
         ident: Ident,
         apply: Apply
@@ -453,8 +453,8 @@ trait Completions { this: MetalsGlobal =>
     }
 
     latestEnclosingArg match {
-      case CliExtractor(dep) =>
-        ScalaCliCompletions(pos, text, dep)
+      case ScalaCliExtractor(dep) =>
+        ScalaCliCompletion(pos, text, dep)
       case _ if isScaladocCompletion(pos, text) =>
         val associatedDef = onUnitOf(pos.source) { unit =>
           new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)

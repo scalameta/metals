@@ -5,9 +5,9 @@ import scala.meta.internal.pc.MetalsGlobal
 
 import org.eclipse.{lsp4j => l}
 
-trait CliCompletions {
+trait ScalaCliCompletions {
   this: MetalsGlobal =>
-  class CliExtractor(pos: Position) {
+  class ScalaCliExtractor(pos: Position) {
     def unapply(path: List[Tree]): Option[String] =
       path match {
         case Nil =>
@@ -18,7 +18,7 @@ trait CliCompletions {
       }
   }
 
-  case class ScalaCliCompletions(
+  case class ScalaCliCompletion(
       pos: Position,
       text: String,
       dependency: String

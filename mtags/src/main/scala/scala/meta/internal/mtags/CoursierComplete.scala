@@ -12,6 +12,7 @@ import scala.meta.internal.tokenizers.Chars
 import coursierapi.Complete
 
 object CoursierComplete {
+  lazy val scalaVersion = BuildInfo.scalaCompilerVersion
   lazy val api: Complete = coursierapi.Complete
     .create()
     .withScalaVersion(scalaVersion)
@@ -19,7 +20,7 @@ object CoursierComplete {
       if (scalaVersion.startsWith("3")) "3"
       else scalaVersion.split('.').take(2).mkString(".")
     )
-  lazy val scalaVersion = BuildInfo.scalaCompilerVersion
+
   def complete(dependency: String): List[String] = {
 
     def completions(s: String): List[String] = {
