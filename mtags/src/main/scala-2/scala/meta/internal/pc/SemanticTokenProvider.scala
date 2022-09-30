@@ -43,19 +43,6 @@ final class SemanticTokenProvider(
   /** main method */
   def provide(): ju.List[Integer] = {
 
-    // logger.info(linSep + linSep + params.text() + linSep)
-    // pprint.log(root)
-    //  Thread.sleep(3000)
-
-    var logString = linSep + params.text()
-    logger.info(treeDescriber(root) + linSep)
-
-    // logString += "\n\n nodes:" + nodes.size.toString()
-    // logString += nodes.toArray.sortBy(_.pos.start)
-    //               .map(n=>treeDescriber(n.tree,false))
-    //               .mkString("")
-
-    // Tools used later
     val buffer = ListBuffer.empty[Integer]
     var currentLine = 0
     var lastLine = 0
