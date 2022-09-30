@@ -54,4 +54,16 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     "circe-core_native0.4",
   )
 
+  check(
+    "script",
+    """|//> using lib "io.circe:circe-core_na@@
+       |package A
+       |""".stripMargin,
+    """|circe-core_native0.4_2.12
+       |circe-core_native0.4_2.13
+       |circe-core_native0.4_3
+       |""".stripMargin,
+    filename = "script.sc",
+  )
+
 }

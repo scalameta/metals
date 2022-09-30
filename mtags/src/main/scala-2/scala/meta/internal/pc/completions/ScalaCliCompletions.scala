@@ -12,6 +12,8 @@ trait CliCompletions {
       path match {
         case Nil =>
           CoursierComplete.isScalaCliDep(pos.lineContent.replace(CURSOR, ""))
+        case (_: PackageDef) :: Nil if pos.source.file.path.endsWith(".sc") =>
+          CoursierComplete.isScalaCliDep(pos.lineContent.replace(CURSOR, ""))
         case _ => None
       }
   }
