@@ -397,8 +397,6 @@ class Compilers(
           pc.semanticTokens(vFile, capableTypes.asJava, capableModifiers.asJava)
             .asScala
             .map { plist =>
-              // Thread.sleep(5000) // for debug
-              scribe.info("Result from token : " + plist.size().toString())
               new SemanticTokens(plist)
             }
         }
