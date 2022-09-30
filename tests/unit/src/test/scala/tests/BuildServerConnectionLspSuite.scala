@@ -41,7 +41,7 @@ class BuildServerConnectionLspSuite
     } yield ()
   }
 
-  test("bloop-version-change") {
+  test("bloop-version-change".ignore) {
     cleanWorkspace()
     val updatedBloopVersion = "1.4.0-RC1-76-1488031d"
     for {
