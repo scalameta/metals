@@ -105,7 +105,7 @@ def template(
     lastTag: String,
     mergedPrs: List[String],
     commits: Int,
-    contributos: List[String],
+    contributors: List[String],
 ) = {
   s"""|---
       |author: $author
@@ -128,7 +128,7 @@ def template(
       |  </tr>
       |    <tr>
       |    <td>Contributors</td>
-      |    <td align="center">${contributos.size}</td>
+      |    <td align="center">${contributors.size}</td>
       |  </tr>
       |  <tr>
       |    <td>Closed issues</td>
@@ -162,7 +162,7 @@ def template(
       |
       |```
       |$$ git shortlog -sn --no-merges $firstTag..$lastTag
-      |${contributos.mkString("\n")}
+      |${contributors.mkString("\n")}
       |```
       |
       |## Merged PRs

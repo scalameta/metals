@@ -120,7 +120,6 @@ case class QuickBuild(
           s"org.scala-lang:scala-reflect:$scalaVersion",
         )
       }
-
     val allDependencies = scalaDependencies ++ libraryDependencies
     val allJars = QuickBuild.fetch(
       allDependencies,
@@ -348,6 +347,7 @@ object QuickBuild {
   }
 
   def newDigest(workspace: AbsolutePath): Option[(AbsolutePath, String)] = {
+
     val digestFile =
       workspace.resolve(".metals").resolve("quick-build.md5")
     val oldDigest =

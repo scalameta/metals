@@ -8,14 +8,14 @@ on:
       metals_version:
         description: "Metals Version"
         required: true
-        default: "v0.11.8"
+        default: "v0.11.9"
       metals_ref:
         description: "Tag/branch-name from which run release"
         required: true
         # If you update this line after release
         #   just put the tag name (`v*.*.*`) here as in `metals_version.value` above.
         # Don't be confused if this value contains `*.*.*_mtags_release`
-        default: "0.11.8_mtags_release"
+        default: "v0.11.9"
 jobs:
   test_and_release:
     runs-on: ubuntu-latest
