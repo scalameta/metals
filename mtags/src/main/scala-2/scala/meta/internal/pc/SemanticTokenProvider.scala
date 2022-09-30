@@ -28,8 +28,8 @@ final class SemanticTokenProvider(
   def getTypeId(p: String): Int = capableTypes.indexOf(p)
 
 
-  // initialize semantic tree
-  val unit: cp.RichCompilationUnit = cp.addCompilationUnit(
+  import cp._
+  val unit: RichCompilationUnit = cp.addCompilationUnit(
     params.text(),
     params.uri().toString(),
     None
