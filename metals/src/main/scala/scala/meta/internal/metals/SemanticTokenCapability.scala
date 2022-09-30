@@ -8,19 +8,19 @@ object SemanticTokenCapability {
   var TokenTypes: List[String] = List(
     SemanticTokenTypes.Type,
     SemanticTokenTypes.Class,
-    SemanticTokenTypes.Enum, // 3
-    SemanticTokenTypes.Interface, // 4
-    SemanticTokenTypes.Struct, // 5
-    SemanticTokenTypes.TypeParameter, // 6
-    SemanticTokenTypes.Parameter, // 7
-    SemanticTokenTypes.Variable, // 8
-    SemanticTokenTypes.Property, // 9
-    SemanticTokenTypes.EnumMember, // 10
-    SemanticTokenTypes.Event, // 11
-    SemanticTokenTypes.Function, // 12
-    SemanticTokenTypes.Method, // 13
-    SemanticTokenTypes.Macro, // 14
-    SemanticTokenTypes.Keyword, // 15
+    SemanticTokenTypes.Enum,
+    SemanticTokenTypes.Interface,
+    SemanticTokenTypes.Struct,
+    SemanticTokenTypes.TypeParameter,
+    SemanticTokenTypes.Parameter,
+    SemanticTokenTypes.Variable,
+    SemanticTokenTypes.Property,
+    SemanticTokenTypes.EnumMember,
+    SemanticTokenTypes.Event,
+    SemanticTokenTypes.Function,
+    SemanticTokenTypes.Method,
+    SemanticTokenTypes.Macro,
+    SemanticTokenTypes.Keyword,
     SemanticTokenTypes.Modifier,
     SemanticTokenTypes.Comment,
     SemanticTokenTypes.String,
