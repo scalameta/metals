@@ -38,7 +38,7 @@ final class SemanticTokenProvider(
   val (root, source) = (unit.lastBody, unit.source)
 
   def unitPos(offset: Int): Position = unit.position(offset)
-  val nodes: Set[NodeInfo] = traverser.traverse(Set.empty[NodeInfo], root)
+  val nodes: Set[NodeInfo] = traverser.traverse(Set.empty[NodeInfo], root).sortBy(_.position.start)
 
   /** main method */
   def provide(): ju.List[Integer] = {
