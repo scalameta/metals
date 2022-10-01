@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.nio.file.Paths
 
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
@@ -13,7 +14,6 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import org.eclipse.{lsp4j as l}
-import scala.meta.internal.mtags.KeywordWrapper
 
 final class ConvertToNamedArgumentsProvider(
     driver: InteractiveDriver,

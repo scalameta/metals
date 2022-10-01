@@ -1,9 +1,9 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.mtags.KeywordWrapper
 
 final class ConvertToNamedArgumentsProvider(
     val compiler: MetalsGlobal,
