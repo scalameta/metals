@@ -13,6 +13,7 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import org.eclipse.{lsp4j as l}
+import scala.meta.internal.mtags.KeywordWrapper
 
 final class ConvertToNamedArgumentsProvider(
     driver: InteractiveDriver,
@@ -38,7 +39,9 @@ final class ConvertToNamedArgumentsProvider(
       fun.tpe match
         case m: MethodType => m.paramNamess.flatten.map(_.toString)
         case _ =>
-          fun.symbol.rawParamss.flatten.filter(!_.isTypeParam).map(_.name.show)
+          fun.symbol.rawParamss.flatten
+            .filter(!_.isTypeParam)
+            .map(_.nameBackticked)
 
     object FromNewApply:
       def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[tpd.Tree])] =

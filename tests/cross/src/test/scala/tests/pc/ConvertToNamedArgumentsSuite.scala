@@ -27,6 +27,32 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "backticked-name",
+    """|object A{
+       |  final case class Foo(`type`: Int, arg: String)
+       |  val a = <<Foo(1, "a")>>
+       |}""".stripMargin,
+    List(0, 1),
+    """|object A{
+       |  final case class Foo(`type`: Int, arg: String)
+       |  val a = Foo(`type` = 1, arg = "a")
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "backticked-name-method",
+    """|object A{
+       |  def foo(`type`: Int, arg: String) = "a"
+       |  val a = <<foo(1, "a")>>
+       |}""".stripMargin,
+    List(0, 1),
+    """|object A{
+       |  def foo(`type`: Int, arg: String) = "a"
+       |  val a = foo(`type` = 1, arg = "a")
+       |}""".stripMargin,
+  )
+
+  checkEdit(
     "new-apply",
     """|object Something {
        |  class Foo(param1: Int, param2: Int)
