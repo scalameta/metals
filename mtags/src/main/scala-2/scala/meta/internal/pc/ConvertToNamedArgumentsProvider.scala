@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.{lsp4j => l}
@@ -35,7 +36,10 @@ final class ConvertToNamedArgumentsProvider(
         case ((arg, index), param) if argIndices.contains(index) => {
           val position = arg.pos.toLsp
           position.setEnd(position.getStart())
-          new l.TextEdit(position, s"${param.nameString} = ")
+          val paramNameText =
+            KeywordWrapper.Scala2.backtickWrap(param.nameString)
+
+          new l.TextEdit(position, s"$paramNameText = ")
         }
       }
     }

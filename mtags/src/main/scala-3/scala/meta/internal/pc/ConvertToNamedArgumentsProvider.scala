@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.nio.file.Paths
 
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
@@ -38,7 +39,9 @@ final class ConvertToNamedArgumentsProvider(
       fun.tpe match
         case m: MethodType => m.paramNamess.flatten.map(_.toString)
         case _ =>
-          fun.symbol.rawParamss.flatten.filter(!_.isTypeParam).map(_.name.show)
+          fun.symbol.rawParamss.flatten
+            .filter(!_.isTypeParam)
+            .map(_.nameBackticked)
 
     object FromNewApply:
       def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[tpd.Tree])] =
