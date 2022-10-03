@@ -317,12 +317,6 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |  x match@@
       |}""".stripMargin,
     s"""|package example
-        |
-        |import example.Color.Red
-        |
-        |import example.Color.Blue
-        |
-        |import example.Color.Green
         |enum Color(rank: Int):
         |  case Red extends Color(1)
         |  case Blue extends Color(2)
@@ -331,9 +325,9 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |object Main {
         |  val x: Color = ???
         |  x match
-        |\tcase Red => $$0
-        |\tcase Blue =>
-        |\tcase Green =>
+        |\tcase Color.Red => $$0
+        |\tcase Color.Blue =>
+        |\tcase Color.Green =>
         |
         |}
         |""".stripMargin,
