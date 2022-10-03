@@ -1,19 +1,15 @@
 package scala.meta.internal.pc.completions
 
-import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
-import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.MetalsGlobal
-import scala.meta.internal.semver.SemVer.Version
-import scala.meta.internal.tokenizers.Chars
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
 
-trait AmmoniteCompletions { this: MetalsGlobal =>
+trait AmmoniteFileCompletions { this: MetalsGlobal =>
 
   class FileSystemMember(
       sym: Symbol,
@@ -27,7 +23,7 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
         label = Some(fileName)
       )
 
-  case class AmmoniteFileCompletions(
+  case class AmmoniteFileCompletion(
       select: Tree,
       selector: List[ImportSelector],
       pos: Position,
@@ -102,77 +98,6 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
               } ++ parentTextEdit
           case _ =>
             Nil
-        }
-      } catch {
-        case NonFatal(e) =>
-          e.printStackTrace()
-          Nil
-      }
-  }
-
-  case class AmmoniteIvyCompletions(
-      select: Tree,
-      selector: List[ImportSelector],
-      pos: Position,
-      editRange: l.Range
-  ) extends CompletionPosition {
-
-    override def contribute: List[Member] =
-      try {
-
-        val query = selector.collectFirst {
-          case sel: ImportSelector if sel.name.toString().contains(CURSOR) =>
-            sel.name.decode.replace(CURSOR, "")
-        }
-
-        query match {
-          case Some(imp) =>
-            val api = coursierapi.Complete
-              .create()
-              .withScalaVersion(BuildInfo.scalaCompilerVersion)
-
-            def completions(s: String): List[String] =
-              api.withInput(s).complete().getCompletions().asScala.toList
-            val javaCompletions = completions(imp)
-            val scalaCompletions =
-              if (imp.endsWith(":") && imp.count(_ == ':') == 1)
-                completions(imp + ":").map(":" + _)
-              else List.empty
-
-            val isInitialCompletion =
-              pos.lineContent.trim == s"import $$ivy.$CURSOR"
-            val ivyEditRange =
-              if (isInitialCompletion) editRange
-              else {
-                // We need the text edit to span the whole group/artefact/version
-                val rangeStart = inferStart(
-                  pos,
-                  pos.source.content.mkString,
-                  c => Chars.isIdentifierPart(c) || c == '.' || c == '-'
-                )
-                pos.withStart(rangeStart).withEnd(pos.point).toLsp
-              }
-            val allCompletions = scalaCompletions ++ javaCompletions
-            val sortedCompletions =
-              if (imp.replaceAll(":+", ":").count(_ == ':') == 2)
-                allCompletions.sortWith(
-                  Version.fromString(_) >= Version.fromString(_)
-                )
-              else allCompletions
-            sortedCompletions.zipWithIndex.map { case (c, index) =>
-              new TextEditMember(
-                filterText = c,
-                edit = new l.TextEdit(
-                  ivyEditRange,
-                  if (isInitialCompletion) s"`$c$$0`" else c
-                ),
-                sym = select.symbol
-                  .newErrorSymbol(TermName(s"artefact$index"))
-                  .setInfo(NoType),
-                label = Some(c.stripPrefix(":"))
-              )
-            }
-          case _ => List.empty
         }
       } catch {
         case NonFatal(e) =>

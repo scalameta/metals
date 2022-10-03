@@ -39,7 +39,8 @@ class MetalsGlobal(
     val workspace: Option[Path]
 ) extends Global(settings, reporter)
     with completions.Completions
-    with completions.AmmoniteCompletions
+    with completions.AmmoniteFileCompletions
+    with completions.AmmoniteIvyCompletions
     with completions.ArgCompletions
     with completions.FilenameCompletions
     with completions.InterpolatorCompletions
