@@ -530,13 +530,13 @@ trait Completions { this: MetalsGlobal =>
         )
       case (imp @ Import(select, selector)) :: _
           if isAmmoniteFileCompletionPosition(imp, pos) =>
-        AmmoniteFileCompletions(select, selector, pos, editRange)
+        AmmoniteFileCompletion(select, selector, pos, editRange)
       case (imp @ Import(select, selector)) :: _
           if isAmmoniteIvyCompletionPosition(
             imp,
             pos
           ) || isWorksheetIvyCompletionPosition(imp, pos) =>
-        AmmoniteIvyCompletions(select, selector, pos, editRange)
+        AmmoniteIvyCompletion(select, selector, pos, editRange, text)
       case _ =>
         inferCompletionPosition(
           pos,
