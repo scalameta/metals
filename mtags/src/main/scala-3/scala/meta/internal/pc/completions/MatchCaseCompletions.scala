@@ -270,10 +270,18 @@ object CaseKeywordCompletion:
 
     val sortedSubclasses = subclassesForType(tpe)
     sortedSubclasses.foreach { case sym =>
-      val autoImport = autoImportsGen.forSymbol(sym)
+      val (autoImport, name) =
+        // We don't want to import cases
+        if sym.isAllOf(Flags.EnumCase) then
+          (
+            autoImportsGen.forSymbol(sym.owner),
+            s"${sym.owner.nameBackticked}.${sym.nameBackticked}",
+          )
+        else (autoImportsGen.forSymbol(sym), sym.decodedName)
+
       val completionOption = completionGenerator.toCompletionValue(
         sym,
-        sym.decodedName,
+        name,
         autoImport.getOrElse(Nil),
       )
       completionOption.foreach(result += _)
