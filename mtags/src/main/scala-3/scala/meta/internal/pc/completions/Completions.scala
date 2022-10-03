@@ -483,7 +483,7 @@ class Completions(
         (completions, true)
 
       case (imp @ Import(expr, selectors)) :: _
-          if isAmmoniteFileCompletionPosition(imp, rawFileName) =>
+          if isAmmoniteCompletionPosition(imp, rawFileName, "$file") =>
         (
           AmmoniteFileCompletions.contribute(
             expr,
@@ -492,6 +492,17 @@ class Completions(
             rawPath.toString(),
             workspace,
             rawFileName,
+          ),
+          true,
+        )
+
+      case (imp @ Import(expr, selectors)) :: _
+          if isAmmoniteCompletionPosition(imp, rawFileName, "$ivy") =>
+        (
+          AmmoniteIvyCompletions.contribute(
+            expr,
+            selectors,
+            pos,
           ),
           true,
         )
@@ -513,9 +524,10 @@ class Completions(
     end match
   end advancedCompletions
 
-  private def isAmmoniteFileCompletionPosition(
+  private def isAmmoniteCompletionPosition(
       tree: Tree,
       fileName: String,
+      magicImport: String,
   ): Boolean =
 
     def getQualifierStart(identOrSelect: Tree): String =
@@ -528,9 +540,9 @@ class Completions(
       case Import(identOrSelect, _) =>
         fileName.isAmmoniteGeneratedFile && getQualifierStart(identOrSelect)
           .toString()
-          .startsWith("$file")
+          .startsWith(magicImport)
       case _ => false
-  end isAmmoniteFileCompletionPosition
+  end isAmmoniteCompletionPosition
 
   private def description(sym: Symbol): String =
     if sym.isType then sym.showFullName
@@ -638,6 +650,7 @@ class Completions(
             case fileSysMember: CompletionValue.FileSystemMember =>
               (fileSysMember.label, true)
             case si: CompletionValue.ScalaCLiImport => (si.label, true)
+            case ai: CompletionValue.AmmoniteIvyImport => (ai.label, true)
 
         if !isSeen(id) && include then
           isSeen += id
