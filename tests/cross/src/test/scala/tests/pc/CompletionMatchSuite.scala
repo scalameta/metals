@@ -289,15 +289,12 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |package example
                 |
                 |import java.nio.file.AccessMode
-                |import java.nio.file.AccessMode.READ
-                |import java.nio.file.AccessMode.WRITE
-                |import java.nio.file.AccessMode.EXECUTE
                 |
                 |object Main {
                 |  (null: AccessMode) match
-                |\tcase READ => $$0
-                |\tcase WRITE =>
-                |\tcase EXECUTE =>
+                |\tcase AccessMode.READ => $$0
+                |\tcase AccessMode.WRITE =>
+                |\tcase AccessMode.EXECUTE =>
                 |
                 |}""".stripMargin
     ),

@@ -508,29 +508,41 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |  x match
       |    case@@
       |}""".stripMargin,
-    """|case Blue =>Color
-       |case Green =>Color
-       |case Red =>Color
+    """|case Color.Blue =>Color
+       |case Color.Green =>Color
+       |case Color.Red =>Color
        |""".stripMargin,
   )
 
-  check(
+  checkEdit(
     "scala-enum-with-param".tag(IgnoreScala2),
     """
-      |package example
+      |package withenum {
       |enum Foo:
       |  case Bla, Bar
       |  case Buzz(arg1: Int, arg2: Int)
-      |
+      |}
+      |package example
       |object Main {
-      |  val x: Foo = ???
+      |  val x: withenum.Foo = ???
       |  x match
       |    case@@
       |}""".stripMargin,
-    """|case Bar =>Foo
-       |case Bla =>Foo
-       |case Buzz(arg1, arg2) => example.Foo
-       |""".stripMargin,
+    """
+      |import withenum.Foo
+      |
+      |package withenum {
+      |enum Foo:
+      |  case Bla, Bar
+      |  case Buzz(arg1: Int, arg2: Int)
+      |}
+      |package example
+      |object Main {
+      |  val x: withenum.Foo = ???
+      |  x match
+      |    case Foo.Buzz(arg1, arg2) => $0
+      |}""".stripMargin,
+    filter = _.contains("Buzz"),
   )
 
   check(
@@ -572,8 +584,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    a match
       |      cas@@
       |}""".stripMargin,
-    """|case B =>A
-       |case C =>A""".stripMargin,
+    """|case A.B =>A
+       |case A.C =>A""".stripMargin,
   )
 
 }
