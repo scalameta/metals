@@ -179,7 +179,7 @@ object InterpolatorCompletions:
                 Nil,
                 Some(cursor.withStart(identOrSelect.span.start).toLsp),
                 // Needed for VS Code which will not show the completion otherwise
-                Some(identOrSelect.show + "." + label),
+                Some(identOrSelect.name.toString() + "." + label),
                 isExtension = isExtension,
               ),
           )
