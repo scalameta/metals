@@ -13,6 +13,7 @@ import scala.meta.internal.pc.SemanticTokenCapability._
 import org.checkerframework.common.returnsreceiver.qual.This
 import org.eclipse.lsp4j.SemanticTokenModifiers
 import org.eclipse.lsp4j.SemanticTokenTypes
+import scala.meta.pc.DefinitionResult
 
 /**
  * Corresponds to tests.SemanticHighlightLspSuite
@@ -20,15 +21,16 @@ import org.eclipse.lsp4j.SemanticTokenTypes
 final class SemanticTokenProvider(
     protected val cp: MetalsGlobal // compiler
     ,
-    val params: VirtualFileParams,
+    val params: VirtualFileParams
 ) {
-  val capableTypes= TokenTypes
+  val capableTypes = TokenTypes
   val capableModifiers = TokenModifiers
 
-  // alias for long notation
-  val getTypeId :Map[String,Int] = capableTypes.zipWithIndex.toMap
-  val getModifierId :Map[String,Int] = capableModifiers.zipWithIndex.toMap
+  // Alias for long notation
+  val getTypeId: Map[String, Int] = capableTypes.zipWithIndex.toMap
+  val getModifierId: Map[String, Int] = capableModifiers.zipWithIndex.toMap
 
+  // Initialize Tree
   import cp._
   val unit: RichCompilationUnit = cp.addCompilationUnit(
     params.text(),
@@ -39,106 +41,87 @@ final class SemanticTokenProvider(
   val (root, source) = (unit.lastBody, unit.source)
 
   def unitPos(offset: Int): Position = unit.position(offset)
-  val nodes: List[NodeInfo] = traverser.traverse(List.empty[NodeInfo], root)
-                                  .sortBy(_.pos.map(_.start))
+  val nodes: List[NodeInfo] = traverser
+    .traverse(List.empty[NodeInfo], root)
+    .sortBy(_.pos.map(_.start))
 
-  /** main method */
+  /**
+   * main method
+   */
   def provide(): ju.List[Integer] = {
 
     val buffer = ListBuffer.empty[Integer]
-    var currentLine = 0
-    var lastLine = 0
-    var lastNewlineOffset = 0
-    var lastCharStartOffset = 0
 
-    def deltaLine(): Int = currentLine - lastLine
-    def deltaStartChar(startPos: Int): Int = {
-      if (deltaLine() == 0) startPos - lastCharStartOffset
-      else startPos - lastNewlineOffset
-    }
-    def addTokenToBuffer(
-        startPos: Int,
-        charSize: Int,
-        tokenType: Int,
-        tokeModifier: Int
-    ): Unit = {
-      if (tokenType == -1 && tokeModifier == 0) return
-
-      buffer.++=(
-        List(
-          deltaLine(), // 1
-          deltaStartChar(startPos), // 2
-          charSize, // 3
-          tokenType, // 4
-          tokeModifier // 5
-        )
-      )
-      lastLine = currentLine
-      lastCharStartOffset = startPos
-    }
-
-    // Loop by token
     import scala.meta._
+    var cLine = Line(0, 0) // Current Line
+    var lastProvided = SingleLineToken(cLine, 0, None)
+
     for (tk <- params.text().tokenize.toOption.get) yield {
 
-      tk match {
-        case _: Token.LF =>
-          currentLine += 1
-          lastNewlineOffset = tk.pos.end
+      val (tokenType, tokeModifier) = getTypeAndMod(tk)
+      var cOffset = tk.pos.start // Current Offset
+      var providing = SingleLineToken(cLine, cOffset, Some(lastProvided.copy()))
 
-        case _: Token.Space =>
+      // If a meta-Token is over multiline,
+      // semantic-token is provided by each line.
+      // For ecample, Comment or Literal String.
+      for (wkStr <- tk.text.toCharArray.toList.map(c => c.toString)) {
+        cOffset += 1
 
-        // deals multi-line token
-        case _: Token.Comment | _: Token.Constant.String =>
-          var wkStartPos = tk.pos.start
-          var wkCurrentPos = tk.pos.start
-          val tokenType = tk match {
-            case _: Token.Comment => getTypeId(SemanticTokenTypes.Comment)
-            case _ => getTypeId(SemanticTokenTypes.String)
-          }
-          val tokeModifier = 0
+        // Token Break
+        if (wkStr == "\n" | cOffset == tk.pos.end) {
+          providing.endOffset =
+            if (wkStr == "\n") cOffset - 1
+            else cOffset
 
-          for (wkStr <- tk.text.toCharArray.toList.map(c => c.toString)) {
-            wkCurrentPos += 1
-
-            // Add token to Buffer
-            if (wkStr == "\n" | wkCurrentPos == tk.pos.end) {
-              val adjustedCurrentPos =
-                if (wkStr == "\n") wkCurrentPos - 1
-                else wkCurrentPos
-              val charSize = adjustedCurrentPos - wkStartPos
-
-              addTokenToBuffer(
-                wkStartPos,
-                charSize,
+          if ((tokenType, tokeModifier) != (-1, 0)) {
+            buffer.++=(
+              List(
+                providing.deltaLine,
+                providing.deltaStartChar,
+                providing.charSize,
                 tokenType,
                 tokeModifier
               )
-              wkStartPos = wkCurrentPos
-            }
-
-            // Count such as Token.LF
-            if (wkStr == "\n") {
-              currentLine += 1
-              lastNewlineOffset = wkCurrentPos
-            }
-
+            )
+            lastProvided = providing
           }
+          // Line Break
+          if (wkStr == "\n") {
+            cLine = Line(cLine.number + 1, cOffset)
+          }
+          providing = SingleLineToken(cLine, cOffset, Some(lastProvided.copy()))
+        }
 
-        case _ =>
-          val (tokenType, tokeModifier) = getTypeAndMod(tk)
-          addTokenToBuffer(
-            tk.pos.start,
-            tk.text.size,
-            tokenType,
-            tokeModifier
-          )
-      } // end match
+      } // end for-wkStr
 
-    } // end for
-
+    } // end for-tk
 
     buffer.toList.asJava
+
+  }
+
+  // single-LIne SemanticToken
+  case class Line(
+      val number: Int,
+      val startOffset: Int
+  )
+  case class SingleLineToken(
+      line: Line, // line which token on
+      startOffset: Int, // Offset from start of file.
+      lastToken: Option[SingleLineToken]
+  ) {
+    var endOffset: Int = 0
+    def charSize: Int = endOffset - startOffset
+    def deltaLine: Int =
+      line.number - this.lastToken.map(_.line.number).getOrElse(0)
+
+    def deltaStartChar: Int = {
+      if (deltaLine == 0)
+        startOffset - lastToken.map(_.startOffset).getOrElse(0)
+      else
+        startOffset - line.startOffset
+    }
 
   }
 
@@ -173,42 +156,54 @@ final class SemanticTokenProvider(
       case _: Token.Constant.Int | _: Token.Constant.Long |
           _: Token.Constant.Float | _: Token.Constant.Double =>
         getTypeId(SemanticTokenTypes.Number)
-      case _: Token.Constant.Char => getTypeId(SemanticTokenTypes.String)
+      case _: Token.Constant.String | _: Token.Constant.Char =>
+        getTypeId(SemanticTokenTypes.String)
+      case _: Token.Constant.Symbol => getTypeId(SemanticTokenTypes.Property)
+
+      // Comment
+      case _: Token.Comment => getTypeId(SemanticTokenTypes.Comment)
 
       // Default
       case _ => -1
     }
 
   }
+  def pickFromTraversed(tk: scala.meta.tokens.Token): Option[NodeInfo] = {
 
-  case class NodeInfo(
-    tree:Option[Tree],
-    sym: Option[Symbol],
-    pos: Option[scala.reflect.api.Position]
-  ){
-    def find(tk:scala.meta.tokens.Token):Option[NodeInfo]={
-      this.tree match {
-        case imp:Import =>
-          selector(imp, tk.pos.start).map(NodeInfo(_))
+    val buffer = ListBuffer.empty[NodeInfo]
+    for (node <- nodes) {
+      node.tree match {
+        case Some(imp: cp.Import) =>
+          selector(imp, tk.pos.start)
+            .map(sym => buffer.++=(List(NodeInfo(sym))))
 
-        case _ =>
-          this.pos
-            .filter(_.start ==tk.pos.start )
-            .filter(_.end ==tk.pos.end )
-            .map(_=>this)
+        case Some(x) =>
+          node.pos
+            .filter(_.start == tk.pos.start)
+            .filter(_.end == tk.pos.end)
+            .map(_ => buffer.++=(List(node)))
+
+        case None =>
       }
     }
 
+    buffer.toList.headOption
   }
+
+  case class NodeInfo(
+      tree: Option[Tree],
+      sym: Option[Symbol],
+      pos: Option[scala.reflect.api.Position]
+  )
   object NodeInfo {
-    def apply(tree :Tree, pos:scala.reflect.api.Position): NodeInfo =
-      new NodeInfo( Some(tree), None,Some(pos))
+    def apply(tree: Tree, pos: scala.reflect.api.Position): NodeInfo =
+      new NodeInfo(Some(tree), Some(tree.symbol), Some(pos))
 
-    def apply(imp: Import): NodeInfo  =
-      new NodeInfo(Some(imp), None,None)
+    def apply(imp: Import): NodeInfo =
+      new NodeInfo(Some(imp), None, None)
 
-    def apply(sym:Symbol):NodeInfo =
-      new NodeInfo(None,Some(sym),None)
+    def apply(sym: Symbol): NodeInfo =
+      new NodeInfo(None, Some(sym), None)
   }
 
   /**
@@ -246,7 +241,7 @@ final class SemanticTokenProvider(
          */
         case sel: cp.Select if sel.pos.isRange =>
           traverse(
-            nodes :+  NodeInfo(sel, sel.namePos),
+            nodes :+ NodeInfo(sel, sel.namePos),
             sel.qualifier
           )
         /* all definitions:
@@ -257,7 +252,7 @@ final class SemanticTokenProvider(
         case df: cp.MemberDef if df.pos.isRange =>
           (annotationChildren(df) ++ df.children)
             .foldLeft(
-              nodes :+  NodeInfo(df, df.namePos)
+              nodes :+ NodeInfo(df, df.namePos)
             )(traverse(_, _))
         /* Named parameters, since they don't show up in typed tree:
          * foo(<<name>> = "abc")
@@ -353,22 +348,20 @@ final class SemanticTokenProvider(
    */
   private def getTypeAndMod(tk: scala.meta.tokens.Token): (Int, Int) = {
 
-    // whether token is identifier or not
     tk match {
-      case _: Token.Ident | _: Token.Constant.Symbol =>
-      // continue this method.
-      // Constant.Symbol means literal symbol with backticks.
-      // e.g. which is `yield` of such as Thread.`yield`().
-      case _ =>
-        // Non-Ident has no modifier.
-        return (typeOfNonIdentToken(tk), 0)
+      case _: Token.Ident => IndentTypeAndMod(tk)
+      case _ => (typeOfNonIdentToken(tk), 0)
     }
+  }
 
-    val nodeInfo = nodes.map(_.find(tk)).headOption.get
+  private def IndentTypeAndMod(tk: scala.meta.tokens.Token): (Int, Int) = {
+    val default = (-1, 0)
 
-    nodeInfo.map(_.sym) match {
-      case sym:Symbol =>
-        // initialize Mod
+    val ret =
+      for (
+        nodeInfo <- pickFromTraversed(tk);
+        sym <- nodeInfo.sym
+      ) yield {
         var mod: Int = 0
         def addPwrToMod(tokenID: String) = {
           val place: Int = getModifierId(tokenID)
@@ -384,11 +377,13 @@ final class SemanticTokenProvider(
           // See symbol.keystring about following conditions.
           if (sym.isJavaInterface)
             getTypeId(SemanticTokenTypes.Interface) // "interface"
-          else if (sym.isTrait) getTypeId(SemanticTokenTypes.Interface) // "trait"
+          else if (sym.isTrait)
+            getTypeId(SemanticTokenTypes.Interface) // "trait"
           else if (sym.isClass) getTypeId(SemanticTokenTypes.Class) // "class"
           else if (sym.isType && !sym.isParameter)
             getTypeId(SemanticTokenTypes.Type) // "type"
-          else if (sym.isVariable) getTypeId(SemanticTokenTypes.Variable) // "var"
+          else if (sym.isVariable)
+            getTypeId(SemanticTokenTypes.Variable) // "var"
           else if (sym.hasPackageFlag)
             getTypeId(SemanticTokenTypes.Namespace) // "package"
           else if (sym.isModule) getTypeId(SemanticTokenTypes.Class) // "object"
@@ -401,17 +396,16 @@ final class SemanticTokenProvider(
             getTypeId(SemanticTokenTypes.Variable) // "val"
           } else -1
 
-
         // Modifiers except by ReadOnly
         if (sym.isAbstract) addPwrToMod(SemanticTokenModifiers.Abstract)
         if (sym.isDeprecated) addPwrToMod(SemanticTokenModifiers.Deprecated)
         if (sym.owner.isModule) addPwrToMod(SemanticTokenModifiers.Static)
 
         (typ, mod)
-      case _ =>
-        (-1,0)
-    }
+
+      }
+
+    ret.getOrElse(default)
 
   }
-
 }

@@ -3,6 +3,7 @@ import org.eclipse.lsp4j._
 
 object SemanticTokenCapability {
   val TokenTypes: List[String] = List(
+    SemanticTokenTypes.Namespace,
     SemanticTokenTypes.Type,
     SemanticTokenTypes.Class,
     SemanticTokenTypes.Enum,
@@ -24,7 +25,7 @@ object SemanticTokenCapability {
     SemanticTokenTypes.Number,
     SemanticTokenTypes.Regexp,
     SemanticTokenTypes.Operator,
-    SemanticTokenTypes.Decorator,
+    SemanticTokenTypes.Decorator
   )
 
   val TokenModifiers: List[String] = List(
@@ -37,7 +38,7 @@ object SemanticTokenCapability {
     SemanticTokenModifiers.Async,
     SemanticTokenModifiers.Modification,
     SemanticTokenModifiers.Documentation,
-    SemanticTokenModifiers.DefaultLibrary,
+    SemanticTokenModifiers.DefaultLibrary
   )
 
 }
