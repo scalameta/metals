@@ -306,24 +306,32 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   checkEdit(
     "exhaustive-scala-enum".tag(IgnoreScala2),
     """
-      |package example
+      |package withenum {
       |enum Color(rank: Int):
       |  case Red extends Color(1)
       |  case Blue extends Color(2)
       |  case Green extends Color(3)
+      |}
+      |
+      |package example
       |
       |object Main {
-      |  val x: Color = ???
+      |  val x: withenum.Color = ???
       |  x match@@
       |}""".stripMargin,
-    s"""|package example
+    s"""|import withenum.Color
+        |
+        |package withenum {
         |enum Color(rank: Int):
         |  case Red extends Color(1)
         |  case Blue extends Color(2)
         |  case Green extends Color(3)
+        |}
+        |
+        |package example
         |
         |object Main {
-        |  val x: Color = ???
+        |  val x: withenum.Color = ???
         |  x match
         |\tcase Color.Red => $$0
         |\tcase Color.Blue =>
