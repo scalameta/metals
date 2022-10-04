@@ -60,7 +60,6 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.pc.SemanticTokenCapability._
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
@@ -69,7 +68,6 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
-import _root_.org.eclipse.lsp4j.DocumentSymbolCapabilities
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -94,6 +92,7 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.DocumentSymbolCapabilities
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FoldingRangeCapabilities
@@ -1318,129 +1317,22 @@ final case class TestingServer(
       expected: String,
       fileContent: String,
   ): Future[Unit] = {
-    try {
+    val uri = toPath(filePath).toTextDocumentIdentifier
+    val params = new org.eclipse.lsp4j.SemanticTokensParams(uri)
 
-      scribe.info("\n Debug:  assertSemanticHighlight: Start")
+    for {
+      obtainedTokens <- server.semanticTokensFull(params).asScala
+    } yield {
+      val obtained = TestSemanticTokens.semanticString(
+        fileContent,
+        obtainedTokens.getData().map(_.toInt).asScala.toList,
+      )
 
-      val uri = toPath(filePath).toTextDocumentIdentifier
-      val params = new org.eclipse.lsp4j.SemanticTokensParams(uri)
-
-      /**
-       * construct string from token type and mods to decorate codes.
-       */
-      def decorationString(typeInd: Int, modInd: Int): String = {
-        val buffer = ListBuffer.empty[String]
-
-        // TokenType
-        if (typeInd != -1) {
-          buffer.addAll(List(TokenTypes(typeInd)))
-        }
-
-        // TokenModifier
-        // wkList = (e.g.) modInd=32 -> 100000 -> "000001"
-        val wkList = modInd.toBinaryString.toCharArray().toList.reverse
-        for (i: Int <- 0 to wkList.size - 1) {
-          if (wkList(i).toString == "1") {
-            buffer.addAll(
-              List(
-                TokenModifiers(i)
-              )
-            )
-          }
-        }
-
-        // return
-        buffer.toList.mkString(",")
-      }
-
-      // Getting semantic tokens from testee function
-      for {
-        obtainedTokens <- server.semanticTokensFull(params).asScala
-      } yield {
-        scribe.info(
-          "\n\n obtainedToken:   \n"
-            + obtainedTokens.getData.asScala
-              .grouped(5)
-              .map(_.mkString(","))
-              .mkString("\n")
-        )
-        val all = obtainedTokens
-          .getData()
-          .asScala
-          .grouped(5)
-          .map(_.toList)
-          .map {
-            case List(
-                  deltaLine,
-                  deltaStartChar,
-                  length,
-                  tokenType,
-                  tokenModifier,
-                ) => // modifiers ignored for now
-              (
-                new l.Position(deltaLine, deltaStartChar),
-                length,
-                decorationString(tokenType, tokenModifier),
-              )
-            case _ =>
-              throw new RuntimeException("Expected output dvidable by 5")
-          }
-          .toList
-
-        def updatePositions_FromRelativeToAbolute(
-            positions: List[(l.Position, Integer, String)],
-            last: l.Position,
-        ): Unit = {
-          positions match {
-            case (head, _, _) :: next =>
-              if (head.getLine() != 0)
-                head.setLine(last.getLine() + head.getLine())
-              else {
-                head.setLine(last.getLine())
-                head.setCharacter(
-                  last.getCharacter() + head.getCharacter()
-                )
-              }
-              updatePositions_FromRelativeToAbolute(next, head)
-            case Nil =>
-          }
-        }
-        updatePositions_FromRelativeToAbolute(all, new l.Position(0, 0))
-
-        // Build textEdits  e.g. which converts 'def'  to  '<<def>>/*keyword*/'
-        val edits = all.map { case (pos, len, typ) =>
-          val startEdit = new l.TextEdit(new l.Range(pos, pos), "<<")
-          val end = new l.Position(pos.getLine(), pos.getCharacter() + len)
-          val endEdit = new l.TextEdit(new l.Range(end, end), s">>/*${typ}*/")
-          List(startEdit, endEdit)
-        }.flatten
-
-        // Decorate fileContent with textEdits
-        val obtained = TextEdits.applyEdits(fileContent, edits)
-
-        val strlog = s"""
-                        |***fileContent***
-                        |$fileContent
-                        |
-                        |***obtained***
-                        |$obtained
-                        |
-                        |***expected***
-                        |$expected
-                        |""".stripMargin
-        scribe.info(strlog)
-
-        Assertions.assertNoDiff(
-          obtained,
-          expected,
-        )
-      }
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-        null
+      Assertions.assertNoDiff(
+        obtained,
+        expected,
+      )
     }
-
   }
 
   def assertHighlight(

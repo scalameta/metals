@@ -1,26 +1,21 @@
 package scala.meta.internal.pc
-import java.util
-import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.collection.mutable.ListBuffer
-import scala.reflect.internal.util.Position
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.pc.SemanticTokenCapability._
 import scala.meta.pc.VirtualFileParams
 import scala.meta.tokens._
-import scala.meta.internal.pc.SemanticTokenCapability._
-import org.checkerframework.common.returnsreceiver.qual.This
+
 import org.eclipse.lsp4j.SemanticTokenModifiers
 import org.eclipse.lsp4j.SemanticTokenTypes
-import scala.meta.pc.DefinitionResult
 
 /**
  * Corresponds to tests.SemanticHighlightLspSuite
  */
 final class SemanticTokenProvider(
-    protected val cp: MetalsGlobal // compiler
-    ,
+    protected val cp: MetalsGlobal, // compiler
     val params: VirtualFileParams
 ) {
   val capableTypes = TokenTypes
