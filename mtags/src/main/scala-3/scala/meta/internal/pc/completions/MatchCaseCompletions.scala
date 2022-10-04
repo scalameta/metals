@@ -313,7 +313,7 @@ object CaseKeywordCompletion:
         val exhaustive = CompletionValue.MatchCompletion(
           "match (exhaustive)",
           insertText,
-          members.flatMap(_.additionalEdits),
+          members.flatMap(_.additionalEdits).distinct,
           s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
         )
         List(basicMatch, exhaustive)
