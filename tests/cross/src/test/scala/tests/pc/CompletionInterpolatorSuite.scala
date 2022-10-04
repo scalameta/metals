@@ -732,6 +732,8 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |def aaa = 123
        |def main = s" ${aaa.incr$0}"
        |""".stripMargin,
+    // simulate issues with VS Code
+    filterText = "aaa.incr",
   )
 
   checkEdit(
@@ -756,6 +758,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |def aaa = 123
        |def main = s"  ${aaa.plus($0)}"
        |""".stripMargin,
+    filterText = "aaa.plus",
   )
 
   check(

@@ -309,6 +309,7 @@ class CompletionProvider(
                     nameEdit,
                     isFromWorkspace = true,
                     v.additionalEdits ++ other.toList,
+                    filterText = v.filterText,
                   )
                 case _ =>
                   mkItem(
@@ -319,6 +320,7 @@ class CompletionProvider(
                     isFromWorkspace = true,
                     v.additionalEdits ++ edits.edits,
                     range = v.range,
+                    filterText = v.filterText,
                   )
             case None =>
               val r = indexedContext.lookupSym(sym)
