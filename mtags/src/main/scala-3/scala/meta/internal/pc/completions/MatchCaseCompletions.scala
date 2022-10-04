@@ -173,12 +173,20 @@ object CaseKeywordCompletion:
       // Step 2: walk through known subclasses of sealed types.
       val sealedDescs = MetalsSealedDesc.sealedStrictDescendants(selectorSym)
       sealedDescs.foreach { sym =>
-        val autoImport = autoImportsGen.forSymbol(sym)
-        autoImport match
-          case Some(value) =>
-            visit(sym, sym.decodedName, value)
-          case scala.None =>
-            visit(sym, sym.showFullName, Nil)
+        // We don't want to import cases
+        if sym.isAllOf(Flags.EnumCase) || sym.isAllOf(Flags.EnumVal) then
+          visit(
+            sym,
+            s"${sym.owner.nameBackticked}.${sym.nameBackticked}",
+            autoImportsGen.forSymbol(sym.owner).getOrElse(Nil),
+          )
+        else
+          val autoImport = autoImportsGen.forSymbol(sym)
+          autoImport match
+            case Some(value) =>
+              visit(sym, sym.decodedName, value)
+            case scala.None =>
+              visit(sym, sym.showFullName, Nil)
       }
       val res = result.result()
 
@@ -272,7 +280,7 @@ object CaseKeywordCompletion:
     sortedSubclasses.foreach { case sym =>
       val (autoImport, name) =
         // We don't want to import cases
-        if sym.isAllOf(Flags.EnumCase) then
+        if sym.isAllOf(Flags.EnumCase) || sym.isAllOf(Flags.EnumVal) then
           (
             autoImportsGen.forSymbol(sym.owner),
             s"${sym.owner.nameBackticked}.${sym.nameBackticked}",
