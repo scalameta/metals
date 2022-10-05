@@ -56,6 +56,7 @@ class ScalaCli(
     languageClient: LanguageClient,
     config: () => MetalsServerConfig,
     userConfig: () => UserConfiguration,
+    parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -129,6 +130,7 @@ class ScalaCli(
                 compilations
                   .cascadeCompileFiles(toCompile) ::
                   compilers().load(toCompile) ::
+                  parseTreesAndPublishDiags(allSources0) ::
                   Nil
               )
             } yield ()
