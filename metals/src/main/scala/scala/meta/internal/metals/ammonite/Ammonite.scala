@@ -52,6 +52,7 @@ final class Ammonite(
     focusedDocument: () => Option[AbsolutePath],
     config: MetalsServerConfig,
     scalaVersionSelector: ScalaVersionSelector,
+    parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -136,6 +137,7 @@ final class Ammonite(
             compilations
               .cascadeCompileFiles(toCompile) ::
               compilers.load(toCompile) ::
+              parseTreesAndPublishDiags(toCompile) ::
               Nil
           )
         } yield ()

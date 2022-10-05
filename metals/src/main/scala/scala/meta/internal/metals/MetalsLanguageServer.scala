@@ -313,14 +313,16 @@ class MetalsLanguageServer(
     initialConfig
   )
 
-  def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Seq[Unit]] = {
-    Future.traverse(paths.distinct) { path =>
-      if (path.isScalaFilename) {
-        Future(diagnostics.onSyntaxError(path, trees.didChange(path)))
-      } else {
-        Future.successful(())
+  def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
+    Future
+      .traverse(paths.distinct) { path =>
+        if (path.isScalaFilename && buffers.contains(path)) {
+          Future(diagnostics.onSyntaxError(path, trees.didChange(path)))
+        } else {
+          Future.successful(())
+        }
       }
-    }
+      .ignoreValue
   }
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
@@ -815,6 +817,7 @@ class MetalsLanguageServer(
             () => focusedDocument,
             clientConfig.initialConfig,
             scalaVersionSelector,
+            parseTreesAndPublishDiags,
           )
         )
         buildTargets.addData(ammonite.buildTargetsData)
@@ -2470,6 +2473,7 @@ class MetalsLanguageServer(
       languageClient,
       () => clientConfig.initialConfig,
       () => userConfig,
+      parseTreesAndPublishDiags,
     )
   )
   buildTargets.addData(scalaCli.buildTargetsData)
