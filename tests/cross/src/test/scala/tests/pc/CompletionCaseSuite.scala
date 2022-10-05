@@ -184,12 +184,6 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     """|case scala.util.Left(value) =>
        |case Right(value) => scala.util
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|case Left(value) => scala.util
-           |case Right(value) => scala.util
-           |""".stripMargin
-    ),
   )
 
   checkEdit(

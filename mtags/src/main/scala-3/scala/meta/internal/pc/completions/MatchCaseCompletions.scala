@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 package completions
 
+import java.net.URI
 import java.{util as ju}
 
 import scala.collection.JavaConverters.*
@@ -10,10 +11,12 @@ import scala.collection.mutable.ListBuffer
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
+import scala.meta.internal.pc.AutoImports.SymbolImport
 import scala.meta.internal.pc.IndexedContext.Result
 import scala.meta.internal.pc.MetalsInteractive.*
 import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.Constant
@@ -55,6 +58,7 @@ object CaseKeywordCompletion:
       completionPos: CompletionPos,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
+      search: SymbolSearch,
       parent: Tree,
       patternOnly: Option[String] = None,
       hasBind: Boolean = false,
@@ -126,13 +130,9 @@ object CaseKeywordCompletion:
         )
       )
     else
-      val result = ListBuffer.empty[CompletionValue.CaseKeyword]
+      val result = ListBuffer.empty[SymbolImport]
       val isVisited = mutable.Set.empty[Symbol]
-      def visit(
-          sym: Symbol,
-          name: String,
-          autoImports: List[l.TextEdit],
-      ): Unit =
+      def visit(symImport: SymbolImport): Unit =
 
         def recordVisit(s: Symbol): Unit =
           if s != NoSymbol && !isVisited(s) then
@@ -140,16 +140,11 @@ object CaseKeywordCompletion:
             recordVisit(s.moduleClass)
             recordVisit(s.sourceModule)
 
+        val sym = symImport.sym
         if !isVisited(sym) then
           recordVisit(sym)
-          if completionGenerator.fuzzyMatches(name) then
-            val completionOption = completionGenerator.toCompletionValue(
-              sym,
-              name,
-              autoImports,
-            )
-            completionOption.foreach(result += _)
-          end if
+          if completionGenerator.fuzzyMatches(symImport.name) then
+            result += symImport
       end visit
 
       // Step 0: case for selector type
@@ -158,7 +153,7 @@ object CaseKeywordCompletion:
         case _ =>
           if !(selectorSym.is(Sealed) &&
               (selectorSym.is(Abstract) || selectorSym.is(Trait)))
-          then visit(selectorSym, selectorSym.decodedName, Nil)
+          then visit((autoImportsGen.inferSymbolImport(selectorSym)))
 
       // Step 1: walk through scope members.
       def isValid(sym: Symbol) = !parents.isParent(sym)
@@ -168,55 +163,63 @@ object CaseKeywordCompletion:
       indexedContext.scopeSymbols
         .foreach(s =>
           val ts = s.info.dealias.typeSymbol
-          if (isValid(ts)) then visit(ts, ts.decodedName, Nil)
+          if (isValid(ts)) then visit(autoImportsGen.inferSymbolImport(ts))
         )
       // Step 2: walk through known subclasses of sealed types.
       val sealedDescs = MetalsSealedDesc.sealedStrictDescendants(selectorSym)
       sealedDescs.foreach { sym =>
-        // We don't want to import cases
-        if sym.isAllOf(Flags.EnumCase) || sym.isAllOf(Flags.EnumVal) then
-          visit(
-            sym,
-            s"${sym.owner.nameBackticked}.${sym.nameBackticked}",
-            autoImportsGen.forSymbol(sym.owner).getOrElse(Nil),
-          )
-        else
-          val autoImport = autoImportsGen.forSymbol(sym)
-          autoImport match
-            case Some(value) =>
-              visit(sym, sym.decodedName, value)
-            case scala.None =>
-              visit(sym, sym.showFullName, Nil)
+        val symbolImport = autoImportsGen.inferSymbolImport(sym)
+        visit(symbolImport)
       }
       val res = result.result()
+
+      val members =
+        res.flatMap { symImport =>
+          completionGenerator
+            .labelForCaseMember(symImport.sym, symImport.name)
+            .map(label => (symImport.sym, label, symImport.importSel))
+
+        }
+
+      val caseItems = members.map((sym, label, importSel) =>
+        completionGenerator.toCompletionValue(
+          sym,
+          label,
+          autoImportsGen.renderImports(importSel.toList),
+        )
+      )
 
       selector match
         // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
         // which works like exhaustive match.
         case EmptyTree =>
-          val sealedMembers = res.filter(c => sealedDescs.contains(c.symbol))
+          val sealedMembers =
+            members.filter((sym, _, _) => sealedDescs.contains(sym))
           sealedMembers match
-            case Nil => res
-            case head :: tail =>
+            case Nil => caseItems
+            case (_, firstLabel, _) :: tail =>
               val insertText = Some(
                 tail
-                  .map(_.label)
+                  .map((_, label, _) => label)
                   .mkString(
-                    if clientSupportsSnippets then s"\n\t${head.label} $$0\n\t"
-                    else s"\n\t${head.label}\n\t",
+                    if clientSupportsSnippets then s"\n\t${firstLabel} $$0\n\t"
+                    else s"\n\t${firstLabel}\n\t",
                     "\n\t",
                     "\n",
                   )
               )
+              val allImports =
+                sealedMembers.flatMap((_, _, importSel) => importSel).distinct
+              val importEdit = autoImportsGen.renderImports(allImports)
               val exhaustive = CompletionValue.MatchCompletion(
                 s"case (exhaustive)",
                 insertText,
-                res.flatMap(_.additionalEdits),
+                importEdit.toList,
                 s" ${selectorSym.decodedName} (${res.length} cases)",
               )
-              exhaustive :: res
+              exhaustive :: caseItems
           end match
-        case _ => res
+        case _ => caseItems
       end match
     end if
 
@@ -235,6 +238,7 @@ object CaseKeywordCompletion:
       completionPos: CompletionPos,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
+      search: SymbolSearch,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val pos = completionPos.sourcePos
@@ -269,31 +273,22 @@ object CaseKeywordCompletion:
             loop(tp2)
           case t => parents += tpe.typeSymbol
       loop(tpe.widen.bounds.hi)
-      parents.toList.flatMap { parent =>
+      val subclasses = parents.toList.flatMap { parent =>
         // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
         if parent.isAllOf(JavaEnumTrait) then parent.children
         else MetalsSealedDesc.sealedStrictDescendants(parent)
       }
+      sortSubclasses(tpe, subclasses, completionPos.sourceUri, search)
     end subclassesForType
 
     val sortedSubclasses = subclassesForType(tpe)
-    sortedSubclasses.foreach { case sym =>
-      val (autoImport, name) =
-        // We don't want to import cases
-        if sym.isAllOf(Flags.EnumCase) || sym.isAllOf(Flags.EnumVal) then
-          (
-            autoImportsGen.forSymbol(sym.owner),
-            s"${sym.owner.nameBackticked}.${sym.nameBackticked}",
-          )
-        else (autoImportsGen.forSymbol(sym), sym.decodedName)
-
-      val completionOption = completionGenerator.toCompletionValue(
-        sym,
-        name,
-        autoImport.getOrElse(Nil),
-      )
-      completionOption.foreach(result += _)
-    }
+    val (labels, imports) =
+      sortedSubclasses.flatMap { sym =>
+        val enter = autoImportsGen.inferSymbolImport(sym)
+        completionGenerator
+          .labelForCaseMember(enter.sym, enter.name)
+          .map(label => (label, enter.importSel))
+      }.unzip
 
     val basicMatch = CompletionValue.MatchCompletion(
       "match",
@@ -304,29 +299,49 @@ object CaseKeywordCompletion:
       Nil,
       "",
     )
-    val members = result.result()
-    val completions = members match
+    val completions = labels match
       case Nil => List(basicMatch)
       case head :: tail =>
         val insertText = Some(
           tail
-            .map(_.label)
             .mkString(
-              if clientSupportsSnippets then s"match\n\t${head.label} $$0\n\t"
-              else s"match\n\t${head.label}\n\t",
+              if clientSupportsSnippets then s"match\n\t${head} $$0\n\t"
+              else s"match\n\t${head}\n\t",
               "\n\t",
               "\n",
             )
         )
+        val importEdit = autoImportsGen.renderImports(imports.flatten.distinct)
         val exhaustive = CompletionValue.MatchCompletion(
           "match (exhaustive)",
           insertText,
-          members.flatMap(_.additionalEdits).distinct,
-          s" ${tpe.typeSymbol.decodedName} (${members.length} cases)",
+          importEdit.toList,
+          s" ${tpe.typeSymbol.decodedName} (${labels.length} cases)",
         )
         List(basicMatch, exhaustive)
     completions
   end matchContribute
+
+  private def sortSubclasses(
+      tpe: Type,
+      syms: List[Symbol],
+      uri: URI,
+      search: SymbolSearch,
+  )(using Context): List[Symbol] =
+    if syms.forall(_.sourcePos.exists) then syms.sortBy(_.sourcePos.point)
+    else
+      val defnSymbols = search
+        .definitionSourceToplevels(
+          SemanticdbSymbols.symbolName(tpe.typeSymbol),
+          uri,
+        )
+        .asScala
+        .zipWithIndex
+        .toMap
+      syms.sortBy { sym =>
+        val semancticName = SemanticdbSymbols.symbolName(sym)
+        defnSymbols.getOrElse(semancticName, -1)
+      }
 
 end CaseKeywordCompletion
 
@@ -371,11 +386,9 @@ class CompletionValueGenerator(
       case Some("") => true
       case Some(query) => CompletionFuzzy.matches(query, name)
 
-  def toCompletionValue(
-      sym: Symbol,
-      name: String,
-      autoImports: List[l.TextEdit],
-  )(using Context): Option[CompletionValue.CaseKeyword] =
+  def labelForCaseMember(sym: Symbol, name: String)(using
+      Context
+  ): Option[String] =
     val isModuleLike =
       sym.is(Flags.Module) || sym.isOneOf(JavaEnumTrait) || sym.isOneOf(
         JavaEnumValue
@@ -384,16 +397,12 @@ class CompletionValueGenerator(
     else
       val pattern =
         if (sym.is(Case) || isModuleLike) && !hasBind then
-          val isInfixEligible =
-            indexedContext.lookupSym(sym) == Result.InScope
-              || autoImports.nonEmpty
-          if isInfixEligible && sym.is(Case) && !Character
-              .isUnicodeIdentifierStart(
-                sym.decodedName.head
-              )
+          if sym.is(Case) &&
+            sym.decodedName == name &&
+            !Character.isUnicodeIdentifierStart(name.head)
           then
             // Deconstructing the symbol as an infix operator, for example `case head :: tail =>`
-            tryInfixPattern(sym).getOrElse(
+            tryInfixPattern(sym, name).getOrElse(
               unapplyPattern(sym, name, isModuleLike)
             )
           else
@@ -408,34 +417,44 @@ class CompletionValueGenerator(
             sym,
             name,
           ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
+        end if
+      end pattern
 
-      val label =
+      val out =
         if patternOnly.isEmpty then s"case $pattern =>"
         else pattern
-      val cursorSuffix =
-        (if patternOnly.nonEmpty then "" else " ") +
-          (if clientSupportsSnippets then "$0" else "")
-      Some(
-        CompletionValue.CaseKeyword(
-          sym,
-          label,
-          Some(label + cursorSuffix),
-          autoImports,
-          range = Some(completionPos.toEditRange),
-        )
-      )
+      Some(out)
     end if
+  end labelForCaseMember
+
+  def toCompletionValue(
+      sym: Symbol,
+      label: String,
+      autoImport: Option[l.TextEdit],
+  )(using Context): CompletionValue.CaseKeyword =
+    val cursorSuffix =
+      (if patternOnly.nonEmpty then "" else " ") +
+        (if clientSupportsSnippets then "$0" else "")
+    CompletionValue.CaseKeyword(
+      sym,
+      label,
+      Some(label + cursorSuffix),
+      autoImport.toList,
+      range = Some(completionPos.toEditRange),
+    )
   end toCompletionValue
 
-  private def tryInfixPattern(sym: Symbol)(using Context): Option[String] =
+  private def tryInfixPattern(sym: Symbol, name: String)(using
+      Context
+  ): Option[String] =
     sym.primaryConstructor.paramSymss match
       case (a :: b :: Nil) :: Nil =>
         Some(
-          s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
+          s"${a.decodedName} $name ${b.decodedName}"
         )
       case _ :: (a :: b :: Nil) :: _ =>
         Some(
-          s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
+          s"${a.decodedName} $name ${b.decodedName}"
         )
       case _ => None
 

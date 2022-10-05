@@ -22,52 +22,7 @@ import org.eclipse.{lsp4j as l}
 
 object AutoImports extends AutoImportsBackticks:
 
-  enum AutoImport:
-
-    /**
-     * Trivial import: `Future -> (Future, import scala.concurrent.Future)`
-     */
-    case Simple(sym: Symbol)
-
-    /**
-     * Rename symbol owner and add renamed prefix to tpe symbol.
-     * For example, `Renamed(sym = <java.util.Map>, ownerRename = "ju")` represents
-     * complete `ju.Map` while auto import `import java.{util => ju}`.
-     * `toEdits` method convert `Renamed` to
-     * AutoImportEdits(
-     *  nameEdit = "ju.Map",
-     *  importEdit = "import java.{util => ju})"
-     * )
-     */
-    case Renamed(sym: Symbol, ownerRename: String)
-
-    /**
-     * Rename symbol itself, import only.
-     * For example, `SelfRenamed(sym = <java.util>, name = "ju")` represents
-     * auto import `import java.{util => ju}` without completing anything, unlike `Renamed`.
-     *
-     * `toEdits` method convert `SelfRenamed` to
-     * AutoImportEdits(
-     *  nameEdit = None,
-     *  importEdit = "import java.{util => ju})"
-     * )
-     */
-    case SelfRenamed(sym: Symbol, name: String)
-
-    /**
-     *  Import owner and add prefix to tpe symbol
-     * `Map -> (mutable.Map, import scala.collection.mutable)`
-     */
-    case SpecifiedOwner(sym: Symbol)
-  end AutoImport
-
   object AutoImport:
-    def renamedOrSpecified(sym: Symbol, ownerRename: String)(using
-        Context
-    ): AutoImport =
-      if sym.owner.showName == ownerRename then SpecifiedOwner(sym)
-      else Renamed(sym, ownerRename)
-
     def renameConfigMap(config: PresentationCompilerConfig)(using
         Context
     ): Map[Symbol, String] =
@@ -79,6 +34,51 @@ object AutoImports extends AutoImportsBackticks:
           .map((_, rename))
       }.toMap
   end AutoImport
+
+  sealed trait SymbolIdent:
+    def value: String
+
+  object SymbolIdent:
+    case class Direct(value: String) extends SymbolIdent
+    case class Select(qual: SymbolIdent, name: String) extends SymbolIdent:
+      def value: String = s"${qual.value}.$name"
+
+    def direct(name: String): SymbolIdent = Direct(name)
+
+    def fullIdent(symbol: Symbol)(using Context): SymbolIdent =
+      val symbols = symbol.ownersIterator.toList
+        .takeWhile(_ != ctx.definitions.RootClass)
+        .reverse
+
+      symbols match
+        case head :: tail =>
+          tail.foldLeft(direct(head.nameBackticked))((acc, next) =>
+            Select(acc, next.nameBackticked)
+          )
+        case Nil =>
+          SymbolIdent.direct("<no symbol>")
+
+  end SymbolIdent
+
+  sealed trait ImportSel:
+    def sym: Symbol
+
+  object ImportSel:
+    final case class Direct(sym: Symbol) extends ImportSel
+    final case class Rename(sym: Symbol, rename: String) extends ImportSel
+
+  case class SymbolImport(
+      sym: Symbol,
+      ident: SymbolIdent,
+      importSel: Option[ImportSel],
+  ):
+
+    def name: String = ident.value
+
+  object SymbolImport:
+
+    def simple(sym: Symbol)(using Context): SymbolImport =
+      SymbolImport(sym, SymbolIdent.direct(sym.nameBackticked), None)
 
   /**
    * Returns AutoImportsGenerator
@@ -160,77 +160,117 @@ object AutoImports extends AutoImportsBackticks:
      * `ShortName("ju", <java.util>)` => `import java.{util => ju}`.
      */
     def forShortName(shortName: ShortName): Option[List[l.TextEdit]] =
-      if shortName.isRename then Some(toEdits(shortName.asImport).edits)
+      if shortName.isRename then
+        renderImports(
+          List(ImportSel.Rename(shortName.symbol, shortName.name.show))
+        ).map(List(_))
       else forSymbol(shortName.symbol)
 
     /**
      * @param symbol A missing symbol to auto-import
      */
     def editsForSymbol(symbol: Symbol): Option[AutoImportEdits] =
-      inferAutoImport(symbol).map { ai => toEdits(ai) }
+      val symbolImport = inferSymbolImport(symbol)
+      val nameEdit = symbolImport.ident match
+        case SymbolIdent.Direct(_) => None
+        case other =>
+          Some(new l.TextEdit(pos.toLsp, other.value))
 
-    private def toEdits(ai: AutoImport): AutoImportEdits =
-      def mkImportEdit = importEdit(List(ai), importPosition)
-      ai match
-        case _: AutoImport.Simple =>
-          AutoImportEdits.importOnly(mkImportEdit)
-        case AutoImport.SpecifiedOwner(sym)
-            if indexedContext.lookupSym(sym.owner).exists =>
-          AutoImportEdits.nameOnly(specifyOwnerEdit(sym, sym.owner.showName))
-        case AutoImport.SpecifiedOwner(sym) =>
-          AutoImportEdits(
-            specifyOwnerEdit(sym, sym.owner.showName),
-            mkImportEdit,
-          )
-        case AutoImport.Renamed(sym, ownerRename)
-            if indexedContext.hasRename(sym.owner, ownerRename) =>
-          AutoImportEdits.nameOnly(specifyOwnerEdit(sym, ownerRename))
-        case AutoImport.Renamed(sym, ownerRename) =>
-          AutoImportEdits(specifyOwnerEdit(sym, ownerRename), mkImportEdit)
-        case AutoImport.SelfRenamed(_, _) =>
-          AutoImportEdits.importOnly(mkImportEdit)
-      end match
-    end toEdits
+      val importEdit =
+        symbolImport.importSel.flatMap(sel => renderImports(List(sel)))
+      if nameEdit.isDefined || importEdit.isDefined then
+        Some(AutoImportEdits(nameEdit, importEdit))
+      else None
+    end editsForSymbol
 
-    private def inferAutoImport(symbol: Symbol): Option[AutoImport] =
+    def inferSymbolImport(symbol: Symbol): SymbolImport =
       indexedContext.lookupSym(symbol) match
-        case IndexedContext.Result.Missing => Some(AutoImport.Simple(symbol))
+        case IndexedContext.Result.Missing =>
+          // in java enum and enum case both have same flags
+          val enumOwner = symbol.owner.companion
+          def isJavaEnumCase: Boolean =
+            symbol.isAllOf(EnumVal) && enumOwner.is(Enum)
+
+          val (name, sel) =
+            // For enums import owner instead of all members
+            if symbol.isAllOf(EnumCase) || isJavaEnumCase
+            then
+              val ownerImport = inferSymbolImport(enumOwner)
+              (
+                SymbolIdent.Select(
+                  ownerImport.ident,
+                  symbol.nameBacktickedImport,
+                ),
+                ownerImport.importSel,
+              )
+            else
+              (
+                SymbolIdent.direct(symbol.nameBackticked),
+                Some(ImportSel.Direct(symbol)),
+              )
+          end val
+
+          SymbolImport(
+            symbol,
+            name,
+            sel,
+          )
         case IndexedContext.Result.Conflict =>
           val owner = symbol.owner
           renames(owner) match
             case Some(rename) =>
-              Some(AutoImport.renamedOrSpecified(symbol, rename))
-            case _ => None
-        case IndexedContext.Result.InScope => None
+              val importSel =
+                if rename != owner.showName then
+                  Some(ImportSel.Rename(owner, rename)).filter(_ =>
+                    !indexedContext.hasRename(owner, rename)
+                  )
+                else
+                  Some(ImportSel.Direct(owner)).filter(_ =>
+                    !indexedContext.lookupSym(owner).exists
+                  )
 
-    private def specifyOwnerEdit(symbol: Symbol, owner: String): l.TextEdit =
-      val line = pos.startLine
-      new l.TextEdit(pos.toLsp, s"$owner.${symbol.nameBacktickedImport}")
+              SymbolImport(
+                symbol,
+                SymbolIdent.Select(
+                  SymbolIdent.direct(rename),
+                  symbol.nameBacktickedImport,
+                ),
+                importSel,
+              )
+            case None =>
+              SymbolImport(
+                symbol,
+                SymbolIdent.direct(symbol.fullNameBackticked),
+                None,
+              )
+          end match
+        case IndexedContext.Result.InScope =>
+          SymbolImport(symbol, SymbolIdent.direct(symbol.nameBackticked), None)
+      end match
+    end inferSymbolImport
 
-    private def importEdit(
-        values: List[AutoImport],
-        importPosition: AutoImportPosition,
-    )(using Context): l.TextEdit =
-      val indent = " " * importPosition.indent
-      val topPadding =
-        if importPosition.padTop then "\n"
-        else ""
+    def renderImports(
+        imports: List[ImportSel]
+    )(using Context): Option[l.TextEdit] =
+      if imports.nonEmpty then
+        val indent = " " * importPosition.indent
+        val topPadding =
+          if importPosition.padTop then "\n"
+          else ""
 
-      val formatted = values
-        .map({
-          case AutoImport.Simple(sym) => importName(sym)
-          case AutoImport.SpecifiedOwner(sym) => importName(sym.owner)
-          case AutoImport.Renamed(sym, rename) =>
-            s"${importName(sym.owner.owner)}.{${sym.owner.nameBacktickedImport} => $rename}"
-          case AutoImport.SelfRenamed(sym, rename) =>
-            s"${importName(sym.owner)}.{${sym.nameBacktickedImport} => $rename}"
-        })
-        .map(selector => s"${indent}import $selector")
-        .mkString(topPadding, "\n", "\n")
+        val formatted = imports
+          .map {
+            case ImportSel.Direct(sym) => importName(sym)
+            case ImportSel.Rename(sym, rename) =>
+              s"${importName(sym.owner)}.{${sym.nameBacktickedImport} => $rename}"
+          }
+          .map(sel => s"${indent}import $sel")
+          .mkString(topPadding, "\n", "\n")
 
-      val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLsp
-      new l.TextEdit(editPos, formatted)
-    end importEdit
+        val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLsp
+        Some(new l.TextEdit(editPos, formatted))
+      else None
+    end renderImports
 
     private def importName(sym: Symbol): String =
       if indexedContext.importContext.toplevelClashes(sym) then

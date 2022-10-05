@@ -215,8 +215,6 @@ object ShortenedNames:
       symbol: Symbol,
   ):
     def isRename(using Context): Boolean = symbol.name.show != name.show
-    def asImport(using Context): AutoImport =
-      AutoImport.SelfRenamed(symbol, name.show)
 
   object ShortName:
     def apply(sym: Symbol)(using ctx: Context): ShortName =

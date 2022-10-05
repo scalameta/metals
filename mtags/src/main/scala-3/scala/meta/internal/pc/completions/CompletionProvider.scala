@@ -62,7 +62,7 @@ class CompletionProvider(
           MetalsInteractive.contextOfPath(tpdPath)(using newctx)
         val indexedCtx = IndexedContext(locatedCtx)
         val completionPos =
-          CompletionPos.infer(pos, params.text, path)(using newctx)
+          CompletionPos.infer(pos, params, path)(using newctx)
         val (completions, searchResult) =
           new Completions(
             pos,

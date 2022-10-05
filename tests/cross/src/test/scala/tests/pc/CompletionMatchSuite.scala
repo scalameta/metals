@@ -101,7 +101,6 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       "3" -> s"""|package stale
                  |
                  |import stale.Weekday.Workday
-                 |
                  |import stale.Weekday.Weekend
                  |sealed abstract class Weekday
                  |object Weekday {
@@ -226,8 +225,8 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       "3" -> s"""package sort
                 |object App {
                 |  Option(1) match
-                |\tcase None => $$0
-                |\tcase Some(value) =>
+                |\tcase Some(value) => $$0
+                |\tcase None =>
                 |
                 |}
                 |""".stripMargin,
@@ -369,8 +368,8 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |
                 |object Main {
                 |  Option(1) match
-                |\tcase None => $$0
-                |\tcase Some(value) =>
+                |\tcase Some(value) => $$0
+                |\tcase scala.None =>
                 |
                 |}""".stripMargin
     ),
