@@ -73,7 +73,7 @@ final class AutoImportsProvider(
     val results = symbols.result.filter(isExactMatch(_, name))
 
     if results.nonEmpty then
-      val correctedPos = CompletionPos.infer(pos, params.text, path).sourcePos
+      val correctedPos = CompletionPos.infer(pos, params, path).sourcePos
       val generator =
         AutoImports.generator(
           correctedPos,
