@@ -78,7 +78,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   check(
     "abstract(modifier), trait, type parameter",
     s"""|
-        |<<package>>/*keyword*/ a.b
+        |<<package>>/*keyword*/ <<a>>/*namespace*/.<<b>>/*namespace*/
         |<<object>>/*keyword*/ <<Sample5>>/*class*/ {
         |
         |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
@@ -97,7 +97,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |  }
         |
         |  <<class>>/*keyword*/ <<IntIterator>>/*class*/(<<to>>/*parameter*/: <<Int>>/*class,abstract*/)
-        |  <<extends>>/*keyword*/ <<hasLogger>>/*class,abstract*/ <<with>>/*keyword*/ <<Iterator>>/*interface,abstract*/[Int]  {
+        |  <<extends>>/*keyword*/ <<hasLogger>>/*class,abstract*/ <<with>>/*keyword*/ <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
         |    <<private>>/*modifier*/ <<var>>/*keyword*/ <<current>>/*variable*/ = <<0>>/*number*/
         |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
         |      <<if>>/*keyword*/ (<<current>>/*variable*/ <<<>>/*method,abstract*/ <<to>>/*variable,readonly*/) {
@@ -121,7 +121,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |  <<@>>/*keyword*/<<deprecated>>/*class*/(<<"this method will be removed">>/*string*/, <<"FooLib 12.0">>/*string*/)
         |  <<def>>/*keyword*/ <<oldMethod>>/*method,deprecated*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/) = <<x>>/*parameter*/
         |
-        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[String]) ={
+        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
         |    <<val>>/*keyword*/ <<str>>/*variable,readonly*/ = <<oldMethod>>/*method,deprecated*/(<<2>>/*number*/).<<toString>>/*method*/
         |     <<println>>/*method*/(<<"Hello, world!">>/*string*/<<+>>/*method*/ <<str>>/*variable,readonly*/)
         |  }
@@ -138,7 +138,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |  <<def>>/*keyword*/ <<sqrtplus1>>/*method*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/)
         |     = <<sqrt>>/*method*/(<<x>>/*parameter*/).<<toString>>/*method*/()
         |
-        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*method*/[<<String>>/*method*/]) ={
+        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
         |    <<println>>/*method*/(<<"Hello, world! : ">>/*string*/ <<+>>/*method*/ <<sqrtplus1>>/*method*/(<<2>>/*number*/))
         |  }
         |}
