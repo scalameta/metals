@@ -303,6 +303,7 @@ final case class Indexer(
       clientConfig.initialConfig.statistics.isIndex,
     ) {
       try {
+        fileWatcher.cancel()
         fileWatcher.start()
       } catch {
         // note(@tgodzik) This is needed in case of ammonite
