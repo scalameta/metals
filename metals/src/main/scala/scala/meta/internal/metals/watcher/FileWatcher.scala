@@ -50,6 +50,18 @@ final class FileWatcher(
     stopWatcher()
   }
 
+  def start(
+      files: Set[AbsolutePath]
+  ): Unit = {
+    stopWatcher = startWatch(
+      config,
+      workspaceDeferred().toNIO,
+      PathsToWatch(files.map(_.toNIO), Set.empty),
+      onFileWatchEvent,
+      watchFilter,
+    )
+  }
+
   def start(): Unit = {
     stopWatcher = startWatch(
       config,

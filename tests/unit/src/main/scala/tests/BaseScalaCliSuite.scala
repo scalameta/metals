@@ -164,35 +164,53 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
     }
   }
 
+  private val simpleFileLayout =
+    s"""|/MyTests.scala
+        |//> using scala "$scalaVersion"
+        |//> using lib "com.lihaoyi::utest::0.7.9"
+        |//> using lib "com.lihaoyi::pprint::0.6.4"
+        |
+        |import foo.Foo
+        |import utest._
+        |
+        |object MyTests extends TestSuite {
+        |  pprint.log(2)
+        |  val tests = Tests {
+        |    test("foo") {
+        |      assert(2 + 2 == 4)
+        |    }
+        |    test("nope") {
+        |      assert(2 + 2 == (new Foo).value)
+        |    }
+        |  }
+        |}
+        |
+        |/foo.sc
+        |class Foo {
+        |  def value = 5
+        |}
+        |""".stripMargin
+
+  test("connecting-scalacli") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = FileLayout.fromString(simpleFileLayout, workspace)
+      _ = FileLayout.fromString(bspLayout, workspace)
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("MyTests.scala")
+      _ <- assertDefinitionAtLocation(
+        "MyTests.scala",
+        "val tests = Test@@s",
+        "utest/Tests.scala",
+      )
+    } yield ()
+  }
+
   def simpleFileTest(useBsp: Boolean): Future[Unit] =
     for {
-      _ <- scalaCliInitialize(useBsp)(
-        s"""/MyTests.scala
-           |//> using scala "$scalaVersion"
-           |//> using lib "com.lihaoyi::utest::0.7.9"
-           |//> using lib "com.lihaoyi::pprint::0.6.4"
-           |
-           |import foo.Foo
-           |import utest._
-           |
-           |object MyTests extends TestSuite {
-           |  pprint.log(2)
-           |  val tests = Tests {
-           |    test("foo") {
-           |      assert(2 + 2 == 4)
-           |    }
-           |    test("nope") {
-           |      assert(2 + 2 == (new Foo).value)
-           |    }
-           |  }
-           |}
-           |
-           |/foo.sc
-           |class Foo {
-           |  def value = 5
-           |}
-           |""".stripMargin
-      )
+      _ <- scalaCliInitialize(useBsp)(simpleFileLayout)
       _ <- server.didOpen("MyTests.scala")
       _ <- {
         if (useBsp) Future.unit

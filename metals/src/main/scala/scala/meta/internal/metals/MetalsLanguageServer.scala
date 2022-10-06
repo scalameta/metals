@@ -221,7 +221,7 @@ class MetalsLanguageServer(
       params => didChangeWatchedFiles(params),
     )
   )
-  private val indexingPromise: Promise[Unit] = Promise[Unit]()
+  val indexingPromise: Promise[Unit] = Promise[Unit]()
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
     CancelableFuture(
@@ -1410,7 +1410,7 @@ class MetalsLanguageServer(
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild
+    abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild || abs.isBsp
   }
 
   /**
@@ -1426,6 +1426,12 @@ class MetalsLanguageServer(
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
+
+    event.eventType match {
+      case EventType.CreateOrModify if path.isBsp =>
+        quickConnectToBuildServer()
+      case _ =>
+    }
     if (isScalaOrJava && event.eventType == EventType.Delete) {
       onDelete(path).asJava
     } else if (
@@ -2240,6 +2246,8 @@ class MetalsLanguageServer(
         if (!buildTools.isAutoConnectable) {
           warnings.noBuildTool()
         }
+        // wait for a bsp file to show up
+        fileWatcher.start(Set(workspace.resolve(".bsp")))
         Future(None)
       }
       case buildTool :: Nil => Future(isCompatibleVersion(buildTool))
