@@ -1,5 +1,6 @@
 package tests.pc
 
+import munit.Location
 import tests.BaseAutoImportsSuite
 
 class AutoImportsSuite extends BaseAutoImportsSuite {
@@ -366,5 +367,23 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
         |$code
         |}
         |""".stripMargin
+
+  // https://dotty.epfl.ch/docs/internals/syntax.html#soft-keywords
+  List("infix", "inline", "opaque", "open", "transparent", "as", "derives",
+    "end", "extension", "throws", "using").foreach(softKeywordCheck)
+
+  private def softKeywordCheck(keyword: String)(implicit loc: Location) =
+    checkEdit(
+      s"'$keyword'-named-object".tag(IgnoreScala2),
+      s"""|
+          |object $keyword{ object ABC }
+          |object Main{ val obj = <<ABC>> }
+          |""".stripMargin,
+      s"""|import $keyword.ABC
+          |
+          |object $keyword{ object ABC }
+          |object Main{ val obj = ABC }
+          |""".stripMargin,
+    )
 
 }

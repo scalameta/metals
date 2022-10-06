@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.*
 
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportEdits
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
@@ -19,7 +20,7 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import org.eclipse.{lsp4j as l}
 
-object AutoImports:
+object AutoImports extends AutoImportsBackticks:
 
   enum AutoImport:
 
@@ -204,7 +205,7 @@ object AutoImports:
 
     private def specifyOwnerEdit(symbol: Symbol, owner: String): l.TextEdit =
       val line = pos.startLine
-      new l.TextEdit(pos.toLsp, s"$owner.${symbol.nameBackticked}")
+      new l.TextEdit(pos.toLsp, s"$owner.${symbol.nameBacktickedImport}")
 
     private def importEdit(
         values: List[AutoImport],
@@ -220,9 +221,9 @@ object AutoImports:
           case AutoImport.Simple(sym) => importName(sym)
           case AutoImport.SpecifiedOwner(sym) => importName(sym.owner)
           case AutoImport.Renamed(sym, rename) =>
-            s"${importName(sym.owner.owner)}.{${sym.owner.nameBackticked} => $rename}"
+            s"${importName(sym.owner.owner)}.{${sym.owner.nameBacktickedImport} => $rename}"
           case AutoImport.SelfRenamed(sym, rename) =>
-            s"${importName(sym.owner)}.{${sym.nameBackticked} => $rename}"
+            s"${importName(sym.owner)}.{${sym.nameBacktickedImport} => $rename}"
         })
         .map(selector => s"${indent}import $selector")
         .mkString(topPadding, "\n", "\n")
@@ -233,8 +234,8 @@ object AutoImports:
 
     private def importName(sym: Symbol): String =
       if indexedContext.importContext.toplevelClashes(sym) then
-        s"_root_.${sym.fullNameBackticked}"
-      else sym.fullNameBackticked
+        s"_root_.${sym.fullNameBacktickedImport}"
+      else sym.fullNameBacktickedImport
   end AutoImportsGenerator
 
   private def autoImportPosition(
@@ -329,3 +330,11 @@ object AutoImports:
   end autoImportPosition
 
 end AutoImports
+
+trait AutoImportsBackticks:
+  // Avoids backticketing import parts that match soft keywords
+  extension (sym: Symbol)(using Context)
+    def fullNameBacktickedImport: String =
+      sym.fullNameBackticked(KeywordWrapper.Scala3SoftKeywords)
+    def nameBacktickedImport: String =
+      sym.nameBackticked(KeywordWrapper.Scala3SoftKeywords)

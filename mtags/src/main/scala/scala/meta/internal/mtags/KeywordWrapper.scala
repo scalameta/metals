@@ -43,8 +43,12 @@ trait KeywordWrapper {
     !valid
   }
 
-  final def backtickWrap(s: String): String = {
-    if (s.isEmpty) "``"
+  final def backtickWrap(
+      s: String,
+      exclusions: Set[String] = Set.empty
+  ): String = {
+    if (exclusions.contains(s)) s
+    else if (s.isEmpty) "``"
     else if (s(0) == '`' && s.last == '`') s
     else if (needsBacktick(s)) "" + ('`') + s + '`'
     else s
@@ -63,15 +67,20 @@ object KeywordWrapper {
     "\u2190"
   )
 
-  val Scala3Keywords: Set[String] = Set(
+  // List of Scala 3 keywords
+  // https://dotty.epfl.ch/docs/internals/syntax.html#keywords
+  val Scala3HardKeywords: Set[String] = Set(
     "abstract", "case", "catch", "class", "def", "do", "else", "enum", "export",
     "extends", "false", "final", "finally", "for", "given", "if", "implicit",
     "import", "lazy", "match", "new", "null", "object", "override", "package",
     "private", "protected", "return", "sealed", "super", "then", "throw",
     "trait", "true", "try", "type", "val", "var", "while", "with", "yield", ":",
-    "=", "<-", "=>", "<:", ":>", "#", "@", "=>>", "?=>", "extension", "inline",
-    "|", "*", "+", "-"
+    "=", "<-", "=>", "<:", ":>", "#", "@", "=>>", "?=>"
   )
+
+  val Scala3SoftKeywords: Set[String] =
+    Set("as", "derives", "end", "extension", "infix", "inline", "opaque",
+      "open", "throws", "transparent", "using", "|", "*", "+", "-")
 
   class Scala2 extends KeywordWrapper {
     val keywords: Set[String] = Scala2Keywords
@@ -79,7 +88,7 @@ object KeywordWrapper {
   object Scala2 extends Scala2
 
   class Scala3 extends KeywordWrapper {
-    val keywords: Set[String] = Scala3Keywords
+    val keywords: Set[String] = Scala3HardKeywords ++ Scala3SoftKeywords
   }
   object Scala3 extends Scala3
 }

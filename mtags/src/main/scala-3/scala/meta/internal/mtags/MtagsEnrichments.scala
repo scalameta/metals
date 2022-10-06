@@ -123,13 +123,15 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
       pos.offset() <= other.start && pos.endOffset() >= other.end
 
   extension (sym: Symbol)(using Context)
-    def fullNameBackticked: String =
+    def fullNameBackticked: String = fullNameBackticked(Set.empty)
+
+    def fullNameBackticked(exclusions: Set[String]): String =
       @tailrec
       def loop(acc: List[String], sym: Symbol): List[String] =
         if sym == NoSymbol || sym.isRoot || sym.isEmptyPackage then acc
         else if sym.isPackageObject then loop(acc, sym.owner)
         else
-          val v = KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
+          val v = this.nameBackticked(sym)(exclusions)
           loop(v :: acc, sym.owner)
       loop(Nil, sym).mkString(".")
 
@@ -138,8 +140,10 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
     def companion: Symbol =
       if sym.is(Module) then sym.companionClass else sym.companionModule
 
-    def nameBackticked: String =
-      KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
+    def nameBackticked: String = nameBackticked(Set.empty)
+
+    def nameBackticked(exclusions: Set[String]): String =
+      KeywordWrapper.Scala3.backtickWrap(sym.decodedName, exclusions)
 
     def withUpdatedTpe(tpe: Type): Symbol =
       val upd = sym.copy(info = tpe)

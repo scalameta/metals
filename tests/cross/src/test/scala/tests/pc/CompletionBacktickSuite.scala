@@ -1,16 +1,17 @@
 package tests.pc
 
+import munit.Location
 import tests.BaseCompletionSuite
 
 class CompletionBacktickSuite extends BaseCompletionSuite {
 
   check(
     "keyword",
-    s"""|object Main {
-        |  val `type` = 42
-        |  Main.typ@@
-        |}
-        |""".stripMargin,
+    """|object Main {
+       |  val `type` = 42
+       |  Main.typ@@
+       |}
+       |""".stripMargin,
     """|`type`: Int
        |""".stripMargin,
     filterText = "type",
@@ -21,11 +22,11 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
 
   checkEdit(
     "keyword-edit",
-    s"""|object Main {
-        |  val `type` = 42
-        |  Main.typ@@
-        |}
-        |""".stripMargin,
+    """|object Main {
+       |  val `type` = 42
+       |  Main.typ@@
+       |}
+       |""".stripMargin,
     """|object Main {
        |  val `type` = 42
        |  Main.`type`
@@ -105,5 +106,25 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     "",
     filter = _.contains("`type`"),
   )
+
+  // https://dotty.epfl.ch/docs/internals/syntax.html#soft-keywords
+  List("infix", "inline", "opaque", "open", "transparent", "as", "derives",
+    "end", "extension", "throws", "using").foreach(softKeywordCheck)
+
+  private def softKeywordCheck(keyword: String)(implicit loc: Location) =
+    checkEdit(
+      s"'$keyword'-keyword-named-method-edit".tag(IgnoreScala2),
+      s"""|object Main {
+          |  def $keyword(a: String) = a
+          |  ${keyword}@@
+          |}
+          |""".stripMargin,
+      s"""|object Main {
+          |  def $keyword(a: String) = a
+          |  `$keyword`
+          |}
+          |""".stripMargin,
+      filter = _.contains("a: String"),
+    )
 
 }
