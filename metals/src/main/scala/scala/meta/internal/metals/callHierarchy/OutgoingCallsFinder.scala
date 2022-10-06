@@ -3,6 +3,7 @@ package scala.meta.internal.metals.callHierarchy
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Decl
 import scala.meta.Member
 import scala.meta.Name
 import scala.meta.Pat
@@ -169,6 +170,7 @@ class OutgoingCallsFinder(
         Future
           .sequence(
             (definition match {
+              case _: Decl => Nil
               case member: Member =>
                 memberSearch(member)
               case other => List(search(other))
