@@ -10,7 +10,7 @@ class ScalaCliCompletions(pos: SourcePosition, text: String):
     path match
       case head :: next => None
       case Nil =>
-        CoursierComplete.isScalaCliDep(pos.lineContent.trim())
+        CoursierComplete.isScalaCliDep(pos.lineContent.take(pos.column))
 
   def contribute(dependency: String) =
     val completions = CoursierComplete.complete(dependency)

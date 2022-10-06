@@ -13,7 +13,9 @@ trait ScalaCliCompletions {
         case Nil =>
           CoursierComplete.isScalaCliDep(pos.lineContent.replace(CURSOR, ""))
         case (_: PackageDef) :: Nil if pos.source.file.path.endsWith(".sc") =>
-          CoursierComplete.isScalaCliDep(pos.lineContent.replace(CURSOR, ""))
+          CoursierComplete.isScalaCliDep(
+            pos.lineContent.replace(CURSOR, "").take(pos.column)
+          )
         case _ => None
       }
   }

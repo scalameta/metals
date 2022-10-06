@@ -41,27 +41,17 @@ object CoursierComplete {
     javaCompletions ++ scalaCompletions
   }
   def inferEditRange(point: Int, text: String): (Int, Int) = {
+    def isArtifactPart(c: Char): Boolean =
+      Chars.isIdentifierPart(c) || c == '.' || c == '-'
     val editStart = {
       var i = point - 1
-      while (
-        i >= 0 && {
-          val c = text.charAt(i)
-          (Chars.isIdentifierPart(c) || c == '.' || c == '-')
-        }
-      ) { i -= 1 }
+      while (i >= 0 && isArtifactPart(text.charAt(i))) { i -= 1 }
       i + 1
     }
     val editEnd = {
       var i = point
       val textLen = text.length()
-      while (
-        i < textLen && {
-          val c = text.charAt(i)
-          (Chars.isIdentifierPart(c) || c == '.' || c == '-')
-        }
-      ) {
-        i += 1
-      }
+      while (i < textLen && isArtifactPart(text.charAt(i))) { i += 1 }
       i
     }
     (editStart, editEnd)

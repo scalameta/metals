@@ -35,7 +35,7 @@ sealed trait CompletionValue:
       case _: CompletionValue.Autofill => CompletionItemKind.Enum
       case _: CompletionValue.CaseKeyword => CompletionItemKind.Method
       case _: CompletionValue.MatchCompletion => CompletionItemKind.Enum
-      case _: CompletionValue.ScalaCLiImport => CompletionItemKind.Keyword
+      case _: CompletionValue.ScalaCLiImport => CompletionItemKind.Folder
       case v: (CompletionValue.Compiler | CompletionValue.Workspace |
             CompletionValue.Scope | CompletionValue.Interpolator) =>
         val symbol = v.symbol
