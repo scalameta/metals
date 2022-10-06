@@ -330,7 +330,11 @@ class Completions(
     lazy val filename = rawFileName
       .stripSuffix(".scala")
     val MatchCaseExtractor = new MatchCaseExtractor(pos, text, completionPos)
+    val ScalaCliCompletions = new ScalaCliCompletions(pos, text)
     path match
+
+      case ScalaCliCompletions(dependency) =>
+        (ScalaCliCompletions.contribute(dependency), true)
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
@@ -629,6 +633,7 @@ class Completions(
               (autofill.label, true)
             case fileSysMember: CompletionValue.FileSystemMember =>
               (fileSysMember.label, true)
+            case si: CompletionValue.ScalaCLiImport => (si.label, true)
 
         if !isSeen(id) && include then
           isSeen += id
