@@ -175,36 +175,22 @@ class CompletionProvider(
     // to recalculate the description
     // related issue https://github.com/lampepfl/dotty/issues/11941
     lazy val kind: CompletionItemKind = completion.completionItemKind
-
-    val description =
-      completion.description(printer)
+    val description = completion.description(printer)
+    val label = completion.labelWithDescription(printer)
+    val ident = completion.insertText.getOrElse(completion.label)
 
     def mkItem0(
-        ident: String,
+        label: String,
         nameEdit: TextEdit,
-        isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil,
         filterText: Option[String] = None,
         command: Option[String] = None,
     ): CompletionItem =
-      val label =
-        kind match
-          case CompletionItemKind.Method =>
-            s"${ident}${description}"
-          case CompletionItemKind.Variable | CompletionItemKind.Field =>
-            s"${ident}: ${description}"
-          case CompletionItemKind.Module | CompletionItemKind.Class =>
-            if isFromWorkspace then s"${ident} -${description}"
-            else s"${ident}${description}"
-          case _ =>
-            ident
       val item = new CompletionItem(label)
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
       item.setFilterText(filterText.getOrElse(completion.label))
-
       item.setTextEdit(nameEdit)
-
       item.setAdditionalTextEdits(additionalEdits.asJava)
 
       completion match
@@ -239,9 +225,8 @@ class CompletionProvider(
     end mkItem0
 
     def mkItem(
-        ident: String,
+        label: String,
         value: String,
-        isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil,
         filterText: Option[String] = None,
         range: Option[LspRange] = None,
@@ -252,9 +237,8 @@ class CompletionProvider(
         value,
       )
       mkItem0(
-        ident,
+        label,
         nameEdit,
-        isFromWorkspace,
         additionalEdits,
         filterText,
         command,
@@ -262,13 +246,10 @@ class CompletionProvider(
     end mkItem
 
     def mkWorkspaceItem(
-        ident: String,
         value: String,
         additionalEdits: List[TextEdit] = Nil,
     ): CompletionItem =
-      mkItem(ident, value, isFromWorkspace = true, additionalEdits)
-
-    val ident = completion.label
+      mkItem(label, value, additionalEdits)
 
     val completionTextSuffix = completion.snippetSuffix.toEdit
 
@@ -290,34 +271,28 @@ class CompletionProvider(
         v: CompletionValue.Workspace | CompletionValue.Extension |
           CompletionValue.Interpolator
     ) =
-      val label = v.label
       val sym = v.symbol
       val suffix = v.snippetSuffix
       path match
         case (_: Ident) :: (_: Import) :: _ =>
-          mkWorkspaceItem(
-            ident,
-            sym.fullNameBackticked,
-          )
+          mkWorkspaceItem(sym.fullNameBackticked)
         case _ =>
           autoImports.editsForSymbol(sym) match
             case Some(edits) =>
               edits match
                 case AutoImportEdits(Some(nameEdit), other) =>
                   mkItem0(
-                    ident,
+                    label,
                     nameEdit,
-                    isFromWorkspace = true,
                     v.additionalEdits ++ other.toList,
                     filterText = v.filterText,
                   )
                 case _ =>
                   mkItem(
-                    ident,
+                    label,
                     v.insertText.getOrElse(
                       ident.backticked + completionTextSuffix
                     ),
-                    isFromWorkspace = true,
                     v.additionalEdits ++ edits.edits,
                     range = v.range,
                     filterText = v.filterText,
@@ -327,19 +302,17 @@ class CompletionProvider(
               r match
                 case IndexedContext.Result.InScope =>
                   mkItem(
-                    ident,
+                    label,
                     ident.backticked + completionTextSuffix,
                     additionalEdits = v.additionalEdits,
                   )
                 case _ if isInStringInterpolation =>
                   mkWorkspaceItem(
-                    ident,
                     "{" + sym.fullNameBackticked + completionTextSuffix + "}",
                     additionalEdits = v.additionalEdits,
                   )
                 case _ =>
                   mkWorkspaceItem(
-                    ident,
                     sym.fullNameBackticked + completionTextSuffix,
                     additionalEdits = v.additionalEdits,
                   )
@@ -353,7 +326,7 @@ class CompletionProvider(
       case v: CompletionValue.Interpolator if v.isWorkspace || v.isExtension =>
         mkItemWithImports(v)
       case CompletionValue.Override(
-            label,
+            _,
             value,
             _,
             shortNames,
@@ -368,24 +341,23 @@ class CompletionProvider(
         mkItem(
           label,
           value,
-          false,
           additionalEdits,
           filterText,
           Some(completionPos.copy(start = start).toEditRange),
         )
-      case CompletionValue.NamedArg(label, _) =>
+      case CompletionValue.NamedArg(_, _) =>
         mkItem(
           label,
           label.replace("$", "$$"),
         ) // escape $ for snippet
-      case CompletionValue.Keyword(label, text) =>
+      case CompletionValue.Keyword(_, text) =>
         mkItem(label, text.getOrElse(label))
-      case CompletionValue.Document(label, doc, desc) =>
+      case CompletionValue.Document(_, doc, desc) =>
         mkItem(label, doc, filterText = Some(desc))
-      case CompletionValue.Autofill(value) => mkItem(ident, value)
+      case CompletionValue.Autofill(value) => mkItem(label, value)
       case CompletionValue.CaseKeyword(
             _,
-            label,
+            _,
             text,
             additionalEdit,
             range,
@@ -399,7 +371,7 @@ class CompletionProvider(
           command = command,
         )
       case CompletionValue.MatchCompletion(
-            label,
+            _,
             text,
             additionalEdits,
             desc,
@@ -408,7 +380,7 @@ class CompletionProvider(
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)
         mkItem(
-          ident,
+          label,
           insert + completionTextSuffix,
           additionalEdits = completion.additionalEdits,
           range = completion.range,
