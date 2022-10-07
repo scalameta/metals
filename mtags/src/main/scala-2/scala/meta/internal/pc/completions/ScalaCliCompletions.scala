@@ -11,10 +11,12 @@ trait ScalaCliCompletions {
     def unapply(path: List[Tree]): Option[String] =
       path match {
         case Nil =>
-          CoursierComplete.isScalaCliDep(pos.lineContent.replace(CURSOR, ""))
+          CoursierComplete.isScalaCliDep(
+            pos.lineContent.replace(CURSOR, "").take(pos.column - 1)
+          )
         case (_: PackageDef) :: Nil if pos.source.file.path.endsWith(".sc") =>
           CoursierComplete.isScalaCliDep(
-            pos.lineContent.replace(CURSOR, "").take(pos.column)
+            pos.lineContent.replace(CURSOR, "").take(pos.column - 1)
           )
         case _ => None
       }

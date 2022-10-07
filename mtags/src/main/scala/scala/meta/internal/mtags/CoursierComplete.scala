@@ -38,7 +38,7 @@ object CoursierComplete {
       if (dependency.endsWith(":") && dependency.count(_ == ':') == 1)
         completions(dependency + ":").map(":" + _)
       else List.empty
-    javaCompletions ++ scalaCompletions
+    scalaCompletions ++ javaCompletions
   }
   def inferEditRange(point: Int, text: String): (Int, Int) = {
     def isArtifactPart(c: Char): Boolean =
@@ -62,8 +62,9 @@ object CoursierComplete {
     line match {
       case reg(deps) =>
         val dep =
-          deps.split(",").last.trim().stripPrefix("\"").stripSuffix("\"")
-        Some(dep)
+          deps.split(",").last
+        if (dep.endsWith("\"") || dep.endsWith(" ")) None
+        else Some(dep.trim.stripPrefix("\""))
       case _ =>
         None
     }
