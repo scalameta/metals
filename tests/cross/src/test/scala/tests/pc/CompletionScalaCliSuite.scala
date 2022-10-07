@@ -66,4 +66,20 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     filename = "script.sc",
   )
 
+  check(
+    "closing-quote",
+    """|//> using lib "io.circe::circe-core:0.14.0"@@
+       |package A
+       |""".stripMargin,
+    "",
+  )
+
+  check(
+    "whitespace",
+    """|//> using lib "io.circe::circe-co @@
+       |package A
+       |""".stripMargin,
+    "",
+  )
+
 }
