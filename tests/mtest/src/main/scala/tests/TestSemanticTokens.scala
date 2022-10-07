@@ -10,7 +10,7 @@ import org.eclipse.{lsp4j => l}
 
 object TestSemanticTokens {
 
-  def semanticString(fileContent: String, obtainedTokens: List[Int]) = {
+  def semanticString(fileContent: String, obtainedTokens: List[Int]): String = {
 
     /**
      * construct string from token type and mods to decorate codes.

@@ -96,7 +96,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |    <<def>>/*keyword*/ <<log>>/*method*/(<<str>>/*parameter*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter*/)}
         |  }
         |
-        |  <<class>>/*keyword*/ <<IntIterator>>/*class*/(<<to>>/*parameter*/: <<Int>>/*class,abstract*/)
+        |  <<class>>/*keyword*/ <<IntIterator>>/*class*/(<<to>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
         |  <<extends>>/*keyword*/ <<hasLogger>>/*class,abstract*/ <<with>>/*keyword*/ <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
         |    <<private>>/*modifier*/ <<var>>/*keyword*/ <<current>>/*variable*/ = <<0>>/*number*/
         |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
