@@ -455,6 +455,8 @@ trait Completions { this: MetalsGlobal =>
     latestEnclosingArg match {
       case MillIvyExtractor(dep) =>
         MillIvyCompletion(pos, text, dep)
+      case SbtLibExtractor(pos, dep) if pos.source.path.isSbt =>
+        SbtLibCompletion(pos, dep)
       case ScalaCliExtractor(dep) =>
         ScalaCliCompletion(pos, text, dep)
       case _ if isScaladocCompletion(pos, text) =>
