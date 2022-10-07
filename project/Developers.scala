@@ -27,6 +27,12 @@ object Developers {
       url("https://github.com/gabro"),
     ),
     Developer(
+      "jkciesluk",
+      "Jakub Cieśluk",
+      "jciesluk@virtuslab.com",
+      url("https://github.com/jkciesluk"),
+    ),
+    Developer(
       "kpodsiad",
       "Kamil Podsiadło",
       "kpodsiadlo@virtuslab.com ",
