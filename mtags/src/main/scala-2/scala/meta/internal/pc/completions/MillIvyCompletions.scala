@@ -9,7 +9,7 @@ import org.eclipse.{lsp4j => l}
 trait MillIvyCompletions {
   this: MetalsGlobal =>
   object MillIvyExtractor {
-    def unapply(path: List[Tree]) = {
+    def unapply(path: List[Tree]): Option[String] = {
       path match {
         case (lt @ Literal(dependency: Constant)) ::
             Apply(Select(Apply(Ident(interpolate), _), ivy), _) :: _
