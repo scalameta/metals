@@ -9,7 +9,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       scalaVersion: String
   ): Seq[Dependency] = {
 
-    Seq(Dependency.of("org.eclipse.lsp4j", "org.eclipse.lsp4j", "0.15.0"))
+    Seq(Dependency.of("org.eclipse.lsp4j", "org.eclipse.lsp4j", "0.16.0"))
   }
 
   check(
