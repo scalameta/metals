@@ -188,7 +188,7 @@ final class SemanticTokenProvider(
   case class NodeInfo(
       tree: Option[Tree],
       sym: Option[Symbol],
-      pos: Option[scala.reflect.api.Position]
+      pos: scala.reflect.api.Position
   )
   object NodeInfo {
     def apply(tree: Tree, pos: scala.reflect.api.Position): NodeInfo =
