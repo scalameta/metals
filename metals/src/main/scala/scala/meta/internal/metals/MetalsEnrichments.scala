@@ -693,11 +693,16 @@ object MetalsEnrichments
     def inString(text: String): Option[String] = {
       var i = 0
       var max = 0
+      def isNewline = text.charAt(i) == '\n'
       while (max < range.startLine) {
-        if (text.charAt(i) == '\n') max += 1
+        if (isNewline) max += 1
         i += 1
       }
       val start = i + range.startCharacter
+      while (max < range.endLine) {
+        if (isNewline) max += 1
+        i += 1
+      }
       val end = i + range.endCharacter
       if (start < text.size && end <= text.size)
         Some(text.substring(start, end))
