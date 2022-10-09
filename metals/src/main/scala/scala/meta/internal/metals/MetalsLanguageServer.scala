@@ -1507,14 +1507,12 @@ class MetalsLanguageServer(
       definitionOrReferences(position, token).map(_.locations)
     }
 
-  @nowarn("msg=parameter value position")
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ =>
-      scribe.warn("textDocument/typeDefinition is not supported.")
-      null
+    CancelTokens.future { token =>
+      compilers.typeDefinition(position, token).map(_.locations)
     }
 
   @JsonRequest("textDocument/implementation")

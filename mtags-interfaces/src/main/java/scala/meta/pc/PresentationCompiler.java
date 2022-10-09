@@ -75,9 +75,15 @@ public abstract class PresentationCompiler {
      */
     public abstract CompletableFuture<DefinitionResult> definition(OffsetParams params);
 
+
     /**
-	 * Returns the occurrences of the symbol under the current position in the entire file.
-	 */
+     * Returns location of the expression's type definition at the given position.
+     */
+     public abstract CompletableFuture<DefinitionResult> typeDefinition(OffsetParams params);
+
+    /**
+    * Returns the occurrences of the symbol under the current position in the entire file.
+     */
     public abstract CompletableFuture<java.util.List<DocumentHighlight>> documentHighlight(OffsetParams params);
 
     /**

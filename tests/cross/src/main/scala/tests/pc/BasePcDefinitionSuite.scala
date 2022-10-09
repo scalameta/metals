@@ -2,10 +2,10 @@ package tests.pc
 
 import java.net.URI
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.pc.OffsetParams
 
 import munit.Location
 import munit.TestOptions
@@ -15,6 +15,8 @@ import tests.BasePCSuite
 import tests.pc.CrossTestEnrichments._
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
+
+  def definitions(offsetParams: OffsetParams): List[l.Location]
 
   def check(
       options: TestOptions,
@@ -33,10 +35,9 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       import scala.meta.inputs.Input
       val offsetRange =
         Position.Range(Input.String(cleanedCode), offset, offset).toLsp
-      val defn = presentationCompiler
-        .definition(CompilerOffsetParams(URI.create(uri), cleanedCode, offset))
-        .get()
-      val edits = defn.locations().asScala.toList.flatMap { location =>
+      val locs =
+        definitions(CompilerOffsetParams(URI.create(uri), cleanedCode, offset))
+      val edits = locs.flatMap { location =>
         if (location.getUri() == uri) {
           List(
             new TextEdit(

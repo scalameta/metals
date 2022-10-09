@@ -881,6 +881,62 @@ class MetalsGlobal(
     else memberType
   }
 
+  /**
+   * Traverses up the parent tree nodes to the largest enclosing application node.
+   *
+   * Example: {{{
+   *   original = println(List(1).map(_.toString))
+   *   pos      = List(1).map
+   *   expanded = List(1).map(_.toString)
+   * }}}
+   */
+  def expandRangeToEnclosingApply(pos: Position): Tree = {
+    def tryTail(enclosing: List[Tree]): Option[Tree] =
+      enclosing match {
+        case Nil => None
+        case head :: tail =>
+          head match {
+            case TreeApply(qual, _) if qual.pos.includes(pos) =>
+              tryTail(tail).orElse(Some(head))
+            case New(_) =>
+              tail match {
+                case Nil => None
+                case Select(_, _) :: next =>
+                  tryTail(next)
+                case _ =>
+                  None
+              }
+            case _ =>
+              None
+          }
+      }
+    lastVisitedParentTrees match {
+      case head :: tail =>
+        tryTail(tail).getOrElse(head)
+      case _ =>
+        EmptyTree
+    }
+  }
+
+  def seenFromType(tree0: Tree, symbol: Symbol): Type = {
+    def qual(t: Tree): Tree =
+      t match {
+        case TreeApply(q, _) => qual(q)
+        case Select(q, _) => q
+        case Import(q, _) => q
+        case t => t
+      }
+    try {
+      val tree = qual(tree0)
+      val pre = stabilizedType(tree)
+      val memberType = pre.memberType(symbol)
+      if (memberType.isErroneous) symbol.info
+      else memberType
+    } catch {
+      case NonFatal(_) => symbol.info
+    }
+  }
+
   // Extractor for both term and type applications like `foo(1)` and foo[T]`
   object TreeApply {
     def unapply(tree: Tree): Option[(Tree, List[Tree])] =

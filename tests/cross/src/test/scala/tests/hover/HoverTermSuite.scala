@@ -59,9 +59,6 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|def apply(name: String): Person
        |""".stripMargin.hover,
-    compat = Map(
-      "3" -> "case class Person: Person".hover
-    ),
   )
 
   check(
@@ -506,4 +503,5 @@ class HoverTermSuite extends BaseHoverSuite {
     "val second: Boolean".hover,
     automaticPackage = false,
   )
+
 }

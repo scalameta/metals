@@ -491,10 +491,29 @@ class Compilers(
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken,
+  ): Future[DefinitionResult] = {
+    definition(params = params, token = token, findTypeDef = false)
+  }
+
+  def typeDefinition(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[DefinitionResult] = {
+    definition(params = params, token = token, findTypeDef = true)
+  }
+
+  private def definition(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+      findTypeDef: Boolean,
   ): Future[DefinitionResult] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.definition(CompilerOffsetParams.fromPos(pos, token))
-        .asScala
+      val params = CompilerOffsetParams.fromPos(pos, token)
+      val defResult =
+        if (findTypeDef) pc.typeDefinition(params)
+        else
+          pc.definition(CompilerOffsetParams.fromPos(pos, token))
+      defResult.asScala
         .map { c =>
           adjust.adjustLocations(c.locations())
           val definitionPaths = c

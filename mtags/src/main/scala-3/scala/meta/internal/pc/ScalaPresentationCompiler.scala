@@ -118,6 +118,17 @@ case class ScalaPresentationCompiler(
       PcDefinitionProvider(driver, params, search).definitions()
     }
 
+  override def typeDefinition(
+      params: OffsetParams
+  ): CompletableFuture[DefinitionResult] =
+    compilerAccess.withNonInterruptableCompiler(
+      DefinitionResultImpl.empty,
+      params.token,
+    ) { access =>
+      val driver = access.compiler()
+      PcDefinitionProvider(driver, params, search).typeDefinitions()
+    }
+
   def documentHighlight(
       params: OffsetParams
   ): CompletableFuture[ju.List[DocumentHighlight]] =
