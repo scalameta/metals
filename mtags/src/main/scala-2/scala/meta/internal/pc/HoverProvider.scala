@@ -2,7 +2,6 @@ package scala.meta.internal.pc
 
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
-import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
@@ -126,62 +125,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case _ =>
         // Don't show hover for non-identifiers.
         None
-    }
-  }
-
-  def seenFromType(tree0: Tree, symbol: Symbol): Type = {
-    def qual(t: Tree): Tree =
-      t match {
-        case TreeApply(q, _) => qual(q)
-        case Select(q, _) => q
-        case Import(q, _) => q
-        case t => t
-      }
-    try {
-      val tree = qual(tree0)
-      val pre = stabilizedType(tree)
-      val memberType = pre.memberType(symbol)
-      if (memberType.isErroneous) symbol.info
-      else memberType
-    } catch {
-      case NonFatal(_) => symbol.info
-    }
-  }
-
-  /**
-   * Traverses up the parent tree nodes to the largest enclosing application node.
-   *
-   * Example: {{{
-   *   original = println(List(1).map(_.toString))
-   *   pos      = List(1).map
-   *   expanded = List(1).map(_.toString)
-   * }}}
-   */
-  def expandRangeToEnclosingApply(pos: Position): Tree = {
-    def tryTail(enclosing: List[Tree]): Option[Tree] =
-      enclosing match {
-        case Nil => None
-        case head :: tail =>
-          head match {
-            case TreeApply(qual, _) if qual.pos.includes(pos) =>
-              tryTail(tail).orElse(Some(head))
-            case New(_) =>
-              tail match {
-                case Nil => None
-                case Select(_, _) :: next =>
-                  tryTail(next)
-                case _ =>
-                  None
-              }
-            case _ =>
-              None
-          }
-      }
-    lastVisitedParentTrees match {
-      case head :: tail =>
-        tryTail(tail).getOrElse(head)
-      case _ =>
-        EmptyTree
     }
   }
 

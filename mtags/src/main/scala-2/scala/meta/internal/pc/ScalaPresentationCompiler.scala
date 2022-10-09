@@ -231,6 +231,15 @@ case class ScalaPresentationCompiler(
     ) { pc => new PcDefinitionProvider(pc.compiler(), params).definition() }
   }
 
+  override def typeDefinition(
+      params: OffsetParams
+  ): CompletableFuture[DefinitionResult] = {
+    compilerAccess.withNonInterruptableCompiler(
+      DefinitionResultImpl.empty,
+      params.token
+    ) { pc => new PcDefinitionProvider(pc.compiler(), params).typeDefinition() }
+  }
+
   override def documentHighlight(
       params: OffsetParams
   ): CompletableFuture[util.List[DocumentHighlight]] =

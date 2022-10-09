@@ -53,7 +53,7 @@ object HoverProvider:
     val tp = typeFromPath(path)
     val tpw = tp.widenTermRefExpr
     // For expression we need to find all enclosing applies to get the exact generic type
-    val enclosing = expandRangeToEnclosingApply(path, pos)
+    val enclosing = path.expandRangeToEnclosingApply(pos)
 
     if tp.isError || tpw == NoType || tpw.isError || path.isEmpty
     then ju.Optional.empty()
@@ -160,35 +160,5 @@ object HoverProvider:
       findRefinement(sel.tpe.termSymbol.info)
     case _ =>
       ju.Optional.empty()
-
-  private def expandRangeToEnclosingApply(
-      path: List[Tree],
-      pos: SourcePosition,
-  )(using Context): List[Tree] =
-    def tryTail(enclosing: List[Tree]): Option[List[Tree]] =
-      enclosing match
-        case Nil => None
-        case head :: tail =>
-          head match
-            case t: GenericApply
-                if t.fun.srcPos.span.contains(pos.span) && !t.tpe.isErroneous =>
-              tryTail(tail).orElse(Some(enclosing))
-            case in: Inlined =>
-              tryTail(tail).orElse(Some(enclosing))
-            case New(_) =>
-              tail match
-                case Nil => None
-                case Select(_, _) :: next =>
-                  tryTail(next)
-                case _ =>
-                  None
-            case _ =>
-              None
-    path match
-      case head :: tail =>
-        tryTail(tail).getOrElse(path)
-      case _ =>
-        List(EmptyTree)
-  end expandRangeToEnclosingApply
 
 end HoverProvider

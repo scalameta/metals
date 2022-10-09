@@ -61,6 +61,13 @@ functionality.
     <td align="center">✅</td>
   </tr>
   <tr>
+    <td>Goto type definition</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
     <td>Completions</td>
     <td align="center">✅</td>
     <td align="center">✅*</td>
