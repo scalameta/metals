@@ -4,7 +4,7 @@ object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.17"
-  val scala213 = "2.13.9"
+  val scala213 = "2.13.10"
   val scala3 = "3.2.0"
   val nextScala3RC = "3.2.1-RC2"
   val sbtScala = "2.12.16"
@@ -86,6 +86,7 @@ object V {
     "2.13.6",
     "2.13.7",
     "2.13.8",
+    "2.13.9",
   )
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
