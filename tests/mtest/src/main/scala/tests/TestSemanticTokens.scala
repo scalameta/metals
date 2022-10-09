@@ -20,7 +20,7 @@ object TestSemanticTokens {
 
       // TokenType
       if (typeInd != -1) {
-        buffer.addAll(List(TokenTypes(typeInd)))
+        buffer.++=(List(TokenTypes(typeInd)))
       }
 
       // TokenModifier
@@ -28,7 +28,7 @@ object TestSemanticTokens {
       val wkList = modInd.toBinaryString.toCharArray().toList.reverse
       for (i: Int <- 0 to wkList.size - 1) {
         if (wkList(i).toString == "1") {
-          buffer.addAll(
+          buffer.++=(
             List(
               TokenModifiers(i)
             )
