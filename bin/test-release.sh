@@ -23,6 +23,7 @@ coursier fetch \
   org.scalameta:mtags_2.13.7:$version \
   org.scalameta:mtags_2.13.8:$version \
   org.scalameta:mtags_2.13.9:$version \
+  org.scalameta:mtags_2.13.10:$version \
   org.scalameta:mtags_2.12.9:$version \
   org.scalameta:mtags_2.12.10:$version \
   org.scalameta:mtags_2.12.11:$version \
