@@ -237,6 +237,7 @@ class CompletionSuite extends BaseCompletionSuite {
       "2.13.7" -> dot2137,
       "2.13.8" -> dot2137,
       "2.13.9" -> dot2137,
+      "2.13.10" -> dot2137,
       "2.13" -> dot213,
       "2.11" ->
         """|apply[A](xs: A*): List[A]

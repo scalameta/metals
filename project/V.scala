@@ -4,7 +4,7 @@ object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.17"
-  val scala213 = "2.13.9"
+  val scala213 = "2.13.10"
   val scala3 = "3.2.0"
   val nextScala3RC = "3.2.1-RC2"
   val sbtScala = "2.12.16"
@@ -72,6 +72,8 @@ object V {
     "2.13.2",
     "2.13.3",
     "2.13.4",
+    // has a binary compatibility issue
+    "2.13.9",
   )
 
   def nonDeprecatedScala2Versions = Seq(
