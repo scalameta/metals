@@ -318,7 +318,7 @@ final class SemanticTokenProvider(
       }
     }
     // We need to collect named params since they will not show on fully typed tree
-    lazy val namedArgCache = {
+    lazy private val namedArgCache = {
       val parsedTree = cp.parseTree(source)
       parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
         rhs.pos.start -> arg
