@@ -125,7 +125,8 @@ object UserConfiguration {
         """"project/.scalafmt.conf"""",
         "Scalafmt config path",
         """Optional custom path to the .scalafmt.conf file.
-          |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
+          |It should be a path (relative or absolute - though an absolute path is recommended) and use
+          |forward slashes `/` for file separators (even on Windows).
           |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -134,7 +135,8 @@ object UserConfiguration {
         """"project/.scalafix.conf"""",
         "Scalafix config path",
         """Optional custom path to the .scalafix.conf file.
-          |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
+          |It should be a path (relative or absolute - though an absolute path is recommended) and use
+          |forward slashes `/` for file separators (even on Windows).
           |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -235,9 +237,9 @@ object UserConfiguration {
         "enable-indent-on-paste",
         "false",
         "false",
-        "Should try adjust indentation on range formatting.",
-        """|When this option is enabled, when user pastes any snippet into a Scala file, Metals
-           |will try to adjust the indentation to that of the current cursor.
+        "Indent snippets when pasted.",
+        """|When this option is enabled, when a snippet is pasted into a Scala file, Metals will
+           |try to adjust the indentation to that of the current cursor.
            |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -247,7 +249,7 @@ object UserConfiguration {
         "Remote language server",
         """A URL pointing to an endpoint that implements a remote language server.
           |
-          |See https://scalameta.org/metals/docs/contributors/remote-language-server.html for
+          |See https://scalameta.org/metals/docs/integrations/remote-language-server for
           |documentation on remote language servers.
           |""".stripMargin,
       ),
@@ -262,9 +264,14 @@ object UserConfiguration {
         """.stripMargin,
       ),
       UserConfigurationOption(
-        "test-user-interface", "Code Lenses", "test explorer",
+        "test-user-interface",
+        "Code Lenses",
+        "test explorer",
         "Test UI used for tests and test suites",
-        "Default way of handling tests and test suites.",
+        """|Default way of handling tests and test suites.  The only valid values are
+           |"code lenses" and "test explorer".  See https://scalameta.org/metals/docs/integrations/test-explorer
+           |for information on how to work with the test explorer.
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "java-format.eclipse-config-path",
@@ -272,7 +279,8 @@ object UserConfiguration {
         """"formatters/eclipse-formatter.xml"""",
         "Eclipse Java formatter config path",
         """Optional custom path to the eclipse-formatter.xml file.
-          |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
+          |It should be a path (relative or absolute - though an absolute path is recommended) and use
+          |forward slashes `/` for file separators (even on Windows).
           |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -280,7 +288,7 @@ object UserConfiguration {
         """empty string `""`.""",
         """"GoogleStyle"""",
         "Eclipse Java formatting profile",
-        """|If the Eclipse formatter file contains more than one profile then specify the required profile name.
+        """|If the Eclipse formatter file contains more than one profile, this option can be used to control which is used.
            |""".stripMargin,
       ),
       UserConfigurationOption(
