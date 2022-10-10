@@ -234,43 +234,9 @@ class CompletionSuite extends BaseCompletionSuite {
        |toString(): String
        |""".stripMargin,
     compat = Map(
-      "2.13.7" -> dot2137,
-      "2.13.8" -> dot2137,
-      "2.13.9" -> dot2137,
-      "2.13.10" -> dot2137,
-      "2.13" -> dot213,
-      "2.11" ->
-        """|apply[A](xs: A*): List[A]
-           |canBuildFrom[A]: CanBuildFrom[List.Coll,A,List[A]]
-           |empty[A]: List[A]
-           |newBuilder[A]: Builder[A,List[A]]
-           |GenericCanBuildFrom scala.collection.generic.GenTraversableFactory
-           |ReusableCBF: List.GenericCanBuildFrom[Nothing]
-           |concat[A](xss: Traversable[A]*): List[A]
-           |fill[A](n: Int)(elem: => A): List[A]
-           |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
-           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]]]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
-           |iterate[A](start: A, len: Int)(f: A => A): List[A]
-           |range[T: Integral](start: T, end: T): List[T]
-           |range[T: Integral](start: T, end: T, step: T): List[T]
-           |tabulate[A](n: Int)(f: Int => A): List[A]
-           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
-           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
-           |unapplySeq[A](x: List[A]): Some[List[A]]
-           |+(other: String): String
-           |formatted(fmtstr: String): String
-           |asInstanceOf[T0]: T0
-           |equals(obj: Any): Boolean
-           |getClass(): Class[_]
-           |hashCode(): Int
-           |isInstanceOf[T0]: Boolean
-           |synchronized[T0](x$1: T0): T0
-           |toString(): String
-           |""".stripMargin,
+      "2.13.5" -> dot213,
+      "2.13.6" -> dot213,
+      "2.13" -> dot2137,
       "3" ->
         """|empty[A]: List[A]
            |from[B](coll: IterableOnce[B]): List[B]
