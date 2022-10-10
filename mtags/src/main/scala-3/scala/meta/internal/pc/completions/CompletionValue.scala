@@ -169,7 +169,7 @@ object CompletionValue:
   ) extends CompletionValue:
     override val filterText: Option[String] = insertText
     override def completionItemKind(using Context): CompletionItemKind =
-          CompletionItemKind.Folder
+      CompletionItemKind.Folder
   case class Interpolator(
       symbol: Symbol,
       label: String,

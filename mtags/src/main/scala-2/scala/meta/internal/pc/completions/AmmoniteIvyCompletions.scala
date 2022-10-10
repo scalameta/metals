@@ -1,14 +1,11 @@
 package scala.meta.internal.pc.completions
 
 import scala.collection.JavaConverters._
-import scala.util.control.NonFatal
 
-import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.pc.MetalsGlobal
-import scala.meta.internal.tokenizers.Chars
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.mtags.CoursierComplete
 
 trait AmmoniteIvyCompletions {
   this: MetalsGlobal =>
