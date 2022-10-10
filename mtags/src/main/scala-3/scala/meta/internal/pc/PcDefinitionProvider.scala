@@ -66,7 +66,7 @@ class PcDefinitionProvider(
       driver: InteractiveDriver,
       indexed: IndexedContext,
   ): DefinitionResult =
-    given ctx: Context = indexed.ctx
+    import indexed.ctx
     definitionsForSymbol(
       MetalsInteractive.enclosingSymbols(path, pos, indexed),
       pos,
@@ -80,7 +80,7 @@ class PcDefinitionProvider(
       driver: InteractiveDriver,
       indexed: IndexedContext,
   ): DefinitionResult =
-    given ctx: Context = indexed.ctx
+    import indexed.ctx
     val enclosing = path.expandRangeToEnclosingApply(pos)
     val typeSymbols = MetalsInteractive
       .enclosingSymbolsWithExpressionType(enclosing, pos, indexed)

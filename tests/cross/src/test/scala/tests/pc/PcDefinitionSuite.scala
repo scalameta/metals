@@ -236,7 +236,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "named-arg-local",
     """|
        |object Main {
-       |  def <<>>foo(arg: Int): Unit = ()
+       |  def foo(<<>>arg: Int): Unit = ()
        |
        |  foo(a@@rg = 42)
        |}
@@ -254,21 +254,53 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
+    "named-arg-multiple",
+    """|object Main {
+       |  def tst(par1: Int, par2: String, <<>>par3: Boolean): Unit = {}
+       |
+       |  tst(1, p@@ar3 = true, par2 = "")
+       |}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  def tst(par1: Int, par2: String, <<par3>>: Boolean): Unit = {}
+           |
+           |  tst(1, p@@ar3 = true, par2 = "")
+           |}""".stripMargin
+    ),
+  )
+
+  check(
+    "named-arg-reversed",
+    """|object Main {
+       |  def tst(par1: Int, <<>>par2: String): Unit = {}
+       |
+       |  tst(pa@@r2 = "foo", par1 = 1)
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  def tst(par1: Int, <<par2>>: String): Unit = {}
+           |
+           |  tst(par2 = "foo", par1 = 1)
+           |}
+           |""".stripMargin
+    ),
+  )
+
+  check(
     "named-arg-global",
-    // NOTE(olafur) ideally we should navigate to the parameter symbol instead of the
-    // enclosing method symbol, but I can live with this behavior.
-    """|
-       |object Main {
-       |  assert(/*scala/Predef.assert(). Predef.scala*/@@assertion = true)
+    """|object Main {
+       |  assert(/*scala/Predef.assert().(assertion) Predef.scala*/@@assertion = true)
        |}
        |""".stripMargin,
     compat = Map(
       // in 3.0 here we obtain patched assert
       // see: https://github.com/scalameta/metals/issues/2918
       "3" ->
-        """|
-           |object Main {
-           |  assert(/*scala/Predef.assert(+1). Predef.scala*/@@assertion = true)
+        """|object Main {
+           |  assert(/*scala/Predef.assert(+1).(assertion) Predef.scala*/assertion = true)
            |}
            |""".stripMargin
     ),
@@ -359,23 +391,41 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
-    "case-class-apply".tag(IgnoreScala2),
+    "case-class-apply",
     """|
-       |case class Foo(<<a>>: Int, b: String)
+       |case class Foo(<<>>a: Int, b: String)
        |class Main {
        |  Foo(@@a = 3, b = "42")
        |}
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |case class Foo(<<a>>: Int, b: String)
+           |class Main {
+           |  Foo(@@a = 3, b = "42")
+           |}
+           |""".stripMargin
+    ),
   )
 
   check(
-    "case-class-copy".tag(IgnoreScala2),
+    "case-class-copy",
     """|
-       |case class Foo(<<a>>: Int, b: String)
+       |case class Foo(<<>>a: Int, b: String)
        |class Main {
        |  Foo(2, "4").copy(@@a = 3, b = "42")
        |}
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |case class Foo(<<a>>: Int, b: String)
+           |class Main {
+           |  Foo(2, "4").copy(@@a = 3, b = "42")
+           |}
+           |""".stripMargin
+    ),
   )
 
   check(

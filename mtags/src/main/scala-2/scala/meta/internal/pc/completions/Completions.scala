@@ -688,6 +688,9 @@ trait Completions { this: MetalsGlobal =>
         t match {
           // new User(age = 42, name = "") becomes transparent, which doesn't happen with normal methods
           case Apply(Select(_: New, _), _) => true
+          // for named args apply becomes transparent but fun doesn't
+          case Apply(fun, args) =>
+            !fun.pos.isTransparent && args.forall(_.pos.isOffset)
           case _ => false
         }
       }
