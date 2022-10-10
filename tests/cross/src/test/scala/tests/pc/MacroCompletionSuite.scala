@@ -59,6 +59,10 @@ class MacroCompletionSuite extends BaseCompletionSuite {
 
   override def beforeAll(): Unit = ()
 
+  // compiler plugins are not published for nightlies
+  override def munitIgnore: Boolean =
+    scalaVersion.contains("-bin-") || super.munitIgnore
+
   check(
     "generic",
     """
