@@ -22,9 +22,11 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     val expanded = expandRangeToEnclosingApply(pos)
     if (!tree.isEmpty && expanded.symbol != null) {
       val tpe =
-        if (expanded.tpe != NoType && expanded.tpe != null) expanded.tpe
-        else expanded.symbol.tpe
-      val tpeSym = tpe.widen.finalResultType.typeSymbol
+        if (expanded.tpe != NoType && expanded.tpe != null) {
+          namedParamSymbol(expanded, pos).map(_.tpe).getOrElse(expanded.tpe)
+        } else expanded.symbol.tpe
+      // typeSymbol also dealiases, which we don't want to do
+      val tpeSym = tpe.widen.finalResultType.typeSymbolDirect
       if (tpeSym.isTypeParameter)
         seenFromType(expanded, tpeSym).typeSymbol
       else if (tpeSym != NoSymbol) tpeSym
@@ -35,6 +37,21 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         case _ => tree.symbol
       }
 
+  }
+
+  /**
+   * Handle named parameters, which are lost in typed trees.
+   */
+  private def namedParamSymbol(tree: Tree, pos: Position): Option[Symbol] = {
+    tree match {
+      case TreeApply(fun, _) if !fun.pos.includes(pos) =>
+        locateUntyped(pos) match {
+          case Ident(name) =>
+            tree.symbol.tpe.params.find(_.name == name)
+          case _ => None
+        }
+      case _ => None
+    }
   }
 
   private def definition(findTypeDef: Boolean): DefinitionResult = {
@@ -50,7 +67,9 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       val pos = unit.position(params.offset())
       val tree = definitionTypedTreeAt(pos)
       val symbol =
-        if (findTypeDef) typeSymbol(tree, pos) else tree.symbol
+        if (findTypeDef) typeSymbol(tree, pos)
+        else namedParamSymbol(tree, pos).getOrElse(tree.symbol)
+
       if (
         symbol == null ||
         symbol == NoSymbol ||

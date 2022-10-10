@@ -141,38 +141,43 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
-    // We don't jump directly to named parameter for scala 2
+    "named-arg-multiple",
+    """|object Main {
+       |  def tst(par1: Int, par2: String, par3: Boolean): Unit = {}
+       |
+       |  tst(1, p/*scala/Boolean# Boolean.scala*/@@ar3 = true, par2 = "")
+       |}""".stripMargin,
+  )
+
+  check(
+    "named-arg-reversed",
+    """|object Main {
+       |  def tst(par1: Int, par2: String): Unit = {}
+       |
+       |  tst(p/*scala/Predef.String# Predef.scala*/@@ar2 = "foo", par1 = 1)
+       |}""".stripMargin,
+  )
+
+  check(
     "named-arg-local",
     """|object Main {
        |  def foo(arg: Int): Unit = ()
        |
-       |  foo(a/*scala/Unit# Unit.scala*/@@rg = 42)
+       |  foo(a/*scala/Int# Int.scala*/@@rg = 42)
        |}
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object Main {
-           |  def foo(arg: Int): Unit = ()
-           |
-           |  foo(a/*scala/Int# Int.scala*/rg = 42)
-           |}
-           |""".stripMargin
-    ),
   )
 
   check(
     "named-arg-global",
-    // We don't jump directly to named parameter for scala 2
     """|object Main {
-       |  assert(a/*scala/Unit# Unit.scala*/@@ssertion = true)
+       |  assert(a/*scala/Boolean# Boolean.scala*/@@ssertion = true)
        |}
        |""".stripMargin,
     compat = Map(
       "3" ->
         """|object Main {
-           |  def foo(/*scala/Int# Int.scala*/arg: Int): Unit = ()
-           |
-           |  foo(arg = 42)
+           |  assert(a/*scala/Boolean# Boolean.scala*/@@ssertion = true)
            |}
            |""".stripMargin
     ),
@@ -442,4 +447,5 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            |""".stripMargin
     ),
   )
+
 }

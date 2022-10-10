@@ -191,14 +191,9 @@ object MetalsInteractive:
           val sym = funSym.owner.info.member(name).symbol
           List((sym, sym.info))
         else
-          val classTree = funSym.topLevelClass.asClass.rootTree
           val paramSymbol =
-            for
-              case DefDef(_, paramss, _, _) <- tpd
-                .defPath(funSym, classTree)
-                .lastOption
-              param <- paramss.flatten.find(_.name == name)
-            yield param.symbol
+            for param <- funSym.paramSymss.flatten.find(_.name == name)
+            yield param
           val sym = paramSymbol.getOrElse(fn.symbol)
           List((sym, sym.info))
 
