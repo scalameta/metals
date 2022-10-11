@@ -756,4 +756,60 @@ abstract class BaseWorksheetLspSuite(
     } yield ()
 
   }
+
+  test("ivy-completion") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${scalaVersion}"
+           |  }
+           |}
+           |/Main.worksheet.sc
+           |import $$ivy.`io.cir`
+           |import $$dep.`io.circe::circe-ref`
+           |import $$dep.`io.circe::circe-yaml:0.14`
+           |""".stripMargin
+      )
+      _ <- server.didOpen("Main.worksheet.sc")
+      groupExpectedCompletionList = "io.circe"
+      groupCompletionList <- server.completion(
+        "Main.worksheet.sc",
+        "import $ivy.`io.cir@@`",
+      )
+      _ = assertNoDiff(groupCompletionList, groupExpectedCompletionList)
+
+      artefactExpectedCompletionList = getExpected(
+        """|circe-refined
+           |circe-refined_native0.4
+           |circe-refined_sjs0.6
+           |circe-refined_sjs1
+           |""".stripMargin,
+        Map(
+          "3" -> """|circe-refined
+                    |circe-refined_native0.4
+                    |circe-refined_sjs1
+                    |""".stripMargin
+        ),
+        scalaVersion,
+      )
+      artefactCompletionList <- server.completion(
+        "Main.worksheet.sc",
+        "import $dep.`io.circe::circe-ref@@`",
+      )
+      _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
+
+      versionExpectedCompletionList =
+        """
+          |0.14.0
+          |0.14.1""".stripMargin
+      versionCompletionList <- server.completion(
+        "Main.worksheet.sc",
+        "import $dep.`io.circe::circe-yaml:0.14@@`",
+      )
+      _ = assertNoDiff(versionCompletionList, versionExpectedCompletionList)
+    } yield ()
+  }
 }

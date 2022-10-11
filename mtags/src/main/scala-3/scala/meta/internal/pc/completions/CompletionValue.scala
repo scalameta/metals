@@ -154,7 +154,7 @@ object CompletionValue:
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.File
 
-  case class ScalaCLiImport(
+  case class IvyImport(
       label: String,
       override val insertText: Option[String],
       override val range: Option[Range],
@@ -163,13 +163,6 @@ object CompletionValue:
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Folder
 
-  case class AmmoniteIvyImport(
-      label: String,
-      override val insertText: Option[String],
-  ) extends CompletionValue:
-    override val filterText: Option[String] = insertText
-    override def completionItemKind(using Context): CompletionItemKind =
-      CompletionItemKind.Folder
   case class Interpolator(
       symbol: Symbol,
       label: String,

@@ -10,11 +10,11 @@ import dotty.tools.dotc.util.SourcePosition
 
 object AmmoniteIvyCompletions:
   def contribute(
-      select: Tree,
       selector: List[ImportSelector],
-      pos: SourcePosition,
+      completionPos: CompletionPos,
+      text: String,
   )(using Context): List[CompletionValue] =
-
+    val pos = completionPos.sourcePos
     val query = selector.collectFirst {
       case sel: ImportSelector if sel.sourcePos.encloses(pos) =>
         sel.name.decoded
@@ -22,13 +22,24 @@ object AmmoniteIvyCompletions:
     query match
       case None => Nil
       case Some(dependency) =>
+        val isInitialCompletion =
+          pos.lineContent.trim == "import $ivy."
+        val ivyEditRange =
+          if isInitialCompletion then completionPos.toEditRange
+          else
+            // We need the text edit to span the whole group/artefact/version
+            val (rangeStart, rangeEnd) =
+              CoursierComplete.inferEditRange(pos.point, text)
+            pos.withStart(rangeStart).withEnd(rangeEnd).toLsp
         val completions = CoursierComplete.complete(dependency)
         completions
           .map(insertText =>
-            CompletionValue.AmmoniteIvyImport(
+            CompletionValue.IvyImport(
               insertText.stripPrefix(":"),
               Some(insertText),
+              Some(ivyEditRange),
             )
           )
+    end match
   end contribute
 end AmmoniteIvyCompletions
