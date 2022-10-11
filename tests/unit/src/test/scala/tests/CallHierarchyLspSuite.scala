@@ -532,4 +532,44 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
+  test("decl-incoming-call") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Demo.scala
+           |package a
+           |
+           |trait Service[R] {
+           |  def ge@@t(): R
+           |}
+           |
+           |object Demo {
+           |  val r: Service[String] = ???
+           |  def <<main>>/*1*/() = r.<?<get>?>/*1*/()
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("decl-outgoing-call") { // https://github.com/scalameta/metals/issues/4489
+    for {
+      _ <- assertOutgoingCalls(
+        """|/a/src/main/scala/a/Demo.scala
+           |package a
+           |
+           |trait Service[R] {
+           |  def ge@@t(): R
+           |}
+           |
+           |object Demo {
+           |  val r: Service[String] = ???
+           |  def main() = r.get()
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }
