@@ -11,13 +11,15 @@ trait MillIvyCompletions {
   object MillIvyExtractor {
     def unapply(path: List[Tree]): Option[String] = {
       path match {
-        case (lt @ Literal(dependency: Constant)) ::
-            Apply(Select(Apply(Ident(interpolate), _), ivy), _) :: _
-            if (lt.pos.source.path.isMill &&
-              dependency.tag == StringTag &&
-              interpolate.decoded == "StringContext" &&
-              ivy.decoded == "ivy") =>
-          Some(dependency.stringValue)
+        case (lt @ Literal(Constant(dependency: String))) ::
+            Apply(
+              Select(
+                Apply(Ident(TermName("StringContext")), _),
+                TermName("ivy")
+              ),
+              _
+            ) :: _ if lt.pos.source.path.isMill =>
+          Some(dependency)
         case _ => None
       }
     }
