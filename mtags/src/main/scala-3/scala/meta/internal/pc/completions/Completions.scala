@@ -496,13 +496,14 @@ class Completions(
           true,
         )
 
-      case (imp @ Import(expr, selectors)) :: _
-          if isAmmoniteCompletionPosition(imp, rawFileName, "$ivy") =>
+      case (imp @ Import(_, selectors)) :: _
+          if isAmmoniteCompletionPosition(imp, rawFileName, "$ivy") ||
+            isWorksheetIvyCompletionPosition(imp, imp.sourcePos) =>
         (
           AmmoniteIvyCompletions.contribute(
-            expr,
             selectors,
-            pos,
+            completionPos,
+            text,
           ),
           true,
         )
@@ -543,6 +544,17 @@ class Completions(
           .startsWith(magicImport)
       case _ => false
   end isAmmoniteCompletionPosition
+
+  def isWorksheetIvyCompletionPosition(
+      tree: Tree,
+      pos: SourcePosition,
+  ): Boolean =
+    tree match
+      case Import(Ident(ivy), _) =>
+        pos.source.file.name.isWorksheet &&
+        (ivy.decoded == "$ivy" ||
+          ivy.decoded == "$dep")
+      case _ => false
 
   private def description(sym: Symbol): String =
     if sym.isType then sym.showFullName
@@ -649,8 +661,7 @@ class Completions(
               (autofill.label, true)
             case fileSysMember: CompletionValue.FileSystemMember =>
               (fileSysMember.label, true)
-            case si: CompletionValue.ScalaCLiImport => (si.label, true)
-            case ai: CompletionValue.AmmoniteIvyImport => (ai.label, true)
+            case ii: CompletionValue.IvyImport => (ii.label, true)
 
         if !isSeen(id) && include then
           isSeen += id

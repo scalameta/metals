@@ -1,29 +1,11 @@
 package tests.feature
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
-class Ammonite213Suite extends tests.BaseAmmoniteSuite(V.ammonite213) {
-  ivyCompletionsTest(
-    version = V.ammonite213,
-    artefactExpectedCompletionList = """
-                                       |circe-refined
-                                       |circe-refined_native0.4
-                                       |circe-refined_sjs0.6
-                                       |circe-refined_sjs1""".stripMargin,
-  )
-}
+class Ammonite213Suite extends tests.BaseAmmoniteSuite(V.ammonite213)
 
-class Ammonite3Suite extends tests.BaseAmmoniteSuite(V.ammonite3) {
-  ivyCompletionsTest(
-    version = V.ammonite3,
-    artefactExpectedCompletionList = """
-                                       |circe-refined
-                                       |circe-refined_native0.4
-                                       |circe-refined_sjs1""".stripMargin,
-  )
-}
+class Ammonite3Suite extends tests.BaseAmmoniteSuite(V.ammonite3)
 
 class Ammonite212Suite extends tests.BaseAmmoniteSuite(V.ammonite212) {
 

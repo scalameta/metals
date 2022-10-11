@@ -585,53 +585,61 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
-  def ivyCompletionsTest(
-      version: String,
-      artefactExpectedCompletionList: String,
-  ): Unit = {
-    test("ivy-completion") {
-      for {
-        _ <- initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": {
-             |    "scalaVersion": "${version}"
-             |  }
-             |}
-             |/main.sc
-             |import $$ivy.`io.cir`
-             |import $$ivy.`io.circe::circe-ref`
-             |import $$ivy.`io.circe::circe-yaml:0.14`
-             |""".stripMargin
-        )
-        _ <- server.didOpen("main.sc")
-        _ <- server.didSave("main.sc")(identity)
-        _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
+  test("ivy-completion") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/main.sc
+           |import $$ivy.`io.cir`
+           |import $$ivy.`io.circe::circe-ref`
+           |import $$ivy.`io.circe::circe-yaml:0.14`
+           |""".stripMargin
+      )
+      _ <- server.didOpen("main.sc")
+      _ <- server.didSave("main.sc")(identity)
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
-        groupExpectedCompletionList = "io.circe"
-        groupCompletionList <- server.completion(
-          "main.sc",
-          "import $ivy.`io.cir@@`",
-        )
-        _ = assertNoDiff(groupCompletionList, groupExpectedCompletionList)
-        artefactCompletionList <- server.completion(
-          "main.sc",
-          "import $ivy.`io.circe::circe-ref@@`",
-        )
-        _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
+      groupExpectedCompletionList = "io.circe"
+      groupCompletionList <- server.completion(
+        "main.sc",
+        "import $ivy.`io.cir@@`",
+      )
+      _ = assertNoDiff(groupCompletionList, groupExpectedCompletionList)
+      artefactCompletionList <- server.completion(
+        "main.sc",
+        "import $ivy.`io.circe::circe-ref@@`",
+      )
+      artefactExpectedCompletionList = getExpected(
+        """|circe-refined
+           |circe-refined_native0.4
+           |circe-refined_sjs0.6
+           |circe-refined_sjs1
+           |""".stripMargin,
+        Map(
+          "3" -> """|circe-refined
+                    |circe-refined_native0.4
+                    |circe-refined_sjs1
+                    |""".stripMargin
+        ),
+        scalaVersion,
+      )
+      _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
 
-        versionExpectedCompletionList =
-          """
-            |0.14.1
-            |0.14.0""".stripMargin
-        versionCompletionList <- server.completion(
-          "main.sc",
-          "import $ivy.`io.circe::circe-yaml:0.14@@`",
-        )
-        _ = assertNoDiff(versionCompletionList, versionExpectedCompletionList)
-      } yield ()
-    }
+      versionExpectedCompletionList =
+        """
+          |0.14.1
+          |0.14.0""".stripMargin
+      versionCompletionList <- server.completion(
+        "main.sc",
+        "import $ivy.`io.circe::circe-yaml:0.14@@`",
+      )
+      _ = assertNoDiff(versionCompletionList, versionExpectedCompletionList)
+    } yield ()
   }
-
 }
