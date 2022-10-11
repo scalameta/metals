@@ -35,7 +35,7 @@ the new contributors for their great work!
 </tbody>
 </table>
 
-For full details: https://github.com/scalameta/metals/milestone/53?closed=1
+For full details: [https://github.com/scalameta/metals/milestone/53?closed=1](https://github.com/scalameta/metals/milestone/53?closed=1)
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
 Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
@@ -47,18 +47,18 @@ and [VirtusLab](https://virtuslab.com) with the help from
 Check out [https://scalameta.org/metals/](https://scalameta.org/metals/), and
 give Metals a try!
 
-- Adjust mismatched type
-- [Scala 3] Ammonite completions
-- Better Scala CLI support
-- [Scala 3] Auto import symbols in string interpolation
-- [Scala 3] Add autofill named arguments completion
-- [Scala 3] Improved performance
-- Make document highlight more reliable.
-- [Scala 3] Add completions for case and match
-- "Extract Method" code action
-- [Scala 2] Add Completions for ivy Imports in Ammonite scripts and worksheets
-- Call hierarchy
-- [Scala 3] Enable fewer braces for Scala 3 nightly versions
+- [Adjust mismatched type](#adjust-mismatched-type)
+- [[Scala 3] Ammonite completions](#ammonite-completions-for-scala-3)
+- [Better Scala CLI support](#better-scala-cli-support)
+- [[Scala 3] Auto import symbols in string interpolation](#scala-3-auto-import-symbols-in-string-interpolation)
+- [[Scala 3] Add autofill named arguments completion](#scala-3-add-autofill-named-arguments-completion)
+- [[Scala 3] Improved performance](#scala-3-improved-performance)
+- [Make document highlight more reliable](#make-documenthighlight-more-reliable)
+- [[Scala 3] Add completions for case and match](#scala-3-add-completions-for-case-and-match)
+- ["Extract Method" code action](#extract-method-code-action)
+- [[Scala 2] Add Completions for ivy Imports in Ammonite scripts and worksheets](#scala-2-add-completions-for-ivy-imports-in-ammonite-scripts-and-worksheets)
+- [Call hierarchy](#call-hierarchy)
+- [[Scala 3] Enable fewer braces for Scala 3 nightly versions](#scala-3-enable-fewer-braces-for-scala-3-nightly-versions)
 - Add support for Scala 3.2.0, 2.12.17, 2.13.9 and RC versions of 3.2.1
 
 ## Adjust mismatched type
