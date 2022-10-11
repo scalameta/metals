@@ -48,4 +48,13 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filename = "A.sbt",
   )
+
+  checkEdit(
+    "double-percent-edit",
+    """|val dependency = "io.circe" %% "circe-core_n@@"
+       |""".stripMargin,
+    """|val dependency = "io.circe" %% "circe-core_native0.4"
+       |""".stripMargin,
+    filename = "A.sbt",
+  )
 }

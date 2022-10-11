@@ -12,45 +12,42 @@ trait SbtLibCompletions {
     def unapply(path: List[Tree]): Option[(Position, String)] = {
       path match {
         // "group@@" %%
-        case (lt @ Literal(group: Constant)) :: Select(_, percent1: Name) :: _
-            if Set("%", "%%").contains(percent1.decoded) &&
-              group.tag == StringTag =>
-          val depString = group.stringValue
-          Some((lt.pos, depString))
+        case (lt @ Literal(Constant(group: String))) :: Select(
+              _,
+              percent1: Name
+            ) :: _ if Set("%", "%%").contains(percent1.decoded) =>
+          Some((lt.pos, group))
 
         // "group" %% "artifact@@"
-        case (lt @ Literal(artifact: Constant)) :: Apply(
-              Select(Literal(group: Constant), percent1: Name),
+        case (lt @ Literal(Constant(artifact: String))) :: Apply(
+              Select(Literal(Constant(group: String)), percent1: Name),
               _
-            ) :: _
-            if Set("%", "%%").contains(percent1.decoded) &&
-              group.tag == StringTag && artifact.tag == StringTag =>
+            ) :: _ if Set("%", "%%").contains(percent1.decoded) =>
           val depString =
-            group.stringValue +
+            group +
               percent1.decoded.replace('%', ':') +
-              artifact.stringValue
+              artifact
           Some((lt.pos, depString))
 
         // "group" %% "artifact" % "version@@"
-        case (lt @ Literal(revision: Constant)) :: Apply(
+        case (lt @ Literal(Constant(revision: String))) :: Apply(
               Select(
                 Apply(
-                  Select(Literal(group: Constant), percent1: Name),
-                  List(Literal(artifact: Constant))
+                  Select(Literal(Constant(group: String)), percent1: Name),
+                  List(Literal(Constant(artifact: String)))
                 ),
                 percent2: Name
               ),
               _
             ) :: _
             if Set("%", "%%").contains(percent1.decoded) &&
-              percent2.decoded == "%" &&
-              group.tag == StringTag && artifact.tag == StringTag && revision.tag == StringTag =>
+              percent2.decoded == "%" =>
           val depString =
-            group.stringValue +
+            group +
               percent1.decoded.replace('%', ':') +
-              artifact.stringValue +
+              artifact +
               ":" +
-              revision.stringValue
+              revision
           Some((lt.pos, depString))
 
         case _ =>
