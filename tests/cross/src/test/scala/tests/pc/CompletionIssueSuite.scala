@@ -8,8 +8,13 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   override protected def extraDependencies(
       scalaVersion: String
   ): Seq[Dependency] = {
-
-    Seq(Dependency.of("org.eclipse.lsp4j", "org.eclipse.lsp4j", "0.16.0"))
+    Seq(
+      Dependency.of("org.eclipse.lsp4j", "org.eclipse.lsp4j", "0.16.0"),
+      if (scalaVersion.startsWith("2.12"))
+        Dependency.of("org.scalameta", "scalameta_2.12", "4.6.0")
+      else
+        Dependency.of("org.scalameta", "scalameta_2.13", "4.6.0"),
+    )
   }
 
   check(
@@ -250,6 +255,20 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |  def method(arg: String): Unit = ()
       |}
       |import obj.method""".stripMargin,
+  )
+
+  // We shouldn't get exhaustive completions for AbsolutePath
+  // related to https://github.com/scala/scala/commit/14fa7bef120cbb996d042daba6095530167c49ed
+  check(
+    "absolute-path",
+    """|
+       |import scala.meta.io.AbsolutePath
+       |object obj {
+       |  val path: AbsolutePath = ???
+       |  path match@@
+       |}
+       |""".stripMargin,
+    "match",
   )
 
   // The tests shows `x$1` but it's because the dependency is not indexed
