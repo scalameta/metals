@@ -1,5 +1,10 @@
 package scala.meta.internal.pc
 
+import java.util.logging.Level
+import java.util.logging.Logger
+
+import scala.util.control.NonFatal
+
 import scala.meta.pc.*
 
 import dotty.tools.dotc.core.Contexts.*
@@ -14,8 +19,14 @@ class CompilerSearchVisitor(
 )(using ctx: Context)
     extends SymbolSearchVisitor:
 
-  private def isAccessible(sym: Symbol): Boolean =
+  val logger: Logger = Logger.getLogger(classOf[CompilerSearchVisitor].getName)
+
+  private def isAccessible(sym: Symbol): Boolean = try
     sym != NoSymbol && sym.isPublic
+  catch
+    case NonFatal(e) =>
+      logger.log(Level.SEVERE, e.getMessage(), e)
+      false
 
   private def toSymbols(
       pkg: String,
