@@ -722,6 +722,7 @@ class MetalsGlobal(
             isVisited += unique
             if (child.name.containsName(CURSOR)) ()
             else if (child.isStale) ()
+            else if (child.name == tpnme.LOCAL_CHILD) ()
             else if (child.isSealed && (child.isAbstract || child.isTrait)) {
               loop(child)
             } else {
