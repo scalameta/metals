@@ -9,8 +9,8 @@
       <<b>>/*parameter*/,
     ) <<==>>/*method*/ (<<1>>/*number*/, <<2>>/*number*/)
     (
-      c,
-      d,
+      <<c>>/*variable,readonly*/,
+      <<d>>/*variable,readonly*/,
     ) <<<->>/*operator*/ <<List>>/*variable,readonly*/((<<a>>/*parameter*/, <<b>>/*parameter*/))
     <<if>>/*keyword*/ (
       <<a>>/*parameter*/,
