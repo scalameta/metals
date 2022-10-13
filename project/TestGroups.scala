@@ -103,10 +103,10 @@ object TestGroups {
       "tests.codeactions.ConvertToNamedArgumentsLspSuite",
       "tests.testProvider.TestSuitesProviderSuite", "tests.MillVersionSuite",
       "tests.FingerprintsLspSuite", "tests.JdkVersionSuite",
-      "tests.MillifyDependencyLspSuite",
       "tests.codeactions.ActionableDiagnosticsSuite",
       "tests.codeactions.MillifyDependencyLspSuite",
-      "tests.RenameFilesLspSuite", "tests.codeactions.ExtractMethodLspSuite"),
+      "tests.RenameFilesLspSuite", "tests.codeactions.ExtractMethodLspSuite",
+      "tests.SemanticTokensExpectSuite"),
   )
 
 }
