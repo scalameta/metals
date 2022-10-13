@@ -2,8 +2,8 @@
 
 <<object>>/*keyword*/ <<StructuralTypes>>/*class*/ {
   <<type>>/*keyword*/ <<User>>/*type*/ = {
-    <<def>>/*keyword*/ <<name>>/*method,abstract*/: String
-    <<def>>/*keyword*/ <<age>>/*method,abstract*/: Int
+    <<def>>/*keyword*/ <<name>>/*method,abstract*/: String/*type*/
+    <<def>>/*keyword*/ <<age>>/*method,abstract*/: Int/*class,abstract*/
   }
 
   <<val>>/*keyword*/ <<user>>/*variable,readonly*/ = null.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
