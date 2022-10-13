@@ -10,8 +10,8 @@
   <<user>>/*variable,readonly*/.<<name>>/*method,abstract*/
   <<user>>/*variable,readonly*/.<<age>>/*method,abstract*/
 
-  <<val>>/*keyword*/ <<V>>/*variable,readonly*/: Object {
-    <<def>>/*keyword*/ <<scalameta>>/*method,abstract*/: String
+  <<val>>/*keyword*/ <<V>>/*variable,readonly*/: <<Object>>/*class,abstract*/ {
+    <<def>>/*keyword*/ <<scalameta>>/*method,abstract*/: <<String>>/*type*/
   } = <<new>>/*keyword*/ {
     <<def>>/*keyword*/ <<scalameta>>/*method*/ = <<"4.0">>/*string*/
   }
