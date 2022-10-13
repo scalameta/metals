@@ -11,7 +11,7 @@
       <<java>>/*namespace*/.<<lang>>/*namespace*/.<<Double>>/*class*/,
     ]
   ](
-    elems = null
+    <<elems>>/*parameter*/ = <<null>>/*keyword*/
   )
   <<println>>/*method*/(<<deriveDecoder>>/*variable,readonly*/[<<MacroAnnotation>>/*class*/])
   <<println>>/*method*/(<<deriveEncoder>>/*variable,readonly*/[<<MacroAnnotation>>/*class*/])
