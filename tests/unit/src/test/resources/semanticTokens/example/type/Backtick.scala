@@ -1,3 +1,3 @@
-<<package>>/*keyword*/ <<example>>/*namespace*/.`type`
+<<package>>/*keyword*/ <<example>>/*namespace*/.<<`type`>>/*namespace*/
 
 <<class>>/*keyword*/ <<Backtick>>/*class*/ {}
