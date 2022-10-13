@@ -36,6 +36,7 @@ import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SignatureHelp
@@ -487,6 +488,21 @@ class Compilers(
         .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
   }.getOrElse(Future.successful(None))
+
+  def rename(
+      params: RenameParams,
+      token: CancelToken,
+  ): Future[ju.List[TextEdit]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.rename(
+        CompilerRangeParams.offsetOrRange(pos, token),
+        params.getNewName(),
+      ).asScala
+        .map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
+    }
+  }.getOrElse(Future.successful(Nil.asJava))
 
   def definition(
       params: TextDocumentPositionParams,

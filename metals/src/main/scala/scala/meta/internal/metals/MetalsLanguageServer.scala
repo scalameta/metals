@@ -1605,7 +1605,9 @@ class MetalsLanguageServer(
   def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
-    CancelTokens.future { token => renameProvider.rename(params, token) }
+    CancelTokens.future { token =>
+      renameProvider.rename(params, compilers, token)
+    }
 
   @JsonRequest("textDocument/references")
   def references(

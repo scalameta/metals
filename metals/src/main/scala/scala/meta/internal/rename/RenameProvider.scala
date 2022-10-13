@@ -12,6 +12,7 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
@@ -67,7 +68,7 @@ final class RenameProvider(
     val source = params.getTextDocument.getUri.toAbsolutePath
     compilations.compilationFinished(source).flatMap { _ =>
       definitionProvider.definition(source, params, token).map { definition =>
-        val symbolOccurrence =
+        val symbolOccurrence: Option[(SymbolOccurrence, TextDocument)] =
           definitionProvider
             .symbolOccurrence(source, params.getPosition)
             .orElse(
@@ -96,13 +97,28 @@ final class RenameProvider(
 
   def rename(
       params: RenameParams,
+      compilers: Compilers,
       token: CancelToken,
   ): Future[WorkspaceEdit] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     compilations.compilationFinished(source).flatMap { _ =>
-      definitionProvider
+      val defininionFuture = definitionProvider
         .definition(source, params, token)
-        .flatMap { definition =>
+      defininionFuture.flatMap { definition =>
+        if (
+          definition.symbol.isLocal && !definition.semanticdb.exists(
+            _.symbols.exists(sym =>
+              sym.symbol == definition.symbol &&
+                sym.overriddenSymbols.nonEmpty
+            )
+          )
+        ) {
+          val edit = compilers.rename(params, token).map { edits =>
+            val mapEdits = Map(source.toString() -> edits).asJava
+            new WorkspaceEdit(mapEdits)
+          }
+          edit
+        } else {
           val textParams = new TextDocumentPositionParams(
             params.getTextDocument(),
             params.getPosition(),
@@ -214,55 +230,56 @@ final class RenameProvider(
             .sequence(allReferences)
             .map(locs => (locs.flatten, symbolOccurrence, definition, newName))
         }
-        .map { case (allReferences, symbolOccurrence, definition, newName) =>
-          def isOccurrence(fn: String => Boolean): Boolean = {
-            symbolOccurrence.exists { case (occ, _) =>
-              fn(occ.symbol)
-            }
-          }
-
-          // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
-          val fallbackOccurences =
-            if (allReferences.isEmpty)
-              renamedImportOccurrences(source, symbolOccurrence)
-            else allReferences
-
-          if (fallbackOccurences.isEmpty) {
-            scribe.debug(s"Symbol occurence was $symbolOccurrence")
-            scribe.debug(s"The definition found was $definition")
-          }
-
-          val allChanges = for {
-            (path, locs) <- fallbackOccurences.toList.distinct
-              .groupBy(_.getUri().toAbsolutePath)
-          } yield {
-            val textEdits = for (loc <- locs) yield {
-              textEdit(isOccurrence, loc, newName)
-            }
-            Seq(path -> textEdits.toList)
-          }
-          val fileChanges = allChanges.flatten.toMap
-          val shouldRenameInBackground =
-            !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.renameFileThreshold
-          val (openedEdits, closedEdits) =
-            if (shouldRenameInBackground) {
-              if (clientConfig.isOpenFilesOnRenameProvider) {
-                client.showMessage(fileThreshold(fileChanges.keySet.size))
+          .map { case (allReferences, symbolOccurrence, definition, newName) =>
+            def isOccurrence(fn: String => Boolean): Boolean = {
+              symbolOccurrence.exists { case (occ, _) =>
+                fn(occ.symbol)
               }
-              fileChanges.partition { case (path, _) =>
-                buffers.contains(path)
-              }
-            } else {
-              (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
             }
 
-          awaitingSave.add(() => changeClosedFiles(closedEdits))
+            // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
+            val fallbackOccurences =
+              if (allReferences.isEmpty)
+                renamedImportOccurrences(source, symbolOccurrence)
+              else allReferences
 
-          val edits = documentEdits(openedEdits)
-          val renames =
-            fileRenames(isOccurrence, fileChanges.keySet, newName)
-          new WorkspaceEdit((edits ++ renames).asJava)
-        }
+            if (fallbackOccurences.isEmpty) {
+              scribe.debug(s"Symbol occurence was $symbolOccurrence")
+              scribe.debug(s"The definition found was $definition")
+            }
+
+            val allChanges = for {
+              (path, locs) <- fallbackOccurences.toList.distinct
+                .groupBy(_.getUri().toAbsolutePath)
+            } yield {
+              val textEdits = for (loc <- locs) yield {
+                textEdit(isOccurrence, loc, newName)
+              }
+              Seq(path -> textEdits.toList)
+            }
+            val fileChanges = allChanges.flatten.toMap
+            val shouldRenameInBackground =
+              !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.renameFileThreshold
+            val (openedEdits, closedEdits) =
+              if (shouldRenameInBackground) {
+                if (clientConfig.isOpenFilesOnRenameProvider) {
+                  client.showMessage(fileThreshold(fileChanges.keySet.size))
+                }
+                fileChanges.partition { case (path, _) =>
+                  buffers.contains(path)
+                }
+              } else {
+                (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+              }
+
+            awaitingSave.add(() => changeClosedFiles(closedEdits))
+
+            val edits = documentEdits(openedEdits)
+            val renames =
+              fileRenames(isOccurrence, fileChanges.keySet, newName)
+            new WorkspaceEdit((edits ++ renames).asJava)
+          }
+      }
     }
   }
 
