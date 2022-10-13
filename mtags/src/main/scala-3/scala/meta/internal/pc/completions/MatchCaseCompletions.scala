@@ -498,7 +498,7 @@ class MatchCaseExtractor(
         case _ => None
   end MatchExtractor
   object CaseExtractor:
-    def unapply(path: List[Tree]): Option[(Tree, Tree)] =
+    def unapply(path: List[Tree])(using Context): Option[(Tree, Tree)] =
       path match
         // foo match
         // case None => ()
@@ -517,9 +517,10 @@ class MatchCaseExtractor(
         case (ident @ Ident(name)) :: Block(
               _,
               expr,
-            ) :: (_: CaseDef) :: (m: Match) :: parent :: _
+            ) :: (cd: CaseDef) :: (m: Match) :: parent :: _
             if ident == expr && "case"
-              .startsWith(name.toString()) =>
+              .startsWith(name.toString()) &&
+              cd.sourcePos.startLine != pos.startLine =>
           Some((m.selector, parent))
         // foo match
         //  ca@@

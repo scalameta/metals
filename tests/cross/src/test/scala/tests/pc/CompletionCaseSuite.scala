@@ -608,4 +608,15 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case A.C =>""".stripMargin,
   )
 
+  check(
+    "same-line",
+    """
+      |object A {
+      |  Option(1) match {
+      |    case Some(a) => cas@@
+      |  }
+      |}""".stripMargin,
+    "",
+  )
+
 }

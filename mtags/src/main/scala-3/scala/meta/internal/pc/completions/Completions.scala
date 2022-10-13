@@ -331,8 +331,8 @@ class Completions(
       .stripSuffix(".scala")
     val MatchCaseExtractor = new MatchCaseExtractor(pos, text, completionPos)
     val ScalaCliCompletions = new ScalaCliCompletions(pos, text)
-    path match
 
+    path match
       case ScalaCliCompletions(dependency) =>
         (ScalaCliCompletions.contribute(dependency), true)
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
