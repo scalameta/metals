@@ -17,7 +17,7 @@
   <<println>>/*method*/(<<number1>>/*variable,readonly*/)
 
   <<def>>/*keyword*/ <<localDeconstruction>>/*method*/ = {
-    <<val>>/*keyword*/ <<Some>>/*class*/(number2) =
+    <<val>>/*keyword*/ <<Some>>/*class*/(<<number2>>/*variable, readonly*/) =
       <<some>>/*variable,readonly*/
     <<number2>>/*variable,readonly*/
   }
