@@ -504,8 +504,8 @@ trait Completions { this: MetalsGlobal =>
         )
       case (m @ Match(_, Nil)) :: parent :: _ =>
         CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
-      case Ident(name) :: (_: CaseDef) :: (m: Match) :: parent :: _
-          if isCasePrefix(name) =>
+      case Ident(name) :: (cd: CaseDef) :: (m: Match) :: parent :: _
+          if isCasePrefix(name) && pos.line != cd.pos.line =>
         CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
       case (ident @ Ident(name)) :: Block(
             _,
