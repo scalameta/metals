@@ -168,7 +168,7 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
         |}
         |""".stripMargin
 
-  test("connecting-scalacli".flaky) {
+  test("connecting-scalacli") {
     cleanWorkspace()
     for {
       _ <- server.initialize()

@@ -51,12 +51,13 @@ final class FileWatcher(
   }
 
   def start(
-      files: Set[AbsolutePath]
+      paths: Set[AbsolutePath]
   ): Unit = {
+    val (files, directories) = paths.partition(_.isFile)
     stopWatcher = startWatch(
       config,
       workspaceDeferred().toNIO,
-      PathsToWatch(files.map(_.toNIO), Set.empty),
+      PathsToWatch(files.map(_.toNIO), directories.map(_.toNIO)),
       onFileWatchEvent,
       watchFilter,
     )

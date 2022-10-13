@@ -486,8 +486,8 @@ trait CommonMtagsEnrichments {
     def isBuild: Boolean =
       path.filename.startsWith("BUILD")
 
-    def isBsp: Boolean =
-      path.filename.startsWith(".bsp")
+    def isInBspDirectory(workspace: AbsolutePath): Boolean =
+      path.toNIO.startsWith(workspace.resolve(".bsp").toNIO)
 
     def isScalaOrJava: Boolean = {
       toLanguage match {
