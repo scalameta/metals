@@ -71,6 +71,11 @@ public abstract class PresentationCompiler {
     public abstract CompletableFuture<Optional<Hover>> hover(OffsetParams params);
 
     /**
+     * Returns the type of the expression at the given position along with the symbol of the referenced symbol.
+    */
+    public abstract CompletableFuture<List<TextEdit>> rename(OffsetParams params, String name);
+
+    /**
      * Returns the definition of the symbol at the given position.
      */
     public abstract CompletableFuture<DefinitionResult> definition(OffsetParams params);

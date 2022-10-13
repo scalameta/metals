@@ -181,6 +181,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
   extension (s: String)
     def backticked: String =
       KeywordWrapper.Scala3.backtickWrap(s)
+    def stripBackticks: String = s.stripPrefix("`").stripSuffix("`")
 
   extension (search: SymbolSearch)
     def symbolDocumentation(symbol: Symbol)(using

@@ -212,6 +212,17 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc => new SignatureHelpProvider(pc.compiler()).signatureHelp(params) }
 
+  override def rename(
+      params: OffsetParams,
+      name: String
+  ): CompletableFuture[ju.List[TextEdit]] =
+    compilerAccess.withNonInterruptableCompiler(
+      List[TextEdit]().asJava,
+      params.token
+    ) { pc =>
+      new PcRenameProvider(pc.compiler(), params, name).rename().asJava
+    }
+
   override def hover(
       params: OffsetParams
   ): CompletableFuture[Optional[Hover]] =
@@ -247,7 +258,7 @@ case class ScalaPresentationCompiler(
       List.empty[DocumentHighlight].asJava,
       params.token()
     ) { pc =>
-      new PcDocumentHighlightProvider(pc.compiler()).highlights(params).asJava
+      new PcDocumentHighlightProvider(pc.compiler(), params).highlights().asJava
     }
 
   override def semanticdbTextDocument(
