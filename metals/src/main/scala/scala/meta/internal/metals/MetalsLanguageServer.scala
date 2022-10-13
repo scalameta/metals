@@ -1410,7 +1410,8 @@ class MetalsLanguageServer(
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild || abs.isBsp
+    abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild ||
+    abs.isInBspDirectory(workspace)
   }
 
   /**
@@ -1428,7 +1429,9 @@ class MetalsLanguageServer(
     val isScalaOrJava = path.isScalaOrJava
 
     event.eventType match {
-      case EventType.CreateOrModify if path.isBsp =>
+      case EventType.CreateOrModify
+          if path.isInBspDirectory(workspace) && path.extension == "json" =>
+        scribe.info(s"Detected new build tool in $path")
         quickConnectToBuildServer()
       case _ =>
     }
