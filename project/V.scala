@@ -9,7 +9,7 @@ object V {
   val nextScala3RC = "3.2.1-RC2"
   val sbtScala = "2.12.16"
   val ammonite212Version = "2.12.17"
-  val ammonite213Version = "2.13.9"
+  val ammonite213Version = "2.13.10"
   val ammonite3Version = "3.1.3"
 
   val ammonite = "2.5.5"
