@@ -220,6 +220,9 @@ object Bill {
     override def buildTargetInverseSources(
         params: InverseSourcesParams
     ): CompletableFuture[InverseSourcesResult] = ???
+    override def buildTargetOutputPaths(
+        params: OutputPathsParams
+    ): CompletableFuture[OutputPathsResult] = ???
     override def buildTargetDependencySources(
         params: DependencySourcesParams
     ): CompletableFuture[DependencySourcesResult] = {
