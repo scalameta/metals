@@ -875,6 +875,7 @@ class MetalsLanguageServer(
         capabilities.setSelectionRangeProvider(true)
         capabilities.setCodeLensProvider(new CodeLensOptions(false))
         capabilities.setDefinitionProvider(true)
+        capabilities.setTypeDefinitionProvider(true)
         capabilities.setImplementationProvider(true)
         capabilities.setHoverProvider(true)
         capabilities.setReferencesProvider(true)
