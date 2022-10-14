@@ -41,7 +41,7 @@ object V {
   val scalameta = "4.6.0"
   val scribe = "3.10.3"
   val semanticdb = scalameta
-  val qdox = "2.0.2"
+  val qdox = "2.0.3"
 
   val guava = "com.google.guava" % "guava" % "31.1-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
