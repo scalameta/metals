@@ -1,5 +1,6 @@
 package tests.feature
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -44,15 +45,17 @@ class Ammonite213Suite extends tests.BaseAmmoniteSuite(V.ammonite213) {
       )
       _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
 
-      versionExpectedCompletionList =
-        """
-          |0.14.0
-          |0.14.1""".stripMargin
-      versionCompletionList <- server.completion(
+      versionExpectedCompletionList = List("0.14.1", "0.14.0")
+      response <- server.completionList(
         "main.sc",
         "import $ivy.`io.circe::circe-yaml:0.14@@`",
       )
-      _ = assertNoDiff(versionCompletionList, versionExpectedCompletionList)
+      versionCompletionList = response
+        .getItems()
+        .asScala
+        .map(_.getLabel())
+        .toList
+      _ = assertEquals(versionCompletionList, versionExpectedCompletionList)
     } yield ()
   }
 }
