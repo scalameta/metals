@@ -44,7 +44,25 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
     """|package foo.bar
        |<<test>><<debug test>>
        |class Foo extends org.scalatest.funsuite.AnyFunSuite {
-       |  test("foo") {}
+       |}
+       |""".stripMargin
+  )
+
+  checkTestCases(
+    "test-suite-with-tests",
+    library = Some("org.scalatest::scalatest:3.2.4"),
+  )(
+    """|package foo.bar
+       |<<test>><<debug test>>
+       |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+       |<<test>><<debug test>>
+       |  test("foo") {
+       |    assert(1 == 1)
+       |  }
+       |<<test>><<debug test>>
+       |  test("bar") {
+       |    assert(1 == 1)
+       |  }
        |}
        |""".stripMargin
   )

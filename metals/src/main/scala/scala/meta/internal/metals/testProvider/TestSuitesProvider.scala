@@ -4,16 +4,22 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.implementation.TextDocumentWithPath
+import scala.meta.internal.metals.BaseCommand
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaTestSuiteSelection
+import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.codelenses.CodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.JUnit4
 import scala.meta.internal.metals.debug.MUnit
@@ -34,6 +40,8 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
+import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.{lsp4j => l}
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
@@ -46,7 +54,8 @@ final class TestSuitesProvider(
     userConfig: () => UserConfiguration,
     client: MetalsLanguageClient,
 )(implicit ec: ExecutionContext)
-    extends SemanticdbFeatureProvider {
+    extends SemanticdbFeatureProvider
+    with CodeLens {
 
   private val index = new TestSuitesIndex
   private val junitTestFinder = new JunitTestFinder
@@ -54,10 +63,12 @@ final class TestSuitesProvider(
     new MunitTestFinder(trees, symbolIndex, semanticdbs)
   private val scalatestTestFinder =
     new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
+  private val isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
+    userConfig().testUserInterface == TestUserInterfaceKind.TestExplorer
 
-  private def isEnabled =
-    clientConfig.isTestExplorerProvider() &&
-      userConfig().testUserInterface == TestUserInterfaceKind.TestExplorer
+  override def isEnabled: Boolean = (clientConfig.isDebuggingProvider() &&
+    userConfig().testUserInterface == TestUserInterfaceKind.CodeLenses) ||
+    isExplorerEnabled
 
   val refreshTestSuites: BatchedFunction[Unit, Unit] =
     BatchedFunction.fromFuture { _ =>
@@ -75,32 +86,63 @@ final class TestSuitesProvider(
 
   override def onChange(docs: TextDocuments, file: AbsolutePath): Unit =
     docs.documents.headOption.foreach {
-      case doc if isEnabled => updateTestCases((file, doc))
+      case doc if isExplorerEnabled => updateTestCases((file, doc))
       case _ => ()
     }
 
   override def onDelete(file: AbsolutePath): Unit = {
     val removed = index.remove(file)
-    val removeEvents = removed
-      .groupBy(_.buildTarget)
-      .map { case (buildTarget, entries) =>
-        BuildTargetUpdate(
-          buildTarget,
-          entries.map(_.suiteDetails.asRemoveEvent),
-        )
-      }
-      .toList
+    if (isExplorerEnabled) {
+      val removeEvents = removed
+        .groupBy(_.buildTarget)
+        .map { case (buildTarget, entries) =>
+          BuildTargetUpdate(
+            buildTarget,
+            entries.map(_.suiteDetails.asRemoveEvent),
+          )
+        }
+        .toList
 
-    updateClientIfNonEmpty(removeEvents)
+      updateClientIfNonEmpty(removeEvents)
+    }
   }
 
   override def reset(): Unit = ()
+
+  override def codeLenses(
+      textDocumentWithPath: TextDocumentWithPath
+  ): Seq[l.CodeLens] = {
+    val path = textDocumentWithPath.filePath
+    for {
+      target <- buildTargets.inverseSources(path).toList
+      cases <- getTestCasesForPath(path, None)
+      lens <- cases.events.asScala.collect { case AddTestCases(fqn, _, cases) =>
+        cases.asScala.flatMap { entry =>
+          val c = ScalaTestSuiteSelection(fqn, List(entry.name).asJava)
+          val params = new b.DebugSessionParams(
+            List(target).asJava,
+            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES_SELECTION,
+            ScalaTestSuites(List(c).asJava, Nil.asJava, Nil.asJava).toJson,
+          )
+          def lens(name: String, cmd: BaseCommand) = new l.CodeLens(
+            entry.location.getRange(),
+            new l.Command(name, cmd.id, List[Object](params).asJava),
+            null,
+          )
+          List(
+            lens("test", ClientCommands.StartRunSession),
+            lens("debug test", ClientCommands.StartDebugSession),
+          )
+        }
+      }.flatten
+    } yield lens
+  }
 
   /**
    * Check if opened file contains test suite and update test cases if yes.
    */
   def didOpen(file: AbsolutePath): Future[Unit] =
-    if (isEnabled && index.contains(file)) Future {
+    if (isExplorerEnabled && index.contains(file)) Future {
       val buildTargetUpdates = getTestCasesForPath(file, None)
       updateClientIfNonEmpty(buildTargetUpdates)
     }
@@ -305,26 +347,28 @@ final class TestSuitesProvider(
       entries.foreach(index.put(_))
     }
 
-    val addedTestCases = addedEntries.mapValues {
-      _.flatMap { entry =>
-        val canResolve = entry.suiteDetails.framework.canResolveChildren
-        if (canResolve && buffers.contains(entry.path))
-          getTestCasesForSuites(entry.path, Vector(entry.suiteDetails), None)
-        else Nil
-      }
-    }.toMap
+    if (isExplorerEnabled) {
+      val addedTestCases = addedEntries.mapValues {
+        _.flatMap { entry =>
+          val canResolve = entry.suiteDetails.framework.canResolveChildren
+          if (canResolve && buffers.contains(entry.path))
+            getTestCasesForSuites(entry.path, Vector(entry.suiteDetails), None)
+          else Nil
+        }
+      }.toMap
 
-    val addedSuites =
-      addedEntries.mapValues(_.map(_.suiteDetails.asAddEvent)).toMap
+      val addedSuites =
+        addedEntries.mapValues(_.map(_.suiteDetails.asAddEvent)).toMap
 
-    val buildTargetUpdates =
-      getBuildTargetUpdates(
-        deletedSuites = deletedSuites,
-        addedSuites = addedSuites,
-        addedTestCases = addedTestCases,
-      )
+      val buildTargetUpdates =
+        getBuildTargetUpdates(
+          deletedSuites = deletedSuites,
+          addedSuites = addedSuites,
+          addedTestCases = addedTestCases,
+        )
 
-    updateClientIfNonEmpty(buildTargetUpdates)
+      updateClientIfNonEmpty(buildTargetUpdates)
+    }
   }
 
   /**

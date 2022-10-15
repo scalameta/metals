@@ -621,8 +621,24 @@ class MetalsLanguageServer(
           clientConfig.commandInHtmlFormat(),
         )
         val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
+        testProvider = new TestSuitesProvider(
+          buildTargets,
+          buildTargetClasses,
+          trees,
+          definitionIndex,
+          semanticdbs,
+          buffers,
+          clientConfig,
+          () => userConfig,
+          languageClient,
+        )
         codeLensProvider = new CodeLensProvider(
-          List(runTestLensProvider, goSuperLensProvider, worksheetCodeLens),
+          List(
+            runTestLensProvider,
+            goSuperLensProvider,
+            worksheetCodeLens,
+            testProvider,
+          ),
           semanticdbs,
           stacktraceAnalyzer,
         )
@@ -648,17 +664,6 @@ class MetalsLanguageServer(
           clientConfig,
           () => userConfig,
           trees,
-        )
-        testProvider = new TestSuitesProvider(
-          buildTargets,
-          buildTargetClasses,
-          trees,
-          definitionIndex,
-          semanticdbs,
-          buffers,
-          clientConfig,
-          () => userConfig,
-          languageClient,
         )
         semanticDBIndexer = new SemanticdbIndexer(
           List(

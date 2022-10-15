@@ -12,6 +12,8 @@ abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
       library: Option[String] = None,
       scalaVersion: Option[String] = None,
       printCommand: Boolean = false,
+      extraInitialization: (TestingServer, String) => Future[Unit] = (_, _) =>
+        Future.unit,
   )(
       expected: => String
   )(implicit loc: Location): Unit = {
@@ -45,10 +47,27 @@ abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
               |$original
               |""".stripMargin
         )
+        _ <- extraInitialization(server, sourceFile)
         _ <- assertCodeLenses(sourceFile, expected, printCommand = printCommand)
       } yield ()
     }
   }
+
+  def checkTestCases(
+      name: TestOptions,
+      library: Option[String] = None,
+      scalaVersion: Option[String] = None,
+      printCommand: Boolean = false,
+  )(
+      expected: => String
+  )(implicit loc: Location): Unit = check(
+    name,
+    library,
+    scalaVersion,
+    printCommand,
+    (server, sourceFile) =>
+      server.discoverTestSuites(List(sourceFile)).map(_ => ()),
+  )(expected)
 
   protected def assertCodeLenses(
       relativeFile: String,
