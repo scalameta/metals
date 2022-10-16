@@ -17,7 +17,6 @@ import scala.meta.inputs.Input.VirtualFile
 import scala.meta.internal.metals.AdjustLspData
 import scala.meta.internal.metals.AdjustedLspData
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
@@ -28,7 +27,6 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
@@ -407,30 +405,11 @@ class WorksheetProvider(
 
   private def getMdoc(target: BuildTargetIdentifier): Option[Mdoc] = {
 
-    def isSupportedScala2Version(scalaVersion: String) = {
-      !ScalaVersions.isScala3Version(scalaVersion) && ScalaVersions
-        .isSupportedAtReleaseMomentScalaVersion(scalaVersion)
-    }
-
     val key = MdocKey.BuildTarget(target)
     mdocs.get(key).map(_.value).orElse {
       for {
         info <- buildTargets.scalaTarget(target)
         scalaVersion = info.scalaVersion
-        isSupported = isSupportedScala2Version(scalaVersion) ||
-          ScalaVersions.isScala3Version(scalaVersion)
-        _ = {
-          if (!isSupported) {
-            val message = Messages.Worksheets.unsupportedScalaVersion(
-              scalaVersion,
-              BuildInfo.scala212,
-              ScalaVersions.recommendedVersion(scalaVersion),
-            )
-            languageClient.showMessage(message)
-            scribe.warn(message.getMessage())
-          }
-        }
-        if isSupported
       } yield {
         // We filter out NonUnitStatements from wartremover or you'll get an
         // error about $doc.binder returning Unit from mdoc, which causes the
