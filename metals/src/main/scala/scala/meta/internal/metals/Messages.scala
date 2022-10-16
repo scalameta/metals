@@ -41,15 +41,6 @@ object Messages {
   )
 
   object Worksheets {
-    def unsupportedScalaVersion(
-        unsupportedVersion: String,
-        fallback: String,
-        recommended: String,
-    ) = new MessageParams(
-      MessageType.Warning,
-      s"Scala ${unsupportedVersion} is not supported in worksheets. Falling back to ${fallback} without your classpath.\n" +
-        s"Consider using ${recommended} instead to fix this.",
-    )
 
     val unableToExport = new MessageParams(
       MessageType.Warning,
