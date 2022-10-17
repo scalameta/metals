@@ -246,7 +246,7 @@ You can also use commands that can be easily bound to shortcuts:
 
 To assign shortcuts just go to the Keyboard Shortcuts page (`File` ->
 `Preferences` -> `Keyboard Shortcuts`) and search for a command, click on it and
-use you preffered shortcut.
+use your preferred shortcut.
 
 ## On type formatting for multiline string formatting
 
@@ -283,7 +283,7 @@ paste in Visual Studio Code you can check the `Editor: Format On Paste` setting:
 Metals provides an alternative command to the native "Go to symbol in workspace..." command, in order to work around some VS Code limitations (see [this issue](https://github.com/microsoft/vscode/issues/98125) for more context) and provide richer search capabilities.
 
 You can invoke this command from the command palette (look for "Metals: Search symbol in workspace").
-Optionally you can also bind this command to a shorcut. For example, if you want to replace the native command with the Metals one you can configure this shortcut:
+Optionally you can also bind this command to a shortcut. For example, if you want to replace the native command with the Metals one you can configure this shortcut:
 
 ```js
   {

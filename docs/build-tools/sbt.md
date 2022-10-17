@@ -67,7 +67,7 @@ integrated stable support in Metals.
 
 ### Generating a `.bsp/sbt.json` file if one doesn't exist
 
-More than likely if you're using sbt >= 1.4.1, you'll have already see this file
+More than likely if you're using sbt >= 1.4.1, you'll have already seen this file
 exist. However, if you're in a fresh workspace or it doesn't exist for some
 reason, you can execute a `metals.generate-bsp-config` command via the command
 palette, which will automatically detect that you're in a sbt workspace and

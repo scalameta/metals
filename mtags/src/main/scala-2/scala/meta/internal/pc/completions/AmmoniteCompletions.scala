@@ -7,6 +7,7 @@ import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.MetalsGlobal
+import scala.meta.internal.semver.SemVer.Version
 import scala.meta.internal.tokenizers.Chars
 import scala.meta.io.AbsolutePath
 
@@ -151,20 +152,25 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
                 )
                 pos.withStart(rangeStart).withEnd(pos.point).toLsp
               }
-
-            (javaCompletions ++ scalaCompletions).zipWithIndex.map {
-              case (c, index) =>
-                new TextEditMember(
-                  filterText = c,
-                  edit = new l.TextEdit(
-                    ivyEditRange,
-                    if (isInitialCompletion) s"`$c$$0`" else c
-                  ),
-                  sym = select.symbol
-                    .newErrorSymbol(TermName(s"artefact$index"))
-                    .setInfo(NoType),
-                  label = Some(c.stripPrefix(":"))
+            val allCompletions = scalaCompletions ++ javaCompletions
+            val sortedCompletions =
+              if (imp.replaceAll(":+", ":").count(_ == ':') == 2)
+                allCompletions.sortWith(
+                  Version.fromString(_) >= Version.fromString(_)
                 )
+              else allCompletions
+            sortedCompletions.zipWithIndex.map { case (c, index) =>
+              new TextEditMember(
+                filterText = c,
+                edit = new l.TextEdit(
+                  ivyEditRange,
+                  if (isInitialCompletion) s"`$c$$0`" else c
+                ),
+                sym = select.symbol
+                  .newErrorSymbol(TermName(s"artefact$index"))
+                  .setInfo(NoType),
+                label = Some(c.stripPrefix(":"))
+              )
             }
           case _ => List.empty
         }

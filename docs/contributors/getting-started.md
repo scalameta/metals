@@ -185,7 +185,7 @@ possible to investigate why test is failing manually.
 
 ## Cross tests
 
-These tests checks common features such as hover, completions or signatures for
+These tests check common features such as hover, completions or signatures for
 different scala version.
 
 ```sh
@@ -324,7 +324,7 @@ To debug the JVM with the Metals server, add a property to your
 `Server Properties` with the usual Java debugging flags, making sure you have
 the `quiet` option on. It's important to remember about the flag, as the server
 uses standard input/output to communicate with the client, and the default
-output of the debuggee interferes with that.
+output of the debugger interferes with that.
 
 This property will make your server run in debug mode on port 5005 without
 waiting for the debugger to connect:

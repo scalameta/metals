@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
+import scala.meta.internal.semver.SemVer.Version
 import scala.meta.internal.tokenizers.Chars
 
 import coursierapi.Complete
@@ -38,8 +39,14 @@ object CoursierComplete {
       if (dependency.endsWith(":") && dependency.count(_ == ':') == 1)
         completions(dependency + ":").map(":" + _)
       else List.empty
-    scalaCompletions ++ javaCompletions
+
+    val allCompletions = scalaCompletions ++ javaCompletions
+    // Attempt to sort versions in reverse order
+    if (dependency.replaceAll(":+", ":").count(_ == ':') == 2)
+      allCompletions.sortWith(Version.fromString(_) >= Version.fromString(_))
+    else allCompletions
   }
+
   def inferEditRange(point: Int, text: String): (Int, Int) = {
     def isArtifactPart(c: Char): Boolean =
       Chars.isIdentifierPart(c) || c == '.' || c == '-'

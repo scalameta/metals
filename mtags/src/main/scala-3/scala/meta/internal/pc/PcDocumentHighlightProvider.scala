@@ -269,9 +269,15 @@ object PcDocumentHighlightProvider:
                 }
                 .flatten
                 .toSet ++ highlights
+            case inl: Inlined =>
+              val traverser =
+                new DeepFolder[Set[DocumentHighlight]](collectNames)
+              val trees = inl.call :: inl.expansion :: inl.bindings
+              trees.foldLeft(highlights) { case (set, tree) =>
+                traverser(set, tree)
+              }
             case o =>
               highlights
-
         val traverser = new DeepFolder[Set[DocumentHighlight]](collectNames)
         val all = traverser(Set.empty[DocumentHighlight], unit.tpdTree)
 
