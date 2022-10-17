@@ -9,20 +9,21 @@ trait SbtLibCompletions {
   this: MetalsGlobal =>
 
   object SbtLibExtractor {
+    lazy val isPercents: Set[String] = Set("%", "%%")
     def unapply(path: List[Tree]): Option[(Position, String)] = {
       path match {
         // "group@@" %%
         case (lt @ Literal(Constant(group: String))) :: Select(
               _,
               percent1: Name
-            ) :: _ if Set("%", "%%").contains(percent1.decoded) =>
+            ) :: _ if isPercents(percent1.decoded) =>
           Some((lt.pos, group))
 
         // "group" %% "artifact@@"
         case (lt @ Literal(Constant(artifact: String))) :: Apply(
               Select(Literal(Constant(group: String)), percent1: Name),
               _
-            ) :: _ if Set("%", "%%").contains(percent1.decoded) =>
+            ) :: _ if isPercents(percent1.decoded) =>
           val depString =
             group +
               percent1.decoded.replace('%', ':') +
@@ -40,7 +41,7 @@ trait SbtLibCompletions {
               ),
               _
             ) :: _
-            if Set("%", "%%").contains(percent1.decoded) &&
+            if isPercents(percent1.decoded) &&
               percent2.decoded == "%" =>
           val depString =
             group +
