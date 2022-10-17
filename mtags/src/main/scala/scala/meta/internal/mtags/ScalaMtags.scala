@@ -32,7 +32,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
   }
 
   private var _toplevelSourceRef: Option[(String, OverloadDisambiguator)] = None
-  private def topleveSourceData: (String, OverloadDisambiguator) = {
+  private def toplevelSourceData: (String, OverloadDisambiguator) = {
     _toplevelSourceRef match {
       case Some(v) => v
       case None =>
@@ -47,8 +47,8 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
         value
     }
   }
-  private def toplevelSourceOwner: String = topleveSourceData._1
-  private def toplevelOverloads: OverloadDisambiguator = topleveSourceData._2
+  private def toplevelSourceOwner: String = toplevelSourceData._1
+  private def toplevelOverloads: OverloadDisambiguator = toplevelSourceData._2
 
   def currentTree: Tree = myCurrentTree
   private var myCurrentTree: Tree = Source(Nil)
@@ -297,14 +297,14 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           // see: https://github.com/scalameta/scalameta/issues/2443
           //      https://github.com/lampepfl/dotty/issues/11690
           val extensionParamss = t.paramss
-          val (owner, overloads) =
+          val overloads =
             if (isPackageOwner)
-              topleveSourceData
+              toplevelOverloads
             else
-              (currentOwner, new OverloadDisambiguator())
+              new OverloadDisambiguator()
 
           def addDefnDef(t: Defn.Def): Unit =
-            withOwner(owner) {
+            withOwner(fileOwner) {
               disambiguatedMethod(
                 t,
                 t.name,
@@ -315,7 +315,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
               )
             }
           def addDeclDef(t: Decl.Def): Unit =
-            withOwner(owner) {
+            withOwner(fileOwner) {
               disambiguatedMethod(
                 t,
                 t.name,

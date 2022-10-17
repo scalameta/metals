@@ -1,11 +1,11 @@
 /*example.Extension$package.*/package example
 
-extension (i/*Extension$package.asString().(i)*/: Int)
-  def asString/*Extension$package.asString().*/: String = i.toString
+extension (i/*example.Extension$package.asString().(i)*/: Int)
+  def asString/*example.Extension$package.asString().*/: String = i.toString
 
-extension (s/*Extension$package.asInt().(s)*//*Extension$package.double().(s)*/: String) {
-  def asInt/*Extension$package.asInt().*/: Int = s.toInt
-  def double/*Extension$package.double().*/: String = s * 2
+extension (s/*example.Extension$package.asInt().(s)*//*example.Extension$package.double().(s)*/: String) {
+  def asInt/*example.Extension$package.asInt().*/: Int = s.toInt
+  def double/*example.Extension$package.double().*/: String = s * 2
 }
 
 trait AbstractExtension/*example.AbstractExtension#*/ {

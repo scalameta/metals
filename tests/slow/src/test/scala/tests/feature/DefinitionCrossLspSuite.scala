@@ -6,6 +6,7 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.InitializationOptions
 
 import munit.Location
+import org.eclipse.{lsp4j => l}
 import tests.BaseCompletionLspSuite
 import tests.ScriptsAssertions
 
@@ -63,6 +64,53 @@ class DefinitionCrossLspSuite
       _ <- server.didOpen("a/src/main/scala/a/Test.scala")
       _ = assertNoDiagnostics()
       _ = server.assertReferenceDefinitionBijection()
+    } yield ()
+  }
+
+  test("inline") {
+    cleanDatabase()
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${BuildInfo.scala3}"
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main {
+           |  Foo("").setBaz1
+           |  Foo("").setBaz2
+           |}
+           |
+           |/a/src/main/scala/a/Foo.scala
+           |package a
+           |
+           |case class Foo(value: String)
+           |extension (x: Foo) {
+           |  inline def setBaz1: Unit = ()
+           |  def setBaz2: Unit = ()
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
+      expectedLocation = new l.Location(
+        workspace.resolve("a/src/main/scala/a/Foo.scala").toURI.toString(),
+        new l.Range(new l.Position(5, 6), new l.Position(5, 13)),
+      )
+      _ = assertNoDiagnostics()
+      _ <- definitionsAt(
+        "a/src/main/scala/a/Main.scala",
+        "  Foo(\"\").setBa@@z2",
+      ).map {
+        case List(loc) =>
+          assertEquals(loc, expectedLocation)
+        case _ => fail("expected single location")
+      }
     } yield ()
   }
 
