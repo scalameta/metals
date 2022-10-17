@@ -11,7 +11,7 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-140140828-1"></script>
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","UA-140140828-1",{})</script>
 <link rel="search" type="application/opensearchdescription+xml" title="Metals" href="/metals/opensearch.xml"><title data-react-helmet="true">Remote Language Servers | Metals</title><meta data-react-helmet="true" name="twitter:card" content="summary_large_image"><meta data-react-helmet="true" property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"><meta data-react-helmet="true" name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"><meta data-react-helmet="true" property="og:url" content="http://scalameta.org/metals/docs/integrations/remote-language-server"><meta data-react-helmet="true" name="docsearch:language" content="en"><meta data-react-helmet="true" name="docsearch:version" content="current"><meta data-react-helmet="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-react-helmet="true" property="og:title" content="Remote Language Servers | Metals"><meta data-react-helmet="true" name="description" content="Metals has experimental support to offload certain requests to a remote language"><meta data-react-helmet="true" property="og:description" content="Metals has experimental support to offload certain requests to a remote language"><link data-react-helmet="true" rel="icon" href="/metals/img/favicon.ico"><link data-react-helmet="true" rel="canonical" href="http://scalameta.org/metals/docs/integrations/remote-language-server"><link data-react-helmet="true" rel="alternate" href="http://scalameta.org/metals/docs/integrations/remote-language-server" hreflang="en"><link data-react-helmet="true" rel="alternate" href="http://scalameta.org/metals/docs/integrations/remote-language-server" hreflang="x-default"><link data-react-helmet="true" rel="preconnect" href="https://BH4D9OD16A-dsn.algolia.net" crossorigin="anonymous"><link rel="stylesheet" href="/metals/assets/css/styles.ab6f3053.css">
-<link rel="preload" href="/metals/assets/js/runtime~main.b9ed442c.js" as="script">
+<link rel="preload" href="/metals/assets/js/runtime~main.bd632a38.js" as="script">
 <link rel="preload" href="/metals/assets/js/main.ffa35fcf.js" as="script">
 </head>
 <body>
@@ -21,7 +21,7 @@ server. This feature can be used to navigate large codebases when it&#x27;s not
 possible to index all the code on a local computer.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="difference-from-local-language-servers">Difference from local language servers<a class="hash-link" href="#difference-from-local-language-servers" title="Direct link to heading">​</a></h2><p>There are some important differences between local and remote language servers:</p><ul><li>Instead of JSON-RPC, a remote language server responds to HTTP POST requests
 with an <code>application/json</code> header and a JSON-formatted body. The reason HTTP
 is chosen over JSON-RPC is because it makes the remote language server
-accesible from more clients, for example via <code>curl</code>. A caveat with using HTTP
+accessible from more clients, for example via <code>curl</code>. A caveat with using HTTP
 instead of JSON-RPC is that it&#x27;s not possible for the remote language server
 to push notification down to the client. In the future, we could consider
 using JSON-RPC via websockets instead.</li><li>Instead of using absolute <code>file://</code> URIs, a remote language server uses
@@ -48,7 +48,7 @@ without notice.</p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div 
                     </a></li><li class="footer__item"><a href="https://twitter.com/scalameta" target="_blank">
                       <img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&style=social">
                     </a></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/metals/img/scalameta-logo.png" alt="" class="themedImage_W2Cr themedImage--light_TfLj footer__logo"><img src="/metals/img/scalameta-logo.png" alt="" class="themedImage_W2Cr themedImage--dark_oUvU footer__logo"></div><div class="footer__copyright">Copyright © 2022 Metals</div></div></div></footer></div>
-<script src="/metals/assets/js/runtime~main.b9ed442c.js"></script>
+<script src="/metals/assets/js/runtime~main.bd632a38.js"></script>
 <script src="/metals/assets/js/main.ffa35fcf.js"></script>
 </body>
 </html>
