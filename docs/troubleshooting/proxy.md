@@ -32,7 +32,7 @@ summarize the most useful solutions here.
 If Maven Central is not available for your workspace it might be best to use
 Coursier's mirrors. Especially since Coursier boostrap tries to download the
 core of Coursier from Maven Central directly, which can only be changed using
-the mirrors. Not all functionalities are yet available for the boostrapped
+the mirrors. Not all functionalities are yet available for the bootstrapped
 Coursier version, including custom repositories, so mirrors are really the only
 way to fix this.
 

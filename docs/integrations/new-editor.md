@@ -77,7 +77,7 @@ properties, we strongly recommend that instead you rely on the
 
 Consult the
 [LSP specification](https://microsoft.github.io/language-server-protocol/specification)
-to learn more more how LSP works. Metals uses the following endpoints from the
+to learn more about how LSP works. Metals uses the following endpoints from the
 specification.
 
 ### `initialize`
@@ -231,7 +231,7 @@ Possible values:
 ##### `copyWorksheetOutputProvider`
 
 Boolean value signifying whether or not the client supports running
-CopyWorksheetOutput server command and copying it's results into the local
+CopyWorksheetOutput server command and copying its results into the local
 buffer.
 
 Default value: `false`
@@ -324,7 +324,7 @@ Possible values:
 Possible values:
 
 - `off` (default): the `metals/inputBox` request is not supported. In this case,
-  Metals tries to fallback to `window/showMessageRequest` when possible.
+  Metals tries to fall back to `window/showMessageRequest` when possible.
 - `on`: the `metals/inputBox` request is fully supported.
 
 ##### `isExitOnShutdown`
@@ -600,7 +600,7 @@ Possible values:
 ### `-Dmetals.statistics`
 
 By default, Metals logs only the most relevant metrics like time it takes to run
-sbt and import a workspace. The enable further metrics, update this property
+sbt and import a workspace. To enable further metrics, update this property
 with a comma separated list of the following supported values:
 
 - `memory`: print memory usage of the navigation index after build import.
@@ -620,7 +620,7 @@ Possible values:
   running Metals servers via TCP through a free port. In case of failure to
   establish a `AUTO_SERVER=TRUE` connection, Metals falls back to
   `AUTO_SERVER=FALSE`.
-- `off`: do not use use `AUTO_SERVER=TRUE`. By disabling this option, it's not
+- `off`: do not use `AUTO_SERVER=TRUE`. By disabling this option, it's not
   possible to run concurrent Metals servers in the same workspace directory. For
   example, it's not possible to have both VS Code and Vim installed with Metals
   running in the same directory. In case there are multiple Metals servers
@@ -646,7 +646,7 @@ preferable to set these there:
 ### `-Dmetals.bloop-port`
 
 Port number of the Bloop server to connect to. Should only be used if Bloop
-server was setup in a custom way. Default value is `8212`.
+server was set up in a custom way. Default value is `8212`.
 
 Possible values are any allowed port number that the Bloop server is able to run
 on.
@@ -996,8 +996,8 @@ interface WindowStateDidChangeParams( {
 
 The `metals/openWindow` params are used with the New Scala Project
 functionality. After the new project has been created, if the editor has the
-ability to open the project in a new window then these params are used with the
-the `metals-open-folder` command.
+ability to open the project in a new window then these params are used with the 
+`metals-open-folder` command.
 
 ```ts
 interface MetalsOpenWindowParams {
@@ -1013,7 +1013,7 @@ interface MetalsOpenWindowParams {
 The `FindTextInDependencyJars` request is sent from the client to the server to perform a search though files in the classpath
 including binary and sources jars. In response it returns a standard list of `Location` from the [LSP spec](https://microsoft.github.io/language-server-protocol/specification#location).
 
-In case if this enpoint was called with empty `query.pattern` or empty `options.include` server sends [`metals/inputBox`](https://scalameta.org/metals/docs/integrations/new-editor#metalsinputbox)
+In case if this endpoint was called with empty `query.pattern` or empty `options.include` server sends [`metals/inputBox`](https://scalameta.org/metals/docs/integrations/new-editor#metalsinputbox)
 request to the client to obtain these values.
 
 _Request_:
@@ -1067,7 +1067,7 @@ _Response_:
 When the client opens the doctor view, it will send in `visible: true` to the
 server and then `visible: false` when the doctor view is closed. This will
 ensure that the doctor checks aren't calculated on the server side when they
-aren't needed to since the won't be seen by the client anyways.
+aren't needed to since they won't be seen by the client anyways.
 
 _Notification_:
 

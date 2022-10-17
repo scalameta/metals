@@ -14,7 +14,7 @@ There are some important differences between local and remote language servers:
 - Instead of JSON-RPC, a remote language server responds to HTTP POST requests
   with an `application/json` header and a JSON-formatted body. The reason HTTP
   is chosen over JSON-RPC is because it makes the remote language server
-  accesible from more clients, for example via `curl`. A caveat with using HTTP
+  accessible from more clients, for example via `curl`. A caveat with using HTTP
   instead of JSON-RPC is that it's not possible for the remote language server
   to push notification down to the client. In the future, we could consider
   using JSON-RPC via websockets instead.

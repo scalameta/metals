@@ -139,7 +139,7 @@ This will open a new Scala buffer that has code lenses annotations:
 just click on the small "open" annotation to navigate to the source
 code relative to your stack trace.
 
-This will work as long as the buffer your are marking your stack trace
+This will work as long as the buffer you are marking your stack trace
 on exists within the project directory tracked by `lsp-mode`, because
 `lsp-metals-analyze-stacktrace` needs the `lsp` workspace to find the
 location of your errors.
