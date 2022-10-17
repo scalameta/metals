@@ -412,7 +412,7 @@ website.
 
 **Status bar**: Editor client implements the `metals/status` notification.
 
-**Decoration protocol**: Editor client impliments the
+**Decoration protocol**: Editor client implements the
 [Decoration Protocol](../integrations/decoration-protocol.md).
 
 **Tree view**: Editor client implements the

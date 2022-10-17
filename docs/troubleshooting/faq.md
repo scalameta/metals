@@ -48,7 +48,7 @@ version. Probably to either include a bug fix from Bloop, a new feature, etc.
 Why doesn't Metals just shut down Bloop and restart automatically? That's a
 great question, and one that we're exploring. However, it's a bit tricky since
 currently there is no way for Metals to know if it started Bloop or if you
-manually started Bloop. In the latter situation, we wouldn't want to shutdown
+manually started Bloop. In the latter situation, we wouldn't want to shut down
 the server that you may have manually started at a specific version. For the
 vast majority of users, when you see this update, just click **Turn off old
 server**.
@@ -61,7 +61,7 @@ you can find information on worksheets in
 
 ### How do I run a worksheet?
 
-Keep in mind that worksheets work a bit different than you may be used to with
+Keep in mind that worksheets work a bit differently than you may be used to with
 Metals. Whereas in other editors you may need to _run_ your worksheet to see the
 results, worksheets in Metals evaluate on save, so there is no need to _run_
 your worksheet.

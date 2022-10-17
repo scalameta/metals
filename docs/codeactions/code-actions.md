@@ -45,7 +45,7 @@ Renames a file to match that of the prominent type defined in it.
 
 ## Extract Value
 
-If you think your code would look nicer, if the calcuation of a value is extracted and assined to a new `val`; this code action would come to your aid.
+If you think your code would look nicer, if the calculation of a value is extracted and assigned to a new `val`; this code action would come to your aid.
 
 ![Extract Value](./gifs/ExtractValue.gif)
 
@@ -57,7 +57,7 @@ It converts a chain of `map`, `flatMap`, `filter` and `filterNot` methods into a
 
 ## Implement Abstract Members of the Parent Type
 
-Upon inherting from a type, you also have to implement its abstract members. But manually looking them all up and copying their signature is time consuming, isn't it? You can just use this code action instead.
+Upon inheriting from a type, you also have to implement its abstract members. But manually looking them all up and copying their signature is time consuming, isn't it? You can just use this code action instead.
 
 ![Implement Abstract Members](./gifs/ImplementAbstractMembers.gif)
 
@@ -75,7 +75,7 @@ This code action infers the type of variables according to the context, and inse
 
 ## Organize Imports
 
-Provided that you have enabled the warn unused option for imports of the scala compiler; this code action can tidy up your imports and remove the ununsed ones. Please note that, in some editors, it is not available under the light bulb, so you would need to access it in other ways.
+Provided that you have enabled the warn unused option for imports of the scala compiler; this code action can tidy up your imports and remove the unused ones. Please note that, in some editors, it is not available under the light bulb, so you would need to access it in other ways.
 
 ![Organise Imports](./gifs/OrganizeImports.gif)
 
