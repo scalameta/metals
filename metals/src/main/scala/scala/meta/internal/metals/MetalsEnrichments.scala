@@ -677,6 +677,9 @@ object MetalsEnrichments
       val severity = d.getSeverity.toString.toLowerCase()
       s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
     }
+    def asTextEdit: Option[l.TextEdit] = {
+      decodeJson(d.getData, classOf[l.TextEdit])
+    }
   }
 
   implicit class XtensionSeverityBsp(sev: b.DiagnosticSeverity) {
@@ -752,8 +755,8 @@ object MetalsEnrichments
   }
 
   implicit class XtensionDiagnosticBsp(diag: b.Diagnostic) {
-    def toLsp: l.Diagnostic =
-      new l.Diagnostic(
+    def toLsp: l.Diagnostic = {
+      val ld = new l.Diagnostic(
         diag.getRange.toLsp,
         fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
         diag.getSeverity.toLsp,
@@ -761,6 +764,9 @@ object MetalsEnrichments
         // We omit diag.getCode since Bloop's BSP implementation uses 'code' with different semantics
         // than LSP. See https://github.com/scalacenter/bloop/issues/1134 for details
       )
+      ld.setData(diag.getData)
+      ld
+    }
   }
 
   implicit class XtensionHttpExchange(exchange: HttpServerExchange) {
