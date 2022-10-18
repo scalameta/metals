@@ -51,6 +51,7 @@ class MetalsGlobal(
     with completions.OverrideCompletions
     with completions.ScalaCliCompletions
     with completions.MillIvyCompletions
+    with completions.SbtLibCompletions
     with Signatures
     with Compat
     with GlobalProxy

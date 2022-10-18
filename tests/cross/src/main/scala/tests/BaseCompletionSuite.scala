@@ -131,9 +131,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       command: Option[String] = None,
       compat: Map[String, String] = Map.empty,
       itemIndex: Int = 0,
+      filename: String = "A.scala",
   )(implicit loc: Location): Unit = {
     test(name) {
-      val items = getItems(original).filter(item => filter(item.getLabel))
+      val items =
+        getItems(original, filename).filter(item => filter(item.getLabel))
       if (items.isEmpty) fail("obtained empty completions!")
       if (assertSingleItem && items.length != 1) {
         fail(
