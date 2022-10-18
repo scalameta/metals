@@ -5,6 +5,6 @@
 
 <<class>>/*keyword*/ <<Imports>>/*class*/ {
   <<// rename reference>>/*comment*/
-  <<NotGood>>/*class*/(null)
+  <<NotGood>>/*class*/(<<null>>/*keyword*/)
   <<max>>/*method*/(<<1>>/*number*/, <<2>>/*number*/)
 }

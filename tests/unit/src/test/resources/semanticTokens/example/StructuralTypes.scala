@@ -6,7 +6,7 @@
     <<def>>/*keyword*/ <<age>>/*method,abstract*/: Int/*class,abstract*/
   }
 
-  <<val>>/*keyword*/ <<user>>/*variable,readonly*/ = null.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
+  <<val>>/*keyword*/ <<user>>/*variable,readonly*/ = <<null>>/*keyword*/.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
   <<user>>/*variable,readonly*/.<<name>>/*method,abstract*/
   <<user>>/*variable,readonly*/.<<age>>/*method,abstract*/
 

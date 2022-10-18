@@ -14,6 +14,6 @@
   <<import>>/*keyword*/ scala.meta.<<_>>/*variable*/
   <<// IntelliJ has never managed to goto definition for the inner classes from Trees.scala>>/*comment*/
   <<// due to the macro annotations.>>/*comment*/
-  <<val>>/*keyword*/ <<x>>/*variable,readonly*/: <<Defn>>/*class*/.<<Class>>/*interface,abstract*/ = <<Defn>>/*class*/.<<Class>>/*method*/(null, null, null, null, null)
+  <<val>>/*keyword*/ <<x>>/*variable,readonly*/: <<Defn>>/*class*/.<<Class>>/*interface,abstract*/ = <<Defn>>/*class*/.<<Class>>/*method*/(<<null>>/*keyword*/, <<null>>/*keyword*/, <<null>>/*keyword*/, <<null>>/*keyword*/, <<null>>/*keyword*/)
   <<val>>/*keyword*/ <<y>>/*variable,readonly*/: <<Mod>>/*class*/.<<Final>>/*interface,abstract*/ = <<Mod>>/*class*/.<<Final>>/*method*/()
 }

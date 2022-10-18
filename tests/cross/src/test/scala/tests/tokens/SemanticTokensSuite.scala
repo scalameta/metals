@@ -12,15 +12,69 @@ import tests.TestSemanticTokens
 
 class SemanticTokensSuite extends BasePCSuite {
 
+
   check(
-    "deprecated",
-    s"""|<<object>>/*keyword*/ <<sample9>>/*class*/ {
-        |  <<@>>/*keyword*/<<deprecated>>/*class*/(<<"this method will be removed">>/*string*/, <<"FooLib 12.0">>/*string*/)
-        |  <<def>>/*keyword*/ <<oldMethod>>/*method,deprecated*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/) = <<x>>/*parameter*/
+    "class, object, var, val(readonly), method, type, parameter, String(single-line)",
+    s"""|<<class>>/*keyword*/  <<Test>>/*class*/{
         |
+        | <<var>>/*keyword*/ <<wkStr>>/*variable*/ = <<"Dog-">>/*string*/
+        | <<val>>/*keyword*/ <<nameStr>>/*variable,readonly*/ = <<"Jack">>/*string*/
+        |
+        | <<def>>/*keyword*/ <<Main>>/*method*/={
+        |
+        |  <<val>>/*keyword*/ <<preStr>>/*variable,readonly*/= <<"I am ">>/*string*/
+        |  <<var>>/*keyword*/ <<postStr>>/*variable*/= <<"in a house. ">>/*string*/
+        |  <<wkStr>>/*variable*/=<<nameStr>>/*variable,readonly*/ <<+>>/*method*/ <<"Cat-">>/*string*/
+        |
+        |  <<testC>>/*class*/.<<bc>>/*method*/(<<preStr>>/*variable,readonly*/
+        |    <<+>>/*method*/ <<wkStr>>/*variable*/
+        |    <<+>>/*method*/ <<preStr>>/*variable,readonly*/)
+        | }
+        |}
+        |
+        |<<object>>/*keyword*/  <<testC>>/*class*/{
+        |
+        | <<def>>/*keyword*/ <<bc>>/*method*/(<<msg>>/*parameter*/:<<String>>/*type*/)={
+        |   <<println>>/*method*/(<<msg>>/*parameter*/)
+        | }
+        |}
+        |""".stripMargin,
+  )
+
+  check(
+    "Comment(Single-Line, Multi-Line)",
+    s"""|
+        |<<object>>/*keyword*/ <<Main>>/*class*/{
+        |
+        |   <</**>>/*comment*/
+        |<<   * Test of Comment Block>>/*comment*/
+        |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<1>>/*number*/
+        |
+        |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
+        |    <<// Single Line Comment>>/*comment*/
+        |    <<a>>/*parameter*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
+        |   }
+        |}
+        |
+        |
+        |""".stripMargin,
+  )
+
+  check(
+    "number literal, Static",
+    s"""|
+        |<<object>>/*keyword*/ <<ab>>/*class*/ {
+        |  <<var>>/*keyword*/  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = <<1>>/*number*/
+        |  <<val>>/*keyword*/  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = <<4.94065645841246544e-324d>>/*number*/
+        |  <<val>>/*keyword*/  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = <<1.40129846432481707e-45>>/*number*/
+        |  <<val>>/*keyword*/  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = <<9223372036854775807L>>/*number*/
+        |}
+        |
+        |<<object>>/*keyword*/ <<sample10>>/*class*/ {
         |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-        |    <<val>>/*keyword*/ <<str>>/*variable,readonly*/ = <<oldMethod>>/*method,deprecated*/(<<2>>/*number*/).<<toString>>/*method*/
-        |     <<println>>/*method*/(<<"Hello, world!">>/*string*/<<+>>/*method*/ <<str>>/*variable,readonly*/)
+        |    <<println>>/*method*/(
+        |     (<<ab>>/*class*/.<<iVar>>/*variable*/ <<+>>/*method,abstract*/ <<ab>>/*class*/.<<iVal>>/*variable,readonly*/).<<toString>>/*method*/
+        |    )
         |  }
         |}
         |""".stripMargin,
@@ -62,6 +116,20 @@ class SemanticTokensSuite extends BasePCSuite {
         |}
         |
         |
+        |""".stripMargin,
+  )
+
+  check(
+    "deprecated",
+    s"""|<<object>>/*keyword*/ <<sample9>>/*class*/ {
+        |  <<@>>/*keyword*/<<deprecated>>/*class*/(<<"this method will be removed">>/*string*/, <<"FooLib 12.0">>/*string*/)
+        |  <<def>>/*keyword*/ <<oldMethod>>/*method,deprecated*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/) = <<x>>/*parameter*/
+        |
+        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+        |    <<val>>/*keyword*/ <<str>>/*variable,readonly*/ = <<oldMethod>>/*method,deprecated*/(<<2>>/*number*/).<<toString>>/*method*/
+        |     <<println>>/*method*/(<<"Hello, world!">>/*string*/<<+>>/*method*/ <<str>>/*variable,readonly*/)
+        |  }
+        |}
         |""".stripMargin,
   )
 

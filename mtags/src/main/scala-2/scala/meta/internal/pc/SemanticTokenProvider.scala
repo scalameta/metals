@@ -135,6 +135,9 @@ final class SemanticTokenProvider(
       // Alphanumeric keywords
       case _: Token.ModifierKeyword => getTypeId(SemanticTokenTypes.Modifier)
       case _: Token.Keyword => getTypeId(SemanticTokenTypes.Keyword)
+      case _: Token.KwNull   => getTypeId(SemanticTokenTypes.Keyword)
+      case _: Token.KwTrue   => getTypeId(SemanticTokenTypes.Keyword)
+      case _: Token.KwFalse   => getTypeId(SemanticTokenTypes.Keyword)
 
       // extends Symbolic keywords
       case _: Token.Hash => getTypeId(SemanticTokenTypes.Keyword)
@@ -158,6 +161,16 @@ final class SemanticTokenProvider(
 
       // Comment
       case _: Token.Comment => getTypeId(SemanticTokenTypes.Comment)
+
+      // Interpolation 
+      case _: Token.Interpolation.Id
+          |_: Token.Interpolation.SpliceStart
+             => getTypeId(SemanticTokenTypes.Keyword)
+      case _: Token.Interpolation.Start
+          |_: Token.Interpolation.Part
+          |_: Token.Interpolation.SpliceEnd
+          |_: Token.Interpolation.End
+             => getTypeId(SemanticTokenTypes.String)  // $ symbol
 
       // Default
       case _ => -1
@@ -344,6 +357,10 @@ final class SemanticTokenProvider(
     }
   }
 
+
+  /**
+   * returns (SemanticTokenType, SemanticTokenModifier) of @param tk
+   */
   private def IndentTypeAndMod(ident: Token.Ident): (Int, Int) = {
     val default = (-1, 0)
 

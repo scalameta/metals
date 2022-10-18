@@ -18,10 +18,10 @@
   <<val>>/*keyword*/ <<x>>/*variable,readonly*/: <<Int>>/*class,abstract*/ = <<message>>/*variable,readonly*/
 
   <<// interpolators>>/*comment*/
-  s"Hello $<<message>>/*variable,readonly*/ $<<number>>/*variable,readonly*/"
-  s"""Hello
-     |$<<message>>/*variable,readonly*/
-     |$<<number>>/*variable,readonly*/""".<<stripMargin>>/*method*/
+  <<s>>/*keyword*/<<">>/*string*/<<Hello >>/*string*/<<$>>/*keyword*/<<message>>/*variable,readonly*/<< >>/*string*/<<$>>/*keyword*/<<number>>/*variable,readonly*/<<">>/*string*/
+  <<s>>/*keyword*/<<""">>/*string*/<<Hello>>/*string*/
+<<     |>>/*string*/<<$>>/*keyword*/<<message>>/*variable,readonly*/<<>>/*string*/
+<<     |>>/*string*/<<$>>/*keyword*/<<number>>/*variable,readonly*/<<""">>/*string*/.<<stripMargin>>/*method*/
 
   <<val>>/*keyword*/ <<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/ = <<char>>/*variable,readonly*/
   <<val>>/*keyword*/ <<b>>/*variable,readonly*/: <<Long>>/*class,abstract*/ = <<char>>/*variable,readonly*/
