@@ -155,16 +155,21 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       text: String
   ) extends CompletionPosition {
     private def subclassesForType(tpe: Type): List[Symbol] = {
-      val subclasses = ListBuffer.empty[Symbol]
       if (tpe.typeSymbol.isRefinementClass) {
         val RefinedType(parents, _) = tpe
-        parents.foreach(t =>
+        parents.map(t => {
+          val subclasses = ListBuffer.empty[Symbol]
           t.typeSymbol.foreachKnownDirectSubClass { sym => subclasses += sym }
-        )
+          subclasses.result()
+        }) match {
+          case Nil => Nil
+          case subcls => subcls.reduce(_.intersect(_))
+        }
       } else {
+        val subclasses = ListBuffer.empty[Symbol]
         tpe.typeSymbol.foreachKnownDirectSubClass { sym => subclasses += sym }
+        subclasses.result()
       }
-      subclasses.result()
     }
     override def contribute: List[Member] = {
       val tpe = prefix.widen.bounds.hi

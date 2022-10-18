@@ -432,7 +432,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |sealed trait TestB
       |case object Baz extends TestB
       |case object Goo extends TestB
-      |
+      |case object Both extends TestA with TestB
       |object Main {
       |  def testExhaustive[T <: TestA with TestB](test: T): Boolean =
       |    test m@@
@@ -446,14 +446,12 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |sealed trait TestB
        |case object Baz extends TestB
        |case object Goo extends TestB
-       |
+       |case object Both extends TestA with TestB
        |object Main {
        |  def testExhaustive[T <: TestA with TestB](test: T): Boolean =
        |    test match {
-       |\tcase Foo => $$0
-       |\tcase Bar =>
-       |\tcase Baz =>
-       |\tcase Goo =>
+       |\tcase Both => $$0
+       |\t
        |}
        |}""".stripMargin,
     filter = _.contains("exhaustive"),
@@ -467,14 +465,12 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |sealed trait TestB
                 |case object Baz extends TestB
                 |case object Goo extends TestB
-                |
+                |case object Both extends TestA with TestB
                 |object Main {
                 |  def testExhaustive[T <: TestA with TestB](test: T): Boolean =
                 |    test match
-                |\tcase Foo => $$0
-                |\tcase Bar =>
-                |\tcase Baz =>
-                |\tcase Goo =>
+                |\tcase Both => $$0
+                |\t
                 |
                 |}""".stripMargin
     ),
