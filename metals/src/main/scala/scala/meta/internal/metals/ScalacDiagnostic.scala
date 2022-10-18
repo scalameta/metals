@@ -1,8 +1,14 @@
 package scala.meta.internal.metals
 
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import org.eclipse.{lsp4j => l}
 
 object ScalacDiagnostic {
+
+  object ScalaAction {
+    def unapply(d: l.Diagnostic): Option[l.TextEdit] = d.asTextEdit
+  }
 
   object NotAMember {
     private val regex = """(?s)value (.+) is not a member of.*""".r
