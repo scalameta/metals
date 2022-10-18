@@ -273,11 +273,14 @@ object CaseKeywordCompletion:
             loop(tp2)
           case t => parents += tpe.typeSymbol
       loop(tpe.widen.bounds.hi)
-      val subclasses = parents.toList.flatMap { parent =>
+      val subclasses = parents.toList.map { parent =>
         // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
         if parent.isAllOf(JavaEnumTrait) then parent.children
         else MetalsSealedDesc.sealedStrictDescendants(parent)
-      }
+      } match
+        case Nil => Nil
+        case subcls => subcls.reduce(_.intersect(_))
+
       sortSubclasses(tpe, subclasses, completionPos.sourceUri, search)
     end subclassesForType
 
