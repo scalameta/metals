@@ -6,6 +6,7 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Statement
 import java.util.zip.ZipError
+import java.util.zip.ZipException
 
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
@@ -56,7 +57,7 @@ final class JarTopLevels(conn: () => Connection) {
         .headOption
         .map(_ => toplevels.result)
     } catch {
-      case _: ZipError =>
+      case _: ZipError | _: ZipException =>
         None
     }
 

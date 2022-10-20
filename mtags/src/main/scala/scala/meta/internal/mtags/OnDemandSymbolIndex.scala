@@ -1,6 +1,7 @@
 package scala.meta.internal.mtags
 
 import java.util.zip.ZipError
+import java.util.zip.ZipException
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
@@ -82,6 +83,9 @@ final class OnDemandSymbolIndex(
           getOrCreateBucket(dialect).addSourceJar(jar)
         } catch {
           case e: ZipError =>
+            onError(IndexingExceptions.InvalidJarException(jar, e))
+            List.empty
+          case e: ZipException =>
             onError(IndexingExceptions.InvalidJarException(jar, e))
             List.empty
         }
