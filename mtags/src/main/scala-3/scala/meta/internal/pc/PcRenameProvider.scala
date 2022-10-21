@@ -14,8 +14,10 @@ final class PcRenameProvider(
   val newName = name.backticked
 
   def collect(tree: Tree, pos: SourcePosition): l.TextEdit =
+    pprint.log(tree)
     tree match
       case id @ Ident(_) if id.isBackquoted =>
+        pprint.log(id.isBackquoted)
         l.TextEdit(pos.toLsp, '`' + newName.stripBackticks + '`')
       case _ =>
         l.TextEdit(pos.toLsp, newName)

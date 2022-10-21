@@ -22,6 +22,7 @@ class PcRenameProvider(
     }
   }
 
-  def rename(): List[TextEdit] = result()
+  def rename(): List[TextEdit] =
+    result()
 
 }

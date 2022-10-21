@@ -105,19 +105,45 @@ final class RenameProvider(
       val defininionFuture = definitionProvider
         .definition(source, params, token)
       defininionFuture.flatMap { definition =>
-        if (
-          definition.symbol.isLocal && !definition.semanticdb.exists(
-            _.symbols.exists(sym =>
-              sym.symbol == definition.symbol &&
-                sym.overriddenSymbols.nonEmpty
+        if (definition.symbol.isLocal) {
+
+          // We have to check if local symbol doesn't override any non-local symbols
+          // If it does, we can't use PC for local rename
+          val overridenSymbols =
+            (for {
+              semantic <- definition.semanticdb
+              symbolInfo <- semantic.symbols
+                .find(_.symbol == definition.symbol)
+              overridenSymbols = symbolInfo.overriddenSymbols
+              if symbolInfo.overriddenSymbols.nonEmpty
+              occ = semantic.occurrences
+                .filter(occ => overridenSymbols.contains(occ.symbol))
+            } yield occ).getOrElse(Nil)
+
+          overridenSymbols
+            .find(!_.symbol.isLocal)
+            .map(oSym =>
+              this.rename(
+                new RenameParams(
+                  params.getTextDocument,
+                  oSym.getRange.toLsp.getStart(),
+                  params.getNewName(),
+                ),
+                compilers,
+                token,
+              )
             )
-          )
-        ) {
-          val edit = compilers.rename(params, token).map { edits =>
-            val mapEdits = Map(source.toString() -> edits).asJava
-            new WorkspaceEdit(mapEdits)
-          }
-          edit
+            .getOrElse(
+              compilers
+                .rename(params, token)
+                .map(_.asScala.toList)
+                .map { edits =>
+                  new WorkspaceEdit(
+                    documentEdits(Map(source -> edits)).asJava
+                  )
+                }
+            )
+
         } else {
           val textParams = new TextDocumentPositionParams(
             params.getTextDocument(),
