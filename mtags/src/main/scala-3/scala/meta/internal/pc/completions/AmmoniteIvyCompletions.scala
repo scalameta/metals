@@ -16,7 +16,8 @@ object AmmoniteIvyCompletions:
   )(using Context): List[CompletionValue] =
     val pos = completionPos.sourcePos
     val query = selector.collectFirst {
-      case sel: ImportSelector if sel.sourcePos.encloses(pos) =>
+      case sel: ImportSelector
+          if sel.sourcePos.encloses(pos) && sel.sourcePos.`end` > pos.`end` =>
         sel.name.decoded
     }
     query match

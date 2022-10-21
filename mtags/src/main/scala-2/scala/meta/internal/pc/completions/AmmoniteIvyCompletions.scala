@@ -1,7 +1,5 @@
 package scala.meta.internal.pc.completions
 
-import scala.collection.JavaConverters._
-
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.pc.MetalsGlobal
 

@@ -3,6 +3,7 @@ package tests
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
@@ -801,15 +802,22 @@ abstract class BaseWorksheetLspSuite(
       )
       _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
 
-      versionExpectedCompletionList =
-        """
-          |0.14.0
-          |0.14.1""".stripMargin
-      versionCompletionList <- server.completion(
+      versionExpectedCompletionList = List("0.14.1", "0.14.0")
+      response <- server.completionList(
         "Main.worksheet.sc",
         "import $dep.`io.circe::circe-yaml:0.14@@`",
       )
-      _ = assertNoDiff(versionCompletionList, versionExpectedCompletionList)
+      versionCompletionList = response
+        .getItems()
+        .asScala
+        .map(_.getLabel())
+        .toList
+      _ = assertEquals(versionCompletionList, versionExpectedCompletionList)
+      noCompletions <- server.completion(
+        "Main.worksheet.sc",
+        "import $dep.`io.circe::circe-yaml:0.14`@@",
+      )
+      _ = assertNoDiff(noCompletions, "")
     } yield ()
   }
 }
