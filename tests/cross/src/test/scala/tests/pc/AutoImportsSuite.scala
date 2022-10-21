@@ -281,6 +281,22 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "import-in-import",
+    """|package inimport
+       |
+       |object A {
+       |  import <<ExecutionContext>>.global
+       |}
+       |""".stripMargin,
+    """|package inimport
+       |
+       |object A {
+       |  import scala.concurrent.ExecutionContext.global
+       |}
+       |""".stripMargin,
+  )
+
   checkAmmoniteEdit(
     "first-auto-import-amm-script",
     ammoniteWrapper(
