@@ -68,6 +68,21 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
   )
 
   renamed(
+    "renamed-import-object",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |import scala.util.{Try => <<StdLibTry>>}
+       |
+       |object Renaming {
+       |  def foo(n: Int): <<StdLib@@Try>>[Int] = 
+       |    <<StdLibTry>>(n)
+       |}
+       |""".stripMargin,
+    newName = "OtherM",
+  )
+
+  renamed(
     "case",
     """|/a/src/main/scala/a/Main.scala
        |package a
