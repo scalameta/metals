@@ -74,7 +74,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
             sym,
             info.member(sym.asTerm.name.setterName).symbol,
             info.member(sym.asTerm.name.getterName).symbol,
-          )
+          ) ++ sym.allOverriddenSymbols.toSet
         else Set(sym)
       all.filter(s => s != NoSymbol && !s.isError)
     end symbolAlternatives
@@ -161,6 +161,9 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
               _.span.point == named.symbol.owner.span.point
             )
 
+        def soughtOrOverride(sym: Symbol) =
+          sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
+        
         def collectNames(
             occurences: Set[T],
             tree: Tree,
@@ -172,7 +175,9 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
              */
             case ident: Ident
                 if !ident.span.isZeroExtent &&
-                  (sought(ident.symbol) || isForComprehensionOwner(ident)) =>
+                  (soughtOrOverride(ident.symbol) ||
+                    isForComprehensionOwner(ident)) =>
+              ident.symbol.nameBackticked
               occurences + collect(
                 ident,
                 ident.sourcePos,
@@ -181,7 +186,8 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
              * All select statements such as:
              * val a = hello.<<b>>
              */
-            case sel: Select if sought(sel.symbol) && !sel.span.isZeroExtent =>
+            case sel: Select
+                if soughtOrOverride(sel.symbol) && !sel.span.isZeroExtent =>
               occurences + collect(
                 sel,
                 pos.withSpan(sel.nameSpan),
@@ -192,9 +198,8 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
              * etc.
              */
             case df: NamedDefTree
-                if sought(
-                  df.symbol
-                ) && !df.span.isZeroExtent && !df.symbol.isSetter =>
+                if soughtOrOverride(df.symbol) &&
+                  !df.span.isZeroExtent && !df.symbol.isSetter =>
               occurences + collect(
                 df,
                 pos.withSpan(df.nameSpan),

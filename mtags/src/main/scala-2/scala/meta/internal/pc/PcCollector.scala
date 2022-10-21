@@ -38,11 +38,11 @@ abstract class PcCollector[T](
    */
   def symbolAlternatives(sym: Symbol): Set[Symbol] = {
     val all =
-      if (sym.isClass)
+      if (sym.isClass) {
         Set(sym, sym.companionModule, sym.companion.moduleClass)
-      else if (sym.isModuleOrModuleClass)
+      } else if (sym.isModuleOrModuleClass) {
         Set(sym, sym.companionClass, sym.moduleClass)
-      else if (sym.isTerm) {
+      } else if (sym.isTerm) {
         val info =
           if (sym.owner.isClass) sym.owner.info
           else sym.owner.owner.info
@@ -51,7 +51,7 @@ abstract class PcCollector[T](
           info.member(sym.getterName),
           info.member(sym.setterName),
           info.member(sym.localName)
-        )
+        ) ++ sym.allOverriddenSymbols.toSet
       } else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
   }
@@ -146,7 +146,7 @@ abstract class PcCollector[T](
           .flatMap(s => symbolAlternatives(s.owner))
           .filter(_ != NoSymbol)
         lazy val soughtNames: Set[Name] = sought.map(_.name)
-
+        pprint.log(sought)
         /*
          * For comprehensions have two owners, one for the enumerators and one for
          * yield. This is a heuristic to find that out.
@@ -156,6 +156,9 @@ abstract class PcCollector[T](
             named.symbol.owner.isAnonymousFunction && owners.exists(
               _.pos.point == named.symbol.owner.pos.point
             )
+
+        def soughtOrOverride(sym: Symbol) =
+          sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
 
         def traverse(
             acc: Set[T],
@@ -168,7 +171,8 @@ abstract class PcCollector[T](
              */
             case ident: Ident
                 if ident.pos.isRange &&
-                  (sought(ident.symbol) || isForComprehensionOwner(ident)) =>
+                  (soughtOrOverride(ident.symbol) ||
+                    isForComprehensionOwner(ident)) =>
               acc + collect(ident, ident.pos)
 
             /**
@@ -186,7 +190,8 @@ abstract class PcCollector[T](
              * All select statements such as:
              * val a = hello.<<b>>
              */
-            case sel: Select if sought(sel.symbol) && sel.pos.isRange =>
+            case sel: Select
+                if soughtOrOverride(sel.symbol) && sel.pos.isRange =>
               traverse(
                 acc + collect(
                   sel,
@@ -201,7 +206,8 @@ abstract class PcCollector[T](
              */
             case df: MemberDef
                 if df.pos.isRange &&
-                  (sought(df.symbol) || isForComprehensionOwner(df)) =>
+                  (soughtOrOverride(df.symbol) ||
+                    isForComprehensionOwner(df)) =>
               (annotationChildren(df) ++ df.children).foldLeft(
                 acc + collect(
                   df,
