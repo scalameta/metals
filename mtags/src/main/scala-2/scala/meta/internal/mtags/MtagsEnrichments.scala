@@ -136,7 +136,8 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       else if (value.toUpperCase.startsWith("JAR:FILE%3A"))
         URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
       else if (value.toUpperCase.startsWith("JAR"))
-        URI.create(value).toAbsolutePath(followSymlink)
+        new URI("jar", value.stripPrefix("jar:"), null)
+          .toAbsolutePath(followSymlink)
       else {
         val stripped = value.stripPrefix("metals:")
         val percentEncoded = URIEncoderDecoder.encode(stripped)
