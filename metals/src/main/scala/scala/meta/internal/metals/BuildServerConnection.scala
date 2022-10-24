@@ -180,6 +180,20 @@ class BuildServerConnection private (
       .map(address => URI.create(address.getUri))
   }
 
+  def jvmRunEnvironment(
+      params: JvmRunEnvironmentParams
+  ): Future[JvmRunEnvironmentResult] = {
+    if (initialConnection.capabilities.getJvmRunEnvironmentProvider()) {
+      register(server => server.jvmRunEnvironment(params)).asScala
+    } else {
+      scribe.warn(
+        s"${initialConnection.displayName} does not support `buildTarget/jvmRunEnvironment`, unable to fetch run environment."
+      )
+      val empty = new JvmRunEnvironmentResult(Collections.emptyList)
+      Future.successful(empty)
+    }
+  }
+
   def workspaceBuildTargets(): Future[WorkspaceBuildTargetsResult] = {
     register(server => server.workspaceBuildTargets()).asScala
   }

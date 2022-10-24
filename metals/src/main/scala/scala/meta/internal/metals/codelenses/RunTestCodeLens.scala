@@ -15,6 +15,7 @@ import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.ExtendedScalaMainClass
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.MethodSignature
@@ -219,9 +220,15 @@ final class RunTestCodeLens(
       target: b.BuildTargetIdentifier,
       main: b.ScalaMainClass,
   ): List[l.Command] = {
+    val data = buildTargets
+      .jvmRunEnvironment(target)
+      .zip(userConfig().usedJavaBinary) match {
+      case None => main.toJson
+      case Some((env, javaHome)) =>
+        ExtendedScalaMainClass(main, env, javaHome).toJson
+    }
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
-      val data = main.toJson
       sessionParams(target, dataKind, data)
     }
 
