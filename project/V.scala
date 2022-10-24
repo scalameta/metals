@@ -19,7 +19,7 @@ object V {
   val bsp = "2.1.0-M3"
   val coursier = "2.1.0-M7"
   val coursierInterfaces = "1.0.9"
-  val debugAdapter = "2.2.0"
+  val debugAdapter = "3.0.2"
   val genyVersion = "0.7.1"
   val gradleBloop = bloop
   val java8Compat = "1.0.2"
