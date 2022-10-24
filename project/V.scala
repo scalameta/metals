@@ -126,5 +126,6 @@ object V {
       ammonite213Version,
       scala3,
       ammonite3Version,
+      nextScala3RC,
     ).toList
 }
