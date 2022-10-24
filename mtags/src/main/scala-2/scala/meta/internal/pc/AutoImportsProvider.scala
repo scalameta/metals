@@ -6,7 +6,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.OffsetParams
 
-import org.eclipse.lsp4j.TextEdit
+import org.eclipse.{lsp4j => l}
 
 final class AutoImportsProvider(
     val compiler: MetalsGlobal,
@@ -44,6 +44,17 @@ final class AutoImportsProvider(
 
     search.search(name, buildTargetIdentifier, visitor)
 
+    def isInImportTree: Boolean = lastVisitedParentTrees match {
+      case (_: Import) :: _ => true
+      case _ => false
+    }
+
+    def namePos: l.Range =
+      pos
+        .withStart(pos.start - name.length())
+        .withEnd(pos.end)
+        .toLsp
+
     def isExactMatch(sym: Symbol, name: String): Boolean =
       sym.name.dropLocal.decoded == name
 
@@ -51,6 +62,10 @@ final class AutoImportsProvider(
       case sym if isExactMatch(sym, name) =>
         val pkg = sym.owner.fullName
         val edits = importPosition match {
+          // if we are in import section just specify full name
+          case None if isInImportTree =>
+            val nameEdit = new l.TextEdit(namePos, sym.fullNameSyntax)
+            List(nameEdit)
           case None =>
             // No import position means we can't insert an import without clashing with
             // existing symbols in scope, so we just do nothing
@@ -62,12 +77,7 @@ final class AutoImportsProvider(
               context,
               value
             )
-            val namePos =
-              pos
-                .withStart(pos.start - name.length())
-                .withEnd(pos.end)
-                .toLsp
-            val nameEdit = new TextEdit(namePos, short)
+            val nameEdit = new l.TextEdit(namePos, short)
             nameEdit :: edits
         }
         AutoImportsResultImpl(pkg, edits.asJava)
