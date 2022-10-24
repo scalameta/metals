@@ -768,16 +768,16 @@ abstract class BaseWorksheetLspSuite(
            |    "scalaVersion": "${scalaVersion}"
            |  }
            |}
-           |/Main.worksheet.sc
+           |/a/src/main/scala/foo/Main.worksheet.sc
            |import $$ivy.`io.cir`
            |import $$dep.`io.circe::circe-ref`
            |import $$dep.`io.circe::circe-yaml:0.14`
            |""".stripMargin
       )
-      _ <- server.didOpen("Main.worksheet.sc")
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
       groupExpectedCompletionList = "io.circe"
       groupCompletionList <- server.completion(
-        "Main.worksheet.sc",
+        "a/src/main/scala/foo/Main.worksheet.sc",
         "import $ivy.`io.cir@@`",
       )
       _ = assertNoDiff(groupCompletionList, groupExpectedCompletionList)
@@ -797,14 +797,14 @@ abstract class BaseWorksheetLspSuite(
         scalaVersion,
       )
       artefactCompletionList <- server.completion(
-        "Main.worksheet.sc",
+        "a/src/main/scala/foo/Main.worksheet.sc",
         "import $dep.`io.circe::circe-ref@@`",
       )
       _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
 
       versionExpectedCompletionList = List("0.14.1", "0.14.0")
       response <- server.completionList(
-        "Main.worksheet.sc",
+        "a/src/main/scala/foo/Main.worksheet.sc",
         "import $dep.`io.circe::circe-yaml:0.14@@`",
       )
       versionCompletionList = response
@@ -814,7 +814,7 @@ abstract class BaseWorksheetLspSuite(
         .toList
       _ = assertEquals(versionCompletionList, versionExpectedCompletionList)
       noCompletions <- server.completion(
-        "Main.worksheet.sc",
+        "a/src/main/scala/foo/Main.worksheet.sc",
         "import $dep.`io.circe::circe-yaml:0.14`@@",
       )
       _ = assertNoDiff(noCompletions, "")
