@@ -231,6 +231,23 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val DiscoverJvmRunCommand = new ParametrizedCommand[DebugDiscoveryParams](
+    "discover-jvm-run-command",
+    "Discover main classes to run.",
+    """|Gets the DebugSession object that also contains a command to run in shell based 
+       |on JVM environment including classpath, jvmOptions and environment parameters.
+       |""".stripMargin,
+    """|DebugUnresolvedTestClassParams object
+       |Example:
+       |```json
+       |{
+       |   testClass: "com.foo.FooSuite",
+       |   buildTarget: "foo"
+       |}
+       |```
+       |""".stripMargin,
+  )
+
   val StartDebugAdapter = new Command(
     "debug-adapter-start",
     "Start debug adapter",
@@ -599,6 +616,7 @@ object ServerCommands {
       GotoSymbol,
       ImportBuild,
       InsertInferredType,
+      DiscoverJvmRunCommand,
       NewScalaFile,
       NewJavaFile,
       NewScalaProject,
