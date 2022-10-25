@@ -552,7 +552,7 @@ class Completions(
                 completionsWithSuffix(
                   sym,
                   sym.decodedName,
-                  CompletionValue.Workspace(_, _, _),
+                  CompletionValue.Workspace(_, _, _, Some(sym)),
                 ).forall(visit),
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
@@ -733,7 +733,7 @@ class Completions(
         // show the abstract members first
         if !ov.symbol.is(Deferred) then penalty |= MemberOrdering.IsNotAbstract
         penalty
-      case CompletionValue.Workspace(_, sym, _) =>
+      case CompletionValue.Workspace(_, sym, _, _) =>
         symbolRelevance(sym) | (IsWorkspaceSymbol + sym.name.show.length)
       case sym: CompletionValue.Symbolic =>
         symbolRelevance(sym.symbol)

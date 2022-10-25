@@ -761,4 +761,16 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(2),
   )
+
+  checkEdit(
+    "apply-method".tag(IgnoreScala2),
+    """|object Main {
+       |  val a = ListBuf@@
+       |}""".stripMargin,
+    """|import scala.collection.mutable.ListBuffer
+       |object Main {
+       |  val a = ListBuffer($0)
+       |}""".stripMargin,
+    filter = _.contains("[A]"),
+  )
 }
