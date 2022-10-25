@@ -98,8 +98,10 @@ object CompletionValue:
       label: String,
       symbol: Symbol,
       override val snippetSuffix: CompletionSuffix,
+      maybeApplyOwner: Option[Symbol] = None,
   ) extends Symbolic:
     override def isFromWorkspace: Boolean = true
+    val applyOwner: Symbol = maybeApplyOwner.getOrElse(symbol)
 
   /**
    * CompletionValue for extension methods via SymbolSearch
