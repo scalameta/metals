@@ -31,6 +31,7 @@ sealed trait CompletionValue:
   def completionData(
       buildTargetIdentifier: String
   )(using Context): Option[CompletionItemData] = None
+  def command: Option[String] = None
 
   /**
    * Label with potentially attached description.
@@ -142,6 +143,7 @@ object CompletionValue:
       label: String,
       tpe: Type,
   ) extends CompletionValue:
+    override def insertText: Option[String] = Some(label.replace("$", "$$"))
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Field
     override def description(printer: MetalsPrinter)(using Context): String =
@@ -156,6 +158,7 @@ object CompletionValue:
   ) extends CompletionValue:
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Enum
+    override def insertText: Option[String] = Some(value)
     override def label: String = "Autofill with default values"
 
   case class Keyword(label: String, override val insertText: Option[String])
@@ -213,7 +216,7 @@ object CompletionValue:
       override val insertText: Option[String],
       override val additionalEdits: List[TextEdit],
       override val range: Option[Range] = None,
-      val command: Option[String] = None,
+      override val command: Option[String] = None,
   ) extends Symbolic:
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Method
@@ -225,6 +228,9 @@ object CompletionValue:
 
   case class Document(label: String, doc: String, description: String)
       extends CompletionValue:
+    override def filterText: Option[String] = Some(description)
+
+    override def insertText: Option[String] = Some(doc)
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Snippet
 

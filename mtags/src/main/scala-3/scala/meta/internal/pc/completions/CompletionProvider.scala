@@ -157,7 +157,6 @@ class CompletionProvider(
 
   private def completionItems(
       completion: CompletionValue,
-      // history: ShortenedNames,
       idx: Int,
       autoImports: AutoImportsGenerator,
       completionPos: CompletionPos,
@@ -180,12 +179,9 @@ class CompletionProvider(
     val ident = completion.insertText.getOrElse(completion.label)
 
     def mkItem(
-        label: String,
         insertText: String,
         additionalEdits: List[TextEdit] = Nil,
-        filterText: Option[String] = None,
         range: Option[LspRange] = None,
-        command: Option[String] = None,
     ): CompletionItem =
       val nameEdit = new TextEdit(
         range.getOrElse(editRange),
@@ -194,9 +190,13 @@ class CompletionProvider(
       val item = new CompletionItem(label)
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
-      item.setFilterText(filterText.getOrElse(completion.label))
+      item.setFilterText(
+        completion.filterText.getOrElse(completion.label)
+      )
       item.setTextEdit(nameEdit)
-      item.setAdditionalTextEdits(additionalEdits.asJava)
+      item.setAdditionalTextEdits(
+        (completion.additionalEdits ++ additionalEdits).asJava
+      )
       completion.insertMode.foreach(item.setInsertTextMode)
 
       completion
@@ -208,19 +208,13 @@ class CompletionProvider(
       if config.isCompletionSnippetsEnabled then
         item.setInsertTextFormat(InsertTextFormat.Snippet)
 
-      command.foreach { command =>
+      completion.command.foreach { command =>
         item.setCommand(new Command("", command))
       }
 
       item.setKind(kind)
       item
     end mkItem
-
-    def mkWorkspaceItem(
-        value: String,
-        additionalEdits: List[TextEdit] = Nil,
-    ): CompletionItem =
-      mkItem(label, value, additionalEdits)
 
     val completionTextSuffix = completion.snippetSuffix.toEdit
 
@@ -246,48 +240,38 @@ class CompletionProvider(
       val suffix = v.snippetSuffix
       path match
         case (_: Ident) :: (_: Import) :: _ =>
-          mkWorkspaceItem(sym.fullNameBackticked)
+          mkItem(sym.fullNameBackticked)
         case _ =>
           autoImports.editsForSymbol(sym) match
             case Some(edits) =>
               edits match
                 case AutoImportEdits(Some(nameEdit), other) =>
                   mkItem(
-                    label,
                     nameEdit.getNewText(),
-                    v.additionalEdits ++ other.toList,
-                    filterText = v.filterText,
-                    range = Some(nameEdit.getRange())
+                    other.toList,
+                    range = Some(nameEdit.getRange()),
                   )
                 case _ =>
                   mkItem(
-                    label,
                     v.insertText.getOrElse(
                       ident.backticked + completionTextSuffix
                     ),
-                    v.additionalEdits ++ edits.edits,
+                    edits.edits,
                     range = v.range,
-                    filterText = v.filterText,
                   )
             case None =>
               val r = indexedContext.lookupSym(sym)
               r match
                 case IndexedContext.Result.InScope =>
                   mkItem(
-                    label,
-                    ident.backticked + completionTextSuffix,
-                    additionalEdits = v.additionalEdits,
+                    ident.backticked + completionTextSuffix
                   )
                 case _ if isInStringInterpolation =>
-                  mkWorkspaceItem(
-                    "{" + sym.fullNameBackticked + completionTextSuffix + "}",
-                    additionalEdits = v.additionalEdits,
+                  mkItem(
+                    "{" + sym.fullNameBackticked + completionTextSuffix + "}"
                   )
                 case _ =>
-                  mkWorkspaceItem(
-                    sym.fullNameBackticked + completionTextSuffix,
-                    additionalEdits = v.additionalEdits,
-                  )
+                  mkItem(sym.fullNameBackticked + completionTextSuffix)
               end match
       end match
     end mkItemWithImports
@@ -297,66 +281,22 @@ class CompletionProvider(
         mkItemWithImports(v)
       case v: CompletionValue.Interpolator if v.isWorkspace || v.isExtension =>
         mkItemWithImports(v)
-      case CompletionValue.Override(
-            _,
-            value,
-            _,
-            shortNames,
-            filterText,
-            start,
-          ) =>
+      case overrideCompletion: CompletionValue.Override =>
         val additionalEdits =
-          shortNames
+          overrideCompletion.shortenedNames
             .sortBy(nme => nme.name)
             .flatMap(name => autoImports.forShortName(name))
             .flatten
         mkItem(
-          label,
-          value,
+          overrideCompletion.value,
           additionalEdits,
-          filterText,
-          Some(completionPos.copy(start = start).toEditRange),
+          Some(completionPos.copy(start = overrideCompletion.start).toEditRange),
         )
-      case CompletionValue.NamedArg(_, _) =>
-        mkItem(
-          label,
-          label.replace("$", "$$"),
-        ) // escape $ for snippet
-      case CompletionValue.Keyword(_, text) =>
-        mkItem(label, text.getOrElse(label))
-      case CompletionValue.Document(_, doc, desc) =>
-        mkItem(label, doc, filterText = Some(desc))
-      case CompletionValue.Autofill(value) => mkItem(label, value)
-      case CompletionValue.CaseKeyword(
-            _,
-            _,
-            text,
-            additionalEdit,
-            range,
-            command,
-          ) =>
-        mkItem(
-          label,
-          text.getOrElse(label),
-          additionalEdits = additionalEdit,
-          range = range,
-          command = command,
-        )
-      case CompletionValue.MatchCompletion(
-            _,
-            text,
-            additionalEdits,
-            desc,
-          ) =>
-        mkItem(label, text.getOrElse(label), additionalEdits = additionalEdits)
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)
         mkItem(
-          label,
           insert + completionTextSuffix,
-          additionalEdits = completion.additionalEdits,
           range = completion.range,
-          filterText = completion.filterText,
         )
     end match
   end completionItems

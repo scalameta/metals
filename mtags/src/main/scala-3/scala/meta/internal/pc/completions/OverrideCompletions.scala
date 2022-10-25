@@ -418,13 +418,12 @@ object OverrideCompletions:
       if config.isCompletionSnippetsEnabled && shouldMoveCursor then "${0:???}"
       else "???"
     val value = s"$signature = $stub"
-    val filterText = signature
     CompletionValue.Override(
       label,
       value,
       sym.symbol,
       printer.shortenedNames,
-      Some(filterText),
+      Some(signature),
       start,
     )
   end toCompletionValue
