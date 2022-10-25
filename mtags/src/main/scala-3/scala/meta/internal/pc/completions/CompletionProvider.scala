@@ -179,37 +179,29 @@ class CompletionProvider(
     val label = completion.labelWithDescription(printer)
     val ident = completion.insertText.getOrElse(completion.label)
 
-    def mkItem0(
+    def mkItem(
         label: String,
-        nameEdit: TextEdit,
+        insertText: String,
         additionalEdits: List[TextEdit] = Nil,
         filterText: Option[String] = None,
+        range: Option[LspRange] = None,
         command: Option[String] = None,
     ): CompletionItem =
+      val nameEdit = new TextEdit(
+        range.getOrElse(editRange),
+        insertText,
+      )
       val item = new CompletionItem(label)
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
       item.setFilterText(filterText.getOrElse(completion.label))
       item.setTextEdit(nameEdit)
       item.setAdditionalTextEdits(additionalEdits.asJava)
+      completion.insertMode.foreach(item.setInsertTextMode)
 
-      completion match
-        case v: CompletionValue.Symbolic =>
-          val completionItemDataKind = v match
-            case _: CompletionValue.Override =>
-              CompletionItemData.OverrideKind
-            case _ => null
-          item.setData(
-            CompletionItemData(
-              SemanticdbSymbols.symbolName(v.symbol),
-              buildTargetIdentifier,
-              kind = completionItemDataKind,
-            ).toJson
-          )
-        case _: CompletionValue.Document =>
-          item.setInsertTextMode(InsertTextMode.AsIs)
-        case _ =>
-      end match
+      completion
+        .completionData(buildTargetIdentifier)
+        .foreach(data => item.setData(data.toJson))
 
       item.setTags(completion.lspTags.asJava)
 
@@ -222,27 +214,6 @@ class CompletionProvider(
 
       item.setKind(kind)
       item
-    end mkItem0
-
-    def mkItem(
-        label: String,
-        value: String,
-        additionalEdits: List[TextEdit] = Nil,
-        filterText: Option[String] = None,
-        range: Option[LspRange] = None,
-        command: Option[String] = None,
-    ): CompletionItem =
-      val nameEdit = new TextEdit(
-        range.getOrElse(editRange),
-        value,
-      )
-      mkItem0(
-        label,
-        nameEdit,
-        additionalEdits,
-        filterText,
-        command,
-      )
     end mkItem
 
     def mkWorkspaceItem(
@@ -281,11 +252,12 @@ class CompletionProvider(
             case Some(edits) =>
               edits match
                 case AutoImportEdits(Some(nameEdit), other) =>
-                  mkItem0(
+                  mkItem(
                     label,
-                    nameEdit,
+                    nameEdit.getNewText(),
                     v.additionalEdits ++ other.toList,
                     filterText = v.filterText,
+                    range = Some(nameEdit.getRange())
                   )
                 case _ =>
                   mkItem(
