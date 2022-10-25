@@ -14,6 +14,7 @@ import dotty.tools.dotc.transform.SymUtils.*
 import dotty.tools.dotc.util.ParsedComment
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionItemTag
+import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 
@@ -26,6 +27,10 @@ sealed trait CompletionValue:
   def filterText: Option[String] = None
   def completionItemKind(using Context): CompletionItemKind
   def description(printer: MetalsPrinter)(using Context): String = ""
+  def insertMode: Option[InsertTextMode] = None
+  def completionData(
+      buildTargetIdentifier: String
+  )(using Context): Option[CompletionItemData] = None
 
   /**
    * Label with potentially attached description.
@@ -40,6 +45,18 @@ object CompletionValue:
   sealed trait Symbolic extends CompletionValue:
     def symbol: Symbol
     def isFromWorkspace: Boolean = false
+    def completionItemDataKind = CompletionItemData.None
+
+    override def completionData(
+        buildTargetIdentifier: String
+    )(using Context): Option[CompletionItemData] =
+      Some(
+        CompletionItemData(
+          SemanticdbSymbols.symbolName(symbol),
+          buildTargetIdentifier,
+          kind = completionItemDataKind,
+        )
+      )
 
     def completionItemKind(using Context): CompletionItemKind =
       val symbol = this.symbol
@@ -112,6 +129,8 @@ object CompletionValue:
       override val filterText: Option[String],
       start: Int,
   ) extends Symbolic:
+    override def completionItemDataKind: Integer =
+      CompletionItemData.OverrideKind
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Method
     override def labelWithDescription(printer: MetalsPrinter)(using
@@ -211,6 +230,7 @@ object CompletionValue:
 
     override def description(printer: MetalsPrinter)(using Context): String =
       description
+    override def insertMode: Option[InsertTextMode] = Some(InsertTextMode.AsIs)
 
   def namedArg(label: String, sym: Symbol)(using
       Context

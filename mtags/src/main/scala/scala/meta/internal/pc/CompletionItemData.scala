@@ -30,6 +30,7 @@ case class CompletionItemData(
 
 object CompletionItemData {
   def empty: CompletionItemData = CompletionItemData("", "")
+  val None: java.lang.Integer = 0
   // This is an `override def` completion item.
   val OverrideKind: java.lang.Integer = 1
   // This is a completion implementing all abstract members
