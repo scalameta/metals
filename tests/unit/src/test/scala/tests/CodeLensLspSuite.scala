@@ -55,11 +55,11 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
     """|package foo.bar
        |<<test>><<debug test>>
        |class Foo extends org.scalatest.funsuite.AnyFunSuite {
-       |<<test>><<debug test>>
+       |<<test case>><<debug test case>>
        |  test("foo") {
        |    assert(1 == 1)
        |  }
-       |<<test>><<debug test>>
+       |<<test case>><<debug test case>>
        |  test("bar") {
        |    assert(1 == 1)
        |  }

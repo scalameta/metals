@@ -130,8 +130,8 @@ final class TestSuitesProvider(
             null,
           )
           List(
-            lens("test", ClientCommands.StartRunSession),
-            lens("debug test", ClientCommands.StartDebugSession),
+            lens("test case", ClientCommands.StartRunSession),
+            lens("debug test case", ClientCommands.StartDebugSession),
           )
         }
       }.flatten
