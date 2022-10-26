@@ -116,7 +116,10 @@ final class TestSuitesProvider(
     val path = textDocumentWithPath.filePath
     for {
       target <- buildTargets.inverseSources(path).toList
-      cases <- getTestCasesForPath(path, None)
+      cases <- getTestCasesForPath(
+        path,
+        Some(textDocumentWithPath.textDocument),
+      )
       lens <- cases.events.asScala.collect { case AddTestCases(fqn, _, cases) =>
         cases.asScala.flatMap { entry =>
           val c = ScalaTestSuiteSelection(fqn, List(entry.name).asJava)
