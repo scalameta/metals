@@ -63,7 +63,8 @@ final class TestSuitesProvider(
     new MunitTestFinder(trees, symbolIndex, semanticdbs)
   private val scalatestTestFinder =
     new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
-  private val isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
+
+  private def isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
     userConfig().testUserInterface == TestUserInterfaceKind.TestExplorer
 
   override def isEnabled: Boolean = (clientConfig.isDebuggingProvider() &&
