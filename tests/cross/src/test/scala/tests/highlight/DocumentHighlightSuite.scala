@@ -608,4 +608,51 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |   }
       |}""".stripMargin,
   )
+
+  check(
+    "inner-class1",
+    """|object Main {
+       |  def foo = {
+       |    case class <<U@@ser>>(name: String)
+       |    object <<User>>{ def nnn = ""}
+       |    <<User>>.nnn
+       |  }
+       |}""".stripMargin,
+  )
+
+  check(
+    "inner-class2",
+    """|object Main {
+       |  def foo = {
+       |    case class <<User>>(name: String)
+       |    object <<U@@ser>>{ def nnn = ""}
+       |    <<User>>.nnn
+       |  }
+       |}""".stripMargin,
+  )
+
+  check(
+    "inner-class3",
+    """|object Main {
+       |  def foo = {
+       |    case class <<User>>(name: String)
+       |    object <<User>>{ def nnn = ""}
+       |    <<Use@@r>>.nnn
+       |  }
+       |}""".stripMargin,
+  )
+
+  check(
+    "inner-class4",
+    """|object Main {
+       |  def foo = {
+       |    object O {
+       |      case class <<User>>(name: String)
+       |      object <<User>>{ def nnn = ""}
+       |      <<Use@@r>>.nnn
+       |    }
+       |  }
+       |}""".stripMargin,
+  )
+
 }
