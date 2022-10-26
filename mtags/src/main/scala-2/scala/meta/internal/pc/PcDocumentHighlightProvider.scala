@@ -57,10 +57,12 @@ final class PcDocumentHighlightProvider(
      */
     def symbolAlternatives(sym: Symbol) = {
       val all =
-        if (sym.isClass)
-          Set(sym, sym.companionModule, sym.companion.moduleClass)
-        else if (sym.isModuleOrModuleClass)
-          Set(sym, sym.companionClass, sym.moduleClass)
+        if (sym.isClass) {
+          if (sym.owner.isMethod) Set(sym) ++ localCompanion(sym)
+          else Set(sym, sym.companionModule, sym.companion.moduleClass)
+        } else if (sym.isModuleOrModuleClass)
+          if (sym.owner.isMethod) Set(sym) ++ localCompanion(sym)
+          else Set(sym, sym.companionClass, sym.moduleClass)
         else if (sym.isTerm) {
           val info =
             if (sym.owner.isClass) sym.owner.info
@@ -73,6 +75,25 @@ final class PcDocumentHighlightProvider(
           )
         } else Set(sym)
       all.filter(s => s != NoSymbol && !s.isError)
+    }
+
+    /**
+     * For classes defined in methods it's not possible to find
+     * companion via methods in symbol.
+     *
+     * @param sym symbol to find a companion for
+     * @return companion if it exists
+     */
+    def localCompanion(sym: Symbol): Option[Symbol] = {
+      val context = doLocateImportContext(pos)
+      context.lookupSymbol(
+        sym.name.companionName,
+        s => s.owner == sym.owner
+      ) match {
+        case LookupSucceeded(_, symbol) =>
+          Some(symbol)
+        case _ => None
+      }
     }
 
     def fallbackSymbol(name: Name, pos: Position) = {
@@ -153,10 +174,11 @@ final class PcDocumentHighlightProvider(
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols match {
       case Some(sought) =>
-        lazy val owners = sought
-          .flatMap(s => symbolAlternatives(s.owner))
+        val owners = sought
+          .map(_.owner)
+          .flatMap(o => symbolAlternatives(o))
           .filter(_ != NoSymbol)
-        lazy val soughtNames: Set[Name] = sought.map(_.name)
+        val soughtNames: Set[Name] = sought.map(_.name)
 
         /*
          * For comprehensions have two owners, one for the enumerators and one for
