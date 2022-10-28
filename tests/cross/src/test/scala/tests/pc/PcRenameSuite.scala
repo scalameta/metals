@@ -186,10 +186,10 @@ class PcRenameSuite extends BasePcRenameSuite {
     "double-backtick",
     """|val <<greet@@ing>> = "Hello"
        |"" match {
-       |  case `<<greeting>>` =>
+       |  case <<`greeting`>> =>
        |}
        |""".stripMargin,
-    newName = "greeting-!",
+    newName = "`greeting-!`",
   )
 
   check(
@@ -212,9 +212,19 @@ class PcRenameSuite extends BasePcRenameSuite {
   )
 
   check(
-    "params",
-    """|case class Name(<<va@@lue>>: String)
+    "paramsss",
+    """|case class Name(<<value>>: String)
        |val name1 = Name(<<value>> = "42")
+       | .copy(<<value>> = "43")
+       | .copy(<<va@@lue>> = "43")
+       | .<<value>>
+       |val name2 = Name(<<value>> = "44")
+       |""".stripMargin,
+  )
+  check(
+    "paramss",
+    """|case class Name(<<value>>: String)
+       |val name1 = Name(<<val@@ue>> = "42")
        | .copy(<<value>> = "43")
        | .copy(<<value>> = "43")
        | .<<value>>
@@ -229,13 +239,11 @@ class PcRenameSuite extends BasePcRenameSuite {
        |""".stripMargin,
   )
 
-
-
   check(
     "type-params",
     """|trait <<ABC>>
-       |class CBD[T <: <<AB@@C>>]
-       |val a = classOf[<<ABC>>]
+       |class CBD[T <: <<ABC>>]
+       |val a = classOf[<<AB@@C>>]
        |val b = new CBD[<<ABC>>]
        |""".stripMargin,
     newName = "Animal",
@@ -268,16 +276,16 @@ class PcRenameSuite extends BasePcRenameSuite {
   )
 
   check(
-      "hierarchy-class",
-      """|sealed abstract class <<Sy@@mbol>>
-         |case class Method(name: String) extends <<Symbol>>
-         |case class Variable(value: String) extends <<Symbol>>
-         |
-         |val symbol2: <<Symbol>> = Method("method")
-         |val symbol3: <<Symbol>> = Variable("value")
-         |""".stripMargin,
-      newName = "NewSymbol",
-    )
+    "hierarchy-class",
+    """|sealed abstract class <<Sy@@mbol>>
+       |case class Method(name: String) extends <<Symbol>>
+       |case class Variable(value: String) extends <<Symbol>>
+       |
+       |val symbol2: <<Symbol>> = Method("method")
+       |val symbol3: <<Symbol>> = Variable("value")
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
 
   check(
     "variable",
@@ -285,28 +293,6 @@ class PcRenameSuite extends BasePcRenameSuite {
        |
        |  def f5: Boolean = {
        |    <<v5>> = true
-       |    <<v5>> == true
-       |  }
-       |""".stripMargin,
-  )
-
-  check(
-    "variable-explicit",
-    """|  var <<v@@5>> = false
-       |
-       |  def f5: Boolean = {
-       |    <<v5>>_= true
-       |    <<v5>> == true
-       |  }
-       |""".stripMargin,
-  )
-
-  check(
-    "variable-explicit",
-    """|  var <<v5>> = false
-       |
-       |  def f5: Boolean = {
-       |    `<<v@@5>>_=`(true)
        |    <<v5>> == true
        |  }
        |""".stripMargin,

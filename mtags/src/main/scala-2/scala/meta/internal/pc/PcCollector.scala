@@ -16,7 +16,7 @@ abstract class PcCollector[T](
     cursor = None
   )
   val pos: Position = unit.position(params.offset)
-
+  val text = unit.source.content
   private val caseClassSynthetics: Set[Name] = Set(nme.apply, nme.copy)
   typeCheck(unit)
   val typedTree: Tree = locateTree(pos) match {
@@ -39,9 +39,11 @@ abstract class PcCollector[T](
   def symbolAlternatives(sym: Symbol): Set[Symbol] = {
     val all =
       if (sym.isClass) {
-        Set(sym, sym.companionModule, sym.companion.moduleClass)
+        if (sym.owner.isMethod) Set(sym) ++ localCompanion(sym)
+        else Set(sym, sym.companionModule, sym.companion.moduleClass)
       } else if (sym.isModuleOrModuleClass) {
-        Set(sym, sym.companionClass, sym.moduleClass)
+        if (sym.owner.isMethod) Set(sym) ++ localCompanion(sym)
+        else Set(sym, sym.companionClass, sym.moduleClass)
       } else if (sym.isTerm) {
         val info =
           if (sym.owner.isClass) sym.owner.info
@@ -54,6 +56,25 @@ abstract class PcCollector[T](
         ) ++ sym.allOverriddenSymbols.toSet
       } else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
+  }
+
+  /**
+   * For classes defined in methods it's not possible to find
+   * companion via methods in symbol.
+   *
+   * @param sym symbol to find a companion for
+   * @return companion if it exists
+   */
+  def localCompanion(sym: Symbol): Option[Symbol] = {
+    val context = doLocateImportContext(pos)
+    context.lookupSymbol(
+      sym.name.companionName,
+      s => s.owner == sym.owner
+    ) match {
+      case LookupSucceeded(_, symbol) =>
+        Some(symbol)
+      case _ => None
+    }
   }
 
   def result(): List[T] = {
@@ -99,9 +120,19 @@ abstract class PcCollector[T](
               apply.symbol.paramss.flatten.find(_.name == id.name).map { s =>
                 // if it's a case class we need to look for parameters also
                 if (caseClassSynthetics(s.owner.name) && s.owner.isSynthetic) {
+                  val applyOwner = s.owner.owner
                   val constructorOwner =
-                    if (s.owner.owner.isCaseClass) s.owner.owner
-                    else s.owner.owner.companion
+                    if (applyOwner.isCaseClass) applyOwner
+                    else if (applyOwner.companion != NoSymbol)
+                      applyOwner.companion
+                    else {
+                      localCompanion(applyOwner) match {
+                        case Some(companion) =>
+                          if (companion.isClass) companion
+                          else localCompanion(companion).getOrElse(NoSymbol)
+                        case None => NoSymbol
+                      }
+                    }
                   val info = constructorOwner.info
                   val constructorParams = info.members
                     .filter(_.isConstructor)
@@ -135,18 +166,20 @@ abstract class PcCollector[T](
        */
       case (sel: NameTree) if sel.namePos.includes(pos) =>
         Some(symbolAlternatives(sel.symbol))
+      case lit @ Literal(Constant(TypeRef(_, sym, _)))
+          if lit.pos.includes(pos) =>
+        Some(symbolAlternatives(sym))
       case _ =>
         None
     }
-
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols match {
       case Some(sought) =>
-        lazy val owners = sought
-          .flatMap(s => symbolAlternatives(s.owner))
+        val owners = sought
+          .map(_.owner)
+          .flatMap(o => symbolAlternatives(o))
           .filter(_ != NoSymbol)
-        lazy val soughtNames: Set[Name] = sought.map(_.name)
-        pprint.log(sought)
+        val soughtNames: Set[Name] = sought.map(_.name)
         /*
          * For comprehensions have two owners, one for the enumerators and one for
          * yield. This is a heuristic to find that out.
@@ -220,7 +253,8 @@ abstract class PcCollector[T](
              * etc.
              */
             case appl: Apply
-                if owners(appl.symbol) || owners(appl.symbol.owner) =>
+                if owners(appl.symbol) ||
+                  symbolAlternatives(appl.symbol.owner).exists(owners(_)) =>
               val named = appl.args
                 .flatMap { arg =>
                   namedArgCache.get(arg.pos.start)
@@ -293,6 +327,15 @@ abstract class PcCollector[T](
                   name.namePos
                 )
               )(traverse(_, _))
+
+            case lit @ Literal(Constant(TypeRef(_, sym, _))) =>
+              val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
+              acc + collect(
+                lit,
+                lit.pos
+                  .withStart(posStart)
+                  .withEnd(posStart + sym.decodedName.length())
+              )
 
             case _ =>
               tree.children.foldLeft(acc)(traverse(_, _))

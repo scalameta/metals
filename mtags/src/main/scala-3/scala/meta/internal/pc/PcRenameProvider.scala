@@ -11,16 +11,16 @@ final class PcRenameProvider(
     params: OffsetParams,
     name: String,
 ) extends PcCollector[l.TextEdit](driver, params):
-  val newName = name.backticked
+  val newName = name.stripBackticks.backticked
 
   def collect(tree: Tree, pos: SourcePosition): l.TextEdit =
-    pprint.log(tree)
-    tree match
-      case id @ Ident(_) if id.isBackquoted =>
-        pprint.log(id.isBackquoted)
-        l.TextEdit(pos.toLsp, '`' + newName.stripBackticks + '`')
-      case _ =>
-        l.TextEdit(pos.toLsp, newName)
+    val isBackticked =
+      sourceText(pos.start) == '`' && sourceText(pos.end - 1) == '`'
+    // val oldNameBackticked = tree.symbol.decodedName.isBackticked
+    val backtickedName =
+      if isBackticked then "`" + newName.stripBackticks + "`"
+      else newName
+    l.TextEdit(pos.toLsp, backtickedName)
 
   def rename(
   ): List[l.TextEdit] =

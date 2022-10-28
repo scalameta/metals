@@ -29,13 +29,13 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans.Span
 abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
   private val caseClassSynthetics: Set[Name] = Set(nme.apply, nme.copy)
+  val uri = params.uri()
+  val filePath = Paths.get(uri)
+  val sourceText = params.text
 
   def collect(tree: Tree, pos: SourcePosition): T
 
   def result(): List[T] =
-    val uri = params.uri()
-    val filePath = Paths.get(uri)
-    val sourceText = params.text
     val source =
       SourceFile.virtual(filePath.toString, sourceText)
     driver.run(uri, source)
@@ -163,7 +163,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
 
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
-        
+
         def collectNames(
             occurences: Set[T],
             tree: Tree,
