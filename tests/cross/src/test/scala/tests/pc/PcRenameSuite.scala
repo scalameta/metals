@@ -109,6 +109,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  "" <<::>> user
        |}
        |""".stripMargin,
+    newName = "+++:",
   )
 
   check(
@@ -157,10 +158,8 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  def <<method>>(adf: String) = 123
        |}
        |
-       |object Main {
-       |  val a = new Alphabet {
-       |    override def <<me@@thod>>(adf: String): Int = 321
-       |  }
+       |val a = new Alphabet {
+       |  override def <<me@@thod>>(adf: String): Int = 321
        |}
        |""".stripMargin,
   )
@@ -171,6 +170,30 @@ class PcRenameSuite extends BasePcRenameSuite {
        |def m[A](implicit a: A): A = a
        |m[Int]
        |""".stripMargin,
+  )
+
+  check(
+    "backtick-new-name",
+    """|object A{
+       |  val <<toRename>> = 123
+       |}
+       |object B{
+       |  val toRename = A.<<toR@@ename>>
+       |}
+       |""".stripMargin,
+    newName = "`other-rename`",
+  )
+
+  check(
+    "backtick-old-and-new-name",
+    """|object A{
+       |  val <<`to-Rename`>> = 123
+       |}
+       |object B{
+       |  val toRename = A.<<`to-R@@ename`>>
+       |}
+       |""".stripMargin,
+    newName = "`other-rename`",
   )
 
   check(
@@ -212,7 +235,7 @@ class PcRenameSuite extends BasePcRenameSuite {
   )
 
   check(
-    "paramsss",
+    "params1",
     """|case class Name(<<value>>: String)
        |val name1 = Name(<<value>> = "42")
        | .copy(<<value>> = "43")
@@ -222,7 +245,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |""".stripMargin,
   )
   check(
-    "paramss",
+    "params2",
     """|case class Name(<<value>>: String)
        |val name1 = Name(<<val@@ue>> = "42")
        | .copy(<<value>> = "43")
@@ -240,10 +263,20 @@ class PcRenameSuite extends BasePcRenameSuite {
   )
 
   check(
-    "type-params",
+    "type-params1",
     """|trait <<ABC>>
        |class CBD[T <: <<ABC>>]
        |val a = classOf[<<AB@@C>>]
+       |val b = new CBD[<<ABC>>]
+       |""".stripMargin,
+    newName = "Animal",
+  )
+
+  check(
+    "type-params2",
+    """|trait <<A@@BC>>
+       |class CBD[T <: <<ABC>>]
+       |val a = classOf[<<ABC>>]
        |val b = new CBD[<<ABC>>]
        |""".stripMargin,
     newName = "Animal",

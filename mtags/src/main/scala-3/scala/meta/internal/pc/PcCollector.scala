@@ -27,6 +27,7 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans.Span
+
 abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
   private val caseClassSynthetics: Set[Name] = Set(nme.apply, nme.copy)
   val uri = params.uri()

@@ -12,14 +12,17 @@ class PcRenameProvider(
 ) extends PcCollector[TextEdit](compiler, params) {
   import compiler._
   val newName: String = Identifier.backtickWrap(name.stripBackticks)
-
   def collect(tree: Tree, pos: Position): TextEdit = {
     val isBackticked = text(pos.start) == '`' && text(pos.end - 1) == '`'
-    // val oldNameBackticked = tree.symbol.decodedName.isBackticked
-    val backtickedName =
-      if (isBackticked) "`" + newName.stripBackticks + "`"
-      else newName
-    new TextEdit(pos.toLsp, backtickedName)
+    // when the old name contains backticks, the position is incorrect
+    val isOldNameBackticked = text(pos.start) == '`' &&
+      text(pos.end - 1) != '`' &&
+      text(pos.end + 1) == '`'
+    if (isBackticked)
+      new TextEdit(pos.toLsp, "`" + newName.stripBackticks + "`")
+    else if (isOldNameBackticked)
+      new TextEdit(pos.withEnd(pos.end + 2).toLsp, newName)
+    else new TextEdit(pos.toLsp, newName)
   }
 
   def rename(): List[TextEdit] =

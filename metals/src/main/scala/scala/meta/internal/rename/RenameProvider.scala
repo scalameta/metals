@@ -55,6 +55,7 @@ final class RenameProvider(
     client: MetalsLanguageClient,
     buffers: Buffers,
     compilations: Compilations,
+    compilers: Compilers,
     clientConfig: ClientConfiguration,
     trees: Trees,
 )(implicit executionContext: ExecutionContext) {
@@ -97,7 +98,6 @@ final class RenameProvider(
 
   def rename(
       params: RenameParams,
-      compilers: Compilers,
       token: CancelToken,
   ): Future[WorkspaceEdit] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
@@ -105,45 +105,23 @@ final class RenameProvider(
       val defininionFuture = definitionProvider
         .definition(source, params, token)
       defininionFuture.flatMap { definition =>
-        if (definition.symbol.isLocal) {
-
-          // We have to check if local symbol doesn't override any non-local symbols
-          // If it does, we can't use PC for local rename
-          val overridenSymbols =
-            (for {
-              semantic <- definition.semanticdb
-              symbolInfo <- semantic.symbols
-                .find(_.symbol == definition.symbol)
-              overridenSymbols = symbolInfo.overriddenSymbols
-              if symbolInfo.overriddenSymbols.nonEmpty
-              occ = semantic.occurrences
-                .filter(occ => overridenSymbols.contains(occ.symbol))
-            } yield occ).getOrElse(Nil)
-
-          overridenSymbols
-            .find(!_.symbol.isLocal)
-            .map(oSym =>
-              this.rename(
-                new RenameParams(
-                  params.getTextDocument,
-                  oSym.getRange.toLsp.getStart(),
-                  params.getNewName(),
-                ),
-                compilers,
-                token,
+        // We have to check if local symbol doesn't override any non-local symbols
+        // If it does, we can't use PC for local rename
+        def overridesNonLocal = (for {
+          semantic <- definition.semanticdb
+          symbolInfo <- semantic.symbols
+            .find(_.symbol == definition.symbol)
+          overridenSymbols = symbolInfo.overriddenSymbols
+        } yield overridenSymbols.exists(!_.isLocal)).getOrElse(true)
+        if (definition.symbol.isLocal && !overridesNonLocal) {
+          compilers
+            .rename(params, token)
+            .map(_.asScala.toList)
+            .map { edits =>
+              new WorkspaceEdit(
+                documentEdits(Map(source -> edits)).asJava
               )
-            )
-            .getOrElse(
-              compilers
-                .rename(params, token)
-                .map(_.asScala.toList)
-                .map { edits =>
-                  new WorkspaceEdit(
-                    documentEdits(Map(source -> edits)).asJava
-                  )
-                }
-            )
-
+            }
         } else {
           val textParams = new TextDocumentPositionParams(
             params.getTextDocument(),

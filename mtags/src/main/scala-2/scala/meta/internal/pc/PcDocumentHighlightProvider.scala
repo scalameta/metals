@@ -13,7 +13,6 @@ final class PcDocumentHighlightProvider(
 
   def collect(tree: Tree, pos: Position): DocumentHighlight =
     tree match {
-      case _: Import => new DocumentHighlight(pos.toLsp)
       case _: MemberDef =>
         new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)
       case _ => new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Read)
@@ -21,5 +20,4 @@ final class PcDocumentHighlightProvider(
 
   def highlights(): List[DocumentHighlight] =
     result()
-
 }

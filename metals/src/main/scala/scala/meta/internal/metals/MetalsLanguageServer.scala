@@ -643,17 +643,7 @@ class MetalsLanguageServer(
           semanticdbs,
           stacktraceAnalyzer,
         )
-        renameProvider = new RenameProvider(
-          referencesProvider,
-          implementationProvider,
-          definitionProvider,
-          workspace,
-          languageClient,
-          buffers,
-          compilations,
-          clientConfig,
-          trees,
-        )
+
         syntheticsDecorator = new SyntheticsDecorationProvider(
           workspace,
           semanticdbs,
@@ -707,6 +697,18 @@ class MetalsLanguageServer(
             mtagsResolver,
             sourceMapper,
           )
+        )
+        renameProvider = new RenameProvider(
+          referencesProvider,
+          implementationProvider,
+          definitionProvider,
+          workspace,
+          languageClient,
+          buffers,
+          compilations,
+          compilers,
+          clientConfig,
+          trees,
         )
         debugProvider = register(
           new DebugProvider(
@@ -1608,7 +1610,7 @@ class MetalsLanguageServer(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
     CancelTokens.future { token =>
-      renameProvider.rename(params, compilers, token)
+      renameProvider.rename(params, token)
     }
 
   @JsonRequest("textDocument/references")

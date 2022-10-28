@@ -18,10 +18,6 @@ final class PcDocumentHighlightProvider(
     tree match
       case _: NamedDefTree =>
         DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)
-      case _: NamedArg =>
-        DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)
-      case _: Import =>
-        DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)
       case _ => DocumentHighlight(pos.toLsp, DocumentHighlightKind.Read)
 
   def highlights: List[DocumentHighlight] =
