@@ -802,7 +802,7 @@ abstract class BaseWorksheetLspSuite(
       )
       _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
 
-      versionExpectedCompletionList = List("0.14.1", "0.14.0")
+      versionExpectedCompletionList = List("0.14.2", "0.14.1", "0.14.0")
       response <- server.completionList(
         "a/src/main/scala/foo/Main.worksheet.sc",
         "import $dep.`io.circe::circe-yaml:0.14@@`",
