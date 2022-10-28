@@ -16,11 +16,20 @@ final class PcRenameProvider(
   def collect(tree: Tree, pos: SourcePosition): l.TextEdit =
     val isBackticked =
       sourceText(pos.start) == '`' && sourceText(pos.end - 1) == '`'
-    // val oldNameBackticked = tree.symbol.decodedName.isBackticked
-    val backtickedName =
-      if isBackticked then "`" + newName.stripBackticks + "`"
-      else newName
-    l.TextEdit(pos.toLsp, backtickedName)
+    // when the old name contains backticks, the position is incorrect
+    val isOldNameBackticked = sourceText(pos.start) != '`' &&
+      sourceText(pos.start - 1) == '`' &&
+      sourceText(pos.end) == '`'
+
+    if isBackticked then
+      l.TextEdit(pos.toLsp, "`" + newName.stripBackticks + "`")
+    else if isOldNameBackticked then
+      l.TextEdit(
+        pos.withStart(pos.start - 1).withEnd(pos.end + 1).toLsp,
+        newName,
+      )
+    else l.TextEdit(pos.toLsp, newName)
+  end collect
 
   def rename(
   ): List[l.TextEdit] =

@@ -1363,21 +1363,7 @@ final case class TestingServer(
         } else {
           val code = buffers.get(path).get
           if (renames.getDocumentChanges() == null) {
-            if (renames.getChanges() == null)
-              file -> code
-            else {
-              val edited = for {
-                validLocations <-
-                  renames
-                    .getChanges()
-                    .asScala
-                    .get(path.toString())
-              } yield TextEdits.applyEdits(
-                code,
-                validLocations.asScala.toList,
-              )
-              file -> edited.getOrElse(code)
-            }
+            file -> code
           } else {
             val renamed = renameFile(file, renames)
             renamed -> TestRanges

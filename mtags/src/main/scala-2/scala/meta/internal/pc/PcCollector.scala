@@ -126,6 +126,8 @@ abstract class PcCollector[T](
                     else if (applyOwner.companion != NoSymbol)
                       applyOwner.companion
                     else {
+                      // there is a weird case, where sometimes we need to use localCompanion twice to get correct companion class
+                      // See tests `params1` and `params2` in PcRenameSuite or `namedParam` in DocumentHighlightSuite
                       localCompanion(applyOwner) match {
                         case Some(companion) =>
                           if (companion.isClass) companion
@@ -166,6 +168,8 @@ abstract class PcCollector[T](
        */
       case (sel: NameTree) if sel.namePos.includes(pos) =>
         Some(symbolAlternatives(sel.symbol))
+
+      // needed for classOf[AB@@C]`
       case lit @ Literal(Constant(TypeRef(_, sym, _)))
           if lit.pos.includes(pos) =>
         Some(symbolAlternatives(sym))
@@ -328,6 +332,7 @@ abstract class PcCollector[T](
                 )
               )(traverse(_, _))
 
+            // needed for `classOf[<<ABC>>]`
             case lit @ Literal(Constant(TypeRef(_, sym, _))) =>
               val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
               acc + collect(
