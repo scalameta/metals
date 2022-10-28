@@ -1,6 +1,14 @@
 package tests
 
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+
+import ch.epfl.scala.bsp4j.DebugSessionParams
+import com.google.gson.JsonObject
+import org.eclipse.lsp4j.CodeLensParams
+import org.eclipse.lsp4j.Command
+import org.eclipse.lsp4j.TextDocumentIdentifier
 
 class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
 
@@ -305,6 +313,53 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         |""".stripMargin
   )
 
+  test("run-shell-command") {
+
+    def runFromCommand(cmd: Command) = {
+
+      cmd.getArguments().asScala.toList match {
+        case (params: DebugSessionParams) :: _ =>
+          params.getData() match {
+            case obj: JsonObject =>
+              val cmd = obj.get("shellCommand").getAsString().split("\\s+")
+              ShellRunner
+                .runSync(cmd.toList, workspace, redirectErrorOutput = false)
+                .map(_.trim())
+            case _ => None
+          }
+
+        case _ => None
+      }
+    }
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/a/src/main/scala/a/Main.scala
+            |package foo
+            |
+            |object Main {
+            |  def main(args: Array[String]): Unit = {
+            |     println("Hello java!")
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      lenses <- server.server.codeLens {
+        val path = server.toPath("a/src/main/scala/a/Main.scala")
+        val uri = path.toURI.toString
+        new CodeLensParams(new TextDocumentIdentifier(uri))
+      }.asScala
+      _ = assert(lenses.size() > 0, "No lenses were generated!")
+      command = lenses.asScala.head.getCommand()
+      _ = assertEquals(runFromCommand(command), Some("Hello java!"))
+    } yield ()
+
+  }
   test("no-stale-supermethod-lenses") {
     cleanWorkspace()
     for {
