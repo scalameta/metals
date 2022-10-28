@@ -262,7 +262,7 @@ final class SemanticTokenProvider(
               namedArgCache.get(arg.pos.start)
             }
             .collectFirst { case cp.AssignOrNamedArg(i @ cp.Ident(_), _) =>
-              NodeInfo(i, i.pos)
+              NodeInfo(appl.symbol.paramss.flatten.find(_.name == i.name), i.pos)
             }
 
           tree.children.foldLeft(nodes ++ named)(traverse(_, _))
