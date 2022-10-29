@@ -723,7 +723,6 @@ class MetalsLanguageServer(
             semanticdbs,
             compilers,
             statusBar,
-            () => userConfig,
           )
         )
         scalafixProvider = ScalafixProvider(
@@ -2078,28 +2077,6 @@ class MetalsLanguageServer(
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
 
-      case ServerCommands.DiscoverJvmRunCommand(unresolvedParams) =>
-        import JsonParser._
-        debugProvider
-          .debugDiscovery(unresolvedParams)
-          .map { params =>
-            params.getData match {
-              case json: JsonElement
-                  if params.getDataKind == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
-                json.as[b.ScalaMainClass] match {
-                  case Success(main) if params.getTargets().size > 0 =>
-                    val updatedData = debugProvider.extendScalaMainClass(
-                      main,
-                      params.getTargets().get(0),
-                    )
-                    params.setData(updatedData)
-                  case _ =>
-                }
-
-            }
-            params
-          }
-          .asJavaObject
       case ServerCommands.CopyWorksheetOutput(path) =>
         val worksheetPath = path.toAbsolutePath
         val output = worksheetProvider.copyWorksheetOutput(worksheetPath)

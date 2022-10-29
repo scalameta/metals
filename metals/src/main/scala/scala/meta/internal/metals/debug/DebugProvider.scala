@@ -42,7 +42,6 @@ import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -87,7 +86,6 @@ class DebugProvider(
     semanticdbs: Semanticdbs,
     compilers: Compilers,
     statusBar: StatusBar,
-    userConfig: () => UserConfiguration,
 ) extends Cancelable {
 
   import DebugProvider._
@@ -608,19 +606,6 @@ class DebugProvider(
       _ <- ensureNoWorkspaceErrors(List(request.target))
       result <- makeDebugSession()
     } yield result
-  }
-
-  def extendScalaMainClass(
-      main: ScalaMainClass,
-      targetId: BuildTargetIdentifier,
-  ): JsonElement = {
-    buildTargets
-      .jvmRunEnvironment(targetId)
-      .zip(userConfig().usedJavaBinary) match {
-      case None => main.toJson
-      case Some((env, javaHome)) =>
-        ExtendedScalaMainClass(main, env, javaHome).toJson
-    }
   }
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
