@@ -27,7 +27,6 @@ import ch.epfl.scala.{bsp4j => b}
  * - allow new clients to use shellCommand to run the main class directly in e.g. terminal
  */
 case class ExtendedScalaMainClass private (
-    kind: "scala-main-class",
     `class`: String,
     arguments: java.util.List[String],
     jvmOptions: java.util.List[String],
@@ -36,8 +35,6 @@ case class ExtendedScalaMainClass private (
 )
 
 object ExtendedScalaMainClass {
-  final val kind: "scala-main-class" = "scala-main-class"
-
   private def createCommand(
       javaHome: AbsolutePath,
       classpath: List[String],
@@ -67,7 +64,6 @@ object ExtendedScalaMainClass {
         .asScala).toList.asJava
 
     ExtendedScalaMainClass(
-      kind,
       main.getClassName(),
       main.getArguments(),
       jvmOpts.asJava,
