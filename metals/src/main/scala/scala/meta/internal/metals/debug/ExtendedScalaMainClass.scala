@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.{bsp4j => b}
 
-case class ExtendedScalaMainClass(
+case class ExtendedScalaMainClass private(
     `class`: String,
     arguments: java.util.List[String],
     jvmOptions: java.util.List[String],
