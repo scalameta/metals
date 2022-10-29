@@ -67,13 +67,17 @@ final class TestSuitesProvider(
   private def isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
     userConfig().testUserInterface == TestUserInterfaceKind.TestExplorer
 
-  override def isEnabled: Boolean = (clientConfig.isDebuggingProvider() &&
-    userConfig().testUserInterface == TestUserInterfaceKind.CodeLenses) ||
-    isExplorerEnabled
+  private def isCodeLensEnabled = clientConfig.isDebuggingProvider() &&
+    userConfig().testUserInterface == TestUserInterfaceKind.CodeLenses
+
+  private def isSuiteRefreshEnabled = isExplorerEnabled || isCodeLensEnabled
+
+  // Applies to code lenses only
+  override def isEnabled: Boolean = isCodeLensEnabled
 
   val refreshTestSuites: BatchedFunction[Unit, Unit] =
     BatchedFunction.fromFuture { _ =>
-      if (isEnabled) doRefreshTestSuites()
+      if (isSuiteRefreshEnabled) doRefreshTestSuites()
       else Future.unit
     }
 
