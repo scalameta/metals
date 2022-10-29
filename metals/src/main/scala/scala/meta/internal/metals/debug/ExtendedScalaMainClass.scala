@@ -8,7 +8,26 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.{bsp4j => b}
 
-case class ExtendedScalaMainClass private(
+/**
+ * Wrapper around the bsp4j.ScalaMainClass to provide additional information which may be used by client.
+ *
+ * For backward compatibility reasons, it provides the same fields as the bsp4j.ScalaMainClass,
+ * so it's safe for older clients to work without any change:
+ * @param class the fully qualified name of the class
+ * @param arguments the arguments to pass to the main method
+ * @param jvmOptions the jvm options to pass to the jvm
+ * @param environmentVariables the environment variables to pass to the process
+ *
+ * However, it also provides two additional fields:
+ * @param kind allows client to distinguish between old, bsp4j.ScalaMainClass and new ExtendedScalaMainClass
+ * @param shellCommand which is the command to run in the shell to start the main class
+ * ---
+ * To sum up:
+ * - allow old clients to work without any change
+ * - allow new clients to use shellCommand to run the main class directly in e.g. terminal
+ */
+case class ExtendedScalaMainClass private (
+    kind: "scala-main-class",
     `class`: String,
     arguments: java.util.List[String],
     jvmOptions: java.util.List[String],
@@ -17,6 +36,7 @@ case class ExtendedScalaMainClass private(
 )
 
 object ExtendedScalaMainClass {
+  final val kind: "scala-main-class" = "scala-main-class"
 
   private def createCommand(
       javaHome: AbsolutePath,
@@ -47,6 +67,7 @@ object ExtendedScalaMainClass {
         .asScala).toList.asJava
 
     ExtendedScalaMainClass(
+      kind,
       main.getClassName(),
       main.getArguments(),
       jvmOpts.asJava,

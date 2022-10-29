@@ -223,7 +223,8 @@ final class RunTestCodeLens(
     val data = buildTargets
       .jvmRunEnvironment(target)
       .zip(userConfig().usedJavaBinary) match {
-      case None => main.toJson
+      case None =>
+        main.toJson
       case Some((env, javaHome)) =>
         ExtendedScalaMainClass(main, env, javaHome).toJson
     }
