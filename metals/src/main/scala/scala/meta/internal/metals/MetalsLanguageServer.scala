@@ -2725,7 +2725,7 @@ class MetalsLanguageServer(
         .configuration(params)
         .asScala
         .flatMap { items =>
-          items.asScala.headOption match {
+          items.asScala.headOption.flatMap(Option.apply) match {
             case Some(item) =>
               val json = item.asInstanceOf[JsonElement].getAsJsonObject()
               updateConfiguration(json)
