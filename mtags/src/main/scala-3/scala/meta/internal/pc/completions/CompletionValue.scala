@@ -126,10 +126,11 @@ object CompletionValue:
       label: String,
       value: String,
       symbol: Symbol,
-      shortenedNames: List[ShortName],
+      override val additionalEdits: List[TextEdit],
       override val filterText: Option[String],
-      start: Int,
+      override val range: Option[Range],
   ) extends Symbolic:
+    override def insertText: Option[String] = Some(value)
     override def completionItemDataKind: Integer =
       CompletionItemData.OverrideKind
     override def completionItemKind(using Context): CompletionItemKind =

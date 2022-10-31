@@ -142,7 +142,7 @@ object AutoImports extends AutoImportsBackticks:
    * @param renames A function that returns the name of the given symbol which is renamed on import statement.
    */
   class AutoImportsGenerator(
-      pos: SourcePosition,
+      val pos: SourcePosition,
       importPosition: AutoImportPosition,
       indexedContext: IndexedContext,
       renames: Symbol => Option[String],

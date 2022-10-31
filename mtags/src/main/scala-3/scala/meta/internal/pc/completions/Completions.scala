@@ -9,8 +9,10 @@ import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.completions.KeywordsCompletions
+import scala.meta.internal.pc.completions.OverrideCompletions.OverrideExtractor
 import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
@@ -47,6 +49,7 @@ class Completions(
     path: List[Tree],
     config: PresentationCompilerConfig,
     workspace: Option[Path],
+    autoImports: AutoImportsGenerator,
 ):
 
   implicit val context: Context = ctx
@@ -347,6 +350,7 @@ class Completions(
             indexedContext,
             config,
             search,
+            autoImports,
           ),
           false,
         )
@@ -364,6 +368,7 @@ class Completions(
             config,
             search,
             parent,
+            autoImports,
             patternOnly = Some(identName),
             hasBind = true,
           ),
@@ -383,6 +388,7 @@ class Completions(
             config,
             search,
             parent,
+            autoImports,
             patternOnly = Some(identName),
           ),
           false,
@@ -397,67 +403,26 @@ class Completions(
             config,
             search,
             parent,
+            autoImports,
           ),
           true,
         )
 
       // class FooImpl extends Foo:
       //   def x|
-      case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
-          if t.parents.nonEmpty =>
-        val completing =
-          if dd.symbol.name == StdNames.nme.ERROR then None else Some(dd.symbol)
-        val values = OverrideCompletions.contribute(
-          td,
-          completing,
-          dd.sourcePos.start,
-          indexedContext,
-          search,
-          config,
+      case OverrideExtractor(td, completing, start, exhaustive) =>
+        (
+          OverrideCompletions.contribute(
+            td,
+            completing,
+            start,
+            indexedContext,
+            search,
+            config,
+            autoImports,
+          ),
+          exhaustive,
         )
-        (values, true)
-
-      // class FooImpl extends Foo:
-      //   ov|
-      case (ident: Ident) :: (t: Template) :: (td: TypeDef) :: _
-          if t.parents.nonEmpty && ident.name.startsWith("o") =>
-        val values = OverrideCompletions.contribute(
-          td,
-          None,
-          ident.sourcePos.start,
-          indexedContext,
-          search,
-          config,
-        )
-        // include compiler-oriented completions, in case `ov` doesn't mean the prefix of `override`
-        (values, false)
-
-      // class Main extends Val:
-      //    def @@
-      case (t: Template) :: (td: TypeDef) :: _ if t.parents.nonEmpty =>
-        val values = OverrideCompletions.contribute(
-          td,
-          None,
-          t.sourcePos.start,
-          indexedContext,
-          search,
-          config,
-        )
-        (values, true)
-
-      // class Main extends Val:
-      //    hello@@
-      case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
-          if t.parents.nonEmpty =>
-        val values = OverrideCompletions.contribute(
-          td,
-          Some(sel.symbol),
-          sel.sourcePos.start,
-          indexedContext,
-          search,
-          config,
-        )
-        (values, false)
 
       // class Fo@@
       case (td: TypeDef) :: _

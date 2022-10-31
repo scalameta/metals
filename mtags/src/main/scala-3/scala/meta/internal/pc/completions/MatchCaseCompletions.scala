@@ -60,22 +60,13 @@ object CaseKeywordCompletion:
       config: PresentationCompilerConfig,
       search: SymbolSearch,
       parent: Tree,
+      autoImportsGen: AutoImportsGenerator,
       patternOnly: Option[String] = None,
       hasBind: Boolean = false,
   ): List[CompletionValue] =
     import indexedContext.ctx
-    val pos = completionPos.sourcePos
-    val typedTree = indexedContext.ctx.compilationUnit.tpdTree
     val definitions = indexedContext.ctx.definitions
-    val text = pos.source.content().mkString
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
-    lazy val autoImportsGen = AutoImports.generator(
-      pos,
-      text,
-      typedTree,
-      indexedContext,
-      config,
-    )
     val completionGenerator = CompletionValueGenerator(
       indexedContext,
       completionPos,
@@ -239,20 +230,11 @@ object CaseKeywordCompletion:
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig,
       search: SymbolSearch,
+      autoImportsGen: AutoImportsGenerator,
   ): List[CompletionValue] =
     import indexedContext.ctx
-    val pos = completionPos.sourcePos
-    val typedTree = indexedContext.ctx.compilationUnit.tpdTree
-    val definitions = indexedContext.ctx.definitions
-    val text = pos.source.content().mkString
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
-    lazy val autoImportsGen = AutoImports.generator(
-      pos,
-      text,
-      typedTree,
-      indexedContext,
-      config,
-    )
+
     val completionGenerator = CompletionValueGenerator(
       indexedContext,
       completionPos,

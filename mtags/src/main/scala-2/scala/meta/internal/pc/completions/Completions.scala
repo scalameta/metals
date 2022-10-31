@@ -484,28 +484,7 @@ trait Completions { this: MetalsGlobal =>
             isPossibleInterpolatorMember(lit, head, text, pos)
               .getOrElse(NoneCompletion)
         }
-      case (_: Ident) ::
-          Select(Ident(TermName("scala")), TypeName("Unit")) ::
-          (defdef: DefDef) ::
-          (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
-        OverrideCompletion(
-          defdef.name,
-          t,
-          pos,
-          text,
-          defdef.pos.start,
-          !_.isGetter
-        )
-      case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
-          (t: Template) :: _ if name.endsWith(CURSOR) =>
-        OverrideCompletion(
-          name,
-          t,
-          pos,
-          text,
-          valdef.pos.start,
-          _ => true
-        )
+
       case (m @ Match(_, Nil)) :: parent :: _ =>
         CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
       case Ident(name) :: (cd: CaseDef) :: (m: Match) :: parent :: _
@@ -519,14 +498,14 @@ trait Completions { this: MetalsGlobal =>
         CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
         FilenameCompletion(c, p, pos, editRange)
-      case (ident: Ident) :: (t: Template) :: _ =>
+      case OverrideExtractor(name, template, start, isCandidate) =>
         OverrideCompletion(
-          ident.name,
-          t,
+          name,
+          template,
           pos,
           text,
-          ident.pos.start,
-          _ => true
+          start,
+          isCandidate
         )
       case (imp @ Import(select, selector)) :: _
           if isAmmoniteFileCompletionPosition(imp, pos) =>

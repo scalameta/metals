@@ -63,6 +63,13 @@ class CompletionProvider(
         val indexedCtx = IndexedContext(locatedCtx)
         val completionPos =
           CompletionPos.infer(pos, params, path)(using newctx)
+        val autoImportsGen = AutoImports.generator(
+          completionPos.sourcePos,
+          params.text,
+          unit.tpdTree,
+          indexedCtx,
+          config,
+        )
         val (completions, searchResult) =
           new Completions(
             pos,
@@ -75,14 +82,8 @@ class CompletionProvider(
             path,
             config,
             workspace,
+            autoImportsGen,
           ).completions()
-        val autoImportsGen = AutoImports.generator(
-          completionPos.sourcePos,
-          params.text,
-          unit.tpdTree,
-          indexedCtx,
-          config,
-        )
 
         val items = completions.zipWithIndex.map { case (item, idx) =>
           completionItems(
@@ -281,17 +282,6 @@ class CompletionProvider(
         mkItemWithImports(v)
       case v: CompletionValue.Interpolator if v.isWorkspace || v.isExtension =>
         mkItemWithImports(v)
-      case overrideCompletion: CompletionValue.Override =>
-        val additionalEdits =
-          overrideCompletion.shortenedNames
-            .sortBy(nme => nme.name)
-            .flatMap(name => autoImports.forShortName(name))
-            .flatten
-        mkItem(
-          overrideCompletion.value,
-          additionalEdits,
-          Some(completionPos.copy(start = overrideCompletion.start).toEditRange),
-        )
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)
         mkItem(
