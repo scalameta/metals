@@ -17,14 +17,15 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   override def munitIgnore: Boolean =
     !isValidScalaVersionForEnv(scalaVersion)
 
-  override def newServer(workspaceName: String): Unit = {
-    super.newServer(workspaceName)
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
     server.client.showMessageRequestHandler = { params =>
       if (params == Messages.ImportScalaScript.params())
         Some(new MessageActionItem(Messages.ImportScalaScript.dismiss))
       else
         None
     }
+
   }
 
   test("simple-script") {
@@ -123,31 +124,40 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   }
 
   test("invalid-version") {
+    cleanWorkspace()
     val fakeScalaVersion = "30.3.4"
+    server.client.showMessageRequestHandler = { params =>
+      if (params == Messages.ImportScalaScript.params())
+        Some(new MessageActionItem(Messages.ImportScalaScript.doImportAmmonite))
+      else if (params == Messages.ImportAllScripts.params())
+        Some(new MessageActionItem(Messages.ImportAllScripts.importAll))
+      else
+        None
+    }
     for {
       _ <- initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion"
-           |  }
-           |}
-           |/main.sc
-           | // scala ${fakeScalaVersion}
-           |
-           |val cantStandTheHeat = "stay off the street"
-           |""".stripMargin
+        s"""|/main.sc
+            | // scala ${fakeScalaVersion}
+            |
+            |val cantStandTheHeat = "stay off the street"
+            |""".stripMargin,
+        expectError = true,
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
-    } yield {
-      assertNoDiff(
-        client.workspaceErrorShowMessages,
-        s"Error fetching Ammonite ${V.ammoniteVersion} for scala ${fakeScalaVersion}",
+      _ = assertEquals(
+        server.client.workspaceShowMessages,
+        s"Error importing Scala script ${workspace.resolve("main.sc")}. See the logs for more details.",
       )
-    }
+      _ <- server.didSave("main.sc") { text =>
+        text.replace(fakeScalaVersion, scalaVersion)
+      }
+      _ <- server.server.indexingPromise.future
+      targets <- server.executeCommand(ServerCommands.ListBuildTargets)
+      _ = assertEquals(
+        targets.toString(),
+        "[main.sc]",
+      )
+    } yield ()
   }
 
   // https://github.com/scalameta/metals/issues/1801

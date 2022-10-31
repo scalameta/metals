@@ -1128,13 +1128,6 @@ class MetalsLanguageServer(
       }
     } else {
       buildServerPromise.future.flatMap { _ =>
-        val triggeredImportOpt =
-          if (
-            path.isAmmoniteScript && buildTargets.inverseSources(path).isEmpty
-          )
-            maybeImportScript(path)
-          else
-            None
         def load(): Future[Unit] = {
           val compileAndLoad =
             Future.sequence(
@@ -1152,7 +1145,7 @@ class MetalsLanguageServer(
             )
             .ignoreValue
         }
-        triggeredImportOpt.getOrElse(load())
+        maybeImportScript(path).getOrElse(load())
       }.asJava
     }
   }
@@ -1282,7 +1275,10 @@ class MetalsLanguageServer(
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
-        )
+        ) ++ // if we fixed the script, we might need to retry connection
+          maybeImportScript(
+            path
+          )
       )
       .ignoreValue
       .asJava
@@ -2768,36 +2764,42 @@ class MetalsLanguageServer(
   def maybeImportScript(path: AbsolutePath): Option[Future[Unit]] = {
     val scalaCliPath = scalaCliDirOrFile(path)
     if (
-      ammonite.loaded(path) || scalaCli.loaded(scalaCliPath) || isMillBuildSc(
-        path
-      )
+      !path.isAmmoniteScript ||
+      !buildTargets.inverseSources(path).isEmpty ||
+      ammonite.loaded(path) ||
+      scalaCli.loaded(scalaCliPath) ||
+      isMillBuildSc(path)
     )
       None
     else {
-      def doImportScalaCli(): Unit =
-        scalaCli.start(scalaCliPath).onComplete {
-          case Failure(e) =>
+      def doImportScalaCli(): Future[Unit] =
+        scalaCli
+          .start(scalaCliPath)
+          .map { _ =>
+            languageClient.showMessage(
+              Messages.ImportScalaScript.ImportedScalaCli
+            )
+          }
+          .recover { e =>
             languageClient.showMessage(
               Messages.ImportScalaScript.ImportFailed(path.toString)
             )
             scribe.warn(s"Error importing Scala CLI project $scalaCliPath", e)
-          case Success(_) =>
+          }
+      def doImportAmmonite(): Future[Unit] =
+        ammonite
+          .start(Some(path))
+          .map { _ =>
             languageClient.showMessage(
-              Messages.ImportScalaScript.ImportedScalaCli
+              Messages.ImportScalaScript.ImportedAmmonite
             )
-        }
-      def doImportAmmonite(): Unit =
-        ammonite.start(Some(path)).onComplete {
-          case Failure(e) =>
+          }
+          .recover { e =>
             languageClient.showMessage(
               Messages.ImportScalaScript.ImportFailed(path.toString)
             )
             scribe.warn(s"Error importing Ammonite script $path", e)
-          case Success(_) =>
-            languageClient.showMessage(
-              Messages.ImportScalaScript.ImportedAmmonite
-            )
-        }
+          }
 
       val autoImportAmmonite =
         tables.dismissedNotifications.AmmoniteImportAuto.isDismissed
@@ -2824,35 +2826,34 @@ class MetalsLanguageServer(
       val futureRes =
         if (autoImportAmmonite) {
           doImportAmmonite()
-          Future.unit
         } else if (autoImportScalaCli) {
           doImportScalaCli()
-          Future.unit
         } else {
-          val futureResp = languageClient
+          languageClient
             .showMessageRequest(Messages.ImportScalaScript.params())
             .asScala
-          futureResp.onComplete {
-            case Failure(e) =>
-              scribe.warn("Error requesting Scala script import", e)
-            case Success(null) =>
-              scribe.debug("Scala script import cancelled by user")
-            case Success(resp) =>
-              resp.getTitle match {
-                case Messages.ImportScalaScript.doImportAmmonite =>
-                  doImportAmmonite()
-                  askAutoImport(
-                    tables.dismissedNotifications.AmmoniteImportAuto
-                  )
-                case Messages.ImportScalaScript.doImportScalaCli =>
-                  doImportScalaCli()
-                  askAutoImport(
-                    tables.dismissedNotifications.ScalaCliImportAuto
-                  )
-                case _ =>
+            .flatMap { response =>
+              if (response != null)
+                response.getTitle match {
+                  case Messages.ImportScalaScript.doImportAmmonite =>
+                    askAutoImport(
+                      tables.dismissedNotifications.AmmoniteImportAuto
+                    )
+                    doImportAmmonite()
+                  case Messages.ImportScalaScript.doImportScalaCli =>
+                    askAutoImport(
+                      tables.dismissedNotifications.ScalaCliImportAuto
+                    )
+                    doImportScalaCli()
+                  case _ => Future.unit
+                }
+              else {
+                Future.unit
               }
-          }
-          futureResp.ignoreValue
+            }
+            .recover { e =>
+              scribe.warn("Error requesting Scala script import", e)
+            }
         }
       Some(futureRes)
     }
