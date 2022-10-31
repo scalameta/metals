@@ -279,8 +279,7 @@ class MetalsLanguageServer(
   private var referencesProvider: ReferenceProvider = _
   private var callHierarchyProvider: CallHierarchyProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
-  private val packageProvider: PackageProvider =
-    new PackageProvider(buildTargets)
+  private var packageProvider: PackageProvider = _
   private var newFileProvider: NewFileProvider = _
   private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
@@ -554,13 +553,6 @@ class MetalsLanguageServer(
           () => userConfig,
           buildTargets,
         )
-        newFileProvider = new NewFileProvider(
-          workspace,
-          languageClient,
-          packageProvider,
-          () => focusedDocument,
-          scalaVersionSelector,
-        )
         referencesProvider = new ReferenceProvider(
           workspace,
           semanticdbs,
@@ -569,6 +561,15 @@ class MetalsLanguageServer(
           remote,
           trees,
           buildTargets,
+        )
+        packageProvider =
+          new PackageProvider(buildTargets, trees, referencesProvider)
+        newFileProvider = new NewFileProvider(
+          workspace,
+          languageClient,
+          packageProvider,
+          () => focusedDocument,
+          scalaVersionSelector,
         )
         callHierarchyProvider = new CallHierarchyProvider(
           workspace,
@@ -926,6 +927,25 @@ class MetalsLanguageServer(
         textDocumentSyncOptions.setChange(TextDocumentSyncKind.Full)
         textDocumentSyncOptions.setSave(new SaveOptions(true))
         textDocumentSyncOptions.setOpenClose(true)
+
+        val scalaFilesPattern = new FileOperationPattern("**/*.scala")
+        scalaFilesPattern.setMatches(FileOperationPatternKind.File)
+        val folderFilesPattern = new FileOperationPattern("**/")
+        folderFilesPattern.setMatches(FileOperationPatternKind.Folder)
+        val fileOperationOptions = new FileOperationOptions(
+          List(
+            new FileOperationFilter(scalaFilesPattern),
+            new FileOperationFilter(folderFilesPattern),
+          ).asJava
+        )
+        val fileOperationsServerCapabilities =
+          new FileOperationsServerCapabilities()
+        fileOperationsServerCapabilities.setWillRename(fileOperationOptions)
+        val workspaceCapabilities = new WorkspaceServerCapabilities()
+        workspaceCapabilities.setFileOperations(
+          fileOperationsServerCapabilities
+        )
+        capabilities.setWorkspace(workspaceCapabilities)
 
         capabilities.setTextDocumentSync(textDocumentSyncOptions)
 
@@ -2102,6 +2122,20 @@ class MetalsLanguageServer(
         Future.successful(()).asJavaObject
     }
   }
+
+  @JsonRequest("workspace/willRenameFiles")
+  def willRenameFiles(
+      params: RenameFilesParams
+  ): CompletableFuture[WorkspaceEdit] =
+    CancelTokens.future { _ =>
+      val moves = params.getFiles.asScala.toSeq.map { rename =>
+        packageProvider.willMovePath(
+          rename.getOldUri().toAbsolutePath,
+          rename.getNewUri().toAbsolutePath,
+        )
+      }
+      Future.sequence(moves).map(_.mergeChanges)
+    }
 
   @JsonNotification("metals/doctorVisibilityDidChange")
   def doctorVisibilityDidChange(
