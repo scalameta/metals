@@ -1077,4 +1077,17 @@ object MetalsEnrichments
     def toLsp = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
   }
 
+  implicit class XtensionWorkspaceEdits(edits: Seq[l.WorkspaceEdit]) {
+    def mergeChanges: l.WorkspaceEdit = {
+      val changes = edits.view
+        .flatMap(e => Option(e.getChanges()).map(_.asScala))
+        .flatten
+        .groupMapReduce(_._1)(_._2.asScala) { _ ++ _ }
+        .mapValues(_.distinct.asJava) // deduplicate same changes
+        .toMap
+        .asJava
+      new l.WorkspaceEdit(changes)
+    }
+  }
+
 }
