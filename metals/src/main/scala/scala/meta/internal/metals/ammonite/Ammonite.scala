@@ -263,11 +263,6 @@ final class Ammonite(
           _ <- connectToNewBuildServer(conn)
         } yield ()
       }
-      .recoverWith {
-        case t @ (_: AmmoniteFetcherException | _: AmmoniteMetalsException) =>
-          languageClient.showMessage(Messages.errorFromThrowable(t))
-          Future(())
-      }
   }
 
   def stop(): CompletableFuture[Object] = {
