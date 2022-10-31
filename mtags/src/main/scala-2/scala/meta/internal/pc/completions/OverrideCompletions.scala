@@ -516,4 +516,39 @@ trait OverrideCompletions { this: MetalsGlobal =>
     if (offset > 0 && offset < t.pos.end) Some(offset)
     else None
   }
+
+  object OverrideExtractor {
+    def unapply(
+        path: List[Tree]
+    ): Option[(Name, Template, Int, Symbol => Boolean)] = {
+      path match {
+        case (_: Ident) ::
+            Select(Ident(TermName("scala")), TypeName("Unit")) ::
+            (defdef: DefDef) ::
+            (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
+          Some(
+            defdef.name,
+            t,
+            defdef.pos.start,
+            !_.isGetter
+          )
+        case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
+            (t: Template) :: _ if name.endsWith(CURSOR) =>
+          Some(
+            name,
+            t,
+            valdef.pos.start,
+            _ => true
+          )
+        case (ident: Ident) :: (t: Template) :: _ =>
+          Some(
+            ident.name,
+            t,
+            ident.pos.start,
+            _ => true
+          )
+        case _ => None
+      }
+    }
+  }
 }

@@ -54,6 +54,7 @@ object OverrideCompletions:
       indexedContext: IndexedContext,
       search: SymbolSearch,
       config: PresentationCompilerConfig,
+      autoImportsGen: AutoImportsGenerator,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val clazz = td.symbol.asClass
@@ -116,6 +117,7 @@ object OverrideCompletions:
           search,
           shouldMoveCursor = true,
           config,
+          autoImportsGen,
           indexedContext.ctx.compilationUnit.source.content
             .startsWith("o", start),
         )
@@ -268,6 +270,7 @@ object OverrideCompletions:
           search,
           shouldMoveCursor = false,
           config,
+          autoImports,
           shouldAddOverrideKwd = true,
         )
       )
@@ -348,11 +351,7 @@ object OverrideCompletions:
       val edit =
         completion.value
       val edits = editsAndImports._1 :+ edit
-      val imports = completion.shortenedNames
-        .sortBy(nme => nme.name)
-        .flatMap(name => autoImports.forShortName(name))
-        .flatten
-        .toSet ++ editsAndImports._2
+      val imports = completion.additionalEdits.toSet ++ editsAndImports._2
       (edits, imports)
     }
   end toEdits
@@ -372,6 +371,7 @@ object OverrideCompletions:
       search: SymbolSearch,
       shouldMoveCursor: Boolean,
       config: PresentationCompilerConfig,
+      autoImportsGen: AutoImportsGenerator,
       shouldAddOverrideKwd: Boolean,
   )(using Context): CompletionValue.Override =
     val renames = AutoImport.renameConfigMap(config)
@@ -418,13 +418,18 @@ object OverrideCompletions:
       if config.isCompletionSnippetsEnabled && shouldMoveCursor then "${0:???}"
       else "???"
     val value = s"$signature = $stub"
+    val additionalEdits =
+      printer.shortenedNames
+        .sortBy(nme => nme.name)
+        .flatMap(name => autoImportsGen.forShortName(name))
+        .flatten
     CompletionValue.Override(
       label,
       value,
       sym.symbol,
-      printer.shortenedNames,
+      additionalEdits,
       Some(signature),
-      start,
+      Some(autoImportsGen.pos.withStart(start).toLsp),
     )
   end toCompletionValue
 
@@ -469,5 +474,65 @@ object OverrideCompletions:
     if offset > 0 && offset < defn.span.end then Some(offset)
     else None
   end hasBraces
+
+  object OverrideExtractor:
+    def unapply(path: List[Tree])(using Context) =
+      path match
+        // class FooImpl extends Foo:
+        //   def x|
+        case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
+            if t.parents.nonEmpty =>
+          val completing =
+            if dd.symbol.name == StdNames.nme.ERROR then None
+            else Some(dd.symbol)
+          Some(
+            (
+              td,
+              completing,
+              dd.sourcePos.start,
+              true,
+            )
+          )
+
+        // class FooImpl extends Foo:
+        //   ov|
+        case (ident: Ident) :: (t: Template) :: (td: TypeDef) :: _
+            if t.parents.nonEmpty && ident.name.startsWith("o") =>
+          Some(
+            (
+              td,
+              None,
+              ident.sourcePos.start,
+              false,
+            )
+          )
+
+        // class Main extends Val:
+        //    def @@
+        case (t: Template) :: (td: TypeDef) :: _ if t.parents.nonEmpty =>
+          Some(
+            (
+              td,
+              None,
+              t.sourcePos.start,
+              true,
+            )
+          )
+
+        // class Main extends Val:
+        //    hello@@
+        case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
+            if t.parents.nonEmpty =>
+          Some(
+            (
+              td,
+              Some(sel.symbol),
+              sel.sourcePos.start,
+              false,
+            )
+          )
+        case _ => None
+
+  end OverrideExtractor
 
 end OverrideCompletions
