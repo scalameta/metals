@@ -95,6 +95,7 @@ import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
 import com.google.gson.JsonElement
+import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
@@ -2725,7 +2726,9 @@ class MetalsLanguageServer(
         .configuration(params)
         .asScala
         .flatMap { items =>
-          items.asScala.headOption.flatMap(Option.apply) match {
+          items.asScala.headOption.flatMap(item =>
+            Option.unless(item.isInstanceOf[JsonNull])(item)
+          ) match {
             case Some(item) =>
               val json = item.asInstanceOf[JsonElement].getAsJsonObject()
               updateConfiguration(json)
