@@ -104,6 +104,7 @@ abstract class BaseDapSuite(
   def assertBreakpoints(
       name: TestOptions,
       main: Option[String] = None,
+      buildTarget: Option[String] = None,
   )(
       source: String
   )(implicit loc: Location): Unit = {
@@ -117,7 +118,11 @@ abstract class BaseDapSuite(
       for {
         _ <- initialize(workspaceLayout)
         _ = assertNoDiagnostics()
-        debugger <- debugMain("a", main.getOrElse("a.Main"), navigator)
+        debugger <- debugMain(
+          buildTarget.getOrElse("a"),
+          main.getOrElse("a.Main"),
+          navigator,
+        )
         _ <- debugger.initialize
         _ <- debugger.launch
         _ <- setBreakpoints(debugger, debugLayout)

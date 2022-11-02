@@ -24,6 +24,7 @@ class DebugDiscoverySuite
   private val fooPath = "a/src/main/scala/a/Foo.scala"
   private val barPath = "a/src/main/scala/a/Bar.scala"
   private val altTargetPath = "b/src/main/scala/b/Main.scala"
+  private val scalaCliScriptPath = "a/src/main/scala/a/main.sc"
 
   test("run") {
     for {
@@ -81,6 +82,32 @@ class DebugDiscoverySuite
         new DebugDiscoveryParams(
           server.toPath(mainPath).toURI.toString,
           "runOrTestFile",
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "oranges are nice")
+  }
+
+  test("run-scala-cli-script") {
+    for {
+      _ <- initialize(
+        s"""/.bsp/scala-cli.json
+           |${BaseScalaCliSuite.scalaCliBspJsonContent()}
+           |/.scala-build/ide-inputs.json
+           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+           |/$scalaCliScriptPath
+           |print("oranges are nice")""".stripMargin
+      )
+      _ <- server.didOpen(scalaCliScriptPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        DebugDiscoveryParams(
+          server.toPath(scalaCliScriptPath).toURI.toString,
+          "run",
         ).toJson
       )
       _ <- debugger.initialize
