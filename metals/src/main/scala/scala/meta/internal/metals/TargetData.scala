@@ -314,6 +314,8 @@ object TargetData {
 
   trait MappedSource {
     def path: AbsolutePath
+    def lineForServer(line: Int): Option[Int] = None
+    def lineForClient(line: Int): Option[Int] = None
     def update(
         content: String
     ): (Input.VirtualFile, l.Position => l.Position, AdjustLspData)

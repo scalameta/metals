@@ -13,9 +13,15 @@ final case class SourceMapper(
     buffers: Buffers,
     workspace: () => AbsolutePath,
 ) {
+  def mappedFrom(path: AbsolutePath): Option[AbsolutePath] =
+    buildTargets.mappedFrom(path)
 
   def mappedTo(path: AbsolutePath): Option[AbsolutePath] =
     buildTargets.mappedTo(path).map(_.path)
+  def mappedLineForServer(path: AbsolutePath, line: Int): Int =
+    buildTargets.mappedLineForServer(path, line).getOrElse(line)
+  def mappedLineForClient(path: AbsolutePath, line: Int): Int =
+    buildTargets.mappedLineForClient(path, line).getOrElse(line)
 
   def pcMapping(
       path: AbsolutePath,
