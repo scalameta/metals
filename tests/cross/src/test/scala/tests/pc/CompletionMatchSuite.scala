@@ -502,4 +502,37 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive"),
   )
 
+  checkEdit(
+    "exhaustive-rename".tag(IgnoreScala2),
+    s"""|package b {
+        |  enum Color: 
+        |    case Red, Blue, Green
+        |}
+        |
+        |package a {
+        |object A {
+        |  import b.Color as Clr
+        |  val c: Clr = ???
+        |  c ma@@
+        |}
+        |}""".stripMargin,
+    s"""|package b {
+        |  enum Color: 
+        |    case Red, Blue, Green
+        |}
+        |
+        |package a {
+        |object A {
+        |  import b.Color as Clr
+        |  val c: Clr = ???
+        |  c match
+        |\tcase Clr.Red => $$0
+        |\tcase Clr.Blue =>
+        |\tcase Clr.Green =>
+        |
+        |}
+        |}""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
 }
