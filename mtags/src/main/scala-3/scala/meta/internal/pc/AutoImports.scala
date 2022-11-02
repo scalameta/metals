@@ -245,7 +245,8 @@ object AutoImports extends AutoImportsBackticks:
               )
           end match
         case IndexedContext.Result.InScope =>
-          SymbolImport(symbol, SymbolIdent.direct(symbol.nameBackticked), None)
+          val direct = renames(symbol).getOrElse(symbol.nameBackticked)
+          SymbolImport(symbol, SymbolIdent.direct(direct), None)
       end match
     end inferSymbolImport
 
