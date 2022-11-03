@@ -18,9 +18,9 @@ import ch.epfl.scala.{bsp4j => b}
  * @param jvmOptions the jvm options to pass to the jvm
  * @param environmentVariables the environment variables to pass to the process
  *
- * However, it also provides two additional fields:
- * @param kind allows client to distinguish between old, bsp4j.ScalaMainClass and new ExtendedScalaMainClass
- * @param shellCommand which is the command to run in the shell to start the main class
+ * However, it also provides an additional field:
+ * @param shellCommand which is the command to run in the shell to start the main class, it also
+ * allows client to distinguish between old, bsp4j.ScalaMainClass and new ExtendedScalaMainClass
  * ---
  * To sum up:
  * - allow old clients to work without any change
