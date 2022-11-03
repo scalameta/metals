@@ -6,9 +6,7 @@ import scala.meta.internal.metals.UserConfiguration
 
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import com.google.gson.JsonObject
-import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.Command
-import org.eclipse.lsp4j.TextDocumentIdentifier
 
 class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
 
@@ -325,6 +323,13 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
               ShellRunner
                 .runSync(cmd.toList, workspace, redirectErrorOutput = false)
                 .map(_.trim())
+                .orElse {
+                  scribe.error(
+                    "Couldn't run command specified in shellCommand."
+                  )
+                  scribe.error("The command run was:\n" + cmd.mkString(" "))
+                  None
+                }
             case _ => None
           }
 
@@ -349,13 +354,9 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
             |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      lenses <- server.server.codeLens {
-        val path = server.toPath("a/src/main/scala/a/Main.scala")
-        val uri = path.toURI.toString
-        new CodeLensParams(new TextDocumentIdentifier(uri))
-      }.asScala
-      _ = assert(lenses.size() > 0, "No lenses were generated!")
-      command = lenses.asScala.head.getCommand()
+      lenses <- server.codeLenses("a/src/main/scala/a/Main.scala")
+      _ = assert(lenses.size > 0, "No lenses were generated!")
+      command = lenses.head.getCommand()
       _ = assertEquals(runFromCommand(command), Some("Hello java!"))
     } yield ()
 

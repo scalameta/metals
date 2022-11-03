@@ -33,7 +33,7 @@ class UnsupportedDebuggingLspSuite
       )
       codeLenses <-
         server
-          .codeLenses("a/src/main/scala/Main.scala")(maxRetries = 3)
+          .codeLensesText("a/src/main/scala/Main.scala")(maxRetries = 3)
           .withTimeout(5, TimeUnit.SECONDS)
           .transform(Success(_))
     } yield {

@@ -76,7 +76,7 @@ abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
       printCommand: Boolean = false,
   )(implicit loc: Location): Future[Unit] = {
     val obtained =
-      server.codeLenses(relativeFile, printCommand)(maxRetries).recover {
+      server.codeLensesText(relativeFile, printCommand)(maxRetries).recover {
         case _: NoSuchElementException =>
           server.textContents(relativeFile)
       }
@@ -88,7 +88,7 @@ abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
       relativeFile: String,
       maxRetries: Int = 4,
   ): Future[Unit] = {
-    server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
+    server.codeLensesText(relativeFile)(maxRetries).failed.flatMap {
       case _: NoSuchElementException => Future.unit
       case e => Future.failed(e)
     }
