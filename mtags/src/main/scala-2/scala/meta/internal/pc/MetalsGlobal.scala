@@ -669,8 +669,11 @@ class MetalsGlobal(
      * Returns the position of the name/identifier of this definition.
      */
     def namePos: Position = {
+      val name =
+        if (defn.symbol.isPackageObject) defn.symbol.enclosingPackageClass.name
+        else defn.name
       val start = defn.pos.point
-      val end = start + defn.name.dropLocal.decoded.length()
+      val end = start + name.dropLocal.decoded.length()
       Position.range(defn.pos.source, start, start, end)
     }
 
