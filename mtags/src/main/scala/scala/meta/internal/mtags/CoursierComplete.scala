@@ -46,7 +46,7 @@ object CoursierComplete {
         completions(dependency + ":").map(":" + _)
       else List.empty
 
-    val allCompletions = scalaCompletions ++ javaCompletions
+    val allCompletions = (scalaCompletions ++ javaCompletions).distinct
     // Attempt to sort versions in reverse order
     if (dependency.replaceAll(":+", ":").count(_ == ':') == 2)
       allCompletions.sortWith(Version.fromString(_) >= Version.fromString(_))
