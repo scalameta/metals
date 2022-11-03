@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import java.net.URI
 import java.net.URLDecoder
+import java.nio.file.NoSuchFileException
 import java.nio.file.Paths
 import java.util.concurrent.CancellationException
 
@@ -135,10 +136,16 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
         URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
       else if (value.toUpperCase.startsWith("JAR:FILE%3A"))
         URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
-      else if (value.toUpperCase.startsWith("JAR"))
-        new URI("jar", value.stripPrefix("jar:"), null)
-          .toAbsolutePath(followSymlink)
-      else {
+      else if (value.toUpperCase.startsWith("JAR")) {
+        try {
+          new URI("jar", value.stripPrefix("jar:"), null)
+            .toAbsolutePath(followSymlink)
+        } catch {
+          // prevents infinity recursion and double check for double escaped %
+          case _: NoSuchFileException if value.contains("%25") =>
+            URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
+        }
+      } else {
         val stripped = value.stripPrefix("metals:")
         val percentEncoded = URIEncoderDecoder.encode(stripped)
         URI.create(percentEncoded).toAbsolutePath(followSymlink)
