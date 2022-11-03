@@ -56,21 +56,28 @@ object ExtendedScalaMainClass {
     val jvmOpts = (main.getJvmOptions().asScala ++ env
       .getJvmOptions()
       .asScala).distinct.toList
-    val envVariables =
-      (env.getEnvironmentVariables().asScala.map { case (key, value) =>
-        s"$key=$value"
-      } ++ main
+
+    val jvmEnvVariables =
+      env
         .getEnvironmentVariables()
-        .asScala).toList.asJava
+        .asScala
+        .map { case (key, value) =>
+          s"$key=$value"
+        }
+        .toList
+
+    val mainEnvVariables = Option(main.getEnvironmentVariables())
+      .map(_.asScala.toList)
+      .getOrElse(Nil)
 
     ExtendedScalaMainClass(
       main.getClassName(),
       main.getArguments(),
       jvmOpts.asJava,
-      envVariables,
+      (jvmEnvVariables ++ mainEnvVariables).asJava,
       createCommand(
         javaHome,
-        env.getClasspath().asScala.toList,
+        env.getClasspath().asScala.map(_.toAbsolutePath.toString).toList,
         jvmOpts,
         main.getArguments().asScala.toList,
         main.getClassName(),
