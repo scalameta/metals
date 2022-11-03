@@ -82,4 +82,21 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     "",
   )
 
+  check(
+    "plugin".tag(
+      IgnoreScalaVersion(version =>
+        Set("2.12.12", "2.12.16", "3.2.1")(version) ||
+          version.contains(
+            "NIGHTLY"
+          ) || version.contains(
+            "-RC"
+          )
+      )
+    ),
+    """|//> using plugin "org.polyvariant:::@@
+       |package A
+       |""".stripMargin,
+    "better-tostring",
+  )
+
 }

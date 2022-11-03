@@ -70,10 +70,10 @@ object CoursierComplete {
     (editStart, editEnd)
   }
 
-  val reg: Regex = """//>\s*using\s+libs?\s+"?(.*)""".r
+  val reg: Regex = """//>\s*using\s+(lib|plugin)s?\s+"?(.*)""".r
   def isScalaCliDep(line: String): Option[String] = {
     line match {
-      case reg(deps) =>
+      case reg(_, deps) =>
         val dep =
           deps.split(",").last
         if (dep.endsWith("\"") || dep.endsWith(" ")) None
