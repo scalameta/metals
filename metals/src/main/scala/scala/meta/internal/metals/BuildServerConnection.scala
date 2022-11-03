@@ -183,14 +183,16 @@ class BuildServerConnection private (
   def jvmRunEnvironment(
       params: JvmRunEnvironmentParams
   ): Future[JvmRunEnvironmentResult] = {
-    if (initialConnection.capabilities.getJvmRunEnvironmentProvider()) {
-      register(server => server.jvmRunEnvironment(params)).asScala
-    } else {
-      scribe.warn(
-        s"${initialConnection.displayName} does not support `buildTarget/jvmRunEnvironment`, unable to fetch run environment."
-      )
-      val empty = new JvmRunEnvironmentResult(Collections.emptyList)
-      Future.successful(empty)
+    connection.flatMap { conn =>
+      if (conn.capabilities.getJvmRunEnvironmentProvider()) {
+        register(server => server.jvmRunEnvironment(params)).asScala
+      } else {
+        scribe.warn(
+          s"${conn.displayName} does not support `buildTarget/jvmRunEnvironment`, unable to fetch run environment."
+        )
+        val empty = new JvmRunEnvironmentResult(Collections.emptyList)
+        Future.successful(empty)
+      }
     }
   }
 
