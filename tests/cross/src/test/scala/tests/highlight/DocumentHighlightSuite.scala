@@ -655,4 +655,18 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |}""".stripMargin,
   )
 
+  check(
+    // Scala 2.12.x has a bug where the namePos points at `object`
+    // working around would it involve a lot of additional logic
+    "package-object".tag(IgnoreScala212),
+    """|package example
+       |
+       |package object <<nes@@ted>> {
+       |
+       |  class PackageObjectNestedClass
+       |
+       |}
+       |""".stripMargin,
+  )
+
 }
