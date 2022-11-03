@@ -184,7 +184,10 @@ class BuildServerConnection private (
       params: JvmRunEnvironmentParams
   ): Future[JvmRunEnvironmentResult] = {
     connection.flatMap { conn =>
-      if (conn.capabilities.getJvmRunEnvironmentProvider()) {
+      if (
+        conn.capabilities
+          .getJvmRunEnvironmentProvider() && conn.displayName != "scala-cli"
+      ) {
         register(server => server.jvmRunEnvironment(params)).asScala
       } else {
         scribe.warn(
