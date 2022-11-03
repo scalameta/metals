@@ -669,4 +669,13 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin,
   )
 
+  check(
+    "named-param",
+    """|object Main {
+       |  def foo = {
+       |      case class User(<<name>>: String)
+       |      val a = User(<<na@@me>> = "abc")
+       |  }
+       |}""".stripMargin,
+  )
 }

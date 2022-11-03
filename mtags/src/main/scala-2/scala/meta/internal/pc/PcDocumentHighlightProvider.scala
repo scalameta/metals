@@ -86,8 +86,11 @@ final class PcDocumentHighlightProvider(
      */
     def localCompanion(sym: Symbol): Option[Symbol] = {
       val context = doLocateImportContext(pos)
+      val nameToLookFor =
+        if (sym.isModuleClass) sym.name.companionName.companionName
+        else sym.name.companionName
       context.lookupSymbol(
-        sym.name.companionName,
+        nameToLookFor,
         s => s.owner == sym.owner
       ) match {
         case LookupSucceeded(_, symbol) =>
@@ -131,9 +134,16 @@ final class PcDocumentHighlightProvider(
               apply.symbol.paramss.flatten.find(_.name == id.name).map { s =>
                 // if it's a case class we need to look for parameters also
                 if (caseClassSynthetics(s.owner.name) && s.owner.isSynthetic) {
+                  val applyOwner = s.owner.owner
                   val constructorOwner =
-                    if (s.owner.owner.isCaseClass) s.owner.owner
-                    else s.owner.owner.companion
+                    if (applyOwner.isCaseClass) applyOwner
+                    else {
+                      applyOwner.companion match {
+                        case NoSymbol =>
+                          localCompanion(applyOwner).getOrElse(NoSymbol)
+                        case comp => comp
+                      }
+                    }
                   val info = constructorOwner.info
                   val constructorParams = info.members
                     .filter(_.isConstructor)
