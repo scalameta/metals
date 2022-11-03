@@ -314,7 +314,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "fuzzy1",
+    "fuzzy1".tag(IgnoreScalaVersion(_ => isJava8)),
     """
       |object A {
       |  new PBuil@@
@@ -439,7 +439,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import3",
+    "import3".tag(IgnoreScalaVersion(_ => isJava8)),
     """
       |import Path@@
       |""".stripMargin,
