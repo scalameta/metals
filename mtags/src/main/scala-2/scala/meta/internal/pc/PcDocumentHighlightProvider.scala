@@ -11,12 +11,15 @@ final class PcDocumentHighlightProvider(
 ) extends PcCollector[DocumentHighlight](compiler, params) {
   import compiler._
 
-  def collect(tree: Tree, pos: Position): DocumentHighlight =
+  def collect(tree: Tree, toAdjust: Position): DocumentHighlight = {
+    val (pos, _) = adjust(toAdjust, forHighlight = true)
     tree match {
       case _: MemberDef =>
         new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)
-      case _ => new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Read)
+      case _ =>
+        new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Read)
     }
+  }
 
   def highlights(): List[DocumentHighlight] =
     result()

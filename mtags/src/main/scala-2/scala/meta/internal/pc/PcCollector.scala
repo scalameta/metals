@@ -66,15 +66,33 @@ abstract class PcCollector[T](
    * @return companion if it exists
    */
   def localCompanion(sym: Symbol): Option[Symbol] = {
+    val nameToLookFor =
+      if (sym.isModuleClass) sym.name.companionName.companionName
+      else sym.name.companionName
     val context = doLocateImportContext(pos)
     context.lookupSymbol(
-      sym.name.companionName,
+      nameToLookFor,
       s => s.owner == sym.owner
     ) match {
       case LookupSucceeded(_, symbol) =>
         Some(symbol)
       case _ => None
     }
+  }
+  def adjust(
+      pos: Position,
+      forHighlight: Boolean = false
+  ): (Position, Boolean) = {
+    val isBackticked = text(pos.start) == '`' && text(pos.end - 1) == '`'
+    // when the old name contains backticks, the position is incorrect
+    val isOldNameBackticked = text(pos.start) == '`' &&
+      text(pos.end - 1) != '`' &&
+      text(pos.end + 1) == '`'
+    if (isBackticked && !forHighlight)
+      (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
+    else if (isOldNameBackticked) // pos
+      (pos.withEnd(pos.end + 2), false)
+    else (pos, false)
   }
 
   def result(): List[T] = {
@@ -123,18 +141,12 @@ abstract class PcCollector[T](
                   val applyOwner = s.owner.owner
                   val constructorOwner =
                     if (applyOwner.isCaseClass) applyOwner
-                    else if (applyOwner.companion != NoSymbol)
-                      applyOwner.companion
-                    else {
-                      // there is a weird case, where sometimes we need to use localCompanion twice to get correct companion class
-                      // See tests `params1` and `params2` in PcRenameSuite or `namedParam` in DocumentHighlightSuite
-                      localCompanion(applyOwner) match {
-                        case Some(companion) =>
-                          if (companion.isClass) companion
-                          else localCompanion(companion).getOrElse(NoSymbol)
-                        case None => NoSymbol
+                    else
+                      applyOwner.companion match {
+                        case NoSymbol =>
+                          localCompanion(applyOwner).getOrElse(NoSymbol)
+                        case comp => comp
                       }
-                    }
                   val info = constructorOwner.info
                   val constructorParams = info.members
                     .filter(_.isConstructor)

@@ -36,6 +36,24 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
 
   def collect(tree: Tree, pos: SourcePosition): T
 
+  def adjust(
+      pos: SourcePosition,
+      forHighlight: Boolean = false,
+  ): (SourcePosition, Boolean) =
+    val isBackticked =
+      sourceText(pos.start) == '`' && sourceText(pos.end - 1) == '`'
+    // when the old name contains backticks, the position is incorrect
+    val isOldNameBackticked = sourceText(pos.start) != '`' &&
+      sourceText(pos.start - 1) == '`' &&
+      sourceText(pos.end) == '`'
+
+    if isBackticked && !forHighlight then
+      (pos.withStart(pos.start + 1).withEnd(pos.`end` - 1), true)
+    else if isOldNameBackticked then
+      (pos.withStart(pos.start - 1).withEnd(pos.`end` + 1), false)
+    else (pos, false)
+  end adjust
+
   def result(): List[T] =
     val source =
       SourceFile.virtual(filePath.toString, sourceText)
