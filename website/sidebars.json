@@ -9,8 +9,9 @@
       "editors/online-ides",
       "editors/user-configuration"
     ],
-    "Code Actions": [
-      "codeactions/codeactions"
+    "Features": [
+      "features/codeactions",
+      "features/scripts"
     ],
     "Build Tools": [
       "build-tools/overview",
