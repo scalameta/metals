@@ -35,7 +35,7 @@ object KeywordsCompletions:
         val isParam = this.isParam(path)
         val isSelect = this.isSelect(path)
         lazy val text = completionPos.cursorPos.source.content.mkString
-        lazy val reverseTokens: Iterator[Token] =
+        lazy val reverseTokens: Array[Token] =
           // Try not to tokenize the whole file
           // Maybe we should re-use the tokenize result with `notInComment`
           val lineStart =
@@ -48,8 +48,8 @@ object KeywordsCompletions:
             .substring(lineStart, completionPos.cursorPos.start)
             .tokenize
             .toOption match
-            case Some(toks) => toks.tokens.reverseIterator
-            case None => Iterator.empty
+            case Some(toks) => toks.tokens.reverse
+            case None => Array.empty[Token]
         end reverseTokens
         Keyword.all.collect {
           case kw
