@@ -41,7 +41,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
               )
               .collect {
                 case token: Token.Constant.String
-                    if (token.pos.toLsp.overlapsWith(range)
+                    if (token.pos.toLsp.encloses(range)
                       && isNotTripleQuote(token)) =>
                   token
                 case start: Token.Interpolation.Start
@@ -71,7 +71,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
             val interpolationActions = tokens.collect {
               case token: Token.Constant.String
-                  if token.pos.toLsp.overlapsWith(range) =>
+                  if token.pos.toLsp.encloses(range) =>
                 interpolateAction(uri, token)
             }.toList
 
@@ -80,9 +80,9 @@ class StringActions(buffers: Buffers) extends CodeAction {
                 case (start: Token.Interpolation.Start, i: Int)
                     if (i + 2 < tokens.length
                       && tokens(i + 2).is[Token.Interpolation.End]) =>
-                  def overlaps = List(start, tokens(i + 1), tokens(i + 2))
-                    .exists(_.pos.toLsp.overlapsWith(range))
-                  if (overlaps) {
+                  def encloses = List(start, tokens(i + 1), tokens(i + 2))
+                    .exists(_.pos.toLsp.encloses(range))
+                  if (encloses) {
                     val lspRange = start.pos.toLsp
                     val editRange =
                       new l.Range(lspRange.getStart, lspRange.getEnd)
