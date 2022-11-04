@@ -678,4 +678,14 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  }
        |}""".stripMargin,
   )
+
+  check(
+    "backtick",
+    """|object Main {
+       |  val <<`hi-!`>> = 5
+       |
+       |  <<`hi@@-!`>> + 3
+       |}""".stripMargin,
+  )
+
 }

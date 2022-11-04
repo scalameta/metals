@@ -1,8 +1,16 @@
 package tests.pc
 
+import coursierapi.Dependency
 import tests.BasePcRenameSuite
 
 class PcRenameSuite extends BasePcRenameSuite {
+  override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
+    val scalaBinaryVersion = createBinaryVersion(scalaVersion)
+    Seq(
+      Dependency.of("io.circe", s"circe-generic_$scalaBinaryVersion", "0.14.1")
+    )
+  }
+
   check(
     "basic",
     """|val <<a>> = 123

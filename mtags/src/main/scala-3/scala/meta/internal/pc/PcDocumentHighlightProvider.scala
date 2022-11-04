@@ -14,7 +14,8 @@ final class PcDocumentHighlightProvider(
     params: OffsetParams,
 ) extends PcCollector[DocumentHighlight](driver, params):
 
-  def collect(tree: Tree, pos: SourcePosition): DocumentHighlight =
+  def collect(tree: Tree, toAdjust: SourcePosition): DocumentHighlight =
+    val (pos, _) = adjust(toAdjust, forHighlight = true)
     tree match
       case _: NamedDefTree =>
         DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)
