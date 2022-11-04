@@ -142,6 +142,7 @@ class ImportMissingSymbolLspSuite
        |
        |object A {
        |  val f = <<Future.successful(Instant.now)
+       |  val a = "  " + "  " + "  "
        |  val b = ListBuffer.newBuilder[Int]>>
        |}
        |""".stripMargin,
@@ -162,6 +163,7 @@ class ImportMissingSymbolLspSuite
        |
        |object A {
        |  val f = Future.successful(Instant.now)
+       |  val a = "  " + "  " + "  "
        |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
