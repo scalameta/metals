@@ -531,12 +531,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|extends
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|extension
-           |extends
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -548,12 +542,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|extends
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|extension
-           |extends
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -565,12 +553,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|extends
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|extension
-           |extends
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -582,12 +564,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|extends
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|extension
-           |extends
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -632,8 +608,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     compat =
       Map( // it works in Scala3 because `completionPos.cursorPos` gives us a `class Main\n exten`
         "3" ->
-          """|extension
-             |extends
+          """|extends
              |""".stripMargin
       ),
   )

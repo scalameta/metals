@@ -27,7 +27,7 @@ case class Keyword(
     isParam: Boolean = false,
     isScala3: Boolean = false,
     commitCharacter: Option[String] = None,
-    reversedTokensPredicate: Option[Iterator[Token] => Boolean] = None
+    reversedTokensPredicate: Option[Array[Token] => Boolean] = None
 ) {
 
   def insertText: String =
@@ -52,9 +52,10 @@ case class Keyword(
       isScala3: Boolean,
       isSelect: Boolean,
       allowToplevel: Boolean,
-      leadingReverseTokens: => Iterator[Token]
+      leadingReverseTokens: => Array[Token]
   ): Boolean = {
     val isAllowedInThisScalaVersion = (this.isScala3 && isScala3) || !this.isScala3
+    lazy val predicate = this.reversedTokensPredicate.exists(pred => pred(leadingReverseTokens))
     this.name.startsWith(name) && isAllowedInThisScalaVersion &&
     // don't complete keywords if it's in `xxx.key@@`
     !isSelect && {
@@ -66,8 +67,9 @@ case class Keyword(
       (this.isPackage && isPackage) ||
       (this.isMethodBody && isMethodBody) ||
       (this.isParam && isParam) ||
-      this.reversedTokensPredicate.exists(pred => pred(leadingReverseTokens))
-    }
+      (this.name == "extends" && predicate)
+    } &&
+    (this.name != "extension" || predicate)
   }
 }
 
@@ -81,7 +83,15 @@ object Keyword {
     Keyword("using", isParam = true, isScala3 = true),
     Keyword("var", isBlock = true, isTemplate = true, isDefinition = true),
     Keyword("given", isBlock = true, isTemplate = true, isDefinition = true, isScala3 = true),
-    Keyword("extension", isBlock = true, isTemplate = true, isDefinition = true, isPackage = true, isScala3 = true),
+    Keyword(
+      "extension",
+      isBlock = true,
+      isTemplate = true,
+      isDefinition = true,
+      isPackage = true,
+      isScala3 = true,
+      reversedTokensPredicate = Some(!extendsPred(_))
+    ),
     Keyword("type", isTemplate = true, isDefinition = true),
     Keyword("class", isTemplate = true, isPackage = true, isDefinition = true),
     Keyword("enum", isTemplate = true, isPackage = true, isDefinition = true, isScala3 = true),
@@ -125,8 +135,11 @@ object Keyword {
     Keyword("then")
   )
 
-  private def extendsPred(leadingReverseTokens: Iterator[Token]): Boolean = {
-    leadingReverseTokens.filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF]).take(3).toList match {
+  private def extendsPred(leadingReverseTokens: Array[Token]): Boolean = {
+    leadingReverseTokens
+      .filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF])
+      .take(3)
+      .toList match {
       // (class|trait|object) classname ext@@
       case (_: Token.Ident) :: (_: Token.Ident) :: kw :: Nil =>
         if (kw.is[Token.KwClass] || kw.is[Token.KwTrait] || kw.is[Token.KwObject]) true
