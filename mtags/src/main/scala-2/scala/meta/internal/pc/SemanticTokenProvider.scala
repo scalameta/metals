@@ -223,7 +223,19 @@ final class SemanticTokenProvider(
          * val a = <<b>>
          */
         case ident: cp.Ident if ident.pos.isRange =>
-          nodes :+ NodeInfo(ident, ident.pos)
+          val symbol =
+            if (ident.symbol == NoSymbol) 
+              if(ident.tpe != null)
+              ident.tpe.typeSymbol
+              else {
+                val context = doLocateContext(ident.pos)
+                context.lookupSymbol(ident.name, _ => true) match {
+                   case LookupSucceeded(_, symbol) => symbol
+                   case _ => NoSymbol
+                }
+              }
+            else ident.symbol
+          nodes :+ NodeInfo(symbol, ident.pos)
         /**
          * Needed for type trees such as:
          * type A = [<<b>>]
