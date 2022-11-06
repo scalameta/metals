@@ -183,17 +183,22 @@ class BuildServerConnection private (
   def jvmRunEnvironment(
       params: JvmRunEnvironmentParams
   ): Future[JvmRunEnvironmentResult] = {
+    def empty = new JvmRunEnvironmentResult(Collections.emptyList)
     connection.flatMap { conn =>
-      if (
-        conn.capabilities
-          .getJvmRunEnvironmentProvider() && conn.displayName != "scala-cli"
-      ) {
-        register(server => server.jvmRunEnvironment(params)).asScala
+      if (conn.capabilities.getJvmRunEnvironmentProvider()) {
+        register(
+          server => server.jvmRunEnvironment(params),
+          onFail = Some(
+            (
+              empty,
+              s"${name} should support `buildTarget/jvmRunEnvironment`, but it fails.",
+            )
+          ),
+        ).asScala
       } else {
         scribe.warn(
           s"${conn.displayName} does not support `buildTarget/jvmRunEnvironment`, unable to fetch run environment."
         )
-        val empty = new JvmRunEnvironmentResult(Collections.emptyList)
         Future.successful(empty)
       }
     }
