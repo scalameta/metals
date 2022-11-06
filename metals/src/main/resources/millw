@@ -5,16 +5,18 @@
 # If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 #
 # Project page: https://github.com/lefou/millw
-# Script Version: 0.4.2
+# Script Version: 0.4.4
 #
 # If you want to improve this script, please also contribute your changes back!
 #
 # Licensed under the Apache License, Version 2.0
 
-
-DEFAULT_MILL_VERSION=0.10.0
-
 set -e
+
+if [ -z "${DEFAULT_MILL_VERSION}" ] ; then
+  DEFAULT_MILL_VERSION=0.10.8
+fi
+
 
 MILL_REPO_URL="https://github.com/com-lihaoyi/mill"
 
@@ -43,6 +45,8 @@ fi
 if [ -z "${MILL_VERSION}" ] ; then
   if [ -f ".mill-version" ] ; then
     MILL_VERSION="$(head -n 1 .mill-version 2> /dev/null)"
+  elif [ -f ".config/mill-version" ] ; then
+    MILL_VERSION="$(head -n 1 .config/mill-version 2> /dev/null)"
   fi
 fi
 
@@ -161,6 +165,10 @@ if [ ! -s "${MILL}" ] ; then
   fi
 fi
 
+if [ -z "$MILL_MAIN_CLI" ] ; then
+  MILL_MAIN_CLI="${0}"
+fi
+
 unset MILL_DOWNLOAD_PATH
 unset MILL_OLD_DOWNLOAD_PATH
 unset OLD_MILL
@@ -168,4 +176,4 @@ unset MILL_VERSION
 unset MILL_VERSION_TAG
 unset MILL_REPO_URL
 
-exec "${MILL}" "$@"
+exec "${MILL}" -D "mill.main.cli=${MILL_MAIN_CLI}" "$@"
