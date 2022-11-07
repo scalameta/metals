@@ -340,8 +340,8 @@ object NewProjectProvider {
         description = "Simple http4s example",
       ),
       MetalsQuickPickItem(
-        id = "scalameta/mill-scala-seed.g8",
-        label = "scalameta/mill-scala-seed.g8",
+        id = "com-lihaoyi/mill-scala-hello.g8",
+        label = "com-lihaoyi/mill-scala-hello.g8",
         description = "A Scala template for the Mill build tool",
       ),
       MetalsQuickPickItem(
