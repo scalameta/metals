@@ -74,8 +74,11 @@ case class ScalaTarget(
       )
   }
 
+  def isAmmonite = displayName.endsWith(".sc")
+
   def isSemanticdbEnabled: Boolean =
-    scalac.isSemanticdbEnabled(scalaVersion) || semanticDbEnabledAlternatively
+    scalac.isSemanticdbEnabled(scalaVersion) ||
+      semanticDbEnabledAlternatively || isAmmonite
 
   def isSourcerootDeclared: Boolean =
     scalac.isSourcerootDeclared(scalaVersion) || semanticDbEnabledAlternatively
