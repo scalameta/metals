@@ -299,9 +299,10 @@ trait CommonMtagsEnrichments {
   protected def filenameToLanguage(filename: String): Language = {
     if (filename.endsWith(".java")) Language.JAVA
     else if (
-      filename.endsWith(".scala") || (filename.endsWith(".sc") && !filename
-        .endsWith(".worksheet.sc"))
-    ) Language.SCALA
+      filename.endsWith(".scala") || filename.endsWith(".sc")
+      || filename.endsWith(".sbt")
+    )
+      Language.SCALA
     else Language.UNKNOWN_LANGUAGE
   }
 
