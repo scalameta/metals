@@ -74,6 +74,8 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
   ;; (setq lsp-log-io nil)
   ;; (setq lsp-completion-provider :capf)
   (setq lsp-prefer-flymake nil)
+  ;; Makes LSP shutdown the metals server when all buffers in the project are closed.
+  ;; https://emacs-lsp.github.io/lsp-mode/page/settings/mode/#lsp-keep-workspace-alive
   (setq lsp-keep-workspace-alive nil))
 
 ;; Add metals backend for lsp-mode
