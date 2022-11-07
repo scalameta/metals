@@ -103,7 +103,11 @@ final class TestDebugger(
   def shutdown: Future[Unit] = {
     Debug.printEnclosing()
     for {
-      _ <- terminated.future
+      _ <- terminated.future.withTimeout(60, TimeUnit.SECONDS).recoverWith {
+        case _ =>
+          scribe.warn("We never got the terminate message")
+          Future.unit
+      }
       _ = scribe.info("TestingDebugger terminated")
       _ <- debugger.shutdown(60)
       _ = scribe.info("Remote server shutdown")
