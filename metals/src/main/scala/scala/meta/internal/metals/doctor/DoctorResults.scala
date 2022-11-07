@@ -44,6 +44,7 @@ object DoctorStatus {
   object check extends DoctorStatus(Icons.unicode.check, true)
   object alert extends DoctorStatus(Icons.unicode.alert, false)
   object error extends DoctorStatus(Icons.unicode.error, false)
+  object info extends DoctorStatus(Icons.unicode.info, false)
 }
 
 final case class DoctorTargetInfo(

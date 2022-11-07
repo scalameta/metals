@@ -80,7 +80,9 @@ sealed trait DoctorExplanation {
       _.element("p")(_.text(title)).element("ul") { ul =>
         ul.element("li")(_.text(correctMessage))
         if (show)
-          ul.element("li")(_.text(incorrectMessage))
+          incorrectMessage.linesIterator.foreach { legend =>
+            ul.element("li")(_.text(legend))
+          }
       }
     )
 
@@ -170,7 +172,8 @@ object DoctorExplanation {
     val correctMessage: String =
       s"${Icons.unicode.check} - working non-interactive features (references, rename etc.)"
     val incorrectMessage: String =
-      s"${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server (work for Bloop only)"
+      s"""|${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server (work for Bloop only)
+          |${Icons.unicode.info} - build target doesn't support Java files""".stripMargin
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
       allTargetsInfo.exists(_.javaStatus.isCorrect == false)
