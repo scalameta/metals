@@ -779,4 +779,16 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     filter = _.contains("(extension)"),
   )
 
+  checkEdit(
+    "apply-method".tag(IgnoreScala2),
+    """|object Main {
+       |  val a = "$ListBuf@@""
+       |}""".stripMargin,
+    """|import scala.collection.mutable.ListBuffer
+       |object Main {
+       |  val a = s"${ListBuffer($0)}""
+       |}""".stripMargin,
+    filter = _.contains("[A]"),
+  )
+
 }

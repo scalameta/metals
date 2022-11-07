@@ -243,10 +243,7 @@ class CompletionProvider(
         case (_: Ident) :: (_: Import) :: _ =>
           mkItem(sym.fullNameBackticked)
         case _ =>
-          val forImportSymbol = v match
-            case w: CompletionValue.Workspace => w.applyOwner
-            case _ => sym
-          autoImports.editsForSymbol(forImportSymbol) match
+          autoImports.editsForSymbol(v.importSymbol) match
             case Some(edits) =>
               edits match
                 case AutoImportEdits(Some(nameEdit), other) =>
