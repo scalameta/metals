@@ -552,7 +552,7 @@ class Completions(
                 completionsWithSuffix(
                   sym,
                   sym.decodedName,
-                  CompletionValue.Workspace(_, _, _, Some(sym)),
+                  CompletionValue.Workspace(_, _, _, sym),
                 ).forall(visit),
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
