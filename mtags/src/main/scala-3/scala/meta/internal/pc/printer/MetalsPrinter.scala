@@ -205,16 +205,16 @@ class MetalsPrinter(
       .mkString("", "", s": ${returnType}")
 
     val flags = (gsym.flags & methodFlags)
-    val flagString =
+    val flagsSeq =
       if !flags.isEmpty then
         val privateWithin =
           if gsym.privateWithin != NoSymbol then gsym.privateWithin.name.show
           else ""
-        flags.flagStrings(privateWithin).mkString(" ") + " "
-      else ""
-    val mods =
-      if additionalMods.isEmpty then flagString
-      else additionalMods.mkString(" ") + " " + flagString
+        flags.flagStrings(privateWithin)
+      else Nil
+    val mods = (additionalMods ++ flagsSeq).distinct match
+      case Nil => ""
+      case xs => xs.mkString("", " ", " ")
 
     if onlyMethodParams then paramssSignature
     else
