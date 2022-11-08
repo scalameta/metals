@@ -396,7 +396,11 @@ object OverrideCompletions:
     val signature =
       // `iterator` method in `new Iterable[Int] { def iterato@@ }`
       // should be completed as `def iterator: Iterator[Int]` instead of `Iterator[A]`.
-      val seenFrom = defn.tpe.memberInfo(sym.symbol)
+      val seenFrom =
+        val memInfo = defn.tpe.memberInfo(sym.symbol)
+        if memInfo.isErroneous then sym.info
+        else memInfo
+
       if sym.is(Method) then
         printer.defaultMethodSignature(
           sym.symbol,
@@ -411,6 +415,7 @@ object OverrideCompletions:
           additionalMods =
             if overrideKeyword.nonEmpty then List(overrideKeyword) else Nil,
         )
+      end if
     end signature
 
     val label = s"$overrideDefLabel$signature"
