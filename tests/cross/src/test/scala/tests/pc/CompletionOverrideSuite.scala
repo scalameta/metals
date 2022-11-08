@@ -1063,7 +1063,33 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "overriden-twice".tag(IgnoreScala3), // empty
+    "overriden-twice",
+    """
+      |trait A {
+      |  def close: Unit
+      |}
+      |trait B extends A{
+      |  override def close : Unit = {}
+      |}
+      |class C extends B{
+      |  close@@
+      |}
+    """.stripMargin,
+    """|trait A {
+       |  def close: Unit
+       |}
+       |trait B extends A{
+       |  override def close : Unit = {}
+       |}
+       |class C extends B{
+       |  override def close: Unit = ${0:???}
+       |}
+       |""".stripMargin,
+    filter = (str) => str.contains("def"),
+  )
+
+  checkEdit(
+    "not-complete-ident".tag(IgnoreScala3),
     """
       |trait A {
       |  def close: Unit
@@ -1074,7 +1100,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |class C extends B{
       |  clos@@
       |}
-    """.stripMargin,
+      """.stripMargin,
     """|trait A {
        |  def close: Unit
        |}
