@@ -2,7 +2,7 @@
 
 <<class>>/*keyword*/ <<Miscellaneous>>/*class*/ {
   <<// backtick identifier>>/*comment*/
-  <<val>>/*keyword*/ <<`a b`>>/*variable, readonly*/ = <<42>>/*number*/
+  <<val>>/*keyword*/ <<`a b`>>/*variable,readonly*/ = <<42>>/*number*/
 
   <<// block with only wildcard value>>/*comment*/
   <<def>>/*keyword*/ <<apply>>/*method*/(): <<Unit>>/*class,abstract*/ = {

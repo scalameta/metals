@@ -16,7 +16,7 @@
         <<Float>>/*class,abstract*/,
         <<Char>>/*class,abstract*/,
     )
-  ]((<<null>>/*keyword*/))
+  ](<<null>>/*keyword*/)
   <<lst>>/*variable,readonly*/.<<isInstanceOf>>/*method*/[<<Any>>/*class,abstract*/]
   <<lst>>/*variable,readonly*/.<<asInstanceOf>>/*method*/[<<Any>>/*class,abstract*/]
   <<println>>/*method*/(<<lst>>/*variable,readonly*/.<<##>>/*method*/)

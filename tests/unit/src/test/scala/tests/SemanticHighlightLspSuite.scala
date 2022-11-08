@@ -8,75 +8,42 @@ import munit.TestOptions
  */
 class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
 
-
   check(
-    "interporlation",
+    "Comment(Single-Line, Multi-Line)",
     s"""|
-        |<<object>>/*keyword*/ <<sample11>>/*class*/ {
-        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-        |    <<val>>/*keyword*/ <<name>>/*variable,readonly*/ = <<"George">>/*string*/
-        |    <<val>>/*keyword*/ <<height>>/*variable,readonly*/ = <<1.9d>>/*number*/
-        |    <<val>>/*keyword*/ <<outStr>>/*variable,readonly*/= 
-        |     <<s>>/*keyword*/<<">>/*string*/<<Hello >>/*string*/<<$$>>/*keyword*/<<name>>/*variable,readonly*/<< , Can you hear me ? >>/*string*/<<">>/*string*/
-        |    <<val>>/*keyword*/ <<fmtStr>>/*variable,readonly*/=
-        |     <<f>>/*keyword*/<<">>/*string*/<<$$>>/*keyword*/<<name>>/*variable,readonly*/<<%s is >>/*string*/<<$$>>/*keyword*/<<height>>/*variable,readonly*/<<%2.2f meters tall>>/*string*/<<">>/*string*/
-        |    <<println>>/*method*/(<<outStr>>/*variable,readonly*/)
-        |    <<println>>/*method*/(<<fmtStr>>/*variable,readonly*/)
-        |  }
+        |<<object>>/*keyword*/ <<Main>>/*class*/{
+        |
+        |   <</**>>/*comment*/
+        |<<   * Test of Comment Block>>/*comment*/
+        |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<1>>/*number*/
+        |
+        |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
+        |    <<// Single Line Comment>>/*comment*/
+        |    <<a>>/*parameter*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
+        |   }
         |}
+        |
         |
         |""".stripMargin,
   )
 
-  // check(
-  //   "String, Char",
-  //   s"""|
-  //       |object sample7 {
-  //       |  def main(args: Array[String]) ={
-  //       |
-  //       |    val testStr1 : String = " Hello  "
-  //       |    println(testStr1)
-  //       |
-  //       |    val testStr2 = """This is
-  //       |    a multiline
-  //       |    Test"""
-  //       |    println(testStr2)
-  //       |
-  //       |    var testChar1 : Char =  'x'
-  //       |     println(testChar1.toString())
-  //       |
-  //       |
-  //       |  }
-  //       |}
-  //       |""".stripMargin
-  // )
-
-  // check(
-  //   "enum",
-  //   s"""|
-  //       |
-  //       |
-  //       |
-  //       |""".stripMargin
-  // )
-
-  // check(
-  //   "Literal Identifer",
-  //   s"""|
-  //       |
-  //       |
-  //       |
-  //       |""".stripMargin
-  // )
-
-  // check(
-  //   "Template",
-  //   s"""|
-  //       |
-  //       |
-  //       |
-  //       |""".stripMargin
-  // )
+  check(
+    "Enum",
+    s"""|
+        |<<package>>/*keyword*/ <<example>>/*namespace*/
+        |<<import>>/*keyword*/ java.nio.file.<<AccessMode>>/*enum*/
+        |<<import>>/*keyword*/ java.nio.file.AccessMode.<<READ>>/*enumMember*/
+        |<<import>>/*keyword*/ java.nio.file.AccessMode.<<WRITE>>/*enumMember*/
+        |<<import>>/*keyword*/ java.nio.file.AccessMode.<<EXECUTE>>/*enumMember*/
+        |<<object>>/*keyword*/ <<Main>>/*class*/ {
+        |  (<<null>>/*keyword*/: <<AccessMode>>/*enumMember,abstract*/) <<match>>/*keyword*/ {
+        |    <<case>>/*keyword*/ <<READ>>/*enumMember*/ <<=>>>/*operator*/ <<0>>/*number*/
+        |    <<case>>/*keyword*/ <<WRITE>>/*enumMember*/ <<=>>>/*operator*/
+        |    <<case>>/*keyword*/ <<EXECUTE>>/*enumMember*/ <<=>>>/*operator*/
+        |  }
+        |}
+        |""".stripMargin,
+  )
 
   def check(
       name: TestOptions,
@@ -99,7 +66,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
           expectError = true,
         )
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-        _ = assertEmpty(client.workspaceDiagnostics)
+        // _ = assertEmpty(client.workspaceDiagnostics)
         _ <- server.assertSemanticHighlight(
           "a/src/main/scala/a/Main.scala",
           expected,

@@ -135,9 +135,9 @@ final class SemanticTokenProvider(
       // Alphanumeric keywords
       case _: Token.ModifierKeyword => getTypeId(SemanticTokenTypes.Modifier)
       case _: Token.Keyword => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.KwNull   => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.KwTrue   => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.KwFalse   => getTypeId(SemanticTokenTypes.Keyword)
+      case _: Token.KwNull => getTypeId(SemanticTokenTypes.Keyword)
+      case _: Token.KwTrue => getTypeId(SemanticTokenTypes.Keyword)
+      case _: Token.KwFalse => getTypeId(SemanticTokenTypes.Keyword)
 
       // extends Symbolic keywords
       case _: Token.Hash => getTypeId(SemanticTokenTypes.Keyword)
@@ -162,15 +162,12 @@ final class SemanticTokenProvider(
       // Comment
       case _: Token.Comment => getTypeId(SemanticTokenTypes.Comment)
 
-      // Interpolation 
-      case _: Token.Interpolation.Id
-          |_: Token.Interpolation.SpliceStart
-             => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.Interpolation.Start
-          |_: Token.Interpolation.Part
-          |_: Token.Interpolation.SpliceEnd
-          |_: Token.Interpolation.End
-             => getTypeId(SemanticTokenTypes.String)  // $ symbol
+      // Interpolation
+      case _: Token.Interpolation.Id | _: Token.Interpolation.SpliceStart =>
+        getTypeId(SemanticTokenTypes.Keyword)
+      case _: Token.Interpolation.Start | _: Token.Interpolation.Part |
+          _: Token.Interpolation.SpliceEnd | _: Token.Interpolation.End =>
+        getTypeId(SemanticTokenTypes.String) // $ symbol
 
       // Default
       case _ => -1
@@ -179,11 +176,23 @@ final class SemanticTokenProvider(
   }
   def pickFromTraversed(tk: scala.meta.tokens.Token): Option[NodeInfo] = {
 
+    val adjustForBacktick: Int = {
+      var ret: Int = 0
+      val cName = tk.text.toCharArray()
+      if (cName.size >= 2) {
+        if (
+          cName(0) == 96.toChar // backtick
+          && cName(cName.size - 1) == 96.toChar
+        ) ret = 2
+      }
+      ret
+    }
+
     val buffer = ListBuffer.empty[NodeInfo]
     for (node <- nodes) {
       if (
         node.pos.start == tk.pos.start &&
-        node.pos.end == tk.pos.end
+        node.pos.end + adjustForBacktick == tk.pos.end
       ) buffer.++=(List(node))
     }
 
@@ -224,18 +233,21 @@ final class SemanticTokenProvider(
          */
         case ident: cp.Ident if ident.pos.isRange =>
           val symbol =
-            if (ident.symbol == NoSymbol) 
-              if(ident.tpe != null)
-              ident.tpe.typeSymbol
-              else {
+            if (ident.symbol == NoSymbol)
+              if (ident.tpe != null) {
+                ident.tpe.underlying.typeSymbolDirect
+              } else {
                 val context = doLocateContext(ident.pos)
                 context.lookupSymbol(ident.name, _ => true) match {
-                   case LookupSucceeded(_, symbol) => symbol
-                   case _ => NoSymbol
+                  case LookupSucceeded(_, symbol) => symbol
+                  case _ => NoSymbol
                 }
               }
-            else ident.symbol
+            else {
+              ident.symbol
+            }
           nodes :+ NodeInfo(symbol, ident.pos)
+
         /**
          * Needed for type trees such as:
          * type A = [<<b>>]
@@ -253,6 +265,13 @@ final class SemanticTokenProvider(
             nodes :+ NodeInfo(sel, sel.namePos),
             sel.qualifier
           )
+        /**
+         * statements such as:
+         * val Some(<<a>>) = Some(2)
+         */
+        case bnd: cp.Bind =>
+          bnd.children.foldLeft(nodes :+ NodeInfo(bnd, bnd.pos))(traverse(_, _))
+
         /* all definitions:
          * def <<foo>> = ???
          * class <<Foo>> = ???
@@ -273,8 +292,11 @@ final class SemanticTokenProvider(
             .flatMap { arg =>
               namedArgCache.get(arg.pos.start)
             }
-            .collectFirst { case cp.AssignOrNamedArg(i @ cp.Ident(_), _) =>
-              NodeInfo(appl.symbol.paramss.flatten.find(_.name == i.name), i.pos)
+            .collect { case cp.AssignOrNamedArg(i @ cp.Ident(_), _) =>
+              NodeInfo(
+                appl.symbol.paramss.flatten.find(_.name == i.name),
+                i.pos
+              )
             }
 
           tree.children.foldLeft(nodes ++ named)(traverse(_, _))
@@ -400,6 +422,14 @@ final class SemanticTokenProvider(
           else if (sym.isTypeParameter)
             getTypeId(SemanticTokenTypes.TypeParameter)
           else if (isOperatorName) getTypeId(SemanticTokenTypes.Operator)
+          // Java Enum
+          else if (
+            sym.companion
+              .hasFlag(scala.reflect.internal.ModifierFlags.JAVA_ENUM)
+          )
+            getTypeId(SemanticTokenTypes.Enum)
+          else if (sym.hasFlag(scala.reflect.internal.ModifierFlags.JAVA_ENUM))
+            getTypeId(SemanticTokenTypes.EnumMember)
           // See symbol.keystring about following conditions.
           else if (sym.isJavaInterface)
             getTypeId(SemanticTokenTypes.Interface) // "interface"
