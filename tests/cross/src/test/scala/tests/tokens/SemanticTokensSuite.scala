@@ -12,7 +12,9 @@ import tests.TestSemanticTokens
 
 class SemanticTokensSuite extends BasePCSuite {
 
-
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala3
+  )
   check(
     "class, object, var, val(readonly), method, type, parameter, String(single-line)",
     s"""|<<class>>/*keyword*/  <<Test>>/*class*/{
