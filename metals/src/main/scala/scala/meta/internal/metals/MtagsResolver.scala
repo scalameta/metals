@@ -14,7 +14,7 @@ import org.jsoup.Jsoup
 
 trait MtagsResolver {
   def resolve(scalaVersion: String): Option[MtagsBinaries]
-  final def isSupportedScalaVersion(version: String): Boolean =
+  def isSupportedScalaVersion(version: String): Boolean =
     resolve(version).isDefined
 }
 

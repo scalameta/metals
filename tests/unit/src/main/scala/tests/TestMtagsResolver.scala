@@ -13,14 +13,18 @@ import scala.meta.internal.metals.ScalaVersions
 class TestMtagsResolver extends MtagsResolver {
 
   val default: MtagsResolver = MtagsResolver.default()
+
+  /**
+   * We don't need to check unsupported versions in tests and that makes the tests run longer.
+   */
   override def resolve(scalaVersion: String): Option[MtagsBinaries] = {
-    default.resolve(scalaVersion).orElse(fakeBinaries(scalaVersion))
+    if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion))
+      default.resolve(scalaVersion).orElse(Some(MtagsBinaries.BuildIn))
+    else None
   }
 
-  private def fakeBinaries(scalaVersion: String): Option[MtagsBinaries] = {
-    if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion))
-      Some(MtagsBinaries.BuildIn)
-    else
-      None
+  override def isSupportedScalaVersion(version: String): Boolean = {
+    ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)
   }
+
 }
