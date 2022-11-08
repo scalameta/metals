@@ -233,16 +233,6 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     filter = _.contains("iterat"),
-    compat = Map(
-      "3" -> // TODO: should s/Any/Iterator[A]/
-        """
-          |object Main {
-          |  new scala.Iterable[Unknown] {
-          |    def iterator: Iterator[Any] = ${0:???}
-          |  }
-          |}
-        """.stripMargin
-    ),
   )
 
   check(
