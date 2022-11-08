@@ -15,7 +15,7 @@ on:
         # If you update this line after release
         #   just put the tag name (`v*.*.*`) here as in `metals_version.value` above.
         # Don't be confused if this value contains `*.*.*_mtags_release`
-        default: "v0.11.9"
+        default: "0.11.9_mtags_release"
 jobs:
   test_and_release:
     runs-on: ubuntu-latest
