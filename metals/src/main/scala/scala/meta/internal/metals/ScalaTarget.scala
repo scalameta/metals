@@ -74,7 +74,7 @@ case class ScalaTarget(
       )
   }
 
-  def isAmmonite = displayName.endsWith(".sc")
+  def isAmmonite: Boolean = displayName.endsWith(".sc")
 
   def isSemanticdbEnabled: Boolean =
     scalac.isSemanticdbEnabled(scalaVersion) ||
