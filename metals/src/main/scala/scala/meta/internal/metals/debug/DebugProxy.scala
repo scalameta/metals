@@ -178,10 +178,7 @@ private[debug] final class DebugProxy(
         stackFrame <- args.getStackFrames
         frameSource <- Option(stackFrame.getSource)
         sourcePath <- Option(frameSource.getPath)
-        metalsSource <- debugAdapter.adaptStackFrameSource(
-          sourcePath,
-          frameSource.getName,
-        )
+        metalsSource <- debugAdapter.adaptStackFrameSource(sourcePath)
       } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSource))
       response.setResult(args.toJson)
       lastFrames = args.getStackFrames()
