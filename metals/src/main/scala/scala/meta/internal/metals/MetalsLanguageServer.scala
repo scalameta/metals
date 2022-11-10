@@ -711,13 +711,11 @@ class MetalsLanguageServer(
         debugProvider = register(
           new DebugProvider(
             workspace,
-            definitionProvider,
             buildTargets,
             buildTargetClasses,
             compilations,
             languageClient,
             buildClient,
-            classFinder,
             definitionIndex,
             stacktraceAnalyzer,
             clientConfig,
@@ -1984,10 +1982,7 @@ class MetalsLanguageServer(
           params <- debugSessionParams
           server <- statusBar.trackFuture(
             "Starting debug server",
-            debugProvider.start(
-              params,
-              scalaVersionSelector,
-            ),
+            debugProvider.start(params),
           )
         } yield {
           statusBar.addMessage("Started debug server!")

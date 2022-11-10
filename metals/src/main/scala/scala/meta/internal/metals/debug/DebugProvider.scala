@@ -29,7 +29,6 @@ import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
-import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
@@ -39,7 +38,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
-import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -52,7 +50,6 @@ import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
@@ -73,13 +70,11 @@ import org.eclipse.lsp4j.MessageType
  */
 class DebugProvider(
     workspace: AbsolutePath,
-    definitionProvider: DefinitionProvider,
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
     compilations: Compilations,
     languageClient: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
-    classFinder: ClassFinder,
     index: OnDemandSymbolIndex,
     stacktraceAnalyzer: StacktraceAnalyzer,
     clientConfig: ClientConfiguration,
@@ -101,8 +96,7 @@ class DebugProvider(
   )
 
   def start(
-      parameters: b.DebugSessionParams,
-      scalaVersionSelector: ScalaVersionSelector,
+      parameters: b.DebugSessionParams
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     for {
       sessionName <- Future.fromTry(parseSessionName(parameters))
@@ -111,12 +105,7 @@ class DebugProvider(
         .fold[Future[BuildServerConnection]](BuildServerUnavailableError)(
           Future.successful
         )
-      debugServer <- start(
-        sessionName,
-        jvmOptionsTranslatedParams,
-        buildServer,
-        scalaVersionSelector,
-      )
+      debugServer <- start(sessionName, jvmOptionsTranslatedParams, buildServer)
     } yield debugServer
   }
 
@@ -124,7 +113,6 @@ class DebugProvider(
       sessionName: String,
       parameters: b.DebugSessionParams,
       buildServer: BuildServerConnection,
-      scalaVersionSelector: ScalaVersionSelector,
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     val inetAddress = InetAddress.getByName("127.0.0.1")
     val proxyServer = new ServerSocket(0, 50, inetAddress)
@@ -161,20 +149,17 @@ class DebugProvider(
       val targets = parameters.getTargets.asScala.toSeq
         .map(_.getUri)
         .map(new BuildTargetIdentifier(_))
+
       val debugAdapter =
         if (buildServer.usesScalaDebugAdapter2x) {
-          MetalsDebugAdapter.`2.x`(
+          MetalsDebugAdapter(
             buildTargets,
             targets,
             supportVirtualDocuments = clientConfig.isVirtualDocumentSupported(),
           )
         } else {
-          MetalsDebugAdapter.`1.x`(
-            definitionProvider,
-            buildTargets,
-            classFinder,
-            scalaVersionSelector,
-            targets,
+          throw new IllegalArgumentException(
+            s"${buildServer.name} ${buildServer.version} does not support scala-debug-adpater 2.x"
           )
         }
       DebugProxy.open(

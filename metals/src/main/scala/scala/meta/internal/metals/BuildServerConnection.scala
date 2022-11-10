@@ -88,9 +88,7 @@ class BuildServerConnection private (
   def supportsTestSelection: Boolean = isBloop || isSbt || isScalaCLI
 
   /* Some users may still use an old version of Bloop that relies on scala-debug-adapter 1.x.
-   * This method is used to do the switch between MetalsDebugAdapter1x and MetalsDebugAdapter2x.
-   * At some point we should drop the support for those old versions of Bloop and remove
-   * this method, also the MetalsDebugAdapter1x and the ClassFinder classes
+   * Metals does not support scala-debug-adapter 1.x anymore.
    */
   def usesScalaDebugAdapter2x: Boolean = {
     def supportNewDebugAdapter = SemVer.isCompatibleVersion(
