@@ -65,22 +65,22 @@ final class RunTestCodeLens(
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
       // most of the bsp servers such as bloop and sbt might not support it.
-      if buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt
-      if connection.isScalaCLI || !path.isAmmoniteScript || !path.isWorksheet
     } yield {
       val classes = buildTargetClasses.classesOf(buildTargetId)
-      val scalaCliScripts =
-        if (connection.isScalaCLI && path.isScalaScript)
-          scalaCliCodeLenses(textDocument, buildTargetId, classes)
-        else Seq.empty
-      val lenses = codeLenses(
-        textDocument,
-        buildTargetId,
-        classes,
-        distance,
-        path,
-      )
-      lenses ++ scalaCliScripts
+      if (connection.isScalaCLI && path.isAmmoniteScript) {
+        scalaCliCodeLenses(textDocument, buildTargetId, classes)
+      } else if (
+        buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt
+      ) {
+        codeLenses(
+          textDocument,
+          buildTargetId,
+          classes,
+          distance,
+          path,
+        )
+      } else { Nil }
+
     }
 
     lenses.getOrElse(Seq.empty)
@@ -196,7 +196,10 @@ final class RunTestCodeLens(
       classes: BuildTargetClasses.Classes,
   ): Seq[l.CodeLens] = {
     val scriptFileName = textDocument.uri.stripSuffix(".sc")
-    val expectedMainClass = s"_empty_/${scriptFileName}_sc."
+
+    val expectedMainClass =
+      if (scriptFileName.contains('/')) s"${scriptFileName}_sc."
+      else s"_empty_/${scriptFileName}_sc."
     val main =
       classes.mainClasses
         .get(expectedMainClass)
