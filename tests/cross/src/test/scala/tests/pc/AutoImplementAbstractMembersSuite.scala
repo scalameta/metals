@@ -1096,6 +1096,64 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "type-alias",
+    """|package example
+       |
+       |trait NodeDb {
+       |  type N
+       |  def method(node: N): String
+       |}
+       |
+       |class <<InMemoryNodeDb>> extends NodeDb
+       |""".stripMargin,
+    """|package example
+       |
+       |trait NodeDb {
+       |  type N
+       |  def method(node: N): String
+       |}
+       |
+       |class InMemoryNodeDb extends NodeDb {
+       |
+       |  override def method(node: N): String = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "higher-kind-type".tag(IgnoreScala2),
+    """|package example
+       |
+       |trait NodeDb[F[_]]:
+       |  type N
+       |
+       |  extension (node: N)
+       |    def leftChild: F[Option[N]]
+       |    def rightChild: F[Option[N]]
+       |
+       |class <<InMemoryNodeDb>>[F[_]] extends NodeDb[F]
+       |""".stripMargin,
+    """|package example
+       |
+       |trait NodeDb[F[_]]:
+       |  type N
+       |
+       |  extension (node: N)
+       |    def leftChild: F[Option[N]]
+       |    def rightChild: F[Option[N]]
+       |
+       |class InMemoryNodeDb[F[_]] extends NodeDb[F] {
+       |
+       |  extension (node: N) override def leftChild: F[Option[N]] = ???
+       |
+       |  extension (node: N) override def rightChild: F[Option[N]] = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

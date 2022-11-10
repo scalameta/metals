@@ -171,8 +171,13 @@ object OverrideCompletions:
     val pos = driver.sourcePosition(params)
 
     val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
+    val tpdTree = newctx.compilationUnit.tpdTree
     val path =
-      Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using newctx)
+      Interactive.pathTo(tpdTree, pos.span)(using newctx) match
+        case path @ TypeDef(_, template) :: _ =>
+          template :: path
+        case path => path
+
     val indexedContext = IndexedContext(
       MetalsInteractive.contextOfPath(path)(using newctx)
     )
@@ -400,7 +405,8 @@ object OverrideCompletions:
       // should be completed as `def iterator: Iterator[Int]` instead of `Iterator[A]`.
       val seenFrom =
         val memInfo = defn.tpe.memberInfo(sym.symbol)
-        if memInfo.isErroneous then sym.info
+        if memInfo.isErroneous || memInfo.finalResultType.isAny then
+          sym.info.widenTermRefExpr
         else memInfo
 
       if sym.is(Method) then
