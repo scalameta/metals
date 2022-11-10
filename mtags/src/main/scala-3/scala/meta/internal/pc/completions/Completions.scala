@@ -176,24 +176,26 @@ class Completions(
     val (all, result) =
       if exclusive then (advanced, SymbolSearch.Result.COMPLETE)
       else
+        val keywords = KeywordsCompletions.contribute(path, completionPos)
+        val allAdvanced = advanced ++ keywords
         path match
           // should not show completions for toplevel
           case Nil if pos.source.file.extension != "sc" =>
-            (advanced, SymbolSearch.Result.COMPLETE)
+            (allAdvanced, SymbolSearch.Result.COMPLETE)
           case Select(qual, _) :: _ if qual.tpe.isErroneous =>
-            (advanced, SymbolSearch.Result.COMPLETE)
+            (allAdvanced, SymbolSearch.Result.COMPLETE)
           case Select(qual, _) :: _ =>
             val (_, compilerCompletions) = Completion.completions(pos)
             val (compiler, result) = compilerCompletions
               .flatMap(toCompletionValues)
               .filterInteresting(qual.typeOpt.widenDealias)
-            (advanced ++ compiler, result)
+            (allAdvanced ++ compiler, result)
           case _ =>
             val (_, compilerCompletions) = Completion.completions(pos)
             val (compiler, result) = compilerCompletions
               .flatMap(toCompletionValues)
               .filterInteresting()
-            (advanced ++ compiler, result)
+            (allAdvanced ++ compiler, result)
         end match
 
     val application = CompletionApplication.fromPath(path)
@@ -486,8 +488,7 @@ class Completions(
           indexedContext,
           config.isCompletionSnippetsEnabled,
         )
-        val keywords = KeywordsCompletions.contribute(path, completionPos)
-        (args ++ keywords, false)
+        (args, false)
     end match
   end advancedCompletions
 
