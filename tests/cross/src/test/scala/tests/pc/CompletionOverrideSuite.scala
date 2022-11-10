@@ -1079,7 +1079,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "not-complete-ident".tag(IgnoreScala3),
+    "not-complete-ident",
     """
       |trait A {
       |  def close: Unit
