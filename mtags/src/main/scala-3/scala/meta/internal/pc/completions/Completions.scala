@@ -410,7 +410,7 @@ class Completions(
 
       // class FooImpl extends Foo:
       //   def x|
-      case OverrideExtractor(td, completing, start, exhaustive) =>
+      case OverrideExtractor(td, completing, start, exhaustive, fallbackName) =>
         (
           OverrideCompletions.contribute(
             td,
@@ -420,6 +420,7 @@ class Completions(
             search,
             config,
             autoImports,
+            fallbackName,
           ),
           exhaustive,
         )
