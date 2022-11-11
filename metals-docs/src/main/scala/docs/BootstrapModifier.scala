@@ -29,7 +29,6 @@ class BootstrapModifier extends StringModifier {
            |  --java-opt -Xms100m \\
            |  --java-opt -Dmetals.client=$client \\
            |  org.scalameta:metals_2.13:${Docs.release.version} \\
-           |  -r bintray:scalacenter/releases \\
            |  -r sonatype:snapshots \\
            |  -o /usr/local/bin/$binary -f
            |```
