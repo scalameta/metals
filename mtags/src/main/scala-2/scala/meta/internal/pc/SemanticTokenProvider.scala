@@ -63,6 +63,7 @@ final class SemanticTokenProvider(
       // For ecample, Comment or Literal String.
       for (wkStr <- tk.text.toCharArray.toList.map(c => c.toString)) {
         cOffset += 1
+        if (wkStr == "\r") providing.countCR
 
         // Token Break
         if (wkStr == "\n" | cOffset == tk.pos.end) {
@@ -108,7 +109,8 @@ final class SemanticTokenProvider(
       lastToken: Option[SingleLineToken]
   ) {
     var endOffset: Int = 0
-    def charSize: Int = endOffset - startOffset
+    var crCount: Int = 0
+    def charSize: Int = endOffset - startOffset - crCount
     def deltaLine: Int =
       line.number - this.lastToken.map(_.line.number).getOrElse(0)
 
@@ -118,7 +120,7 @@ final class SemanticTokenProvider(
       else
         startOffset - line.startOffset
     }
-
+    def countCR: Unit = { crCount += 1 }
   }
 
   /**
@@ -390,7 +392,6 @@ final class SemanticTokenProvider(
       case _ => (typeOfNonIdentToken(tk), 0)
     }
   }
-
 
   /**
    * returns (SemanticTokenType, SemanticTokenModifier) of @param tk
