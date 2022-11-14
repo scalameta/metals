@@ -23,17 +23,25 @@ trait AmmoniteIvyCompletions {
       }
       query match {
         case Some(imp) =>
-          val completions = CoursierComplete.complete(imp)
-          val isInitialCompletion =
-            pos.lineContent.trim == s"import $$ivy.$CURSOR"
-          val ivyEditRange =
-            if (isInitialCompletion) editRange
-            else {
+          val prefix = "import $ivy."
+          val afterImport =
+            pos.lineContent.stripPrefix(prefix).replace(CURSOR, "")
+          val isInitialCompletion = pos.lineContent
+            .startsWith(prefix) && !afterImport.headOption
+            .exists(c => c == '`' || c == '{')
+
+          val (rangeStart, completeInput) =
+            if (isInitialCompletion && !afterImport.contains(':')) {
+              val start = // Here we need start to be the point after 'import $ivy.'
+                pos.source.lineToOffset(pos.line - 1).max(0) + prefix.length
+              (start, afterImport.trim)
+            } else {
               // We need the text edit to span the whole group/artefact/version
-              val (rangeStart, _) =
-                CoursierComplete.inferEditRange(pos.point, text)
-              pos.withStart(rangeStart).withEnd(pos.point).toLsp
+              val (start, _) = CoursierComplete.inferEditRange(pos.point, text)
+              (start, imp)
             }
+          val completions = CoursierComplete.complete(completeInput)
+          val ivyEditRange = pos.withStart(rangeStart).withEnd(pos.point).toLsp
           completions.zipWithIndex.map { case (c, index) =>
             new TextEditMember(
               filterText = c,
