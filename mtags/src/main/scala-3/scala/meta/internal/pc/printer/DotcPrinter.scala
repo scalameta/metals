@@ -29,7 +29,9 @@ object DotcPrinter:
 
   private val defaultWidth = 1000
 
-  class Std(using ctx: Context) extends RefinedPrinter(ctx) with DotcPrinter:
+  class Std(using ctx: Context)
+      extends RefinedDotcPrinter(ctx)
+      with DotcPrinter:
 
     override def nameString(name: Name): String =
       super.nameString(name.stripModuleClassSuffix)
@@ -69,24 +71,6 @@ object DotcPrinter:
 
     def fullName(sym: Symbol): String =
       fullNameString(sym)
-
-    override protected def toTextRefinement(rt: RefinedType): Closed =
-      rt.refinedInfo match
-        case TypeBounds(lo, hi) if lo == hi =>
-          val tsym = rt.parent.member(rt.refinedName).symbol
-          if tsym.exists then
-            ("type " ~ simpleNameString(tsym) ~ " = " ~ toText(hi)).close
-          else super.toTextRefinement(rt)
-        case tp: TypeRef =>
-          ("val " ~ nameString(rt.refinedName) ~ ": " ~ toText(tp)).close
-        case tp: ExprType =>
-          ("def " ~ nameString(rt.refinedName) ~ ": " ~ toText(
-            tp.resType
-          )).close
-        case tp: MethodType =>
-          ("def " ~ nameString(rt.refinedName) ~ toText(tp)).close
-        case _ =>
-          super.toTextRefinement(rt)
 
     override def toText(tp: Type): Text =
       // Override the behavior for `AppliedType` because
