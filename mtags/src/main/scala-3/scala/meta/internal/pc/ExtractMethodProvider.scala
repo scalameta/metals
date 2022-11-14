@@ -38,6 +38,7 @@ final class ExtractMethodProvider(
     extractionPos: OffsetParams,
     driver: InteractiveDriver,
     search: SymbolSearch,
+    noIndent: Boolean,
 ) extends ExtractMethodUtils:
 
   def extractMethod(): List[TextEdit] =
@@ -139,8 +140,11 @@ final class ExtractMethodProvider(
             newIndent,
             oldIndentLen,
           )
+        val (obracket, cbracket) =
+          if noIndent && extracted.length > 1 then (" {", s"$newIndent}")
+          else ("", "")
         val defText =
-          s"def $name$typeParamsText($methodParamsText): $exprType =\n${toExtract}\n\n$newIndent"
+          s"def $name$typeParamsText($methodParamsText): $exprType =$obracket\n${toExtract}\n$cbracket\n$newIndent"
         val replacedText = s"$name($exprParamsText)"
         List(
           new l.TextEdit(

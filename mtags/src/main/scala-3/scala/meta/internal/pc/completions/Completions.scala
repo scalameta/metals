@@ -50,6 +50,7 @@ class Completions(
     config: PresentationCompilerConfig,
     workspace: Option[Path],
     autoImports: AutoImportsGenerator,
+    options: List[String],
 ):
 
   implicit val context: Context = ctx
@@ -353,6 +354,7 @@ class Completions(
             config,
             search,
             autoImports,
+            options.contains("-no-indent"),
           ),
           false,
         )

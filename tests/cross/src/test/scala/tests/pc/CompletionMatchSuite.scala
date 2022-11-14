@@ -3,7 +3,6 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 class CompletionMatchSuite extends BaseCompletionSuite {
-
   override def requiresScalaLibrarySources: Boolean = true
 
   check(
