@@ -17,7 +17,7 @@ object V {
   val bloop = "1.5.4-14-7cb43276"
   val bloopNightly = bloop
   val bsp = "2.1.0-M3"
-  val coursier = "2.1.0-RC1"
+  val coursier = "2.1.0-M7"
   val coursierInterfaces = "1.0.10"
   val debugAdapter = "3.0.4"
   val genyVersion = "0.7.1"
