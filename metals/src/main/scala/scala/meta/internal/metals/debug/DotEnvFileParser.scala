@@ -66,10 +66,4 @@ object DotEnvFileParser {
 
   private def unescape(s: String): String =
     s.replaceAll("""\\([^$])""", "$1")
-
-  case class InvalidEnvFileException(path: AbsolutePath)
-      extends Exception(
-        s"Unable to open the specified .env file ${path.toString()}. " +
-          "Please make sure the file exists and is readable."
-      )
 }

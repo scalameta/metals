@@ -1,16 +1,21 @@
-package tests
+package tests.debug
 
 import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
-import scala.meta.internal.metals.debug.DebugProvider
-import scala.meta.internal.metals.debug.DebugProvider.SemanticDbNotFoundException
-import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
-import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
+import scala.meta.internal.metals.debug.InvalidEnvFileException
+import scala.meta.internal.metals.debug.NoRunOptionException
 import scala.meta.internal.metals.debug.NoTestsFoundException
+import scala.meta.internal.metals.debug.SemanticDbNotFoundException
+import scala.meta.internal.metals.debug.WorkspaceErrorsException
 import scala.meta.io.AbsolutePath
+
+import tests.BaseDapSuite
+import tests.QuickBuildInitializer
+import tests.QuickBuildLayout
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -48,6 +53,40 @@ class DebugDiscoverySuite
         new DebugDiscoveryParams(
           server.toPath(mainPath).toURI.toString,
           "run",
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "oranges are nice")
+  }
+
+  test("run - recover from wrong build target") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${mainPath}
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    print("oranges are nice")
+           |    System.exit(0)
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(mainPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedMainClassParams(
+          mainClass = "a.Main",
+          // wrong build target
+          buildTarget = "b",
         ).toJson
       )
       _ <- debugger.initialize
@@ -148,10 +187,10 @@ class DebugDiscoverySuite
             "runOrTestFile",
           ).toJson
         )
-        .recover { case e @ DebugProvider.NoRunOptionException => e }
+        .recover { case e @ NoRunOptionException => e }
     } yield assertNoDiff(
       result.toString(),
-      DebugProvider.NoRunOptionException.toString(),
+      NoRunOptionException.toString(),
     )
   }
 

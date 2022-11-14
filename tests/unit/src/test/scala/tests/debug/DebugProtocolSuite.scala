@@ -1,4 +1,4 @@
-package tests
+package tests.debug
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -12,10 +12,13 @@ import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsBspException
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
+import scala.meta.internal.metals.debug.WorkspaceErrorsException
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import tests.BaseDapSuite
+import tests.QuickBuildInitializer
+import tests.QuickBuildLayout
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
