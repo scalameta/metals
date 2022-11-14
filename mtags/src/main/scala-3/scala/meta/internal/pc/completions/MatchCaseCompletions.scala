@@ -231,6 +231,7 @@ object CaseKeywordCompletion:
       config: PresentationCompilerConfig,
       search: SymbolSearch,
       autoImportsGen: AutoImportsGenerator,
+      noIndent: Boolean,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
@@ -275,25 +276,28 @@ object CaseKeywordCompletion:
           .map(label => (label, enter.importSel))
       }.unzip
 
+    val (obracket, cbracket) = if noIndent then (" {", "}") else ("", "")
     val basicMatch = CompletionValue.MatchCompletion(
       "match",
       Some(
-        if clientSupportsSnippets then "match\n\tcase$0\n"
+        if clientSupportsSnippets then s"match$obracket\n\tcase$$0\n$cbracket"
         else "match"
       ),
       Nil,
       "",
     )
+
     val completions = labels match
       case Nil => List(basicMatch)
       case head :: tail =>
         val insertText = Some(
           tail
             .mkString(
-              if clientSupportsSnippets then s"match\n\t${head} $$0\n\t"
-              else s"match\n\t${head}\n\t",
+              if clientSupportsSnippets then
+                s"match$obracket\n\t${head} $$0\n\t"
+              else s"match$obracket\n\t${head}\n\t",
               "\n\t",
-              "\n",
+              s"\n$cbracket",
             )
         )
         val importEdit = autoImportsGen.renderImports(imports.flatten.distinct)

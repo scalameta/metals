@@ -237,6 +237,7 @@ case class ScalaPresentationCompiler(
         extractionPos,
         pc.compiler(),
         search,
+        options.contains("-no-indent"),
       )
         .extractMethod()
         .asJava

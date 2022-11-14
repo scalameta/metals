@@ -83,6 +83,7 @@ class CompletionProvider(
             config,
             workspace,
             autoImportsGen,
+            driver.settings,
           ).completions()
 
         val items = completions.zipWithIndex.map { case (item, idx) =>
