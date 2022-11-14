@@ -646,6 +646,18 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  val c: Foo{type T = Int; type G = Long} = new Foo { type T = Int; type G = Long}
        |}
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object O{
+           |  trait Foo {
+           |    type T
+           |    type G
+           |  }
+           |
+           |  val c: Foo{type T >: Int <: Int; type G >: Long <: Long} = new Foo { type T = Int; type G = Long}
+           |}
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -666,6 +678,17 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  val d: Foo{type T = Int} = c
        |}
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object O{
+           |  trait Foo {
+           |    type T
+           |  }
+           |  val c = new Foo { type T = Int }
+           |  val d: Foo{type T >: Int <: Int} = c
+           |}
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -686,6 +709,17 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  val c: Foo{type T = Int} = new Foo { type T = Int }
        |}
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object O{
+           |  trait Foo {
+           |    type T
+           |  }
+           |
+           |  val c: Foo{type T >: Int <: Int} = new Foo { type T = Int }
+           |}
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -705,7 +739,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  type T
        |}
        |
-       |val c: Foo{type T = Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit} = new Foo {
+       |val c: Foo{type T >: Int <: Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit} = new Foo {
        |  type T = Int
        |  val x = 0
        |  def y = 0
