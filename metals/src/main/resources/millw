@@ -5,7 +5,7 @@
 # If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 #
 # Project page: https://github.com/lefou/millw
-# Script Version: 0.4.4
+# Script Version: 0.4.5
 #
 # If you want to improve this script, please also contribute your changes back!
 #
@@ -14,7 +14,7 @@
 set -e
 
 if [ -z "${DEFAULT_MILL_VERSION}" ] ; then
-  DEFAULT_MILL_VERSION=0.10.8
+  DEFAULT_MILL_VERSION=0.10.9
 fi
 
 
@@ -169,6 +169,13 @@ if [ -z "$MILL_MAIN_CLI" ] ; then
   MILL_MAIN_CLI="${0}"
 fi
 
+MILL_FIRST_ARG=""
+if [ "$1" = "--bsp" ] || [ "$1" = "-i" ] || [ "$1" = "--interactive" ] || [ "$1" = "--no-server" ] || [ "$1" = "--repl" ] || [ "$1" = "--help" ] ; then
+  # Need to preserve the first position of those listed options
+  MILL_FIRST_ARG=$1
+  shift
+fi
+
 unset MILL_DOWNLOAD_PATH
 unset MILL_OLD_DOWNLOAD_PATH
 unset OLD_MILL
@@ -176,4 +183,6 @@ unset MILL_VERSION
 unset MILL_VERSION_TAG
 unset MILL_REPO_URL
 
-exec "${MILL}" -D "mill.main.cli=${MILL_MAIN_CLI}" "$@"
+# We don't quote MILL_FIRST_ARG on purpose, so we can expand the empty value without quotes
+# shellcheck disable=SC2086
+exec "${MILL}" $MILL_FIRST_ARG -D "mill.main.cli=${MILL_MAIN_CLI}" "$@"
