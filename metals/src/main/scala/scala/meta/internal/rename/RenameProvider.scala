@@ -67,33 +67,38 @@ final class RenameProvider(
       token: CancelToken,
   ): Future[Option[LSPRange]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    compilations.compilationFinished(source).flatMap { _ =>
-      definitionProvider.definition(source, params, token).map { definition =>
-        val symbolOccurrence: Option[(SymbolOccurrence, TextDocument)] =
-          definitionProvider
-            .symbolOccurrence(source, params.getPosition)
-            .orElse(
-              findRenamedImportOccurrenceAtPosition(
-                source,
-                params.getPosition(),
+    compilations
+      .compilationFinished(source)
+      .flatMap { _ =>
+        definitionProvider.definition(source, params, token).map { definition =>
+          val symbolOccurrence: Option[(SymbolOccurrence, TextDocument)] =
+            definitionProvider
+              .symbolOccurrence(source, params.getPosition)
+              .orElse(
+                findRenamedImportOccurrenceAtPosition(
+                  source,
+                  params.getPosition(),
+                )
               )
-            )
-        for {
-          (occurence, _) <- symbolOccurrence
-          soughtSymbols = Set(occurence.symbol) ++ companion(occurence.symbol)
-          definitionLocation <- definition.locations.asScala.headOption
-          definitionPath = definitionLocation.getUri().toAbsolutePath
-          if canRenameSymbol(occurence.symbol, None) &&
-            (isWorkspaceSymbol(occurence.symbol, definitionPath) ||
-              findRenamedImportForSymbol(
-                source,
-                soughtSymbols,
-                occurence.symbol.desc.name.value,
-              ).isDefined)
-          range <- occurence.range
-        } yield range.toLsp
+          for {
+            (occurence, _) <- symbolOccurrence
+            soughtSymbols = Set(occurence.symbol) ++ companion(occurence.symbol)
+            definitionLocation <- definition.locations.asScala.headOption
+            definitionPath = definitionLocation.getUri().toAbsolutePath
+            if canRenameSymbol(occurence.symbol, None) &&
+              (isWorkspaceSymbol(occurence.symbol, definitionPath) ||
+                findRenamedImportForSymbol(
+                  source,
+                  soughtSymbols,
+                  occurence.symbol.desc.name.value,
+                ).isDefined)
+            range <- occurence.range
+          } yield range.toLsp
+        }
       }
-    }
+      .fallbackTo(
+        compilers.prepareRename(params, token).map(_.asScala)
+      )
   }
 
   def rename(

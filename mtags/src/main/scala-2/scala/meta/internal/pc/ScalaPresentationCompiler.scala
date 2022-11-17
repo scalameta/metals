@@ -38,6 +38,7 @@ import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -211,6 +212,18 @@ case class ScalaPresentationCompiler(
       new SignatureHelp(),
       params.token
     ) { pc => new SignatureHelpProvider(pc.compiler()).signatureHelp(params) }
+
+  override def prepareRename(
+      params: OffsetParams
+  ): CompletableFuture[ju.Optional[lsp4j.Range]] =
+    compilerAccess.withNonInterruptableCompiler(
+      Optional.empty[lsp4j.Range](),
+      params.token
+    ) { pc =>
+      Optional.ofNullable(
+        PcRenameProvider.prepareRename(pc.compiler(), params).orNull
+      )
+    }
 
   override def rename(
       params: OffsetParams,

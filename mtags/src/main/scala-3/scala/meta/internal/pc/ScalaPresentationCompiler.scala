@@ -282,6 +282,19 @@ case class ScalaPresentationCompiler(
     }
   end hover
 
+  def prepareRename(
+      params: OffsetParams
+  ): CompletableFuture[ju.Optional[l.Range]] =
+    compilerAccess.withNonInterruptableCompiler(
+      Optional.empty[l.Range](),
+      params.token,
+    ) { access =>
+      val driver = access.compiler()
+      Optional.ofNullable(
+        PcRenameProvider.prepareRename(driver, params).orNull
+      )
+    }
+
   def rename(
       params: OffsetParams,
       name: String,

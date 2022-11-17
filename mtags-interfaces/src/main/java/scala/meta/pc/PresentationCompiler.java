@@ -6,12 +6,12 @@ import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.DocumentHighlight;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
+import org.eclipse.lsp4j.Range;
 
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.DocumentRangeFormattingParams;
-import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
 import org.eclipse.lsp4j.SelectionRange;
 
@@ -68,6 +68,12 @@ public abstract class PresentationCompiler {
      * Returns the type of the expression at the given position along with the symbol of the referenced symbol.
      */
     public abstract CompletableFuture<Optional<HoverSignature>> hover(OffsetParams params);
+
+    /**
+     * Renames the symbol at given position and all of its occurrences to `name`.
+     * @implNote use only on symbols defined inside a method
+    */
+    public abstract CompletableFuture<Optional<Range>> prepareRename(OffsetParams params);
 
     /**
      * Renames the symbol at given position and all of its occurrences to `name`.

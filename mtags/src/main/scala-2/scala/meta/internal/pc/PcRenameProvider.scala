@@ -4,6 +4,14 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.Range
+
+object PcRenameProvider {
+  def prepareRename(
+      compiler: MetalsGlobal,
+      params: OffsetParams
+  ): Option[Range] = ???
+}
 
 class PcRenameProvider(
     override val compiler: MetalsGlobal,

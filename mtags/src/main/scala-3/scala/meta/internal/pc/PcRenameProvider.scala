@@ -6,6 +6,13 @@ import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
+
+object PcRenameProvider:
+  def prepareRename(
+      driver: InteractiveDriver,
+      params: OffsetParams,
+  ): Option[l.Range] = ???
+
 final class PcRenameProvider(
     driver: InteractiveDriver,
     params: OffsetParams,
