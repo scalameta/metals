@@ -159,7 +159,7 @@ class DebugProvider(
           )
         } else {
           throw new IllegalArgumentException(
-            s"${buildServer.name} ${buildServer.version} does not support scala-debug-adpater 2.x"
+            s"${buildServer.name} ${buildServer.version} does not support scala-debug-adapter 2.x"
           )
         }
       DebugProxy.open(
