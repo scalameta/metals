@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.codeactions
 
+import java.util.Collections
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -12,7 +14,6 @@ import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
-import java.util.Collections
 
 class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
     extends CodeAction {
