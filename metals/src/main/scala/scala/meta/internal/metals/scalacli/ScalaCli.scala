@@ -371,7 +371,7 @@ object ScalaCli {
   def scalaCliMainClass: String =
     "scala.cli.ScalaCli"
 
-  val name = "ScalaCli"
+  val name = "scala-cli"
 
   sealed trait ConnectionState
   object ConnectionState {
