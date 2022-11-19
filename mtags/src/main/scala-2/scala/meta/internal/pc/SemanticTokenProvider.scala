@@ -71,7 +71,7 @@ final class SemanticTokenProvider(
             if (wkStr == "\n") cOffset - 1
             else cOffset
 
-          if ((tokenType, tokeModifier) != (-1, 0)) {
+          if (tokenType!= -1) {
             buffer.++=(
               List(
                 providing.deltaLine,
