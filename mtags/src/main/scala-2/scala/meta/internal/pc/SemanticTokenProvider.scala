@@ -52,7 +52,7 @@ final class SemanticTokenProvider(
     var cLine = Line(0, 0) // Current Line
     var lastProvided = SingleLineToken(cLine, 0, None)
 
-    for (tk <- params.text().tokenize.toOption.get) yield {
+    for (tk <- params.text().tokenize.toOption.getOrElse(Nil)) yield {
 
       val (tokenType, tokeModifier) = getTypeAndMod(tk)
       var cOffset = tk.pos.start // Current Offset
