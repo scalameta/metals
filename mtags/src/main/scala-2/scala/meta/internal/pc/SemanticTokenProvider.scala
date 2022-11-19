@@ -183,7 +183,7 @@ final class SemanticTokenProvider(
       if (cName.size >= 2) {
         if (
           cName(0) == '`'
-          && cName(cName.size - 1) == 96.toChar
+          && cName(cName.size - 1) == '`'
         ) ret = 2
       }
       ret
