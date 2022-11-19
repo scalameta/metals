@@ -182,7 +182,7 @@ final class SemanticTokenProvider(
       val cName = tk.text.toCharArray()
       if (cName.size >= 2) {
         if (
-          cName(0) == 96.toChar // backtick
+          cName(0) == '`'
           && cName(cName.size - 1) == 96.toChar
         ) ret = 2
       }
