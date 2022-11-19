@@ -206,7 +206,10 @@ final class SemanticTokenProvider(
   )
   object NodeInfo {
     def apply(tree: Tree, pos: scala.reflect.api.Position): NodeInfo =
-      new NodeInfo(Some(tree.symbol), pos)
+      val sym = tree.symbol
+      if (sym != NoSymbol && sym != null)
+        NodeInfo(Some(tree.symbol), pos)
+      else NodeInfo(None, pos)
 
     def apply(sym: Symbol, pos: scala.reflect.api.Position): NodeInfo =
       new NodeInfo(Some(sym), pos)
