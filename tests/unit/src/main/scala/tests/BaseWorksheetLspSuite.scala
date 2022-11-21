@@ -771,7 +771,7 @@ abstract class BaseWorksheetLspSuite(
            |/a/src/main/scala/foo/Main.worksheet.sc
            |import $$ivy.`io.cir`
            |import $$dep.`io.circe::circe-ref`
-           |import $$dep.`io.circe::circe-yaml:0.14`
+           |import $$dep.`com.lihaoyi::upickle:1.4`
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
@@ -802,10 +802,11 @@ abstract class BaseWorksheetLspSuite(
       )
       _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
 
-      versionExpectedCompletionList = List("0.14.2", "0.14.1", "0.14.0")
+      versionExpectedCompletionList =
+        List("1.4.4", "1.4.3", "1.4.2", "1.4.1", "1.4.0")
       response <- server.completionList(
         "a/src/main/scala/foo/Main.worksheet.sc",
-        "import $dep.`io.circe::circe-yaml:0.14@@`",
+        "import $dep.`com.lihaoyi::upickle:1.4@@`",
       )
       versionCompletionList = response
         .getItems()
@@ -815,7 +816,7 @@ abstract class BaseWorksheetLspSuite(
       _ = assertEquals(versionCompletionList, versionExpectedCompletionList)
       noCompletions <- server.completion(
         "a/src/main/scala/foo/Main.worksheet.sc",
-        "import $dep.`io.circe::circe-yaml:0.14`@@",
+        "import $dep.`com.lihaoyi::upickle:1.4`@@",
       )
       _ = assertNoDiff(noCompletions, "")
     } yield ()
