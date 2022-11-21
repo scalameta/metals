@@ -1526,4 +1526,17 @@ class CompletionSuite extends BaseCompletionSuite {
     ),
     topLines = Some(1),
   )
+
+  check(
+    "wildcard-param",
+    """
+      |object A {
+      |  List(1, 3, 4).map { _ =>
+      |    @@
+      |  }
+      |}""".stripMargin,
+    "",
+    filter = _.startsWith("_"),
+  )
+
 }

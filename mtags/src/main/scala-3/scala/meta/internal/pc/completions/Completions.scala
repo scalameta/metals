@@ -80,6 +80,14 @@ class Completions(
           !isNotLocalForwardReference(sym) ||
           sym.isPackageObject
 
+      def isWildcardParam(sym: Symbol) =
+        if sym.isTerm && sym.owner.isAnonymousFunction then
+          sym.name match
+            case DerivedName(under, _) =>
+              under.isEmpty
+            case _ => false
+        else false
+
       if generalExclude then false
       else
         this match
@@ -100,6 +108,7 @@ class Completions(
               sym.is(Module) &&
                 (sym.companionClass == NoSymbol && sym.info.allMembers.nonEmpty)
             allowModule
+          case Term if isWildcardParam(sym) => false
           case Term if sym.isTerm || sym.is(Package) => true
           case Import => true
           case _ => false
