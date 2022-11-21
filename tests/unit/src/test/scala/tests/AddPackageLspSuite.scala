@@ -16,6 +16,16 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
        |""".stripMargin,
   )
 
+  check("script")(
+    "a/src/main/scala/a/Main.sc",
+    "",
+  )
+
+  check("worksheet")(
+    "a/src/main/scala/a/Main.worksheet.sc",
+    "",
+  )
+
   check("package-file")(
     "a/src/main/scala/a/package.scala",
     """|package object a {
