@@ -35,10 +35,11 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j
+import org.eclipse.lsp4j.eclipse.lsp4j.Hover
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -215,9 +216,9 @@ case class ScalaPresentationCompiler(
 
   override def prepareRename(
       params: OffsetParams
-  ): CompletableFuture[ju.Optional[lsp4j.Range]] =
+  ): CompletableFuture[ju.Optional[Range]] =
     compilerAccess.withNonInterruptableCompiler(
-      Optional.empty[lsp4j.Range](),
+      Optional.empty[Range](),
       params.token
     ) { pc =>
       Optional.ofNullable(

@@ -20,6 +20,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
     test(name) {
       val original = s"""|object Main {
                          |def method() = {
+                         |List(1) + 2
                          |$methodBody
                          |}
                          |}
