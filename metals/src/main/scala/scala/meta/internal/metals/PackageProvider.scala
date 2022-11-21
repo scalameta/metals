@@ -45,7 +45,8 @@ class PackageProvider(private val buildTargets: BuildTargets) {
     }
 
     if (
-      path.isScalaOrJava && !path.isJarFileSystem && path.toFile.length() == 0
+      path.isScalaOrJava && !path.isScalaScript && !path.isJarFileSystem &&
+      path.toFile.length() == 0
     ) {
       buildTargets
         .inverseSourceItem(path)
