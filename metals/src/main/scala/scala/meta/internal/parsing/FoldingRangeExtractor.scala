@@ -20,7 +20,7 @@ final class FoldingRangeExtractor(
     foldOnlyLines: Boolean,
 ) {
   private val spanThreshold = 2
-  private val distanceToEnclosingThreshold = 3
+  private val distanceToEnclosingThreshold = 1
 
   private val ranges = new FoldingRanges(foldOnlyLines)
 
