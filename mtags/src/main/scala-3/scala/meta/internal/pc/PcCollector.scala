@@ -176,9 +176,11 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
          */
         def isForComprehensionOwner(named: NameTree) =
           soughtNames(named.name) &&
-            named.symbol.owner.isAnonymousFunction && owners.exists(
-              _.span.point == named.symbol.owner.span.point
-            )
+            scala.util
+              .Try(named.symbol.owner)
+              .toOption
+              .exists(_.isAnonymousFunction) &&
+            owners.exists(_.span.point == named.symbol.owner.span.point)
 
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))

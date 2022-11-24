@@ -107,6 +107,13 @@ class ShortenedNames(
       if isVisited(key) then return cached.getOrDefault(key, tpe)
       isVisited += key
       val result = tpe match
+        // special case for types which are not designated by a Symbol
+        // example: path-dependent types
+        case tr: CachedTypeRef
+            if !tr.designator
+              .isInstanceOf[Symbol] && tr.typeSymbol == NoSymbol =>
+          new CachedTypeRef(loop(tr.prefix, None), tr.designator, tr.hash)
+
         case TypeRef(prefix, designator) =>
           // designator is not necessarily an instance of `Symbol` and it's an instance of `Name`
           // this can be seen, for example, when we are shortening the signature of 3rd party APIs.
