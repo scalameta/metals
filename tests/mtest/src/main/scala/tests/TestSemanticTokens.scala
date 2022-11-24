@@ -4,7 +4,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.pc.SemanticTokenCapability._
+import scala.meta.internal.pc.SemanticTokens._
 
 import org.eclipse.{lsp4j => l}
 

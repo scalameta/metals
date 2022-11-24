@@ -1,7 +1,7 @@
 package scala.meta.internal.pc
 import org.eclipse.lsp4j._
 
-object SemanticTokens{
+object SemanticTokens {
   val TokenTypes: List[String] = List(
     SemanticTokenTypes.Namespace,
     SemanticTokenTypes.Type,

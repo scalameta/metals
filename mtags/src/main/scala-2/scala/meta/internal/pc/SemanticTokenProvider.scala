@@ -5,7 +5,7 @@ import scala.annotation.switch
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.pc.SemanticTokenCapability._
+import scala.meta.internal.pc.SemanticTokens._
 import scala.meta.pc.VirtualFileParams
 import scala.meta.tokens._
 
@@ -71,7 +71,7 @@ final class SemanticTokenProvider(
             if (wkStr == "\n") cOffset - 1
             else cOffset
 
-          if (tokenType!= -1) {
+          if (tokenType != -1) {
             buffer.++=(
               List(
                 providing.deltaLine,
@@ -132,7 +132,6 @@ final class SemanticTokenProvider(
       tk: scala.meta.tokens.Token
   ): Integer = {
     tk match {
-
       // Alphanumeric keywords
       case _: Token.ModifierKeyword => getTypeId(SemanticTokenTypes.Modifier)
       case _: Token.Keyword => getTypeId(SemanticTokenTypes.Keyword)
@@ -175,6 +174,10 @@ final class SemanticTokenProvider(
     }
 
   }
+
+  /**
+   * The position of @param tk must be incremented from the previous call.
+   */
   def pickFromTraversed(tk: scala.meta.tokens.Token): Option[NodeInfo] = {
 
     val adjustForBacktick: Int = {
@@ -189,15 +192,28 @@ final class SemanticTokenProvider(
       ret
     }
 
-    val buffer = ListBuffer.empty[NodeInfo]
-    for (node <- nodes) {
-      if (
-        node.pos.start == tk.pos.start &&
-        node.pos.end + adjustForBacktick == tk.pos.end
-      ) buffer.++=(List(node))
-    }
+    val nodesIterator = nodes.iterator
+    var currentNode = nodesIterator.next()
 
-    buffer.toList.headOption
+    def isTarget: Boolean =
+      currentNode.pos.start == tk.pos.start &&
+        currentNode.pos.end + adjustForBacktick == tk.pos.end
+
+    def continueItelation: Boolean =
+      // Goes ahead for appropriate position
+      if (currentNode.pos.start < tk.pos.start) true
+      // Stops if the position is exceeded
+      else if (currentNode.pos.start > tk.pos.start) false
+      // Ends successfully if Target is found
+      else if (isTarget) false
+      // Continues seeking on the appropriate position
+      else true
+
+    while (continueItelation && nodesIterator.hasNext)
+      currentNode = nodesIterator.next()
+
+    if (isTarget) Some(currentNode)
+    else None
   }
 
   case class NodeInfo(
@@ -205,11 +221,12 @@ final class SemanticTokenProvider(
       pos: scala.reflect.api.Position
   )
   object NodeInfo {
-    def apply(tree: Tree, pos: scala.reflect.api.Position): NodeInfo =
+    def apply(tree: Tree, pos: scala.reflect.api.Position): NodeInfo = {
       val sym = tree.symbol
       if (sym != NoSymbol && sym != null)
         NodeInfo(Some(tree.symbol), pos)
       else NodeInfo(None, pos)
+    }
 
     def apply(sym: Symbol, pos: scala.reflect.api.Position): NodeInfo =
       new NodeInfo(Some(sym), pos)
@@ -335,7 +352,7 @@ final class SemanticTokenProvider(
             val symbol = imp.expr.symbol.info.member(sel.name)
             NodeInfo(symbol, sel.namePosition(source))
           }
-          nodes ++ ret
+          traverse(nodes ++ ret, imp.expr)
 
         case _ =>
           if (tree == null) null
@@ -422,7 +439,7 @@ final class SemanticTokenProvider(
         // get Type
         val typ =
           if (sym.isValueParameter) getTypeId(SemanticTokenTypes.Parameter)
-          else if (sym.isTypeParameter)
+          else if (sym.isTypeParameter || sym.isTypeSkolem)
             getTypeId(SemanticTokenTypes.TypeParameter)
           else if (isOperatorName) getTypeId(SemanticTokenTypes.Operator)
           // Java Enum

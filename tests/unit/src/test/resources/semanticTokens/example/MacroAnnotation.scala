@@ -1,6 +1,6 @@
 <<package>>/*keyword*/ <<example>>/*namespace*/
 
-<<import>>/*keyword*/ io.circe.derivation.annotations.<<JsonCodec>>/*variable,readonly*/
+<<import>>/*keyword*/ <<io>>/*namespace*/.circe.derivation.annotations.<<JsonCodec>>/*variable,readonly*/
 
 <<@>>/*keyword*/<<JsonCodec>>/*class*/
 <<// FIXME: https://github.com/scalameta/scalameta/issues/1789>>/*comment*/
@@ -11,7 +11,7 @@
 }
 
 <<object>>/*keyword*/ <<MacroAnnotations>>/*class*/ {
-  <<import>>/*keyword*/ scala.meta.<<_>>/*variable*/
+  <<import>>/*keyword*/ <<scala>>/*namespace*/.<<meta>>/*namespace*/.<<_>>/*variable*/
   <<// IntelliJ has never managed to goto definition for the inner classes from Trees.scala>>/*comment*/
   <<// due to the macro annotations.>>/*comment*/
   <<val>>/*keyword*/ <<x>>/*variable,readonly*/: <<Defn>>/*class*/.<<Class>>/*interface,abstract*/ = <<Defn>>/*class*/.<<Class>>/*method*/(<<null>>/*keyword*/, <<null>>/*keyword*/, <<null>>/*keyword*/, <<null>>/*keyword*/, <<null>>/*keyword*/)

@@ -138,7 +138,7 @@ class SemanticTokensSuite extends BasePCSuite {
   check(
     "import(Out of File)",
     s"""|
-        |<<import>>/*keyword*/ scala.math.<<sqrt>>/*method*/
+        |<<import>>/*keyword*/ <<scala>>/*namespace*/.<<math>>/*namespace*/.<<sqrt>>/*method*/
         |<<object>>/*keyword*/ <<sample3>>/*class*/ {
         |
         |  <<def>>/*keyword*/ <<sqrtplus1>>/*method*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/)

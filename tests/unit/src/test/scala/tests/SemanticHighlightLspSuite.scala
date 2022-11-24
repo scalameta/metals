@@ -28,14 +28,16 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   )
 
   check(
-    "Enum",
+    "Enum,true,false",
     s"""|
         |<<package>>/*keyword*/ <<example>>/*namespace*/
-        |<<import>>/*keyword*/ java.nio.file.<<AccessMode>>/*enum*/
-        |<<import>>/*keyword*/ java.nio.file.AccessMode.<<READ>>/*enumMember*/
-        |<<import>>/*keyword*/ java.nio.file.AccessMode.<<WRITE>>/*enumMember*/
-        |<<import>>/*keyword*/ java.nio.file.AccessMode.<<EXECUTE>>/*enumMember*/
+        |<<import>>/*keyword*/ <<java>>/*namespace*/.<<nio>>/*namespace*/.<<file>>/*namespace*/.<<AccessMode>>/*enum*/
+        |<<import>>/*keyword*/ <<java>>/*namespace*/.<<nio>>/*namespace*/.<<file>>/*namespace*/.<<AccessMode>>/*enum*/.<<READ>>/*enumMember*/
+        |<<import>>/*keyword*/ <<java>>/*namespace*/.<<nio>>/*namespace*/.<<file>>/*namespace*/.<<AccessMode>>/*enum*/.<<WRITE>>/*enumMember*/
+        |<<import>>/*keyword*/ <<java>>/*namespace*/.<<nio>>/*namespace*/.<<file>>/*namespace*/.<<AccessMode>>/*enum*/.<<EXECUTE>>/*enumMember*/
         |<<object>>/*keyword*/ <<Main>>/*class*/ {
+        |  <<val>>/*keyword*/ <<vTrue>>/*variable,readonly*/ = <<true>>/*keyword*/
+        |  <<val>>/*keyword*/ <<vFalse>>/*variable,readonly*/ = <<false>>/*keyword*/
         |  (<<null>>/*keyword*/: <<AccessMode>>/*enumMember,abstract*/) <<match>>/*keyword*/ {
         |    <<case>>/*keyword*/ <<READ>>/*enumMember*/ <<=>>>/*operator*/ <<0>>/*number*/
         |    <<case>>/*keyword*/ <<WRITE>>/*enumMember*/ <<=>>>/*operator*/

@@ -79,7 +79,7 @@ import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.pc.SemanticTokenCapability._
+import scala.meta.internal.pc.SemanticTokens._
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semver.SemVer
@@ -1743,8 +1743,6 @@ class MetalsLanguageServer(
   def semanticTokensFull(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] = {
-    scribe.info("Debug: MetalsLanguageServer.semanticHighlighting: Start")
-
     CancelTokens.future { token =>
       compilers.semanticTokens(
         params,
