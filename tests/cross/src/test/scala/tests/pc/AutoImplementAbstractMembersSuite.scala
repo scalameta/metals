@@ -1154,6 +1154,29 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "path-dependent-type-arg".tag(IgnoreScala2),
+    """|package a
+       |import scala.deriving.Mirror
+       |trait Foo:
+       |  def foo[A](using mirror: Mirror.ProductOf[A])(ordering: Ordering[mirror.MirroredElemTypes]): Unit
+       |
+       |class <<Bar>> extends Foo
+       |""".stripMargin,
+    """|package a
+       |import scala.deriving.Mirror
+       |import scala.deriving.Mirror.ProductOf
+       |trait Foo:
+       |  def foo[A](using mirror: Mirror.ProductOf[A])(ordering: Ordering[mirror.MirroredElemTypes]): Unit
+       |
+       |class Bar extends Foo {
+       |
+       |  override def foo[A](using mirror: ProductOf[A])(ordering: Ordering[mirror.MirroredElemTypes]): Unit = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
