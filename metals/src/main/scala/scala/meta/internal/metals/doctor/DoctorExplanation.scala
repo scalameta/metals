@@ -99,7 +99,7 @@ sealed trait DoctorExplanation {
   ): Obj = {
     val explanations =
       if (show)
-        List(correctMessage, incorrectMessage)
+        List(correctMessage) ++ incorrectMessage.split("\n")
       else
         List(correctMessage)
 
@@ -172,7 +172,7 @@ object DoctorExplanation {
     val correctMessage: String =
       s"${Icons.unicode.check} - working non-interactive features (references, rename etc.)"
     val incorrectMessage: String =
-      s"""|${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server (work for Bloop only)
+      s"""|${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server (which is only done when using Bloop)
           |${Icons.unicode.info} - build target doesn't support Java files""".stripMargin
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
