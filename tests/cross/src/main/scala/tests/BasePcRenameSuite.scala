@@ -6,6 +6,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.TextEdits
+import tests.RangeReplace
 
 import munit.Location
 import munit.TestOptions
@@ -50,4 +51,36 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
       )
 
     }
+
+  def prepare(
+      name: TestOptions,
+      input: String,
+  ) = {
+    test(name) {
+      val edit = input.replaceAll("(<<|>>)", "")
+      val expected =
+        input.replaceAll("@@", "")
+      val base = input.replaceAll("(<<|>>|@@)", "")
+      val (code, offset) = params(edit)
+      val range = presentationCompiler
+        .prepareRename(
+          CompilerOffsetParams(
+            URI.create("file:/Rename.scala"),
+            code,
+            offset,
+            EmptyCancelToken,
+          )
+        )
+        .get()
+
+      val withRange = {
+        val res = range.map(replaceInRange(base, _))
+        if (res.isEmpty()) expected else res.get()
+      }
+      assertNoDiff(
+        withRange,
+        expected,
+      )
+    }
+  }
 }

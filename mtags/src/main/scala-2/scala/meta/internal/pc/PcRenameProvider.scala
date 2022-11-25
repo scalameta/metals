@@ -89,10 +89,10 @@ object PcRenameProvider {
 class PcRenameProvider(
     override val compiler: MetalsGlobal,
     params: OffsetParams,
-    name: String
+    name: Option[String]
 ) extends PcCollector[TextEdit](compiler, params) {
   import compiler._
-  val newName: String = Identifier.backtickWrap(name.stripBackticks)
+  val newName: String = name.map(name => Identifier.backtickWrap(name.stripBackticks)).getOrElse("newName")
   def collect(tree: Tree, toAdjust: Position): TextEdit = {
     val (pos, stripBackticks) = adjust(toAdjust)
     new TextEdit(

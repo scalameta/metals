@@ -39,7 +39,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Hover
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -234,7 +234,7 @@ case class ScalaPresentationCompiler(
       List[TextEdit]().asJava,
       params.token
     ) { pc =>
-      new PcRenameProvider(pc.compiler(), params, name).rename().asJava
+      new PcRenameProvider(pc.compiler(), params, Some(name)).rename().asJava
     }
 
   override def hover(

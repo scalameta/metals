@@ -69,7 +69,6 @@ final class RenameProvider(
     val source = params.getTextDocument.getUri.toAbsolutePath
     val localPrepareRename =
       compilers.prepareRename(params, token).map(_.asScala)
-
     localPrepareRename
       .filter(_.nonEmpty)
       .fallbackTo(

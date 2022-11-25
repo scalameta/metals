@@ -98,17 +98,17 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
   end symbolAlternatives
 
   // First identify the symbol we are at, comments identify @@ as current cursor position
-  def soughtSymbols(path: List[Tree]): Option[Set[Symbol]] = path match
+  def soughtSymbols(path: List[Tree]): Option[(Set[Symbol], SourcePosition)] = path match
     /* simple identifier:
      * val a = val@@ue + value
      */
     case (id: Ident) :: _ =>
-      Some(symbolAlternatives(id.symbol))
+      Some(symbolAlternatives(id.symbol), id.sourcePos)
     /* simple selector:
      * object.val@@ue
      */
     case (sel: Select) :: _ if sel.nameSpan.contains(pos.span) =>
-      Some(symbolAlternatives(sel.symbol))
+      Some(symbolAlternatives(sel.symbol), pos.withSpan(sel.nameSpan))
     /* named argument:
      * foo(nam@@e = "123")
      */
@@ -120,13 +120,13 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
           // if it's a case class we need to look for parameters also
           if caseClassSynthetics(s.owner.name) && s.owner.is(Flags.Synthetic)
           then
-            Set(
+            (Set(
               s,
               s.owner.owner.companion.info.member(s.name).symbol,
               s.owner.owner.info.member(s.name).symbol,
             )
-              .filter(_ != NoSymbol)
-          else Set(s)
+              .filter(_ != NoSymbol), arg.sourcePos)
+          else (Set(s), arg.sourcePos)
         }
       else None
       end if
@@ -136,7 +136,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
      * etc.
      */
     case (df: NamedDefTree) :: _ if df.nameSpan.contains(pos.span) =>
-      Some(symbolAlternatives(df.symbol))
+      Some(symbolAlternatives(df.symbol), pos.withSpan(df.nameSpan))
     /**
      * For traversing annotations:
      * @JsonNo@@tification("")
@@ -156,7 +156,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
      * import scala.util.Tr@@y
      */
     case (imp: Import) :: _ if imp.span.contains(pos.span) =>
-      imp.selector(pos.span).map(symbolAlternatives)
+      imp.selector(pos.span).map(sym => (symbolAlternatives(sym), sym.sourcePos))
 
     case _ =>
       None
@@ -164,7 +164,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
   def result(): List[T] =
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols(path) match
-      case Some(sought) =>
+      case Some(sought, _) =>
         lazy val owners = sought
           .flatMap { s => Set(s.owner, s.owner.companionModule) }
           .filter(_ != NoSymbol)

@@ -95,7 +95,7 @@ abstract class PcCollector[T](
     else (pos, false)
   }
 
-  lazy val namedArgCache: Map[Int, NamedArg] = {
+  lazy val namedArgCache = {
     val parsedTree = parseTree(unit.source)
     parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
       rhs.pos.start -> arg

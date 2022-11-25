@@ -291,7 +291,7 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       Optional.ofNullable(
-        PcRenameProvider.prepareRename(driver, params).orNull
+        PcRenameProvider(driver, params, None).prepareRename().orNull
       )
     }
 
@@ -304,7 +304,7 @@ case class ScalaPresentationCompiler(
       params.token,
     ) { access =>
       val driver = access.compiler()
-      PcRenameProvider(driver, params, name).rename().asJava
+      PcRenameProvider(driver, params, Some(name)).rename().asJava
     }
 
   def newInstance(
