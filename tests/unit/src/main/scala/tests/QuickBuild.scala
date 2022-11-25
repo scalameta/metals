@@ -90,10 +90,19 @@ case class QuickBuild(
   def scalaBinaryVersion: String =
     ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
   def toBloop(workspace: AbsolutePath): C.Project = {
+    val testFrameworks = {
+      val frameworks = libraryDependencies
+        .map(lib => lib.take(lib.lastIndexOf(":")))
+        .flatMap(QuickBuild.supportedTestFrameworks.get)
+        .toList
+
+      if (frameworks.isEmpty) None
+      else Some(Config.Test(frameworks, Config.TestOptions.empty))
+    }
     val baseDirectory: Path = workspace.resolve(id).toNIO
     val binaryVersion: String = scalaBinaryVersion
     val out: Path = workspace.resolve(".bloop").resolve(id).toNIO
-    val isTest = id.endsWith("-test")
+    val isTest = testFrameworks.nonEmpty
     val classDirectory: Path = {
       val testPrefix = if (isTest) "test-" else ""
       out
@@ -188,17 +197,6 @@ case class QuickBuild(
         )
       }
     val javaHome = Option(Properties.jdkHome).map(Paths.get(_))
-
-    val testFrameworks = {
-      val frameworks = libraryDependencies
-        .map(lib => lib.take(lib.lastIndexOf(":")))
-        .flatMap(QuickBuild.supportedTestFrameworks.get)
-        .toList
-
-      if (frameworks.isEmpty) None
-      else Some(Config.Test(frameworks, Config.TestOptions.empty))
-    }
-
     val tags = if (isTest) Tag.Test :: Nil else Nil
 
     val scalaCompiler =
