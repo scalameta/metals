@@ -6,10 +6,10 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.TextEdits
-import tests.RangeReplace
 
 import munit.Location
 import munit.TestOptions
+import tests.RangeReplace
 
 class BasePcRenameSuite extends BasePCSuite with RangeReplace {
 
@@ -55,7 +55,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
   def prepare(
       name: TestOptions,
       input: String,
-  ) = {
+  ): Unit = {
     test(name) {
       val edit = input.replaceAll("(<<|>>)", "")
       val expected =

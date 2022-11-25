@@ -35,11 +35,11 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
+import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.Hover
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -222,7 +222,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc =>
       Optional.ofNullable(
-        PcRenameProvider.prepareRename(pc.compiler(), params).orNull
+        new PcRenameProvider(pc.compiler(), params, None).prepareRename().orNull
       )
     }
 

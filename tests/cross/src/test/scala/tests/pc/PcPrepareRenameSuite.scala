@@ -5,36 +5,17 @@ import tests.BasePcRenameSuite
 class PcPrepareRenameSuite extends BasePcRenameSuite {
 
   prepare(
-    "basic",
-    """package a
-      |object Main2{
-      |  val toRename = Main.preparetoR@@enameprepare
-      |}
-      |""".stripMargin,
-  )
-
-  prepare(
     "prepare-import",
     """|package a
        |
        |import java.util.{List => `J-List`}
        |
        |object Main{
-       |  val toRename: prepare`J-L@@ist`prepare[Int] = ???
-       |  val toRename2: `J-List`[Int] = ???
-       |  val toRename3: java.util.List[Int] = ???
-       |}
-       |""".stripMargin,
-  )
-
-  prepare(
-    "prepare-import-local",
-    """|package a
-       |
-       |import a.{Main2 => prepareOt@@herMainprepare}
-       |
-       |object Main{
-       |  val toRename = OtherMain.toRename
+       |  def m() = {
+       |    val toRename: <<`J-L@@ist`>>[Int] = ???
+       |    val toRename2: `J-List`[Int] = ???
+       |    val toRename3: java.util.List[Int] = ???
+       |  }
        |}
        |""".stripMargin,
   )
@@ -43,11 +24,13 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     "prepare-import-object",
     """|package a
        |
-       |import scala.util.{Try => StdLibTry}
        |
        |object Renaming {
-       |  def foo(n: Int): prepareStdLib@@Tryprepare[Int] = 
-       |    prepareStdLibTryprepare(n)
+       |  def m() = {
+       |    import scala.util.{Try => StdLibTry}  
+       |    def foo(n: Int): <<StdLib@@Try>>[Int] = 
+       |      StdLibTryprepare(n)
+       |  }
        |}
        |""".stripMargin,
   )
@@ -55,11 +38,13 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
   prepare(
     "case",
     """|package a
-       |case class prepareUserprepare(name : String)
+       |case class Userprepare(name : String)
        |object Main{
-       |  val user = prepareUserprepare.apply("James")
-       |  val user2 = prepareU@@serprepare(name = "Roger")
-       |  user.copy(name = "")
+       |  def m() = {
+       |    val user = User.apply("James")
+       |    val user2 = U@@serprepare(name = "Roger")
+       |    user.copy(name = "")
+       |  }
        |}
        |""".stripMargin,
   )
@@ -67,12 +52,12 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
   prepare(
     "generics",
     """|package a
-       |trait S1[X] { def preparetorenameprepare(p: X): String = "" }
-       |trait T1[Z] extends S1[Z] { override def preparetorenameprepare(p: Z): String = super.preparetorenameprepare(p) }
-       |trait T2[X] extends T1[X] { override def preparetorenameprepare(p: X): String = super.preparetorenameprepare(p) }
-       |trait T3[I, J] extends T2[I] { override def preparetorenameprepare(p: I): String = super.preparetorenameprepare(p) }
-       |trait T4[I, J] extends T3[J, I] { override def preparetorenameprepare(p: J): String = super.preparetorenameprepare(p) }
-       |trait T5[U] extends T4[U, U] { override def preparetore@@nameprepare(p: U): String = super.preparetorenameprepare(p) }
+       |trait S1[X] { def torename(p: X): String = "" }
+       |trait T1[Z] extends S1[Z] { override def torename(p: Z): String = super.torename(p) }
+       |trait T2[X] extends T1[X] { override def torename(p: X): String = super.torename(p) }
+       |trait T3[I, J] extends T2[I] { override def torename(p: I): String = super.torename(p) }
+       |trait T4[I, J] extends T3[J, I] { override def torename(p: J): String = super.torename(p) }
+       |trait T5[U] extends T4[U, U] { override def tore@@name(p: U): String = super.torename(p) }
        |""".stripMargin,
   )
 
@@ -81,36 +66,23 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     """|package a
        |trait P
        |trait PP extends P
-       |trait A { def preparetorenameprepare(a: String): P = ??? }
-       |trait B extends A { override def preparetore@@nameprepare(a: String): PP = ??? }
+       |trait A { def torename(a: String): P = ??? }
+       |trait B extends A { override def tore@@name(a: String): PP = ??? }
        |
-       |""".stripMargin,
-  )
-
-  prepare(
-    "across-targets",
-    """|package a
-       |object Main{
-       |  val preparetoRenameprepare = 123
-       |}
-       |/b/src/main/scala/b/Main2.scala
-       |package b
-       |import a.Main
-       |object Main2{
-       |  val toRename = Main.preparetoR@@enameprepare
-       |}
        |""".stripMargin,
   )
 
   prepare(
     "unapply",
-    """|object prepareF@@ooprepare {
+    """|object F@@oo {
        |  def unapply(s: String): Option[String] = Some("")
        |}
        |
        |object Main{
-       |  "foo" match {
-       |    case prepareFooprepare(s) => ()
+       |  def m() = {
+       |    "foo" match {
+       |      case Fooprepare(s) => ()
+       |    }
        |  }
        |}
        |""".stripMargin,
@@ -119,7 +91,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
   prepare(
     "unapply-param",
     """|object Foo {
-       |  def unapply(<<preparenam@@eprepare>>: String): Option[String] = Some(preparenameprepare)
+       |  def unapply(<<nam@@e>>: String): Option[String] = Some(name)
        |}
        |
        |object Main{
@@ -135,8 +107,8 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     """|package a
        |object Main{
        |  def hello() = {
-       |    val <<preparetoRen@@ameprepare>> = 123
-       |    preparetoRenameprepare
+       |    val <<toRen@@ame>> = 123
+       |    toRename
        |  }
        |}
        |""".stripMargin,
@@ -146,9 +118,10 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     "method",
     """|package a
        |object Main{
-       |  def preparemet@@hodprepare(abc : String) = true
-       |
-       |  if(preparemethodprepare("")) println("Is true!")
+       |  def m() = {
+       |    def <<met@@hodprepare>>(abc : String) = true
+       |    if(methodprepare("")) println("Is true!")
+       |  }
        |}
        |""".stripMargin,
   )
@@ -156,12 +129,15 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
   prepare(
     "self-type",
     """|package a
-       |trait prepareA@@BCprepare
-       |trait Alphabet{
-       |  this: prepareABCprepare =>
-       |}
+       |
        |object Main{
-       |  val a = new Alphabet with prepareABCprepare
+       |  def m() = {
+       |    trait <<A@@BC>>
+       |    trait Alphabet{
+       |      this: ABC =>
+       |    }
+       |    val a = new Alphabet with ABC
+       |  }
        |}
        |""".stripMargin,
   )
@@ -170,45 +146,11 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     "method-inheritance",
     """|package a
        |trait Hello{
-       |  def preparemethodprepare(abc : String) : Boolean
+       |  def method(abc : String) : Boolean
        |}
        |
        |class GoodMorning extends Hello {
-       |  def preparemet@@hodprepare(abc : String) = true
-       |}
-       |""".stripMargin,
-  )
-
-  prepare(
-    "long-inheritance",
-    """|package a
-       |trait A[T, S] {
-       |  def preparemethodprepare(abc : T) : S
-       |}
-       |
-       |abstract class B[T] extends A[T, Boolean] {
-       |  def preparemethodprepare(abc : T) : Boolean
-       |}
-       |
-       |abstract class C extends B[String] {
-       |  def preparemeth@@odprepare(abc : String) : Boolean = false
-       |}
-       |""".stripMargin,
-  )
-
-  prepare(
-    "multiple-inheritance",
-    """|package a
-       |trait A {
-       |  def preparemethodprepare(abc : String) : Boolean
-       |}
-       |
-       |trait B {
-       |  def preparemethodprepare(abc : String) : Boolean = true
-       |}
-       |
-       |abstract class C extends B with A {
-       |  override def preparemeth@@odprepare(abc : String) : Boolean = false
+       |  def met@@hod(abc : String) = true
        |}
        |""".stripMargin,
   )
@@ -217,37 +159,26 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     "apply",
     """|package a
        |object User{
-       |  def prepareap@@plyprepare(name : String) = name
+       |  def ap@@ply(name : String) = name
        |  def apply(name : String, age: Int) = name
        |}
        |object Main{
-       |  val toRename = User##.##prepareprepare("abc")
+       |  val toRename = User##.##("abc")
        |}
        |""".stripMargin,
   )
 
   prepare(
     "colon-bad",
-    """|package a
-       |class User{
-       |  def prepare:@@:prepare(name : String) = name
-       |}
+    """|package a  
        |object Main{
-       |  val user = new User()
-       |  "" prepare::prepare user
-       |}
-       |""".stripMargin,
-  )
-
-  prepare(
-    "colon-good",
-    """|package a
-       |class User{
-       |  def prepare:@@:prepare(name : String) = name
-       |}
-       |object Main{
-       |  val user = new User()
-       |  "" prepare::prepare user
+       |  def m() = {
+       |    class User{
+       |      def <<:@@:>>(name : String) = name
+       |    }
+       |    val user = new User()
+       |    "" :: user
+       |  }
        |}
        |""".stripMargin,
   )
@@ -255,25 +186,15 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
   prepare(
     "unary-bad",
     """|package a
-       |class User{
-       |  def prepareunary_!prepare = false
-       |}
+       |
        |object Main{
-       |  val user = new User()
-       |  prepare@@!prepareuser
-       |}
-       |""".stripMargin,
-  )
-
-  prepare(
-    "unary-bad2",
-    """|package a
-       |class User{
-       |  def prepareu@@nary_!prepare = false
-       |}
-       |object Main{
-       |  val user = new User()
-       |  prepare!prepareuser
+       |  def m() = {
+       |    class User{
+       |      def unary_! = false
+       |    }
+       |    val user = new User()
+       |    @@!user
+       |  }
        |}
        |""".stripMargin,
   )
@@ -288,76 +209,57 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
   )
 
   prepare(
-    "inheritance",
-    """|package a
-       |abstract class prepareAn@@imalprepare
-       |class Dog extends prepareAnimalprepare
-       |class Cat extends prepareAnimalprepare
-       |""".stripMargin,
-  )
-
-  prepare(
     "companion",
     """|package a
-       |class prepareMainprepare{}
-       |object prepareM@@ainprepare
+       |class Main{}
+       |object M@@ain
        |""".stripMargin,
   )
 
   prepare(
     "companion2",
     """|package a
-       |class prepareMa@@inprepare{}
-       |object prepareMainprepare
-       |""".stripMargin,
-  )
-
-  prepare(
-    "filename-exact-match",
-    """|package a
-       |object prepareMa@@inprepare
-       |object TheMain
-       |""".stripMargin,
-  )
-
-  prepare(
-    "filename-exact-match-2",
-    """|package a
-       |object Main
-       |object prepareThe@@Mainprepare
-       |""".stripMargin,
-  )
-
-
-  prepare(
-    "anon",
-    """|trait Methodable[T] {
-       |  def preparemethodprepare(asf: T): Int
-       |}
+       |object a {
+       |  def m() = {
+       |    class <<Ma@@in>>{}
+       |    object Main
        |
-       |trait Alphabet extends Methodable[String] {
-       |  def preparemethodprepare(adf: String) = 123
-       |}
-       |
-       |object Main {
-       |  val a = new Alphabet {
-       |    override def <<prepareme@@thodprepare>>(adf: String): Int = 321
        |  }
        |}
        |""".stripMargin,
   )
 
-
+  prepare(
+    "anon",
+    """|trait Methodable[T] {
+       |  def methodprepare(asf: T): Int
+       |}
+       |
+       |trait Alphabet extends Methodable[String] {
+       |  def methodprepare(adf: String) = 123
+       |}
+       |
+       |object Main {
+       |  val a = new Alphabet {
+       |    override def <<me@@thod>>(adf: String): Int = 321
+       |  }
+       |}
+       |""".stripMargin,
+  )
 
   prepare(
     "macro",
     """|package a
        |import io.circe.generic.JsonCodec
        |trait LivingBeing
-       |@JsonCodec sealed trait prepareAn@@imalprepare extends LivingBeing
-       |object prepareAnimalprepare {
-       |  case object Dog extends prepareAnimalprepare
-       |  case object Cat extends prepareAnimalprepare
+       |object Main {
+       |  def m() = {
+       |    @JsonCodec sealed trait <<An@@imal>> extends LivingBeing
+       |    object Animal {
+       |      case object Dog extends Animal
+       |      case object Cat extends Animal
+       |    }
+       |  }
        |}
        |""".stripMargin,
   )
@@ -367,75 +269,27 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     """|package a
        |import io.circe.generic.JsonCodec
        |@JsonCodec
-       |final case class prepareMa@@in2prepare(name: String)
+       |final case class Ma@@in2(name: String)
        |""".stripMargin,
   )
-
-
 
   prepare(
     "implicit-param",
     """|package a
        |object A {
-       |  implicit val preparesome@@Nameprepare: Int = 1
+       |  implicit val some@@Name: Int = 1
        |  def m[A](implicit a: A): A = a
        |  m[Int]
        |}""".stripMargin,
   )
 
   prepare(
-    "nested-symbol",
-    """|package a
-       |object Foo {
-       |  object prepareMa@@inprepare
-       |}
-       |""".stripMargin,
-  )
-
-
-  prepare(
-    "backtick-old-and-new-name",
-    """|package a
-       |object Main{
-       |  val prepare`to-Rename`prepare = 123
-       |}
-       |object Main2{
-       |  val toRename = Main.prepare`to-R@@ename`prepare
-       |}
-       |""".stripMargin,
-  )
-
-  prepare(
-    "backtick",
-    """|package a
-       |object Main{
-       |  val preparegreet@@ingprepare = "Hello"
-       |  "" match {
-       |    case `preparegreetingprepare` =>
-       |  }
-       |}
-       |""".stripMargin,
-  )
-
-  prepare(
-    "double-backtick",
-    """|package a
-       |object Main{
-       |  val preparegreet@@ingprepare = "Hello"
-       |  "" match {
-       |    case prepare`greeting`prepare =>
-       |  }
-       |}
-       |""".stripMargin,
-  )
-
-  prepare(
     "backtick2",
     """|package a
        |object Main{
-       |  val preparegreetingprepare = "Hello"
+       |  val greeting = "Hello"
        |  "" match {
-       |    case `preparegre@@etingprepare` =>
+       |    case `gre@@eting` =>
        |  }
        |}
        |""".stripMargin,
@@ -446,9 +300,9 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     """|package a
        |object Main{
        |  def local = {
-       |    val <<preparegreet@@ingprepare>> = "Hello"
+       |    val <<greet@@ing>> = "Hello"
        |    "" match {
-       |      case `preparegreetingprepare` =>
+       |      case `greeting` =>
        |    }
        |  }
        |}
@@ -472,24 +326,27 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
 
   prepare(
     "params",
-    """|case class Name(prepareva@@lueprepare: String)
+    """|
        |
        |object Main {
-       |  val name1 = Name(preparevalueprepare = "42")
-       |   .copy(preparevalueprepare = "43")
-       |   .copy(preparevalueprepare = "43")
-       |   .preparevalueprepare
-       |  val name2 = Name(preparevalueprepare = "44")
+       |  def m() = {
+       |    case class Name(<<va@@lue>>: String)
+       |    val name1 = Name(value = "42")
+       |      .copy(value = "43")
+       |      .copy(value = "43")
+       |      .value
+       |    val name2 = Name(value = "44")
+       |  }
        |}
        |""".stripMargin,
   )
 
   prepare(
     "constructor",
-    """|case class Name(prepareva@@lueprepare: String)
+    """|case class Name(va@@lue: String)
        |
        |object Main {
-       |  val name2 = new Name(preparevalueprepare = "44")
+       |  val name2 = new Name(value = "44")
        |}
        |""".stripMargin,
   )
@@ -497,40 +354,26 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
   prepare(
     "type-params",
     """|package a
-       |trait prepareABCprepare
-       |class CBD[T <: prepareAB@@Cprepare]
+       |trait ABC
+       |class CBD[T <: AB@@C]
        |object Main{
-       |  val a = classOf[prepareABCprepare]
-       |  val b = new CBD[prepareABCprepare]
+       |  val a = classOf[ABC]
+       |  val b = new CBD[ABC]
        |}
        |""".stripMargin,
   )
-
-  prepare(
-    "implicit-parameter",
-    """|trait A {
-       | implicit def preparefooprepare: Double
-       |}
-       |object A extends A {
-       |  implicit def preparefo@@oprepare: Double = 0.1
-       |  def bar(implicit x: Double): Double = x
-       |  val x = bar
-       |}
-       |""".stripMargin,
-  )
-
 
   prepare(
     "hierarchy-inside-method-trait",
     """|package a
        |object Main {
        |  final def main(args: Array[String]) = {
-       |    sealed trait <<prepareSy@@mbolprepare>>
-       |    case class Method(name: String) extends prepareSymbolprepare
-       |    case class Variable(value: String) extends prepareSymbolprepare
+       |    sealed trait <<Sy@@mbol>>
+       |    case class Method(name: String) extends Symbol
+       |    case class Variable(value: String) extends Symbol
        |
-       |    val symbol2: prepareSymbolprepare = Method("method")
-       |    val symbol3: prepareSymbolprepare = Variable("value")
+       |    val symbol2: Symbol = Method("method")
+       |    val symbol3: Symbol = Variable("value")
        |  }
        |}
        |""".stripMargin,
@@ -541,12 +384,12 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     """|package a
        |object Main {
        |  final def main(args: Array[String]) = {
-       |    sealed abstract class <<prepareSy@@mbolprepare>>
-       |    case class Method(name: String) extends prepareSymbolprepare
-       |    case class Variable(value: String) extends prepareSymbolprepare
+       |    sealed abstract class <<Sy@@mbol>>
+       |    case class Method(name: String) extends Symbol
+       |    case class Variable(value: String) extends Symbol
        |
-       |    val symbol2: prepareSymbolprepare = Method("method")
-       |    val symbol3: prepareSymbolprepare = Variable("value")
+       |    val symbol2: Symbol = Method("method")
+       |    val symbol3: Symbol = Variable("value")
        |  }
        |}
        |""".stripMargin,
@@ -556,11 +399,11 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     "variable",
     """|package a
        |object Main {
-       |  var preparev@@5prepare = false
+       |  var v@@5 = false
        |
        |  def f5: Boolean = {
-       |    preparev5prepare = true
-       |    preparev5prepare == true
+       |    v5 = true
+       |    v5 == true
        |  }
        |}
        |""".stripMargin,
@@ -570,11 +413,11 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     "variable-explicit1",
     """|package a
        |object Main {
-       |  var preparev@@5prepare = false
+       |  var v@@5 = false
        |
        |  def f5: Boolean = {
-       |    preparev5prepare_=(true)
-       |    preparev5prepare == true
+       |    v5_=(true)
+       |    v5 == true
        |  }
        |}
        |""".stripMargin,
@@ -584,11 +427,11 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     "variable-explicit2",
     """|package a
        |object Main {
-       |  var preparev5prepare = false
+       |  var v5 = false
        |
        |  def f5: Boolean = {
-       |    <<`preparev@@5prepare_=`>>(true)
-       |    preparev5prepare == true
+       |    <<`v@@5_=`>>(true)
+       |    v5 == true
        |  }
        |}
        |""".stripMargin,
@@ -602,8 +445,8 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |object Main {
        |  def method() = {
        |    List(1) + 2
-       |    val prepareabcprepare: Option[Int] = ???
-       |    <<prepareab@@cprepare>>.map(_ + 1)
+       |    val abc: Option[Int] = ???
+       |    <<ab@@c>>.map(_ + 1)
        |  }
        |}
        |""".stripMargin,

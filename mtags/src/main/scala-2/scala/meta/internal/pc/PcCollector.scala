@@ -110,7 +110,7 @@ abstract class PcCollector[T](
     }
   }
 
-  val soughtSymbols: Option[Set[Symbol]] = typedTree match {
+  lazy val soughtSymbols: Option[(Set[Symbol], Position)] = typedTree match {
     /* simple identifier:
      * val a = val@@ue + value
      */
@@ -118,9 +118,11 @@ abstract class PcCollector[T](
       // might happen in type trees
       // also this doesn't seem to be picked up by semanticdb
       if (id.symbol == NoSymbol)
-        fallbackSymbol(id.name, pos).map(symbolAlternatives)
+        fallbackSymbol(id.name, pos).map(sym =>
+          (symbolAlternatives(sym), id.pos)
+        )
       else {
-        Some(symbolAlternatives(id.symbol))
+        Some(symbolAlternatives(id.symbol), id.pos)
       }
     /* named argument, which is a bit complex:
      * foo(nam@@e = "123")
@@ -150,13 +152,16 @@ abstract class PcCollector[T](
                   .flatMap(_.paramss)
                   .flatten
                   .toSet
-                (constructorParams ++ Set(
-                  s,
-                  info.member(s.getterName),
-                  info.member(s.setterName),
-                  info.member(s.localName)
-                )).filter(_ != NoSymbol)
-              } else Set(s)
+                (
+                  (constructorParams ++ Set(
+                    s,
+                    info.member(s.getterName),
+                    info.member(s.setterName),
+                    info.member(s.localName)
+                  )).filter(_ != NoSymbol),
+                  id.pos
+                )
+              } else (Set(s), id.pos)
             }
         }
         .flatten
@@ -166,21 +171,28 @@ abstract class PcCollector[T](
      * etc.
      */
     case (df: DefTree) if df.namePos.includes(pos) =>
-      Some(symbolAlternatives(df.symbol))
+      Some(symbolAlternatives(df.symbol), df.namePos)
     /* Import selectors:
      * import scala.util.Tr@@y
      */
     case (imp: Import) if imp.pos.includes(pos) =>
-      imp.selector(pos).map(symbolAlternatives)
+      imp.selector(pos).map(sym => (symbolAlternatives(sym), sym.pos))
     /* simple selector:
      * object.val@@ue
      */
     case (sel: NameTree) if sel.namePos.includes(pos) =>
-      Some(symbolAlternatives(sel.symbol))
+      Some(symbolAlternatives(sel.symbol), sel.namePos)
 
     // needed for classOf[AB@@C]`
     case lit @ Literal(Constant(TypeRef(_, sym, _))) if lit.pos.includes(pos) =>
-      Some(symbolAlternatives(sym))
+      val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
+
+      Some(
+        symbolAlternatives(sym),
+        lit.pos
+          .withStart(posStart)
+          .withEnd(posStart + sym.decodedName.length())
+      )
     case _ =>
       None
   }
@@ -191,7 +203,7 @@ abstract class PcCollector[T](
 
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols match {
-      case Some(sought) =>
+      case Some((sought, _)) =>
         val owners = sought
           .map(_.owner)
           .flatMap(o => symbolAlternatives(o))
