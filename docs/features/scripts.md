@@ -6,7 +6,7 @@ title: Scripts support
 ### Working with a script
 
 Whenever, Metals opens a script file with `*.sc` extension, but only when it's
-not `*.worksheet.sc` or a build server is not already started for it, users will
+not `*.worksheet.sc` or a build server has not already started for it, users will
 be prompted to choose whether they want to use [Ammonite](http://ammonite.io/)
 or [Scala CLI](https://scala-cli.virtuslab.org/) to power the script.
 
@@ -22,7 +22,7 @@ import all newly opened scripts automatically or to always to do that manually.
 Both tools will start a build server in the background that will be able to
 compile your code and provide Metals with all the necessary information.
 
-ScalaCLI scripts can also be used standalone when Scala CLI generated `.bsp`
+Scala CLI scripts can also be used standalone when Scala CLI generated `.bsp`
 directory after running `scala-cli compile` or `scala-cli setup-ide` on that
 script.
 
@@ -47,6 +47,6 @@ errors coming from normal files in the workspace.
 Current limitations can be found:
 
 - [here for Ammonite](https://github.com/scalameta/metals/issues?q=is%3Aopen+is%3Aissue+label%3A%22ammonite+support%22)
-- [here for ScalaCLI](https://github.com/scalameta/metals/issues?q=is%3Aopen+is%3Aissue+label%3Ascala-cli)
+- [here for Scala CLI](https://github.com/scalameta/metals/issues?q=is%3Aopen+is%3Aissue+label%3Ascala-cli)
 
 For troubleshooting that a look at the [FAQ](/docs/troubleshooting/faq#ammonite-scripts)
