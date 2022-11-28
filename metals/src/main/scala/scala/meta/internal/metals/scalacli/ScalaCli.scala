@@ -319,7 +319,7 @@ object ScalaCli {
         finished.tryComplete(res)
       }
       SocketConnection(
-        "ScalaCli",
+        ScalaCli.name,
         new ClosableOutputStream(proc.outputStream, "Scala CLI error stream"),
         proc.inputStream,
         List(Cancelable { () => proc.cancel }),
