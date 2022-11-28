@@ -80,12 +80,21 @@ class StringActions(buffers: Buffers) extends CodeAction {
                 case (start: Token.Interpolation.Start, i: Int)
                     if (i + 2 < tokens.length
                       && tokens(i + 2).is[Token.Interpolation.End]) =>
+                  val idLength = tokens.lift(i - 1) match {
+                    case Some(Token.Interpolation.Id(name)) => name.length()
+                    case _ => 1
+                  }
                   def encloses = List(start, tokens(i + 1), tokens(i + 2))
                     .exists(_.pos.toLsp.encloses(range))
                   if (encloses) {
                     val lspRange = start.pos.toLsp
+
                     val editRange =
                       new l.Range(lspRange.getStart, lspRange.getEnd)
+
+                    val startChar = editRange.getStart.getCharacter
+                    editRange.getStart.setCharacter(startChar - idLength)
+                    editRange.getEnd.setCharacter(startChar)
                     Some(removeInterpolationAction(uri, editRange))
                   } else {
                     None
@@ -151,9 +160,6 @@ class StringActions(buffers: Buffers) extends CodeAction {
       uri: String,
       range: l.Range,
   ): l.CodeAction = {
-    range.getStart.setCharacter(range.getStart.getCharacter - 1)
-    range.getEnd.setCharacter(range.getStart.getCharacter + 1)
-
     val edits = List(
       new l.TextEdit(range, "")
     )
