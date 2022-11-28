@@ -90,6 +90,8 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
             "NIGHTLY"
           ) || version.contains(
             "-RC"
+          ) || version.contains(
+            "-bin-"
           )
       )
     ),
