@@ -75,6 +75,9 @@ final class BuildTools(
   def isMaven: Boolean = workspace.resolve("pom.xml").isFile
   def isPants: Boolean = workspace.resolve("pants.ini").isFile
   def isBazel: Boolean = workspace.resolve("WORKSPACE").isFile
+  def isScalaCli: Boolean =
+    workspace.resolve("project.scala").isFile ||
+      workspace.resolve(".scala-build").isDirectory
 
   def allAvailable: List[BuildTool] = {
     List(
@@ -94,6 +97,7 @@ final class BuildTools(
     if (isMaven) buf += "Maven"
     if (isPants) buf += "Pants"
     if (isBazel) buf += "Bazel"
+    if (isScalaCli) buf += "ScalaCli"
     buf.result()
   }
 
@@ -108,6 +112,7 @@ final class BuildTools(
     if (isGradle) buf += GradleBuildTool(userConfig)
     if (isMaven) buf += MavenBuildTool(userConfig)
     if (isMill) buf += MillBuildTool(userConfig)
+    if (isScalaCli) buf += ScalaCliBuildTool(userConfig)
 
     buf.result()
   }

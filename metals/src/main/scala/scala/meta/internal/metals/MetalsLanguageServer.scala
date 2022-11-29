@@ -32,6 +32,7 @@ import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BloopInstall
+import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
@@ -2273,7 +2274,7 @@ class MetalsLanguageServer(
         _ == BloopServers.name
       )
       buildChange <- possibleBuildTool match {
-        case Some(buildTool) =>
+        case Some(buildTool: BloopInstallProvider) =>
           buildTool.digest(workspace) match {
             case None =>
               scribe.warn(s"Skipping build import, no checksum.")
@@ -2283,14 +2284,25 @@ class MetalsLanguageServer(
             case Some(digest) =>
               indexer.reloadWorkspaceAndIndex(forceImport, buildTool, digest)
           }
-        case None =>
+        case Some(buildTool: BuildServerProvider) =>
+          buildTool.digest(workspace) match {
+            case None =>
+              scribe.warn(s"Skipping generating bsp files, no checksum.")
+              Future.successful(BuildChange.None)
+            case Some(digest) if !buildTools.isBsp =>
+              generateBspConfig()
+              indexer.reloadWorkspaceAndIndex(forceImport, buildTool, digest)
+            case Some(digest) =>
+              indexer.reloadWorkspaceAndIndex(forceImport, buildTool, digest)
+          }
+        case _ =>
           Future.successful(BuildChange.None)
       }
     } yield buildChange
 
   private def slowConnectToBloopServer(
       forceImport: Boolean,
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       checksum: String,
   ): Future[BuildChange] =
     for {
