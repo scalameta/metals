@@ -114,11 +114,23 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
             |
             |val schema = Schema.loadFromString("{}")
             |println(schema.isSuccess)
+            |
+            |/build.sc
+            |
+            |// this part may contain some config
+            |@
+            |import mill._
+            |import mill.scalalib._
+            |object demo extends ScalaModule {
+            |  def scalaVersion: T[String] = T("2.13.10")
+            |}
             |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
       _ <- server.didSave("main.sc")(identity)
+      _ = assertNoDiagnostics()
+      _ <- server.didOpen("build.sc")
       _ = assertNoDiagnostics()
     } yield ()
   }
