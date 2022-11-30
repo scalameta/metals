@@ -1,3 +1,22 @@
+def fooWithMatch(): Unit =>>region>>
+  def bar(): Unit =>>region>>
+    ??? match>>region>>
+      case 1 => ???
+      case 2 =>
+        ??? match
+          case 3 => ???
+          case 4 => ???
+          case 5 => ???
+          case 6 => ???<<region<<
+    ???
+    ???
+    ???<<region<<
+  ???
+  ???
+  ???
+  ???
+  ???<<region<<
+
 def foobar(): Unit =>>region>>
   ???
   ???
@@ -24,20 +43,9 @@ object foo>>region>>:
   println("")<<region<<
 
 def fooNested(): Unit =>>region>>
-  def bar(): Unit =>>region>>
+  def bar(): Unit =
     ???
     ???
     ???
-    ???<<region<<
-  ???<<region<<
-
-def fooWithMatch(x: Unit): Unit =>>region>>
-  def bar(): Unit =>>region>>
-    ??? match>>region>>
-      case _: Unit => ???
-      case z =>
-        z match
-          case _: Unit => ???
-          case _ => ???<<region<<
-    ???<<region<<
+    ???
   ???<<region<<
