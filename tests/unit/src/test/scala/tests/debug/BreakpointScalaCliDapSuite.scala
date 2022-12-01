@@ -1,5 +1,8 @@
 package tests.debug
 
+import scala.meta.internal.metals.DebugUnresolvedMainClassParams
+import scala.meta.internal.metals.JsonParser._
+
 import tests.BaseDapSuite
 import tests.QuickBuildInitializer
 import tests.ScalaCliBuildLayout
@@ -14,12 +17,18 @@ class BreakpointScalaCliDapSuite
   private val scalaCliScriptPath = "a/src/main/scala/a/script.sc"
   assertBreakpoints(
     "script",
-    main = Some("a.src.main.scala.a.script_sc"),
-    buildTarget = Some("project_28a1ba13eb"),
+    navigator =>
+      server.startDebuggingUnresolved(
+        DebugUnresolvedMainClassParams(
+          "a.src.main.scala.a.script_sc"
+        ).toJson,
+        navigator,
+      ),
   )(
     source = s"""/$scalaCliScriptPath
-                |>>val hello = "Hello"
-                |>>val world = "World"
+                |val hello = "Hello"
+                |val world = "World"
+                |>>println("Hello!")
                 |val helloWorld = s"$$hello $$world"
                 |>>println(helloWorld)
                 |System.exit(0)
@@ -29,12 +38,18 @@ class BreakpointScalaCliDapSuite
   private val scalaCliScriptPathTop = "script.sc"
   assertBreakpoints(
     "script-top",
-    main = Some("script_sc"),
-    buildTarget = Some("project_28a1ba13eb"),
+    navigator =>
+      server.startDebuggingUnresolved(
+        DebugUnresolvedMainClassParams(
+          "script_sc"
+        ).toJson,
+        navigator,
+      ),
   )(
     source = s"""/$scalaCliScriptPathTop
-                |>>val hello = "Hello"
-                |>>val world = "World"
+                |val hello = "Hello"
+                |val world = "World"
+                |>>println("Hello!")
                 |val helloWorld = s"$$hello $$world"
                 |>>println(helloWorld)
                 |System.exit(0)
