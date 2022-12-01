@@ -10,7 +10,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: hmarr/auto-approve-action@v2
+      - uses: hmarr/auto-approve-action@v3
         if: contains(github.event.pull_request.labels.*.name, 'semver-spec-patch') && github.actor == 'scalameta-bot'
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
