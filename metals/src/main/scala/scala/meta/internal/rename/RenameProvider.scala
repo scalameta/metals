@@ -112,7 +112,6 @@ final class RenameProvider(
       token: CancelToken,
   ): Future[WorkspaceEdit] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    pprint.log("tutaj wszedlem w ogole")
     val localRename = compilers
       .rename(params, token)
       .map(_.asScala.toList)

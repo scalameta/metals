@@ -11,13 +11,12 @@ class PcRenameProvider(
     name: Option[String]
 ) extends PcCollector[l.TextEdit](compiler, params) {
   import compiler._
+  private val forbiddenMethods =
+    Set("equals", "hashCode", "unapply", "unary_!", "!")
 
   def canRenameSymbol(sym: Symbol): Boolean = {
-    val forbiddenMethods =
-      Set("equals", "hashCode", "unapply", "unary_!", "!")
-    (!sym.isMethod || !forbiddenMethods(
-      sym.decodedName
-    )) && (sym.ownersIterator
+    (!sym.isMethod || !forbiddenMethods(sym.decodedName)) &&
+    (sym.ownersIterator
       .drop(1)
       .exists(
         _.isMethod
@@ -26,7 +25,6 @@ class PcRenameProvider(
   }
   def prepareRename(
   ): Option[l.Range] = {
-
     soughtSymbols.flatMap { case (symbols, pos) =>
       if (symbols.forall(canRenameSymbol)) Some(pos.toLsp)
       else None
@@ -45,7 +43,6 @@ class PcRenameProvider(
   }
 
   def rename(): List[l.TextEdit] = {
-
     val symbols = soughtSymbols.map(_._1).getOrElse(Set.empty)
     if (symbols.nonEmpty && symbols.forall(canRenameSymbol(_)))
       result()

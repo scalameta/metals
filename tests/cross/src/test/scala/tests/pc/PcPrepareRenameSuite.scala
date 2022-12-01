@@ -12,7 +12,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |
        |object Main{
        |  def m() = {
-       |    val toRename: <<`J-L@@ist`>>[Int] = ???
+       |    val toRename: `J-L@@ist`[Int] = ???
        |    val toRename2: `J-List`[Int] = ???
        |    val toRename3: java.util.List[Int] = ???
        |  }
@@ -20,15 +20,15 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |""".stripMargin,
   )
 
+  // currently we are not using presentation compiler in this case
   prepare(
     "prepare-import-object",
     """|package a
        |
-       |
        |object Renaming {
        |  def m() = {
        |    import scala.util.{Try => StdLibTry}  
-       |    def foo(n: Int): <<StdLib@@Try>>[Int] = 
+       |    def foo(n: Int): StdLib@@Try[Int] = 
        |      StdLibTryprepare(n)
        |  }
        |}
@@ -53,11 +53,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     "generics",
     """|package a
        |trait S1[X] { def torename(p: X): String = "" }
-       |trait T1[Z] extends S1[Z] { override def torename(p: Z): String = super.torename(p) }
-       |trait T2[X] extends T1[X] { override def torename(p: X): String = super.torename(p) }
-       |trait T3[I, J] extends T2[I] { override def torename(p: I): String = super.torename(p) }
-       |trait T4[I, J] extends T3[J, I] { override def torename(p: J): String = super.torename(p) }
-       |trait T5[U] extends T4[U, U] { override def tore@@name(p: U): String = super.torename(p) }
+       |trait T1[Z] extends S1[Z] { override def tore@@name(p: Z): String = super.torename(p) }
        |""".stripMargin,
   )
 
@@ -241,7 +237,28 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |
        |object Main {
        |  val a = new Alphabet {
-       |    override def <<me@@thod>>(adf: String): Int = 321
+       |    override def me@@thod(adf: String): Int = 321
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  prepare(
+    "anon2",
+    """|object a {
+       |  def m() = {
+       |    trait Methodable[T] {
+       |      def methodprepare(asf: T): Int
+       |    }
+       |
+       |    trait Alphabet extends Methodable[String] {
+       |      def methodprepare(adf: String) = 123
+       |    }
+       |
+       |    object Main {
+       |      val a = new Alphabet {
+       |        override def <<me@@thod>>(adf: String): Int = 321
+       |    }
        |  }
        |}
        |""".stripMargin,
@@ -424,20 +441,20 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
   )
 
   prepare(
-    "variable-explicit2",
-    """|package a
-       |object Main {
-       |  var v5 = false
-       |
-       |  def f5: Boolean = {
-       |    <<`v@@5_=`>>(true)
-       |    v5 == true
-       |  }
-       |}
+    "worksheet-method",
+    """|trait S1[X] { def torename(p: X): String = "" }
+       |trait T1[Z] extends S1[Z] { override def <<tore@@name>>(p: Z): String = super.torename(p) }
        |""".stripMargin,
+    filename = "A.worksheet.sc",
   )
-
-  // NON COMPILING TESTS
+  prepare(
+    "worksheet-classes",
+    """|sealed abstract class <<Sy@@mbol>>
+       |case class Method(name: String) extends Symbol
+       |case class Variable(value: String) extends Symbol
+       |""".stripMargin,
+    filename = "A.worksheet.sc",
+  )
 
   prepare(
     "not-compiling",

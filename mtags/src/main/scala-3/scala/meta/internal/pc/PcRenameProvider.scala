@@ -1,20 +1,21 @@
 package scala.meta.internal.pc
+import java.nio.file.Paths
+
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.tpd.*
-import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.{lsp4j as l}
-import java.nio.file.Paths
-import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.core.Symbols.NoSymbol
+import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.StdNames.*
+import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
-import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.interactive.Interactive
+import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.util.SourceFile
+import dotty.tools.dotc.util.SourcePosition
+import org.eclipse.{lsp4j as l}
 
 object PcRenameProvider:
 
@@ -25,17 +26,12 @@ final class PcRenameProvider(
     params: OffsetParams,
     name: Option[String],
 ) extends PcCollector[l.TextEdit](driver, params):
-
+  private val forbiddenMethods =
+    Set("equals", "hashCode", "unapply", "unary_!", "!")
   def canRenameSymbol(sym: Symbol)(using Context): Boolean =
-    pprint.log(sym.ownersIterator.toList.map(s => (s, s.name.decoded)))
-    val forbiddenMethods = Set("equals", "hashCode", "unapply", "unary_!", "!")
     (!sym.is(Method) || !forbiddenMethods(sym.decodedName))
-    && sym.ownersIterator
-      .drop(1)
-      .exists(ow =>
-        ow.is(Method) || (ow.is(ModuleClass)) && ow.name.decoded == "worksheet"
-      )
-    && sym.isDefinedInCurrentRun
+      && (sym.ownersIterator.drop(1).exists(ow => ow.is(Method))
+        || sym.source.path.isWorksheet)
 
   def prepareRename(): Option[l.Range] =
     soughtSymbols(path).flatMap((symbols, pos) =>

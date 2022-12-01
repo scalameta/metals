@@ -1621,9 +1621,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[l.Range] =
     CancelTokens.future { token =>
-      val rm = renameProvider.prepareRename(params, token).map(_.orNull)
-      rm.onComplete(pprint.log(_))
-      rm
+      renameProvider.prepareRename(params, token).map(_.orNull)
     }
 
   @JsonRequest("textDocument/rename")

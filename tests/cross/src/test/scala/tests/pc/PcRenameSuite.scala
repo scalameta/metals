@@ -338,4 +338,37 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  }
        |""".stripMargin,
   )
+
+  check(
+    "worksheet-method",
+    """|trait S1[X] { def <<torename>>(p: X): String = "" }
+       |trait T1[Z] extends S1[Z] { override def <<tore@@name>>(p: Z): String = super.<<torename>>(p) }
+       |""".stripMargin,
+    filename = "A.worksheet.sc",
+    wrap = false,
+  )
+
+  check(
+    "worksheet-classes",
+    """|sealed abstract class <<Sy@@mbol>>
+       |case class Method(name: String) extends <<Symbol>>
+       |case class Variable(value: String) extends <<Symbol>>
+       |""".stripMargin,
+    newName = "Tree",
+    filename = "A.worksheet.sc",
+    wrap = false,
+  )
+
+  check(
+    "not-compiling",
+    """|package a
+       |object Main {
+       |  def method() = {
+       |    List(1) + 2
+       |    val <<abc>>: Option[Int] = ???
+       |    <<ab@@c>>.map(_ + 1)
+       |  }
+       |}
+       |""".stripMargin,
+  )
 }
