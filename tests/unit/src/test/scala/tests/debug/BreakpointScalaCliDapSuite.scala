@@ -1,6 +1,8 @@
 package tests.debug
 
-import tests.{BaseDapSuite, QuickBuildInitializer, ScalaCliBuildLayout}
+import tests.BaseDapSuite
+import tests.QuickBuildInitializer
+import tests.ScalaCliBuildLayout
 
 class BreakpointScalaCliDapSuite
     extends BaseDapSuite(
