@@ -551,9 +551,9 @@ trait Completions { this: MetalsGlobal =>
   def isWorksheetIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
     tree match {
       case Import(select, _) =>
-        pos.source.file.name.isWorksheet && (select
-          .toString() == "<$ivy: error>" || select
-          .toString() == "<$dep: error>")
+        pos.source.file.name.isWorksheet &&
+        (select.toString().startsWith("<$ivy: error>") ||
+          select.toString().startsWith("<$dep: error>"))
       case _ => false
     }
 
