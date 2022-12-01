@@ -194,8 +194,6 @@ private[debug] final class DebugProxy(
         )
         mappedSourcePath = clientAdapter
           .toMetalsPath(frameSourcePath, mappedFrom = true)
-          .toString()
-        _ = frameSource.setPath(mappedSourcePath)
         metalsSource <- debugAdapter.adaptStackFrameSource(
           mappedSourcePath
         )
