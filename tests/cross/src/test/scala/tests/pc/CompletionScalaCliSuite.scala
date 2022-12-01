@@ -56,14 +56,18 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
 
   check(
     "script",
-    """|//> using lib "io.circe:circe-core_na@@
-       |package A
-       |""".stripMargin,
+    scriptWrapper(
+      """|//> using lib "io.circe:circe-core_na@@
+         |
+         |""".stripMargin,
+      "script.sc.scala",
+    ),
     """|circe-core_native0.4_2.12
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
        |""".stripMargin,
-    filename = "script.sc",
+    filename = "script.sc.scala",
+    enablePackageWrap = false,
   )
 
   check(
@@ -100,5 +104,14 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |""".stripMargin,
     "better-tostring",
   )
+
+  private def scriptWrapper(code: String, filename: String): String =
+    // Vaguely looks like a scala file that ScalaCLI generates
+    // from a sc file.
+    s"""|
+        |object ${filename.stripSuffix(".sc.scala")} {
+        |/*<script>*/${code}
+        |}
+        |""".stripMargin
 
 }
