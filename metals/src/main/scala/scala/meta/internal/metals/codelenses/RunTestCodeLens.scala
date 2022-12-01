@@ -57,25 +57,33 @@ final class RunTestCodeLens(
   ): Seq[l.CodeLens] = {
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
-    if (path.isAmmoniteScript || path.isWorksheet) {
-      Seq.empty
-    } else {
-      val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
-      val lenses = for {
-        buildTargetId <- buildTargets.inverseSources(path)
-        buildTarget <- buildTargets.info(buildTargetId)
-        connection <- buildTargets.buildServerOf(buildTargetId)
-        // although hasDebug is already available in BSP capabilities
-        // see https://github.com/build-server-protocol/build-server-protocol/pull/161
-        // most of the bsp servers such as bloop and sbt might not support it.
-        if buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt,
-      } yield {
-        val classes = buildTargetClasses.classesOf(buildTargetId)
-        codeLenses(textDocument, buildTargetId, classes, distance, path)
-      }
+    val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
+    val lenses = for {
+      buildTargetId <- buildTargets.inverseSources(path)
+      buildTarget <- buildTargets.info(buildTargetId)
+      connection <- buildTargets.buildServerOf(buildTargetId)
+      // although hasDebug is already available in BSP capabilities
+      // see https://github.com/build-server-protocol/build-server-protocol/pull/161
+      // most of the bsp servers such as bloop and sbt might not support it.
+    } yield {
+      val classes = buildTargetClasses.classesOf(buildTargetId)
+      if (connection.isScalaCLI && path.isAmmoniteScript) {
+        scalaCliCodeLenses(textDocument, buildTargetId, classes)
+      } else if (
+        buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt
+      ) {
+        codeLenses(
+          textDocument,
+          buildTargetId,
+          classes,
+          distance,
+          path,
+        )
+      } else { Nil }
 
-      lenses.getOrElse(Seq.empty)
     }
+
+    lenses.getOrElse(Seq.empty)
   }
 
   /**
@@ -180,6 +188,31 @@ final class RunTestCodeLens(
           .toList
       command <- commands
     } yield new l.CodeLens(range, command, null)
+  }
+
+  private def scalaCliCodeLenses(
+      textDocument: TextDocument,
+      target: BuildTargetIdentifier,
+      classes: BuildTargetClasses.Classes,
+  ): Seq[l.CodeLens] = {
+    val scriptFileName = textDocument.uri.stripSuffix(".sc")
+
+    val expectedMainClass =
+      if (scriptFileName.contains('/')) s"${scriptFileName}_sc."
+      else s"_empty_/${scriptFileName}_sc."
+    val main =
+      classes.mainClasses
+        .get(expectedMainClass)
+        .map(mainCommand(target, _))
+        .getOrElse(Nil)
+
+    main.map(command =>
+      new l.CodeLens(
+        new l.Range(new l.Position(0, 0), new l.Position(0, 2)),
+        command,
+        null,
+      )
+    )
   }
 
   /**

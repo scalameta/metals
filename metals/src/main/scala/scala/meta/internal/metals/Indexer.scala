@@ -280,6 +280,10 @@ final case class Indexer(
                   adjustLspData,
                 )
               }
+              override def lineForServer(line: Int): Option[Int] =
+                Some(line + topWrapperLineCount)
+              override def lineForClient(line: Int): Option[Int] =
+                Some(line - topWrapperLineCount)
             }
           data.addMappedSource(path, mappedSource)
         }

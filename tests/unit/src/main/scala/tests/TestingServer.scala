@@ -682,12 +682,13 @@ final case class TestingServer(
   }
 
   def startDebuggingUnresolved(
-      params: AnyRef
+      params: AnyRef,
+      stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue,
   ): Future[TestDebugger] = {
     assertSystemExit(params)
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
       .collect { case DebugSession(_, uri) =>
-        TestDebugger(URI.create(uri), Stoppage.Handler.Continue)
+        TestDebugger(URI.create(uri), stoppageHandler)
       }
   }
 

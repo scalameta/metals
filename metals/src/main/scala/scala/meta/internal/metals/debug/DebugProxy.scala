@@ -13,6 +13,7 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Trace
@@ -44,13 +45,15 @@ private[debug] final class DebugProxy(
     compilers: Compilers,
     stripColor: Boolean,
     statusBar: StatusBar,
+    sourceMapper: SourceMapper,
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
   @volatile private var debugMode: DebugMode = DebugMode.Enabled
   private val cancelled = new AtomicBoolean()
 
-  @volatile private var clientAdapter = ClientConfigurationAdapter.default
+  @volatile private var clientAdapter =
+    ClientConfigurationAdapter.default(sourceMapper)
   @volatile private var lastFrames: Array[StackFrame] = Array.empty
 
   lazy val listen: Future[ExitStatus] = {
@@ -82,7 +85,7 @@ private[debug] final class DebugProxy(
         "Initializing debugger",
         initialized.future,
       )
-      clientAdapter = ClientConfigurationAdapter.initialize(args)
+      clientAdapter = ClientConfigurationAdapter.initialize(args, sourceMapper)
       server.send(request)
     case request @ LaunchRequest(debugMode) =>
       this.debugMode = debugMode
@@ -103,7 +106,10 @@ private[debug] final class DebugProxy(
       val metalsSourcePath = clientAdapter.toMetalsPath(originalSource.getPath)
 
       args.getBreakpoints.foreach { breakpoint =>
-        val line = clientAdapter.normalizeLineForServer(breakpoint.getLine)
+        val line = clientAdapter.normalizeLineForServer(
+          metalsSourcePath,
+          breakpoint.getLine,
+        )
         breakpoint.setLine(line)
       }
 
@@ -154,7 +160,9 @@ private[debug] final class DebugProxy(
       response <- responses
       breakpoint <- response.getBreakpoints
     } yield {
-      val line = clientAdapter.adaptLineForClient(breakpoint.getLine)
+      val sourcePath = clientAdapter.toMetalsPath(originalSource.getPath)
+      val line =
+        clientAdapter.adaptLineForClient(sourcePath, breakpoint.getLine)
       breakpoint.setSource(originalSource)
       breakpoint.setLine(line)
       breakpoint
@@ -177,8 +185,18 @@ private[debug] final class DebugProxy(
       for {
         stackFrame <- args.getStackFrames
         frameSource <- Option(stackFrame.getSource)
-        sourcePath <- Option(frameSource.getPath)
-        metalsSource <- debugAdapter.adaptStackFrameSource(sourcePath)
+        frameSourcePath <- Option(frameSource.getPath)
+        _ = stackFrame.setLine(
+          clientAdapter.adaptLineForClient(
+            clientAdapter.toMetalsPath(frameSourcePath),
+            stackFrame.getLine,
+          )
+        )
+        mappedSourcePath = clientAdapter
+          .toMetalsPath(frameSourcePath, mappedFrom = true)
+        metalsSource <- debugAdapter.adaptStackFrameSource(
+          mappedSourcePath
+        )
       } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSource))
       response.setResult(args.toJson)
       lastFrames = args.getStackFrames()
@@ -237,6 +255,7 @@ private[debug] object DebugProxy {
       workspace: AbsolutePath,
       stripColor: Boolean,
       status: StatusBar,
+      sourceMapper: SourceMapper,
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -261,6 +280,7 @@ private[debug] object DebugProxy {
       compilers,
       stripColor,
       status,
+      sourceMapper,
     )
   }
 

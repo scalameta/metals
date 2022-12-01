@@ -724,6 +724,7 @@ class MetalsLanguageServer(
             semanticdbs,
             compilers,
             statusBar,
+            sourceMapper,
           )
         )
         scalafixProvider = ScalafixProvider(

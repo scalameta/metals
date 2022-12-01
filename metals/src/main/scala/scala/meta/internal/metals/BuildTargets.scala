@@ -78,6 +78,22 @@ final class BuildTargets() {
     data.fromIterators(d => d.allBuildTargetIds.iterator.map((d, _)))
   def mappedTo(path: AbsolutePath): Option[TargetData.MappedSource] =
     data.fromOptions(_.actualSources.get(path))
+  def mappedFrom(path: AbsolutePath): Option[AbsolutePath] =
+    data.fromOptions(_.actualSources.collectFirst {
+      case (source, mapped) if mapped.path == path => source
+    })
+  private def findMappedSource(
+      mappedPath: AbsolutePath
+  ): Option[TargetData.MappedSource] = {
+    data
+      .fromOptions(_.actualSources.collectFirst {
+        case (_, mapped) if mapped.path == mappedPath => mapped
+      })
+  }
+  def mappedLineForServer(mappedPath: AbsolutePath, line: Int): Option[Int] =
+    findMappedSource(mappedPath).flatMap(_.lineForServer(line))
+  def mappedLineForClient(mappedPath: AbsolutePath, line: Int): Option[Int] =
+    findMappedSource(mappedPath).flatMap(_.lineForClient(line))
 
   def allBuildTargetIds: Seq[BuildTargetIdentifier] =
     allBuildTargetIdsInternal.map(_._2).toVector

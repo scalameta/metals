@@ -104,11 +104,28 @@ abstract class BaseDapSuite(
   def assertBreakpoints(
       name: TestOptions,
       main: Option[String] = None,
+      buildTarget: Option[String] = None,
+  )(
+      source: String
+  )(implicit loc: Location): Unit = {
+    assertBreakpoints(
+      name,
+      navigator =>
+        debugMain(
+          buildTarget.getOrElse("a"),
+          main.getOrElse("a.Main"),
+          navigator,
+        ),
+    )(source)
+  }
+
+  def assertBreakpoints(
+      name: TestOptions,
+      createDebugger: StepNavigator => Future[TestDebugger],
   )(
       source: String
   )(implicit loc: Location): Unit = {
     test(name) {
-
       cleanWorkspace()
       val debugLayout = DebugWorkspaceLayout(source, workspace)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
@@ -117,7 +134,7 @@ abstract class BaseDapSuite(
       for {
         _ <- initialize(workspaceLayout)
         _ = assertNoDiagnostics()
-        debugger <- debugMain("a", main.getOrElse("a.Main"), navigator)
+        debugger <- createDebugger(navigator)
         _ <- debugger.initialize
         _ <- debugger.launch
         _ <- setBreakpoints(debugger, debugLayout)
@@ -126,7 +143,6 @@ abstract class BaseDapSuite(
       } yield ()
     }
   }
-
   def navigateExpectedBreakpoints(
       workspaceLayout: DebugWorkspaceLayout
   ): StepNavigator = {
