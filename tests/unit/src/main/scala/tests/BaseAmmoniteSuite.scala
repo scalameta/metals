@@ -672,30 +672,4 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ = assertNoDiff(noCompletions, "")
     } yield ()
   }
-
-  test("ivy-completion-extended-initial-completion") {
-    for {
-      _ <- initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion"
-           |  }
-           |}
-           |/main.sc
-           |import $$ivy.org.scalame
-           |""".stripMargin
-      )
-      _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
-
-      groupCompletionList <- server.completion(
-        "main.sc",
-        "import $ivy.org.scalame@@",
-      )
-      _ = assertNoDiff(groupCompletionList, "org.scalameta")
-    } yield ()
-  }
 }
