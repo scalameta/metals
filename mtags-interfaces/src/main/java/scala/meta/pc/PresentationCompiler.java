@@ -4,7 +4,6 @@ import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.DocumentHighlight;
-import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
 
@@ -68,7 +67,7 @@ public abstract class PresentationCompiler {
     /**
      * Returns the type of the expression at the given position along with the symbol of the referenced symbol.
      */
-    public abstract CompletableFuture<Optional<Hover>> hover(OffsetParams params);
+    public abstract CompletableFuture<Optional<HoverSignature>> hover(OffsetParams params);
 
     /**
      * Renames the symbol at given position and all of its occurrences to `name`.

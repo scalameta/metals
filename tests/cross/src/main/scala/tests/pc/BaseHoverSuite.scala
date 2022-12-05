@@ -45,13 +45,15 @@ abstract class BaseHoverSuite
       val hover = presentationCompiler
         .hover(pcParams)
         .get()
-      val obtained: String = renderAsString(code, hover.asScala, includeRange)
+        .asScala
+        .map(_.toLsp())
+      val obtained: String = renderAsString(code, hover, includeRange)
       assertNoDiff(
         obtained,
         getExpected(expected, compat, scalaVersion),
       )
       for {
-        h <- hover.asScala
+        h <- hover
         range <- Option(h.getRange)
       } {
         val base =

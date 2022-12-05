@@ -34,7 +34,6 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
@@ -46,6 +45,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
+import scala.meta.pc.HoverSignature
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -192,7 +192,7 @@ class Compilers(
                 "object Ma\n",
                 "object Ma".length(),
               )
-            )
+            ).thenApply(_.map(_.toLsp()))
           }
         }
       }
@@ -481,7 +481,7 @@ class Compilers(
   def hover(
       params: HoverExtParams,
       token: CancelToken,
-  ): Future[Option[Hover]] = {
+  ): Future[Option[HoverSignature]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.hover(CompilerRangeParams.offsetOrRange(pos, token))
         .asScala

@@ -1527,7 +1527,7 @@ class MetalsLanguageServer(
       compilers
         .hover(params, token)
         .map { hover =>
-          syntheticsDecorator.addSyntheticsHover(params, hover)
+          syntheticsDecorator.addSyntheticsHover(params, hover.map(_.toLsp()))
         }
         .map(
           _.orElse {
