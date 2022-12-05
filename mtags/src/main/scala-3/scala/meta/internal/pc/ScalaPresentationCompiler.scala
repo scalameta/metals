@@ -270,9 +270,9 @@ case class ScalaPresentationCompiler(
     }
   end selectionRange
 
-  def hover(params: OffsetParams): CompletableFuture[ju.Optional[l.Hover]] =
+  def hover(params: OffsetParams): CompletableFuture[ju.Optional[HoverSignature]] =
     compilerAccess.withNonInterruptableCompiler(
-      ju.Optional.empty[l.Hover](),
+      ju.Optional.empty[HoverSignature](),
       params.token,
     ) { access =>
       val driver = access.compiler()

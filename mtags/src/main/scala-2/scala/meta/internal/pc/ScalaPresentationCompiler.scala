@@ -23,6 +23,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
+import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
@@ -34,7 +35,6 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
@@ -225,9 +225,9 @@ case class ScalaPresentationCompiler(
 
   override def hover(
       params: OffsetParams
-  ): CompletableFuture[Optional[Hover]] =
+  ): CompletableFuture[Optional[HoverSignature]] =
     compilerAccess.withNonInterruptableCompiler(
-      Optional.empty[Hover](),
+      Optional.empty[HoverSignature](),
       params.token
     ) { pc =>
       Optional.ofNullable(

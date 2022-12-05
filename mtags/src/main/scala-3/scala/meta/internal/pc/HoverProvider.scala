@@ -10,6 +10,7 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
+import scala.meta.pc.HoverSignature
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.*
@@ -35,7 +36,7 @@ object HoverProvider:
       params: OffsetParams,
       driver: InteractiveDriver,
       search: SymbolSearch,
-  ): ju.Optional[Hover] =
+  ): ju.Optional[HoverSignature] =
     val uri = params.uri
     val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
     driver.run(uri, sourceFile)
@@ -115,13 +116,14 @@ object HoverProvider:
                     !symbol.is(Module) &&
                     !symbol.flags.isAllOf(EnumCase)
                 )
-              val content = HoverMarkup(
-                expressionType,
-                hoverString,
-                docString,
-                forceExpressionType,
+              ju.Optional.of(
+                ScalaHover.fromInfo(
+                  expressionType,
+                  hoverString,
+                  docString,
+                  forceExpressionType,
+                )
               )
-              ju.Optional.of(new Hover(content.toMarkupContent))
             case _ =>
               ju.Optional.empty
           end match
@@ -135,24 +137,24 @@ object HoverProvider:
   private def fallbackToDynamics(
       path: List[Tree],
       printer: MetalsPrinter,
-  )(using Context): ju.Optional[Hover] = path match
+  )(using Context): ju.Optional[HoverSignature] = path match
     case Apply(
           Select(sel, n),
           List(Literal(Constant(name: String))),
         ) :: _ if n == nme.selectDynamic || n == nme.applyDynamic =>
-      def findRefinement(tp: Type): ju.Optional[Hover] =
+      def findRefinement(tp: Type): ju.Optional[HoverSignature] =
         tp match
           case RefinedType(info, refName, tpe) if name == refName.toString() =>
             val tpeString =
               if n == nme.selectDynamic then s": ${printer.tpe(tpe.resultType)}"
               else printer.tpe(tpe)
-            val content = HoverMarkup(
-              tpeString,
-              s"def $name$tpeString",
-              "",
+            ju.Optional.of(
+              ScalaHover.fromInfo(
+                tpeString,
+                s"def $name$tpeString",
+                "",
+              )
             )
-            ju.Optional.of(new Hover(content.toMarkupContent))
-
           case RefinedType(info, _, _) =>
             findRefinement(info)
           case _ => ju.Optional.empty()
