@@ -6,11 +6,11 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
+import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
-import scala.meta.pc.HoverSignature
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.*
@@ -117,11 +117,11 @@ object HoverProvider:
                     !symbol.flags.isAllOf(EnumCase)
                 )
               ju.Optional.of(
-                ScalaHover.fromInfo(
-                  expressionType,
-                  hoverString,
-                  docString,
-                  forceExpressionType,
+                new ScalaHover(
+                  expressionType = Some(expressionType),
+                  symbolSignature = Some(hoverString),
+                  docstring = Some(docString),
+                  forceExpressionType = forceExpressionType,
                 )
               )
             case _ =>
@@ -149,10 +149,9 @@ object HoverProvider:
               if n == nme.selectDynamic then s": ${printer.tpe(tpe.resultType)}"
               else printer.tpe(tpe)
             ju.Optional.of(
-              ScalaHover.fromInfo(
-                tpeString,
-                s"def $name$tpeString",
-                "",
+              new ScalaHover(
+                expressionType = Some(tpeString),
+                symbolSignature = Some(s"def $name$tpeString"),
               )
             )
           case RefinedType(info, _, _) =>
