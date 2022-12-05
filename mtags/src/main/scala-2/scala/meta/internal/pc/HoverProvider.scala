@@ -150,12 +150,12 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       )
       val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
       val lspRange = if (range.isRange) Some(range.toLsp) else None
-      Some(new ScalaHover(Left(prettyType), lspRange))
+      Some(new ScalaHover(expressionType = Some(prettyType), range = lspRange))
     } else if (symbol == null || tpe.typeSymbol.isAnonymousClass) None
     else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
       Some(
         new ScalaHover(
-          Left(
+          expressionType = Some(
             s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
           )
         )
@@ -193,14 +193,11 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         }
       Some(
         ScalaHover(
-          Right(
-            ScalaHoverInfo(
-              prettyType,
-              prettySignature,
-              docstring,
-              pos.start != pos.end || !prettySignature.endsWith(prettyType)
-            )
-          ),
+          expressionType = Some(prettyType),
+          symbolSignature = Some(prettySignature),
+          docstring = Some(docstring),
+          forceExpressionType =
+            pos.start != pos.end || !prettySignature.endsWith(prettyType),
           range = if (range.isRange) Some(range.toLsp) else None
         )
       )
