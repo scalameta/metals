@@ -51,4 +51,22 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin,
   )
 
+  check(
+    "extension-params",
+    """|extension (<<sb@@d>>: String)
+       |  def double = <<sbd>> + <<sbd>>
+       |  def double2 = <<sbd>> + <<sbd>>
+       |end extension
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-params-ref",
+    """|extension (<<sbd>>: String)
+       |  def double = <<sb@@d>> + <<sbd>>
+       |  def double2 = <<sbd>> + <<sbd>>
+       |end extension
+       |""".stripMargin,
+  )
+
 }
