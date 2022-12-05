@@ -371,4 +371,44 @@ class PcRenameSuite extends BasePcRenameSuite {
        |}
        |""".stripMargin,
   )
+
+  check(
+    "extension-param".tag(IgnoreScala2),
+    """|extension (<<sb@@d>>: String)
+       |  def double = <<sbd>> + <<sbd>>
+       |  def double2 = <<sbd>> + <<sbd>>
+       |end extension
+       |""".stripMargin,
+    newName = "greeting",
+  )
+
+  check(
+    "extension-params-ref".tag(IgnoreScala2),
+    """|extension (<<sbd>>: String)
+       |  def double = <<sb@@d>> + <<sbd>>
+       |  def double2 = <<sbd>> + <<sbd>>
+       |end extension
+       |""".stripMargin,
+    newName = "greeting",
+  )
+
+  check(
+    "extension-type-param".tag(IgnoreScala2),
+    """|extension [T](<<x@@s>>: List[T])
+       |  def double = <<xs>> ++ <<xs>>
+       |  def double2 = <<xs>> ++ <<xs>>
+       |end extension
+       |""".stripMargin,
+    newName = "ABC",
+  )
+
+  check(
+    "extension-type-param-ref".tag(IgnoreScala2),
+    """|extension [T](<<xs>>: List[T])
+       |  def double = <<xs>> ++ <<xs>>
+       |  def double2 = <<xs>> ++ <<x@@s>>
+       |end extension
+       |""".stripMargin,
+    newName = "ABC",
+  )
 }

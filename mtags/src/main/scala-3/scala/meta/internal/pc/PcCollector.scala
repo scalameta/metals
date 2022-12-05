@@ -99,7 +99,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
 
   // First identify the symbol we are at, comments identify @@ as current cursor position
   def soughtSymbols(path: List[Tree]): Option[(Set[Symbol], SourcePosition)] =
-    path match
+    val sought = path match
       /* simple identifier:
        * val a = val@@ue + value
        */
@@ -166,6 +166,43 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
 
       case _ =>
         None
+
+    sought match
+      case Some(value) => sought
+      case None =>
+        // Fallback check for extension method parameter
+        def collectExtMethods(
+            acc: Set[(Symbol, SourcePosition)],
+            tree: untpd.Tree,
+        ) =
+          tree match
+            case ExtMethods(paramss, _) =>
+              acc ++ paramss
+                .flatMap(
+                  _.map(p =>
+                    (
+                      p.symbol,
+                      p.namePos,
+                    )
+                  )
+                )
+                .toSet
+            case _ => acc
+        val traverser =
+          new untpd.UntypedDeepFolder[Set[(Symbol, SourcePosition)]](
+            collectExtMethods
+          )
+        val extParams: Set[(Symbol, SourcePosition)] =
+          traverser(Set.empty[(Symbol, SourcePosition)], unit.untpdTree)
+        extParams.collectFirst {
+          case (sym, symPos)
+              if symPos.span.contains(
+                pos.span
+              ) && sym != NoSymbol && !sym.isError =>
+            (symbolAlternatives(sym), symPos)
+        }
+    end match
+  end soughtSymbols
 
   def result(): List[T] =
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
