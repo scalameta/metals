@@ -497,6 +497,9 @@ class Compilers(
       pc.prepareRename(
         CompilerRangeParams.offsetOrRange(pos, token)
       ).asScala
+        .map { range =>
+          range.map(adjust.adjustRange(_))
+        }
     }
   }.getOrElse(Future.successful(None.asJava))
 

@@ -17,10 +17,6 @@ import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
 
-object PcRenameProvider:
-
-end PcRenameProvider
-
 final class PcRenameProvider(
     driver: InteractiveDriver,
     params: OffsetParams,

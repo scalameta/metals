@@ -110,6 +110,7 @@ abstract class PcCollector[T](
     }
   }
 
+  // First identify the symbol we are at, comments identify @@ as current cursor position
   lazy val soughtSymbols: Option[(Set[Symbol], Position)] = typedTree match {
     /* simple identifier:
      * val a = val@@ue + value
@@ -198,8 +199,6 @@ abstract class PcCollector[T](
   }
 
   def result(): List[T] = {
-
-    // First identify the symbol we are at, comments identify @@ as current cursor position
 
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols match {
