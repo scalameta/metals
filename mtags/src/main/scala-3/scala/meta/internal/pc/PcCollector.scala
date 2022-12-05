@@ -15,6 +15,7 @@ import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.Positioned
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
+import dotty.tools.dotc.ast.untpd.ExtMethods
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.NameOps.*
@@ -99,68 +100,103 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
     end symbolAlternatives
 
     // First identify the symbol we are at, comments identify @@ as current cursor position
-    def soughtSymbols(path: List[Tree]): Option[Set[Symbol]] = path match
-      /* simple identifier:
-       * val a = val@@ue + value
-       */
-      case (id: Ident) :: _ =>
-        Some(symbolAlternatives(id.symbol))
-      /* simple selector:
-       * object.val@@ue
-       */
-      case (sel: Select) :: _ if sel.nameSpan.contains(pos.span) =>
-        Some(symbolAlternatives(sel.symbol))
-      /* named argument:
-       * foo(nam@@e = "123")
-       */
-      case (arg: NamedArg) :: (appl: Apply) :: _ =>
-        val realName = arg.name.stripModuleClassSuffix.lastPart
-        if pos.span.start > arg.span.start && pos.span.end < arg.span.point + realName.length
-        then
-          appl.symbol.paramSymss.flatten.find(_.name == arg.name).map { s =>
-            // if it's a case class we need to look for parameters also
-            if caseClassSynthetics(s.owner.name) && s.owner.is(Flags.Synthetic)
-            then
-              Set(
-                s,
-                s.owner.owner.companion.info.member(s.name).symbol,
-                s.owner.owner.info.member(s.name).symbol,
-              )
-                .filter(_ != NoSymbol)
-            else Set(s)
+    def soughtSymbols(path: List[Tree]): Option[Set[Symbol]] =
+      val sought = path match
+        /* simple identifier:
+         * val a = val@@ue + value
+         */
+        case (id: Ident) :: _ =>
+          Some(symbolAlternatives(id.symbol))
+        /* simple selector:
+         * object.val@@ue
+         */
+        case (sel: Select) :: _ if sel.nameSpan.contains(pos.span) =>
+          Some(symbolAlternatives(sel.symbol))
+        /* named argument:
+         * foo(nam@@e = "123")
+         */
+        case (arg: NamedArg) :: (appl: Apply) :: _ =>
+          val realName = arg.name.stripModuleClassSuffix.lastPart
+          if pos.span.start > arg.span.start && pos.span.end < arg.span.point + realName.length
+          then
+            appl.symbol.paramSymss.flatten.find(_.name == arg.name).map { s =>
+              // if it's a case class we need to look for parameters also
+              if caseClassSynthetics(s.owner.name) && s.owner
+                  .is(Flags.Synthetic)
+              then
+                Set(
+                  s,
+                  s.owner.owner.companion.info.member(s.name).symbol,
+                  s.owner.owner.info.member(s.name).symbol,
+                )
+                  .filter(_ != NoSymbol)
+              else Set(s)
+            }
+          else None
+          end if
+        /* all definitions:
+         * def fo@@o = ???
+         * class Fo@@o = ???
+         * etc.
+         */
+        case (df: NamedDefTree) :: _ if df.nameSpan.contains(pos.span) =>
+          Some(symbolAlternatives(df.symbol))
+        /**
+         * For traversing annotations:
+         * @JsonNo@@tification("")
+         * def params() = ???
+         */
+        case (df: MemberDef) :: _ if df.span.contains(pos.span) =>
+          val annotTree = df.mods.annotations.find { t =>
+            t.span.contains(pos.span)
           }
-        else None
-        end if
-      /* all definitions:
-       * def fo@@o = ???
-       * class Fo@@o = ???
-       * etc.
-       */
-      case (df: NamedDefTree) :: _ if df.nameSpan.contains(pos.span) =>
-        Some(symbolAlternatives(df.symbol))
-      /**
-       * For traversing annotations:
-       * @JsonNo@@tification("")
-       * def params() = ???
-       */
-      case (df: MemberDef) :: _ if df.span.contains(pos.span) =>
-        val annotTree = df.mods.annotations.find { t =>
-          t.span.contains(pos.span)
-        }
-        collectTrees(annotTree).flatMap { t =>
-          soughtSymbols(
-            Interactive.pathTo(t, pos.span)
-          )
-        }.headOption
+          collectTrees(annotTree).flatMap { t =>
+            soughtSymbols(
+              Interactive.pathTo(t, pos.span)
+            )
+          }.headOption
 
-      /* Import selectors:
-       * import scala.util.Tr@@y
-       */
-      case (imp: Import) :: _ if imp.span.contains(pos.span) =>
-        imp.selector(pos.span).map(symbolAlternatives)
+        /* Import selectors:
+         * import scala.util.Tr@@y
+         */
+        case (imp: Import) :: _ if imp.span.contains(pos.span) =>
+          imp.selector(pos.span).map(symbolAlternatives)
 
-      case _ =>
-        None
+        case _ =>
+          None
+
+      sought match
+        case Some(value) => sought
+        case None =>
+          // Fallback check for extension method parameter
+          def collectExtMethods(
+              acc: Set[(Symbol, SourcePosition)],
+              tree: untpd.Tree,
+          ) =
+            tree match
+              case ExtMethods(params :: _, _) =>
+                acc ++ params
+                  .map(p =>
+                    val ppos = p.sourcePos
+                    (
+                      p.symbol,
+                      ppos.withEnd(ppos.start + p.symbol.decodedName.length()),
+                    )
+                  )
+                  .toSet
+              case _ => acc
+          val traverser =
+            new untpd.UntypedDeepFolder[Set[(Symbol, SourcePosition)]](
+              collectExtMethods
+            )
+          val extParams: Set[(Symbol, SourcePosition)] =
+            traverser(Set.empty[(Symbol, SourcePosition)], unit.untpdTree)
+          extParams.collectFirst {
+            case (sym, symPos) if symPos.span.contains(pos.span) =>
+              symbolAlternatives(sym)
+          }
+      end match
+    end soughtSymbols
 
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols(path) match
@@ -185,6 +221,15 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
 
+        def extensionParam(sym: Symbol) =
+          val extensionParam = for
+            extensionMethod <- sym.ownersIterator.drop(1).nextOption()
+            if extensionMethod.is(Flags.ExtensionMethod)
+          yield extensionMethod.extensionParam
+          extensionParam.exists(param => sym == param)
+
+        lazy val isExtensionParam = sought.exists(extensionParam)
+
         def collectNames(
             occurences: Set[T],
             tree: Tree,
@@ -197,7 +242,8 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
             case ident: Ident
                 if !ident.span.isZeroExtent &&
                   (soughtOrOverride(ident.symbol) ||
-                    isForComprehensionOwner(ident)) =>
+                    isForComprehensionOwner(ident) ||
+                    (isExtensionParam && extensionParam(ident.symbol))) =>
               ident.symbol.nameBackticked
               occurences + collect(
                 ident,
