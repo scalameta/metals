@@ -24,19 +24,15 @@ case class ScalaHover(
         docstring.getOrElse(""),
         forceExpressionType
       )
-    val hover = new lsp4j.Hover(markdown.toMarkupContent)
-
-    range.foreach(hover.setRange)
-
-    hover
+    new lsp4j.Hover(markdown.toMarkupContent, range.orNull)
   }
 
   def getRange(): Optional[lsp4j.Range] = range.asJava
 
   def withRange(range: lsp4j.Range): HoverSignature =
     ScalaHover(
-      symbolSignature,
       expressionType,
+      symbolSignature,
       docstring,
       forceExpressionType,
       Some(range)
