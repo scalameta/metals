@@ -14,8 +14,8 @@ given Foo[String]>>region>> with
       "o"<<region<<<<region<<
 
 given x: AnyRef>>region>> with
-  extension (y: String)
-    def a (y: Int): String =>>region>>
+  extension (y: String)>>region>>
+    def a (y: Int): String =
       "f" +
         "o" +
         "o"<<region<<<<region<<

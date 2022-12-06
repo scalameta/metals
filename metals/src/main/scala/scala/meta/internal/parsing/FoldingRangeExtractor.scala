@@ -11,6 +11,8 @@ import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeKind._
 import org.eclipse.{lsp4j => l}
 
+import scala.reflect.ClassTag
+
 final class FoldingRangeExtractor(
     distance: TokenEditDistance,
     foldOnlyLines: Boolean,
@@ -145,39 +147,48 @@ final class FoldingRangeExtractor(
     def unapply(
         tree: Tree
     ): Option[(Position, Boolean)] = {
-      if (
-        tree.isNot[Defn] && !tree.parent.exists(_.is[Defn]) && span(
-          tree.pos
-        ) < spanThreshold
-      ) return None
 
-      // Case statement takes care of its own folding no need for direct children to be evaluated
-      if (tree.parent.exists(_.is[Case]))
+      // All Defn statements must fold
+      if (tree.isNot[Defn] && span(tree.pos) < spanThreshold)
         return None
 
-      val parentDefnFoldStart = tree.parent
-        .filter(_.is[Defn])
-        .map(parentDefn => findFoldStartAtParentDefn(tree, parentDefn))
+      // Case and Defn statement take care of their own folding no need for direct children to be evaluated
+      if (tree.parent.exists(p => p.is[Case] || p.is[Defn]))
+        return None
 
       tree match {
         case _: Term.Select => None
         case _: Term.Function => None
         case _: Pkg => None
-        case _: Defn => None
+        case defn: Defn =>
+          for {
+            foldStart <- findDefnFoldStart(defn)
+            lastChild <- defn.children.lastOption
+            adjust = !isScala3BlockWithoutOptionalBraces(lastChild)
+          } yield (
+            range(
+              tree.pos.input,
+              foldStart,
+              tree.pos.end,
+            ),
+            adjust,
+          )
 
         case _: Lit.String =>
           Some(range(tree.pos.input, tree.pos.start + 3, tree.pos.end), true)
 
         case term: Term.Match =>
-          matchCatchBlockStart[Token.KwMatch](term.expr.trailingTokens) match {
+          matchBlockStartAndFoldingAdjustment[Token.KwMatch](
+            term.expr.trailingTokens
+          ) match {
             case Some(foldStartIndexAndAdjust) =>
               Some(
                 range(
                   tree.pos.input,
-                  parentDefnFoldStart.getOrElse(foldStartIndexAndAdjust._1),
+                  foldStartIndexAndAdjust._1,
                   term.pos.end,
                 ),
-                parentDefnFoldStart.isEmpty && foldStartIndexAndAdjust._2,
+                foldStartIndexAndAdjust._2,
               )
             case None => None
           }
@@ -185,35 +196,48 @@ final class FoldingRangeExtractor(
         case c: Case =>
           val startingPoint = c.cond.getOrElse(c.pat)
           for {
-            (foldStart, adjust) <- matchCatchBlockStart[Token.RightArrow](
+            (foldStart, adjust) <- matchBlockStartAndFoldingAdjustment[
+              Token.RightArrow
+            ](
               startingPoint.trailingTokens
             )
             pos = range(tree.pos.input, foldStart, c.body.pos.end)
           } yield (pos, adjust)
 
         case term: Term.Try => // range for the `catch` clause
-          matchCatchBlockStart[Token.KwCatch](term.expr.trailingTokens) match {
+          matchBlockStartAndFoldingAdjustment[Token.KwCatch](
+            term.expr.trailingTokens
+          ) match {
             case Some(foldStartIndexAndAdjust) =>
               Some(
                 range(
                   tree.pos.input,
-                  parentDefnFoldStart.getOrElse(foldStartIndexAndAdjust._1),
+                  foldStartIndexAndAdjust._1,
                   term.pos.end,
                 ),
-                parentDefnFoldStart.isEmpty && foldStartIndexAndAdjust._2,
+                foldStartIndexAndAdjust._2,
               )
             case None => None
           }
 
         case For(endPosition) =>
-          val start = tree.pos.start + 3
-          val end = endPosition.start
-          Some(
-            range(tree.pos.input, parentDefnFoldStart.getOrElse(start), end),
-            parentDefnFoldStart.isEmpty,
-          )
+          matchBlockStartAndFoldingAdjustment[Token.KwFor](
+            tree.tokens.iterator
+          ) match {
+            case Some(foldStartIndexAndAdjust) =>
+              Some(
+                range(
+                  tree.pos.input,
+                  foldStartIndexAndAdjust._1,
+                  endPosition.start,
+                ),
+                true,
+              )
+            case None => None
+          }
 
         case template: Template =>
+          // TODO is this case needed now if we handle folding from defn case?
           val adjust = !isScala3BlockWithoutOptionalBraces(template)
           template.inits.lastOption match {
             case Some(init) =>
@@ -237,49 +261,24 @@ final class FoldingRangeExtractor(
           }
 
         case block: Term.Block => {
-          val braceless =
-            isScala3BlockWithoutOptionalBraces(block) && block.pos.startLine > 0
-          if (braceless) {
-            Some(
-              range(
-                tree.pos.input,
-                parentDefnFoldStart.getOrElse(
-                  tree.pos.input
-                    .lineToOffset(tree.pos.startLine) - System
-                    .lineSeparator()
-                    .size
-                ),
-                tree.pos.end,
-              ),
-              false, // if braceless add as is
-            )
-          } else {
-            Some(
-              range(
-                tree.pos.input,
-                parentDefnFoldStart.getOrElse(tree.pos.start),
-                tree.pos.end,
-              ),
-              true,
-            )
-          }
+          val adjust =
+            !isScala3BlockWithoutOptionalBraces(
+              block
+            ) && block.pos.startLine > 0
+
+          Some(
+            range(
+              tree.pos.input,
+              tree.pos.start,
+              tree.pos.end,
+            ),
+            adjust, // if braceless add as is, if not adjust folding range
+          )
         }
+
         case _: Stat =>
           tree.parent.collect {
-            case _: Defn =>
-              parentDefnFoldStart
-                .map(parentFoldStart =>
-                  (
-                    range(
-                      tree.pos.input,
-                      parentFoldStart,
-                      tree.pos.end,
-                    ),
-                    false,
-                  )
-                )
-                .getOrElse((tree.pos, true))
-            case _: Term.Block | _: Term.Function | _: Template =>
+            case _: Term.Block | _: Term.Function | _: Template | _: Defn =>
               (tree.pos, false)
           }
         case _ => None
@@ -303,24 +302,30 @@ final class FoldingRangeExtractor(
         .getOrElse(false)
     }
 
-    private def findDefnFoldStart(defn: Tree): Int = {
-      val childrenStartPos = defn.children.head.pos.start
-      val defnTokenSlice = defn.tokens
-        .takeWhile(_.pos.start > childrenStartPos)
+    private def findDefnFoldStart(defn: Tree): Option[Int] = {
+      defn.children.lastOption.map {
+        case template: Template =>
+          template.inits.lastOption
+            .map(_.pos.end)
+            .getOrElse(template.pos.start)
+        case block =>
+          val defnTokenSlice = defn.tokens
+            .takeWhile(_.pos.start < block.pos.start)
 
-      val endOfLastEquals = defnTokenSlice
-        .findLast(_.is[Token.Equals])
-        .map(_.pos.end)
+          val endOfLastEquals = defnTokenSlice
+            .findLast(_.is[Token.Equals])
+            .map(_.pos.end)
 
-      endOfLastEquals.getOrElse(
-        defnTokenSlice
-          .findLast(_.isNot[Token.Whitespace])
-          .map(_.pos.end)
-          .getOrElse(defnTokenSlice.last.pos.end)
-      )
+          endOfLastEquals.getOrElse(
+            defnTokenSlice
+              .findLast(_.isNot[Token.Whitespace])
+              .map(_.pos.end)
+              .getOrElse(defnTokenSlice.last.pos.end)
+          )
+      }
     }
 
-    private def matchCatchBlockStart[T <: Token](
+    private def matchBlockStartAndFoldingAdjustment[T: ClassTag](
         trailingTokens: Iterator[Token]
     ): Option[(Int, Boolean)] = {
       val firstTwoTokens = trailingTokens
@@ -331,7 +336,7 @@ final class FoldingRangeExtractor(
         case List(_: T, brace: Token.LeftBrace) =>
           // with braces
           Some(
-            brace.pos.end,
+            brace.pos.start,
             /* adjust */ true,
           )
         case (kw: T) :: _ =>
@@ -342,24 +347,6 @@ final class FoldingRangeExtractor(
           )
         case _ => None
       }
-    }
-
-    private def findFoldStartAtParentDefn(tree: Tree, parent: Tree): Int = {
-      val defnTokens = parent.tokens
-      val defnTokenSlice = defnTokens
-        .slice(0, defnTokens.indexOfSlice(tree.tokens))
-
-      // the fold should start after equality sign
-      val endOfLastEquals = defnTokenSlice
-        .findLast(_.is[Token.Equals])
-        .map(_.pos.end)
-
-      endOfLastEquals.getOrElse(
-        defnTokenSlice
-          .findLast(_.isNot[Token.Whitespace])
-          .map(_.pos.end)
-          .getOrElse(defnTokenSlice.last.pos.end)
-      )
     }
 
     private def range(input: Input, start: Int, end: Int): Position =
