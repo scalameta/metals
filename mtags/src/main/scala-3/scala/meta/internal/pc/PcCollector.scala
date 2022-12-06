@@ -174,13 +174,14 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
               tree: untpd.Tree,
           ) =
             tree match
-              case ExtMethods(params :: _, _) =>
-                acc ++ params
-                  .map(p =>
-                    val ppos = p.sourcePos
-                    (
-                      p.symbol,
-                      ppos.withEnd(ppos.start + p.symbol.decodedName.length()),
+              case ExtMethods(paramss, _) =>
+                acc ++ paramss
+                  .flatMap(
+                    _.map(p =>
+                      (
+                        p.symbol,
+                        p.namePos,
+                      )
                     )
                   )
                   .toSet
@@ -192,7 +193,10 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
           val extParams: Set[(Symbol, SourcePosition)] =
             traverser(Set.empty[(Symbol, SourcePosition)], unit.untpdTree)
           extParams.collectFirst {
-            case (sym, symPos) if symPos.span.contains(pos.span) =>
+            case (sym, symPos)
+                if symPos.span.contains(
+                  pos.span
+                ) && sym != NoSymbol && !sym.isError =>
               symbolAlternatives(sym)
           }
       end match
@@ -221,14 +225,14 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
 
-        def extensionParam(sym: Symbol) =
+        def isExtensionParam(sym: Symbol) =
           val extensionParam = for
             extensionMethod <- sym.ownersIterator.drop(1).nextOption()
             if extensionMethod.is(Flags.ExtensionMethod)
           yield extensionMethod.extensionParam
           extensionParam.exists(param => sym == param)
 
-        lazy val isExtensionParam = sought.exists(extensionParam)
+        lazy val extensionParam = sought.exists(isExtensionParam)
 
         def collectNames(
             occurences: Set[T],
@@ -243,7 +247,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
                 if !ident.span.isZeroExtent &&
                   (soughtOrOverride(ident.symbol) ||
                     isForComprehensionOwner(ident) ||
-                    (isExtensionParam && extensionParam(ident.symbol))) =>
+                    (extensionParam && isExtensionParam(ident.symbol))) =>
               ident.symbol.nameBackticked
               occurences + collect(
                 ident,
