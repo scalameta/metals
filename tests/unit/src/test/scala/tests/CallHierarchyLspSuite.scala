@@ -572,4 +572,28 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
+  test("incoming-calls-finds-parent-calls") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Demo.scala
+           |package a
+           |
+           |trait Service {
+           |  def get(): Unit
+           |}
+           |
+           |class Impl extends Service {
+           | def g@@et(): Unit = ()
+           |}
+           |
+           |object Demo {
+           |  val s: Service = new Impl
+           |  def <<main>>/*1*/() = s.<?<get>?>/*1*/()
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }
