@@ -421,7 +421,12 @@ class WorksheetProvider(
           .asJava
         val mdoc = embedded
           .mdoc(info.scalaVersion)
-          .withClasspath(info.fullClasspath.distinct.asJava)
+          .withClasspath(
+            info.fullClasspath
+              .filterNot(Embedded.filterMDocLibraries)
+              .distinct
+              .asJava
+          )
           .withScalacOptions(scalacOptions)
         mdocs(key) = MdocRef(scalaVersion, mdoc)
         mdoc

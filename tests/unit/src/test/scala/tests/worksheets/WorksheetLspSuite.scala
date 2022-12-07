@@ -186,4 +186,28 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
       _ = assertNoDiagnostics()
     } yield ()
   }
+
+  test("pprint") {
+    cleanWorkspace()
+    val path = "a/src/main/scala/hi.worksheet.sc"
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies": ["com.lihaoyi::pprint:0.6.0"]
+           |  }
+           |}
+           |/${path}
+           |new java.sql.Date(100L)
+           |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01",
+      )
+    } yield ()
+  }
 }
