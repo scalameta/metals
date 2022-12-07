@@ -4,7 +4,14 @@ import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.semver.SemVer
 
-object ScalaVersions {
+class ScalaVersions(
+    deprecatedScalaVersions: Seq[String],
+    supportedScalaVersions: Seq[String],
+    supportedScalaBinaryVersions: Seq[String],
+    scala212: String,
+    scala213: String,
+    scala3: String,
+) {
 
   def isScala3Milestone(version: String): Boolean =
     version.startsWith("3.0.0-M") || version.startsWith("3.0.0-RC")
@@ -16,9 +23,9 @@ object ScalaVersions {
     version.replaceAll("-bin-.*", "")
 
   private val _isDeprecatedScalaVersion: Set[String] =
-    BuildInfo.deprecatedScalaVersions.toSet
+    deprecatedScalaVersions.toSet
   private val _isSupportedScalaVersion: Set[String] =
-    BuildInfo.supportedScalaVersions.toSet
+    supportedScalaVersions.toSet
 
   def isSupportedAtReleaseMomentScalaVersion(version: String): Boolean =
     _isSupportedScalaVersion(dropVendorSuffix(version))
@@ -27,7 +34,7 @@ object ScalaVersions {
     _isDeprecatedScalaVersion(dropVendorSuffix(version))
 
   def isSupportedScalaBinaryVersion(scalaVersion: String): Boolean =
-    BuildInfo.supportedScalaBinaryVersions.exists { binaryVersion =>
+    supportedScalaBinaryVersions.exists { binaryVersion =>
       scalaVersion.startsWith(binaryVersion)
     }
 
@@ -35,12 +42,12 @@ object ScalaVersions {
     scalaVersion.startsWith("3.")
 
   def supportedScala3Versions: Set[String] =
-    BuildInfo.supportedScalaVersions.filter(isScala3Version(_)).toSet
+    supportedScalaVersions.filter(isScala3Version(_)).toSet
 
   val isLatestScalaVersion: Set[String] =
-    Set(BuildInfo.scala212, BuildInfo.scala213, BuildInfo.scala3)
+    Set(scala212, scala213, scala3)
 
-  def latestBinaryVersionFor(scalaVersion: String): Option[String] = {
+  def latestStableVersionFor(scalaVersion: String): Option[String] = {
     val binaryVersion = scalaBinaryVersionFromFullVersion(scalaVersion)
     isLatestScalaVersion
       .find(latest =>
@@ -48,18 +55,37 @@ object ScalaVersions {
       )
   }
 
+  /**
+   * Latest supported version that has the same binary version
+   */
+  def latestSupportedVersionFor(scalaVersion: String): Option[String] = {
+    val binaryVersion = scalaBinaryVersionFromFullVersion(scalaVersion)
+    supportedScalaVersions
+      .filter(scalaBinaryVersionFromFullVersion(_) == binaryVersion)
+      .toList
+      .sortWith(SemVer.isLaterVersion(_, _))
+      .lastOption
+  }
+
   def recommendedVersion(scalaVersion: String): String = {
-    latestBinaryVersionFor(scalaVersion).getOrElse {
-      if (isScala3Version(scalaVersion)) {
-        BuildInfo.scala3
-      } else {
-        BuildInfo.scala212
-      }
+    val parsedVersion = SemVer.Version.fromString(scalaVersion)
+    val latestVersion = if (parsedVersion.releaseCandidate.isDefined) {
+      // if the project is currently using an RC recommend latest suported version, possibly a RC
+      latestSupportedVersionFor(scalaVersion)
+    } else {
+      // otherwise recommend the latest stable version
+      latestStableVersionFor(scalaVersion)
     }
+    val defaultVersion = if (isScala3Version(scalaVersion)) {
+      scala3
+    } else {
+      scala212
+    }
+    latestVersion.getOrElse(defaultVersion)
   }
 
   def isFutureVersion(scalaVersion: String): Boolean = {
-    def isFuture = latestBinaryVersionFor(scalaVersion)
+    def isFuture = latestSupportedVersionFor(scalaVersion)
       .map(latest =>
         latest != scalaVersion && SemVer
           .isLaterVersion(latest, scalaVersion)
@@ -110,7 +136,7 @@ object ScalaVersions {
       scalaVersion: String,
       includeSource3: Boolean,
   ): ScalafmtDialect = {
-    ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion) match {
+    scalaBinaryVersionFromFullVersion(scalaVersion) match {
       case "3" => ScalafmtDialect.Scala3
       case "2.13" if includeSource3 => ScalafmtDialect.Scala213Source3
       case "2.13" => ScalafmtDialect.Scala213
@@ -152,7 +178,7 @@ object ScalaVersions {
       .sortBy(_._2)(Ordering.Boolean.reverse)
       .headOption
       .map { case (version, _) => scalaBinaryVersionFromFullVersion(version) }
-      .getOrElse(BuildInfo.scala213)
+      .getOrElse(scala213)
   }
 
   def dialectForDependencyJar(filename: String): Dialect =
@@ -162,3 +188,13 @@ object ScalaVersions {
     )
 
 }
+
+object ScalaVersions
+    extends ScalaVersions(
+      BuildInfo.deprecatedScalaVersions,
+      BuildInfo.supportedScalaVersions,
+      BuildInfo.supportedScalaBinaryVersions,
+      BuildInfo.scala212,
+      BuildInfo.scala213,
+      BuildInfo.scala3,
+    )
