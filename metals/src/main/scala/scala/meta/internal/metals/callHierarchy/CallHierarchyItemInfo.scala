@@ -13,4 +13,14 @@ private[callHierarchy] final case class CallHierarchyItemInfo(
     visited: Array[String],
     isLocal: Boolean,
     searchLocal: Boolean,
-)
+) {
+  def withVisitedSymbols(
+      additionalSymbols: Array[String]
+  ): CallHierarchyItemInfo =
+    new CallHierarchyItemInfo(
+      symbols ++ additionalSymbols,
+      visited ++ additionalSymbols,
+      isLocal,
+      searchLocal,
+    )
+}

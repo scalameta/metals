@@ -571,16 +571,6 @@ class MetalsLanguageServer(
           () => focusedDocument,
           scalaVersionSelector,
         )
-        callHierarchyProvider = new CallHierarchyProvider(
-          workspace,
-          semanticdbs,
-          definitionProvider,
-          referencesProvider,
-          clientConfig.icons,
-          () => compilers,
-          trees,
-          buildTargets,
-        )
         implementationProvider = new ImplementationProvider(
           semanticdbs,
           workspace,
@@ -596,6 +586,18 @@ class MetalsLanguageServer(
           languageClient,
           definitionProvider,
           implementationProvider,
+        )
+
+        callHierarchyProvider = new CallHierarchyProvider(
+          workspace,
+          semanticdbs,
+          definitionProvider,
+          referencesProvider,
+          clientConfig.icons,
+          () => compilers,
+          trees,
+          buildTargets,
+          supermethods,
         )
 
         val runTestLensProvider =

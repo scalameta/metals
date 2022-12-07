@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Tree
+import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -30,6 +31,7 @@ final case class CallHierarchyProvider(
     compilers: () => Compilers,
     trees: Trees,
     buildTargets: BuildTargets,
+    supermethods: Supermethods,
 )(implicit ec: ExecutionContext)
     extends CallHierarchyHelpers {
 
@@ -103,8 +105,14 @@ final case class CallHierarchyProvider(
       params: CallHierarchyIncomingCallsParams,
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[List[CallHierarchyIncomingCall]] = {
-    val info = getInfo(params.getItem.getData)
-
+    val parents = supermethods
+      .getSuperMethodHierarchySymbols(
+        params.getItem.getUri,
+        params.getItem.getSelectionRange.getStart,
+      )
+      .getOrElse(List())
+    val info =
+      getInfo(params.getItem.getData).withVisitedSymbols(parents.toArray)
     def getIncomingCallsInSpecifiedSource(
         source: AbsolutePath
     ): List[Future[CallHierarchyIncomingCall]] = {

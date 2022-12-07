@@ -15,6 +15,7 @@ import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 class Supermethods(
@@ -112,12 +113,21 @@ class Supermethods(
 
   def getSuperMethodHierarchySymbols(
       params: TextDocumentPositionParams
+  ): Option[List[String]] =
+    getSuperMethodHierarchySymbols(
+      params.getTextDocument.getUri,
+      params.getPosition,
+    )
+
+  def getSuperMethodHierarchySymbols(
+      path: String,
+      position: Position,
   ): Option[List[String]] = {
     for {
-      filePath <- params.getTextDocument.getUri.toAbsolutePathSafe
+      filePath <- path.toAbsolutePathSafe
       (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
         filePath,
-        params.getPosition(),
+        position,
       )
       findSymbol = implementationProvider.defaultSymbolSearch(
         filePath,
