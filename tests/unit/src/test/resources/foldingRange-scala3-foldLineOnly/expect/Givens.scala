@@ -1,24 +1,24 @@
-trait Foo[A]:
-  def foo: String
+trait Foo[A]>>region>>:
+  def foo: String<<region<<
 
-given Foo[String]>>region>> with 
-  def a: String =
-    "f" +
+given Foo[String]>>region>> with
+  def a: String =>>region>>
+    >>region>>"f" +
       "o" +
-      "o"<<region<<
+      "o"<<region<<<<region<<<<region<<
 
-given Foo[String]>>region>> with 
-  def a: String = 
-    "f" +
+given Foo[String]>>region>> with
+  def a: String =>>region>>
+    >>region>>"f" +
       "o" +
-      "o"<<region<<
+      "o"<<region<<<<region<<<<region<<
 
 given x: AnyRef>>region>> with
-  extension (y: String)
-    def a (y: Int): String =
-      "f" +
+  extension (y: String)>>region>>
+    def a (y: Int): String =>>region>>
+      >>region>>"f" +
         "o" +
-        "o"<<region<<
+        "o"<<region<<<<region<<<<region<<<<region<<
 
 given stringV: String =>>region>>
   val a = "a"

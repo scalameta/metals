@@ -28,7 +28,7 @@ final class FoldingRangeExtractor(
   }
 
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
-    val newEnclosing = tree match {
+    val newEnclosing = (tree, enclosing) match {
       case Foldable((pos, adjust)) =>
         distance.toRevised(pos.toLsp) match {
           case Some(revisedPos) =>
@@ -143,8 +143,10 @@ final class FoldingRangeExtractor(
 
   private object Foldable {
     def unapply(
-        tree: Tree
+        treeAndEnclosing: (Tree, Position)
     ): Option[(Position, Boolean)] = {
+      val tree = treeAndEnclosing._1
+      val enclosing = treeAndEnclosing._2
 
       // All Defn statements must fold
       if (
@@ -153,11 +155,7 @@ final class FoldingRangeExtractor(
       )
         return None
 
-      // Case and Defn statement take care of their own folding no need for direct children to be evaluated
-      if (tree.parent.exists(p => p.is[Case] || p.is[Defn]))
-        return None
-
-      tree match {
+      val result = tree match {
         case _: Term.Select => None
         case _: Term.Function => None
         case _: Pkg => None
@@ -165,7 +163,11 @@ final class FoldingRangeExtractor(
           for {
             foldStart <- findDefnFoldStart(defn)
             lastChild <- defn.children.lastOption
-            adjust = !isScala3BlockWithoutOptionalBraces(lastChild)
+            adjust =
+              if (lastChild.is[Term.Block])
+                !isScala3BlockWithoutOptionalBraces(lastChild)
+              else
+                false
           } yield (
             range(
               tree.pos.input,
@@ -237,45 +239,44 @@ final class FoldingRangeExtractor(
             case None => None
           }
 
-        case template: Template =>
-          // TODO is this case needed now if we handle folding from defn case?
-          val adjust = !isScala3BlockWithoutOptionalBraces(template)
-          template.inits.lastOption match {
-            case Some(init) =>
-              Some(
-                range(
-                  tree.pos.input,
-                  init.pos.end,
-                  template.pos.end,
-                ),
-                adjust,
-              )
-            case None =>
-              Some(
-                range(
-                  tree.pos.input,
-                  template.pos.start,
-                  template.pos.end,
-                ),
-                adjust,
-              )
-          }
-
-        case block: Term.Block => {
+        case block: Term.Block =>
           val adjust =
             !isScala3BlockWithoutOptionalBraces(
               block
             ) && block.pos.startLine > 0
 
-          Some(
-            range(
-              tree.pos.input,
-              tree.pos.start,
-              tree.pos.end,
-            ),
-            adjust, // if braceless add as is, if not adjust folding range
+          val defaultBlockFoldRange = range(
+            tree.pos.input,
+            tree.pos.start,
+            tree.pos.end,
           )
-        }
+
+          block.parent match {
+            case Some(_: Defn) | Some(_: Case) => None
+            case Some(_: Term.ForYield) if !adjust =>
+              Some(
+                getFoldingRangeForBlockAfterKeyword[Token.KwYield](block)
+                  .getOrElse(defaultBlockFoldRange),
+                false,
+              )
+            case Some(_: Term.For) if !adjust =>
+              Some(
+                getFoldingRangeForBlockAfterKeyword[Token.KwDo](block)
+                  .getOrElse(defaultBlockFoldRange),
+                false,
+              )
+            case Some(_: Term.Try) if !adjust =>
+              Some(
+                getFoldingRangeForBlockAfterKeyword[Token.KwTry](block)
+                  .getOrElse(defaultBlockFoldRange),
+                false,
+              )
+            case _ =>
+              Some(
+                defaultBlockFoldRange,
+                adjust,
+              )
+          }
 
         case _: Stat =>
           tree.parent.collect {
@@ -283,6 +284,12 @@ final class FoldingRangeExtractor(
               (tree.pos, false)
           }
         case _ => None
+      }
+
+      result match {
+        case Some((rangePos, _)) if rangePos.startLine == enclosing.startLine =>
+          None
+        case _ => result
       }
     }
 
@@ -319,7 +326,9 @@ final class FoldingRangeExtractor(
 
           endOfLastEquals.getOrElse(
             defnTokenSlice
-              .findLast(_.isNot[Token.Whitespace])
+              .findLast(t =>
+                t.isNot[Token.Whitespace] && t.isNot[Token.Comment]
+              )
               .map(_.pos.end)
               .getOrElse(defnTokenSlice.last.pos.end)
           )
@@ -345,6 +354,25 @@ final class FoldingRangeExtractor(
           Some(
             kw.pos.end,
             /* adjust */ false,
+          )
+        case _ => None
+      }
+    }
+
+    private def getFoldingRangeForBlockAfterKeyword[T: ClassTag](
+        block: Term.Block
+    ): Option[Position] = {
+      val firstToken = block.leadingTokens
+        .filter(t => t.isNot[Token.Whitespace] && t.isNot[Token.Comment])
+        .headOption
+      firstToken match {
+        case Some(kw: T) =>
+          Some(
+            range(
+              block.pos.input,
+              kw.pos.end,
+              block.pos.end,
+            )
           )
         case _ => None
       }

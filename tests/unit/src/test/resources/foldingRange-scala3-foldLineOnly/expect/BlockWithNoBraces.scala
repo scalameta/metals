@@ -5,9 +5,9 @@ def foobar(): Unit =>>region>>
    ???<<region<<
 
 object Foo>>region>>:
-  def foo =
+  def foo =>>region>>
     ???
-    ???<<region<<
+    ???<<region<<<<region<<
 
 def endmarker(): Unit =>>region>>
   ???

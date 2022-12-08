@@ -47,3 +47,23 @@ def noFoldInside(): Unit =>>region>>
 
   for { ??? <- ??? }
   yield ???<<region<<
+
+class Bar >>region>>{
+  def foo() =>>region>> {
+    ???
+    ???
+    ???
+  }<<region<<
+
+  def bar() =>>region>> {
+    ???
+    ???
+    ???
+  }<<region<<
+}<<region<<
+
+trait Bar2 >>region>>{
+  def foo(): Unit
+
+  def bar(): Unit
+}<<region<<

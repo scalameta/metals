@@ -33,7 +33,7 @@ def fooNested(): Unit =>>region>>
 
 def fooWithMatch(): Unit =>>region>>
   def bar(): Unit =>>region>>
-    ??? match
+    ??? match>>region>>
       case 1 =>>>region>>
         ???
         ???
@@ -46,7 +46,7 @@ def fooWithMatch(): Unit =>>region>>
           case 6 => ???<<region<<
         ???
         ???
-        ???<<region<<<<region<<
+        ???<<region<<<<region<<<<region<<
   ???
   ???
   ???
@@ -63,3 +63,19 @@ def noFoldInside(): Unit =>>region>>
 
   for ??? <- ???
   yield ???<<region<<
+
+class Bar>>region>>:
+  def foo() =>>region>>
+    ???
+    ???
+    ???<<region<<
+
+  def bar() =>>region>>
+    ???
+    ???
+    ???<<region<<<<region<<
+
+trait Bar2>>region>>:
+  def foo(): Unit
+
+  def bar(): Unit<<region<<
