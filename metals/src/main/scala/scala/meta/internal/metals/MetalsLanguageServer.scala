@@ -2281,7 +2281,12 @@ class MetalsLanguageServer(
             case Some(digest) if isBloopOrEmpty =>
               slowConnectToBloopServer(forceImport, buildTool, digest)
             case Some(digest) =>
-              indexer.reloadWorkspaceAndIndex(forceImport, buildTool, digest)
+              indexer.reloadWorkspaceAndIndex(
+                forceImport,
+                buildTool,
+                digest,
+                importBuild,
+              )
           }
         case None =>
           Future.successful(BuildChange.None)
@@ -2439,15 +2444,8 @@ class MetalsLanguageServer(
     }
   }
 
-  private def connectToNewBuildServer(
-      session: BspSession
-  ): Future[BuildChange] = {
-    scribe.info(
-      s"Connected to Build server: ${session.main.name} v${session.version}"
-    )
-    cancelables.add(session)
+  private def importBuild(session: BspSession) = {
     compilers.cancel()
-    bspSession = Some(session)
     val importedBuilds0 = timerProvider.timed("Imported build") {
       session.importBuilds()
     }
@@ -2460,16 +2458,26 @@ class MetalsLanguageServer(
           targets.map(t => (t.getId(), bspBuild.connection))
         }
         mainBuildTargetsData.resetConnections(idToConnection)
-        lastImportedBuilds = bspBuilds.map(_.build)
       }
+    } yield ()
+  }
+
+  private def connectToNewBuildServer(
+      session: BspSession
+  ): Future[BuildChange] = {
+    scribe.info(
+      s"Connected to Build server: ${session.main.name} v${session.version}"
+    )
+    cancelables.add(session)
+    bspSession = Some(session)
+    for {
+      _ <- importBuild(session)
       _ <- indexer.profiledIndexWorkspace(() => doctor.check())
       _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
     }
   }
-
-  private var lastImportedBuilds = List.empty[ImportedBuild]
 
   val scalaCli: ScalaCli = register(
     new ScalaCli(
@@ -2505,7 +2513,9 @@ class MetalsLanguageServer(
         Indexer.BuildTool(
           "main",
           mainBuildTargetsData,
-          ImportedBuild.fromList(lastImportedBuilds),
+          ImportedBuild.fromList(
+            bspSession.map(_.lastImportedBuild).getOrElse(Nil)
+          ),
         ),
         Indexer.BuildTool(
           "ammonite",
