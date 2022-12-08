@@ -66,7 +66,7 @@ trait AdjustLspData {
     }
 
   def adjustHoverResp(hover: HoverSignature): HoverSignature =
-    hover.getRange().map(hover.withRange(_)).orElse(hover)
+    hover.getRange().map(rng => hover.withRange(adjustRange(rng))).orElse(hover)
 
   def adjustCompletionListInPlace(list: CompletionList): Unit = {
     for (item <- list.getItems.asScala) {
