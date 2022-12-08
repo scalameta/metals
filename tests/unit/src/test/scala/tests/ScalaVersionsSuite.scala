@@ -323,7 +323,7 @@ class ScalaVersionsSuite extends BaseSuite {
     }
   }
 
-  def scalaVersions(supportedScalaVersions: String*) = {
+  def scalaVersions(supportedScalaVersions: String*): ScalaVersions = {
     val deprecatedScalaVersions = Seq.empty[String]
     val supportedScalaBinaryVersions =
       Seq("2.13", "2.12", "2.11", "3")
