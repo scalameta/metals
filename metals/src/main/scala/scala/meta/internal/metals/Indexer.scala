@@ -85,12 +85,14 @@ final case class Indexer(
       forceRefresh: Boolean,
       buildTool: BuildTool,
       checksum: String,
+      importBuild: BspSession => Future[Unit],
   ): Future[BuildChange] = {
     def reloadAndIndex(session: BspSession): Future[BuildChange] = {
       workspaceReload().persistChecksumStatus(Status.Started, buildTool)
 
       session
         .workspaceReload()
+        .flatMap(_ => importBuild(session))
         .map { _ =>
           scribe.info("Correctly reloaded workspace")
           profiledIndexWorkspace(() => doctor().check())

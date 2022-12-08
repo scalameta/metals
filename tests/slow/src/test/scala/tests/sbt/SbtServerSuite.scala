@@ -97,12 +97,22 @@ class SbtServerSuite
     cleanWorkspace()
     client.importBuildChanges = ImportBuildChanges.yes
     for {
-      _ <- initialize(SbtBuildLayout("", V.scala213))
+      _ <- initialize(
+        SbtBuildLayout(
+          """|/a/src/main/scala/A.scala
+             |
+             |object A{
+             |  
+             |}
+             |""".stripMargin,
+          V.scala213,
+        )
+      )
       // reload build after build.sbt changes
       _ <- server.executeCommand(ServerCommands.ResetNotifications)
       _ <- server.didSave("build.sbt") { text =>
         s"""$text
-           |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
+           |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.3.0"
            |""".stripMargin
       }
       _ = {
@@ -112,14 +122,38 @@ class SbtServerSuite
         )
         client.showMessages.clear()
       }
-      _ <- server.didSave("build.sbt") { _ =>
-        s"""scalaVersion := "${V.scala213}"
-           |libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
-           |""".stripMargin
+      _ <- server.didSave("build.sbt") { text =>
+        text.replace("ibraryDependencies", "libraryDependencies")
       }
       _ = {
         assert(client.workspaceErrorShowMessages.isEmpty)
       }
+      _ <- server.didSave("build.sbt") { text =>
+        text.replace(
+          "val a = project.in(file(\"a\"))",
+          """|val a = project.in(file("a")).settings(
+             |  libraryDependencies += "org.scalameta" %% "scalameta" % "4.6.0"
+             |)
+             |""".stripMargin,
+        )
+      }
+      _ = {
+        assert(client.workspaceErrorShowMessages.isEmpty)
+      }
+      _ <- server.didSave("a/src/main/scala/A.scala") { _ =>
+        """|object A{
+           |  val a: scala.meta.Defn.Class = ???
+           |}
+           |""".stripMargin
+      }
+      _ <- server.assertHoverAtLine(
+        "a/src/main/scala/A.scala",
+        "  val a: scala.meta.Defn.C@@lass = ???",
+        """|```scala
+           |abstract trait Class: Defn.Class
+           |```
+           |""".stripMargin,
+      )
     } yield ()
   }
 
