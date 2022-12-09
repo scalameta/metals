@@ -5,7 +5,6 @@ import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 
 class ExtractValueLspSuite
     extends BaseCodeActionLspSuite("extractValueRewrite") {
-
   check(
     "block",
     """|object Main {
@@ -148,8 +147,9 @@ class ExtractValueLspSuite
     """|object Main {
        |  def method2(i: Int) : Int = ???
        |  def method1(s: String): Unit = {
+       |    println("Hello!"); 
        |    val newValue = 1 + 2
-       |    println("Hello!"); method2(1 + method2(newValue))
+       |    method2(1 + method2(newValue))
        |  }
        |}
        |""".stripMargin,
@@ -236,7 +236,6 @@ class ExtractValueLspSuite
        |}
        |""".stripMargin,
   )
-
   check(
     "extract-match",
     """|object Main{
@@ -255,7 +254,6 @@ class ExtractValueLspSuite
        |}
        |""".stripMargin,
   )
-
   check(
     "extract-throw",
     """|object Main{
@@ -359,6 +357,100 @@ class ExtractValueLspSuite
        |  new Car(age = newValue)
        |}
        |""".stripMargin,
+  )
+  check(
+    "multiline-line-block-with-braces",
+    """|object Main{
+       |  val aa : List[Int] = ???
+       |  def m(i: Int) : Int = ???
+       |
+       |  val newValue =
+       |     aa.map(item => {
+       |        m(i<<t>>em + 1)
+       |     })
+       |}""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("item + 1")}
+        |${ConvertToNamedArguments.title("m(...)")}
+        |""".stripMargin,
+    """|object Main{
+       |  val aa : List[Int] = ???
+       |  def m(i: Int) : Int = ???
+       |
+       |  val newValue =
+       |     aa.map(item => {
+       |        val newValue = item + 1
+       |        m(newValue)
+       |     })
+       |}""".stripMargin,
+  )
+  check(
+    "one-line-block-with-braces",
+    """|object Main{
+       |  val aa : List[Int] = ???
+       |  def m(i: Int) : Int = ???
+       |
+       |  val newValue = aa.map(item => {m(i<<t>>em + 1)})
+       |}""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("item + 1")}
+        |${ConvertToNamedArguments.title("m(...)")}
+        |""".stripMargin,
+    """|object Main{
+       |  val aa : List[Int] = ???
+       |  def m(i: Int) : Int = ???
+       |
+       |  val newValue = aa.map(item => {
+       |    val newValue = item + 1
+       |    m(newValue)})
+       |}""".stripMargin,
+  )
+
+  check(
+    "one-line-block-no-braces",
+    """|object Main{
+       |  val aa : List[Int] = ???
+       |  def m(i: Int) : Int = ???
+       |
+       |  val newValue = aa.map(item => m(i<<t>>em + 1))
+       |}""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("item + 1")}
+        |${ConvertToNamedArguments.title("m(...)")}
+        |""".stripMargin,
+    """|object Main{
+       |  val aa : List[Int] = ???
+       |  def m(i: Int) : Int = ???
+       |
+       |  val newValue = aa.map(item => {
+       |    val newValue = item + 1
+       |    m(newValue)
+       |  })
+       |}""".stripMargin,
+  )
+
+  check(
+    "multiline-line-block-no-braces",
+    """|object Main{
+       |val aa : List[Int] = ???
+       |def m(i: Int) : Int = ???
+       |
+       |val newValue =
+       |  aa.map(item =>
+       |    m(<<i>>tem + 1)
+       |  )
+       |}""".stripMargin,
+    s"""|${ExtractValueCodeAction.title("item + 1")}
+        |${ConvertToNamedArguments.title("m(...)")}
+        |""".stripMargin,
+    """|object Main{
+       |val aa : List[Int] = ???
+       |def m(i: Int) : Int = ???
+       |
+       |val newValue =
+       |  aa.map(item => {
+       |    val newValue = item + 1
+       |    m(newValue)
+       |  }
+       |  )
+       |}""".stripMargin,
   )
 
 }

@@ -28,6 +28,7 @@ case class MetalsNames(tree: Tree, prefix: String) {
           fy
         case Some(f: Term.For) => f
         case Some(df: Defn.Def) => df
+        case Some(tf: Term.Function) => tf
         case Some(other) => loop(other)
         case None => t
       }
