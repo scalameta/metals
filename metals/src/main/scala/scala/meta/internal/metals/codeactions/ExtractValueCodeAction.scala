@@ -59,11 +59,7 @@ class ExtractValueCodeAction(
         val blank =
           if (source(stat.pos.start - stat.pos.startColumn) == '\t') '\t'
           else ' '
-        val indent = blank.stringRepeat(indentationLength(source, stat.pos))
         val keyword = if (stat.isInstanceOf[Enumerator]) "" else "val "
-        // we will insert `val newValue = ???` before the existing statement containing apply
-        val valueText = s"${indent}$keyword$name = ${argument.toString()}"
-        val valueTextWithBraces = withBraces(stat, source, valueText, blank)
         // we need to add additional () in case of  `apply{}`
         val replacementText =
           term match {
@@ -72,9 +68,20 @@ class ExtractValueCodeAction(
               s"($name)"
             case _ => name
           }
+        val valueText = s"$keyword$name = ${argument.toString()}"
         val replacedArgument =
           new l.TextEdit(argument.pos.toLsp, replacementText)
-        (replacedArgument :: valueTextWithBraces, argument.toString())
+        // we will insert `val newValue = ???` before the existing statement containing apply
+        (
+          withInsertNewValueDef(
+            stat,
+            source,
+            valueText,
+            blank,
+            replacedArgument,
+          ),
+          argument.toString(),
+        )
       }
 
     textEdits.map { case (edits, title) =>
@@ -164,27 +171,36 @@ class ExtractValueCodeAction(
    * @param blank whietespace character to use for indentation
    * @return text edits together with braces to add
    */
-  private def withBraces(
+  private def withInsertNewValueDef(
       stat: Tree,
       source: String,
       valueString: String,
       blank: Char,
+      textEdit: l.TextEdit,
   ): List[l.TextEdit] = {
+    val indLength = indentationLength(source, stat.pos)
+    val indentation = blank.stringRepeat(indLength)
+    val additionalIndent = if (blank == '\t') "\t" else "  "
 
-    def defnEqualsPos(defn: Defn.Def): Option[Position] = defn.tokens.reverse
-      .collectFirst {
-        case t: Token.Equals if t.start < defn.body.pos.start => t.pos
+    def getPositionForAdditionalBraces(t: Tree): Option[Position] =
+      t match {
+        case defn: Defn.Def =>
+          defn.tokens.reverse.collectFirst {
+            case t: Token.Equals if t.start < defn.body.pos.start => t.pos
+          }
+        case f: Term.Function =>
+          f.tokens.reverse.collectFirst {
+            case t: Token.RightArrow if t.start < f.body.pos.start => t.pos
+          }
+        case _ => None
       }
 
     val edits = for {
-      defn <- stat.parent.collect { case defn: Defn.Def => defn }
-      equalsPos <- defnEqualsPos(defn)
+      parent <- stat.parent
+      equalsPos <- getPositionForAdditionalBraces(parent)
     } yield {
       val defnLineIndentation =
-        blank.stringRepeat(indentationLength(source, defn.pos))
-      val additionalIndent =
-        if (defnLineIndentation.headOption.contains('\t')) "\t"
-        else "  "
+        blank.stringRepeat(indentationLength(source, parent.pos))
       val innerIndentation = defnLineIndentation + additionalIndent
       val statStart = stat.pos.toLsp
       statStart.setEnd(statStart.getStart())
@@ -193,7 +209,7 @@ class ExtractValueCodeAction(
       startBlockPos.setStart(startBlockPos.getEnd())
       startBlockPos.setEnd(statStart.getStart())
 
-      val noIndentation = equalsPos.startLine == defn.body.pos.startLine
+      val noIndentation = equalsPos.startLine == stat.pos.startLine
 
       // Scala 3 optional braces
       if (stat.canUseBracelessSyntax(source)) {
@@ -203,7 +219,7 @@ class ExtractValueCodeAction(
             new l.TextEdit(
               startBlockPos,
               s"""|
-                  |$additionalIndent$valueString
+                  |$additionalIndent$indentation$valueString
                   |$innerIndentation""".stripMargin,
             )
           )
@@ -220,7 +236,7 @@ class ExtractValueCodeAction(
           List(
             new l.TextEdit(
               statStart,
-              s"""|$indentStat${valueString.trim()}
+              s"""|$indentStat$valueString
                   |$innerIndentation""".stripMargin,
             )
           )
@@ -231,17 +247,17 @@ class ExtractValueCodeAction(
           // we should indent the stat
           if (noIndentation)
             s"""| {
-                |$additionalIndent$valueString
+                |$additionalIndent$indentation$valueString
                 |$innerIndentation""".stripMargin
           // stat should alredy be indented correctly
           else
             s"""| {
-                |$valueString
+                |$indentation$valueString
                 |$innerIndentation""".stripMargin
 
         val startBlockEdit =
           new l.TextEdit(startBlockPos, startBlockText)
-        val endBracePos = defn.pos.toLsp
+        val endBracePos = parent.pos.toLsp
         endBracePos.setStart(endBracePos.getEnd())
         val endBraceEdit =
           new l.TextEdit(endBracePos, s"\n$defnLineIndentation}")
@@ -249,13 +265,27 @@ class ExtractValueCodeAction(
       }
     }
 
-    edits.getOrElse {
+    edits.map(textEdit :: _).getOrElse {
       // otherwise, no braces are needed
       val range = stat.pos.toLsp
-      val start = range.getStart()
-      start.setCharacter(0)
-      range.setEnd(start)
-      List(new l.TextEdit(range, s"$valueString\n"))
+      range.setEnd(range.getStart())
+      val insertNewValue =
+        if (indLength == stat.pos.startColumn) s"${valueString}\n$indentation"
+        else if (stat.parent.exists(_.pos.startLine == stat.pos.startLine))
+          s"""|
+              |$additionalIndent$indentation$valueString
+              |$additionalIndent$indentation""".stripMargin
+        else s"""|
+                 |$indentation$valueString
+                 |$indentation""".stripMargin
+      if (textEdit.getRange.overlapsWith(range))
+        List(
+          new l.TextEdit(
+            textEdit.getRange(),
+            insertNewValue ++ textEdit.getNewText,
+          )
+        )
+      else textEdit :: List(new l.TextEdit(range, insertNewValue))
     }
 
   }
@@ -307,12 +337,14 @@ class ExtractValueCodeAction(
           Some(fy.enums)
         case Some(f: Term.For) => Some(f.enums)
         case Some(df: Defn.Def) => Some(List(df.body))
+        case Some(tf: Term.Function) => Some(List(tf.body))
         case Some(other) => loop(other)
         case None => None
       }
     }
     loop(apply)
   }
+
 }
 
 object ExtractValueCodeAction {
@@ -321,4 +353,5 @@ object ExtractValueCodeAction {
     if (trimmed.length <= 10) s"Extract `$trimmed` as value"
     else s"Extract `${trimmed.take(10)}` ... as value"
   }
+
 }
