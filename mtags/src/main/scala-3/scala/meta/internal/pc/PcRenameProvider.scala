@@ -1,17 +1,41 @@
 package scala.meta.internal.pc
+import java.nio.file.Paths
+
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.StdNames.*
+import dotty.tools.dotc.core.Symbols.NoSymbol
+import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
+
 final class PcRenameProvider(
     driver: InteractiveDriver,
     params: OffsetParams,
-    name: String,
+    name: Option[String],
 ) extends PcCollector[l.TextEdit](driver, params):
-  val newName = name.stripBackticks.backticked
+  private val forbiddenMethods =
+    Set("equals", "hashCode", "unapply", "unary_!", "!")
+  def canRenameSymbol(sym: Symbol)(using Context): Boolean =
+    (!sym.is(Method) || !forbiddenMethods(sym.decodedName))
+      && (sym.ownersIterator.drop(1).exists(ow => ow.is(Method))
+        || sym.source.path.isWorksheet)
+
+  def prepareRename(): Option[l.Range] =
+    soughtSymbols(path).flatMap((symbols, pos) =>
+      if symbols.forall(canRenameSymbol) then Some(pos.toLsp)
+      else None
+    )
+
+  val newName = name.map(_.stripBackticks.backticked).getOrElse("newName")
 
   def collect(tree: Tree, toAdjust: SourcePosition): l.TextEdit =
     val (pos, stripBackticks) = adjust(toAdjust)
@@ -23,6 +47,11 @@ final class PcRenameProvider(
 
   def rename(
   ): List[l.TextEdit] =
-    result()
-
+    val (symbols, _) = soughtSymbols(path).getOrElse(Set.empty, pos)
+    if symbols.nonEmpty && symbols.forall(canRenameSymbol(_))
+    then
+      val res = result()
+      res
+    else Nil
+  end rename
 end PcRenameProvider

@@ -95,102 +95,114 @@ abstract class PcCollector[T](
     else (pos, false)
   }
 
-  def result(): List[T] = {
-
-    lazy val namedArgCache = {
-      val parsedTree = parseTree(unit.source)
-      parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
-        rhs.pos.start -> arg
-      }.toMap
+  private lazy val namedArgCache = {
+    val parsedTree = parseTree(unit.source)
+    parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
+      rhs.pos.start -> arg
+    }.toMap
+  }
+  def fallbackSymbol(name: Name, pos: Position): Option[Symbol] = {
+    val context = doLocateImportContext(pos)
+    context.lookupSymbol(name, sym => sym.isType) match {
+      case LookupSucceeded(_, symbol) =>
+        Some(symbol)
+      case _ => None
     }
-    def fallbackSymbol(name: Name, pos: Position) = {
-      val context = doLocateImportContext(pos)
-      context.lookupSymbol(name, sym => sym.isType) match {
-        case LookupSucceeded(_, symbol) =>
-          Some(symbol)
-        case _ => None
+  }
+
+  // First identify the symbol we are at, comments identify @@ as current cursor position
+  lazy val soughtSymbols: Option[(Set[Symbol], Position)] = typedTree match {
+    /* simple identifier:
+     * val a = val@@ue + value
+     */
+    case (id: Ident) =>
+      // might happen in type trees
+      // also this doesn't seem to be picked up by semanticdb
+      if (id.symbol == NoSymbol)
+        fallbackSymbol(id.name, pos).map(sym =>
+          (symbolAlternatives(sym), id.pos)
+        )
+      else {
+        Some(symbolAlternatives(id.symbol), id.pos)
       }
-    }
-
-    // First identify the symbol we are at, comments identify @@ as current cursor position
-    val soughtSymbols: Option[Set[Symbol]] = typedTree match {
-      /* simple identifier:
-       * val a = val@@ue + value
-       */
-      case (id: Ident) =>
-        // might happen in type trees
-        // also this doesn't seem to be picked up by semanticdb
-        if (id.symbol == NoSymbol)
-          fallbackSymbol(id.name, pos).map(symbolAlternatives)
-        else {
-          Some(symbolAlternatives(id.symbol))
+    /* named argument, which is a bit complex:
+     * foo(nam@@e = "123")
+     */
+    case (apply: Apply) =>
+      apply.args
+        .flatMap { arg =>
+          namedArgCache.get(arg.pos.start)
         }
-      /* named argument, which is a bit complex:
-       * foo(nam@@e = "123")
-       */
-      case (apply: Apply) =>
-        apply.args
-          .flatMap { arg =>
-            namedArgCache.get(arg.pos.start)
-          }
-          .collectFirst {
-            case AssignOrNamedArg(id: Ident, _) if id.pos.includes(pos) =>
-              apply.symbol.paramss.flatten.find(_.name == id.name).map { s =>
-                // if it's a case class we need to look for parameters also
-                if (caseClassSynthetics(s.owner.name) && s.owner.isSynthetic) {
-                  val applyOwner = s.owner.owner
-                  val constructorOwner =
-                    if (applyOwner.isCaseClass) applyOwner
-                    else
-                      applyOwner.companion match {
-                        case NoSymbol =>
-                          localCompanion(applyOwner).getOrElse(NoSymbol)
-                        case comp => comp
-                      }
-                  val info = constructorOwner.info
-                  val constructorParams = info.members
-                    .filter(_.isConstructor)
-                    .flatMap(_.paramss)
-                    .flatten
-                    .toSet
+        .collectFirst {
+          case AssignOrNamedArg(id: Ident, _) if id.pos.includes(pos) =>
+            apply.symbol.paramss.flatten.find(_.name == id.name).map { s =>
+              // if it's a case class we need to look for parameters also
+              if (caseClassSynthetics(s.owner.name) && s.owner.isSynthetic) {
+                val applyOwner = s.owner.owner
+                val constructorOwner =
+                  if (applyOwner.isCaseClass) applyOwner
+                  else
+                    applyOwner.companion match {
+                      case NoSymbol =>
+                        localCompanion(applyOwner).getOrElse(NoSymbol)
+                      case comp => comp
+                    }
+                val info = constructorOwner.info
+                val constructorParams = info.members
+                  .filter(_.isConstructor)
+                  .flatMap(_.paramss)
+                  .flatten
+                  .toSet
+                (
                   (constructorParams ++ Set(
                     s,
                     info.member(s.getterName),
                     info.member(s.setterName),
                     info.member(s.localName)
-                  )).filter(_ != NoSymbol)
-                } else Set(s)
-              }
-          }
-          .flatten
-      /* all definitions:
-       * def fo@@o = ???
-       * class Fo@@o = ???
-       * etc.
-       */
-      case (df: DefTree) if df.namePos.includes(pos) =>
-        Some(symbolAlternatives(df.symbol))
-      /* Import selectors:
-       * import scala.util.Tr@@y
-       */
-      case (imp: Import) if imp.pos.includes(pos) =>
-        imp.selector(pos).map(symbolAlternatives)
-      /* simple selector:
-       * object.val@@ue
-       */
-      case (sel: NameTree) if sel.namePos.includes(pos) =>
-        Some(symbolAlternatives(sel.symbol))
+                  )).filter(_ != NoSymbol),
+                  id.pos
+                )
+              } else (Set(s), id.pos)
+            }
+        }
+        .flatten
+    /* all definitions:
+     * def fo@@o = ???
+     * class Fo@@o = ???
+     * etc.
+     */
+    case (df: DefTree) if df.namePos.includes(pos) =>
+      Some(symbolAlternatives(df.symbol), df.namePos)
+    /* Import selectors:
+     * import scala.util.Tr@@y
+     */
+    case (imp: Import) if imp.pos.includes(pos) =>
+      imp.selector(pos).map(sym => (symbolAlternatives(sym), sym.pos))
+    /* simple selector:
+     * object.val@@ue
+     */
+    case (sel: NameTree) if sel.namePos.includes(pos) =>
+      Some(symbolAlternatives(sel.symbol), sel.namePos)
 
-      // needed for classOf[AB@@C]`
-      case lit @ Literal(Constant(TypeRef(_, sym, _)))
-          if lit.pos.includes(pos) =>
-        Some(symbolAlternatives(sym))
-      case _ =>
-        None
-    }
+    // needed for classOf[AB@@C]`
+    case lit @ Literal(Constant(TypeRef(_, sym, _))) if lit.pos.includes(pos) =>
+      val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
+
+      Some(
+        symbolAlternatives(sym),
+        lit.pos
+          .withStart(posStart)
+          .withEnd(posStart + sym.decodedName.length())
+      )
+    case _ =>
+      None
+  }
+
+  def result(): List[T] = {
+
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     soughtSymbols match {
-      case Some(sought) =>
+      case Some((sought, _)) =>
         val owners = sought
           .map(_.owner)
           .flatMap(o => symbolAlternatives(o))

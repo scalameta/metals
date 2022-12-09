@@ -16,14 +16,20 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
       name: TestOptions,
       methodBody: String,
       newName: String = "newName",
+      filename: String = "A.scala",
+      wrap: Boolean = true,
   )(implicit location: Location): Unit =
     test(name) {
-      val original = s"""|object Main {
-                         |def method() = {
-                         |$methodBody
-                         |}
-                         |}
-                         |""".stripMargin
+      val original =
+        if (!wrap) methodBody
+        else
+          s"""|object Main {
+              |def method() = {
+              |$methodBody
+              |}
+              |}
+              |""".stripMargin
+
       val edit = original.replaceAll("(<<|>>)", "")
       val expected =
         original.replaceAll("@@", "").replaceAll("\\<\\<\\S*\\>\\>", newName)
@@ -32,7 +38,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
       val renames = presentationCompiler
         .rename(
           CompilerOffsetParams(
-            URI.create("file:/Rename.scala"),
+            URI.create(s"file:/$filename"),
             code,
             offset,
             EmptyCancelToken,
@@ -49,4 +55,35 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
       )
 
     }
+
+  def prepare(
+      name: TestOptions,
+      input: String,
+      filename: String = "A.scala",
+  ): Unit = {
+    test(name) {
+      val edit = input.replaceAll("(<<|>>)", "")
+      val expected =
+        input.replaceAll("@@", "")
+      val base = input.replaceAll("(<<|>>|@@)", "")
+      val (code, offset) = params(edit)
+      val range = presentationCompiler
+        .prepareRename(
+          CompilerOffsetParams(
+            URI.create(s"file:/$filename"),
+            code,
+            offset,
+            EmptyCancelToken,
+          )
+        )
+        .get()
+
+      val withRange =
+        if (range.isEmpty()) base else replaceInRange(base, range.get())
+      assertNoDiff(
+        withRange,
+        expected,
+      )
+    }
+  }
 }

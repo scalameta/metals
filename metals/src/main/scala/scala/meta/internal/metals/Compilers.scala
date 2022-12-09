@@ -489,6 +489,20 @@ class Compilers(
     }
   }.getOrElse(Future.successful(None))
 
+  def prepareRename(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[ju.Optional[LspRange]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.prepareRename(
+        CompilerRangeParams.offsetOrRange(pos, token)
+      ).asScala
+        .map { range =>
+          range.map(adjust.adjustRange(_))
+        }
+    }
+  }.getOrElse(Future.successful(None.asJava))
+
   def rename(
       params: RenameParams,
       token: CancelToken,

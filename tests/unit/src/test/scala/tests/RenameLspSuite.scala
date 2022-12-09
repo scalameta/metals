@@ -876,6 +876,24 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
     newName = "NewSymbol",
   )
 
+  // NON COMPILING TESTS
+
+  renamed(
+    "not-compiling",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  def method() = {
+       |    List(1) + 2
+       |    val <<abc>>: Option[Int] = ???
+       |    <<ab@@c>>.map(_ + 1)
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+    expectedError = true,
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.12", "io.circe::circe-generic:0.14.1")
 
