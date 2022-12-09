@@ -1,6 +1,7 @@
 package scala.meta.metals
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
@@ -9,8 +10,12 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.logging.MetalsLogger
 
 import bloop.launcher.Launcher
+import coursierapi.Dependency
 
 object DownloadDependencies {
+
+  private val metalsBinaryVersion =
+    ScalaVersions.scalaBinaryVersionFromFullVersion(BuildInfo.scala213)
 
   /**
    * A main class that populates the Coursier download cache with Metals dependencies.
@@ -25,37 +30,39 @@ object DownloadDependencies {
    */
   def main(args: Array[String]): Unit = {
     MetalsLogger.updateDefaultFormat()
-    downloadMdoc()
-    downloadScalafmt()
-    downloadMtags()
-    downloadSemanticDBScalac()
-    downloadSemanticDBJavac()
-    downloadScala()
+    val allPaths = downloadMdoc() ++
+      downloadScalafmt() ++
+      downloadMtags() ++
+      downloadSemanticDBScalac() ++
+      downloadSemanticDBJavac() ++
+      downloadScala() ++
+      downloadBloop()
+
+    allPaths.distinct.foreach(println)
+
     // NOTE(olafur): important, Bloop comes last because it does System.exit()
-    downloadBloop()
+    tryLAunchBloop()
   }
 
-  def downloadScala(): Unit = {
+  def downloadScala(): Seq[Path] = {
     scribe.info("Downloading scala library and sources")
-    BuildInfo.supportedScala2Versions.foreach { scalaVersion =>
+    BuildInfo.supportedScala2Versions.flatMap { scalaVersion =>
       Embedded.downloadScalaSources(scalaVersion)
-    }
-
-    BuildInfo.supportedScala3Versions.foreach { scalaVersion =>
+    } ++ BuildInfo.supportedScala3Versions.flatMap { scalaVersion =>
       Embedded.downloadScala3Sources(scalaVersion)
     }
   }
 
-  def downloadMdoc(): Unit = {
+  def downloadMdoc(): Seq[Path] = {
     scribe.info("Downloading mdoc")
-    BuildInfo.supportedScala2Versions.foreach { scalaVersion =>
+    BuildInfo.supportedScala2Versions.flatMap { scalaVersion =>
       Embedded.downloadMdoc(
         ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
       )
     }
   }
 
-  def downloadScalafmt(): Unit = {
+  def downloadScalafmt(): Seq[Path] = {
     scribe.info("Downloading scalafmt")
     val scalafmt = FormattingProvider.newScalafmt()
     val tmp = Files.createTempFile("scalafmt", "Foo.scala")
@@ -68,29 +75,65 @@ object DownloadDependencies {
     scalafmt.format(config, tmp, "object Foo { }")
     Files.deleteIfExists(tmp)
     Files.deleteIfExists(config)
+    Embedded.downloadDependency(
+      Dependency.of(
+        "org.scalameta",
+        s"scalafmt-cli_" + metalsBinaryVersion,
+        BuildInfo.scalafmtVersion,
+      ),
+      scalaVersion = Some(BuildInfo.scala213),
+    )
   }
 
-  def downloadMtags(): Unit = {
+  def downloadMtags(): Seq[Path] = {
     scribe.info("Downloading mtags")
-    BuildInfo.supportedScalaVersions.foreach { scalaVersion =>
+    BuildInfo.supportedScalaVersions.flatMap { scalaVersion =>
       Embedded.downloadMtags(scalaVersion)
     }
   }
 
-  def downloadSemanticDBScalac(): Unit = {
+  def downloadSemanticDBScalac(): Seq[Path] = {
     scribe.info("Downloading semanticdb-scalac")
-    BuildInfo.supportedScala2Versions.foreach { scalaVersion =>
+    BuildInfo.supportedScala2Versions.flatMap { scalaVersion =>
       Embedded.downloadSemanticdbScalac(scalaVersion)
     }
   }
 
-  def downloadSemanticDBJavac(): Unit = {
+  def downloadSemanticDBJavac(): Seq[Path] = {
     scribe.info("Downloading semanticdb-javac")
     Embedded.downloadSemanticdbJavac
   }
 
-  def downloadBloop(): Unit = {
+  def downloadBloop(): Seq[Path] = {
     scribe.info("Downloading bloop")
+
+    // Try to donwload all artifacts needed for Bloop
+    Embedded.downloadDependency(
+      Dependency.of(
+        "ch.epfl.scala",
+        s"bloop-config_" + metalsBinaryVersion,
+        BuildInfo.bloopConfigVersion,
+      ),
+      scalaVersion = Some(BuildInfo.scala213),
+    ) ++ Embedded.downloadDependency(
+      Dependency.of(
+        "ch.epfl.scala",
+        s"bloop-launcher-core_" + metalsBinaryVersion,
+        BuildInfo.bloopVersion,
+      ),
+      scalaVersion = Some(BuildInfo.scala213),
+    ) ++ Embedded.downloadDependency(
+      Dependency.of(
+        "ch.epfl.scala",
+        s"bloop-frontend_2.12",
+        BuildInfo.bloopVersion,
+      ),
+      scalaVersion = Some(BuildInfo.scala213),
+    )
+
+  }
+
+  def tryLAunchBloop(): Unit = {
     // NOTE(olafur): this starts a daemon process for the Bloop server.
     Launcher.main(Array("--skip-bsp-connection", BuildInfo.bloopVersion))
   }

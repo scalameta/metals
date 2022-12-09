@@ -441,6 +441,7 @@ lazy val metals = project
       "bspVersion" -> V.bsp,
       "sbtVersion" -> sbtVersion.value,
       "bloopVersion" -> V.bloop,
+      "bloopConfigVersion" -> V.bloopConfig,
       "bloopNightlyVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,
       "gradleBloopVersion" -> V.gradleBloop,
