@@ -469,4 +469,40 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |""".stripMargin,
   )
 
+  prepare(
+    "extension-param".tag(IgnoreScala2),
+    """|extension (<<sb@@d>>: String)
+       |  def double = sbd + sbd
+       |  def double2 = sbd + sbd
+       |end extension
+       |""".stripMargin,
+  )
+
+  prepare(
+    "extension-params-ref".tag(IgnoreScala2),
+    """|extension (sbd: String)
+       |  def double = <<sb@@d>> + sbd
+       |  def double2 = sbd + sbd
+       |end extension
+       |""".stripMargin,
+  )
+
+  prepare(
+    "extension-type-param".tag(IgnoreScala2),
+    """|extension [T](<<x@@s>>: List[T])
+       |  def double = xs ++ xs
+       |  def double2 = xs ++ xs
+       |end extension
+       |""".stripMargin,
+  )
+
+  prepare(
+    "extension-type-param-ref".tag(IgnoreScala2),
+    """|extension [T](xs: List[T])
+       |  def double = xs ++ xs
+       |  def double2 = xs ++ <<x@@s>>
+       |end extension
+       |""".stripMargin,
+  )
+
 }
