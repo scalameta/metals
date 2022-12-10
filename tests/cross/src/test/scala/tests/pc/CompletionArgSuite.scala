@@ -21,6 +21,21 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
+    "arg-newline",
+    s"""|object Main {
+        |  def foo(banana: String, apple: String) = ???
+        |  foo(
+        |    @@
+        |  )
+        |}
+        |""".stripMargin,
+    """|apple = : String
+       |banana = : String
+       |""".stripMargin,
+    topLines = Option(2),
+  )
+
+  check(
     "arg1",
     s"""|object Main {
         |  assert(assertion = true, @@)
@@ -477,6 +492,20 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument2 = x : Int
        |""".stripMargin,
     topLines = Some(4),
+    compat = Map(
+      /* Minor implementation detail between Scala 2 and Scala 3
+       * which shouldn't cause any issue and making it work the same
+       * would require non trivial code. `argument1 = x ` is not a
+       * NamedArgument in Scala 2 but a simple TextEditMember, which means
+       * `argument1 = ` will be prioritized.
+       */
+      "3" ->
+        """|argument1 = : Int
+           |argument1 = x : Int
+           |argument2 = : Int
+           |argument2 = x : Int
+           |""".stripMargin
+    ),
   )
 
 }

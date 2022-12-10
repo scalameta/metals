@@ -632,9 +632,6 @@ class Completions(
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
             case mc: CompletionValue.MatchCompletion => (mc.label, true)
-            case namedArg: CompletionValue.NamedArg =>
-              val id = namedArg.label + "="
-              (id, true)
             case autofill: CompletionValue.Autofill =>
               (autofill.label, true)
             case fileSysMember: CompletionValue.FileSystemMember =>
@@ -858,27 +855,48 @@ class Completions(
         def priority(v: CompletionValue): Int =
           v match
             case _: CompletionValue.Compiler => 0
-            case _: CompletionValue.NamedArg => 1
-            case _ => 2
+            case _ => 1
 
         priority(o1) - priority(o2)
       end compareInApplyParams
 
-      def prioritizeCaseKeyword(
+      /**
+       * Some completion values should be shown first such as CaseKeyword and
+       * NamedArg
+       */
+      def compareCompletionValue(
           sym1: CompletionValue.Symbolic,
           sym2: CompletionValue.Symbolic,
       ): Boolean =
-        sym1.isInstanceOf[CompletionValue.CaseKeyword] && !sym2
-          .isInstanceOf[CompletionValue.CaseKeyword]
+        val prioritizeCaseKeyword =
+          sym1.isInstanceOf[CompletionValue.CaseKeyword] &&
+            !sym2.isInstanceOf[CompletionValue.CaseKeyword]
+
+        // if the name is the same as the parameter name then we should show the symbolic first
+        val prefixMatches =
+          sym1.symbol.name.toString().startsWith(sym2.symbol.name.toString())
+
+        val prioritizeNamed =
+          sym1.isInstanceOf[CompletionValue.NamedArg] &&
+            !sym2.isInstanceOf[CompletionValue.NamedArg] &&
+            !prefixMatches
+
+        prioritizeCaseKeyword || prioritizeNamed
+      end compareCompletionValue
 
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
         (o1, o2) match
+          case (o1: CompletionValue.NamedArg, o2: CompletionValue.NamedArg) =>
+            IdentifierComparator.compare(
+              o1.label,
+              o2.label,
+            )
           case (
                 sym1: CompletionValue.Symbolic,
                 sym2: CompletionValue.Symbolic,
               ) =>
-            if prioritizeCaseKeyword(sym1, sym2) then 0
-            else if prioritizeCaseKeyword(sym2, sym1) then 1
+            if compareCompletionValue(sym1, sym2) then 0
+            else if compareCompletionValue(sym2, sym1) then 1
             else
               val s1 = sym1.symbol
               val s2 = sym2.symbol
