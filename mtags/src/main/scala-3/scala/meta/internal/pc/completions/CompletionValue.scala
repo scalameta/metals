@@ -145,7 +145,8 @@ object CompletionValue:
   case class NamedArg(
       label: String,
       tpe: Type,
-  ) extends CompletionValue:
+      symbol: Symbol,
+  ) extends Symbolic:
     override def insertText: Option[String] = Some(label.replace("$", "$$"))
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Field
@@ -155,6 +156,7 @@ object CompletionValue:
     override def labelWithDescription(printer: MetalsPrinter)(using
         Context
     ): String = label
+  end NamedArg
 
   case class Autofill(
       value: String
@@ -246,7 +248,7 @@ object CompletionValue:
   def namedArg(label: String, sym: Symbol)(using
       Context
   ): CompletionValue =
-    NamedArg(label, sym.info.widenTermRefExpr)
+    NamedArg(label, sym.info.widenTermRefExpr, sym)
 
   def keyword(label: String, insertText: String): CompletionValue =
     Keyword(label, Some(insertText))
