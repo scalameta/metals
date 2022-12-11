@@ -349,10 +349,28 @@ final class SemanticTokenProvider(
           val ret = for {
             sel <- imp.selectors
           } yield {
+            // NodeInfo(symbol, sel.namePosition(source))
+            val buffer = ListBuffer.empty[NodeInfo]
             val symbol = imp.expr.symbol.info.member(sel.name)
-            NodeInfo(symbol, sel.namePosition(source))
+            buffer.++=(
+              List(
+                NodeInfo(symbol, sel.namePosition(source))
+              )
+            )
+            def isRename(sel: cp.ImportSelector): Boolean =
+              sel.rename != null &&
+                sel.rename != nme.WILDCARD &&
+                sel.name != sel.rename
+            if (isRename(sel)) {
+              buffer.++=(
+                List(
+                  NodeInfo(symbol, sel.renamePosition(source))
+                )
+              )
+            }
+            buffer.toList
           }
-          traverse(nodes ++ ret, imp.expr)
+          traverse(nodes ++ ret.flatten, imp.expr)
 
         case _ =>
           if (tree == null) null

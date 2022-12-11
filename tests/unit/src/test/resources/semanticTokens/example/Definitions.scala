@@ -1,7 +1,7 @@
 <<package>>/*keyword*/ <<example>>/*namespace*/
 
-<<import>>/*keyword*/ io.circe.derivation.<<deriveDecoder>>/*variable,readonly*/
-<<import>>/*keyword*/ io.circe.derivation.<<deriveEncoder>>/*variable,readonly*/
+<<import>>/*keyword*/ <<io>>/*namespace*/.<<circe>>/*variable,readonly*/.<<derivation>>/*variable,readonly*/.<<deriveDecoder>>/*variable,readonly*/
+<<import>>/*keyword*/ <<io>>/*namespace*/.<<circe>>/*variable,readonly*/.<<derivation>>/*variable,readonly*/.<<deriveEncoder>>/*variable,readonly*/
 
 <<class>>/*keyword*/ <<Definitions>>/*class*/ {
   <<Predef>>/*class*/.<<any2stringadd>>/*method,deprecated*/(<<1>>/*number*/)

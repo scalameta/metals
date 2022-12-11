@@ -1,6 +1,6 @@
 <<package>>/*keyword*/ <<example>>/*namespace*/
 
-<<import>>/*keyword*/ <<io>>/*namespace*/.circe.derivation.annotations.<<JsonCodec>>/*variable,readonly*/
+<<import>>/*keyword*/ <<io>>/*namespace*/.<<circe>>/*variable,readonly*/.<<derivation>>/*variable,readonly*/.<<annotations>>/*variable,readonly*/.<<JsonCodec>>/*variable,readonly*/
 
 <<@>>/*keyword*/<<JsonCodec>>/*class*/
 <<// FIXME: https://github.com/scalameta/scalameta/issues/1789>>/*comment*/

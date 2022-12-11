@@ -9,6 +9,44 @@ import munit.TestOptions
 class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
 
   check(
+    "Invalid ext (shouldn't be tokenized) 1",
+    s"""|
+        |
+        |package example
+        |
+        |import util.{Failure => NotGood}
+        |import math.{floor => _, _}
+        |
+        |class Imports {
+        |  // rename reference
+        |  NotGood(null)
+        |  max(1, 2)
+        |}
+        |
+        |""".stripMargin,
+    "build.sc",
+  )
+
+  check(
+    "Invalid ext (shouldn't be tokenized) 2",
+    s"""|
+        |
+        |package example
+        |
+        |import util.{Failure => NotGood}
+        |import math.{floor => _, _}
+        |
+        |class Imports {
+        |  // rename reference
+        |  NotGood(null)
+        |  max(1, 2)
+        |}
+        |
+        |""".stripMargin,
+    "build.sbt",
+  )
+
+  check(
     "Comment(Single-Line, Multi-Line)",
     s"""|
         |<<object>>/*keyword*/ <<Main>>/*class*/{
@@ -50,11 +88,13 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   def check(
       name: TestOptions,
       expected: String,
+      fileName: String="Main.scala",
   ): Unit = {
     val fileContent =
       expected.replaceAll(raw"/\*[\w,]+\*/", "").replaceAll(raw"\<\<|\>\>", "")
 
-    val fileName = "/a/src/main/scala/a/Main.scala"
+    val filePath = "a/src/main/scala/a/" + fileName
+    val absFilePath = "/" + filePath
 
     test(name) {
       for {
@@ -62,15 +102,20 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         _ <- initialize(
           s"""/metals.json
              |{"a":{}}
-             |${fileName.trim()}
+             |${absFilePath.trim()}
              |${fileContent}
              |""".stripMargin,
           expectError = true,
         )
-        _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-        // _ = assertEmpty(client.workspaceDiagnostics)
+        _ <- server.didChangeConfiguration(
+          """{
+            |  "enable-semantic-highlighting": true
+            |}
+            |""".stripMargin
+        )
+        _ <- server.didOpen(filePath)
         _ <- server.assertSemanticHighlight(
-          "a/src/main/scala/a/Main.scala",
+          filePath,
           expected,
           fileContent,
         )
