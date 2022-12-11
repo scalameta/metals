@@ -68,7 +68,7 @@ final class RunTestCodeLens(
     } yield {
       val classes = buildTargetClasses.classesOf(buildTargetId)
       if (connection.isScalaCLI && path.isAmmoniteScript) {
-        scalaCliCodeLenses(textDocument, buildTargetId, classes)
+        scalaCliCodeLenses(textDocument, buildTargetId, classes, distance)
       } else if (
         buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt
       ) {
@@ -182,18 +182,23 @@ final class RunTestCodeLens(
         main ++ tests ++ fromAnnot ++ javaMains
       }
       if commands.nonEmpty
-      range <-
-        occurrence.range
-          .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
-          .toList
+      range <- occurrenceRange(occurrence, distance).toList
       command <- commands
     } yield new l.CodeLens(range, command, null)
   }
+
+  private def occurrenceRange(
+      occurrence: SymbolOccurrence,
+      distance: TokenEditDistance,
+  ): Option[l.Range] =
+    occurrence.range
+      .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
 
   private def scalaCliCodeLenses(
       textDocument: TextDocument,
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
+      distance: TokenEditDistance,
   ): Seq[l.CodeLens] = {
     val scriptFileName = textDocument.uri.stripSuffix(".sc")
 
@@ -206,7 +211,16 @@ final class RunTestCodeLens(
         .map(mainCommand(target, _))
         .getOrElse(Nil)
 
-    main.map(command =>
+    val fromAnnotations = textDocument.occurrences.flatMap { occ =>
+      for {
+        sym <- DebugProvider.mainFromAnnotation(occ, textDocument)
+        cls <- classes.mainClasses.get(sym)
+        range <- occurrenceRange(occ, distance)
+      } yield mainCommand(target, cls).map { cmd =>
+        new l.CodeLens(range, cmd, null)
+      }
+    }.flatten
+    fromAnnotations ++ main.map(command =>
       new l.CodeLens(
         new l.Range(new l.Position(0, 0), new l.Position(0, 2)),
         command,
