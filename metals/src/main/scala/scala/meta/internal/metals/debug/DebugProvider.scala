@@ -831,10 +831,10 @@ object DebugProvider {
       case GlobalSymbol(
             GlobalSymbol(
               owner,
-              Descriptor.Term(sourceOwner),
+              Descriptor.Term(_),
             ),
             Descriptor.Method(name, _),
-          ) if sourceOwner.endsWith("$package") =>
+          ) =>
         val converted = GlobalSymbol(owner, Descriptor.Term(name))
         Some(converted.value)
       case _ =>

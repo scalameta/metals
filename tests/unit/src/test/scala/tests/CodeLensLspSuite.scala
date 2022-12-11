@@ -3,6 +3,7 @@ package tests
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import com.google.gson.JsonObject
@@ -207,6 +208,59 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         """|<<run>><<debug>>
            |print("oranges are nice")
            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("run-main-annotation-with-script") {
+    cleanWorkspace()
+    val path = "main.sc"
+    for {
+      _ <- initialize(
+        ScalaCliBuildLayout(
+          s"""|/$path
+              |val x = 3
+              |
+              |@main def main() = {
+              |  println("annotation")
+              |}""".stripMargin,
+          V.scala3,
+        )
+      )
+      _ <- server.didOpen(path)
+      _ <- assertCodeLenses(
+        path,
+        """|<<run>><<debug>>
+           |val x = 3
+           |
+           |<<run>><<debug>>
+           |@main def main() = {
+           |  println("annotation")
+           |}""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("run-main-annotation-with-scala-file") {
+    cleanWorkspace()
+    val path = "main.scala"
+    for {
+      _ <- initialize(
+        ScalaCliBuildLayout(
+          s"""|/$path
+              |@main def main() = {
+              |  println("annotation")
+              |}""".stripMargin,
+          V.scala3,
+        )
+      )
+      _ <- server.didOpen(path)
+      _ <- assertCodeLenses(
+        path,
+        """|<<run>><<debug>>
+           |@main def main() = {
+           |  println("annotation")
+           |}""".stripMargin,
       )
     } yield ()
   }
