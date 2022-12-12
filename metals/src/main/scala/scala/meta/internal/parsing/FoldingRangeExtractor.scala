@@ -181,20 +181,14 @@ final class FoldingRangeExtractor(
           Some(range(tree.pos.input, tree.pos.start + 3, tree.pos.end), true)
 
         case term: Term.Match =>
-          matchBlockStartAndFoldingAdjustment[Token.KwMatch](
-            term.expr.trailingTokens
-          ) match {
-            case Some(foldStartIndexAndAdjust) =>
-              Some(
-                range(
-                  tree.pos.input,
-                  foldStartIndexAndAdjust._1,
-                  term.pos.end,
-                ),
-                foldStartIndexAndAdjust._2,
-              )
-            case None => None
-          }
+          for {
+            (foldStart, adjust) <- matchBlockStartAndFoldingAdjustment[
+              Token.KwMatch
+            ](
+              term.expr.trailingTokens
+            )
+            pos = range(tree.pos.input, foldStart, term.pos.end)
+          } yield (pos, adjust)
 
         case c: Case =>
           val startingPoint = c.cond.getOrElse(c.pat)
@@ -208,36 +202,24 @@ final class FoldingRangeExtractor(
           } yield (pos, adjust)
 
         case term: Term.Try => // range for the `catch` clause
-          matchBlockStartAndFoldingAdjustment[Token.KwCatch](
-            term.expr.trailingTokens
-          ) match {
-            case Some(foldStartIndexAndAdjust) =>
-              Some(
-                range(
-                  tree.pos.input,
-                  foldStartIndexAndAdjust._1,
-                  term.pos.end,
-                ),
-                foldStartIndexAndAdjust._2,
-              )
-            case None => None
-          }
+          for {
+            (foldStart, adjust) <- matchBlockStartAndFoldingAdjustment[
+              Token.KwCatch
+            ](
+              term.expr.trailingTokens
+            )
+            pos = range(tree.pos.input, foldStart, term.pos.end)
+          } yield (pos, adjust)
 
         case For(endPosition) =>
-          matchBlockStartAndFoldingAdjustment[Token.KwFor](
-            tree.tokens.iterator
-          ) match {
-            case Some(foldStartIndexAndAdjust) =>
-              Some(
-                range(
-                  tree.pos.input,
-                  foldStartIndexAndAdjust._1,
-                  endPosition.start,
-                ),
-                true,
-              )
-            case None => None
-          }
+          for {
+            (foldStart, _) <- matchBlockStartAndFoldingAdjustment[
+              Token.KwFor
+            ](
+              tree.tokens.iterator
+            )
+            pos = range(tree.pos.input, foldStart, endPosition.start)
+          } yield (pos, true)
 
         case block: Term.Block =>
           val adjust =

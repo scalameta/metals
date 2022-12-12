@@ -3,22 +3,22 @@ trait Foo[A]>>region>>:
 
 given Foo[String]>>region>> with 
   def a: String =>>region>>
-    >>region>>"f" +
+    "f" +
       "o" +
-      "o"<<region<<<<region<<<<region<<
+      "o"<<region<<<<region<<
 
 given Foo[String]>>region>> with 
   def a: String =>>region>>
-    >>region>>"f" +
+    "f" +
       "o" +
-      "o"<<region<<<<region<<<<region<<
+      "o"<<region<<<<region<<
 
 given x: AnyRef>>region>> with
   extension (y: String)>>region>>
     def a (y: Int): String =>>region>>
-      >>region>>"f" +
+      "f" +
         "o" +
-        "o"<<region<<<<region<<<<region<<<<region<<
+        "o"<<region<<<<region<<<<region<<
 
 given stringV: String =>>region>>
   val a = "a"
