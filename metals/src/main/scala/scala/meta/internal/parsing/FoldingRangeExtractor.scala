@@ -32,7 +32,7 @@ final class FoldingRangeExtractor(
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
     // All Defn statements  except one-liners must fold
     if (
-      (tree.is[Defn] && span(tree.pos) > 0) || span(tree.pos) >= spanThreshold
+      (tree.is[Defn] && span(tree.pos) > 0) || span(tree.pos) > spanThreshold
     ) {
       val newEnclosing = (tree, enclosing) match {
         case Foldable((pos, adjust)) =>
