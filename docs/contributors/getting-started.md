@@ -84,6 +84,38 @@ but most popular are:
 - debugging through logging (recommended option)
 - classic debugging with breakpoints
 
+## Commit messages
+
+Try to follow the
+[conventional commits specification](https://www.conventionalcommits.org/en/v1.0.0/),
+which means your commits should be of form:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+It's important to over-communicate in your commit messages. Be thorough. It's
+important to ensure you outline the problem you're trying to solve, or the
+feature you're introducing, and then explain the fix or implementation. This will
+help the reviewers with their review and also future contributors to get the
+full context of your changes.
+
+For example, this message can be take a form of:
+
+```
+Previously, this bug was happening due to invalid handling of URIs. Now, we handle them correctly using a dedicated class.
+```
+
+Ideally, each PR would only have one commit and the title with body would be the
+same for the pull requests. However, sometimes a PR might require more changes
+and commits, in that case please try to keep them self contained, which means
+each change pertains to a specific bug or feature and can be reverted
+separately.
+
 ### Debugging through logging
 
 This approach provides very quick iterations and short feedback loop.
