@@ -30,28 +30,33 @@ final class FoldingRangeExtractor(
   }
 
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
-    val newEnclosing = (tree, enclosing) match {
-      case Foldable((pos, adjust)) =>
-        distance.toRevised(pos.toLsp) match {
-          case Some(revisedPos) =>
-            val range = createRange(revisedPos)
-            ranges.add(Region, range, adjust)
-            pos
-          case None => enclosing
-        }
-      case _ =>
-        enclosing
+    // All Defn statements  except one-liners must fold
+    if (
+      (tree.is[Defn] && span(tree.pos) > 0) || span(tree.pos) >= spanThreshold
+    ) {
+      val newEnclosing = (tree, enclosing) match {
+        case Foldable((pos, adjust)) =>
+          distance.toRevised(pos.toLsp) match {
+            case Some(revisedPos) =>
+              val range = createRange(revisedPos)
+              ranges.add(Region, range, adjust)
+              pos
+            case None => enclosing
+          }
+        case _ =>
+          enclosing
+      }
+      val (importGroups, otherChildren) = extractImports(tree.children)
+      importGroups.foreach(group => foldImports(group))
+
+      otherChildren.foreach(child => {
+        val childEnclosing =
+          if (newEnclosing.contains(child.pos)) newEnclosing
+          else enclosing
+
+        extractFrom(child, childEnclosing)
+      })
     }
-    val (importGroups, otherChildren) = extractImports(tree.children)
-    importGroups.foreach(group => foldImports(group))
-
-    otherChildren.foreach(child => {
-      val childEnclosing =
-        if (newEnclosing.contains(child.pos)) newEnclosing
-        else enclosing
-
-      extractFrom(child, childEnclosing)
-    })
   }
 
   private def extractImports(trees: List[Tree]) = {
@@ -149,13 +154,6 @@ final class FoldingRangeExtractor(
     ): Option[(Position, Boolean)] = {
       val tree = treeAndEnclosing._1
       val enclosing = treeAndEnclosing._2
-
-      // All Defn statements must fold
-      if (
-        (tree
-          .isNot[Defn] || span(tree.pos) == 0) && span(tree.pos) < spanThreshold
-      )
-        return None
 
       val result = tree match {
         case _: Term.Select => None
