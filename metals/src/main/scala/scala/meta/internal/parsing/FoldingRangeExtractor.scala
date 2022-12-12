@@ -30,7 +30,7 @@ final class FoldingRangeExtractor(
   }
 
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
-    // All Defn statements  except one-liners must fold
+    // All Defn statements except one-liners must fold
     if (
       (tree.is[Defn] && span(tree.pos) > 0) || span(tree.pos) > spanThreshold
     ) {
@@ -182,7 +182,7 @@ final class FoldingRangeExtractor(
 
         case term: Term.Match =>
           for {
-            (foldStart, adjust) <- matchBlockStartAndFoldingAdjustment[
+            (foldStart, adjust) <- findTermFoldStartAndAdjustment[
               Token.KwMatch
             ](
               term.expr.trailingTokens
@@ -193,7 +193,7 @@ final class FoldingRangeExtractor(
         case c: Case =>
           val startingPoint = c.cond.getOrElse(c.pat)
           for {
-            (foldStart, adjust) <- matchBlockStartAndFoldingAdjustment[
+            (foldStart, adjust) <- findTermFoldStartAndAdjustment[
               Token.RightArrow
             ](
               startingPoint.trailingTokens
@@ -203,7 +203,7 @@ final class FoldingRangeExtractor(
 
         case term: Term.Try => // range for the `catch` clause
           for {
-            (foldStart, adjust) <- matchBlockStartAndFoldingAdjustment[
+            (foldStart, adjust) <- findTermFoldStartAndAdjustment[
               Token.KwCatch
             ](
               term.expr.trailingTokens
@@ -213,7 +213,7 @@ final class FoldingRangeExtractor(
 
         case For(endPosition) =>
           for {
-            (foldStart, _) <- matchBlockStartAndFoldingAdjustment[
+            (foldStart, _) <- findTermFoldStartAndAdjustment[
               Token.KwFor
             ](
               tree.tokens.iterator
@@ -275,7 +275,7 @@ final class FoldingRangeExtractor(
       }
     }
 
-    private def isScala3BlockWithoutOptionalBraces(tree: Tree) = {
+    private def isScala3BlockWithoutOptionalBraces(tree: Tree): Boolean = {
       tree.children
         .find(_.isNot[Self])
         .map { child =>
@@ -317,7 +317,7 @@ final class FoldingRangeExtractor(
       }
     }
 
-    private def matchBlockStartAndFoldingAdjustment[T: ClassTag](
+    private def findTermFoldStartAndAdjustment[T: ClassTag](
         trailingTokens: Iterator[Token]
     ): Option[(Int, Boolean)] = {
       val firstTwoTokens = trailingTokens
