@@ -30,7 +30,7 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
       _ <- server.assertFolded(
         "a/src/main/scala/a/Main.scala",
         """object Main >>region>>{
-          |  def foo = >>region>>{
+          |  def foo =>>region>> {
           |    ???
           |    ???
           |    ???
@@ -74,7 +74,7 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
         """|package b
            |import scala.concurrent.Future as F
            |object a >>region>>{
-           |  def func(args: String*) = >>region>>{
+           |  def func(args: String*) =>>region>> {
            |    println("")
            |    println("")
            |    println("")
