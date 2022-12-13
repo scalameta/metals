@@ -17,7 +17,7 @@ implemented.
 
 Currently, all you need to run the manual installation is:
 
-`mvn ch.epfl.scala:maven-bloop_2.13:@BLOOP_VERSION@:bloopInstall -DdownloadSources=true`
+`mvn ch.epfl.scala:bloop-maven-plugin:@BLOOP_MAVEN_VERSION@:bloopInstall -DdownloadSources=true`
 
 If you choose this option though you should select "Don't show again" when
 Metals prompts to import the build.

@@ -79,6 +79,7 @@ object Docs {
           "SNAPSHOT_DATE" -> snapshot.lastModified.toString,
           "LOCAL_VERSION" -> V.localSnapshotVersion,
           "BLOOP_VERSION" -> V.bloopVersion,
+          "BLOOP_MAVEN_VERSION" -> V.mavenBloopVersion,
           "SBT_BLOOP_VERSION" -> V.sbtBloopVersion,
           "SCALAMETA_VERSION" -> V.scalametaVersion,
           "SCALA211_VERSION" -> V.scala211,
