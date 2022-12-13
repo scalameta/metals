@@ -118,8 +118,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
            |Main arg4
            |""".stripMargin,
       "3.1" ->
-        """|age = : Int
-           |address = : String
+        """|address = : String
+           |age = : Int
            |followers = : Int
            |""".stripMargin,
     ),
