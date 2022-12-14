@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.io.File
+import java.lang
 import java.net.URI
 import java.nio.file.Path
 import java.util
@@ -40,6 +41,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.{messages => jm}
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -162,6 +164,22 @@ case class ScalaPresentationCompiler(
       new InferredTypeProvider(pc.compiler(), params).inferredTypeEdits().asJava
     }
   }
+
+  override def inlineValue(
+      params: RangeParams,
+      inlineAll: lang.Boolean
+  ): CompletableFuture[jm.Either[String, ju.List[TextEdit]]] = {
+    val empty: jm.Either[String, ju.List[TextEdit]] =
+      jm.Either.forRight(new ju.ArrayList[TextEdit]())
+    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+      new InlineValueProvider(new ReferenceProviderImpl(pc.compiler(), params))
+        .getInlineTextEdits(inlineAll) match {
+        case Left(error) => jm.Either.forLeft(error)
+        case Right(edits) => jm.Either.forRight(edits.asJava)
+      }
+    }
+  }
+
   override def extractMethod(
       range: RangeParams,
       extractionPos: OffsetParams

@@ -11,7 +11,9 @@ final class PcDocumentHighlightProvider(
 ) extends PcCollector[DocumentHighlight](compiler, params) {
   import compiler._
 
-  def collect(tree: Tree, toAdjust: Position): DocumentHighlight = {
+  def collect(
+      parent: Option[Tree]
+  )(tree: Tree, toAdjust: Position): DocumentHighlight = {
     val (pos, _) = adjust(toAdjust, forHighlight = true)
     tree match {
       case _: MemberDef =>

@@ -8,7 +8,7 @@ abstract class PcCollector[T](
 ) {
   import compiler._
 
-  def collect(tree: Tree, pos: Position): T
+  def collect(parent: Option[Tree])(tree: Tree, pos: Position): T
 
   val unit: RichCompilationUnit = addCompilationUnit(
     code = params.text(),
@@ -83,10 +83,12 @@ abstract class PcCollector[T](
       pos: Position,
       forHighlight: Boolean = false
   ): (Position, Boolean) = {
-    val isBackticked = text(pos.start) == '`' && text(pos.end - 1) == '`'
+    val isBackticked = text(pos.start) == '`' &&
+      text(pos.end - 1) == '`' &&
+      pos.start != (pos.end - 1) // if the range is for one character pos.end-1 points to pos.start, and may return true for other two cheks
     // when the old name contains backticks, the position is incorrect
     val isOldNameBackticked = text(pos.start) == '`' &&
-      text(pos.end - 1) != '`' &&
+      (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
       text(pos.end + 1) == '`'
     if (isBackticked && !forHighlight)
       (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
@@ -221,10 +223,14 @@ abstract class PcCollector[T](
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
 
-        def traverse(
+        def traverseWithParent(parent: Option[Tree])(
             acc: Set[T],
             tree: Tree
         ): Set[T] = {
+          val traverse: (Set[T], Tree) => Set[T] = traverseWithParent(
+            Some(tree)
+          )
+          val collect: (Tree, Position) => T = this.collect(parent)
           tree match {
             /**
              * All indentifiers such as:
@@ -370,7 +376,7 @@ abstract class PcCollector[T](
               tree.children.foldLeft(acc)(traverse(_, _))
           }
         }
-        val all = traverse(Set.empty[T], unit.lastBody)
+        val all = traverseWithParent(None)(Set.empty[T], unit.lastBody)
         all.toList.distinct
       case None => Nil
     }
