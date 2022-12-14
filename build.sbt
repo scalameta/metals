@@ -647,6 +647,7 @@ lazy val metalsDependencies = project
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
       "com.lihaoyi" % "mill-contrib-testng" % V.mill,
       "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),
+      "ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop,
     ),
   )
   .disablePlugins(ScalafixPlugin)

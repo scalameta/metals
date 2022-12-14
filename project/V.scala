@@ -27,7 +27,7 @@ object V {
   val jsoup = "1.15.3"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.19.0"
-  val mavenBloop = bloop
+  val mavenBloop = "2.0.0-RC4"
   val mill = "0.10.10"
   val mdoc = "2.3.6"
   val munit = "1.0.0-M7"
