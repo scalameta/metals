@@ -446,6 +446,7 @@ lazy val metals = project
       "sbtBloopVersion" -> V.sbtBloop,
       "gradleBloopVersion" -> V.gradleBloop,
       "mavenBloopVersion" -> V.mavenBloop,
+      "gradleBloopVersion" -> V.gradleBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
       "javaSemanticdbVersion" -> V.javaSemanticdb,
@@ -648,6 +649,7 @@ lazy val metalsDependencies = project
       "com.lihaoyi" % "mill-contrib-testng" % V.mill,
       "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),
       "ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop,
+      "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
     ),
   )
   .disablePlugins(ScalafixPlugin)

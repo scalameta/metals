@@ -6,6 +6,7 @@ import java.nio.file.Path
 
 import scala.util.Properties
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
@@ -14,14 +15,15 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     with BloopInstallProvider {
 
   private val initScriptName = "init-script.gradle"
-  private def initScript(versionToUse: String) =
+  private val gradleBloopVersion = BuildInfo.gradleBloopVersion
+  private val initScript =
     s"""
        |initscript {
        |  repositories{
        |    mavenCentral()
        |  }
        |  dependencies {
-       |    classpath 'ch.epfl.scala:gradle-bloop_2.12:$versionToUse'
+       |    classpath 'ch.epfl.scala:gradle-bloop_2.12:$gradleBloopVersion'
        |  }
        |}
        |allprojects {
@@ -30,8 +32,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     """.stripMargin.getBytes()
 
   private lazy val initScriptPath: Path = {
-    val bloopVersion = userConfig().currentBloopVersion
-    Files.write(tempDir.resolve(initScriptName), initScript(bloopVersion))
+    Files.write(tempDir.resolve(initScriptName), initScript)
   }
 
   private lazy val gradleWrapper = {
