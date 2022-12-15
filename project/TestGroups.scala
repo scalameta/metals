@@ -45,7 +45,8 @@ object TestGroups {
       "tests.MtagsScala2Suite", "tests.UriEncoderDecoderSuite",
       "tests.DidFocusWhileCompilingLspSuite", "tests.BloopJavaHomeLspSuite",
       "tests.testProvider.ScalatestFinderSuite", "tests.ScalaCliSuite",
-      "tests.FoldingRangeScala3LineFolingOnlySuite"),
+      "tests.FoldingRangeScala3LineFolingOnlySuite",
+      "tests.debug.BreakpointScalaCliDapSuite", "tests.CallHierarchyLspSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",
@@ -102,7 +103,10 @@ object TestGroups {
       "tests.codeactions.ConvertToNamedArgumentsLspSuite",
       "tests.testProvider.TestSuitesProviderSuite", "tests.MillVersionSuite",
       "tests.FingerprintsLspSuite", "tests.JdkVersionSuite",
-      "tests.MillifyDependencyLspSuite"),
+      "tests.MillifyDependencyLspSuite",
+      "tests.codeactions.ActionableDiagnosticsSuite",
+      "tests.codeactions.MillifyDependencyLspSuite",
+      "tests.RenameFilesLspSuite", "tests.codeactions.ExtractMethodLspSuite"),
   )
 
 }
