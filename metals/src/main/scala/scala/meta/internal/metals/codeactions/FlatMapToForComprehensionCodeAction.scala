@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import scala.meta.Case
 import scala.meta.Enumerator
 import scala.meta.Lit
+import scala.meta.Name
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.Tree
@@ -21,7 +22,6 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
-import scala.meta.Name
 
 class FlatMapToForComprehensionCodeAction(
     trees: Trees,

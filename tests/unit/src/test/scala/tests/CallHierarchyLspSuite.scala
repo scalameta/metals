@@ -427,7 +427,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("apply") {
+  test("apply-incoming") {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/User.scala
@@ -451,6 +451,11 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |
            |""".stripMargin
       )
+    } yield ()
+  }
+
+  test("apply-outgoing") {
+    for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/User.scala
            |package a
@@ -476,7 +481,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("unapply") {
+  test("unapply-incoming") {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/User.scala
@@ -503,7 +508,11 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |
            |""".stripMargin
       )
+    } yield ()
+  }
 
+  test("unapply-outgoing") {
+    for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/User.scala
            |package a
