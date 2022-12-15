@@ -88,7 +88,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   def check(
       name: TestOptions,
       expected: String,
-      fileName: String="Main.scala",
+      fileName: String = "Main.scala",
   ): Unit = {
     val fileContent =
       expected.replaceAll(raw"/\*[\w,]+\*/", "").replaceAll(raw"\<\<|\>\>", "")
