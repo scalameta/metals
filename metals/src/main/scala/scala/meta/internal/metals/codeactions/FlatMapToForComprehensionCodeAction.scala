@@ -21,6 +21,7 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
+import scala.meta.Name
 
 class FlatMapToForComprehensionCodeAction(
     trees: Trees,
@@ -270,6 +271,7 @@ class FlatMapToForComprehensionCodeAction(
           _: Term.Name | _: Pat.Typed | _: Pat.Var =>
         true
       case Pat.Tuple(pats) => pats.forall(isSimple)
+      case Pat.ArgClause(pats) => pats.forall(isSimple)
       case Pat.Xml(_, args) => args.forall(isSimple)
       case _ => false
     }
@@ -280,7 +282,8 @@ class FlatMapToForComprehensionCodeAction(
       nameGenerator: MetalsNames,
   ): Option[(Pat, Term)] = {
     tree match {
-      case Term.Function(List(param), term) if param.name.value.isEmpty =>
+      case Term.Function(List(param), term)
+          if param.name.is[Name.Placeholder] =>
         val newName = nameGenerator.createNewName()
         Some(Pat.Var(Term.Name(newName)), term)
       case Term.Function(List(param), term) =>
