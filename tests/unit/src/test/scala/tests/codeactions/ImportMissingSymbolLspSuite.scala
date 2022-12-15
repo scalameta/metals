@@ -217,7 +217,6 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Instant")}
-        |${ExtractMethodCodeAction.title("object `A`")}
         |${ConvertToNamedArguments.title("successful(...)")}
         |""".stripMargin,
     """|package a
