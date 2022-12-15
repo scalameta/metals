@@ -340,10 +340,10 @@ class Scala3CodeActionLspSuite
     "named-basic",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
-       |  Foo<<(>>1, 2, param3 = 3)
+       |  Foo(<<1>>, 2, param3 = 3)
        |  Foo(4,5,6)
        |}""".stripMargin,
-    s"""|${ExtractMethodCodeAction.title("object `Something`")}
+    s"""|${ExtractValueCodeAction.title("1")}
         |${ConvertToNamedArguments.title("Foo(...)")}""".stripMargin,
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)

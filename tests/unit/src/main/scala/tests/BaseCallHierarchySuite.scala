@@ -103,7 +103,7 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
     val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
 
     // if item is already specified we did already create the workspace
-    // might need some further refactor
+    // note(@tgodzik) Might need some further refactor
     val init = if (item.isEmpty) {
       cleanWorkspace()
       for {
