@@ -132,7 +132,7 @@ class SbtServerSuite
         text.replace(
           "val a = project.in(file(\"a\"))",
           """|val a = project.in(file("a")).settings(
-             |  libraryDependencies += "org.scalameta" %% "scalameta" % "4.6.0"
+             |  libraryDependencies += "org.scalameta" %% "scalameta" % "4.7.0"
              |)
              |""".stripMargin,
         )
