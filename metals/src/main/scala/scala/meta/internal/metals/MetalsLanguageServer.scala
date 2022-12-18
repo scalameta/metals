@@ -1741,7 +1741,6 @@ class MetalsLanguageServer(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] = {
     CancelTokens.future { token =>
-      compilers
       compilers.semanticTokens(params)
     }
   }
