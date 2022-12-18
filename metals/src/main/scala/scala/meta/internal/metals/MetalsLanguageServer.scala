@@ -1750,7 +1750,7 @@ class MetalsLanguageServer(
           token,
         )
         .map { tokens =>
-          if (tokens eq None) null
+          if (tokens.eq(None)) null
           else tokens
         }
     }
