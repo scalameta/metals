@@ -399,7 +399,7 @@ class Compilers(
               new SemanticTokens(plist)
             }
         }
-        .getOrElse(Future.successful(new SemanticTokens(Nil.asJava)))
+        .getOrElse(Future.successful(new SemanticTokens(zeroToken)))
     }
 
   }
