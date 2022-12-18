@@ -13,7 +13,8 @@ import org.eclipse.lsp4j.SemanticTokenModifiers
 import org.eclipse.lsp4j.SemanticTokenTypes
 
 /**
- * Corresponds to tests.SemanticHighlightLspSuite
+ *  Provides semantic tokens of file(@param params)
+ *  according to the LSP specification.
  */
 final class SemanticTokenProvider(
     protected val cp: MetalsGlobal, // compiler
@@ -42,7 +43,12 @@ final class SemanticTokenProvider(
     .sortBy(_.pos.start)
 
   /**
-   * main method
+   * Main method.  Fist, Codes are convert to Scala.Meta.Tokens.
+   * And a semantic token, which is composed by 5 Ints
+   * are provided for each meta-token. If a meta-token is
+   * Idenitifier, the attributes (e.g. constant or not)
+   * are gotten using presentation Compler.
+   * All semantic tokens is flattend to a list and returned.
    */
   def provide(): ju.List[Integer] = {
 
@@ -52,7 +58,7 @@ final class SemanticTokenProvider(
     var cLine = Line(0, 0) // Current Line
     var lastProvided = SingleLineToken(cLine, 0, None)
 
-    for (tk <- params.text().tokenize.toOption.getOrElse(Nil)) yield {
+    for (tk <- params.text().tokenize.get) yield {
 
       val (tokenType, tokeModifier) = getTypeAndMod(tk)
       var cOffset = tk.pos.start // Current Offset

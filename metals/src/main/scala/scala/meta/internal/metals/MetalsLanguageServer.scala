@@ -889,19 +889,16 @@ class MetalsLanguageServer(
         )
         capabilities.setFoldingRangeProvider(true)
         capabilities.setSelectionRangeProvider(true)
-        capabilities.setSemanticTokensProvider(
-          new org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions(
-            new SemanticTokensLegend(
-              TokenTypes.asJava,
-              TokenModifiers.asJava,
-            ),
-            new SemanticTokensServerFull(
-              false
-            ), // Method 'full' is supported, but 'full/delta' is not.
-            false, // Method 'range' is not supported.
-            // Dynamic registration is not supported.
+        val semanticTokenOptions = new SemanticTokensWithRegistrationOptions()
+        semanticTokenOptions.setFull(false)
+        semanticTokenOptions.setRange(false)
+        semanticTokenOptions.setLegend(
+          new SemanticTokensLegend(
+            TokenTypes.asJava,
+            TokenModifiers.asJava,
           )
         )
+        capabilities.setSemanticTokensProvider(semanticTokenOptions)
         capabilities.setCodeLensProvider(new CodeLensOptions(false))
         capabilities.setDefinitionProvider(true)
         capabilities.setTypeDefinitionProvider(true)
@@ -1745,10 +1742,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[SemanticTokens] = {
     CancelTokens.future { token =>
       compilers
-        .semanticTokens(
-          params,
-          token,
-        )
+        .semanticTokens(params)
         .map { tokens =>
           if (tokens.eq(None)) null
           else tokens

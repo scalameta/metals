@@ -8,6 +8,13 @@ import munit.TestOptions
  */
 class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
 
+
+  check(
+    "Empty file",
+    s"""|
+        |""".stripMargin,
+  )
+
   check(
     "Invalid ext (shouldn't be tokenized) 1",
     s"""|

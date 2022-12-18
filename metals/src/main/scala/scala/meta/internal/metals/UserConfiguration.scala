@@ -243,6 +243,16 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "enable-semantic-highlighting",
+        "false",
+        "false",
+        "Highlight codes using semantic information.",
+        """|When this option is enabled, scala codes are highlighted.
+           |using semantic information(parameter, constant,etc) .
+           |When disabled, No codes are highlighted.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "enable-indent-on-paste",
         "false",
         "false",
