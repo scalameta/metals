@@ -1,5 +1,5 @@
 class A >>region>>{
-  val field =>>region>> {
+  val field = >>region>>{
 
 
 
@@ -7,7 +7,7 @@ class A >>region>>{
     ???
   }<<region<<
 
-  def method(a:Int) =>>region>> {
+  def method(a:Int) = >>region>>{
 
 
 
@@ -19,20 +19,20 @@ class A >>region>>{
 
   def chain =>>region>> Seq(1).map{
     x =>
-    >>region>>x + 1
+    x + 1
      + 1
      + 1
      + 1
      + 1
      + 1
-     + 1<<region<<
+     + 1
   }.map>>region>>{
-    >>region>>_ + 1
+    _ + 1
     + 1
     + 1
     + 1
     + 1
-    + 1<<region<<
+    + 1
   }<<region<<<<region<<
 
   def chain =>>region>> Seq(1).map(

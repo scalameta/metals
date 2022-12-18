@@ -16,6 +16,16 @@ def endmarker(): Unit =
   ???
 end endmarker
 
+def fooNested(): Unit =
+  def bar(): Unit =
+    ???
+    ???
+    ???
+    ???
+  end bar
+  ???
+end fooNested
+
 object foo:
   println("")
   println("")

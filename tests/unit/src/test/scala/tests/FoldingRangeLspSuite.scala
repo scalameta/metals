@@ -25,7 +25,7 @@ class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
       _ <- server.assertFolded(
         "a/src/main/scala/a/Main.scala",
         """object Main >>region>>{
-          |  def foo =>>region>> {
+          |  def foo = >>region>>{
           |    ???
           |    ???
           |    ???
@@ -42,7 +42,7 @@ class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
         """__
           |
           |object Main >>region>>{
-          |  def foo =>>region>> {
+          |  def foo = >>region>>{
           |    ???
           |    ???
           |    ???

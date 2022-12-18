@@ -1,11 +1,11 @@
-def foobar(): Unit =>>region>> {
+def foobar(): Unit = >>region>>{
   ???
   ???
   ???
   ???
 }<<region<<
 
-def test(): Unit =>>region>> {
+def test(): Unit = >>region>>{
   try >>region>>{
     ???
     ???
@@ -49,13 +49,20 @@ def noFoldInside(): Unit =>>region>>
   yield ???<<region<<
 
 class Bar >>region>>{
-  def foo() =>>region>> {
+  def foo() = >>region>>{
     ???
     ???
     ???
   }<<region<<
 
-  def bar() =>>region>> {
+  def bar() = >>region>>{
+    ???
+    ???
+    ???
+  }<<region<<
+
+  def fbar() =>>region>>
+  {
     ???
     ???
     ???

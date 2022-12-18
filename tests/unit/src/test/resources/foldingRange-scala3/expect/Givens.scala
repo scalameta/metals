@@ -1,5 +1,5 @@
-trait Foo[A]>>region>>:
-  def foo: String<<region<<
+trait Foo[A]:
+  def foo: String
 
 given Foo[String]>>region>> with 
   def a: String =>>region>>

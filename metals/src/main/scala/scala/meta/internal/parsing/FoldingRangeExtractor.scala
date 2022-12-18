@@ -20,6 +20,7 @@ final class FoldingRangeExtractor(
     foldOnlyLines: Boolean,
 ) {
   private val spanThreshold = 2
+  private val distanceToEnclosingThreshold = 3
 
   private val ranges = new FoldingRanges(foldOnlyLines)
 
@@ -31,15 +32,18 @@ final class FoldingRangeExtractor(
 
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
     // All Defn statements except one-liners must fold
-    if (
-      (tree.is[Defn] && span(tree.pos) > 0) || span(tree.pos) > spanThreshold
-    ) {
-      val newEnclosing = (tree, enclosing) match {
-        case Foldable((pos, adjust)) =>
+    if (span(tree.pos) > spanThreshold) {
+      val newEnclosing = tree match {
+        case Foldable((pos, adjust))
+            if tree.is[Defn] || span(enclosing) - span(
+              pos
+            ) > distanceToEnclosingThreshold =>
           distance.toRevised(pos.toLsp) match {
             case Some(revisedPos) =>
-              val range = createRange(revisedPos)
-              ranges.add(Region, range, adjust)
+              if (pos.startLine != enclosing.startLine) {
+                val range = createRange(revisedPos)
+                ranges.add(Region, range, adjust)
+              }
               pos
             case None => enclosing
           }
@@ -150,32 +154,14 @@ final class FoldingRangeExtractor(
 
   private object Foldable {
     def unapply(
-        treeAndEnclosing: (Tree, Position)
+        tree: Tree
     ): Option[(Position, Boolean)] = {
-      val tree = treeAndEnclosing._1
-      val enclosing = treeAndEnclosing._2
 
-      val result = tree match {
+      tree match {
         case _: Term.Select => None
         case _: Term.Function => None
         case _: Pkg => None
-        case defn: Defn =>
-          for {
-            foldStart <- findDefnFoldStart(defn)
-            lastChild <- defn.children.lastOption
-            adjust =
-              if (lastChild.is[Term.Block])
-                !isScala3BlockWithoutOptionalBraces(lastChild)
-              else
-                false
-          } yield (
-            range(
-              tree.pos.input,
-              foldStart,
-              tree.pos.end,
-            ),
-            adjust,
-          )
+        case defn: Defn => getFoldingRangeForDefn(defn)
 
         case _: Lit.String =>
           Some(range(tree.pos.input, tree.pos.start + 3, tree.pos.end), true)
@@ -185,7 +171,8 @@ final class FoldingRangeExtractor(
             (foldStart, adjust) <- findTermFoldStartAndAdjustment[
               Token.KwMatch
             ](
-              term.expr.trailingTokens
+              term.expr.trailingTokens,
+              startFoldIfEOL = true,
             )
             pos = range(tree.pos.input, foldStart, term.pos.end)
           } yield (pos, adjust)
@@ -196,7 +183,8 @@ final class FoldingRangeExtractor(
             (foldStart, adjust) <- findTermFoldStartAndAdjustment[
               Token.RightArrow
             ](
-              startingPoint.trailingTokens
+              startingPoint.trailingTokens,
+              startFoldIfEOL = false,
             )
             pos = range(tree.pos.input, foldStart, c.body.pos.end)
           } yield (pos, adjust)
@@ -206,9 +194,18 @@ final class FoldingRangeExtractor(
             (foldStart, adjust) <- findTermFoldStartAndAdjustment[
               Token.KwCatch
             ](
-              term.expr.trailingTokens
+              term.expr.trailingTokens,
+              startFoldIfEOL = false,
             )
-            pos = range(tree.pos.input, foldStart, term.pos.end)
+            lastCase <- term.catchp.lastOption
+            foldEnd =
+              if (adjust)
+                lastCase
+                  .findFirstTrailing(_.is[Token.RightBrace])
+                  .map(_.pos.end)
+                  .getOrElse(lastCase.pos.end)
+              else lastCase.pos.end
+            pos = range(tree.pos.input, foldStart, foldEnd)
           } yield (pos, adjust)
 
         case For(endPosition) =>
@@ -216,7 +213,8 @@ final class FoldingRangeExtractor(
             (foldStart, _) <- findTermFoldStartAndAdjustment[
               Token.KwFor
             ](
-              tree.tokens.iterator
+              tree.tokens.iterator,
+              startFoldIfEOL = false,
             )
             pos = range(tree.pos.input, foldStart, endPosition.start)
           } yield (pos, true)
@@ -267,17 +265,11 @@ final class FoldingRangeExtractor(
           }
         case _ => None
       }
-
-      result match {
-        case Some((rangePos, _)) if rangePos.startLine == enclosing.startLine =>
-          None
-        case _ => result
-      }
     }
 
     private def isScala3BlockWithoutOptionalBraces(tree: Tree): Boolean = {
       tree.children
-        .find(_.isNot[Self])
+        .find(child => child.isNot[Self] && child.isNot[Init])
         .map { child =>
           val childStartPos = child.pos.start
           val LeftBracesNotClosed = tree.tokens
@@ -289,39 +281,67 @@ final class FoldingRangeExtractor(
             }
           LeftBracesNotClosed == 0
         }
-        .getOrElse(false)
+        .getOrElse(true)
     }
 
-    private def findDefnFoldStart(defn: Tree): Option[Int] = {
-      defn.children.lastOption.map {
-        case template: Template =>
-          template.inits.lastOption
-            .map(_.pos.end)
-            .getOrElse(template.pos.start)
-        case block =>
-          val defnTokenSlice = defn.tokens
-            .takeWhile(_.pos.start < block.pos.start)
-
-          val endOfLastEquals = defnTokenSlice
-            .findLast(_.is[Token.Equals])
-            .map(_.pos.end)
-
-          endOfLastEquals.getOrElse(
-            defnTokenSlice
-              .findLast(t =>
-                t.isNot[Token.Whitespace] && t.isNot[Token.Comment]
-              )
+    private def getFoldingRangeForDefn(
+        defn: Tree
+    ): Option[(Position, Boolean)] = {
+      defn.children.lastOption.flatMap { child =>
+        val isBraceless = isScala3BlockWithoutOptionalBraces(child)
+        child match {
+          case template: Template =>
+            val foldStart = template.inits.lastOption
               .map(_.pos.end)
-              .getOrElse(defnTokenSlice.last.pos.end)
-          )
+              .getOrElse(template.pos.start)
+
+            Some(range(defn.pos.input, foldStart, defn.pos.end), !isBraceless)
+          case block =>
+            val defnTokenSlice = defn.tokens
+              .takeWhile(_.pos.start < block.pos.start)
+
+            val defnEqualsPosStart = defnTokenSlice
+              .findLast(_.is[Token.Equals])
+              .map(_.pos.start)
+
+            if (defnEqualsPosStart.isDefined) {
+              val tokensStartingwithEquals = defn.tokens
+                .dropWhile(_.pos.start < defnEqualsPosStart.get)
+
+              val startPosAndAdjust =
+                findTermFoldStartAndAdjustment[Token.Equals](
+                  tokensStartingwithEquals.iterator,
+                  startFoldIfEOL = true,
+                )
+
+              startPosAndAdjust.map { case (startPos, adjust) =>
+                (range(defn.pos.input, startPos, defn.pos.end), adjust)
+              }
+            } else {
+              defnTokenSlice
+                .findLast(t =>
+                  t.isNot[Token.Whitespace] && t.isNot[Token.Comment]
+                )
+                .map(lastToken =>
+                  (
+                    range(defn.pos.input, lastToken.end, defn.pos.end),
+                    !isBraceless,
+                  )
+                )
+            }
+        }
       }
     }
 
     private def findTermFoldStartAndAdjustment[T: ClassTag](
-        trailingTokens: Iterator[Token]
+        trailingTokens: Iterator[Token],
+        startFoldIfEOL: Boolean,
     ): Option[(Int, Boolean)] = {
       val firstTwoTokens = trailingTokens
-        .withFilter(_.isNot[Token.Whitespace])
+        .withFilter(t =>
+          (startFoldIfEOL && t.is[Token.EOL]) || t.isNot[Token.Whitespace] && t
+            .isNot[Token.Comment]
+        )
         .take(2)
         .toList
       firstTwoTokens match {
@@ -332,7 +352,7 @@ final class FoldingRangeExtractor(
             /* adjust */ true,
           )
         case (kw: T) :: _ =>
-          // braceless
+          // braceless or brace starts on another line (if reactToNewLine is set)
           Some(
             kw.pos.end,
             /* adjust */ false,

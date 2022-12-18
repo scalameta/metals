@@ -5,9 +5,9 @@ def foobar(): Unit =>>region>>
   ???<<region<<
 
 object Foo>>region>>:
-  def foo =>>region>>
+  def foo =
     ???
-    ???<<region<<<<region<<
+    ???<<region<<
 
 def endmarker(): Unit =>>region>>
   ???
@@ -15,6 +15,16 @@ def endmarker(): Unit =>>region>>
   ???
   ???<<region<<
 end endmarker
+
+def fooNested(): Unit =>>region>>
+  def bar(): Unit =>>region>>
+    ???
+    ???
+    ???
+    ???<<region<<
+  end bar
+  ???<<region<<
+end fooNested
 
 object foo>>region>>:
   println("")
@@ -33,7 +43,7 @@ def fooNested(): Unit =>>region>>
 
 def fooWithMatch(): Unit =>>region>>
   def bar(): Unit =>>region>>
-    ??? match>>region>>
+    ??? match
       case 1 =>>>region>>
         ???
         ???
@@ -46,7 +56,7 @@ def fooWithMatch(): Unit =>>region>>
           case 6 => ???<<region<<
         ???
         ???
-        ???<<region<<<<region<<<<region<<
+        ???<<region<<<<region<<
   ???
   ???
   ???

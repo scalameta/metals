@@ -1,20 +1,20 @@
 class A >>region>>{
   def foo =>>region>>
-    for >>region>>{
+    for {
       x <- ???
-    } <<region<<{
+    } {
       ???
     }<<region<<
 
   def noSpacing =>>region>>
     for>>region>>{
       x <- ???
-    }<<region<<>>region>>{
+    }<<region<<{
       ???
       ???
       ???
       ???
-    }<<region<<<<region<<
+    }<<region<<
 
   def why =>>region>>
     for
