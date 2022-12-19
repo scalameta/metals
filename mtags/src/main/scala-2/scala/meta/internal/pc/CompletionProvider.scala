@@ -340,8 +340,8 @@ class CompletionProvider(
         false
       }
     }
-    completions.foreach(visit)
     completion.contribute.foreach(visit)
+    completions.foreach(visit)
     buf ++= keywords(
       pos,
       editRange,

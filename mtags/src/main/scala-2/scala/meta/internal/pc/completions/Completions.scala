@@ -487,6 +487,25 @@ trait Completions { this: MetalsGlobal =>
           text,
           parent
         )
+      case CaseExtractors.CasePatternExtractor(selector, parent, name) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
+          pos,
+          text,
+          parent,
+          patternOnly = Some(name.stripSuffix("_CURSOR_"))
+        )
+      case CaseExtractors.TypedCasePatternExtractor(selector, parent, name) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
+          pos,
+          text,
+          parent,
+          patternOnly = Some(name.stripSuffix("_CURSOR_")),
+          hasBind = true
+        )
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
         FilenameCompletion(c, p, pos, editRange)
       case OverrideExtractor(name, template, start, isCandidate) =>
