@@ -435,7 +435,6 @@ trait Completions { this: MetalsGlobal =>
       completions: CompletionResult,
       latestEnclosingArg: List[Tree]
   ): CompletionPosition = {
-    val PatternMatch = new PatternMatch(pos)
     val ScalaCliExtractor = new ScalaCliExtractor(pos)
     def fromIdentApply(
         ident: Ident,
@@ -472,10 +471,6 @@ trait Completions { this: MetalsGlobal =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
-      case Ident(_) :: PatternMatch(c, m) =>
-        CasePatternCompletion(isTyped = false, c, m)
-      case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
-        CasePatternCompletion(isTyped = true, c, m)
       case (lit @ Literal(Constant(_: String))) :: head :: _ =>
         InterpolationSplice(pos.point, pos.source.content, text) match {
           case Some(i) =>
@@ -484,18 +479,14 @@ trait Completions { this: MetalsGlobal =>
             isPossibleInterpolatorMember(lit, head, text, pos)
               .getOrElse(NoneCompletion)
         }
-
-      case (m @ Match(_, Nil)) :: parent :: _ =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
-      case Ident(name) :: (cd: CaseDef) :: (m: Match) :: parent :: _
-          if isCasePrefix(name) && pos.line != cd.pos.line =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
-      case (ident @ Ident(name)) :: Block(
-            _,
-            expr
-          ) :: (_: CaseDef) :: (m: Match) :: parent :: _
-          if ident == expr && isCasePrefix(name) =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
+      case CaseExtractors.CaseExtractor(selector, parent) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
+          pos,
+          text,
+          parent
+        )
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
         FilenameCompletion(c, p, pos, editRange)
       case OverrideExtractor(name, template, start, isCandidate) =>
@@ -626,16 +617,6 @@ trait Completions { this: MetalsGlobal =>
         NoneCompletion
     }
 
-  }
-
-  class PatternMatch(pos: Position) {
-    def unapply(enclosing: List[Tree]): Option[(CaseDef, Match)] =
-      enclosing match {
-        case (c: CaseDef) :: (m: Match) :: _ if c.pat.pos.includes(pos) =>
-          Some((c, m))
-        case _ =>
-          None
-      }
   }
 
   class MetalsLocator(pos: Position, acceptTransparent: Boolean = false)

@@ -430,4 +430,45 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     }
   }
 
+  object CaseExtractors {
+    object CaseDefMatch {
+      def unapply(path: List[Tree]): Option[(Tree, Tree)] =
+        path match {
+          case (_: CaseDef) :: (m: Match) :: parent :: _ =>
+            Some((m.selector, parent))
+          case _ => None
+        }
+    }
+
+    object CaseExtractor {
+      def unapply(path: List[Tree]): Option[(Tree, Tree)] =
+        path match {
+          // xxx match {
+          //   ca@@
+          case (m @ Match(_, Nil)) :: parent :: _ =>
+            Some((m.selector, parent))
+
+          // xxx match {
+          //   case A =>
+          //   ca@@
+          case (id @ Ident(name)) :: (cd: CaseDef) :: (m: Match) :: parent :: _
+              if isCasePrefix(name) &&
+                cd.pos.line != id.pos.line =>
+            Some((m.selector, parent))
+
+          // xxx match {
+          //   case A => ()
+          //   ca@@
+          case (ident @ Ident(name)) :: Block(
+                _,
+                expr
+              ) :: CaseDefMatch(selector, parent)
+              if ident == expr && isCasePrefix(name) =>
+            Some((selector, parent))
+
+          case _ => None
+        }
+    }
+  }
+
 }
