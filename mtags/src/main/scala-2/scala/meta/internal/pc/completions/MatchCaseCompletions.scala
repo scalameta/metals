@@ -126,6 +126,20 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
           )
         )
       } else {
+
+        // Step 0: case for selector type, e.g.
+        // case class Foo(a: Int, b: Int)
+        // List(Foo(1,2)).map{ case F@@ }
+        selectorSym.info match {
+          case NoType => ()
+          case _ =>
+            if (
+              !(selectorSym.isSealed &&
+                (selectorSym.isAbstract || selectorSym.isTrait))
+            )
+              visit(selectorSym, Identifier(selectorSym.name), Nil)
+        }
+
         // Step 1: walk through scope members.
         metalsScopeMembers(pos).iterator
           .foreach { m =>
