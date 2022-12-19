@@ -475,18 +475,23 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     ),
   )
   check(
-    "exhaustive-map".tag(IgnoreScala2),
+    "exhaustive-map",
     """
       |object A {
       |  List(Option(1)).map{ ca@@ }
       |}""".stripMargin,
-    """|case (exhaustive) Option (2 cases)
+    """|case (exhaustive) Option[A] (2 cases)
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|case (exhaustive) Option (2 cases)
+           |""".stripMargin
+    ),
     filter = _.contains("exhaustive"),
   )
 
   checkEdit(
-    "exhaustive-map-edit".tag(IgnoreScala2),
+    "exhaustive-map-edit",
     """
       |object A {
       |  List(Option(1)).map{cas@@}
