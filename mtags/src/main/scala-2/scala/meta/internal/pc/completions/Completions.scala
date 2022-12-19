@@ -442,7 +442,15 @@ trait Completions { this: MetalsGlobal =>
     ): CompletionPosition = {
       if (hasLeadingBrace(ident, text)) {
         if (isCasePrefix(ident.name)) {
-          CaseKeywordCompletion(EmptyTree, editRange, pos, text, apply)
+          CaseKeywordCompletion(
+            EmptyTree,
+            editRange,
+            pos,
+            text,
+            source,
+            apply,
+            includeExhaustive = true
+          )
         } else {
           NoneCompletion
         }
@@ -485,6 +493,7 @@ trait Completions { this: MetalsGlobal =>
           editRange,
           pos,
           text,
+          source,
           parent
         )
       case CaseExtractors.CasePatternExtractor(selector, parent, name) =>
@@ -493,6 +502,7 @@ trait Completions { this: MetalsGlobal =>
           editRange,
           pos,
           text,
+          source,
           parent,
           patternOnly = Some(name.stripSuffix("_CURSOR_"))
         )
@@ -502,6 +512,7 @@ trait Completions { this: MetalsGlobal =>
           editRange,
           pos,
           text,
+          source,
           parent,
           patternOnly = Some(name.stripSuffix("_CURSOR_")),
           hasBind = true
