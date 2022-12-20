@@ -178,12 +178,16 @@ final class FileDecoderProvider(
   }
 
   private def convertJarStrToURI(uriAsStr: String): URI = {
+    // Windows treats % literally:
+    // https://learn.microsoft.com/en-us/troubleshoot/windows-client/networking/url-encoding-unc-paths-not-url-decoded
+    val decoded =
+      if (Properties.isWin) URIEncoderDecoder.decode(uriAsStr) else uriAsStr
 
     /**
      *  URI.create will decode the string, which means ZipFileSystemProvider will not work
      *  Related stack question: https://stackoverflow.com/questions/9873845/java-7-zip-file-system-provider-doesnt-seem-to-accept-spaces-in-uri
      */
-    new URI("jar", uriAsStr.stripPrefix("jar:"), null)
+    new URI("jar", decoded.stripPrefix("jar:"), null)
   }
 
   private def decodeJar(uri: URI): DecoderResponse = {

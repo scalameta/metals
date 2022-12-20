@@ -9,6 +9,7 @@ import java.util.concurrent.CancellationException
 import scala.collection.mutable
 import scala.reflect.internal.util.Position
 import scala.util.Failure
+import scala.util.Properties
 import scala.util.Success
 import scala.util.Try
 import scala.{meta => m}
@@ -130,15 +131,20 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       value.size > 1 && value.head == '`' && value.last == '`'
     def toAbsolutePath: AbsolutePath = toAbsolutePath(true)
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
+      // Windows treats % literally:
+      // https://learn.microsoft.com/en-us/troubleshoot/windows-client/networking/url-encoding-unc-paths-not-url-decoded
+      def decoded =
+        if (Properties.isWin) URIEncoderDecoder.decode(value) else value
+
       // jar schemes must have "jar:file:"" instead of "jar:file%3A" or jar file system won't recognise the URI.
       // but don't overdecode as URIs may not be recognised e.g. "com-microsoft-java-debug-core-0.32.0%2B1.jar" is correct
       if (value.toUpperCase.startsWith("JAR%3AFILE"))
-        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
+        URLDecoder.decode(decoded, "UTF-8").toAbsolutePath(followSymlink)
       else if (value.toUpperCase.startsWith("JAR:FILE%3A"))
-        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
+        URLDecoder.decode(decoded, "UTF-8").toAbsolutePath(followSymlink)
       else if (value.toUpperCase.startsWith("JAR")) {
         try {
-          new URI("jar", value.stripPrefix("jar:"), null)
+          new URI("jar", decoded.stripPrefix("jar:"), null)
             .toAbsolutePath(followSymlink)
         } catch {
           // prevents infinity recursion and double check for double escaped %
@@ -146,8 +152,9 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
             URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
         }
       } else {
-        val stripped = value.stripPrefix("metals:")
-        val percentEncoded = URIEncoderDecoder.encode(stripped)
+        val percentEncoded =
+          if (Properties.isWin) decoded.stripPrefix("metals:")
+          else URIEncoderDecoder.encode(value.stripPrefix("metals:"))
         URI.create(percentEncoded).toAbsolutePath(followSymlink)
       }
     }
