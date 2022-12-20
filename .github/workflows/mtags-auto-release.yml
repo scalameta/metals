@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.metals_ref }}
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
