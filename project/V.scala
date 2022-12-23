@@ -18,7 +18,7 @@ object V {
   val bloopConfig = "1.5.5"
   val bsp = "2.1.0-M3"
   val coursier = "2.1.0-RC4"
-  val coursierInterfaces = "1.0.11"
+  val coursierInterfaces = "1.0.12"
   val debugAdapter = "3.0.4"
   val genyVersion = "0.7.1"
   val gradleBloop = "1.5.8"
@@ -38,7 +38,7 @@ object V {
   val scalaCli = "0.1.18"
   val scalafix = "0.10.4"
   val scalafmt = "3.5.3"
-  val scalameta = "4.7.0"
+  val scalameta = "4.7.1"
   val scribe = "3.10.5"
   val semanticdb = scalameta
   val qdox = "2.0.3"
