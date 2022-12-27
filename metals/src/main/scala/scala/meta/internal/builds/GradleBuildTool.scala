@@ -7,8 +7,14 @@ import java.nio.file.Path
 import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
+
+import coursierapi.Credentials
+import coursierapi.IvyRepository
+import coursierapi.MavenRepository
+import coursierapi.Repository
 
 case class GradleBuildTool(userConfig: () => UserConfiguration)
     extends BuildTool
@@ -16,11 +22,44 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
 
   private val initScriptName = "init-script.gradle"
   private val gradleBloopVersion = BuildInfo.gradleBloopVersion
-  private val initScript =
+  private def initScript = {
+    def authString(cr: Credentials) =
+      if (cr == null) ""
+      else
+        s"""|
+            |      credentials {
+            |        username ${cr.getUser()}
+            |        password ${cr.getPassword()}
+            |      }
+            |""".stripMargin
+    val repos = Repository.defaults.asScala.collect {
+      case mr: MavenRepository if mr != Repository.central =>
+        // filter central etc.
+        s"""|    maven {
+            |      url "${mr.getBase()}" ${authString(mr.getCredentials())}
+            |    }""".stripMargin
+
+      case ir: IvyRepository =>
+        ir.getPattern().split("\\/\\[").toList match {
+          case url :: rest => {
+            val layout = "[" ++ rest.mkString("/[")
+            s"""|    ivy {
+                |      url "${url}"
+                |      patternLayout {
+                |        artifact "${layout}"
+                |      }${authString(ir.getCredentials())}
+                |    }""".stripMargin
+          }
+          case Nil => ""
+        }
+      case mr if mr == Repository.central => "    mavenCentral()"
+    }
+    val reposString =
+      if (repos.isEmpty) "    mavenCentral()" else repos.mkString("\n")
     s"""
        |initscript {
-       |  repositories{
-       |    mavenCentral()
+       |  repositories {
+       |$reposString
        |  }
        |  dependencies {
        |    classpath 'ch.epfl.scala:gradle-bloop_2.12:$gradleBloopVersion'
@@ -30,6 +69,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
        |  apply plugin: bloop.integrations.gradle.BloopPlugin
        |}
     """.stripMargin.getBytes()
+  }
 
   private lazy val initScriptPath: Path = {
     Files.write(tempDir.resolve(initScriptName), initScript)
