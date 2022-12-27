@@ -267,8 +267,8 @@ final class RunTestCodeLens(
       target: b.BuildTargetIdentifier,
       main: b.ScalaMainClass,
   ): List[l.Command] = {
-    val data = buildTargets
-      .jvmRunEnvironment(target)
+    val data = buildTargetClasses.jvmRunEnvironment
+      .get(target)
       .zip(userConfig().usedJavaBinary) match {
       case None =>
         main.toJson
