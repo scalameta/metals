@@ -162,10 +162,10 @@ class MetalsLanguageServer(
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
-  private val clientConfig: ClientConfiguration = new ClientConfiguration(
-    initialConfig
+  private val clientConfig = new ClientConfiguration(
+    initialConfig,
+    initializeParams
   )
-  clientConfig.update(initializeParams)
 
   private val languageClient =
     new ConfiguredLanguageClient(client, clientConfig)

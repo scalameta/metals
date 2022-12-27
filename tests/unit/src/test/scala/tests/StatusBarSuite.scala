@@ -16,7 +16,7 @@ class StatusBarSuite extends BaseSuite {
     () => client,
     time,
     ProgressTicks.dots,
-    ClientConfiguration.Default,
+    ClientConfiguration.default,
   )
   override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()

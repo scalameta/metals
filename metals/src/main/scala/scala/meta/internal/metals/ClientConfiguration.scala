@@ -13,19 +13,19 @@ import org.eclipse.lsp4j.InitializeParams
  * and `initializationOptions`.
  *
  * @param initalConfig Initial server properties
+ * @param initializeParams The initialize params sent from the client in the first request
  */
-final class ClientConfiguration(val initialConfig: MetalsServerConfig) {
+final class ClientConfiguration(
+    val initialConfig: MetalsServerConfig,
+    initializeParams: InitializeParams,
+) {
 
-  private var experimentalCapabilities = ClientExperimentalCapabilities.Default
-  private var initializationOptions = InitializationOptions.Default
-  private var clientCapabilities: Option[ClientCapabilities] = None
+  private val experimentalCapabilities =
+    ClientExperimentalCapabilities.from(initializeParams.getCapabilities)
+  private val initializationOptions = InitializationOptions.from(initializeParams)
+  private val clientCapabilities: Option[ClientCapabilities] = Some(initializeParams.getCapabilities)
 
   def update(params: InitializeParams): Unit = {
-    experimentalCapabilities = ClientExperimentalCapabilities.from(
-      params.getCapabilities
-    )
-    initializationOptions = InitializationOptions.from(params)
-    clientCapabilities = Some(params.getCapabilities())
   }
 
   def extract[T](primary: Option[T], secondary: Option[T], default: T): T = {
@@ -177,7 +177,8 @@ final class ClientConfiguration(val initialConfig: MetalsServerConfig) {
 }
 
 object ClientConfiguration {
-  def Default(): ClientConfiguration = new ClientConfiguration(
-    MetalsServerConfig()
+  val default: ClientConfiguration = new ClientConfiguration(
+    initialConfig = MetalsServerConfig(),
+    initializeParams = new InitializeParams(),
   )
 }
