@@ -25,6 +25,7 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.logging.LanguageClientLogger
+import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.ServerState.ShuttingDown
 import scala.meta.metals.lsp.DelegatingService
@@ -142,7 +143,6 @@ class MetalsNewLanguageServer(
             workspace = workspace,
             client = languageClient,
             initializeParams = params,
-            redirectSystemOut = redirectSystemOut,
             charset = charset,
             time = time,
             initialConfig = initialConfig,
@@ -154,6 +154,7 @@ class MetalsNewLanguageServer(
             onStartCompilation = onStartCompilation,
             classpathSearchIndexer = classpathSearchIndexer,
           )
+          MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
           serverState = ServerState.Initialized(server)
           metalsService.underlying = server
           server.initialize(params)

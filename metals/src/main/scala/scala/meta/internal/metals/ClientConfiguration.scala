@@ -25,9 +25,6 @@ final class ClientConfiguration(
   private val initializationOptions = InitializationOptions.from(initializeParams)
   private val clientCapabilities: Option[ClientCapabilities] = Some(initializeParams.getCapabilities)
 
-  def update(params: InitializeParams): Unit = {
-  }
-
   def extract[T](primary: Option[T], secondary: Option[T], default: T): T = {
     primary.orElse(secondary).getOrElse(default)
   }

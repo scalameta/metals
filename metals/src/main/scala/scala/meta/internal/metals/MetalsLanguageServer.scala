@@ -62,7 +62,6 @@ import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
-import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
@@ -107,7 +106,6 @@ class MetalsLanguageServer(
     val workspace: AbsolutePath,
     client: MetalsLanguageClient,
     initializeParams: InitializeParams,
-    redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
     initialConfig: MetalsServerConfig = MetalsServerConfig.default,
@@ -186,9 +184,11 @@ class MetalsLanguageServer(
     ExcludedPackagesHandler.default
 
   var ammonite: Ammonite = _
+
+  val tables: Tables = register(new Tables(workspace, time))
   private val mainBuildTargetsData = new TargetData
-  val buildTargets: BuildTargets = new BuildTargets()
-  buildTargets.addData(mainBuildTargetsData)
+  val buildTargets: BuildTargets = BuildTargets.from(workspace, mainBuildTargetsData, tables)
+
   private val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
   private var doctor: Doctor = _
@@ -305,7 +305,6 @@ class MetalsLanguageServer(
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
 
-  var tables: Tables = _
   var statusBar: StatusBar = new StatusBar(
     () => languageClient,
     time,
@@ -341,9 +340,8 @@ class MetalsLanguageServer(
     cancelable
   }
 
+  // TODO this method shouldn't exist, we should be able to get rid of it
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
-
-    MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
 
     val clientInfo = Option(params.getClientInfo()) match {
       case Some(info) =>
@@ -354,15 +352,12 @@ class MetalsLanguageServer(
     scribe.info(
       s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
     )
-    clientConfig.update(params)
 
     foldingRangeProvider.setFoldOnlyLines(Option(params).foldOnlyLines)
     documentSymbolProvider.setSupportsHierarchicalDocumentSymbols(
       Some(initializeParams).supportsHierarchicalDocumentSymbols
     )
-    buildTargets.setWorkspaceDirectory(workspace)
-    tables = register(new Tables(workspace, time))
-    buildTargets.setTables(tables)
+    
     workspaceReload = new WorkspaceReload(
       workspace,
       languageClient,

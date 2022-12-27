@@ -12,7 +12,7 @@ object TreeUtils {
   )
   def getTrees(scalaVersion: Option[String]): (Buffers, Trees) = {
     val buffers = Buffers()
-    val buildTargets = new BuildTargets()
+    val buildTargets = BuildTargets.empty
     val selector =
       new ScalaVersionSelector(
         () => UserConfiguration(fallbackScalaVersion = scalaVersion),

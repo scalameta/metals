@@ -25,12 +25,10 @@ import ch.epfl.scala.bsp4j.TextDocumentIdentifier
 /**
  * In-memory cache for looking up build server metadata.
  */
-final class BuildTargets() {
-  private var workspace = PathIO.workingDirectory
-  def setWorkspaceDirectory(newWorkspace: AbsolutePath): Unit = {
-    workspace = newWorkspace
-  }
-  private var tables: Option[Tables] = None
+final class BuildTargets private (
+    workspace: AbsolutePath,
+    tables: Option[Tables],
+) {
   private val dataLock = new Object
   private var data: BuildTargets.DataSeq =
     BuildTargets.DataSeq((new TargetData) :: Nil)
@@ -65,9 +63,6 @@ final class BuildTargets() {
       score
   }
 
-  def setTables(newTables: Tables): Unit = {
-    tables = Some(newTables)
-  }
   def sourceItems: Iterable[AbsolutePath] =
     data.iterable.flatMap(_.sourceItemsToBuildTarget.keys)
   def sourceItemsToBuildTargets
@@ -522,6 +517,17 @@ final class BuildTargets() {
 }
 
 object BuildTargets {
+  def from(
+      workspace: AbsolutePath,
+      data: TargetData,
+      tables: Tables,
+  ): BuildTargets = {
+    val targets = new BuildTargets(workspace, Some(tables))
+    targets.addData(data)
+    targets
+  }
+
+  def empty: BuildTargets = new BuildTargets(PathIO.workingDirectory, None)
 
   def isInverseDependency(
       query: BuildTargetIdentifier,
