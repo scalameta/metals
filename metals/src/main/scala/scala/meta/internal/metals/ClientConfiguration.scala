@@ -14,7 +14,7 @@ import org.eclipse.lsp4j.InitializeParams
  *
  * @param initalConfig Initial server properties
  */
-case class ClientConfiguration(initialConfig: MetalsServerConfig) {
+final class ClientConfiguration(val initialConfig: MetalsServerConfig) {
 
   private var experimentalCapabilities = ClientExperimentalCapabilities.Default
   private var initializationOptions = InitializationOptions.Default
@@ -177,5 +177,7 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
 }
 
 object ClientConfiguration {
-  def Default(): ClientConfiguration = ClientConfiguration(MetalsServerConfig())
+  def Default(): ClientConfiguration = new ClientConfiguration(
+    MetalsServerConfig()
+  )
 }

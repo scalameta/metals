@@ -50,10 +50,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
-import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.codeactions.CodeActionProvider
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
@@ -65,7 +63,6 @@ import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
-import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -87,6 +84,7 @@ import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.lsp.TextDocumentAndWorkspaceService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
@@ -109,6 +107,9 @@ import org.eclipse.{lsp4j => l}
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
     buffers: Buffers = Buffers(),
+    val workspace: AbsolutePath,
+    client: MetalsLanguageClient,
+    initializeParams: InitializeParams,
     redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
@@ -122,9 +123,12 @@ class MetalsLanguageServer(
     onStartCompilation: () => Unit = () => (),
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
-) extends Cancelable {
+) extends Cancelable
+    with TextDocumentAndWorkspaceService {
+
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
+
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
 
@@ -158,9 +162,16 @@ class MetalsLanguageServer(
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
+  private val clientConfig: ClientConfiguration = new ClientConfiguration(
+    initialConfig
+  )
+  clientConfig.update(initializeParams)
+
+  private val languageClient =
+    new ConfiguredLanguageClient(client, clientConfig)
+
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
-  var workspace: AbsolutePath = _
   var focusedDocument: Option[AbsolutePath] = None
   private val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
@@ -171,7 +182,6 @@ class MetalsLanguageServer(
   private val savedFiles = new ActiveFiles(time)
   private val recentlyOpenedFiles = new ActiveFiles(time)
   private val recentlyFocusedFiles = new ActiveFiles(time)
-  private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   val isImportInProcess = new AtomicBoolean(false)
   @volatile
   var userConfig: UserConfiguration = UserConfiguration()
@@ -275,7 +285,6 @@ class MetalsLanguageServer(
   private var formattingProvider: FormattingProvider = _
   private var javaFormattingProvider: JavaFormattingProvider = _
   private var syntheticsDecorator: SyntheticsDecorationProvider = _
-  private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
   private var callHierarchyProvider: CallHierarchyProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
@@ -300,18 +309,23 @@ class MetalsLanguageServer(
     compilers.loadedPresentationCompilerCount()
 
   var tables: Tables = _
-  var statusBar: StatusBar = _
-  private var embedded: Embedded = _
+  var statusBar: StatusBar = new StatusBar(
+    () => languageClient,
+    time,
+    progressTicks,
+    clientConfig,
+  )
+  private val embedded: Embedded = register(
+    new Embedded(
+      statusBar
+    )
+  )
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
   var popupChoiceReset: PopupChoiceReset = _
   var stacktraceAnalyzer: StacktraceAnalyzer = _
   var findTextInJars: FindTextInDependencyJars = _
-
-  private val clientConfig: ClientConfiguration = ClientConfiguration(
-    initialConfig
-  )
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
     Future
@@ -323,24 +337,6 @@ class MetalsLanguageServer(
         }
       }
       .ignoreValue
-  }
-
-  def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
-    languageClient.underlying =
-      new ConfiguredLanguageClient(client, clientConfig)(ec)
-    statusBar = new StatusBar(
-      () => languageClient,
-      time,
-      progressTicks,
-      clientConfig,
-    )
-    embedded = register(
-      new Embedded(
-        statusBar
-      )
-    )
-    LanguageClientLogger.languageClient = Some(languageClient)
-    cancelables.add(() => languageClient.shutdown())
   }
 
   def register[T <: Cancelable](cancelable: T): T = {
@@ -360,8 +356,7 @@ class MetalsLanguageServer(
     root match {
       case None =>
         languageClient.showMessage(Messages.noRoot)
-      case Some(path) =>
-        workspace = path.toAbsolutePath
+      case Some(_) =>
         MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
 
         val clientInfo = Option(params.getClientInfo()) match {
@@ -377,7 +372,7 @@ class MetalsLanguageServer(
 
         foldingRangeProvider.setFoldOnlyLines(Option(params).foldOnlyLines)
         documentSymbolProvider.setSupportsHierarchicalDocumentSymbols(
-          initializeParams.supportsHierarchicalDocumentSymbols
+          Some(initializeParams).supportsHierarchicalDocumentSymbols
         )
         buildTargets.setWorkspaceDirectory(workspace)
         tables = register(new Tables(workspace, time))
@@ -869,17 +864,15 @@ class MetalsLanguageServer(
   ): CompletableFuture[InitializeResult] = {
     timerProvider
       .timed("initialize")(Future {
+
         setupJna()
-        initializeParams = Option(params)
         updateWorkspaceDirectory(params)
 
         // load fingerprints from last execution
         fingerprints.addAll(tables.fingerprints.load())
         val capabilities = new ServerCapabilities()
         capabilities.setExecuteCommandProvider(
-          new ExecuteCommandOptions(
-            (ServerCommands.allIds ++ codeActionProvider.allActionCommandsIds).toList.asJava
-          )
+          new ExecuteCommandOptions(ServerCommands.allIds.toList.asJava)
         )
         capabilities.setFoldingRangeProvider(true)
         capabilities.setSelectionRangeProvider(true)
@@ -912,7 +905,7 @@ class MetalsLanguageServer(
         capabilities.setWorkspaceSymbolProvider(true)
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
-        if (initializeParams.supportsCodeActionLiterals) {
+        if (Some(initializeParams).supportsCodeActionLiterals) {
           capabilities.setCodeActionProvider(
             new CodeActionOptions(
               List(
@@ -964,7 +957,7 @@ class MetalsLanguageServer(
 
   private def registerNiceToHaveFilePatterns(): Unit = {
     for {
-      params <- initializeParams
+      params <- Option(initializeParams)
       capabilities <- Option(params.getCapabilities)
       workspace <- Option(capabilities.getWorkspace)
       didChangeWatchedFiles <- Option(workspace.getDidChangeWatchedFiles)
@@ -1027,7 +1020,7 @@ class MetalsLanguageServer(
 
   @nowarn("msg=parameter value params")
   @JsonNotification("initialized")
-  def initialized(params: InitializedParams): CompletableFuture[Unit] = {
+  def initialized(params: InitializedParams): Future[Unit] = {
     // Avoid duplicate `initialized` notifications. During the transition
     // for https://github.com/natebosch/vim-lsc/issues/113 to get fixed,
     // we may have users on a fixed vim-lsc version but with -Dmetals.no-initialized=true
@@ -1052,11 +1045,11 @@ class MetalsLanguageServer(
       result
     } else {
       scribe.warn("Ignoring duplicate 'initialized' notification.")
-      Future.successful(())
+      Future.unit
     }
   }.recover { case NonFatal(e) =>
     scribe.error("Unexpected error initializing server", e)
-  }.asJava
+  }
 
   lazy val shutdownPromise = new AtomicReference[Promise[Unit]](null)
 
@@ -1106,7 +1099,9 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("textDocument/didOpen")
-  def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
+  override def didOpen(
+      params: DidOpenTextDocumentParams
+  ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     // In some cases like peeking definition didOpen might be followed up by close
     // and we would lose the notion of the focused document
@@ -1174,7 +1169,7 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("metals/didFocusTextDocument")
-  def didFocus(
+  override def didFocus(
       params: AnyRef
   ): CompletableFuture[DidFocusResult.Value] = {
 
@@ -1250,7 +1245,9 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("metals/windowStateDidChange")
-  def windowStateDidChange(params: WindowStateDidChangeParams): Unit = {
+  override def windowStateDidChange(
+      params: WindowStateDidChangeParams
+  ): Unit = {
     if (params.focused) {
       pauseables.unpause()
     } else {
@@ -1259,7 +1256,7 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("textDocument/didChange")
-  def didChange(
+  override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] =
     params.getContentChanges.asScala.headOption match {
@@ -1275,7 +1272,7 @@ class MetalsLanguageServer(
     }
 
   @JsonNotification("textDocument/didClose")
-  def didClose(params: DidCloseTextDocumentParams): Unit = {
+  override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     if (focusedDocument.contains(path)) {
       focusedDocument = recentlyFocusedFiles.pollRecent()
@@ -1287,7 +1284,9 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("textDocument/didSave")
-  def didSave(params: DidSaveTextDocumentParams): CompletableFuture[Unit] = {
+  override def didSave(
+      params: DidSaveTextDocumentParams
+  ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
     // read file from disk, we only remove files from buffers on didClose.
@@ -1326,7 +1325,7 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("workspace/didChangeConfiguration")
-  def didChangeConfiguration(
+  override def didChangeConfiguration(
       params: DidChangeConfigurationParams
   ): CompletableFuture[Unit] = {
     val fullJson = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
@@ -1420,7 +1419,7 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("workspace/didChangeWatchedFiles")
-  def didChangeWatchedFiles(
+  override def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
   ): CompletableFuture[Unit] = {
     val paths = params.getChanges.asScala.iterator
@@ -1431,8 +1430,8 @@ class MetalsLanguageServer(
   }
 
   /**
-   * This filter is an optimization and it is closely related to which files are processed
-   * in [[didChangeWatchedFiles]]
+   * This filter is an optimization and it is closely related to which files are
+   * processed in [[didChangeWatchedFiles]]
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
@@ -1443,10 +1442,11 @@ class MetalsLanguageServer(
   /**
    * Callback that is executed on a file change event by the file watcher.
    *
-   * Note that if you are adding processing of another kind of a file,
-   * be sure to include it in the [[fileWatchFilter]]
+   * Note that if you are adding processing of another kind of a file, be sure
+   * to include it in the [[fileWatchFilter]]
    *
-   * This method is run synchronously in the FileWatcher, so it should not do anything expensive on the main thread
+   * This method is run synchronously in the FileWatcher, so it should not do
+   * anything expensive on the main thread
    */
   private def didChangeWatchedFiles(
       event: FileWatcherEvent
@@ -1521,7 +1521,7 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("textDocument/definition")
-  def definition(
+  override def definition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { token =>
@@ -1529,7 +1529,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/typeDefinition")
-  def typeDefinition(
+  override def typeDefinition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { token =>
@@ -1537,7 +1537,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/implementation")
-  def implementation(
+  override def implementation(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { _ =>
@@ -1545,7 +1545,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/hover")
-  def hover(params: HoverExtParams): CompletableFuture[Hover] = {
+  override def hover(params: HoverExtParams): CompletableFuture[Hover] = {
     CancelTokens.future { token =>
       compilers
         .hover(params, token)
@@ -1565,13 +1565,13 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("textDocument/documentHighlight")
-  def documentHighlights(
+  override def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
     CancelTokens.future { token => compilers.documentHighlight(params, token) }
 
   @JsonRequest("textDocument/documentSymbol")
-  def documentSymbol(
+  override def documentSymbol(
       params: DocumentSymbolParams
   ): CompletableFuture[
     JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
@@ -1583,7 +1583,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/formatting")
-  def formatting(
+  override def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens.future { token =>
@@ -1595,7 +1595,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/onTypeFormatting")
-  def onTypeFormatting(
+  override def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
@@ -1607,7 +1607,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/rangeFormatting")
-  def rangeFormatting(
+  override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
@@ -1619,7 +1619,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/prepareRename")
-  def prepareRename(
+  override def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[l.Range] =
     CancelTokens.future { token =>
@@ -1627,7 +1627,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/rename")
-  def rename(
+  override def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
     CancelTokens.future { token =>
@@ -1635,7 +1635,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/references")
-  def references(
+  override def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens { _ => referencesResult(params).flatMap(_.locations).asJava }
@@ -1714,7 +1714,7 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("textDocument/prepareCallHierarchy")
-  def prepareCallHierarchy(
+  override def prepareCallHierarchy(
       params: CallHierarchyPrepareParams
   ): CompletableFuture[util.List[CallHierarchyItem]] =
     CancelTokens.future { token =>
@@ -1722,7 +1722,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("callHierarchy/incomingCalls")
-  def callHierarchyIncomingCalls(
+  override def callHierarchyIncomingCalls(
       params: CallHierarchyIncomingCallsParams
   ): CompletableFuture[util.List[CallHierarchyIncomingCall]] =
     CancelTokens.future { token =>
@@ -1730,7 +1730,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("callHierarchy/outgoingCalls")
-  def callHierarchyOutgoingCalls(
+  override def callHierarchyOutgoingCalls(
       params: CallHierarchyOutgoingCallsParams
   ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] =
     CancelTokens.future { token =>
@@ -1738,11 +1738,13 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/completion")
-  def completion(params: CompletionParams): CompletableFuture[CompletionList] =
+  override def completion(
+      params: CompletionParams
+  ): CompletableFuture[CompletionList] =
     CancelTokens.future { token => compilers.completions(params, token) }
 
   @JsonRequest("completionItem/resolve")
-  def completionItemResolve(
+  override def completionItemResolve(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
     CancelTokens.future { token =>
@@ -1754,7 +1756,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/signatureHelp")
-  def signatureHelp(
+  override def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CancelTokens.future { token =>
@@ -1762,7 +1764,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/codeAction")
-  def codeAction(
+  override def codeAction(
       params: CodeActionParams
   ): CompletableFuture[util.List[l.CodeAction]] =
     CancelTokens.future { token =>
@@ -1770,7 +1772,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/codeLens")
-  def codeLens(
+  override def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
@@ -1784,7 +1786,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/foldingRange")
-  def foldingRange(
+  override def foldingRange(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
     CancelTokens.future { token =>
@@ -1801,7 +1803,7 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("textDocument/selectionRange")
-  def selectionRange(
+  override def selectionRange(
       params: SelectionRangeParams
   ): CompletableFuture[util.List[SelectionRange]] = {
     CancelTokens.future { token =>
@@ -1810,7 +1812,7 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("workspace/symbol")
-  def workspaceSymbol(
+  override def workspaceSymbol(
       params: WorkspaceSymbolParams
   ): CompletableFuture[util.List[SymbolInformation]] =
     CancelTokens.future { token =>
@@ -1831,7 +1833,7 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("workspace/executeCommand")
-  def executeCommand(
+  override def executeCommand(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] = {
     params match {
@@ -2127,7 +2129,7 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("workspace/willRenameFiles")
-  def willRenameFiles(
+  override def willRenameFiles(
       params: RenameFilesParams
   ): CompletableFuture[WorkspaceEdit] =
     CancelTokens.future { _ =>
@@ -2141,7 +2143,7 @@ class MetalsLanguageServer(
     }
 
   @JsonNotification("metals/doctorVisibilityDidChange")
-  def doctorVisibilityDidChange(
+  override def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
   ): CompletableFuture[Unit] =
     Future {
@@ -2149,7 +2151,7 @@ class MetalsLanguageServer(
     }.asJava
 
   @JsonRequest("metals/treeViewChildren")
-  def treeViewChildren(
+  override def treeViewChildren(
       params: TreeViewChildrenParams
   ): CompletableFuture[MetalsTreeViewChildrenResult] = {
     Future {
@@ -2158,7 +2160,7 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("metals/treeViewParent")
-  def treeViewParent(
+  override def treeViewParent(
       params: TreeViewParentParams
   ): CompletableFuture[TreeViewParentResult] = {
     Future {
@@ -2167,7 +2169,7 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("metals/treeViewVisibilityDidChange")
-  def treeViewVisibilityDidChange(
+  override def treeViewVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams
   ): CompletableFuture[Unit] =
     Future {
@@ -2175,7 +2177,7 @@ class MetalsLanguageServer(
     }.asJava
 
   @JsonNotification("metals/treeViewNodeCollapseDidChange")
-  def treeViewNodeCollapseDidChange(
+  override def treeViewNodeCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams
   ): CompletableFuture[Unit] =
     Future {
@@ -2183,7 +2185,7 @@ class MetalsLanguageServer(
     }.asJava
 
   @JsonRequest("metals/treeViewReveal")
-  def treeViewReveal(
+  override def treeViewReveal(
       params: TextDocumentPositionParams
   ): CompletableFuture[TreeViewNodeRevealResult] =
     Future {
@@ -2196,7 +2198,7 @@ class MetalsLanguageServer(
     }.asJava
 
   @JsonRequest("metals/findTextInDependencyJars")
-  def findTextInDependencyJars(
+  override def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
   ): CompletableFuture[util.List[Location]] = {
     findTextInJars.find(params).map(_.asJava).asJava
@@ -2639,11 +2641,10 @@ class MetalsLanguageServer(
   }
 
   /**
-   * Returns the the definition location or reference locations of a symbol
-   * at a given text document position.
-   * If the symbol represents the definition itself, this method returns
-   * the reference locations, otherwise this returns definition location.
-   * https://github.com/scalameta/metals/issues/755
+   * Returns the the definition location or reference locations of a symbol at a
+   * given text document position. If the symbol represents the definition
+   * itself, this method returns the reference locations, otherwise this returns
+   * definition location. https://github.com/scalameta/metals/issues/755
    */
   def definitionOrReferences(
       positionParams: TextDocumentPositionParams,
@@ -2754,7 +2755,7 @@ class MetalsLanguageServer(
 
   private def syncUserconfiguration(): Future[Unit] = {
     val supportsConfiguration = for {
-      params <- initializeParams
+      params <- Some(initializeParams)
       capabilities <- Option(params.getCapabilities)
       workspace <- Option(capabilities.getWorkspace)
       out <- Option(workspace.getConfiguration())
@@ -2788,12 +2789,14 @@ class MetalsLanguageServer(
       buildTools.isMill
 
   /**
-   * Returns the absolute path or directory that ScalaCLI imports as ScalaCLI scripts.
-   * By default, ScalaCLI tries to import the entire directory as ScalaCLI scripts.
-   * However, we have to ensure that there are no clashes with other existing sourceItems
-   * see: https://github.com/scalameta/metals/issues/4447
+   * Returns the absolute path or directory that ScalaCLI imports as ScalaCLI
+   * scripts. By default, ScalaCLI tries to import the entire directory as
+   * ScalaCLI scripts. However, we have to ensure that there are no clashes with
+   * other existing sourceItems see:
+   * https://github.com/scalameta/metals/issues/4447
    *
-   * @param path the absolute path of the ScalaCLI script to import
+   * @param path
+   *   the absolute path of the ScalaCLI script to import
    */
   private def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = {
     val dir = path.parent

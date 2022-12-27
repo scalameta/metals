@@ -7,7 +7,6 @@ import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Trace
@@ -50,7 +49,7 @@ object Main {
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
     val initialConfig = MetalsServerConfig.default
-    val server = new MetalsLanguageServer(
+    val server = new MetalsNewLanguageServer(
       ec,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,

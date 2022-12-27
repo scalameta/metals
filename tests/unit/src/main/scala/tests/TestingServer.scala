@@ -42,7 +42,6 @@ import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
@@ -144,7 +143,7 @@ final case class TestingServer(
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
 
-  val server = new MetalsLanguageServer(
+  val languageServer = new m.metals.MetalsNewLanguageServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,
@@ -158,7 +157,9 @@ final case class TestingServer(
     onStartCompilation = onStartCompilation,
     classpathSearchIndexer = TestingServer.testingClasspathSearchIndexer,
   )
-  server.connectToLanguageClient(client)
+  languageServer.connectToLanguageClient(client)
+
+  val server = languageServer.getOldMetalsLanguageServer
 
   private val trees = new Trees(
     buffers,
@@ -577,7 +578,7 @@ final case class TestingServer(
   }
 
   def initialized(): Future[Unit] = {
-    server.initialized(new InitializedParams).asScala
+    languageServer.initialized(new InitializedParams).asScala
   }
 
   def assertBuildServerConnection(): Unit = {
