@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.annotation.nowarn
 import scala.collection.immutable.Nil
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
@@ -100,8 +99,6 @@ import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
-import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
 
 class MetalsLanguageServer(
@@ -164,7 +161,7 @@ class MetalsLanguageServer(
 
   private val clientConfig = new ClientConfiguration(
     initialConfig,
-    initializeParams
+    initializeParams,
   )
 
   private val languageClient =
@@ -346,506 +343,494 @@ class MetalsLanguageServer(
 
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
 
-    // NOTE: we purposefully don't check workspaceFolders here
-    // since Metals technically doesn't support it. Once we implement
-    // https://github.com/scalameta/metals-feature-requests/issues/87 we'll
-    // have to change this.
-    val root =
-      Option(params.getRootUri()).orElse(Option(params.getRootPath()))
+    MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
 
-    root match {
-      case None =>
-        languageClient.showMessage(Messages.noRoot)
-      case Some(_) =>
-        MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
-
-        val clientInfo = Option(params.getClientInfo()) match {
-          case Some(info) =>
-            s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
-          case None => ""
-        }
-
-        scribe.info(
-          s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
-        )
-        clientConfig.update(params)
-
-        foldingRangeProvider.setFoldOnlyLines(Option(params).foldOnlyLines)
-        documentSymbolProvider.setSupportsHierarchicalDocumentSymbols(
-          Some(initializeParams).supportsHierarchicalDocumentSymbols
-        )
-        buildTargets.setWorkspaceDirectory(workspace)
-        tables = register(new Tables(workspace, time))
-        buildTargets.setTables(tables)
-        workspaceReload = new WorkspaceReload(
-          workspace,
-          languageClient,
-          tables,
-        )
-        buildTools = new BuildTools(
-          workspace,
-          bspGlobalDirectories,
-          () => userConfig,
-          () => tables.buildServers.selectedServer().nonEmpty,
-        )
-        fileSystemSemanticdbs = new FileSystemSemanticdbs(
-          buildTargets,
-          charset,
-          workspace,
-          fingerprints,
-        )
-
-        val optJavaHome =
-          (userConfig.javaHome orElse JdkSources.defaultJavaHome)
-            .map(AbsolutePath(_))
-        val maybeJdkVersion: Option[JdkVersion] =
-          JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
-        val javaInteractiveSemanticdb =
-          for {
-            javaHome <- optJavaHome
-            jdkVersion <- maybeJdkVersion
-            javaSemanticDb <- JavaInteractiveSemanticdb.create(
-              javaHome,
-              workspace,
-              buildTargets,
-              jdkVersion,
-            )
-          } yield javaSemanticDb
-
-        interactiveSemanticdbs = register(
-          new InteractiveSemanticdbs(
-            workspace,
-            buildTargets,
-            charset,
-            languageClient,
-            tables,
-            statusBar,
-            () => compilers,
-            clientConfig,
-            () => semanticDBIndexer,
-            javaInteractiveSemanticdb,
-          )
-        )
-        warnings = new Warnings(
-          workspace,
-          buildTargets,
-          statusBar,
-          clientConfig.icons,
-          buildTools,
-          compilations.isCurrentlyCompiling,
-        )
-        diagnostics = new Diagnostics(
-          buffers,
-          languageClient,
-          clientConfig.initialConfig.statistics,
-          Option(workspace),
-          trees,
-        )
-        buildClient = new ForwardingMetalsBuildClient(
-          languageClient,
-          diagnostics,
-          buildTargets,
-          clientConfig,
-          statusBar,
-          time,
-          report => {
-            didCompileTarget(report)
-            compilers.didCompile(report)
-          },
-          onBuildTargetDidCompile = { target =>
-            treeView.onBuildTargetDidCompile(target)
-            worksheetProvider.onBuildTargetDidCompile(target)
-          },
-          onBuildTargetDidChangeFunc = maybeQuickConnectToBuildServer,
-        )
-        shellRunner = register(
-          new ShellRunner(languageClient, () => userConfig, time, statusBar)
-        )
-        bloopInstall = new BloopInstall(
-          workspace,
-          languageClient,
-          buildTools,
-          tables,
-          shellRunner,
-        )
-        bspConfigGenerator = new BspConfigGenerator(
-          workspace,
-          languageClient,
-          shellRunner,
-        )
-        newProjectProvider = new NewProjectProvider(
-          languageClient,
-          statusBar,
-          clientConfig,
-          shellRunner,
-          clientConfig.icons,
-          workspace,
-        )
-        bloopServers = new BloopServers(
-          buildClient,
-          languageClient,
-          tables,
-          clientConfig.initialConfig,
-        )
-        bspServers = new BspServers(
-          workspace,
-          charset,
-          languageClient,
-          buildClient,
-          tables,
-          bspGlobalDirectories,
-          clientConfig.initialConfig,
-        )
-        buildToolSelector = new BuildToolSelector(
-          languageClient,
-          tables,
-        )
-        bspConnector = new BspConnector(
-          bloopServers,
-          bspServers,
-          buildTools,
-          languageClient,
-          tables,
-          () => userConfig,
-          statusBar,
-          bspConfigGenerator,
-          () => bspSession.map(_.mainConnection),
-        )
-        semanticdbs = AggregateSemanticdbs(
-          List(
-            fileSystemSemanticdbs,
-            interactiveSemanticdbs,
-          )
-        )
-        definitionProvider = new DefinitionProvider(
-          workspace,
-          mtags,
-          buffers,
-          definitionIndex,
-          semanticdbs,
-          warnings,
-          () => compilers,
-          remote,
-          trees,
-          buildTargets,
-          scalaVersionSelector,
-          saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
-          sourceMapper,
-        )
-        formattingProvider = new FormattingProvider(
-          workspace,
-          buffers,
-          () => userConfig,
-          languageClient,
-          clientConfig,
-          statusBar,
-          clientConfig.icons,
-          tables,
-          buildTargets,
-        )
-        javaFormattingProvider = new JavaFormattingProvider(
-          buffers,
-          () => userConfig,
-          buildTargets,
-        )
-        referencesProvider = new ReferenceProvider(
-          workspace,
-          semanticdbs,
-          buffers,
-          definitionProvider,
-          remote,
-          trees,
-          buildTargets,
-        )
-        packageProvider =
-          new PackageProvider(buildTargets, trees, referencesProvider)
-        newFileProvider = new NewFileProvider(
-          workspace,
-          languageClient,
-          packageProvider,
-          () => focusedDocument,
-          scalaVersionSelector,
-        )
-        implementationProvider = new ImplementationProvider(
-          semanticdbs,
-          workspace,
-          definitionIndex,
-          buildTargets,
-          buffers,
-          definitionProvider,
-          trees,
-          scalaVersionSelector,
-        )
-
-        supermethods = new Supermethods(
-          languageClient,
-          definitionProvider,
-          implementationProvider,
-        )
-
-        callHierarchyProvider = new CallHierarchyProvider(
-          workspace,
-          semanticdbs,
-          definitionProvider,
-          referencesProvider,
-          clientConfig.icons,
-          () => compilers,
-          trees,
-          buildTargets,
-          supermethods,
-        )
-
-        val runTestLensProvider =
-          new RunTestCodeLens(
-            buildTargetClasses,
-            buffers,
-            buildTargets,
-            clientConfig,
-            () => userConfig,
-            trees,
-          )
-
-        val goSuperLensProvider = new SuperMethodCodeLens(
-          buffers,
-          () => userConfig,
-          clientConfig,
-          trees,
-        )
-
-        stacktraceAnalyzer = new StacktraceAnalyzer(
-          workspace,
-          buffers,
-          definitionProvider,
-          clientConfig.icons,
-          clientConfig.commandInHtmlFormat(),
-        )
-        val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
-        testProvider = new TestSuitesProvider(
-          buildTargets,
-          buildTargetClasses,
-          trees,
-          definitionIndex,
-          semanticdbs,
-          buffers,
-          clientConfig,
-          () => userConfig,
-          languageClient,
-        )
-        codeLensProvider = new CodeLensProvider(
-          List(
-            runTestLensProvider,
-            goSuperLensProvider,
-            worksheetCodeLens,
-            testProvider,
-          ),
-          semanticdbs,
-          stacktraceAnalyzer,
-        )
-
-        syntheticsDecorator = new SyntheticsDecorationProvider(
-          workspace,
-          semanticdbs,
-          buffers,
-          languageClient,
-          fingerprints,
-          charset,
-          () => focusedDocument,
-          clientConfig,
-          () => userConfig,
-          trees,
-        )
-        semanticDBIndexer = new SemanticdbIndexer(
-          List(
-            referencesProvider,
-            implementationProvider,
-            syntheticsDecorator,
-            testProvider,
-          ),
-          buildTargets,
-          workspace,
-        )
-        workspaceSymbols = new WorkspaceSymbolProvider(
-          workspace,
-          buildTargets,
-          definitionIndex,
-          saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
-          () => excludedPackageHandler,
-          classpathSearchIndexer = classpathSearchIndexer,
-        )
-        symbolSearch = new MetalsSymbolSearch(
-          symbolDocs,
-          workspaceSymbols,
-          definitionProvider,
-        )
-        compilers = register(
-          new Compilers(
-            workspace,
-            clientConfig,
-            () => userConfig,
-            buildTargets,
-            buffers,
-            symbolSearch,
-            embedded,
-            statusBar,
-            sh,
-            Option(params),
-            () => excludedPackageHandler,
-            scalaVersionSelector,
-            trees,
-            mtagsResolver,
-            sourceMapper,
-          )
-        )
-        renameProvider = new RenameProvider(
-          referencesProvider,
-          implementationProvider,
-          definitionProvider,
-          workspace,
-          languageClient,
-          buffers,
-          compilations,
-          compilers,
-          clientConfig,
-          trees,
-        )
-        debugProvider = register(
-          new DebugProvider(
-            workspace,
-            buildTargets,
-            buildTargetClasses,
-            compilations,
-            languageClient,
-            buildClient,
-            definitionIndex,
-            stacktraceAnalyzer,
-            clientConfig,
-            semanticdbs,
-            compilers,
-            statusBar,
-            sourceMapper,
-          )
-        )
-        scalafixProvider = ScalafixProvider(
-          buffers,
-          () => userConfig,
-          workspace,
-          statusBar,
-          compilations,
-          languageClient,
-          buildTargets,
-          buildClient,
-          interactiveSemanticdbs,
-        )
-        codeActionProvider = new CodeActionProvider(
-          compilers,
-          buffers,
-          buildTargets,
-          scalafixProvider,
-          trees,
-          diagnostics,
-          languageClient,
-        )
-
-        doctor = new Doctor(
-          workspace,
-          buildTargets,
-          diagnostics,
-          languageClient,
-          () => bspSession,
-          () => bspConnector.resolve(),
-          () => httpServer,
-          tables,
-          clientConfig,
-          mtagsResolver,
-          () => userConfig.javaHome,
-          maybeJdkVersion,
-        )
-
-        fileDecoderProvider = new FileDecoderProvider(
-          workspace,
-          compilers,
-          buildTargets,
-          () => userConfig,
-          shellRunner,
-          fileSystemSemanticdbs,
-          interactiveSemanticdbs,
-          languageClient,
-          clientConfig,
-          classFinder,
-        )
-        popupChoiceReset = new PopupChoiceReset(
-          workspace,
-          tables,
-          languageClient,
-          doctor,
-          () => slowConnectToBuildServer(forceImport = true),
-          bspConnector,
-          () => quickConnectToBuildServer(),
-        )
-
-        val worksheetPublisher =
-          if (clientConfig.isDecorationProvider)
-            new DecorationWorksheetPublisher(
-              clientConfig.isInlineDecorationProvider()
-            )
-          else
-            new WorkspaceEditWorksheetPublisher(buffers, trees)
-        worksheetProvider = register(
-          new WorksheetProvider(
-            workspace,
-            buffers,
-            buildTargets,
-            languageClient,
-            () => userConfig,
-            statusBar,
-            diagnostics,
-            embedded,
-            worksheetPublisher,
-            compilers,
-            compilations,
-            scalaVersionSelector,
-          )
-        )
-        ammonite = register(
-          new Ammonite(
-            buffers,
-            compilers,
-            compilations,
-            statusBar,
-            diagnostics,
-            () => tables,
-            languageClient,
-            buildClient,
-            () => userConfig,
-            () => indexer.profiledIndexWorkspace(() => ()),
-            () => workspace,
-            () => focusedDocument,
-            clientConfig.initialConfig,
-            scalaVersionSelector,
-            parseTreesAndPublishDiags,
-          )
-        )
-        buildTargets.addData(ammonite.buildTargetsData)
-        if (clientConfig.isTreeViewProvider) {
-          treeView = new MetalsTreeViewProvider(
-            () => workspace,
-            languageClient,
-            buildTargets,
-            () => buildClient.ongoingCompilations(),
-            definitionIndex,
-            clientConfig.initialConfig.statistics,
-            id => compilations.compileTarget(id),
-            sh,
-            () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false),
-          )
-        }
-        findTextInJars = new FindTextInDependencyJars(
-          buildTargets,
-          () => workspace,
-          languageClient,
-          saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
-        )
+    val clientInfo = Option(params.getClientInfo()) match {
+      case Some(info) =>
+        s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
+      case None => ""
     }
+
+    scribe.info(
+      s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
+    )
+    clientConfig.update(params)
+
+    foldingRangeProvider.setFoldOnlyLines(Option(params).foldOnlyLines)
+    documentSymbolProvider.setSupportsHierarchicalDocumentSymbols(
+      Some(initializeParams).supportsHierarchicalDocumentSymbols
+    )
+    buildTargets.setWorkspaceDirectory(workspace)
+    tables = register(new Tables(workspace, time))
+    buildTargets.setTables(tables)
+    workspaceReload = new WorkspaceReload(
+      workspace,
+      languageClient,
+      tables,
+    )
+    buildTools = new BuildTools(
+      workspace,
+      bspGlobalDirectories,
+      () => userConfig,
+      () => tables.buildServers.selectedServer().nonEmpty,
+    )
+    fileSystemSemanticdbs = new FileSystemSemanticdbs(
+      buildTargets,
+      charset,
+      workspace,
+      fingerprints,
+    )
+
+    val optJavaHome =
+      (userConfig.javaHome orElse JdkSources.defaultJavaHome)
+        .map(AbsolutePath(_))
+    val maybeJdkVersion: Option[JdkVersion] =
+      JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
+    val javaInteractiveSemanticdb =
+      for {
+        javaHome <- optJavaHome
+        jdkVersion <- maybeJdkVersion
+        javaSemanticDb <- JavaInteractiveSemanticdb.create(
+          javaHome,
+          workspace,
+          buildTargets,
+          jdkVersion,
+        )
+      } yield javaSemanticDb
+
+    interactiveSemanticdbs = register(
+      new InteractiveSemanticdbs(
+        workspace,
+        buildTargets,
+        charset,
+        languageClient,
+        tables,
+        statusBar,
+        () => compilers,
+        clientConfig,
+        () => semanticDBIndexer,
+        javaInteractiveSemanticdb,
+      )
+    )
+    warnings = new Warnings(
+      workspace,
+      buildTargets,
+      statusBar,
+      clientConfig.icons,
+      buildTools,
+      compilations.isCurrentlyCompiling,
+    )
+    diagnostics = new Diagnostics(
+      buffers,
+      languageClient,
+      clientConfig.initialConfig.statistics,
+      Option(workspace),
+      trees,
+    )
+    buildClient = new ForwardingMetalsBuildClient(
+      languageClient,
+      diagnostics,
+      buildTargets,
+      clientConfig,
+      statusBar,
+      time,
+      report => {
+        didCompileTarget(report)
+        compilers.didCompile(report)
+      },
+      onBuildTargetDidCompile = { target =>
+        treeView.onBuildTargetDidCompile(target)
+        worksheetProvider.onBuildTargetDidCompile(target)
+      },
+      onBuildTargetDidChangeFunc = maybeQuickConnectToBuildServer,
+    )
+    shellRunner = register(
+      new ShellRunner(languageClient, () => userConfig, time, statusBar)
+    )
+    bloopInstall = new BloopInstall(
+      workspace,
+      languageClient,
+      buildTools,
+      tables,
+      shellRunner,
+    )
+    bspConfigGenerator = new BspConfigGenerator(
+      workspace,
+      languageClient,
+      shellRunner,
+    )
+    newProjectProvider = new NewProjectProvider(
+      languageClient,
+      statusBar,
+      clientConfig,
+      shellRunner,
+      clientConfig.icons,
+      workspace,
+    )
+    bloopServers = new BloopServers(
+      buildClient,
+      languageClient,
+      tables,
+      clientConfig.initialConfig,
+    )
+    bspServers = new BspServers(
+      workspace,
+      charset,
+      languageClient,
+      buildClient,
+      tables,
+      bspGlobalDirectories,
+      clientConfig.initialConfig,
+    )
+    buildToolSelector = new BuildToolSelector(
+      languageClient,
+      tables,
+    )
+    bspConnector = new BspConnector(
+      bloopServers,
+      bspServers,
+      buildTools,
+      languageClient,
+      tables,
+      () => userConfig,
+      statusBar,
+      bspConfigGenerator,
+      () => bspSession.map(_.mainConnection),
+    )
+    semanticdbs = AggregateSemanticdbs(
+      List(
+        fileSystemSemanticdbs,
+        interactiveSemanticdbs,
+      )
+    )
+    definitionProvider = new DefinitionProvider(
+      workspace,
+      mtags,
+      buffers,
+      definitionIndex,
+      semanticdbs,
+      warnings,
+      () => compilers,
+      remote,
+      trees,
+      buildTargets,
+      scalaVersionSelector,
+      saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
+      sourceMapper,
+    )
+    formattingProvider = new FormattingProvider(
+      workspace,
+      buffers,
+      () => userConfig,
+      languageClient,
+      clientConfig,
+      statusBar,
+      clientConfig.icons,
+      tables,
+      buildTargets,
+    )
+    javaFormattingProvider = new JavaFormattingProvider(
+      buffers,
+      () => userConfig,
+      buildTargets,
+    )
+    referencesProvider = new ReferenceProvider(
+      workspace,
+      semanticdbs,
+      buffers,
+      definitionProvider,
+      remote,
+      trees,
+      buildTargets,
+    )
+    packageProvider =
+      new PackageProvider(buildTargets, trees, referencesProvider)
+    newFileProvider = new NewFileProvider(
+      workspace,
+      languageClient,
+      packageProvider,
+      () => focusedDocument,
+      scalaVersionSelector,
+    )
+    implementationProvider = new ImplementationProvider(
+      semanticdbs,
+      workspace,
+      definitionIndex,
+      buildTargets,
+      buffers,
+      definitionProvider,
+      trees,
+      scalaVersionSelector,
+    )
+
+    supermethods = new Supermethods(
+      languageClient,
+      definitionProvider,
+      implementationProvider,
+    )
+
+    callHierarchyProvider = new CallHierarchyProvider(
+      workspace,
+      semanticdbs,
+      definitionProvider,
+      referencesProvider,
+      clientConfig.icons,
+      () => compilers,
+      trees,
+      buildTargets,
+      supermethods,
+    )
+
+    val runTestLensProvider =
+      new RunTestCodeLens(
+        buildTargetClasses,
+        buffers,
+        buildTargets,
+        clientConfig,
+        () => userConfig,
+        trees,
+      )
+
+    val goSuperLensProvider = new SuperMethodCodeLens(
+      buffers,
+      () => userConfig,
+      clientConfig,
+      trees,
+    )
+
+    stacktraceAnalyzer = new StacktraceAnalyzer(
+      workspace,
+      buffers,
+      definitionProvider,
+      clientConfig.icons,
+      clientConfig.commandInHtmlFormat(),
+    )
+    val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
+    testProvider = new TestSuitesProvider(
+      buildTargets,
+      buildTargetClasses,
+      trees,
+      definitionIndex,
+      semanticdbs,
+      buffers,
+      clientConfig,
+      () => userConfig,
+      languageClient,
+    )
+    codeLensProvider = new CodeLensProvider(
+      List(
+        runTestLensProvider,
+        goSuperLensProvider,
+        worksheetCodeLens,
+        testProvider,
+      ),
+      semanticdbs,
+      stacktraceAnalyzer,
+    )
+
+    syntheticsDecorator = new SyntheticsDecorationProvider(
+      workspace,
+      semanticdbs,
+      buffers,
+      languageClient,
+      fingerprints,
+      charset,
+      () => focusedDocument,
+      clientConfig,
+      () => userConfig,
+      trees,
+    )
+    semanticDBIndexer = new SemanticdbIndexer(
+      List(
+        referencesProvider,
+        implementationProvider,
+        syntheticsDecorator,
+        testProvider,
+      ),
+      buildTargets,
+      workspace,
+    )
+    workspaceSymbols = new WorkspaceSymbolProvider(
+      workspace,
+      buildTargets,
+      definitionIndex,
+      saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
+      () => excludedPackageHandler,
+      classpathSearchIndexer = classpathSearchIndexer,
+    )
+    symbolSearch = new MetalsSymbolSearch(
+      symbolDocs,
+      workspaceSymbols,
+      definitionProvider,
+    )
+    compilers = register(
+      new Compilers(
+        workspace,
+        clientConfig,
+        () => userConfig,
+        buildTargets,
+        buffers,
+        symbolSearch,
+        embedded,
+        statusBar,
+        sh,
+        Option(params),
+        () => excludedPackageHandler,
+        scalaVersionSelector,
+        trees,
+        mtagsResolver,
+        sourceMapper,
+      )
+    )
+    renameProvider = new RenameProvider(
+      referencesProvider,
+      implementationProvider,
+      definitionProvider,
+      workspace,
+      languageClient,
+      buffers,
+      compilations,
+      compilers,
+      clientConfig,
+      trees,
+    )
+    debugProvider = register(
+      new DebugProvider(
+        workspace,
+        buildTargets,
+        buildTargetClasses,
+        compilations,
+        languageClient,
+        buildClient,
+        definitionIndex,
+        stacktraceAnalyzer,
+        clientConfig,
+        semanticdbs,
+        compilers,
+        statusBar,
+        sourceMapper,
+      )
+    )
+    scalafixProvider = ScalafixProvider(
+      buffers,
+      () => userConfig,
+      workspace,
+      statusBar,
+      compilations,
+      languageClient,
+      buildTargets,
+      buildClient,
+      interactiveSemanticdbs,
+    )
+    codeActionProvider = new CodeActionProvider(
+      compilers,
+      buffers,
+      buildTargets,
+      scalafixProvider,
+      trees,
+      diagnostics,
+      languageClient,
+    )
+
+    doctor = new Doctor(
+      workspace,
+      buildTargets,
+      diagnostics,
+      languageClient,
+      () => bspSession,
+      () => bspConnector.resolve(),
+      () => httpServer,
+      tables,
+      clientConfig,
+      mtagsResolver,
+      () => userConfig.javaHome,
+      maybeJdkVersion,
+    )
+
+    fileDecoderProvider = new FileDecoderProvider(
+      workspace,
+      compilers,
+      buildTargets,
+      () => userConfig,
+      shellRunner,
+      fileSystemSemanticdbs,
+      interactiveSemanticdbs,
+      languageClient,
+      clientConfig,
+      classFinder,
+    )
+    popupChoiceReset = new PopupChoiceReset(
+      workspace,
+      tables,
+      languageClient,
+      doctor,
+      () => slowConnectToBuildServer(forceImport = true),
+      bspConnector,
+      () => quickConnectToBuildServer(),
+    )
+
+    val worksheetPublisher =
+      if (clientConfig.isDecorationProvider)
+        new DecorationWorksheetPublisher(
+          clientConfig.isInlineDecorationProvider()
+        )
+      else
+        new WorkspaceEditWorksheetPublisher(buffers, trees)
+    worksheetProvider = register(
+      new WorksheetProvider(
+        workspace,
+        buffers,
+        buildTargets,
+        languageClient,
+        () => userConfig,
+        statusBar,
+        diagnostics,
+        embedded,
+        worksheetPublisher,
+        compilers,
+        compilations,
+        scalaVersionSelector,
+      )
+    )
+    ammonite = register(
+      new Ammonite(
+        buffers,
+        compilers,
+        compilations,
+        statusBar,
+        diagnostics,
+        () => tables,
+        languageClient,
+        buildClient,
+        () => userConfig,
+        () => indexer.profiledIndexWorkspace(() => ()),
+        () => workspace,
+        () => focusedDocument,
+        clientConfig.initialConfig,
+        scalaVersionSelector,
+        parseTreesAndPublishDiags,
+      )
+    )
+    buildTargets.addData(ammonite.buildTargetsData)
+    if (clientConfig.isTreeViewProvider) {
+      treeView = new MetalsTreeViewProvider(
+        () => workspace,
+        languageClient,
+        buildTargets,
+        () => buildClient.ongoingCompilations(),
+        definitionIndex,
+        clientConfig.initialConfig.statistics,
+        id => compilations.compileTarget(id),
+        sh,
+        () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false),
+      )
+    }
+    findTextInJars = new FindTextInDependencyJars(
+      buildTargets,
+      () => workspace,
+      languageClient,
+      saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
+    )
   }
 
   def setupJna(): Unit = {
@@ -858,7 +843,6 @@ class MetalsLanguageServer(
     System.setProperty("jna.nosys", "true")
   }
 
-  @JsonRequest("initialize")
   def initialize(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] = {
@@ -1018,9 +1002,7 @@ class MetalsLanguageServer(
 
   val isInitialized = new AtomicBoolean(false)
 
-  @nowarn("msg=parameter value params")
-  @JsonNotification("initialized")
-  def initialized(params: InitializedParams): Future[Unit] = {
+  def initialized(): Future[Unit] = {
     // Avoid duplicate `initialized` notifications. During the transition
     // for https://github.com/natebosch/vim-lsc/issues/113 to get fixed,
     // we may have users on a fixed vim-lsc version but with -Dmetals.no-initialized=true
@@ -1053,7 +1035,6 @@ class MetalsLanguageServer(
 
   lazy val shutdownPromise = new AtomicReference[Promise[Unit]](null)
 
-  @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
     val promise = Promise[Unit]()
     // Ensure we only run `shutdown` at most once and that `exit` waits for the
@@ -1078,7 +1059,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonNotification("exit")
   def exit(): Unit = {
     // `shutdown` is idempotent, we can trigger it as often as we like.
     shutdown()
@@ -1098,7 +1078,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonNotification("textDocument/didOpen")
   override def didOpen(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = {
@@ -1168,7 +1147,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonNotification("metals/didFocusTextDocument")
   override def didFocus(
       params: AnyRef
   ): CompletableFuture[DidFocusResult.Value] = {
@@ -1244,7 +1222,6 @@ class MetalsLanguageServer(
 
   }
 
-  @JsonNotification("metals/windowStateDidChange")
   override def windowStateDidChange(
       params: WindowStateDidChangeParams
   ): Unit = {
@@ -1255,7 +1232,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonNotification("textDocument/didChange")
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] =
@@ -1271,7 +1247,6 @@ class MetalsLanguageServer(
           .asJava
     }
 
-  @JsonNotification("textDocument/didClose")
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     if (focusedDocument.contains(path)) {
@@ -1283,7 +1258,6 @@ class MetalsLanguageServer(
     diagnostics.onClose(path)
   }
 
-  @JsonNotification("textDocument/didSave")
   override def didSave(
       params: DidSaveTextDocumentParams
   ): CompletableFuture[Unit] = {
@@ -1324,7 +1298,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonNotification("workspace/didChangeConfiguration")
   override def didChangeConfiguration(
       params: DidChangeConfigurationParams
   ): CompletableFuture[Unit] = {
@@ -1418,7 +1391,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonNotification("workspace/didChangeWatchedFiles")
   override def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
   ): CompletableFuture[Unit] = {
@@ -1520,7 +1492,6 @@ class MetalsLanguageServer(
       .ignoreValue
   }
 
-  @JsonRequest("textDocument/definition")
   override def definition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
@@ -1528,7 +1499,6 @@ class MetalsLanguageServer(
       definitionOrReferences(position, token).map(_.locations)
     }
 
-  @JsonRequest("textDocument/typeDefinition")
   override def typeDefinition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
@@ -1536,7 +1506,6 @@ class MetalsLanguageServer(
       compilers.typeDefinition(position, token).map(_.locations)
     }
 
-  @JsonRequest("textDocument/implementation")
   override def implementation(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
@@ -1544,7 +1513,6 @@ class MetalsLanguageServer(
       implementationProvider.implementations(position).map(_.asJava)
     }
 
-  @JsonRequest("textDocument/hover")
   override def hover(params: HoverExtParams): CompletableFuture[Hover] = {
     CancelTokens.future { token =>
       compilers
@@ -1564,13 +1532,11 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonRequest("textDocument/documentHighlight")
   override def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
     CancelTokens.future { token => compilers.documentHighlight(params, token) }
 
-  @JsonRequest("textDocument/documentSymbol")
   override def documentSymbol(
       params: DocumentSymbolParams
   ): CompletableFuture[
@@ -1582,7 +1548,6 @@ class MetalsLanguageServer(
         .asJava
     }
 
-  @JsonRequest("textDocument/formatting")
   override def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
@@ -1594,7 +1559,6 @@ class MetalsLanguageServer(
         formattingProvider.format(path, token)
     }
 
-  @JsonRequest("textDocument/onTypeFormatting")
   override def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
@@ -1606,7 +1570,6 @@ class MetalsLanguageServer(
         onTypeFormattingProvider.format(params).asJava
     }
 
-  @JsonRequest("textDocument/rangeFormatting")
   override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
@@ -1618,7 +1581,6 @@ class MetalsLanguageServer(
         rangeFormattingProvider.format(params).asJava
     }
 
-  @JsonRequest("textDocument/prepareRename")
   override def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[l.Range] =
@@ -1626,7 +1588,6 @@ class MetalsLanguageServer(
       renameProvider.prepareRename(params, token).map(_.orNull)
     }
 
-  @JsonRequest("textDocument/rename")
   override def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
@@ -1634,7 +1595,6 @@ class MetalsLanguageServer(
       renameProvider.rename(params, token)
     }
 
-  @JsonRequest("textDocument/references")
   override def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
@@ -1713,7 +1673,6 @@ class MetalsLanguageServer(
     results
   }
 
-  @JsonRequest("textDocument/prepareCallHierarchy")
   override def prepareCallHierarchy(
       params: CallHierarchyPrepareParams
   ): CompletableFuture[util.List[CallHierarchyItem]] =
@@ -1721,7 +1680,6 @@ class MetalsLanguageServer(
       callHierarchyProvider.prepare(params, token).map(_.asJava)
     }
 
-  @JsonRequest("callHierarchy/incomingCalls")
   override def callHierarchyIncomingCalls(
       params: CallHierarchyIncomingCallsParams
   ): CompletableFuture[util.List[CallHierarchyIncomingCall]] =
@@ -1729,7 +1687,6 @@ class MetalsLanguageServer(
       callHierarchyProvider.incomingCalls(params, token).map(_.asJava)
     }
 
-  @JsonRequest("callHierarchy/outgoingCalls")
   override def callHierarchyOutgoingCalls(
       params: CallHierarchyOutgoingCallsParams
   ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] =
@@ -1737,13 +1694,11 @@ class MetalsLanguageServer(
       callHierarchyProvider.outgoingCalls(params, token).map(_.asJava)
     }
 
-  @JsonRequest("textDocument/completion")
   override def completion(
       params: CompletionParams
   ): CompletableFuture[CompletionList] =
     CancelTokens.future { token => compilers.completions(params, token) }
 
-  @JsonRequest("completionItem/resolve")
   override def completionItemResolve(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
@@ -1755,7 +1710,6 @@ class MetalsLanguageServer(
       }
     }
 
-  @JsonRequest("textDocument/signatureHelp")
   override def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
@@ -1763,7 +1717,6 @@ class MetalsLanguageServer(
       compilers.signatureHelp(params, token)
     }
 
-  @JsonRequest("textDocument/codeAction")
   override def codeAction(
       params: CodeActionParams
   ): CompletableFuture[util.List[l.CodeAction]] =
@@ -1771,7 +1724,6 @@ class MetalsLanguageServer(
       codeActionProvider.codeActions(params, token).map(_.asJava)
     }
 
-  @JsonRequest("textDocument/codeLens")
   override def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
@@ -1785,7 +1737,6 @@ class MetalsLanguageServer(
       }
     }
 
-  @JsonRequest("textDocument/foldingRange")
   override def foldingRange(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
@@ -1802,7 +1753,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonRequest("textDocument/selectionRange")
   override def selectionRange(
       params: SelectionRangeParams
   ): CompletableFuture[util.List[SelectionRange]] = {
@@ -1811,7 +1761,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonRequest("workspace/symbol")
   override def workspaceSymbol(
       params: WorkspaceSymbolParams
   ): CompletableFuture[util.List[SymbolInformation]] =
@@ -1832,7 +1781,6 @@ class MetalsLanguageServer(
     workspaceSymbols.search(query)
   }
 
-  @JsonRequest("workspace/executeCommand")
   override def executeCommand(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] = {
@@ -2128,7 +2076,6 @@ class MetalsLanguageServer(
     }
   }
 
-  @JsonRequest("workspace/willRenameFiles")
   override def willRenameFiles(
       params: RenameFilesParams
   ): CompletableFuture[WorkspaceEdit] =
@@ -2142,7 +2089,6 @@ class MetalsLanguageServer(
       Future.sequence(moves).map(_.mergeChanges)
     }
 
-  @JsonNotification("metals/doctorVisibilityDidChange")
   override def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
   ): CompletableFuture[Unit] =
@@ -2150,7 +2096,6 @@ class MetalsLanguageServer(
       doctor.onVisibilityDidChange(params.visible)
     }.asJava
 
-  @JsonRequest("metals/treeViewChildren")
   override def treeViewChildren(
       params: TreeViewChildrenParams
   ): CompletableFuture[MetalsTreeViewChildrenResult] = {
@@ -2159,7 +2104,6 @@ class MetalsLanguageServer(
     }.asJava
   }
 
-  @JsonRequest("metals/treeViewParent")
   override def treeViewParent(
       params: TreeViewParentParams
   ): CompletableFuture[TreeViewParentResult] = {
@@ -2168,7 +2112,6 @@ class MetalsLanguageServer(
     }.asJava
   }
 
-  @JsonNotification("metals/treeViewVisibilityDidChange")
   override def treeViewVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams
   ): CompletableFuture[Unit] =
@@ -2176,7 +2119,6 @@ class MetalsLanguageServer(
       treeView.onVisibilityDidChange(params)
     }.asJava
 
-  @JsonNotification("metals/treeViewNodeCollapseDidChange")
   override def treeViewNodeCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams
   ): CompletableFuture[Unit] =
@@ -2184,7 +2126,6 @@ class MetalsLanguageServer(
       treeView.onCollapseDidChange(params)
     }.asJava
 
-  @JsonRequest("metals/treeViewReveal")
   override def treeViewReveal(
       params: TextDocumentPositionParams
   ): CompletableFuture[TreeViewNodeRevealResult] =
@@ -2197,7 +2138,6 @@ class MetalsLanguageServer(
         .orNull
     }.asJava
 
-  @JsonRequest("metals/findTextInDependencyJars")
   override def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
   ): CompletableFuture[util.List[Location]] = {

@@ -173,7 +173,7 @@ class MetalsNewLanguageServer(
       pprint.log("initialized")
       serverState match {
         case ServerState.Initialized(server) =>
-          server.initialized(params)
+          server.initialized()
         case _ =>
           Future.failed(new Exception)
       }
