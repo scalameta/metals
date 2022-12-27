@@ -1,20 +1,20 @@
 class A >>region>>{
-  val tryCatch =
+  val tryCatch =>>region>>
     try ???
-    catch>>region>> {
+    catch {
       case 0 =>
       case 1 => println()
       case 2 =>>>region>>
         println()
         println()
         println()
-        println()
-<<region<<      case 3 =>
+        println()<<region<<
+      case 3 =>
         println()
       case _ => println()
     }<<region<<
 
-  val patternMatching = ??? match>>region>> {
+  val patternMatching =>>region>> ??? match {
     case 0 =>
     case 1 => println()
     case 2 => println()
@@ -24,7 +24,7 @@ class A >>region>>{
     case _ => println()
   }<<region<<
 
-  val foo = >>region>>Seq().map{
+  val foo =>>region>> Seq().map{
     case 0 =>
     case 1 => println()
     case 2 => println()

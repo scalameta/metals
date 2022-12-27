@@ -8,7 +8,7 @@ given Foo[String] with
       "o"
 
 given Foo[String] with 
-  def a: String = 
+  def a: String =
     "f" +
       "o" +
       "o"
