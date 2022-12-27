@@ -29,10 +29,10 @@ import org.eclipse.{lsp4j => l}
  * It's equivalent to [[org.eclipse.lsp4j.services.TextDocumentService]] and
  * [[org.eclipse.lsp4j.services.WorkspaceService]] with some additional, metals
  * specific endpoints.
- * 
+ *
  * Each method has a default implementation which throws UnsupportedOperationException. Throwing in this context is ok because:
-  * - the default implementation should never be called, because the method is always overridden in [[MetalsLanguageService]]
-  * - lsp4j wraps each method in try catch and returns an error response to the client
+ * - the default implementation should never be called, because the method is always overridden in [[MetalsLanguageService]]
+ * - lsp4j wraps each method in try catch and returns an error response to the client
  */
 trait TextDocumentAndWorkspaceService {
   @JsonNotification("textDocument/didOpen")

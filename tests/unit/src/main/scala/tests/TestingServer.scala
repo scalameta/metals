@@ -574,7 +574,7 @@ final case class TestingServer(
         .asJava
     )
     params.setRootUri(workspace.toURI.toString)
-    server.initialize(params).asScala
+    languageServer.initialize(params).asScala
   }
 
   def initialized(): Future[Unit] = {

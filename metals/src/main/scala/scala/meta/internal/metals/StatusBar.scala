@@ -36,7 +36,7 @@ import org.eclipse.lsp4j.MessageType
  *   as long as the attached `Future[_]` is not completed.
  */
 final class StatusBar(
-    client: () => MetalsLanguageClient,
+    client: MetalsLanguageClient,
     time: Time,
     progressTicks: ProgressTicks = ProgressTicks.braille,
     clientConfig: ClientConfiguration,
@@ -56,7 +56,7 @@ final class StatusBar(
     if (clientConfig.statusBarState == StatusBarState.Off)
       trackBlockingTask(message)(thunk)
     else {
-      val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
       try {
         thunk
       } catch {
@@ -73,7 +73,7 @@ final class StatusBar(
     if (clientConfig.statusBarState == StatusBarState.Off)
       trackFuture(message, thunk)
     else {
-      val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
       thunk.onComplete {
         case Failure(exception) =>
           slowTaskFailed(message, exception)
@@ -86,7 +86,7 @@ final class StatusBar(
 
   private def slowTaskFailed(message: String, e: Throwable): Unit = {
     scribe.error(s"failed: $message", e)
-    client().logMessage(
+    client.logMessage(
       new MessageParams(
         MessageType.Error,
         s"$message failed, see metals.log for more details.",
@@ -151,12 +151,12 @@ final class StatusBar(
               MetalsStatusParams(value.formattedMessage, show = show)
           }
           value.show()
-          client().metalsStatus(params)
+          client.metalsStatus(params)
           isHidden = false
         }
       case None =>
         if (!isHidden && !isActiveMessage) {
-          client().metalsStatus(MetalsStatusParams("", hide = true))
+          client.metalsStatus(MetalsStatusParams("", hide = true))
           isHidden = true
           activeItem = None
         }

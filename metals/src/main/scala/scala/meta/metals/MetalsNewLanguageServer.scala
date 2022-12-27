@@ -13,6 +13,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -154,12 +155,40 @@ class MetalsNewLanguageServer(
             onStartCompilation = onStartCompilation,
             classpathSearchIndexer = classpathSearchIndexer,
           )
-          MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
+
+          setupJna()
+          setupLogging(params, workspace)
+
           serverState = ServerState.Initialized(server)
           metalsService.underlying = server
-          server.initialize(params)
+
+          server.initialize()
       }
     }
+
+  private def setupLogging(
+      params: InitializeParams,
+      workspace: AbsolutePath,
+  ): Unit = {
+    MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
+
+    val clientInfo = Option(params.getClientInfo()).fold("") { info =>
+      s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
+    }
+    scribe.info(
+      s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
+    )
+  }
+
+  private def setupJna(): Unit = {
+    // This is required to avoid the following error:
+    //   java.lang.NoClassDefFoundError: Could not initialize class com.sun.jna.platform.win32.Kernel32
+    //     at sbt.internal.io.WinMilli$.getHandle(Milli.scala:277)
+    //   There is an incompatible JNA native library installed on this system
+    //     Expected: 5.2.2
+    //     Found:    3.2.1
+    System.setProperty("jna.nosys", "true")
+  }
 
   private val isInitialized = new AtomicBoolean(false)
 

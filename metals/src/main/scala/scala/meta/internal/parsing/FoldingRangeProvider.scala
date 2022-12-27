@@ -2,7 +2,6 @@ package scala.meta.internal.parsing
 
 import java.util
 import java.util.Collections
-import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
@@ -16,13 +15,8 @@ import org.eclipse.lsp4j.FoldingRange
 final class FoldingRangeProvider(
     val trees: Trees,
     buffers: Buffers,
+    foldOnlyLines: Boolean,
 ) {
-
-  private val foldOnlyLines = new AtomicBoolean(false)
-
-  def setFoldOnlyLines(value: Boolean): Unit = {
-    foldOnlyLines.set(value)
-  }
 
   def getRangedForScala(
       filePath: AbsolutePath
@@ -36,7 +30,7 @@ final class FoldingRangeProvider(
       val fromTree =
         Input.VirtualFile(filePath.toURI.toString(), tree.pos.input.text)
       val distance = TokenEditDistance(fromTree, revised, trees)
-      val extractor = new FoldingRangeExtractor(distance, foldOnlyLines.get())
+      val extractor = new FoldingRangeExtractor(distance, foldOnlyLines)
       extractor.extract(tree)
     }
     result.getOrElse(util.Collections.emptyList())
@@ -50,7 +44,7 @@ final class FoldingRangeProvider(
       if filePath.isJava
     } yield {
       val extractor =
-        new JavaFoldingRangeExtractor(code, foldOnlyLines.get())
+        new JavaFoldingRangeExtractor(code, foldOnlyLines)
       extractor.extract().asJava
     }
 

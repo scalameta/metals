@@ -26,7 +26,8 @@ abstract class DocumentSymbolSuite(
         () => {
           val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
           val documentSymbolProvider = new DocumentSymbolProvider(
-            trees
+            trees,
+            false,
           )
 
           // populate buffers
