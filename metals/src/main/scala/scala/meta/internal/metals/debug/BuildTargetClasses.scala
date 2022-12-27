@@ -20,7 +20,9 @@ final class BuildTargetClasses(
     buildTargets: BuildTargets
 )(implicit val ec: ExecutionContext) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
-
+  val jvmRunEnvironment
+      : TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem] =
+    TrieMap.empty[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
   val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
     BatchedFunction.fromFuture(fetchClasses)
 
@@ -78,9 +80,18 @@ final class BuildTargetClasses(
             .testClasses(new b.ScalaTestClassesParams(targetsList))
             .map(cacheTestClasses(classes, _))
 
+          val jvmRunEnvironment = connection
+            .jvmRunEnvironment(
+              new b.JvmRunEnvironmentParams(
+                buildTargets.allBuildTargetIds.toList.asJava
+              )
+            )
+            .map(cacheJvmRunEnvironment)
+
           for {
             _ <- updateMainClasses
             _ <- updateTestClasses
+            _ <- jvmRunEnvironment
           } yield {
             classes.foreach { case (id, classes) =>
               index.put(id, classes)
@@ -88,6 +99,17 @@ final class BuildTargetClasses(
           }
       }
       .ignoreValue
+  }
+
+  private def cacheJvmRunEnvironment(
+      result: b.JvmRunEnvironmentResult
+  ): Unit = {
+    for {
+      item <- result.getItems().asScala
+      target = item.getTarget
+    } {
+      jvmRunEnvironment.put(target, item)
+    }
   }
 
   private def cacheMainClasses(

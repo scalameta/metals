@@ -19,7 +19,6 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.InverseSourcesParams
-import ch.epfl.scala.bsp4j.JvmEnvironmentItem
 import ch.epfl.scala.bsp4j.TextDocumentIdentifier
 
 /**
@@ -245,11 +244,6 @@ final class BuildTargets() {
       Some(orSbtBuildTarget.maxBy(buildTargetsOrder))
     }
   }
-
-  def jvmRunEnvironment(
-      targetId: BuildTargetIdentifier
-  ): Option[JvmEnvironmentItem] =
-    data.fromOptions(_.jvmRunEnvironments.get(targetId))
 
   def inverseSourcesBsp(
       source: AbsolutePath
