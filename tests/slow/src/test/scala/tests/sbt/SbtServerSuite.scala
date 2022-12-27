@@ -26,6 +26,13 @@ class SbtServerSuite
   val supportedBspVersion = V.sbtVersion
   val scalaVersion = V.scala213
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
+  var compilationCount = 0
+
+  override def beforeEach(context: BeforeEach): Unit = {
+    compilationCount = 0
+    onStartCompilation = { () => compilationCount += 1 }
+    super.beforeEach(context)
+  }
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -102,7 +109,7 @@ class SbtServerSuite
           """|/a/src/main/scala/A.scala
              |
              |object A{
-             |  
+             |
              |}
              |""".stripMargin,
           V.scala213,
@@ -238,6 +245,34 @@ class SbtServerSuite
           "meta-build-target-test",
         ).mkString("\n"),
       )
+    }
+  }
+
+  test("infinite-loop") {
+    cleanWorkspace()
+    val layout =
+      s"""|/project/build.properties
+          |sbt.version=$supportedMetaBuildVersion
+          |/build.sbt
+          |${SbtBuildLayout.commonSbtSettings}
+          |Compile / sourceGenerators += Def.task {
+          |  val content = "object Foo\\n"
+          |  val file = target.value / "Foo.scala"
+          |  IO.write(file, content)
+          |  Seq(file)
+          |}
+          |""".stripMargin
+    for {
+      _ <- initialize(layout)
+      // make sure to compile once
+      _ <- server.server.compilations.compileFile(
+        workspace.resolve("target/Foo.scala")
+      )
+    } yield {
+      // Sleep 100 ms: that should be enough to see the compilation looping
+      Thread.sleep(100)
+      // Check that the compilation is not looping
+      assertEquals(compilationCount, 1)
     }
   }
 }
