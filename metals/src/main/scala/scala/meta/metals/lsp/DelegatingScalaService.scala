@@ -19,8 +19,20 @@ import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
-class DelegatingService(var underlying: TextDocumentAndWorkspaceService)
-    extends TextDocumentAndWorkspaceService {
+/**
+ * Delegating Scala LSP service which forwards all requests to the underlying
+ * instance. This is needed to support lsp4j
+ * [[org.eclipse.lsp4j.jsonrpc.services.JsonDelegate]]. Value returned by
+ * method with that annotation is used to determine which methods are supported
+ * by the server. We can't initialize it to null because then no lsp methods would be
+ * supported. Instead, we initialize it to a dummy instance which is then replaced.
+ *
+ * @param underlying
+ *   underlying instance which is swapped at runtime
+ */
+class DelegatingScalaService(
+    var underlying: ScalaLspService
+) extends ScalaLspService {
 
   override def didOpen(
       params: DidOpenTextDocumentParams

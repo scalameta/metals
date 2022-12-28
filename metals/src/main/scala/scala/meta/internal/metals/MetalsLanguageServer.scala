@@ -82,7 +82,7 @@ import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.io.AbsolutePath
-import scala.meta.metals.lsp.TextDocumentAndWorkspaceService
+import scala.meta.metals.lsp.ScalaLspService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
@@ -100,6 +100,7 @@ import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
 
+// todo rename to MetalsLspService
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
     buffers: Buffers = Buffers(),
@@ -119,7 +120,7 @@ class MetalsLanguageServer(
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
 ) extends Cancelable
-    with TextDocumentAndWorkspaceService {
+    with ScalaLspService {
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)

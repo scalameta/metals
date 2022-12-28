@@ -49,7 +49,7 @@ object Main {
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
     val initialConfig = MetalsServerConfig.default
-    val server = new MetalsNewLanguageServer(
+    val server = new MetalsLanguageServer(
       ec,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
@@ -65,6 +65,7 @@ object Main {
         .setLocalService(server)
         .create()
       val clientProxy = launcher.getRemoteProxy
+      // important, plug language client before starting listening!
       server.connectToLanguageClient(clientProxy)
       launcher.startListening().get()
     } catch {

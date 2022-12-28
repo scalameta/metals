@@ -143,7 +143,7 @@ final case class TestingServer(
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
 
-  val languageServer = new m.metals.MetalsNewLanguageServer(
+  val languageServer = new scala.meta.metals.MetalsLanguageServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,

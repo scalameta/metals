@@ -36,6 +36,14 @@ trait LanguageServer {
   @JsonNotification("exit")
   def exit(): Unit
 
+  /**
+   * See [[scala.meta.metals.lsp.DelegatingScalaService]] docs for more information about how JsonDelegate works.
+   */
   @JsonDelegate
-  def getTextDocumentAndWorkspaceService: TextDocumentAndWorkspaceService
+  def getScalaService: ScalaLspService
 }
+
+trait ScalaLspService
+    extends TextDocumentService
+    with WorkspaceService
+    with MetalsService
