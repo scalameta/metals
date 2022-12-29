@@ -284,6 +284,7 @@ class MetalsLanguageServer(
   private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
+  private var javaHighlightProvider: JavaDocumentHighlightProvider = _
   private var scalafixProvider: ScalafixProvider = _
   private var fileDecoderProvider: FileDecoderProvider = _
   private var testProvider: TestSuitesProvider = _
@@ -668,6 +669,10 @@ class MetalsLanguageServer(
           ),
           buildTargets,
           workspace,
+        )
+        javaHighlightProvider = new JavaDocumentHighlightProvider(
+          definitionProvider,
+          semanticdbs,
         )
         workspaceSymbols = new WorkspaceSymbolProvider(
           workspace,
@@ -1567,8 +1572,14 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/documentHighlight")
   def documentHighlights(
       params: TextDocumentPositionParams
-  ): CompletableFuture[util.List[DocumentHighlight]] =
-    CancelTokens.future { token => compilers.documentHighlight(params, token) }
+  ): CompletableFuture[util.List[DocumentHighlight]] = {
+    if (params.getTextDocument.getUri.toAbsolutePath.isJava)
+      CancelTokens { _ => javaHighlightProvider.documentHighlight(params) }
+    else
+      CancelTokens.future { token =>
+        compilers.documentHighlight(params, token)
+      }
+  }
 
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
