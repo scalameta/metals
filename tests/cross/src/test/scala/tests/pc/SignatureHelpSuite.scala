@@ -123,14 +123,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |       ^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "2.11" ->
-        """|<init>(x: Int): Some[Int]
-           |       ^^^^^^
-           |""".stripMargin,
       "3" ->
         """|Some[A](value: A)
            |        ^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     ),
   )
 
@@ -329,13 +325,9 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |      ^
        |""".stripMargin,
     compat = Map(
-      "2.11" ->
-        """|empty[A, B]: Map[A,B]
-           |      ^
-           |""".stripMargin,
       "3" -> """|empty[K, V]: Map[K, V]
                 |      ^
-                |""".stripMargin,
+                |""".stripMargin
     ),
   )
 
@@ -446,15 +438,6 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|^^^^^^^^
            |to(end: Int): scala.collection.immutable.Range.Inclusive
            |to(end: Int, step: Int): scala.collection.immutable.Range.Inclusive
-           |""".stripMargin,
-      "2.11" ->
-        """|to(end: T): Range.Partial[T,NumericRange[T]]
-           |   ^^^^^^
-           |to(end: T, step: T): NumericRange.Inclusive[T]
-           |to(end: T): NumericRange.Inclusive[T]
-           |to(end: T, step: T): NumericRange.Inclusive[T]
-           |to(end: Int): Range.Inclusive
-           |to(end: Int, step: Int): Range.Inclusive
            |""".stripMargin,
     ),
   )

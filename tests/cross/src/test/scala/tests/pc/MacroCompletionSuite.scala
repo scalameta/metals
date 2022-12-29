@@ -75,11 +75,6 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|from(r: String :: Int :: HNil): Person
        |""".stripMargin,
-    compat = Map(
-      "2.11" ->
-        """|from(r: ::[String,::[Int,HNil]]): Person
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -100,11 +95,8 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     """|fold[C](fa: Int => C, fb: String => C): C
        |""".stripMargin,
     compat = Map(
-      "2.11" ->
-        """|fold[X](fa: Int => X, fb: String => X): X
-           |""".stripMargin,
       // NOTE(olafur): the presentation compiler returns empty results here in 2.13.0
-      "2.13" -> "",
+      "2.13" -> ""
     ),
   )
 
@@ -162,11 +154,6 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|fold[C](fa: Int => C, fb: String => C): C
        |""".stripMargin,
-    compat = Map(
-      "2.11" ->
-        """|fold[X](fa: Int => X, fb: String => X): X
-           |""".stripMargin
-    ),
   )
 
   check(
