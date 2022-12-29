@@ -83,8 +83,26 @@ class ExtractRenameMember(
           differentNames && notExtendsSealedOrSealed && companionNotSealed && !newFileUri.exists
         }
 
+        lazy val canExtractSingle = tree match {
+          case Source((Pkg(_, stats)) :: Nil) =>
+            stats.length > 1
+          case Source(stats) =>
+            stats.length > 1
+          case _ => false
+        }
+
         definitions match {
           case Nil => Nil
+          case head :: Nil
+              if canExtractSingle &&
+                canExtractDefn(head.member) &&
+                defnAtCursor.isDefined =>
+            getMemberType(head.member).map { memberType =>
+              val title =
+                ExtractRenameMember.title(memberType, head.member.name.value)
+              extractClassAction(uri, head.member, title)
+            }.toList
+
           case head :: Nil
               if canRenameDefn(
                 head.member

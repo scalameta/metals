@@ -495,6 +495,66 @@ class Scala3CodeActionLspSuite
     selectedActionIndex = 1,
   )
 
+  checkExtractedMember(
+    "extract-object-main-annot",
+    """|package a
+       |@main def buildSite() =  ???
+       |
+       |object <<B>> {}
+       |""".stripMargin,
+    s"""|${ExtractRenameMember.title("object", "B")}""".stripMargin,
+    """|package a
+       |@main def buildSite() =  ???
+       |
+       |""".stripMargin,
+    newFile = (
+      "B.scala",
+      s"""|package a
+          |
+          |object B {}
+          |""".stripMargin,
+    ),
+  )
+
+  checkExtractedMember(
+    "extract-toplevel-val",
+    """|package a
+       |
+       |val abc = ???
+       |class <<B>>()
+       |""".stripMargin,
+    expectedActions = ExtractRenameMember.title("class", "B"),
+    """|package a
+       |
+       |val abc = ???
+       |""".stripMargin,
+    newFile = (
+      "B.scala",
+      s"""|package a
+          |
+          |class B()
+          |""".stripMargin,
+    ),
+  )
+
+  checkExtractedMember(
+    "extract-toplevel-given",
+    """|
+       |given String = "hello"
+       |class <<B>>()
+       |""".stripMargin,
+    expectedActions = ExtractRenameMember.title("class", "B"),
+    """|
+       |given String = "hello"
+       |""".stripMargin,
+    newFile = (
+      "B.scala",
+      s"""|
+          |class B()
+          |""".stripMargin,
+    ),
+  )
+
   def checkExtractedMember(
       name: TestOptions,
       input: String,
