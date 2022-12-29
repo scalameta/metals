@@ -14,15 +14,6 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       _parameterHintsCommand = paramHint
     )
 
-  override val compatProcess: Map[String, String => String] = Map(
-    "2.11" -> { (s: String) =>
-      // The standard library renamed fields of Some/Left/Right for 2.12.0.
-      s.replace("Some(value)", "Some(x)")
-        .replace("Left(value)", "Left(a)")
-        .replace("Right(value)", "Right(b)")
-    }
-  )
-
   check(
     "empty",
     """
@@ -163,9 +154,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     """|case Cls(a, b) => `sealed-two`.Outer
        |""".stripMargin,
     compat = Map(
-      // known-direct subclasses doesn't work well in 2.11 apparently.
-      "2.11" -> "",
-      "3" -> "case Cls(a, b) => sealed-two.Outer",
+      "3" -> "case Cls(a, b) => sealed-two.Outer"
     ),
   )
 
