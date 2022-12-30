@@ -61,8 +61,8 @@ case class ScalaPresentationCompiler(
       config,
       sh,
       () => new Scala3CompilerWrapper(newDriver),
-    )(
-      using ec
+    )(using
+      ec
     )
 
   private def removeDoubleOptions(options: List[String]): List[String] =
