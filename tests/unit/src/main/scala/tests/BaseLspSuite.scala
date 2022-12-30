@@ -137,7 +137,9 @@ abstract class BaseLspSuite(
       initializationOptions = initOptions,
       mtagsResolver = mtagsResolver,
       onStartCompilation = onStartCompilation,
-    )(ex)
+    )(
+      ex
+    )
   }
 
   /**

@@ -598,11 +598,11 @@ class MetalsLanguageServer(
       classpathSearchIndexer = classpathSearchIndexer,
     )
 
-private val javaHighlightProvider: JavaDocumentHighlightProvider = new JavaDocumentHighlightProvider(
-          definitionProvider,
-          semanticdbs,
-        )
-  
+  private val javaHighlightProvider: JavaDocumentHighlightProvider =
+    new JavaDocumentHighlightProvider(
+      definitionProvider,
+      semanticdbs,
+    )
 
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets, trees, referencesProvider)
