@@ -134,6 +134,7 @@ final case class TestingServer(
     val client: TestingClient,
     buffers: Buffers,
     config: MetalsServerConfig,
+    initialUserConfig: UserConfiguration,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
     time: Time,
@@ -148,6 +149,7 @@ final case class TestingServer(
     buffers = buffers,
     redirectSystemOut = false,
     initialConfig = config,
+    initialUserConfig = initialUserConfig,
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
@@ -159,12 +161,12 @@ final case class TestingServer(
   )
   languageServer.connectToLanguageClient(client)
 
-  val server = languageServer.getOldMetalsLanguageServer
+  lazy val server = languageServer.getOldMetalsLanguageServer
 
-  private val trees = new Trees(
+  private lazy val trees = new Trees(
     buffers,
     new ScalaVersionSelector(
-      () => UserConfiguration.default,
+      () => initialUserConfig,
       server.buildTargets,
     ),
   )

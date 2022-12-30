@@ -17,16 +17,22 @@ import org.eclipse.lsp4j.InitializeParams
  */
 final class ClientConfiguration(
     val initialConfig: MetalsServerConfig,
-    initializeParams: InitializeParams,
+    initializeParams: Option[InitializeParams],
 ) {
 
+  private val clientCapabilities: Option[ClientCapabilities] =
+    initializeParams.flatMap(params => Option(params.getCapabilities))
+
   private val experimentalCapabilities =
-    ClientExperimentalCapabilities.from(initializeParams.getCapabilities)
+    clientCapabilities
+      .fold(ClientExperimentalCapabilities.Default)(
+        ClientExperimentalCapabilities.from
+      )
+
   private val initializationOptions =
-    InitializationOptions.from(initializeParams)
-  private val clientCapabilities: Option[ClientCapabilities] = Some(
-    initializeParams.getCapabilities
-  )
+    initializeParams.fold(InitializationOptions.Default)(
+      InitializationOptions.from
+    )
 
   def extract[T](primary: Option[T], secondary: Option[T], default: T): T = {
     primary.orElse(secondary).getOrElse(default)
@@ -177,8 +183,18 @@ final class ClientConfiguration(
 }
 
 object ClientConfiguration {
-  val default: ClientConfiguration = new ClientConfiguration(
-    initialConfig = MetalsServerConfig(),
-    initializeParams = new InitializeParams(),
-  )
+  val default: ClientConfiguration = ClientConfiguration(MetalsServerConfig())
+
+  def apply(
+      initialConfig: MetalsServerConfig,
+      initializeParams: InitializeParams,
+  ): ClientConfiguration = {
+    new ClientConfiguration(initialConfig, Some(initializeParams))
+  }
+
+  def apply(
+      initialConfig: MetalsServerConfig
+  ): ClientConfiguration = {
+    new ClientConfiguration(initialConfig, None)
+  }
 }

@@ -14,6 +14,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -21,7 +22,9 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.ThreadPools
 import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.logging.LanguageClientLogger
@@ -50,6 +53,11 @@ object ServerState {
 
 /**
  * Scala Language Server implementation.
+ *
+ * @param ec
+ *   execution context for futures.
+ * @param sh
+ *   scheduled executor service for scheduling tasks.
  */
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -58,6 +66,7 @@ class MetalsLanguageServer(
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
     initialConfig: MetalsServerConfig = MetalsServerConfig.default,
+    initialUserConfig: UserConfiguration = UserConfiguration.default,
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
@@ -68,6 +77,9 @@ class MetalsLanguageServer(
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
 ) extends LanguageServer {
+
+  ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
+  ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
@@ -80,22 +92,28 @@ class MetalsLanguageServer(
   private var languageClient: MetalsLanguageClient = NoopLanguageClient
 
   private val cancelables = new MutableCancelable()
-  val isCancelled = new AtomicBoolean(false)
+  private val isCancelled = new AtomicBoolean(false)
+  private val isLanguageClientConnected = new AtomicBoolean(false)
 
   private val metalsService = new DelegatingScalaService(new ScalaLspService {})
 
   def connectToLanguageClient(languageClient: MetalsLanguageClient): Unit = {
+    isLanguageClientConnected.set(true)
     this.languageClient = languageClient
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())
   }
 
-  def cancelAll(): Unit = {
+  /**
+   * Cancel all cancelables, but leave thread pools running. This is used only
+   * in tests where thread pools are reused.
+   */
+  def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
       cancelables.cancel()
       serverState match {
-        case ServerState.Initialized(service) => service.cancelAll()
-        case ShuttingDown(service) => service.cancelAll()
+        case ServerState.Initialized(service) => service.cancel()
+        case ShuttingDown(service) => service.cancel()
         case _ =>
           scribe.warn(
             s"Server is in state $serverState, cannot invoke cancelAll"
@@ -104,9 +122,23 @@ class MetalsLanguageServer(
     }
   }
 
+  /**
+   * Cancel all cancelables and shutdown thread pools. This is used in
+   * production and in tests, after all tests are finished in suite.
+   */
+  def cancelAll(): Unit = {
+    cancel()
+    Cancelable.cancelAll(
+      List(
+        Cancelable(() => ec.shutdown()),
+        Cancelable(() => sh.shutdown()),
+      )
+    )
+  }
+
   override def initialize(
       params: InitializeParams
-  ): CompletableFuture[InitializeResult] =
+  ): CompletableFuture[InitializeResult] = {
     if (serverState != ServerState.Started) {
       Future
         .failed[InitializeResult](
@@ -126,12 +158,10 @@ class MetalsLanguageServer(
           .map(_.toAbsolutePath)
       root match {
         // ugly check to avoid starting the server if proper languageClient wasn't plugged
-        case _ if languageClient.isInstanceOf[NoopLanguageClient] =>
+        case _ if !isLanguageClientConnected.get =>
           Future
             .failed(
-              new IllegalArgumentException(
-                "There is no root directory in InitializeParams"
-              )
+              new IllegalStateException("Language client wasn't plugged!")
             )
             .asJava
         case None =>
@@ -162,7 +192,7 @@ class MetalsLanguageServer(
           server.initialize()
       }
     }
-
+  }
   private def setupJna(): Unit = {
     // This is required to avoid the following error:
     //   java.lang.NoClassDefFoundError: Could not initialize class com.sun.jna.platform.win32.Kernel32
@@ -185,6 +215,7 @@ class MetalsLanguageServer(
     charset = charset,
     time = time,
     initialConfig = initialConfig,
+    initialUserConfig = initialUserConfig,
     progressTicks = progressTicks,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,

@@ -101,12 +101,22 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
 
 // todo rename to MetalsLspService
+/**
+ * Metals implementation of the Scala Language Service.
+ * @param ec
+ *   Execution context used for submitting tasks. This class DO NOT manage the
+ *   lifecycle of this execution context.
+ * @param sh
+ *   Scheduled executor service used for scheduling tasks. This class DO NOT
+ *   manage the lifecycle of this executor.
+ */
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
     buffers: Buffers = Buffers(),
     val workspace: AbsolutePath,
     client: MetalsLanguageClient,
     initializeParams: InitializeParams,
+    initialUserConfig: UserConfiguration = UserConfiguration.default,
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
     initialConfig: MetalsServerConfig = MetalsServerConfig.default,
@@ -146,22 +156,12 @@ class MetalsLanguageServer(
     }
   }
 
-  def cancelAll(): Unit = {
-    cancel()
-    Cancelable.cancelAll(
-      List(
-        Cancelable(() => ec.shutdown()),
-        Cancelable(() => sh.shutdown()),
-      )
-    )
-  }
-
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
   @volatile
-  var userConfig: UserConfiguration = UserConfiguration()
+  private var userConfig: UserConfiguration = initialUserConfig
 
-  private val clientConfig = new ClientConfiguration(
+  private val clientConfig = ClientConfiguration(
     initialConfig,
     initializeParams,
   )
@@ -188,7 +188,7 @@ class MetalsLanguageServer(
     workspace,
     bspGlobalDirectories,
     () => userConfig,
-    tables.buildServers.selectedServer().nonEmpty,
+    () => tables.buildServers.selectedServer().nonEmpty,
   )
 
   private val optJavaHome =

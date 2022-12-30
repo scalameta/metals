@@ -61,10 +61,8 @@ abstract class BaseLspSuite(
 
   override def afterAll(): Unit = {
     if (server != null) {
-      server.server.cancelAll()
+      server.languageServer.cancelAll()
     }
-    ex.shutdown()
-    sh.shutdown()
   }
 
   def writeLayout(layout: String): Unit = {
@@ -128,23 +126,26 @@ abstract class BaseLspSuite(
 
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(
-      workspace,
-      client,
-      buffers,
-      config,
-      bspGlobalDirectories,
-      sh,
-      time,
-      initOptions,
-      mtagsResolver,
-      onStartCompilation,
+      workspace = workspace,
+      client = client,
+      buffers = buffers,
+      config = config,
+      initialUserConfig = this.userConfig,
+      bspGlobalDirectories = bspGlobalDirectories,
+      sh = sh,
+      time = time,
+      initializationOptions = initOptions,
+      mtagsResolver = mtagsResolver,
+      onStartCompilation = onStartCompilation,
     )(ex)
-    server.server.userConfig = this.userConfig
   }
 
+  /**
+   * Cancel the server without cancelling its thread pools.
+   */
   def cancelServer(): Unit = {
     if (server != null) {
-      server.server.cancel()
+      server.languageServer.cancel()
     }
   }
 
