@@ -1,6 +1,5 @@
 package scala.meta.internal.mtags
 
-import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -345,7 +344,7 @@ trait CommonMtagsEnrichments {
           } match {
             case Failure(exception) =>
               logger.warning(exception.getMessage())
-              input.path.reverse.takeWhile(_ != File.separatorChar).reverse
+              input.path.reverse.takeWhile(c => c != '/' && c != '\\').reverse
             case Success(value) =>
               value
           }

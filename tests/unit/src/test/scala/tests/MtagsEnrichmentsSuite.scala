@@ -101,8 +101,8 @@ class MtagsEnrichmentsSuite extends BaseSuite {
 
   test("filename") {
 
-    def assertFilename(input: String, expected: String) = {
-      val filename = Input.VirtualFile(input, "").filename
+    def assertFilename(path: String, expected: String) = {
+      val filename = Input.VirtualFile(path, "").filename
       assertEquals(filename, expected)
     }
 
