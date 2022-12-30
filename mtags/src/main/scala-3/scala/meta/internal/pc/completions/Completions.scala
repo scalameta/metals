@@ -244,15 +244,15 @@ class Completions(
     // leads to the failure of one of the DocSuite tests
       || symbol.info.typeSymbol.isAllOf(
         Flags.JavaInterface // in Java:  interface A {}
-        // in Scala 3: object B { new A@@}
+          // in Scala 3: object B { new A@@}
       ) || symbol.info.typeSymbol.isAllOf(
         Flags.PureInterface // in Java: abstract class Shape { abstract void draw();}
-        // Shape has only abstract members, so can be represented by a Java interface
-        // in Scala 3: object B{ new Shap@@ }
+          // Shape has only abstract members, so can be represented by a Java interface
+          // in Scala 3: object B{ new Shap@@ }
       ) || (symbol.info.typeSymbol.is(Flags.Abstract) &&
         symbol.isClass) // so as to exclude abstract methods
-    // abstract class A(i: Int){ def doSomething: Int}
-    // object B{ new A@@}
+      // abstract class A(i: Int){ def doSomething: Int}
+      // object B{ new A@@}
     )
   end isAbstractType
 

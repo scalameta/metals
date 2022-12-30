@@ -1,13 +1,13 @@
 class A>>region>>{
-  val multilineString =
-    """>>region>>
+  val multilineString =>>region>>
+    """
       |
       |
       |
       |
       |
       |
-    """<<region<<.stripMargin
+    """.stripMargin<<region<<
 
   val b = ???
 }<<region<<

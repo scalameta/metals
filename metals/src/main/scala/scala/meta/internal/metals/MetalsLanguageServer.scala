@@ -598,6 +598,12 @@ class MetalsLanguageServer(
       classpathSearchIndexer = classpathSearchIndexer,
     )
 
+private val javaHighlightProvider: JavaDocumentHighlightProvider = new JavaDocumentHighlightProvider(
+          definitionProvider,
+          semanticdbs,
+        )
+  
+
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets, trees, referencesProvider)
 
@@ -1504,8 +1510,14 @@ class MetalsLanguageServer(
 
   override def documentHighlights(
       params: TextDocumentPositionParams
-  ): CompletableFuture[util.List[DocumentHighlight]] =
-    CancelTokens.future { token => compilers.documentHighlight(params, token) }
+  ): CompletableFuture[util.List[DocumentHighlight]] = {
+    if (params.getTextDocument.getUri.toAbsolutePath.isJava)
+      CancelTokens { _ => javaHighlightProvider.documentHighlight(params) }
+    else
+      CancelTokens.future { token =>
+        compilers.documentHighlight(params, token)
+      }
+  }
 
   override def documentSymbol(
       params: DocumentSymbolParams

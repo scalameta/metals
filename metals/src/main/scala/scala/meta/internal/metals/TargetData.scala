@@ -48,6 +48,8 @@ final class TargetData {
     TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
   val buildTargetGeneratedDirs: MMap[AbsolutePath, Unit] =
     TrieMap.empty[AbsolutePath, Unit]
+  val buildTargetGeneratedFiles: MMap[AbsolutePath, Unit] =
+    TrieMap.empty[AbsolutePath, Unit]
   val sourceJarNameToJarFile: MMap[String, AbsolutePath] =
     TrieMap.empty[String, AbsolutePath]
   val isSourceRoot: util.Set[AbsolutePath] =
@@ -184,15 +186,14 @@ final class TargetData {
   ): Unit = {
     val sourceItemPath = sourceItem.getUri.toAbsolutePath(followSymlink = false)
 
-    sourceItem.getKind() match {
-      case DIRECTORY => {
-        if (sourceItem.getGenerated()) {
+    sourceItem.getKind match {
+      case DIRECTORY =>
+        if (sourceItem.getGenerated)
           buildTargetGeneratedDirs(sourceItemPath) = ()
-        }
-      }
-      case FILE => {
+      case FILE =>
+        if (sourceItem.getGenerated)
+          buildTargetGeneratedFiles(sourceItemPath) = ()
         sourceItemFiles.add(sourceItemPath)
-      }
     }
     addSourceItem(sourceItemPath, buildTarget)
   }
@@ -212,6 +213,7 @@ final class TargetData {
     inverseDependencies.clear()
     buildTargetSources.clear()
     buildTargetGeneratedDirs.clear()
+    buildTargetGeneratedFiles.clear()
     inverseDependencySources.clear()
     sourceJarNameToJarFile.clear()
     isSourceRoot.clear()
@@ -233,10 +235,13 @@ final class TargetData {
   }
 
   def checkIfGeneratedSource(source: Path): Boolean = {
+    val absolutePath = AbsolutePath(source)
+    buildTargetGeneratedFiles.contains(absolutePath) ||
     buildTargetGeneratedDirs.keys.exists(generatedDir =>
-      source.startsWith(generatedDir.toNIO)
+      absolutePath.toNIO.startsWith(generatedDir.toNIO)
     )
   }
+
   def checkIfGeneratedDir(path: AbsolutePath): Boolean =
     buildTargetGeneratedDirs.contains(path)
 

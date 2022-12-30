@@ -78,7 +78,7 @@ class FoldingRangeScala3Suite
       lineFoldingOnly = false,
     )
 
-class FoldingRangeScala3LineFolingOnlySuite
+class FoldingRangeScala3LineFoldingOnlySuite
     extends FoldingRangeSuite(
       V.scala3,
       "foldingRange-scala3-foldLineOnly",

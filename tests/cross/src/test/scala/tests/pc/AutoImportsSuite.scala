@@ -14,13 +14,6 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
     """|scala.concurrent
        |java.util.concurrent
        |""".stripMargin,
-    compat = Map(
-      "2.11" ->
-        """|scala.concurrent
-           |scala.concurrent.impl
-           |java.util.concurrent
-           |""".stripMargin
-    ),
   )
 
   checkEdit(

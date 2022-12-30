@@ -34,6 +34,7 @@ import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 import org.eclipse.lsp4j.services.LanguageClient
 
 /**
@@ -370,6 +371,8 @@ class BuildServerConnection private (
               t match {
                 case _: CancellationException =>
                   scribe.info(message)
+                case issue: MessageIssueException =>
+                  scribe.info(issue.getRpcMessage().toString())
                 case _ =>
                   scribe.info(message, t)
               }
