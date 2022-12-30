@@ -1,5 +1,6 @@
 package scala.meta.internal.mtags
 
+import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -12,6 +13,8 @@ import java.{util => ju}
 
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
+import scala.util.Failure
+import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
@@ -334,8 +337,20 @@ trait CommonMtagsEnrichments {
       Try {
         val uri = URI.create(input.path)
         Paths.get(uri).filename
-      }.getOrElse {
-        Paths.get(input.path).filename
+      } match {
+        case Failure(exception) =>
+          logger.warning(exception.getMessage())
+          Try {
+            Paths.get(input.path).filename
+          } match {
+            case Failure(exception) =>
+              logger.warning(exception.getMessage())
+              input.path.reverse.takeWhile(_ != File.separatorChar).reverse
+            case Success(value) =>
+              value
+          }
+        case Success(value) =>
+          value
       }
     }
   }
