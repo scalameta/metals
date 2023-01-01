@@ -39,6 +39,9 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Position
 
+// todo https://github.com/scalameta/metals/issues/4788
+// clean () =>, use plain values
+
 /**
  * Coordinates build target data fetching and caching, and the re-computation of various
  * indexes based on it.
@@ -49,7 +52,7 @@ final case class Indexer(
     languageClient: DelegatingLanguageClient,
     bspSession: () => Option[BspSession],
     executionContext: ExecutionContextExecutorService,
-    tables: () => Tables,
+    tables: Tables,
     statusBar: () => StatusBar,
     timerProvider: TimerProvider,
     scalafixProvider: () => ScalafixProvider,
@@ -127,7 +130,7 @@ final case class Indexer(
                 if (userResponse.isYes) {
                   reloadAndIndex(session)
                 } else {
-                  tables().dismissedNotifications.ImportChanges
+                  tables.dismissedNotifications.ImportChanges
                     .dismiss(2, TimeUnit.MINUTES)
                   Future.successful(BuildChange.None)
                 }
@@ -359,7 +362,7 @@ final case class Indexer(
       sh.schedule(
         new Runnable {
           override def run(): Unit = {
-            tables().jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
+            tables.jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
           }
         },
         2,
@@ -586,14 +589,14 @@ final case class Indexer(
    * @param path JAR path
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
-    tables().jarSymbols.getTopLevels(path) match {
+    tables.jarSymbols.getTopLevels(path) match {
       case Some(toplevels) =>
         val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
         definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
       case None =>
         val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
         val toplevels = definitionIndex.addSourceJar(path, dialect)
-        tables().jarSymbols.putTopLevels(path, toplevels)
+        tables.jarSymbols.putTopLevels(path, toplevels)
     }
   }
 

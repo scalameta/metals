@@ -148,7 +148,7 @@ final case class TestingServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,
-    initialConfig = config,
+    initialServerConfig = config,
     initialUserConfig = initialUserConfig,
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,

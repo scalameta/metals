@@ -101,6 +101,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
 
 // todo rename to MetalsLspService
+// todo https://github.com/scalameta/metals/issues/4789
+// extract configuration to separate class
 /**
  * Metals implementation of the Scala Language Service.
  * @param ec
@@ -287,7 +289,7 @@ class MetalsLanguageServer(
 
   private val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
-    Some(initializeParams).supportsHierarchicalDocumentSymbols,
+    initializeParams.supportsHierarchicalDocumentSymbols,
   )
 
   private val onTypeFormattingProvider =
@@ -298,7 +300,7 @@ class MetalsLanguageServer(
   private val foldingRangeProvider = new FoldingRangeProvider(
     trees,
     buffers,
-    foldOnlyLines = Option(initializeParams).foldOnlyLines,
+    foldOnlyLines = initializeParams.foldOnlyLines,
   )
 
   private val shellRunner: ShellRunner = register(
@@ -632,7 +634,7 @@ class MetalsLanguageServer(
       embedded,
       statusBar,
       sh,
-      Option(initializeParams),
+      initializeParams,
       () => excludedPackageHandler,
       scalaVersionSelector,
       trees,
@@ -804,7 +806,7 @@ class MetalsLanguageServer(
       compilations,
       statusBar,
       diagnostics,
-      () => tables,
+      tables,
       languageClient,
       buildClient,
       () => userConfig,
@@ -876,7 +878,7 @@ class MetalsLanguageServer(
         capabilities.setWorkspaceSymbolProvider(true)
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
-        if (Some(initializeParams).supportsCodeActionLiterals) {
+        if (initializeParams.supportsCodeActionLiterals) {
           capabilities.setCodeActionProvider(
             new CodeActionOptions(
               List(
@@ -2448,7 +2450,7 @@ class MetalsLanguageServer(
       buffers,
       () => indexer.profiledIndexWorkspace(() => ()),
       () => diagnostics,
-      () => tables,
+      tables,
       () => buildClient,
       languageClient,
       () => clientConfig.initialConfig,
@@ -2464,7 +2466,7 @@ class MetalsLanguageServer(
     languageClient,
     () => bspSession,
     executionContext,
-    () => tables,
+    tables,
     () => statusBar,
     timerProvider,
     () => scalafixProvider,

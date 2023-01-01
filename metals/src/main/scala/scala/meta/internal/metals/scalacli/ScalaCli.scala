@@ -44,6 +44,8 @@ import scala.meta.io.AbsolutePath
 import coursier.version.Version
 import org.eclipse.lsp4j.services.LanguageClient
 
+// todo https://github.com/scalameta/metals/issues/4788
+// clean () =>, use plain values
 class ScalaCli(
     compilers: () => Compilers,
     compilations: Compilations,
@@ -51,7 +53,7 @@ class ScalaCli(
     buffers: Buffers,
     indexWorkspace: () => Future[Unit],
     diagnostics: () => Diagnostics,
-    tables: () => Tables,
+    tables: Tables,
     buildClient: () => MetalsBuildClient,
     languageClient: LanguageClient,
     config: () => MetalsServerConfig,
@@ -263,7 +265,7 @@ class ScalaCli(
         buildClient(),
         languageClient,
         () => ScalaCli.socketConn(command, connDir),
-        tables().dismissedNotifications.ReconnectScalaCli,
+        tables.dismissedNotifications.ReconnectScalaCli,
         config(),
         "Scala CLI",
         supportsWrappedSources = Some(true),

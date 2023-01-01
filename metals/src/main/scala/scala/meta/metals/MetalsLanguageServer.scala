@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -38,18 +39,8 @@ import scala.meta.metals.lsp.ScalaLspService
 
 import org.eclipse.lsp4j._
 
-/**
- * According to the spec, the server waits for the `initialize` request to be
- * sent. After that, the server sends the `initialized` notification to the
- * client. Next, the server is fully working and can receive requests and
- * notifications from the client.
- */
-sealed trait ServerState
-object ServerState {
-  case object Started extends ServerState
-  final case class Initialized(service: MetalsLspService) extends ServerState
-  final case class ShuttingDown(service: MetalsLspService) extends ServerState
-}
+// todo https://github.com/scalameta/metals/issues/4789
+// extract configuration to separate class
 
 /**
  * Scala Language Server implementation.
@@ -65,7 +56,7 @@ class MetalsLanguageServer(
     redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
-    initialConfig: MetalsServerConfig = MetalsServerConfig.default,
+    initialServerConfig: MetalsServerConfig = MetalsServerConfig.default,
     initialUserConfig: UserConfiguration = UserConfiguration.default,
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
@@ -83,10 +74,8 @@ class MetalsLanguageServer(
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
-  // AtomicReference's set and get have the same semantics as volatile variables.
-  // because we only use get and set, there is no need to use AtomicReference.
-  @volatile
-  private var serverState: ServerState = ServerState.Started
+  private val serverState =
+    new AtomicReference[ServerState](ServerState.Started)
 
   @volatile
   private var languageClient: MetalsLanguageClient = NoopLanguageClient
@@ -111,7 +100,7 @@ class MetalsLanguageServer(
   def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
       cancelables.cancel()
-      serverState match {
+      serverState.get match {
         case ServerState.Initialized(service) => service.cancel()
         case ShuttingDown(service) => service.cancel()
         case _ =>
@@ -139,7 +128,7 @@ class MetalsLanguageServer(
   override def initialize(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] = {
-    if (serverState != ServerState.Started) {
+    if (serverState.get != ServerState.Started) {
       Future
         .failed[InitializeResult](
           new IllegalStateException(
@@ -174,7 +163,7 @@ class MetalsLanguageServer(
             )
             .asJava
         case Some(workspace) =>
-          val server = createServer(workspace, params)
+          val service = createService(workspace, params)
 
           setupJna()
           MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
@@ -186,10 +175,10 @@ class MetalsLanguageServer(
             s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
           )
 
-          serverState = ServerState.Initialized(server)
-          metalsService.underlying = server
+          serverState.set(ServerState.Initialized(service))
+          metalsService.underlying = service
 
-          server.initialize()
+          service.initialize()
       }
     }
   }
@@ -203,7 +192,7 @@ class MetalsLanguageServer(
     System.setProperty("jna.nosys", "true")
   }
 
-  private def createServer(
+  private def createService(
       workspace: AbsolutePath,
       initializeParams: InitializeParams,
   ): MetalsLspService = new MetalsLspService(
@@ -214,7 +203,7 @@ class MetalsLanguageServer(
     initializeParams = initializeParams,
     charset = charset,
     time = time,
-    initialConfig = initialConfig,
+    initialConfig = initialServerConfig,
     initialUserConfig = initialUserConfig,
     progressTicks = progressTicks,
     bspGlobalDirectories = bspGlobalDirectories,
@@ -234,7 +223,7 @@ class MetalsLanguageServer(
     // we may have users on a fixed vim-lsc version but with -Dmetals.no-initialized=true
     // enabled.
     if (isInitialized.compareAndSet(false, true)) {
-      serverState match {
+      serverState.get match {
         case ServerState.Initialized(server) =>
           server.initialized()
         case _ =>
@@ -248,23 +237,29 @@ class MetalsLanguageServer(
     scribe.error("Unexpected error initializing server", e)
   }.asJava
 
-  override def shutdown(): CompletableFuture[Unit] = serverState match {
+  override def shutdown(): CompletableFuture[Unit] = serverState.get match {
     case ServerState.Initialized(server) =>
+      scribe.info("Shutting down server")
       server.shutdown()
     case _ =>
+      scribe.warn(s"Ignoring shutdown request, server is $serverState state")
       Future.unit.asJava
   }
 
-  override def exit(): Unit = serverState match {
+  override def exit(): Unit = serverState.get match {
     case ServerState.ShuttingDown(server) =>
+      scribe.info("Exiting server")
       server.exit()
-    case _ => ()
+    case _ =>
+      scribe.warn(s"Ignoring exit request, server is $serverState state")
+      ()
   }
 
   override val getScalaService: ScalaLspService = metalsService
 
+  // todo https://github.com/scalameta/metals/issues/4785
   @deprecated
-  def getOldMetalsLanguageServer: MetalsLspService = serverState match {
+  def getOldMetalsLanguageServer: MetalsLspService = serverState.get match {
     case ServerState.Initialized(server) => server
     case _ => throw new IllegalStateException("Server is not initialized")
   }
