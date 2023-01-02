@@ -5,7 +5,11 @@ import org.eclipse.lsp4j.{Location, Position, Range, TextDocumentPositionParams}
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
-import scala.meta.internal.metals.{InitializationOptions, MetalsServerConfig, StatisticsConfig}
+import scala.meta.internal.metals.{
+  InitializationOptions,
+  MetalsServerConfig,
+  StatisticsConfig,
+}
 
 class DefinitionLspSuite extends BaseLspSuite("definition") {
 
@@ -174,15 +178,20 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
 
       _ = assertEquals(
         Await.result(
-          server.server.definitionOrReferences(
-            new TextDocumentPositionParams(mainPath.toTextDocumentIdentifier, mousePositionAtApply))
-              .map(_.locations.get(0)),
-            10.seconds),
-        new Location(fooPath.toURI.toString, objectFooApplyRange)
+          server.server
+            .definitionOrReferences(
+              new TextDocumentPositionParams(
+                mainPath.toTextDocumentIdentifier,
+                mousePositionAtApply,
+              )
+            )
+            .map(_.locations.get(0)),
+          10.seconds,
+        ),
+        new Location(fooPath.toURI.toString, objectFooApplyRange),
       )
     } yield ()
   }
-
 
   // This test makes sure that textDocument/definition returns reference locations
   // instead of definition location if the symbol at the given text document position

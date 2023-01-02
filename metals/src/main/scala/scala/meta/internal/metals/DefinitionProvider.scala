@@ -1,10 +1,8 @@
 package scala.meta.internal.metals
 
 import java.{util => ju}
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -25,11 +23,12 @@ import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentPositionParams
+
+import scala.meta.internal.metals.logging.MetalsLogger
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -62,6 +61,8 @@ final class DefinitionProvider(
     sourceMapper: SourceMapper,
 )(implicit ec: ExecutionContext) {
 
+  MetalsLogger.setupLspLogger(workspace, redirectSystemStreams = true)
+
   val destinationProvider = new DestinationProvider(
     index,
     buffers,
@@ -83,18 +84,27 @@ final class DefinitionProvider(
       semanticdbs.textDocument(path).documentIncludingStale
     val fromSnapshot = fromSemanticdb match {
       case Some(doc) =>
+        scribe.info(
+          s"DefinitionProvider.definition looking for definition in snapshot"
+        )
         definitionFromSnapshot(path, params, doc)
       case _ =>
         DefinitionResult.empty
     }
     val fromIndex =
       if (fromSnapshot.isEmpty && remote.isEnabledForPath(path)) {
+        scribe.info(
+          s"DefinitionProvider.definition looking for definition in remote"
+        )
         remote.definition(params).map(_.getOrElse(fromSnapshot))
       } else {
         Future.successful(fromSnapshot)
       }
     fromIndex.flatMap { result =>
       if (result.isEmpty && path.isScalaFilename) {
+        scribe.info(
+          s"DefinitionProvider.definition looking for definition from compiler"
+        )
         compilers().definition(params, token)
       } else {
         if (fromSemanticdb.isEmpty) {
@@ -250,9 +260,12 @@ final class DefinitionProvider(
         snapshot,
       )
 
+    scribe.info(s"ResolvedSymbolOccurrence = $occurrence")
+
     // Find symbol definition location.
     def definitionResult(occ: SymbolOccurrence): Option[DefinitionResult] = {
       val isLocal = occ.symbol.isLocal || snapshot.definesSymbol(occ.symbol)
+      scribe.info(s"isLocal = $isLocal")
       if (isLocal) {
         // symbol is local so it is defined within the source.
         DefinitionDestination(
@@ -274,6 +287,10 @@ final class DefinitionProvider(
     val result = occurrence.flatMap(definitionResult)
     val applyResults = apply.flatMap(definitionResult)
     val combined = result ++ applyResults
+
+    scribe.info(s"occurenceResult = $result")
+    scribe.info(s"applyResults = $applyResults")
+    scribe.info(s"combined = $combined")
 
     if (combined.isEmpty)
       DefinitionResult.empty(occurrence.fold("")(_.symbol))
@@ -376,6 +393,7 @@ class DestinationProvider(
       allowedBuildTargets: Set[BuildTargetIdentifier],
   ): Option[SymbolDefinition] = {
     val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
+    scribe.info(s"definitions = $definitions")
     if (allowedBuildTargets.isEmpty)
       definitions.headOption
     else {
@@ -384,6 +402,7 @@ class DestinationProvider(
           allowedBuildTargets.contains(id)
         )
       }
+      scribe.info(s"matched = $matched")
       // Fallback to any definition - it's needed for worksheets
       // They might have dynamic `import $dep` and these sources jars
       // aren't registered in buildTargets
@@ -418,6 +437,8 @@ class DestinationProvider(
         if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
         else defn.path
       val uri = destinationPath.toURI.toString
+
+      println(s"destinationPath = $destinationPath")
 
       defn.range match {
         // read only source - no need to adjust positions
@@ -454,6 +475,7 @@ class DestinationProvider(
       source: Option[AbsolutePath],
   ): Option[DefinitionResult] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
+    scribe.info(s"targets = $targets")
     fromSymbol(symbol, targets)
   }
 

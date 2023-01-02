@@ -52,13 +52,15 @@ final class OnDemandSymbolIndex(
     }
   }
 
-  override def definitions(symbol: Symbol): List[SymbolDefinition] =
+  override def definitions(symbol: Symbol): List[SymbolDefinition] = {
+    println("OnDemandSymbolIndex.definitions")
     try findSymbolDefinition(symbol)
     catch {
       case NonFatal(e) =>
         onError(IndexingExceptions.InvalidSymbolException(symbol.value, e))
         List.empty
     }
+  }
 
   override def addSourceDirectory(
       dir: AbsolutePath,

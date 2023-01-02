@@ -1528,10 +1528,14 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/definition")
   def definition(
       position: TextDocumentPositionParams
-  ): CompletableFuture[util.List[Location]] =
+  ): CompletableFuture[util.List[Location]] = {
+    scribe.info(
+      s"textDocument/definition with position ${position.getPosition}"
+    )
     CancelTokens.future { token =>
       definitionOrReferences(position, token).map(_.locations)
     }
+  }
 
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
@@ -2665,6 +2669,8 @@ class MetalsLanguageServer(
     if (source.isScalaFilename || source.isJavaFilename) {
       val semanticDBDoc =
         semanticdbs.textDocument(source).documentIncludingStale
+
+      scribe.info(s"semanticDBDoc = $semanticDBDoc")
       (for {
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
@@ -2672,9 +2678,11 @@ class MetalsLanguageServer(
           positionParams.getPosition,
           doc,
         )
+        _ = scribe.info(s"positionOccurrence = $positionOccurrence")
         occ <- positionOccurrence.occurrence
       } yield occ) match {
         case Some(occ) =>
+          scribe.info(s"occ = $occ")
           if (occ.role.isDefinition && !definitionOnly) {
             val refParams = new ReferenceParams(
               positionParams.getTextDocument(),
@@ -2686,8 +2694,10 @@ class MetalsLanguageServer(
               // Fallback again to the original behavior that returns
               // the definition location itself if no reference locations found,
               // for avoiding the confusing messages like "No definition found ..."
+              scribe.info("Fallback again to the original behavior")
               definitionResult(positionParams, token)
             } else {
+              scribe.info(s"locations = ${results.flatMap(_.locations)}")
               Future.successful(
                 DefinitionResult(
                   locations = results.flatMap(_.locations).asJava,
@@ -2698,11 +2708,17 @@ class MetalsLanguageServer(
               )
             }
           } else {
+            scribe.info(
+              "occ.role.isNotDefinition -> Fallback again to the original behavior"
+            )
             definitionResult(positionParams, token)
           }
         case None =>
           // Even if it failed to retrieve the symbol occurrence from semanticdb,
           // try to find its definitions from presentation compiler.
+          scribe.info(
+            "Failed to retrieve symbol occurence from semanticdb, using PC"
+          )
           definitionResult(positionParams, token)
       }
     } else {
@@ -2733,6 +2749,7 @@ class MetalsLanguageServer(
         case Success(value) =>
           // Record what build target this dependency source (if any) was jumped from,
           // needed to know what classpath to compile the dependency source with.
+          scribe.info(s"Definition result: ${value.locations}")
           interactiveSemanticdbs.didDefinition(source, value)
         case _ =>
       }

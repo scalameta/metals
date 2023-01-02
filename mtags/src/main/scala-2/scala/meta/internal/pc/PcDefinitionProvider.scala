@@ -55,6 +55,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   }
 
   private def definition(findTypeDef: Boolean): DefinitionResult = {
+    println(s"params = $params")
     if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
       DefinitionResultImpl.empty
     } else {

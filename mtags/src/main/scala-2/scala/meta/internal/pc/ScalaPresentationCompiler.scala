@@ -248,6 +248,7 @@ case class ScalaPresentationCompiler(
     }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
+    println(s"params = $params")
     compilerAccess.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
