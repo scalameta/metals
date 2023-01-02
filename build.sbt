@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "0.11.10-SNAPSHOT"
+def localSnapshotVersion = "0.11.11-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -376,7 +376,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "9.10.2",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.5.0",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.1",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       "ch.epfl.scala" %% "bloop-launcher" % V.bloop,
       // for LSP

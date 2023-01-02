@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.inputs.Input
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.{semanticdb => s}
 
@@ -96,6 +97,21 @@ class MtagsEnrichmentsSuite extends BaseSuite {
     assert(r((2, 10), (5, 10)).encloses(p(2, 9)) == false)
     assert(r((2, 10), (5, 10)).encloses(p(1, 10)) == false)
     assert(r((2, 10), (5, 10)).encloses(p(5, 11)) == false)
+  }
+
+  test("filename") {
+
+    def assertFilename(path: String, expected: String) = {
+      val filename = Input.VirtualFile(path, "").filename
+      assertEquals(filename, expected)
+    }
+
+    assertFilename("file:///a/v/main.scala", "main.scala")
+    assertFilename("/a/v/main.scala", "main.scala")
+    assertFilename(
+      "jar:file:///C:/Users/A C/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.2.0/scala3-library_3-3.2.0-sources.jar!/scala/Tuple.scala",
+      "Tuple.scala",
+    )
   }
 
 }

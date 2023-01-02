@@ -8,6 +8,7 @@ import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.pc.MetalsGlobal
 
@@ -33,7 +34,11 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       editRange: l.Range,
       pos: Position,
       text: String,
-      parent: Tree
+      source: URI,
+      parent: Tree,
+      patternOnly: Option[String] = None,
+      hasBind: Boolean = false,
+      includeExhaustive: Boolean = false
   ) extends CompletionPosition {
     val context: Context = doLocateContext(pos)
     val parents: Parents = selector match {
@@ -68,78 +73,165 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       case sel => new Parents(sel.pos)
     }
     override def isPrioritized(member: Member): Boolean =
-      member.isInstanceOf[TextEditMember]
+      member match {
+        case m: TextEditMember => !m.filterText.contains("(exhaustive)")
+        case _ => false
+      }
+
     override def contribute: List[Member] = {
-      val result = ListBuffer.empty[Member]
-      val isVisited = mutable.Set.empty[Symbol]
-      def visit(
-          sym: Symbol,
-          name: String,
-          autoImports: List[l.TextEdit]
-      ): Unit = {
-        val fsym = sym.dealiasedSingleType
-        val isValid = !isVisited(sym) &&
-          !isVisited(fsym) &&
-          !parents.isParent(fsym) &&
-          (fsym.isCase ||
-            fsym.hasModuleFlag ||
-            fsym.isInstanceOf[TypeSymbol]) &&
-          parents.isSubClass(fsym, includeReverse = false)
-        def recordVisit(s: Symbol): Unit = {
-          if (s != NoSymbol && !isVisited(s)) {
-            isVisited += s
-            recordVisit(s.moduleClass)
-            recordVisit(s.module)
-            recordVisit(s.dealiased)
+
+      val selectorSym = parents.selector.typeSymbol
+
+      // Special handle case when selector is a tuple or `FunctionN`.
+      if (definitions.isTupleType(parents.selector)) {
+        List(
+          new TextEditMember(
+            "case () =>",
+            new l.TextEdit(
+              editRange,
+              if (clientSupportsSnippets) "case ($0) =>" else "case () =>"
+            ),
+            selectorSym,
+            label = Some(s"case ${parents.selector} =>"),
+            command = metalsConfig.parameterHintsCommand().asScala
+          )
+        )
+      } else {
+        val completionGenerator = new CompletionValueGenerator(
+          editRange,
+          context,
+          clientSupportsSnippets,
+          patternOnly,
+          hasBind
+        )
+        val result = ListBuffer.empty[(Symbol, TextEditMember)]
+        val isVisited = mutable.Set.empty[Symbol]
+        def visit(
+            sym: Symbol,
+            name: String,
+            autoImports: List[l.TextEdit]
+        ): Unit = {
+          val fsym = sym.dealiasedSingleType
+          def recordVisit(s: Symbol): Unit = {
+            if (s != NoSymbol && !isVisited(s)) {
+              isVisited += s
+              recordVisit(s.moduleClass)
+              recordVisit(s.module)
+              recordVisit(s.dealiased)
+            }
+          }
+          if (!isVisited(sym) && !isVisited(fsym)) {
+            recordVisit(sym)
+            recordVisit(fsym)
+            if (fuzzyMatches(name))
+              result += ((
+                sym,
+                completionGenerator.toCaseMember(
+                  name,
+                  sym,
+                  fsym,
+                  autoImports
+                )
+              ))
           }
         }
-        if (isValid) {
-          recordVisit(sym)
-          recordVisit(fsym)
-          result += toCaseMember(
-            name,
-            sym,
-            fsym,
-            context,
-            editRange,
-            autoImports
-          )
+
+        // Step 0: case for selector type, e.g.
+        // case class Foo(a: Int, b: Int)
+        // List(Foo(1,2)).map{ case F@@ }
+        selectorSym.info match {
+          case NoType => ()
+          case _ =>
+            if (
+              !(selectorSym.isSealed &&
+                (selectorSym.isAbstract || selectorSym.isTrait))
+            )
+              visit(selectorSym, Identifier(selectorSym.name), Nil)
         }
-      }
 
-      // Step 1: walk through scope members.
-      metalsScopeMembers(pos).iterator
-        .foreach(m => visit(m.sym.dealiased, Identifier(m.sym.name), Nil))
+        // Step 1: walk through scope members.
+        metalsScopeMembers(pos).iterator
+          .foreach { m =>
+            val sym = m.sym.dealiased
+            val fsym = sym.dealiasedSingleType
+            val isValid = !parents.isParent(fsym) &&
+              (fsym.isCase ||
+                fsym.hasModuleFlag ||
+                fsym.isInstanceOf[TypeSymbol]) &&
+              parents.isSubClass(fsym, includeReverse = false)
+            if (isValid) visit(sym, Identifier(m.sym.name), Nil)
+          }
 
-      // Step 2: walk through known direct subclasses of sealed types.
-      val autoImport = autoImportPosition(pos, text)
-      parents.selector.typeSymbol.foreachKnownDirectSubClass { sym =>
-        autoImport match {
-          case Some(value) =>
-            val (shortName, edits) =
-              ShortenedNames.synthesize(sym, pos, context, value)
-            visit(sym, shortName, edits)
-          case scala.None =>
-            visit(sym, sym.fullNameSyntax, Nil)
+        // Step 2: walk through known direct subclasses of sealed types.
+        // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
+        // which works like exhaustive match, so we need to collect only members from this step
+        val autoImport = autoImportPosition(pos, text)
+        val sealedDescs = mutable.Set.empty[Symbol]
+        selectorSym.foreachKnownDirectSubClass { sym =>
+          sealedDescs += sym.dealiased
+          autoImport match {
+            case Some(value) =>
+              val (shortName, edits) =
+                ShortenedNames.synthesize(sym, pos, context, value)
+              visit(sym, shortName, edits)
+            case None =>
+              visit(sym, sym.fullNameSyntax, Nil)
+          }
         }
+        val members = result.result()
+        val edits = members.map(_._2)
+        // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
+        // which works like exhaustive match, so we need to collect only members from this step
+        if (includeExhaustive) {
+          def isSealedDesc(sym: Symbol) = {
+            sym.info match {
+              case tr: TypeRef => sealedDescs(tr.underlying.typeSymbol)
+              case _ => sealedDescs(sym)
+            }
+          }
+          val sortedMembers = sortSubclasses(members, selectorSym.tpe, source)
+          val sealedMembers = sortedMembers.collect {
+            case (sym, member) if isSealedDesc(sym) => member
+          }
+          sealedMembers match {
+            case Nil => edits
+            case head :: tail =>
+              val newText = new l.TextEdit(
+                editRange,
+                tail
+                  .map(_.label.getOrElse(""))
+                  .mkString(
+                    if (clientSupportsSnippets) {
+                      s"\n\t${head.label.getOrElse("")} $$0\n\t"
+                    } else {
+                      s"\n\t${head.label.getOrElse("")}\n\t"
+                    },
+                    "\n\t",
+                    "\n"
+                  )
+              )
+              val detail =
+                s" ${metalsToLongString(selectorSym.tpe, new ShortenedNames())} (${sealedMembers.length} cases)"
+              val exhaustive = new TextEditMember(
+                "case (exhaustive)",
+                newText,
+                selectorSym,
+                label = Some("case (exhaustive)"),
+                detail = Some(detail),
+                additionalTextEdits =
+                  sealedMembers.toList.flatMap(_.additionalTextEdits)
+              )
+              exhaustive :: edits
+          }
+        } else edits
       }
-
-      // Step 3: special handle case when selector is a tuple or `FunctionN`.
-      if (definitions.isTupleType(parents.selector)) {
-        result += new TextEditMember(
-          "case () =>",
-          new l.TextEdit(
-            editRange,
-            if (clientSupportsSnippets) "case ($0) =>" else "case () =>"
-          ),
-          parents.selector.typeSymbol,
-          label = Some(s"case ${parents.selector} =>"),
-          command = metalsConfig.parameterHintsCommand().asScala
-        )
-      }
-
-      result.toList
     }
+
+    def fuzzyMatches(name: String): Boolean =
+      patternOnly match {
+        case None => true
+        case Some(query) => CompletionFuzzy.matches(query, name)
+      }
   }
 
   /**
@@ -173,39 +265,14 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     }
     override def contribute: List[Member] = {
       val tpe = prefix.widen.bounds.hi
-      val members = ListBuffer.empty[TextEditMember]
       val importPos = autoImportPosition(pos, text)
       val context = doLocateImportContext(pos)
-      val subclassesResult = subclassesForType(tpe)
-
-      // sort subclasses by declaration order
-      // see: https://github.com/scalameta/metals-feature-requests/issues/49
-      val sortedSubclasses =
-        if (subclassesResult.forall(_.pos.isDefined)) {
-          // if all the symbols of subclasses' position is defined
-          // we can sort those symbols by declaration order
-          // based on their position information quite cheaply
-          subclassesResult.sortBy(subclass =>
-            (subclass.pos.line, subclass.pos.column)
-          )
-        } else {
-          // Read all the symbols in the source that contains
-          // the definition of the symbol in declaration order
-          val defnSymbols = search
-            .definitionSourceToplevels(semanticdbSymbol(tpe.typeSymbol), source)
-            .asScala
-          if (defnSymbols.length > 0) {
-            val symbolIdx = defnSymbols.zipWithIndex.toMap
-            subclassesResult
-              .sortBy(sym => {
-                symbolIdx.getOrElse(semanticdbSymbol(sym), -1)
-              })
-          } else {
-            subclassesResult
-          }
-        }
-
-      sortedSubclasses.foreach { sym =>
+      val completionGenerator = new CompletionValueGenerator(
+        editRange,
+        context,
+        clientSupportsSnippets
+      )
+      val subclassesResult = subclassesForType(tpe).map { sym =>
         val (shortName, edits) =
           importPos match {
             case Some(value) =>
@@ -213,16 +280,22 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
             case scala.None =>
               (sym.fullNameSyntax, Nil)
           }
-        members += toCaseMember(
-          shortName,
+        (
           sym,
-          sym.dealiasedSingleType,
-          context,
-          editRange,
-          edits,
-          isSnippet = false
+          completionGenerator.toCaseMember(
+            shortName,
+            sym,
+            sym.dealiasedSingleType,
+            edits
+          )
         )
       }
+
+      // sort subclasses by declaration order
+      // see: https://github.com/scalameta/metals-feature-requests/issues/49
+      val sortedSubclasses = sortSubclasses(subclassesResult, tpe, source)
+
+      val members = sortedSubclasses.map(_._2)
       val basicMatch = new TextEditMember(
         "match",
         new l.TextEdit(
@@ -243,12 +316,12 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
           val newText = new l.TextEdit(
             editRange,
             tail
-              .map(_.edit.getNewText())
+              .map(_.label.getOrElse(""))
               .mkString(
                 if (clientSupportsSnippets) {
-                  s"match {\n\t${head.edit.getNewText} $$0\n\t"
+                  s"match {\n\t${head.label.getOrElse("")} $$0\n\t"
                 } else {
-                  s"match {\n\t${head.edit.getNewText}\n\t"
+                  s"match {\n\t${head.label.getOrElse("")}\n\t"
                 },
                 "\n\t",
                 "\n}"
@@ -269,32 +342,32 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       result
     }
   }
-
-  case class CasePatternCompletion(
-      isTyped: Boolean,
-      c: CaseDef,
-      m: Match
-  ) extends CompletionPosition {
-    override def contribute: List[Member] = Nil
-    override def isCandidate(member: Member): Boolean = {
-      // Can't complete regular def methods in pattern matching.
-      !member.sym.isMethod || !member.sym.isVal
-    }
-    val parents = new Parents(m.selector.pos)
-    override def isPrioritized(head: Member): Boolean = {
-      parents.isSubClass(head.sym, includeReverse = false) || {
-        def alternatives(unapply: Symbol): Boolean =
-          unapply.alternatives.exists { unapply =>
-            unapply.info
-            unapply.paramLists match {
-              case (param :: Nil) :: Nil =>
-                parents.isSubClass(param, includeReverse = true)
-              case _ =>
-                false
+  private def sortSubclasses[A](
+      subclasses: List[(Symbol, A)],
+      tpe: Type,
+      source: URI
+  ) = {
+    if (subclasses.forall(_._1.pos.isDefined)) {
+      // if all the symbols of subclasses' position is defined
+      // we can sort those symbols by declaration order
+      // based on their position information quite cheaply
+      subclasses.sortBy { case (sym, _) => (sym.pos.line, sym.pos.column) }
+    } else {
+      // Read all the symbols in the source that contains
+      // the definition of the symbol in declaration order
+      val defnSymbols = search
+        .definitionSourceToplevels(semanticdbSymbol(tpe.typeSymbol), source)
+        .asScala
+      if (defnSymbols.length > 0) {
+        val symbolIdx = defnSymbols.zipWithIndex.toMap
+        subclasses
+          .sortBy {
+            case (sym, _) => {
+              symbolIdx.getOrElse(semanticdbSymbol(sym), -1)
             }
           }
-        alternatives(head.sym.tpe.member(termNames.unapply)) ||
-        alternatives(head.sym.tpe.member(termNames.unapplySeq))
+      } else {
+        subclasses
       }
     }
   }
@@ -324,82 +397,110 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     Set("c", "ca", "cas", "case").contains(prefix)
   }
 
-  private def toCaseMember(
-      name: String,
-      sym: Symbol,
-      fsym: Symbol,
-      context: Context,
+  class CompletionValueGenerator(
       editRange: l.Range,
-      autoImports: List[l.TextEdit],
-      isSnippet: Boolean = true
-  ): TextEditMember = {
-    sym.info // complete
-    val isModuleLike = fsym.hasModuleFlag || fsym.hasJavaEnumFlag
-    if (sym.isCase || isModuleLike) {
-      // Syntax for deconstructing the symbol as an infix operator, for example `case head :: tail =>`
-      val isInfixEligible =
-        context.symbolIsInScope(sym) ||
-          autoImports.nonEmpty
-      val infixPattern: Option[String] =
-        if (
-          isInfixEligible &&
-          sym.isCase &&
-          !Character.isUnicodeIdentifierStart(sym.decodedName.head)
-        ) {
-          sym.primaryConstructor.paramss match {
-            case (a :: b :: Nil) :: _ =>
-              Some(
-                s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
-              )
-            case _ => scala.None
-          }
-        } else {
-          scala.None
-        }
-      val pattern = infixPattern.getOrElse {
-        // Fallback to "apply syntax", example `case ::(head, tail) =>`
-        val suffix =
-          if (isModuleLike) ""
-          else {
-            sym.primaryConstructor.paramss match {
-              case Nil => "()"
-              case head :: _ =>
-                head
-                  .map(param => Identifier(param.name))
-                  .mkString("(", ", ", ")")
-            }
-          }
-        name + suffix
-      }
-      val label = s"case $pattern =>"
+      context: Context,
+      clientSupportsSnippets: Boolean,
+      patternOnly: Option[String] = None,
+      hasBind: Boolean = false
+  ) {
+
+    def toCaseMember(
+        name: String,
+        sym: Symbol,
+        fsym: Symbol,
+        autoImports: List[l.TextEdit]
+    ): TextEditMember = {
+      sym.info
+      val isModuleLike = fsym.hasModuleFlag || fsym.hasJavaEnumFlag
+      val pattern =
+        if ((sym.isCase || isModuleLike) && !hasBind) {
+          val isInfixEligible =
+            context.symbolIsInScope(sym) ||
+              autoImports.nonEmpty
+          if (
+            isInfixEligible &&
+            sym.isCase &&
+            !Character.isUnicodeIdentifierStart(sym.decodedName.head)
+          )
+            // Deconstructing the symbol as an infix operator, for example `case head :: tail =>`
+            tryInfixPattern(sym).getOrElse(
+              unapplyPattern(sym, name, isModuleLike)
+            )
+          else
+            unapplyPattern(
+              sym,
+              name,
+              isModuleLike
+            ) // Apply syntax, example `case ::(head, tail) =>`
+        } else
+          typePattern(
+            sym,
+            name
+          ) // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
+
+      val label =
+        if (patternOnly.isEmpty) s"case $pattern =>"
+        else pattern
+      val cursorSuffix = (if (patternOnly.nonEmpty) "" else " ") +
+        (if (clientSupportsSnippets) "$0" else "")
       new TextEditMember(
         filterText = label,
         edit = new l.TextEdit(
           editRange,
-          label + (if (isSnippet && clientSupportsSnippets) " $0" else "")
+          label + cursorSuffix
         ),
         sym = sym,
         label = Some(label),
         additionalTextEdits = autoImports
       )
-    } else {
-      // Symbol is not a case class with unapply deconstructor so we use typed pattern, example `_: User`
+    }
+
+    private def tryInfixPattern(sym: Symbol): Option[String] = {
+      sym.primaryConstructor.paramss match {
+        case (a :: b :: Nil) :: Nil =>
+          Some(
+            s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
+          )
+        case _ :: (a :: b :: Nil) :: _ =>
+          Some(
+            s"${a.decodedName} ${sym.decodedName} ${b.decodedName}"
+          )
+        case _ => None
+      }
+    }
+    private def unapplyPattern(
+        sym: Symbol,
+        name: String,
+        isModuleLike: Boolean
+    ): String = {
+      val suffix =
+        if (isModuleLike) ""
+        else
+          sym.primaryConstructor.paramss match {
+            case Nil => "()"
+            case _ :: params :: _ =>
+              params
+                .map(param => param.name)
+                .mkString("(", ", ", ")")
+            case head :: _ =>
+              head
+                .map(param => param.name)
+                .mkString("(", ", ", ")")
+          }
+      name + suffix
+    }
+
+    private def typePattern(
+        sym: Symbol,
+        name: String
+    ): String = {
       val suffix = sym.typeParams match {
         case Nil => ""
         case tparams => tparams.map(_ => "_").mkString("[", ", ", "]")
       }
-      new TextEditMember(
-        s"case _: $name",
-        new l.TextEdit(
-          editRange,
-          if (isSnippet && clientSupportsSnippets)
-            s"case $${0:_}: $name$suffix => "
-          else s"case _: $name$suffix =>"
-        ),
-        sym,
-        Some(s"case _: $name$suffix =>"),
-        additionalTextEdits = autoImports
-      )
+      val bind = if (hasBind) "" else "_: "
+      bind + name + suffix
     }
   }
 
@@ -427,6 +528,94 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         typeSymbol.isSubClass(parent) ||
         (includeReverse && parent.isSubClass(typeSymbol))
       }
+    }
+  }
+
+  object CaseExtractors {
+    object CaseDefMatch {
+      def unapply(path: List[Tree]): Option[(Tree, Tree)] =
+        path match {
+          case (_: CaseDef) :: (m: Match) :: parent :: _ =>
+            Some((m.selector, parent))
+          case _ => None
+        }
+    }
+
+    object CaseExtractor {
+      def unapply(path: List[Tree]): Option[(Tree, Tree)] =
+        path match {
+          // xxx match {
+          //   ca@@
+          case (m @ Match(_, Nil)) :: parent :: _ =>
+            Some((m.selector, parent))
+
+          // xxx match {
+          //   case A =>
+          //   ca@@
+          case (id @ Ident(name)) :: (cd: CaseDef) :: (m: Match) :: parent :: _
+              if isCasePrefix(name) &&
+                cd.pos.line != id.pos.line =>
+            Some((m.selector, parent))
+
+          // xxx match {
+          //   case A => ()
+          //   ca@@
+          case (ident @ Ident(name)) :: Block(
+                _,
+                expr
+              ) :: CaseDefMatch(selector, parent)
+              if ident == expr && isCasePrefix(name) =>
+            Some((selector, parent))
+
+          case _ => None
+        }
+    }
+    object CasePatternExtractor {
+      def unapply(path: List[Tree]): Option[(Tree, Tree, String)] =
+        path match {
+          // case @@ =>
+          case Bind(_, _) :: CaseDefMatch(selector, parent) =>
+            Some((selector, parent, ""))
+          // case Som@@ =>
+          case Ident(
+                name
+              ) :: CaseDefMatch(selector, parent) =>
+            Some((selector, parent, name.decoded))
+          // case abc @ @@ =>
+          case Bind(_, _) :: Bind(
+                _,
+                _
+              ) :: CaseDefMatch(selector, parent) =>
+            Some((selector, parent, ""))
+          // case abc @ Som@@ =>
+          case Ident(name) :: Bind(
+                _,
+                _
+              ) :: CaseDefMatch(selector, parent) =>
+            Some((selector, parent, name.decoded))
+          case _ => None
+        }
+    }
+
+    object TypedCasePatternExtractor {
+      def unapply(path: List[Tree]): Option[(Tree, Tree, String)] =
+        path match {
+          // case _: Som@@ =>
+          // case _: @@ =>
+          case Ident(name) :: Typed(
+                _,
+                _
+              ) :: CaseDefMatch(selector, parent) =>
+            Some((selector, parent, name.decoded))
+          // case ab: Som@@ =>
+          // case ab: @@ =>
+          case Ident(name) :: Typed(_, _) :: Bind(
+                _,
+                _
+              ) :: CaseDefMatch(selector, parent) =>
+            Some((selector, parent, name.decoded))
+          case _ => None
+        }
     }
   }
 
