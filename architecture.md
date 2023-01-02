@@ -101,3 +101,19 @@ The main code for debugging resides in `scala.meta.internal.metals.debug` packag
 DebugProvider sets up the communication between the debug server process started by the build server and the client. This communication is handled in [DebugProxy.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/debug/DebugProxy.scala) which translates some of the messages in order to enrich them with the information from Metals itself.
 
 You can find more information about DAP [here](https://github.com/scalacenter/bloop/blob/main/docs/debug-adapter.md)
+
+## MtagsIndexer
+
+MtagsIndexers are the approximate SemanticDB's `TextDocument` generator based on syntax information.
+They are useful when we're interested in symbol name and their locations, and not interested in further information such as their types and document's synthetics.
+
+We use mtags-generated SemanticDB instead of compiler-generated SemanticDB because sometimes we want to rely on symbol index even when the compiler cannot generate SemanticDB: 3rd-party dependencies, not-compilable code, or compilable but not yet compiled code.
+
+One of the endpoint is `scala.meta.internal.mtags.Mtags` that dispatches to several `MtagsIndexer` implementations.
+
+- `ScalaMtags` parses the given Scala file using scalameta's parser.
+  - To see which symbols ScalaMtags extract, the unit tests (`MtagsSuite.scala` and `tests/unit/src/test/resources/mtags`) is a good resource.
+- `ScalaToplevelMtags` **tokenizes** the given Scala file using scalameta, and parse it on Metals side.
+  - We skip extracting nested symbols (such as functions and members defined in toplevel class, trait, and object). We can skip nested symbols because we're not interested in the nested symbols when doing symbol search.
+  - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
+- `JavaMtags` parses the given Java file using `qdox`.
