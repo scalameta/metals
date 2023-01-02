@@ -19,6 +19,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.MutableCancelable
@@ -30,7 +31,6 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.metals.logging.MetalsLogger
-import scala.meta.internal.metals.{MetalsLanguageServer => MetalsLspService}
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.ServerState.ShuttingDown
 import scala.meta.metals.lsp.DelegatingScalaService

@@ -76,7 +76,7 @@ object MetalsHttpServer {
   def apply(
       host: String,
       preferredPort: Int,
-      languageServer: MetalsLanguageServer,
+      languageService: MetalsLspService,
       render: () => String,
       complete: HttpServerExchange => Unit,
       doctor: () => String,
@@ -114,7 +114,7 @@ object MetalsHttpServer {
                 params <- Option(exchange.getQueryParameters.get("command"))
                 command <- params.asScala.headOption
               } yield command
-              languageServer.executeCommand(
+              languageService.executeCommand(
                 new ExecuteCommandParams(
                   command.getOrElse("<unknown command>"),
                   Collections.emptyList(),

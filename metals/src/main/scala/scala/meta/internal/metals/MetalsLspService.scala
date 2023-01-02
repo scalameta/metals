@@ -100,7 +100,6 @@ import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
 
-// todo rename to MetalsLspService
 // todo https://github.com/scalameta/metals/issues/4789
 // extract configuration to separate class
 /**
@@ -112,7 +111,7 @@ import org.eclipse.{lsp4j => l}
  *   Scheduled executor service used for scheduling tasks. This class DO NOT
  *   manage the lifecycle of this executor.
  */
-class MetalsLanguageServer(
+class MetalsLspService(
     ec: ExecutionContextExecutorService,
     buffers: Buffers = Buffers(),
     val workspace: AbsolutePath,

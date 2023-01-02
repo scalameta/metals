@@ -1,6 +1,6 @@
 package scala.meta.metals
 
-import scala.meta.internal.metals.{MetalsLanguageServer => MetalsLspService}
+import scala.meta.internal.metals.{MetalsLspService => MetalsLspService}
 
 /**
  * According to the spec, the server waits for the `initialize` request to be
