@@ -25,15 +25,11 @@ case class WorkspaceSymbolQuery(
   def matches(symbol: CharSequence): Boolean =
     alternatives.exists(_.matches(symbol, isTrailingDot))
 
-  def matches(info: SymbolInformation): Boolean = {
-    WorkspaceSymbolQuery.isRelevantKind(info.kind) &&
-    this.matches(info.symbol)
-  }
-
-  def matches(info: SymbolInformation, additionalKinds: Kind): Boolean = {
-    (WorkspaceSymbolQuery.isRelevantKind(info.kind)
-      || info.kind == additionalKinds) &&
-    this.matches(info.symbol)
+  def matches(info: SymbolInformation, isScala: Boolean): Boolean = {
+    WorkspaceSymbolQuery.isRelevantKind(
+      info.kind,
+      isScala
+    ) && this.matches(info.symbol)
   }
 }
 
@@ -100,13 +96,22 @@ object WorkspaceSymbolQuery {
       }
     }
   }
-  def isRelevantKind(kind: Kind): Boolean = {
+
+  def isRelevantKind(kind: Kind, isScala: Boolean): Boolean = {
     kind match {
       case Kind.OBJECT | Kind.PACKAGE_OBJECT | Kind.CLASS | Kind.TRAIT |
           Kind.INTERFACE =>
         true
+      case Kind.METHOD | Kind.TYPE => isScala
       case _ =>
         false
+    }
+  }
+
+  def isMethodOrType(kind: Kind): Boolean = {
+    kind match {
+      case Kind.METHOD | Kind.TYPE => true
+      case _ => false
     }
   }
 }

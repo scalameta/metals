@@ -31,6 +31,7 @@ import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -504,7 +505,10 @@ final case class Indexer(
       targetOpt: Option[b.BuildTargetIdentifier],
       data: Seq[TargetData],
   ): Unit = {
-
+    def isExtensionMethod(si: SymbolInformation): Boolean =
+      si.kind == Kind.METHOD && si.properties == 0 && si.symbol(
+        si.symbol.length - 2
+      ) != ')' // hacky-hack: extension methods in ScalaToplevelMtags don't use disambiguators
     try {
       val sourceToIndex0 =
         sourceMapper.mappedTo(source).getOrElse(source)
@@ -535,28 +539,28 @@ final case class Indexer(
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         SemanticdbDefinition.foreach(input, dialect) {
           case SemanticdbDefinition(info, occ, owner) =>
-            if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-              occ.range.foreach { range =>
-                symbols += WorkspaceSymbolInformation(
-                  info.symbol,
-                  info.kind,
-                  range.toLsp,
-                )
-              }
-            }
-            // what we really want to index are "extension" methods
-            // However, we filter by `Kind.Method` because semanticdb doesn't have properties
-            // that represents "extension".
-            // Knowing `SemanticdbDefinition.foreach` uses `ScalaToplevelMtags` and it puts
-            // `Kind.Method` only to extension methods, we can safely filter extension methods
-            // by `info.kind == Kind.Method`. (TODO: add exntension properties to semanticdb schema).
-            if (info.kind == Kind.METHOD) {
+            if (isExtensionMethod(info)) {
               occ.range.foreach { range =>
                 methodSymbols += WorkspaceSymbolInformation(
                   info.symbol,
                   info.kind,
                   range.toLsp,
                 )
+              }
+            } else {
+              if (
+                WorkspaceSymbolProvider.isRelevantKind(
+                  info.kind,
+                  input.toLanguage.isScala,
+                )
+              ) {
+                occ.range.foreach { range =>
+                  symbols += WorkspaceSymbolInformation(
+                    info.symbol,
+                    info.kind,
+                    range.toLsp,
+                  )
+                }
               }
             }
             if (

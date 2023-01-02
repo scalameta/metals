@@ -9,7 +9,7 @@ trait Foo/*example.nested.Foo#*/ {
 }
 
 object LocalDeclarations/*example.nested.LocalDeclarations.*/ {
-  def create(): LocalDeclarations = {
+  def create/*example.nested.LocalDeclarations.create().*/(): LocalDeclarations = {
     def bar(): Unit = ()
 
     val x = new {

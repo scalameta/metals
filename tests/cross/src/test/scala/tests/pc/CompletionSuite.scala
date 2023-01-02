@@ -1070,8 +1070,8 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         """|NotString: Int
+           |Number: Regex
            |Nil scala.collection.immutable
-           |NoManifest scala.reflect
            |""".stripMargin
     ),
   )

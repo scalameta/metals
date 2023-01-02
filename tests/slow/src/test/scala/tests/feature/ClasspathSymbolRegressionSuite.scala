@@ -22,11 +22,14 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.meta.inputs.Input.None Object
        |scala.meta.inputs.Position.None Object
        |scala.meta.internal.semanticdb.Scala.Descriptor.None Object
+       |scala.meta.internal.semanticdb.Scala.Symbols.None Method
        |scala.meta.internal.trees.Origin.None Object
        |scala.meta.prettyprinters.Show.None Object
        |scala.reflect.macros.NonemptyAttachments Class
        |scala.tools.nsc.backend.jvm.opt.LocalOptImpls.RemoveHandlersResult.NoneRemoved Object
        |scala.tools.nsc.settings.ScalaSettings#CachePolicy.None Object
+       |scala.tools.nsc.settings.ScalaSettings#MacroExpand.None Method
+       |scala.tools.nsc.settings.ScalaSettings#optChoices.lNone Method
        |scala.tools.nsc.transform.async.ExprBuilder#StateTransitionStyle.None Object
        |""".stripMargin,
   )

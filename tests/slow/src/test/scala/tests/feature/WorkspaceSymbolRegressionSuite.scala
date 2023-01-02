@@ -3,18 +3,34 @@ package tests.feature
 import scala.meta.io.AbsolutePath
 
 import bench.Corpus
+import org.eclipse.lsp4j.SymbolKind
 import tests.BaseWorkspaceSymbolSuite
 
 abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   def workspace: AbsolutePath = Corpus.akka()
-  check("Actor", "1009 results")
-  check("Actor(", "")
+  check("Actor", "1095 results")
+  check(
+    "Actor",
+    "1010 results",
+    filter = (m => m.getKind() != SymbolKind.Method),
+  )
+  check(
+    "Actor(",
+    """akka.actor.UidClashTest.oldActor Method
+      |akka.actor.testkit.typed.internal.TestProbeImpl.testActor Method
+      |akka.routing.NoRouter.createRouterActor Method
+      |akka.routing.ScatterGatherFirstCompletedSpec.newActor Method
+      |akka.routing.TailChoppingSpec.newActor Method
+      |akka.stream.typed.scaladsl.ActorMaterializer.boundToActor Method
+    """.stripMargin,
+  )
   check(
     "FSMFB",
     """
       |akka.japi.pf.FSMStateFunctionBuilder Class
       |akka.persistence.fsm.japi.pf.FSMStateFunctionBuilder Class
     """.stripMargin,
+    filter = _.getKind() != SymbolKind.Method,
   )
   check(
     "fsmb",

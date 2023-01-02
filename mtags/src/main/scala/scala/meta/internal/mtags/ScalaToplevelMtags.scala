@@ -10,6 +10,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
@@ -47,7 +48,7 @@ class ScalaToplevelMtags(
 
   override def language: Language = Language.SCALA
 
-  override def indexRoot(): Unit = loop(0, true, Region.RootRegion, None)
+  override def indexRoot(): Unit = loop(0, true, new Region.RootRegion, None)
 
   private val scanner = new LegacyScanner(input, dialect)
   scanner.reader.nextChar()
@@ -72,7 +73,8 @@ class ScalaToplevelMtags(
       indent: Int,
       isAfterNewline: Boolean,
       region: Region,
-      expectTemplate: Option[ExpectTemplate]
+      expectTemplate: Option[ExpectTemplate],
+      prevWasDot: Boolean = false
   ): Unit = {
     def newExpectTemplate: Some[ExpectTemplate] =
       Some(ExpectTemplate(indent, currentOwner, false, false))
@@ -105,6 +107,9 @@ class ScalaToplevelMtags(
     def needEmitMember(region: Region): Boolean =
       includeInnerClasses || region.acceptMembers
 
+    def needEmitTermMember(region: Region): Boolean =
+      includeInnerClasses && region.acceptsTermMembers && !prevWasDot
+
     if (!isDone) {
       val data = scanner.curr
 
@@ -115,12 +120,11 @@ class ScalaToplevelMtags(
             case _ => exitIndented(region, indent)
           }
         } else region
-
       data.token match {
         case PACKAGE =>
           val isNotPackageObject = emitPackage(currRegion.owner)
           if (isNotPackageObject) {
-            val nextRegion = Region.Package(currentOwner, currRegion)
+            val nextRegion = new Region.Package(currentOwner, currRegion)
             loop(
               indent,
               false,
@@ -155,7 +159,7 @@ class ScalaToplevelMtags(
           loop(
             indent,
             isAfterNewline = false,
-            currRegion,
+            currRegion.withTermOwner(nextOwner),
             newExpectExtensionTemplate(nextOwner)
           )
         case CLASS | TRAIT | OBJECT | ENUM if needEmitMember(currRegion) =>
@@ -171,10 +175,6 @@ class ScalaToplevelMtags(
             term(
               name.name,
               name.pos,
-              // hack: (exclusively) making symbol kind of extension methods to Kind.Method
-              // so that we can tell it's an extension method in Indexer.scala
-              // TODO: add properties that represents "extension" method to semanticdb schema
-              // see: https://github.com/scalameta/scalameta/issues/2799
               Kind.METHOD,
               0
             )
@@ -202,10 +202,23 @@ class ScalaToplevelMtags(
           val pos = newPosition
           val srcName = input.filename.stripSuffix(".scala")
           val name = s"$srcName$$package"
-          withOwner(currRegion.owner) {
+          val owner = withOwner(currRegion.owner) {
             term(name, pos, Kind.OBJECT, 0)
           }
-          loop(indent, isAfterNewline = false, region, expectTemplate)
+          loop(
+            indent,
+            isAfterNewline = false,
+            region.withTermOwner(owner),
+            expectTemplate
+          )
+        case DEF | VAL | VAR | GIVEN | TYPE
+            if needEmitTermMember(currRegion) && expectTemplate
+              .map(!_.isExtension)
+              .getOrElse(true) =>
+          withOwner(region.termOwner) {
+            emitTerm(region.overloads)
+          }
+          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         case IMPORT =>
           // skip imports becase they might have `given` kw
           acceptToStatSep()
@@ -282,10 +295,16 @@ class ScalaToplevelMtags(
           acceptBalancedDelimeters(LPAREN, RPAREN)
           scanner.nextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
-        case _ =>
+        case t =>
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           scanner.nextToken()
-          loop(indent, isAfterNewline = false, currRegion, nextExpectTemplate)
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion,
+            nextExpectTemplate,
+            t == DOT
+          )
       }
     } else ()
   }
@@ -356,6 +375,49 @@ class ScalaToplevelMtags(
         }
     }
     scanner.nextToken()
+  }
+
+  /**
+   * Enters a global element (def/val/var/type)
+   */
+  def emitTerm(overloads: OverloadDisambiguator): Unit = {
+    val kind = scanner.curr.token
+    acceptTrivia()
+    kind match {
+      case VAL =>
+        valIdentifiers.foreach(name =>
+          term(
+            name.name,
+            name.pos,
+            Kind.METHOD,
+            SymbolInformation.Property.VAL.value
+          )
+        )
+      case VAR =>
+        valIdentifiers.foreach(name =>
+          method(
+            name.name,
+            "()",
+            name.pos,
+            SymbolInformation.Property.VAR.value
+          )
+        )
+      case TYPE =>
+        val name = newIdentifier
+        tpe(name.name, name.pos, Kind.TYPE, 0)
+      case DEF =>
+        val name = newIdentifier
+        method(name.name, overloads.disambiguator(name.name), name.pos, 0)
+      case GIVEN =>
+        val name = newIdentifier
+        method(
+          name.name,
+          overloads.disambiguator(name.name),
+          name.pos,
+          SymbolInformation.Property.GIVEN.value
+        )
+    }
+
   }
 
   /**
@@ -441,6 +503,22 @@ class ScalaToplevelMtags(
     new Identifier(name, pos)
   }
 
+  def valIdentifiers: List[Identifier] = {
+    var resultList: List[Identifier] = Nil
+    while (scanner.curr.token != EQUALS && scanner.curr.token != COLON) {
+      scanner.curr.token match {
+        case IDENTIFIER => {
+          val pos = newPosition
+          val name = scanner.curr.name
+          resultList = new Identifier(name, pos) :: resultList
+        }
+        case _ =>
+      }
+      scanner.nextToken()
+    }
+    resultList
+  }
+
   private def isNewline: Boolean =
     scanner.curr.token == WHITESPACE &&
       (scanner.curr.strVal match {
@@ -510,22 +588,42 @@ object ScalaToplevelMtags {
     def prev: Region
     def owner: String
     def acceptMembers: Boolean
+    def acceptsTermMembers: Boolean
     def produceSourceToplevel: Boolean
     def isExtension: Boolean = false
+    def overloads: OverloadDisambiguator = new OverloadDisambiguator()
+    def termOwner: String =
+      owner // toplevel terms are wrapped into an atrificial Object
+    def withTermOwner(termOwner: String): Region = this
   }
 
   object Region {
 
-    case object RootRegion extends Region { self =>
+    final case class RootRegion(override val termOwner: String) extends Region {
+      self =>
+      def this() = this(Symbols.EmptyPackage)
       val owner: String = Symbols.EmptyPackage
       val prev: Region = self
       val acceptMembers: Boolean = true
+      val acceptsTermMembers: Boolean = true
       val produceSourceToplevel: Boolean = true
+
+      override def withTermOwner(termOwner: String): Region = RootRegion(
+        termOwner
+      )
     }
 
-    final case class Package(owner: String, prev: Region) extends Region {
+    final case class Package(
+        owner: String,
+        prev: Region,
+        override val termOwner: String
+    ) extends Region {
+      def this(owner: String, prev: Region) = this(owner, prev, owner)
       val acceptMembers: Boolean = true
+      val acceptsTermMembers: Boolean = true
       val produceSourceToplevel: Boolean = true
+      override def withTermOwner(termOwner: String): Region =
+        Package(owner, prev, termOwner)
     }
 
     final case class InBrace(
@@ -535,6 +633,9 @@ object ScalaToplevelMtags {
     ) extends Region {
       def acceptMembers: Boolean =
         owner.endsWith("/")
+
+      def acceptsTermMembers: Boolean =
+        owner.endsWith("/") || owner.endsWith(".")
       val produceSourceToplevel: Boolean = false
       override def isExtension = extension
     }
@@ -546,6 +647,8 @@ object ScalaToplevelMtags {
     ) extends Region {
       def acceptMembers: Boolean =
         owner.endsWith("/")
+      def acceptsTermMembers: Boolean =
+        owner.endsWith("/") || owner.endsWith(".")
       val produceSourceToplevel: Boolean = false
       override def isExtension = extension
     }

@@ -7,13 +7,13 @@ case class User/*example.User#*/(
     }
 )
 object NamedArguments/*example.NamedArguments.*/ {
-  final val susan = "Susan"
-  val user1 =
+  final val susan/*example.NamedArguments.susan.*/ = "Susan"
+  val user1/*example.NamedArguments.user1.*/ =
     User
       .apply(
         name = "John"
       )
-  val user2: User =
+  val user2/*example.NamedArguments.user2.*/: User =
     User(
       name = susan
     ).copy(
@@ -24,7 +24,7 @@ object NamedArguments/*example.NamedArguments.*/ {
   @deprecated(
     message = "a",
     since = susan,
-  ) def b = 1
+  ) def b/*example.NamedArguments.b().*/ = 1
 
   // vararg
   List(

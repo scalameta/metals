@@ -6,6 +6,7 @@ import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 
 import munit.Location
+import org.eclipse.lsp4j.SymbolInformation
 import tests.MetalsTestEnrichments._
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
@@ -23,9 +24,10 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def check(
       query: String,
       expected: String,
+      filter: SymbolInformation => Boolean = _ => true,
   )(implicit loc: Location): Unit = {
     test(query) {
-      val result = symbols.search(query)
+      val result = symbols.search(query).filter(filter)
       val obtained =
         if (result.length > 100) s"${result.length} results"
         else {
