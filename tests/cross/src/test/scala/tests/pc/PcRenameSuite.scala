@@ -19,6 +19,18 @@ class PcRenameSuite extends BasePcRenameSuite {
   )
 
   check(
+    "apply",
+    """|object A{
+       |  List(1, 2, 3).map{ _ =>
+       |    val <<a>> = 123
+       |    <<@@a>> + 1
+       |  }
+       |}  
+       |""".stripMargin,
+    wrap = false,
+  )
+
+  check(
     "generics",
     """|trait S1[X] { def <<torename>>(p: X): String = "" }
        |trait T1[Z] extends S1[Z] { override def <<torename>>(p: Z): String = super.<<torename>>(p) }
