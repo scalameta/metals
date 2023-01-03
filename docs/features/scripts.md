@@ -49,4 +49,4 @@ Current limitations can be found:
 - [here for Ammonite](https://github.com/scalameta/metals/issues?q=is%3Aopen+is%3Aissue+label%3A%22ammonite+support%22)
 - [here for Scala CLI](https://github.com/scalameta/metals/issues?q=is%3Aopen+is%3Aissue+label%3Ascala-cli)
 
-For troubleshooting that a look at the [FAQ](/docs/troubleshooting/faq#ammonite-scripts)
+For troubleshooting take a look at the [FAQ](/docs/troubleshooting/faq#ammonite-scripts)
