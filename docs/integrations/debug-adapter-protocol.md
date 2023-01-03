@@ -118,6 +118,11 @@ the run/debug session. For reference, take a look at the
 and how it is
 [wired up together](https://github.com/scalameta/metals-vscode/blob/master/src/extension.ts#L356)
 
+## Supported Testing Frameworks
+
+```scala mdoc:test-frameworks
+```
+
 ## Debugging the connection
 
 Create the following trace files to spy on incoming/outgoing JSON communication
