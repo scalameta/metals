@@ -18,8 +18,8 @@ class PcRenameProvider(
     (!sym.isMethod || !forbiddenMethods(sym.decodedName)) &&
     (sym.ownersIterator
       .drop(1)
-      .exists(
-        _.isMethod
+      .exists(owner =>
+        owner.isMethod || owner.isAnonymousFunction
       )) // this also works for worksheets, since they are wrapped in `method main`
 
   }
