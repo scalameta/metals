@@ -131,7 +131,7 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       value.size > 1 && value.head == '`' && value.last == '`'
     def toAbsolutePath: AbsolutePath = toAbsolutePath(true)
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
-      // Windows treats % literally:
+      // Windows sometimes treats % literally:
       // https://learn.microsoft.com/en-us/troubleshoot/windows-client/networking/url-encoding-unc-paths-not-url-decoded
       def decoded =
         if (Properties.isWin) URIEncoderDecoder.decode(value) else value
@@ -152,9 +152,8 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
             URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
         }
       } else {
-        val percentEncoded =
-          if (Properties.isWin) decoded.stripPrefix("metals:")
-          else URIEncoderDecoder.encode(value.stripPrefix("metals:"))
+        val stripped = value.stripPrefix("metals:")
+        val percentEncoded = URIEncoderDecoder.encode(stripped)
         URI.create(percentEncoded).toAbsolutePath(followSymlink)
       }
     }
