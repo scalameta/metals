@@ -53,6 +53,7 @@ abstract class BaseLspSuite(
   protected def initializationOptions: Option[InitializationOptions] = None
 
   private var useVirtualDocs = false
+  protected val changeSpacesToDash = true
 
   protected def useVirtualDocuments = useVirtualDocs
 
@@ -156,11 +157,15 @@ abstract class BaseLspSuite(
   }
 
   protected def createWorkspace(name: String): AbsolutePath = {
-    val path = PathIO.workingDirectory
+    val pathToSuite = PathIO.workingDirectory
       .resolve("target")
       .resolve("e2e")
       .resolve(suiteName)
-      .resolve(name.replace(' ', '-'))
+
+    val path =
+      if (changeSpacesToDash)
+        pathToSuite.resolve(name.replace(' ', '-'))
+      else pathToSuite.resolve(name)
 
     Files.createDirectories(path.toNIO)
     path
