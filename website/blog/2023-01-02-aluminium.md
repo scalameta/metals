@@ -34,8 +34,8 @@ which will become the primary focus over the next releases.
 </tbody>
 </table>
 
-For full details: [https://github.com/scalameta/metals/milestone/54?closed=1]
-(https://github.com/scalameta/metals/milestone/54?closed=1)
+For full details:
+[https://github.com/scalameta/metals/milestone/54?closed=1](https://github.com/scalameta/metals/milestone/54?closed=1)
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
 Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
