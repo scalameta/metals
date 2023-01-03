@@ -105,6 +105,17 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     "better-tostring",
   )
 
+  checkEdit(
+    "alternative-sorting",
+    """|//> using lib "co.fs2::fs2-core:@@"
+       |package A
+       |""".stripMargin,
+    """|//> using lib "co.fs2::fs2-core:3.4.0"
+       |package A
+       |""".stripMargin,
+    filter = _.startsWith("3.4"),
+  )
+
   private def scriptWrapper(code: String, filename: String): String =
     // Vaguely looks like a scala file that ScalaCLI generates
     // from a sc file.
