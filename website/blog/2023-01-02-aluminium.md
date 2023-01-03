@@ -148,6 +148,14 @@ that is not available for all the editors. However, thanks to
 ([LaurenceWarne](https://github.com/LaurenceWarne)) Metals will now show lenses
 to run a single test case in case of all other editors.
 
+NOTE: While Metals detects test suites for most of existing testing frameworks,
+support for recognizing individual tests is more limited. Metals supports the
+current set of test frameworks when it comes to individual test discovery:
+
+- Junit
+- MUnit
+- Scalatest
+
 More details can be found in the
 [PR \#4569](https://github.com/scalameta/metals/pull/4569).
 
