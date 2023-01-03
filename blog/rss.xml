@@ -43,7 +43,9 @@ compiler as well, so look forward to more features like this in the future!</p><
 within Visual Studio Code and nvim-metals which use an additional Test Explorer
 that is not available for all the editors. However, thanks to
 (<a href="https://github.com/LaurenceWarne" target="_blank" rel="noopener noreferrer">LaurenceWarne</a>) Metals will now show lenses
-to run a single test case in case of all other editors.</p><p>More details can be found in the
+to run a single test case in case of all other editors.</p><p>NOTE: While Metals detects test suites for most of existing testing frameworks,
+support for recognizing individual tests is more limited. Metals supports the
+current set of test frameworks when it comes to individual test discovery:</p><ul><li>Junit</li><li>MUnit</li><li>Scalatest</li></ul><p>More details can be found in the
 <a href="https://github.com/scalameta/metals/pull/4569" target="_blank" rel="noopener noreferrer">PR <!-- -->#<!-- -->4569</a>.</p><h2 class="anchor anchorWithStickyNavbar_LWe7" id="add-support-for-goto-type-definition">Add support for goto type definition<a class="hash-link" href="#add-support-for-goto-type-definition" title="Direct link to heading">​</a></h2><p>Users were able for a long time to navigate to the definition of a particular
 symbol, which can be a method, object, class etc. After that they could
 sometimes also find the definition of the type of that symbol. However, it's not
