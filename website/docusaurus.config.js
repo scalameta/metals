@@ -30,7 +30,7 @@ module.exports = {
           "blogSidebarTitle": "All Blog Posts",
         },
         "theme": {
-          "customCss": "../src/css/customTheme.css"
+          "customCss": "./src/css/customTheme.css"
         },
         "gtag": {
           "trackingID": "UA-140140828-1"
@@ -59,10 +59,7 @@ module.exports = {
       "additionalLanguages": ["lisp"],
     },
     "colorMode": {
-      "switchConfig": {
-        "darkIcon": "🌙",
-        "lightIcon": "☀️"
-      }
+      "respectPrefersColorScheme": true
     },
     "navbar": {
       "title": "Metals",
@@ -136,7 +133,8 @@ module.exports = {
       }
     },
     "algolia": {
-      "apiKey": "c865f6d974a3072a35d4b53d48ac2307",
+      "appId": "DZKJ3Z5JFX",
+      "apiKey": "e8f55852e303f6374dfa716be910cf08",
       "indexName": "metals"
     }
   }
