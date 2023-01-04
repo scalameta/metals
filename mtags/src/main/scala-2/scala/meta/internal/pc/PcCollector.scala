@@ -81,7 +81,7 @@ abstract class PcCollector[T](
   }
   def adjust(
       pos: Position,
-      forHighlight: Boolean = false
+      forRename: Boolean = false
   ): (Position, Boolean) = {
     val isBackticked = text(pos.start) == '`' &&
       text(pos.end - 1) == '`' &&
@@ -90,7 +90,7 @@ abstract class PcCollector[T](
     val isOldNameBackticked = text(pos.start) == '`' &&
       (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
       text(pos.end + 1) == '`'
-    if (isBackticked && !forHighlight)
+    if (isBackticked && forRename)
       (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
     else if (isOldNameBackticked) // pos
       (pos.withEnd(pos.end + 2), false)

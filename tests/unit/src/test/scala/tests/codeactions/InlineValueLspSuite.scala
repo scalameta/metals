@@ -1,7 +1,6 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.InlineValueCodeAction
-import scala.meta.internal.metals.codeactions.ExtractRenameMember
 
 class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
   check(
@@ -19,6 +18,18 @@ class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
        | def u : Unit = {
        |  def m(i : Int) : Int = ???
        |  def get(): Unit = List(1).map(x => m(x))
+       | }
+       |}
+       |""".stripMargin,
+    fileName = "Main.scala",
+  )
+
+  checkNoAction(
+    "extraction-in-def",
+    """|object Main {
+       | def l : Unit = {
+       |  val Some(l) = Some(1)
+       |  def get(): Int = <<l>>
        | }
        |}
        |""".stripMargin,
@@ -65,43 +76,20 @@ class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
     fileName = "Main.scala",
   )
 
-  checkNoAction(
-    "should-not-inline-if-value-has-mod-override",
-    """|abstract class HasValV {
-       |  val v : Int
-       |}
-       |object Main extends HasValV {
-       |  override val <<v>> : Int = 1
-       |  def someF(x : Int): Int = x + v + 3
-       |}
-       |""".stripMargin,
-    fileName = "Main.scala",
-    filterAction =
-      _.getTitle != s"""${ExtractRenameMember.title("class", "HasValV")}""",
-  )
-
   check(
-    "should-not-delete-if-value-overrides",
-    """|abstract class HasValV {
-       |  val v : Int
-       |}
-       |object Main extends HasValV {
-       |  override val v : Int = 1
+    "should-not-delete-if-value-not-local",
+    """|object Main {
+       |  val v : Int = 1
        |  def someF(x : Int): Int = x + <<v>> + 3
        |}
        |""".stripMargin,
     s"""|${InlineValueCodeAction.title("v")}""".stripMargin,
-    """|abstract class HasValV {
-       |  val v : Int
-       |}
-       |object Main extends HasValV {
-       |  override val v : Int = 1
+    """|object Main {
+       |  val v : Int = 1
        |  def someF(x : Int): Int = x + 1 + 3
        |}
        |""".stripMargin,
     fileName = "Main.scala",
-    filterAction =
-      _.getTitle != s"""${ExtractRenameMember.title("class", "HasValV")}""",
   )
 
   check(
@@ -149,5 +137,25 @@ class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
        |  val s : Int = s - r
        |}""".stripMargin,
     fileName = "Main.scala",
+  )
+
+  check(
+    "check-local-object",
+    """|object Main {
+       |  def hello: Unit = {
+       |     object O {
+       |        val <<a>>: Int = 123
+       |        val b: Int = a
+       |     }
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("a")}""".stripMargin,
+    """|object Main {
+       |  def hello: Unit = {
+       |     object O {
+       |        val b: Int = 123
+       |     }
+       |  }
+       |}""".stripMargin,
   )
 }

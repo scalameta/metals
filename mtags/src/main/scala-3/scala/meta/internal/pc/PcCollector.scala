@@ -61,7 +61,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
 
   def adjust(
       pos: SourcePosition,
-      forHighlight: Boolean = false,
+      forRename: Boolean = false,
   ): (SourcePosition, Boolean) =
     val isBackticked =
       sourceText(pos.start) == '`' && sourceText(pos.end - 1) == '`'
@@ -70,7 +70,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
       sourceText(pos.start - 1) == '`' &&
       sourceText(pos.end) == '`'
 
-    if isBackticked && !forHighlight then
+    if isBackticked && forRename then
       (pos.withStart(pos.start + 1).withEnd(pos.`end` - 1), true)
     else if isOldNameBackticked then
       (pos.withStart(pos.start - 1).withEnd(pos.`end` + 1), false)

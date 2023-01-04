@@ -235,14 +235,15 @@ case class ScalaPresentationCompiler(
     }
 
   override def inlineValue(
-      params: RangeParams,
-      inlineAll: java.lang.Boolean,
+      params: OffsetParams
   ): CompletableFuture[jm.Either[String, ju.List[l.TextEdit]]] =
     val empty: jm.Either[String, ju.List[l.TextEdit]] =
       jm.Either.forRight(ju.List.of())
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new InlineValueProvider(new ReferenceProviderImpl(pc.compiler(), params))
-        .getInlineTextEdits(inlineAll)
+      new InlineValueProvider(
+        new PcValReferenceProviderImpl(pc.compiler(), params)
+      )
+        .getInlineTextEdits()
         .map(_.asJava)
         .asJava
     }

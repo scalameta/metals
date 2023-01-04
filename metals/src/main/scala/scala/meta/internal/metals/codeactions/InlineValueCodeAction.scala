@@ -25,7 +25,7 @@ class InlineValueCodeAction(
     languageClient: MetalsLanguageClient,
 ) extends CodeAction {
 
-  type CommandData = ServerCommands.InlineValueParams
+  type CommandData = l.TextDocumentPositionParams
 
   override def command: Option[ActionCommand] =
     Some(ServerCommands.InlineValue)
@@ -41,16 +41,14 @@ class InlineValueCodeAction(
     val action =
       for {
         termName <- getTermNameForPos(path, range)
-        if (hasDefinitionInScope(termName))
-        optThisDef = getDefinitionOfValue(path, range)
-        if (optThisDef.map(isLocal(_)).getOrElse(true))
+        (defn, isDefn) <- hasDefinitionInScope(termName)
+        if (isLocal(defn) || !isDefn)
       } yield {
         val command =
           ServerCommands.InlineValue.toLsp(
-            ServerCommands.InlineValueParams(
+            new l.TextDocumentPositionParams(
               params.getTextDocument(),
-              termName.pos.toLsp,
-              optThisDef.isDefined,
+              params.getRange().getStart(),
             )
           )
         CodeActionBuilder.build(
@@ -62,9 +60,10 @@ class InlineValueCodeAction(
     action.toSeq
   }
 
-  private def isLocal(definition: Defn.Val): Boolean =
+  private def isLocal(definition: Tree): Boolean =
     definition.parent match {
       case Some(_: Term.Block) => true
+      case Some(e) => isLocal(e)
       case _ => false
     }
 
@@ -73,15 +72,13 @@ class InlineValueCodeAction(
   //       2. can have FALSE POSITIVES but the condition is checked properly upon execution
   private def hasDefinitionInScope(
       nameTerm: Term.Name
-  ): Boolean = {
-    def isDefinition(t: Tree): Boolean = {
+  ): Option[(Defn.Val, Boolean)] = {
+    def isDefinition(t: Tree): Option[(Defn.Val, Boolean)] = {
       t match {
-        case v: Defn.Val =>
-          v.pats.exists {
-            case p: Pat.Var if (p.name.value == nameTerm.value) => true
-            case _ => false
-          }
-        case _ => false
+        case v @ Defn.Val(_, List(Pat.Var(name)), _, _)
+            if name.value == nameTerm.value =>
+          Some(v, name.pos.encloses(nameTerm.pos))
+        case _ => None
       }
     }
 
@@ -94,13 +91,19 @@ class InlineValueCodeAction(
         case _ => List()
       }
 
-    def go(t: Tree): Boolean = {
+    def go(t: Tree): Option[(Defn.Val, Boolean)] = {
       t.parent match {
-        case Some(parent) if (isDefinition(parent)) => true
-        case Some(parent) if (findSiblings(parent).exists(isDefinition(_))) =>
-          true
-        case Some(parent) => go(parent)
-        case None => false
+        case Some(parent) =>
+          isDefinition(parent)
+            .orElse {
+              findSiblings(parent).collectFirst { s =>
+                isDefinition(s) match {
+                  case Some(res) => res
+                }
+              }
+            }
+            .orElse(go(parent))
+        case None => None
       }
     }
 
@@ -108,14 +111,12 @@ class InlineValueCodeAction(
   }
 
   override def handleCommand(
-      params: ServerCommands.InlineValueParams,
+      params: l.TextDocumentPositionParams,
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Unit] =
     compilers
       .inlineEdits(
-        params.textDocument.getUri,
-        params.range,
-        params.inlineAll,
+        params,
         token,
       )
       .map { res =>
@@ -131,7 +132,7 @@ class InlineValueCodeAction(
             languageClient.applyEdit(
               new l.ApplyWorkspaceEditParams(
                 new l.WorkspaceEdit(
-                  Map(params.textDocument.getUri -> edits.asJava).asJava
+                  Map(params.getTextDocument().getUri -> edits).asJava
                 )
               )
             )
@@ -142,34 +143,8 @@ class InlineValueCodeAction(
   private def getTermNameForPos(
       path: AbsolutePath,
       range: l.Range,
-  ): Option[Term.Name] = {
-    def go(t: Tree): Option[Term.Name] =
-      t.children.find(_.pos.encloses(range)) match {
-        case Some(tn: Term.Name) => Some(tn)
-        case Some(t) => go(t)
-        case None => None
-      }
-    trees.get(path).flatMap(go(_))
-  }
-
-  private def getDefinitionOfValue(
-      path: AbsolutePath,
-      range: l.Range,
-  ): Option[Defn.Val] = {
-    def go(t: Tree): Option[Defn.Val] =
-      t.children.find(_.pos.encloses(range)) match {
-        case Some(v: Defn.Val) =>
-          (v.pats
-            .collect {
-              case p: Pat.Var if (p.name.pos.encloses(range)) => Some(v)
-            })
-            .headOption
-            .getOrElse(go(v))
-        case Some(t) => go(t)
-        case None => None
-      }
-    trees.get(path).flatMap(go(_))
-  }
+  ): Option[Term.Name] =
+    trees.findLastEnclosingAt[Term.Name](path, range.getStart())
 }
 
 object InlineValueCodeAction {

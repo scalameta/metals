@@ -134,8 +134,7 @@ public abstract class PresentationCompiler {
 	/**
 	 * Return the text edits for inlining a value.
 	 */
-	public abstract CompletableFuture<Either<String, List<TextEdit>>> inlineValue(RangeParams params,
-			Boolean inlineAll);
+	public abstract CompletableFuture<Either<String, List<TextEdit>>> inlineValue(OffsetParams params);
 
 	/**
 	 * Extract method in selected range

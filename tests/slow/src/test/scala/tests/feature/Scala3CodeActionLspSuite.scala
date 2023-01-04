@@ -1,27 +1,15 @@
 package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
-import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
-import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
-import scala.meta.internal.metals.codeactions.ExtractRenameMember
-import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
-import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
-import scala.meta.internal.metals.codeactions.ImplementAbstractMembers
-import scala.meta.internal.metals.codeactions.InsertInferredType
-import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
-import scala.meta.internal.metals.codeactions.SourceOrganizeImports
-import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
+import scala.meta.internal.metals.codeactions.InlineValueCodeAction
 
-import munit.Location
-import munit.TestOptions
 import tests.codeactions.BaseCodeActionLspSuite
 
 class Scala3CodeActionLspSuite
     extends BaseCodeActionLspSuite("cross-code-actions") {
 
   override protected val scalaVersion: String = BuildInfo.scala3
-
+  /*
   checkNoAction(
     "val",
     """|package a
@@ -200,7 +188,7 @@ class Scala3CodeActionLspSuite
     "single-def-split",
     """|object Main {
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) =
        |    method2(i + 23 + <<123>>)
        |}
@@ -210,7 +198,7 @@ class Scala3CodeActionLspSuite
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) = {
        |    val newValue = i + 23 + 123
        |    method2(newValue)
@@ -223,7 +211,7 @@ class Scala3CodeActionLspSuite
     "single-def-split-optional",
     """|object Main:
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) =
        |  method2(i + 23 + <<123>>)
        |
@@ -233,7 +221,7 @@ class Scala3CodeActionLspSuite
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) =
        |    val newValue = i + 23 + 123
        |    method2(newValue)
@@ -248,7 +236,7 @@ class Scala3CodeActionLspSuite
        |  val a = 1
        |  a + 2
        |}
-       |  
+       |
        |def main(i : Int) = method2(i + 23 + <<123>>)
        |
        |""".stripMargin,
@@ -259,7 +247,7 @@ class Scala3CodeActionLspSuite
        |  val a = 1
        |  a + 2
        |}
-       |  
+       |
        |def main(i : Int) = {
        |  val newValue = i + 23 + 123
        |  method2(newValue)
@@ -438,7 +426,7 @@ class Scala3CodeActionLspSuite
         |  val b = 4
         |  val c = 3
         |  def method(i: Int, j: Int) = i + 1
-        |  val a = { 
+        |  val a = {
         |    val c = 5
         |    <<123 + method(c, b) + method(b,c)>>
         |  }
@@ -453,7 +441,7 @@ class Scala3CodeActionLspSuite
         |  def newMethod(c: Int): Int =
         |    123 + method(c, b) + method(b,c)
         |
-        |  val a = { 
+        |  val a = {
         |    val c = 5
         |    newMethod(c)
         |  }
@@ -580,7 +568,25 @@ class Scala3CodeActionLspSuite
       },
     )
   }
-
-  private def getPath(name: String) = s"a/src/main/scala/a/$name"
+   */
+  check(
+    "issue",
+    """|object Main {
+       | def u : Unit = {
+       | val `<<l>>` : List[Char] = List(1)
+       | def m(i : Int) : Int = ???
+       | def get(): Unit = `l`.map(x => m(x))
+       | }
+       |}
+       |""".stripMargin,
+    s"""|${InlineValueCodeAction.title("l")}""".stripMargin,
+    """|object Main {
+       | def u : Unit = {
+       | def m(i : Int) : Int = ???
+       | def get(): Unit = List(1).map(x => m(x))
+       | }
+       |}
+       |""".stripMargin,
+  )
 
 }

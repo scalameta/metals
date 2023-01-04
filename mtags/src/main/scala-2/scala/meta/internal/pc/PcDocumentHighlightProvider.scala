@@ -14,7 +14,7 @@ final class PcDocumentHighlightProvider(
   def collect(
       parent: Option[Tree]
   )(tree: Tree, toAdjust: Position): DocumentHighlight = {
-    val (pos, _) = adjust(toAdjust, forHighlight = true)
+    val (pos, _) = adjust(toAdjust)
     tree match {
       case _: MemberDef =>
         new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)

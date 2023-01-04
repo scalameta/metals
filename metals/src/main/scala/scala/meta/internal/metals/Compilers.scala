@@ -495,17 +495,14 @@ class Compilers(
   }.getOrElse(Future.successful(Nil.asJava))
 
   def inlineEdits(
-      uri: String,
-      range: LspRange,
-      inlineAll: Boolean,
+      params: TextDocumentPositionParams,
       token: CancelToken,
-  ): Future[Either[String, List[TextEdit]]] =
-    withPCAndAdjustLsp(uri, range, range.getStart) { (pc, pos, _, adjust) =>
-      pc.inlineValue(CompilerRangeParams.fromPos(pos, token), inlineAll)
+  ): Future[Either[String, ju.List[TextEdit]]] =
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.inlineValue(CompilerOffsetParams.fromPos(pos, token))
         .asScala
-        .map(_.asScala)
-        .map(_.map(_.asScala.toList))
-    }.getOrElse(Future.successful(Right(Nil)))
+        .map(_.asScala.map(adjust.adjustTextEdits))
+    }.getOrElse(Future.successful(Right(Nil.asJava)))
 
   def documentHighlight(
       params: TextDocumentPositionParams,

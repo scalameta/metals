@@ -37,7 +37,7 @@ class PcRenameProvider(
   def collect(
       parent: Option[Tree]
   )(tree: Tree, toAdjust: Position): l.TextEdit = {
-    val (pos, stripBackticks) = adjust(toAdjust)
+    val (pos, stripBackticks) = adjust(toAdjust, forRename = true)
     new l.TextEdit(
       pos.toLsp,
       if (stripBackticks) newName.stripBackticks else newName

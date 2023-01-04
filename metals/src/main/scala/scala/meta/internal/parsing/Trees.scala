@@ -41,9 +41,9 @@ final class Trees(
   private def enclosedChildren(
       children: List[Tree],
       pos: Position,
-  ): Option[Tree] = {
+  ): List[Tree] = {
     children
-      .find { child =>
+      .filter { child =>
         child.pos.start <= pos.start && pos.start <= child.pos.end
       }
   }
@@ -66,10 +66,13 @@ final class Trees(
       t match {
         case t: T =>
           enclosedChildren(t.children, pos)
-            .flatMap(loop(_, pos))
+            .flatMap(loop(_, pos).toList)
+            .headOption
             .orElse(if (predicate(t)) Some(t) else None)
         case other =>
-          enclosedChildren(other.children, pos).flatMap(loop(_, pos))
+          enclosedChildren(other.children, pos)
+            .flatMap(loop(_, pos).toList)
+            .headOption
       }
     }
 

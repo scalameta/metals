@@ -1,7 +1,6 @@
 package scala.meta.internal.pc
 
 import java.io.File
-import java.lang
 import java.net.URI
 import java.nio.file.Path
 import java.util
@@ -166,14 +165,14 @@ case class ScalaPresentationCompiler(
   }
 
   override def inlineValue(
-      params: RangeParams,
-      inlineAll: lang.Boolean
+      params: OffsetParams
   ): CompletableFuture[jm.Either[String, ju.List[TextEdit]]] = {
     val empty: jm.Either[String, ju.List[TextEdit]] =
       jm.Either.forRight(new ju.ArrayList[TextEdit]())
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new InlineValueProvider(new ReferenceProviderImpl(pc.compiler(), params))
-        .getInlineTextEdits(inlineAll) match {
+      new InlineValueProvider(
+        new PcValReferenceProviderImpl(pc.compiler(), params)
+      ).getInlineTextEdits match {
         case Left(error) => jm.Either.forLeft(error)
         case Right(edits) => jm.Either.forRight(edits.asJava)
       }

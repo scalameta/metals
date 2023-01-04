@@ -542,18 +542,13 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  final case class InlineValueParams(
-      textDocument: TextDocumentIdentifier,
-      range: lsp4j.Range,
-      inlineAll: Boolean,
-  )
-  val InlineValue = new ParametrizedCommand[InlineValueParams](
+  val InlineValue = new ParametrizedCommand[TextDocumentPositionParams](
     "inline-value",
     "Inline value",
     """|Whenever a user chooses code action to inline a value this command is later ran to
        |find all the references to choose the correct inline version (if possible to perform)
        |""".stripMargin,
-    """|This command should be sent in with `InlineValueParams`
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
        |""".stripMargin,
   )
 

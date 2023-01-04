@@ -1,22 +1,25 @@
 package scala.meta.internal.pc
 
 import scala.meta._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.Definition
+import scala.meta.internal.pc.Reference
 
 import org.eclipse.{lsp4j => l}
-
 final class InlineValueProvider(
-    val refProvider: ReferenceProvider
+    val refProvider: PcValReferenceProvider
 ) {
   private def definitionNeedsBrackets(rhs: String): Boolean =
     rhs.parse[Term].toOption match {
       case Some(_: Term.ApplyInfix) => true
-      case Some(_: Term.ApplyUnary) => true
       case _ => false
     }
 
-  private def referenceNeedsBrackets(parentPos: Option[(Int, Int)]): Boolean = {
+  private def referenceNeedsBrackets(
+      parentPos: Option[RangeOffset]
+  ): Boolean = {
     parentPos.flatMap(t =>
-      refProvider.text.slice(t._1, t._2).parse[Term].toOption
+      refProvider.text.slice(t.start, t.end).parse[Term].toOption
     ) match {
       case Some(_: Term.ApplyInfix) => true
       case Some(_: Term.ApplyUnary) => true
@@ -25,19 +28,14 @@ final class InlineValueProvider(
     }
   }
   // We return result or error
-  def getInlineTextEdits(
-      isInlineAll: Boolean
-  ): Either[String, List[l.TextEdit]] = {
-    val allReferences = refProvider.result()
-    val references: List[Reference] =
-      allReferences.collect { case Left(v) => v }
-    allReferences.filter(_.isRight) match {
-      case Right(definition) :: Nil => {
-        if (isInlineAll) inlineAll(definition, references)
-        else inlineOne(definition, references)
+  def getInlineTextEdits(): Either[String, List[l.TextEdit]] = {
+    refProvider
+      .defAndRefs()
+      .map { case (d, refs) =>
+        if (d.termNameRange.encloses(refProvider.position)) inlineAll(d, refs)
+        else inlineOne(d, refs)
       }
-      case _ => Left(InlineValueProvider.Errors.didNotFindDefinition)
-    }
+      .getOrElse(Left(InlineValueProvider.Errors.didNotFindDefinition))
   }
 
   private def inlineAll(
@@ -65,7 +63,7 @@ final class InlineValueProvider(
     else {
       Right(
         references
-          .find(_.range.equals(refProvider.range))
+          .find(_.range.encloses(refProvider.position))
           .map(referenceTextEdit(definition))
           .toList
       )
@@ -85,8 +83,8 @@ final class InlineValueProvider(
   private def definitionTextEdit(definition: Definition): l.TextEdit =
     new l.TextEdit(
       extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
-        definition.rangeOffsets._1,
-        definition.rangeOffsets._2,
+        definition.rangeOffsets.start,
+        definition.rangeOffsets.end,
         definition.range
       ),
       ""
@@ -112,7 +110,9 @@ final class InlineValueProvider(
     while (
       source(endOffset + endWhiteSpaces) == ' ' || source(
         endOffset + endWhiteSpaces
-      ) == '\t'
+      ) == '\t' || source(
+        endOffset + endWhiteSpaces
+      ) == ';'
     ) {
       endWhiteSpaces += 1
     }
@@ -140,7 +140,8 @@ final class InlineValueProvider(
 
 object InlineValueProvider {
   object Errors {
-    val didNotFindDefinition = "The definition was not found in the scope."
+    val didNotFindDefinition =
+      "The definition was not found in the scope of the file."
     val notLocal =
       "Non local value cannot be inlined."
   }
