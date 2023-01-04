@@ -261,9 +261,13 @@ object ScaladocParser {
   private val TrailingWhitespaceRegex = """\s+$""".r
   def parseComment(
       comment: String,
+      scaladocLinkToCommand: String => String,
       defines: collection.Map[String, String] = Map.empty
   ): Comment = {
-    parseAtSymbol(HtmlConverter.convert(expandDefines(comment, defines)))
+    parseAtSymbol(
+      HtmlConverter.convert(expandDefines(comment, defines)),
+      scaladocLinkToCommand
+    )
   }
 
   def extractDefines(
@@ -319,6 +323,7 @@ object ScaladocParser {
    */
   def parseAtSymbol(
       comment: String,
+      scaladocLinkToCommand: String => String,
       pos: Position = Position.None
       //      site: Symbol = NoSymbol
   ): Comment = {
@@ -545,7 +550,7 @@ object ScaladocParser {
 
           val bodyTags: mutable.Map[TagKey, List[Body]] =
             mutable.Map(tagsWithoutDiagram.map { case (key, tag) =>
-              key -> tag.map(parseWikiAtSymbol(_, pos))
+              key -> tag.map(parseWikiAtSymbol(_, pos, scaladocLinkToCommand))
             }.toSeq: _*)
 
           def oneTag(
@@ -599,7 +604,9 @@ object ScaladocParser {
           }
 
           createComment(
-            body0 = Some(parseWikiAtSymbol(docBody.toString, pos)),
+            body0 = Some(
+              parseWikiAtSymbol(docBody.toString, pos, scaladocLinkToCommand)
+            ),
             authors0 = allTags(SimpleTagKey("author")),
             see0 = allTags(SimpleTagKey("see")),
             result0 = oneTag(SimpleTagKey("return")),
@@ -647,12 +654,14 @@ object ScaladocParser {
    */
   def parseWikiAtSymbol(
       string: String,
-      pos: Position
+      pos: Position,
+      scaladocLinkToCommand: String => String
       //      site: Symbol
   ): Body =
     new WikiParser(
       string,
-      pos
+      pos,
+      scaladocLinkToCommand
       //      site
     ).document()
 
@@ -665,7 +674,8 @@ object ScaladocParser {
    */
   final class WikiParser(
       val buffer: String,
-      pos: Position
+      pos: Position,
+      scaladocLinkToCommand: String => String
       //      site: Symbol
   ) extends CharReader(buffer) { wiki =>
     var summaryParsed = false
@@ -1297,9 +1307,11 @@ object ScaladocParser {
 
       link match {
         case LinkPattern(link, _, _, title) =>
-          Link(link, Option(title) map (Text.apply) getOrElse Text(link))
+          val trueLink =
+            if (link.startsWith("http")) link else scaladocLinkToCommand(link)
+          Link(trueLink, Option(title) map (Text.apply) getOrElse Text(link))
         case text =>
-          Link(text, Text(text))
+          Link(scaladocLinkToCommand(text), Text(text))
       }
     }
 

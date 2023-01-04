@@ -20,14 +20,17 @@ object MarkdownGenerator {
   def toMarkdown(code: String): Seq[String] =
     Scala213(code).tokenize.get.collect {
       case c: Token.Comment if c.syntax.startsWith("/**") =>
-        fromDocstring(c.syntax, Map.empty)
+        fromDocstring(c.syntax, identity, Map.empty)
     }
 
   def fromDocstring(
       docstring: String,
+      scaladocLinkToCommand: String => String,
       defines: collection.Map[String, String]
   ): String = {
-    toMarkdown(ScaladocParser.parseComment(docstring, defines))
+    toMarkdown(
+      ScaladocParser.parseComment(docstring, scaladocLinkToCommand, defines)
+    )
   }
 
   def toMarkdown(b: Body): String = {

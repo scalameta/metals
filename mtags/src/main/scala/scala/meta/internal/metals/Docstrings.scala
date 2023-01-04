@@ -28,7 +28,11 @@ import scala.meta.pc.SymbolDocumentation
  *
  * Handles both javadoc and scaladoc.
  */
-class Docstrings(index: GlobalSymbolIndex) {
+class Docstrings(
+    index: GlobalSymbolIndex,
+    convertTextToLink: String => String
+) {
+
   val cache = new TrieMap[String, SymbolDocumentation]()
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
@@ -117,10 +121,12 @@ class Docstrings(index: GlobalSymbolIndex) {
     defn.path.toLanguage match {
       case Language.JAVA =>
         JavadocIndexer
-          .foreach(defn.path.toInput)(cacheSymbol)
+          .foreach(defn.path.toInput, convertTextToLink)(cacheSymbol)
       case Language.SCALA =>
         ScaladocIndexer
-          .foreach(defn.path.toInput, defn.dialect)(cacheSymbol)
+          .foreach(defn.path.toInput, defn.dialect, convertTextToLink)(
+            cacheSymbol
+          )
       case _ =>
     }
   }
@@ -141,5 +147,5 @@ class Docstrings(index: GlobalSymbolIndex) {
 }
 
 object Docstrings {
-  def empty: Docstrings = new Docstrings(OnDemandSymbolIndex.empty())
+  def empty: Docstrings = new Docstrings(OnDemandSymbolIndex.empty(), identity)
 }

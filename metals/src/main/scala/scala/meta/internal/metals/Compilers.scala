@@ -69,6 +69,7 @@ class Compilers(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
+    convertTextToLink: String => String,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -149,6 +150,7 @@ class Compilers(
                   buildTargets,
                   saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
                   sourceMapper,
+                  convertTextToLink,
                 )
               ).getOrElse(EmptySymbolSearch),
               "default",
@@ -644,6 +646,7 @@ class Compilers(
             buildTargets,
             saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
             sourceMapper,
+            convertTextToLink,
             workspaceFallback = Some(search),
           )
           newCompiler(
@@ -676,6 +679,7 @@ class Compilers(
               buildTargets,
               saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
               sourceMapper,
+              convertTextToLink,
             ),
             path.toString(),
             path,

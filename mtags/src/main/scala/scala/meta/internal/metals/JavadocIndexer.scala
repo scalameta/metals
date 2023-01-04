@@ -9,8 +9,7 @@ import scala.meta.inputs.Position
 import scala.meta.internal.docstrings.MarkdownGenerator
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.JavaMtags
-import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.pc.SymbolDocumentation
 
@@ -27,7 +26,8 @@ import com.thoughtworks.qdox.model.JavaTypeVariable
  */
 class JavadocIndexer(
     input: Input.VirtualFile,
-    fn: SymbolDocumentation => Unit
+    fn: SymbolDocumentation => Unit,
+    convertTextToLink: String => String
 ) extends JavaMtags(input) {
   override def visitClass(
       cls: JavaClass,
@@ -65,9 +65,27 @@ class JavadocIndexer(
     )
   }
 
-  def markdown(e: JavaAnnotatedElement): String = {
+  private def ownerClass(symbol: String, findPackage: Boolean): String = {
+    if (findPackage && symbol.endsWith("/")) symbol
+    else if (!findPackage && symbol.endsWith("#")) symbol
+    else ownerClass(symbol.owner, findPackage)
+  }
+
+  def markdown(e: JavaAnnotatedElement, symbol: String): String = {
     val comment = Option(e.getComment).getOrElse("")
-    try MarkdownGenerator.fromDocstring(s"/**$comment\n*/", Map.empty)
+
+    def convertWithRightOwner(linkSymbol: String) = {
+      /* if the sought symbol is a class we try to find the package, otherwise the current class
+       */
+      val owner = ownerClass(symbol, linkSymbol.head.isUpper)
+      convertWithContext(owner, convertTextToLink)(linkSymbol)
+    }
+    try
+      MarkdownGenerator.fromDocstring(
+        s"/**$comment\n*/",
+        convertWithRightOwner,
+        Map.empty
+      )
     catch {
       case NonFatal(_) =>
         // The Scaladoc parser implementation uses fragile regexp processing which
@@ -79,7 +97,7 @@ class JavadocIndexer(
     new MetalsSymbolDocumentation(
       symbol,
       method.getName,
-      markdown(method),
+      markdown(method, symbol),
       "",
       typeParameters(symbol, method, method.getTypeParameters),
       parameters(symbol, method, method.getParameters)
@@ -92,7 +110,7 @@ class JavadocIndexer(
     new MetalsSymbolDocumentation(
       symbol,
       method.getName,
-      markdown(method),
+      markdown(method, symbol),
       "",
       typeParameters(symbol, method, method.getTypeParameters),
       Nil.asJava
@@ -105,7 +123,7 @@ class JavadocIndexer(
     new MetalsSymbolDocumentation(
       symbol,
       method.getName,
-      markdown(method),
+      markdown(method, symbol),
       "",
       typeParameters(symbol, method, method.getTypeParameters),
       parameters(symbol, method, method.getParameters)
@@ -159,14 +177,18 @@ class JavadocIndexer(
   }
 }
 object JavadocIndexer {
-  def all(input: Input.VirtualFile): List[SymbolDocumentation] = {
+  def all(
+      input: Input.VirtualFile,
+      convertTextToLink: String => String
+  ): List[SymbolDocumentation] = {
     val buf = List.newBuilder[SymbolDocumentation]
-    foreach(input)(buf += _)
+    foreach(input, convertTextToLink)(buf += _)
     buf.result()
   }
   def foreach(
-      input: Input.VirtualFile
+      input: Input.VirtualFile,
+      convertTextToLink: String => String
   )(fn: SymbolDocumentation => Unit): Unit = {
-    new JavadocIndexer(input, fn).indexRoot()
+    new JavadocIndexer(input, fn, convertTextToLink).indexRoot()
   }
 }

@@ -165,7 +165,15 @@ class MetalsLanguageServer(
   private val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
   private val definitionIndex = newSymbolIndex()
-  private val symbolDocs = new Docstrings(definitionIndex)
+
+  def convertTextToLink(sym: String): String = {
+    clientConfig
+      .commandInHtmlFormat()
+      .map(format => ServerCommands.GotoSymbol.toCommandLink(sym, format))
+      .getOrElse(sym)
+
+  }
+  private val symbolDocs = new Docstrings(definitionIndex, convertTextToLink)
   var bspSession: Option[BspSession] =
     Option.empty[BspSession]
   private val savedFiles = new ActiveFiles(time)
@@ -704,6 +712,7 @@ class MetalsLanguageServer(
             trees,
             mtagsResolver,
             sourceMapper,
+            convertTextToLink,
           )
         )
         renameProvider = new RenameProvider(

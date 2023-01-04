@@ -20,7 +20,8 @@ import scala.meta.pc.SymbolDocumentation
 class ScaladocIndexer(
     input: Input.VirtualFile,
     fn: SymbolDocumentation => Unit,
-    dialect: Dialect
+    dialect: Dialect,
+    convertTextToLink: String => String
 ) extends ScalaMtags(input, dialect) {
   val defines: mutable.Map[String, String] = mutable.Map.empty[String, String]
   override def visitOccurrence(
@@ -43,7 +44,13 @@ class ScaladocIndexer(
     }
     // Register `@define` macros to use for expanding in later docstrings.
     defines ++= ScaladocParser.extractDefines(docstring)
-    val comment = ScaladocParser.parseComment(docstring, defines)
+
+    val comment =
+      ScaladocParser.parseComment(
+        docstring,
+        convertWithContext(owner, convertTextToLink),
+        defines
+      )
     val markdown = MarkdownGenerator.toMarkdown(comment)
     def param(name: String, default: String): SymbolDocumentation = {
       val paramDoc = comment.valueParams
@@ -135,9 +142,10 @@ object ScaladocIndexer {
    */
   def foreach(
       input: Input.VirtualFile,
-      dialect: Dialect
+      dialect: Dialect,
+      convertTextToLink: String => String
   )(fn: SymbolDocumentation => Unit): Unit = {
-    new ScaladocIndexer(input, fn, dialect).indexRoot()
+    new ScaladocIndexer(input, fn, dialect, convertTextToLink).indexRoot()
   }
 
   /**

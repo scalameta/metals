@@ -1240,11 +1240,12 @@ final case class TestingServer(
       query: String,
       expected: String,
       root: AbsolutePath = workspace,
+      modifyHover: String => String = identity,
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
       hover <- hover(filename, query, root)
     } yield {
-      Assertions.assertNoDiff(hover, expected)
+      Assertions.assertNoDiff(modifyHover(hover), expected)
     }
   }
 

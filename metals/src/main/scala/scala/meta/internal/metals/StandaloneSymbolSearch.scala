@@ -29,6 +29,7 @@ class StandaloneSymbolSearch(
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
     sourceMapper: SourceMapper,
+    convertTextToLink: String => String,
     workspaceFallback: Option[SymbolSearch] = None,
 ) extends SymbolSearch {
 
@@ -45,7 +46,7 @@ class StandaloneSymbolSearch(
     index.addSourceJar(s, ScalaVersions.dialectForDependencyJar(s.filename))
   )
 
-  private val docs = new Docstrings(index)
+  private val docs = new Docstrings(index, convertTextToLink)
   private val mtags = new Mtags()
   private val destinationProvider =
     new DestinationProvider(
@@ -131,6 +132,7 @@ object StandaloneSymbolSearch {
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
       sourceMapper: SourceMapper,
+      convertTextToLink: String => String,
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
@@ -150,6 +152,7 @@ object StandaloneSymbolSearch {
       buildTargets,
       saveSymbolFileToDisk,
       sourceMapper,
+      convertTextToLink,
     )
   }
   def apply(
@@ -162,6 +165,7 @@ object StandaloneSymbolSearch {
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
       sourceMapper: SourceMapper,
+      convertTextToLink: String => String,
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
@@ -176,6 +180,7 @@ object StandaloneSymbolSearch {
       buildTargets,
       saveSymbolFileToDisk,
       sourceMapper,
+      convertTextToLink,
     )
   }
 

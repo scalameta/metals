@@ -75,7 +75,7 @@ abstract class BasePCSuite extends BaseSuite {
     val search = new TestingSymbolSearch(
       ClasspathSearch
         .fromClasspath(myclasspath, ExcludedPackagesHandler.default),
-      new Docstrings(index),
+      new Docstrings(index, identity),
       workspace,
       index,
     )

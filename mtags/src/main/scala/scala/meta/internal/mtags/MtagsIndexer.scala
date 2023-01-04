@@ -12,6 +12,25 @@ import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.{semanticdb => s}
 
 trait MtagsIndexer {
+  protected def convertWithContext(
+      owner: String,
+      convertTextToLink: String => String
+  )(text: String): String = {
+    if (text.contains('.')) {
+      val symbol = text.replace('.', '/') + "."
+      convertTextToLink(symbol)
+    } else {
+      /* If we only have name of the symbol we don't know what
+       * kind of symbol that is, so this is our best guess.
+       * We should be able to improve it when doing go to definition.
+       */
+      val ending =
+        if (text.endsWith("$")) "."
+        else if (text.head.isUpper) "#"
+        else "()."
+      convertTextToLink(owner + text + ending)
+    }
+  }
   def language: Language
   def indexRoot(): Unit
   def input: Input.VirtualFile
