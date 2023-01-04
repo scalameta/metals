@@ -23,7 +23,7 @@ object V {
   val genyVersion = "0.7.1"
   val gradleBloop = "1.5.8"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.7.4"
+  val javaSemanticdb = "0.8.9"
   val jsoup = "1.15.3"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.19.0"
