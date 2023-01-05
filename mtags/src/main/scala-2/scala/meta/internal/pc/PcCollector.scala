@@ -44,7 +44,7 @@ abstract class PcCollector[T](
       } else if (sym.isModuleOrModuleClass) {
         if (sym.owner.isMethod) Set(sym) ++ localCompanion(sym)
         else Set(sym, sym.companionClass, sym.moduleClass)
-      } else if (sym.isTerm) {
+      } else if (sym.isTerm && (sym.owner.isClass || sym.owner.isConstructor)) {
         val info =
           if (sym.owner.isClass) sym.owner.info
           else sym.owner.owner.info

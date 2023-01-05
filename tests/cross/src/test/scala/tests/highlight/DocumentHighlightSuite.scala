@@ -688,4 +688,15 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |}""".stripMargin,
   )
 
+  check(
+    "shadowing",
+    """|object Main {
+       |  val abc = {
+       |    val <<abc>> = 1
+       |    <<a@@bc>> + 1
+       |  }
+       |  val d = abc + 1
+       |}""".stripMargin,
+  )
+
 }
