@@ -84,10 +84,10 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
         Set(sym, sym.companionModule, sym.companion.moduleClass)
       else if sym.is(Flags.Module) then
         Set(sym, sym.companionClass, sym.moduleClass)
-      else if sym.isTerm then
+      else if sym.isTerm && (sym.owner.isClass || sym.owner.isConstructor)
+      then
         val info =
-          if sym.owner.isClass then sym.owner.info
-          else sym.owner.owner.info
+          if sym.owner.isClass then sym.owner.info else sym.owner.owner.info
         Set(
           sym,
           info.member(sym.asTerm.name.setterName).symbol,
