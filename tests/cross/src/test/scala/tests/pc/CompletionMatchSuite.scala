@@ -495,6 +495,63 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "exhaustive-map-edit-2",
+    """|sealed trait B
+       |case class C(c: Int) extends B
+       |case class D(d: Int) extends B
+       |case class E(e: Int) extends B
+       |
+       |object A {
+       |  val b: B = ???
+       |  List(b).map{cas@@
+       |  }
+       |}""".stripMargin,
+    s"""|sealed trait B
+        |case class C(c: Int) extends B
+        |case class D(d: Int) extends B
+        |case class E(e: Int) extends B
+        |
+        |object A {
+        |  val b: B = ???
+        |  List(b).map{
+        |\tcase C(c) => $$0
+        |\tcase D(d) =>
+        |\tcase E(e) =>
+        |  }
+        |}""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
+    "exhaustive-map-edit-3",
+    s"""|sealed trait B
+        |case class C(c: Int) extends B
+        |case class D(d: Int) extends B
+        |case class E(e: Int) extends B
+        |
+        |object A {
+        |  val b: B = ???
+        |  List(b).map{
+        |\tcas@@
+        |  }
+        |}""".stripMargin,
+    s"""|sealed trait B
+        |case class C(c: Int) extends B
+        |case class D(d: Int) extends B
+        |case class E(e: Int) extends B
+        |
+        |object A {
+        |  val b: B = ???
+        |  List(b).map{
+        |\tcase C(c) => $$0
+        |case D(d) =>
+        |case E(e) =>
+        |  }
+        |}""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
     "exhaustive-rename".tag(IgnoreScala2),
     s"""|package b {
         |  enum Color: 

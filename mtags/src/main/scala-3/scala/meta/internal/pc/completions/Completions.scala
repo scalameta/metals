@@ -407,7 +407,11 @@ class Completions(
           false,
         )
 
-      case MatchCaseExtractor.CaseExtractor(selector, parent) =>
+      case MatchCaseExtractor.CaseExtractor(
+            selector,
+            parent,
+            includeExhaustive,
+          ) =>
         (
           CaseKeywordCompletion.contribute(
             selector,
@@ -417,6 +421,7 @@ class Completions(
             search,
             parent,
             autoImports,
+            includeExhaustive = includeExhaustive,
           ),
           true,
         )
