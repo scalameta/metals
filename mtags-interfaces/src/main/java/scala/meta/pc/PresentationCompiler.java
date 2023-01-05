@@ -36,6 +36,12 @@ public abstract class PresentationCompiler {
 	// Language Server Protocol APIs.
 	// ==============================
 
+     /**
+     * Returns token informations from presentation compiler.
+     *
+     */
+    public abstract CompletableFuture<List<Integer>> semanticTokens(VirtualFileParams params);
+
 	/**
 	 * Returns code completions for the given source position.
 	 *

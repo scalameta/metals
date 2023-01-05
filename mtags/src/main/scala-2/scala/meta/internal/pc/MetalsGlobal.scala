@@ -676,7 +676,6 @@ class MetalsGlobal(
       val end = start + name.dropLocal.decoded.length()
       Position.range(defn.pos.source, start, start, end)
     }
-
   }
 
   implicit class XtensionNameTreeMetals(sel: NameTreeApi) {
