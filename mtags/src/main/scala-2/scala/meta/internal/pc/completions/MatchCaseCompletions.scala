@@ -38,7 +38,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       parent: Tree,
       patternOnly: Option[String] = None,
       hasBind: Boolean = false,
-      includeExhaustive: Boolean = false
+      includeExhaustive: Option[(Boolean, Boolean)] = None
   ) extends CompletionPosition {
     val context: Context = doLocateContext(pos)
     val parents: Parents = selector match {
@@ -182,51 +182,55 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         val edits = members.map(_._2)
         // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
         // which works like exhaustive match, so we need to collect only members from this step
-        if (includeExhaustive) {
-          def isSealedDesc(sym: Symbol) = {
-            sym.info match {
-              case tr: TypeRef => sealedDescs(tr.underlying.typeSymbol)
-              case _ => sealedDescs(sym)
+        includeExhaustive match {
+          case Some((moveToNewLine, addNewLineAfter)) =>
+            def isSealedDesc(sym: Symbol) = {
+              sym.info match {
+                case tr: TypeRef => sealedDescs(tr.underlying.typeSymbol)
+                case _ => sealedDescs(sym)
+              }
             }
-          }
-          val sortedMembers = sortSubclasses(members, selectorSym.tpe, source)
-          val sealedMembers = sortedMembers.collect {
-            case (sym, member) if isSealedDesc(sym) => member
-          }
-          sealedMembers match {
-            case Nil => edits
-            case head :: tail =>
-              val newText = new l.TextEdit(
-                editRange,
-                tail
-                  .map(_.label.getOrElse(""))
-                  .mkString(
-                    if (clientSupportsSnippets) {
-                      s"\n\t${head.label.getOrElse("")} $$0\n\t"
-                    } else {
-                      s"\n\t${head.label.getOrElse("")}\n\t"
-                    },
-                    "\n\t",
-                    "\n"
-                  )
-              )
-              val detail =
-                s" ${metalsToLongString(selectorSym.tpe, new ShortenedNames())} (${sealedMembers.length} cases)"
-              val exhaustive = new TextEditMember(
-                "case (exhaustive)",
-                newText,
-                selectorSym,
-                label = Some("case (exhaustive)"),
-                detail = Some(detail),
-                additionalTextEdits =
-                  sealedMembers.toList.flatMap(_.additionalTextEdits)
-              )
-              exhaustive :: edits
-          }
-        } else edits
+            val sortedMembers = sortSubclasses(members, selectorSym.tpe, source)
+            val sealedMembers = sortedMembers.collect {
+              case (sym, member) if isSealedDesc(sym) => member
+            }
+            sealedMembers match {
+              case Nil => edits
+              case head :: tail =>
+                val (newLine, addIndent) =
+                  if (moveToNewLine) ("\n\t", "\t") else ("", "")
+                val newText = new l.TextEdit(
+                  editRange,
+                  tail
+                    .map(_.label.getOrElse(""))
+                    .mkString(
+                      if (clientSupportsSnippets) {
+                        s"$newLine${head.label.getOrElse("")} $$0\n$addIndent"
+                      } else {
+                        s"$newLine${head.label.getOrElse("")}\n$addIndent"
+                      },
+                      s"\n$addIndent",
+                      if (addNewLineAfter) "\n" else ""
+                    )
+                )
+
+                val detail =
+                  s" ${metalsToLongString(selectorSym.tpe, new ShortenedNames())} (${sealedMembers.length} cases)"
+                val exhaustive = new TextEditMember(
+                  "case (exhaustive)",
+                  newText,
+                  selectorSym,
+                  label = Some("case (exhaustive)"),
+                  detail = Some(detail),
+                  additionalTextEdits =
+                    sealedMembers.toList.flatMap(_.additionalTextEdits)
+                )
+                exhaustive :: edits
+            }
+          case None => edits
+        }
       }
     }
-
     def fuzzyMatches(name: String): Boolean =
       patternOnly match {
         case None => true

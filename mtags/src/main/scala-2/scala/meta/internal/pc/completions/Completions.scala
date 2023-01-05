@@ -442,6 +442,8 @@ trait Completions { this: MetalsGlobal =>
     ): CompletionPosition = {
       if (hasLeadingBrace(ident, text)) {
         if (isCasePrefix(ident.name)) {
+          val moveToNewLine = ident.pos.line == apply.pos.line
+          val addNewLineAfter = apply.pos.focusEnd.line == ident.pos.line
           CaseKeywordCompletion(
             EmptyTree,
             editRange,
@@ -449,7 +451,7 @@ trait Completions { this: MetalsGlobal =>
             text,
             source,
             apply,
-            includeExhaustive = true
+            includeExhaustive = Some((moveToNewLine, addNewLineAfter))
           )
         } else {
           NoneCompletion

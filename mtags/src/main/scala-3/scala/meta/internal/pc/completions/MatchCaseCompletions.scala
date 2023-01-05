@@ -63,6 +63,7 @@ object CaseKeywordCompletion:
       autoImportsGen: AutoImportsGenerator,
       patternOnly: Option[String] = None,
       hasBind: Boolean = false,
+      includeExhaustive: Option[(Boolean, Boolean)] = None,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val definitions = indexedContext.ctx.definitions
@@ -180,23 +181,26 @@ object CaseKeywordCompletion:
         )
       )
 
-      selector match
+      includeExhaustive match
         // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
         // which works like exhaustive match.
-        case EmptyTree =>
+        case Some(moveToNewLine, addNewLineAfter) =>
           val sealedMembers =
             members.filter((sym, _, _) => sealedDescs.contains(sym))
           sealedMembers match
             case Nil => caseItems
             case (_, firstLabel, _) :: tail =>
+              val (newLine, addIndent) =
+                if moveToNewLine then ("\n\t", "\t") else ("", "")
               val insertText = Some(
                 tail
                   .map((_, label, _) => label)
                   .mkString(
-                    if clientSupportsSnippets then s"\n\t${firstLabel} $$0\n\t"
-                    else s"\n\t${firstLabel}\n\t",
-                    "\n\t",
-                    "\n",
+                    if clientSupportsSnippets then
+                      s"$newLine${firstLabel} $$0\n$addIndent"
+                    else s"$newLine${firstLabel}\n$addIndent",
+                    s"\n$addIndent",
+                    if addNewLineAfter then "\n" else "",
                   )
               )
               val allImports =
@@ -210,7 +214,7 @@ object CaseKeywordCompletion:
               )
               exhaustive :: caseItems
           end match
-        case _ => caseItems
+        case None => caseItems
       end match
     end if
 
@@ -506,7 +510,9 @@ class MatchCaseExtractor(
         case _ => None
   end MatchExtractor
   object CaseExtractor:
-    def unapply(path: List[Tree])(using Context): Option[(Tree, Tree)] =
+    def unapply(path: List[Tree])(using
+        Context
+    ): Option[(Tree, Tree, Option[(Boolean, Boolean)])] =
       path match
         // foo match
         // case None => ()
@@ -517,7 +523,7 @@ class MatchCaseExtractor(
               _.isInstanceOf[Match]
             ) && expr == id =>
           val selector = stats.last.asInstanceOf[Match].selector
-          Some((selector, parent))
+          Some((selector, parent, None))
         // List(Option(1)).collect {
         //   case Some(value) => ()
         //   ca@@
@@ -529,20 +535,26 @@ class MatchCaseExtractor(
             if ident == expr && "case"
               .startsWith(name.toString()) &&
               cd.sourcePos.startLine != pos.startLine =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, None))
         // foo match
         //  ca@@
         case (_: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, None))
         // List(foo).map { ca@@ }
-        case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
-              fun,
-              args,
-            )) :: _
+        case (ident @ Ident(name)) :: (block @ Block(stats, expr)) ::
+            (apply @ Apply(fun, args)) :: _
             if stats.isEmpty && ident == expr && "case".startsWith(
               name.toString()
             ) =>
-          Some((EmptyTree, appl))
+          val moveToNewLine = ident.sourcePos.line == apply.sourcePos.line
+          val addNewLineAfter = apply.sourcePos.endLine == ident.sourcePos.line
+          Some(
+            (
+              EmptyTree,
+              apply,
+              Some((moveToNewLine, addNewLineAfter)),
+            )
+          )
 
         case _ => None
   end CaseExtractor
@@ -559,13 +571,13 @@ class MatchCaseExtractor(
             if pos.start - c.sourcePos.start > 4 =>
           Some((m.selector, parent, ""))
         // case Som@@
-        case Ident(name) :: CaseExtractor(selector, parent) =>
+        case Ident(name) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, name.decoded))
         // case abc @ Som@@
-        case Ident(name) :: Bind(_, _) :: CaseExtractor(selector, parent) =>
+        case Ident(name) :: Bind(_, _) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, name.decoded))
         // case abc @ @@
-        case Bind(_, _) :: CaseExtractor(selector, parent) =>
+        case Bind(_, _) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, ""))
         case _ => None
 
@@ -575,18 +587,19 @@ class MatchCaseExtractor(
     def unapply(path: List[Tree])(using Context) =
       path match
         // case _: Som@@ =>
-        case Ident(name) :: Typed(_, _) :: CaseExtractor(selector, parent) =>
+        case Ident(name) :: Typed(_, _) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, name.decoded))
         // case _: @@ =>
-        case Typed(_, _) :: CaseExtractor(selector, parent) =>
+        case Typed(_, _) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, ""))
         // case ab: @@ =>
-        case Bind(_, Typed(_, _)) :: CaseExtractor(selector, parent) =>
+        case Bind(_, Typed(_, _)) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, ""))
         // case ab: Som@@ =>
         case Ident(name) :: Typed(_, _) :: Bind(_, _) :: CaseExtractor(
               selector,
               parent,
+              _,
             ) =>
           Some((selector, parent, name.decoded))
         case _ => None
