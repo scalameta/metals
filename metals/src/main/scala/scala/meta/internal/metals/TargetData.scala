@@ -263,10 +263,13 @@ final class TargetData {
     }
   }
 
-  def addJavacOptions(result: JavacOptionsResult): Unit = {
+  def addJavacOptions(
+      result: JavacOptionsResult,
+      bspSession: Option[BuildServerConnection],
+  ): Unit = {
     result.getItems.asScala.foreach { javac =>
       info(javac.getTarget()).foreach { info =>
-        javaTargetInfo(javac.getTarget) = JavaTarget(info, javac)
+        javaTargetInfo(javac.getTarget) = JavaTarget(info, javac, bspSession)
       }
     }
   }

@@ -200,7 +200,10 @@ final case class Indexer(
           importedBuild.scalacOptions,
           bspSession().map(_.mainConnection),
         )
-        data.addJavacOptions(importedBuild.javacOptions)
+        data.addJavacOptions(
+          importedBuild.javacOptions,
+          bspSession().map(_.mainConnection),
+        )
 
         // For "wrapped sources", we create dedicated TargetData.MappedSource instances,
         // able to convert back and forth positions from the user-facing file to
