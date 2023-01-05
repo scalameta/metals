@@ -890,7 +890,7 @@ class MetalsLanguageServer(
         capabilities.setFoldingRangeProvider(true)
         capabilities.setSelectionRangeProvider(true)
         val semanticTokenOptions = new SemanticTokensWithRegistrationOptions()
-        semanticTokenOptions.setFull(false)
+        semanticTokenOptions.setFull(true)
         semanticTokenOptions.setRange(false)
         semanticTokenOptions.setLegend(
           new SemanticTokensLegend(
@@ -1741,7 +1741,10 @@ class MetalsLanguageServer(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] = {
     CancelTokens.future { token =>
-      compilers.semanticTokens(params)
+      compilers.semanticTokens(params, token).map { semanticTokens =>
+        if (semanticTokens.getData().isEmpty()) null
+        else semanticTokens
+      }
     }
   }
 

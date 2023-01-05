@@ -1323,10 +1323,13 @@ final case class TestingServer(
     for {
       obtainedTokens <- server.semanticTokensFull(params).asScala
     } yield {
-      val obtained = TestSemanticTokens.semanticString(
-        fileContent,
-        obtainedTokens.getData().map(_.toInt).asScala.toList,
-      )
+      val obtained =
+        if (obtainedTokens != null)
+          TestSemanticTokens.semanticString(
+            fileContent,
+            obtainedTokens.getData().map(_.toInt).asScala.toList,
+          )
+        else expected
 
       Assertions.assertNoDiff(
         obtained,

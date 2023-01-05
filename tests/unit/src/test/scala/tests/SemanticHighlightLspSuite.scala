@@ -8,15 +8,14 @@ import munit.TestOptions
  */
 class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
 
-
   check(
-    "Empty file",
+    "empty-file",
     s"""|
         |""".stripMargin,
   )
 
   check(
-    "Invalid ext (shouldn't be tokenized) 1",
+    "invalid-extension",
     s"""|
         |
         |package example
@@ -35,7 +34,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   )
 
   check(
-    "Invalid ext (shouldn't be tokenized) 2",
+    "invalid-extension-sbt",
     s"""|
         |
         |package example
@@ -54,7 +53,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   )
 
   check(
-    "Comment(Single-Line, Multi-Line)",
+    "comments",
     s"""|
         |<<object>>/*keyword*/ <<Main>>/*class*/{
         |
@@ -73,7 +72,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   )
 
   check(
-    "Enum,true,false",
+    "enum-true-false",
     s"""|
         |<<package>>/*keyword*/ <<example>>/*namespace*/
         |<<import>>/*keyword*/ <<java>>/*namespace*/.<<nio>>/*namespace*/.<<file>>/*namespace*/.<<AccessMode>>/*enum*/

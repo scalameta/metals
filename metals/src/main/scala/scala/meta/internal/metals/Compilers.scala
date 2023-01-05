@@ -374,12 +374,12 @@ class Compilers(
   }
 
   def semanticTokens(
-      params: SemanticTokensParams
+      params: SemanticTokensParams,
+      token: CancelToken,
   ): Future[SemanticTokens] = {
 
     val path = params.getTextDocument.getUri.toAbsolutePath
-    val emptyTokens = List.empty[Integer].asJava
-
+    val emptyTokens = Collections.emptyList[Integer]();
     if (!userConfig().enableSemanticHighlighting) {
       Future { new SemanticTokens(emptyTokens) }
     } else if (path.isScalaScript || path.isSbt) {
@@ -387,7 +387,7 @@ class Compilers(
     } else {
       val uri = path.toNIO.toUri()
       val input = path.toInputFromBuffers(buffers)
-      val vFile = CompilerVirtualFileParams(uri, input.value)
+      val vFile = CompilerVirtualFileParams(uri, input.value, token)
 
       loadCompiler(path)
         .map { pc =>

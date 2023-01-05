@@ -246,10 +246,9 @@ object UserConfiguration {
         "enable-semantic-highlighting",
         "false",
         "false",
-        "Highlight codes using semantic information.",
-        """|When this option is enabled, scala codes are highlighted.
-           |using semantic information(parameter, constant,etc) .
-           |When disabled, No codes are highlighted.
+        "Use semantic tokens highlight (experimental).",
+        """|When this option is enabled, Metals will provide semantic tokens for clients that support it.
+           |The feature is still experimental and does not work for all sources.
            |""".stripMargin,
       ),
       UserConfigurationOption(
