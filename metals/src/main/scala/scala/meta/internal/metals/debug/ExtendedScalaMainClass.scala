@@ -53,7 +53,7 @@ object ExtendedScalaMainClass {
       javaHome.toNIO
         .iterator()
         .asScala
-        .map(p => "\"" + p + "\"")
+        .map(p => s""""$p"""")
         .mkString(File.separator)
     val safeJavaHome =
       if (Properties.isWin) escapedJavaHome.replace("""\"""", """\\"""")
