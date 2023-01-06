@@ -74,6 +74,7 @@ import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.SemanticTokens._
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semver.SemVer
@@ -850,6 +851,16 @@ class MetalsLspService(
         )
         capabilities.setFoldingRangeProvider(true)
         capabilities.setSelectionRangeProvider(true)
+        val semanticTokenOptions = new SemanticTokensWithRegistrationOptions()
+        semanticTokenOptions.setFull(true)
+        semanticTokenOptions.setRange(false)
+        semanticTokenOptions.setLegend(
+          new SemanticTokensLegend(
+            TokenTypes.asJava,
+            TokenModifiers.asJava,
+          )
+        )
+        capabilities.setSemanticTokensProvider(semanticTokenOptions)
         capabilities.setCodeLensProvider(new CodeLensOptions(false))
         capabilities.setDefinitionProvider(true)
         capabilities.setTypeDefinitionProvider(true)
@@ -1656,6 +1667,17 @@ class MetalsLspService(
       compileAndLookForNewReferences(params, results)
     }
     results
+  }
+
+  override def semanticTokensFull(
+      params: SemanticTokensParams
+  ): CompletableFuture[SemanticTokens] = {
+    CancelTokens.future { token =>
+      compilers.semanticTokens(params, token).map { semanticTokens =>
+        if (semanticTokens.getData().isEmpty()) null
+        else semanticTokens
+      }
+    }
   }
 
   override def prepareCallHierarchy(

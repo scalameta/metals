@@ -650,6 +650,7 @@ lazy val metalsDependencies = project
       "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),
       "ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop,
       "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
+      "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
     ),
   )
   .disablePlugins(ScalafixPlugin)

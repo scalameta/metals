@@ -305,6 +305,8 @@ project's modules. From this panel it's possible to
 
 ![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
 
+```scala mdoc:test-frameworks
+```
 If you encounter an error, create an [issue](https://github.com/scalameta/metals/issues).
 
 ## Coming from IntelliJ

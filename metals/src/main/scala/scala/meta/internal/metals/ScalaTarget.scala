@@ -69,7 +69,7 @@ case class ScalaTarget(
     buildServer =>
       buildServer.name == MillBuildTool.name &&
       SemVer.isCompatibleVersion(
-        MillBuildTool.emitsSemanticDbByDefault,
+        MillBuildTool.scalaSemanticDbSupport,
         buildServer.version,
       )
   }

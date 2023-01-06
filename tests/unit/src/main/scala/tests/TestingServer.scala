@@ -67,7 +67,6 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
-import _root_.org.eclipse.lsp4j.DocumentSymbolCapabilities
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -92,6 +91,7 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.DocumentSymbolCapabilities
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FoldingRangeCapabilities
@@ -1314,6 +1314,32 @@ final case class TestingServer(
       codeActions.toList,
       codeActions.map(_.getTitle()).mkString("\n"),
     )
+
+  def assertSemanticHighlight(
+      filePath: String,
+      expected: String,
+      fileContent: String,
+  ): Future[Unit] = {
+    val uri = toPath(filePath).toTextDocumentIdentifier
+    val params = new org.eclipse.lsp4j.SemanticTokensParams(uri)
+
+    for {
+      obtainedTokens <- server.semanticTokensFull(params).asScala
+    } yield {
+      val obtained =
+        if (obtainedTokens != null)
+          TestSemanticTokens.semanticString(
+            fileContent,
+            obtainedTokens.getData().map(_.toInt).asScala.toList,
+          )
+        else expected
+
+      Assertions.assertNoDiff(
+        obtained,
+        expected,
+      )
+    }
+  }
 
   def assertHighlight(
       filename: String,

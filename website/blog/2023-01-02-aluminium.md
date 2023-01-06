@@ -34,8 +34,8 @@ which will become the primary focus over the next releases.
 </tbody>
 </table>
 
-For full details: [https://github.com/scalameta/metals/milestone/54?closed=1]
-(https://github.com/scalameta/metals/milestone/54?closed=1)
+For full details:
+[https://github.com/scalameta/metals/milestone/54?closed=1](https://github.com/scalameta/metals/milestone/54?closed=1)
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
 Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
@@ -147,6 +147,14 @@ within Visual Studio Code and nvim-metals which use an additional Test Explorer
 that is not available for all the editors. However, thanks to
 ([LaurenceWarne](https://github.com/LaurenceWarne)) Metals will now show lenses
 to run a single test case in case of all other editors.
+
+NOTE: While Metals detects test suites for most of existing testing frameworks,
+support for recognizing individual tests is more limited. Metals supports the
+current set of test frameworks when it comes to individual test discovery:
+
+- Junit
+- MUnit
+- Scalatest
 
 More details can be found in the
 [PR \#4569](https://github.com/scalameta/metals/pull/4569).

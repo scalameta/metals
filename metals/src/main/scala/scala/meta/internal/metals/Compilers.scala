@@ -39,6 +39,8 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
+import org.eclipse.lsp4j.SemanticTokens
+import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
@@ -369,6 +371,35 @@ class Compilers(
         }
       }
       .getOrElse(Future.successful(Nil))
+  }
+
+  def semanticTokens(
+      params: SemanticTokensParams,
+      token: CancelToken,
+  ): Future[SemanticTokens] = {
+
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val emptyTokens = Collections.emptyList[Integer]();
+    if (!userConfig().enableSemanticHighlighting) {
+      Future { new SemanticTokens(emptyTokens) }
+    } else if (path.isScalaScript || path.isSbt) {
+      Future { new SemanticTokens(emptyTokens) }
+    } else {
+      val uri = path.toNIO.toUri()
+      val input = path.toInputFromBuffers(buffers)
+      val vFile = CompilerVirtualFileParams(uri, input.value, token)
+
+      loadCompiler(path)
+        .map { pc =>
+          pc.semanticTokens(vFile)
+            .asScala
+            .map { plist =>
+              new SemanticTokens(plist)
+            }
+        }
+        .getOrElse(Future.successful(new SemanticTokens(emptyTokens)))
+    }
+
   }
 
   def completions(

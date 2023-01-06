@@ -203,4 +203,8 @@ class DelegatingScalaService(
   ): CompletableFuture[util.List[Location]] =
     underlying.findTextInDependencyJars(params)
 
+  override def semanticTokensFull(
+      params: SemanticTokensParams
+  ): CompletableFuture[SemanticTokens] = underlying.semanticTokensFull(params)
+
 }

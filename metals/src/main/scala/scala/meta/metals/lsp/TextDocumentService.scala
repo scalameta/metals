@@ -141,4 +141,10 @@ trait TextDocumentService {
       params: SelectionRangeParams
   ): CompletableFuture[util.List[SelectionRange]]
 
+  /** Requesting semantic tokens for a whole file in order to highlight */
+  @JsonRequest("textDocument/semanticTokens/full")
+  def semanticTokensFull(
+      params: SemanticTokensParams
+  ): CompletableFuture[SemanticTokens]
+
 }
