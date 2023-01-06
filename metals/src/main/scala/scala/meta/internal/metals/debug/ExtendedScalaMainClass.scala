@@ -2,6 +2,8 @@ package scala.meta.internal.metals.debug
 
 import java.io.File
 
+import scala.util.Properties
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
@@ -42,10 +44,21 @@ object ExtendedScalaMainClass {
       arguments: List[String],
       mainClass: String,
   ): String = {
-    val jvmOptsString = jvmOptions.mkString(" ")
+    val jvmOptsString =
+      if (jvmOptions.nonEmpty) jvmOptions.mkString("\"", "\" \"", "\"") else ""
     val classpathString = classpath.mkString(File.pathSeparator)
     val argumentsString = arguments.mkString(" ")
-    s"$javaHome $jvmOptsString -classpath $classpathString $mainClass $argumentsString"
+    // We need to add "" to account for whitespace and also escaped \ before "
+    val escapedJavaHome = javaHome.toNIO.getRoot().toString +
+      javaHome.toNIO
+        .iterator()
+        .asScala
+        .map(p => s""""$p"""")
+        .mkString(File.separator)
+    val safeJavaHome =
+      if (Properties.isWin) escapedJavaHome.replace("""\"""", """\\"""")
+      else escapedJavaHome
+    s"$safeJavaHome $jvmOptsString -classpath \"$classpathString\" $mainClass $argumentsString"
   }
 
   def apply(
