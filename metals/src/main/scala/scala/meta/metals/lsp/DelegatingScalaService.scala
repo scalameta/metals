@@ -31,7 +31,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
  *   underlying instance which is swapped at runtime
  */
 class DelegatingScalaService(
-    var underlying: ScalaLspService
+    @volatile var underlying: ScalaLspService
 ) extends ScalaLspService {
 
   override def didOpen(

@@ -77,18 +77,20 @@ class MetalsLanguageServer(
   private val serverState =
     new AtomicReference[ServerState](ServerState.Started)
 
-  @volatile
-  private var languageClient: MetalsLanguageClient = NoopLanguageClient
+  private val languageClient =
+    new AtomicReference[MetalsLanguageClient](NoopLanguageClient)
 
   private val cancelables = new MutableCancelable()
   private val isCancelled = new AtomicBoolean(false)
   private val isLanguageClientConnected = new AtomicBoolean(false)
 
-  private val metalsService = new DelegatingScalaService(new ScalaLspService {})
+  // it's fine to pass null to underlying service, it won't be used before initialize is called
+  // and we set it to the correct value in initialize anyway
+  private val metalsService = new DelegatingScalaService(null)
 
   def connectToLanguageClient(languageClient: MetalsLanguageClient): Unit = {
     isLanguageClientConnected.set(true)
-    this.languageClient = languageClient
+    this.languageClient.set(languageClient)
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())
   }
@@ -150,11 +152,11 @@ class MetalsLanguageServer(
         case _ if !isLanguageClientConnected.get =>
           Future
             .failed(
-              new IllegalStateException("Language client wasn't plugged!")
+              new IllegalStateException("Language client wasn't connected!")
             )
             .asJava
         case None =>
-          languageClient.showMessage(Messages.noRoot)
+          languageClient.get.showMessage(Messages.noRoot)
           Future
             .failed(
               new IllegalArgumentException(
@@ -199,7 +201,7 @@ class MetalsLanguageServer(
     ec = ec,
     buffers = buffers,
     workspace = workspace,
-    client = languageClient,
+    client = languageClient.get,
     initializeParams = initializeParams,
     charset = charset,
     time = time,
@@ -224,8 +226,8 @@ class MetalsLanguageServer(
     // enabled.
     if (isInitialized.compareAndSet(false, true)) {
       serverState.get match {
-        case ServerState.Initialized(server) =>
-          server.initialized()
+        case ServerState.Initialized(service) =>
+          service.initialized()
         case _ =>
           Future.failed(new Exception)
       }
@@ -260,7 +262,7 @@ class MetalsLanguageServer(
   // todo https://github.com/scalameta/metals/issues/4785
   @deprecated
   def getOldMetalsLanguageServer: MetalsLspService = serverState.get match {
-    case ServerState.Initialized(server) => server
+    case ServerState.Initialized(service) => service
     case _ => throw new IllegalStateException("Server is not initialized")
   }
 

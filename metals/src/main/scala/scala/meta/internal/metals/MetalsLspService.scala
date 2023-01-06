@@ -844,7 +844,9 @@ class MetalsLspService(
         fingerprints.addAll(tables.fingerprints.load())
         val capabilities = new ServerCapabilities()
         capabilities.setExecuteCommandProvider(
-          new ExecuteCommandOptions(ServerCommands.allIds.toList.asJava)
+          new ExecuteCommandOptions(
+            (ServerCommands.allIds ++ codeActionProvider.allActionCommandsIds).toList.asJava
+          )
         )
         capabilities.setFoldingRangeProvider(true)
         capabilities.setSelectionRangeProvider(true)
@@ -2678,8 +2680,7 @@ class MetalsLspService(
 
   private def syncUserconfiguration(): Future[Unit] = {
     val supportsConfiguration = for {
-      params <- Some(initializeParams)
-      capabilities <- Option(params.getCapabilities)
+      capabilities <- Option(initializeParams.getCapabilities)
       workspace <- Option(capabilities.getWorkspace)
       out <- Option(workspace.getConfiguration())
     } yield out.booleanValue()

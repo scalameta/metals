@@ -15,157 +15,130 @@ import org.eclipse.{lsp4j => l}
  * Interface which describes text document LSP requests and notifications which are
  * implemented by Metals.
  *
- * It's equivalent to [[org.eclipse.lsp4j.services.TextDocumentService]] with some return types changed.
- *
- * Each method has a default implementation which throws UnsupportedOperationException. Throwing in this context is ok because:
- * - the default implementation should never be called, because the method is always overridden in [[scala.meta.internal.metals.MetalsLanguageServer]]
- * - lsp4j wraps each method in try catch and returns an error response to the client
+ * Based on [[org.eclipse.lsp4j.services.TextDocumentService]] with some return types changed.
  */
 trait TextDocumentService {
 
   @JsonNotification("textDocument/didOpen")
-  def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] =
-    throw new UnsupportedOperationException()
+  def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit]
 
   @JsonNotification("textDocument/didChange")
   def didChange(
       params: DidChangeTextDocumentParams
-  ): CompletableFuture[Unit] = throw new UnsupportedOperationException()
+  ): CompletableFuture[Unit]
 
   @JsonNotification("textDocument/didClose")
-  def didClose(params: DidCloseTextDocumentParams): Unit =
-    throw new UnsupportedOperationException()
+  def didClose(params: DidCloseTextDocumentParams): Unit
 
   @JsonNotification("textDocument/didSave")
-  def didSave(params: DidSaveTextDocumentParams): CompletableFuture[Unit] =
-    throw new UnsupportedOperationException()
+  def didSave(params: DidSaveTextDocumentParams): CompletableFuture[Unit]
 
   @JsonRequest("textDocument/definition")
   def definition(
       position: TextDocumentPositionParams
-  ): CompletableFuture[util.List[Location]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[Location]]
 
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
       position: TextDocumentPositionParams
-  ): CompletableFuture[util.List[Location]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[Location]]
 
   @JsonRequest("textDocument/implementation")
   def implementation(
       position: TextDocumentPositionParams
-  ): CompletableFuture[util.List[Location]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[Location]]
 
   @JsonRequest("textDocument/hover")
-  def hover(params: HoverExtParams): CompletableFuture[Hover] =
-    throw new UnsupportedOperationException()
+  def hover(params: HoverExtParams): CompletableFuture[Hover]
 
   @JsonRequest("textDocument/documentHighlight")
   def documentHighlights(
       params: TextDocumentPositionParams
-  ): CompletableFuture[util.List[DocumentHighlight]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[DocumentHighlight]]
 
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
       params: DocumentSymbolParams
   ): CompletableFuture[
     JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
-  ] = throw new UnsupportedOperationException()
+  ]
 
   @JsonRequest("textDocument/formatting")
   def formatting(
       params: DocumentFormattingParams
-  ): CompletableFuture[util.List[TextEdit]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[TextEdit]]
 
   @JsonRequest("textDocument/onTypeFormatting")
   def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
-  ): CompletableFuture[util.List[TextEdit]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[TextEdit]]
 
   @JsonRequest("textDocument/rangeFormatting")
   def rangeFormatting(
       params: DocumentRangeFormattingParams
-  ): CompletableFuture[util.List[TextEdit]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[TextEdit]]
 
   @JsonRequest("textDocument/prepareRename")
   def prepareRename(
       params: TextDocumentPositionParams
-  ): CompletableFuture[l.Range] = throw new UnsupportedOperationException()
+  ): CompletableFuture[l.Range]
 
   @JsonRequest("textDocument/rename")
   def rename(
       params: RenameParams
-  ): CompletableFuture[WorkspaceEdit] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[WorkspaceEdit]
 
   @JsonRequest("textDocument/references")
   def references(
       params: ReferenceParams
-  ): CompletableFuture[util.List[Location]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[Location]]
 
   @JsonRequest("textDocument/prepareCallHierarchy")
   def prepareCallHierarchy(
       params: CallHierarchyPrepareParams
-  ): CompletableFuture[util.List[CallHierarchyItem]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[CallHierarchyItem]]
 
   @JsonRequest("callHierarchy/incomingCalls")
   def callHierarchyIncomingCalls(
       params: CallHierarchyIncomingCallsParams
-  ): CompletableFuture[util.List[CallHierarchyIncomingCall]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[CallHierarchyIncomingCall]]
 
   @JsonRequest("callHierarchy/outgoingCalls")
   def callHierarchyOutgoingCalls(
       params: CallHierarchyOutgoingCallsParams
-  ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[CallHierarchyOutgoingCall]]
 
   @JsonRequest("textDocument/completion")
-  def completion(params: CompletionParams): CompletableFuture[CompletionList] =
-    throw new UnsupportedOperationException()
+  def completion(params: CompletionParams): CompletableFuture[CompletionList]
 
   @JsonRequest("completionItem/resolve")
   def completionItemResolve(
       item: CompletionItem
-  ): CompletableFuture[CompletionItem] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[CompletionItem]
 
   @JsonRequest("textDocument/signatureHelp")
   def signatureHelp(
       params: TextDocumentPositionParams
-  ): CompletableFuture[SignatureHelp] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[SignatureHelp]
 
   @JsonRequest("textDocument/codeAction")
   def codeAction(
       params: CodeActionParams
-  ): CompletableFuture[util.List[l.CodeAction]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[l.CodeAction]]
 
   @JsonRequest("textDocument/codeLens")
   def codeLens(
       params: CodeLensParams
-  ): CompletableFuture[util.List[CodeLens]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[CodeLens]]
 
   @JsonRequest("textDocument/foldingRange")
   def foldingRange(
       params: FoldingRangeRequestParams
-  ): CompletableFuture[util.List[FoldingRange]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[FoldingRange]]
 
   @JsonRequest("textDocument/selectionRange")
   def selectionRange(
       params: SelectionRangeParams
-  ): CompletableFuture[util.List[SelectionRange]] =
-    throw new UnsupportedOperationException()
+  ): CompletableFuture[util.List[SelectionRange]]
 
 }
