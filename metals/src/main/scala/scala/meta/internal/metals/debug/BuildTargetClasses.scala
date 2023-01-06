@@ -81,11 +81,7 @@ final class BuildTargetClasses(
             .map(cacheTestClasses(classes, _))
 
           val jvmRunEnvironment = connection
-            .jvmRunEnvironment(
-              new b.JvmRunEnvironmentParams(
-                buildTargets.allBuildTargetIds.toList.asJava
-              )
-            )
+            .jvmRunEnvironment(new b.JvmRunEnvironmentParams(targetsList))
             .map(cacheJvmRunEnvironment)
 
           for {
