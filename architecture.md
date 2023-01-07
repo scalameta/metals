@@ -8,16 +8,34 @@ This document describes the high-level architecture of Metals following the phil
 - If you're interested in the overview of how Metals works, [A Dive into how Metals works](https://youtu.be/fpzN_vTBy18) video will be helpful.
 - For LSP specification, please refer [the LSP document](https://microsoft.github.io/language-server-protocol/), you don't have to read all of the `specification`, just read the `overview` and pick out the interesting parts when you need it.
 
+## Language Server
+
+`MetalsLanguageServer.scala` is an entrypoint to Metals. This class is responsible for handling LSP [lifecycle messages](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages). Upon receiving initialize request, an instance of `MetalsLspService.scala` which is responsible for handling other LSP requests.
+
 ## LSP endpoints
 
-The most important file of this project is `MetalsLanguageServer.scala`. In this file, we define all of the LSP endpoints, for example, you will find the endpoint for `textDocument/completion` request as follows.
+The most important file of this project is `MetalsLspService.scala`. In this file, we implement all of the LSP endpoints. All endpoint we use, are defined in `scala.meta.metals.lsp` package in 3 files:
+
+- `WorkspaceService.scala`
+- `TextDocumentService.scala`
+- `MetalsService.scala`
+
+For example, you will find the endpoint for `textDocument/completion` request in `TextDocumentService`.
 
 ```scala
 @JsonRequest("textDocument/completion")
 def completion(...) = ...
 ```
 
-In addition to the LSP endpoints, this file contains many components, for example `private var semanticdbs: Semanticdbs = _`. Those components will be initialized later at some points like on LSP's `initialize` request.
+Such endpoint is then implemented by `MetalsLspService`.
+
+In addition to the implementation of LSP endpoints, this file creates and manage many components, for instance:
+
+- `private val compilers: Compilers = ...`
+- `private val codeLensProvider: CodeLensProvider = ...`
+- `private val diagnostics: Diagnostics = ...`
+
+Hacking in Metals usually starts with recognizing in which component one has to make a change to get something woorking.
 
 ## Presentation compiler
 
@@ -54,11 +72,12 @@ For more details about sbt's BSP support in Metals, see [the blog post](https://
 
 ## Worksheet
 
- Worksheet support is provided by [mdoc](https://github.com/scalameta/mdoc), which is able to typecheck and evaluate each line of the input. The main class responsible for worksheets is [WorksheetProvider.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorksheetProvider.scala). It is responsible for downloading mdoc instance for each Scala version that is supported and running the evaluation in the file input.
- 
- Later the evaluations are published using [decoration extension](https://scalameta.org/metals/docs/integrations/decoration-protocol) or via additional Text Edits for editors that do not support decorations. This is done in the two classes implementing [WorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorksheetPublisher.scala):
- - [DecorationWorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/DecorationWorksheetPublisher.scala) for decoration publishing
- - [WorkspaceEditWorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorkspaceEditWorksheetPublisher.scala) for publishing decorations as comments in the code
+Worksheet support is provided by [mdoc](https://github.com/scalameta/mdoc), which is able to typecheck and evaluate each line of the input. The main class responsible for worksheets is [WorksheetProvider.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorksheetProvider.scala). It is responsible for downloading mdoc instance for each Scala version that is supported and running the evaluation in the file input.
+
+Later the evaluations are published using [decoration extension](https://scalameta.org/metals/docs/integrations/decoration-protocol) or via additional Text Edits for editors that do not support decorations. This is done in the two classes implementing [WorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorksheetPublisher.scala):
+
+- [DecorationWorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/DecorationWorksheetPublisher.scala) for decoration publishing
+- [WorkspaceEditWorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorkspaceEditWorksheetPublisher.scala) for publishing decorations as comments in the code
 
 ## Formatting
 
@@ -75,11 +94,10 @@ Metals downloads separate version of Scalafix for each binary version of Scala. 
 
 ## Debbugging
 
-
 Debugging is handled by Debug Adapter Protocol, which is a complementary protocol to LSP.
 
-The main code for debugging resides in `scala.meta.internal.metals.debug` package with [DebugProvider.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/debug/DebugProvider.scala) being the main entrypoint. 
+The main code for debugging resides in `scala.meta.internal.metals.debug` package with [DebugProvider.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/debug/DebugProvider.scala) being the main entrypoint.
 
-DebugProvider sets up the communication between the debug server process started by the build server and the client.  This communication is handled in [DebugProxy.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/debug/DebugProxy.scala) which translates some of the messages in order to enrich them with the information from Metals itself.
+DebugProvider sets up the communication between the debug server process started by the build server and the client. This communication is handled in [DebugProxy.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/debug/DebugProxy.scala) which translates some of the messages in order to enrich them with the information from Metals itself.
 
 You can find more information about DAP [here](https://github.com/scalacenter/bloop/blob/main/docs/debug-adapter.md)
