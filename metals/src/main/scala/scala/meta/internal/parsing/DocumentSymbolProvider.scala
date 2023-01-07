@@ -1,7 +1,6 @@
 package scala.meta.internal.parsing
 
 import java.util
-import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -18,13 +17,10 @@ import org.eclipse.{lsp4j => l}
  *  If the document doesn't parse, we fall back to the latest
  *  known snapshot of the document, if present.
  */
-class DocumentSymbolProvider(trees: Trees) {
-
-  private val supportsHierarchicalDocumentSymbols = new AtomicBoolean(true)
-
-  def setSupportsHierarchicalDocumentSymbols(value: Boolean): Unit = {
-    supportsHierarchicalDocumentSymbols.set(value)
-  }
+final class DocumentSymbolProvider(
+    trees: Trees,
+    supportsHierarchicalDocumentSymbols: Boolean,
+) {
 
   def documentSymbols(
       path: AbsolutePath
@@ -41,7 +37,7 @@ class DocumentSymbolProvider(trees: Trees) {
     }
     val symbols = result.getOrElse(Nil).toSeq
 
-    if (supportsHierarchicalDocumentSymbols.get()) {
+    if (supportsHierarchicalDocumentSymbols) {
       Left(symbols.asJava)
     } else {
       val infos = symbols.toSymbolInformation(path.toURI.toString())

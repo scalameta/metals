@@ -65,7 +65,7 @@ class Compilers(
     embedded: Embedded,
     statusBar: StatusBar,
     sh: ScheduledExecutorService,
-    initializeParams: Option[InitializeParams],
+    initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
     scalaVersionSelector: ScalaVersionSelector,
     trees: Trees,
@@ -874,13 +874,11 @@ class Compilers(
       .withExecutorService(ec)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
-      .withConfiguration(
-        initializeParams
-          .map(params => {
-            val options = InitializationOptions.from(params).compilerOptions
-            config.initialConfig.compilers.update(options)
-          })
-          .getOrElse(config.initialConfig.compilers)
+      .withConfiguration {
+        val options =
+          InitializationOptions.from(initializeParams).compilerOptions
+        config.initialConfig.compilers
+          .update(options)
           .copy(
             _symbolPrefixes = userConfig().symbolPrefixes,
             isCompletionSnippetsEnabled =
@@ -888,7 +886,7 @@ class Compilers(
             _isStripMarginOnTypeFormattingEnabled =
               () => userConfig().enableStripMarginOnTypeFormatting,
           )
-      )
+      }
 
   def newCompiler(
       target: ScalaTarget,

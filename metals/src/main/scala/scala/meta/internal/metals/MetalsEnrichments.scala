@@ -925,11 +925,10 @@ object MetalsEnrichments
   }
 
   implicit class XtensionClientCapabilities(
-      initializeParams: Option[l.InitializeParams]
+      params: l.InitializeParams
   ) {
     def supportsHierarchicalDocumentSymbols: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         documentSymbol <- Option(textDocument.getDocumentSymbol)
@@ -940,7 +939,6 @@ object MetalsEnrichments
 
     def supportsCompletionSnippets: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         completion <- Option(textDocument.getCompletion)
@@ -950,7 +948,6 @@ object MetalsEnrichments
 
     def foldOnlyLines: Boolean = {
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         settings <- Option(textDocument.getFoldingRange)
@@ -960,7 +957,6 @@ object MetalsEnrichments
 
     def supportsCodeActionLiterals: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         codeAction <- Option(textDocument.getCodeAction)

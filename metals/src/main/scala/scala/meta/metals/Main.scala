@@ -7,7 +7,6 @@ import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Trace
@@ -54,7 +53,7 @@ object Main {
       ec,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
-      initialConfig = initialConfig,
+      initialServerConfig = initialConfig,
     )
     try {
       val launcher = new Launcher.Builder[MetalsLanguageClient]()
@@ -66,6 +65,7 @@ object Main {
         .setLocalService(server)
         .create()
       val clientProxy = launcher.getRemoteProxy
+      // important, plug language client before starting listening!
       server.connectToLanguageClient(clientProxy)
       launcher.startListening().get()
     } catch {

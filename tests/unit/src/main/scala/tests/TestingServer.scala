@@ -42,7 +42,6 @@ import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
@@ -135,6 +134,7 @@ final case class TestingServer(
     val client: TestingClient,
     buffers: Buffers,
     config: MetalsServerConfig,
+    initialUserConfig: UserConfiguration,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
     time: Time,
@@ -144,11 +144,12 @@ final case class TestingServer(
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
 
-  val server = new MetalsLanguageServer(
+  val languageServer = new scala.meta.metals.MetalsLanguageServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,
-    initialConfig = config,
+    initialServerConfig = config,
+    initialUserConfig = initialUserConfig,
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
@@ -158,12 +159,14 @@ final case class TestingServer(
     onStartCompilation = onStartCompilation,
     classpathSearchIndexer = TestingServer.testingClasspathSearchIndexer,
   )
-  server.connectToLanguageClient(client)
+  languageServer.connectToLanguageClient(client)
 
-  private val trees = new Trees(
+  lazy val server = languageServer.getOldMetalsLanguageServer
+
+  private lazy val trees = new Trees(
     buffers,
     new ScalaVersionSelector(
-      () => UserConfiguration.default,
+      () => initialUserConfig,
       server.buildTargets,
     ),
   )
@@ -573,11 +576,11 @@ final case class TestingServer(
         .asJava
     )
     params.setRootUri(workspace.toURI.toString)
-    server.initialize(params).asScala
+    languageServer.initialize(params).asScala
   }
 
   def initialized(): Future[Unit] = {
-    server.initialized(new InitializedParams).asScala
+    languageServer.initialized(new InitializedParams).asScala
   }
 
   def assertBuildServerConnection(): Unit = {

@@ -43,7 +43,7 @@ final class Ammonite(
     compilations: Compilations,
     statusBar: StatusBar,
     diagnostics: Diagnostics,
-    tables: () => Tables,
+    tables: Tables,
     languageClient: MetalsLanguageClient,
     buildClient: ForwardingMetalsBuildClient,
     userConfig: () => UserConfiguration,
@@ -254,7 +254,7 @@ final class Ammonite(
                 script +: extraScripts,
                 workspace(),
               ),
-          tables().dismissedNotifications.ReconnectAmmonite,
+          tables.dismissedNotifications.ReconnectAmmonite,
           config,
           "Ammonite",
         )

@@ -8,9 +8,9 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.MetalsLanguageServer
 
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
