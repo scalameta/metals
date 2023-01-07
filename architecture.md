@@ -14,7 +14,7 @@ This document describes the high-level architecture of Metals following the phil
 
 ## LSP endpoints
 
-The most important file of this project is `MetalsLspService.scala`. In this file, we implement all of the LSP endpoints. All endpoint we use, are defined in `scala.meta.metals.lsp` package in 3 files:
+The most important file of this project is `MetalsLspService.scala`. In this file, we implement all of the LSP endpoints. All endpoints we use are defined in the `scala.meta.metals.lsp` package in 3 files:
 
 - `WorkspaceService.scala`
 - `TextDocumentService.scala`
@@ -29,7 +29,7 @@ def completion(...) = ...
 
 Such endpoint is then implemented by `MetalsLspService`.
 
-In addition to the implementation of LSP endpoints, this file creates and manage many components, for instance:
+In addition to the implementation of LSP endpoints, this file creates and manages many components, for instance:
 
 - `private val compilers: Compilers = ...`
 - `private val codeLensProvider: CodeLensProvider = ...`
