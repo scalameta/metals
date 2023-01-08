@@ -48,9 +48,11 @@ object Main {
     val tracePrinter = Trace.setupTracePrinter("LSP")
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
+    val sh = Executors.newSingleThreadScheduledExecutor()
     val initialConfig = MetalsServerConfig.default
     val server = new MetalsLanguageServer(
-      ec,
+      ec = ec,
+      sh = sh,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
       initialServerConfig = initialConfig,
@@ -75,6 +77,7 @@ object Main {
     } finally {
       server.cancelAll()
       ec.shutdownNow()
+      sh.shutdownNow()
 
       sys.exit(0)
     }

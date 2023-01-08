@@ -3,7 +3,6 @@ package scala.meta.metals
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -52,6 +51,7 @@ import org.eclipse.lsp4j._
  */
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
+    sh: ScheduledExecutorService,
     buffers: Buffers = Buffers(),
     redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
@@ -61,7 +61,6 @@ class MetalsLanguageServer(
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
-    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
     isReliableFileWatcher: Boolean = true,
     mtagsResolver: MtagsResolver = MtagsResolver.default(),
     onStartCompilation: () => Unit = () => (),
@@ -236,13 +235,15 @@ class MetalsLanguageServer(
       Future.unit
     }
   }.recover { case NonFatal(e) =>
-    scribe.error("Unexpected error initializing server", e)
+    scribe.error("Unexpected error initializing server: ", e)
   }.asJava
 
   override def shutdown(): CompletableFuture[Unit] = serverState.get match {
     case ServerState.Initialized(server) =>
       scribe.info("Shutting down server")
-      server.shutdown()
+      server
+        .shutdown()
+        .thenApply(_ => serverState.set(ServerState.ShuttingDown(server)))
     case _ =>
       scribe.warn(s"Ignoring shutdown request, server is $serverState state")
       Future.unit.asJava
