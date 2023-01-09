@@ -170,6 +170,7 @@ class MetalsLspService(
 
   private val languageClient =
     new ConfiguredLanguageClient(client, clientConfig)
+  cancelables.add(() => languageClient.shutdown())
 
   val statusBar: StatusBar = new StatusBar(
     languageClient,

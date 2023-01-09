@@ -28,7 +28,6 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
-import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.ServerState.ShuttingDown
@@ -87,11 +86,19 @@ class MetalsLanguageServer(
   // and we set it to the correct value in initialize anyway
   private val metalsService = new DelegatingScalaService(null)
 
-  def connectToLanguageClient(languageClient: MetalsLanguageClient): Unit = {
-    isLanguageClientConnected.set(true)
-    this.languageClient.set(languageClient)
-    LanguageClientLogger.languageClient = Some(languageClient)
-    cancelables.add(() => languageClient.shutdown())
+  /**
+   * @param languageClientProxy don't be fool by type, this is proxy created by lsp4j and calling shutdown on it may throw
+   */
+  def connectToLanguageClient(
+      languageClientProxy: MetalsLanguageClient
+  ): Unit = {
+    if (isLanguageClientConnected.compareAndSet(false, true)) {
+      this.languageClient.set(languageClientProxy)
+    } else {
+      scribe.warn(
+        "Attempted to connect to language client, but it was already connected"
+      )
+    }
   }
 
   /**
