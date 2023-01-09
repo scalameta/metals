@@ -451,7 +451,8 @@ trait Completions { this: MetalsGlobal =>
             text,
             source,
             apply,
-            includeExhaustive = Some((moveToNewLine, addNewLineAfter))
+            includeExhaustive =
+              Some(NewLineOptions(moveToNewLine, addNewLineAfter))
           )
         } else {
           NoneCompletion
