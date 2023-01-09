@@ -3,7 +3,6 @@ package scala.meta.metals
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -29,7 +28,6 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
-import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.ServerState.ShuttingDown
@@ -52,6 +50,7 @@ import org.eclipse.lsp4j._
  */
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
+    sh: ScheduledExecutorService,
     buffers: Buffers = Buffers(),
     redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
@@ -61,7 +60,6 @@ class MetalsLanguageServer(
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
-    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
     isReliableFileWatcher: Boolean = true,
     mtagsResolver: MtagsResolver = MtagsResolver.default(),
     onStartCompilation: () => Unit = () => (),
@@ -88,11 +86,19 @@ class MetalsLanguageServer(
   // and we set it to the correct value in initialize anyway
   private val metalsService = new DelegatingScalaService(null)
 
-  def connectToLanguageClient(languageClient: MetalsLanguageClient): Unit = {
-    isLanguageClientConnected.set(true)
-    this.languageClient.set(languageClient)
-    LanguageClientLogger.languageClient = Some(languageClient)
-    cancelables.add(() => languageClient.shutdown())
+  /**
+   * @param languageClientProxy don't be fool by type, this is proxy created by lsp4j and calling shutdown on it may throw
+   */
+  def connectToLanguageClient(
+      languageClientProxy: MetalsLanguageClient
+  ): Unit = {
+    if (isLanguageClientConnected.compareAndSet(false, true)) {
+      this.languageClient.set(languageClientProxy)
+    } else {
+      scribe.warn(
+        "Attempted to connect to language client, but it was already connected"
+      )
+    }
   }
 
   /**
@@ -236,13 +242,15 @@ class MetalsLanguageServer(
       Future.unit
     }
   }.recover { case NonFatal(e) =>
-    scribe.error("Unexpected error initializing server", e)
+    scribe.error("Unexpected error initializing server: ", e)
   }.asJava
 
   override def shutdown(): CompletableFuture[Unit] = serverState.get match {
     case ServerState.Initialized(server) =>
       scribe.info("Shutting down server")
-      server.shutdown()
+      server
+        .shutdown()
+        .thenApply(_ => serverState.set(ServerState.ShuttingDown(server)))
     case _ =>
       scribe.warn(s"Ignoring shutdown request, server is $serverState state")
       Future.unit.asJava
