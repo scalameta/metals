@@ -100,6 +100,7 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.logging.LanguageClientLogger
 
 // todo https://github.com/scalameta/metals/issues/4789
 // extract configuration to separate class
@@ -170,6 +171,7 @@ class MetalsLspService(
 
   private val languageClient =
     new ConfiguredLanguageClient(client, clientConfig)
+  LanguageClientLogger.languageClient = Some(languageClient)
   cancelables.add(() => languageClient.shutdown())
 
   val statusBar: StatusBar = new StatusBar(
