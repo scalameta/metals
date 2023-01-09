@@ -57,10 +57,12 @@ final class SemanticTokenProvider(
     import scala.meta._
     var cLine = Line(0, 0) // Current Line
     var lastProvided = SingleLineToken(cLine, 0, None)
-
+    var nodesIterator: List[NodeInfo] = nodes
     for (tk <- params.text().tokenize.get) yield {
 
-      val (tokenType, tokeModifier) = getTypeAndMod(tk)
+      val (tokenType, tokenModifier, nodesIterator0) =
+        getTypeAndMod(tk, nodesIterator)
+      nodesIterator = nodesIterator0
       var cOffset = tk.pos.start // Current Offset
       var providing = SingleLineToken(cLine, cOffset, Some(lastProvided.copy()))
 
@@ -84,7 +86,7 @@ final class SemanticTokenProvider(
                 providing.deltaStartChar,
                 providing.charSize,
                 tokenType,
-                tokeModifier
+                tokenModifier
               )
             )
             lastProvided = providing
@@ -184,7 +186,10 @@ final class SemanticTokenProvider(
   /**
    * The position of @param tk must be incremented from the previous call.
    */
-  def pickFromTraversed(tk: scala.meta.tokens.Token): Option[NodeInfo] = {
+  def pickFromTraversed(
+      tk: scala.meta.tokens.Token,
+      nodesIterator: List[NodeInfo]
+  ): Option[(NodeInfo, List[NodeInfo])] = {
 
     val adjustForBacktick: Int = {
       var ret: Int = 0
@@ -197,29 +202,15 @@ final class SemanticTokenProvider(
       }
       ret
     }
+    def isTarget(node: NodeInfo): Boolean =
+      node.pos.start == tk.pos.start &&
+        node.pos.end + adjustForBacktick == tk.pos.end
 
-    val nodesIterator = nodes.iterator
-    var currentNode = nodesIterator.next()
-
-    def isTarget: Boolean =
-      currentNode.pos.start == tk.pos.start &&
-        currentNode.pos.end + adjustForBacktick == tk.pos.end
-
-    def continueItelation: Boolean =
-      // Goes ahead for appropriate position
-      if (currentNode.pos.start < tk.pos.start) true
-      // Stops if the position is exceeded
-      else if (currentNode.pos.start > tk.pos.start) false
-      // Ends successfully if Target is found
-      else if (isTarget) false
-      // Continues seeking on the appropriate position
-      else true
-
-    while (continueItelation && nodesIterator.hasNext)
-      currentNode = nodesIterator.next()
-
-    if (isTarget) Some(currentNode)
-    else None
+    val candidates = nodesIterator.dropWhile(_.pos.start < tk.pos.start)
+    candidates
+      .takeWhile(_.pos.start == tk.pos.start)
+      .find(isTarget)
+      .zip(Some(candidates))
   }
 
   case class NodeInfo(
@@ -428,19 +419,25 @@ final class SemanticTokenProvider(
   /**
    * returns (SemanticTokenType, SemanticTokenModifier) of @param tk
    */
-  private def getTypeAndMod(tk: scala.meta.tokens.Token): (Int, Int) = {
+  private def getTypeAndMod(
+      tk: scala.meta.tokens.Token,
+      nodesIterator: List[NodeInfo]
+  ): (Int, Int, List[NodeInfo]) = {
 
     tk match {
-      case ident: Token.Ident => IndentTypeAndMod(ident)
-      case _ => (typeOfNonIdentToken(tk), 0)
+      case ident: Token.Ident => IdentTypeAndMod(ident, nodesIterator)
+      case _ => (typeOfNonIdentToken(tk), 0, nodesIterator)
     }
   }
 
   /**
    * returns (SemanticTokenType, SemanticTokenModifier) of @param tk
    */
-  private def IndentTypeAndMod(ident: Token.Ident): (Int, Int) = {
-    val default = (-1, 0)
+  private def IdentTypeAndMod(
+      ident: Token.Ident,
+      nodesIterator: List[NodeInfo]
+  ): (Int, Int, List[NodeInfo]) = {
+    val default = (-1, 0, nodesIterator)
 
     val isOperatorName = (ident.name.last: @switch) match {
       case '~' | '!' | '@' | '#' | '%' | '^' | '*' | '+' | '-' | '<' | '>' |
@@ -448,10 +445,9 @@ final class SemanticTokenProvider(
         true
       case _ => false
     }
-
     val ret =
       for (
-        nodeInfo <- pickFromTraversed(ident);
+        (nodeInfo, nodesIterator) <- pickFromTraversed(ident, nodesIterator);
         sym <- nodeInfo.sym
       ) yield {
         var mod: Int = 0
@@ -501,7 +497,7 @@ final class SemanticTokenProvider(
         if (sym.isDeprecated) addPwrToMod(SemanticTokenModifiers.Deprecated)
         if (sym.owner.isModule) addPwrToMod(SemanticTokenModifiers.Static)
 
-        (typ, mod)
+        (typ, mod, nodesIterator)
 
       }
 
