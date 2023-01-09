@@ -38,7 +38,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       parent: Tree,
       patternOnly: Option[String] = None,
       hasBind: Boolean = false,
-      includeExhaustive: Option[(Boolean, Boolean)] = None
+      includeExhaustive: Option[NewLineOptions] = None
   ) extends CompletionPosition {
     val context: Context = doLocateContext(pos)
     val parents: Parents = selector match {
@@ -183,18 +183,18 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
         // which works like exhaustive match, so we need to collect only members from this step
         includeExhaustive match {
-          case Some((moveToNewLine, addNewLineAfter)) =>
+          case Some(NewLineOptions(moveToNewLine, addNewLineAfter)) =>
             def isSealedDesc(sym: Symbol) = {
               sym.info match {
                 case tr: TypeRef => sealedDescs(tr.underlying.typeSymbol)
                 case _ => sealedDescs(sym)
               }
             }
-            val sortedMembers = sortSubclasses(members, selectorSym.tpe, source)
-            val sealedMembers = sortedMembers.collect {
-              case (sym, member) if isSealedDesc(sym) => member
-            }
-            sealedMembers match {
+            val sealedMembers = members.filter(m => isSealedDesc(m._1))
+            val sortedMembers =
+              sortSubclasses(sealedMembers, selectorSym.tpe, source).map(_._2)
+
+            sortedMembers match {
               case Nil => edits
               case head :: tail =>
                 val (newLine, addIndent) =
@@ -223,7 +223,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
                   label = Some("case (exhaustive)"),
                   detail = Some(detail),
                   additionalTextEdits =
-                    sealedMembers.toList.flatMap(_.additionalTextEdits)
+                    sortedMembers.toList.flatMap(_.additionalTextEdits)
                 )
                 exhaustive :: edits
             }
@@ -346,8 +346,8 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       result
     }
   }
-  private def sortSubclasses[A](
-      subclasses: List[(Symbol, A)],
+  private def sortSubclasses(
+      subclasses: List[(Symbol, TextEditMember)],
       tpe: Type,
       source: URI
   ) = {
@@ -622,5 +622,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         }
     }
   }
+
+  case class NewLineOptions(moveToNewLine: Boolean, addNewLineAfter: Boolean)
 
 }
