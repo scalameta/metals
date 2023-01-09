@@ -62,6 +62,7 @@ import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
+import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
@@ -100,7 +101,6 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.metals.logging.LanguageClientLogger
 
 // todo https://github.com/scalameta/metals/issues/4789
 // extract configuration to separate class
@@ -112,6 +112,10 @@ import scala.meta.internal.metals.logging.LanguageClientLogger
  * @param sh
  *   Scheduled executor service used for scheduling tasks. This class DO NOT
  *   manage the lifecycle of this executor.
+ * @param client
+ *   Metals client used for sending notifications to the client. This class DO
+ *   NOT manage the lifecycle of this client. It is the responsibility of the
+ *   caller to shut down the client.
  */
 class MetalsLspService(
     ec: ExecutionContextExecutorService,
@@ -169,10 +173,13 @@ class MetalsLspService(
     initializeParams,
   )
 
-  private val languageClient =
-    new ConfiguredLanguageClient(client, clientConfig)
-  LanguageClientLogger.languageClient = Some(languageClient)
-  cancelables.add(() => languageClient.shutdown())
+  private val languageClient = {
+    val languageClient = new ConfiguredLanguageClient(client, clientConfig)
+    // Set the language client so that we can forward log messages to the client
+    LanguageClientLogger.languageClient = Some(languageClient)
+    cancelables.add(() => languageClient.shutdown())
+    languageClient
+  }
 
   val statusBar: StatusBar = new StatusBar(
     languageClient,
