@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 import java.{util => ju}
 
 import scala.annotation.switch
+import scala.collection.immutable.SortedSet
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -36,11 +37,15 @@ final class SemanticTokenProvider(
   )
   cp.typeCheck(unit) // initializing unit
   val (root, source) = (unit.lastBody, unit.source)
+  implicit val ord: Ordering[NodeInfo] = Ordering.fromLessThan((ni1, ni2) =>
+    if (ni1.pos.start == ni2.pos.start) ni1.pos.end < ni2.pos.end
+    else ni1.pos.start < ni2.pos.start
+  )
 
   def unitPos(offset: Int): Position = unit.position(offset)
   val nodes: List[NodeInfo] = traverser
-    .traverse(List.empty[NodeInfo], root)
-    .sortBy(_.pos.start)
+    .traverse(SortedSet.empty[NodeInfo], root)
+    .toList
 
   /**
    * Main method.  Fist, Codes are convert to Scala.Meta.Tokens.
@@ -209,8 +214,10 @@ final class SemanticTokenProvider(
     val candidates = nodesIterator.dropWhile(_.pos.start < tk.pos.start)
     candidates
       .takeWhile(_.pos.start == tk.pos.start)
-      .find(isTarget)
-      .zip(Some(candidates))
+      .find(isTarget) match {
+      case None => None
+      case Some(value) => Some((value, candidates))
+    }
   }
 
   case class NodeInfo(
@@ -240,9 +247,9 @@ final class SemanticTokenProvider(
      * The nodes have symbol.
      */
     def traverse(
-        nodes: List[NodeInfo],
+        nodes: SortedSet[NodeInfo],
         tree: cp.Tree
-    ): List[NodeInfo] = {
+    ): SortedSet[NodeInfo] = {
 
       tree match {
         /**
@@ -264,7 +271,7 @@ final class SemanticTokenProvider(
             else {
               ident.symbol
             }
-          nodes :+ NodeInfo(symbol, ident.pos)
+          nodes + NodeInfo(symbol, ident.pos)
 
         /**
          * Needed for type trees such as:
@@ -272,7 +279,7 @@ final class SemanticTokenProvider(
          */
         case tpe: cp.TypeTree if tpe.original != null && tpe.pos.isRange =>
           tpe.original.children.foldLeft(
-            nodes :+ NodeInfo(tpe.original, typePos(tpe))
+            nodes + NodeInfo(tpe.original, typePos(tpe))
           )(traverse(_, _))
         /**
          * All select statements such as:
@@ -280,7 +287,7 @@ final class SemanticTokenProvider(
          */
         case sel: cp.Select if sel.pos.isRange =>
           traverse(
-            nodes :+ NodeInfo(sel, sel.namePos),
+            nodes + NodeInfo(sel, sel.namePos),
             sel.qualifier
           )
         /**
@@ -288,7 +295,7 @@ final class SemanticTokenProvider(
          * val Some(<<a>>) = Some(2)
          */
         case bnd: cp.Bind =>
-          bnd.children.foldLeft(nodes :+ NodeInfo(bnd, bnd.pos))(traverse(_, _))
+          bnd.children.foldLeft(nodes + NodeInfo(bnd, bnd.pos))(traverse(_, _))
 
         /* all definitions:
          * def <<foo>> = ???
@@ -298,8 +305,10 @@ final class SemanticTokenProvider(
         case df: cp.MemberDef if df.pos.isRange =>
           (annotationChildren(df) ++ df.children)
             .foldLeft(
-              nodes :+ NodeInfo(df, df.namePos)
+              if (nodes(NodeInfo(df, df.namePos))) nodes
+              else nodes + NodeInfo(df, df.namePos)
             )(traverse(_, _))
+
         /* Named parameters, since they don't show up in typed tree:
          * foo(<<name>> = "abc")
          * User(<<name>> = "abc")
@@ -331,7 +340,7 @@ final class SemanticTokenProvider(
          */
         case id: cp.Ident if id.symbol == cp.NoSymbol =>
           fallbackSymbol(id.name, id.pos) match {
-            case Some(_) => nodes :+ NodeInfo(id, id.pos)
+            case Some(_) => nodes + NodeInfo(id, id.pos)
             case _ => nodes
           }
 
