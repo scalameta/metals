@@ -118,7 +118,9 @@ class MetalsPrinter(
     if sym.is(Flags.Package) || sym.isClass then
       " " + dotcPrinter.fullName(sym.owner)
     else if sym.is(Flags.Module) || typeSymbol.is(Flags.Module) then
-      " " + dotcPrinter.fullName(typeSymbol.owner)
+      if typeSymbol != NoSymbol then
+        " " + dotcPrinter.fullName(typeSymbol.owner)
+      else " " + dotcPrinter.fullName(sym.owner)
     else if sym.is(Flags.Method) then
       defaultMethodSignature(sym, info, onlyMethodParams = true)
     else tpe(info)
