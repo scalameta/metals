@@ -160,7 +160,8 @@ commands ++= Seq(
 // https://github.com/scala/bug/issues/10448
 def lintingOptions(scalaVersion: String) = {
   val unused213 = "-Wunused"
-  val unused3 = "-Wunused:all"
+  // Can't use due to issues with Scala 3 https://github.com/lampepfl/dotty/issues/16650
+  // val unused3 = "-Wunused:all"
   val common = List(
     // desugaring of for yield caused pattern var to complain
     // https://github.com/scala/bug/issues/10287
@@ -181,7 +182,7 @@ def lintingOptions(scalaVersion: String) = {
   crossSetting(
     scalaVersion,
     if213 = unused213 :: commonFiltered,
-    if3 = unused3 :: Nil,
+    if3 = Nil,
     if211 = List("-Ywarn-unused-import"),
   )
 }
