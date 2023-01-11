@@ -143,6 +143,7 @@ final class ConfiguredLanguageClient(
     val result = new ShowMessageRequestParams()
     result.setMessage(params.placeHolder)
     result.setActions(params.items.map(item => new MessageActionItem(item.id)))
+    result.setType(MessageType.Info)
     result
   }
 
