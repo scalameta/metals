@@ -23,44 +23,9 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
   private val initScriptName = "init-script.gradle"
   private val gradleBloopVersion = BuildInfo.gradleBloopVersion
   private def initScript = {
-    def authString(cr: Credentials) =
-      if (cr == null) ""
-      else
-        s"""|
-            |      credentials {
-            |        username ${cr.getUser()}
-            |        password ${cr.getPassword()}
-            |      }
-            |""".stripMargin
-    val repos = Repository.defaults.asScala.collect {
-      case mr: MavenRepository if mr != Repository.central =>
-        // filter central etc.
-        s"""|    maven {
-            |      url "${mr.getBase()}" ${authString(mr.getCredentials())}
-            |    }""".stripMargin
-
-      case ir: IvyRepository =>
-        ir.getPattern().split("\\/\\[").toList match {
-          case url :: rest => {
-            val layout = "[" ++ rest.mkString("/[")
-            s"""|    ivy {
-                |      url "${url}"
-                |      patternLayout {
-                |        artifact "${layout}"
-                |      }${authString(ir.getCredentials())}
-                |    }""".stripMargin
-          }
-          case Nil => ""
-        }
-      case mr if mr == Repository.central => "    mavenCentral()"
-    }
-    val reposString =
-      if (repos.isEmpty) "    mavenCentral()" else repos.mkString("\n")
     s"""
        |initscript {
-       |  repositories {
-       |$reposString
-       |  }
+       |${GradleBuildTool.toGradleRepositories(Repository.defaults.asScala.toList)}
        |  dependencies {
        |    classpath 'ch.epfl.scala:gradle-bloop_2.12:$gradleBloopVersion'
        |  }
@@ -157,5 +122,52 @@ object GradleBuildTool {
     path.toNIO.startsWith(buildSrc) ||
     filename.endsWith(".gradle") ||
     filename.endsWith(".gradle.kts")
+  }
+
+  def toGradleRepositories(
+      repos: List[Repository]
+  ): String = {
+    def authString(cr: Credentials) =
+      if (cr == null) ""
+      else
+        s"""|
+            |      credentials {
+            |        username "${cr.getUser()}"
+            |        password "${cr.getPassword()}"
+            |      }""".stripMargin
+
+    repos.collect {
+      case mr: MavenRepository if mr != Repository.central =>
+        // filter central etc.
+        s"""|    maven {
+            |      url "${mr.getBase()}"${authString(mr.getCredentials())}
+            |    }""".stripMargin
+
+      case ir: IvyRepository =>
+        ir.getPattern().split("\\/\\[").toList match {
+          case url :: rest => {
+            val layout = "[" ++ rest.mkString("/[")
+            s"""|    ivy {
+                |      url "${url}"
+                |      patternLayout {
+                |        artifact "${layout}"
+                |      }${authString(ir.getCredentials())}
+                |    }""".stripMargin
+          }
+          case Nil => ""
+        }
+      case mr if mr == Repository.central => "    mavenCentral()"
+    } match {
+      case Nil =>
+        """|  repositories {
+           |    mavenCentral()
+           |  }
+           |""".stripMargin
+      case repos =>
+        s"""|  repositories {
+            |${repos.mkString("\n")}
+            |  }
+            |""".stripMargin
+    }
   }
 }
