@@ -366,20 +366,24 @@ class BuildServerConnection private (
           }
         case t
             if implicitly[ClassTag[T]].runtimeClass.getSimpleName != "Object" =>
+          val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
+          val message = onFail
+            .map { case (_, msg) => msg }
+            .getOrElse(s"Failed to run request with params ${name}")
+
+          t match {
+            case _: CancellationException =>
+              scribe.info(message)
+            case issue: MessageIssueException =>
+              scribe.info(issue.getRpcMessage().toString())
+            case _ =>
+              scribe.info(message, t)
+          }
           onFail
-            .map { case (defaultResult, message) =>
-              t match {
-                case _: CancellationException =>
-                  scribe.info(message)
-                case issue: MessageIssueException =>
-                  scribe.info(issue.getRpcMessage().toString())
-                case _ =>
-                  scribe.info(message, t)
-              }
+            .map { case (defaultResult, _) =>
               Future.successful(defaultResult)
             }
             .getOrElse({
-              val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
               Future.failed(new MetalsBspException(name, t))
             })
       }
