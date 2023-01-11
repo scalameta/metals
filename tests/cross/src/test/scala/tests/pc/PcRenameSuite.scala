@@ -423,4 +423,16 @@ class PcRenameSuite extends BasePcRenameSuite {
        |""".stripMargin,
     newName = "ABC",
   )
+
+  check(
+    "class-of",
+    """|object Test {
+       |  classOf[String]
+       |  def test() = {
+       |    val <<tes@@tVal>> = "test"
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "testing",
+  )
 }

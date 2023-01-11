@@ -357,7 +357,7 @@ abstract class PcCollector[T](
               )(traverse(_, _))
 
             // needed for `classOf[<<ABC>>]`
-            case lit @ Literal(Constant(TypeRef(_, sym, _))) =>
+            case lit @ Literal(Constant(TypeRef(_, sym, _))) if sought(sym) =>
               val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
               acc + collect(
                 lit,
