@@ -562,8 +562,11 @@ final class Doctor(
       }
     val (targetType, diagnosticsStatus) =
       scalaTarget.sbtVersion match {
-        case Some(sbt) =>
+        case Some(sbt)
+            if currentBuildServer().exists(_.mainConnectionIsBloop) =>
           (s"sbt $sbt", DoctorStatus.alert)
+        case Some(sbt) =>
+          (s"sbt $sbt", DoctorStatus.check)
         case None =>
           (s"Scala $scalaVersion", DoctorStatus.check)
       }
