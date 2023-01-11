@@ -146,18 +146,16 @@ final case class TestingServer(
 
   val languageServer = new scala.meta.metals.MetalsLanguageServer(
     ex,
-    buffers = buffers,
-    redirectSystemOut = false,
-    initialServerConfig = config,
-    initialUserConfig = initialUserConfig,
-    progressTicks = ProgressTicks.none,
-    bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
-    time = time,
-    isReliableFileWatcher = System.getenv("CI") != "true",
-    mtagsResolver = mtagsResolver,
-    onStartCompilation = onStartCompilation,
-    classpathSearchIndexer = TestingServer.testingClasspathSearchIndexer,
+    new TestingServer.TestMetalsServerConfiguration(
+      buffers = buffers,
+      initialServerConfig = config,
+      initialUserConfig = initialUserConfig,
+      bspGlobalDirectories = bspGlobalDirectories,
+      time = time,
+      mtagsResolver = mtagsResolver,
+      onStartCompilation = onStartCompilation,
+    ),
   )
   languageServer.connectToLanguageClient(client)
 
@@ -1936,4 +1934,21 @@ object TestingServer {
       }
 
     }
+
+  case class TestMetalsServerConfiguration(
+      override val buffers: Buffers,
+      override val time: Time,
+      override val initialServerConfig: MetalsServerConfig,
+      override val initialUserConfig: UserConfiguration,
+      override val bspGlobalDirectories: List[AbsolutePath],
+      override val mtagsResolver: MtagsResolver,
+      override val onStartCompilation: () => Unit,
+  ) extends scala.meta.internal.metals.MetalsServerConfiguration {
+    override val redirectSystemOut = false
+
+    override val progressTicks = ProgressTicks.none
+    override val isReliableFileWatcher: Boolean = System.getenv("CI") != "true"
+    override val classpathSearchIndexer =
+      TestingServer.testingClasspathSearchIndexer
+  }
 }

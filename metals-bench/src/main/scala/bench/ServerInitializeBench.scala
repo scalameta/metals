@@ -55,7 +55,7 @@ class ServerInitializeBench {
     val client = new TestingClient(path, buffers)
     MetalsLogger.updateDefaultFormat()
     val ec = ExecutionContext.fromExecutorService(ex)
-    val server = new MetalsLanguageServer(ec, sh = sh)
+    val server = new MetalsLanguageServer(ec, sh)
     server.connectToLanguageClient(client)
     val initialize = new InitializeParams
     initialize.setRootUri(path.toURI.toString)

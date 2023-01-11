@@ -1,12 +1,9 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
 import java.nio.file._
 import java.util
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -102,8 +99,6 @@ import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
 
-// todo https://github.com/scalameta/metals/issues/4789
-// extract configuration to separate class
 /**
  * Metals implementation of the Scala Language Service.
  * @param ec
@@ -112,32 +107,28 @@ import org.eclipse.{lsp4j => l}
  * @param sh
  *   Scheduled executor service used for scheduling tasks. This class DO NOT
  *   manage the lifecycle of this executor.
+ * @param configuration
+ *   Metals sever configuration, it's main purpose is allowing for custom bahaviour in tests.
+ * @param workspace
+ *   An absolute path to the workscape.
  * @param client
  *   Metals client used for sending notifications to the client. This class DO
  *   NOT manage the lifecycle of this client. It is the responsibility of the
  *   caller to shut down the client.
+ * @param initializeParams
+ *  Initialization parameters send by the client in the initialize request,
+ *  which is the first request sent to the server by the client.
  */
 class MetalsLspService(
     ec: ExecutionContextExecutorService,
-    buffers: Buffers = Buffers(),
+    sh: ScheduledExecutorService,
+    configuration: MetalsServerConfiguration,
     val workspace: AbsolutePath,
     client: MetalsLanguageClient,
     initializeParams: InitializeParams,
-    initialUserConfig: UserConfiguration = UserConfiguration.default,
-    charset: Charset = StandardCharsets.UTF_8,
-    time: Time = Time.system,
-    initialConfig: MetalsServerConfig = MetalsServerConfig.default,
-    progressTicks: ProgressTicks = ProgressTicks.braille,
-    bspGlobalDirectories: List[AbsolutePath] =
-      BspServers.globalInstallDirectories,
-    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
-    isReliableFileWatcher: Boolean = true,
-    mtagsResolver: MtagsResolver = MtagsResolver.default(),
-    onStartCompilation: () => Unit = () => (),
-    classpathSearchIndexer: ClasspathSearch.Indexer =
-      ClasspathSearch.Indexer.default,
 ) extends Cancelable
     with ScalaLspService {
+  import configuration._
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -169,7 +160,7 @@ class MetalsLspService(
   private var userConfig: UserConfiguration = initialUserConfig
 
   private val clientConfig = ClientConfiguration(
-    initialConfig,
+    initialServerConfig,
     initializeParams,
   )
 
@@ -245,7 +236,7 @@ class MetalsLspService(
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
-    initialConfig,
+    initialServerConfig,
     buffers,
     buildTargets,
   )
@@ -267,7 +258,7 @@ class MetalsLspService(
   )
   private val fileWatcher = register(
     new FileWatcher(
-      initialConfig,
+      initialServerConfig,
       () => workspace,
       buildTargets,
       fileWatchFilter,
@@ -885,7 +876,7 @@ class MetalsLspService(
           new DocumentOnTypeFormattingOptions("\n", List("\"").asJava)
         )
         capabilities.setDocumentRangeFormattingProvider(
-          initialConfig.allowMultilineStringFormatting
+          initialServerConfig.allowMultilineStringFormatting
         )
         capabilities.setSignatureHelpProvider(
           new SignatureHelpOptions(List("(", "[", ",").asJava)

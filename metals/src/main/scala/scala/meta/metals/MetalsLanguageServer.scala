@@ -1,7 +1,5 @@
 package scala.meta.metals
 
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
@@ -11,21 +9,14 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-import scala.meta.internal.bsp.BspServers
-import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.MtagsResolver
+import scala.meta.internal.metals.MetalsServerConfiguration
 import scala.meta.internal.metals.MutableCancelable
-import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.ThreadPools
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
@@ -37,35 +28,23 @@ import scala.meta.metals.lsp.ScalaLspService
 
 import org.eclipse.lsp4j._
 
-// todo https://github.com/scalameta/metals/issues/4789
-// extract configuration to separate class
-
 /**
  * Scala Language Server implementation.
  *
  * @param ec
- *   execution context for futures.
+ *  Execution context for futures.
  * @param sh
- *   scheduled executor service for scheduling tasks.
+ *  Scheduled executor service for scheduling tasks.
+ * @param configuration
+ *  Metals sever configuration, it's main purpose is allowing for custom bahaviour in tests.
  */
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
     sh: ScheduledExecutorService,
-    buffers: Buffers = Buffers(),
-    redirectSystemOut: Boolean = true,
-    charset: Charset = StandardCharsets.UTF_8,
-    time: Time = Time.system,
-    initialServerConfig: MetalsServerConfig = MetalsServerConfig.default,
-    initialUserConfig: UserConfiguration = UserConfiguration.default,
-    progressTicks: ProgressTicks = ProgressTicks.braille,
-    bspGlobalDirectories: List[AbsolutePath] =
-      BspServers.globalInstallDirectories,
-    isReliableFileWatcher: Boolean = true,
-    mtagsResolver: MtagsResolver = MtagsResolver.default(),
-    onStartCompilation: () => Unit = () => (),
-    classpathSearchIndexer: ClasspathSearch.Indexer =
-      ClasspathSearch.Indexer.default,
+    configuration: MetalsServerConfiguration =
+      MetalsServerConfiguration.productionConfiguration,
 ) extends LanguageServer {
+  import configuration._
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -204,22 +183,12 @@ class MetalsLanguageServer(
       workspace: AbsolutePath,
       initializeParams: InitializeParams,
   ): MetalsLspService = new MetalsLspService(
-    ec = ec,
-    buffers = buffers,
-    workspace = workspace,
-    client = languageClient.get,
-    initializeParams = initializeParams,
-    charset = charset,
-    time = time,
-    initialConfig = initialServerConfig,
-    initialUserConfig = initialUserConfig,
-    progressTicks = progressTicks,
-    bspGlobalDirectories = bspGlobalDirectories,
-    sh = sh,
-    isReliableFileWatcher = isReliableFileWatcher,
-    mtagsResolver = mtagsResolver,
-    onStartCompilation = onStartCompilation,
-    classpathSearchIndexer = classpathSearchIndexer,
+    ec,
+    sh,
+    configuration,
+    workspace,
+    languageClient.get,
+    initializeParams,
   )
 
   private val isInitialized = new AtomicBoolean(false)

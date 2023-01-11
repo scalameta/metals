@@ -1,13 +1,11 @@
 package scala.meta.metals
 
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -49,14 +47,7 @@ object Main {
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
     val sh = Executors.newSingleThreadScheduledExecutor()
-    val initialConfig = MetalsServerConfig.default
-    val server = new MetalsLanguageServer(
-      ec = ec,
-      sh = sh,
-      redirectSystemOut = true,
-      charset = StandardCharsets.UTF_8,
-      initialServerConfig = initialConfig,
-    )
+    val server = new MetalsLanguageServer(ec, sh)
     try {
       val launcher = new Launcher.Builder[MetalsLanguageClient]()
         .traceMessages(tracePrinter.orNull)
