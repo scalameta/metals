@@ -180,6 +180,16 @@ final class ClientConfiguration(
     } yield refreshSupport
     codeLenseRefreshSupport.getOrElse(false)
   }
+
+  def semanticTokensRefreshSupport(): Boolean = {
+    val semanticTokensRefreshSupport: Option[Boolean] = for {
+      capabilities <- clientCapabilities
+      workspace <- Option(capabilities.getWorkspace())
+      semanticTokens <- Option(workspace.getSemanticTokens())
+      refreshSupport <- Option(semanticTokens.getRefreshSupport())
+    } yield refreshSupport
+    semanticTokensRefreshSupport.getOrElse(false)
+  }
 }
 
 object ClientConfiguration {

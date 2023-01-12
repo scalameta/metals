@@ -2584,6 +2584,10 @@ class MetalsLspService(
       .fold(Future.successful(()))(
         worksheetProvider.evaluateAndPublish(_, EmptyCancelToken)
       )
+      .flatMap { _ =>
+        // we need to refresh tokens for worksheets since dependencies could have been added
+        languageClient.refreshSemanticTokens().asScala.map(_ => ())
+      }
   }
 
   private def onBuildChangedUnbatched(

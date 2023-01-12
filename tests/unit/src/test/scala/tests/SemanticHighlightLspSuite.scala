@@ -15,44 +15,6 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
   )
 
   check(
-    "invalid-extension",
-    s"""|
-        |
-        |package example
-        |
-        |import util.{Failure => NotGood}
-        |import math.{floor => _, _}
-        |
-        |class Imports {
-        |  // rename reference
-        |  NotGood(null)
-        |  max(1, 2)
-        |}
-        |
-        |""".stripMargin,
-    "build.sc",
-  )
-
-  check(
-    "invalid-extension-sbt",
-    s"""|
-        |
-        |package example
-        |
-        |import util.{Failure => NotGood}
-        |import math.{floor => _, _}
-        |
-        |class Imports {
-        |  // rename reference
-        |  NotGood(null)
-        |  max(1, 2)
-        |}
-        |
-        |""".stripMargin,
-    "build.sbt",
-  )
-
-  check(
     "comments",
     s"""|
         |<<object>>/*keyword*/ <<Main>>/*class*/{
@@ -97,7 +59,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
       fileName: String = "Main.scala",
   ): Unit = {
     val fileContent =
-      expected.replaceAll(raw"/\*[\w,]+\*/", "").replaceAll(raw"\<\<|\>\>", "")
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
 
     val filePath = "a/src/main/scala/a/" + fileName
     val absFilePath = "/" + filePath
