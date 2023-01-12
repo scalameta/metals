@@ -5,8 +5,7 @@ object V {
   val scala211 = "2.11.12"
   val scala212 = "2.12.17"
   val scala213 = "2.13.10"
-  val scala3 = "3.2.1"
-  val nextScala3RC = "3.2.2-RC2"
+  val scala3 = "3.2.2"
   val sbtScala = "2.12.16"
   val ammonite212Version = "2.12.17"
   val ammonite213Version = "2.13.10"
@@ -93,9 +92,9 @@ object V {
 
   // Scala 3
   def nonDeprecatedScala3Versions =
-    Seq(nextScala3RC, scala3, "3.2.0", "3.1.3")
+    Seq(scala3, "3.2.1", "3.2.0", "3.1.3")
   def deprecatedScala3Versions =
-    Seq("3.2.2-RC1", "3.1.2", "3.1.1", "3.1.0", "3.0.2")
+    Seq("3.2.2-RC2", "3.1.2", "3.1.1", "3.1.0", "3.0.2")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   lazy val nightlyScala3DottyVersions = {
@@ -123,6 +122,5 @@ object V {
       ammonite213Version,
       scala3,
       ammonite3Version,
-      nextScala3RC,
     ).toList
 }
