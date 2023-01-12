@@ -251,11 +251,13 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
                   (soughtOrOverride(ident.symbol) ||
                     isForComprehensionOwner(ident) ||
                     (extensionParam && isExtensionParam(ident.symbol))) =>
-              ident.symbol.nameBackticked
-              occurences + collect(
-                ident,
-                ident.sourcePos,
-              )
+              // symbols will differ for params in different ext methods, but source pos will be the same
+              if sought.exists(_.sourcePos == ident.symbol.sourcePos) then
+                occurences + collect(
+                  ident,
+                  ident.sourcePos,
+                )
+              else occurences
             /**
              * All select statements such as:
              * val a = hello.<<b>>
