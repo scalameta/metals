@@ -14,7 +14,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
-import scala.meta.internal.metals.MetalsServerConfiguration
+import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ThreadPools
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -35,16 +35,17 @@ import org.eclipse.lsp4j._
  *  Execution context for futures.
  * @param sh
  *  Scheduled executor service for scheduling tasks.
- * @param configuration
- *  Metals sever configuration, it's main purpose is allowing for custom bahaviour in tests.
+ * @param serverInputs
+ *  Collection of different parameters used by Metals for running,
+ *  which main purpose is allowing for custom bahaviour in tests.
  */
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
     sh: ScheduledExecutorService,
-    configuration: MetalsServerConfiguration =
-      MetalsServerConfiguration.productionConfiguration,
+    serverInputs: MetalsServerInputs =
+      MetalsServerInputs.productionConfiguration,
 ) extends LanguageServer {
-  import configuration._
+  import serverInputs._
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -185,7 +186,7 @@ class MetalsLanguageServer(
   ): MetalsLspService = new MetalsLspService(
     ec,
     sh,
-    configuration,
+    serverInputs,
     workspace,
     languageClient.get,
     initializeParams,
