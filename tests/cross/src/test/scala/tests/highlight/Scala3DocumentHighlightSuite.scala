@@ -87,4 +87,24 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin,
   )
 
+  check(
+    "extension-complex",
+    """|object Extensions:
+       |
+       |  extension [A, B](<<eit@@hers>>: Seq[Either[A, B]])
+       |    def sequence = <<eithers>>.partitionMap(identity) match
+       |      case (Nil, rights)       => Right(rights)
+       |      case (firstLeft :: _, _) => Left(firstLeft)
+       |    def sequence2 = <<eithers>>.partitionMap(identity) match
+       |      case (Nil, rights)       => Right(rights)
+       |      case (firstLeft :: _, _) => Left(firstLeft)
+       |
+       |  extension (map: Map[String, String])
+       |    def getOrLeft(key: String): Either[String, String] =
+       |      map.get(key) match
+       |        case None        => Left(s"Missing ${key} in }")
+       |        case Some(value) => Right(value)
+       |""".stripMargin,
+  )
+
 }
