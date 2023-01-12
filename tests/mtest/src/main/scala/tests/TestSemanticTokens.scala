@@ -10,6 +10,11 @@ import org.eclipse.{lsp4j => l}
 
 object TestSemanticTokens {
 
+  def removeSemanticHighlightDecorations(contents: String): String =
+    contents
+      .replaceAll(raw"/\*[\w,]+\*/", "")
+      .replaceAll(raw"\<\<|\>\>", "")
+
   def semanticString(fileContent: String, obtainedTokens: List[Int]): String = {
 
     /**

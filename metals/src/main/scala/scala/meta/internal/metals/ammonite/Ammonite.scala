@@ -285,11 +285,7 @@ object Ammonite {
     val startIdx = scalaCode.indexOf(startTag)
     if (startIdx >= 0) {
       val linesBefore = scalaCode.lineAtIndex(startIdx + startTag.length)
-      pos =>
-        if (pos.getLine < linesBefore)
-          new Position(0, 0)
-        else
-          new Position(pos.getLine - linesBefore, pos.getCharacter)
+      pos => new Position(pos.getLine - linesBefore, pos.getCharacter)
     } else
       identity _
   }

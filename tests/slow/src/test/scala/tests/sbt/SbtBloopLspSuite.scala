@@ -20,6 +20,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
 import tests.ScriptsAssertions
+import tests.TestSemanticTokens
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
@@ -707,4 +708,55 @@ class SbtBloopLspSuite
       )
     } yield ()
   }
+
+  test("semantic-highlight") {
+    val expected =
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+          |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
+          |  .<<settings>>/*method*/(
+          |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
+          |    <<inThisBuild>>/*method*/(
+          |      <<List>>/*namespace*/(
+          |        <<organization>>/*variable,readonly*/ <<:=>>/*method*/ <<"com.example">>/*string*/,
+          |        <<scalaVersion>>/*variable,readonly*/ <<:=>>/*method*/ <<"2.13.10">>/*string*/,
+          |        <<scalacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*namespace*/(<<"-Xsource:3">>/*string*/, <<"-Xlint:adapted-args">>/*string*/),
+          |        <<javacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*namespace*/(
+          |          <<"-Xlint:all">>/*string*/,
+          |          <<"-Xdoclint:accessibility,html,syntax">>/*string*/
+          |        )
+          |      )
+          |    ),
+          |    <<name>>/*variable,readonly*/ <<:=>>/*method*/ <<"bsp-tests-source-sets">>/*string*/
+          |  )
+          |
+          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*variable,readonly*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
+          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalatest">>/*string*/ <<%%>>/*method*/ <<"scalatest">>/*string*/ <<%>>/*method*/ <<"3.2.9">>/*string*/ <<%>>/*method*/ <<Test>>/*variable,readonly*/
+          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalameta">>/*string*/ <<%%>>/*method*/ <<"scalameta">>/*string*/ <<%>>/*method*/ <<"4.6.0">>/*string*/
+          |
+         """.stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+    for {
+      _ <- initialize(
+        s"""|/build.sbt
+            |$fileContent
+         """.stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("build.sbt")
+      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.assertSemanticHighlight(
+        "build.sbt",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
+
 }

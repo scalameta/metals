@@ -377,24 +377,69 @@ class Compilers(
       params: SemanticTokensParams,
       token: CancelToken,
   ): Future[SemanticTokens] = {
-
-    val path = params.getTextDocument.getUri.toAbsolutePath
     val emptyTokens = Collections.emptyList[Integer]();
     if (!userConfig().enableSemanticHighlighting) {
       Future { new SemanticTokens(emptyTokens) }
-    } else if (path.isScalaScript || path.isSbt) {
-      Future { new SemanticTokens(emptyTokens) }
     } else {
-      val uri = path.toNIO.toUri()
-      val input = path.toInputFromBuffers(buffers)
-      val vFile = CompilerVirtualFileParams(uri, input.value, token)
-
+      val path = params.getTextDocument.getUri.toAbsolutePath
       loadCompiler(path)
-        .map { pc =>
-          pc.semanticTokens(vFile)
+        .map { compiler =>
+          val (input, _, adjust) =
+            sourceAdjustments(
+              params.getTextDocument().getUri(),
+              compiler.scalaVersion(),
+            )
+
+          /**
+           * Find the start that is actually contained in the file and not
+           * in the added parts such as imports in sbt.
+           *
+           * @param line line within the adjusted source
+           * @param character line within the adjusted source
+           * @param remaining the rest of the tokens to analyze
+           * @return the first found that should be contained with the rest
+           */
+          def findCorrectStart(
+              line: Integer,
+              character: Integer,
+              remaining: List[Integer],
+          ): List[Integer] = {
+            remaining match {
+              case lineDelta :: charDelta :: next =>
+                val newCharacter: Integer =
+                  // only increase character delta if the same line
+                  if (lineDelta == 0) character + charDelta
+                  else charDelta
+
+                val adjustedTokenPos = adjust.adjustPos(
+                  new LspPosition(line + lineDelta, newCharacter),
+                  adjustToZero = false,
+                )
+                if (
+                  adjustedTokenPos.getLine() >= 0 &&
+                  adjustedTokenPos.getCharacter() >= 0
+                )
+                  (adjustedTokenPos.getLine(): Integer) ::
+                    (adjustedTokenPos.getCharacter(): Integer) :: next
+                else
+                  findCorrectStart(
+                    line + lineDelta,
+                    newCharacter,
+                    next.drop(3),
+                  )
+              case _ => Nil
+            }
+          }
+
+          val vFile =
+            CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
+          compiler
+            .semanticTokens(vFile)
             .asScala
             .map { plist =>
-              new SemanticTokens(plist)
+              new SemanticTokens(
+                findCorrectStart(0, 0, plist.asScala.toList).asJava
+              )
             }
         }
         .getOrElse(Future.successful(new SemanticTokens(emptyTokens)))

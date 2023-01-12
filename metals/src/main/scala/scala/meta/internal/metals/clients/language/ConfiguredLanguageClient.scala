@@ -95,6 +95,12 @@ final class ConfiguredLanguageClient(
     } else CompletableFuture.completedFuture(())
   }
 
+  override def refreshSemanticTokens(): CompletableFuture[Void] = {
+    if (clientConfig.semanticTokensRefreshSupport()) {
+      underlying.refreshSemanticTokens()
+    } else CompletableFuture.allOf()
+  }
+
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit =
