@@ -43,6 +43,7 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
@@ -147,7 +148,7 @@ final case class TestingServer(
   val languageServer = new scala.meta.metals.MetalsLanguageServer(
     ex,
     sh = sh,
-    new TestingServer.TestMetalsServerConfiguration(
+    TestingServer.testServerInputs(
       buffers = buffers,
       initialServerConfig = config,
       initialUserConfig = initialUserConfig,
@@ -1935,20 +1936,27 @@ object TestingServer {
 
     }
 
-  case class TestMetalsServerConfiguration(
-      override val buffers: Buffers,
-      override val time: Time,
-      override val initialServerConfig: MetalsServerConfig,
-      override val initialUserConfig: UserConfiguration,
-      override val bspGlobalDirectories: List[AbsolutePath],
-      override val mtagsResolver: MtagsResolver,
-      override val onStartCompilation: () => Unit,
-  ) extends scala.meta.internal.metals.MetalsServerConfiguration {
-    override val redirectSystemOut = false
+  def testServerInputs(
+      buffers: Buffers,
+      time: Time,
+      initialServerConfig: MetalsServerConfig,
+      initialUserConfig: UserConfiguration,
+      bspGlobalDirectories: List[AbsolutePath],
+      mtagsResolver: MtagsResolver,
+      onStartCompilation: () => Unit,
+  ): MetalsServerInputs = MetalsServerInputs(
+    buffers,
+    time,
+    initialServerConfig,
+    initialUserConfig,
+    bspGlobalDirectories,
+    mtagsResolver,
+    onStartCompilation,
+    redirectSystemOut = false,
+    progressTicks = ProgressTicks.none,
+    isReliableFileWatcher = System.getenv("CI") != "true",
+    classpathSearchIndexer = TestingServer.testingClasspathSearchIndexer,
+    charset = StandardCharsets.UTF_8,
+  )
 
-    override val progressTicks = ProgressTicks.none
-    override val isReliableFileWatcher: Boolean = System.getenv("CI") != "true"
-    override val classpathSearchIndexer =
-      TestingServer.testingClasspathSearchIndexer
-  }
 }

@@ -102,19 +102,20 @@ import org.eclipse.{lsp4j => l}
 /**
  * Metals implementation of the Scala Language Service.
  * @param ec
- *   Execution context used for submitting tasks. This class DO NOT manage the
- *   lifecycle of this execution context.
+ *  Execution context used for submitting tasks. This class DO NOT manage the
+ *  lifecycle of this execution context.
  * @param sh
- *   Scheduled executor service used for scheduling tasks. This class DO NOT
- *   manage the lifecycle of this executor.
- * @param configuration
- *   Metals sever configuration, it's main purpose is allowing for custom bahaviour in tests.
+ *  Scheduled executor service used for scheduling tasks. This class DO NOT
+ *  manage the lifecycle of this executor.
+ * @param serverInputs
+ *  Collection of different parameters used by Metals for running,
+ *  which main purpose is allowing for custom bahaviour in tests.
  * @param workspace
- *   An absolute path to the workscape.
+ *  An absolute path to the workscape.
  * @param client
- *   Metals client used for sending notifications to the client. This class DO
- *   NOT manage the lifecycle of this client. It is the responsibility of the
- *   caller to shut down the client.
+ *  Metals client used for sending notifications to the client. This class DO
+ *  NOT manage the lifecycle of this client. It is the responsibility of the
+ *  caller to shut down the client.
  * @param initializeParams
  *  Initialization parameters send by the client in the initialize request,
  *  which is the first request sent to the server by the client.
@@ -122,13 +123,13 @@ import org.eclipse.{lsp4j => l}
 class MetalsLspService(
     ec: ExecutionContextExecutorService,
     sh: ScheduledExecutorService,
-    configuration: MetalsServerConfiguration,
+    serverInputs: MetalsServerInputs,
     val workspace: AbsolutePath,
     client: MetalsLanguageClient,
     initializeParams: InitializeParams,
 ) extends Cancelable
     with ScalaLspService {
-  import configuration._
+  import serverInputs._
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
