@@ -1396,7 +1396,9 @@ class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val paths = params.getChanges.asScala.iterator
       .map(_.getUri.toAbsolutePath)
-      .filterNot(savedFiles.isRecentlyActive) // de-duplicate didSave events.
+      .filterNot(path =>
+        savedFiles.isRecentlyActive(path) || path.isDirectory
+      ) // de-duplicate didSave events.
       .toSeq
     onChange(paths).asJava
   }
@@ -1437,6 +1439,7 @@ class MetalsLspService(
       onDelete(path).asJava
     } else if (
       isScalaOrJava &&
+      !path.isDirectory &&
       !savedFiles.isRecentlyActive(path) &&
       !buffers.contains(path)
     ) {
