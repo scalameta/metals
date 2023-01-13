@@ -147,9 +147,14 @@ final class InferredTypeProvider(
        * `.map((a: Int) => a + a)`
        */
       case Some(vl @ ValDef(sym, tpt, rhs)) =>
-        val isParam = path.tail.headOption.exists(_.symbol.isAnonymousFunction)
+        val isParam = path match
+          case head :: next :: _ if next.symbol.isAnonymousFunction => true
+          case head :: (b @ Block(stats, expr)) :: next :: _
+              if next.symbol.isAnonymousFunction =>
+            true
+          case _ => false
         def baseEdit(withParens: Boolean): TextEdit =
-          val keywordOffset = if vl.symbol.is(Flags.Param) then 0 else 4
+          val keywordOffset = if isParam then 0 else 4
           val endPos =
             findNamePos(params.text, vl, keywordOffset).endPos.toLsp
           adjustOpt.foreach(adjust => endPos.setEnd(adjust.adjustedEndPos))
