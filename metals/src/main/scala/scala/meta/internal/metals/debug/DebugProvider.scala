@@ -26,10 +26,10 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
-import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
@@ -374,6 +374,19 @@ class DebugProvider(
     result.failed.foreach(reportErrors)
     result
   }
+
+  def asSession(
+      debugParams: DebugSessionParams
+  )(implicit ec: ExecutionContext): Future[DebugSession] =
+    for {
+      server <- statusBar.trackFuture(
+        "Starting debug server",
+        start(debugParams),
+      )
+    } yield {
+      statusBar.addMessage("Started debug server!")
+      DebugSession(server.sessionName, server.uri.toString)
+    }
 
   /**
    * Given fully unresolved params this figures out the runType that was passed
@@ -840,20 +853,6 @@ object DebugProvider {
       case _ =>
         None
     }
-  }
-
-  object DebugParametersJsonParsers {
-    lazy val debugSessionParamsParser = new JsonParser.Of[b.DebugSessionParams]
-    lazy val mainClassParamsParser =
-      new JsonParser.Of[DebugUnresolvedMainClassParams]
-    lazy val testSuitesParamsParser =
-      new JsonParser.Of[ScalaTestSuitesDebugRequest]
-    lazy val testClassParamsParser =
-      new JsonParser.Of[DebugUnresolvedTestClassParams]
-    lazy val attachRemoteParamsParser =
-      new JsonParser.Of[DebugUnresolvedAttachRemoteParams]
-    lazy val unresolvedParamsParser =
-      new JsonParser.Of[DebugDiscoveryParams]
   }
 
   val ScalaTestSelection = "scala-test-suites-selection"

@@ -231,10 +231,10 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  val StartDebugAdapter = new Command(
+  val StartDebugAdapter = new ParametrizedCommand[b.DebugSessionParams](
     "debug-adapter-start",
     "Start debug adapter",
-    "Start debug adapter",
+    "Start a new debugger session with fully specified DebugSessionParams",
     s"""|DebugSessionParameters object
         |Example:
         |```json
@@ -247,27 +247,91 @@ object ServerCommands {
         |}
         |```
         |
-        |or DebugUnresolvedMainClassParams object
+        |""".stripMargin,
+  )
+
+  val StartMainClass = new ParametrizedCommand[DebugUnresolvedMainClassParams](
+    "debug-adapter-start",
+    "Start main class",
+    "Start a new debugger session by resolving a main class by name and target",
+    s"""|DebugUnresolvedMainClassParams object
         |Example:
         |```json
         |{
-        |   mainClass: "com.foo.App",
-        |   buildTarget: "foo",
-        |   args: ["bar"],
-        |   jvmOptions: ["-Dfile.encoding=UTF-16"],
-        |   env: {"NUM" : "123"},
-        |   envFile: ".env"
+        |  "mainClass": "path/to/file.scala",
+        |  "buildTarget": "metals"
         |}
         |```
         |
-        |or DebugUnresolvedTestClassParams object
+        |""".stripMargin,
+  )
+
+  val StartTestSuite = new ParametrizedCommand[ScalaTestSuitesDebugRequest](
+    "debug-adapter-start",
+    "Start test suite",
+    "Start a new debugger session for a test suite, can be used to run a single test case",
+    s"""|ScalaTestSuitesDebugRequest object
         |Example:
         |```json
         |{
-        |   testClass: "com.foo.FooSuite",
-        |   buildTarget: "foo"
+        |  "target": "metals"
+        |  "requestData" : {
+        |    "suites": ["com.foo.FooSuite"],
+        |    "jvmOptions": []],
+        |    "environmentVariables": [],
+        |   }
         |}
         |```
+        |
+        |""".stripMargin,
+  )
+
+  val ResolveAndStartTestSuite =
+    new ParametrizedCommand[DebugUnresolvedTestClassParams](
+      "debug-adapter-start",
+      "Start test suite",
+      "Start a new debugger session by resolving a test suite by name and possibly target.",
+      s"""|DebugUnresolvedTestClassParams object
+          |Example:
+          |```json
+          |{
+          |   "testClass": "com.foo.FooSuite"
+          |}
+          |```
+          |
+          |""".stripMargin,
+    )
+
+  val StartAttach = new ParametrizedCommand[DebugUnresolvedAttachRemoteParams](
+    "debug-adapter-start",
+    "Attach to a running jvm process",
+    "Start a new debugger session by attaching to existing jvm process.",
+    s"""|DebugUnresolvedAttachRemoteParams object
+        |Example:
+        |```json
+        |{
+        |    "hostName": "localhost",
+        |    "port": 1234,
+        |    "buildTarget": "metals",
+        |}
+        |```
+        |
+        |""".stripMargin,
+  )
+
+  val DiscoverAndRun = new ParametrizedCommand[DebugDiscoveryParams](
+    "debug-adapter-start",
+    "Try to discover a test or main to run.",
+    "Start a new debugger session by running the discovered test or main class.",
+    s"""|DebugDiscoveryParams object
+        |Example:
+        |```json
+        |{
+        |    "path": "path/to/file.scala",
+        |    "runType": "run",
+        |}
+        |```
+        |
         |""".stripMargin,
   )
 
@@ -615,6 +679,11 @@ object ServerCommands {
       ScanWorkspaceSources,
       StartAmmoniteBuildServer,
       StartDebugAdapter,
+      StartMainClass,
+      StartTestSuite,
+      ResolveAndStartTestSuite,
+      StartAttach,
+      DiscoverAndRun,
       StopAmmoniteBuildServer,
       SuperMethodHierarchy,
       StartScalaCliServer,

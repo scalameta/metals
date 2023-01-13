@@ -1933,51 +1933,44 @@ class MetalsLspService(
             )
           )
         }.asJavaObject
-      case ServerCommands.StartDebugAdapter() =>
-        val args = params.getArguments.asScala.toSeq
-        import DebugProvider.DebugParametersJsonParsers._
-        val debugSessionParams: Future[b.DebugSessionParams] = args match {
-          case Seq(debugSessionParamsParser.Jsonized(params))
-              if params.getData != null =>
-            debugProvider
-              .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
-              .map(_ => params)
 
-          case Seq(mainClassParamsParser.Jsonized(params))
-              if params.mainClass != null =>
-            debugProvider.resolveMainClassParams(params)
+      case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
+        debugProvider
+          .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
+          .flatMap(_ => debugProvider.asSession(params))
+          .asJavaObject
 
-          case Seq(testSuitesParamsParser.Jsonized(params))
-              if params.target != null && params.requestData != null =>
-            debugProvider.resolveTestSelectionParams(params)
+      case ServerCommands.StartMainClass(params) if params.mainClass != null =>
+        debugProvider
+          .resolveMainClassParams(params)
+          .flatMap(debugProvider.asSession)
+          .asJavaObject
 
-          case Seq(testClassParamsParser.Jsonized(params))
-              if params.testClass != null =>
-            debugProvider.resolveTestClassParams(params)
+      case ServerCommands.StartTestSuite(params)
+          if params.target != null && params.requestData != null =>
+        debugProvider
+          .resolveTestSelectionParams(params)
+          .flatMap(debugProvider.asSession)
+          .asJavaObject
 
-          case Seq(attachRemoteParamsParser.Jsonized(params))
-              if params.hostName != null =>
-            debugProvider.resolveAttachRemoteParams(params)
+      case ServerCommands.ResolveAndStartTestSuite(params)
+          if params.testClass != null =>
+        debugProvider
+          .resolveTestClassParams(params)
+          .flatMap(debugProvider.asSession)
+          .asJavaObject
 
-          case Seq(unresolvedParamsParser.Jsonized(params)) =>
-            debugProvider.debugDiscovery(params)
+      case ServerCommands.StartAttach(params) if params.hostName != null =>
+        debugProvider
+          .resolveAttachRemoteParams(params)
+          .flatMap(debugProvider.asSession)
+          .asJavaObject
 
-          case _ =>
-            val argExample = ServerCommands.StartDebugAdapter.arguments
-            val msg = s"Invalid arguments: $args. Expecting: $argExample"
-            Future.failed(new IllegalArgumentException(msg))
-        }
-        val session = for {
-          params <- debugSessionParams
-          server <- statusBar.trackFuture(
-            "Starting debug server",
-            debugProvider.start(params),
-          )
-        } yield {
-          statusBar.addMessage("Started debug server!")
-          DebugSession(server.sessionName, server.uri.toString)
-        }
-        session.asJavaObject
+      case ServerCommands.DiscoverAndRun(params) =>
+        debugProvider
+          .debugDiscovery(params)
+          .flatMap(debugProvider.asSession)
+          .asJavaObject
 
       case ServerCommands.AnalyzeStacktrace(content) =>
         Future {
