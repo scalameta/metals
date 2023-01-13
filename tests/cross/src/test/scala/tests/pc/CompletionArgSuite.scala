@@ -508,4 +508,14 @@ class CompletionArgSuite extends BaseCompletionSuite {
     ),
   )
 
+  check(
+    "infix",
+    s"""|object Main{
+        |  val lst: List[Int] = List(1, 2, 3)
+        |  lst.map(x => x * x@@ )
+        |}
+        |""".stripMargin,
+    """|x: Int
+       |""".stripMargin,
+  )
 }
