@@ -34,6 +34,7 @@ object KeywordsCompletions:
         val isPackage = this.isPackage(path)
         val isParam = this.isParam(path)
         val isSelect = this.isSelect(path)
+        val isImport = this.isImport(path)
         lazy val text = completionPos.cursorPos.source.content.mkString
         lazy val reverseTokens: Array[Token] =
           // Try not to tokenize the whole file
@@ -64,6 +65,7 @@ object KeywordsCompletions:
                 isParam = isParam,
                 isScala3 = true,
                 isSelect = isSelect,
+                isImport = isImport,
                 allowToplevel = true,
                 leadingReverseTokens = reverseTokens,
               ) && notInComment =>
@@ -112,6 +114,11 @@ object KeywordsCompletions:
     enclosing match
       case (_: Apply) :: (_: Select) :: _ => true
       case (_: Select) :: _ => true
+      case _ => false
+
+  private def isImport(enclosing: List[Tree]): Boolean =
+    enclosing match
+      case Import(_, _) :: _ => true
       case _ => false
 
   private def isDefinition(

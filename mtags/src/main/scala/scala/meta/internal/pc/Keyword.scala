@@ -26,6 +26,7 @@ case class Keyword(
     isDefinition: Boolean = false,
     isParam: Boolean = false,
     isScala3: Boolean = false,
+    isImport: Boolean = false,
     commitCharacter: Option[String] = None,
     reversedTokensPredicate: Option[Array[Token] => Boolean] = None
 ) {
@@ -51,6 +52,7 @@ case class Keyword(
       isParam: Boolean,
       isScala3: Boolean,
       isSelect: Boolean,
+      isImport: Boolean,
       allowToplevel: Boolean,
       leadingReverseTokens: => Array[Token]
   ): Boolean = {
@@ -67,6 +69,7 @@ case class Keyword(
       (this.isPackage && isPackage) ||
       (this.isMethodBody && isMethodBody) ||
       (this.isParam && isParam) ||
+      (this.isImport && isImport) ||
       (this.name == "extends" && predicate)
     } &&
     (this.name != "extension" || predicate)
@@ -132,7 +135,8 @@ object Keyword {
     Keyword("with"),
     Keyword("catch"),
     Keyword("finally"),
-    Keyword("then")
+    Keyword("then"),
+    Keyword("*", isImport = true, isScala3 = true)
   )
 
   private def extendsPred(leadingReverseTokens: Array[Token]): Boolean = {

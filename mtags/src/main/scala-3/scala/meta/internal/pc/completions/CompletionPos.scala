@@ -8,6 +8,7 @@ import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.untpd.ImportSelector
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.util.SourcePosition
@@ -114,6 +115,14 @@ object CompletionPos:
                 if s.name.toTermName == nme.ERROR || pos.span.point < s.span.point
                 then fallback
                 else s.span.point
+              case Import(_, sel) =>
+                sel
+                  .collectFirst {
+                    case ImportSelector(imported, renamed, _)
+                        if imported.sourcePos.contains(pos) =>
+                      imported.sourcePos.point
+                  }
+                  .getOrElse(fallback)
               case _ => fallback
     loop(path)
   end inferIdentStart
