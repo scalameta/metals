@@ -30,7 +30,8 @@ object NamedArgCompletions:
       clientSupportsSnippets: Boolean,
   )(using ctx: Context): List[CompletionValue] =
     path match
-      case (ident: Ident) :: (app: Apply) :: _ => // fun(arg@@)
+      case (ident: Ident) :: (app: Apply) :: _
+          if !isInfix(pos, app) => // fun(arg@@) if isNotInfix(pos, app)
         contribute(
           Some(ident),
           app,
@@ -38,12 +39,24 @@ object NamedArgCompletions:
           indexedContext,
           clientSupportsSnippets,
         )
-      case (Literal(Constant(null))) :: (app: Apply) :: _ => // fun(a, @@)
+      case (Literal(Constant(null))) :: (app: Apply) :: _
+          if !isInfix(pos, app) => // fun(a, @@) if isNotInfix(pos, app)
         contribute(None, app, pos, indexedContext, clientSupportsSnippets)
-      case (app: Apply) :: _ => // fun(@@)
+      case (app: Apply) :: _ if !isInfix(pos, app) => // fun(@@)
         contribute(None, app, pos, indexedContext, clientSupportsSnippets)
       case _ =>
         Nil
+    end match
+  end contribute
+
+  private def isInfix(pos: SourcePosition, apply: Apply)(using ctx: Context) =
+    apply.fun match
+      // is a select statement without a dot `qual.name` and is not a synthetic apply etc.
+      case sel @ Select(qual, _) if !sel.symbol.is(Flags.Synthetic) =>
+        !(qual.span.end until sel.nameSpan.start)
+          .map(pos.source.apply)
+          .contains('.')
+      case _ => false
 
   private def contribute(
       ident: Option[Ident],
