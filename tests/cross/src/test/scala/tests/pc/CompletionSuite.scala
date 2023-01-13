@@ -378,6 +378,32 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
+    "import-star-basic",
+    """
+      |import scala.collection.immutable.List.*@@
+      |""".stripMargin,
+    "",
+    compat = Map(
+      "3" ->
+        """|*
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "import-star-multi-import",
+    """
+      |import scala.collection.immutable.List.{range => r, *@@}
+      |""".stripMargin,
+    "",
+    compat = Map(
+      "3" ->
+        """|*
+           |""".stripMargin
+    ),
+  )
+
+  check(
     "import",
     """
       |import JavaCon@@

@@ -56,6 +56,7 @@ trait Keywords { this: MetalsGlobal =>
         val isPackage = this.isPackage(latestEnclosing)
         val isParam = this.isParam(latestEnclosing)
         val isSelect = this.isSelect(latestEnclosing)
+        val isImport = this.isImport(latestEnclosing)
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -69,6 +70,7 @@ trait Keywords { this: MetalsGlobal =>
                 isParam = isParam,
                 isScala3 = false,
                 isSelect = isSelect,
+                isImport = isImport,
                 allowToplevel = isAmmoniteScript,
                 leadingReverseTokens = reverseTokens
               ) =>
@@ -193,6 +195,12 @@ trait Keywords { this: MetalsGlobal =>
     enclosing match {
       case (_: Ident) :: (_: Select) :: _ => true
       case (_: Apply) :: (_: Select) :: _ => true
+      case _ => false
+    }
+
+  private def isImport(enclosing: List[Tree]): Boolean =
+    enclosing match {
+      case (_: Import) :: _ => true
       case _ => false
     }
 
