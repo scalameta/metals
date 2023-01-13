@@ -241,12 +241,21 @@ final class InferredTypeProvider(
        */
       case Some(df @ DefDef(name, _, tpt, rhs)) =>
         def typeNameEdit =
-          val end = tpt.endPos.toLsp
+          /* NOTE: In Scala 3.1.3, `List((1,2)).map((<<a>>,b) => ...)`
+           * turns into `List((1,2)).map((:Inta,b) => ...)`,
+           * because `tpt.SourcePos == df.namePos.startPos`, so we use `df.namePos.endPos` instead
+           * After dropping support for 3.1.3 this can be removed
+           */
+          val end =
+            if tpt.endPos.end > df.namePos.end then tpt.endPos.toLsp
+            else df.namePos.endPos.toLsp
+
           adjustOpt.foreach(adjust => end.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             end,
             ": " + printType(tpt.tpe),
           )
+        end typeNameEdit
 
         def lastColon =
           var i = tpt.startPos.start
