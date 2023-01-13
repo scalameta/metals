@@ -676,6 +676,7 @@ class MetalsLspService(
       compilers,
       statusBar,
       sourceMapper,
+      () => userConfig,
     )
   )
 
@@ -1825,6 +1826,10 @@ class MetalsLspService(
             Option(params.uri).map(_.toAbsolutePath)
           )
         }.asJavaObject
+      case ServerCommands.DiscoverMainClasses(unresolvedParams) =>
+        debugProvider
+          .runCommandDiscovery(unresolvedParams)
+          .asJavaObject
       case ServerCommands.RunScalafix(params) =>
         val uri = params.getTextDocument().getUri()
         scalafixProvider

@@ -64,6 +64,7 @@ import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import scala.meta.internal.metals.UserConfiguration
 
 /**
  * @param supportsTestSelection test selection hasn't been defined in BSP spec yet.
@@ -83,6 +84,7 @@ class DebugProvider(
     compilers: Compilers,
     statusBar: StatusBar,
     sourceMapper: SourceMapper,
+    userConfig: () => UserConfiguration,
 ) extends Cancelable {
 
   import DebugProvider._
@@ -403,6 +405,43 @@ class DebugProvider(
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)
     }
+  }
+
+  /**
+   * Tries to discover the main class to run and returns
+   * DebugSessionParams that contains the shellCommand field.
+   * This is used so that clients can easily run the full command
+   * if they want.
+   */
+  def runCommandDiscovery(
+      unresolvedParams: DebugDiscoveryParams
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    debugDiscovery(unresolvedParams).map(enrichWithMainShellCommand)
+  }
+
+  private def enrichWithMainShellCommand(
+      params: b.DebugSessionParams
+  ): b.DebugSessionParams = {
+    params.getData() match {
+      case json: JsonElement
+          if params.getDataKind == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+        json.as[b.ScalaMainClass] match {
+          case Success(main) if params.getTargets().size > 0 =>
+            val updatedData = buildTargetClasses.jvmRunEnvironment
+              .get(params.getTargets().get(0))
+              .zip(userConfig().usedJavaBinary) match {
+              case None =>
+                main.toJson
+              case Some((env, javaHome)) =>
+                ExtendedScalaMainClass(main, env, javaHome, workspace).toJson
+            }
+            params.setData(updatedData)
+          case _ =>
+        }
+
+      case _ =>
+    }
+    params
   }
 
   /**

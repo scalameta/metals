@@ -118,6 +118,23 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val DiscoverMainClasses = new ParametrizedCommand[DebugDiscoveryParams](
+    "discover-jvm-run-command",
+    "Discover main classes to run and return the object",
+    """|Gets the DebugSession object that also contains a command to run in shell based 
+       |on JVM environment including classpath, jvmOptions and environment parameters.
+       |""".stripMargin,
+    """|DebugUnresolvedTestClassParams object
+       |Example:
+       |```json
+       |{
+       |    "path": "path/to/file.scala",
+       |    "runType": "run"
+       |}
+       |```
+       |""".stripMargin,
+  )
+
   /** If uri is null discover all test suites, otherwise discover testcases in file */
   final case class DiscoverTestParams(
       @Nullable uri: String = null
@@ -666,6 +683,7 @@ object ServerCommands {
       CleanCompile,
       ConvertToNamedArguments,
       CopyWorksheetOutput,
+      DiscoverMainClasses,
       DiscoverTestSuites,
       ExtractMemberDefinition,
       GenerateBspConfig,
