@@ -283,10 +283,10 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   checkEdit(
     "lambda-tuple".tag(IgnoreScala2),
     """|object A{
-       |  val toStringList = List((1, 2)).map((int, <<n>>) => n)
+       |  val toStringList = List((1, 2)).map((<<int>>, n) => int)
        |}""".stripMargin,
     """|object A{
-       |  val toStringList = List((1, 2)).map((int, n: Int) => n)
+       |  val toStringList = List((1, 2)).map((int: Int, n) => int)
        |}""".stripMargin,
   )
 
