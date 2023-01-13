@@ -62,16 +62,17 @@ object MetalsTestEnrichments {
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         SemanticdbDefinition.foreach(input, dialect) {
           case defn @ SemanticdbDefinition(info, _, _) =>
-            if (
-              WorkspaceSymbolProvider.isRelevantKind(
-                info.kind,
-                input.toLanguage.isScala,
-              )
-            ) {
-              symbols += defn.toCached
-            }
-            if (info.kind == s.SymbolInformation.Kind.METHOD) {
+            if (info.isExtenstion) {
               methodSymbols += defn.toCached
+            } else {
+              if (
+                WorkspaceSymbolProvider.isRelevantKind(
+                  info.kind,
+                  input.toLanguage.isScala,
+                )
+              ) {
+                symbols += defn.toCached
+              }
             }
         }
         wsp.didChange(source, symbols.toSeq, methodSymbols.toSeq)

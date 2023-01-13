@@ -31,8 +31,6 @@ import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
@@ -505,10 +503,6 @@ final case class Indexer(
       targetOpt: Option[b.BuildTargetIdentifier],
       data: Seq[TargetData],
   ): Unit = {
-    def isExtensionMethod(si: SymbolInformation): Boolean =
-      si.kind == Kind.METHOD && si.properties == 0 && si.symbol(
-        si.symbol.length - 2
-      ) != ')' // hacky-hack: extension methods in ScalaToplevelMtags don't use disambiguators
     try {
       val sourceToIndex0 =
         sourceMapper.mappedTo(source).getOrElse(source)
@@ -539,7 +533,7 @@ final case class Indexer(
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         SemanticdbDefinition.foreach(input, dialect) {
           case SemanticdbDefinition(info, occ, owner) =>
-            if (isExtensionMethod(info)) {
+            if (info.isExtenstion) {
               occ.range.foreach { range =>
                 methodSymbols += WorkspaceSymbolInformation(
                   info.symbol,
