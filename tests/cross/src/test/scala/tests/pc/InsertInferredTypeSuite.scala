@@ -281,6 +281,16 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "lambda-tuple".tag(IgnoreScala2),
+    """|object A{
+       |  val toStringList = List((1, 2)).map((int, <<n>>) => n)
+       |}""".stripMargin,
+    """|object A{
+       |  val toStringList = List((1, 2)).map((int, n: Int) => n)
+       |}""".stripMargin,
+  )
+
+  checkEdit(
     "pattern-match-paren",
     """|object A{
        |  val list = List(1, 2, 3) match {
@@ -747,6 +757,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |}
        |""".stripMargin,
   )
+
   def checkEdit(
       name: TestOptions,
       original: String,
