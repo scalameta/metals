@@ -441,6 +441,16 @@ class MetalsLspService(
     () => bspSession.map(_.mainConnection),
   )
 
+  private val workspaceSymbols: WorkspaceSymbolProvider =
+    new WorkspaceSymbolProvider(
+      workspace,
+      buildTargets,
+      definitionIndex,
+      saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
+      () => excludedPackageHandler,
+      classpathSearchIndexer = classpathSearchIndexer,
+    )
+
   private val definitionProvider: DefinitionProvider = new DefinitionProvider(
     workspace,
     mtags,
@@ -455,6 +465,7 @@ class MetalsLspService(
     scalaVersionSelector,
     saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     sourceMapper,
+    workspaceSymbols,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(
@@ -590,16 +601,6 @@ class MetalsLspService(
       trees,
       buildTargets,
       supermethods,
-    )
-
-  private val workspaceSymbols: WorkspaceSymbolProvider =
-    new WorkspaceSymbolProvider(
-      workspace,
-      buildTargets,
-      definitionIndex,
-      saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
-      () => excludedPackageHandler,
-      classpathSearchIndexer = classpathSearchIndexer,
     )
 
   private val javaHighlightProvider: JavaDocumentHighlightProvider =

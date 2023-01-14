@@ -79,7 +79,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
         .get()
 
       val withRange =
-        if (range.isEmpty()) base else replaceInRange(base, range.get())
+        if (!range.isPresent()) base else replaceInRange(base, range.get())
       assertNoDiff(
         withRange,
         expected,
