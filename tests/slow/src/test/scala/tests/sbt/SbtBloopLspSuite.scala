@@ -750,16 +750,16 @@ class SbtBloopLspSuite
 
   test("semantic-highlight") {
     val expected =
-      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*method*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
           |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
           |  .<<settings>>/*method*/(
           |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
           |    <<inThisBuild>>/*method*/(
-          |      <<List>>/*namespace*/(
+          |      <<List>>/*class*/(
           |        <<organization>>/*variable,readonly*/ <<:=>>/*method*/ <<"com.example">>/*string*/,
           |        <<scalaVersion>>/*variable,readonly*/ <<:=>>/*method*/ <<"2.13.10">>/*string*/,
-          |        <<scalacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*namespace*/(<<"-Xsource:3">>/*string*/, <<"-Xlint:adapted-args">>/*string*/),
-          |        <<javacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*namespace*/(
+          |        <<scalacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(<<"-Xsource:3">>/*string*/, <<"-Xlint:adapted-args">>/*string*/),
+          |        <<javacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(
           |          <<"-Xlint:all">>/*string*/,
           |          <<"-Xdoclint:accessibility,html,syntax">>/*string*/
           |        )

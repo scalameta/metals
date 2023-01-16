@@ -832,7 +832,7 @@ abstract class BaseWorksheetLspSuite(
              |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
              |<<val>>/*keyword*/ <<hi2>>/*variable,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
              |
-             |<<val>>/*keyword*/ <<hellos>>/*variable,readonly*/ = <<List>>/*namespace*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+             |<<val>>/*keyword*/ <<hellos>>/*variable,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
              |""".stripMargin
         else
           """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)

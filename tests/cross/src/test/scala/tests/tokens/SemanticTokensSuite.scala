@@ -152,6 +152,22 @@ class SemanticTokensSuite extends BasePCSuite {
         |""".stripMargin,
   )
 
+  check(
+    "anonymous-class",
+    s"""|<<object>>/*keyword*/ <<A>>/*class*/ {
+        |  <<trait>>/*keyword*/ <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] {
+        |    <<def>>/*keyword*/ <<method>>/*method,abstract*/(<<asf>>/*parameter*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
+        |  }
+        |
+        |  <<abstract>>/*modifier*/ <<class>>/*keyword*/ <<Alphabet>>/*class,abstract*/(<<alp>>/*variable,readonly*/: <<Int>>/*class,abstract*/) <<extends>>/*keyword*/ <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
+        |    <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/) = <<123>>/*number*/
+        |  }
+        |  <<val>>/*keyword*/ <<a>>/*variable,readonly*/ = <<new>>/*keyword*/ <<Alphabet>>/*class,abstract*/(<<alp>>/*parameter*/ = <<10>>/*number*/) {
+        |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = <<321>>/*number*/
+        |  }
+        |}""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       expected: String,

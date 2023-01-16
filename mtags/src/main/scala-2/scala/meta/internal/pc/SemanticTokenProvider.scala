@@ -2,7 +2,6 @@ package scala.meta.internal.pc
 import java.{util => ju}
 
 import scala.annotation.switch
-import scala.collection.immutable.SortedSet
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -21,31 +20,35 @@ final class SemanticTokenProvider(
     protected val cp: MetalsGlobal, // compiler
     val params: VirtualFileParams
 ) {
+  import cp._
+
   val capableTypes = TokenTypes
   val capableModifiers = TokenModifiers
-
   // Alias for long notation
   val getTypeId: Map[String, Int] = capableTypes.zipWithIndex.toMap
   val getModifierId: Map[String, Int] = capableModifiers.zipWithIndex.toMap
 
-  // Initialize Tree
-  import cp._
-  val unit: RichCompilationUnit = cp.addCompilationUnit(
-    params.text(),
-    params.uri().toString(),
-    None
-  )
-  cp.typeCheck(unit) // initializing unit
-  val (root, source) = (unit.lastBody, unit.source)
   implicit val ord: Ordering[NodeInfo] = Ordering.fromLessThan((ni1, ni2) =>
     if (ni1.pos.start == ni2.pos.start) ni1.pos.end < ni2.pos.end
     else ni1.pos.start < ni2.pos.start
   )
 
-  def unitPos(offset: Int): Position = unit.position(offset)
-  val nodes: List[NodeInfo] = traverser
-    .traverse(SortedSet.empty[NodeInfo], root)
-    .toList
+  // Initialize Tree
+  case class NodeInfo(
+      sym: Collector.compiler.Symbol,
+      pos: scala.reflect.api.Position
+  )
+  object Collector extends PcCollector[NodeInfo](cp, params) {
+
+    override def collect(
+        parent: Option[compiler.Tree]
+    )(tree: compiler.Tree, pos: Position): NodeInfo = {
+      NodeInfo(tree.symbol, pos)
+    }
+  }
+
+  val nodes: List[NodeInfo] =
+    Collector.result.sorted
 
   /**
    * Main method.  Fist, Codes are convert to Scala.Meta.Tokens.
@@ -214,215 +217,25 @@ final class SemanticTokenProvider(
     val candidates = nodesIterator.dropWhile(_.pos.start < tk.pos.start)
     candidates
       .takeWhile(_.pos.start == tk.pos.start)
-      .find(isTarget) match {
-      case None => None
-      case Some(value) => Some((value, candidates))
-    }
-  }
-
-  case class NodeInfo(
-      sym: Option[Symbol],
-      pos: scala.reflect.api.Position
-  )
-  object NodeInfo {
-    def apply(tree: Tree, pos: scala.reflect.api.Position): NodeInfo = {
-      val sym = tree.symbol
-      if (sym != NoSymbol && sym != null)
-        NodeInfo(Some(tree.symbol), pos)
-      else NodeInfo(None, pos)
-    }
-
-    def apply(sym: Symbol, pos: scala.reflect.api.Position): NodeInfo =
-      new NodeInfo(Some(sym), pos)
-  }
-
-  /**
-   * was written in reference to PcDocumentHighlightProvider.
-   */
-  import cp._
-  object traverser {
-
-    /**
-     * gathers all nodes inside given tree.
-     * The nodes have symbol.
-     */
-    def traverse(
-        nodes: SortedSet[NodeInfo],
-        tree: cp.Tree
-    ): SortedSet[NodeInfo] = {
-
-      tree match {
-        /**
-         * All indentifiers such as:
-         * val a = <<b>>
-         */
-        case ident: cp.Ident if ident.pos.isRange =>
-          val symbol =
-            if (ident.symbol == NoSymbol)
-              if (ident.tpe != null) {
-                ident.tpe.underlying.typeSymbolDirect
-              } else {
-                val context = doLocateContext(ident.pos)
-                context.lookupSymbol(ident.name, _ => true) match {
-                  case LookupSucceeded(_, symbol) => symbol
-                  case _ => NoSymbol
-                }
-              }
-            else {
-              ident.symbol
+      .filter(isTarget) match {
+      case Nil => None
+      case node :: Nil => Some((node, candidates))
+      case manyNodes =>
+        manyNodes.filter(ni =>
+          Collector
+            .symbolAlternatives(ni.sym)
+            .exists(_.decodedName == tk.text)
+        ) match {
+          case Nil => None
+          case matchingNames
+              if matchingNames.exists(!_.sym.owner.isPrimaryConstructor) =>
+            matchingNames.collectFirst {
+              case ni if !ni.sym.owner.isPrimaryConstructor => (ni, candidates)
             }
-          nodes + NodeInfo(symbol, ident.pos)
+          case head :: _ => Some((head, candidates))
+        }
 
-        /**
-         * Needed for type trees such as:
-         * type A = [<<b>>]
-         */
-        case tpe: cp.TypeTree if tpe.original != null && tpe.pos.isRange =>
-          tpe.original.children.foldLeft(
-            nodes + NodeInfo(tpe.original, typePos(tpe))
-          )(traverse(_, _))
-        /**
-         * All select statements such as:
-         * val a = hello.<<b>>
-         */
-        case sel: cp.Select if sel.pos.isRange =>
-          traverse(
-            nodes + NodeInfo(sel, sel.namePos),
-            sel.qualifier
-          )
-        /**
-         * statements such as:
-         * val Some(<<a>>) = Some(2)
-         */
-        case bnd: cp.Bind if bnd.pos.isRange =>
-          bnd.children.foldLeft(nodes + NodeInfo(bnd, bnd.pos))(traverse(_, _))
-
-        /* all definitions:
-         * def <<foo>> = ???
-         * class <<Foo>> = ???
-         * etc.
-         */
-        case df: cp.MemberDef if df.pos.isRange =>
-          (annotationChildren(df) ++ df.children)
-            .foldLeft(
-              if (nodes(NodeInfo(df, df.namePos))) nodes
-              else nodes + NodeInfo(df, df.namePos)
-            )(traverse(_, _))
-
-        /* Named parameters, since they don't show up in typed tree:
-         * foo(<<name>> = "abc")
-         * User(<<name>> = "abc")
-         * etc.
-         */
-        case appl: cp.Apply if appl.pos.isRange =>
-          val named = appl.args
-            .flatMap { arg =>
-              namedArgCache.get(arg.pos.start)
-            }
-            .collect { case cp.AssignOrNamedArg(i @ cp.Ident(_), _) =>
-              NodeInfo(
-                appl.symbol.paramss.flatten.find(_.name == i.name),
-                i.pos
-              )
-            }
-
-          tree.children.foldLeft(nodes ++ named)(traverse(_, _))
-
-        /**
-         * We don't automatically traverser types like:
-         * val opt: Option[<<String>>] =
-         */
-        case tpe: cp.TypeTree if tpe.original != null =>
-          tpe.original.children.foldLeft(nodes)(traverse(_, _))
-        /**
-         * Some type trees don't have symbols attached such as:
-         * type A = List[_ <: <<Iterable>>[Int]]
-         */
-        case id: cp.Ident if id.symbol == cp.NoSymbol && id.pos.isRange =>
-          fallbackSymbol(id.name, id.pos) match {
-            case Some(_) => nodes + NodeInfo(id, id.pos)
-            case _ => nodes
-          }
-
-        case df: cp.MemberDef =>
-          (tree.children ++ annotationChildren(df))
-            .foldLeft(nodes)(traverse(_, _))
-        /**
-         * For traversing import selectors:
-         * import scala.util.<<Try>>
-         */
-        case imp: cp.Import =>
-          val ret = for {
-            sel <- imp.selectors
-          } yield {
-            // NodeInfo(symbol, sel.namePosition(source))
-            val buffer = ListBuffer.empty[NodeInfo]
-            val symbol = imp.expr.symbol.info.member(sel.name)
-            buffer.++=(
-              List(
-                NodeInfo(symbol, sel.namePosition(source))
-              )
-            )
-            def isRename(sel: cp.ImportSelector): Boolean =
-              sel.rename != null &&
-                sel.rename != nme.WILDCARD &&
-                sel.name != sel.rename
-            if (isRename(sel)) {
-              buffer.++=(
-                List(
-                  NodeInfo(symbol, sel.renamePosition(source))
-                )
-              )
-            }
-            buffer.toList
-          }
-          traverse(nodes ++ ret.flatten, imp.expr)
-
-        case _ =>
-          if (tree == null) null
-          else tree.children.foldLeft(nodes)(traverse(_, _))
-      }
     }
-
-    def fallbackSymbol(name: cp.Name, pos: cp.Position): Option[Symbol] = {
-      val context = cp.doLocateImportContext(pos)
-      context.lookupSymbol(name, sym => sym.isType) match {
-        case cp.LookupSucceeded(_, symbol) =>
-          Some(symbol)
-        case _ => None
-      }
-    }
-    private def annotationChildren(mdef: cp.MemberDef): List[cp.Tree] = {
-      mdef.mods.annotations match {
-        case Nil if mdef.symbol != null =>
-          // After typechecking, annotations are moved from the modifiers
-          // to the annotation on the symbol of the annotatee.
-          mdef.symbol.annotations.map(_.original)
-        case anns => anns
-      }
-    }
-
-    private def typePos(tpe: cp.TypeTree) = {
-      tpe.original match {
-        case cp.AppliedTypeTree(tpt, _) => tpt.pos
-        case sel: cp.Select => sel.namePos
-        case _ => tpe.pos
-      }
-    }
-    // We need to collect named params since they will not show on fully typed tree
-    lazy private val namedArgCache = {
-      val parsedTree = cp.parseTree(source)
-      parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
-        rhs.pos.start -> arg
-      }.toMap
-    }
-  }
-
-  def selector(imp: cp.Import, startOffset: Int): Option[cp.Symbol] = {
-    for {
-      sel <- imp.selectors.reverseIterator
-        .find(_.namePos <= startOffset)
-    } yield imp.expr.symbol.info.member(sel.name)
   }
 
   /**
@@ -457,7 +270,7 @@ final class SemanticTokenProvider(
     val ret =
       for (
         (nodeInfo, nodesIterator) <- pickFromTraversed(ident, nodesIterator);
-        sym <- nodeInfo.sym
+        sym = nodeInfo.sym
       ) yield {
         var mod: Int = 0
         def addPwrToMod(tokenID: String) = {
@@ -467,7 +280,8 @@ final class SemanticTokenProvider(
 
         // get Type
         val typ =
-          if (sym.isValueParameter) getTypeId(SemanticTokenTypes.Parameter)
+          if (sym.isValueParameter)
+            getTypeId(SemanticTokenTypes.Parameter)
           else if (sym.isTypeParameter || sym.isTypeSkolem)
             getTypeId(SemanticTokenTypes.TypeParameter)
           else if (isOperatorName) getTypeId(SemanticTokenTypes.Operator)
