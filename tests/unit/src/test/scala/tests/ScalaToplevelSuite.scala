@@ -47,7 +47,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |  case Da, Db""".stripMargin,
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
-      "_empty_/B#X#", "_empty_/C#", "_empty_/D#",
+      "_empty_/B#X#", "_empty_/B#foo().", "_empty_/C#", "_empty_/D#",
     ),
     all = true,
   )
@@ -92,7 +92,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |}""".stripMargin,
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
-      "_empty_/B#X#", "_empty_/C#", "_empty_/D#",
+      "_empty_/B#X#", "_empty_/B#foo().", "_empty_/C#", "_empty_/D#",
     ),
     all = true,
   )

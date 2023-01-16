@@ -2,10 +2,10 @@ package example
 
 class Miscellaneous/*example.Miscellaneous#*/ {
   // backtick identifier
-  val `a b` = 42
+  val `a b`/*example.Miscellaneous#`a b`.*/ = 42
 
   // block with only wildcard value
-  def apply(): Unit = {
+  def apply/*example.Miscellaneous#apply().*/(): Unit = {
     val _ = 42
   }
   // infix + inferred apply/implicits/tparams

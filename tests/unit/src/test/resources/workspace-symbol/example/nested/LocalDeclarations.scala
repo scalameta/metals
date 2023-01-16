@@ -5,7 +5,7 @@ trait LocalDeclarations/*example.nested.LocalDeclarations#*/ {
 }
 
 trait Foo/*example.nested.Foo#*/ {
-  val y = 3
+  val y/*example.nested.Foo#y.*/ = 3
 }
 
 object LocalDeclarations/*example.nested.LocalDeclarations.*/ {

@@ -7,7 +7,7 @@ import io.circe.derivation.annotations.JsonCodec
 case class MacroAnnotation/*example.MacroAnnotation#*/(
     name: String
 ) {
-  def method = 42
+  def method/*example.MacroAnnotation#method().*/ = 42
 }
 
 object MacroAnnotations/*example.MacroAnnotations.*/ {

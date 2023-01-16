@@ -107,8 +107,8 @@ class ScalaToplevelMtags(
     def needEmitMember(region: Region): Boolean =
       includeInnerClasses || region.acceptMembers
 
-    def needEmitTermMember(region: Region): Boolean =
-      includeInnerClasses && region.acceptsTermMembers && !prevWasDot
+    def needEmitTermMember(): Boolean =
+      includeInnerClasses && !prevWasDot
 
     if (!isDone) {
       val data = scanner.curr
@@ -212,7 +212,7 @@ class ScalaToplevelMtags(
             expectTemplate
           )
         case DEF | VAL | VAR | GIVEN | TYPE
-            if needEmitTermMember(currRegion) && expectTemplate
+            if needEmitTermMember() && expectTemplate
               .map(!_.isExtension)
               .getOrElse(true) =>
           withOwner(region.termOwner) {
@@ -588,7 +588,6 @@ object ScalaToplevelMtags {
     def prev: Region
     def owner: String
     def acceptMembers: Boolean
-    def acceptsTermMembers: Boolean
     def produceSourceToplevel: Boolean
     def isExtension: Boolean = false
     def overloads: OverloadDisambiguator = new OverloadDisambiguator()
@@ -605,7 +604,6 @@ object ScalaToplevelMtags {
       val owner: String = Symbols.EmptyPackage
       val prev: Region = self
       val acceptMembers: Boolean = true
-      val acceptsTermMembers: Boolean = true
       val produceSourceToplevel: Boolean = true
 
       override def withTermOwner(termOwner: String): Region = RootRegion(
@@ -620,7 +618,6 @@ object ScalaToplevelMtags {
     ) extends Region {
       def this(owner: String, prev: Region) = this(owner, prev, owner)
       val acceptMembers: Boolean = true
-      val acceptsTermMembers: Boolean = true
       val produceSourceToplevel: Boolean = true
       override def withTermOwner(termOwner: String): Region =
         Package(owner, prev, termOwner)
@@ -634,8 +631,6 @@ object ScalaToplevelMtags {
       def acceptMembers: Boolean =
         owner.endsWith("/")
 
-      def acceptsTermMembers: Boolean =
-        owner.endsWith("/") || owner.endsWith(".")
       val produceSourceToplevel: Boolean = false
       override def isExtension = extension
     }
@@ -647,8 +642,6 @@ object ScalaToplevelMtags {
     ) extends Region {
       def acceptMembers: Boolean =
         owner.endsWith("/")
-      def acceptsTermMembers: Boolean =
-        owner.endsWith("/") || owner.endsWith(".")
       val produceSourceToplevel: Boolean = false
       override def isExtension = extension
     }
