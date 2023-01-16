@@ -1,7 +1,7 @@
 package example.nested
 
 trait LocalDeclarations/*example.nested.LocalDeclarations#*/ {
-  def foo(): Unit
+  def foo/*example.nested.LocalDeclarations#foo().*/(): Unit
 }
 
 trait Foo/*example.nested.Foo#*/ {
