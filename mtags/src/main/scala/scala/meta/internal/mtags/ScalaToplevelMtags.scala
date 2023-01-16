@@ -408,7 +408,7 @@ class ScalaToplevelMtags(
         val name = newIdentifier
         tpe(name.name, name.pos, Kind.TYPE, 0)
       case DEF =>
-        val name = newIdentifier
+        val name = methodIdentifier
         method(
           name.name,
           region.overloads.disambiguator(name.name),
@@ -508,6 +508,19 @@ class ScalaToplevelMtags(
     val pos = newPosition
     val name = scanner.curr.name
     new Identifier(name, pos)
+  }
+
+  /**
+   * Returns a name and position for the current identifier token
+   */
+  def methodIdentifier: Identifier = {
+    scanner.curr.token match {
+      case IDENTIFIER =>
+        new Identifier(scanner.curr.name, newPosition)
+      case THIS =>
+        new Identifier("`<init>`", newPosition)
+      case _ => fail("identifier")
+    }
   }
 
   def valIdentifiers: List[Identifier] = {
