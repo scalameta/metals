@@ -1,25 +1,29 @@
 package scala.meta.internal.pc
 
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.VirtualFileParams
 
 abstract class PcCollector[T](
     val compiler: MetalsGlobal,
-    params: OffsetParams
+    params: VirtualFileParams
 ) {
   import compiler._
 
   def collect(parent: Option[Tree])(tree: Tree, pos: Position): T
-
   val unit: RichCompilationUnit = addCompilationUnit(
     code = params.text(),
     filename = params.uri().toString(),
     cursor = None
   )
-  val pos: Position = unit.position(params.offset)
-  val text = unit.source.content
+  val offset: Int = params match {
+    case p: OffsetParams => p.offset()
+    case _: VirtualFileParams => 0
+  }
+  val pos: Position = unit.position(offset)
+  lazy val text = unit.source.content
   private val caseClassSynthetics: Set[Name] = Set(nme.apply, nme.copy)
   typeCheck(unit)
-  val typedTree: Tree = locateTree(pos) match {
+  lazy val typedTree: Tree = locateTree(pos) match {
     // Check actual object if apply is synthetic
     case sel @ Select(qual, name) if name == nme.apply && qual.pos == sel.pos =>
       qual
@@ -201,8 +205,13 @@ abstract class PcCollector[T](
   }
 
   def result(): List[T] = {
+    params match {
+      case _: OffsetParams => resultWithSought()
+      case _ => resultAllOccurences().toList
+    }
+  }
 
-    // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
+  def resultWithSought(): List[T] = {
     soughtSymbols match {
       case Some((sought, _)) =>
         val owners = sought
@@ -223,163 +232,216 @@ abstract class PcCollector[T](
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
 
-        def traverseWithParent(parent: Option[Tree])(
-            acc: Set[T],
-            tree: Tree
-        ): Set[T] = {
-          val traverse: (Set[T], Tree) => Set[T] = traverseWithParent(
-            Some(tree)
-          )
-          val collect: (Tree, Position) => T = this.collect(parent)
+        def soughtTreeFilter(tree: Tree): Boolean =
           tree match {
-            /**
-             * All indentifiers such as:
-             * val a = <<b>>
-             */
             case ident: Ident
-                if ident.pos.isRange &&
-                  (soughtOrOverride(ident.symbol) ||
-                    isForComprehensionOwner(ident)) =>
-              acc + collect(ident, ident.pos)
-
-            /**
-             * Needed for type trees such as:
-             * type A = [<<b>>]
-             */
-            case tpe: TypeTree
-                if tpe.original != null && sought(tpe.original.symbol) &&
-                  tpe.pos.isRange =>
-              acc + collect(
-                tpe,
-                typePos(tpe)
-              )
-            /**
-             * All select statements such as:
-             * val a = hello.<<b>>
-             */
-            case sel: Select
-                if soughtOrOverride(sel.symbol) && sel.pos.isRange =>
-              traverse(
-                acc + collect(
-                  sel,
-                  sel.namePos
-                ),
-                sel.qualifier
-              )
-            /* all definitions:
-             * def <<foo>> = ???
-             * class <<Foo>> = ???
-             * etc.
-             */
-            case df: MemberDef
-                if df.pos.isRange &&
-                  (soughtOrOverride(df.symbol) ||
-                    isForComprehensionOwner(df)) =>
-              (annotationChildren(df) ++ df.children).foldLeft(
-                acc + collect(
-                  df,
-                  df.namePos
-                )
-              )(traverse(_, _))
-            /* Named parameters, since they don't show up in typed tree:
-             * foo(<<name>> = "abc")
-             * User(<<name>> = "abc")
-             * etc.
-             */
-            case appl: Apply
-                if owners(appl.symbol) ||
-                  symbolAlternatives(appl.symbol.owner).exists(owners(_)) =>
-              val named = appl.args
-                .flatMap { arg =>
-                  namedArgCache.get(arg.pos.start)
-                }
-                .collectFirst {
-                  case AssignOrNamedArg(i @ Ident(name), _)
-                      if (sought.exists(sym => sym.name == name)) =>
-                    collect(
-                      i,
-                      i.pos
-                    )
-                }
-              tree.children.foldLeft(acc ++ named)(traverse(_, _))
-
-            /**
-             * We don't automatically traverser types like:
-             * val opt: Option[<<String>>] =
-             */
-            case tpe: TypeTree if tpe.original != null =>
-              tpe.original.children.foldLeft(acc)(traverse(_, _))
-            /**
-             * Some type trees don't have symbols attached such as:
-             * type A = List[_ <: <<Iterable>>[Int]]
-             */
-            case id: Ident
-                if id.symbol == NoSymbol && soughtNames.exists(_ == id.name) =>
-              fallbackSymbol(id.name, id.pos) match {
-                case Some(sym) if sought(sym) =>
-                  acc + collect(
-                    id,
-                    id.pos
-                  )
-                case _ => acc
-              }
-
-            /**
-             * For traversing annotations:
-             * @<<JsonNotification>>("")
-             * def params() = ???
-             */
+                if (soughtOrOverride(ident.symbol) ||
+                  isForComprehensionOwner(ident)) =>
+              true
+            case tpe: TypeTree =>
+              sought(tpe.original.symbol)
+            case sel: Select =>
+              soughtOrOverride(sel.symbol)
             case df: MemberDef =>
-              (tree.children ++ annotationChildren(df))
-                .foldLeft(acc)(traverse(_, _))
-
-            /**
-             * For traversing import selectors:
-             * import scala.util.<<Try>>
-             */
-            case imp: Import
-                if owners(imp.expr.symbol) && imp.selectors
-                  .exists(sel => soughtNames(sel.name)) =>
-              imp.selectors.foldLeft(traverse(acc, imp.expr)) {
-                case (acc, sel) if soughtNames(sel.name) =>
-                  val positions =
-                    if (!sel.rename.isEmpty)
-                      Set(
-                        sel.renamePosition(pos.source),
-                        sel.namePosition(pos.source)
-                      )
-                    else Set(sel.namePosition(pos.source))
-                  acc ++ positions.map(pos => collect(imp, pos))
-                case (acc, _) =>
-                  acc
-              }
-            // catch all missed named trees
-            case name: NameTree if sought(name.symbol) && name.pos.isRange =>
-              tree.children.foldLeft(
-                acc + collect(
-                  name,
-                  name.namePos
-                )
-              )(traverse(_, _))
-
-            // needed for `classOf[<<ABC>>]`
-            case lit @ Literal(Constant(TypeRef(_, sym, _))) if sought(sym) =>
-              val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
-              acc + collect(
-                lit,
-                lit.pos
-                  .withStart(posStart)
-                  .withEnd(posStart + sym.decodedName.length())
-              )
-
-            case _ =>
-              tree.children.foldLeft(acc)(traverse(_, _))
+              (soughtOrOverride(df.symbol) ||
+              isForComprehensionOwner(df))
+            case appl: Apply =>
+              owners(appl.symbol) ||
+              symbolAlternatives(appl.symbol.owner).exists(owners(_))
+            case imp: Import =>
+              owners(imp.expr.symbol) && imp.selectors
+                .exists(sel => soughtNames(sel.name))
+            case _ => false
           }
+
+        def soughtFilter(f: Set[Symbol] => Boolean): Boolean = {
+          f(sought)
         }
-        val all = traverseWithParent(None)(Set.empty[T], unit.lastBody)
-        all.toList.distinct
+
+        traverseSought(soughtTreeFilter, soughtFilter).toList
+
       case None => Nil
     }
+  }
+
+  def resultAllOccurences(): Set[T] = {
+    def noTreeFilter = (tree: Tree) => true
+    def noSoughtFilter = (f: Set[Symbol] => Boolean) => true
+
+    traverseSought(noTreeFilter, noSoughtFilter)
+  }
+
+  def traverseSought(
+      filter: Tree => Boolean,
+      soughtFilter: (Set[Symbol] => Boolean) => Boolean
+  ): Set[T] = {
+    // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
+    def traverseWithParent(parent: Option[Tree])(
+        acc: Set[T],
+        tree: Tree
+    ): Set[T] = {
+      val traverse: (Set[T], Tree) => Set[T] = traverseWithParent(
+        Some(tree)
+      )
+      val collect: (Tree, Position) => T = this.collect(parent)
+      tree match {
+        /**
+         * All indentifiers such as:
+         * val a = <<b>>
+         */
+        case ident: Ident if ident.pos.isRange && filter(ident) =>
+          val id =
+            if (ident.symbol == NoSymbol) {
+              fallbackSymbol(ident.name, pos) match {
+                case None => ident
+                case Some(sym) => Ident(sym)
+              }
+            } else ident
+          acc + collect(id, ident.pos)
+
+        /**
+         * Needed for type trees such as:
+         * type A = [<<b>>]
+         */
+        case tpe: TypeTree
+            if tpe.pos.isRange && tpe.original != null && filter(tpe) =>
+          tpe.original.children.foldLeft(
+            acc + collect(
+              tpe.original,
+              typePos(tpe)
+            )
+          )(traverse(_, _))
+
+        /**
+         * All select statements such as:
+         * val a = hello.<<b>>
+         */
+        case sel: Select if sel.pos.isRange && filter(sel) =>
+          traverse(
+            acc + collect(
+              sel,
+              sel.namePos
+            ),
+            sel.qualifier
+          )
+        /* all definitions:
+         * def <<foo>> = ???
+         * class <<Foo>> = ???
+         * etc.
+         */
+        case df: MemberDef if df.pos.isRange && filter(df) =>
+          (annotationChildren(df) ++ df.children).foldLeft({
+            val t = collect(
+              df,
+              df.namePos
+            )
+            if (acc(t)) acc else acc + t
+          })(traverse(_, _))
+        /* Named parameters, since they don't show up in typed tree:
+         * foo(<<name>> = "abc")
+         * User(<<name>> = "abc")
+         * etc.
+         */
+        case appl: Apply if filter(appl) =>
+          val named = appl.args
+            .flatMap { arg =>
+              namedArgCache.get(arg.pos.start)
+            }
+            .collect {
+              case AssignOrNamedArg(i @ Ident(name), _)
+                  if soughtFilter(sought =>
+                    sought.exists(sym => sym.name == name)
+                  ) =>
+                collect(
+                  Ident(
+                    appl.symbol.paramss.flatten
+                      .find(_.name == i.name)
+                      .getOrElse(NoSymbol)
+                  ),
+                  i.pos
+                )
+            }
+          tree.children.foldLeft(acc ++ named)(traverse(_, _))
+
+        /**
+         * We don't automatically traverser types like:
+         * val opt: Option[<<String>>] =
+         */
+        case tpe: TypeTree if tpe.original != null =>
+          tpe.original.children.foldLeft(acc)(traverse(_, _))
+        /**
+         * Some type trees don't have symbols attached such as:
+         * type A = List[_ <: <<Iterable>>[Int]]
+         */
+        case id: Ident
+            if id.symbol == NoSymbol &&
+              soughtFilter(sought => sought.exists(_.name == id.name)) =>
+          fallbackSymbol(id.name, id.pos) match {
+            case Some(sym) if soughtFilter(sought => sought(sym)) =>
+              acc + collect(
+                id,
+                id.pos
+              )
+            case _ => acc
+          }
+
+        /**
+         * For traversing annotations:
+         * @<<JsonNotification>>("")
+         * def params() = ???
+         */
+        case df: MemberDef =>
+          (tree.children ++ annotationChildren(df))
+            .foldLeft(acc)(traverse(_, _))
+
+        /**
+         * For traversing import selectors:
+         * import scala.util.<<Try>>
+         */
+        case imp: Import if filter(imp) =>
+          val res = imp.selectors.foldLeft(traverse(acc, imp.expr)) {
+            case (acc, sel)
+                if soughtFilter(sought => sought.exists(_.name == sel.name)) =>
+              val positions =
+                if (sel.rename != null && !sel.rename.isEmpty)
+                  Set(
+                    sel.renamePosition(pos.source),
+                    sel.namePosition(pos.source)
+                  )
+                else Set(sel.namePosition(pos.source))
+              val symbol = imp.expr.symbol.info.member(sel.name)
+              acc ++ positions.map(pos => collect(Ident(symbol), pos))
+            case (acc, _) =>
+              acc
+          }
+          res
+        // catch all missed named trees
+        case name: NameTree
+            if soughtFilter(_(name.symbol)) && name.pos.isRange =>
+          tree.children.foldLeft(
+            acc + collect(
+              name,
+              name.namePos
+            )
+          )(traverse(_, _))
+
+        // needed for `classOf[<<ABC>>]`
+        case lit @ Literal(Constant(TypeRef(_, sym, _)))
+            if soughtFilter(_(sym)) =>
+          val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
+          acc + collect(
+            lit,
+            lit.pos
+              .withStart(posStart)
+              .withEnd(posStart + sym.decodedName.length())
+          )
+
+        case _ =>
+          tree.children.foldLeft(acc)(traverse(_, _))
+      }
+    }
+    val all = traverseWithParent(None)(Set.empty[T], unit.lastBody)
+    all
   }
 
   private def annotationChildren(mdef: MemberDef): List[Tree] = {
