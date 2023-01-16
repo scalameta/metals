@@ -381,6 +381,27 @@ class ScalaToplevelSuite extends BaseSuite {
     dialect = dialects.Scala3,
   )
 
+  check(
+    "unapply",
+    """|package a
+       |
+       |object O {
+       | val (s1, s2) = ???
+       | var (s3, s4) = ???
+       | val Some(extr) = ???
+       | val CaseClass(extr1, extr2) = ???
+       | val (r, SomeConstructor) = ???
+       | val (p, 1) = (2, 1)
+       |}
+       |""".stripMargin,
+    List(
+      "a/", "a/O.", "a/O.s1.", "a/O.s2.", "a/O.s3().", "a/O.s4().", "a/O.extr.",
+      "a/O.extr1.", "a/O.extr2.", "a/O.r.", "a/O.p.",
+    ),
+    all = true,
+    dialect = dialects.Scala3,
+  )
+
   def check(
       options: TestOptions,
       code: String,

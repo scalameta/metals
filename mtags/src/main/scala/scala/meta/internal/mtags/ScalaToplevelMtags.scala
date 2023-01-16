@@ -216,7 +216,7 @@ class ScalaToplevelMtags(
               .map(!_.isExtension)
               .getOrElse(true) =>
           withOwner(region.termOwner) {
-            emitTerm(region.overloads)
+            emitTerm(region)
           }
           loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         case IMPORT =>
@@ -380,39 +380,46 @@ class ScalaToplevelMtags(
   /**
    * Enters a global element (def/val/var/type)
    */
-  def emitTerm(overloads: OverloadDisambiguator): Unit = {
+  def emitTerm(region: Region): Unit = {
     val kind = scanner.curr.token
     acceptTrivia()
     kind match {
       case VAL =>
-        valIdentifiers.foreach(name =>
+        valIdentifiers.foreach(name => {
           term(
             name.name,
             name.pos,
             Kind.METHOD,
             SymbolInformation.Property.VAL.value
           )
-        )
+          resetRegion(region)
+        })
       case VAR =>
-        valIdentifiers.foreach(name =>
+        valIdentifiers.foreach(name => {
           method(
             name.name,
             "()",
             name.pos,
             SymbolInformation.Property.VAR.value
           )
-        )
+          resetRegion(region)
+        })
       case TYPE =>
         val name = newIdentifier
         tpe(name.name, name.pos, Kind.TYPE, 0)
       case DEF =>
         val name = newIdentifier
-        method(name.name, overloads.disambiguator(name.name), name.pos, 0)
+        method(
+          name.name,
+          region.overloads.disambiguator(name.name),
+          name.pos,
+          0
+        )
       case GIVEN =>
         val name = newIdentifier
         method(
           name.name,
-          overloads.disambiguator(name.name),
+          region.overloads.disambiguator(name.name),
           name.pos,
           SymbolInformation.Property.GIVEN.value
         )
@@ -505,6 +512,7 @@ class ScalaToplevelMtags(
 
   def valIdentifiers: List[Identifier] = {
     var resultList: List[Identifier] = Nil
+    var isUnapply = false
     while (scanner.curr.token != EQUALS && scanner.curr.token != COLON) {
       scanner.curr.token match {
         case IDENTIFIER => {
@@ -512,11 +520,13 @@ class ScalaToplevelMtags(
           val name = scanner.curr.name
           resultList = new Identifier(name, pos) :: resultList
         }
-        case _ =>
+        case WHITESPACE | COMMA => {}
+        case _ => { isUnapply = true }
       }
       scanner.nextToken()
     }
-    resultList
+    if (isUnapply) resultList.filterNot(_.name.charAt(0).isUpper)
+    else resultList
   }
 
   private def isNewline: Boolean =
