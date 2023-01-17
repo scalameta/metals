@@ -21,7 +21,9 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """|scala.None Object
        |scala.meta.inputs.Input.None Object
        |scala.meta.inputs.Position.None Object
+       |scala.meta.internal.semanticdb.Scala.Descriptor#isNone Method
        |scala.meta.internal.semanticdb.Scala.Descriptor.None Object
+       |scala.meta.internal.semanticdb.Scala.ScalaSymbolOps#isNone Method
        |scala.meta.internal.semanticdb.Scala.Symbols.None Method
        |scala.meta.internal.trees.Origin.None Object
        |scala.meta.prettyprinters.Show.None Object
@@ -30,6 +32,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.tools.nsc.settings.ScalaSettings#CachePolicy.None Object
        |scala.tools.nsc.settings.ScalaSettings#MacroExpand.None Method
        |scala.tools.nsc.settings.ScalaSettings#optChoices.lNone Method
+       |scala.tools.nsc.settings.ScalaSettings#optNone Method
        |scala.tools.nsc.transform.async.ExprBuilder#StateTransitionStyle.None Object
        |""".stripMargin,
   )
@@ -80,13 +83,18 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   )
   check(
     "File",
-    """|acyclic.plugin.Value.File Class
+    """|acyclic.plugin.GraphAnalysis#FileNode Class
+       |acyclic.plugin.Value.File Class
        |com.google.common.io.Files Class
        |com.google.common.io.Files#FileByteSink Class
        |com.google.common.io.Files#FileByteSource Class
        |com.google.common.io.Files#FilePredicate Class
        |com.google.protobuf.compiler.PluginProtos#CodeGeneratorResponse#File Class
        |com.google.protobuf.compiler.PluginProtos#CodeGeneratorResponse#FileOrBuilder Interface
+       |com.google.protobuf.compiler.plugin.CodeGeneratorResponse#addAllFile Method
+       |com.google.protobuf.compiler.plugin.CodeGeneratorResponse#addFile Method
+       |com.google.protobuf.compiler.plugin.CodeGeneratorResponse#clearFile Method
+       |com.google.protobuf.compiler.plugin.CodeGeneratorResponse#withFile Method
        |com.google.protobuf.compiler.plugin.CodeGeneratorResponse.File Class
        |com.google.protobuf.compiler.plugin.CodeGeneratorResponse.File Object
        |com.google.protobuf.compiler.plugin.CodeGeneratorResponse.File.FileLens Class
@@ -105,6 +113,7 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.meta.inputs.Input.VirtualFile Class
        |scala.reflect.io.File Class
        |scala.reflect.io.File Object
+       |scala.reflect.io.File#toFile Method
        |sourcecode.File Class
        |sourcecode.File Object
        |""".stripMargin,
@@ -121,6 +130,11 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.ivy.ant.IvyCacheFileset Class
        |org.apache.parquet.Files Class
        |org.apache.spark.SparkFiles Object
+       |org.apache.spark.sql.execution.streaming.FileStreamSource#allFilesUsingInMemoryFileIndex Method
+       |org.apache.spark.sql.execution.streaming.FileStreamSource#allFilesUsingMetadataLogFileIndex Method
+       |org.apache.spark.sql.execution.streaming.FileStreamSource#fetchAllFiles Method
+       |org.apache.spark.sql.execution.streaming.FileStreamSource#maxFilesPerBatch Method
+       |org.apache.spark.sql.execution.streaming.FileStreamSource#seenFiles Method
        |org.apache.spark.sql.execution.streaming.FileStreamSource.SeenFilesMap Class
        |org.glassfish.jersey.server.internal.scanning.FilesScanner Class
        |org.jline.builtins.Completers#FilesCompleter Class
@@ -155,8 +169,18 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.tools.nsc.interpreter.Power#Implicits1 Interface
        |scala.tools.nsc.interpreter.Power#Implicits2 Interface
        |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
+       |scala.tools.nsc.interpreter.StdReplVals#replImplicits Method
        |scala.tools.nsc.typechecker.Implicits Interface
+       |scala.tools.nsc.typechecker.Implicits#ImplicitSearch#ImplicitComputation#invalidImplicits Method
+       |scala.tools.nsc.typechecker.Implicits#ImplicitSearch#ImplicitComputation#rankImplicits Method
+       |scala.tools.nsc.typechecker.Implicits#ImplicitSearch#allImplicits Method
+       |scala.tools.nsc.typechecker.Implicits#ImplicitSearch#allImplicitsPoly Method
+       |scala.tools.nsc.typechecker.Implicits#resetImplicits Method
        |scala.tools.nsc.typechecker.ImplicitsStats Interface
+       |scala.tools.nsc.typechecker.ImplicitsStats#foundImplicits Method
+       |scala.tools.nsc.typechecker.ImplicitsStats#matchingImplicits Method
+       |scala.tools.nsc.typechecker.ImplicitsStats#plausiblyCompatibleImplicits Method
+       |scala.tools.nsc.typechecker.ImplicitsStats#typedImplicits Method
        |""".stripMargin,
   )
 
@@ -171,7 +195,15 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
 
   check(
     "inputs.Position.",
-    """|scala.meta.inputs.Position.None Object
+    """|scala.meta.inputs.Position#end Method
+       |scala.meta.inputs.Position#endColumn Method
+       |scala.meta.inputs.Position#endLine Method
+       |scala.meta.inputs.Position#input Method
+       |scala.meta.inputs.Position#start Method
+       |scala.meta.inputs.Position#startColumn Method
+       |scala.meta.inputs.Position#startLine Method
+       |scala.meta.inputs.Position#text Method
+       |scala.meta.inputs.Position.None Object
        |scala.meta.inputs.Position.Range Class
        |scala.meta.inputs.Position.Range Object
        |""".stripMargin,

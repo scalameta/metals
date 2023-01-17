@@ -19,10 +19,7 @@ class WorkspaceSymbolExpectSuite
           val symtab0 = mtags0.symbols.map(i => i.symbol -> i).toMap
           val mtags = mtags0.copy(
             occurrences = mtags0.occurrences.filter { occ =>
-              WorkspaceSymbolProvider.isRelevantKind(
-                symtab0(occ.symbol).kind,
-                input.toLanguage.isScala,
-              )
+              WorkspaceSymbolProvider.isRelevantKind(symtab0(occ.symbol).kind)
             }
           )
           val obtained = Semanticdbs.printTextDocument(mtags)

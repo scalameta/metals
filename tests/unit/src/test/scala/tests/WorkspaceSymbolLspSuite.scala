@@ -336,8 +336,8 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
              |scala.jdk.javaapi.FutureConverters
              |java.util.concurrent.CompletableFuture
              |scala.concurrent.Future.failedFailureFuture
-             |scala.concurrent.impl.FutureConvertersImpl.CF#toCompletableFuture
              |java.util.concurrent.ScheduledThreadPoolExecutor#ScheduledFutureTask
+             |scala.concurrent.impl.FutureConvertersImpl.CF#toCompletableFuture
              |scala.concurrent.impl.FutureConvertersImpl
              |""".stripMargin
         } else {
@@ -355,7 +355,6 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
              |scala.jdk.javaapi.FutureConverters
              |java.util.concurrent.CompletableFuture
              |scala.concurrent.Future.failedFailureFuture
-             |scala.concurrent.impl.FutureConvertersImpl.CF#toCompletableFuture
              |java.util.concurrent.ScheduledThreadPoolExecutor#ScheduledFutureTask""".stripMargin
         },
       )
@@ -389,7 +388,6 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
              |scala.jdk.FutureConverters
              |scala.jdk.javaapi.FutureConverters
              |scala.concurrent.Future.failedFailureFuture
-             |scala.concurrent.impl.FutureConvertersImpl.CF#toCompletableFuture
              |scala.concurrent.impl.FutureConvertersImpl
              |""".stripMargin,
       )

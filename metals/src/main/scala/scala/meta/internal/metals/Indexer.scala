@@ -542,12 +542,7 @@ final case class Indexer(
                 )
               }
             } else {
-              if (
-                WorkspaceSymbolProvider.isRelevantKind(
-                  info.kind,
-                  input.toLanguage.isScala,
-                )
-              ) {
+              if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
                 occ.range.foreach { range =>
                   symbols += WorkspaceSymbolInformation(
                     info.symbol,

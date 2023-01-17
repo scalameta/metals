@@ -223,6 +223,6 @@ final class WorkspaceSymbolProvider(
 }
 
 object WorkspaceSymbolProvider {
-  def isRelevantKind(kind: Kind, isScala: Boolean): Boolean =
-    WorkspaceSymbolQuery.isRelevantKind(kind, isScala)
+  def isRelevantKind(kind: Kind): Boolean =
+    WorkspaceSymbolQuery.isRelevantKind(kind)
 }

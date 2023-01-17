@@ -28,7 +28,7 @@ class TestingWorkspaceSearch {
     } {
       SemanticdbDefinition.foreach(Input.VirtualFile(path, text), dialect) {
         defn =>
-          if (query.matches(defn.info, true)) {
+          if (query.matches(defn.info)) {
             val c = defn.toCached
             if (filter(c)) {
               visitor.visitWorkspaceSymbol(

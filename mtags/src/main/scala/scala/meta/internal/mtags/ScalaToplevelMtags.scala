@@ -323,7 +323,8 @@ class ScalaToplevelMtags(
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case LPAREN =>
           expectTemplate match {
-            case Some(expect) if expect.isCaseClassConstructor => {
+            case Some(expect)
+                if expect.isCaseClassConstructor && includeInnerClasses => {
               scanner.nextToken()
               loop(
                 indent,
@@ -338,7 +339,7 @@ class ScalaToplevelMtags(
               loop(indent, isAfterNewline = false, currRegion, expectTemplate)
             }
           }
-        case RPAREN =>
+        case RPAREN if region.changeCaseClassState(true).emitIdentifier =>
           scanner.nextToken()
           loop(indent, isAfterNewline = false, region.prev, newExpectTemplate)
         case COMMA =>
@@ -347,7 +348,7 @@ class ScalaToplevelMtags(
           loop(
             indent,
             isAfterNewline = false,
-            region.changeCaseClassState(CaseClassState.COMMA),
+            region.changeCaseClassState(true),
             nextExpectTemplate
           )
         case IDENTIFIER if (region.emitIdentifier) =>
@@ -362,7 +363,7 @@ class ScalaToplevelMtags(
           loop(
             indent,
             isAfterNewline = false,
-            region.changeCaseClassState(CaseClassState.COLON),
+            region.changeCaseClassState(false),
             expectTemplate
           )
         case CASE =>
@@ -662,11 +663,6 @@ class ScalaToplevelMtags(
 
 object ScalaToplevelMtags {
 
-  object CaseClassState {
-    val COMMA = 1 // or first open parenthesis
-    val COLON = 2
-  }
-
   final case class CaseClassState(state: Int, openParen: Int = 0) {
     def openParenthesis(): CaseClassState = CaseClassState(state, openParen + 1)
     def closeParenthesis(): CaseClassState =
@@ -696,7 +692,7 @@ object ScalaToplevelMtags {
       Region.InBrace(owner, adjustRegion(prev), extension)
 
     def startInParenRegion(prev: Region): Region =
-      Region.InParen(owner, adjustRegion(prev), CaseClassState.COMMA)
+      Region.InParen(owner, adjustRegion(prev), true)
 
     def startIndentedRegion(prev: Region, extension: Boolean = false): Region =
       Region.Indented(owner, indent, adjustRegion(prev), extension)
@@ -712,9 +708,9 @@ object ScalaToplevelMtags {
     val overloads: OverloadDisambiguator = new OverloadDisambiguator()
     def termOwner: String =
       owner // toplevel terms are wrapped into an atrificial Object
-    def withTermOwner(termOwner: String): Region = this
+    val withTermOwner: String => Region = _ => this
     def emitIdentifier: Boolean = false
-    val changeCaseClassState: Int => Region = _ => this
+    val changeCaseClassState: Boolean => Region = _ => this
   }
 
   object Region {
@@ -726,10 +722,8 @@ object ScalaToplevelMtags {
       val prev: Region = self
       val acceptMembers: Boolean = true
       val produceSourceToplevel: Boolean = true
-
-      override def withTermOwner(termOwner: String): Region = RootRegion(
-        termOwner
-      )
+      override val withTermOwner: String => RootRegion = termOwner =>
+        RootRegion(termOwner)
     }
 
     final case class Package(
@@ -740,7 +734,7 @@ object ScalaToplevelMtags {
       def this(owner: String, prev: Region) = this(owner, prev, owner)
       val acceptMembers: Boolean = true
       val produceSourceToplevel: Boolean = true
-      override def withTermOwner(termOwner: String): Region =
+      override val withTermOwner: String => Package = termOwner =>
         Package(owner, prev, termOwner)
     }
 
@@ -770,13 +764,12 @@ object ScalaToplevelMtags {
     final case class InParen(
         owner: String,
         prev: Region,
-        state: Int
+        override val emitIdentifier: Boolean
     ) extends Region {
       def acceptMembers: Boolean = false
       val produceSourceToplevel: Boolean = false
-      override def emitIdentifier: Boolean = state == CaseClassState.COMMA
-      override val changeCaseClassState: Int => Region = newState =>
-        this.copy(state = newState)
+      override val changeCaseClassState: Boolean => Region = ei =>
+        this.copy(emitIdentifier = ei)
     }
   }
 }

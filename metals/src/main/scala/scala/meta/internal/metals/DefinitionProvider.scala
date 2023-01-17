@@ -111,8 +111,8 @@ final class DefinitionProvider(
     }
 
     fromCompilerOrSemanticdb.map { definition =>
-      if (definition.isEmpty) {
-        fromSearch(path, params.getPosition(), token).getOrElse(definition)
+      if (definition.isEmpty && !definition.symbol.endsWith("/")) {
+        fromSearch(path, params.getPosition()).getOrElse(definition)
       } else {
         definition
       }

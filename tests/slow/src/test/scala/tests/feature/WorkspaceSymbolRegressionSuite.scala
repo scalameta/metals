@@ -8,7 +8,7 @@ import tests.BaseWorkspaceSymbolSuite
 
 abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   def workspace: AbsolutePath = Corpus.akka()
-  check("Actor", "1095 results")
+  check("Actor", "1465 results")
   check(
     "Actor",
     "1010 results",
@@ -16,13 +16,8 @@ abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   )
   check(
     "Actor(",
-    """akka.actor.UidClashTest.oldActor Method
-      |akka.actor.testkit.typed.internal.TestProbeImpl.testActor Method
-      |akka.routing.NoRouter.createRouterActor Method
-      |akka.routing.ScatterGatherFirstCompletedSpec.newActor Method
-      |akka.routing.TailChoppingSpec.newActor Method
-      |akka.stream.typed.scaladsl.ActorMaterializer.boundToActor Method
-    """.stripMargin,
+    "",
+    filter = (m => m.getKind() != SymbolKind.Method),
   )
   check(
     "FSMFB",
@@ -43,6 +38,8 @@ abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |akka.persistence.fsm.japi.pf.FSMStateFunctionBuilder Class
        |akka.persistence.fsm.japi.pf.FSMStopBuilder Class
        |akka.persistence.serialization.MessageFormats#PersistentFSMSnapshotOrBuilder Interface
+       |akka.persistence.serialization.MessageSerializer#persistentFSMSnapshotBuilder Method
+       |akka.stream.io.FileSourcesScaleBenchmark#FILES_NUMBER Method
        |""".stripMargin,
   )
   // Making lowercase queries "more precise" doesn't help because it grows the search state.
@@ -81,6 +78,8 @@ abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |akka.japi.pf.FSMStateFunctionBuilder Class
        |akka.japi.pf.FSMStopBuilder Class
        |akka.japi.pf.FSMTransitionHandlerBuilder Class
+       |akka.pattern.BackoffOptions#withFinalStopMessage Method
+       |akka.pattern.BackoffOptionsImpl#withFinalStopMessage Method
        |akka.persistence.fsm.AbstractPersistentFSM Class
        |akka.persistence.fsm.AbstractPersistentFSMBase Class
        |akka.persistence.fsm.AbstractPersistentFSMBase Object
@@ -113,6 +112,9 @@ abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |akka.persistence.fsm.japi.pf.FSMStopBuilder Class
        |akka.persistence.serialization.MessageFormats#PersistentFSMSnapshot Class
        |akka.persistence.serialization.MessageFormats#PersistentFSMSnapshotOrBuilder Interface
+       |akka.persistence.serialization.MessageSerializer#PersistentFSMSnapshotClass Method
+       |akka.persistence.serialization.MessageSerializer#persistentFSMSnapshot Method
+       |akka.persistence.serialization.MessageSerializer#persistentFSMSnapshotBuilder Method
        |akka.remote.artery.FanInThroughputSpecMultiJvmNode1 Class
        |akka.remote.artery.FanInThroughputSpecMultiJvmNode2 Class
        |akka.remote.artery.FanInThroughputSpecMultiJvmNode3 Class
@@ -128,10 +130,13 @@ abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |akka.remote.testconductor.Controller.CreateServerFSM Class
        |akka.remote.testconductor.ServerFSM Class
        |akka.remote.testconductor.ServerFSM Object
+       |akka.stream.io.FileSourcesScaleBenchmark#FILES_NUMBER Method
        |akka.stream.scaladsl.FlowStatefulMapConcatSpec Class
        |akka.testkit.TestFSMRef Class
        |akka.testkit.TestFSMRef Object
        |akka.testkit.TestFSMRefSpec Class
+       |akka.testkit.TestKitBase#fishForSpecificMessage Method
+       |akka.testkit.javadsl.TestKit#fishForSpecificMessage Method
        |docs.actor.FSMDocSpec Class
        |docs.actor.FSMDocSpec Object
        |docs.actor.FSMDocSpec#DemoCode.MyFSM Class
