@@ -48,6 +48,7 @@ final class RunTestCodeLens(
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
     trees: Trees,
+    workspace: AbsolutePath,
 ) extends CodeLens {
 
   override def isEnabled: Boolean = clientConfig.isDebuggingProvider()
@@ -273,7 +274,7 @@ final class RunTestCodeLens(
       case None =>
         main.toJson
       case Some((env, javaHome)) =>
-        ExtendedScalaMainClass(main, env, javaHome).toJson
+        ExtendedScalaMainClass(main, env, javaHome, workspace).toJson
     }
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
