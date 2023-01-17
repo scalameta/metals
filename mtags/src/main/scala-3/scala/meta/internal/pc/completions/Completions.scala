@@ -164,8 +164,8 @@ class Completions(
           case (a @ AppliedTypeTree(_, args)) :: _
               if args.exists(_.sourcePos.contains(pos)) =>
             typePos
-          case (Template(constr, parents, self, _)) :: _
-              if (constr :: self :: parents).exists(
+          case (templ @ Template(constr, _, self, _)) :: _
+              if (constr :: self :: templ.parents).exists(
                 _.sourcePos.contains(pos)
               ) =>
             typePos
