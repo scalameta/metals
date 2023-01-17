@@ -69,8 +69,8 @@ object MetalsInteractive:
               case _ =>
             }
             localCtx
-          case tree @ Template(constr, parents, self, _) =>
-            if (constr :: self :: parents).contains(nested) then outer
+          case tree @ Template(constr, _, self, _) =>
+            if (constr :: self :: tree.parents).contains(nested) then outer
             else
               contextOfStat(
                 tree.body,
