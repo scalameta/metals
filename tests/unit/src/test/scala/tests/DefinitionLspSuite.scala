@@ -348,6 +348,63 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
+  test("fallback-to-workspace-search") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": { "dependsOn": [ "a" ] }
+          |
+          |}
+          |/a/src/main/scala/a/Main.scala
+          |package a
+          |object Main {
+          |  // Error that makes the whole target not compile
+          |  val name: Int = "John"
+          |}
+          |/b/src/main/scala/b/Foo.scala
+          |package b
+          |import a.Main
+          |
+          |object Foo{
+          |  val nm = Main.name
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("b/src/main/scala/b/Foo.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Main.scala:4:19: error: type mismatch;
+           | found   : String("John")
+           | required: Int
+           |  val name: Int = "John"
+           |                  ^^^^^^
+           |""".stripMargin,
+      )
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main/*L1*/ {
+           |  // Error that makes the whole target not compile
+           |  val name/*L3*/: Int/*Int.scala*/ = "John"
+           |}
+           |/b/src/main/scala/b/Foo.scala
+           |package b
+           |import a/*<no symbol>*/.Main/*Main.scala:1*/
+           |
+           |object Foo/*L3*/{
+           |  val nm/*<no symbol>*/ = Main/*Main.scala:1*/.name/*<no symbol>*/
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("rambo", withoutVirtualDocs = true) {
     cleanDatabase()
     for {
