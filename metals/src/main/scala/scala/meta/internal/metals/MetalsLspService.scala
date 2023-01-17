@@ -497,6 +497,7 @@ class MetalsLspService(
         clientConfig,
         () => userConfig,
         trees,
+        workspace,
       )
     val goSuperLensProvider = new SuperMethodCodeLens(
       buffers,
