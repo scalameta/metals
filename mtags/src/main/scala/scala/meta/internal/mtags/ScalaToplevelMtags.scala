@@ -48,7 +48,8 @@ class ScalaToplevelMtags(
 
   override def language: Language = Language.SCALA
 
-  override def indexRoot(): Unit = loop(0, true, new Region.RootRegion, None)
+  override def indexRoot(): Unit =
+    loop(0, true, new Region.RootRegion, None)
 
   private val scanner = new LegacyScanner(input, dialect)
   scanner.reader.nextChar()
@@ -78,6 +79,16 @@ class ScalaToplevelMtags(
   ): Unit = {
     def newExpectTemplate: Some[ExpectTemplate] =
       Some(ExpectTemplate(indent, currentOwner, false, false))
+    def newExpectCaseClassTemplate: Some[ExpectTemplate] =
+      Some(
+        ExpectTemplate(
+          indent,
+          currentOwner,
+          false,
+          false,
+          isCaseClassConstructor = true
+        )
+      )
     def newExpectPkgTemplate: Some[ExpectTemplate] =
       Some(ExpectTemplate(indent, currentOwner, true, false))
     def newExpectExtensionTemplate(owner: String): Some[ExpectTemplate] =
@@ -112,7 +123,6 @@ class ScalaToplevelMtags(
 
     if (!isDone) {
       val data = scanner.curr
-
       val currRegion =
         if (dialect.allowSignificantIndentation) {
           data.token match {
@@ -125,12 +135,7 @@ class ScalaToplevelMtags(
           val isNotPackageObject = emitPackage(currRegion.owner)
           if (isNotPackageObject) {
             val nextRegion = new Region.Package(currentOwner, currRegion)
-            loop(
-              indent,
-              false,
-              nextRegion,
-              newExpectPkgTemplate
-            )
+            loop(indent, false, nextRegion, newExpectPkgTemplate)
           } else
             loop(indent, false, currRegion, newExpectTemplate)
         case IDENTIFIER
@@ -164,7 +169,12 @@ class ScalaToplevelMtags(
           )
         case CLASS | TRAIT | OBJECT | ENUM if needEmitMember(currRegion) =>
           emitMember(false, currRegion.owner)
-          loop(indent, isAfterNewline = false, currRegion, newExpectTemplate)
+          val template = expectTemplate match {
+            case Some(expect) if expect.isCaseClassConstructor =>
+              newExpectCaseClassTemplate
+            case _ => newExpectTemplate
+          }
+          loop(indent, isAfterNewline = false, currRegion, template)
         // also covers extension methods because of `def` inside
         case DEF
             // extension group
@@ -172,12 +182,7 @@ class ScalaToplevelMtags(
           acceptTrivia()
           val name = newIdentifier
           withOwner(currRegion.owner) {
-            term(
-              name.name,
-              name.pos,
-              Kind.METHOD,
-              EXTENSION
-            )
+            term(name.name, name.pos, Kind.METHOD, EXTENSION)
           }
           loop(indent, isAfterNewline = false, region, newExpectIgnoreBody)
         // inline extension method `extension (...) def foo = ...`
@@ -241,16 +246,31 @@ class ScalaToplevelMtags(
               // basically for braceless def
               case Some(expect) if expect.ignoreBody =>
                 val nextIndent = acceptWhileIndented(expect.indent)
-                loop(nextIndent, isAfterNewline = false, currRegion, None)
+                loop(
+                  nextIndent,
+                  isAfterNewline = false,
+                  currRegion,
+                  None
+                )
               case _ =>
                 scanner.nextToken()
-                loop(0, isAfterNewline = true, region, expectTemplate)
+                loop(
+                  0,
+                  isAfterNewline = true,
+                  region,
+                  expectTemplate
+                )
             }
           } else {
             val nextIndentLevel =
               if (isAfterNewline) indent + 1 else indent
             scanner.nextToken()
-            loop(nextIndentLevel, isAfterNewline, region, expectTemplate)
+            loop(
+              nextIndentLevel,
+              isAfterNewline,
+              region,
+              expectTemplate
+            )
           }
         case COLON if dialect.allowSignificantIndentation =>
           (expectTemplate, nextIsNL) match {
@@ -261,10 +281,20 @@ class ScalaToplevelMtags(
               loop(0, isAfterNewline = true, next, None)
             case (Some(expect), true) =>
               val nextIndent = acceptWhileIndented(expect.indent)
-              loop(nextIndent, isAfterNewline = false, currRegion, None)
+              loop(
+                nextIndent,
+                isAfterNewline = false,
+                currRegion,
+                None
+              )
             case _ =>
               scanner.nextToken()
-              loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+              loop(
+                indent,
+                isAfterNewline = false,
+                currRegion,
+                expectTemplate
+              )
           }
         case LBRACE =>
           expectTemplate match {
@@ -292,9 +322,59 @@ class ScalaToplevelMtags(
           scanner.nextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case LPAREN =>
-          acceptBalancedDelimeters(LPAREN, RPAREN)
+          expectTemplate match {
+            case Some(expect) if expect.isCaseClassConstructor => {
+              scanner.nextToken()
+              loop(
+                indent,
+                isAfterNewline = false,
+                expect.startInParenRegion(region),
+                None
+              )
+            }
+            case _ => {
+              acceptBalancedDelimeters(LPAREN, RPAREN)
+              scanner.nextToken()
+              loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+            }
+          }
+        case RPAREN =>
           scanner.nextToken()
-          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+          loop(indent, isAfterNewline = false, region.prev, newExpectTemplate)
+        case COMMA =>
+          val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
+          scanner.nextToken()
+          loop(
+            indent,
+            isAfterNewline = false,
+            region.changeCaseClassState(CaseClassState.COMMA),
+            nextExpectTemplate
+          )
+        case IDENTIFIER if (region.emitIdentifier) =>
+          withOwner(region.owner) {
+            term(
+              scanner.curr.name,
+              newPosition,
+              Kind.METHOD,
+              SymbolInformation.Property.VAL.value
+            )
+          }
+          loop(
+            indent,
+            isAfterNewline = false,
+            region.changeCaseClassState(CaseClassState.COLON),
+            expectTemplate
+          )
+        case CASE =>
+          val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
+          acceptTrivia()
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion,
+            if (scanner.curr.token == CLASS) newExpectCaseClassTemplate
+            else nextExpectTemplate
+          )
         case t =>
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           scanner.nextToken()
@@ -408,12 +488,13 @@ class ScalaToplevelMtags(
         val name = newIdentifier
         tpe(name.name, name.pos, Kind.TYPE, 0)
       case DEF =>
-        val name = methodIdentifier
-        method(
-          name.name,
-          region.overloads.disambiguator(name.name),
-          name.pos,
-          0
+        methodIdentifier.foreach(name =>
+          method(
+            name.name,
+            region.overloads.disambiguator(name.name),
+            name.pos,
+            0
+          )
         )
       case GIVEN =>
         val name = newIdentifier
@@ -513,12 +594,12 @@ class ScalaToplevelMtags(
   /**
    * Returns a name and position for the current identifier token
    */
-  def methodIdentifier: Identifier = {
+  def methodIdentifier: Option[Identifier] = {
     scanner.curr.token match {
       case IDENTIFIER =>
-        new Identifier(scanner.curr.name, newPosition)
+        Some(new Identifier(scanner.curr.name, newPosition))
       case THIS =>
-        new Identifier("`<init>`", newPosition)
+        None
       case _ => fail("identifier")
     }
   }
@@ -581,12 +662,24 @@ class ScalaToplevelMtags(
 
 object ScalaToplevelMtags {
 
+  object CaseClassState {
+    val COMMA = 1 // or first open parenthesis
+    val COLON = 2
+  }
+
+  final case class CaseClassState(state: Int, openParen: Int = 0) {
+    def openParenthesis(): CaseClassState = CaseClassState(state, openParen + 1)
+    def closeParenthesis(): CaseClassState =
+      CaseClassState(state, openParen - 1)
+  }
+
   final case class ExpectTemplate(
       indent: Int,
       owner: String,
       isPackageBody: Boolean,
       isExtension: Boolean = false,
-      ignoreBody: Boolean = false
+      ignoreBody: Boolean = false,
+      isCaseClassConstructor: Boolean = false
   ) {
 
     /**
@@ -602,6 +695,9 @@ object ScalaToplevelMtags {
     def startInBraceRegion(prev: Region, extension: Boolean = false): Region =
       Region.InBrace(owner, adjustRegion(prev), extension)
 
+    def startInParenRegion(prev: Region): Region =
+      Region.InParen(owner, adjustRegion(prev), CaseClassState.COMMA)
+
     def startIndentedRegion(prev: Region, extension: Boolean = false): Region =
       Region.Indented(owner, indent, adjustRegion(prev), extension)
 
@@ -613,10 +709,12 @@ object ScalaToplevelMtags {
     def acceptMembers: Boolean
     def produceSourceToplevel: Boolean
     def isExtension: Boolean = false
-    def overloads: OverloadDisambiguator = new OverloadDisambiguator()
+    val overloads: OverloadDisambiguator = new OverloadDisambiguator()
     def termOwner: String =
       owner // toplevel terms are wrapped into an atrificial Object
     def withTermOwner(termOwner: String): Region = this
+    def emitIdentifier: Boolean = false
+    val changeCaseClassState: Int => Region = _ => this
   }
 
   object Region {
@@ -667,6 +765,18 @@ object ScalaToplevelMtags {
         owner.endsWith("/")
       val produceSourceToplevel: Boolean = false
       override def isExtension = extension
+    }
+
+    final case class InParen(
+        owner: String,
+        prev: Region,
+        state: Int
+    ) extends Region {
+      def acceptMembers: Boolean = false
+      val produceSourceToplevel: Boolean = false
+      override def emitIdentifier: Boolean = state == CaseClassState.COMMA
+      override val changeCaseClassState: Int => Region = newState =>
+        this.copy(state = newState)
     }
   }
 }

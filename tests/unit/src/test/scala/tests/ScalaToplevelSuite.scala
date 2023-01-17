@@ -315,7 +315,8 @@ class ScalaToplevelSuite extends BaseSuite {
        |  }
        |""".stripMargin,
     List(
-      "a/", "a/A.", "a/A.B1.", "a/A.B1.C1#", "a/A.B2.", "a/A.B2.C2#",
+      "a/", "a/A.", "a/A.B1.", "a/A.B1.C1#", "a/A.B1.C1#a.", "a/A.B2.",
+      "a/A.B2.C2#", "a/A.B2.C2#a.",
     ),
     all = true,
     dialect = dialects.Scala213,
@@ -399,7 +400,32 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/O.extr1.", "a/O.extr2.", "a/O.r.", "a/O.p.",
     ),
     all = true,
-    dialect = dialects.Scala3,
+  )
+
+  check(
+    "additional-constructor",
+    """|package p
+       |
+       |class B() {
+       |  def this(i: Int) = ???
+       |}
+       |""".stripMargin,
+    List("p/", "p/B#"),
+    all = true,
+  )
+
+  check(
+    "case-class",
+    """|package p
+       |
+       |case class A(
+       |  name: Int, isH: Boolean = false
+       |) {
+       |  val V = ???
+       |}
+       |""".stripMargin,
+    List("p/", "p/A#", "p/A#name.", "p/A#isH.", "p/A#V."),
+    all = true,
   )
 
   def check(
