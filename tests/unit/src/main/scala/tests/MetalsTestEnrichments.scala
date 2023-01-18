@@ -60,7 +60,7 @@ object MetalsTestEnrichments {
         val input = source.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        SemanticdbDefinition.foreach(input, dialect) {
+        SemanticdbDefinition.foreach(input, dialect, includeMembers = true) {
           case defn @ SemanticdbDefinition(info, _, _) =>
             if (info.isExtenstion) {
               methodSymbols += defn.toCached

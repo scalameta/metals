@@ -28,7 +28,12 @@ final class Mtags {
     } else if (language.isScala) {
       addLines(language, input.text)
       val mtags =
-        new ScalaToplevelMtags(input, includeInnerClasses = false, dialect)
+        new ScalaToplevelMtags(
+          input,
+          includeInnerClasses = false,
+          includeMembers = false,
+          dialect
+        )
       mtags
         .index()
         .occurrences
@@ -49,7 +54,9 @@ final class Mtags {
     addLines(language, input.text)
     val result =
       if (language.isJava) {
-        JavaMtags.index(input).index()
+        JavaMtags
+          .index(input, includeMembers = true)
+          .index()
       } else if (language.isScala) {
         ScalaMtags.index(input, dialect).index()
       } else {
@@ -90,9 +97,10 @@ object Mtags {
   ): TextDocument = {
     input.toLanguage match {
       case Language.JAVA =>
-        new JavaMtags(input).index()
+        new JavaMtags(input, includeMembers = true).index()
       case Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(input, true, dialect)
+        val mtags =
+          new ScalaToplevelMtags(input, true, includeMembers = true, dialect)
         mtags.index()
       case _ =>
         TextDocument()

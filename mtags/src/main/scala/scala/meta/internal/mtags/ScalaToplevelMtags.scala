@@ -41,6 +41,7 @@ final class Identifier(val name: String, val pos: Position) {
 class ScalaToplevelMtags(
     val input: Input.VirtualFile,
     includeInnerClasses: Boolean,
+    includeMembers: Boolean,
     dialect: Dialect
 ) extends MtagsIndexer {
 
@@ -119,7 +120,7 @@ class ScalaToplevelMtags(
       includeInnerClasses || region.acceptMembers
 
     def needEmitTermMember(): Boolean =
-      includeInnerClasses && !prevWasDot
+      includeMembers && !prevWasDot
 
     if (!isDone) {
       val data = scanner.curr

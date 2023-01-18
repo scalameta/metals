@@ -38,12 +38,21 @@ case class SemanticdbDefinition(
 }
 
 object SemanticdbDefinition {
-  def foreach(input: Input.VirtualFile, dialect: Dialect)(
+  def foreach(
+      input: Input.VirtualFile,
+      dialect: Dialect,
+      includeMembers: Boolean
+  )(
       fn: SemanticdbDefinition => Unit
   ): Unit = {
     input.toLanguage match {
       case Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(input, true, dialect) {
+        val mtags = new ScalaToplevelMtags(
+          input,
+          includeInnerClasses = true,
+          includeMembers = includeMembers,
+          dialect
+        ) {
           override def visitOccurrence(
               occ: SymbolOccurrence,
               info: SymbolInformation,
@@ -58,7 +67,7 @@ object SemanticdbDefinition {
             () // ignore because we don't need to index untokenizable files.
         }
       case Language.JAVA =>
-        val mtags = new JavaMtags(input) {
+        val mtags = new JavaMtags(input, includeMembers) {
           override def visitOccurrence(
               occ: SymbolOccurrence,
               info: SymbolInformation,

@@ -167,8 +167,9 @@ class MetalsGlobal(
       visit: Member => Boolean
   ): SymbolSearch.Result = {
 
-    def isRelevantWorkspaceSymbol(sym: Symbol): Boolean =
-      sym.isClass || sym.isModule || sym.isPackageObject || sym.isTraitOrInterface
+    def isRelevantWorkspaceSymbol(sym: Symbol): Boolean = {
+      sym.isClass || sym.isModule || sym.isPackageObject || sym.isTrait || sym.isInterface
+    }
 
     lazy val isInStringInterpolation = {
       lastVisitedParentTrees match {

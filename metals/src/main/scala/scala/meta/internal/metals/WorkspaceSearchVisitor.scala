@@ -131,7 +131,11 @@ class WorkspaceSearchVisitor(
     } {
       isVisited += defn.path
       val input = defn.path.toInput
-      SemanticdbDefinition.foreach(input, defn.dialect) { semanticDefn =>
+      SemanticdbDefinition.foreach(
+        input,
+        defn.dialect,
+        includeMembers = false,
+      ) { semanticDefn =>
         if (query.matches(semanticDefn.info)) {
           val path =
             if (saveClassFileToDisk) defn.path.toFileOnDisk(workspace)

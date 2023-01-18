@@ -26,19 +26,22 @@ class TestingWorkspaceSearch {
     for {
       (path, (text, dialect)) <- inputs
     } {
-      SemanticdbDefinition.foreach(Input.VirtualFile(path, text), dialect) {
-        defn =>
-          if (query.matches(defn.info)) {
-            val c = defn.toCached
-            if (filter(c)) {
-              visitor.visitWorkspaceSymbol(
-                Paths.get(path),
-                c.symbol,
-                c.kind,
-                c.range,
-              )
-            }
+      SemanticdbDefinition.foreach(
+        Input.VirtualFile(path, text),
+        dialect,
+        includeMembers = true,
+      ) { defn =>
+        if (query.matches(defn.info)) {
+          val c = defn.toCached
+          if (filter(c)) {
+            visitor.visitWorkspaceSymbol(
+              Paths.get(path),
+              c.symbol,
+              c.kind,
+              c.range,
+            )
           }
+        }
       }
     }
 }
