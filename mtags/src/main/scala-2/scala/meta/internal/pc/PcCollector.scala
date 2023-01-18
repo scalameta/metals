@@ -85,8 +85,8 @@ abstract class PcCollector[T](
   ): (Position, Boolean) = {
     val isBackticked = text(pos.start) == '`' &&
       text(pos.end - 1) == '`' &&
-      pos.start != (pos.end - 1) // if the range is for one character pos.end-1 points to pos.start, and may return true for other two cheks
-    // when the old name contains backticks, the position is incorrect
+      pos.start != (pos.end - 1) // for one character names, e.g. `c`
+    //                                                    start-^^-end
     val isOldNameBackticked = text(pos.start) == '`' &&
       (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
       text(pos.end + 1) == '`'

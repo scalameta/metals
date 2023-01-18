@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.annotation.tailrec
+
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.Definition
@@ -96,45 +98,35 @@ final class InlineValueProvider(
       range: l.Range
   ): l.Range = {
     val source = refProvider.text
-    var startWhiteSpaces = 0
-    if (startOffset != 0) {
-      while (
-        source(startOffset - startWhiteSpaces - 1) == ' ' || source(
-          startOffset - startWhiteSpaces - 1
-        ) == '\t'
-      ) {
-        startWhiteSpaces += 1
-      }
+    @tailrec
+    def expand(step: Int, currentIndex: Int): Int = {
+      def isWhiteSpace =
+        source(currentIndex) == ' ' || source(currentIndex) == '\t'
+      if (currentIndex >= 0 && currentIndex < source.size && isWhiteSpace)
+        expand(step, currentIndex + step)
+      else currentIndex
     }
-    var endWhiteSpaces = 0
-    while (
-      source(endOffset + endWhiteSpaces) == ' ' || source(
-        endOffset + endWhiteSpaces
-      ) == '\t' || source(
-        endOffset + endWhiteSpaces
-      ) == ';'
-    ) {
-      endWhiteSpaces += 1
-    }
-    if (source(endOffset + endWhiteSpaces) == '\n')
-      new l.Range(
-        new l.Position(
-          range.getStart.getLine,
-          range.getStart.getCharacter - startWhiteSpaces
-        ),
+    val endWithSpace = expand(1, endOffset)
+    val startWithSpace = expand(-1, startOffset - 1)
+    val startPos = new l.Position(
+      range.getStart.getLine,
+      range.getStart.getCharacter - (startOffset - startWithSpace) + 1
+    )
+    val endPos =
+      if (endWithSpace < source.size && source(endWithSpace) == '\n')
         new l.Position(range.getEnd.getLine + 1, 0)
-      )
-    else
-      new l.Range(
-        new l.Position(
-          range.getStart.getLine,
-          range.getStart.getCharacter - startWhiteSpaces
-        ),
+      else if (endWithSpace < source.size && source(endWithSpace) == ';')
         new l.Position(
           range.getEnd.getLine,
-          range.getEnd.getCharacter + endWhiteSpaces
+          range.getEnd.getCharacter + endWithSpace - endOffset + 1
         )
-      )
+      else
+        new l.Position(
+          range.getEnd.getLine,
+          range.getEnd.getCharacter + endWithSpace - endOffset
+        )
+
+    new l.Range(startPos, endPos)
   }
 }
 

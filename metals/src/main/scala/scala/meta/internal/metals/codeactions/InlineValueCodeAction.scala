@@ -42,6 +42,8 @@ class InlineValueCodeAction(
       for {
         termName <- getTermNameForPos(path, range)
         (defn, isDefn) <- hasDefinitionInScope(termName)
+        /* Either the value definition is local, which can be always inlined since it's scoped to the file
+           or action was executed on a value reference so inlining just the reference will not break anything. */
         if (isLocal(defn) || !isDefn)
       } yield {
         val command =

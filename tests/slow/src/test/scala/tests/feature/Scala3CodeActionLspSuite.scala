@@ -1,15 +1,28 @@
 package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
+import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
+import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
+import scala.meta.internal.metals.codeactions.ExtractRenameMember
+import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
+import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
+import scala.meta.internal.metals.codeactions.ImplementAbstractMembers
 import scala.meta.internal.metals.codeactions.InlineValueCodeAction
+import scala.meta.internal.metals.codeactions.InsertInferredType
+import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
+import scala.meta.internal.metals.codeactions.SourceOrganizeImports
+import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 
+import munit.Location
+import munit.TestOptions
 import tests.codeactions.BaseCodeActionLspSuite
 
 class Scala3CodeActionLspSuite
     extends BaseCodeActionLspSuite("cross-code-actions") {
 
   override protected val scalaVersion: String = BuildInfo.scala3
-  /*
+
   checkNoAction(
     "val",
     """|package a
@@ -543,6 +556,28 @@ class Scala3CodeActionLspSuite
     ),
   )
 
+  check(
+    "issue",
+    """|object Main {
+       | def u : Unit = {
+       | val `<<l>>` : List[Char] = List(1)
+       | def m(i : Int) : Int = ???
+       | def get(): Unit = `l`.map(x => m(x))
+       | }
+       |}
+       |""".stripMargin,
+    s"""|${InlineValueCodeAction.title("l")}""".stripMargin,
+    """|object Main {
+       | def u : Unit = {
+       | def m(i : Int) : Int = ???
+       | def get(): Unit = List(1).map(x => m(x))
+       | }
+       |}
+       |""".stripMargin,
+  )
+
+  private def getPath(name: String) = s"a/src/main/scala/a/$name"
+
   def checkExtractedMember(
       name: TestOptions,
       input: String,
@@ -568,25 +603,5 @@ class Scala3CodeActionLspSuite
       },
     )
   }
-   */
-  check(
-    "issue",
-    """|object Main {
-       | def u : Unit = {
-       | val `<<l>>` : List[Char] = List(1)
-       | def m(i : Int) : Int = ???
-       | def get(): Unit = `l`.map(x => m(x))
-       | }
-       |}
-       |""".stripMargin,
-    s"""|${InlineValueCodeAction.title("l")}""".stripMargin,
-    """|object Main {
-       | def u : Unit = {
-       | def m(i : Int) : Int = ???
-       | def get(): Unit = List(1).map(x => m(x))
-       | }
-       |}
-       |""".stripMargin,
-  )
 
 }

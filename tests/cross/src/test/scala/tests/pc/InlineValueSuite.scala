@@ -33,10 +33,10 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
   checkEdit(
     "inline-local-same-name",
     """|object Main {
-       | val a = { val a = 1; val b = <<a>> + 1}
+       | val a = { val a = 1; val b = <<a>> + 1 }
        |}""".stripMargin,
     """|object Main {
-       | val a = {val b = 1 + 1}
+       | val a = { val b = 1 + 1 }
        |}""".stripMargin,
   )
 
