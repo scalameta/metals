@@ -541,6 +541,17 @@ object ServerCommands {
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
        |""".stripMargin,
   )
+
+  val InlineValue = new ParametrizedCommand[TextDocumentPositionParams](
+    "inline-value",
+    "Inline value",
+    """|Whenever a user chooses code action to inline a value this command is later ran to
+       |find all the references to choose the correct inline version (if possible to perform)
+       |""".stripMargin,
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+       |""".stripMargin,
+  )
+
   final case class ExtractMethodParams(
       param: TextDocumentIdentifier,
       range: lsp4j.Range,
@@ -663,6 +674,7 @@ object ServerCommands {
       GotoSymbol,
       ImportBuild,
       InsertInferredType,
+      InlineValue,
       NewScalaFile,
       NewJavaFile,
       NewScalaProject,

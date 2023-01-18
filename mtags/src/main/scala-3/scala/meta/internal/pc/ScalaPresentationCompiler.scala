@@ -34,6 +34,7 @@ import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.util.*
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.jsonrpc.{messages as jm}
 import org.eclipse.{lsp4j as l}
 
 case class ScalaPresentationCompiler(
@@ -230,6 +231,20 @@ case class ScalaPresentationCompiler(
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
       new InferredTypeProvider(params, pc.compiler(), config, search)
         .inferredTypeEdits()
+        .asJava
+    }
+
+  override def inlineValue(
+      params: OffsetParams
+  ): CompletableFuture[jm.Either[String, ju.List[l.TextEdit]]] =
+    val empty: jm.Either[String, ju.List[l.TextEdit]] =
+      jm.Either.forRight(ju.List.of())
+    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+      new InlineValueProvider(
+        new PcValReferenceProviderImpl(pc.compiler(), params)
+      )
+        .getInlineTextEdits()
+        .map(_.asJava)
         .asJava
     }
 
