@@ -1,5 +1,7 @@
 package tests.debug
 
+import java.util.concurrent.CancellationException
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 
@@ -8,7 +10,6 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseDapSuite
 import tests.QuickBuildInitializer
 import tests.QuickBuildLayout
-import java.util.concurrent.CancellationException
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment

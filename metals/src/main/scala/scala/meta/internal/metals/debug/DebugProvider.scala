@@ -386,7 +386,7 @@ class DebugProvider(
   )(implicit ec: ExecutionContext): Future[DebugSession] = {
     val cancelPromise = Promise[Unit]()
     for {
-      server <- statusBar.trackSlowFutureCancellable(
+      server <- statusBar.trackSlowFuture(
         "Starting debug server",
         start(debugParams, cancelPromise),
         () => cancelPromise.trySuccess(()),
