@@ -106,7 +106,8 @@ object TestGroups {
       "tests.codeactions.ActionableDiagnosticsSuite",
       "tests.codeactions.MillifyDependencyLspSuite",
       "tests.RenameFilesLspSuite", "tests.codeactions.ExtractMethodLspSuite",
-      "tests.SemanticTokensExpectSuite"),
+      "tests.SemanticTokensExpectSuite",
+      "tests.debug.DebugProtocolCancelationSuite"),
   )
 
 }

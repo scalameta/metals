@@ -17,7 +17,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
-import scala.meta.internal.metals.config.StatusBarState
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -53,7 +52,7 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (clientConfig.statusBarState == StatusBarState.Off)
+    if (!clientConfig.slowTaskIsOn)
       trackBlockingTask(message)(thunk)
     else {
       val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
@@ -70,7 +69,7 @@ final class StatusBar(
   }
 
   def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
-    if (clientConfig.statusBarState == StatusBarState.Off)
+    if (!clientConfig.slowTaskIsOn)
       trackFuture(message, thunk)
     else {
       val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
@@ -89,7 +88,7 @@ final class StatusBar(
       thunk: Future[T],
       onCancel: () => Unit,
   ): Future[T] = {
-    if (clientConfig.statusBarState == StatusBarState.Off)
+    if (!clientConfig.slowTaskIsOn)
       trackFuture(message, thunk)
     else {
       val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
