@@ -174,9 +174,13 @@ class BuildServerConnection private (
     register(server => server.buildTargetScalaTestClasses(params)).asScala
   }
 
-  def startDebugSession(params: DebugSessionParams): Future[URI] = {
-    register(server => server.debugSessionStart(params)).asScala
-      .map(address => URI.create(address.getUri))
+  def startDebugSession(
+      params: DebugSessionParams,
+      cancelPromise: Promise[Unit],
+  ): Future[URI] = {
+    val completableFuture = register(server => server.debugSessionStart(params))
+    cancelPromise.future.foreach(_ => completableFuture.cancel(true))
+    completableFuture.asScala.map(address => URI.create(address.getUri))
   }
 
   def jvmRunEnvironment(

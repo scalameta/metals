@@ -98,7 +98,8 @@ class DebugProvider(
   )
 
   def start(
-      parameters: b.DebugSessionParams
+      parameters: b.DebugSessionParams,
+      cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     for {
       sessionName <- Future.fromTry(parseSessionName(parameters))
@@ -107,7 +108,12 @@ class DebugProvider(
         .fold[Future[BuildServerConnection]](BuildServerUnavailableError)(
           Future.successful
         )
-      debugServer <- start(sessionName, jvmOptionsTranslatedParams, buildServer)
+      debugServer <- start(
+        sessionName,
+        jvmOptionsTranslatedParams,
+        buildServer,
+        cancelPromise,
+      )
     } yield debugServer
   }
 
@@ -115,6 +121,7 @@ class DebugProvider(
       sessionName: String,
       parameters: b.DebugSessionParams,
       buildServer: BuildServerConnection,
+      cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     val inetAddress = InetAddress.getByName("127.0.0.1")
     val proxyServer = new ServerSocket(0, 50, inetAddress)
@@ -133,8 +140,7 @@ class DebugProvider(
 
       compilations.compilationFinished(targets).flatMap { _ =>
         buildServer
-          .startDebugSession(parameters)
-          .withTimeout(60, TimeUnit.SECONDS)
+          .startDebugSession(parameters, cancelPromise)
           .map { uri =>
             val socket = connect(uri)
             connectedToServer.trySuccess(())
@@ -377,16 +383,19 @@ class DebugProvider(
 
   def asSession(
       debugParams: DebugSessionParams
-  )(implicit ec: ExecutionContext): Future[DebugSession] =
+  )(implicit ec: ExecutionContext): Future[DebugSession] = {
+    val cancelPromise = Promise[Unit]()
     for {
-      server <- statusBar.trackFuture(
+      server <- statusBar.trackSlowFutureCancellable(
         "Starting debug server",
-        start(debugParams),
+        start(debugParams, cancelPromise),
+        () => cancelPromise.trySuccess(()),
       )
     } yield {
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)
     }
+  }
 
   /**
    * Given fully unresolved params this figures out the runType that was passed

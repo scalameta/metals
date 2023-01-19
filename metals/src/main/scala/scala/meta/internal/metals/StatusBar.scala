@@ -84,6 +84,30 @@ final class StatusBar(
     }
   }
 
+  def trackSlowFutureCancellable[T](
+      message: String,
+      thunk: Future[T],
+      onCancel: () => Unit,
+  ): Future[T] = {
+    if (clientConfig.statusBarState == StatusBarState.Off)
+      trackFuture(message, thunk)
+    else {
+      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
+      task.thenApply { response =>
+        if (response.cancel) onCancel()
+      }
+      thunk.onComplete {
+        case Failure(exception) =>
+          slowTaskFailed(message, exception)
+          task.cancel(true)
+        case _: Success[T] =>
+          task.cancel(true)
+      }
+
+      thunk
+    }
+  }
+
   private def slowTaskFailed(message: String, e: Throwable): Unit = {
     scribe.error(s"failed: $message", e)
     client.logMessage(
