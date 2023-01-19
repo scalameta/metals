@@ -15,7 +15,6 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.MetalsServerInputs
-import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ThreadPools
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
@@ -58,7 +57,6 @@ class MetalsLanguageServer(
   private val languageClient =
     new AtomicReference[MetalsLanguageClient](NoopLanguageClient)
 
-  private val cancelables = new MutableCancelable()
   private val isCancelled = new AtomicBoolean(false)
   private val isLanguageClientConnected = new AtomicBoolean(false)
 
@@ -87,7 +85,6 @@ class MetalsLanguageServer(
    */
   def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
-      cancelables.cancel()
       serverState.get match {
         case ServerState.Initialized(service) => service.cancel()
         case ShuttingDown(service) => service.cancel()

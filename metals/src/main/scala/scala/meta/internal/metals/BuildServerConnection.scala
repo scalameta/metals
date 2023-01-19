@@ -110,7 +110,8 @@ class BuildServerConnection private (
   /**
    * Run build/shutdown procedure
    */
-  def shutdown(): Future[Unit] =
+  def shutdown(): Future[Unit] = {
+    cancel()
     connection.map { conn =>
       try {
         if (isShuttingDown.compareAndSet(false, true)) {
@@ -133,6 +134,7 @@ class BuildServerConnection private (
           )
       }
     }
+  }
 
   def compile(params: CompileParams): CompletableFuture[CompileResult] = {
     register(

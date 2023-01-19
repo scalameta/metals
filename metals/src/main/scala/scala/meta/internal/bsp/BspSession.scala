@@ -34,7 +34,9 @@ case class BspSession(
   def cancel(): Unit = connections.foreach(_.cancel())
 
   def shutdown(): Future[Unit] =
-    Future.sequence(connections.map(_.shutdown())).map(_ => ())
+    Future
+      .sequence(connections.map(_.shutdown()))
+      .map(_ => ())
 
   def mainConnection: BuildServerConnection = main
 
