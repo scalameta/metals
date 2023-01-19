@@ -68,25 +68,10 @@ final class StatusBar(
     }
   }
 
-  def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
-    if (!clientConfig.slowTaskIsOn)
-      trackFuture(message, thunk)
-    else {
-      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
-      thunk.onComplete {
-        case Failure(exception) =>
-          slowTaskFailed(message, exception)
-          task.cancel(true)
-        case Success(_) =>
-          task.cancel(true)
-      }
-    }
-  }
-
-  def trackSlowFutureCancellable[T](
+  def trackSlowFuture[T](
       message: String,
       thunk: Future[T],
-      onCancel: () => Unit,
+      onCancel: () => Unit = () => (),
   ): Future[T] = {
     if (!clientConfig.slowTaskIsOn)
       trackFuture(message, thunk)
@@ -99,10 +84,9 @@ final class StatusBar(
         case Failure(exception) =>
           slowTaskFailed(message, exception)
           task.cancel(true)
-        case _: Success[T] =>
+        case Success(_) =>
           task.cancel(true)
       }
-
       thunk
     }
   }
