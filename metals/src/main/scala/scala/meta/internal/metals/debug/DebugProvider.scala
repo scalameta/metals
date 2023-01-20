@@ -139,15 +139,23 @@ class DebugProvider(
       val targets = parameters.getTargets().asScala.toSeq
 
       compilations.compilationFinished(targets).flatMap { _ =>
-        buildServer
+        val conn = buildServer
           .startDebugSession(parameters, cancelPromise)
           .map { uri =>
             val socket = connect(uri)
             connectedToServer.trySuccess(())
             socket
           }
+
+        val connWithTimeout =
+          // if slow task is supported users can stop it themselves
+          if (clientConfig.slowTaskIsOn()) conn
+          else conn.withTimeout(60, TimeUnit.SECONDS)
+
+        connWithTimeout
           .recover { case exception =>
             connectedToServer.tryFailure(exception)
+            cancelPromise.tryFailure(exception)
             throw exception
           }
       }
