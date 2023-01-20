@@ -147,7 +147,7 @@ class Completions(
             var i = span.end
             while i < (text.length() - 1) && text(i).isWhitespace do i = i + 1
 
-            if i < text.length() then text(i) == '['
+            if (i < text.length()) then text(i) == '['
             else false
           else false
 

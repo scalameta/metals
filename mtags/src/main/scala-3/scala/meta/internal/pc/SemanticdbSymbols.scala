@@ -132,7 +132,7 @@ object SemanticdbSymbols:
         b.append('('); addName(sym.name); b.append(')')
       else if sym.isRoot then b.append(Symbols.RootPackage)
       else if sym.isEmptyPackage then b.append(Symbols.EmptyPackage)
-      else if sym.isScala2PackageObject then
+      else if (sym.isScala2PackageObject) then
         b.append(Symbols.PackageObjectDescriptor)
       else
         addName(sym.name)
