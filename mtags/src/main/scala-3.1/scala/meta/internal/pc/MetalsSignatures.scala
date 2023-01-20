@@ -14,7 +14,6 @@ import dotty.tools.dotc.util.SourcePosition
 object MetalsSignatures:
 
   def signatures(
-      search: SymbolSearch,
       path: List[tpd.Tree],
       pos: SourcePosition,
   )(using Context): (Int, Int, List[(Signature, Denotation)]) =
