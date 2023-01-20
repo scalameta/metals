@@ -157,9 +157,8 @@ object NamedArgCompletions:
       then
         val editText = allParams.zipWithIndex
           .collect {
-            case (param, index) if !param.is(Flags.HasDefault) => {
+            case (param, index) if !param.is(Flags.HasDefault) =>
               s"${param.nameBackticked.replace("$", "$$")} = $${${index + 1}${findDefaultValue(param)}}"
-            }
           }
           .mkString(", ")
         List(
