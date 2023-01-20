@@ -60,7 +60,9 @@ object MetalsTestEnrichments {
         val input = source.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        SemanticdbDefinition.foreach(input, dialect, includeMembers = true) {
+        val includeMembers =
+          wsp.workspace.extension != "zip" && wsp.workspace.extension != "jar"
+        SemanticdbDefinition.foreach(input, dialect, includeMembers) {
           case defn @ SemanticdbDefinition(info, _, _) =>
             if (info.isExtension) {
               methodSymbols += defn.toCached

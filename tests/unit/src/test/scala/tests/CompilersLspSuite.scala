@@ -14,7 +14,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
           |}
           |/a/src/main/scala/a/A.scala
           |package a
-          |object A {
+          |class A {
           |  // @@
           |  def completeThisUniqueName() = 42
           |}
@@ -42,7 +42,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
       _ <-
         server.didSave("b/src/main/scala/b/B.scala")(_ => "package b; object B")
       _ <-
-        server.didSave("a/src/main/scala/a/A.scala")(_ => "package a; object A")
+        server.didSave("a/src/main/scala/a/A.scala")(_ => "package a; class A")
       _ = assertNoDiagnostics()
       _ = assertEquals(0, server.server.loadedPresentationCompilerCount())
     } yield ()
