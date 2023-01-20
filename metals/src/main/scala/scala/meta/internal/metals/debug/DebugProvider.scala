@@ -155,7 +155,7 @@ class DebugProvider(
         connWithTimeout
           .recover { case exception =>
             connectedToServer.tryFailure(exception)
-            cancelPromise.tryFailure(exception)
+            cancelPromise.trySuccess(())
             throw exception
           }
       }

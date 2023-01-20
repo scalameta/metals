@@ -316,7 +316,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       _ = {
         assertNoDiff(
           client.workspaceMessageRequests,
-          MissingScalafmtVersion.messageRequestMessage,
+          s"""|${MissingScalafmtVersion.messageRequestMessage}
+              |Loading Scalafmt""".stripMargin,
         )
         assertNoDiff(
           client.workspaceShowMessages,
