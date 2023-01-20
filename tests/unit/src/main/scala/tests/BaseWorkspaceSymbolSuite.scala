@@ -24,10 +24,9 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def check(
       query: String,
       expected: String,
-      filter: SymbolInformation => Boolean = _ => true,
   )(implicit loc: Location): Unit = {
     test(query) {
-      val result = symbols.search(query).filter(filter)
+      val result = symbols.search(query)
       val obtained =
         if (result.length > 100) s"${result.length} results"
         else {

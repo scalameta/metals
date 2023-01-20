@@ -62,7 +62,7 @@ object MetalsTestEnrichments {
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         SemanticdbDefinition.foreach(input, dialect, includeMembers = true) {
           case defn @ SemanticdbDefinition(info, _, _) =>
-            if (info.isExtenstion) {
+            if (info.isExtension) {
               methodSymbols += defn.toCached
             } else {
               if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {

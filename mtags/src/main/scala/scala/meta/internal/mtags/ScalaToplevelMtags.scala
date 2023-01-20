@@ -352,7 +352,7 @@ class ScalaToplevelMtags(
             region.changeCaseClassState(true),
             nextExpectTemplate
           )
-        case IDENTIFIER if (region.emitIdentifier) =>
+        case IDENTIFIER if region.emitIdentifier && includeMembers =>
           withOwner(region.owner) {
             term(
               scanner.curr.name,
@@ -708,7 +708,7 @@ object ScalaToplevelMtags {
     def isExtension: Boolean = false
     val overloads: OverloadDisambiguator = new OverloadDisambiguator()
     def termOwner: String =
-      owner // toplevel terms are wrapped into an atrificial Object
+      owner // toplevel terms are wrapped into an artificial Object
     val withTermOwner: String => Region = _ => this
     def emitIdentifier: Boolean = false
     val changeCaseClassState: Boolean => Region = _ => this

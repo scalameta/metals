@@ -533,7 +533,7 @@ final case class Indexer(
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         SemanticdbDefinition.foreach(input, dialect, includeMembers = true) {
           case SemanticdbDefinition(info, occ, owner) =>
-            if (info.isExtenstion) {
+            if (info.isExtension) {
               occ.range.foreach { range =>
                 methodSymbols += WorkspaceSymbolInformation(
                   info.symbol,

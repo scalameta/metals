@@ -657,7 +657,7 @@ trait CommonMtagsEnrichments {
 
   implicit class XtensionSymbolInformation(info: s.SymbolInformation) {
     // This works only for SymbolInformation produced in metals in `ScalaTopLevelMtags`.
-    def isExtenstion: Boolean = (EXTENSION & info.properties) != 0
+    def isExtension: Boolean = (EXTENSION & info.properties) != 0
   }
 
   val EXTENSION: Int = s.SymbolInformation.Property.values.map(_.value).max << 1
