@@ -238,7 +238,7 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[jm.Either[String, ju.List[l.TextEdit]]] =
     val empty: jm.Either[String, ju.List[l.TextEdit]] =
-      jm.Either.forRight(ju.List.of())
+      jm.Either.forRight(ju.Collections.emptyList())
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
       new InlineValueProvider(
         new PcValReferenceProviderImpl(pc.compiler(), params)

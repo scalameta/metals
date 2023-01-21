@@ -10,6 +10,7 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.CancelToken
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -51,6 +52,25 @@ final class WorkspaceSymbolProvider(
       case InterruptException() =>
         Nil
     }
+  }
+
+  def searchExactFrom(
+      queryString: String,
+      path: AbsolutePath,
+      token: CancelToken,
+  ): Seq[l.SymbolInformation] = {
+    val query = WorkspaceSymbolQuery.exact(queryString)
+    val visistor =
+      new WorkspaceSearchVisitor(
+        workspace,
+        query,
+        token,
+        index,
+        saveClassFileToDisk,
+      )
+    val targetId = buildTargets.inverseSources(path)
+    search(query, visistor, targetId)
+    visistor.allResults().filter(_.getName() == queryString)
   }
 
   def search(
