@@ -5,6 +5,8 @@ import java.{util => ju}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Term
+import scala.meta.Type
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -30,6 +32,8 @@ import scala.meta.tokens.Token
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
@@ -108,7 +112,7 @@ final class DefinitionProvider(
 
     fromCompilerOrSemanticdb.map { definition =>
       if (definition.isEmpty) {
-        fromSearch(path, params.getPosition()).getOrElse(definition)
+        fromSearch(path, params.getPosition(), token).getOrElse(definition)
       } else {
         definition
       }
@@ -127,29 +131,63 @@ final class DefinitionProvider(
   def fromSearch(
       path: AbsolutePath,
       pos: Position,
+      token: CancelToken,
   ): Option[DefinitionResult] = {
-    val ident = for {
+
+    val defResult = for {
       sourceText <- buffers.get(path)
       virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
       metaPos <- pos.toMeta(virtualFile)
       tokens <- trees.tokenized(virtualFile).toOption
-      containing <- tokens.collectFirst {
+      ident <- tokens.collectFirst {
         case id: Token.Ident if id.pos.encloses(metaPos) => id
       }
-    } yield containing
+    } yield {
+      lazy val nameTree = trees.findLastEnclosingAt(path, pos)
 
-    ident match {
-      case Some(Token.Ident(name)) =>
-        val locs = workspaceSearch.search(name).collect {
-          case info if info.getName == name =>
-            info.getLocation()
+      // for sure is not a class/trait/enum if we access it via select
+      lazy val isInSelectPosition = nameTree.exists { name =>
+        name.parent.exists {
+          case Type.Select(qual, _) if nameTree.contains(qual) => true
+          case Term.Select(qual, _) if nameTree.contains(qual) => true
+          case _ => false
         }
-        if (locs.nonEmpty) {
-          scribe.warn(s"Using indexes to guess the definition of ${name}")
-          Some(DefinitionResult(locs.asJava, name, None, None))
-        } else None
-      case _ => None
+      }
+
+      lazy val isInTypePosition = nameTree.exists(_.is[Type.Name])
+
+      def filterViaHeuristics(symbolInfo: SymbolInformation) = {
+        val kind = symbolInfo.getKind()
+        val isClassLike =
+          kind == SymbolKind.Class || kind == SymbolKind.Enum || kind == SymbolKind.Interface
+        if (isClassLike && isInSelectPosition) false
+        else if (kind == SymbolKind.Object && isInTypePosition) false
+        else true
+      }
+
+      val locs = workspaceSearch
+        .searchExactFrom(ident.value, path, token)
+
+      val reducedGuesses =
+        if (locs.size > 1)
+          locs.filter(filterViaHeuristics)
+        else
+          locs
+
+      if (reducedGuesses.nonEmpty) {
+        scribe.warn(s"Using indexes to guess the definition of ${ident.value}")
+        Some(
+          DefinitionResult(
+            reducedGuesses.map(_.getLocation()).asJava,
+            ident.value,
+            None,
+            None,
+          )
+        )
+      } else None
+
     }
+    defResult.flatten
   }
 
   def fromSymbol(

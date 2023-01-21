@@ -15,6 +15,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     )
 
   test("definition") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         """|
@@ -361,9 +362,11 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
           |}
           |/a/src/main/scala/a/Main.scala
           |package a
+          |class Main
           |object Main {
           |  // Error that makes the whole target not compile
           |  val name: Int = "John"
+          |  case class Bar()
           |}
           |/b/src/main/scala/b/Foo.scala
           |package b
@@ -371,6 +374,8 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
           |
           |object Foo{
           |  val nm = Main.name
+          |  val foo = Main.Bar()
+          |  val m: Main = new Main()
           |}
           |""".stripMargin
       )
@@ -378,7 +383,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       _ <- server.didOpen("b/src/main/scala/b/Foo.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Main.scala:4:19: error: type mismatch;
+        """|a/src/main/scala/a/Main.scala:5:19: error: type mismatch;
            | found   : String("John")
            | required: Int
            |  val name: Int = "John"
@@ -389,16 +394,20 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
         server.workspaceDefinitions,
         """|/a/src/main/scala/a/Main.scala
            |package a
-           |object Main/*L1*/ {
+           |class Main/*L1*/
+           |object Main/*L2*/ {
            |  // Error that makes the whole target not compile
-           |  val name/*L3*/: Int/*Int.scala*/ = "John"
+           |  val name/*L4*/: Int/*Int.scala*/ = "John"
+           |  case class Bar/*L5*/()
            |}
            |/b/src/main/scala/b/Foo.scala
            |package b
-           |import a/*<no symbol>*/.Main/*Main.scala:1*/
+           |import a/*<no symbol>*/.Main/*;Main.scala:1;Main.scala:2*/
            |
            |object Foo/*L3*/{
-           |  val nm/*<no symbol>*/ = Main/*Main.scala:1*/.name/*<no symbol>*/
+           |  val nm/*<no symbol>*/ = Main/*Main.scala:2*/.name/*<no symbol>*/
+           |  val foo/*<no symbol>*/ = Main/*Main.scala:2*/.Bar/*Main.scala:5*/()
+           |  val m/*<no symbol>*/: Main/*Main.scala:1*/ = new Main/*Main.scala:1*/()
            |}
            |""".stripMargin,
       )
