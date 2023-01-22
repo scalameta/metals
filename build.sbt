@@ -161,7 +161,7 @@ commands ++= Seq(
 def lintingOptions(scalaVersion: String) = {
   val unused213 = "-Wunused"
   // Can't use due to issues with Scala 3 https://github.com/lampepfl/dotty/issues/16650
-  // val unused3 = "-Wunused:all"
+  val unused3 = "-Wunused:all"
   val common = List(
     // desugaring of for yield caused pattern var to complain
     // https://github.com/scala/bug/issues/10287
@@ -182,7 +182,7 @@ def lintingOptions(scalaVersion: String) = {
   crossSetting(
     scalaVersion,
     if213 = unused213 :: commonFiltered,
-    if3 = Nil,
+    if3 = unused3 :: Nil,
     if211 = List("-Ywarn-unused-import"),
   )
 }
@@ -374,7 +374,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.8.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.11.0",
+      "org.flywaydb" % "flyway-core" % "9.12.0",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",

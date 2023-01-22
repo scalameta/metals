@@ -13,6 +13,7 @@ import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.Positioned
+import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.ast.untpd.ExtMethods
@@ -56,11 +57,11 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
       Interactive.pathTo(sel, pos.span) ::: rawPath
     case _ => rawPath
 
-  def collect(tree: Tree, pos: SourcePosition): T
+  def collect(parent: Option[Tree])(tree: Tree, pos: SourcePosition): T
 
   def adjust(
       pos: SourcePosition,
-      forHighlight: Boolean = false,
+      forRename: Boolean = false,
   ): (SourcePosition, Boolean) =
     val isBackticked =
       sourceText(pos.start) == '`' && sourceText(pos.end - 1) == '`'
@@ -69,7 +70,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
       sourceText(pos.start - 1) == '`' &&
       sourceText(pos.end) == '`'
 
-    if isBackticked && !forHighlight then
+    if isBackticked && forRename then
       (pos.withStart(pos.start + 1).withEnd(pos.`end` - 1), true)
     else if isOldNameBackticked then
       (pos.withStart(pos.start - 1).withEnd(pos.`end` + 1), false)
@@ -237,10 +238,12 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
 
         lazy val extensionParam = sought.exists(isExtensionParam)
 
-        def collectNames(
+        def collectNamesWithParent(
             occurences: Set[T],
             tree: Tree,
+            parent: Option[Tree],
         ): Set[T] =
+          def collect = this.collect(parent)
           tree match
             /**
              * All indentifiers such as:
@@ -320,7 +323,9 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
             case mdf: MemberDef if mdf.mods.annotations.nonEmpty =>
               val trees = collectTrees(mdf.mods.annotations)
               val traverser =
-                new DeepFolder[Set[T]](collectNames)
+                new PcCollector.DeepFolderWithParent[Set[T]](
+                  collectNamesWithParent
+                )
               trees.foldLeft(occurences) { case (set, tree) =>
                 traverser(set, tree)
               }
@@ -348,15 +353,20 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
                 .toSet ++ occurences
             case inl: Inlined =>
               val traverser =
-                new DeepFolder[Set[T]](collectNames)
+                new PcCollector.DeepFolderWithParent[Set[T]](
+                  collectNamesWithParent
+                )
               val trees = inl.call :: inl.expansion :: inl.bindings
               trees.foldLeft(occurences) { case (set, tree) =>
                 traverser(set, tree)
               }
             case o =>
               occurences
+          end match
+        end collectNamesWithParent
 
-        val traverser = new DeepFolder[Set[T]](collectNames)
+        val traverser =
+          new PcCollector.DeepFolderWithParent[Set[T]](collectNamesWithParent)
         val all = traverser(Set.empty[T], unit.tpdTree)
 
         all.toList
@@ -371,4 +381,20 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
     trees.collect { case t: Tree =>
       t
     }
+end PcCollector
+
+object PcCollector:
+  private class WithParentTraverser[X](f: (X, Tree, Option[Tree]) => X)
+      extends TreeAccumulator[List[Tree]]:
+    def apply(x: List[Tree], tree: Tree)(using Context): List[Tree] = tree :: x
+    def traverse(acc: X, tree: Tree, parent: Option[Tree])(using Context): X =
+      val res = f(acc, tree, parent)
+      val children = foldOver(Nil, tree).reverse
+      children.foldLeft(res)((a, c) => traverse(a, c, Some(tree)))
+
+  // Folds over the tree as `DeepFolder` but `f` takes also the parent.
+  class DeepFolderWithParent[X](f: (X, Tree, Option[Tree]) => X):
+    private val traverser = WithParentTraverser[X](f)
+    def apply(x: X, tree: Tree)(using Context) =
+      traverser.traverse(x, tree, None)
 end PcCollector

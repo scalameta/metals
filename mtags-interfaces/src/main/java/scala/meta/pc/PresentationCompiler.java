@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.DocumentRangeFormattingParams;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
 import org.eclipse.lsp4j.SelectionRange;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -129,6 +130,11 @@ public abstract class PresentationCompiler {
 	 * position.
 	 */
 	public abstract CompletableFuture<List<TextEdit>> insertInferredType(OffsetParams params);
+
+	/**
+	 * Return the text edits for inlining a value.
+	 */
+	public abstract CompletableFuture<Either<String, List<TextEdit>>> inlineValue(OffsetParams params);
 
 	/**
 	 * Extract method in selected range

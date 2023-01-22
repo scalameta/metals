@@ -1,10 +1,18 @@
 package scala.meta.internal.metals.debug
 
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.util.jar
 
 import scala.util.Properties
+import scala.util.Try
+import scala.util.Using
 
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MD5
+import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -37,16 +45,20 @@ case class ExtendedScalaMainClass private (
 )
 
 object ExtendedScalaMainClass {
+
   private def createCommand(
       javaHome: AbsolutePath,
       classpath: List[String],
       jvmOptions: List[String],
       arguments: List[String],
       mainClass: String,
+      workspace: AbsolutePath,
   ): String = {
     val jvmOptsString =
       if (jvmOptions.nonEmpty) jvmOptions.mkString("\"", "\" \"", "\"") else ""
-    val classpathString = classpath.mkString(File.pathSeparator)
+    val classpathString = Try(tempManifestJar(classpath, workspace)).getOrElse(
+      classpath.mkString(File.pathSeparator)
+    )
     val argumentsString = arguments.mkString(" ")
     // We need to add "" to account for whitespace and also escaped \ before "
     val escapedJavaHome = javaHome.toNIO.getRoot().toString +
@@ -61,10 +73,61 @@ object ExtendedScalaMainClass {
     s"$safeJavaHome $jvmOptsString -classpath \"$classpathString\" $mainClass $argumentsString"
   }
 
+  /**
+   * Create a manifest jar containing the classpath.
+   * It's created in `.metals/tmp` with the name derived
+   * from the classpath MD5 sum so that it's not created
+   * every time.
+   *
+   * @param classpath classpath to put into the jar file
+   * @param workspace current workspace path
+   * @return path to the create jar as string
+   */
+  private def tempManifestJar(
+      classpath: List[String],
+      workspace: AbsolutePath,
+  ): String = {
+
+    val classpathDigest = MD5.compute(classpath.mkString)
+    val manifestJar =
+      workspace
+        .resolve(Directories.tmp)
+        .resolve(s"classpath_${classpathDigest}.jar")
+
+    if (!manifestJar.exists) {
+
+      manifestJar.touch()
+      manifestJar.toNIO.toFile().deleteOnExit()
+
+      val classpathStr =
+        classpath
+          .map(path =>
+            URIEncoderDecoder.encode(Paths.get(path).toUri().toString())
+          )
+          .mkString(" ")
+
+      val manifest = new jar.Manifest()
+      manifest.getMainAttributes.put(
+        jar.Attributes.Name.MANIFEST_VERSION,
+        "1.0",
+      )
+      manifest.getMainAttributes.put(
+        jar.Attributes.Name.CLASS_PATH,
+        classpathStr,
+      )
+
+      val out = Files.newOutputStream(manifestJar.toNIO)
+      Using.resource(new jar.JarOutputStream(out, manifest))(identity)
+
+    }
+    manifestJar.toString()
+  }
+
   def apply(
       main: ScalaMainClass,
       env: b.JvmEnvironmentItem,
       javaHome: AbsolutePath,
+      workspace: AbsolutePath,
   ): ExtendedScalaMainClass = {
     val jvmOpts = (main.getJvmOptions().asScala ++ env
       .getJvmOptions()
@@ -94,6 +157,7 @@ object ExtendedScalaMainClass {
         jvmOpts,
         main.getArguments().asScala.toList,
         main.getClassName(),
+        workspace,
       ),
     )
   }

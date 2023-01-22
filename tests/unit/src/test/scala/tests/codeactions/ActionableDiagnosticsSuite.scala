@@ -21,7 +21,7 @@ class ActionableDiagnosticsSuite
         |  println("Hello")
         |}
         |""".stripMargin,
-    s"Apply suggestion: com.lihaoyi::os-lib:0.7.8 is outdated, update to $newestOsLib",
+    s"""Apply suggestion: "os-lib is outdated, update to $newestOsLib"""",
     s"""|//> using lib "com.lihaoyi::os-lib:$newestOsLib"
         |
         |object Hello extends App {
