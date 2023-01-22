@@ -13,7 +13,6 @@ import dotty.tools.dotc.core.Denotations.*
 object MetalsSignatures:
 
   def signatures(
-      search: SymbolSearch,
       path: List[tpd.Tree],
       pos: SourcePosition,
   )(using Context): (Int, Int, List[(Signature, Denotation)]) =

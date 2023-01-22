@@ -1,7 +1,5 @@
 package scala.meta.internal.mtags
 
-import java.net.URI
-
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
@@ -9,14 +7,11 @@ import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.pc.MetalsInteractive
 import scala.meta.internal.pc.SemanticdbSymbols
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.ParentSymbols
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
-import dotty.tools.dotc.Driver
 import dotty.tools.dotc.ast.tpd.*
-import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Denotations.*
 import dotty.tools.dotc.core.Flags.*
@@ -31,7 +26,6 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
-import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.{lsp4j as l}
 
 object MtagsEnrichments extends CommonMtagsEnrichments:
@@ -64,13 +58,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
           "No source files were passed to the Scala 3 presentation compiler"
         )
       val unit = driver.currentCtx.run.units.head
-      val tree = unit.tpdTree
       val pos = driver.sourcePosition(params)
-      val path =
-        Interactive.pathTo(driver.openedTrees(params.uri), pos)(using
-          driver.currentCtx
-        )
-
       val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
       val tpdPath =
         Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using

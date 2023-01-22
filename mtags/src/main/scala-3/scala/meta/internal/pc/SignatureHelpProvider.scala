@@ -1,7 +1,6 @@
 package scala.meta.internal.pc
 
 import scala.collection.JavaConverters.*
-import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -49,11 +48,7 @@ object SignatureHelpProvider:
       Interactive.pathTo(trees, pos).dropWhile(t => notCurrentApply(t, pos))
 
     val (paramN, callableN, alternativeSignatures) =
-      MetalsSignatures.signatures(
-        search,
-        path,
-        pos,
-      )
+      MetalsSignatures.signatures(path, pos)
 
     val signatureInfos = alternativeSignatures.map { case (signature, denot) =>
       search.symbolDocumentation(denot.symbol) match
