@@ -14,6 +14,7 @@ final class InlineValueProvider(
   private def definitionNeedsBrackets(rhs: String): Boolean =
     rhs.parse[Term].toOption match {
       case Some(_: Term.ApplyInfix) => true
+      case Some(_: Term.Function) => true
       case _ => false
     }
 
@@ -26,6 +27,7 @@ final class InlineValueProvider(
       case Some(_: Term.ApplyInfix) => true
       case Some(_: Term.ApplyUnary) => true
       case Some(_: Term.Select) => true
+      case Some(_: Term.Name) => true // apply
       case _ => false
     }
   }
