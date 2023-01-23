@@ -3,7 +3,7 @@ id: mill
 title: Mill
 ---
 
-Mill is a build tool developed by Li Haoyi in order to create something simpler
+Mill is a build tool initially developed by Li Haoyi in order to create something simpler
 and more intuitive than most of the other build tools today.  There is extensive
 documentation on the [Mill website](https://com-lihaoyi.github.io/mill/).
 
@@ -15,19 +15,21 @@ in the workspace directory.
 
 ## Manual installation
 
-Manual installation is not recommended, but it's pretty easy to do. There are
-only two steps involved.
+Manual installation is not recommended by Metals, but it's pretty easy to do. 
+You can choose between two server implementations.
 
-First add one import line to your `build.sc` file or in any other file it
-depends on:
+### Bloop
 
-`` import $ivy.`com.lihaoyi::mill-contrib-bloop:VERSION` ``
+Using Mill with Bloop is the current preferred way by Metals.
 
-Remember to replace the `VERSION` with your Mill version.
+Metals requires the Bloop config files, which you can generate with the following command:
 
-After adding the line you should be able to generate the Bloop config files needed
-to work with Metals using the below command:
-
-`mill mill.contrib.Bloop/install`
+``mill --import "ivy:com.lihaoyi::mill-contrib-bloop::" mill.contrib.Bloop/install``
 
 Afterwards, you can just open Metals and start working on your code.
+
+### Mill BSP
+
+Mill also provides a built-in BSP server. To generate the BSP connection discovery files, run the following command:
+
+``mill mill.bsp.BSP/install``
