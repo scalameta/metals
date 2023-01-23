@@ -24,6 +24,7 @@ import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
+import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -197,14 +198,19 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       argIndices: ju.List[Integer]
   ): CompletableFuture[ju.List[TextEdit]] = {
-    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new ConvertToNamedArgumentsProvider(
-        pc.compiler(),
-        params,
-        argIndices.asScala.map(_.toInt).toSet
-      ).convertToNamedArguments.asJava
-    }
+    val empty: Either[String, List[TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(empty, params.token) { pc =>
+        new ConvertToNamedArgumentsProvider(
+          pc.compiler(),
+          params,
+          argIndices.asScala.map(_.toInt).toSet
+        ).convertToNamedArguments
+      })
+      .thenApplyAsync {
+        case Left(error: String) => throw new DisplayableException(error)
+        case Right(edits: List[TextEdit]) => edits.asJava
+      }
   }
 
   override def autoImports(

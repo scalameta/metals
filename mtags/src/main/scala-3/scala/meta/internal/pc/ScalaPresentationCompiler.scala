@@ -270,14 +270,20 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       argIndices: ju.List[Integer],
   ): CompletableFuture[ju.List[l.TextEdit]] =
-    val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new ConvertToNamedArgumentsProvider(
-        pc.compiler(),
-        params,
-        argIndices.asScala.map(_.toInt).toSet,
-      ).convertToNamedArguments.asJava
-    }
+    val empty: Either[String, List[l.TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(empty, params.token) { pc =>
+        new ConvertToNamedArgumentsProvider(
+          pc.compiler(),
+          params,
+          argIndices.asScala.map(_.toInt).toSet,
+        ).convertToNamedArguments
+      })
+      .thenApplyAsync {
+        case Left(error: String) => throw new DisplayableException(error)
+        case Right(edits: List[l.TextEdit]) => edits.asJava
+      }
+  end convertToNamedArguments
   override def selectionRange(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[l.SelectionRange]] =

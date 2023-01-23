@@ -9,6 +9,7 @@ import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Types.MethodType
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
@@ -21,7 +22,7 @@ final class ConvertToNamedArgumentsProvider(
     argIndices: Set[Int],
 ):
 
-  def convertToNamedArguments: List[l.TextEdit] =
+  def convertToNamedArguments: Either[String, List[l.TextEdit]] =
     val uri = params.uri
     val filePath = Paths.get(uri)
     driver.run(
@@ -54,17 +55,24 @@ final class ConvertToNamedArgumentsProvider(
             Some(fun, argss ++ args)
           case _ => None
 
-    def edits(tree: Option[tpd.Tree])(using Context): List[l.TextEdit] =
+    def edits(tree: Option[tpd.Tree])(using
+        Context
+    ): Either[String, List[l.TextEdit]] =
       def makeTextEdits(fun: tpd.Tree, args: List[tpd.Tree]) =
-        args.zipWithIndex
-          .zip(paramss(fun))
-          .collect {
-            case ((arg, index), param) if argIndices.contains(index) => {
-              val position = arg.sourcePos.toLsp
-              position.setEnd(position.getStart())
-              new l.TextEdit(position, s"$param = ")
-            }
-          }
+        if fun.symbol.is(Flags.JavaDefined) then
+          Left(CodeActionErrorMessages.ConvertToNamedArguments.IsJavaObject)
+        else
+          Right(
+            args.zipWithIndex
+              .zip(paramss(fun))
+              .collect {
+                case ((arg, index), param) if argIndices.contains(index) => {
+                  val position = arg.sourcePos.toLsp
+                  position.setEnd(position.getStart())
+                  new l.TextEdit(position, s"$param = ")
+                }
+              }
+          )
 
       tree match
         case Some(t) =>
@@ -73,8 +81,8 @@ final class ConvertToNamedArgumentsProvider(
               makeTextEdits(fun, args)
             case tpd.Apply(fun, args) =>
               makeTextEdits(fun, args)
-            case _ => Nil
-        case _ => Nil
+            case _ => Right(Nil)
+        case _ => Right(Nil)
       end match
     end edits
     edits(tree)(using newctx)
