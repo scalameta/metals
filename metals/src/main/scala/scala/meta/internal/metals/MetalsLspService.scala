@@ -84,6 +84,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
+import scala.meta.pc.DisplayableException
 import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
@@ -2067,7 +2068,19 @@ class MetalsLspService(
             actionCommand.getCommand()
           ) =>
         CancelTokens.future { token =>
-          codeActionProvider.executeCommands(params, token).withObjectValue
+          codeActionProvider
+            .executeCommands(params, token)
+            .recover {
+              case e: Exception if (e.getCause match {
+                    case _: DisplayableException => true
+                    case _ => false
+                  }) =>
+                languageClient.showMessage(
+                  l.MessageType.Info,
+                  e.getCause.getMessage,
+                )
+            }
+            .withObjectValue
         }
       case cmd =>
         ServerCommands.all
