@@ -504,9 +504,21 @@ trait CommonMtagsEnrichments {
     def isInBspDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(workspace.resolve(".bsp").toNIO)
 
+    /*
+     * This checks if the file has an extension that indicates it's a
+     * Java or Scala file.
+     *
+     * This also needs to check if the file exists and is an actual file,
+     * since this might actually be a directory ending with the extension.
+     *
+     * If the path does not yet exist we assume it's a file if an extension
+     * is present.
+     */
     def isScalaOrJava: Boolean = {
       toLanguage match {
-        case Language.SCALA | Language.JAVA => true
+        case Language.SCALA | Language.JAVA =>
+          !Files.exists(path.toNIO) ||
+          Files.isRegularFile(path.toNIO)
         case _ => false
       }
     }
