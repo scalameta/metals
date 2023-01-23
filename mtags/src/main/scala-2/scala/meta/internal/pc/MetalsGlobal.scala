@@ -168,7 +168,7 @@ class MetalsGlobal(
   ): SymbolSearch.Result = {
 
     def isRelevantWorkspaceSymbol(sym: Symbol): Boolean =
-      !sym.safeOwner.isType
+      sym.isStatic
 
     lazy val isInStringInterpolation = {
       lastVisitedParentTrees match {
