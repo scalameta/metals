@@ -385,7 +385,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Try
-       |Breaks.TryBlock
        |""".stripMargin,
     // additional completion when apply method is present
     compat = Map(
