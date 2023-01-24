@@ -64,16 +64,16 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
         server.workspaceDefinitions,
         """|/a/src/main/scala/a/Main.scala
            |package a
-           |import java/*StdNames.scala*/.util.concurrent.Future/*Future.java*/ // unused
+           |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
            |object Main/*L3*/ extends App/*App.scala*/ {
            |  val message/*L4*/ = Message/*Message.java:1*/.message/*Message.java:2*/
-           |  new java/*StdNames.scala*/.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
+           |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
            |  println/*Predef.scala*/(message/*L4*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |package a
-           |import java/*StdNames.scala*/.util.concurrent.Future/*Future.java*/ // unused
+           |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
            |import org.scalatest.funsuite.AnyFunSuite/*AnyFunSuite.scala*/
            |object MainSuite/*L4*/ extends AnyFunSuite/*AnyFunSuite.scala*/ {
@@ -101,23 +101,23 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |>>>>>>>/*<no symbol>*/
            |
            |package a
-           |import java/*StdNames.scala*/.util.concurrent.Future/*Future.java*/ // unused
+           |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
            |object Main/*L5*/ extends App/*App.scala*/ {
            |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
-           |  new java/*StdNames.scala*/.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
-           |  println/*Predef.scala*/(message/*L4*/)
+           |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
+           |  println/*Predef.scala*/(message/*<no symbol>*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |>>>>>>>/*<no symbol>*/
            |
            |package a
-           |import java/*StdNames.scala*/.util.concurrent.Future/*Future.java*/ // unused
+           |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
            |import org.scalatest.funsuite.AnyFunSuite/*AnyFunSuite.scala*/
            |object MainSuite/*L6*/ extends AnyFunSuite/*AnyFunSuite.scala*/ {
            |  test/*AnyFunSuiteLike.scala*/(testName/*<no symbol>*/) {
-           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
+           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
            |    assert/*Assertions.scala*/(condition/*L8*/)
            |  }
            |}
