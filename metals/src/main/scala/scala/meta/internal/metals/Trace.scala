@@ -29,8 +29,17 @@ object Trace {
       AbsolutePath(projectDirectories.cacheDir)
     }.toOption
 
-  val localDirectory: AbsolutePath = PathIO.workingDirectory.resolve(".metals/")
-  val metalsLog: AbsolutePath = localDirectory.resolve("metals.log")
+  private val localDirectory: AbsolutePath =
+    PathIO.workingDirectory.resolve(".metals/")
+
+  // We default to the global cache here mainly because it's not safe to assume
+  // that PathIO.workingDirectory is actually what we want to fallback to.
+  // In editors like VS Code that have a "workspace" concept this will
+  // normally be fine, but in others like nvim where "workspace" doesn't really
+  // exist, we can only rely on the rootUri that is passed in, but we don't have
+  // access to that yet when we use this.
+  val metalsLog: AbsolutePath =
+    globalDirectory.getOrElse(localDirectory).resolve("metals.log")
 
   def protocolTracePath(
       protocolName: String,
@@ -42,7 +51,8 @@ object Trace {
 
   /**
    * Setups trace printer for a given protocol name and workspace.
-   * Searches for trace file in provided workspace. If there is no such file in the workspace, fall backs to the global directory.
+   * Searches for trace file in provided workspace. If there is no such file in
+   * the workspace, fall backs to the global directory.
    */
   def setupTracePrinter(
       protocolName: String,
