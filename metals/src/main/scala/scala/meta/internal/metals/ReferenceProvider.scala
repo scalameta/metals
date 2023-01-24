@@ -8,7 +8,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.Importee
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
@@ -101,8 +103,14 @@ final class ReferenceProvider(
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
-        val results: List[ResolvedSymbolOccurrence] =
-          definition.positionOccurrences(source, params.getPosition, doc)
+        val results: List[ResolvedSymbolOccurrence] = {
+          val posOccurrences =
+            definition.positionOccurrences(source, params.getPosition, doc)
+          if (posOccurrences.isEmpty)
+            // handling case `import a.{A as @@B}`
+            occerencesForRenamedImport(source, params, doc)
+          else posOccurrences
+        }
         results.map { result =>
           val occurrence = result.occurrence.get
           val distance = result.distance
@@ -132,6 +140,24 @@ final class ReferenceProvider(
         )
     }
   }
+
+  // for `import package.{AA as B@@B}` we look for occurences at `import package.{@@AA as BB}`,
+  // since rename is not a position occurence in semanticDB
+  private def occerencesForRenamedImport(
+      source: AbsolutePath,
+      params: ReferenceParams,
+      document: TextDocument,
+  ): List[ResolvedSymbolOccurrence] =
+    (for {
+      rename <- trees.findLastEnclosingAt[Importee.Rename](
+        source,
+        params.getPosition(),
+      )
+    } yield definition.positionOccurrences(
+      source,
+      rename.name.pos.toLsp.getStart(),
+      document,
+    )).getOrElse(List())
 
   // Returns alternatives symbols for which "goto definition" resolves to the occurrence symbol.
   private def referenceAlternatives(
@@ -259,6 +285,7 @@ final class ReferenceProvider(
                 findRealRange,
                 includeSynthetics,
                 sourcePath.isJava,
+                source,
               )
             } catch {
               case NonFatal(e) =>
@@ -321,6 +348,7 @@ final class ReferenceProvider(
           findRealRange,
           includeSynthetics,
           source.isJava,
+          source,
         )
       else Seq.empty
 
@@ -335,6 +363,7 @@ final class ReferenceProvider(
         )
       else
         Seq.empty
+
     workspaceRefs ++ local
   }
 
@@ -347,6 +376,7 @@ final class ReferenceProvider(
       findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean,
       isJava: Boolean,
+      source: AbsolutePath,
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -365,6 +395,7 @@ final class ReferenceProvider(
       if !reference.role.isDefinition || isIncludeDeclaration
       range <- reference.range.toList
     } {
+
       if (isJava) {
         add(range)
       }
