@@ -17,9 +17,17 @@ object TestRanges extends RangeReplace {
     val resolved = for {
       (file, code) <- sourceFiles.toSeq
       validLocations = locations.filter(_.getUri().contains(file))
-    } yield file -> validLocations.foldLeft(code) { (base, location) =>
-      replaceInRange(base, location.getRange)
-    }
+    } yield file -> validLocations
+      .foldLeft((code, List.empty[(Int, Int)])) {
+        case ((base, alreadyAddedMarkings), location) =>
+          replaceInRangeWithAdjustmens(
+            code,
+            base,
+            location.getRange,
+            alreadyAddedMarkings,
+          )
+      }
+      ._1
     resolved.toMap
   }
 

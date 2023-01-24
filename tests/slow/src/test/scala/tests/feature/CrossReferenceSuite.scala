@@ -40,6 +40,36 @@ class CrossReferenceSuite extends BaseRangesSuite("cross-reference-suite") {
     scalaVersion = Some(V.scala3),
   )
 
+  check(
+    "import-rename",
+    """|/Main.scala
+       |package a
+       |
+       |import a.sample.{<<X1>> as X2}
+       |
+       |object sample:
+       |  class <<X@@1>>
+       |
+       |def f: <<X2>> = new <<X2>>
+       |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+  )
+
+  check(
+    "import-rename2",
+    """|/Main.scala
+       |package a
+       |
+       |import sample.{<<X1>> as X@@2}
+       |
+       |object sample:
+       |  class <<X1>>
+       |
+       |def f: <<X2>> = ???
+       |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+  )
+
   override def assertCheck(
       filename: String,
       edit: String,

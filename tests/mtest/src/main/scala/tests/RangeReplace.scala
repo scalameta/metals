@@ -12,9 +12,17 @@ trait RangeReplace {
       code: String,
       highlights: List[DocumentHighlight],
   ): String = {
-    highlights.foldLeft(code) { (base, highlight) =>
-      replaceInRange(base, highlight.getRange)
-    }
+    highlights
+      .foldLeft((code, List.empty[(Int, Int)])) {
+        case ((base, alreadyAddedMarkings), location) =>
+          replaceInRangeWithAdjustmens(
+            code,
+            base,
+            location.getRange,
+            alreadyAddedMarkings,
+          )
+      }
+      ._1
   }
 
   protected def replaceInRange(
@@ -22,20 +30,43 @@ trait RangeReplace {
       range: Range,
       prefix: String = "<<",
       suffix: String = ">>",
-  ): String = {
-    val input = Input.String(base)
+  ): String =
+    replaceInRangeWithAdjustmens(base, base, range, List(), prefix, suffix)._1
+
+  protected def replaceInRangeWithAdjustmens(
+      code: String,
+      currentBase: String,
+      range: Range,
+      alreadyAddedMarkings: List[(Int, Int)],
+      prefix: String = "<<",
+      suffix: String = ">>",
+  ): (String, List[(Int, Int)]) = {
+    val input = Input.String(code)
     val pos = range
       .toMeta(input)
       .getOrElse(
         throw new RuntimeException(s"$range was not contained in file")
       )
-    new java.lang.StringBuilder()
-      .append(base, 0, pos.start)
-      .append(prefix)
-      .append(base, pos.start, pos.end)
-      .append(suffix)
-      .append(base, pos.end, base.length)
-      .toString
+    def adjustPosition(pos: Int) =
+      alreadyAddedMarkings
+        .filter { case (i, _) => i <= pos }
+        .map(_._2)
+        .fold(0)(_ + _) + pos
+    val posStart = adjustPosition(pos.start)
+    val posEnd = adjustPosition(pos.end)
+    (
+      new java.lang.StringBuilder()
+        .append(currentBase, 0, posStart)
+        .append(prefix)
+        .append(currentBase, posStart, posEnd)
+        .append(suffix)
+        .append(currentBase, posEnd, currentBase.length)
+        .toString,
+      (pos.start, prefix.length) :: (
+        pos.end,
+        suffix.length,
+      ) :: alreadyAddedMarkings,
+    )
   }
 
 }
