@@ -106,7 +106,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |object Main/*L5*/ extends App/*App.scala*/ {
            |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
-           |  println/*Predef.scala*/(message/*<no symbol>*/)
+           |  println/*Predef.scala*/(message/*L4*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |>>>>>>>/*<no symbol>*/
@@ -117,7 +117,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |import org.scalatest.funsuite.AnyFunSuite/*AnyFunSuite.scala*/
            |object MainSuite/*L6*/ extends AnyFunSuite/*AnyFunSuite.scala*/ {
            |  test/*AnyFunSuiteLike.scala*/(testName/*<no symbol>*/) {
-           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
+           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
            |    assert/*Assertions.scala*/(condition/*L8*/)
            |  }
            |}
@@ -405,9 +405,9 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |import a/*<no symbol>*/.Main/*;Main.scala:1;Main.scala:2*/
            |
            |object Foo/*L3*/{
-           |  val nm/*<no symbol>*/ = Main/*Main.scala:2*/.name/*<no symbol>*/
-           |  val foo/*<no symbol>*/ = Main/*Main.scala:2*/.Bar/*Main.scala:5*/()
-           |  val m/*<no symbol>*/: Main/*Main.scala:1*/ = new Main/*Main.scala:1*/()
+           |  val nm/*L4*/ = Main/*Main.scala:2*/.name/*Main.scala:4*/
+           |  val foo/*L5*/ = Main/*Main.scala:2*/.Bar/*Main.scala:5*/()
+           |  val m/*L6*/: Main/*Main.scala:1*/ = new Main/*Main.scala:1*/()
            |}
            |""".stripMargin,
       )
