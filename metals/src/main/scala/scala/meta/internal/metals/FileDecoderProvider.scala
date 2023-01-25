@@ -5,7 +5,6 @@ import java.io.File
 import java.io.PrintStream
 import java.net.URI
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import javax.annotation.Nullable
 
 import scala.annotation.tailrec
@@ -19,7 +18,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.cli.Reporter
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
@@ -158,7 +156,7 @@ final class FileDecoderProvider(
             if (semanticdbExtensions.exists(uriAsStr.endsWith))
               decodeMetalsFile(jarURI)
             else
-              Future { decodeJar(jarURI) }
+              Future { decodeJar(jarURI, uriAsStr) }
           case "file" => decodeMetalsFile(uri)
           case "metalsDecode" =>
             decodedFileContents(uri.getSchemeSpecificPart())
@@ -190,12 +188,12 @@ final class FileDecoderProvider(
     new URI("jar", decoded.stripPrefix("jar:"), null)
   }
 
-  private def decodeJar(uri: URI): DecoderResponse = {
-    Try {
-      val path = uri.toAbsolutePath
-      FileIO.slurp(path, StandardCharsets.UTF_8)
-    } match {
-      case Failure(exception) => DecoderResponse.failed(uri, exception)
+  private def decodeJar(uri: URI, original: String): DecoderResponse = {
+    Try(uri.toAbsolutePath.readText)
+      .orElse(Try(original.toAbsolutePath.readText)) match {
+      case Failure(exception) =>
+        scribe.warn(s"Unable to decode: $original", exception)
+        DecoderResponse.failed(uri, exception)
       case Success(value) => DecoderResponse.success(uri, value)
     }
   }

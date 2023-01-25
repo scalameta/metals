@@ -1353,6 +1353,19 @@ final case class TestingServer(
     }
   }
 
+  def definition(
+      filename: String,
+      query: String,
+      root: AbsolutePath,
+  ): Future[List[Location]] = {
+    for {
+      (text, params) <- offsetParams(filename, query, root)
+      definition <- server.definition(params).asScala
+    } yield {
+      definition.asScala.toList
+    }
+  }
+
   def highlight(
       filename: String,
       query: String,
