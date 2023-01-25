@@ -120,7 +120,7 @@ final class Trees(
   private def parse(
       path: AbsolutePath,
       dialect: Dialect,
-  ): Option[Parsed[Tree]] = {
+  ): Option[Parsed[Tree]] = try {
     for {
       text <- buffers.get(path).orElse(path.readTextOpt)
     } yield {
@@ -132,6 +132,11 @@ final class Trees(
         dialect(input).parse[Source]
       }
     }
+  } catch {
+    // if the parsers breaks we should not throw the exception further
+    case _: StackOverflowError =>
+      scribe.debug("Could not parse:\n" + path.readTextOpt.getOrElse(""))
+      None
   }
 }
 
