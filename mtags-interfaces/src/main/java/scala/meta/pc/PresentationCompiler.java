@@ -146,6 +146,7 @@ public abstract class PresentationCompiler {
 
 	/**
 	 * Return named arguments for the apply method that encloses the given position.
+	 * May fail with a DisplayableException.
 	 */
 	public abstract CompletableFuture<List<TextEdit>> convertToNamedArguments(OffsetParams params,
 			List<Integer> argIndices);

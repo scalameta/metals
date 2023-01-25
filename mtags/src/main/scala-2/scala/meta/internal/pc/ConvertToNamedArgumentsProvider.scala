@@ -44,21 +44,23 @@ final class ConvertToNamedArgumentsProvider(
       }
     }
 
-    def handleWithJavaFilter(symbol: Symbol)(f: () => List[l.TextEdit]) = {
+    def handleWithJavaFilter(symbol: Symbol, edits: => List[l.TextEdit]) = {
       if (symbol.isJava)
         Left(CodeActionErrorMessages.ConvertToNamedArguments.IsJavaObject)
-      else Right(f())
+      else Right(edits)
     }
 
     typedTree match {
       case FromNewApply(fun, args) if fun.symbol != null =>
-        handleWithJavaFilter(fun.symbol) { () =>
+        handleWithJavaFilter(
+          fun.symbol,
           makeTextEdits(fun.tpe.paramss.flatten, args)
-        }
+        )
       case Apply(fun, args) if fun.symbol != null && !fun.symbol.isJava =>
-        handleWithJavaFilter(fun.symbol) { () =>
+        handleWithJavaFilter(
+          fun.symbol,
           makeTextEdits(fun.tpe.params, args)
-        }
+        )
       case _ => Right(Nil)
     }
   }
