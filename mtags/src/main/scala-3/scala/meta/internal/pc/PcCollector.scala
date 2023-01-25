@@ -224,7 +224,9 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
               .Try(named.symbol.owner)
               .toOption
               .exists(_.isAnonymousFunction) &&
-            owners.exists(_.span.point == named.symbol.owner.span.point)
+            owners.exists(o =>
+              o.span.exists && o.span.point == named.symbol.owner.span.point
+            )
 
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))

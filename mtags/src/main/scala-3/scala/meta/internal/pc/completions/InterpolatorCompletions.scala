@@ -188,7 +188,7 @@ object InterpolatorCompletions:
 
     val qualType = for
       parent <- path.tail.headOption.toList
-      if text.charAt(lit.span.point - 1) != '}'
+      if lit.span.exists && text.charAt(lit.span.point - 1) != '}'
       identOrSelect <- path
         .collectFirst(interpolatorMemberArg(lit, parent))
         .flatten
@@ -242,7 +242,6 @@ object InterpolatorCompletions:
   )(using ctx: Context): List[CompletionValue] =
 
     val text = position.source.content().mkString
-    val offset: Int = position.span.point
     val span = position.span
     val nameStart =
       span.withStart(span.start - interpolator.name.size)
