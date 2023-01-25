@@ -2067,19 +2067,21 @@ class MetalsLspService(
           if codeActionProvider.allActionCommandsIds(
             actionCommand.getCommand()
           ) =>
+        val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
+          case e: DisplayableException => e.getMessage()
+          case e: Exception if (e.getCause() match {
+                case _: DisplayableException => true
+                case _ => false
+              }) =>
+            e.getCause().getMessage()
+        }
         CancelTokens.future { token =>
           codeActionProvider
             .executeCommands(params, token)
-            .recover {
-              case e: Exception if (e.getCause match {
-                    case _: DisplayableException => true
-                    case _ => false
-                  }) =>
-                languageClient.showMessage(
-                  l.MessageType.Info,
-                  e.getCause.getMessage,
-                )
-            }
+            .recover(
+              getOptDisplayableMessage andThen (languageClient
+                .showMessage(l.MessageType.Info, _))
+            )
             .withObjectValue
         }
       case cmd =>
