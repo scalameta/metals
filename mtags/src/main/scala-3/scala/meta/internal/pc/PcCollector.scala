@@ -109,7 +109,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
       /* simple selector:
        * object.val@@ue
        */
-      case (sel: Select) :: _ if sel.nameSpan.contains(pos.span) =>
+      case (sel: Select) :: _ if selectNameSpan(sel).contains(pos.span) =>
         Some(symbolAlternatives(sel.symbol), pos.withSpan(sel.nameSpan))
       /* named argument:
        * foo(nam@@e = "123")
@@ -271,7 +271,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
                 if soughtOrOverride(sel.symbol) && !sel.span.isZeroExtent =>
               occurences + collect(
                 sel,
-                pos.withSpan(sel.nameSpan),
+                pos.withSpan(selectNameSpan(sel)),
               )
             /* all definitions:
              * def <<foo>> = ???
@@ -383,6 +383,20 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
     trees.collect { case t: Tree =>
       t
     }
+
+  // NOTE: Connected to https://github.com/lampepfl/dotty/issues/16771
+  // `sel.nameSpan` is calculated incorrectly in (1 + 2).toString
+  // See test DocumentHighlightSuite.select-parentheses
+  private def selectNameSpan(sel: Select)(using Context): Span =
+    val span = sel.span
+    if span.exists then
+      val point = span.point
+      if sel.name.toTermName == nme.ERROR then Span(point)
+      else if sel.qualifier.span.start > span.point then // right associative
+        val realName = sel.name.stripModuleClassSuffix.lastPart
+        Span(span.start, span.start + realName.length, point)
+      else Span(point, span.end, point)
+    else span
 end PcCollector
 
 object PcCollector:

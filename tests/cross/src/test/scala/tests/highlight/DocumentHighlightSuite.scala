@@ -699,4 +699,17 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |}""".stripMargin,
   )
 
+  check(
+    "select-parentheses",
+    """|object Main {
+       |  val a = (1 + 2 + 3).<<toStr@@ing>>
+       |}""".stripMargin,
+  )
+
+  check(
+    "select-parentheses2".tag(IgnoreScala2),
+    """|object Main {
+       |  val a = (1 + 2 + 3) <<:@@:>> Nil
+       |}""".stripMargin,
+  )
 }
