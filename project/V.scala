@@ -6,7 +6,7 @@ object V {
   val scala212 = "2.12.17"
   val scala213 = "2.13.10"
   val scala3 = "3.2.2"
-  val scala3RC: Option[String] = Some("3.3.0-RC1")
+  val scala3RC: Option[String] = Some("3.3.0-RC2")
   val sbtScala = "2.12.16"
   val ammonite212Version = "2.12.17"
   val ammonite213Version = "2.13.10"
@@ -95,7 +95,7 @@ object V {
   def nonDeprecatedScala3Versions =
     Seq(scala3, "3.2.1", "3.2.0", "3.1.3") ++ scala3RC.toSeq
   def deprecatedScala3Versions =
-    Seq("3.2.2-RC2", "3.1.2", "3.1.1", "3.1.0", "3.0.2")
+    Seq("3.3.0-RC1", "3.2.2-RC2", "3.1.2", "3.1.1", "3.1.0", "3.0.2")
   // NOTE if you hadd a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
