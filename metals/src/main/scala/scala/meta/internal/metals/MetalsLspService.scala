@@ -1403,7 +1403,9 @@ class MetalsLspService(
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild ||
+    val fileName = path.getFileName()
+    val isAutoSave = fileName.startsWith(".#")
+    !isAutoSave || abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild ||
     abs.isInBspDirectory(workspace)
   }
 
