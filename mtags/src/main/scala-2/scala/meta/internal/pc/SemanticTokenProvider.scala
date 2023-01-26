@@ -294,7 +294,7 @@ final class SemanticTokenProvider(
          * statements such as:
          * val Some(<<a>>) = Some(2)
          */
-        case bnd: cp.Bind =>
+        case bnd: cp.Bind if bnd.pos.isRange =>
           bnd.children.foldLeft(nodes + NodeInfo(bnd, bnd.pos))(traverse(_, _))
 
         /* all definitions:
@@ -314,7 +314,7 @@ final class SemanticTokenProvider(
          * User(<<name>> = "abc")
          * etc.
          */
-        case appl: cp.Apply =>
+        case appl: cp.Apply if appl.pos.isRange =>
           val named = appl.args
             .flatMap { arg =>
               namedArgCache.get(arg.pos.start)
@@ -338,7 +338,7 @@ final class SemanticTokenProvider(
          * Some type trees don't have symbols attached such as:
          * type A = List[_ <: <<Iterable>>[Int]]
          */
-        case id: cp.Ident if id.symbol == cp.NoSymbol =>
+        case id: cp.Ident if id.symbol == cp.NoSymbol && id.pos.isRange =>
           fallbackSymbol(id.name, id.pos) match {
             case Some(_) => nodes + NodeInfo(id, id.pos)
             case _ => nodes
