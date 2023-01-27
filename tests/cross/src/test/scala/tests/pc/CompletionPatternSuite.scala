@@ -56,6 +56,17 @@ class CompletionPatternSuite extends BaseCompletionSuite {
     """
       |object A {
       |  Option(1) match {
+      |    case ma@@
+      |  }
+      |}""".stripMargin,
+    "",
+  )
+
+  check(
+    "bind2",
+    """
+      |object A {
+      |  Option(1) match {
       |    case abc @ @@ =>
       |  }
       |}""".stripMargin,
@@ -64,6 +75,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(2),
   )
+
   check(
     "bind-ident",
     """

@@ -581,8 +581,11 @@ class MatchCaseExtractor(
         // case abc @ Som@@
         case Ident(name) :: Bind(_, _) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, name.decoded))
+        // case abc@@
+        case Bind(name, Ident(_)) :: CaseExtractor(selector, parent, _) =>
+          Some((selector, parent, name.decoded))
         // case abc @ @@
-        case Bind(_, _) :: CaseExtractor(selector, parent, _) =>
+        case Bind(name, Literal(_)) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, ""))
         case _ => None
 
