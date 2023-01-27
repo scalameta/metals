@@ -405,11 +405,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  }
       |}
     """.stripMargin,
-    """|head :: next scala.collection.immutable
-       |Nil scala.collection.immutable""".stripMargin,
+    "",
     compat = Map(
-      "2.12" ->
-        """|head :: tl scala.collection.immutable
+      "3" ->
+        """|head :: next scala.collection.immutable
            |Nil scala.collection.immutable
            |""".stripMargin
     ),

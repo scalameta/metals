@@ -577,9 +577,9 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     object CasePatternExtractor {
       def unapply(path: List[Tree]): Option[(Tree, Tree, String)] =
         path match {
-          // case @@ =>
-          case Bind(_, _) :: CaseDefMatch(selector, parent) =>
-            Some((selector, parent, ""))
+          // case abc@@ =>
+          case Bind(name, _) :: CaseDefMatch(selector, parent) =>
+            Some((selector, parent, name.decoded))
           // case Som@@ =>
           case Ident(
                 name
