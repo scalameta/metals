@@ -1,7 +1,7 @@
 package example
 
 object Vars/*example.Vars.*/ {
-  var a = 2
+  var a/*example.Vars.a().*/ = 2
 
   a = 2
 

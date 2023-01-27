@@ -28,7 +28,7 @@ import com.thoughtworks.qdox.model.JavaTypeVariable
 class JavadocIndexer(
     input: Input.VirtualFile,
     fn: SymbolDocumentation => Unit
-) extends JavaMtags(input) {
+) extends JavaMtags(input, includeMembers = true) {
   override def visitClass(
       cls: JavaClass,
       pos: Position,

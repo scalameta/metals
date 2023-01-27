@@ -592,7 +592,7 @@ trait CommonMtagsEnrichments {
 
   }
 
-  implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
+  implicit class XtensionSymbolInformationKind(kind: s.SymbolInformation.Kind) {
     def toLsp: l.SymbolKind =
       kind match {
         case k.LOCAL => l.SymbolKind.Variable
@@ -666,4 +666,11 @@ trait CommonMtagsEnrichments {
         toOffset(endLine, endColumn)
       )
   }
+
+  implicit class XtensionSymbolInformation(info: s.SymbolInformation) {
+    // This works only for SymbolInformation produced in metals in `ScalaTopLevelMtags`.
+    def isExtension: Boolean = (EXTENSION & info.properties) != 0
+  }
+
+  val EXTENSION: Int = s.SymbolInformation.Property.values.map(_.value).max << 1
 }

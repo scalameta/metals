@@ -26,14 +26,7 @@ case class WorkspaceSymbolQuery(
     alternatives.exists(_.matches(symbol, isTrailingDot))
 
   def matches(info: SymbolInformation): Boolean = {
-    WorkspaceSymbolQuery.isRelevantKind(info.kind) &&
-    this.matches(info.symbol)
-  }
-
-  def matches(info: SymbolInformation, additionalKinds: Kind): Boolean = {
-    (WorkspaceSymbolQuery.isRelevantKind(info.kind)
-      || info.kind == additionalKinds) &&
-    this.matches(info.symbol)
+    WorkspaceSymbolQuery.isRelevantKind(info.kind) && this.matches(info.symbol)
   }
 }
 
@@ -100,13 +93,15 @@ object WorkspaceSymbolQuery {
       }
     }
   }
+
   def isRelevantKind(kind: Kind): Boolean = {
     kind match {
       case Kind.OBJECT | Kind.PACKAGE_OBJECT | Kind.CLASS | Kind.TRAIT |
-          Kind.INTERFACE =>
+          Kind.INTERFACE | Kind.METHOD | Kind.TYPE =>
         true
       case _ =>
         false
     }
   }
+
 }

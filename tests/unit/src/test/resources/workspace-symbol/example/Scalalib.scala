@@ -1,8 +1,8 @@
 package example
 
 class Scalalib/*example.Scalalib#*/ {
-  val nil = List()
-  val lst = List[
+  val nil/*example.Scalalib#nil.*/ = List()
+  val lst/*example.Scalalib#lst.*/ = List[
     (
         Nothing,
         Null,

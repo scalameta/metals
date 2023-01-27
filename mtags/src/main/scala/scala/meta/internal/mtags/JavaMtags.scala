@@ -21,10 +21,14 @@ import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
 
 object JavaMtags {
-  def index(input: Input.VirtualFile): MtagsIndexer =
-    new JavaMtags(input)
+  def index(
+      input: Input.VirtualFile,
+      includeMembers: Boolean
+  ): MtagsIndexer =
+    new JavaMtags(input, includeMembers)
 }
-class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
+class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
+    extends MtagsIndexer { self =>
   val builder = new JavaProjectBuilder()
   override def language: Language = Language.JAVA
 
@@ -109,9 +113,11 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
         kind
       )
       visitClasses(cls.getNestedClasses)
-      visitMethods(cls)
-      visitConstructors(cls)
-      visitMembers(cls.getFields)
+      if (includeMembers) {
+        visitMethods(cls)
+        visitConstructors(cls)
+        visitMembers(cls.getFields)
+      }
     }
 
   def visitConstructor(

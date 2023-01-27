@@ -1,16 +1,16 @@
 package example
 
 object StructuralTypes/*example.StructuralTypes.*/ {
-  type User = {
+  type User/*example.StructuralTypes.User#*/ = {
     def name: String
     def age: Int
   }
 
-  val user = null.asInstanceOf[User]
+  val user/*example.StructuralTypes.user.*/ = null.asInstanceOf[User]
   user.name
   user.age
 
-  val V: Object {
+  val V/*example.StructuralTypes.V.*/: Object {
     def scalameta: String
   } = new {
     def scalameta = "4.0"
