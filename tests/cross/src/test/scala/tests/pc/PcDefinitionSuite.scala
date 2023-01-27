@@ -514,4 +514,21 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
   )
+
+  check(
+    "derives-def".tag(IgnoreScala2),
+    """|
+       |import scala.deriving.Mirror
+       |
+       |trait <<Show>>[A]:
+       |  def show(a: A): String
+       |
+       |object Show:
+       |  inline def derived[T](using Mirror.Of[T]): Show[T] = new Show[T]:
+       |    override def show(a: T): String = a.toString
+       |
+       |case class Box[A](value: A) derives Sh@@ow
+       |
+       |""".stripMargin,
+  )
 }
