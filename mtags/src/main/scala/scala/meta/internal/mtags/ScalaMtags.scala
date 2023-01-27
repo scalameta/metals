@@ -9,7 +9,6 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
 import scala.meta.internal.trees._
-import scala.meta.transversers.SimpleTraverser
 
 object ScalaMtags {
   def index(input: Input.VirtualFile, dialect: Dialect): MtagsIndexer = {
@@ -17,16 +16,18 @@ object ScalaMtags {
   }
 }
 class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
-    extends SimpleTraverser
+    extends SimpleSortedTraverser
     with MtagsIndexer {
 
+  private val isScala3 = dialect.allowEnums
   private val root: Parsed[Source] =
     dialect(input).parse[Source]
   def source: Source = root.get
   override def language: Language = Language.SCALA
   override def indexRoot(): Unit = {
     root match {
-      case Parsed.Success(tree) => apply(tree)
+      case Parsed.Success(tree) =>
+        apply(tree)
       case _ => // do nothing in case of parse error
     }
   }
@@ -52,6 +53,8 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
 
   def currentTree: Tree = myCurrentTree
   private var myCurrentTree: Tree = Source(Nil)
+
+  private var caseClasses: List[String] = List()
   override def apply(tree: Tree): Unit =
     withOwner() {
       def continue(): Unit = super.apply(tree)
@@ -171,8 +174,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
       tree match {
         case _: Source => continue()
         case t: Template =>
-          val overloads = new OverloadDisambiguator()
-          overloads.disambiguator("") // primary constructor
+          val overloads = getAdjustedDisambiguatorProvider()
           t.stats.foreach {
             case t: Ctor.Secondary =>
               disambiguatedMethod(
@@ -231,6 +233,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
             }
           }
           tpe(t.name, Kind.CLASS, 0)
+          classEmmited(currentOwner, t.mods)
           enterTypeParameters(t.tparams)
           enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
           continue()
@@ -366,6 +369,30 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
       }
     }
 
+  private def getAdjustedDisambiguatorProvider() = {
+    val overloads = new OverloadDisambiguator()
+    overloads.disambiguator("") // primary constructor
+    def isCompanionObjectForACaseClass =
+      caseClasses
+        .map(_.dropRight(1) ++ ".")
+        .exists(_ == currentOwner)
+    if (isScala3 && isCompanionObjectForACaseClass) {
+      // for a case class an apply method is produced in the companion object
+      // in Scala 3, it's added at the beginning (in Scala 2 at the end)
+      overloads.disambiguator("apply")
+    }
+    overloads
+  }
+
+  private def classEmmited(symbol: String, mods: List[Mod]): Unit = {
+    def isCaseClass =
+      mods.exists {
+        case _: Mod.Case => true
+        case _ => false
+      }
+    if (isScala3 && isCaseClass) caseClasses = symbol :: caseClasses
+  }
+
   /**
    * Use source level package object as an owner for toplevel defition
    */
@@ -398,4 +425,14 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
     }
     extract(t, 0)
   }
+}
+
+class SimpleSortedTraverser {
+  def apply(tree: Tree): Unit = tree.children
+    .sortBy {
+      case _: Defn.Class =>
+        -1 // we always want to parse companion objects after classes
+      case _ => 0
+    }
+    .foreach(apply)
 }

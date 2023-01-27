@@ -114,6 +114,51 @@ class DefinitionCrossLspSuite
     } yield ()
   }
 
+  test("apply") {
+    cleanDatabase()
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${BuildInfo.scala3}"
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main:
+           |  List(1).map(Foo.apply)
+           |
+           |/a/src/main/scala/a/Foo.scala
+           |package a
+           |
+           |case class Foo(a: Int, b: Int)
+           |
+           |object Foo:
+           |  def apply(a: Int): Foo = Foo(a, 1)
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
+      expectedLocation = new l.Location(
+        workspace.resolve("a/src/main/scala/a/Foo.scala").toURI.toString(),
+        new l.Range(new l.Position(5, 6), new l.Position(5, 11)),
+      )
+      _ = assertNoDiagnostics()
+      _ <- definitionsAt(
+        "a/src/main/scala/a/Main.scala",
+        "  List(1).map(Foo.ap@@ply)",
+      ).map {
+        case List(loc) =>
+          assertEquals(loc, expectedLocation)
+        case _ => fail("expected single location")
+      }
+    } yield ()
+  }
+
   test("scala3-stdLibPatches") {
     def assertDefinitionUri(
         file: String,

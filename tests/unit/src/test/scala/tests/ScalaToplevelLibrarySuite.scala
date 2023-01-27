@@ -62,8 +62,8 @@ class ScalaToplevelLibrarySuite extends BaseSuite {
       input: Input.VirtualFile,
   ): Unit = {
     assertNoDiff(
-      obtained.mkString("\n"),
-      expected.mkString("\n"),
+      obtained.sorted.mkString("\n"),
+      expected.sorted.mkString("\n"),
       s"${input.path}",
     )
   }
