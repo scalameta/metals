@@ -88,7 +88,8 @@ final class ConfiguredLanguageClient(
     if (clientConfig.codeLenseRefreshSupport)
       underlying.refreshCodeLenses.thenApply(_ => ())
     else if (
-      clientConfig.isExecuteClientCommandProvider && clientConfig.isDebuggingProvider
+      clientConfig.isExecuteClientCommandProvider &&
+      (clientConfig.isDebuggingProvider || clientConfig.isRunProvider())
     ) {
       val params = ClientCommands.RefreshModel.toExecuteCommandParams()
       CompletableFuture.completedFuture(metalsExecuteClientCommand(params))

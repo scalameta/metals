@@ -51,7 +51,8 @@ final class RunTestCodeLens(
     workspace: AbsolutePath,
 ) extends CodeLens {
 
-  override def isEnabled: Boolean = clientConfig.isDebuggingProvider()
+  override def isEnabled: Boolean =
+    clientConfig.isDebuggingProvider() || clientConfig.isRunProvider()
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
@@ -173,7 +174,11 @@ final class RunTestCodeLens(
           .get(symbol)
           .map(mainCommand(target, _))
           .getOrElse(Nil)
-        val tests = testClasses(target, classes, symbol)
+        val tests =
+          // Currently tests can only be run via DAP
+          if (clientConfig.isDebuggingProvider())
+            testClasses(target, classes, symbol)
+          else Nil
         val fromAnnot = DebugProvider
           .mainFromAnnotation(occurrence, textDocument)
           .flatMap { symbol =>
@@ -285,10 +290,12 @@ final class RunTestCodeLens(
       sessionParams(target, dataKind, data)
     }
 
-    List(
-      command("run", StartRunSession, params),
-      command("debug", StartDebugSession, params),
-    )
+    if (clientConfig.isDebuggingProvider())
+      List(
+        command("run", StartRunSession, params),
+        command("debug", StartDebugSession, params),
+      )
+    else List(command("run", StartRunSession, params))
   }
 
   private def sessionParams(

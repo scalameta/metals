@@ -53,6 +53,7 @@ import org.eclipse.{lsp4j => l}
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
     debuggingProvider: Option[Boolean],
+    runProvider: Option[Boolean],
     decorationProvider: Option[Boolean],
     inlineDecorationProvider: Option[Boolean],
     didFocusProvider: Option[Boolean],
@@ -113,6 +114,7 @@ object InitializationOptions {
     None,
     None,
     None,
+    None,
   )
 
   def from(
@@ -138,6 +140,7 @@ object InitializationOptions {
     InitializationOptions(
       compilerOptions = extractCompilerOptions(jsonObj),
       debuggingProvider = jsonObj.getBooleanOption("debuggingProvider"),
+      runProvider = jsonObj.getBooleanOption("runProvider"),
       decorationProvider = jsonObj.getBooleanOption("decorationProvider"),
       inlineDecorationProvider =
         jsonObj.getBooleanOption("inlineDecorationProvider"),
