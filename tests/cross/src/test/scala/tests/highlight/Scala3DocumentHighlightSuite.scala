@@ -123,4 +123,40 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin,
   )
 
+  check(
+    "given-synthetic1",
+    """|given (usi@@ng i: Int): Double = 4.0
+       |val a = given_Double""".stripMargin,
+  )
+
+  check(
+    "given-synthetic2",
+    """|given (using i: Int): Double = 4.0
+       |val a = <<given_Doub@@le>>""".stripMargin,
+  )
+
+  check(
+    "given-synthetic3",
+    """|given Int = 10
+       |val a = <<giv@@en_Int>>""".stripMargin,
+  )
+
+  check(
+    "given-synthetic4",
+    """|given <<I@@nt>> = 10
+       |val a = given_Int""".stripMargin,
+  )
+
+  check(
+    "given-not-synthetic1",
+    """|given <<`giv@@en_D`>>: Double = 4.0
+       |val a = <<`given_D`>>""".stripMargin,
+  )
+
+  check(
+    "given-not-synthetic2",
+    """|given <<`given_D`>>:Double = 4.0
+       |val a = <<`giv@@en_D`>>""".stripMargin,
+  )
+
 }
