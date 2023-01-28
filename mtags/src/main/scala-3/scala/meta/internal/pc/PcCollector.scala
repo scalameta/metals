@@ -344,7 +344,7 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
                       if (!sel.renamed.isEmpty) then
                         Set(sel.renamed.span, sel.imported.span)
                       else Set(sel.imported.span)
-                    spans.map { span =>
+                    spans.filter(!_.isZeroExtent).map { span =>
                       collect(
                         imp,
                         pos.withSpan(span),

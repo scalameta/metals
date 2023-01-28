@@ -8,6 +8,22 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     Some(IgnoreScala2)
 
   check(
+    "enum1",
+    """|enum FooEnum:
+       | case <<Ba@@r>>, Baz
+       |val bar = FooEnum.<<Bar>>
+       |""".stripMargin,
+  )
+
+  check(
+    "enum2",
+    """|enum FooEnum:
+       | case <<Bar>>, Baz
+       |val bar = FooEnum.<<Ba@@r>>
+       |""".stripMargin,
+  )
+
+  check(
     "transparent1",
     """|trait Foo
        |class Bar extends Foo
