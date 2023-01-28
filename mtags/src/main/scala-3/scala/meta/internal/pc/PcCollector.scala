@@ -98,6 +98,13 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
     all.filter(s => s != NoSymbol && !s.isError)
   end symbolAlternatives
 
+  private def isGeneratedGiven(df: NamedDefTree)(using Context) =
+    val nameSpan = df.nameSpan
+    df.symbol.is(Flags.Given) && sourceText.substring(
+      nameSpan.start,
+      nameSpan.end,
+    ) != df.name.toString()
+
   // First identify the symbol we are at, comments identify @@ as current cursor position
   def soughtSymbols(path: List[Tree]): Option[(Set[Symbol], SourcePosition)] =
     val sought = path match
@@ -140,7 +147,8 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
        * class Fo@@o = ???
        * etc.
        */
-      case (df: NamedDefTree) :: _ if df.nameSpan.contains(pos.span) =>
+      case (df: NamedDefTree) :: _
+          if df.nameSpan.contains(pos.span) && !isGeneratedGiven(df) =>
         Some(symbolAlternatives(df.symbol), pos.withSpan(df.nameSpan))
       /**
        * For traversing annotations:
@@ -280,7 +288,8 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
              */
             case df: NamedDefTree
                 if soughtOrOverride(df.symbol) &&
-                  !df.span.isZeroExtent && !df.symbol.isSetter =>
+                  !df.span.isZeroExtent && !df.symbol.isSetter &&
+                  !isGeneratedGiven(df) =>
               occurences + collect(
                 df,
                 pos.withSpan(df.nameSpan),
