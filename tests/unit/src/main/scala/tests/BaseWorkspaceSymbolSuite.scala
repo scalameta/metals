@@ -6,7 +6,6 @@ import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 
 import munit.Location
-import org.eclipse.lsp4j.SymbolInformation
 import tests.MetalsTestEnrichments._
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {

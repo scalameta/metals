@@ -132,6 +132,9 @@ final class ClientConfiguration(
       false,
     )
 
+  def isRunProvider(): Boolean =
+    initializationOptions.runProvider.getOrElse(false)
+
   def isDecorationProvider(): Boolean =
     extract(
       initializationOptions.decorationProvider,
