@@ -62,6 +62,10 @@ final class RunTestCodeLens(
     val lenses = for {
       buildTargetId <- buildTargets.inverseSources(path)
       buildTarget <- buildTargets.info(buildTargetId)
+      // generate code lenses only for JVM based targets for Scala
+      if buildTarget.asScalaBuildTarget.forall(
+        _.getPlatform == b.ScalaPlatform.JVM
+      )
       connection <- buildTargets.buildServerOf(buildTargetId)
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
