@@ -14,6 +14,8 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import org.eclipse.lsp4j.SelectionRange
 
+import SelectionRangeProvider.*
+
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
  *
@@ -49,9 +51,22 @@ class SelectionRangeProvider(
           selectionRange.setRange(tree.sourcePos.toLsp)
           selectionRange
         }
+      val commentRanges = checkCmt(
+        param,
+        pos.start,
+        pos.`end`,
+      ).map { x =>
+        val lspRange = new SelectionRange():
+          setRange(
+            x._3.toLsp
+          )
 
-      bareRanges.reduceRight(setParent)
+        lspRange
+      }.toList // if in comment return range in cmt
+
+      (commentRanges ++ bareRanges).reduceRight(setParent)
     }
+    // println(s"all selectionRanges ${selectionRanges}")
 
     selectionRanges
   end selectionRange
@@ -84,4 +99,32 @@ class SelectionRangeProvider(
       child.setParent(parent)
       child
 
+end SelectionRangeProvider
+
+object SelectionRangeProvider:
+  import scala.meta.*
+  import scala.meta.Token.Comment
+
+  /** check pos.start,if it is within comment then expand to comment */
+  def checkCmt(param: OffsetParams, start: Int, end: Int) =
+    // https://scalameta.org/docs/trees/guide.html
+    val programStr = param.text()
+    // deal with multiple source text
+    val tkSrc = programStr.parse[Source].toOption.map(_.tokens)
+    val tkExpr = programStr.parse[Stat].toOption.map(_.tokens)
+    val tkType = programStr.parse[Type].toOption.map(_.tokens)
+
+    val tokens = tkSrc orElse tkExpr orElse tkType
+    val commentList = tokens.toList.flatten
+      .collect { case x: Comment =>
+        // println(s"find Comment : ${x}")
+        x
+      }
+      .map(x => (x.start, x.`end`, x.pos))
+    val commentWithin =
+      commentList.filter((commentStart, commentEnd, _) =>
+        commentStart <= start && start <= commentEnd
+      )
+    commentWithin
+  end checkCmt
 end SelectionRangeProvider
