@@ -265,8 +265,16 @@ object OverrideCompletions:
         else ""
       (indent, indent, lastIndent)
     end calcIndent
+    val abstractMembers = defn.tpe.abstractTermMembers.map(_.symbol)
 
-    val overridables = defn.tpe.abstractTermMembers.map(_.symbol)
+    val caseClassOwners = Set("Product", "Equals")
+    val overridables =
+      if (defn.symbol.is(Flags.CaseClass)) then
+        abstractMembers.filter(sym =>
+          sym.sourcePos.exists || !caseClassOwners(sym.owner.decodedName)
+        )
+      else abstractMembers
+
     val completionValues = overridables
       .map(sym =>
         toCompletionValue(
@@ -282,7 +290,6 @@ object OverrideCompletions:
         )
       )
       .toList
-
     val (edits, imports) = toEdits(
       completionValues,
       autoImports,
@@ -297,10 +304,10 @@ object OverrideCompletions:
             !sym.isTypeParam &&
             !sym.is(ParamAccessor) && // `num` of `class Foo(num: int)`
             sym.span.exists &&
+            !(sym.span.isZeroExtent && defn.symbol.is(Flags.CaseClass)) &&
             defn.sourcePos.contains(sym.sourcePos)
         )
         .sortBy(_.sourcePos.start)
-
       val source = indexedContext.ctx.source
 
       val shouldCompleteBraces = decls.isEmpty && hasBraces(text, defn).isEmpty
@@ -321,8 +328,8 @@ object OverrideCompletions:
           val span = decl.sourcePos.span.withStart(pos).withEnd(pos)
           defn.sourcePos.withSpan(span)
         )
-      val editPos = posFromDecls.getOrElse(inferEditPosition(text, defn))
 
+      val editPos = posFromDecls.getOrElse(inferEditPosition(text, defn))
       lazy val shouldCompleteWith = defn match
         case dd: DefDef =>
           dd.symbol.is(Given)

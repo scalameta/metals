@@ -1177,6 +1177,30 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "case-class",
+    """|package example
+       |
+       |sealed trait Demo {
+       |  def implementMe: Int
+       |}
+       |
+       |case class <<ADemo>>(value: Int) extends Demo
+       |""".stripMargin,
+    """|package example
+       |
+       |sealed trait Demo {
+       |  def implementMe: Int
+       |}
+       |
+       |case class ADemo(value: Int) extends Demo {
+       |
+       |  override def implementMe: Int = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
