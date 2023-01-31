@@ -254,7 +254,16 @@ object AutoImports extends AutoImportsBackticks:
         imports: List[ImportSel]
     )(using Context): Option[l.TextEdit] =
       if imports.nonEmpty then
-        val indent = " " * importPosition.indent
+        val indent0 = " " * importPosition.indent
+        val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLsp
+
+        // for worksheets, we need to remove 2 whitespaces, because it ends up being wrapped in an object
+        // see WorksheetProvider.worksheetScala3AdjustmentsForPC
+        val indent =
+          if pos.source.path.isWorksheet &&
+            editPos.getStart().getCharacter() == 0
+          then indent0.drop(2)
+          else indent0
         val topPadding =
           if importPosition.padTop then "\n"
           else ""
@@ -268,7 +277,6 @@ object AutoImports extends AutoImportsBackticks:
           .map(sel => s"${indent}import $sel")
           .mkString(topPadding, "\n", "\n")
 
-        val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLsp
         Some(new l.TextEdit(editPos, formatted))
       else None
     end renderImports
