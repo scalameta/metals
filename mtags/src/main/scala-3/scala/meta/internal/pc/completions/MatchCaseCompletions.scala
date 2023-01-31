@@ -382,7 +382,12 @@ class CompletionValueGenerator(
     patternOnly match
       case None => true
       case Some("") => true
-      case Some(query) => CompletionFuzzy.matches(query, name)
+      case Some(Cursor.value) => true
+      case Some(query) =>
+        CompletionFuzzy.matches(
+          query.replace(Cursor.value, ""),
+          name,
+        )
 
   def labelForCaseMember(sym: Symbol, name: String)(using
       Context
@@ -498,20 +503,14 @@ class MatchCaseExtractor(
       path match
         // foo mat@@
         case (sel @ Select(qualifier, name)) :: _
-            if "match".startsWith(name.toString()) && text.charAt(
-              completionPos.start - 1
-            ) == ' ' =>
+            if name.toString() != Cursor.value && "match"
+              .startsWith(
+                name.toString().replace(Cursor.value, "")
+              ) && (text
+              .charAt(
+                completionPos.start - 1
+              ) == ' ' || text.charAt(completionPos.start - 1) == '.') =>
           Some(qualifier)
-        // foo match @@
-        case (c: CaseDef) :: (m: Match) :: _
-            if completionPos.query.startsWith("match") =>
-          Some(m.selector)
-        // foo ma@tch (no cases)
-        case (m @ Match(
-              _,
-              CaseDef(Literal(Constant(null)), _, _) :: Nil,
-            )) :: _ =>
-          Some(m.selector)
         case _ => None
   end MatchExtractor
   object CaseExtractor:
@@ -524,7 +523,9 @@ class MatchCaseExtractor(
         // ca@@
         case (id @ Ident(name)) :: Block(stats, expr) :: parent :: _
             if "case"
-              .startsWith(name.toString()) && stats.lastOption.exists(
+              .startsWith(
+                name.toString().replace(Cursor.value, "")
+              ) && stats.lastOption.exists(
               _.isInstanceOf[Match]
             ) && expr == id =>
           val selector = stats.last.asInstanceOf[Match].selector
@@ -538,7 +539,9 @@ class MatchCaseExtractor(
               expr,
             ) :: (cd: CaseDef) :: (m: Match) :: parent :: _
             if ident == expr && "case"
-              .startsWith(name.toString()) &&
+              .startsWith(
+                name.toString().replace(Cursor.value, "")
+              ) &&
               cd.sourcePos.startLine != pos.startLine =>
           Some((m.selector, parent, None))
         // foo match
@@ -549,7 +552,7 @@ class MatchCaseExtractor(
         case (ident @ Ident(name)) :: (block @ Block(stats, expr)) ::
             (apply @ Apply(fun, args)) :: _
             if stats.isEmpty && ident == expr && "case".startsWith(
-              name.toString()
+              name.toString().replace(Cursor.value, "")
             ) =>
           val moveToNewLine = ident.sourcePos.line == apply.sourcePos.line
           val addNewLineAfter = apply.sourcePos.endLine == ident.sourcePos.line

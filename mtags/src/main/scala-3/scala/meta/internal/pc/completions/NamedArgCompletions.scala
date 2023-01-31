@@ -3,6 +3,7 @@ package scala.meta.internal.pc.completions
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IndexedContext
 
+import dotty.tools.dotc.ast.Trees.ValDef
 import dotty.tools.dotc.ast.tpd.Apply
 import dotty.tools.dotc.ast.tpd.Block
 import dotty.tools.dotc.ast.tpd.Ident
@@ -39,11 +40,15 @@ object NamedArgCompletions:
           indexedContext,
           clientSupportsSnippets,
         )
-      case (Literal(Constant(null))) :: (app: Apply) :: _
-          if !isInfix(pos, app) => // fun(a, @@) if isNotInfix(pos, app)
-        contribute(None, app, pos, indexedContext, clientSupportsSnippets)
-      case (app: Apply) :: _ if !isInfix(pos, app) => // fun(@@)
-        contribute(None, app, pos, indexedContext, clientSupportsSnippets)
+      case (ident: Ident) :: ValDef(_, _, _) :: Block(_, app: Apply) :: _
+          if !isInfix(pos, app) =>
+        contribute(
+          Some(ident),
+          app,
+          pos,
+          indexedContext,
+          clientSupportsSnippets,
+        )
       case _ =>
         Nil
     end match
@@ -83,7 +88,6 @@ object NamedArgCompletions:
     val vparamss =
       methodSym.paramSymss.filter(params => params.forall(p => p.isTerm))
     val argss = collectArgss(apply)
-
     // get params and args we are interested in
     // e.g.
     // in the following case, the interesting args and params are
@@ -125,7 +129,11 @@ object NamedArgCompletions:
           ) // filter out synthesized param, like evidence
       )
 
-    val prefix = ident.map(_.name.toString).getOrElse("").stripPrefix("CURSOR")
+    val prefix =
+      ident
+        .map(_.name.toString)
+        .getOrElse("")
+        .replace(Cursor.value, "")
     val params: List[Symbol] =
       allParams.filter(param => param.name.startsWith(prefix))
 
@@ -135,7 +143,7 @@ object NamedArgCompletions:
         .collect {
           case sym
               if sym.info <:< paramType && sym.isTerm && !sym.info.isNullType && !sym.info.isNothingType && !sym
-                .is(Flags.Method) =>
+                .is(Flags.Method) && !sym.is(Flags.Synthetic) =>
             sym.decodedName
         }
         .filter(name => name != "Nil" && name != "None")

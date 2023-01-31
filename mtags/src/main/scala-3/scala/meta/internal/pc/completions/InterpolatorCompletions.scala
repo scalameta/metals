@@ -30,6 +30,7 @@ import org.eclipse.{lsp4j as l}
 object InterpolatorCompletions:
 
   def contribute(
+      text: String,
       pos: SourcePosition,
       completionPos: CompletionPos,
       indexedContext: IndexedContext,
@@ -41,10 +42,10 @@ object InterpolatorCompletions:
       config: PresentationCompilerConfig,
       buildTargetIdentifier: String,
   )(using Context) =
-    val text = pos.source.content().mkString
-    InterpolationSplice(pos.span.point, pos.source.content(), text) match
+    InterpolationSplice(pos.span.point, text.toCharArray(), text) match
       case Some(interpolator) =>
         InterpolatorCompletions.contributeScope(
+          text,
           lit,
           pos,
           completionPos,
@@ -228,6 +229,7 @@ object InterpolatorCompletions:
    * - place the cursor at the end of the completed name using TextMate `$0` snippet syntax.
    */
   private def contributeScope(
+      text: String,
       lit: Literal,
       position: SourcePosition,
       completionPos: CompletionPos,
@@ -240,8 +242,8 @@ object InterpolatorCompletions:
       config: PresentationCompilerConfig,
       buildTargetIdentifier: String,
   )(using ctx: Context): List[CompletionValue] =
-
-    val text = position.source.content().mkString
+    val litStartPos = lit.span.start
+    val litEndPos = lit.span.end - Cursor.value.length()
     val span = position.span
     val nameStart =
       span.withStart(span.start - interpolator.name.size)
@@ -254,11 +256,11 @@ object InterpolatorCompletions:
     def additionalEdits(): List[l.TextEdit] =
       val interpolatorEdit =
         if !hasStringInterpolator then
-          val range = lit.sourcePos.withEnd(lit.span.start).toLsp
+          val range = lit.sourcePos.withEnd(litStartPos).toLsp
           List(new l.TextEdit(range, "s"))
         else Nil
       val dollarEdits = for
-        i <- lit.span.start to lit.span.end
+        i <- litStartPos to litEndPos
         if !hasStringInterpolator &&
           text.charAt(i) == '$' && i != interpolator.dollar
       yield new l.TextEdit(lit.sourcePos.focusAt(i).toLsp, "$")

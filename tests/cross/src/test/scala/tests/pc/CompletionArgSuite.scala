@@ -130,23 +130,15 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|
         |$user
         |object Main {
-        |  User("", @@ address = "")
+        |  User("", @@, address = "")
         |}
         |""".stripMargin,
-    """|address = : String
+    """|age = : Int
        |followers = : Int
        |Main arg5
        |User arg5
        |""".stripMargin,
     topLines = Option(4),
-    compat = Map(
-      "3" ->
-        """|age = : Int
-           |followers = : Int
-           |Main arg5
-           |User arg5
-           |""".stripMargin
-    ),
   )
 
   check(

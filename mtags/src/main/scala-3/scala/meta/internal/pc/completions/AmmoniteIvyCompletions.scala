@@ -18,7 +18,7 @@ object AmmoniteIvyCompletions:
     val query = selector.collectFirst {
       case sel: ImportSelector
           if sel.sourcePos.encloses(pos) && sel.sourcePos.`end` > pos.`end` =>
-        sel.name.decoded
+        sel.name.decoded.replace(Cursor.value, "")
     }
     query match
       case None => Nil

@@ -55,7 +55,7 @@ object OverrideCompletions:
       search: SymbolSearch,
       config: PresentationCompilerConfig,
       autoImportsGen: AutoImportsGenerator,
-      fallbackName: Option[Name],
+      fallbackName: Option[String],
   ): List[CompletionValue] =
     import indexedContext.ctx
     val clazz = td.symbol.asClass
@@ -88,7 +88,12 @@ object OverrideCompletions:
     // because they are not method definitions (not starting from `def`).
     val flags = completing.map(_.flags & interestingFlags).getOrElse(EmptyFlags)
 
-    val name = completing.fold(fallbackName)(sym => Some(sym.name))
+    val name =
+      completing
+        .fold(fallbackName)(sym => Some(sym.name.show))
+        .map(_.replace(Cursor.value, ""))
+        .filter(!_.isEmpty())
+
     // not using `td.tpe.abstractTermMembers` because those members includes
     // the abstract members in `td.tpe`. For example, when we type `def foo@@`,
     // `td.tpe.abstractTermMembers` contains `method foo: <error>` and it overrides the parent `foo` method.
@@ -103,7 +108,7 @@ object OverrideCompletions:
       .collect {
         case denot
             if name
-              .fold(true)(name => denot.name.startsWith(name.show)) &&
+              .fold(true)(name => denot.name.startsWith(name)) &&
               !denot.symbol.isType =>
           denot.symbol
       }
@@ -538,7 +543,9 @@ object OverrideCompletions:
         // class FooImpl extends Foo:
         //   ov|
         case (ident: Ident) :: (t: Template) :: (td: TypeDef) :: _
-            if t.parents.nonEmpty && "override".startsWith(ident.name.show) =>
+            if t.parents.nonEmpty && "override".startsWith(
+              ident.name.show.replace(Cursor.value, "")
+            ) =>
           Some(
             (
               td,
@@ -551,7 +558,11 @@ object OverrideCompletions:
 
         // class Main extends Val:
         //    def @@
-        case (t: Template) :: (td: TypeDef) :: _ if t.parents.nonEmpty =>
+        case (id: Ident) :: (t: Template) :: (td: TypeDef) :: _
+            if t.parents.nonEmpty && id.name.decoded.replace(
+              Cursor.value,
+              "",
+            ) == "def" =>
           Some(
             (
               td,
@@ -561,23 +572,8 @@ object OverrideCompletions:
               None,
             )
           )
-
         // class Main extends Val:
-        //    hello@@
-        case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
-            if t.parents.nonEmpty =>
-          Some(
-            (
-              td,
-              Some(sel.symbol),
-              sel.sourcePos.start,
-              false,
-              None,
-            )
-          )
-
-        // class Main extends Val:
-        //    he@@ // incomplete symbol
+        //    he@@
         case (id: Ident) :: (t: Template) :: (td: TypeDef) :: _
             if t.parents.nonEmpty =>
           Some(
@@ -586,7 +582,7 @@ object OverrideCompletions:
               None,
               id.sourcePos.start,
               false,
-              Some(id.name),
+              Some(id.name.show),
             )
           )
 

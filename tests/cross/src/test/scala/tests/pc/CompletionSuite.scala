@@ -810,6 +810,8 @@ class CompletionSuite extends BaseCompletionSuite {
       "3" ->
         """|until(end: Int): Range
            |until(end: Int, step: Int): Range
+           |until(end: T): Exclusive[T]
+           |until(end: T, step: T): Exclusive[T]
            |""".stripMargin,
     ),
   )
