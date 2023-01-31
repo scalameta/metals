@@ -116,31 +116,16 @@ class InlineValueCodeAction(
       params: l.TextDocumentPositionParams,
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Unit] =
-    compilers
-      .inlineEdits(
-        params,
-        token,
+    for {
+      edits <- compilers.inlineEdits(params, token)
+      _ = languageClient.applyEdit(
+        new l.ApplyWorkspaceEditParams(
+          new l.WorkspaceEdit(
+            Map(params.getTextDocument().getUri -> edits).asJava
+          )
+        )
       )
-      .map { res =>
-        res match {
-          case Left(error) =>
-            languageClient.showMessage(
-              new l.MessageParams(
-                l.MessageType.Info,
-                s"Cannot inline, because $error",
-              )
-            )
-          case Right(edits) =>
-            languageClient.applyEdit(
-              new l.ApplyWorkspaceEditParams(
-                new l.WorkspaceEdit(
-                  Map(params.getTextDocument().getUri -> edits).asJava
-                )
-              )
-            )
-        }
-        ()
-      }
+    } yield ()
 
   private def getTermNameForPos(
       path: AbsolutePath,

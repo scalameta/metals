@@ -497,12 +497,12 @@ class Compilers(
   def inlineEdits(
       params: TextDocumentPositionParams,
       token: CancelToken,
-  ): Future[Either[String, ju.List[TextEdit]]] =
+  ): Future[ju.List[TextEdit]] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.inlineValue(CompilerOffsetParams.fromPos(pos, token))
         .asScala
-        .map(_.asScala.map(adjust.adjustTextEdits))
-    }.getOrElse(Future.successful(Right(Nil.asJava)))
+        .map(adjust.adjustTextEdits)
+    }.getOrElse(Future.successful(Nil.asJava))
 
   def documentHighlight(
       params: TextDocumentPositionParams,
