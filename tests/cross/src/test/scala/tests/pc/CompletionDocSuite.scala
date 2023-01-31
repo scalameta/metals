@@ -152,7 +152,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|sliding[B >: Int](size: Int, step: Int = 1): $1$.GroupedIterator[B]
+        """|sliding[B >: Int](size: Int, step: Int = 1): List[Int]#iterator.GroupedIterator[B]
            |""".stripMargin
     ),
   )

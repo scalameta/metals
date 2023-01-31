@@ -108,18 +108,10 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin.triplequoted,
     """|object Main {
        |  val myName = ""
-       |  s"$myName$0 $$"
+       |  s"$myName $$"
        |}
        |""".stripMargin.triplequoted,
     filterText = "myName",
-    compat = Map(
-      "2" ->
-        """|object Main {
-           |  val myName = ""
-           |  s"$myName $$"
-           |}
-           |""".stripMargin
-    ),
   )
 
   checkEdit(

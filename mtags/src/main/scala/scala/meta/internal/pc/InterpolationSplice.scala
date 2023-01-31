@@ -10,7 +10,6 @@ package scala.meta.internal.pc
 case class InterpolationSplice(dollar: Int, name: String, needsBraces: Boolean)
 
 object InterpolationSplice {
-
   def apply(
       offset: Int,
       chars: Array[Char],

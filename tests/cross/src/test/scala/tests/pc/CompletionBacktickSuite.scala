@@ -121,7 +121,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
           |""".stripMargin,
       s"""|object Main {
           |  def $keyword(a: String) = a
-          |  `$keyword`
+          |  `$keyword`($$0)
           |}
           |""".stripMargin,
       filter = _.contains("a: String"),

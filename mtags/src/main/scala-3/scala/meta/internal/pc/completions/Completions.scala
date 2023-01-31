@@ -59,16 +59,20 @@ class Completions(
   val canDetectJavaObjectsCorrectly =
     SemVer.isLaterVersion("3.1.0", BuildInfo.scalaCompilerVersion)
 
-  private lazy val shouldAddSnippet = path match
-    /* In case of `method@@()` we should not add snippets and the path
-     * will contain apply as the parent of the current tree.
-     */
-    case (fun) :: (appl: GenericApply) :: _ if appl.fun == fun =>
-      false
-    case (_: Import) :: _ => false
-    case _ :: (_: Import) :: _ => false
-    case (_: Ident) :: (_: SeqLiteral) :: _ => false
-    case _ => true
+  private lazy val shouldAddSnippet =
+    path match
+      /* In case of `method@@()` we should not add snippets and the path
+       * will contain apply as the parent of the current tree.
+       */
+      case (fun) :: (appl: GenericApply) :: _ if appl.fun == fun =>
+        false
+      case _ :: (withcursor @ Select(fun, name)) :: (appl: GenericApply) :: _
+          if appl.fun == withcursor && name.decoded == Cursor.value =>
+        false
+      case (_: Import) :: _ => false
+      case _ :: (_: Import) :: _ => false
+      case (_: Ident) :: (_: SeqLiteral) :: _ => false
+      case _ => true
 
   enum CursorPos:
     case Type(hasTypeParams: Boolean, hasNewKw: Boolean)
@@ -445,12 +449,16 @@ class Completions(
 
       // class Fo@@
       case (td: TypeDef) :: _
-          if Fuzzy.matches(td.symbol.name.decoded, filename) =>
+          if Fuzzy.matches(
+            td.symbol.name.decoded.replace(Cursor.value, ""),
+            filename,
+          ) =>
         val values = FilenameCompletions.contribute(filename, td)
         (values, true)
       case (lit @ Literal(Constant(_: String))) :: _ =>
         val completions = InterpolatorCompletions
           .contribute(
+            text,
             pos,
             completionPos,
             indexedContext,

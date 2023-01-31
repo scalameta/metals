@@ -406,12 +406,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     "",
-    compat = Map(
-      "3" ->
-        """|head :: next scala.collection.immutable
-           |Nil scala.collection.immutable
-           |""".stripMargin
-    ),
     // to avoid newMain annotation
     filter = str => !str.contains("newMain"),
   )
