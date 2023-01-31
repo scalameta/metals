@@ -229,6 +229,9 @@ lazy val interfaces = project
   .settings(
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
+    mimaPreviousArtifacts := Set(
+      "org.scalameta" % "mtags-interfaces" % "0.11.10"
+    ),
     crossPaths := false,
     libraryDependencies ++= List(
       V.lsp4j

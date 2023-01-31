@@ -18,6 +18,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.List;
 import java.util.LinkedList;
@@ -37,11 +38,13 @@ public abstract class PresentationCompiler {
 	// Language Server Protocol APIs.
 	// ==============================
 
-     /**
-     * Returns token informations from presentation compiler.
-     *
-     */
-    public abstract CompletableFuture<List<Integer>> semanticTokens(VirtualFileParams params);
+	/**
+	 * Returns token informations from presentation compiler.
+	 *
+	 */
+	public CompletableFuture<List<Integer>> semanticTokens(VirtualFileParams params) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
 
 	/**
 	 * Returns code completions for the given source position.
@@ -134,7 +137,11 @@ public abstract class PresentationCompiler {
 	/**
 	 * Return the text edits for inlining a value.
 	 */
-	public abstract CompletableFuture<List<TextEdit>> inlineValue(OffsetParams params);
+	public CompletableFuture<List<TextEdit>> inlineValue(OffsetParams params) {
+		return CompletableFuture.supplyAsync(() -> {
+			throw new DisplayableException("Inline value is not available in this version of Scala");
+		});
+	}
 
 	/**
 	 * Extract method in selected range
