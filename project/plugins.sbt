@@ -5,6 +5,9 @@ addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.3.6")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
 addSbtPlugin("com.github.reibitto" % "sbt-welcome" % "0.2.2")
 
+// Mima used for mtags-interfaces
+addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.1")
+
 libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
 
 resolvers ++= Resolver.sonatypeOssRepos("public")

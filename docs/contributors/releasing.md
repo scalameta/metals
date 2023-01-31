@@ -120,6 +120,10 @@ Open the PR to the repo https://github.com/scalameta/metals/releases/new.
 - Announce the new release with the link to the release notes:
   - on [Discord](https://discord.com/invite/RFpSVth)
 
+### Update MiMa
+
+- Update `mimaPreviousArtifacts` in interfaces to the new released version
+
 ## Sanity check
 
 - [ ] draft release notes and create with PR with them
