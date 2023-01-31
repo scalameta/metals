@@ -41,7 +41,6 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.jsonrpc.{messages => jm}
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -167,17 +166,18 @@ case class ScalaPresentationCompiler(
 
   override def inlineValue(
       params: OffsetParams
-  ): CompletableFuture[jm.Either[String, ju.List[TextEdit]]] = {
-    val empty: jm.Either[String, ju.List[TextEdit]] =
-      jm.Either.forRight(new ju.ArrayList[TextEdit]())
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new InlineValueProvider(
-        new PcValReferenceProviderImpl(pc.compiler(), params)
-      ).getInlineTextEdits match {
-        case Left(error) => jm.Either.forLeft(error)
-        case Right(edits) => jm.Either.forRight(edits.asJava)
+  ): CompletableFuture[ju.List[TextEdit]] = {
+    val empty: Either[String, List[TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(empty, params.token) { pc =>
+        new InlineValueProvider(
+          new PcValReferenceProviderImpl(pc.compiler(), params)
+        ).getInlineTextEdits
+      })
+      .thenApply {
+        case Right(edits: List[TextEdit]) => edits.asJava
+        case Left(error: String) => throw new DisplayableException(error)
       }
-    }
   }
 
   override def extractMethod(
@@ -207,7 +207,7 @@ case class ScalaPresentationCompiler(
           argIndices.asScala.map(_.toInt).toSet
         ).convertToNamedArguments
       })
-      .thenApplyAsync {
+      .thenApply {
         case Left(error: String) => throw new DisplayableException(error)
         case Right(edits: List[TextEdit]) => edits.asJava
       }

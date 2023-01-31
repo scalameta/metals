@@ -34,6 +34,7 @@ import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.util.*
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.{messages as jm}
 import org.eclipse.{lsp4j as l}
 
@@ -236,17 +237,20 @@ case class ScalaPresentationCompiler(
 
   override def inlineValue(
       params: OffsetParams
-  ): CompletableFuture[jm.Either[String, ju.List[l.TextEdit]]] =
-    val empty: jm.Either[String, ju.List[l.TextEdit]] =
-      jm.Either.forRight(ju.Collections.emptyList())
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new InlineValueProvider(
-        new PcValReferenceProviderImpl(pc.compiler(), params)
-      )
-        .getInlineTextEdits()
-        .map(_.asJava)
-        .asJava
-    }
+  ): CompletableFuture[ju.List[l.TextEdit]] =
+    val empty: Either[String, List[l.TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(empty, params.token) { pc =>
+        new InlineValueProvider(
+          new PcValReferenceProviderImpl(pc.compiler(), params)
+        )
+          .getInlineTextEdits()
+      })
+      .thenApply {
+        case Right(edits: List[TextEdit]) => edits.asJava
+        case Left(error: String) => throw new DisplayableException(error)
+      }
+  end inlineValue
 
   override def extractMethod(
       range: RangeParams,

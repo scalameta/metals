@@ -7,6 +7,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.mtags.CommonMtagsEnrichments
 import scala.meta.internal.pc.InlineValueProvider.{Errors => InlineErrors}
+import scala.meta.pc.DisplayableException
 
 import munit.Location
 import munit.TestOptions
@@ -220,14 +221,10 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
       filename: String = "file:/A.scala",
   )(implicit location: Location): Unit =
     test(name) {
-      getInlineEdits(original, filename) match {
-        case Left(error) => fail(s"Error: $error")
-        case Right(edits) => {
-          val (code, _, _) = params(original)
-          val obtained = TextEdits.applyEdits(code, edits)
-          assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
-        }
-      }
+      val edits = getInlineEdits(original, filename)
+      val (code, _, _) = params(original)
+      val obtained = TextEdits.applyEdits(code, edits)
+      assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
 
   def checkErorr(
@@ -237,16 +234,22 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
       filename: String = "file:/A.scala",
   )(implicit location: Location): Unit =
     test(name) {
-      getInlineEdits(original, filename) match {
-        case Left(error) => assertNoDiff(error, expectedError)
-        case Right(_) => fail("No error found")
+      try {
+        getInlineEdits(original, filename)
+        fail("No error found")
+      } catch {
+        case e: Exception if (e.getCause match {
+              case _: DisplayableException => true
+              case _ => false
+            }) =>
+          assertNoDiff(e.getCause.getMessage, expectedError)
       }
     }
 
   def getInlineEdits(
       original: String,
       filename: String,
-  ): Either[String, List[l.TextEdit]] = {
+  ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler
       .inlineValue(
@@ -258,7 +261,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
         )
       )
       .get()
-    result.asScala.map(_.asScala.toList)
+    result.asScala.toList
   }
 
 }
