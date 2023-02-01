@@ -119,7 +119,9 @@ final class ForwardingMetalsBuildClient(
   def buildTaskStart(params: TaskStartParams): Unit = {
     params.getDataKind match {
       case TaskDataKind.COMPILE_TASK =>
-        if (params.getMessage.startsWith("Compiling")) {
+        if (
+          params.getMessage != null && params.getMessage.startsWith("Compiling")
+        ) {
           scribe.info(params.getMessage.toLowerCase())
         }
         for {
@@ -133,7 +135,10 @@ final class ForwardingMetalsBuildClient(
 
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
-          val isNoOp = params.getMessage.startsWith("Start no-op compilation")
+          val isNoOp =
+            params.getMessage != null && params.getMessage.startsWith(
+              "Start no-op compilation"
+            )
           val compilation = Compilation(new Timer(time), promise, isNoOp)
           compilations(task.getTarget) = compilation
 
