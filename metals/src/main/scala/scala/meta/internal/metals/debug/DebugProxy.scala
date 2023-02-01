@@ -19,11 +19,11 @@ import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.debug.DebugProtocol.CompletionRequest
+import scala.meta.internal.metals.debug.DebugProtocol.DisconnectRequest
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
-import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
 import scala.meta.io.AbsolutePath
@@ -91,7 +91,7 @@ private[debug] final class DebugProxy(
     case request @ LaunchRequest(debugMode) =>
       this.debugMode = debugMode
       server.send(request)
-    case request @ RestartRequest(_) =>
+    case request @ DisconnectRequest(args) if args.getRestart() =>
       initialized.trySuccess(())
       // set the status first, since the server can kill the connection
       exitStatus.trySuccess(Restarted)

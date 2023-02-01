@@ -16,7 +16,7 @@ import scala.reflect.classTag
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
+import scala.meta.internal.metals.debug.DebugProtocol
 
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.debug.Capabilities
@@ -40,7 +40,7 @@ private[debug] final class RemoteServer(
 
   private val remote = new SocketEndpoint(socket)
   private val ongoing = new TrieMap[String, Response => Unit]()
-  private val id = new AtomicInteger(FirstMessageId)
+  private val id = new AtomicInteger(DebugProtocol.FirstMessageId)
   lazy val listening: Future[Unit] = Future(listen())
 
   override def initialize(
@@ -124,7 +124,7 @@ private[debug] final class RemoteServer(
   override def disconnect(
       args: DisconnectArguments
   ): CompletableFuture[Void] = {
-    sendRequest("disconnect", args)
+    sendRequest(DebugProtocol.DisconnectRequest.name, args)
   }
 
   private def listen(): Unit = {

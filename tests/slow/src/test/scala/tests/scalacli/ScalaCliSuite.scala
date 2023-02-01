@@ -2,13 +2,16 @@ package tests.scalacli
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.SlowTaskConfig
+import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -24,6 +27,8 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       InitializationOptions.Default.copy(
         inlineDecorationProvider = Some(true),
         decorationProvider = Some(true),
+        debuggingProvider = Option(true),
+        runProvider = Option(true),
       )
     )
 
@@ -546,4 +551,118 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     } yield ()
   }
 
+  def startDebugging(
+      main: String,
+      buildTarget: String,
+  ): Future[TestDebugger] = {
+    server.startDebuggingUnresolved(
+      new DebugUnresolvedMainClassParams(main, buildTarget).toJson
+    )
+  }
+
+  test("base-native-run") {
+    cleanWorkspace()
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""/MyMain.scala
+           |//> using scala "$scalaVersion"
+           |//> using platform "native"
+           |
+           |import scala.scalanative._
+           |
+           |object MyMain {
+           |  def main(args: Array[String]): Unit = {
+           |    println("Hello world!")
+           |    System.exit(0)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("MyMain.scala")
+      textWithLenses <- server.codeLensesText(
+        "MyMain.scala",
+        printCommand = false,
+      )(maxRetries = 5)
+      _ = assertNoDiff(
+        textWithLenses,
+        s"""|//> using scala "$scalaVersion"
+            |//> using platform "native"
+            |
+            |import scala.scalanative._
+            |
+            |<<run>>
+            |object MyMain {
+            |  def main(args: Array[String]): Unit = {
+            |    println("Hello world!")
+            |    System.exit(0)
+            |  }
+            |}
+            |
+            |""".stripMargin,
+      )
+      targets <- server.listBuildTargets
+      mainTarget = targets.find(!_.contains("test"))
+      _ = assert(mainTarget.isDefined, "No main target specified")
+      debugServer <- startDebugging("MyMain", mainTarget.get)
+      _ <- debugServer.initialize
+      _ <- debugServer.launch
+      _ <- debugServer.configurationDone
+      _ <- debugServer.shutdown
+      output <- debugServer.allOutput
+    } yield assertContains(output, "Hello world!\n")
+  }
+
+  test("base-js-run") {
+    cleanWorkspace()
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""/MyMain.scala
+           |//> using scala "$scalaVersion"
+           |//> using platform "js"
+           |
+           |import scala.scalajs.js
+           |
+           |object MyMain {
+           |  def main(args: Array[String]): Unit = {
+           |    println("Hello world!")
+           |    // System.exit(0)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("MyMain.scala")
+      textWithLenses <- server.codeLensesText(
+        "MyMain.scala",
+        printCommand = false,
+      )(maxRetries = 5)
+      _ = assertNoDiff(
+        textWithLenses,
+        s"""|//> using scala "$scalaVersion"
+            |//> using platform "js"
+            |
+            |import scala.scalajs.js
+            |
+            |<<run>>
+            |object MyMain {
+            |  def main(args: Array[String]): Unit = {
+            |    println("Hello world!")
+            |    // System.exit(0)
+            |  }
+            |}
+            |
+            |""".stripMargin,
+      )
+      targets <- server.listBuildTargets
+      mainTarget = targets.find(!_.contains("test"))
+      _ = assert(mainTarget.isDefined, "No main target specified")
+      debugServer <- startDebugging("MyMain", mainTarget.get)
+      _ <- debugServer.initialize
+      _ <- debugServer.launch
+      _ <- debugServer.configurationDone
+      _ <- debugServer.shutdown
+      output <- debugServer.allOutput
+    } yield assertContains(output, "Hello world!\n")
+  }
 }
