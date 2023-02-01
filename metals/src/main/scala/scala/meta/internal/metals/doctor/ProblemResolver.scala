@@ -56,10 +56,12 @@ class ProblemResolver(
 
     val unsupportedVersions = ListBuffer[String]()
     val deprecatedVersions = ListBuffer[String]()
+    val deprecatedRemovedVersions = ListBuffer[String]()
     val futureVersions = ListBuffer[String]()
     var misconfiguredProjects = 0
     var unsupportedSbt = false
     var deprecatedSbt = false
+    var deprecatedRemovedSbt = false
     var futureSbt = false
 
     for {
@@ -69,11 +71,14 @@ class ProblemResolver(
       issue match {
         case UnsupportedScalaVersion(version) => unsupportedVersions += version
         case DeprecatedScalaVersion(version) => deprecatedVersions += version
+        case DeprecatedRemovedScalaVersion(version) =>
+          deprecatedRemovedVersions += version
         case FutureScalaVersion(version) => futureVersions += version
         case _: SemanticDBDisabled => misconfiguredProjects += 1
         case _: MissingSourceRoot => misconfiguredProjects += 1
         case UnsupportedSbtVersion => unsupportedSbt = true
         case DeprecatedSbtVersion => deprecatedSbt = true
+        case DeprecatedRemovedSbtVersion => deprecatedRemovedSbt = true
         case FutureSbtVersion => futureSbt = true
         case MissingJdkSources(_) => misconfiguredProjects += 1
         case _ =>
@@ -104,6 +109,15 @@ class ProblemResolver(
     } else {
       None
     }
+    val deprecatedRemovedMessage = if (deprecatedRemovedVersions.nonEmpty) {
+      Some(
+        Messages.DeprecatedRemovedScalaVersion.message(
+          deprecatedRemovedVersions.toSet
+        )
+      )
+    } else {
+      None
+    }
 
     val futureMessage = if (futureVersions.nonEmpty) {
       Some(Messages.FutureScalaVersion.message(futureVersions.toSet))
@@ -113,6 +127,10 @@ class ProblemResolver(
 
     val deprecatedSbtMessage =
       if (deprecatedSbt) Some(Messages.DeprecatedSbtVersion.message) else None
+    val deprecatedRemovedSbtMessage =
+      if (deprecatedRemovedSbt)
+        Some(Messages.DeprecatedRemovedSbtVersion.message)
+      else None
     val unsupportedSbtMessage =
       if (unsupportedSbt) Some(Messages.UnsupportedSbtVersion.message) else None
     val futureSbtMessage =
@@ -146,9 +164,11 @@ class ProblemResolver(
 
     val allMessages = List(
       deprecatedMessage,
+      deprecatedRemovedMessage,
       unsupportedMessage,
       futureMessage,
       deprecatedSbtMessage,
+      deprecatedRemovedSbtMessage,
       unsupportedSbtMessage,
       futureSbtMessage,
       semanticdbMessage,
@@ -205,12 +225,17 @@ class ProblemResolver(
             .isScala3Version(scalaTarget.scalaVersion) =>
         Some(MissingSourceRoot(workspace.scalaSourcerootOption))
       case version
-          if ScalaVersions.isDeprecatedScalaVersion(
-            version
-          ) && scalaTarget.isSbt =>
+          if ScalaVersions.isDeprecatedScalaVersion(version) &&
+            scalaTarget.isSbt =>
         Some(DeprecatedSbtVersion)
       case version if ScalaVersions.isDeprecatedScalaVersion(version) =>
         Some(DeprecatedScalaVersion(version))
+      case version
+          if mtagsResolver.isSupportedInOlderVersion(version) &&
+            scalaTarget.isSbt =>
+        Some(DeprecatedRemovedSbtVersion)
+      case version if mtagsResolver.isSupportedInOlderVersion(version) =>
+        Some(DeprecatedRemovedScalaVersion(version))
       case _ => None
     }
 

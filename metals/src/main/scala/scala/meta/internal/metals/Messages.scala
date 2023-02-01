@@ -704,7 +704,18 @@ object Messages {
     ): String = {
       val using = "legacy " + usingString(usingNow)
       val recommended = recommendationString(usingNow)
-      s"You are using $using, which might not be supported in future versions of Metals. " +
+      s"You are using $using, which might stop being bugfixed in future versions of Metals. " +
+        s"Please upgrade to $recommended."
+    }
+  }
+
+  object DeprecatedRemovedScalaVersion {
+    def message(
+        usingNow: Set[String]
+    ): String = {
+      val using = "legacy " + usingString(usingNow)
+      val recommended = recommendationString(usingNow)
+      s"You are using $using, which doesn't use newest Metals fixes. " +
         s"Please upgrade to $recommended."
     }
   }
@@ -757,7 +768,14 @@ object Messages {
 
   object DeprecatedSbtVersion {
     def message: String = {
-      s"You are using an old sbt version, navigation for which might not be supported in the future versions of Metals. " +
+      s"You are using an old sbt version, support for which might stop being bugfixed in the future versions of Metals. " +
+        s"Please upgrade to at least sbt ${BuildInfo.minimumSupportedSbtVersion}."
+    }
+  }
+
+  object DeprecatedRemovedSbtVersion {
+    def message: String = {
+      s"You are using an old sbt version, support for which is no longer being bugfixed. " +
         s"Please upgrade to at least sbt ${BuildInfo.minimumSupportedSbtVersion}."
     }
   }
