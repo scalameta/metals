@@ -223,20 +223,22 @@ object SbtBuildTool {
       resolver: Option[String],
   )
 
+  private def sonatypeResolver(version: String): Option[String] =
+    if (version.contains("SNAPSHOT"))
+      Some(
+        """resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
+      )
+    else None
+
   /**
    * Short description and artifact for the sbt-bloop plugin
    */
   private def bloopPluginDetails(version: String): PluginDetails = {
-    val resolver =
-      if (isSnapshotVersion(version))
-        Some("""Resolver.bintrayRepo("scalacenter", "releases")""")
-      else None
-
     PluginDetails(
       description =
         Seq("This file enables sbt-bloop to create bloop config files."),
       artifact = s""""ch.epfl.scala" % "sbt-bloop" % "$version"""",
-      resolver,
+      sonatypeResolver(version),
     )
   }
 
@@ -244,20 +246,13 @@ object SbtBuildTool {
    * Short description and artifact for the sbt-metals plugin
    */
   private def metalsPluginDetails: PluginDetails = {
-    val resolver =
-      if (isSnapshotVersion(BuildInfo.metalsVersion))
-        Some(
-          """"Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
-        )
-      else None
-
     PluginDetails(
       Seq(
         "This plugin enables semantic information to be produced by sbt.",
         "It also adds support for debugging using the Debug Adapter Protocol",
       ),
       s""""org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"""",
-      resolver,
+      sonatypeResolver(BuildInfo.metalsVersion),
     )
   }
 
@@ -287,14 +282,11 @@ object SbtBuildTool {
       resolver = None,
     )
 
-  private def isSnapshotVersion(version: String): Boolean =
-    version.contains("+")
-
   /**
    * Contents of metals.sbt file that is to be installed in the workspace.
    */
   private def sbtPlugin(plugin: PluginDetails): String = {
-    val resolvers = plugin.resolver.map(r => s"resolvers += $r").getOrElse("")
+    val resolvers = plugin.resolver.getOrElse("")
     val description = plugin.description.mkString("// ", "\n// ", "")
 
     s"""|$description

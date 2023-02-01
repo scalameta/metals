@@ -312,11 +312,12 @@ object Messages {
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
 
+    def msg: String =
+      s"Bloop version was updated, do you want to restart the running Bloop server?"
+
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
-      params.setMessage(
-        s"Bloop version was updated, do you want to restart the running Bloop server?"
-      )
+      params.setMessage(msg)
       params.setType(MessageType.Warning)
       params.setActions(
         List(

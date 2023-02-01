@@ -120,6 +120,45 @@ class SbtBloopLspSuite
       )
     } yield ()
   }
+
+  test("bloop-snapshot") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.server.buildServerPromise.future
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          importBuildMessage,
+          progressMessage,
+        ).mkString("\n"),
+      )
+      _ = client.messageRequests.clear() // restart
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "bloop-version": "1.5.6-134-46452098-SNAPSHOT"
+          |}
+          |""".stripMargin
+      )
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          BloopVersionChange.msg,
+          progressMessage,
+        ).mkString("\n"),
+      )
+      _ = assertStatus(_.isInstalled)
+    } yield ()
+  }
+
   test("force-command-multiple") {
     cleanWorkspace()
     for {
