@@ -9,7 +9,7 @@
   },
   "devDependencies": {},
   "dependencies": {
-    "@docusaurus/core": "2.2.0",
+    "@docusaurus/core": "2.3.0",
     "@docusaurus/preset-classic": "2.2.0",
     "clsx": "^1.1.1",
     "react": "^18.2.0",
