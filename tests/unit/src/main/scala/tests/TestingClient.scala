@@ -17,6 +17,7 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
@@ -131,6 +132,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
+    Debug.printEnclosing(params.getCommand())
     clientCommands.addLast(params)
     params.getCommand match {
       case ClientCommands.RefreshModel.id =>

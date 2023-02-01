@@ -2,7 +2,7 @@ package scala.meta.internal.metals.clients.language
 
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-import java.{util => ju}
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
@@ -23,11 +23,23 @@ import scala.meta.internal.metals.Timer
 import scala.meta.internal.tvp._
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j._
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonObject
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.{lsp4j => l}
+
+/**
+ * Used to forward messages from the build server. Messages might
+ * be mixed if the server is sending messages as well as output from
+ * running. This hasn't been a problem yet, not perfect solution,
+ * but seems to work ok.
+ */
+trait LogForwarder {
+  def error(message: String): Unit = ()
+  def warn(message: String): Unit = ()
+  def info(message: String): Unit = ()
+  def log(message: String): Unit = ()
+}
 
 /**
  * A build client that forwards notifications from the build server to the language client.
@@ -39,31 +51,39 @@ final class ForwardingMetalsBuildClient(
     clientConfig: ClientConfiguration,
     statusBar: StatusBar,
     time: Time,
-    didCompile: CompileReport => Unit,
-    onBuildTargetDidCompile: BuildTargetIdentifier => Unit,
+    didCompile: b.CompileReport => Unit,
+    onBuildTargetDidCompile: b.BuildTargetIdentifier => Unit,
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
     bspErrorHandler: BspErrorHandler,
 ) extends MetalsBuildClient
     with Cancelable {
 
+  private val forwarders =
+    new AtomicReference(List.empty[LogForwarder])
+
+  def registerLogForwarder(
+      logForwarder: LogForwarder
+  ): List[LogForwarder] = {
+    forwarders.getAndUpdate(_.prepended(logForwarder))
+  }
   private case class Compilation(
       timer: Timer,
-      promise: Promise[CompileReport],
+      promise: Promise[b.CompileReport],
       isNoOp: Boolean,
       progress: TaskProgress = TaskProgress.empty,
   ) extends TreeViewCompilation {
     def progressPercentage = progress.percentage
   }
 
-  private val compilations = TrieMap.empty[BuildTargetIdentifier, Compilation]
+  private val compilations = TrieMap.empty[b.BuildTargetIdentifier, Compilation]
   private val hasReportedError = Collections.newSetFromMap(
-    new ConcurrentHashMap[BuildTargetIdentifier, java.lang.Boolean]()
+    new ConcurrentHashMap[b.BuildTargetIdentifier, java.lang.Boolean]()
   )
 
-  val updatedTreeViews: ju.Set[BuildTargetIdentifier] =
-    ConcurrentHashSet.empty[BuildTargetIdentifier]
+  val updatedTreeViews: java.util.Set[b.BuildTargetIdentifier] =
+    ConcurrentHashSet.empty[b.BuildTargetIdentifier]
 
-  def buildHasErrors(buildTargetId: BuildTargetIdentifier): Boolean = {
+  def buildHasErrors(buildTargetId: b.BuildTargetIdentifier): Boolean = {
     buildTargets
       .buildTargetTransitiveDependencies(buildTargetId)
       .exists(hasReportedError.contains(_))
@@ -96,18 +116,22 @@ final class ForwardingMetalsBuildClient(
   def onBuildShowMessage(params: l.MessageParams): Unit =
     languageClient.showMessage(params)
 
-  def onBuildLogMessage(params: l.MessageParams): Unit =
+  def onBuildLogMessage(params: l.MessageParams): Unit = {
     params.getType match {
       case l.MessageType.Error =>
         bspErrorHandler.onError(params.getMessage())
+        forwarders.get().foreach(_.error(params.getMessage()))
       case l.MessageType.Warning =>
+        forwarders.get().foreach(_.warn(params.getMessage()))
         scribe.warn(params.getMessage)
       case l.MessageType.Info =>
+        forwarders.get().foreach(_.info(params.getMessage()))
         scribe.info(params.getMessage)
       case l.MessageType.Log =>
+        forwarders.get().foreach(_.log(params.getMessage()))
         scribe.info(params.getMessage)
     }
-
+  }
   def onBuildPublishDiagnostics(params: b.PublishDiagnosticsParams): Unit = {
     diagnostics.onBuildPublishDiagnostics(params)
   }
@@ -119,9 +143,9 @@ final class ForwardingMetalsBuildClient(
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}
 
   @JsonNotification("build/taskStart")
-  def buildTaskStart(params: TaskStartParams): Unit = {
+  def buildTaskStart(params: b.TaskStartParams): Unit = {
     params.getDataKind match {
-      case TaskStartDataKind.COMPILE_TASK =>
+      case b.TaskStartDataKind.COMPILE_TASK =>
         if (
           params.getMessage != null && params.getMessage.startsWith("Compiling")
         ) {
@@ -137,7 +161,7 @@ final class ForwardingMetalsBuildClient(
           compilations.remove(target).foreach(_.promise.cancel())
 
           val name = info.getDisplayName
-          val promise = Promise[CompileReport]()
+          val promise = Promise[b.CompileReport]()
           val isNoOp =
             params.getMessage != null && params.getMessage.startsWith(
               "Start no-op compilation"
@@ -157,9 +181,9 @@ final class ForwardingMetalsBuildClient(
   }
 
   @JsonNotification("build/taskFinish")
-  def buildTaskFinish(params: TaskFinishParams): Unit = {
+  def buildTaskFinish(params: b.TaskFinishParams): Unit = {
     params.getDataKind match {
-      case TaskFinishDataKind.COMPILE_REPORT =>
+      case b.TaskFinishDataKind.COMPILE_REPORT =>
         for {
           report <- params.asCompileReport
           compilation <- compilations.remove(report.getTarget)
@@ -214,8 +238,8 @@ final class ForwardingMetalsBuildClient(
   }
 
   @JsonNotification("build/taskProgress")
-  def buildTaskProgress(params: TaskProgressParams): Unit = {
-    def buildTargetFromParams: Option[BuildTargetIdentifier] =
+  def buildTaskProgress(params: b.TaskProgressParams): Unit = {
+    def buildTargetFromParams: Option[b.BuildTargetIdentifier] =
       for {
         data <- Option(params.getData).collect { case o: JsonObject =>
           o
@@ -227,7 +251,7 @@ final class ForwardingMetalsBuildClient(
         if uriElement.isJsonPrimitive
         uri = uriElement.getAsJsonPrimitive
         if uri.isString
-      } yield new BuildTargetIdentifier(uri.getAsString)
+      } yield new b.BuildTargetIdentifier(uri.getAsString)
 
     params.getDataKind match {
       case "bloop-progress" =>
@@ -252,7 +276,7 @@ final class ForwardingMetalsBuildClient(
 
   def ongoingCompilations(): TreeViewCompilations =
     new TreeViewCompilations {
-      override def get(id: BuildTargetIdentifier) = compilations.get(id)
+      override def get(id: b.BuildTargetIdentifier) = compilations.get(id)
       override def isEmpty = compilations.isEmpty
       override def size = compilations.size
       override def buildTargets = compilations.keysIterator

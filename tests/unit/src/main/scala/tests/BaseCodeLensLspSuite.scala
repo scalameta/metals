@@ -110,6 +110,7 @@ abstract class BaseCodeLensLspSuite(
       printCommand: Boolean = false,
       extraInitialization: (TestingServer, String) => Future[Unit] = (_, _) =>
         Future.unit,
+      minExpectedLenses: Int = 1,
   )(
       expected: => String
   )(implicit loc: Location): Unit = {
@@ -144,7 +145,12 @@ abstract class BaseCodeLensLspSuite(
               |""".stripMargin
         )
         _ <- extraInitialization(server, sourceFile)
-        _ <- assertCodeLenses(sourceFile, expected, printCommand = printCommand)
+        _ <- assertCodeLenses(
+          sourceFile,
+          expected,
+          printCommand = printCommand,
+          minExpectedLenses = minExpectedLenses,
+        )
       } yield ()
     }
   }
@@ -154,6 +160,7 @@ abstract class BaseCodeLensLspSuite(
       library: Option[String] = None,
       scalaVersion: Option[String] = None,
       printCommand: Boolean = false,
+      minExpectedLenses: Int = 1,
   )(
       expected: => String
   )(implicit loc: Location): Unit = check(
@@ -163,6 +170,7 @@ abstract class BaseCodeLensLspSuite(
     printCommand,
     (server, sourceFile) =>
       server.discoverTestSuites(List(sourceFile)).map(_ => ()),
+    minExpectedLenses,
   )(expected)
 
   protected def assertCodeLenses(
@@ -170,12 +178,16 @@ abstract class BaseCodeLensLspSuite(
       expected: String,
       maxRetries: Int = 4,
       printCommand: Boolean = false,
+      minExpectedLenses: Int = 1,
   )(implicit loc: Location): Future[Unit] = {
     val obtained =
-      server.codeLensesText(relativeFile, printCommand)(maxRetries).recover {
-        case _: NoSuchElementException =>
+      server
+        .codeLensesText(relativeFile, printCommand, minExpectedLenses)(
+          maxRetries
+        )
+        .recover { case _: NoSuchElementException =>
           server.textContents(relativeFile)
-      }
+        }
 
     obtained.map(assertNoDiff(_, expected))
   }
