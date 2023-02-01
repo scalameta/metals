@@ -15,6 +15,7 @@ import dotty.tools.dotc.util.SourceFile
 import org.eclipse.lsp4j.SelectionRange
 
 import SelectionRangeProvider.*
+import dotty.tools.dotc.semanticdb.Scala3
 
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
@@ -51,17 +52,15 @@ class SelectionRangeProvider(
           selectionRange.setRange(tree.sourcePos.toLsp)
           selectionRange
         }
-      val commentRanges = checkCmt(
+      val commentRanges = getCommentRanges(
         param,
         pos.start,
         pos.`end`,
       ).map { x =>
-        val lspRange = new SelectionRange():
+        new SelectionRange():
           setRange(
             x._3.toLsp
           )
-
-        lspRange
       }.toList // if in comment return range in cmt
 
       (commentRanges ++ bareRanges).reduceRight(setParent)
@@ -106,15 +105,17 @@ object SelectionRangeProvider:
   import scala.meta.Token.Comment
 
   /** check pos.start,if it is within comment then expand to comment */
-  def checkCmt(param: OffsetParams, start: Int, end: Int) =
-    // https://scalameta.org/docs/trees/guide.html
+  def getCommentRanges(param: OffsetParams, start: Int, end: Int) =
+    // overwrite implicit 'implicit def current: Scala213' in scalameta
+    implicit val dialect: Dialect = dialects.Scala3.withAllowToplevelTerms(true)
     val programStr = param.text()
-    // deal with multiple source text
+    // deal with multiple source text. probably a better way ?
     val tkSrc = programStr.parse[Source].toOption.map(_.tokens)
     val tkExpr = programStr.parse[Stat].toOption.map(_.tokens)
     val tkType = programStr.parse[Type].toOption.map(_.tokens)
 
-    val tokens = tkSrc orElse tkExpr orElse tkType
+    val tokens = tkSrc orElse tkExpr orElse tkType // orElse tkTopDecls
+    if tokens.isEmpty then pprint.log("fail to parse in getCommentRanges!")
     val commentList = tokens.toList.flatten
       .collect { case x: Comment =>
         // println(s"find Comment : ${x}")
@@ -126,5 +127,5 @@ object SelectionRangeProvider:
         commentStart <= start && start <= commentEnd
       )
     commentWithin
-  end checkCmt
+  end getCommentRanges
 end SelectionRangeProvider
