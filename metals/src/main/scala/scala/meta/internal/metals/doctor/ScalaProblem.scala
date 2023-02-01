@@ -42,6 +42,12 @@ case class DeprecatedScalaVersion(version: String) extends ScalaProblem {
       s"please upgrade to Scala ${ScalaVersions.recommendedVersion(version)}."
 }
 
+case class DeprecatedRemovedScalaVersion(version: String) extends ScalaProblem {
+  override def message: String =
+    s"Scala $version is no longer being bugfixed, " +
+      s"please upgrade to Scala ${ScalaVersions.recommendedVersion(version)}."
+}
+
 case class FutureScalaVersion(version: String) extends ScalaProblem {
   override def message: String = s"Scala $version is not yet supported, " +
     s"please downgrade to Scala ${ScalaVersions.recommendedVersion(version)}."
@@ -80,6 +86,11 @@ case object UnsupportedSbtVersion extends ScalaProblem {
 case object DeprecatedSbtVersion extends ScalaProblem {
   override def message: String =
     "Code navigation might not be supported in the future for this sbt version, " +
+      s"please upgrade to at least ${BuildInfo.minimumSupportedSbtVersion} and reimport the build"
+}
+case object DeprecatedRemovedSbtVersion extends ScalaProblem {
+  override def message: String =
+    "Support for Scala is no longer being bugfixed for this sbt version, " +
       s"please upgrade to at least ${BuildInfo.minimumSupportedSbtVersion} and reimport the build"
 }
 case object FutureSbtVersion extends ScalaProblem {

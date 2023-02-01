@@ -63,6 +63,7 @@ object V {
       .distinct
 
   // Scala 2
+  // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala2Versions = Seq(
     scala211,
     "2.12.10",
@@ -94,6 +95,7 @@ object V {
   // Scala 3
   def nonDeprecatedScala3Versions =
     Seq(scala3, "3.2.1", "3.2.0", "3.1.3") ++ scala3RC.toSeq
+  // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =
     Seq("3.3.0-RC1", "3.2.2-RC2", "3.1.2", "3.1.1", "3.1.0", "3.0.2")
   // NOTE if you hadd a new Scala Version make sure it's contained in quickPublishScalaVersions

@@ -27,4 +27,6 @@ class TestMtagsResolver extends MtagsResolver {
     ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)
   }
 
+  override def isSupportedInOlderVersion(version: String): Boolean =
+    default.isSupportedInOlderVersion(version)
 }

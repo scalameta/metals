@@ -226,11 +226,14 @@ object Embedded {
     }
   }
 
-  private def mtagsDependency(scalaVersion: String): Dependency =
+  private def mtagsDependency(
+      scalaVersion: String,
+      metalsVersion: String,
+  ): Dependency =
     Dependency.of(
       "org.scalameta",
       s"mtags_$scalaVersion",
-      BuildInfo.metalsVersion,
+      metalsVersion,
     )
 
   private def mdocDependency(
@@ -295,8 +298,11 @@ object Embedded {
     )
   }
 
-  def downloadMtags(scalaVersion: String): List[Path] =
-    downloadDependency(mtagsDependency(scalaVersion), Some(scalaVersion))
+  def downloadMtags(scalaVersion: String, metalsVersion: String): List[Path] =
+    downloadDependency(
+      mtagsDependency(scalaVersion, metalsVersion),
+      Some(scalaVersion),
+    )
 
   def downloadMdoc(
       scalaBinaryVersion: String,

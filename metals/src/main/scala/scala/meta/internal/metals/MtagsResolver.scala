@@ -16,16 +16,33 @@ trait MtagsResolver {
   def resolve(scalaVersion: String): Option[MtagsBinaries]
   def isSupportedScalaVersion(version: String): Boolean =
     resolve(version).isDefined
+  def isSupportedInOlderVersion(version: String): Boolean
 }
 
 object MtagsResolver {
 
   def default(): MtagsResolver = new Default
 
+  /**
+   * Map of removed Scala versions since 0.11.10.
+   * Points to the last Metals version that supported it.
+   */
+  private val removedScalaVersions = Map(
+    "2.13.1" -> "0.11.10",
+    "2.13.2" -> "0.11.10",
+    "2.12.9" -> "0.11.10",
+    "3.0.0" -> "0.11.10",
+    "3.0.1" -> "0.11.10",
+    "3.2.2-RC1" -> "0.11.10",
+  )
+
   class Default extends MtagsResolver {
 
     private val states =
       new ConcurrentHashMap[String, State]()
+
+    def isSupportedInOlderVersion(version: String): Boolean =
+      removedScalaVersions.contains(version)
 
     def resolve(scalaVersion: String): Option[MtagsBinaries] = {
       resolve(scalaVersion, original = None)
@@ -49,7 +66,16 @@ object MtagsResolver {
 
       def fetch(tries: Int = 0): State = {
         try {
-          val jars = Embedded.downloadMtags(scalaVersion)
+          val metalsVersion = removedScalaVersions.getOrElse(
+            scalaVersion,
+            BuildInfo.metalsVersion,
+          )
+          if (metalsVersion != BuildInfo.metalsVersion) {
+            scribe.warn(
+              s"$scalaVersion is no longer supported in the current Metals versions, using last known supported version $metalsVersion"
+            )
+          }
+          val jars = Embedded.downloadMtags(scalaVersion, metalsVersion)
           State.Success(MtagsBinaries.Artifacts(scalaVersion, jars))
         } catch {
           case NonFatal(e) =>

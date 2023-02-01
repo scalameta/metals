@@ -88,7 +88,7 @@ object DownloadDependencies {
   def downloadMtags(): Seq[Path] = {
     scribe.info("Downloading mtags")
     BuildInfo.supportedScalaVersions.flatMap { scalaVersion =>
-      Embedded.downloadMtags(scalaVersion)
+      Embedded.downloadMtags(scalaVersion, BuildInfo.metalsVersion)
     }
   }
 
