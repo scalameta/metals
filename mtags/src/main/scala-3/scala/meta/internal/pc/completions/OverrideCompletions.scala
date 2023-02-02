@@ -157,6 +157,16 @@ object OverrideCompletions:
         case (dd: DefDef) :: (_: Template) :: (td: TypeDef) :: _
             if dd.symbol.isConstructor =>
           Some(td)
+
+        // case class <<Foo>>(a: Int) extends ...
+        // if there is no companion object Foo, td would be Foo$
+        // we have to look for defininion of Foo class
+        case (dd: DefDef) :: (t: Template) :: (td: TypeDef) :: parent :: _
+            if dd.symbol.decodedName == "apply" =>
+          fallbackFromParent(
+            parent: Tree,
+            dd.symbol.owner.decodedName,
+          )
         case _ => None
     end FindTypeDef
 
@@ -494,6 +504,16 @@ object OverrideCompletions:
     if offset > 0 && offset < defn.span.end then Some(offset)
     else None
   end hasBraces
+
+  private def fallbackFromParent(parent: Tree, name: String)(using Context) =
+    val stats = parent match
+      case t: Template => Some(t.body)
+      case pkg: PackageDef => Some(pkg.stats)
+      case b: Block => Some(b.stats)
+      case _ => None
+    stats.flatMap(_.collectFirst {
+      case td: TypeDef if td.symbol.decodedName == name => td
+    })
 
   object OverrideExtractor:
     def unapply(path: List[Tree])(using Context) =
