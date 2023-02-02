@@ -90,7 +90,9 @@ object MtagsResolver {
           case State.Success(v) => Some(v)
           // Try to download latest supported snapshot
           case _: State.Failure
-              if original.isEmpty && scalaVersion.contains("NIGHTLY") =>
+              if original.isEmpty &&
+                scalaVersion.contains("NIGHTLY") ||
+                scalaVersion.contains("nonbootstrapped") =>
             findLatestSnapshot(scalaVersion) match {
               case None => None
               case Some(latestSnapshot) =>
