@@ -72,7 +72,7 @@ object MtagsResolver {
           )
           if (metalsVersion != BuildInfo.metalsVersion) {
             scribe.warn(
-              s"$scalaVersion is no longer supported in the current Metals versions, using last known supported version $metalsVersion"
+              s"$scalaVersion is no longer supported in the current Metals versions, using the last known supported version $metalsVersion"
             )
           }
           val jars = Embedded.downloadMtags(scalaVersion, metalsVersion)

@@ -714,7 +714,7 @@ object Messages {
     ): String = {
       val using = "legacy " + usingString(usingNow)
       val recommended = recommendationString(usingNow)
-      s"You are using $using, which doesn't use newest Metals fixes. " +
+      s"You are using $using, which doesn't have the newest Metals features and bugfixes. " +
         s"Please upgrade to $recommended."
     }
   }
