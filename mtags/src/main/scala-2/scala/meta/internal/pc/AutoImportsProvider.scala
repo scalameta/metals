@@ -80,6 +80,15 @@ final class AutoImportsProvider(
             val nameEdit = new l.TextEdit(namePos, short)
             nameEdit :: edits
         }
+        if (edits.isEmpty) {
+          val trees = lastVisitedParentTrees
+            .take(5)
+            .map(_.getClass().getName())
+            .mkString(",")
+          logger.warning(
+            s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
+          )
+        }
         AutoImportsResultImpl(pkg, edits.asJava)
     }
   }
