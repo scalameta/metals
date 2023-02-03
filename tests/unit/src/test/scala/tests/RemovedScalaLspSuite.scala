@@ -1,11 +1,25 @@
 package tests
 
+import scala.annotation.tailrec
+import scala.util.Try
+
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MtagsResolver
+import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.semver.SemVer
+
+import coursierapi.Dependency
+import coursierapi.Fetch
 
 class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
 
   override protected def mtagsResolver: MtagsResolver = MtagsResolver.default()
+
+  test("versions-should-be-added") {
+    check(firstSupported = "2.12.9", lastSupported = V.scala212)
+    check(firstSupported = "2.13.1", lastSupported = V.scala213)
+    check(firstSupported = "3.0.0", lastSupported = V.scala3)
+  }
 
   test("check-support") {
     cleanWorkspace()
@@ -58,5 +72,57 @@ class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
         fileContents,
       )
     } yield ()
+  }
+
+  def check(firstSupported: String, lastSupported: String): Unit = {
+    def isKnownScalaVersion(scalaVersion: String) = {
+      val compilerDep =
+        if (scalaVersion.startsWith("3."))
+          Dependency.of("org.scala-lang", "scala3-compiler_3", scalaVersion)
+        else
+          Dependency.of("org.scala-lang", "scala-library", scalaVersion)
+
+      val fetch = Try {
+        Fetch
+          .create()
+          .withDependencies(compilerDep)
+          .withMainArtifacts()
+          .fetch()
+      }
+      !fetch.isFailure
+    }
+
+    // This doesn't try to fetch, which will fail for local version
+    val testMtagsResolver = super.mtagsResolver
+
+    def isSupported(ver: SemVer.Version) = {
+      testMtagsResolver.isSupportedScalaVersion(ver.toString()) || mtagsResolver
+        .isSupportedInOlderVersion(ver.toString())
+    }
+
+    def tick(ver: SemVer.Version) = {
+      val updatedPatch = ver.copy(patch = ver.patch + 1)
+      if (isKnownScalaVersion(updatedPatch.toString()))
+        updatedPatch
+      else
+        ver.copy(minor = ver.minor + 1, patch = 0)
+    }
+
+    val version = SemVer.Version.fromString(firstSupported)
+    val lastVersion = SemVer.Version.fromString(lastSupported)
+
+    @tailrec
+    def checkEachVersion(currentVersion: SemVer.Version): Unit = {
+      if (currentVersion != lastVersion) {
+        assert(
+          isSupported(currentVersion),
+          s"Did you forget to add last supported Metals version for $currentVersion in MtagsResolver?",
+        )
+        val next = tick(currentVersion)
+        checkEachVersion(next)
+      }
+    }
+
+    checkEachVersion(version)
   }
 }
