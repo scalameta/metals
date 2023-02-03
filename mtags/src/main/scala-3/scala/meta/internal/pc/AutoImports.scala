@@ -361,8 +361,8 @@ object AutoImports extends AutoImportsBackticks:
       )
 
     val scriptPos =
-      if path.endsWith(".sc") then forScript(isAmmonite = false)
-      else if path.endsWith(".amm.sc.scala") then forScript(isAmmonite = true)
+      if path.isAmmoniteGeneratedFile then forScript(isAmmonite = true)
+      else if path.isScalaCLIGeneratedFile then forScript(isAmmonite = false)
       else None
 
     scriptPos

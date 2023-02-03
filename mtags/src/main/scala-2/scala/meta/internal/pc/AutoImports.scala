@@ -113,8 +113,8 @@ trait AutoImports { this: MetalsGlobal =>
 
         val path = pos.source.path
         val scriptPos =
-          if (path.endsWith(".sc")) forScript(isAmmonite = false)
-          else if (path.endsWith(".amm.sc.scala")) forScript(isAmmonite = true)
+          if (path.isAmmoniteGeneratedFile) forScript(isAmmonite = true)
+          else if (path.isScalaCLIGeneratedFile) forScript(isAmmonite = false)
           else None
 
         scriptPos
