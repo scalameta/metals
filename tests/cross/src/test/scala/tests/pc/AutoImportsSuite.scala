@@ -94,7 +94,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |}
        |""".stripMargin,
-    filename = "A.sc",
+    filename = "A.sc.scala",
   )
 
   checkEdit(
