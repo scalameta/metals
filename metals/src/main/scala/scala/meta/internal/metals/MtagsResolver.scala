@@ -13,9 +13,27 @@ import coursierapi.error.SimpleResolutionError
 import org.jsoup.Jsoup
 
 trait MtagsResolver {
+
+  /**
+   * Try and resolve mtags module for a given version of Scala.
+   * Can contain a bunch of fallbacks in case of non stable versions.
+   * @return information to use and load the presentation compiler implementation
+   */
   def resolve(scalaVersion: String): Option[MtagsBinaries]
+
+  /**
+   * Check if a given Scala version is supported in Metals.
+   *
+   * @param version Scala version to check
+   */
   def isSupportedScalaVersion(version: String): Boolean =
     resolve(version).isDefined
+
+  /**
+   * Check if this version of Scala is supported in a previous
+   * binary compatible Metals version. Needed for the doctor.
+   * @param version scala version to check
+   */
   def isSupportedInOlderVersion(version: String): Boolean
 }
 

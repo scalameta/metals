@@ -77,8 +77,8 @@ class ProblemResolver(
         case _: SemanticDBDisabled => misconfiguredProjects += 1
         case _: MissingSourceRoot => misconfiguredProjects += 1
         case UnsupportedSbtVersion => unsupportedSbt = true
-        case DeprecatedSbtVersion => deprecatedSbt = true
-        case DeprecatedRemovedSbtVersion => deprecatedRemovedSbt = true
+        case _: DeprecatedSbtVersion => deprecatedSbt = true
+        case _: DeprecatedRemovedSbtVersion => deprecatedRemovedSbt = true
         case FutureSbtVersion => futureSbt = true
         case MissingJdkSources(_) => misconfiguredProjects += 1
         case _ =>
@@ -199,7 +199,8 @@ class ProblemResolver(
   ): Option[ScalaProblem] = {
 
     def isSupportedScalaVersion(version: String): Boolean =
-      mtagsResolver.isSupportedScalaVersion(version)
+      mtagsResolver.isSupportedScalaVersion(version) ||
+        mtagsResolver.isSupportedInOlderVersion(version)
 
     val scalaVersionProblem = scalaTarget.scalaVersion match {
       case version if !isSupportedScalaVersion(version) && scalaTarget.isSbt =>
@@ -226,14 +227,14 @@ class ProblemResolver(
         Some(MissingSourceRoot(workspace.scalaSourcerootOption))
       case version
           if ScalaVersions.isDeprecatedScalaVersion(version) &&
-            scalaTarget.isSbt =>
-        Some(DeprecatedSbtVersion)
+            scalaTarget.sbtVersion.isDefined =>
+        Some(DeprecatedSbtVersion(scalaTarget.sbtVersion.get, version))
       case version if ScalaVersions.isDeprecatedScalaVersion(version) =>
         Some(DeprecatedScalaVersion(version))
       case version
           if mtagsResolver.isSupportedInOlderVersion(version) &&
-            scalaTarget.isSbt =>
-        Some(DeprecatedRemovedSbtVersion)
+            scalaTarget.sbtVersion.isDefined =>
+        Some(DeprecatedRemovedSbtVersion(scalaTarget.sbtVersion.get, version))
       case version if mtagsResolver.isSupportedInOlderVersion(version) =>
         Some(DeprecatedRemovedScalaVersion(version))
       case _ => None

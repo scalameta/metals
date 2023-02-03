@@ -703,8 +703,8 @@ object Messages {
     ): String = {
       val using = "legacy " + usingString(usingNow)
       val recommended = recommendationString(usingNow)
-      s"You are using $using, which might stop being bugfixed in future versions of Metals. " +
-        s"Please upgrade to $recommended."
+      s"You are using $using, which might no longer be supported by Metals in the future. " +
+        s"To get the best support possible it's recommended to update to at least $recommended."
     }
   }
 
@@ -713,9 +713,10 @@ object Messages {
         usingNow: Set[String]
     ): String = {
       val using = "legacy " + usingString(usingNow)
+      val isAre = if (usingNow.size == 1) "is" else "are"
       val recommended = recommendationString(usingNow)
-      s"You are using $using, which doesn't have the newest Metals features and bugfixes. " +
-        s"Please upgrade to $recommended."
+      s"You are using $using, which $isAre no longer supported by Metals. " +
+        s"To get the best support possible it's recommended to update to at least $recommended."
     }
   }
 
