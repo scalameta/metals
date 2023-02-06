@@ -3,18 +3,54 @@ package scala.meta.internal.pc
 import scala.annotation.tailrec
 
 import scala.meta._
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.pc.Definition
-import scala.meta.internal.pc.Reference
 
 import org.eclipse.{lsp4j => l}
-final class InlineValueProvider(
-    val refProvider: PcValReferenceProvider
-) {
+trait InlineValueProvider {
+
+  val text: Array[Char]
+  val position: l.Position
+  def defAndRefs(): Either[String, (Definition, List[Reference])]
+
+  // We return a result or an error
+  def getInlineTextEdits(): Either[String, List[l.TextEdit]] =
+    defAndRefs() match {
+      case Right((defn, refs)) =>
+        val defNeedsBrackets = definitionNeedsBrackets(defn.rhs)
+        val edits =
+          if (defn.shouldBeRemoved) {
+            val defEdit = definitionTextEdit(defn)
+            val refsEdits = refs.map(referenceTextEdit(defn, defNeedsBrackets))
+            defEdit :: refsEdits
+          } else refs.map(referenceTextEdit(defn, defNeedsBrackets))
+        Right(edits)
+      case Left(error) => Left(error)
+    }
+
+  private def referenceTextEdit(
+      definition: Definition,
+      defNeedsBrackets: Boolean
+  )(ref: Reference): l.TextEdit =
+    if (
+      defNeedsBrackets && referenceNeedsBrackets(
+        ref.parentOffsets
+      )
+    )
+      new l.TextEdit(
+        ref.range,
+        s"""(${definition.rhs})"""
+      )
+    else new l.TextEdit(ref.range, definition.rhs)
+
   private def definitionNeedsBrackets(rhs: String): Boolean =
     rhs.parse[Term].toOption match {
       case Some(_: Term.ApplyInfix) => true
       case Some(_: Term.Function) => true
+      case Some(_: Term.ForYield) => true
+      case Some(_: Term.PartialFunction) => true
+      case Some(_: Term.PolyFunction) => true
+      case Some(_: Term.AnonymousFunction) => true
+      case Some(_: Term.Do) => true
+      case Some(_: Term.While) => true
       case _ => false
     }
 
@@ -22,7 +58,7 @@ final class InlineValueProvider(
       parentPos: Option[RangeOffset]
   ): Boolean = {
     parentPos.flatMap(t =>
-      refProvider.text.slice(t.start, t.end).parse[Term].toOption
+      text.slice(t.start, t.end).parse[Term].toOption
     ) match {
       case Some(_: Term.ApplyInfix) => true
       case Some(_: Term.ApplyUnary) => true
@@ -31,58 +67,6 @@ final class InlineValueProvider(
       case _ => false
     }
   }
-  // We return result or error
-  def getInlineTextEdits(): Either[String, List[l.TextEdit]] = {
-    refProvider
-      .defAndRefs()
-      .map { case (d, refs) =>
-        if (d.termNameRange.encloses(refProvider.position)) inlineAll(d, refs)
-        else inlineOne(d, refs)
-      }
-      .getOrElse(Left(InlineValueProvider.Errors.didNotFindDefinition))
-  }
-
-  private def inlineAll(
-      definition: Definition,
-      references: List[Reference]
-  ): Either[String, List[l.TextEdit]] =
-    if (!definition.isLocal) Left(InlineValueProvider.Errors.notLocal)
-    else
-      Right(
-        definitionTextEdit(definition) :: (references.map(
-          referenceTextEdit(definition)
-        ))
-      )
-
-  private def inlineOne(
-      definition: Definition,
-      references: List[Reference]
-  ): Either[String, List[l.TextEdit]] =
-    if (definition.isLocal && references.length == 1)
-      Right(
-        definitionTextEdit(definition) :: (references.map(
-          referenceTextEdit(definition)
-        ))
-      )
-    else {
-      Right(
-        references
-          .find(_.range.encloses(refProvider.position))
-          .map(referenceTextEdit(definition))
-          .toList
-      )
-    }
-
-  private def referenceTextEdit(
-      definition: Definition
-  )(ref: Reference): l.TextEdit =
-    if (
-      definitionNeedsBrackets(definition.rhs) && referenceNeedsBrackets(
-        ref.parentOffsets
-      )
-    )
-      new l.TextEdit(ref.range, s"""(${definition.rhs})""")
-    else new l.TextEdit(ref.range, definition.rhs)
 
   private def definitionTextEdit(definition: Definition): l.TextEdit =
     new l.TextEdit(
@@ -99,12 +83,11 @@ final class InlineValueProvider(
       endOffset: Int,
       range: l.Range
   ): l.Range = {
-    val source = refProvider.text
     @tailrec
     def expand(step: Int, currentIndex: Int): Int = {
       def isWhiteSpace =
-        source(currentIndex) == ' ' || source(currentIndex) == '\t'
-      if (currentIndex >= 0 && currentIndex < source.size && isWhiteSpace)
+        text(currentIndex) == ' ' || text(currentIndex) == '\t'
+      if (currentIndex >= 0 && currentIndex < text.size && isWhiteSpace)
         expand(step, currentIndex + step)
       else currentIndex
     }
@@ -115,9 +98,9 @@ final class InlineValueProvider(
       range.getStart.getCharacter - (startOffset - startWithSpace) + 1
     )
     val endPos =
-      if (endWithSpace < source.size && source(endWithSpace) == '\n')
+      if (endWithSpace < text.size && text(endWithSpace) == '\n')
         new l.Position(range.getEnd.getLine + 1, 0)
-      else if (endWithSpace < source.size && source(endWithSpace) == ';')
+      else if (endWithSpace < text.size && text(endWithSpace) == ';')
         new l.Position(
           range.getEnd.getLine,
           range.getEnd.getCharacter + endWithSpace - endOffset + 1
@@ -137,6 +120,24 @@ object InlineValueProvider {
     val didNotFindDefinition =
       "The definition was not found in the scope of the file."
     val notLocal =
-      "Non local value cannot be inlined."
+      "Non-local value cannot be inlined."
+    val didNotFindReference =
+      "The chosen reference couldn't be identified."
+    def variablesAreShadowed(fullName: String): String =
+      s"Following variables are shadowed: $fullName."
   }
 }
+
+case class RangeOffset(start: Int, end: Int)
+
+case class Definition(
+    range: l.Range,
+    rhs: String,
+    rangeOffsets: RangeOffset,
+    shouldBeRemoved: Boolean
+)
+
+case class Reference(
+    range: l.Range,
+    parentOffsets: Option[RangeOffset]
+)
