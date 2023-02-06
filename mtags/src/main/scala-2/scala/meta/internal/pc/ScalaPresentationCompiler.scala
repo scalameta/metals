@@ -22,6 +22,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.PcInlineValueProviderImpl
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
@@ -41,7 +42,6 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
@@ -170,9 +170,7 @@ case class ScalaPresentationCompiler(
     val empty: Either[String, List[TextEdit]] = Right(List())
     (compilerAccess
       .withInterruptableCompiler(empty, params.token) { pc =>
-        new InlineValueProvider(
-          new PcValReferenceProviderImpl(pc.compiler(), params)
-        ).getInlineTextEdits
+        new PcInlineValueProviderImpl(pc.compiler(), params).getInlineTextEdits
       })
       .thenApply {
         case Right(edits: List[TextEdit]) => edits.asJava

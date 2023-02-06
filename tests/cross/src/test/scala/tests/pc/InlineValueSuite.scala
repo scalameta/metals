@@ -204,13 +204,148 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |}""".stripMargin,
   )
 
-  checkErorr(
+  checkError(
     "inline-all-not-local",
     """|object Main {
        |  val <<o>>: Int = 6
        |  val p: Int = 2 - o
        |}""".stripMargin,
     InlineErrors.notLocal,
+  )
+
+  checkEdit(
+    "for-comprehension",
+    """|object Main {
+       |val a =
+       |  for {
+       |    i <- List(1,2,3)
+       |  } yield i + 1
+       |val b = <<a>>.map(_ + 1)
+       |}""".stripMargin,
+    """|object Main {
+       |val a =
+       |  for {
+       |    i <- List(1,2,3)
+       |  } yield i + 1
+       |val b = (for {
+       |    i <- List(1,2,3)
+       |  } yield i + 1).map(_ + 1)
+       |}""".stripMargin,
+  )
+
+  checkEdit(
+    "bracktes-add",
+    """|object Main {
+       |  val b = 1 + (2 + 3)
+       |  val c = <<b>>
+       |}""".stripMargin,
+    """|object Main {
+       |  val b = 1 + (2 + 3)
+       |  val c = 1 + (2 + 3)
+       |}""".stripMargin,
+  )
+
+  // --- different possibilites of conflicts ----------
+  checkError(
+    "scoping",
+    """|package scala.net.com.ooo
+       |object Demo {
+       |  val j: Int = 5
+       |  val f: Int = 4 - j
+       |
+       |  def m() = {
+       |    val j = 10
+       |    val z = <<f>> + 1
+       |  }
+       |}""".stripMargin,
+    InlineErrors.variablesAreShadowed("scala.net.com.ooo.Demo.j"),
+  )
+
+  checkError(
+    "scoping-class",
+    """|class Demo {
+       |  val j: Int = 5
+       |  val f: Int = 4 - j
+       |
+       |  def m() = {
+       |    val j = 10
+       |    val z = <<f>> + 1
+       |  }
+       |}""".stripMargin,
+    InlineErrors.variablesAreShadowed("Demo.j"),
+  )
+
+  // Note: we do not check if summoned implicts change when inlining
+  checkEdit(
+    "scoping-implicit",
+    """|object Demo {
+       |  implicit val b : Boolean = true
+       |  def myF(implicit b : Boolean): Int = if(b) 0 else 1
+       |  val f: Int = myF
+       |
+       |  def m() = {
+       |    implicit val v : Boolean = false
+       |    val z = <<f>>
+       |  }
+       |}""".stripMargin,
+    """|object Demo {
+       |  implicit val b : Boolean = true
+       |  def myF(implicit b : Boolean): Int = if(b) 0 else 1
+       |  val f: Int = myF
+       |
+       |  def m() = {
+       |    implicit val v : Boolean = false
+       |    val z = myF
+       |  }
+       |}""".stripMargin,
+  )
+
+  checkError(
+    "scoping-packages",
+    """|package a
+       |object A {
+       |  val aaa = 1
+       |}
+       |package b;
+       |object Demo {
+       |  import a.A.aaa
+       |  val inl = aaa
+       |  def m() = {
+       |    val aaa = 3
+       |    <<inl>>
+       |  }
+       |}""".stripMargin,
+    InlineErrors.variablesAreShadowed("a.A.aaa"),
+  )
+
+  checkError(
+    "bad-scoping",
+    """|object Demo {
+       |  def oo(j : Int) = {
+       |    val m = j + 3
+       |    def kk() = {
+       |      val j = 0
+       |      <<m>>
+       |    }
+       |  }
+       |}""".stripMargin,
+    InlineErrors.variablesAreShadowed("Demo.oo.j"),
+    compat = Map(
+      "2" -> InlineErrors.variablesAreShadowed("Demo.j")
+    ),
+  )
+
+  checkError(
+    "bad-scoping-2",
+    """|class A {
+       |  val k = 3
+       |  val l = k + 2
+       |  case class B() {
+       |     val k = 5
+       |     val m = <<l>> + 3
+       |  }
+       |}""".stripMargin,
+    InlineErrors.variablesAreShadowed("A.k"),
   )
 
   def checkEdit(
@@ -227,22 +362,29 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
       assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
 
-  def checkErorr(
+  def checkError(
       name: TestOptions,
       original: String,
       expectedError: String,
+      compat: Map[String, String] = Map.empty,
       filename: String = "file:/A.scala",
   )(implicit location: Location): Unit =
     test(name) {
       try {
-        getInlineEdits(original, filename)
-        fail("No error found")
+        val edits = getInlineEdits(original, filename)
+        val (code, _, _) = params(original)
+        val obtained = TextEdits.applyEdits(code, edits)
+        fail(s"""|No error found, obtained:
+                 |$obtained""".stripMargin)
       } catch {
         case e: Exception if (e.getCause match {
               case _: DisplayableException => true
               case _ => false
             }) =>
-          assertNoDiff(e.getCause.getMessage, expectedError)
+          assertNoDiff(
+            e.getCause.getMessage,
+            getExpected(expectedError, compat, scalaVersion),
+          )
       }
     }
 
