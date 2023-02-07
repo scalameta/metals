@@ -128,6 +128,7 @@ final class Embedded(
     val jars =
       Embedded.downloadMdoc(
         scalaBinaryVersion,
+        scalaVersion,
         Some(fullResolution),
       )
 
@@ -237,12 +238,16 @@ object Embedded {
     )
 
   private def mdocDependency(
-      scalaBinaryVersion: String
+      scalaBinaryVersion: String,
+      scalaVersion: Option[String],
   ): Dependency = {
     Dependency.of(
       "org.scalameta",
       s"mdoc_${scalaBinaryVersion}",
-      if (scalaBinaryVersion == "2.11") "2.2.24" else BuildInfo.mdocVersion,
+      if (scalaBinaryVersion == "2.11") "2.2.24"
+      // from 2.2.24 mdoc is compiled with 3.1.x which is incompatible with 3.0.x
+      else if (scalaVersion.exists(_.startsWith("3.0"))) "2.2.23"
+      else BuildInfo.mdocVersion,
     )
   }
 
@@ -306,10 +311,11 @@ object Embedded {
 
   def downloadMdoc(
       scalaBinaryVersion: String,
+      scalaVersion: Option[String],
       resolutionParams: Option[ResolutionParams] = None,
   ): List[Path] =
     downloadDependency(
-      mdocDependency(scalaBinaryVersion),
+      mdocDependency(scalaBinaryVersion, scalaVersion),
       scalaVersion = None,
       resolution = resolutionParams,
     )
