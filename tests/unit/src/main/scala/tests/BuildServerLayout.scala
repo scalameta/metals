@@ -42,6 +42,35 @@ object SbtBuildLayout extends BuildToolLayout {
   }
 }
 
+object ScalaCliBuildLayout extends BuildToolLayout {
+  override def apply(
+      scalaCliRunner: String,
+      digest: String,
+  ): String = {
+    s"""|/.bsp/scala-cli.json
+        |{
+        |  "name": "scala-cli",
+        |  "argv": [
+        |    $scalaCliRunner,
+        |    "bsp",
+        |    "--json-options",
+        |    "$digest/.scala-build/ide-options-v2.json",
+        |    "$digest"
+        |  ],
+        |  "version": "${V.scalaCliVersion}",
+        |  "bspVersion": "${V.bspVersion}",
+        |  "languages": [
+        |    "scala",
+        |    "java"
+        |  ]
+        |}
+        |/.scala-build/ide-inputs.json
+        |{"args":["$digest"]}
+        |/.scala-build/ide-options-v2.json
+        |{}""".stripMargin
+  }
+}
+
 object MillBuildLayout extends BuildToolLayout {
   override def apply(sourceLayout: String, scalaVersion: String): String =
     s"""|/build.sc

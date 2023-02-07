@@ -6,9 +6,11 @@ import scala.util.Properties
 
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -143,6 +145,59 @@ object SbtServerInitializer extends BuildServerInitializer {
       )
       val gson = new Gson()
       sbtJson.writeText(gson.toJson(connectionDetails))
+    }
+  }
+}
+
+object ScalaCliServerInitializer extends BuildServerInitializer {
+  override def initialize(
+      workspace: AbsolutePath,
+      server: TestingServer,
+      client: TestingClient,
+      layout: String,
+      expectError: Boolean,
+  )(implicit ec: ExecutionContext): Future[InitializeResult] = {
+    generateBspConfig(workspace)
+    for {
+      initializeResult <- server.initialize()
+      _ <- server.initialized()
+      _ = client.selectBspServer = { _ => new MessageActionItem("scala-cli") }
+      _ <- server.executeCommand(ServerCommands.BspSwitch)
+    } yield {
+      if (!expectError) {
+        server.assertBuildServerConnection()
+      }
+      initializeResult
+    }
+  }
+
+  private def generateBspConfig(workspace: AbsolutePath): Unit = {
+    val userConfig = UserConfiguration()
+    val buildTool = ScalaCliBuildTool(() => userConfig)
+    val bspFolder = workspace.resolve(".bsp")
+    val scalaCliJson = bspFolder.resolve("scala-cli.json")
+    // don't overwrite existing BSP config
+    if (!scalaCliJson.isFile) {
+      val scalaCliLauncher =
+        userConfig.scalaCliLauncher.getOrElse(buildTool.executableName)
+      val argv = List(
+        scalaCliLauncher,
+        "-Xms100m",
+        "-Xmx100m",
+        "-classpath",
+        "xscala-cli.boot.Boot",
+        "-bsp",
+      )
+      val connectionDetails = new BspConnectionDetails(
+        "scala-cli",
+        argv.asJava,
+        buildTool.version,
+        "2.0.0-M5",
+        List("scala").asJava,
+      )
+      val gson = new Gson()
+      scalaCliJson.writeText(gson.toJson(connectionDetails))
+      gson.toJson(connectionDetails)
     }
   }
 }
