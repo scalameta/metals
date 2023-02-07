@@ -526,6 +526,6 @@ object ImplementationProvider {
   }
 
   def isClassLike(info: SymbolInformation): Boolean =
-    info.isObject || info.isClass || info.isTrait || info.isType
+    info.isObject || info.isClass || info.isTrait || info.isType || info.isInterface
 
 }
