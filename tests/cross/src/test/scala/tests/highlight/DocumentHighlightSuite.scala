@@ -712,4 +712,29 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  val a = (1 + 2 + 3) <<:@@:>> Nil
        |}""".stripMargin,
   )
+
+  check(
+    "trailling-comma".tag(IgnoreScala2),
+    """
+      |object Main {
+      |  val a = 1
+      |  val <<b>> = 2
+      |  List(
+      |    a,
+      |    <<b@@>>,
+      |  )
+      |}""".stripMargin,
+  )
+  check(
+    "trailling-comma2".tag(IgnoreScala2),
+    """
+      |object Main {
+      |  val a = 1
+      |  val <<`ab`>> = 2
+      |  List(
+      |    a,
+      |    <<`ab@@`>>,
+      |  )
+      |}""".stripMargin,
+  )
 }

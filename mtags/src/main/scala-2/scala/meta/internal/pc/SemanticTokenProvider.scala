@@ -47,11 +47,12 @@ final class SemanticTokenProvider(
         pos: Position,
         sym: Option[compiler.Symbol]
     ): NodeInfo = {
+      val pos0 = adjust(pos)._1
       val symbol = sym.getOrElse(tree.symbol)
       if (symbol == null)
-        NodeInfo(compiler.NoSymbol, pos)
+        NodeInfo(compiler.NoSymbol, pos0)
       else
-        NodeInfo(symbol, pos)
+        NodeInfo(symbol, pos0)
     }
   }
 
@@ -207,20 +208,9 @@ final class SemanticTokenProvider(
       nodesIterator: List[NodeInfo]
   ): Option[(NodeInfo, List[NodeInfo])] = {
 
-    val adjustForBacktick: Int = {
-      var ret: Int = 0
-      val cName = tk.text.toCharArray()
-      if (cName.size >= 2) {
-        if (
-          cName(0) == '`'
-          && cName(cName.size - 1) == '`'
-        ) ret = 2
-      }
-      ret
-    }
     def isTarget(node: NodeInfo): Boolean =
       node.pos.start == tk.pos.start &&
-        node.pos.end + adjustForBacktick == tk.pos.end &&
+        node.pos.end == tk.pos.end &&
         node.sym != NoSymbol
 
     val candidates = nodesIterator.dropWhile(_.pos.start < tk.pos.start)
