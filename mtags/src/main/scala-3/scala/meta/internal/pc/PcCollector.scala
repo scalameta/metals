@@ -60,16 +60,19 @@ abstract class PcCollector[T](driver: InteractiveDriver, params: OffsetParams):
   def collect(parent: Option[Tree])(tree: Tree, pos: SourcePosition): T
 
   def adjust(
-      pos: SourcePosition,
+      pos0: SourcePosition,
       forRename: Boolean = false,
   ): (SourcePosition, Boolean) =
+
+    val pos =
+      if sourceText(pos0.`end` - 1) == ',' then pos0.withEnd(pos0.`end` - 1)
+      else pos0
     val isBackticked =
       sourceText(pos.start) == '`' && sourceText(pos.end - 1) == '`'
     // when the old name contains backticks, the position is incorrect
     val isOldNameBackticked = sourceText(pos.start) != '`' &&
       sourceText(pos.start - 1) == '`' &&
       sourceText(pos.end) == '`'
-
     if isBackticked && forRename then
       (pos.withStart(pos.start + 1).withEnd(pos.`end` - 1), true)
     else if isOldNameBackticked then

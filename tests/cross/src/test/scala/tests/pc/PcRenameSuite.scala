@@ -435,4 +435,20 @@ class PcRenameSuite extends BasePcRenameSuite {
        |""".stripMargin,
     newName = "testing",
   )
+
+  check(
+    "trailling-comma",
+    """|object A{
+       |  val <<`to-Rename`>> = 123
+       |}
+       |object B{
+       |  val toRename = 
+       |    List(
+       |      A.<<`to-R@@ename`>>,
+       |      A.<<`to-Rename`>>,
+       |    )
+       |}
+       |""".stripMargin,
+    newName = "`other-rename`",
+  )
 }
