@@ -42,8 +42,16 @@ final class SemanticTokenProvider(
 
     override def collect(
         parent: Option[compiler.Tree]
-    )(tree: compiler.Tree, pos: Position): NodeInfo = {
-      NodeInfo(tree.symbol, pos)
+    )(
+        tree: compiler.Tree,
+        pos: Position,
+        sym: Option[compiler.Symbol]
+    ): NodeInfo = {
+      val symbol = sym.getOrElse(tree.symbol)
+      if (symbol == null)
+        NodeInfo(compiler.NoSymbol, pos)
+      else
+        NodeInfo(symbol, pos)
     }
   }
 
@@ -212,7 +220,8 @@ final class SemanticTokenProvider(
     }
     def isTarget(node: NodeInfo): Boolean =
       node.pos.start == tk.pos.start &&
-        node.pos.end + adjustForBacktick == tk.pos.end
+        node.pos.end + adjustForBacktick == tk.pos.end &&
+        node.sym != NoSymbol
 
     val candidates = nodesIterator.dropWhile(_.pos.start < tk.pos.start)
     candidates

@@ -18,7 +18,8 @@ final class PcValReferenceProviderImpl(
 
   override def collect(parent: Option[Tree])(
       tree: Tree,
-      pos: Position
+      pos: Position,
+      sym: Option[Symbol]
   ): Occurrence = {
     val (adjustedPos, _) = adjust(pos)
     tree match {

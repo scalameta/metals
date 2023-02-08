@@ -9,7 +9,9 @@ abstract class PcCollector[T](
 ) {
   import compiler._
 
-  def collect(parent: Option[Tree])(tree: Tree, pos: Position): T
+  def collect(
+      parent: Option[Tree]
+  )(tree: Tree, pos: Position, sym: Option[Symbol]): T
   val unit: RichCompilationUnit = addCompilationUnit(
     code = params.text(),
     filename = params.uri().toString(),
@@ -283,21 +285,19 @@ abstract class PcCollector[T](
       val traverse: (Set[T], Tree) => Set[T] = traverseWithParent(
         Some(tree)
       )
-      val collect: (Tree, Position) => T = this.collect(parent)
+      def collect(t: Tree, pos: Position, sym: Option[Symbol] = None): T =
+        this.collect(parent)(t, pos, sym)
+
       tree match {
         /**
          * All indentifiers such as:
          * val a = <<b>>
          */
         case ident: Ident if ident.pos.isRange && filter(ident) =>
-          val id =
-            if (ident.symbol == NoSymbol) {
-              fallbackSymbol(ident.name, pos) match {
-                case None => ident
-                case Some(sym) => Ident(sym)
-              }
-            } else ident
-          acc + collect(id, ident.pos)
+          if (ident.symbol == NoSymbol)
+            acc + collect(ident, ident.pos, fallbackSymbol(ident.name, pos))
+          else
+            acc + collect(ident, ident.pos)
 
         /**
          * Needed for type trees such as:
@@ -353,12 +353,10 @@ abstract class PcCollector[T](
                     sought.exists(sym => sym.name == name)
                   ) =>
                 collect(
-                  Ident(
-                    appl.symbol.paramss.flatten
-                      .find(_.name == i.name)
-                      .getOrElse(NoSymbol)
-                  ),
-                  i.pos
+                  i,
+                  i.pos,
+                  appl.symbol.paramss.flatten
+                    .find(_.name == i.name)
                 )
             }
           tree.children.foldLeft(acc ++ named)(traverse(_, _))
@@ -410,7 +408,7 @@ abstract class PcCollector[T](
                   )
                 else Set(sel.namePosition(pos.source))
               val symbol = imp.expr.symbol.info.member(sel.name)
-              acc ++ positions.map(pos => collect(Ident(symbol), pos))
+              acc ++ positions.map(pos => collect(imp, pos, Option(symbol)))
             case (acc, _) =>
               acc
           }
@@ -433,7 +431,8 @@ abstract class PcCollector[T](
             lit,
             lit.pos
               .withStart(posStart)
-              .withEnd(posStart + sym.decodedName.length())
+              .withEnd(posStart + sym.decodedName.length()),
+            Option(sym)
           )
 
         case _ =>

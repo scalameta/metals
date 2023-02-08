@@ -13,7 +13,7 @@ final class PcDocumentHighlightProvider(
 
   def collect(
       parent: Option[Tree]
-  )(tree: Tree, toAdjust: Position): DocumentHighlight = {
+  )(tree: Tree, toAdjust: Position, sym: Option[Symbol]): DocumentHighlight = {
     val (pos, _) = adjust(toAdjust)
     tree match {
       case _: MemberDef =>
