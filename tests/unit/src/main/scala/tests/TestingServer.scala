@@ -168,6 +168,7 @@ final case class TestingServer(
       () => initialUserConfig,
       server.buildTargets,
     ),
+    workspace,
   )
 
   private val virtualDocSources = TrieMap.empty[String, AbsolutePath]

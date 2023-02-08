@@ -287,7 +287,7 @@ class MetalsLspService(
   )
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
-  private val trees = new Trees(buffers, scalaVersionSelector)
+  private val trees = new Trees(buffers, scalaVersionSelector, workspace)
 
   private val documentSymbolProvider = new DocumentSymbolProvider(
     trees,

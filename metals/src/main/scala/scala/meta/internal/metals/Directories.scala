@@ -8,6 +8,8 @@ object Directories {
     RelativePath(".metals").resolve("readonly")
   def tmp: RelativePath =
     RelativePath(".metals").resolve(".tmp")
+  def reports: RelativePath =
+    RelativePath(".metals").resolve(".reports")
   def dependencies: RelativePath =
     readonly.resolve(dependenciesName)
   def log: RelativePath =
