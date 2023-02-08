@@ -70,7 +70,7 @@ case class Keyword(
       (this.isMethodBody && isMethodBody) ||
       (this.isParam && isParam) ||
       (this.isImport && isImport) ||
-      (this.name == "extends" && predicate)
+      ((this.name == "extends" || this.name == "derives") && predicate)
     } &&
     (this.name != "extension" || predicate)
   }
@@ -86,6 +86,7 @@ object Keyword {
     Keyword("using", isParam = true, isScala3 = true),
     Keyword("var", isBlock = true, isTemplate = true, isDefinition = true),
     Keyword("given", isBlock = true, isTemplate = true, isDefinition = true, isScala3 = true),
+    Keyword("derives", reversedTokensPredicate = Some(extendsPred), isScala3 = true),
     Keyword(
       "extension",
       isBlock = true,

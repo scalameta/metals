@@ -614,4 +614,46 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       ),
   )
 
+  check(
+    "derives-object",
+    """
+      |package foo
+      |
+      |object Foo der@@
+      """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-constructor",
+    """
+      |package foo
+      |
+      |class Foo(x: Int) der@@
+      """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "no-derives",
+    """
+      |package foo
+      |
+      |object Main {
+      |  def main = {
+      |    foo.der@@
+      |  }
+      |}
+      """.stripMargin,
+    "",
+  )
+
 }
