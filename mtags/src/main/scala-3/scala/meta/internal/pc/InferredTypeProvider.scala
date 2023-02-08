@@ -203,20 +203,6 @@ final class InferredTypeProvider(
         def simpleType =
           typeNameEdit ::: imports
 
-        def tupleType(applied: AppliedType) =
-          import scala.meta.*
-          val pattern =
-            params.text.substring(vl.startPos.start, tpt.startPos.start)
-
-          dialects.Scala3("val " + pattern + "???").parse[Source] match
-            case Parsed.Success(Source(List(valDef: m.Defn.Val))) =>
-              editForTupleUnapply(
-                applied,
-                valDef.pats.head,
-                vl.startPos.start,
-              )
-            case _ => simpleType
-
         rhs match
           case t: Tree[?]
               if t.typeOpt.isErroneous && retryType && !tpt.sourcePos.span.isZeroExtent =>
@@ -228,12 +214,7 @@ final class InferredTypeProvider(
                 )
               )
             )
-          case _ =>
-            tpt.tpe match
-              case applied: AppliedType =>
-                tupleType(applied)
-              case _ =>
-                simpleType
+          case _ => simpleType
         end match
       /* `def a[T](param : Int) = param`
        *     turns into
@@ -294,15 +275,12 @@ final class InferredTypeProvider(
            */
           case _ :: (unappl @ UnApply(_, _, patterns)) :: _
               if patterns.size > 1 =>
-            import scala.meta.*
             val firstEnd = patterns(0).endPos.end
             val secondStart = patterns(1).startPos.start
             val hasDot = params
               .text()
               .substring(firstEnd, secondStart)
-              .tokenize
-              .toOption
-              .exists(_.tokens.exists(_.is[T.Comma]))
+              .exists(_ == ',')
             if !hasDot then
               val leftParen = new TextEdit(body.startPos.toLsp, "(")
               leftParen :: baseEdit(withParens = true) :: Nil
