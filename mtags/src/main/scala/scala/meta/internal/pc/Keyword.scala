@@ -86,7 +86,11 @@ object Keyword {
     Keyword("using", isParam = true, isScala3 = true),
     Keyword("var", isBlock = true, isTemplate = true, isDefinition = true),
     Keyword("given", isBlock = true, isTemplate = true, isDefinition = true, isScala3 = true),
-    Keyword("derives", reversedTokensPredicate = Some(extendsPred), isScala3 = true),
+    Keyword(
+      "derives",
+      reversedTokensPredicate = Some(arr => extendsPred(arr) || derivesAfterExtends(arr)),
+      isScala3 = true
+    ),
     Keyword(
       "extension",
       isBlock = true,
@@ -147,11 +151,27 @@ object Keyword {
       .toList match {
       // (class|trait|object) classname ext@@
       case (_: Token.Ident) :: (_: Token.Ident) :: kw :: Nil =>
-        if (kw.is[Token.KwClass] || kw.is[Token.KwTrait] || kw.is[Token.KwObject]) true
+        if (kw.is[Token.KwClass] || kw.is[Token.KwTrait] || kw.is[Token.KwObject] || kw.is[Token.KwEnum]) true
         else false
       // ... classname() ext@@
       case (_: Token.Ident) :: (_: Token.RightParen) :: _ => true
+      // ... classname[T] ext@@
+      case (_: Token.Ident) :: (_: Token.RightBracket) :: _ => true
       case _ => false
     }
   }
+
+  private def derivesAfterExtends(leadingReverseTokens: Array[Token]): Boolean = {
+    leadingReverseTokens
+      .filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF])
+      .take(4)
+      .toList match {
+      // ... extends A(,|with) B der@@
+      case (_: Token.Ident) :: (_: Token.Ident) :: sep :: _ if sep.is[Token.KwWith] || sep.is[Token.Comma] => true
+      // ... extends A der@@
+      case (_: Token.Ident) :: (_: Token.Ident) :: (_: Token.KwExtends) :: _ => true
+      case _ => false
+    }
+  }
+
 }
