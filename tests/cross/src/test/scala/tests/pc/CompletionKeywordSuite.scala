@@ -568,6 +568,17 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+    "extends-with-type-param",
+    """
+      |package foo
+      |
+      |class Foo[A] ext@@
+      """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
     "no-extends",
     """
       |package foo
@@ -615,6 +626,17 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+    "extends-enum",
+    """
+      |package foo
+      |
+      |enum Foo(x: Int) ext@@
+        """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
     "derives-object",
     """
       |package foo
@@ -635,6 +657,87 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |
       |class Foo(x: Int) der@@
       """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-comma-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |trait Baz {}
+      |
+      |class Foo(x: Int) extends Bar, Baz der@@
+        """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |class Foo(x: Int) extends Bar der@@
+          """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-extends-type-param",
+    """
+      |package foo
+      |
+      |trait Bar[B] {}
+      |class Foo(x: Int) extends Bar[Int] der@@
+            """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |trait Baz {}
+      |
+      |class Foo(x: Int) extends Bar with Baz der@@
+              """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-constructor-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |class Baz(b: Int) {}
+      |
+      |class Foo(x: Int) extends Bar with Baz(1) der@@
+                """.stripMargin,
     """|derives
        |""".stripMargin,
     compat = Map(
