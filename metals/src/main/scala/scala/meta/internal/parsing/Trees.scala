@@ -1,13 +1,19 @@
 package scala.meta.internal.parsing
 
+import java.nio.file.Files
+
 import scala.collection.concurrent.TrieMap
 import scala.reflect.ClassTag
 
 import scala.meta._
+import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parse
+import scala.meta.parsers.ParseException
 import scala.meta.parsers.Parsed
 
 import org.eclipse.lsp4j.Diagnostic
@@ -24,6 +30,7 @@ import org.eclipse.{lsp4j => l}
 final class Trees(
     buffers: Buffers,
     scalaVersionSelector: ScalaVersionSelector,
+    workspace: AbsolutePath,
 ) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
@@ -120,10 +127,10 @@ final class Trees(
   private def parse(
       path: AbsolutePath,
       dialect: Dialect,
-  ): Option[Parsed[Tree]] = try {
+  ): Option[Parsed[Tree]] =
     for {
       text <- buffers.get(path).orElse(path.readTextOpt)
-    } yield {
+    } yield try {
       val input = Input.VirtualFile(path.toURI.toString(), text)
       if (path.isAmmoniteScript || path.isMill) {
         val ammoniteInput = Input.Ammonite(input)
@@ -131,13 +138,26 @@ final class Trees(
       } else {
         dialect(input).parse[Source]
       }
+    } catch {
+      // if the parsers breaks we should not throw the exception further
+      case _: StackOverflowError =>
+        val reportsDir = workspace.resolve(Directories.reports)
+        val newPathCopy =
+          reportsDir.resolve(
+            "stackoverflow_" + System.currentTimeMillis() + "_" + path.filename
+          )
+        Files.createDirectories(reportsDir.toNIO)
+        newPathCopy.writeText(text)
+        val message =
+          s"Could not parse $path, saved the current snapshot to ${newPathCopy}"
+        scribe.warn(message)
+        Parsed.Error(
+          Position.None,
+          message,
+          new ParseException(Position.None, message),
+        )
     }
-  } catch {
-    // if the parsers breaks we should not throw the exception further
-    case _: StackOverflowError =>
-      scribe.debug("Could not parse:\n" + path.readTextOpt.getOrElse(""))
-      None
-  }
+
 }
 
 object Trees {
