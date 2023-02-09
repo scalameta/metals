@@ -13,7 +13,8 @@ object DefinitionAlternatives {
       caseClassApplyOrCopy(symbol),
       caseClassApplyOrCopyParams(symbol),
       varGetter(symbol),
-      methodOwner(symbol)
+      methodOwner(symbol),
+      objectInsteadOfAny(symbol)
     ).flatten
   }
 
@@ -32,6 +33,19 @@ object DefinitionAlternatives {
     Option(symbol).collect { case GlobalSymbol(owner, Descriptor.Term(name)) =>
       GlobalSymbol(owner, Descriptor.Type(name))
     }
+
+  private val objectMethods = Set("equals", "toString", "getClass", "hashCode")
+
+  /**
+   * If Any is used we don't have any source to go to, so instead we try with java Object.
+   */
+  private def objectInsteadOfAny(symbol: Symbol): Option[Symbol] = {
+    Option(symbol).collect {
+      case GlobalSymbol(owner, method @ Descriptor.Method(methodName, _))
+          if owner.value == "scala/Any#" && objectMethods(methodName) =>
+        Symbol("java/lang/Object#" + method)
+    }
+  }
 
   /**
    * If `case class Foo(a: Int)`, then resolve
