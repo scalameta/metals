@@ -5,8 +5,8 @@ given String/*Predef.scala*/ = "str"
 given (using/*<no symbol>*/ i/*GivenAlias.scala*/: Int/*Int.scala*/): Double/*Double.scala*/ = 4.0
 given [T/*GivenAlias.scala*/]: List/*package.scala*/[T/*GivenAlias.scala*/] = Nil/*package.scala*/
 given given_Char/*GivenAlias.scala*/: Char/*Char.scala*/ = '?'
-given `given_Float`/*<no symbol>*/: Float/*Float.scala*/ = 3.0
-given `* *`/*<no symbol>*/ : Long/*Long.scala*/ = 5
+given `given_Float`/*GivenAlias.scala*/: Float/*Float.scala*/ = 3.0
+given `* *`/*GivenAlias.scala*/ : Long/*Long.scala*/ = 5
 
 def method/*GivenAlias.scala*/(using/*<no symbol>*/ Int/*Int.scala*/) = ""
 
