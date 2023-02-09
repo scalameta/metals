@@ -1,7 +1,7 @@
 <<package>>/*keyword*/ <<example>>/*namespace*/
 
-<<import>>/*keyword*/ <<io>>/*namespace*/.<<circe>>/*variable,readonly*/.<<derivation>>/*variable,readonly*/.<<deriveDecoder>>/*variable,readonly*/
-<<import>>/*keyword*/ <<io>>/*namespace*/.<<circe>>/*variable,readonly*/.<<derivation>>/*variable,readonly*/.<<deriveEncoder>>/*variable,readonly*/
+<<import>>/*keyword*/ <<io>>/*namespace*/.<<circe>>/*namespace*/.<<derivation>>/*namespace*/.<<deriveDecoder>>/*variable,readonly*/
+<<import>>/*keyword*/ <<io>>/*namespace*/.<<circe>>/*namespace*/.<<derivation>>/*namespace*/.<<deriveEncoder>>/*variable,readonly*/
 
 <<class>>/*keyword*/ <<Definitions>>/*class*/ {
   <<Predef>>/*class*/.<<any2stringadd>>/*method,deprecated*/(<<1>>/*number*/)
@@ -13,6 +13,6 @@
   ](
     <<elems>>/*parameter*/ = <<null>>/*keyword*/
   )
-  <<println>>/*method*/(<<deriveDecoder>>/*variable,readonly*/[<<MacroAnnotation>>/*class*/])
-  <<println>>/*method*/(<<deriveEncoder>>/*variable,readonly*/[<<MacroAnnotation>>/*class*/])
+  <<println>>/*method*/(<<deriveDecoder>>/*method*/[<<MacroAnnotation>>/*class*/])
+  <<println>>/*method*/(<<deriveEncoder>>/*method*/[<<MacroAnnotation>>/*class*/])
 }

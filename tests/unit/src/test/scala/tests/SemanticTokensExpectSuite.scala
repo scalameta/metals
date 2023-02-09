@@ -8,7 +8,9 @@ import scala.meta.internal.pc.ScalaPresentationCompiler
 class SemanticTokensExpectSuite extends DirectoryExpectSuite("semanticTokens") {
 
   override lazy val input: InputProperties = InputProperties.scala2()
-  private val compiler = new ScalaPresentationCompiler()
+  private val compiler = new ScalaPresentationCompiler(
+    classpath = input.classpath.entries.map(_.toNIO)
+  )
 
   override def testCases(): List[ExpectTestCase] = {
     input.scalaFiles.map { file =>
