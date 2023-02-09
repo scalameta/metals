@@ -42,9 +42,9 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
 
   check(
     "version",
-    """|val dependency = ivy"io.circe::circe-core_native0.4:@@"
+    """|val dependency = ivy"io.circe::circe-core_sjs1:0.13@@"
        |""".stripMargin,
-    """|0.14.3
+    """|0.13.0
        |""".stripMargin,
     filename = "build.sc",
   )
