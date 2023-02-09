@@ -96,7 +96,7 @@ class BuildServerConnection private (
       "1.4.10",
       version,
     )
-    isSbt || isScalaCLI || (isBloop && supportNewDebugAdapter)
+    !isBloop || (isBloop && supportNewDebugAdapter)
   }
 
   def workspaceDirectory: AbsolutePath = workspace
