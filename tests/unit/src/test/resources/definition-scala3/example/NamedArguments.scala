@@ -3,7 +3,7 @@ package example
 case class User/*NamedArguments.scala*/(
     name/*NamedArguments.scala*/: String/*Predef.scala*/ = {
       // assert default values have occurrences
-      Map/*Predef.scala*/.toString
+      Map/*Predef.scala*/.toString/*Object.java fallback to java.lang.Object#toString().*/
     }
 )
 object NamedArguments/*NamedArguments.scala*/ {
