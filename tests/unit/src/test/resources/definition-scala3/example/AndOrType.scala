@@ -1,7 +1,7 @@
 package example
 
-trait Cancelable/*AndOrType.scala*/ 
-trait Movable/*AndOrType.scala*/ 
+trait Cancelable/*AndOrType.scala*/
+trait Movable/*AndOrType.scala*/
 
 type Y/*AndOrType.scala*/ = (Cancelable/*AndOrType.scala*/ & Movable/*AndOrType.scala*/)
 

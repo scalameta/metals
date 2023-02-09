@@ -1,0 +1,1 @@
+class EmptyPackage/*EmptyPackage.scala*/

@@ -6,16 +6,15 @@ given (using i/*example.GivenAlias$package.given_Double().(i)*/: Int/*scala.Int#
 given [T/*example.GivenAlias$package.given_List_T().[T]*/]: List/*scala.package.List#*/[T/*example.GivenAlias$package.given_List_T().[T]*/] = Nil/*scala.package.Nil.*/
 given given_Char/*example.GivenAlias$package.given_Char.*/: Char/*scala.Char#*/ = '?'
 given `given_Float/*example.GivenAlias$package.given_Float.*/`: Float/*scala.Float#*/ = 3.0
-given `* */*example.GivenAlias$package.`* *`.*/`: Long/*scala.Long#*/ = 5
+given `* */*example.GivenAlias$package.`* *`.*/` : Long/*scala.Long#*/ = 5
 
 def method/*example.GivenAlias$package.method().*/(using Int/*scala.Int#*/) = ""
 
-object X/*example.X.*/ {
+object X/*example.X.*/:
   given Double/*scala.Double#*/ = 4.0
   val double/*example.X.double.*/ = given_Double/*example.X.given_Double.*/
 
   given of/*example.X.of().*/[A/*example.X.of().[A]*/]: Option/*scala.Option#*/[A/*example.X.of().[A]*/] = ???/*scala.Predef.`???`().*/
-}
 
 trait Xg/*example.Xg#*/:
   def doX/*example.Xg#doX().*/: Int/*scala.Int#*/
@@ -35,7 +34,6 @@ given (using Xg/*example.Xg#*/): Yg/*example.Yg#*/ with
 given [T/*example.GivenAlias$package.given_Zg_T#[T]*/]: Zg/*example.Zg#*/[T/*example.GivenAlias$package.given_Zg_T#[T]*/] with
   def doZ/*example.GivenAlias$package.given_Zg_T#doZ().*/: List/*scala.package.List#*/[T/*example.GivenAlias$package.given_Zg_T#[T]*/] = Nil/*scala.package.Nil.*/
 
-
 val a/*example.GivenAlias$package.a.*/ = intValue/*example.GivenAlias$package.intValue.*/
 val b/*example.GivenAlias$package.b.*/ = given_String/*example.GivenAlias$package.given_String.*/
 val c/*example.GivenAlias$package.c.*/ = X/*example.X.*/.given_Double/*example.X.given_Double.*/
@@ -47,4 +45,3 @@ val i/*example.GivenAlias$package.i.*/ = X/*example.X.*/.of/*example.X.of().*/[I
 val x/*example.GivenAlias$package.x.*/ = given_Xg/*example.GivenAlias$package.given_Xg.*/
 val y/*example.GivenAlias$package.y.*/ = given_Yg/*example.GivenAlias$package.given_Yg().*/
 val z/*example.GivenAlias$package.z.*/ = given_Zg_T/*example.GivenAlias$package.given_Zg_T().*/[String/*scala.Predef.String#*/]
-
