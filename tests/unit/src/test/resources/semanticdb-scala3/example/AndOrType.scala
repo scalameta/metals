@@ -1,7 +1,7 @@
 package example
 
-trait Cancelable/*example.Cancelable#*/ 
-trait Movable/*example.Movable#*/ 
+trait Cancelable/*example.Cancelable#*/
+trait Movable/*example.Movable#*/
 
 type Y/*example.AndOrType$package.Y#*/ = (Cancelable/*example.Cancelable#*/ &/*scala.`&`#*/ Movable/*example.Movable#*/)
 

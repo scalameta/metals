@@ -516,6 +516,13 @@ lazy val input3 = project
   .settings(
     sharedSettings,
     scalaVersion := V.scala3,
+    target := (ThisBuild / baseDirectory).value / "input" / "target" / "target3",
+    Compile / unmanagedSourceDirectories := Seq(
+      (ThisBuild / baseDirectory).value / "tests" / "input" / "src" / "main" / "scala",
+      (ThisBuild / baseDirectory).value / "tests" / "input" / "src" / "main" / "scala-3",
+      (ThisBuild / baseDirectory).value / "tests" / "input" / "src" / "main" / "java",
+    ),
+    scalaVersion := V.scala3,
     publish / skip := true,
   )
   .disablePlugins(ScalafixPlugin)
