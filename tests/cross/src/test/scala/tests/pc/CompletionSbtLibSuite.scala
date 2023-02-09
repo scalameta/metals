@@ -42,9 +42,9 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
 
   check(
     "version",
-    """|val dependency = "io.circe" %% "circe-core_native0.4" % "@@"
+    """|val dependency = "io.circe" %% "circe-core_sjs1" % "0.13@@"
        |""".stripMargin,
-    """|0.14.3
+    """|0.13.0
        |""".stripMargin,
     filename = "A.sbt",
   )
