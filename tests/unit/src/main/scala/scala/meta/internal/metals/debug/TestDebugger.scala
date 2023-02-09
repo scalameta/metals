@@ -109,7 +109,10 @@ final class TestDebugger(
           Future.unit
       }
       _ = scribe.info("TestingDebugger terminated")
-      _ <- debugger.shutdown(60)
+      _ <- debugger.shutdown(60).recoverWith { case _: TimeoutException =>
+        scribe.warn("The debugger is most likely already shut down.")
+        Future.unit
+      }
       _ = scribe.info("Remote server shutdown")
       _ <- onStoppage.shutdown
     } yield ()
