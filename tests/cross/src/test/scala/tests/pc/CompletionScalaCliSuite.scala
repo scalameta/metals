@@ -40,10 +40,10 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
 
   check(
     "version",
-    """|//> using lib "io.circe::circe-core_native0.4:@@"
+    """|//> using lib "io.circe::circe-core_sjs1:0.14.1@@"
        |package A
        |""".stripMargin,
-    "0.14.3",
+    "0.14.1",
   )
 
   check(
