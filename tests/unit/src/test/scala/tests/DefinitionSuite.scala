@@ -10,7 +10,6 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
-import scala.meta.tokens.Token.Ident
 
 /**
  * Assert that every identifier has a definition and every non-identifier has no definition.
@@ -72,18 +71,17 @@ abstract class DefinitionSuiteBase(
               }
             }
             def symbol(path: AbsolutePath, range: s.Range): Option[Symbol] = {
-              def isBackticked = token match {
-                case i: Ident =>
-                  i.value.size + 2 == range.endCharacter - range.startCharacter
-                case _ => false
-              }
               for {
                 document <- Semanticdbs.loadTextDocuments(path).documents
                 occ <- document.occurrences.find { occ =>
-                  // Scala 3 semanticdb generates ranges without backticks
-                  if (isBackticked)
-                    occ.range.exists(range.encloses)
-                  else occ.range.contains(range)
+                  // zero ranges will not be used by definition
+                  def nonZeroRanges = occ.range.exists(r =>
+                    r.startCharacter != r.endCharacter
+                  ) && range.startCharacter != range.endCharacter
+                  nonZeroRanges && (
+                    occ.range.exists(range.encloses) ||
+                      occ.range.exists(_.encloses(range))
+                  )
                 }
               } yield Symbol(occ.symbol)
             }.headOption
