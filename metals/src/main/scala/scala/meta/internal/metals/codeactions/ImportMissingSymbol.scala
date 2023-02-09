@@ -1,7 +1,5 @@
 package scala.meta.internal.metals.codeactions
 
-import java.util.Collections
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -40,8 +38,9 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
       codeAction
         .getEdit()
         .getChanges()
-        .getOrDefault(uri, Collections.emptyList)
         .asScala
+        .values
+        .flatMap(_.asScala)
 
     def joinActionEdits(actions: Seq[l.CodeAction]) = {
       actions
