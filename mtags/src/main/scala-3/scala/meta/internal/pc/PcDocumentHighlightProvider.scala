@@ -4,6 +4,7 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.DocumentHighlight
@@ -16,7 +17,11 @@ final class PcDocumentHighlightProvider(
 
   def collect(
       parent: Option[Tree]
-  )(tree: Tree, toAdjust: SourcePosition): DocumentHighlight =
+  )(
+      tree: Tree,
+      toAdjust: SourcePosition,
+      sym: Option[Symbol],
+  ): DocumentHighlight =
     val (pos, _) = adjust(toAdjust)
     tree match
       case _: NamedDefTree =>

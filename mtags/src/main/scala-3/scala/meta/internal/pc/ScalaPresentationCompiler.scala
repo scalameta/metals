@@ -90,8 +90,12 @@ case class ScalaPresentationCompiler(
   override def semanticTokens(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Integer]] =
-    CompletableFuture.completedFuture {
-      new ju.ArrayList[Integer]()
+    compilerAccess.withInterruptableCompiler(
+      new ju.ArrayList[Integer](),
+      params.token(),
+    ) { access =>
+      val driver = access.compiler()
+      new SemanticTokenProvider(driver, params).provide()
     }
 
   override def getTasty(
