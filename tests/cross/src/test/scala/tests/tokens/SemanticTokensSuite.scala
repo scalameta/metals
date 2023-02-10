@@ -1,20 +1,9 @@
 package tests.tokens
 
-import java.net.URI
+import tests.BaseSemanticTokensSuite
 
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.CompilerVirtualFileParams
+class SemanticTokensSuite extends BaseSemanticTokensSuite {
 
-import munit.Location
-import munit.TestOptions
-import tests.BasePCSuite
-import tests.TestSemanticTokens
-
-class SemanticTokensSuite extends BasePCSuite {
-
-  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
-    IgnoreScala3
-  )
   check(
     "class, object, var, val(readonly), method, type, parameter, String(single-line)",
     s"""|<<class>>/*keyword*/  <<Test>>/*class*/{
@@ -60,6 +49,24 @@ class SemanticTokensSuite extends BasePCSuite {
         |
         |
         |""".stripMargin,
+    compat = Map(
+      "3" ->
+        s"""|
+            |<<object>>/*keyword*/ <<Main>>/*class*/{
+            |
+            |   <</**>>/*comment*/
+            |<<   * Test of Comment Block>>/*comment*/
+            |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<1>>/*number*/
+            |
+            |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
+            |    <<// Single Line Comment>>/*comment*/
+            |    <<a>>/*parameter*/ <<+>>/*method*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
+            |   }
+            |}
+            |
+            |
+            |""".stripMargin
+    ),
   )
 
   check(
@@ -80,6 +87,26 @@ class SemanticTokensSuite extends BasePCSuite {
         |  }
         |}
         |""".stripMargin,
+    // In Scala 3 `+` is not abstract
+    compat = Map(
+      "3" ->
+        s"""|
+            |<<object>>/*keyword*/ <<ab>>/*class*/ {
+            |  <<var>>/*keyword*/  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = <<1>>/*number*/
+            |  <<val>>/*keyword*/  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = <<4.94065645841246544e-324d>>/*number*/
+            |  <<val>>/*keyword*/  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = <<1.40129846432481707e-45>>/*number*/
+            |  <<val>>/*keyword*/  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = <<9223372036854775807L>>/*number*/
+            |}
+            |
+            |<<object>>/*keyword*/ <<sample10>>/*class*/ {
+            |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+            |    <<println>>/*method*/(
+            |     (<<ab>>/*class*/.<<iVar>>/*variable*/ <<+>>/*method*/ <<ab>>/*class*/.<<iVal>>/*variable,readonly*/).<<toString>>/*method*/
+            |    )
+            |  }
+            |}
+            |""".stripMargin
+    ),
   )
 
   check(
@@ -119,6 +146,45 @@ class SemanticTokensSuite extends BasePCSuite {
         |
         |
         |""".stripMargin,
+    // In Scala 3 `+` is not abstract
+    compat = Map(
+      "3" ->
+        s"""|
+            |<<package>>/*keyword*/ <<a>>/*namespace*/.<<b>>/*namespace*/
+            |<<object>>/*keyword*/ <<Sample5>>/*class*/ {
+            |
+            |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+            |      <<val>>/*keyword*/ <<itr>>/*variable,readonly*/ = <<new>>/*keyword*/ <<IntIterator>>/*class*/(<<5>>/*number*/)
+            |      <<var>>/*keyword*/ <<str>>/*variable*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ <<",">>/*string*/
+            |          <<str>>/*variable*/ += <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/
+            |      <<println>>/*method*/(<<"count:">>/*string*/<<+>>/*method*/<<str>>/*variable*/)
+            |  }
+            |
+            |  <<trait>>/*keyword*/ <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,abstract*/] {
+            |    <<def>>/*keyword*/ <<next>>/*method*/(): <<A>>/*typeParameter,abstract*/
+            |  }
+            |
+            |  <<abstract>>/*modifier*/ <<class>>/*keyword*/ <<hasLogger>>/*class,abstract*/ {
+            |    <<def>>/*keyword*/ <<log>>/*method*/(<<str>>/*parameter*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter*/)}
+            |  }
+            |
+            |  <<class>>/*keyword*/ <<IntIterator>>/*class*/(<<to>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+            |  <<extends>>/*keyword*/ <<hasLogger>>/*class,abstract*/ <<with>>/*keyword*/ <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
+            |    <<private>>/*modifier*/ <<var>>/*keyword*/ <<current>>/*variable*/ = <<0>>/*number*/
+            |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
+            |      <<if>>/*keyword*/ (<<current>>/*variable*/ <<<>>/*method*/ <<to>>/*variable,readonly*/) {
+            |        <<log>>/*method*/(<<"main">>/*string*/)
+            |        <<val>>/*keyword*/ <<t>>/*variable,readonly*/ = <<current>>/*variable*/
+            |        <<current>>/*variable*/ = <<current>>/*variable*/ <<+>>/*method*/ <<1>>/*number*/
+            |        <<t>>/*variable,readonly*/
+            |      } <<else>>/*keyword*/ <<0>>/*number*/
+            |    }
+            |  }
+            |}
+            |
+            |
+            |""".stripMargin
+    ),
   )
 
   check(
@@ -166,6 +232,21 @@ class SemanticTokensSuite extends BasePCSuite {
         |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = <<321>>/*number*/
         |  }
         |}""".stripMargin,
+    // In Scala 3 methods in `trait` are not abstract
+    compat = Map(
+      "3" -> s"""|<<object>>/*keyword*/ <<A>>/*class*/ {
+                 |  <<trait>>/*keyword*/ <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] {
+                 |    <<def>>/*keyword*/ <<method>>/*method*/(<<asf>>/*parameter*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
+                 |  }
+                 |
+                 |  <<abstract>>/*modifier*/ <<class>>/*keyword*/ <<Alphabet>>/*class,abstract*/(<<alp>>/*variable,readonly*/: <<Int>>/*class,abstract*/) <<extends>>/*keyword*/ <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
+                 |    <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/) = <<123>>/*number*/
+                 |  }
+                 |  <<val>>/*keyword*/ <<a>>/*variable,readonly*/ = <<new>>/*keyword*/ <<Alphabet>>/*class,abstract*/(<<alp>>/*parameter*/ = <<10>>/*number*/) {
+                 |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = <<321>>/*number*/
+                 |  }
+                 |}""".stripMargin
+    ),
   )
 
   check(
@@ -182,31 +263,4 @@ class SemanticTokensSuite extends BasePCSuite {
         |}""".stripMargin,
   )
 
-  def check(
-      name: TestOptions,
-      expected: String,
-  )(implicit location: Location): Unit =
-    test(name) {
-
-      val base =
-        expected
-          .replaceAll(raw"/\*[\w,]+\*/", "")
-          .replaceAll(raw"\<\<|\>\>", "")
-
-      val tokens = presentationCompiler
-        .semanticTokens(
-          CompilerVirtualFileParams(URI.create("file:/Tokens.scala"), base)
-        )
-        .get()
-
-      val obtained = TestSemanticTokens.semanticString(
-        base,
-        tokens.asScala.toList.map(_.toInt),
-      )
-      assertEquals(
-        obtained,
-        expected,
-      )
-
-    }
 }

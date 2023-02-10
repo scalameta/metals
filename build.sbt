@@ -125,7 +125,7 @@ def crossTestDyn(state: State, scalaV: String): State = {
 
 commands ++= Seq(
   Command.command("save-expect") { s =>
-    "unit/test:runMain tests.SaveExpect" :: s
+    "unit/test:runMain tests.SaveExpect" :: "quick-publish-local" :: "slow/test:runMain tests.feature.SlowSaveExpect" :: s
   },
   Command.command("quick-publish-local") { s =>
     val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
