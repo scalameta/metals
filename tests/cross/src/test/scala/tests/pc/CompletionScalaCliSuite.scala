@@ -116,6 +116,22 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     filter = _.startsWith("3.4"),
   )
 
+  check(
+    "dep",
+    """|//> using dep "io.cir@@
+       |package A
+       |""".stripMargin,
+    "io.circe",
+  )
+
+  check(
+    "multiple-deps",
+    """|//> using libs "io.circe::circe-core:0.14.0", "io.circe::circe-core_na@@"
+       |package A
+       |""".stripMargin,
+    "circe-core_native0.4",
+  )
+
   private def scriptWrapper(code: String, filename: String): String =
     // Vaguely looks like a scala file that ScalaCLI generates
     // from a sc file.
