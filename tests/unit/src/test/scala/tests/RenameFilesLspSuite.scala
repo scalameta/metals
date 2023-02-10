@@ -1,5 +1,7 @@
 package tests
 
+import java.nio.file.Files
+
 class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   private val prefix = "a/src/main/scala"
 
@@ -32,6 +34,19 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/A/B/Sun.scala"),
     expectedRenames = Map("A" -> "A.B"),
+  )
+
+  /* We should not rename if moving outside the workspace */
+  renamed(
+    "outside-workspace",
+    s"""|/$prefix/A/Sun.scala
+        |package A
+        |object Sun 
+        |""".stripMargin,
+    fileRenames = Map(
+      s"$prefix/A/Sun.scala" -> Files.createTempFile("Sun", ".scala").toString()
+    ),
+    expectedRenames = Map.empty,
   )
 
   renamed(
