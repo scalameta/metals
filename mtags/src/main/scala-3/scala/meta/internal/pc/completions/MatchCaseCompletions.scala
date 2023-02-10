@@ -28,7 +28,9 @@ import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.AndType
+import dotty.tools.dotc.core.Types.ClassInfo
 import dotty.tools.dotc.core.Types.NoType
+import dotty.tools.dotc.core.Types.OrType
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.interactive.Interactive
@@ -253,22 +255,44 @@ object CaseKeywordCompletion:
       case t => t
 
     def subclassesForType(tpe: Type)(using Context): List[Symbol] =
-      val parents = ListBuffer.empty[Symbol]
-      // Get parent types from refined type
-      def loop(tpe: Type): Unit =
+      // Symbol must be a subclass of every `AndType`
+      def getAndTypes(tpe: Type, acc: List[Type]): List[Type] =
         tpe match
-          case AndType(tp1, tp2) => // for refined type like A with B with C
-            loop(tp1)
-            loop(tp2)
-          case t => parents += tpe.typeSymbol
-      loop(tpe.widen.bounds.hi)
+          case AndType(tp1, tp2) =>
+            getAndTypes(tp2, getAndTypes(tp1, acc))
+          case t => t :: acc
+
+      val andTypes = getAndTypes(tpe.widen.bounds.hi, List.empty)
+
+      def getParentTypes(tpe: Type, acc: List[Symbol]): List[Symbol] =
+        tpe match
+          case AndType(tp1, tp2) =>
+            getParentTypes(tp2, getParentTypes(tp1, acc))
+          case OrType(tp1, tp2) =>
+            getParentTypes(tp2, getParentTypes(tp1, acc))
+          case t =>
+            tpe.typeSymbol :: acc
+
+      def isEhaustiveMember(sym: Symbol): Boolean =
+        val parentTypes = sym.info match
+          case cl: ClassInfo => cl.parents
+          case simple => List(simple)
+
+        andTypes.toList.forall(tpe => parentTypes.exists(_ <:< tpe))
+
+      val parents =
+        andTypes.foldLeft(List.empty)((acc, tpe) => getParentTypes(tpe, acc))
+
       parents.toList.map { parent =>
         // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
         if parent.isAllOf(JavaEnumTrait) then parent.children
         else MetalsSealedDesc.sealedStrictDescendants(parent)
       } match
         case Nil => Nil
-        case subcls => subcls.reduce(_.intersect(_))
+        case subcls :: Nil => subcls
+        case subcls =>
+          val subclasses = subcls.flatten.distinct
+          subclasses.filter(isEhaustiveMember)
 
     end subclassesForType
 
