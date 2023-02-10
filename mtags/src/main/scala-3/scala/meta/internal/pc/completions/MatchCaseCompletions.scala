@@ -160,7 +160,7 @@ object CaseKeywordCompletion:
           if (isValid(ts)) then visit(autoImportsGen.inferSymbolImport(ts))
         )
       // Step 2: walk through known subclasses of sealed types.
-      val sealedDescs = MetalsSealedDesc.sealedStrictDescendants(selectorSym)
+      val sealedDescs = subclassesForType(parents.selector.widen.bounds.hi)
       sealedDescs.foreach { sym =>
         val symbolImport = autoImportsGen.inferSymbolImport(sym)
         visit(symbolImport)
@@ -254,51 +254,9 @@ object CaseKeywordCompletion:
       case tr @ TypeRef(_, _) => tr.underlying
       case t => t
 
-    def subclassesForType(tpe: Type)(using Context): List[Symbol] =
-      // Symbol must be a subclass of every `AndType`
-      def getAndTypes(tpe: Type, acc: List[Type]): List[Type] =
-        tpe match
-          case AndType(tp1, tp2) =>
-            getAndTypes(tp2, getAndTypes(tp1, acc))
-          case t => t :: acc
-
-      val andTypes = getAndTypes(tpe.widen.bounds.hi, List.empty)
-
-      def getParentTypes(tpe: Type, acc: List[Symbol]): List[Symbol] =
-        tpe match
-          case AndType(tp1, tp2) =>
-            getParentTypes(tp2, getParentTypes(tp1, acc))
-          case OrType(tp1, tp2) =>
-            getParentTypes(tp2, getParentTypes(tp1, acc))
-          case t =>
-            tpe.typeSymbol :: acc
-
-      def isEhaustiveMember(sym: Symbol): Boolean =
-        val parentTypes = sym.info match
-          case cl: ClassInfo => cl.parents
-          case simple => List(simple)
-
-        andTypes.toList.forall(tpe => parentTypes.exists(_ <:< tpe))
-
-      val parents =
-        andTypes.foldLeft(List.empty)((acc, tpe) => getParentTypes(tpe, acc))
-
-      parents.toList.map { parent =>
-        // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
-        if parent.isAllOf(JavaEnumTrait) then parent.children
-        else MetalsSealedDesc.sealedStrictDescendants(parent)
-      } match
-        case Nil => Nil
-        case subcls :: Nil => subcls
-        case subcls =>
-          val subclasses = subcls.flatten.distinct
-          subclasses.filter(isEhaustiveMember)
-
-    end subclassesForType
-
     val sortedSubclasses =
       val subclasses =
-        subclassesForType(tpe)
+        subclassesForType(tpe.widen.bounds.hi)
           .map(autoImportsGen.inferSymbolImport)
           .flatMap(si =>
             completionGenerator.labelForCaseMember(si.sym, si.name).map((si, _))
@@ -364,6 +322,49 @@ object CaseKeywordCompletion:
         val semancticName = SemanticdbSymbols.symbolName(sym)
         defnSymbols.getOrElse(semancticName, -1)
       }
+
+  def subclassesForType(tpe: Type)(using Context): List[Symbol] =
+    /**
+     * Split type made of & and | types to a list of simple types.
+     * For example, `(A | D) & (B & C)` returns `List(A, D, B, C).
+     * Later we use them to generate subclasses of each of these types.
+     */
+    def getParentTypes(tpe: Type, acc: List[Symbol]): List[Symbol] =
+      tpe match
+        case AndType(tp1, tp2) =>
+          getParentTypes(tp2, getParentTypes(tp1, acc))
+        case OrType(tp1, tp2) =>
+          getParentTypes(tp2, getParentTypes(tp1, acc))
+        case t =>
+          tpe.typeSymbol :: acc
+
+    /**
+     * Check if `sym` is a subclass of type `tpe`.
+     * For `class A extends B with C with D` we have to construct B & C & D type,
+     * because `A <:< (B & C) == false`.
+     */
+    def isExhaustiveMember(sym: Symbol): Boolean =
+      val symTpe = sym.info match
+        case cl: ClassInfo =>
+          cl.parents
+            .reduceLeftOption((tp1, tp2) => tp1.&(tp2))
+            .getOrElse(sym.info)
+        case simple => simple
+      symTpe <:< tpe
+
+    val parents = getParentTypes(tpe, List.empty)
+    parents.toList.map { parent =>
+      // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
+      if parent.isAllOf(JavaEnumTrait) then parent.children
+      else MetalsSealedDesc.sealedStrictDescendants(parent)
+    } match
+      case Nil => Nil
+      case subcls :: Nil => subcls
+      case subcls =>
+        val subclasses = subcls.flatten.distinct
+        subclasses.filter(isExhaustiveMember)
+
+  end subclassesForType
 
 end CaseKeywordCompletion
 

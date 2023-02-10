@@ -663,13 +663,13 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |enum Activity:
         |  case Reading(book: String, author: String) extends Activity, Hobby
         |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
-        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Cleaning(time: Int)                   extends Activity, Physical, Chore
         |  case Singing(song: String)                 extends Activity, Hobby
         |  case DishWashing(amount: Int)              extends Activity, Chore
         |
         |import Activity.*
         |
-        |def energySpend(act: Hobby | Physical): Double =
+        |def energySpend(act: Hobby | Physical & Chore): Double =
         |  act mat@@
         |
         |""".stripMargin,
@@ -684,17 +684,17 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |enum Activity:
         |  case Reading(book: String, author: String) extends Activity, Hobby
         |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
-        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Cleaning(time: Int)                   extends Activity, Physical, Chore
         |  case Singing(song: String)                 extends Activity, Hobby
         |  case DishWashing(amount: Int)              extends Activity, Chore
         |
         |import Activity.*
         |
-        |def energySpend(act: Hobby | Physical): Double =
+        |def energySpend(act: Hobby | Physical & Chore): Double =
         |  act match
         |\tcase Reading(book, author) => $$0
         |\tcase Sports(time, intensity) =>
-        |\tcase Cleaning =>
+        |\tcase Cleaning(time) =>
         |\tcase Singing(song) =>
         |
         |""".stripMargin,
