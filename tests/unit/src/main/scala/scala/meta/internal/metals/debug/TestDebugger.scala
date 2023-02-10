@@ -105,6 +105,7 @@ final class TestDebugger(
     for {
       _ <- terminated.future.withTimeout(60, TimeUnit.SECONDS).recoverWith {
         case _: TimeoutException =>
+          terminated.trySuccess(())
           scribe.warn("We never got the terminate message")
           Future.unit
       }
