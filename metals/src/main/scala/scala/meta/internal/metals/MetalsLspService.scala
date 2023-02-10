@@ -2103,10 +2103,17 @@ class MetalsLspService(
   ): CompletableFuture[WorkspaceEdit] =
     CancelTokens.future { _ =>
       val moves = params.getFiles.asScala.toSeq.map { rename =>
-        packageProvider.willMovePath(
-          rename.getOldUri().toAbsolutePath,
-          rename.getNewUri().toAbsolutePath,
-        )
+        val oldPath = rename.getOldUri().toAbsolutePath
+        val newPath = rename.getNewUri().toAbsolutePath
+        /* Changing package for files moved out of the workspace will cause unexpected issues
+         * This showed up with emacs automated backups.
+         */
+        if (newPath.startWith(workspace))
+          packageProvider.willMovePath(oldPath, newPath)
+        else
+          Future.successful(
+            new WorkspaceEdit(Map.empty[String, util.List[TextEdit]].asJava)
+          )
       }
       Future.sequence(moves).map(_.mergeChanges)
     }

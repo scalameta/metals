@@ -579,6 +579,9 @@ trait CommonMtagsEnrichments {
         None
       }
     }
+
+    def startWith(other: AbsolutePath): Boolean =
+      path.toNIO.startsWith(other.toNIO)
   }
 
   implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {
