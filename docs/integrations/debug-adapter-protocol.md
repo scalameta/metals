@@ -33,8 +33,8 @@ command.
 Starting a Debug Adapter Protocol session might take some time, since it needs
 to set up all the neccesary utilities for debugging. Metals also provides a
 `shellCommand` field, which will be present in the command attached to the run
-main methods code lenses. This field can be used to simply run the process quickly
-without the debugging capabilities.
+main methods code lenses. This field can be used to simply run the process
+quickly without the debugging capabilities.
 
 If you can't or won't support DAP, you can use the `runProvider` instead of
 `debugProvider `option in the initialization options sent from the editor to the
@@ -118,10 +118,33 @@ keys that can be sent as well with the same format as above.
 
 ```json
 {
-  "path": "file:///path/to/my/file.scala"
+  "path": "file:///path/to/my/file.scala",
   "runType": "testTarget"
 }
 ```
+
+Instead of `debug-adapter-start` if you only want to get data about the command
+to run you can use `discover-jvm-run-command`, which takes the same json as
+above, but instead of starting the DAP session it will return the
+`DebugSessionParams` object containing targets that this main class can be run
+for along with the data about the main class which will take form of:
+
+```json
+{
+  "targets": ["id1"],
+  "dataKind": "scala-main-class",
+  "data": {
+    "class": "Foo",
+    "arguments": [],
+    "jvmOptions": [],
+    "environmentVariables": [],
+    "shellCommand": "java ..."
+  }
+}
+```
+
+where `shellCommand` will be the exact command to run if you want to run it on
+your own without DAP.
 
 ### Wiring it all together
 

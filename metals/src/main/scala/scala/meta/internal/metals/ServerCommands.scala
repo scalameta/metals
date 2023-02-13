@@ -132,6 +132,21 @@ object ServerCommands {
        |    "runType": "run"
        |}
        |```
+       |
+       |Response:
+       |```json
+       |{
+       |  "targets": ["id1"],
+       |  "dataKind": "scala-main-class",
+       |  "data": {
+       |    "class": "Foo",
+       |    "arguments": [],
+       |    "jvmOptions": [],
+       |    "environmentVariables": [],
+       |    "shellCommand": "java ..."
+       |  }
+       |}
+       |```
        |""".stripMargin,
   )
 
