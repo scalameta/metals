@@ -716,6 +716,15 @@ class MetalsLspService(
     maybeJdkVersion,
   )
 
+  private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
+    tables,
+    buildTargets,
+    () => bspSession,
+    () => bspConnector.resolve(),
+    initializeParams.getClientInfo(),
+    buildTools,
+  )
+
   private val fileDecoderProvider: FileDecoderProvider =
     new FileDecoderProvider(
       workspace,
@@ -1871,6 +1880,10 @@ class MetalsLspService(
             else Future.successful(())
           }
         } yield ()).asJavaObject
+      case ServerCommands.OpenIssue() =>
+        Future
+          .successful(Urls.openBrowser(githubNewIssueUrlCreator.buildUrl()))
+          .asJavaObject
       case OpenBrowserCommand(url) =>
         Future.successful(Urls.openBrowser(url)).asJavaObject
       case ServerCommands.CascadeCompile() =>
