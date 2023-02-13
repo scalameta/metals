@@ -622,10 +622,16 @@ object ServerCommands {
     "Open the Metals logs to troubleshoot issues.",
   )
 
-  val OpenIssue = new OpenBrowserCommand(
-    "https://github.com/scalameta/metals/issues/new/choose",
-    "Open issue on GitHub",
-    "Open the Metals repository on GitHub to ask a question, report a bug or request a new feature.",
+  val OpenIssue = new Command(
+    "open-new-github-issue",
+    "Open an issue on GitHub",
+    "Open the Metals repository on GitHub to ask a question or report a bug.",
+  )
+
+  val OpenFeatureRequest = new OpenBrowserCommand(
+    "https://github.com/scalameta/metals-feature-requests/issues/new?template=feature-request.yml",
+    "Open a feature request",
+    "Open the Metals repository on GitHub to open a feature request.",
   )
 
   val MetalsGithub = new OpenBrowserCommand(
@@ -733,6 +739,8 @@ object ServerCommands {
       SuperMethodHierarchy,
       StartScalaCliServer,
       StopScalaCliServer,
+      OpenIssue,
+      OpenFeatureRequest,
     )
 
   val allIds: Set[String] = all.map(_.id).toSet
