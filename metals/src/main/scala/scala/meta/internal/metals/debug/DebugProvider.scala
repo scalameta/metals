@@ -41,6 +41,7 @@ import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -64,7 +65,6 @@ import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
-import scala.meta.internal.metals.UserConfiguration
 
 /**
  * @param supportsTestSelection test selection hasn't been defined in BSP spec yet.
