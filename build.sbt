@@ -518,9 +518,9 @@ lazy val input3 = project
     scalaVersion := V.scala3,
     target := (ThisBuild / baseDirectory).value / "input" / "target" / "target3",
     Compile / unmanagedSourceDirectories := Seq(
-      (ThisBuild / baseDirectory).value / "tests" / "input" / "src" / "main" / "scala",
-      (ThisBuild / baseDirectory).value / "tests" / "input" / "src" / "main" / "scala-3",
-      (ThisBuild / baseDirectory).value / "tests" / "input" / "src" / "main" / "java",
+      (input / baseDirectory).value / "src" / "main" / "scala",
+      (input / baseDirectory).value / "src" / "main" / "scala-3",
+      (input / baseDirectory).value / "src" / "main" / "java",
     ),
     scalaVersion := V.scala3,
     publish / skip := true,
