@@ -1086,4 +1086,11 @@ object MetalsEnrichments
     }
   }
 
+  implicit class XtensionAny[T](v: T) {
+    def withExec[R](toExec: T => R): T = {
+      toExec(v)
+      v
+    }
+  }
+
 }

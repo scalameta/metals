@@ -189,6 +189,8 @@ class MetalsLspService(
 
   val tables: Tables = register(new Tables(workspace, time))
 
+  private val reports = new Reports(workspace)
+
   private val buildTools: BuildTools = new BuildTools(
     workspace,
     bspGlobalDirectories,
@@ -288,7 +290,7 @@ class MetalsLspService(
   )
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
-  private val trees = new Trees(buffers, scalaVersionSelector, workspace)
+  private val trees = new Trees(buffers, scalaVersionSelector, reports)
 
   private val documentSymbolProvider = new DocumentSymbolProvider(
     trees,

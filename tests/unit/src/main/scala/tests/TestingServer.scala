@@ -48,6 +48,7 @@ import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.Reports
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.TextEdits
@@ -162,13 +163,15 @@ final case class TestingServer(
 
   lazy val server = languageServer.getOldMetalsLanguageServer
 
+  val reports = new Reports(workspace)
+
   private lazy val trees = new Trees(
     buffers,
     new ScalaVersionSelector(
       () => initialUserConfig,
       server.buildTargets,
     ),
-    workspace,
+    reports,
   )
 
   private val virtualDocSources = TrieMap.empty[String, AbsolutePath]
