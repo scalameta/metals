@@ -15,6 +15,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.Reports
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.*
@@ -57,6 +58,7 @@ case class ScalaPresentationCompiler(
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   private val forbiddenDoubleOptions = Set("-release")
+  given Option[Reports] = workspace.map(Reports(_))
 
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(

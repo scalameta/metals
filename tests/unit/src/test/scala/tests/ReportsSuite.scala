@@ -37,17 +37,22 @@ class ReportsSuite extends BaseSuite {
       "some_different_test_error_old",
       exampleText(),
     )
+    Thread.sleep(2) // to make sure, that the new tests have a later timestamp
     reportsProvider.incognito.createReport("some_test_error_new", exampleText())
     reportsProvider.incognito.createReport(
       "some_different_test_error_new",
       exampleText(),
     )
     val deleted = reportsProvider.incognito.cleanUpOldReports(2)
-    assertEquals(deleted.length, 2)
-    deleted.foreach(f => assert(f.name.contains("old")))
+    deleted match {
+      case (_ :: _ :: Nil) if deleted.forall(_.name.contains("old")) =>
+      case _ => fail(s"deleted: ${deleted.map(_.name)}")
+    }
     val reports = reportsProvider.incognito.getReports
-    assertEquals(reports.length, 2)
-    reports.foreach(f => assert(f.name.contains("new")))
+    reports match {
+      case (_ :: _ :: Nil) if reports.forall(_.name.contains("new")) =>
+      case _ => fail(s"reports: ${reports.map(_.name)}")
+    }
   }
 
   test("zip-reports") {

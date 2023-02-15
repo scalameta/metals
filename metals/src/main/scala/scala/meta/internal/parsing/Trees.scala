@@ -28,8 +28,7 @@ import org.eclipse.{lsp4j => l}
 final class Trees(
     buffers: Buffers,
     scalaVersionSelector: ScalaVersionSelector,
-    reports: Reports,
-) {
+)(implicit reports: Reports) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
 

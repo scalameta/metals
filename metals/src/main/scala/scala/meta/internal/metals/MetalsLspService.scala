@@ -43,6 +43,7 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Reports
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -189,7 +190,7 @@ class MetalsLspService(
 
   val tables: Tables = register(new Tables(workspace, time))
 
-  private val reports = new Reports(workspace)
+  implicit val reports: Reports = new Reports(workspace)
 
   private val buildTools: BuildTools = new BuildTools(
     workspace,
@@ -290,7 +291,7 @@ class MetalsLspService(
   )
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
-  private val trees = new Trees(buffers, scalaVersionSelector, reports)
+  private val trees = new Trees(buffers, scalaVersionSelector)
 
   private val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
@@ -1170,9 +1171,10 @@ class MetalsLspService(
         None
     }
 
-    uriOpt match {
-      case Some(uri) => {
-        val path = uri.toAbsolutePath
+    val pathOpt = uriOpt.flatMap(_.toAbsolutePathSafe)
+
+    pathOpt match {
+      case Some(path) => {
         focusedDocument = Some(path)
         buildTargets
           .inverseSources(path)
@@ -2736,6 +2738,11 @@ class MetalsLspService(
         case e: IndexingExceptions.PathIndexingException =>
           scribe.error(s"issues while parsing: ${e.path}", e.underlying)
         case e: IndexingExceptions.InvalidSymbolException =>
+          reports.incognito.createReport(
+            "invalid-symbol",
+            s"""Symbol: ${e.symbol}""".stripMargin,
+            e,
+          )
           scribe.error(s"searching for `${e.symbol}` failed", e.underlying)
         case _: NoSuchFileException =>
         // only comes for badly configured jar with `/Users` path added.

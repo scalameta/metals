@@ -163,7 +163,7 @@ final case class TestingServer(
 
   lazy val server = languageServer.getOldMetalsLanguageServer
 
-  val reports = new Reports(workspace)
+  implicit val reports: Reports = new Reports(workspace)
 
   private lazy val trees = new Trees(
     buffers,
@@ -171,7 +171,6 @@ final case class TestingServer(
       () => initialUserConfig,
       server.buildTargets,
     ),
-    reports,
   )
 
   private val virtualDocSources = TrieMap.empty[String, AbsolutePath]

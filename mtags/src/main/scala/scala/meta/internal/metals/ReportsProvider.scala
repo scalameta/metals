@@ -6,21 +6,23 @@ import java.nio.file.Path
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 class Reports(workspace: AbsolutePath) {
-  private lazy val reportsDir =
-    workspace.resolve(Directories.reports).withExec { d =>
-      Files.createDirectories(d.toNIO)
-    }
+  private lazy val reportsDir = {
+    val dir = workspace.resolve(Reports.reportsDir)
+    Files.createDirectories(dir.toNIO)
+    dir
+  }
+
   val unsanitized =
-    new ReportsProvider(workspace, Directories.reports.resolve("metals-full"))
+    new ReportsProvider(workspace, Reports.reportsDir.resolve("metals-full"))
   val incognito =
-    new ReportsProvider(workspace, Directories.reports.resolve("metals"))
+    new ReportsProvider(workspace, Reports.reportsDir.resolve("metals"))
   val bloop =
-    new ReportsProvider(workspace, Directories.reports.resolve("bloop"))
+    new ReportsProvider(workspace, Reports.reportsDir.resolve("bloop"))
 
   def all: List[ReportsProvider] = List(unsanitized, incognito, bloop)
   def allToZip: List[ReportsProvider] = List(incognito, bloop)
@@ -55,17 +57,28 @@ class Reports(workspace: AbsolutePath) {
 }
 
 class ReportsProvider(workspace: AbsolutePath, pathToReports: RelativePath) {
-  private lazy val reportsDir =
-    workspace.resolve(pathToReports).withExec { d =>
-      Files.createDirectories(d.toNIO)
-    }
+  private lazy val reportsDir = {
+    val dir = workspace.resolve(pathToReports)
+    Files.createDirectories(dir.toNIO)
+    dir
+  }
 
   private lazy val userHome = Option(System.getProperty("user.home"))
 
-  def createReport(name: String, text: String): AbsolutePath =
-    reportsDir
-      .resolve(s"r_${name}_${System.currentTimeMillis()}")
-      .withExec(_.writeText(sanitize(text)))
+  def createReport(name: String, text: String): AbsolutePath = {
+    val path = reportsDir.resolve(s"r_${name}_${System.currentTimeMillis()}")
+    path.writeText(sanitize(text))
+    path
+  }
+
+  def createReport(name: String, text: String, e: Throwable): AbsolutePath =
+    createReport(
+      name,
+      s"""|$text
+          |Error message: ${e.getMessage()}
+          |Error: $e
+          |""".stripMargin
+    )
 
   private def sanitize(text: String) = {
     val textAfterWokspaceReplace =
@@ -105,6 +118,10 @@ object Reports {
   val WORKSPACE_STR = "<WORKSPACE>"
   val HOME_STR = "<HOME>"
   val ZIP_FILE_NAME = "reports.zip"
+
+  def reportsDir: RelativePath =
+    RelativePath(".metals").resolve(".reports")
+  def apply(path: Path) = new Reports(AbsolutePath(path))
 }
 
 case class Report(file: File, timestamp: Long) {
