@@ -7,6 +7,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
+import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.{BuildInfo => V}
 
 abstract class BaseWorksheetLspSuite(
@@ -821,6 +823,54 @@ abstract class BaseWorksheetLspSuite(
       _ = assertNoDiff(noCompletions, "")
     } yield ()
   }
+  if (ScalaVersions.isScala3Version(scalaVersion))
+    test("import-missing-symbol") {
+      cleanWorkspace()
+      val path = "a/src/main/scala/foo/Main.worksheet.sc"
+      val expectedActions =
+        s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+            |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+            |${CreateNewSymbol.title("Future")}
+            |""".stripMargin
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{"a": {"scalaVersion": "${scalaVersion}"}}
+             |/$path
+             |object A {
+             |  val f = Future.successful(42)
+             |}
+             |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+        _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+        codeActions <-
+          server
+            .assertCodeAction(
+              path,
+              """|object A {
+                 |  val f = <<Future>>.successful(42)
+                 |}
+                 |""".stripMargin,
+              expectedActions,
+              Nil,
+            )
+        _ <- client.applyCodeAction(0, codeActions, server)
+        _ <- server.didSave(path) { _ =>
+          server.bufferContents(path)
+        }
+        // Assert if indentation is correct. See `AutoImports.renderImport`
+        _ = assertNoDiff(
+          server.bufferContents(path),
+          """|import scala.concurrent.Future
+             |object A {
+             |  val f = Future.successful(42)
+             |}
+             |""".stripMargin,
+        )
+      } yield ()
+    }
 
   if (!ScalaVersions.isScala3Version(scalaVersion))
     test("semantic-highlighting") {
