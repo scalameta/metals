@@ -93,14 +93,16 @@ class ClassFinder(trees: Trees) {
         // implicits classes which extends AnyVal produce also companion object which hols
         // defined extension methods, add such object to results
         dfn match {
-          case cls: Defn.Class if isImplicitAnyVal(cls) =>
-            val anyValCompanionObject = ClassArtifact(
+          case cls: Defn.Class if addCompanionObject(cls) =>
+            val companionObject = ClassArtifact(
               ClassKind.Object,
               MangledClassName(mangledName.value + "$"),
               shortName,
               searchGranularity.extension,
             )
-            definitions.append(anyValCompanionObject)
+            // in case when companion object is defined explicitly,
+            // duplicate entry will be discarded at the end by distinctBy
+            definitions.append(companionObject)
           case _ => ()
         }
       }
@@ -227,13 +229,19 @@ class ClassFinder(trees: Trees) {
     else Some(MangledClassName(name))
   }
 
-  private def isImplicitAnyVal(cls: Defn.Class): Boolean = {
+  private def addCompanionObject(cls: Defn.Class): Boolean =
+    isImplicitAnyValDefinition(cls) || isCaseClassDefinition(cls)
+
+  private def isImplicitAnyValDefinition(cls: Defn.Class): Boolean = {
     cls.mods.exists(_.is[Mod.Implicit]) &&
     cls.templ.inits.exists(_.tpe match {
       case Type.Name("AnyVal") => true
       case _: Type => false
     })
   }
+
+  private def isCaseClassDefinition(cls: Defn.Class): Boolean =
+    cls.mods.exists(_.is[Mod.Case])
 
 }
 

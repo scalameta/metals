@@ -133,6 +133,19 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
     searchGranularity = ClassFinderGranularity.ClassFiles,
   )
 
+  check(
+    "case-class-generated-companion",
+    """|package a
+       |case class Foo(x: Int)
+       |""".stripMargin,
+    Vector(
+      "Class Foo a.Foo.class",
+      "Object Foo a.Foo$.class",
+    ),
+    scalaVersion = V.scala213,
+    searchGranularity = ClassFinderGranularity.ClassFiles,
+  )
+
   def check(
       name: TestOptions,
       sourceText: String,
