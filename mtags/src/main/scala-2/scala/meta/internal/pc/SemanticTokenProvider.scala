@@ -213,6 +213,12 @@ final class SemanticTokenProvider(
         node.pos.end == tk.pos.end &&
         node.sym != NoSymbol
 
+    def classOverMethod(nodes: List[NodeInfo]): Option[NodeInfo] =
+      nodes.find { case ni => !ni.sym.isMethod } match {
+        case Some(node) => Some(node)
+        case None => nodes.headOption
+      }
+
     val candidates = nodesIterator.dropWhile(_.pos.start < tk.pos.start)
     candidates
       .takeWhile(_.pos.start == tk.pos.start)
@@ -225,13 +231,14 @@ final class SemanticTokenProvider(
             .symbolAlternatives(ni.sym)
             .exists(_.decodedName == tk.text)
         ) match {
-          case Nil => None
+          case Nil => classOverMethod(manyNodes).map(ni => (ni, candidates))
           case matchingNames
               if matchingNames.exists(!_.sym.owner.isPrimaryConstructor) =>
             matchingNames.collectFirst {
               case ni if !ni.sym.owner.isPrimaryConstructor => (ni, candidates)
             }
-          case head :: _ => Some((head, candidates))
+          case matchingNames =>
+            classOverMethod(matchingNames).map(ni => (ni, candidates))
         }
 
     }

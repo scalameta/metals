@@ -168,6 +168,20 @@ class SemanticTokensSuite extends BasePCSuite {
         |}""".stripMargin,
   )
 
+  check(
+    "import-rename",
+    s"""|<<package>>/*keyword*/ <<example>>/*namespace*/
+        |
+        |<<import>>/*keyword*/ <<util>>/*namespace*/.{<<Failure>>/*class*/ <<=>>>/*operator*/ <<NoBad>>/*class*/}
+        |<<import>>/*keyword*/ <<math>>/*namespace*/.{<<floor>>/*method*/ <<=>>>/*operator*/ <<_>>/*variable*/, <<_>>/*variable*/}
+        |
+        |<<class>>/*keyword*/ <<Imports>>/*class*/ {
+        |  <<// rename reference>>/*comment*/
+        |  <<NoBad>>/*class*/(<<null>>/*keyword*/)
+        |  <<max>>/*method*/(<<1>>/*number*/, <<2>>/*number*/)
+        |}""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       expected: String,
