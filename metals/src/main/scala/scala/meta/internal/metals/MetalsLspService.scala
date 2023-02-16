@@ -68,6 +68,7 @@ import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinder
+import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
@@ -1856,10 +1857,13 @@ class MetalsLspService(
           }
           .asJavaObject
       case ServerCommands.ChooseClass(params) =>
+        val searchGranularity =
+          if (params.kind == "class") ClassFinderGranularity.ClassFiles
+          else ClassFinderGranularity.Tasty
         fileDecoderProvider
           .chooseClassFromFile(
             params.textDocument.getUri().toAbsolutePath,
-            params.kind == "class",
+            searchGranularity,
           )
           .asJavaObject
       case ServerCommands.RunDoctor() =>

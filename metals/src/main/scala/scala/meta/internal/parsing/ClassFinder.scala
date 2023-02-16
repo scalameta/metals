@@ -5,100 +5,153 @@ import scala.collection.mutable
 
 import scala.meta.Defn
 import scala.meta.Member
+import scala.meta.Mod
 import scala.meta.Pkg
 import scala.meta.Position
 import scala.meta.Self
 import scala.meta.Tree
+import scala.meta.Type
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.parsing.Trees
+import scala.meta.internal.parsing.finder.ClassKind
+import scala.meta.internal.parsing.finder.MangledClassName
+import scala.meta.internal.parsing.finder.ShortClassName
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
 
-final case class ClassWithPos(
-    path: String,
-    friendlyName: String,
-    description: String,
-)
+final case class ClassArtifact(
+    kind: ClassKind,
+    mangledClassName: MangledClassName,
+    shortClassName: ShortClassName,
+    extensionSuffix: String,
+) {
+  private val resourceDir = mangledClassName.value.replace('.', '/')
+
+  val resourcePath: String = s"$resourceDir$extensionSuffix"
+  val resourceMangledName: String = s"${mangledClassName.value}$extensionSuffix"
+  val prettyName: String = kind match {
+    case ClassKind.Class => s"Class ${shortClassName.value}"
+    case ClassKind.Trait => s"Trait ${shortClassName.value}"
+    case ClassKind.Object => s"Object ${shortClassName.value}"
+    case ClassKind.Enum => s"Enum ${shortClassName.value}"
+    case ClassKind.ToplevelPackage => "Toplevel package"
+  }
+}
 
 class ClassFinder(trees: Trees) {
 
-  def findClass(path: AbsolutePath, pos: l.Position): Option[String] =
-    findClass(path, pos, checkInnerClasses = true)
+  def findClass(path: AbsolutePath, pos: l.Position): Option[MangledClassName] =
+    findClass(path, pos, searchGranularity = ClassFinderGranularity.ClassFiles)
 
-  def findTasty(path: AbsolutePath, pos: l.Position): Option[String] =
-    findClass(path, pos, checkInnerClasses = false)
+  def findTasty(path: AbsolutePath, pos: l.Position): Option[MangledClassName] =
+    findClass(path, pos, searchGranularity = ClassFinderGranularity.Tasty)
       .map(_.stripSuffix("$"))
 
   def findAllClasses(
       path: AbsolutePath,
-      checkInnerClasses: Boolean,
-  ): Option[List[ClassWithPos]] =
+      searchGranularity: ClassFinderGranularity,
+  ): Option[Vector[ClassArtifact]] =
     for {
       tree <- trees.get(path)
     } yield {
-      val extension = if (checkInnerClasses) "class" else "tasty"
-      val definitions = new mutable.ArrayBuffer[ClassWithPos]()
+      val definitions = new mutable.ArrayBuffer[ClassArtifact]()
       var isToplevelAdded: Boolean = false
 
-      def name(tree: Tree) = tree match {
-        case cls: Defn.Class => s"Class ${cls.name.value}"
-        case cls: Defn.Object => s"Object ${cls.name.value}"
-        case cls: Defn.Trait => s"Trait ${cls.name.value}"
-        case cls: Defn.Enum => s"Enum ${cls.name.value}"
-        case _: Defn.Def => "Toplevel package"
-      }
+      def addDfnToResults(dfn: Member): Unit = {
+        val suffixToStrip =
+          if (searchGranularity.isTasty) "$" else ""
 
-      def addDfn(dfn: Member): Unit = {
-        val suffixToStrip = if (!checkInnerClasses) "$" else ""
-        val classWithPackage =
-          findClassForOffset(tree, dfn.pos, path.filename, checkInnerClasses)
-            .stripSuffix(suffixToStrip)
-        val resourceDir = classWithPackage.replace('.', '/')
-        val suffix = s".$extension"
-        val resourcePath = s"$resourceDir$suffix"
-        val description = s"$classWithPackage$suffix"
-        val c = ClassWithPos(resourcePath, name(dfn), description)
-        definitions.append(c)
+        val mangledName = findClassNameForOffset(
+          tree,
+          dfn.pos,
+          path.filename,
+          searchGranularity,
+        ).map(_.stripSuffix(suffixToStrip)).getOrElse(MangledClassName(""))
+
+        val (shortName, defnKind) = dfn match {
+          case cls: Defn.Class =>
+            ShortClassName(cls.name.value) -> ClassKind.Class
+          case cls: Defn.Object =>
+            ShortClassName(cls.name.value) -> ClassKind.Object
+          case cls: Defn.Trait =>
+            ShortClassName(cls.name.value) -> ClassKind.Trait
+          case cls: Defn.Enum =>
+            ShortClassName(cls.name.value) -> ClassKind.Enum
+          case _: Defn.Def =>
+            ShortClassName("") -> ClassKind.ToplevelPackage
+        }
+
+        val classEntry = ClassArtifact(
+          defnKind,
+          mangledName,
+          shortName,
+          searchGranularity.extension,
+        )
+        definitions.append(classEntry)
+
+        // implicits classes which extends AnyVal produce also companion object which hols
+        // defined extension methods, add such object to results
+        dfn match {
+          case cls: Defn.Class if isImplicitAnyVal(cls) =>
+            val anyValCompanionObject = ClassArtifact(
+              ClassKind.Object,
+              MangledClassName(mangledName.value + "$"),
+              shortName,
+              searchGranularity.extension,
+            )
+            definitions.append(anyValCompanionObject)
+          case _ => ()
+        }
       }
 
       def loop(tree: Tree, isInnerClass: Boolean = false): Unit = tree match {
         case _: Pkg | _: Pkg.Object =>
           tree.children.foreach(loop(_, isInnerClass))
+
         case _: Defn.Class | _: Defn.Trait | _: Defn.Object | _: Defn.Enum =>
-          addDfn(tree.asInstanceOf[Member])
-          if (checkInnerClasses)
+          addDfnToResults(tree.asInstanceOf[Member])
+          if (!searchGranularity.isTasty)
             tree.children.foreach(loop(_, isInnerClass = true))
+
         case dfn: Defn.Def if !isInnerClass && !isToplevelAdded =>
           isToplevelAdded = true
-          addDfn(dfn)
+          addDfnToResults(dfn)
+
         case _: Defn.Def => ()
+
         case _ =>
           tree.children.foreach(loop(_, isInnerClass))
       }
+
       loop(tree)
-      definitions.toList.distinctBy(_.path)
+      definitions.toVector.distinctBy(_.resourcePath)
     }
 
   private def findClass(
       path: AbsolutePath,
       pos: l.Position,
-      checkInnerClasses: Boolean,
-  ): Option[String] = {
+      searchGranularity: ClassFinderGranularity,
+  ): Option[MangledClassName] = {
     for {
       tree <- trees.get(path)
       input = tree.pos.input
       metaPos <- pos.toMeta(input)
-      cls = findClassForOffset(tree, metaPos, path.filename, checkInnerClasses)
-      if cls.nonEmpty
+      cls <- findClassNameForOffset(
+        tree,
+        metaPos,
+        path.filename,
+        searchGranularity,
+      )
     } yield cls
   }
 
-  private def findClassForOffset(
+  private def findClassNameForOffset(
       tree: Tree,
       pos: Position,
       fileName: String,
-      inspectInnerClasses: Boolean,
-  ): String = {
+      searchGranularity: ClassFinderGranularity,
+  ): Option[MangledClassName] = {
     @tailrec
     def loop(tree: Tree, symbol: String, isInsideClass: Boolean): String = {
       val delimeter =
@@ -148,7 +201,7 @@ class ClassFinder(trees: Trees) {
       // which does not work in case of normal classes
       val shouldNotContinue =
         (tree.is[Defn.Def] && !isInsideClass) ||
-          (!inspectInnerClasses && isInsideClass)
+          (searchGranularity.isTasty && isInsideClass)
       if (shouldNotContinue) {
         fullName
       } else {
@@ -168,7 +221,37 @@ class ClassFinder(trees: Trees) {
       }
     }
 
-    loop(tree, "", false)
+    val name = loop(tree, "", false)
+
+    if (name.isEmpty) None
+    else Some(MangledClassName(name))
   }
 
+  private def isImplicitAnyVal(cls: Defn.Class): Boolean = {
+    cls.mods.exists(_.is[Mod.Implicit]) &&
+    cls.templ.inits.exists(_.tpe match {
+      case Type.Name("AnyVal") => true
+      case _: Type => false
+    })
+  }
+
+}
+
+sealed trait ClassFinderGranularity {
+  import ClassFinderGranularity._
+
+  def isTasty: Boolean = this match {
+    case ClassFiles => false
+    case Tasty => true
+  }
+
+  def extension: String = this match {
+    case ClassFiles => ".class"
+    case Tasty => ".tasty"
+  }
+}
+
+object ClassFinderGranularity {
+  case object ClassFiles extends ClassFinderGranularity
+  case object Tasty extends ClassFinderGranularity
 }

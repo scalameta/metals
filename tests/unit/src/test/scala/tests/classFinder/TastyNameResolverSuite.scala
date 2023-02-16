@@ -151,6 +151,6 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
         classFinder.findTasty(path, pos.toLsp.getStart())
 
       assert(tastyPath.isDefined)
-      assertNoDiff(tastyPath.get, expected)
+      assertNoDiff(tastyPath.get.value, expected)
     }
 }

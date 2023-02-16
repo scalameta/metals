@@ -26,8 +26,9 @@ import scala.meta.internal.metap.DocumentPrinter
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.URIEncoderDecoder
+import scala.meta.internal.parsing.ClassArtifact
 import scala.meta.internal.parsing.ClassFinder
-import scala.meta.internal.parsing.ClassWithPos
+import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.metap.Format
@@ -280,9 +281,11 @@ final class FileDecoderProvider(
         case Right(response) => response
       }
     } else if (path.isScala)
-      selectClassFromScalaFileAndDecode(path.toURI, path, true)(p =>
-        decode(p.path)
-      )
+      selectClassFromScalaFileAndDecode(
+        path.toURI,
+        path,
+        ClassFinderGranularity.ClassFiles,
+      )(p => decode(p.path))
     else
       Future.successful(
         DecoderResponse.failed(
@@ -331,7 +334,11 @@ final class FileDecoderProvider(
       path: AbsolutePath
   ): Future[DecoderResponse] = {
     if (path.isScala && isScala3(path)) {
-      selectClassFromScalaFileAndDecode(path.toURI, path, false)(
+      selectClassFromScalaFileAndDecode(
+        path.toURI,
+        path,
+        ClassFinderGranularity.Tasty,
+      )(
         decodeFromTastyFile
       )
     } else if (path.isScala) {
@@ -390,14 +397,14 @@ final class FileDecoderProvider(
    * If there is more than one candidate asks user, using lsp client and quickpick, which class he wants to decode.
    * If there is only one possible candidate then just pick it.
    *
-   * @param includeInnerClasses - if true searches for candidates which produce .class file, otherwise .tasty
+   * @param searchGranularity - identifies if we are looking for .class or .tasty files
    */
   private def selectClassFromScalaFileAndDecode[T](
       requestedURI: URI,
       path: AbsolutePath,
-      includeInnerClasses: Boolean,
+      searchGranularity: ClassFinderGranularity,
   )(decode: PathInfo => Future[DecoderResponse]): Future[DecoderResponse] = {
-    val availableClasses = classFinder.findAllClasses(path, includeInnerClasses)
+    val availableClasses = classFinder.findAllClasses(path, searchGranularity)
     availableClasses match {
       case Some(classes) if classes.nonEmpty =>
         val resourceToDecode = pickClass(classes)
@@ -428,11 +435,19 @@ final class FileDecoderProvider(
     }
   }
 
-  private def pickClass(classes: List[ClassWithPos]): Future[Option[String]] =
+  private def pickClass(
+      classes: Vector[ClassArtifact]
+  ): Future[Option[String]] =
     if (classes.size > 1) {
       val quickPickParams = MetalsQuickPickParams(
         classes
-          .map(c => MetalsQuickPickItem(c.path, c.friendlyName, c.description))
+          .map(c =>
+            MetalsQuickPickItem(
+              id = c.resourcePath,
+              label = c.prettyName,
+              description = c.resourceMangledName,
+            )
+          )
           .asJava,
         placeHolder = "Pick the class you want to decode",
       )
@@ -441,7 +456,7 @@ final class FileDecoderProvider(
         .asScala
         .mapOptionInside(_.itemId)
     } else
-      Future.successful(Some(classes.head.path))
+      Future.successful(Some(classes.head.resourcePath))
 
   private def findSemanticDbPathInfo(
       sourceFile: AbsolutePath
@@ -739,9 +754,9 @@ final class FileDecoderProvider(
 
   def chooseClassFromFile(
       path: AbsolutePath,
-      includeInnerClasses: Boolean,
+      searchGranularity: ClassFinderGranularity,
   ): Future[DecoderResponse] =
-    selectClassFromScalaFileAndDecode(path.toURI, path, includeInnerClasses) {
+    selectClassFromScalaFileAndDecode(path.toURI, path, searchGranularity) {
       pathInfo =>
         Future.successful(
           DecoderResponse.success(path.toURI, pathInfo.path.toURI.toString())
