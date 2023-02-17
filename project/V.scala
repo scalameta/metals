@@ -28,7 +28,7 @@ object V {
   val kindProjector = "0.13.2"
   val lsp4jV = "0.19.0"
   val mavenBloop = "2.0.0"
-  val mill = "0.10.10"
+  val mill = "0.10.11"
   val mdoc = "2.3.6"
   val munit = "1.0.0-M7"
   val organizeImportRule = "0.6.0"
