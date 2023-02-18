@@ -17,6 +17,12 @@ import org.eclipse.lsp4j.SelectionRange
 import SelectionRangeProvider.*
 import dotty.tools.dotc.semanticdb.Scala3
 
+import scala.meta.tokens.Token
+import dotty.tools.dotc.util.SourcePosition
+import scala.meta.inputs.Position
+import scala.meta.tokens.Token.Trivia
+import org.eclipse.lsp4j
+
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
  *
@@ -52,20 +58,16 @@ class SelectionRangeProvider(
           selectionRange.setRange(tree.sourcePos.toLsp)
           selectionRange
         }
-      val commentRanges = getCommentRanges(
-        param,
-        pos.start,
-        pos.`end`,
-      ).map { x =>
+      val commentRanges = getCommentRanges(pos, path, param.text()).map { x =>
         new SelectionRange():
-          setRange(
-            x._3.toLsp
-          )
-      }.toList // if in comment return range in cmt
+          setRange(x)
+      }.toList
+      // if cursor is in comment return range in comment
 
-      (commentRanges ++ bareRanges).reduceRight(setParent)
+      (commentRanges ++ bareRanges)
+        .reduceRightOption(setParent)
+        .getOrElse(new SelectionRange())
     }
-    // println(s"all selectionRanges ${selectionRanges}")
 
     selectionRanges
   end selectionRange
@@ -103,29 +105,104 @@ end SelectionRangeProvider
 object SelectionRangeProvider:
   import scala.meta.*
   import scala.meta.Token.Comment
+  import dotty.tools.dotc.ast.tpd
+
+  // overwrites implicit 'implicit def current: Scala213' in scalameta
+  implicit val sca3toplevel: Dialect =
+    dialects.Scala3.withAllowToplevelTerms(true)
+
+  def sourcePos2SelectionRange(pos: SourcePosition): SelectionRange =
+    new SelectionRange():
+      setRange(
+        pos.toLsp
+      )
+
+  def commentRangesFromTokens(
+      tokenList: List[Token],
+      cursorStart: SourcePosition,
+      offsetStart: Int,
+  ) =
+    val cursorStartShifted = cursorStart.start - offsetStart
+    // lspStartOffset.
+    val commentList: List[(Int, Int, Position)] = tokenList.collect {
+      case x: Comment =>
+        println(
+          s"find Comment \"${x}\" at ${(x.start, x.`end`)} " // :
+        ) // , ${(x.start, x.`end`, x.pos)}
+        (x.start, x.`end`, x.pos)
+    }
+
+    // WIP: when there are multiple single line comments,select them together
+    val merged = tokenList
+      .foldLeft(List[List[Comment]](List())) { (acc, tok) =>
+        val accRev = acc.reverse
+        val accRevHd = accRev.head
+        val accRevTl = accRev.tail
+        tok match
+          case x: Comment => (accRevHd :+ x) :: accRevTl
+          case x: Trivia => accRevHd :: accRevTl
+          case _ => acc :+ List()
+      }
+      .filter(_.nonEmpty)
+      .reverse
+      .filter(_.length >= 2)
+      .map(x => (x.head.start, x.last.`end`, x.head.pos))
+
+    println("merged: " + merged.map(x => (x._1, x._2)))
+
+    val commentWithin =
+      (commentList) // ++ merged)
+        .filter((commentStart, commentEnd, _) =>
+          commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd
+        )
+        .map { (commentStart, commentEnd, oldPos) =>
+          val oldLsp = oldPos.toLsp
+
+          // val (s, e) = (oldLsp.getStart(), oldLsp.getEnd())
+          // val newS = lsp4j.Position(
+          //   s.getLine() + lspStartOffset.getLine(),
+          //   s.getCharacter() + lspStartOffset.getCharacter(),
+          // )
+
+          // val newE = lsp4j.Position(
+          //   e.getLine() + lspStartOffset.getLine(),
+          //   e.getCharacter() + lspStartOffset.getCharacter(),
+          // )
+
+          // TODO: need to add offset to Position!
+          val newPos: Position =
+            meta.Position.Range(
+              oldPos.input, // TODO: need to add offset to this!
+              commentStart + offsetStart,
+              commentEnd + offsetStart,
+            )
+          newPos.toLsp // convert
+          // lsp4j.Range(newS, newE)
+        }
+    commentWithin
+  end commentRangesFromTokens
 
   /** check pos.start,if it is within comment then expand to comment */
-  def getCommentRanges(param: OffsetParams, start: Int, end: Int) =
-    // overwrite implicit 'implicit def current: Scala213' in scalameta
-    implicit val dialect: Dialect = dialects.Scala3.withAllowToplevelTerms(true)
-    val programStr = param.text()
-    // deal with multiple source text. probably a better way ?
-    val tkSrc = programStr.parse[Source].toOption.map(_.tokens)
-    val tkExpr = programStr.parse[Stat].toOption.map(_.tokens)
-    val tkType = programStr.parse[Type].toOption.map(_.tokens)
+  def getCommentRanges(
+      cursor: SourcePosition,
+      path: List[tpd.Tree],
+      srcText: String,
+  )(using Context) =
+    val (treeStart, treeEnd) = path.headOption
+      .map(t => (t.sourcePos.start, t.sourcePos.`end`))
+      .getOrElse((0, srcText.size))
+    val lspStartOffset = treeStart
 
-    val tokens = tkSrc orElse tkExpr orElse tkType // orElse tkTopDecls
+    // only parse comments from first range to reduce computation
+    val srcSliced = srcText // .slice(treeStart, treeEnd)
+
+    val tokens = srcSliced.tokenize.toOption
     if tokens.isEmpty then pprint.log("fail to parse in getCommentRanges!")
-    val commentList = tokens.toList.flatten
-      .collect { case x: Comment =>
-        // println(s"find Comment : ${x}")
-        x
-      }
-      .map(x => (x.start, x.`end`, x.pos))
-    val commentWithin =
-      commentList.filter((commentStart, commentEnd, _) =>
-        commentStart <= start && start <= commentEnd
-      )
-    commentWithin
+
+    commentRangesFromTokens(
+      tokens.toList.flatten,
+      cursor,
+      lspStartOffset,
+    )
   end getCommentRanges
 end SelectionRangeProvider
