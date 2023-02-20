@@ -518,12 +518,15 @@ trait CommonMtagsEnrichments {
      */
     def isScalaOrJava: Boolean = {
       toLanguage match {
-        case Language.SCALA | Language.JAVA =>
-          !Files.exists(path.toNIO) ||
-          Files.isRegularFile(path.toNIO)
+        case Language.SCALA | Language.JAVA => isFile
         case _ => false
       }
     }
+
+    def isFile: Boolean =
+      !Files.exists(path.toNIO) ||
+        Files.isRegularFile(path.toNIO)
+
     def isSbt: Boolean = {
       filename.endsWith(".sbt")
     }
@@ -549,10 +552,10 @@ trait CommonMtagsEnrichments {
       filename.isScalaFilename
     }
     def isScala: Boolean = {
-      toLanguage == Language.SCALA
+      toLanguage == Language.SCALA && isFile
     }
     def isJava: Boolean = {
-      toLanguage == Language.JAVA
+      toLanguage == Language.JAVA && isFile
     }
     def isSemanticdb: Boolean = {
       path.toNIO.getFileName.toString.endsWith(".semanticdb")
