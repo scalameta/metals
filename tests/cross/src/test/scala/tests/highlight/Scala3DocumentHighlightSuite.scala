@@ -68,6 +68,28 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
+    "recursive-inline1",
+    """|inline def <<po@@wer>>(x: Double, n: Int): Double =
+       |  if n == 0 then 1.0
+       |  else if n == 1 then x
+       |  else
+       |    val y = <<power>>(x, n / 2)
+       |    if n % 2 == 0 then y * y else y * y * x
+       |""".stripMargin,
+  )
+
+  check(
+    "recursive-inline2",
+    """|inline def <<power>>(x: Double, n: Int): Double =
+       |  if n == 0 then 1.0
+       |  else if n == 1 then x
+       |  else
+       |    val y = <<po@@wer>>(x, n / 2)
+       |    if n % 2 == 0 then y * y else y * y * x
+       |""".stripMargin,
+  )
+
+  check(
     "extension-params",
     """|extension (<<sb@@d>>: String)
        |  def double = <<sbd>> + <<sbd>>

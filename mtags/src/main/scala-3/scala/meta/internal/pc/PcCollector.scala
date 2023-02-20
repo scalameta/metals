@@ -297,6 +297,10 @@ abstract class PcCollector[T](
 
       case None => Nil
 
+  extension (span: Span)
+    def isCorrect =
+      !span.isZeroExtent && span.exists && span.start < sourceText.size && span.end <= sourceText.size
+
   def traverseSought(
       filter: Tree => Boolean,
       soughtFilter: (Set[Symbol] => Boolean) => Boolean,
@@ -318,7 +322,7 @@ abstract class PcCollector[T](
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident if !ident.span.isZeroExtent && filter(ident) =>
+        case ident: Ident if ident.span.isCorrect && filter(ident) =>
           // symbols will differ for params in different ext methods, but source pos will be the same
           if soughtFilter(sought =>
               sought.exists(_.sourcePos == ident.symbol.sourcePos)
@@ -333,7 +337,7 @@ abstract class PcCollector[T](
          * All select statements such as:
          * val a = hello.<<b>>
          */
-        case sel: Select if !sel.span.isZeroExtent && filter(sel) =>
+        case sel: Select if sel.span.isCorrect && filter(sel) =>
           occurences + collect(
             sel,
             pos.withSpan(selectNameSpan(sel)),
@@ -344,7 +348,7 @@ abstract class PcCollector[T](
          * etc.
          */
         case df: NamedDefTree
-            if !df.span.isZeroExtent && filter(df) &&
+            if df.span.isCorrect && filter(df) &&
               !isGeneratedGiven(df) =>
           val annots = collectTrees(df.mods.annotations)
           val traverser =
@@ -425,7 +429,7 @@ abstract class PcCollector[T](
                   if (!sel.renamed.isEmpty) then
                     Set(sel.renamed.span, sel.imported.span)
                   else Set(sel.imported.span)
-                spans.filter(!_.isZeroExtent).map { span =>
+                spans.filter(_.isCorrect).map { span =>
                   collect(
                     imp,
                     pos.withSpan(span),
@@ -440,7 +444,7 @@ abstract class PcCollector[T](
             new PcCollector.DeepFolderWithParent[Set[T]](
               collectNamesWithParent
             )
-          val trees = inl.call :: inl.expansion :: inl.bindings
+          val trees = inl.call :: inl.bindings
           trees.foldLeft(occurences) { case (set, tree) =>
             traverser(set, tree)
           }
