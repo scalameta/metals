@@ -104,39 +104,6 @@ final class InferredTypeProvider(
       )
       printer.tpe(tpe)
 
-    /*
-     * Get the exact position in ValDef pattern for val (a, b) = (1, 2)
-     * val ((a, c), b) = ((1, 3), 2) will be covered by Bind
-     * This is needed to Scala versions pre 3.1.2.
-     */
-    def editForTupleUnapply(
-        applied: AppliedType,
-        metaPattern: m.Pat,
-        valdefOffset: Int,
-    )(using ctx: Context) =
-      import scala.meta.*
-      metaPattern match
-        case tpl: m.Pat.Tuple =>
-          val newOffset = params.offset - valdefOffset + 4
-          val tupleIndex = tpl.args.indexWhere { p =>
-            p.pos.start <= newOffset && p.pos.end >= newOffset
-          }
-          if tupleIndex >= 0 then
-            val tuplePartTpe = applied.args(tupleIndex)
-            val typeEndPos = tpl.args(tupleIndex).pos.end
-            val namePos = typeEndPos + valdefOffset - 4
-            val lspPos = new SourcePosition(source, Spans.Span(namePos)).toLsp
-            val typeNameEdit =
-              new TextEdit(
-                lspPos,
-                ": " + printType(tuplePartTpe),
-              )
-            typeNameEdit :: imports
-          else Nil
-        case _ => Nil
-      end match
-    end editForTupleUnapply
-
     path.headOption match
       /* `val a = 1` or `var b = 2`
        *     turns into
