@@ -26,6 +26,7 @@ class PackageProvider(
     trees: Trees,
     refProvider: ReferenceProvider,
     buffers: Buffers,
+    defProvider: DefinitionProvider,
 ) {
   import PackageProvider._
   def willMovePath(
@@ -180,16 +181,17 @@ class PackageProvider(
     val edits = decls.view
       .flatMap(decl => findRefs(decl, oldUri).map((decl, _)))
       .view
-      .groupMap { case (_, location) =>
+      .groupMap { case (_, (_, location)) =>
         location.getUri()
-      } { case (decl, _) =>
-        decl
+      } { case (decl, (s, _)) =>
+        (decl, s)
       }
       .map { case (fileUri, refs) =>
         val filePath = fileUri.toAbsolutePath
         val refPkgParts = deducePkgParts(fileUri.toAbsolutePath)
         val optTree = trees.get(filePath)
-        val refsNames = refs.map(_.value).toSet
+        val refsNames = refs.map(_._1.value).toSet
+        val referencesSymbols = refs.map(_._2).toSet
 
         val importersAndParts = optTree
           .fold(Vector.empty[Importer])(findImporters)
@@ -208,24 +210,26 @@ class PackageProvider(
             )
             newImports ++ refsInImportsEdits
           case None =>
-            val refsInImportsEdits = importersAndParts.flatMap {
-              case (importer, importParts) =>
-                calcImportEditsForFileMove(
-                  importer,
-                  importParts,
-                  oldPkgParts,
-                  refsNames,
-                  newPkgName,
-                )
-            }
-            val shouldAddImports =
-              fileUri != oldUri && refsInImportsEdits.isEmpty
+            val ImportEdits(imported, refsInImportsEdits) =
+              calcAllImportsEditsForFileMove(
+                importersAndParts,
+                oldPkgParts,
+                refsNames,
+                referencesSymbols,
+                newPkgName,
+                filePath,
+              )
+            lazy val toImport = refsNames -- imported
+            val shouldAddImports = fileUri != oldUri && toImport.nonEmpty
             val newImports = Option.when(shouldAddImports) {
-              calcNewImports(optTree, refsNames, newPkgName)
+              calcNewImports(
+                optTree,
+                toImport,
+                newPkgName,
+              )
             }
             refsInImportsEdits ++ newImports
         }
-
         new WorkspaceEdit(
           Map(filePath.toURI.toString -> changes.toList.asJava).asJava
         )
@@ -272,19 +276,85 @@ class PackageProvider(
     new TextEdit(range, importString)
   }
 
+  private def calcAllImportsEditsForFileMove(
+      importersAndParts: Vector[(Importer, Vector[String])],
+      oldPkgParts: Vector[String],
+      referencesNames: Set[String],
+      referencesSymbols: Set[String],
+      newPkgName: String,
+      source: AbsolutePath,
+  ): ImportEdits = {
+    val directlyImportedNames =
+      importersAndParts
+        .withFilter(_._2 == oldPkgParts)
+        .flatMap(_._1.importees)
+        .collect {
+          case Importee.Name(name) => name
+          case Importee.Rename(from, _) => from
+          case Importee.Unimport(name) => name
+        }
+    val refsImportedViaWildCard =
+      referencesNames -- directlyImportedNames
+        .withFilter(n => referencesNames.contains(n.value))
+        .map(_.value)
+    lazy val directlyImportedSymbols =
+      directlyImportedNames
+        .flatMap(name =>
+          defProvider
+            .symbolOccurrence(source, name.pos.toLsp.getStart())
+        )
+        .map(_._1.symbol)
+        .toSet
+
+    val importEdits =
+      importersAndParts.map { case (importer, importParts) =>
+        calcImportEditsForFileMove(
+          importer,
+          importParts,
+          oldPkgParts,
+          referencesNames,
+          referencesSymbols,
+          newPkgName,
+          refsImportedViaWildCard,
+          () => directlyImportedSymbols,
+          source,
+        )
+      }
+    ImportEdits(
+      importEdits.flatMap(_.handledRefs).toList,
+      importEdits.flatMap(_.edits).toList,
+    )
+  }
+
   private def calcImportEditsForFileMove(
       importer: Importer,
       importParts: Vector[String],
       oldPkgParts: Vector[String],
-      refsNames: Set[String],
+      referencesNames: Set[String],
+      referencesSymbols: Set[String],
       newPkgName: String,
-  ): List[TextEdit] =
+      refsImportedViaWildCard: Set[String],
+      directlyImportedSymbols: () => Set[String],
+      source: AbsolutePath,
+  ): ImportEdits = {
+    def wildcardImportsOnlyRefs() = {
+      val importedSymbols = defProvider
+        .symbolOccurrence(source, importer.ref.pos.toLsp.getEnd())
+        .map { case (so, _) => so.symbol }
+        .toList
+        .flatMap(
+          refProvider
+            .referencesForWildcardImport(_, source, directlyImportedSymbols())
+        )
+      importedSymbols.forall(referencesSymbols.contains(_))
+    }
     if (importParts == oldPkgParts) {
       val importees = importer.importees
       def isReferenced(importee: Importee) = importee match {
-        case Importee.Name(name) => refsNames.contains(name.value)
-        case Importee.Rename(from, _) => refsNames.contains(from.value)
-        case Importee.Unimport(name) => refsNames.contains(name.value)
+        case Importee.Name(name) => referencesNames.contains(name.value)
+        case Importee.Rename(from, _) => referencesNames.contains(from.value)
+        case Importee.Unimport(name) => referencesNames.contains(name.value)
+        case Importee.Wildcard() if wildcardImportsOnlyRefs => true
         case _ => false
       }
       val (refsImportees, refsIndices) = importees.zipWithIndex.filter {
@@ -292,23 +362,38 @@ class PackageProvider(
           isReferenced(i)
       }.unzip
       if (refsImportees.length == 0) {
-        List.empty
+        ImportEdits.empty
       } else {
-        val importeeStr = mkImportees(refsImportees.collect {
-          case Importee.Name(name) => name.value
+        def rep2(str: String) = (str, str)
+        val (handledRefs, importeeStrings) = refsImportees.flatMap {
+          case Importee.Name(name) => List(rep2(name.value))
           case Importee.Rename(from, to) =>
-            s"${from.value} => ${to.value}"
-          case Importee.Unimport(name) => name.value
-        })
+            List((from.value, s"${from.value} => ${to.value}"))
+          case Importee.Unimport(name) => List((name.value, ""))
+          case Importee.Wildcard() =>
+            refsImportedViaWildCard.map(rep2(_)).toList
+          case _ => List.empty
+        }.unzip
         val newImportStr = {
-          val bracedImporteeStr = refsImportees match {
-            case List(Importee.Rename(_, _)) => s"{$importeeStr}"
-            case _ => importeeStr
+          val filteredImporteeStrings = importeeStrings.filter(_ != "")
+          def bracedImporteeStr = refsImportees match {
+            case List(Importee.Rename(_, _)) =>
+              s"{${mkImportees(filteredImporteeStrings)}}"
+            case _ => mkImportees(filteredImporteeStrings)
           }
-          s"$newPkgName.$bracedImporteeStr"
+          if (filteredImporteeStrings.nonEmpty)
+            s"$newPkgName.$bracedImporteeStr"
+          else s""
         }
         if (refsImportees.length == importer.importees.length) {
-          List(new TextEdit(importer.pos.toLsp, newImportStr))
+          val importChange =
+            if (newImportStr == "")
+              // we delete the import
+              importer.parent
+                .map(line => new TextEdit(line.pos.toLsp, ""))
+                .toList
+            else List(new TextEdit(importer.pos.toLsp, newImportStr))
+          ImportEdits(handledRefs, importChange)
         } else {
           // In this branch some importees should be removed from the import, but not all.
           // Trying to remove them with commas
@@ -337,12 +422,18 @@ class PackageProvider(
                 pos.map(new TextEdit(_, ""))
             }
           val newImportPos = posNextToEndOf(importer.pos)
-          val newImportEdit =
-            new TextEdit(newImportPos, s"import $newImportStr\n")
-          newImportEdit :: oldImportEdits
+          val importChages =
+            if (newImportStr == "") oldImportEdits
+            else {
+              val newImportEdit =
+                new TextEdit(newImportPos, s"import $newImportStr\n")
+              newImportEdit :: oldImportEdits
+            }
+          ImportEdits(handledRefs, importChages)
         }
       }
-    } else List.empty
+    } else ImportEdits.empty
+  }
 
   private def findImporters(tree: Tree): Vector[Importer] = {
     def go(tree: Tree): LazyList[Importer] = tree match {
@@ -363,13 +454,13 @@ class PackageProvider(
   private def findRefs(
       name: Name,
       uri: String,
-  ): List[Location] = {
+  ): List[(String, Location)] = {
     val params = new ReferenceParams(
       new TextDocumentIdentifier(uri),
       new Position(name.pos.startLine, name.pos.startColumn),
       new ReferenceContext(false), // do not include declaration
     )
-    refProvider.references(params).flatMap(_.locations)
+    refProvider.references(params).flatMap(s => s.locations.map((s.symbol, _)))
   }
 
   private def findPkgs(tree: Tree): PkgsStructure = {
@@ -544,4 +635,10 @@ object PackageProvider {
       pkg: Pkg,
       renameToParts: List[String], // empty list means delete
   )
+}
+
+case class ImportEdits(handledRefs: List[String], edits: List[TextEdit])
+
+object ImportEdits {
+  def empty: ImportEdits = ImportEdits(List.empty, List.empty)
 }
