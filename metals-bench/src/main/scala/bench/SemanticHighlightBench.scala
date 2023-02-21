@@ -6,8 +6,11 @@ import java.util.concurrent.TimeUnit
 import java.{util => ju}
 
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.SemanticTokensProvider
 import scala.meta.io.AbsolutePath
 
 import org.openjdk.jmh.annotations.Benchmark
@@ -77,7 +80,14 @@ class SemanticHighlightBench extends PcBenchmark {
       EmptyCancelToken,
     )
 
-    pc.semanticTokens(vFile).get()
+    val nodes = pc.semanticTokens(vFile).get().asScala.toList
+    val isScala3 = ScalaVersions.isScala3Version(pc.scalaVersion())
+
+    SemanticTokensProvider.provide(
+      nodes,
+      vFile,
+      isScala3,
+    )
   }
 
   def currentHighlight: String = highlightRequests(currentHighlightRequest)

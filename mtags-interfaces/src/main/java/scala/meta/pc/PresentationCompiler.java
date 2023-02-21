@@ -42,7 +42,7 @@ public abstract class PresentationCompiler {
 	 * Returns token informations from presentation compiler.
 	 *
 	 */
-	public CompletableFuture<List<Integer>> semanticTokens(VirtualFileParams params) {
+	public CompletableFuture<List<Node>> semanticTokens(VirtualFileParams params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 

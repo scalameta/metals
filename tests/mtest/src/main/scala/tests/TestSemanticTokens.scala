@@ -4,7 +4,9 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.pc.SemanticTokens
 import scala.meta.internal.pc.SemanticTokens._
+import scala.meta.pc.Node
 
 import org.eclipse.{lsp4j => l}
 
@@ -15,35 +17,75 @@ object TestSemanticTokens {
       .replaceAll(raw"/\*[\w,]+\*/", "")
       .replaceAll(raw"\<\<|\>\>", "")
 
+  def decorationString(typeInd: Int, modInd: Int): String = {
+    val buffer = ListBuffer.empty[String]
+
+    // TokenType
+    if (typeInd != -1) {
+      buffer.++=(List(TokenTypes(typeInd)))
+    }
+
+    // TokenModifier
+    // wkList = (e.g.) modInd=32 -> 100000 -> "000001"
+    val wkList = modInd.toBinaryString.toCharArray().toList.reverse
+    for (i: Int <- 0 to wkList.size - 1) {
+      if (wkList(i).toString == "1") {
+        buffer.++=(
+          List(
+            TokenModifiers(i)
+          )
+        )
+      }
+    }
+
+    // return
+    buffer.toList.mkString(",")
+  }
+
+  // We can't always correctly determin which node will be used outside the compiler,
+  // because we don't know about tokens, and some nodes contain synthetic symbols.
+  // Here we try to pick the same node as `SemanticTokenProvider` will.
+  def pcSemanticString(fileContent: String, nodes: List[Node]): String = {
+    val wkStr = new StringBuilder
+    def iter(nodes: List[Node], curr: Int): Int = {
+      nodes match {
+        case head :: rest
+            if (curr <= head.start && head.start() != head.end()) =>
+          val isValid = rest
+            .takeWhile(node =>
+              node.end() < head.end() || (node.end() == head.end() && node
+                .start() > head.start())
+            )
+            .isEmpty
+          if (isValid) {
+            val candidates = head :: rest.takeWhile(_.start() == head.start())
+            val node = candidates.maxBy(node =>
+              SemanticTokens.getTypePriority(node.tokenType())
+            )
+            val slice = fileContent.slice(curr, node.start)
+            wkStr ++= slice
+            wkStr ++= "<<"
+            wkStr ++= fileContent.slice(node.start, node.end)
+            wkStr ++= ">>/*"
+            wkStr ++= decorationString(node.tokenType, node.tokenModifier)
+            wkStr ++= "*/"
+            iter(rest, node.end())
+          } else {
+            iter(rest, curr)
+          }
+        case _ :: rest => iter(rest, curr)
+        case Nil => curr
+      }
+    }
+    val curr = iter(nodes, 0)
+    wkStr ++= fileContent.slice(curr, fileContent.size)
+    wkStr.mkString
+  }
   def semanticString(fileContent: String, obtainedTokens: List[Int]): String = {
 
     /**
      * construct string from token type and mods to decorate codes.
      */
-    def decorationString(typeInd: Int, modInd: Int): String = {
-      val buffer = ListBuffer.empty[String]
-
-      // TokenType
-      if (typeInd != -1) {
-        buffer.++=(List(TokenTypes(typeInd)))
-      }
-
-      // TokenModifier
-      // wkList = (e.g.) modInd=32 -> 100000 -> "000001"
-      val wkList = modInd.toBinaryString.toCharArray().toList.reverse
-      for (i: Int <- 0 to wkList.size - 1) {
-        if (wkList(i).toString == "1") {
-          buffer.++=(
-            List(
-              TokenModifiers(i)
-            )
-          )
-        }
-      }
-
-      // return
-      buffer.toList.mkString(",")
-    }
 
     val allTokens = obtainedTokens
       .grouped(5)
