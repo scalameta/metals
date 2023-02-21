@@ -624,6 +624,7 @@ class MetalsLspService(
       trees,
       referencesProvider,
       buffers,
+      definitionProvider,
     )
 
   private val newFileProvider: NewFileProvider = new NewFileProvider(

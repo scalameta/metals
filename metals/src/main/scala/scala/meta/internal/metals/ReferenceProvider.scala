@@ -89,12 +89,31 @@ final class ReferenceProvider(
     }
   }
 
+  def referencesForWildcardImport(
+      sym: String,
+      source: AbsolutePath,
+      directlyImportedSymbols: Set[String],
+  ): List[String] = {
+    semanticdbs.textDocument(source).documentIncludingStale match {
+      case Some(doc) =>
+        doc.occurrences
+          .map(_.symbol)
+          .distinct
+          .filter(s =>
+            s.ownerChain.contains(sym) && s != sym && !directlyImportedSymbols
+              .contains(s)
+          )
+          .toList
+      case None => List()
+    }
+  }
+
   /**
    * Find references for the given params.
    *
    * @return - All found list of references, it is a list of result because
    *           in some cases, multiple symbols are attached to the given position.
-   *           (e.g. exntesion parameter). See: https://github.com/scalameta/scalameta/issues/2443
+   *           (e.g. extension parameter). See: https://github.com/scalameta/scalameta/issues/2443
    */
   def references(
       params: ReferenceParams,
