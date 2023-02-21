@@ -43,7 +43,7 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Reports
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -190,7 +190,10 @@ class MetalsLspService(
 
   val tables: Tables = register(new Tables(workspace, time))
 
-  implicit val reports: Reports = new Reports(workspace)
+  implicit val reports: StdReportContext = new StdReportContext(workspace)
+
+  val zipReportsProvider: ZipReportsProvider =
+    new ZipReportsProvider(doctor.getTargetsInfoForReports, reports)
 
   private val buildTools: BuildTools = new BuildTools(
     workspace,
@@ -1870,6 +1873,23 @@ class MetalsLspService(
         Future {
           doctor.onVisibilityDidChange(true)
           doctor.executeRunDoctor()
+        }.asJavaObject
+      case ServerCommands.ZipReports() =>
+        Future {
+          val zip = zipReportsProvider.zip()
+          val pos = new l.Position(0, 0)
+          val location = new Location(
+            zip.toURI.toString(),
+            new l.Range(pos, pos),
+          )
+          languageClient.metalsExecuteClientCommand(
+            ClientCommands.GotoLocation.toExecuteCommandParams(
+              ClientCommands.WindowLocation(
+                location.getUri(),
+                location.getRange(),
+              )
+            )
+          )
         }.asJavaObject
       case ServerCommands.ListBuildTargets() =>
         Future {

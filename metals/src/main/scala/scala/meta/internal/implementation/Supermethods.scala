@@ -7,7 +7,7 @@ import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuic
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Reports
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -25,7 +25,7 @@ class Supermethods(
     implementationProvider: ImplementationProvider,
 )(implicit
     ec: ExecutionContext,
-    reports: Reports,
+    reports: ReportContext,
 ) {
 
   def getGoToSuperMethodCommand(

@@ -7,7 +7,7 @@ import java.nio.file.Paths
 import scala.collection.mutable
 
 import scala.meta.internal.metals.Fuzzy
-import scala.meta.internal.metals.Reports
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
@@ -52,7 +52,7 @@ class Completions(
     workspace: Option[Path],
     autoImports: AutoImportsGenerator,
     options: List[String],
-)(using Option[Reports]):
+)(using ReportContext):
 
   implicit val context: Context = ctx
 

@@ -16,7 +16,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
-import scala.meta.internal.metals.Reports
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.ThreadPools
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
@@ -167,7 +167,7 @@ class MetalsLanguageServer(
           serverState.set(ServerState.Initialized(service))
           metalsService.underlying = service
 
-          new Reports(workspace).cleanUpOldReports()
+          new StdReportContext(workspace).cleanUpOldReports()
 
           service.initialize()
       }

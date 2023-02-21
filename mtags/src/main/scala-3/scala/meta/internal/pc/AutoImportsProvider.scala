@@ -6,7 +6,7 @@ import java.{util as ju}
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
-import scala.meta.internal.metals.Reports
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.completions.CompletionPos
@@ -32,7 +32,7 @@ final class AutoImportsProvider(
     params: OffsetParams,
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String,
-)(using Option[Reports]):
+)(using ReportContext):
 
   def autoImports(isExtension: Boolean): List[AutoImportsResult] =
     val uri = params.uri

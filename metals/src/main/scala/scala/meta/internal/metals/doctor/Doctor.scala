@@ -475,6 +475,12 @@ final class Doctor(
       }
   }
 
+  def getTargetsInfoForReports(): List[Map[String, String]] =
+    allTargetIds()
+      .flatMap(extractTargetInfo(_))
+      .map(_.toMap(exclude = List("gotoCommand", "buildTarget")))
+      .toList
+
   private def extractTargetInfo(
       targetId: BuildTargetIdentifier
   ): List[DoctorTargetInfo] = {

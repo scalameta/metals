@@ -7,7 +7,7 @@ import scala.meta._
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Reports
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parse
@@ -28,7 +28,7 @@ import org.eclipse.{lsp4j => l}
 final class Trees(
     buffers: Buffers,
     scalaVersionSelector: ScalaVersionSelector,
-)(implicit reports: Reports) {
+)(implicit reports: ReportContext) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
 
