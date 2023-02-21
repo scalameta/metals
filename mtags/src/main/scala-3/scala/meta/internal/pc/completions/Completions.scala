@@ -313,11 +313,21 @@ class Completions(
       sym.info
       sym.is(Flags.JavaDefined)
 
+    def companionSynthetic = sym.companion.exists && sym.companion.is(Synthetic)
     // find the apply completion that would need a snippet
     val methodSymbols =
-      if shouldAddSnippet && sym.is(Flags.Module) && !isJavaDefined
+      if shouldAddSnippet &&
+        (sym.is(Flags.Module) || sym.isClass && !sym.is(Flags.Trait)) &&
+        !isJavaDefined
       then
-        val applSymbols = sym.info.member(nme.apply).allSymbols
+        val info =
+          /* Companion will be added even for normal classes now,
+           * but it will not show up from classpath. We can suggest
+           * constructors based on those synthetic applies.
+           */
+          if (sym.isClass && companionSynthetic) then sym.companionModule.info
+          else sym.info
+        val applSymbols = info.member(nme.apply).allSymbols
         sym :: applSymbols
       else List(sym)
 
@@ -579,7 +589,7 @@ class Completions(
                   sym,
                   sym.decodedName,
                   CompletionValue.Workspace(_, _, _, sym),
-                ).forall(visit),
+                ).map(visit).forall(_ == true),
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
       case CompletionKind.Members if query.nonEmpty =>
@@ -593,7 +603,7 @@ class Completions(
                 sym,
                 sym.decodedName,
                 CompletionValue.Extension(_, _, _),
-              ).forall(visit)
+              ).map(visit).forall(_ == true)
             else false,
         )
         Some(search.searchMethods(query, buildTargetIdentifier, visitor))

@@ -9,10 +9,16 @@ import org.eclipse.lsp4j.CompletionList
 
 abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
 
-  def withCompletion(query: String, project: Char = 'a')(
+  def withCompletion(
+      query: String,
+      project: Char = 'a',
+      testFilename: Option[String],
+  )(
       fn: CompletionList => Unit
   ): Future[Unit] = {
-    val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    val filename = testFilename.getOrElse(
+      s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    )
     val text = server
       .textContentsOnDisk(filename)
       .replace("// @@", query.replace("@@", ""))
@@ -30,8 +36,9 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       project: Char = 'a',
       includeDetail: Boolean = true,
       filter: String => Boolean = _ => true,
+      filename: Option[String] = None,
   )(implicit loc: Location): Future[Unit] = {
-    withCompletion(query, project) { list =>
+    withCompletion(query, project, filename) { list =>
       val completion = server.formatCompletion(list, includeDetail, filter)
       assertNoDiff(completion, expected)
     }
@@ -169,6 +176,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |""".stripMargin,
             "3" ->
               """|TrieMap - scala.collection.concurrent
+                 |TrieMap(k: K): V
                  |TrieMap[K, V](elems: (K, V)*): CC[K, V]
                  |""".stripMargin,
           ),

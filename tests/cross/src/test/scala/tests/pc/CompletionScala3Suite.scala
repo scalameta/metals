@@ -23,6 +23,34 @@ class CompletionScala3Suite extends BaseCompletionSuite {
     topLines = Some(3),
   )
 
+  check(
+    "constructor-empty",
+    """|package a
+       |
+       |class Testing
+       |
+       |def main =
+       |  Testin@@
+       |""".stripMargin,
+    """|Testing a
+       |Testing(): Testing
+       |""".stripMargin,
+  )
+
+  check(
+    "constructor-params",
+    """|package a
+       |
+       |class Testing(a: Int, b: String)
+       |
+       |def main =
+       |  Testin@@
+       |""".stripMargin,
+    """|Testing a
+       |Testing(a: Int, b: String): Testing
+       |""".stripMargin,
+  )
+
   // https://github.com/scalameta/metals/issues/2810
   check(
     "higher-kinded-match-type".tag(IgnoreScalaVersion.forLessThan("3.1.3-RC2")),
