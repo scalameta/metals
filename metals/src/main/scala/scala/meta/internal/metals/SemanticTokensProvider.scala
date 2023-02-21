@@ -1,10 +1,15 @@
-package scala.meta.internal.pc
+package scala.meta.internal.metals
+
 import java.{util => ju}
 
 import scala.annotation.switch
 import scala.collection.mutable.ListBuffer
 
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.parsers.SoftKeywords
+import scala.meta.internal.pc.SemanticTokens._
+import scala.meta.pc.Node
+import scala.meta.pc.VirtualFileParams
 import scala.meta.tokens._
 
 import org.eclipse.lsp4j.SemanticTokenTypes
@@ -13,17 +18,17 @@ import org.eclipse.lsp4j.SemanticTokenTypes
  *  Provides semantic tokens of file
  *  according to the LSP specification.
  */
-abstract class SemTokenProvider {
-  type Sym
-  type Pos
+object SemanticTokensProvider {
 
-  val capableTypes = SemanticTokens.TokenTypes
-  val capableModifiers = SemanticTokens.TokenModifiers
-  // Alias for long notation
-  val getTypeId: Map[String, Int] = capableTypes.zipWithIndex.toMap
-  val getModifierId: Map[String, Int] = capableModifiers.zipWithIndex.toMap
-  def getTokens(): Tokens
-  def nodes: List[NodeInfo]
+  def getTokens(isScala3: Boolean, params: VirtualFileParams): Tokens = {
+    import scala.meta._
+    if (isScala3) {
+      implicit val dialect = scala.meta.dialects.Scala3
+      params.text().tokenize.get
+    } else {
+      params.text().tokenize.get
+    }
+  }
 
   /**
    * Main method.  Fist, Codes are convert to Scala.Meta.Tokens.
@@ -33,17 +38,20 @@ abstract class SemTokenProvider {
    * are gotten using presentation Compler.
    * All semantic tokens is flattend to a list and returned.
    */
-  def provide(): ju.List[Integer] = {
+  def provide(
+      nodes: List[Node],
+      params: VirtualFileParams,
+      isScala3: Boolean,
+  ): ju.List[Integer] = {
 
     val buffer = ListBuffer.empty[Integer]
 
     var cLine = Line(0, 0) // Current Line
     var lastProvided = SingleLineToken(cLine, 0, None)
-    var nodesIterator: List[NodeInfo] = nodes
-    for (tk <- getTokens()) yield {
-
+    var nodesIterator: List[Node] = nodes
+    for (tk <- getTokens(isScala3, params)) yield {
       val (tokenType, tokenModifier, nodesIterator0) =
-        getTypeAndMod(tk, nodesIterator)
+        getTypeAndMod(tk, nodesIterator, isScala3)
       nodesIterator = nodesIterator0
       var cOffset = tk.pos.start // Current Offset
       var providing = SingleLineToken(cLine, cOffset, Some(lastProvided.copy()))
@@ -68,7 +76,7 @@ abstract class SemTokenProvider {
                 providing.deltaStartChar,
                 providing.charSize,
                 tokenType,
-                tokenModifier
+                tokenModifier,
               )
             )
             lastProvided = providing
@@ -88,19 +96,14 @@ abstract class SemTokenProvider {
 
   }
 
-  case class NodeInfo(
-      sym: Sym,
-      pos: Pos
-  )
-
   case class Line(
       val number: Int,
-      val startOffset: Int
+      val startOffset: Int,
   )
   case class SingleLineToken(
       line: Line, // line which token on
       startOffset: Int, // Offset from start of file.
-      lastToken: Option[SingleLineToken]
+      lastToken: Option[SingleLineToken],
   ) {
     var endOffset: Int = 0
     var crCount: Int = 0
@@ -122,26 +125,55 @@ abstract class SemTokenProvider {
    */
   private def getTypeAndMod(
       tk: scala.meta.tokens.Token,
-      nodesIterator: List[NodeInfo]
-  ): (Int, Int, List[NodeInfo]) = {
+      nodesIterator: List[Node],
+      isScala3: Boolean,
+  ): (Int, Int, List[Node]) = {
 
     tk match {
+      case ident: Token.Ident if isOperatorName(ident) =>
+        (getTypeId(SemanticTokenTypes.Operator), 0, nodesIterator)
       case ident: Token.Ident =>
         identTypeAndMod(ident, nodesIterator) match {
-          case (-1, 0, _) => (typeOfNonIdentToken(tk), 0, nodesIterator)
+          case (-1, 0, _) =>
+            (typeOfNonIdentToken(tk, isScala3), 0, nodesIterator)
           case res => res
         }
-      case _ => (typeOfNonIdentToken(tk), 0, nodesIterator)
+      case _ => (typeOfNonIdentToken(tk, isScala3), 0, nodesIterator)
     }
+  }
+
+  private def bestPick(nodes: List[Node]): Option[Node] = {
+    val preferred =
+      nodes.maxBy(node => getTypePriority(node.tokenType))
+    Some(preferred)
   }
 
   /**
    * returns (SemanticTokenType, SemanticTokenModifier) of @param tk
    */
-  protected def identTypeAndMod(
+  private def identTypeAndMod(
       ident: Token.Ident,
-      nodesIterator: List[NodeInfo]
-  ): (Int, Int, List[NodeInfo])
+      nodesIterator: List[Node],
+  ): (Int, Int, List[Node]) = {
+    def isTarget(node: Node): Boolean =
+      node.start == ident.pos.start &&
+        node.end == ident.pos.end
+
+    val candidates = nodesIterator.dropWhile(_.start < ident.start)
+    val node = candidates
+      .takeWhile(_.start == ident.start)
+      .filter(isTarget) match {
+      case node :: Nil => Some(node)
+      case Nil => None
+      case manyNodes =>
+        bestPick(manyNodes)
+    }
+
+    node match {
+      case None => (-1, 0, candidates)
+      case Some(node) => (node.tokenType(), node.tokenModifier(), candidates)
+    }
+  }
 
   /**
    * This function returns -1 when capable Type is nothing.
@@ -149,7 +181,8 @@ abstract class SemTokenProvider {
    *  See Token.Comment in this file.
    */
   private def typeOfNonIdentToken(
-      tk: scala.meta.tokens.Token
+      tk: scala.meta.tokens.Token,
+      isScala3: Boolean,
   ): Integer = {
     tk match {
       // Alphanumeric keywords
@@ -189,12 +222,49 @@ abstract class SemTokenProvider {
           _: Token.Interpolation.SpliceEnd | _: Token.Interpolation.End =>
         getTypeId(SemanticTokenTypes.String) // $ symbol
 
-      // Default
-      case _ =>
+      case _ if isScala3 =>
         trySoftKeyword(tk)
+
+      // Default
+      case _ => tokenFallback(tk)
     }
 
   }
+  def tokenFallback(tk: scala.meta.tokens.Token): Int = {
+    tk.text.headOption match {
+      case Some(upper) if upper.isUpper => getTypeId(SemanticTokenTypes.Class)
+      case Some(lower) if lower.isLower =>
+        getTypeId(SemanticTokenTypes.Variable)
+      case _ => -1
+    }
+  }
+
+  def trySoftKeyword(tk: Token): Integer = {
+    val SoftKeywordsUnapply = new SoftKeywords(scala.meta.dialects.Scala3)
+    tk match {
+
+      case SoftKeywordsUnapply.KwAs() => getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwDerives() =>
+        getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwEnd() => getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwExtension() =>
+        getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwInfix() =>
+        getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwInline() =>
+        getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwOpaque() =>
+        getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwOpen() => getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwTransparent() =>
+        getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwUsing() =>
+        getTypeId(SemanticTokenTypes.Keyword)
+      case _ => tokenFallback(tk)
+    }
+
+  }
+
   def isOperatorName(ident: Token.Ident): Boolean =
     (ident.name.last: @switch) match {
       case '~' | '!' | '@' | '#' | '%' | '^' | '*' | '+' | '-' | '<' | '>' |
@@ -203,5 +273,4 @@ abstract class SemTokenProvider {
       case _ => false
     }
 
-  protected def trySoftKeyword(tk: scala.meta.tokens.Token): Integer
 }

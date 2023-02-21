@@ -26,6 +26,7 @@ import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
+import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
@@ -124,17 +125,17 @@ case class ScalaPresentationCompiler(
 
   override def semanticTokens(
       params: VirtualFileParams
-  ): CompletableFuture[ju.List[Integer]] = {
+  ): CompletableFuture[ju.List[Node]] = {
 
-    val empty: ju.List[Integer] = new ju.ArrayList[Integer]()
+    val empty: ju.List[Node] = new ju.ArrayList[Node]()
     compilerAccess.withInterruptableCompiler(
       empty,
       params.token
     ) { pc =>
-      new SemanticTokenProvider(
+      new PcSemanticTokensProvider(
         pc.compiler(),
         params
-      ).provide()
+      ).provide().asJava
     }
   }
 

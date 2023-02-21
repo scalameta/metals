@@ -6,16 +6,18 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
 
   check(
     "class, object, var, val(readonly), method, type, parameter, String(single-line)",
-    s"""|<<class>>/*keyword*/  <<Test>>/*class*/{
+    s"""|package <<example>>/*namespace*/
         |
-        | <<var>>/*keyword*/ <<wkStr>>/*variable*/ = <<"Dog-">>/*string*/
-        | <<val>>/*keyword*/ <<nameStr>>/*variable,readonly*/ = <<"Jack">>/*string*/
+        |class <<Test>>/*class*/{
         |
-        | <<def>>/*keyword*/ <<Main>>/*method*/={
+        | var <<wkStr>>/*variable*/ = "Dog-"
+        | val <<nameStr>>/*variable,readonly*/ = "Jack"
         |
-        |  <<val>>/*keyword*/ <<preStr>>/*variable,readonly*/= <<"I am ">>/*string*/
-        |  <<var>>/*keyword*/ <<postStr>>/*variable*/= <<"in a house. ">>/*string*/
-        |  <<wkStr>>/*variable*/=<<nameStr>>/*variable,readonly*/ <<+>>/*method*/ <<"Cat-">>/*string*/
+        | def <<Main>>/*method*/={
+        |
+        |  val <<preStr>>/*variable,readonly*/= "I am "
+        |  var <<postStr>>/*variable*/= "in a house. "
+        |  <<wkStr>>/*variable*/=<<nameStr>>/*variable,readonly*/ <<+>>/*method*/ "Cat-"
         |
         |  <<testC>>/*class*/.<<bc>>/*method*/(<<preStr>>/*variable,readonly*/
         |    <<+>>/*method*/ <<wkStr>>/*variable*/
@@ -23,9 +25,9 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         | }
         |}
         |
-        |<<object>>/*keyword*/  <<testC>>/*class*/{
+        |object <<testC>>/*class*/{
         |
-        | <<def>>/*keyword*/ <<bc>>/*method*/(<<msg>>/*parameter*/:<<String>>/*type*/)={
+        | def <<bc>>/*method*/(<<msg>>/*parameter*/:<<String>>/*type*/)={
         |   <<println>>/*method*/(<<msg>>/*parameter*/)
         | }
         |}
@@ -34,53 +36,52 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
 
   check(
     "Comment(Single-Line, Multi-Line)",
-    s"""|
-        |<<object>>/*keyword*/ <<Main>>/*class*/{
+    s"""|package <<example>>/*namespace*/
         |
-        |   <</**>>/*comment*/
-        |<<   * Test of Comment Block>>/*comment*/
-        |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<1>>/*number*/
+        |object <<Main>>/*class*/{
         |
-        |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
-        |    <<// Single Line Comment>>/*comment*/
-        |    <<a>>/*parameter*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
+        |   /**
+        |   * Test of Comment Block
+        |   */  val <<x>>/*variable,readonly*/ = 1
+        |
+        |  def <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
+        |    // Single Line Comment
+        |    <<a>>/*parameter*/ <<+>>/*method,abstract*/ 1 // com = 1
         |   }
         |}
-        |
-        |
         |""".stripMargin,
     compat = Map(
       "3" ->
-        s"""|
-            |<<object>>/*keyword*/ <<Main>>/*class*/{
+        s"""|package <<example>>/*namespace*/
             |
-            |   <</**>>/*comment*/
-            |<<   * Test of Comment Block>>/*comment*/
-            |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<1>>/*number*/
+            |object <<Main>>/*class*/{
             |
-            |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
-            |    <<// Single Line Comment>>/*comment*/
-            |    <<a>>/*parameter*/ <<+>>/*method*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
+            |   /**
+            |   * Test of Comment Block
+            |   */  val <<x>>/*variable,readonly*/ = 1
+            |
+            |  def <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
+            |    // Single Line Comment
+            |    <<a>>/*parameter*/ <<+>>/*method*/ 1 // com = 1
             |   }
             |}
-            |
-            |
             |""".stripMargin
     ),
   )
 
   check(
     "number literal, Static",
-    s"""|
-        |<<object>>/*keyword*/ <<ab>>/*class*/ {
-        |  <<var>>/*keyword*/  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = <<1>>/*number*/
-        |  <<val>>/*keyword*/  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = <<4.94065645841246544e-324d>>/*number*/
-        |  <<val>>/*keyword*/  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = <<1.40129846432481707e-45>>/*number*/
-        |  <<val>>/*keyword*/  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = <<9223372036854775807L>>/*number*/
+    s"""|package <<example>>/*namespace*/
+        |
+        |object <<ab>>/*class*/ {
+        |  var  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = 1
+        |  val  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = 4.94065645841246544e-324d
+        |  val  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = 1.40129846432481707e-45
+        |  val  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = 9223372036854775807L
         |}
         |
-        |<<object>>/*keyword*/ <<sample10>>/*class*/ {
-        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+        |object <<sample10>>/*class*/ {
+        |  def <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
         |    <<println>>/*method*/(
         |     (<<ab>>/*class*/.<<iVar>>/*variable*/ <<+>>/*method,abstract*/ <<ab>>/*class*/.<<iVal>>/*variable,readonly*/).<<toString>>/*method*/
         |    )
@@ -90,16 +91,17 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
     // In Scala 3 `+` is not abstract
     compat = Map(
       "3" ->
-        s"""|
-            |<<object>>/*keyword*/ <<ab>>/*class*/ {
-            |  <<var>>/*keyword*/  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = <<1>>/*number*/
-            |  <<val>>/*keyword*/  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = <<4.94065645841246544e-324d>>/*number*/
-            |  <<val>>/*keyword*/  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = <<1.40129846432481707e-45>>/*number*/
-            |  <<val>>/*keyword*/  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = <<9223372036854775807L>>/*number*/
+        s"""|package <<example>>/*namespace*/
+            |
+            |object <<ab>>/*class*/ {
+            |  var  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = 1
+            |  val  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = 4.94065645841246544e-324d
+            |  val  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = 1.40129846432481707e-45
+            |  val  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = 9223372036854775807L
             |}
             |
-            |<<object>>/*keyword*/ <<sample10>>/*class*/ {
-            |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+            |object <<sample10>>/*class*/ {
+            |  def <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
             |    <<println>>/*method*/(
             |     (<<ab>>/*class*/.<<iVar>>/*variable*/ <<+>>/*method*/ <<ab>>/*class*/.<<iVal>>/*variable,readonly*/).<<toString>>/*method*/
             |    )
@@ -112,34 +114,34 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
   check(
     "abstract(modifier), trait, type parameter",
     s"""|
-        |<<package>>/*keyword*/ <<a>>/*namespace*/.<<b>>/*namespace*/
-        |<<object>>/*keyword*/ <<Sample5>>/*class*/ {
+        |package <<a>>/*namespace*/.<<b>>/*namespace*/
+        |object <<Sample5>>/*class*/ {
         |
-        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-        |      <<val>>/*keyword*/ <<itr>>/*variable,readonly*/ = <<new>>/*keyword*/ <<IntIterator>>/*class*/(<<5>>/*number*/)
-        |      <<var>>/*keyword*/ <<str>>/*variable*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ <<",">>/*string*/
+        |  def <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+        |      val <<itr>>/*variable,readonly*/ = new <<IntIterator>>/*class*/(5)
+        |      var <<str>>/*variable*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ ","
         |          <<str>>/*variable*/ += <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/
-        |      <<println>>/*method*/(<<"count:">>/*string*/<<+>>/*method*/<<str>>/*variable*/)
+        |      <<println>>/*method*/("count:"<<+>>/*method*/<<str>>/*variable*/)
         |  }
         |
-        |  <<trait>>/*keyword*/ <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,abstract*/] {
-        |    <<def>>/*keyword*/ <<next>>/*method,abstract*/(): <<A>>/*typeParameter,abstract*/
+        |  trait <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,abstract*/] {
+        |    def <<next>>/*method,abstract*/(): <<A>>/*typeParameter,abstract*/
         |  }
         |
-        |  <<abstract>>/*modifier*/ <<class>>/*keyword*/ <<hasLogger>>/*class,abstract*/ {
-        |    <<def>>/*keyword*/ <<log>>/*method*/(<<str>>/*parameter*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter*/)}
+        |  abstract class <<hasLogger>>/*class,abstract*/ {
+        |    def <<log>>/*method*/(<<str>>/*parameter*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter*/)}
         |  }
         |
-        |  <<class>>/*keyword*/ <<IntIterator>>/*class*/(<<to>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-        |  <<extends>>/*keyword*/ <<hasLogger>>/*class,abstract*/ <<with>>/*keyword*/ <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
-        |    <<private>>/*modifier*/ <<var>>/*keyword*/ <<current>>/*variable*/ = <<0>>/*number*/
-        |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
-        |      <<if>>/*keyword*/ (<<current>>/*variable*/ <<<>>/*method,abstract*/ <<to>>/*variable,readonly*/) {
-        |        <<log>>/*method*/(<<"main">>/*string*/)
-        |        <<val>>/*keyword*/ <<t>>/*variable,readonly*/ = <<current>>/*variable*/
-        |        <<current>>/*variable*/ = <<current>>/*variable*/ <<+>>/*method,abstract*/ <<1>>/*number*/
+        |  class <<IntIterator>>/*class*/(<<to>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+        |  extends <<hasLogger>>/*class,abstract*/ with <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
+        |    private var <<current>>/*variable*/ = 0
+        |    override def <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
+        |      if (<<current>>/*variable*/ <<<>>/*method,abstract*/ <<to>>/*variable,readonly*/) {
+        |        <<log>>/*method*/("main")
+        |        val <<t>>/*variable,readonly*/ = <<current>>/*variable*/
+        |        <<current>>/*variable*/ = <<current>>/*variable*/ <<+>>/*method,abstract*/ 1
         |        <<t>>/*variable,readonly*/
-        |      } <<else>>/*keyword*/ <<0>>/*number*/
+        |      } else 0
         |    }
         |  }
         |}
@@ -150,34 +152,34 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
     compat = Map(
       "3" ->
         s"""|
-            |<<package>>/*keyword*/ <<a>>/*namespace*/.<<b>>/*namespace*/
-            |<<object>>/*keyword*/ <<Sample5>>/*class*/ {
+            |package <<a>>/*namespace*/.<<b>>/*namespace*/
+            |object <<Sample5>>/*class*/ {
             |
-            |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-            |      <<val>>/*keyword*/ <<itr>>/*variable,readonly*/ = <<new>>/*keyword*/ <<IntIterator>>/*class*/(<<5>>/*number*/)
-            |      <<var>>/*keyword*/ <<str>>/*variable*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ <<",">>/*string*/
+            |  def <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+            |      val <<itr>>/*variable,readonly*/ = new <<IntIterator>>/*class*/(5)
+            |      var <<str>>/*variable*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ ","
             |          <<str>>/*variable*/ += <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/
-            |      <<println>>/*method*/(<<"count:">>/*string*/<<+>>/*method*/<<str>>/*variable*/)
+            |      <<println>>/*method*/("count:"<<+>>/*method*/<<str>>/*variable*/)
             |  }
             |
-            |  <<trait>>/*keyword*/ <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,abstract*/] {
-            |    <<def>>/*keyword*/ <<next>>/*method*/(): <<A>>/*typeParameter,abstract*/
+            |  trait <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,abstract*/] {
+            |    def <<next>>/*method*/(): <<A>>/*typeParameter,abstract*/
             |  }
             |
-            |  <<abstract>>/*modifier*/ <<class>>/*keyword*/ <<hasLogger>>/*class,abstract*/ {
-            |    <<def>>/*keyword*/ <<log>>/*method*/(<<str>>/*parameter*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter*/)}
+            |  abstract class <<hasLogger>>/*class,abstract*/ {
+            |    def <<log>>/*method*/(<<str>>/*parameter*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter*/)}
             |  }
             |
-            |  <<class>>/*keyword*/ <<IntIterator>>/*class*/(<<to>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-            |  <<extends>>/*keyword*/ <<hasLogger>>/*class,abstract*/ <<with>>/*keyword*/ <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
-            |    <<private>>/*modifier*/ <<var>>/*keyword*/ <<current>>/*variable*/ = <<0>>/*number*/
-            |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
-            |      <<if>>/*keyword*/ (<<current>>/*variable*/ <<<>>/*method*/ <<to>>/*variable,readonly*/) {
-            |        <<log>>/*method*/(<<"main">>/*string*/)
-            |        <<val>>/*keyword*/ <<t>>/*variable,readonly*/ = <<current>>/*variable*/
-            |        <<current>>/*variable*/ = <<current>>/*variable*/ <<+>>/*method*/ <<1>>/*number*/
+            |  class <<IntIterator>>/*class*/(<<to>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+            |  extends <<hasLogger>>/*class,abstract*/ with <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
+            |    private var <<current>>/*variable*/ = 0
+            |    override def <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
+            |      if (<<current>>/*variable*/ <<<>>/*method*/ <<to>>/*variable,readonly*/) {
+            |        <<log>>/*method*/("main")
+            |        val <<t>>/*variable,readonly*/ = <<current>>/*variable*/
+            |        <<current>>/*variable*/ = <<current>>/*variable*/ <<+>>/*method*/ 1
             |        <<t>>/*variable,readonly*/
-            |      } <<else>>/*keyword*/ <<0>>/*number*/
+            |      } else 0
             |    }
             |  }
             |}
@@ -189,30 +191,28 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
 
   check(
     "deprecated",
-    s"""|<<object>>/*keyword*/ <<sample9>>/*class*/ {
-        |  <<@>>/*keyword*/<<deprecated>>/*class*/(<<"this method will be removed">>/*string*/, <<"FooLib 12.0">>/*string*/)
-        |  <<def>>/*keyword*/ <<oldMethod>>/*method,deprecated*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/) = <<x>>/*parameter*/
+    s"""|package <<example>>/*namespace*/
+        |object <<sample9>>/*class*/ {
+        |  @<<deprecated>>/*class*/("this method will be removed", "FooLib 12.0")
+        |  def <<oldMethod>>/*method,deprecated*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/) = <<x>>/*parameter*/
         |
-        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-        |    <<val>>/*keyword*/ <<str>>/*variable,readonly*/ = <<oldMethod>>/*method,deprecated*/(<<2>>/*number*/).<<toString>>/*method*/
-        |     <<println>>/*method*/(<<"Hello, world!">>/*string*/<<+>>/*method*/ <<str>>/*variable,readonly*/)
+        |  def <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+        |    val <<str>>/*variable,readonly*/ = <<oldMethod>>/*method,deprecated*/(2).<<toString>>/*method*/
+        |     <<println>>/*method*/("Hello, world!"<<+>>/*method*/ <<str>>/*variable,readonly*/)
         |  }
         |}
         |""".stripMargin,
   )
-
   check(
     "import(Out of File)",
-    s"""|
-        |<<import>>/*keyword*/ <<scala>>/*namespace*/.<<math>>/*namespace*/.<<sqrt>>/*method*/
-        |<<object>>/*keyword*/ <<sample3>>/*class*/ {
+    s"""|package <<example>>/*namespace*/
         |
-        |  <<def>>/*keyword*/ <<sqrtplus1>>/*method*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/)
-        |     = <<sqrt>>/*method*/(<<x>>/*parameter*/).<<toString>>/*method*/()
+        |import <<scala>>/*namespace*/.<<collection>>/*namespace*/.<<immutable>>/*namespace*/.<<SortedSet>>/*class*/
         |
-        |  <<def>>/*keyword*/ <<main>>/*method*/(<<args>>/*parameter*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-        |    <<println>>/*method*/(<<"Hello, world! : ">>/*string*/ <<+>>/*method*/ <<sqrtplus1>>/*method*/(<<2>>/*number*/))
-        |  }
+        |object <<sample3>>/*class*/ {
+        |
+        |  def <<sorted1>>/*method*/(<<x>>/*parameter*/: <<Int>>/*class,abstract*/)
+        |     = <<SortedSet>>/*class*/(<<x>>/*parameter*/)
         |}
         |
         |""".stripMargin,
@@ -220,30 +220,32 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
 
   check(
     "anonymous-class",
-    s"""|<<object>>/*keyword*/ <<A>>/*class*/ {
-        |  <<trait>>/*keyword*/ <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] {
-        |    <<def>>/*keyword*/ <<method>>/*method,abstract*/(<<asf>>/*parameter*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
+    s"""|package <<example>>/*namespace*/ 
+        |object <<A>>/*class*/ {
+        |  trait <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] {
+        |    def <<method>>/*method,abstract*/(<<asf>>/*parameter*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
         |  }
         |
-        |  <<abstract>>/*modifier*/ <<class>>/*keyword*/ <<Alphabet>>/*class,abstract*/(<<alp>>/*variable,readonly*/: <<Int>>/*class,abstract*/) <<extends>>/*keyword*/ <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
-        |    <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/) = <<123>>/*number*/
+        |  abstract class <<Alp>>/*class,abstract*/(<<alp>>/*variable,readonly*/: <<Int>>/*class,abstract*/) extends <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
+        |    def <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/) = 123
         |  }
-        |  <<val>>/*keyword*/ <<a>>/*variable,readonly*/ = <<new>>/*keyword*/ <<Alphabet>>/*class,abstract*/(<<alp>>/*parameter*/ = <<10>>/*number*/) {
-        |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = <<321>>/*number*/
+        |  val <<a>>/*variable,readonly*/ = new <<Alp>>/*class,abstract*/(<<alp>>/*parameter*/ = 10) {
+        |    override def <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = 321
         |  }
         |}""".stripMargin,
     // In Scala 3 methods in `trait` are not abstract
     compat = Map(
-      "3" -> s"""|<<object>>/*keyword*/ <<A>>/*class*/ {
-                 |  <<trait>>/*keyword*/ <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] {
-                 |    <<def>>/*keyword*/ <<method>>/*method*/(<<asf>>/*parameter*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
+      "3" -> s"""|package <<example>>/*namespace*/ 
+                 |object <<A>>/*class*/ {
+                 |  trait <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] {
+                 |    def <<method>>/*method*/(<<asf>>/*parameter*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
                  |  }
                  |
-                 |  <<abstract>>/*modifier*/ <<class>>/*keyword*/ <<Alphabet>>/*class,abstract*/(<<alp>>/*variable,readonly*/: <<Int>>/*class,abstract*/) <<extends>>/*keyword*/ <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
-                 |    <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/) = <<123>>/*number*/
+                 |  abstract class <<Alp>>/*class,abstract*/(<<alp>>/*variable,readonly*/: <<Int>>/*class,abstract*/) extends <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
+                 |    def <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/) = 123
                  |  }
-                 |  <<val>>/*keyword*/ <<a>>/*variable,readonly*/ = <<new>>/*keyword*/ <<Alphabet>>/*class,abstract*/(<<alp>>/*parameter*/ = <<10>>/*number*/) {
-                 |    <<override>>/*modifier*/ <<def>>/*keyword*/ <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = <<321>>/*number*/
+                 |  val <<a>>/*variable,readonly*/ = new <<Alp>>/*class,abstract*/(<<alp>>/*parameter*/ = 10) {
+                 |    override def <<method>>/*method*/(<<adf>>/*parameter*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = 321
                  |  }
                  |}""".stripMargin
     ),
@@ -251,15 +253,13 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
 
   check(
     "import-rename",
-    s"""|<<package>>/*keyword*/ <<example>>/*namespace*/
+    s"""|package <<example>>/*namespace*/
         |
-        |<<import>>/*keyword*/ <<util>>/*namespace*/.{<<Failure>>/*class*/ <<=>>>/*operator*/ <<NoBad>>/*class*/}
-        |<<import>>/*keyword*/ <<math>>/*namespace*/.{<<floor>>/*method*/ <<=>>>/*operator*/ <<_>>/*variable*/, <<_>>/*variable*/}
+        |import <<util>>/*namespace*/.{<<Failure>>/*class*/ => <<NoBad>>/*class*/}
         |
-        |<<class>>/*keyword*/ <<Imports>>/*class*/ {
-        |  <<// rename reference>>/*comment*/
-        |  <<NoBad>>/*class*/(<<null>>/*keyword*/)
-        |  <<max>>/*method*/(<<1>>/*number*/, <<2>>/*number*/)
+        |class <<Imports>>/*class*/ {
+        |  // rename reference
+        |  <<NoBad>>/*class*/(null)
         |}""".stripMargin,
   )
 
