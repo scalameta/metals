@@ -31,8 +31,22 @@ final class ExtractMethodProvider(
     )
     val scopeSymbols =
       metalsScopeMembers(pos).map(_.sym).filter(_.pos.isDefined).toSet
-    def prettyType(tpe: Type) =
-      metalsToLongString(tpe.widen.finalResultType, history)
+
+    def prettyType(tpe: Type, forceAsMethod: Boolean = false): String = {
+      def prettyResType(tpe: Type) =
+        metalsToLongString(tpe.widen.finalResultType, history)
+      def printParamList(params: List[Symbol]): String =
+        params match {
+          case sym :: Nil => prettyResType(sym.info)
+          case _ =>
+            s"(${params.map(sym => prettyResType(sym.info)).mkString(", ")})"
+        }
+      val paramss = tpe.paramss
+      if (paramss.nonEmpty)
+        s"${paramss.map(printParamList).mkString(" => ")} => ${prettyResType(tpe)}"
+      else if (forceAsMethod) s"=> ${prettyResType(tpe)}"
+      else prettyResType(tpe)
+    }
 
     def extractFromBlock(t: Tree): List[Tree] =
       t match {
@@ -57,8 +71,6 @@ final class ExtractMethodProvider(
       def symFromIdent(id: Ident): Set[Symbol] = {
         val sym = id.symbol match {
           case _: NoSymbol =>
-            // This case is mostly for class parameters, which are also getters,
-            // so we don't use `!sym.isMethod`
             context.lookupSymbol(
               id.name,
               s =>
@@ -69,10 +81,7 @@ final class ExtractMethodProvider(
               case _ => Set.empty[Symbol]
             }
           case _ =>
-            // Currently we are not extracting methods and we leave it to the user
-            Set(id.symbol).filter(s =>
-              (s.isTerm || s.isTypeParameterOrSkolem) && !s.isMethod
-            )
+            Set(id.symbol).filter(s => s.isTerm || s.isTypeParameterOrSkolem)
         }
         sym.filter(nonAvailable(_))
       }
@@ -89,6 +98,7 @@ final class ExtractMethodProvider(
 
       val methodParams = allSymbols.toList.filter(_.isTerm)
       val methodParamTypes = methodParams
+        .flatMap(p => p :: p.info.paramss.flatten)
         .map(_.info.typeSymbol)
         .filter(tp => nonAvailable(tp) && tp.isTypeParameterOrSkolem)
         .distinct
@@ -118,7 +128,9 @@ final class ExtractMethodProvider(
         val (methodParams, typeParams) =
           localRefs(extracted, defnPos, extractedPos)
         val methodParamsText = methodParams
-          .map(sym => s"${sym.decodedName}: ${prettyType(sym.info)}")
+          .map(sym =>
+            s"${sym.decodedName}: ${prettyType(sym.info, sym.isMethod && !sym.isGetter)}"
+          )
           .mkString(", ")
         val typeParamsText = typeParams
           .map(_.decodedName) match {

@@ -25,6 +25,9 @@ import dotty.tools.dotc.core.Flags.Method
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Names.TermName
 import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.core.Types.MethodType
+import dotty.tools.dotc.core.Types.PolyType
+import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
@@ -57,6 +60,23 @@ final class ExtractMethodProvider(
     val indexedCtx = IndexedContext(locatedCtx)
     val printer =
       MetalsPrinter.standard(indexedCtx, search, IncludeDefaultParam.Never)
+    def prettyPrint(tpe: Type) =
+      def prettyPrintReturnType(tpe: Type): String =
+        tpe match
+          case mt: (MethodType | PolyType) =>
+            prettyPrintReturnType(tpe.resultType)
+          case tpe => printer.tpe(tpe)
+      def printParams(params: List[Type]) =
+        params match
+          case p :: Nil => prettyPrintReturnType(p)
+          case _ => s"(${params.map(prettyPrintReturnType).mkString(", ")})"
+
+      if tpe.paramInfoss.isEmpty
+      then prettyPrintReturnType(tpe)
+      else
+        val params = tpe.paramInfoss.map(printParams).mkString(" => ")
+        s"$params => ${prettyPrintReturnType(tpe)}"
+    end prettyPrint
 
     def extractFromBlock(t: tpd.Tree): List[tpd.Tree] =
       t match
@@ -79,10 +99,7 @@ final class ExtractMethodProvider(
         tree match
           case id @ Ident(_) =>
             val sym = id.symbol
-            // Currently we are not extracting methods and we leave it to the user
-            if nonAvailable(sym) && (sym.isTerm || sym.isTypeParam) && !sym.is(
-                Method
-              )
+            if nonAvailable(sym) && (sym.isTerm || sym.isTypeParam)
             then symbols + sym
             else symbols
           case _ => symbols
@@ -93,6 +110,7 @@ final class ExtractMethodProvider(
 
       val methodParams = allSymbols.toList.filter(_.isTerm)
       val methodParamTypes = methodParams
+        .flatMap(p => p :: p.paramSymss.flatten)
         .map(_.info.typeSymbol)
         .filter(tp => nonAvailable(tp) && tp.isTypeParam)
         .distinct
@@ -117,13 +135,13 @@ final class ExtractMethodProvider(
       yield
         val defnPos = stat.sourcePos
         val extractedPos = head.sourcePos.withEnd(expr.sourcePos.end)
-        val exprType = printer.tpe(expr.tpe.widen)
+        val exprType = prettyPrint(expr.tpe.widen)
         val name =
           genName(indexedCtx.scopeSymbols.map(_.decodedName).toSet, "newMethod")
         val (methodParams, typeParams) =
           localRefs(extracted, stat.sourcePos, extractedPos)
         val methodParamsText = methodParams
-          .map(sym => s"${sym.decodedName}: ${printer.tpe(sym.info)}")
+          .map(sym => s"${sym.decodedName}: ${prettyPrint(sym.info)}")
           .mkString(", ")
         val typeParamsText = typeParams
           .map(_.decodedName) match
