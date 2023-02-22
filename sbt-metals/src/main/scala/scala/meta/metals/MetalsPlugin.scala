@@ -139,45 +139,43 @@ object MetalsPlugin extends AutoPlugin {
         javaHome: File
     ): Option[JdkVersion] = {
 
-      def fromReleaseFile: Option[JdkVersion] = {
-        val releaseFile = javaHome / "release"
-        if (releaseFile.exists) {
-          val props = new ju.Properties
-          props.load(Source.fromFile(releaseFile).bufferedReader())
-          try {
+      def fromReleaseFile: Option[JdkVersion] =
+        Seq(javaHome / "release", javaHome.getParentFile / "release")
+          .filter(_.exists)
+          .flatMap { releaseFile =>
+            val props = new ju.Properties
+            props.load(Source.fromFile(releaseFile).bufferedReader())
             props.asScala
               .get("JAVA_VERSION")
               .map(_.stripPrefix("\"").stripSuffix("\""))
-              .flatMap(JdkVersion.parse)
-          } catch {
-            case NonFatal(e) =>
-              None
+              .flatMap(jv => JdkVersion.parse(jv))
           }
-        } else None
-      }
+          .headOption
 
-      def jdk8Fallback: Option[JdkVersion] = {
-        val rtJar = javaHome / "jre" / "lib" / "rt.jar"
-        if (rtJar.exists) Some(JdkVersion(8))
-        else None
-      }
+      def jdk8Fallback: Option[JdkVersion] =
+        Seq(javaHome / "jre" / "lib" / "rt.jar", javaHome / "lib" / "rt.jar")
+          .filter(_.exists)
+          .map(_ => JdkVersion(8))
+          .headOption
 
       fromReleaseFile.orElse(jdk8Fallback)
     }
 
     def parse(v: String): Option[JdkVersion] = {
-      val numbers = v
-        .split('-')
-        .head
-        .split('.')
-        .toList
-        .take(2)
-        .map(s => Try(s.toInt).toOption)
+      val numbers = Try {
+        v
+          .split('-')
+          .head
+          .split('.')
+          .toList
+          .take(2)
+          .flatMap(s => Try(s.toInt).toOption)
+      }.toOption
 
       numbers match {
-        case Some(1) :: Some(minor) :: _ =>
+        case Some(1 :: minor :: _) =>
           Some(JdkVersion(minor))
-        case Some(single) :: _ =>
+        case Some(single :: _) =>
           Some(JdkVersion(single))
         case _ => None
       }
