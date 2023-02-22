@@ -356,8 +356,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
                          |  }
                          |}""".stripMargin),
   )
-  // Currently we are not supporting extracting inner methods
-  // Issue: https://github.com/scalameta/metals/issues/4360
+
   checkEdit(
     "extract-def",
     s"""|object A{
@@ -369,14 +368,121 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |}""".stripMargin,
     s"""|object A{
         |  def method(i: Int) = i + 1
-        |  def newMethod(a: Int): Int =
+        |  def newMethod(a: Int, m2: Int => Int): Int =
         |    method(2 + m2(a))
         |
         |  def f1(a: Int) = {
         |    def m2(b: Int) = b + 1
-        |    newMethod(a)
+        |    newMethod(a, m2)
         |  }
         |}""".stripMargin,
+  )
+
+  checkEdit(
+    "extract-def-mult-params-lists",
+    s"""|object Hello {
+        |  @@def m(): Unit = {
+        |    def m2[T](a: T, j: Int)(i : Int) = List(a)
+        |    val a = "aa"
+        |    <<m2(a, 2)(2)>>
+        |  }
+        |}
+        |""".stripMargin,
+    s"""|object Hello {
+        |  def newMethod[T](a: String, m2: (T, Int) => Int => List[T]): List[String] =
+        |    m2(a, 2)(2)
+        |
+        |  def m(): Unit = {
+        |    def m2[T](a: T, j: Int)(i : Int) = List(a)
+        |    val a = "aa"
+        |    newMethod(a, m2)
+        |  }
+        |}
+        |""".stripMargin,
+  )
+
+  checkEdit(
+    "extract-def-mult-type-params",
+    s"""|object Hello {
+        |  @@def m[T](a: T): Unit = {
+        |    def m2[F](a: F, j: Int)(i : Int) = List(a)
+        |    <<m2(a, 2)(2)>>
+        |  }
+        |}
+        |""".stripMargin,
+    s"""|object Hello {
+        |  def newMethod[F, T](a: T, m2: (F, Int) => Int => List[F]): List[T] =
+        |    m2(a, 2)(2)
+        |
+        |  def m[T](a: T): Unit = {
+        |    def m2[F](a: F, j: Int)(i : Int) = List(a)
+        |    newMethod(a, m2)
+        |  }
+        |}
+        |""".stripMargin,
+  )
+
+  checkEdit(
+    "extract-def-partial",
+    s"""|object Hello {
+        |  @@def m(): Unit = {
+        |    def m2[T](a: T, j: Int)(i : Int) = List(a)
+        |    <<m2("aa", 2)>>(2)
+        |  }
+        |}
+        |""".stripMargin,
+    s"""|object Hello {
+        |  def newMethod[T](m2: (T, Int) => Int => List[T]): Int => List[String] =
+        |    m2("aa", 2)
+        |
+        |  def m(): Unit = {
+        |    def m2[T](a: T, j: Int)(i : Int) = List(a)
+        |    newMethod(m2)(2)
+        |  }
+        |}
+        |""".stripMargin,
+  )
+
+  checkEdit(
+    "extract-def-no-args",
+    s"""|object Hello {
+        |  @@def m(): Unit = {
+        |    def m2 = 9
+        |    <<m2 + 3>>
+        |  }
+        |}
+        |""".stripMargin,
+    s"""|object Hello {
+        |  def newMethod(m2: => Int): Int =
+        |    m2 + 3
+        |
+        |  def m(): Unit = {
+        |    def m2 = 9
+        |    newMethod(m2)
+        |  }
+        |}
+        |""".stripMargin,
+  )
+
+  checkEdit(
+    "extract-def-no-args2",
+    s"""|object Hello {
+        |  @@def m(): Unit = {
+        |    def m2() = 9
+        |    <<m2() + 3>>
+        |  }
+        |}
+        |""".stripMargin,
+    s"""|object Hello {
+        |  def newMethod(m2: () => Int): Int =
+        |    m2() + 3
+        |
+        |  def m(): Unit = {
+        |    def m2() = 9
+        |    newMethod(m2)
+        |  }
+        |}
+        |""".stripMargin,
   )
 
   checkEdit(
@@ -401,5 +507,4 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |  }
         |}""".stripMargin,
   )
-
 }
