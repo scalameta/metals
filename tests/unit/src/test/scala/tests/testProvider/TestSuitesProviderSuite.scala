@@ -257,6 +257,17 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |
         |  List("") // negative case - apply without test call
         |
+        |  val numbers = List(1, 2, 3)
+        |  numbers.foreach{
+        |    n =>
+        |     test(n.toShort.toString) {
+        |         if (true) {
+        |           val input = 123
+        |           assert(input.toString.contains(n.toString))
+        |         }
+        |     }
+        |  }
+        |
         |  def check(name: String, n1: Int, n2: Int = 1) = {
         |    test(name) {
         |      assertEquals(n1, n2)
