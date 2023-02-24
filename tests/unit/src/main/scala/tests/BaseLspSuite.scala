@@ -95,7 +95,10 @@ abstract class BaseLspSuite(
   )(implicit loc: Location): Unit = {
     def functionRetry(retry: Int): Future[Unit] = {
       fn.recoverWith {
-        case _ if retry > 0 => functionRetry(retry - 1)
+        case _ if retry > 0 =>
+          cancelServer()
+          newServer(testOpts.name)
+          functionRetry(retry - 1)
         case e => Future.failed(e)
       }
     }
