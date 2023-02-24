@@ -3,10 +3,18 @@ package scala.meta.internal.metals.watcher
 import java.nio.file.Path
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.util.Failure
+import scala.util.Try
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
@@ -40,7 +48,8 @@ final class FileWatcher(
     buildTargets: BuildTargets,
     watchFilter: Path => Boolean,
     onFileWatchEvent: FileWatcherEvent => Unit,
-) extends Cancelable {
+)(implicit ec: ExecutionContext)
+    extends Cancelable {
   import FileWatcher._
 
   @volatile
@@ -131,7 +140,7 @@ object FileWatcher {
       pathsToWatch: PathsToWatch,
       callback: FileWatcherEvent => Unit,
       watchFilter: Path => Boolean,
-  ): () => Unit = {
+  )(implicit ec: ExecutionContext): () => Unit = {
     val watchEventQueue: BlockingQueue[FileWatcherEvent] =
       new LinkedBlockingQueue[FileWatcherEvent]
 
@@ -196,9 +205,20 @@ object FileWatcher {
     }
 
     () => {
-      watcher.close()
-      stopWatchingSignal.set(true)
-      thread.interrupt()
+      val hanged: AtomicReference[Thread] = new AtomicReference(null)
+      val closing = Future {
+        hanged.set(Thread.currentThread())
+        stopWatchingSignal.set(true)
+        watcher.close()
+        thread.interrupt()
+        hanged.set(null)
+      }
+      // watcher.close() might hang so we don't want to get stuck here
+      Try(Await.ready(closing, 3.seconds)) match {
+        case Failure(_: TimeoutException) =>
+          Option(hanged.get()).foreach(_.interrupt())
+        case _ =>
+      }
     }
   }
 
