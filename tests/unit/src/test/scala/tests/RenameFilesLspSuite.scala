@@ -52,11 +52,11 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   renamed(
     "single-package-non-matching-structure",
     s"""|/$prefix/A/B/Sun.scala
-        |package <<A>>
+        |package A
         |object Sun 
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/C/Sun.scala"),
-    expectedRenames = Map("A" -> "A.C"),
+    expectedRenames = Map(),
   )
 
   /* Multi-package-semantics */
@@ -67,7 +67,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "multi-package-rename-all",
     s"""|/$prefix/A/B/Sun.scala
         |<<package A; package B>>
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
     expectedRenames = Map("package A; package B" -> "package C.D"),
@@ -85,26 +85,75 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   )
 
   renamed(
+    "multi-package-rename-last-brackets",
+    s"""|/$prefix/A/B/Sun.scala
+        |package A {
+        | package <<B>> {
+        |   object Sun
+        | }
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/C/Sun.scala"),
+    expectedRenames = Map("B" -> "C"),
+  )
+
+  renamed(
+    "multi-package-rename-first-head",
+    s"""|/$prefix/A/B/C/D/Sun.scala
+        |package <<A>>.B
+        |package C.D
+        |object Sun
+        |""".stripMargin,
+    fileRenames =
+      Map(s"$prefix/A/B/C/D/Sun.scala" -> s"$prefix/E/B/C/D/Sun.scala"),
+    expectedRenames = Map("A" -> "E"),
+  )
+
+  renamed(
     "multi-package-rename-first-end",
     s"""|/$prefix/A/B/C/D/Sun.scala
-        |package A.<<B>>
-        |package C.D
-        |object Sun 
+        |package <<A.B
+        |package C.D>>
+        |object Sun
         |""".stripMargin,
     fileRenames =
       Map(s"$prefix/A/B/C/D/Sun.scala" -> s"$prefix/A/E/C/D/Sun.scala"),
-    expectedRenames = Map("B" -> "E"),
+    expectedRenames = Map("A.B\npackage C.D" -> "A.E.C.D"),
+  )
+
+  renamed(
+    "outer-matches-path",
+    s"""|/$prefix/A/Sun.scala
+        |package <<A>>
+        |package object C {
+        | object Sun
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/A/M/Sun.scala"),
+    expectedRenames = Map("A" -> "A.M"),
+  )
+
+  renamed(
+    "multi-package-rename-to-one",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A
+        |package B>>
+        |
+        |object Sun
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/Sun.scala"),
+    expectedRenames = Map("A\npackage B" -> "C"),
   )
 
   renamed(
     "multi-package-add-between",
     s"""|/$prefix/A/B/Sun.scala
         |package A
-        |<<package B>>
+        |package <<B>>
         |object Sun 
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/C/B/Sun.scala"),
-    expectedRenames = Map("package B" -> "package C\npackage B"),
+    expectedRenames = Map("B" -> "C.B"),
   )
 
   renamed(
@@ -168,13 +217,13 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   renamed(
     "package-object",
     s"""|/$prefix/A/B/packageFile.scala
-        |package <<A>>
+        |<<package A>>
         |package object <<B>> 
         |""".stripMargin,
     fileRenames = Map(
       s"$prefix/A/B" -> s"$prefix/C/D"
     ),
-    expectedRenames = Map("A" -> "C", "B" -> "D"),
+    expectedRenames = Map("package A" -> "package C", "B" -> "D"),
   )
 
   /* References semantics */
@@ -213,7 +262,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   renamed(
     "references-package-object",
     s"""|/$prefix/A/B/package.scala
-        |package <<A>>
+        |<<package A>>
         |package object <<B>> {
         | trait Sun
         |}
@@ -223,8 +272,21 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |object Moon 
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C/D"),
-    expectedRenames = Map("A" -> "C", "B" -> "D"),
+    expectedRenames = Map("package A" -> "package C", "B" -> "D", "A" -> "C"),
     sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "scala3-pkg",
+    s"""|/$prefix/A/B/package.scala
+        |<<package A:
+        |  package B:>>
+        |    object M
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C"),
+    expectedRenames = Map("package A:\n  package B:" -> "  package C:"),
+    sourcesAreCompiled = true,
+    scalaVersion = Some("3.2.0"),
   )
 
   renamed(
@@ -325,7 +387,80 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     sourcesAreCompiled = true,
   )
 
+  renamed(
+    "already-correct-pkg",
+    s"""|/$prefix/A/Dep.scala
+        |package A.inner
+        |
+        |class Dep
+        |/$prefix/B/Usage.scala
+        |package B
+        |import A.inner.Dep
+        |
+        |class Usage(b : Dep)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Dep.scala" -> s"$prefix/A/inner/Dep.scala"),
+    expectedRenames = Map(),
+    sourcesAreCompiled = true,
+  )
+
   /* Cases that are not yet supported */
+  renamed(
+    "unsupported-common-pkg-part".ignore,
+    s"""|/$prefix/A/B/Dep.scala
+        |package A
+        |package <<B>> {
+        | class Dep
+        |}
+        |/$prefix/B/Usage.scala
+        |package A
+        |import <<B>>.Dep
+        |
+        |class Usage(b : Dep)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Dep.scala" -> s"$prefix/A/C/Dep.scala"),
+    expectedRenames = Map("B" -> "C"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "unsupported-inner-pkg".ignore,
+    s"""|/$prefix/A/Dep.scala
+        |package <<A>> {
+        |  class Foo
+        |  package inner {
+        |   class Dep
+        |  }
+        |}
+        |/$prefix/B/Usage.scala
+        |package B
+        |import <<A>>.inner.Dep
+        |
+        |class Usage(b : Dep)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Dep.scala" -> s"$prefix/C/Dep.scala"),
+    expectedRenames = Map("A" -> "C"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "static-obj".ignore,
+    s"""|/$prefix/A/Dep.scala
+        |package <<A>>
+        |object Obj {
+        | case class Dep()
+        |}
+        |/$prefix/B/Usage.scala
+        |package B
+        |import <<A>>.Obj.Dep
+        |
+        |class Usage(b : Dep)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Dep.scala" -> s"$prefix/M/Dep.scala"),
+    expectedRenames = Map("A" -> "M"),
+    sourcesAreCompiled = true,
+  )
+
   renamed(
     "unsupported-qualified-refs",
     s"""|/$prefix/A/B/Sun.scala

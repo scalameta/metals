@@ -25,6 +25,7 @@ class PackageProvider(
     buildTargets: BuildTargets,
     trees: Trees,
     refProvider: ReferenceProvider,
+    buffers: Buffers,
 ) {
   import PackageProvider._
   def willMovePath(
@@ -109,21 +110,25 @@ class PackageProvider(
       newPath: AbsolutePath,
       optDirChange: Option[DirChange] = None,
   )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = Future {
-    val edit = trees
-      .get(oldPath)
-      .map(tree => {
-        val oldPkgParts = deducePkgParts(oldPath)
-        val newPkgParts = deducePkgParts(newPath)
-        val fileEdits = calcMovedFileEdits(tree, oldPath, newPkgParts)
-        val refsEdits = calcRefsEdits(
+    val edit =
+      for {
+        tree <- trees.get(oldPath)
+        oldPkgParts = deducePkgParts(oldPath)
+        newPkgParts = deducePkgParts(newPath)
+        fileEdits <- calcMovedFileEdits(
+          tree,
+          oldPath,
+          oldPkgParts.toList,
+          newPkgParts.toList,
+        )
+        refsEdits = calcRefsEdits(
           tree,
           oldPath,
           oldPkgParts,
           newPkgParts,
           optDirChange,
         )
-        List(fileEdits, refsEdits).mergeChanges
-      })
+      } yield List(fileEdits, refsEdits).mergeChanges
 
     edit.getOrElse(new WorkspaceEdit())
   }
@@ -131,29 +136,35 @@ class PackageProvider(
   private def calcMovedFileEdits(
       tree: Tree,
       oldPath: AbsolutePath,
-      newPkgParts: Vector[String],
-  ): WorkspaceEdit = {
-    val pkgs = findPkgs(tree)
+      expectedOldPkgParts: List[String],
+      newPkgParts: List[String],
+  ): Option[WorkspaceEdit] = {
+    val pkgStructure @ PkgsStructure(pkgs, optObj) = findPkgs(tree)
+    val oldPkgsParts = pkgStructure.allParts()
 
-    val oldPkgSplit: Vector[Vector[String]] =
-      pkgs.map(p => extractNames(p.ref))
+    def oldPkgsMatchOldPath = oldPkgsParts == expectedOldPkgParts
+    def oldPkgsMatchNewPath = oldPkgsParts == newPkgParts
+    def oldPkgsWithoutObjectMatchOldPath =
+      oldPkgsParts.dropRight(1) == expectedOldPkgParts
 
-    val optPkgObj = tree.collect { case p: Pkg.Object => p }.headOption
-
-    // edit of package stament
-    val pkgStmtParts =
-      if (optPkgObj.isDefined) newPkgParts.dropRight(1) else newPkgParts
-    val pkgEdit = calcPkgEdit(oldPkgSplit, pkgStmtParts, oldPath, pkgs)
-
-    // edit of package object name if it exists in the file
-    val pkgObjEdit = for {
-      pkgObjStmt <- optPkgObj
-      lastPkg <- newPkgParts.lastOption
-      edit = workspaceEdit(oldPath, lastPkg, pkgObjStmt.name.pos.toLsp)
-      if pkgObjStmt.name.value != lastPkg
-    } yield edit
-
-    (List(pkgEdit) ++ pkgObjEdit).mergeChanges
+    optObj match {
+      case None if (oldPkgsMatchOldPath) =>
+        calcPkgEdit(pkgs, newPkgParts, oldPath)
+      case Some(obj) if (oldPkgsMatchOldPath) =>
+        for {
+          lastPart <- newPkgParts.lastOption
+          edits <- calcPkgEdit(pkgs, newPkgParts.dropRight(1), oldPath)
+          objectEdit = workspaceEdit(
+            oldPath,
+            lastPart,
+            obj.name.pos.toLsp,
+          )
+        } yield List(edits, objectEdit).mergeChanges
+      case Some(_)
+          if !oldPkgsMatchNewPath && oldPkgsWithoutObjectMatchOldPath =>
+        calcPkgEdit(pkgs, newPkgParts, oldPath)
+      case _ => None
+    }
   }
 
   private def calcRefsEdits(
@@ -242,8 +253,8 @@ class PackageProvider(
 
     val optLastPkg = for {
       tree <- optTree
-      lastPkg <- findPkgs(tree).lastOption
-    } yield lastPkg
+      lastPkg <- findPkgs(tree).pkgs.lastOption
+    } yield lastPkg.pkg
 
     val optLastImport = for {
       lastPkg <- optLastPkg
@@ -361,31 +372,23 @@ class PackageProvider(
     refProvider.references(params).flatMap(_.locations)
   }
 
-  private def calcPkgEdit(
-      oldPackageSplit: Vector[Vector[String]],
-      newPackageParts: Vector[String],
-      oldPath: AbsolutePath,
-      packages: Vector[Pkg],
-  ): WorkspaceEdit =
-    packages match {
-      case firstPkg +: otherPkgs =>
-        val lastPkg = otherPkgs.lastOption.getOrElse(firstPkg).ref.pos
-        val range = firstPkg.ref.pos.toLsp.copy(
-          startCharacter = 0,
-          endLine = lastPkg.endLine,
-          endCharacter = lastPkg.endColumn,
-        )
-        val newSplit = splitPackageStatements(oldPackageSplit, newPackageParts)
-        val pkgStatement =
-          newSplit.map(ps => s"package ${ps.mkString(".")}").mkString("\n")
-        if (oldPackageSplit != newSplit)
-          workspaceEdit(oldPath, pkgStatement, range)
-        else new WorkspaceEdit()
-      case _ => new WorkspaceEdit()
+  private def findPkgs(tree: Tree): PkgsStructure = {
+    @tailrec
+    def extractOuterPkg(
+        tree: Tree,
+        acc: PkgsStructure = PkgsStructure.empty,
+    ): PkgsStructure =
+      tree match {
+        case p @ Pkg(_, Nil) => acc.addPkg(p)
+        case p @ Pkg(_, st :: _) => extractOuterPkg(st, acc.addPkg(p))
+        case p: Pkg.Object => acc.withObject(p)
+        case _ => acc
+      }
+    tree match {
+      case Source(List(pk: Pkg)) => extractOuterPkg(pk).reverse
+      case _ => PkgsStructure.empty
     }
-
-  private def findPkgs(tree: Tree): Vector[Pkg] =
-    tree.collect { case p: Pkg => p }.toVector
+  }
 
   private def wrap(str: String): String = Identifier.backtickWrap(str)
 
@@ -412,58 +415,83 @@ class PackageProvider(
       .map { _.iterator().asScala.map(p => wrap(p.toString())).toVector }
       .getOrElse(Vector.empty)
 
+  private def calcPkgEdit(
+      oldPackages: List[PkgWithName],
+      newPkgs: List[String],
+      oldPath: AbsolutePath,
+  ): Option[WorkspaceEdit] = {
+    val edits = findPkgEdits(newPkgs, oldPackages)
+    if (edits.isEmpty) None
+    else
+      for {
+        source <- buffers.get(oldPath).orElse(oldPath.readTextOpt)
+      } yield pkgEditsToWorkspaceEdit(edits, source.toCharArray(), oldPath)
+  }
+
   /**
    * Splits package declaration into statements
    * Desired property - not to break old visibility regions
-   * @param oldPackageSplit: content of package statements before refactoring
-   * @param newPkgs: list of package parts that should be present after refactoring
-   * @return split of `newPkgs` into package statements with respect to the `oldPackageSplit`
    */
-  private def splitPackageStatements(
-      oldPackageSplit: Vector[Vector[String]],
-      newPkgs: Vector[String],
-  ): Vector[Vector[String]] = {
-    val oldPackageSplitSet = oldPackageSplit.toSet
-    val oldEndPkgs =
-      oldPackageSplit.flatMap(_.lastOption).reverse.zipWithIndex.toMap
-
-    var consideredEndPkg = 0
-    var pkgStmts: Vector[Vector[String]] = Vector.empty
-    var pkgStmt: Vector[String] = Vector.empty
-
-    newPkgs.reverse.foreach { newPkg =>
-      val foundEndPkg =
-        oldEndPkgs.get(newPkg).filter { _ >= consideredEndPkg }
-      foundEndPkg match {
-        case Some(endPkgInd) => {
-          if (endPkgInd == 0) pkgStmt = newPkg +: pkgStmt
-          else {
-            if (pkgStmt.nonEmpty) pkgStmts = pkgStmt +: pkgStmts
-            pkgStmt = Vector(newPkg)
+  private def findPkgEdits(
+      newPkgs: List[String],
+      oldPkg: List[PkgWithName],
+  ): List[PkgEdit] =
+    oldPkg match {
+      case Nil => Nil
+      case PkgWithName(oldPkg, _) :: Nil => List(PkgEdit(oldPkg, newPkgs))
+      case PkgWithName(oldPkg, oldPkgName) :: nextOld =>
+        newPkgs.zipWithIndex
+          .filter { case (s, _) =>
+            oldPkgName.lastOption.contains(s)
           }
-          consideredEndPkg = endPkgInd + 1
+          .minByOption { case (_, i) => (i - oldPkgName.length).abs } match {
+          case None =>
+            PkgEdit(oldPkg, List()) :: findPkgEdits(
+              newPkgs,
+              nextOld,
+            )
+          case Some((_, i)) =>
+            val (currParts, nextNew) = newPkgs.splitAt(i + 1)
+            PkgEdit(oldPkg, currParts) ::
+              findPkgEdits(
+                nextNew,
+                nextOld,
+              )
         }
-        case None =>
-          if (oldPackageSplitSet.contains(pkgStmt)) {
-            pkgStmts = pkgStmt +: pkgStmts
-            pkgStmt = Vector.empty
-          }
-          pkgStmt = newPkg +: pkgStmt
-      }
     }
-    if (pkgStmt.nonEmpty) pkgStmts = pkgStmt +: pkgStmts
-    pkgStmts
-  }
 
-  @tailrec
-  private def extractNames(
-      t: Term,
-      acc: Vector[String] = Vector.empty,
-  ): Vector[String] = {
-    t match {
-      case n: Term.Name => n.value +: acc
-      case s: Term.Select => extractNames(s.qual, s.name.value +: acc)
-    }
+  private def pkgEditsToWorkspaceEdit(
+      edits: List[PkgEdit],
+      source: Array[Char],
+      oldPath: AbsolutePath,
+  ): WorkspaceEdit = {
+    val extend: (Int, Int) => (Int, Int) =
+      extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(source, List(':'))
+    edits.flatMap {
+      // delete package declaration
+      case PkgEdit(pkg, Nil) =>
+        val topEditRange @ (rangeStart, rangeEnd) =
+          extend(pkg.pos.start, pkg.ref.pos.end)
+        val editRanges =
+          if (rangeEnd + 1 < source.length && source(rangeEnd + 1) == '{') {
+            List(
+              extend(rangeStart, rangeEnd + 1),
+              extend(pkg.pos.end - 1, pkg.pos.end),
+            )
+          } else List(topEditRange)
+        editRanges.map { case (startOffset, endOffset) =>
+          workspaceEdit(
+            oldPath,
+            "",
+            new m.Position.Range(pkg.pos.input, startOffset, endOffset).toLsp,
+          )
+        }
+      // rename package
+      case PkgEdit(pkg, newParts) =>
+        val edit =
+          workspaceEdit(oldPath, newParts.mkString("."), pkg.ref.pos.toLsp)
+        List(edit)
+    }.mergeChanges
   }
 
   private def mkImportees(names: List[String]): String =
@@ -481,4 +509,39 @@ class PackageProvider(
 
 object PackageProvider {
   final case class DirChange(oldPkg: Vector[String], newPkg: Vector[String])
+
+  @tailrec
+  private def extractNames(
+      t: Term,
+      acc: Vector[String] = Vector.empty,
+  ): Vector[String] = {
+    t match {
+      case n: Term.Name => n.value +: acc
+      case s: Term.Select => extractNames(s.qual, s.name.value +: acc)
+    }
+  }
+
+  case class PkgWithName(pkg: Pkg, name: Vector[String])
+
+  case class PkgsStructure(
+      pkgs: List[PkgWithName],
+      pkgObject: Option[Pkg.Object] = None,
+  ) {
+    def withObject(pkgObject: Pkg.Object): PkgsStructure =
+      PkgsStructure(pkgs, Some(pkgObject))
+    def addPkg(pkg: Pkg): PkgsStructure =
+      PkgsStructure(PkgWithName(pkg, extractNames(pkg.ref)) :: pkgs, pkgObject)
+    def reverse(): PkgsStructure = PkgsStructure(pkgs.reverse, pkgObject)
+    def allParts(): List[String] =
+      pkgs.flatMap(_.name) ++ pkgObject.map(_.name.value).toList
+  }
+
+  object PkgsStructure {
+    def empty: PkgsStructure = PkgsStructure(List(), None)
+  }
+
+  case class PkgEdit(
+      pkg: Pkg,
+      renameToParts: List[String], // empty list means delete
+  )
 }
