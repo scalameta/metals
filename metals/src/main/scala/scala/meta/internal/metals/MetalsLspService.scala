@@ -619,7 +619,12 @@ class MetalsLspService(
     )
 
   private val packageProvider: PackageProvider =
-    new PackageProvider(buildTargets, trees, referencesProvider)
+    new PackageProvider(
+      buildTargets,
+      trees,
+      referencesProvider,
+      buffers,
+    )
 
   private val newFileProvider: NewFileProvider = new NewFileProvider(
     workspace,
