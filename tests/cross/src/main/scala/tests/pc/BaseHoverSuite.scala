@@ -3,8 +3,6 @@ package tests.pc
 import java.nio.file.Paths
 
 import scala.meta.XtensionSyntax
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 import munit.Location
@@ -12,6 +10,7 @@ import munit.TestOptions
 import tests.BasePCSuite
 import tests.RangeReplace
 import tests.TestHovers
+import scala.meta.internal.mtags.{CompilerOffsetParams, CompilerRangeParams}
 
 abstract class BaseHoverSuite
     extends BasePCSuite

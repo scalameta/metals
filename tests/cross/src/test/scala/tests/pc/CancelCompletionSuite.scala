@@ -8,8 +8,6 @@ import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.CancelToken
@@ -18,6 +16,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import munit.Location
 import munit.TestOptions
 import tests.BaseCompletionSuite
+import scala.meta.internal.mtags.{CompilerOffsetParams, EmptyCancelToken}
 
 class CancelCompletionSuite extends BaseCompletionSuite {
 

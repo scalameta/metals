@@ -6,7 +6,6 @@ import scala.util.Success
 import scala.meta.internal.metals.PathMatcher
 import scala.meta.internal.metals.ScalafmtConfig
 import scala.meta.internal.metals.ScalafmtDialect
-import scala.meta.internal.semver.SemVer
 
 import com.typesafe.config.ConfigFactory
 import munit.TestOptions

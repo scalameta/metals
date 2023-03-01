@@ -7,7 +7,6 @@ import java.nio.file.Paths
 
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.io.AbsolutePath
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.interactive.InteractiveDriver
@@ -28,7 +27,7 @@ class SemanticdbTextDocumentProvider(
       sourceCode: String,
   ): Array[Byte] =
     val filePath = Paths.get(uri)
-    val validCode = removeMagicImports(sourceCode, AbsolutePath(filePath))
+    val validCode = removeMagicImports(sourceCode, filePath)
     driver.run(
       uri,
       SourceFile.virtual(filePath.toString, validCode),

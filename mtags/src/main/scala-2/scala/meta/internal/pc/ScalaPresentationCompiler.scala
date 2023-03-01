@@ -19,8 +19,7 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.{BuildInfo, EmptyCancelToken}
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.PcInlineValueProviderImpl
 import scala.meta.pc.AutoImportsResult

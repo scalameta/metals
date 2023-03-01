@@ -1,7 +1,6 @@
 package tests.feature
 
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.semver.SemVer
 
 class Worksheet211LspSuite extends tests.BaseWorksheetLspSuite(V.scala211)
 

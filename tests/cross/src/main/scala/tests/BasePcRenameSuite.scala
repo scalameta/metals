@@ -3,12 +3,11 @@ package tests
 import java.net.URI
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.TextEdits
 
 import munit.Location
 import munit.TestOptions
+import scala.meta.internal.mtags.{CompilerOffsetParams, EmptyCancelToken}
 
 class BasePcRenameSuite extends BasePCSuite with RangeReplace {
 

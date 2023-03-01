@@ -38,6 +38,7 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
 import dotty.tools.dotc.util.SrcPos
+import scala.meta.internal.mtags.CoursierComplete
 
 class Completions(
     pos: SourcePosition,
@@ -55,6 +56,8 @@ class Completions(
 )(using ReportContext):
 
   implicit val context: Context = ctx
+
+  val coursierComplete = new CoursierComplete(BuildInfo.scalaCompilerVersion)
 
   // versions prior to 3.1.0 sometimes didn't manage to detect properly Java objects
   val canDetectJavaObjectsCorrectly =
@@ -360,7 +363,8 @@ class Completions(
     lazy val filename = rawFileName
       .stripSuffix(".scala")
     val MatchCaseExtractor = new MatchCaseExtractor(pos, text, completionPos)
-    val ScalaCliCompletions = new ScalaCliCompletions(pos, text)
+    val ScalaCliCompletions =
+      new ScalaCliCompletions(coursierComplete, pos, text)
 
     path match
       case ScalaCliCompletions(dependency) =>
@@ -504,6 +508,7 @@ class Completions(
             isWorksheetIvyCompletionPosition(imp, imp.sourcePos) =>
         (
           AmmoniteIvyCompletions.contribute(
+            coursierComplete,
             selectors,
             completionPos,
             text,

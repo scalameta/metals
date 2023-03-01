@@ -2,7 +2,6 @@ package docs
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.semver.SemVer.Version
 
 import mdoc.Reporter
 import mdoc.StringModifier

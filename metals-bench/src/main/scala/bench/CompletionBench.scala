@@ -2,7 +2,6 @@ package bench
 
 import java.net.URI
 import java.util.concurrent.TimeUnit
-
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.pc.PresentationCompiler
 

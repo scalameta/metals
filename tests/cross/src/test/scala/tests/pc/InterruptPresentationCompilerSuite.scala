@@ -7,8 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.meta.internal.async.CompletableCancelToken
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.{CompilerOffsetParams, Symbol}
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler

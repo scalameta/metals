@@ -1,7 +1,6 @@
 package tests.pc
 
 import java.net.URI
-
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.mtags.MtagsEnrichments._
