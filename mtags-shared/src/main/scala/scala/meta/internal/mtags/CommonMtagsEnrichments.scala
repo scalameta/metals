@@ -6,7 +6,6 @@ import java.util
 import java.util.logging.Level
 import java.util.logging.Logger
 import java.{util => ju}
-
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
 import scala.util.control.NonFatal
@@ -16,13 +15,14 @@ import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
-
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
+
+import scala.meta.internal.metals.{CompilerOffsetParams, CompilerRangeParams}
 
 object CommonMtagsEnrichments extends CommonMtagsEnrichments {}
 trait CommonMtagsEnrichments {

@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
-import com.google.common.hash.{BloomFilter, Funnels}
+import com.google.common.hash.BloomFilter
+import com.google.common.hash.Funnels
 import net.jpountz.xxhash.XXHashFactory
 
 /**

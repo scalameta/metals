@@ -1,10 +1,11 @@
 package scala.meta.internal.pc
 
-import org.eclipse.lsp4j.CompletionItem
-
-import scala.meta.pc.{PresentationCompilerConfig, SymbolDocumentation}
-import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolDocumentation
+
+import org.eclipse.lsp4j.CompletionItem
 
 trait ItemResolver {
 

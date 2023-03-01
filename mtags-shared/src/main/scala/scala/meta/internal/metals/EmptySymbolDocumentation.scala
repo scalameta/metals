@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util
 import java.util.Collections
+
 import scala.meta.pc.SymbolDocumentation
 
 /**

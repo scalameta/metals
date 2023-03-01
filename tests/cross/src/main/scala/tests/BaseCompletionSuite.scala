@@ -4,6 +4,8 @@ import java.nio.file.Paths
 import java.util.Collections
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.CancelToken
@@ -12,7 +14,6 @@ import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
-import scala.meta.internal.mtags.{CompilerOffsetParams, EmptyCancelToken}
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 

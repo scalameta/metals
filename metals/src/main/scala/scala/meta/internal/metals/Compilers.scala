@@ -15,6 +15,8 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.CompilerOffsetParamsUtils
+import scala.meta.internal.mtags.CompilerRangeParamsUtils
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.LogMessages
@@ -49,12 +51,6 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
-
-import scala.meta.internal.mtags.{CompilerOffsetParams, CompilerRangeParams}
-import scala.meta.internal.mtags.{
-  CompilerOffsetParamsUtils,
-  CompilerRangeParamsUtils,
-}
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.

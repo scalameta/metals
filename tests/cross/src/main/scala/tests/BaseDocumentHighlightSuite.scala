@@ -3,11 +3,12 @@ package tests
 import java.net.URI
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.EmptyCancelToken
 
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.DocumentHighlight
-import scala.meta.internal.mtags.{CompilerOffsetParams, EmptyCancelToken}
 
 class BaseDocumentHighlightSuite extends BasePCSuite with RangeReplace {
 

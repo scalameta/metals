@@ -1,11 +1,15 @@
 package scala.meta.internal.mtags
 
-import scala.meta.inputs.Position
 import java.net.URI
-import java.nio.file.Paths
 import java.net.URISyntaxException
-import scala.meta.pc.{CancelToken, OffsetParams, RangeParams}
-import meta.internal.inputs.XtensionInputSyntaxStructure
+import java.nio.file.Paths
+
+import scala.meta.inputs.Position
+import scala.meta.internal.inputs.XtensionInputSyntaxStructure
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.CompilerRangeParams
+import scala.meta.pc.CancelToken
+import scala.meta.pc.OffsetParams
 
 trait OffsetParamsUtils {
   protected def syntaxURI(pos: Position): URI = {

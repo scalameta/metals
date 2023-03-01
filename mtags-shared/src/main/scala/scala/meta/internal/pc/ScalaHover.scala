@@ -1,10 +1,11 @@
 package scala.meta.internal.pc
 
-import org.eclipse.lsp4j
-
 import java.util.Optional
-import scala.meta.pc.HoverSignature
+
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.pc.HoverSignature
+
+import org.eclipse.lsp4j
 
 case class ScalaHover(
     expressionType: Option[String] = None,

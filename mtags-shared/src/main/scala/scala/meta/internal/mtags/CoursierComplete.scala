@@ -1,14 +1,16 @@
 package scala.meta.internal.mtags
 
-import coursierapi.Complete
-
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Try
 import scala.util.matching.Regex
+
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.semver.SemVer.Version
+
+import coursierapi.Complete
 
 class CoursierComplete(scalaVersion: String) {
   lazy val api: Complete = coursierapi.Complete

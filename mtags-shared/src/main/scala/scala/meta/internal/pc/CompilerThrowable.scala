@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.{util => ju}
+
 import scala.annotation.tailrec
 
 object CompilerThrowable {

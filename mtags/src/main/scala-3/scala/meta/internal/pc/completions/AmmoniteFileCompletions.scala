@@ -8,7 +8,6 @@ import scala.collection.JavaConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImport
-// import scala.meta.io.AbsolutePath
 
 import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.ast.tpd.*

@@ -16,7 +16,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import munit.Location
 import munit.TestOptions
 import tests.BaseCompletionSuite
-import scala.meta.internal.mtags.{CompilerOffsetParams, EmptyCancelToken}
+import scala.meta.internal.metals.{CompilerOffsetParams, EmptyCancelToken}
 
 class CancelCompletionSuite extends BaseCompletionSuite {
 

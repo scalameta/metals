@@ -1,6 +1,9 @@
 package scala.meta.internal.pc
 
-import com.google.gson.{JsonArray, JsonElement, JsonObject, JsonPrimitive}
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 
 case class CompletionItemData(
     symbol: String,

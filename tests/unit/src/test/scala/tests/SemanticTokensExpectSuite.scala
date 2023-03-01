@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.CompilerVirtualFileParams
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticTokensProvider
 import scala.meta.internal.metals.EmptyCancelToken

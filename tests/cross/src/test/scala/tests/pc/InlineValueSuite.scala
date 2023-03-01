@@ -3,8 +3,9 @@ package tests.pc
 import java.net.URI
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.mtags.{CommonMtagsEnrichments, CompilerOffsetParams}
+import scala.meta.internal.mtags.CommonMtagsEnrichments
 import scala.meta.internal.pc.InlineValueProvider.{Errors => InlineErrors}
 import scala.meta.pc.DisplayableException
 
@@ -21,12 +22,12 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |  def u(): Unit = {
        |    val o: Int = 1
        |    val p: Int = <<o>> + 2
-       |  } 
+       |  }
        |}""".stripMargin,
     """|object Main {
        |  def u(): Unit = {
        |    val p: Int = 1 + 2
-       |  } 
+       |  }
        |}""".stripMargin,
   )
 
@@ -83,13 +84,13 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val <<o>>: Int = 1
        |    val p: Int = o + 2
        |    val i: Int = o + 3
-       |  } 
+       |  }
        |}""".stripMargin,
     """|object Main {
        |  def u(): Unit = {
        |    val p: Int = 1 + 2
        |    val i: Int = 1 + 3
-       |  } 
+       |  }
        |}""".stripMargin,
   )
 
@@ -100,13 +101,13 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val <<o>>: Int = 1
        |    val p: Int = o + 2
        |    val i: Int = o + 3
-       |  } 
+       |  }
        |}""".stripMargin,
     """|object Main {
        |  val u(): Unit = {
        |    val p: Int = 1 + 2
        |    val i: Int = 1 + 3
-       |  } 
+       |  }
        |}""".stripMargin,
   )
 
@@ -117,14 +118,14 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val o: Int = 1 + 6
        |    val p: Int = 2 - <<o>>
        |    val k: Int = o
-       |  } 
+       |  }
        |}""".stripMargin,
     """|object Main {
        |  def u(): Unit = {
        |    val o: Int = 1 + 6
        |    val p: Int = 2 - (1 + 6)
        |    val k: Int = o
-       |  } 
+       |  }
        |}""".stripMargin,
   )
 
@@ -136,14 +137,14 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val <<o>>: Int = 1 + 6
        |    val p: Int = h - o
        |    val k: Int = o
-       |  } 
+       |  }
        |}""".stripMargin,
     """|object Main {
        |  def u(): Unit = {
        |    val h: Int = 9
        |    val p: Int = h - (1 + 6)
        |    val k: Int = 1 + 6
-       |  } 
+       |  }
        |}""".stripMargin,
   )
 

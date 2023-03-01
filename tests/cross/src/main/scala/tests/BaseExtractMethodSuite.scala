@@ -3,13 +3,14 @@ package tests
 import java.net.URI
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.metals.TextEdits
 
 import munit.Location
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 import tests.BaseCodeActionSuite
-import scala.meta.internal.mtags.{CompilerOffsetParams, CompilerRangeParams}
 
 class BaseExtractMethodSuite extends BaseCodeActionSuite {
   def checkEdit(

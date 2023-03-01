@@ -1,7 +1,9 @@
 package scala.meta.internal.metals
 
-import org.eclipse.lsp4j.{MessageParams, MessageType}
 import java.nio.file.Path
+
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 
 /**
  * A string builder with helper methods for rendering HTML.

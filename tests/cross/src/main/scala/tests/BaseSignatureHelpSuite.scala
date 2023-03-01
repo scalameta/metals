@@ -4,10 +4,10 @@ import java.nio.file.Paths
 
 import scala.meta.XtensionSyntax
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
 
 import munit.Location
 import munit.TestOptions
-import scala.meta.internal.mtags.CompilerOffsetParams
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
   def checkDoc(

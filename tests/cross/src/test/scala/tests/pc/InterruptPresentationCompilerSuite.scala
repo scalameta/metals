@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.meta.internal.async.CompletableCancelToken
-import scala.meta.internal.mtags.{CompilerOffsetParams, Symbol}
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -15,6 +15,7 @@ import scala.meta.pc.PresentationCompiler
 import munit.Location
 import tests.BasePCSuite
 import tests.DelegatingGlobalSymbolIndex
+import scala.meta.internal.metals.CompilerOffsetParams
 
 class InterruptPresentationCompilerSuite extends BasePCSuite {
   class InterruptSymbolIndex extends DelegatingGlobalSymbolIndex() {

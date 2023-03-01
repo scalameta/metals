@@ -3,6 +3,7 @@ package docs
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.semver.SemVer
 
 import mdoc.Reporter
 import mdoc.StringModifier
@@ -38,7 +39,7 @@ class RequirementsModifier extends StringModifier {
        |supported, please make sure the `JAVA_HOME` environment variable
        |points to a valid Java 8, 11 or 17 installation.
        |
-       |**macOS, Linux or Windows**. Metals is developed on many operating systems and 
+       |**macOS, Linux or Windows**. Metals is developed on many operating systems and
        |every PR is tested on Ubuntu, Windows and MacOS.
        |
        |**Scala 2.13, 2.12, 2.11 and Scala 3**. Metals supports these Scala versions:

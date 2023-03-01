@@ -10,7 +10,7 @@ import munit.TestOptions
 import tests.BasePCSuite
 import tests.RangeReplace
 import tests.TestHovers
-import scala.meta.internal.mtags.{CompilerOffsetParams, CompilerRangeParams}
+import scala.meta.internal.metals.{CompilerOffsetParams, CompilerRangeParams}
 
 abstract class BaseHoverSuite
     extends BasePCSuite

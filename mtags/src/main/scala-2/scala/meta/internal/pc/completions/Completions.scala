@@ -7,7 +7,9 @@ import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
+import scala.meta.internal.BuildInfo
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.InterpolationSplice
@@ -17,8 +19,6 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tokenizers.Chars
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.mtags.CoursierComplete
-import scala.meta.internal.BuildInfo
 
 /**
  * Utility methods for completions.
