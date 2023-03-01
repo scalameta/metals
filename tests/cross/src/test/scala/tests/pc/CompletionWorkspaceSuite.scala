@@ -849,4 +849,52 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}""".stripMargin,
     filter = _.contains("[A]"),
   )
+
+  checkEdit(
+    "type-import",
+    """|package a {
+       |  object A {
+       |    type Beta = String
+       |    def m(): Int = ???
+       |  }
+       |}
+       |
+       |package b {
+       |  object B{
+       |    val x: Bet@@
+       |  }
+       |}""".stripMargin,
+    """|package a {
+       |  object A {
+       |    type Beta = String
+       |    def m(): Int = ???
+       |  }
+       |}
+       |
+       |package b {
+       |
+       |  import a.A
+       |  object B{
+       |    val x: A.Beta
+       |  }
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|import a.A.Beta
+           |package a {
+           |  object A {
+           |    type Beta = String
+           |    def m(): Int = ???
+           |  }
+           |}
+           |
+           |package b {
+           |  object B{
+           |    val x: Beta
+           |  }
+           |}
+           |""".stripMargin
+    ),
+  )
 }
