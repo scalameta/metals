@@ -5,35 +5,38 @@ authorURL: https://twitter.com/TomekGodzik
 authorImageURL: https://github.com/tgodzik.png
 ---
 
-We're happy to announce the release of Metals v0.11.11, which
+We're happy to announce the release of Metals v0.11.11, which brings in a couple
+of new features and improvements as well as stability fixes. Further releases
+and possibly 1.0.0 release will focus on providing a better stable development
+environment.
 
 <table>
 <tbody>
-  <tr>
+    <tr>
     <td>Commits since last release</td>
-    <td align="center">141</td>
+    <td align="center">177</td>
   </tr>
   <tr>
     <td>Merged PRs</td>
-    <td align="center">108</td>
+    <td align="center">138</td>
   </tr>
     <tr>
     <td>Contributors</td>
-    <td align="center">9</td>
+    <td align="center">11</td>
   </tr>
   <tr>
     <td>Closed issues</td>
-    <td align="center">TODO</td>
+    <td align="center">42</td>
   </tr>
   <tr>
     <td>New features</td>
-    <td align="center">6</td>
+    <td align="center">7</td>
   </tr>
 </tbody>
 </table>
 
-For full details: [https://github.com/scalameta/metals/milestone/_num_?closed=1]
-(https://github.com/scalameta/metals/milestone/_num_?closed=1)
+For full details: [https://github.com/scalameta/metals/milestone/55?closed=1]
+(https://github.com/scalameta/metals/milestone/55?closed=1)
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
 Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
@@ -46,29 +49,29 @@ Check out [https://scalameta.org/metals/](https://scalameta.org/metals/), and
 give Metals a try!
 
 - Added support for Scala 3.2.2.
-- [Semantic Tokens](#semantic-tokens)
-- [Inline value code action](#inline-value-code-action)
-- [Workspace symbol search for fields](#inline-value-code-action)
-- [Allow users to use older Scala support](#allow-users-to-use-older-scala-support)
+- [Introduce Support for Semantic Tokens](#introduce-support-for-semantic-tokens)
+- [New Inline value code action](#new-inline-value-code-action)
+- [Expanded workspace symbol search to include fields](#expanded-workspace-symbol-search-to-include-fields)
+- [Allow users to use older Scala versions](#allow-users-to-use-older-scala-versions)
 - [Improve match-case completions in Scala 2](#improve-match-case-completions-in-scala-2)
-- [Fallback to symbol search](#fallback-to-symbol-search)
-- [Adds details to github issue](#adds-details-to-github-issue)
+- [Fallback to symbol search for code navigation](#fallback-to-symbol-search-for-code-navigation)
+- [Automatically add details to github issue](#automatically-add-details-to-github-issue)
 
-## Semantic Tokens
+## Introduce Support for Semantic Tokens
 
-Semantic tokens is one of a newer addition to language server protocol that
-enables editors to provide syntax highlighting based on the knowledge provided
-by the language server. Each symbol within the Scala file should now have color
-dependent on whether it's a class, field, operator and more.
+Semantic tokens is a newer addition to the language server protocol that enables
+editors to provide syntax highlighting based on the knowledge provided by the
+language server. Each symbol within the Scala file should now have a more
+meaningful color dependent on whether it's a class, field, operator, etc.
 
-This feature is now available in Metals to the main work done by
-[ShintaroSasaki](https://github.com/ShintaroSasaki) during last years Google
+This feature is now available in Metals thanks to the main work done by
+[ShintaroSasaki](https://github.com/ShintaroSasaki) during last year's Google
 summer of code and some later additional effort by other Metals contributors
 mainly [jkciesluk](https://github.com/jkciesluk). Since this feature would
 impact all the users in every file they open, we decided to put it first behind
 an additional user setting `metals.enableSemanticHighlighting`, which needs to
 be set to true. Later depending on your editor, you might also need to enable it
-in some other places
+in some other places.
 
 For example in VS Code you also need to set
 `editor.semanticHighlighting.enabled` to `true`. So the settings json files
@@ -103,10 +106,10 @@ methods or classes.
 
 ![semantic-tokens](https://i.imgur.com/vkllczg.png)
 
-For setting up semantic tokens in your editor other than VS Code please consult
-the relevant documentation.
+For setting up semantic tokens in editors other than VS Code please consult the
+relevant documentation.
 
-## Inline value code action
+## New inline value code action
 
 Inline value is a new code action contributed by
 [kasiaMarek](https://github.com/kasiaMarek) that allows users to inline the
@@ -123,7 +126,7 @@ the same file. This works in two ways:
 
 ![replace-all](https://i.imgur.com/LdlSQsB.gif)
 
-## Workspace symbol search for fields
+## Expanded workspace symbol search to include fields
 
 Previously, when searching the workspace Metals would only look for classes,
 trait, interfaces, enums and objects. If you wanted to search for a particularly
@@ -136,17 +139,17 @@ increase indexes used by Metals too much.
 
 Another great contribution from [kasiaMarek](https://github.com/kasiaMarek)!
 
-## Allow users to use older Scala support
+## Allow users to use older Scala versions
 
 To provide support for a particular Scala version Metals needs to release a
 separate version for each of them, which causes a strain on CI infrastructure.
-Because of that previously we would stop supporting some older Scala version.
+Because of that previously we would stop supporting some older Scala versions.
 However, now instead of entirely dropping support for older versions, we will
 only freeze the amount of features and not fix any new bugs for any of those
 older versions.
 
 We will still recommend updating to the newest possible binary compatible
-version of the Scala version you are using, but in case it's not possible in for
+version of the Scala version you are using, but in case it's not possible for
 you it should be safe to use Metals with those older versions.
 
 In this release we removed Scala 3.0.0, 2.13.1, 2.13.2, 2.12.9, 3.0.0 and 3.0.1.
@@ -190,20 +193,19 @@ In all the examples `@@` denotes the position of the cursor.
 
 This cool improvement was added by [jkciesluk](https://github.com/jkciesluk).
 
-## Fallback to symbol search
+## Fallback to symbol search for code navigation
 
 Metals uses both global semanticdb indexes as well as the compiler itself to
-find the definition of any symbol. However, whenever workspace had problems with
-compilation both those methods could have failed to actually find that
+find the definition of any symbol. However, whenever your workspace had problems
+with compilation both those methods could have failed to actually find that
 definition. Instead of giving up, since Metals indexes all the names of types,
-methods etc.m we will try to find the symbol by name within the user's
-workspace.
+methods etc. we will try to find the symbol by name within the user's workspace.
 
 This heuristic might sometimes offer false positives, but it's much more useful
 than being left with no definition location at all. We will continue to improve
 those heuristics to make sure that the number of false positives is reduced.
 
-## Adds details to github issue
+## Automatically add details to github issue
 
 Thanks to [kasiaMarek](https://github.com/kasiaMarek) whenever users open an
 issue from the Metals tree view or via the `open-new-github-issue` command, the
@@ -284,16 +286,33 @@ $ git shortlog -sn --no-merges v0.11.10..v0.11.11
   Joao Azevedo
   Maciej Gajek
   Shintaro Sasaki
+  Adrien Piquerez
+  Jędrzej Rochala
 ```
 
 ## Merged PRs
 
-## [v0.11.11](https://github.com/scalameta/metals/tree/v0.11.11) (2023-02-14)
+## [v0.11.11](https://github.com/scalameta/metals/tree/v0.11.11) (2023-03-02)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.11.10...v0.11.11)
 
 **Merged pull requests:**
 
+- dep: bump gradleBloop from 1.5.8.to 1.6.0
+  [\#5020](https://github.com/scalameta/metals/pull/5020)
+  ([ckipp01](https://github.com/ckipp01))
+- build(deps): bump @docusaurus/core from 2.3.0 to 2.3.1 in /website
+  [\#5018](https://github.com/scalameta/metals/pull/5018)
+  ([dependabot[bot]](https://github.com/dependabot[bot]))
+- build(deps): bump @docusaurus/plugin-client-redirects from 2.3.0 to 2.3.1 in /website
+  [\#5017](https://github.com/scalameta/metals/pull/5017)
+  ([dependabot[bot]](https://github.com/dependabot[bot]))
+- build(deps): bump @docusaurus/preset-classic from 2.3.0 to 2.3.1 in /website
+  [\#5016](https://github.com/scalameta/metals/pull/5016)
+  ([dependabot[bot]](https://github.com/dependabot[bot]))
+- improvement: Add test for type completion out of scope
+  [\#5015](https://github.com/scalameta/metals/pull/5015)
+  ([jkciesluk](https://github.com/jkciesluk))
 - refactor: Move SemanticTokens to metals package
   [\#5002](https://github.com/scalameta/metals/pull/5002)
   ([jkciesluk](https://github.com/jkciesluk))
