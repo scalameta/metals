@@ -1,11 +1,10 @@
 package scala.meta.internal.mtags
 
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util
 import java.util.logging.Level
 import java.util.logging.Logger
 import java.{util => ju}
+
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
 import scala.util.control.NonFatal
@@ -15,14 +14,13 @@ import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
+
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
-
-import scala.meta.internal.metals.{CompilerOffsetParams, CompilerRangeParams}
 
 object CommonMtagsEnrichments extends CommonMtagsEnrichments {}
 trait CommonMtagsEnrichments {
@@ -114,11 +112,27 @@ trait CommonMtagsEnrichments {
       item.setTextEdit(JEither.forLeft(edit))
     }
 
+    def getLeftTextEdit(): Option[l.TextEdit] = {
+      for {
+        either <- Option(item.getTextEdit)
+        textEdit <- Option(either.getLeft())
+      } yield textEdit
+    }
+  }
+
+  implicit class XtensionLspPosition(pos: l.Position) {
+    def isNone: Boolean =
+      pos.getLine() < 0 &&
+        pos.getCharacter() < 0
   }
 
   implicit class XtensionLspRange(range: l.Range) {
     def isOffset: Boolean =
       range.getStart == range.getEnd
+
+    def isNone: Boolean =
+      range.getStart().isNone &&
+        range.getEnd().isNone
 
     def encloses(position: l.Position): Boolean = {
       val startsBeforeOrAt =
@@ -149,22 +163,16 @@ trait CommonMtagsEnrichments {
       startsBeforeOtherEnds && endsAfterOtherStarts
     }
 
-  }
-
-  implicit class XtensionPathMetals(file: Path) {
-    def semanticdbRoot: Option[Path] = {
-      val end = Paths.get("META-INF").resolve("semanticdb")
-      @tailrec def root(path: Path): Option[Path] = {
-        if (path.endsWith(end)) Some(path)
-        else {
-          Option(path.getParent) match {
-            case Some(parent) => root(parent)
-            case _ => None
-          }
-        }
-      }
-      root(file)
-    }
+    def copy(
+        startLine: Int = range.getStart().getLine(),
+        startCharacter: Int = range.getStart().getCharacter(),
+        endLine: Int = range.getEnd().getLine(),
+        endCharacter: Int = range.getEnd().getCharacter()
+    ) =
+      new l.Range(
+        new l.Position(startLine, startCharacter),
+        new l.Position(endLine, endCharacter)
+      )
   }
 
   implicit class XtensionStringDoc(doc: String) {
@@ -184,6 +192,8 @@ trait CommonMtagsEnrichments {
       doc.endsWith(".java")
     def isAmmoniteGeneratedFile: Boolean =
       doc.endsWith(".amm.sc.scala")
+    def isScalaCLIGeneratedFile: Boolean =
+      doc.endsWith(".sc.scala") && !isAmmoniteGeneratedFile
     def isAmmoniteScript: Boolean =
       isScalaScript && !isWorksheet && !doc.endsWith("/build.sc")
     def isMill: Boolean =
@@ -214,5 +224,4 @@ trait CommonMtagsEnrichments {
       }
 
   }
-
 }

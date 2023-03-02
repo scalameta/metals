@@ -29,7 +29,7 @@ import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.{lsp4j as l}
 
-object MtagsEnrichments extends CommonMtagsEnrichments:
+object MtagsEnrichments extends ScalametaCommonEnrichements:
 
   extension (driver: InteractiveDriver)
 

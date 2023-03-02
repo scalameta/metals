@@ -7,7 +7,7 @@ import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
-import scala.meta.internal.BuildInfo
+import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -27,7 +27,7 @@ trait Completions { this: MetalsGlobal =>
 
   val clientSupportsSnippets: Boolean =
     metalsConfig.isCompletionSnippetsEnabled()
-  val coursierComplete = new CoursierComplete(BuildInfo.version)
+  val coursierComplete = new CoursierComplete(BuildInfo.scalaCompilerVersion)
 
   /**
    * A member for symbols on the classpath that are not in scope, produced via workspace/symbol.
