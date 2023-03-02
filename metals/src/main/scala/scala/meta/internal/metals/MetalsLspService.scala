@@ -1,104 +1,59 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j.CompileReport
+import ch.epfl.scala.{bsp4j => b}
+import com.google.gson._
+import io.undertow.server.HttpServerExchange
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import org.eclipse.lsp4j.{ExecuteCommandParams, _}
+import org.eclipse.{lsp4j => l}
+
 import java.net.URI
 import java.nio.file._
 import java.util
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
-
-import scala.collection.immutable.Nil
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContextExecutorService
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.concurrent.TimeoutException
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
-import scala.util.Failure
-import scala.util.Success
-import scala.util.control.NonFatal
-
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
+import java.util.concurrent.{CompletableFuture, ScheduledExecutorService, TimeUnit}
+import scala.concurrent._
+import scala.concurrent.duration.{Duration, _}
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
-import scala.meta.internal.bsp.BspConfigGenerator
-import scala.meta.internal.bsp.BspConnector
-import scala.meta.internal.bsp.BspServers
-import scala.meta.internal.bsp.BspSession
-import scala.meta.internal.bsp.BuildChange
-import scala.meta.internal.builds.BloopInstall
-import scala.meta.internal.builds.BuildServerProvider
-import scala.meta.internal.builds.BuildTool
-import scala.meta.internal.builds.BuildToolSelector
-import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.builds.NewProjectProvider
-import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.builds.WorkspaceReload
+import scala.meta.internal.bsp.{BspConfigGenerationStatus, _}
+import scala.meta.internal.builds._
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
-import scala.meta.internal.implementation.ImplementationProvider
-import scala.meta.internal.implementation.Supermethods
+import scala.meta.internal.implementation.{ImplementationProvider, Supermethods}
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
-import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
+import scala.meta.internal.metals.Messages.{AmmoniteJvmParametersChange, IncompatibleBloopVersion}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
-import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
-import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.{ConfiguredLanguageClient, ForwardingMetalsBuildClient, MetalsLanguageClient}
 import scala.meta.internal.metals.codeactions.CodeActionProvider
-import scala.meta.internal.metals.codelenses.RunTestCodeLens
-import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
-import scala.meta.internal.metals.codelenses.WorksheetCodeLens
-import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.debug.DebugProvider
-import scala.meta.internal.metals.doctor.Doctor
-import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
+import scala.meta.internal.metals.codelenses.{RunTestCodeLens, SuperMethodCodeLens, WorksheetCodeLens}
+import scala.meta.internal.metals.debug.{BuildTargetClasses, DebugProvider}
+import scala.meta.internal.metals.doctor.{Doctor, DoctorVisibilityDidChangeParams}
 import scala.meta.internal.metals.findfiles._
-import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
-import scala.meta.internal.metals.formatting.RangeFormattingProvider
+import scala.meta.internal.metals.formatting.{OnTypeFormattingProvider, RangeFormattingProvider}
 import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
-import scala.meta.internal.metals.watcher.FileWatcher
-import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
+import scala.meta.internal.metals.watcher.{FileWatcher, FileWatcherEvent}
 import scala.meta.internal.mtags._
-import scala.meta.internal.parsing.ClassFinder
-import scala.meta.internal.parsing.DocumentSymbolProvider
-import scala.meta.internal.parsing.FoldingRangeProvider
-import scala.meta.internal.parsing.TokenEditDistance
-import scala.meta.internal.parsing.Trees
+import scala.meta.internal.parsing._
 import scala.meta.internal.pc.SemanticTokens._
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp._
-import scala.meta.internal.worksheets.DecorationWorksheetPublisher
-import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
+import scala.meta.internal.worksheets.{DecorationWorksheetPublisher, WorksheetProvider, WorkspaceEditWorksheetPublisher}
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
 import scala.meta.parsers.ParseException
-import scala.meta.pc.CancelToken
-import scala.meta.pc.DisplayableException
+import scala.meta.pc.{CancelToken, DisplayableException}
 import scala.meta.tokenizers.TokenizeException
-
-import ch.epfl.scala.bsp4j.CompileReport
-import ch.epfl.scala.{bsp4j => b}
-import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonNull
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
-import io.undertow.server.HttpServerExchange
-import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j._
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import org.eclipse.{lsp4j => l}
+import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
 /**
  * Metals implementation of the Scala Language Service.
@@ -2507,35 +2462,34 @@ class MetalsLspService(
 
   val scalaCli: ScalaCli = register(
     new ScalaCli(
-      () => compilers,
+      compilers,
       compilations,
-      () => statusBar,
+      statusBar,
       buffers,
-      () => indexer.profiledIndexWorkspace(() => ()),
-      () => diagnostics,
+      indexer.profiledIndexWorkspace(() => ()),
+      diagnostics,
       tables,
-      () => buildClient,
+      buildClient,
       languageClient,
-      () => clientConfig.initialConfig,
-      () => userConfig,
+      clientConfig.initialConfig,
+      userConfig,
       parseTreesAndPublishDiags,
     )
   )
   buildTargets.addData(scalaCli.buildTargetsData)
 
   private val indexer = Indexer(
-    () => workspaceReload,
-    () => doctor,
+    workspaceReload,
+    doctor,
     languageClient,
-    () => bspSession,
+    bspSession,
     executionContext,
     tables,
-    () => statusBar,
+    statusBar,
     timerProvider,
-    () => scalafixProvider,
+    scalafixProvider,
     indexingPromise,
-    () =>
-      Seq(
+    Seq(
         Indexer.BuildTool(
           "main",
           mainBuildTargetsData,
@@ -2556,22 +2510,22 @@ class MetalsLspService(
       ),
     clientConfig,
     definitionIndex,
-    () => referencesProvider,
-    () => workspaceSymbols,
+    referencesProvider,
+    workspaceSymbols,
     buildTargets,
-    () => interactiveSemanticdbs,
-    () => buildClient,
-    () => semanticDBIndexer,
-    () => treeView,
-    () => worksheetProvider,
-    () => symbolSearch,
-    () => buildTools,
-    () => formattingProvider,
+    interactiveSemanticdbs,
+    buildClient,
+    semanticDBIndexer,
+    treeView,
+    worksheetProvider,
+    symbolSearch,
+    buildTools,
+    formattingProvider,
     fileWatcher,
-    () => focusedDocument,
+    focusedDocument,
     focusedDocumentBuildTarget,
     buildTargetClasses,
-    () => userConfig,
+    userConfig,
     sh,
     symbolDocs,
     scalaVersionSelector,

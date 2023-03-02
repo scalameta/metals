@@ -47,17 +47,17 @@ import org.eclipse.lsp4j.services.LanguageClient
 // todo https://github.com/scalameta/metals/issues/4788
 // clean () =>, use plain values
 class ScalaCli(
-    compilers: () => Compilers,
+    compilers: Compilers,
     compilations: Compilations,
-    statusBar: () => StatusBar,
+    statusBar: StatusBar,
     buffers: Buffers,
-    indexWorkspace: () => Future[Unit],
-    diagnostics: () => Diagnostics,
+    indexWorkspace: Future[Unit],
+    diagnostics: Diagnostics,
     tables: Tables,
-    buildClient: () => MetalsBuildClient,
+    buildClient: MetalsBuildClient,
     languageClient: LanguageClient,
-    config: () => MetalsServerConfig,
-    userConfig: () => UserConfiguration,
+    config: MetalsServerConfig,
+    userConfig: UserConfiguration,
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
@@ -107,9 +107,9 @@ class ScalaCli(
 
   def importBuild(): Future[Unit] =
     ifConnectedOrElse { st =>
-      compilers().cancel()
+      compilers.cancel()
 
-      statusBar()
+      statusBar
         .trackFuture(
           "Importing Scala CLI sources",
           ImportedBuild.fromConnection(st.connection),
@@ -122,7 +122,7 @@ class ScalaCli(
             buildTargetsData.resetConnections(connections)
 
             for {
-              _ <- indexWorkspace()
+              _ <- indexWorkspace
               allSources0 = allSources()
               toCompile = buffers.open.toSeq.filter(p =>
                 allSources0
@@ -131,7 +131,7 @@ class ScalaCli(
               _ <- Future.sequence(
                 compilations
                   .cascadeCompileFiles(toCompile) ::
-                  compilers().load(toCompile) ::
+                  compilers.load(toCompile) ::
                   parseTreesAndPublishDiags(allSources0) ::
                   Nil
               )
@@ -148,7 +148,7 @@ class ScalaCli(
         disconnectOldBuildServer()
       case st: ConnectionState.Connected =>
         state.compareAndSet(st, ConnectionState.Empty)
-        diagnostics().reset(allSources())
+        diagnostics.reset(allSources())
         st.connection.shutdown()
     }
   }
@@ -219,7 +219,7 @@ class ScalaCli(
     }
 
     val minVersion = "0.1.3"
-    val cliCommand = userConfig().scalaCliLauncher
+    val cliCommand = userConfig.scalaCliLauncher
       .filter(_.trim.nonEmpty)
       .map(Seq(_))
       .orElse {
@@ -262,11 +262,11 @@ class ScalaCli(
     if (state.compareAndSet(ConnectionState.Empty, nextSt)) {
       val futureConn = BuildServerConnection.fromSockets(
         connDir,
-        buildClient(),
+        buildClient,
         languageClient,
         () => ScalaCli.socketConn(command, connDir),
         tables.dismissedNotifications.ReconnectScalaCli,
-        config(),
+        config,
         "Scala CLI",
         supportsWrappedSources = Some(true),
       )

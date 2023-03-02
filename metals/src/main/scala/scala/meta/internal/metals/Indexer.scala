@@ -46,35 +46,35 @@ import org.eclipse.lsp4j.Position
  * indexes based on it.
  */
 final case class Indexer(
-    workspaceReload: () => WorkspaceReload,
-    doctor: () => Doctor,
+    workspaceReload: WorkspaceReload,
+    doctor: Doctor,
     languageClient: DelegatingLanguageClient,
-    bspSession: () => Option[BspSession],
+    bspSession: Option[BspSession],
     executionContext: ExecutionContextExecutorService,
     tables: Tables,
-    statusBar: () => StatusBar,
+    statusBar: StatusBar,
     timerProvider: TimerProvider,
-    scalafixProvider: () => ScalafixProvider,
+    scalafixProvider: ScalafixProvider,
     indexingPromise: Promise[Unit],
-    buildData: () => Seq[Indexer.BuildTool],
+    buildData: Seq[Indexer.BuildTool],
     clientConfig: ClientConfiguration,
     definitionIndex: OnDemandSymbolIndex,
-    referencesProvider: () => ReferenceProvider,
-    workspaceSymbols: () => WorkspaceSymbolProvider,
+    referencesProvider: ReferenceProvider,
+    workspaceSymbols: WorkspaceSymbolProvider,
     buildTargets: BuildTargets,
-    interactiveSemanticdbs: () => InteractiveSemanticdbs,
-    buildClient: () => ForwardingMetalsBuildClient,
-    semanticDBIndexer: () => SemanticdbIndexer,
-    treeView: () => TreeViewProvider,
-    worksheetProvider: () => WorksheetProvider,
-    symbolSearch: () => MetalsSymbolSearch,
-    buildTools: () => BuildTools,
-    formattingProvider: () => FormattingProvider,
+    interactiveSemanticdbs: InteractiveSemanticdbs,
+    buildClient: ForwardingMetalsBuildClient,
+    semanticDBIndexer: SemanticdbIndexer,
+    treeView: TreeViewProvider,
+    worksheetProvider: WorksheetProvider,
+    symbolSearch: MetalsSymbolSearch,
+    buildTools: BuildTools,
+    formattingProvider: FormattingProvider,
     fileWatcher: FileWatcher,
-    focusedDocument: () => Option[AbsolutePath],
+    focusedDocument: Option[AbsolutePath],
     focusedDocumentBuildTarget: AtomicReference[b.BuildTargetIdentifier],
     buildTargetClasses: BuildTargetClasses,
-    userConfig: () => UserConfiguration,
+    userConfig: UserConfiguration,
     sh: ScheduledExecutorService,
     symbolDocs: Docstrings,
     scalaVersionSelector: ScalaVersionSelector,
@@ -90,38 +90,38 @@ final case class Indexer(
       importBuild: BspSession => Future[Unit],
   ): Future[BuildChange] = {
     def reloadAndIndex(session: BspSession): Future[BuildChange] = {
-      workspaceReload().persistChecksumStatus(Status.Started, buildTool)
+      workspaceReload.persistChecksumStatus(Status.Started, buildTool)
 
       session
         .workspaceReload()
         .flatMap(_ => importBuild(session))
         .map { _ =>
           scribe.info("Correctly reloaded workspace")
-          profiledIndexWorkspace(() => doctor().check())
-          workspaceReload().persistChecksumStatus(Status.Installed, buildTool)
+          profiledIndexWorkspace(() => doctor.check())
+          workspaceReload.persistChecksumStatus(Status.Installed, buildTool)
           BuildChange.Reloaded
         }
         .recoverWith { case NonFatal(e) =>
           scribe.error(s"Unable to reload workspace: ${e.getMessage()}")
-          workspaceReload().persistChecksumStatus(Status.Failed, buildTool)
+          workspaceReload.persistChecksumStatus(Status.Failed, buildTool)
           languageClient.showMessage(Messages.ReloadProjectFailed)
           Future.successful(BuildChange.Failed)
         }
     }
 
-    bspSession() match {
+    bspSession match {
       case None =>
         scribe.warn("No build session currently active to reload.")
         Future.successful(BuildChange.None)
       case Some(session) if forceRefresh => reloadAndIndex(session)
       case Some(session) =>
-        workspaceReload().oldReloadResult(checksum) match {
+        workspaceReload.oldReloadResult(checksum) match {
           case Some(status) =>
             scribe.info(s"Skipping reload with status '${status.name}'")
             Future.successful(BuildChange.None)
           case None =>
             for {
-              userResponse <- workspaceReload().requestReload(
+              userResponse <- workspaceReload.requestReload(
                 buildTool,
                 checksum,
               )
@@ -140,32 +140,32 @@ final case class Indexer(
   }
 
   def profiledIndexWorkspace(check: () => Unit): Future[Unit] = {
-    val tracked = statusBar().trackFuture(
+    val tracked = statusBar.trackFuture(
       s"Indexing",
       Future {
         timerProvider.timedThunk("indexed workspace", onlyIf = true) {
           try indexWorkspace(check)
           finally {
-            Future(scalafixProvider().load())
+            Future(scalafixProvider.load())
             indexingPromise.trySuccess(())
           }
         }
       },
     )
     tracked.foreach { _ =>
-      statusBar().addMessage(
+      statusBar.addMessage(
         s"${clientConfig.icons.rocket} Indexing complete!"
       )
       if (clientConfig.initialConfig.statistics.isMemory) {
         Memory.logMemory(
           List(
             ("definition index", definitionIndex),
-            ("references index", referencesProvider().index),
-            ("workspace symbol index", workspaceSymbols().inWorkspace),
+            ("references index", referencesProvider.index),
+            ("workspace symbol index", workspaceSymbols.inWorkspace),
             ("build targets", buildTargets),
             (
               "classpath symbol index",
-              workspaceSymbols().inDependencies.packages,
+              workspaceSymbols.inDependencies.packages,
             ),
           )
         )
@@ -181,14 +181,14 @@ final case class Indexer(
       "reset stuff",
       clientConfig.initialConfig.statistics.isIndex,
     ) {
-      interactiveSemanticdbs().reset()
-      buildClient().reset()
-      semanticDBIndexer().reset()
-      treeView().reset()
-      worksheetProvider().reset()
-      symbolSearch().reset()
+      interactiveSemanticdbs.reset()
+      buildClient.reset()
+      semanticDBIndexer.reset()
+      treeView.reset()
+      worksheetProvider.reset()
+      symbolSearch.reset()
     }
-    val allBuildTargetsData = buildData()
+    val allBuildTargetsData = buildData
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
         s"updated ${buildTool.name} build targets",
@@ -200,11 +200,11 @@ final case class Indexer(
         data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
         data.addScalacOptions(
           importedBuild.scalacOptions,
-          bspSession().map(_.mainConnection),
+          bspSession.map(_.mainConnection),
         )
         data.addJavacOptions(
           importedBuild.javacOptions,
-          bspSession().map(_.mainConnection),
+          bspSession.map(_.mainConnection),
         )
 
         // For "wrapped sources", we create dedicated TargetData.MappedSource instances,
@@ -305,9 +305,9 @@ final case class Indexer(
       clientConfig.initialConfig.statistics.isIndex,
     ) {
       check()
-      buildTools()
+      buildTools
         .loadSupported()
-      formattingProvider().validateWorkspace()
+      formattingProvider.validateWorkspace()
     }
     timerProvider.timedThunk(
       "started file watcher",
@@ -328,13 +328,13 @@ final case class Indexer(
       "indexed library classpath",
       clientConfig.initialConfig.statistics.isIndex,
     ) {
-      workspaceSymbols().indexClasspath()
+      workspaceSymbols.indexClasspath()
     }
     timerProvider.timedThunk(
       "indexed workspace SemanticDBs",
       clientConfig.initialConfig.statistics.isIndex,
     ) {
-      semanticDBIndexer().onTargetRoots()
+      semanticDBIndexer.onTargetRoots()
     }
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
@@ -370,7 +370,7 @@ final case class Indexer(
         TimeUnit.SECONDS,
       )
 
-    focusedDocument().foreach { doc =>
+    focusedDocument.foreach { doc =>
       buildTargets
         .inverseSources(doc)
         .foreach(focusedDocumentBuildTarget.set)
@@ -476,7 +476,7 @@ final case class Indexer(
     // remove cached symbols from Jars
     // that are not used
     val usedJars = mutable.HashSet.empty[AbsolutePath]
-    val jdkSources = JdkSources(userConfig().javaHome)
+    val jdkSources = JdkSources(userConfig.javaHome)
     jdkSources match {
       case Right(zip) =>
         usedJars += zip
@@ -565,7 +565,7 @@ final case class Indexer(
               )
             }
         }
-        workspaceSymbols().didChange(source, symbols.toSeq, methodSymbols.toSeq)
+        workspaceSymbols.didChange(source, symbols.toSeq, methodSymbols.toSeq)
 
         // Since the `symbols` here are toplevel symbols,
         // we cannot use `symbols` for expiring the cache for all symbols in the source.
@@ -598,7 +598,7 @@ final case class Indexer(
   def reindexWorkspaceSources(
       paths: Seq[AbsolutePath]
   ): Unit = {
-    val data = buildData().map(_.data)
+    val data = buildData.map(_.data)
     for {
       path <- paths.iterator
       if path.isScalaOrJava
