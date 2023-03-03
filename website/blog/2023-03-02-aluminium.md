@@ -48,7 +48,7 @@ and [VirtusLab](https://virtuslab.com) with the help from
 Check out [https://scalameta.org/metals/](https://scalameta.org/metals/), and
 give Metals a try!
 
-- Added support for Scala 3.2.2.
+- [Added support for Scala 3.2.2](#support-for-scala-322).
 - [Introduce Support for Semantic Tokens](#introduce-support-for-semantic-tokens)
 - [New Inline value code action](#new-inline-value-code-action)
 - [Expanded workspace symbol search to include fields](#expanded-workspace-symbol-search-to-include-fields)
@@ -56,6 +56,22 @@ give Metals a try!
 - [Improve match-case completions in Scala 2](#improve-match-case-completions-in-scala-2)
 - [Fallback to symbol search for code navigation](#fallback-to-symbol-search-for-code-navigation)
 - [Automatically add details to github issue](#automatically-add-details-to-github-issue)
+
+## Support for Scala 3.2.2
+
+Release notes from
+[https://www.scala-lang.org/news/3.2.2](https://www.scala-lang.org/news/3.2.2)
+
+This version not only fixes bugs but also brings two new flags:
+
+- `-Vrepl-max-print-characters` allows you to configure how many characters can
+  be printed in the REPL before truncating the output. The default limit was
+  also raised from 1,000 to 50,000 characters.
+
+- `-Ylightweight-lazy-vals` enables new lazy vals implementation. It can be much
+  more performant, especially in cases of parallel access. However, it can cause
+  problems when used inside of GraalVM native image. We will make the new
+  implementation the default one as soon as we fix those problems.
 
 ## Introduce Support for Semantic Tokens
 
@@ -304,8 +320,8 @@ $ git shortlog -sn --no-merges v0.11.10..v0.11.11
 - build(deps): bump @docusaurus/core from 2.3.0 to 2.3.1 in /website
   [\#5018](https://github.com/scalameta/metals/pull/5018)
   ([dependabot[bot]](https://github.com/dependabot[bot]))
-- build(deps): bump @docusaurus/plugin-client-redirects from 2.3.0 to 2.3.1 in /website
-  [\#5017](https://github.com/scalameta/metals/pull/5017)
+- build(deps): bump @docusaurus/plugin-client-redirects from 2.3.0 to 2.3.1 in
+  /website [\#5017](https://github.com/scalameta/metals/pull/5017)
   ([dependabot[bot]](https://github.com/dependabot[bot]))
 - build(deps): bump @docusaurus/preset-classic from 2.3.0 to 2.3.1 in /website
   [\#5016](https://github.com/scalameta/metals/pull/5016)
