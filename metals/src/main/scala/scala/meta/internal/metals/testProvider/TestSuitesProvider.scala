@@ -419,6 +419,11 @@ final class TestSuitesProvider(
       currentTarget.testSymbols
         .readOnlySnapshot()
         .toList
+        // sort the symbols lexically so that symbols with the same fullyQualifiedName
+        // will be grouped, and the class will come before companion object (i.e.
+        // `a.b.WordSpec#` < `a.b.WordSpec.`). This ensures that the class is put into the cache
+        // instead of the companion object.
+        .sortBy(_._1)
         .foldLeft(List.empty[TestEntry]) {
           case (entries, (symbol, testSymbolInfo)) =>
             val fullyQualifiedName =
