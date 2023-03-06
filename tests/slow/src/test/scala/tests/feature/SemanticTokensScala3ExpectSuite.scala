@@ -9,6 +9,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsBinaries
 import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.SemanticTokensProvider
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -54,15 +55,19 @@ class SemanticTokensScala3ExpectSuite(
       ExpectTestCase(
         file,
         () => {
-          val tokens = compiler
-            .semanticTokens(
-              CompilerVirtualFileParams(
-                file.file.toURI,
-                file.code,
-                EmptyCancelToken,
-              )
-            )
-            .get()
+          val params = CompilerVirtualFileParams(
+            file.file.toURI,
+            file.code,
+            EmptyCancelToken,
+          )
+          val nodes = compiler.semanticTokens(params).get().asScala.toList
+
+          val tokens = SemanticTokensProvider.provide(
+            nodes,
+            params,
+            isScala3 = true,
+          )
+
           TestSemanticTokens.semanticString(
             file.code,
             tokens.asScala.toList.map(_.toInt),

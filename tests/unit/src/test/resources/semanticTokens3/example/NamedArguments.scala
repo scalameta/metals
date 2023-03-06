@@ -28,7 +28,7 @@
 
   <<// vararg>>/*comment*/
   <<List>>/*variable,readonly*/(
-    elems = <<2>>/*number*/
+    <<elems>>/*variable*/ = <<2>>/*number*/
   )
 
 }
