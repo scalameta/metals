@@ -20,7 +20,7 @@
   <<// interpolators>>/*comment*/
   <<s>>/*keyword*/<<">>/*string*/<<Hello >>/*string*/<<$>>/*keyword*/<<message>>/*variable,readonly*/<< >>/*string*/<<$>>/*keyword*/<<number>>/*variable,readonly*/<<">>/*string*/
   <<s>>/*keyword*/<<""">>/*string*/<<Hello>>/*string*/
-<<     |>>/*string*/<<$>>/*keyword*/<<message>>/*variable,readonly*/<<>>/*string*/
+<<     |>>/*string*/<<$>>/*keyword*/<<message>>/*variable,readonly*/
 <<     |>>/*string*/<<$>>/*keyword*/<<number>>/*variable,readonly*/<<""">>/*string*/.<<stripMargin>>/*method*/
 
   <<val>>/*keyword*/ <<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/ = <<char>>/*variable,readonly*/
