@@ -12,6 +12,8 @@ import tests.TestSemanticTokens
 
 class BaseSemanticTokensSuite extends BasePCSuite {
 
+  // We check only if correct symbol tokens are added here.
+  // Other tokens (e.g. keywords) are added outside the compiler.
   def check(
       name: TestOptions,
       expected: String,
@@ -22,15 +24,15 @@ class BaseSemanticTokensSuite extends BasePCSuite {
         expected
           .replaceAll(raw"/\*[\w,]+\*/", "")
           .replaceAll(raw"\<\<|\>\>", "")
-      val tokens = presentationCompiler
+      val nodes = presentationCompiler
         .semanticTokens(
           CompilerVirtualFileParams(URI.create("file:/Tokens.scala"), base)
         )
         .get()
 
-      val obtained = TestSemanticTokens.semanticString(
+      val obtained = TestSemanticTokens.pcSemanticString(
         base,
-        tokens.asScala.toList.map(_.toInt),
+        nodes.asScala.toList,
       )
       assertEquals(
         obtained,

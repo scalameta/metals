@@ -278,8 +278,9 @@ class SbtServerSuite
   }
 
   test("semantic-highlight") {
+    cleanWorkspace()
     val expected =
-      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*method*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
           |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
           |  .<<settings>>/*method*/(
           |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
@@ -301,7 +302,7 @@ class SbtServerSuite
           |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalatest">>/*string*/ <<%%>>/*method*/ <<"scalatest">>/*string*/ <<%>>/*method*/ <<"3.2.9">>/*string*/ <<%>>/*method*/ <<Test>>/*variable,readonly*/
           |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalameta">>/*string*/ <<%%>>/*method*/ <<"scalameta">>/*string*/ <<%>>/*method*/ <<"4.6.0">>/*string*/
           |
-             """.stripMargin
+           """.stripMargin
 
     val fileContent =
       TestSemanticTokens.removeSemanticHighlightDecorations(expected)
@@ -309,7 +310,7 @@ class SbtServerSuite
       _ <- initialize(
         s"""|/build.sbt
             |$fileContent
-         """.stripMargin
+           """.stripMargin
       )
       _ <- server.didChangeConfiguration(
         """{

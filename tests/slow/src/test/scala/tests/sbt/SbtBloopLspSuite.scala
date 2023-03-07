@@ -750,7 +750,7 @@ class SbtBloopLspSuite
 
   test("semantic-highlight") {
     val expected =
-      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*method*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
           |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
           |  .<<settings>>/*method*/(
           |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,

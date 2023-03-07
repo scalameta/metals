@@ -68,7 +68,13 @@ class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
       )
       _ <- server.assertSemanticHighlight(
         "a/src/main/scala/a/A.scala",
-        "",
+        // we get only semantic tokens for keywords, tokens for symbols are missing
+        """|<<package>>/*keyword*/ <<a>>/*variable*/
+           |<<object>>/*keyword*/ <<A>>/*class*/ {
+           |  <<val>>/*keyword*/ <<age>>/*variable*/ = <<42>>/*number*/
+           |  <<age>>/*variable*/ + <<12>>/*number*/
+           |}
+           |""".stripMargin,
         fileContents,
       )
     } yield ()

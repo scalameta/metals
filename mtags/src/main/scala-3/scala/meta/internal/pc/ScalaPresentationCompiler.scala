@@ -89,13 +89,13 @@ case class ScalaPresentationCompiler(
 
   override def semanticTokens(
       params: VirtualFileParams
-  ): CompletableFuture[ju.List[Integer]] =
+  ): CompletableFuture[ju.List[Node]] =
     compilerAccess.withInterruptableCompiler(
-      new ju.ArrayList[Integer](),
+      new ju.ArrayList[Node](),
       params.token(),
     ) { access =>
       val driver = access.compiler()
-      new SemanticTokenProvider(driver, params).provide()
+      new PcSemanticTokensProvider(driver, params).provide().asJava
     }
 
   override def getTasty(
@@ -245,9 +245,7 @@ case class ScalaPresentationCompiler(
     val empty: Either[String, List[l.TextEdit]] = Right(List())
     (compilerAccess
       .withInterruptableCompiler(empty, params.token) { pc =>
-        new InlineValueProvider(
-          new PcValReferenceProviderImpl(pc.compiler(), params)
-        )
+        new PcInlineValueProviderImpl(pc.compiler(), params)
           .getInlineTextEdits()
       })
       .thenApply {

@@ -433,10 +433,17 @@ class Compilers(
 
           val vFile =
             CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
+          val isScala3 = ScalaVersions.isScala3Version(compiler.scalaVersion())
           compiler
             .semanticTokens(vFile)
             .asScala
-            .map { plist =>
+            .map { nodes =>
+              val plist = SemanticTokensProvider.provide(
+                nodes.asScala.toList,
+                vFile,
+                isScala3,
+              )
+
               new SemanticTokens(
                 findCorrectStart(0, 0, plist.asScala.toList).asJava
               )
