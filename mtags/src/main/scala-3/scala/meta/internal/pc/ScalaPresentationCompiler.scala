@@ -47,9 +47,10 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None,
+    workspaceId: String,
 ) extends PresentationCompiler:
 
-  def this() = this("", Nil, Nil)
+  def this(workspaceId: String) = this("", Nil, Nil, workspaceId = workspaceId)
 
   import InteractiveDriver.*
 
@@ -119,6 +120,7 @@ case class ScalaPresentationCompiler(
         config,
         buildTargetIdentifier,
         workspace,
+        workspaceId,
       ).completions()
 
     }

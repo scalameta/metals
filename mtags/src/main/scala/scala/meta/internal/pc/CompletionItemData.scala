@@ -8,6 +8,7 @@ import com.google.gson.JsonPrimitive
 case class CompletionItemData(
     symbol: String,
     target: String,
+    workspaceId: String,
     // The kind of the completion item, for example `override def`
     kind: java.lang.Integer = null,
     additionalSymbols: java.util.List[String] = null
@@ -29,7 +30,7 @@ case class CompletionItemData(
 }
 
 object CompletionItemData {
-  def empty: CompletionItemData = CompletionItemData("", "")
+  def empty: CompletionItemData = CompletionItemData("", "", "root")
   val None: java.lang.Integer = 0
   // This is an `override def` completion item.
   val OverrideKind: java.lang.Integer = 1

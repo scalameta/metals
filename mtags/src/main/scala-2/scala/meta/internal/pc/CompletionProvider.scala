@@ -19,6 +19,7 @@ import org.eclipse.{lsp4j => l}
 
 class CompletionProvider(
     val compiler: MetalsGlobal,
+    workspaceId: String,
     params: OffsetParams
 ) {
   import compiler._
@@ -240,6 +241,7 @@ class CompletionProvider(
         CompletionItemData(
           semanticdbSymbol(member.sym),
           buildTargetIdentifier,
+          workspaceId,
           kind = completionItemDataKind,
           additionalSymbols
         ).toJson

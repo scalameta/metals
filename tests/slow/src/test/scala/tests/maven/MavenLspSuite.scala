@@ -81,7 +81,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
             |$defaultPom
             |""".stripMargin
       )
-      _ <- server.server.buildServerPromise.future
+      _ <- server.headFolderWorkspaceServer.buildServerPromise.future
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(

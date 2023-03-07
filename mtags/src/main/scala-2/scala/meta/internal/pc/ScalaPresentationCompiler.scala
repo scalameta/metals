@@ -51,7 +51,8 @@ case class ScalaPresentationCompiler(
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
-    workspace: Option[Path] = None
+    workspace: Option[Path] = None,
+    workspaceId: String
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -82,7 +83,8 @@ case class ScalaPresentationCompiler(
   ): PresentationCompiler =
     copy(config = config)
 
-  def this() = this(buildTargetIdentifier = "")
+  def this(workspaceId: String) =
+    this(buildTargetIdentifier = "", workspaceId = workspaceId)
 
   val compilerAccess =
     new ScalaCompilerAccess(
@@ -145,14 +147,16 @@ case class ScalaPresentationCompiler(
     compilerAccess.withInterruptableCompiler(
       EmptyCompletionList(),
       params.token
-    ) { pc => new CompletionProvider(pc.compiler(), params).completions() }
+    ) { pc =>
+      new CompletionProvider(pc.compiler(), workspaceId, params).completions()
+    }
 
   override def implementAbstractMembers(
       params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new CompletionProvider(pc.compiler(), params).implementAll()
+      new CompletionProvider(pc.compiler(), workspaceId, params).implementAll()
     }
   }
 

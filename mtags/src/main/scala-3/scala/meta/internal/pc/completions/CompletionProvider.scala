@@ -38,6 +38,7 @@ class CompletionProvider(
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String,
     workspace: Option[Path],
+    workspaceId: String,
 ):
   def completions(): CompletionList =
     val uri = params.uri
@@ -172,6 +173,7 @@ class CompletionProvider(
         insertText,
       )
       val item = new CompletionItem(label)
+      workspace.foreach(ws => item.setData(ws.toString))
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
       item.setFilterText(
@@ -184,7 +186,7 @@ class CompletionProvider(
       completion.insertMode.foreach(item.setInsertTextMode)
 
       completion
-        .completionData(buildTargetIdentifier)
+        .completionData(buildTargetIdentifier, workspaceId)
         .foreach(data => item.setData(data.toJson))
 
       item.setTags(completion.lspTags.asJava)

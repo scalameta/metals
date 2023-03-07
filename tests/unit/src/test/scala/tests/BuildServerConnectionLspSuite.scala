@@ -23,7 +23,7 @@ class BuildServerConnectionLspSuite
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
-      _ = server.server.bspSession.get.cancel()
+      _ = server.headFolderWorkspaceServer.bspSession.get.cancel()
       _ = assertNoDiagnostics()
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(

@@ -164,7 +164,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- server.didSave("main.sc") { text =>
         text.replace(fakeScalaVersion, scalaVersion)
       }
-      _ <- server.server.indexingPromise.future
+      _ <- server.headFolderWorkspaceServer.indexingPromise.future
       targets <- server.executeCommand(ServerCommands.ListBuildTargets)
       _ = assertEquals(
         targets.toString(),
@@ -582,7 +582,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.server
+      _ <- server.headFolderWorkspaceServer
         .maybeImportScript(server.toPath("main.sc"))
         .getOrElse(Future.unit)
 
@@ -596,7 +596,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
 
       _ <- server.didOpen("build.sc")
-      _ <- server.server
+      _ <- server.headFolderWorkspaceServer
         .maybeImportScript(server.toPath("build.sc"))
         .getOrElse(Future.unit)
 

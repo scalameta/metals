@@ -1,6 +1,6 @@
 package scala.meta.metals
 
-import scala.meta.internal.metals.{MetalsLspService => MetalsLspService}
+import scala.meta.internal.metals.WorkspaceLspService
 
 /**
  * According to the spec, the server waits for the `initialize` request to be
@@ -11,6 +11,7 @@ import scala.meta.internal.metals.{MetalsLspService => MetalsLspService}
 sealed trait ServerState
 object ServerState {
   case object Started extends ServerState
-  final case class Initialized(service: MetalsLspService) extends ServerState
-  final case class ShuttingDown(service: MetalsLspService) extends ServerState
+  final case class Initialized(service: WorkspaceLspService) extends ServerState
+  final case class ShuttingDown(service: WorkspaceLspService)
+      extends ServerState
 }

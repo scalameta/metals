@@ -118,7 +118,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
       for {
         _ <- initialize(layout)
         // trigger extraction into readonly
-        info = server.server.workspaceSymbol(depSymbol)
+        info = server.headFolderWorkspaceServer.workspaceSymbol(depSymbol)
         matchedInfo = info.find(_.getLocation().getUri().contains(path))
         uri = matchedInfo match {
           case None =>

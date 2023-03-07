@@ -13,10 +13,10 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ThreadPools
+import scala.meta.internal.metals.WorkspaceLspService
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
@@ -150,17 +150,17 @@ class MetalsLanguageServer(
               )
             )
             .asJava
-        case Some(workspace) =>
-          val service = createService(workspace, params)
+        case Some(root) =>
+          val service = createService(List(("root", root)), params)
 
           setupJna()
-          MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
+          MetalsLogger.setupLspLogger(root, redirectSystemOut)
 
           val clientInfo = Option(params.getClientInfo()).fold("") { info =>
             s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
           }
           scribe.info(
-            s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
+            s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$root' $clientInfo."
           )
 
           serverState.set(ServerState.Initialized(service))
@@ -181,15 +181,15 @@ class MetalsLanguageServer(
   }
 
   private def createService(
-      workspace: AbsolutePath,
+      workspaceFolders: List[(String, AbsolutePath)],
       initializeParams: InitializeParams,
-  ): MetalsLspService = new MetalsLspService(
+  ): WorkspaceLspService = new WorkspaceLspService(
     ec,
     sh,
     serverInputs,
-    workspace,
     languageClient.get,
     initializeParams,
+    workspaceFolders,
   )
 
   private val isInitialized = new AtomicBoolean(false)
@@ -239,7 +239,7 @@ class MetalsLanguageServer(
 
   // todo https://github.com/scalameta/metals/issues/4785
   @deprecated
-  def getOldMetalsLanguageServer: MetalsLspService = serverState.get match {
+  def getOldMetalsLanguageServer: WorkspaceLspService = serverState.get match {
     case ServerState.Initialized(service) => service
     case _ => throw new IllegalStateException("Server is not initialized")
   }

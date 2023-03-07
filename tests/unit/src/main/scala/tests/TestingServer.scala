@@ -161,12 +161,13 @@ final case class TestingServer(
   languageServer.connectToLanguageClient(client)
 
   lazy val server = languageServer.getOldMetalsLanguageServer
+  lazy val headFolderWorkspaceServer = server.folderServices.head
 
   private lazy val trees = new Trees(
     buffers,
     new ScalaVersionSelector(
       () => initialUserConfig,
-      server.buildTargets,
+      headFolderWorkspaceServer.buildTargets,
     ),
     workspace,
   )
@@ -186,7 +187,7 @@ final case class TestingServer(
       includeKind: Boolean = false,
       includeFilename: Boolean = false,
   ): String = {
-    val infos = server.workspaceSymbol(query)
+    val infos = headFolderWorkspaceServer.workspaceSymbol(query)
     infos.foreach(info => {
       val path = info.getLocation().getUri().toAbsolutePath
       if (path.isJarFileSystem)
@@ -209,7 +210,7 @@ final case class TestingServer(
   }
   def workspaceSources(): Seq[AbsolutePath] = {
     for {
-      sourceItem <- server.buildTargets.sourceItems.toSeq
+      sourceItem <- headFolderWorkspaceServer.buildTargets.sourceItems.toSeq
       if sourceItem.exists
       source <-
         if (sourceItem.isScalaOrJava)
@@ -219,7 +220,7 @@ final case class TestingServer(
   }
 
   def buildTargetSourceJars(buildTarget: String): Future[Seq[String]] = {
-    server.bspSession match {
+    headFolderWorkspaceServer.bspSession match {
       case Some(session) =>
         val main = session.mainConnection
         for {
@@ -428,7 +429,10 @@ final case class TestingServer(
       token <- trees.tokenized(input).get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
-      definition = server.definitionResult(params).asJava.get()
+      definition = headFolderWorkspaceServer
+        .definitionResult(params)
+        .asJava
+        .get()
       if !definition.symbol.isPackage
       if !definition.definition.exists(_.isDependencySource(workspace))
       location <- definition.locations.asScala
@@ -451,7 +455,7 @@ final case class TestingServer(
         ref.location.getRange.getStart,
         new ReferenceContext(true),
       )
-      val obtainedLocations = server.referencesResult(params)
+      val obtainedLocations = headFolderWorkspaceServer.referencesResult(params)
       references ++= obtainedLocations.flatMap { result =>
         result.locations.map { l =>
           newRef(result.symbol, l)
@@ -584,7 +588,10 @@ final case class TestingServer(
   }
 
   def assertBuildServerConnection(): Unit = {
-    require(server.bspSession.isDefined, "Build server did not initialize")
+    require(
+      headFolderWorkspaceServer.bspSession.isDefined,
+      "Build server did not initialize",
+    )
   }
 
   def toPath(filename: String): AbsolutePath = {
@@ -737,12 +744,14 @@ final case class TestingServer(
   }
 
   def analyzeStacktrace(stacktrace: String): Seq[l.CodeLens] = {
-    server.stacktraceAnalyzer.stacktraceLenses(stacktrace.split('\n').toList)
+    headFolderWorkspaceServer.stacktraceAnalyzer.stacktraceLenses(
+      stacktrace.split('\n').toList
+    )
   }
 
   def exportEvaluation(filename: String): Option[String] = {
     val path = toPath(filename)
-    server.worksheetProvider.copyWorksheetOutput(path)
+    headFolderWorkspaceServer.worksheetProvider.copyWorksheetOutput(path)
   }
 
   def didOpen(filename: String): Future[Unit] = {
@@ -988,7 +997,9 @@ final case class TestingServer(
         }
     }
 
-    val compilations = paths.map(path => server.compilations.compileFile(path))
+    val compilations = paths.map(path =>
+      headFolderWorkspaceServer.compilations.compileFile(path)
+    )
     for {
       _ <- Future.sequence(compilations)
       _ <- waitFor(util.concurrent.TimeUnit.SECONDS.toMillis(1))
@@ -1030,7 +1041,7 @@ final case class TestingServer(
           if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
           else if (retries > 0) {
             retries -= 1
-            server.compilations.compileFile(path)
+            headFolderWorkspaceServer.compilations.compileFile(path)
           } else {
             val error = s"Could not fetch any code lenses in $maxRetries tries"
             codeLenses.tryFailure(new NoSuchElementException(error))
@@ -1045,7 +1056,7 @@ final case class TestingServer(
           .asScala // model is refreshed only for focused document
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
-      _ <- server.compilations.compileFile(path)
+      _ <- headFolderWorkspaceServer.compilations.compileFile(path)
       lenses <- codeLenses.future
     } yield lenses
   }
@@ -1642,7 +1653,7 @@ final case class TestingServer(
     var last = List[String]()
     trees.tokenized(input).get.foreach { token =>
       val params = token.toPositionParams(identifier)
-      val definition = server
+      val definition = headFolderWorkspaceServer
         .definitionOrReferences(params, definitionOnly = true)
         .asJava
         .get()
@@ -1720,12 +1731,14 @@ final case class TestingServer(
   }
 
   def buildTarget(displayName: String): String = {
-    server.buildTargets
+    headFolderWorkspaceServer.buildTargets
       .findByDisplayName(displayName)
       .map(_.getId().getUri())
       .getOrElse {
         val alternatives =
-          server.buildTargets.all.map(_.getDisplayName()).mkString(" ")
+          headFolderWorkspaceServer.buildTargets.all
+            .map(_.getDisplayName())
+            .mkString(" ")
         throw new NoSuchElementException(
           s"$displayName (alternatives: ${alternatives}"
         )
@@ -1733,12 +1746,14 @@ final case class TestingServer(
   }
 
   def jar(filename: String): String = {
-    server.buildTargets.allWorkspaceJars
+    headFolderWorkspaceServer.buildTargets.allWorkspaceJars
       .find(_.filename.contains(filename))
       .map(_.toURI.toString())
       .getOrElse {
         val alternatives =
-          server.buildTargets.allWorkspaceJars.map(_.filename).mkString(" ")
+          headFolderWorkspaceServer.buildTargets.allWorkspaceJars
+            .map(_.filename)
+            .mkString(" ")
         throw new NoSuchElementException(
           s"$filename (alternatives: ${alternatives}"
         )
@@ -1760,9 +1775,13 @@ final case class TestingServer(
         sys.error(s"$path: not found pattern '$linePattern'")
       )
     val reveal =
-      server.treeView.reveal(toPath(filename), new l.Position(line, 0)).get
+      headFolderWorkspaceServer.treeView
+        .reveal(toPath(filename), new l.Position(line, 0))
+        .get
     val parents = (reveal.uriChain :+ null).map { uri =>
-      server.treeView.children(TreeViewChildrenParams(reveal.viewId, uri))
+      headFolderWorkspaceServer.treeView.children(
+        TreeViewChildrenParams(reveal.viewId, uri)
+      )
     }
 
     val label = parents.iterator
@@ -1799,7 +1818,9 @@ final case class TestingServer(
   )(implicit loc: munit.Location): Unit = {
     val viewId: String = TreeViewProvider.Project
     val result =
-      server.treeView.children(TreeViewChildrenParams(viewId, uri)).nodes
+      headFolderWorkspaceServer.treeView
+        .children(TreeViewChildrenParams(viewId, uri))
+        .nodes
     val obtained = result
       .map { node =>
         val collapse =

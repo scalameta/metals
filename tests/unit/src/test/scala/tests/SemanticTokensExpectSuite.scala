@@ -9,7 +9,8 @@ class SemanticTokensExpectSuite extends DirectoryExpectSuite("semanticTokens") {
 
   override lazy val input: InputProperties = InputProperties.scala2()
   private val compiler = new ScalaPresentationCompiler(
-    classpath = input.classpath.entries.map(_.toNIO)
+    classpath = input.classpath.entries.map(_.toNIO),
+    workspaceId = "root",
   )
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global

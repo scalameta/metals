@@ -235,7 +235,7 @@ class SbtServerSuite
       )
       // assert contains the meta-build-target-build
       assertNoDiff(
-        server.server.buildTargets.all
+        server.headFolderWorkspaceServer.buildTargets.all
           .map(_.getDisplayName())
           .toSeq
           .sorted
@@ -266,7 +266,7 @@ class SbtServerSuite
     for {
       _ <- initialize(layout)
       // make sure to compile once
-      _ <- server.server.compilations.compileFile(
+      _ <- server.headFolderWorkspaceServer.compilations.compileFile(
         workspace.resolve("target/Foo.scala")
       )
     } yield {
