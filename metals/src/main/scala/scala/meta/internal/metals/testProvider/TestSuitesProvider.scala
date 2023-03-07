@@ -423,7 +423,7 @@ final class TestSuitesProvider(
         // will be grouped, and the class will come before companion object (i.e.
         // `a.b.WordSpec#` < `a.b.WordSpec.`). This ensures that the class is put into the cache
         // instead of the companion object.
-        .sortBy(_._1)
+        .sortBy { case (symbol, _) => symbol }
         .foldLeft(List.empty[TestEntry]) {
           case (entries, (symbol, testSymbolInfo)) =>
             val fullyQualifiedName =
