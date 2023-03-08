@@ -646,6 +646,67 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   checkEvents(
+    "scalatest-any-word-spec-with-companion-object",
+    List("org.scalatest::scalatest:3.2.13"),
+    s"""|
+        |/app/src/main/scala/a/b/WordSpec.scala
+        |package a.b
+        |import org.scalatest.wordspec.AnyWordSpec
+        |
+        |class WordSpec extends AnyWordSpec {
+        |  import WordSpec._
+        |  "A Set" when {
+        |    "empty" should {
+        |      "have size 0" in {
+        |        assert(foo == "bar")
+        |        assert(Set.empty.size == 0)
+        |      }
+        |    }
+        |  }
+        |}
+        |
+        |object WordSpec {
+           def foo: String = "bar"
+        |}
+        |""".stripMargin,
+    file = "app/src/main/scala/a/b/WordSpec.scala",
+    expected = () => {
+      val fcqn = "a.b.WordSpec"
+      val className = "WordSpec"
+      val symbol = "a/b/WordSpec#"
+      val file = "app/src/main/scala/a/b/WordSpec.scala"
+      List(
+        BuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestSuite(
+              fcqn,
+              className,
+              symbol,
+              QuickLocation(
+                classUriFor(file),
+                (3, 6, 3, 14),
+              ).toLsp,
+              canResolveChildren = true,
+            ),
+            AddTestCases(
+              fcqn,
+              className,
+              List(
+                TestCaseEntry(
+                  "A Set when empty should have size 0",
+                  QuickLocation(classUriFor(file), (7, 6, 7, 19)).toLsp,
+                )
+              ).asJava,
+            ),
+          ).asJava,
+        )
+      )
+    },
+  )
+
+  checkEvents(
     "scalatest-any-flat-spec",
     List("org.scalatest::scalatest:3.2.13"),
     s"""|
