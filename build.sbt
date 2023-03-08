@@ -651,6 +651,8 @@ lazy val metalsDependencies = project
   .in(file("target/.dependencies"))
   .settings(
     publish / skip := true,
+    // silent the intransitive dependency warning
+    publishMavenStyle := false,
     libraryDependencies ++= List(
       // The dependencies listed below are only listed so Scala Steward
       // will pick them up and update them. They aren't actually used.
@@ -662,6 +664,7 @@ lazy val metalsDependencies = project
       "ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop,
       "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
+      "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter intransitive (),
     ),
   )
   .disablePlugins(ScalafixPlugin)
