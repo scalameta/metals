@@ -87,7 +87,7 @@ object ScalatestTestFinder {
       style: ScalatestStyle,
       tree: Tree,
       suiteName: FullyQualifiedName,
-  ): Seq[TestCaseEntry] =
+  ): Vector[TestCaseEntry] =
     TreeUtils.extractTemplateFrom(tree, suiteName.value) match {
       case Some(template) =>
         style match {
@@ -104,14 +104,14 @@ object ScalatestTestFinder {
             findAnyFunSpecTests(path, template)
         }
       case None =>
-        Nil
+        Vector.empty
     }
 
   private def findAnyFunSuiteTests(
       path: AbsolutePath,
       template: Template,
       style: ScalatestStyle,
-  ): List[TestCaseEntry] = {
+  ): Vector[TestCaseEntry] = {
     // collect all entries like test("testname") { ... }
     template.stats.collect {
           // format: off
@@ -119,7 +119,7 @@ object ScalatestTestFinder {
               if style.leafMethods.contains(funName) =>
           // format: on
         TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
-    }
+    }.toVector
   }
 
   /**
@@ -129,7 +129,7 @@ object ScalatestTestFinder {
       path: AbsolutePath,
       template: Template,
       style: ScalatestStyle,
-  ): List[TestCaseEntry] = {
+  ): Vector[TestCaseEntry] = {
 
     def loop(
         stats: List[Stat],
@@ -159,7 +159,7 @@ object ScalatestTestFinder {
           acc
       }
 
-    loop(template.stats, Nil, Nil)
+    loop(template.stats, Nil, Nil).toVector
   }
 
   /**
@@ -168,7 +168,7 @@ object ScalatestTestFinder {
   private def findAnyFlatSpecTests(
       path: AbsolutePath,
       template: Template,
-  ): List[TestCaseEntry] = {
+  ): Vector[TestCaseEntry] = {
     val (result, _) = template.stats.foldLeft(
       (List.empty[TestCaseEntry], Option.empty[String])
     ) { case ((acc, namePrefix), stat) =>
@@ -184,7 +184,7 @@ object ScalatestTestFinder {
 
         // format: off
         // it should "have size 0" in { ... } - replace it with encountered name or leave empty
-        case Term.ApplyInfix(appl @ Term.ApplyInfix(Term.Name("it"), Term.Name(infixOp), _, List(Lit.String(right))), _: Term.Name, _, _) => 
+        case Term.ApplyInfix(appl @ Term.ApplyInfix(Term.Name("it") | Term.Name("ignore"), Term.Name(infixOp), _, List(Lit.String(right))), _: Term.Name, _, _) => 
         // format: on
           val prefix = namePrefix.fold("")(_ + " ")
           val testname = s"$prefix$infixOp $right"
@@ -194,7 +194,7 @@ object ScalatestTestFinder {
         case _ => (acc, namePrefix)
       }
     }
-    result
+    result.toVector
   }
 
   /**
@@ -204,7 +204,7 @@ object ScalatestTestFinder {
   private def findAnyFunSpecTests(
       path: AbsolutePath,
       template: Template,
-  ): List[TestCaseEntry] = {
+  ): Vector[TestCaseEntry] = {
 
     def loop(
         stats: List[Stat],
@@ -215,7 +215,7 @@ object ScalatestTestFinder {
       stats.flatMap {
         // format: off
         // gather name part from describe
-        case Term.Apply(Term.Apply(Term.Name("describe"), (prefix: Lit.String) :: Nil), (block: Term.Block) :: Nil) => 
+        case Term.Apply(Term.Apply(Term.Name("describe") | Term.Name("ignore"), (prefix: Lit.String) :: Nil), (block: Term.Block) :: Nil) => 
         // format: on
           (acc, sharedPrefix :+ prefix.value)
           loop(block.stats, sharedPrefix :+ prefix.value, acc)
@@ -233,7 +233,7 @@ object ScalatestTestFinder {
           acc
       }
     }
-    loop(template.stats, Nil, Nil)
+    loop(template.stats, Nil, Nil).toVector
   }
 
 }
@@ -245,7 +245,7 @@ sealed trait ScalatestStyle {
 }
 
 object ScalatestStyle {
-  private val styles =
+  private val styles: Vector[ScalatestStyle] =
     Vector(
       AnyFunSuite,
       AnyPropSpec,
@@ -265,7 +265,7 @@ object ScalatestStyle {
       "org/scalatest/funsuite/AnyFunSuite#",
       "org/scalatest/funsuite/AnyFunSuiteLike#",
     )
-    override val leafMethods: Set[String] = Set("test")
+    override val leafMethods: Set[String] = Set("test", "ignore")
   }
 
   case object AnyPropSpec extends ScalatestStyle {
@@ -273,7 +273,7 @@ object ScalatestStyle {
       "org/scalatest/propspec/AnyPropSpec#",
       "org/scalatest/propspec/AnyPropSpecLike#",
     )
-    override val leafMethods: Set[String] = Set("property")
+    override val leafMethods: Set[String] = Set("property", "ignore")
   }
 
   case object AnyFlatSpec extends ScalatestStyle {
@@ -297,7 +297,7 @@ object ScalatestStyle {
     )
     override val intermediateMethods: Set[String] =
       Set("when", "should", "must", "can", "which")
-    override val leafMethods: Set[String] = Set("in")
+    override val leafMethods: Set[String] = Set("in", "ignore")
   }
 
   case object AnyFreeSpec extends ScalatestStyle {
@@ -306,7 +306,7 @@ object ScalatestStyle {
       "org/scalatest/freespec/AnyFreeSpecLike#",
     )
     override val intermediateMethods: Set[String] = Set("-")
-    override val leafMethods: Set[String] = Set("in")
+    override val leafMethods: Set[String] = Set("in", "ignore")
   }
 
 }
