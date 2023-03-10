@@ -80,6 +80,7 @@ class CompletionProvider(
             completionPos,
             indexedCtx,
             path,
+            tpdPath,
             config,
             workspace,
             autoImportsGen,

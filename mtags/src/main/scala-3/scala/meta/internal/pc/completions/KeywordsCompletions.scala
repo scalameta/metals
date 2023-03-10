@@ -7,12 +7,9 @@ import scala.meta.tokens.Token
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
-import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.typer.Deriving
-import scala.meta.internal.metals.Fuzzy.matches
-import dotty.tools.dotc.core.Flags
 
 object KeywordsCompletions:
 
@@ -39,8 +36,8 @@ object KeywordsCompletions:
         val isParam = this.isParam(path)
         val isSelect = this.isSelect(path)
         val isImport = this.isImport(path)
-        val (canBeExtended, hasExtend, canDerive) =
-          checkPossibleTemplateParents(path, completionPos)
+        val templateKeywordAvailability =
+          checkTemplateForNewParents(path, completionPos)
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -55,9 +52,9 @@ object KeywordsCompletions:
                 isScala3 = true,
                 isSelect = isSelect,
                 isImport = isImport,
-                canBeExtended = canBeExtended,
-                canDerive = canDerive,
-                hasExtend = hasExtend,
+                canBeExtended = templateKeywordAvailability.`extends`,
+                canDerive = templateKeywordAvailability.`derives`,
+                hasExtend = templateKeywordAvailability.`with`,
                 allowToplevel = true,
               ) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
@@ -146,48 +143,85 @@ object KeywordsCompletions:
       case Ident(_) :: t :: _ if t.isTerm => true
       case other => false
 
-  // (extends, with, derives)
-  def checkPossibleTemplateParents(enclosing: List[Tree], pos: CompletionPos)(
+  case class TemplateKeywordAvailability(
+      `extends`: Boolean,
+      `with`: Boolean,
+      `derives`: Boolean,
+  )
+
+  /*
+   * Checks whether given path and position can be followed with
+   * `extends`, `with` or `derives` keywords.
+   * @param enclosing - typed path to position
+   * @param pos - completion position
+   *
+   * @returns TemplateKeywordAvailability with available keywords
+   *
+   * @note This method requires a typed path. The rest of the metals functionalities.
+   */
+  def checkTemplateForNewParents(enclosing: List[Tree], pos: CompletionPos)(
       using ctx: Context
-  ): (Boolean, Boolean, Boolean) =
-    def findPreviousTypeDef(tree: Tree): Option[Tree] =
-      val typeDefs = tree.filterSubTrees {
-        case typeDef: TypeDef =>
-          (typeDef.span.exists && typeDef.span.end < pos.sourcePos.span.start) ||
-          typeDef.symbol.flags.is(Flags.Enum)
-        case other => false
-      }
+  ): TemplateKeywordAvailability =
 
-      typeDefs match
-        case Nil => None
+    /*
+     * Finds tree which ends just before cursor positions, that may be extended or derive.
+     * In Scala 3, such tree must be a `TypeDef` which has field of type `Template` describing
+     * its parents and derived classes.
+     *
+     * @tree - enclosing tree
+     *
+     * @returns TypeDef tree defined before the cursor position or `enclosingTree` otherwise
+     */
+    def findLastSatisfyingTree(enclosingTree: Tree): Option[Tree] =
+      enclosingTree match
+        // for Enum, the enclosing tree is correct and contains cursor position in its span
+        case typeDef: TypeDef if typeDef.symbol.flags.is(Flags.Enum) =>
+          Some(typeDef)
         case other =>
-          other
-            .filter(tree => tree.span.exists && tree.span.end < pos.end)
-            .maxByOption(_.span.end)
-            .orElse(Some(tree))
-    end findPreviousTypeDef
-
-    val result = enclosing match
-      case Nil => (false, false, false)
-      case (_: Template) :: _ => (false, true, true) // WITH and DERIVES
-      case other :: _ =>
-        findPreviousTypeDef(other)
-          .map {
-            case tpeDef @ TypeDef(_, template: Template) if tpeDef.isClassDef =>
-              if template.parents.forall(parent =>
-                  parent.symbol.exists && (
-                    parent.symbol.owner == ctx.definitions.ObjectClass ||
-                      parent.symbol == ctx.definitions.ObjectClass ||
-                      parent.symbol == ctx.definitions.EnumClass
-                  )
-                )
-              then (true, false, true)
-              else (false, true, true)
-            case other => (false, false, false)
+          val typeDefs = other.filterSubTrees {
+            // package test
+            // class Test ext@@ - Interactive.pathTo returns `PackageDef` instead of `TypeDef`
+            // - because it tried to repair the broken tree by finishing `TypeDef` before ext
+            //
+            // The cursor position is 27 and tree positions after parsing are:
+            //
+            //  package Test@../Test.sc<8..12> {
+            //    class Test {}@../Test.sc[13..19..23]
+            //  }@../Test.sc<0..27>
+            case typeDef: TypeDef =>
+              typeDef.span.exists && typeDef.span.end < pos.sourcePos.span.start
+            case other => false
           }
-          .getOrElse((false, false, false))
 
-    result
-  end checkPossibleTemplateParents
+          typeDefs match
+            // If we didn't find any trees, it means the enclosingTree is not a TypeDef,
+            // thus can't be followed with `extends`, `with` and `derives`
+            case Nil => None
+            case other =>
+              other
+                .filter(tree => tree.span.exists && tree.span.end < pos.start)
+                .maxByOption(_.span.end)
+
+    end findLastSatisfyingTree
+
+    enclosing.headOption
+      .flatMap { enclosingTree =>
+        findLastSatisfyingTree(enclosingTree).map {
+          case tpeDef @ TypeDef(_, template: Template) if tpeDef.isClassDef =>
+            if template.parents.forall(parent =>
+                parent.symbol.exists && (
+                  parent.symbol.owner == ctx.definitions.ObjectClass ||
+                    parent.symbol == ctx.definitions.ObjectClass ||
+                    parent.symbol == ctx.definitions.EnumClass
+                )
+              )
+            then TemplateKeywordAvailability(true, false, true)
+            else TemplateKeywordAvailability(false, true, true)
+          case other => TemplateKeywordAvailability(false, false, false)
+        }
+      }
+      .getOrElse(TemplateKeywordAvailability(false, false, false))
+
+  end checkTemplateForNewParents
 
 end KeywordsCompletions

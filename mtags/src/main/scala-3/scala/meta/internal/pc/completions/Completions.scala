@@ -47,6 +47,7 @@ class Completions(
     completionPos: CompletionPos,
     indexedContext: IndexedContext,
     path: List[Tree],
+    tpdPath: List[Tree],
     config: PresentationCompilerConfig,
     workspace: Option[Path],
     autoImports: AutoImportsGenerator,
@@ -190,7 +191,7 @@ class Completions(
     val (all, result) =
       if exclusive then (advanced, SymbolSearch.Result.COMPLETE)
       else
-        val keywords = KeywordsCompletions.contribute(path, completionPos)
+        val keywords = KeywordsCompletions.contribute(tpdPath, completionPos)
         val allAdvanced = advanced ++ keywords
         path match
           // should not show completions for toplevel
