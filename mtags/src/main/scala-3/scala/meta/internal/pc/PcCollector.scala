@@ -76,9 +76,18 @@ abstract class PcCollector[T](
   )(tree: Tree, pos: SourcePosition, symbol: Option[Symbol]): T
 
   def adjust(
-      pos0: SourcePosition,
+      pos1: SourcePosition,
       forRename: Boolean = false,
   ): (SourcePosition, Boolean) =
+    val pos0 =
+      val span = pos1.span
+      if span.exists && span.point > span.end then
+        pos1.withSpan(
+          span
+            .withStart(span.point)
+            .withEnd(span.point + (span.end - span.start))
+        )
+      else pos1
 
     val pos =
       if sourceText(pos0.`end` - 1) == ',' then pos0.withEnd(pos0.`end` - 1)
@@ -392,7 +401,9 @@ abstract class PcCollector[T](
               arg,
               pos
                 .withSpan(
-                  arg.span.withEnd(arg.span.start + realName.length)
+                  arg.span
+                    .withEnd(arg.span.start + realName.length)
+                    .withPoint(arg.span.start)
                 ),
               sym,
             )
