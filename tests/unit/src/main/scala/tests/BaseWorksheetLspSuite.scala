@@ -86,6 +86,27 @@ abstract class BaseWorksheetLspSuite(
       } yield ()
     }
 
+  test("ANSI") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/Main.worksheet.sc
+           |pprint.pprintln("Hello, world!")
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/Main.worksheet.sc")
+      // check that ANSI colors were stripped
+      _ = assertNotContains(client.workspaceDecorations, "\u001b")
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|pprint.pprintln("Hello, world!") // "Hello, world!"
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("outside-target") {
     cleanWorkspace()
     for {

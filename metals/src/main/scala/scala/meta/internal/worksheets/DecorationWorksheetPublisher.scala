@@ -46,7 +46,7 @@ class DecorationWorksheetPublisher(isInlineDecorationProvider: Boolean)
           s.position().toLsp,
           new MarkupContent(
             MarkupKind.MARKDOWN,
-            HoverMarkup(s.details),
+            HoverMarkup(s.prettyDetails()),
           ),
           ThemableDecorationInstanceRenderOptions(
             after = ThemableDecorationAttachmentRenderOptions(

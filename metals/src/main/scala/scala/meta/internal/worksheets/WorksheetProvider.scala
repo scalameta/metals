@@ -195,7 +195,7 @@ class WorksheetProvider(
           lineHasOutput match {
             case Some(statement) =>
               val detailLines = statement
-                .details()
+                .prettyDetails()
                 .split("\n")
                 .map { line =>
                   // println in worksheets already come with //
@@ -363,7 +363,6 @@ class WorksheetProvider(
     val classpath = evaluatedWorksheet.classpath().asScala.toList
     val previousDigest = worksheetsDigests.getOrElse(path, "")
     val newDigest = calculateDigest(classpath)
-
     exportableEvaluations.update(
       input,
       evaluatedWorksheet,
