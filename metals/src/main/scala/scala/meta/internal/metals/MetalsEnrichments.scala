@@ -1086,4 +1086,12 @@ object MetalsEnrichments
     }
   }
 
+  /**
+   * Strips ANSI colors.
+   * As long as the color codes are valid this should correctly strip
+   * anything that is ESC (U+001B) plus [
+   */
+  def filerANSIColorCodes(str: String): String =
+    str.replaceAll("\u001B\\[[;\\d]*m", "")
+
 }

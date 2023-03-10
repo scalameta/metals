@@ -1,5 +1,7 @@
 package scala.meta.internal.worksheets
 
+import scala.meta.internal.metals.MetalsEnrichments
+
 import mdoc.interfaces.EvaluatedWorksheetStatement
 import mdoc.{interfaces => i}
 import org.eclipse.{lsp4j => l}
@@ -57,8 +59,17 @@ object MdocEnrichments {
    * continuation
    */
   def truncatify(statement: EvaluatedWorksheetStatement): String = {
-    if (statement.isSummaryComplete()) statement.summary()
-    else statement.summary() + "…"
+    if (statement.isSummaryComplete()) statement.prettySummary()
+    else statement.prettySummary() + "…"
+  }
+
+  implicit class XtensionEvaluatedWorksheetStatement(
+      statement: EvaluatedWorksheetStatement
+  ) {
+    def prettyDetails(): String =
+      MetalsEnrichments.filerANSIColorCodes(statement.details())
+    def prettySummary(): String =
+      MetalsEnrichments.filerANSIColorCodes(statement.summary())
   }
 
 }
