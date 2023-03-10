@@ -9,6 +9,10 @@ import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
+import dotty.tools.dotc.interactive.Interactive
+import dotty.tools.dotc.typer.Deriving
+import scala.meta.internal.metals.Fuzzy.matches
+import dotty.tools.dotc.core.Flags
 
 object KeywordsCompletions:
 
@@ -35,23 +39,8 @@ object KeywordsCompletions:
         val isParam = this.isParam(path)
         val isSelect = this.isSelect(path)
         val isImport = this.isImport(path)
-        lazy val text = completionPos.cursorPos.source.content.mkString
-        lazy val reverseTokens: Array[Token] =
-          // Try not to tokenize the whole file
-          // Maybe we should re-use the tokenize result with `notInComment`
-          val lineStart =
-            if completionPos.cursorPos.line > 0 then
-              completionPos.sourcePos.source.lineToOffset(
-                completionPos.cursorPos.line - 1
-              )
-            else 0
-          text
-            .substring(lineStart, completionPos.cursorPos.start)
-            .tokenize
-            .toOption match
-            case Some(toks) => toks.tokens.reverse
-            case None => Array.empty[Token]
-        end reverseTokens
+        val (canBeExtended, hasExtend, canDerive) =
+          checkPossibleTemplateParents(path, completionPos)
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -66,8 +55,10 @@ object KeywordsCompletions:
                 isScala3 = true,
                 isSelect = isSelect,
                 isImport = isImport,
+                canBeExtended = canBeExtended,
+                canDerive = canDerive,
+                hasExtend = hasExtend,
                 allowToplevel = true,
-                leadingReverseTokens = reverseTokens,
               ) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }
@@ -88,6 +79,7 @@ object KeywordsCompletions:
 
   private def isPackage(enclosing: List[Tree]): Boolean =
     enclosing match
+      case (_: PackageDef) :: _ => true
       case Nil => true
       case _ => false
 
@@ -153,4 +145,49 @@ object KeywordsCompletions:
       case Ident(_) :: (_: ValOrDefDef) :: _ => true
       case Ident(_) :: t :: _ if t.isTerm => true
       case other => false
+
+  // (extends, with, derives)
+  def checkPossibleTemplateParents(enclosing: List[Tree], pos: CompletionPos)(
+      using ctx: Context
+  ): (Boolean, Boolean, Boolean) =
+    def findPreviousTypeDef(tree: Tree): Option[Tree] =
+      val typeDefs = tree.filterSubTrees {
+        case typeDef: TypeDef =>
+          (typeDef.span.exists && typeDef.span.end < pos.sourcePos.span.start) ||
+          typeDef.symbol.flags.is(Flags.Enum)
+        case other => false
+      }
+
+      typeDefs match
+        case Nil => None
+        case other =>
+          other
+            .filter(tree => tree.span.exists && tree.span.end < pos.end)
+            .maxByOption(_.span.end)
+            .orElse(Some(tree))
+    end findPreviousTypeDef
+
+    val result = enclosing match
+      case Nil => (false, false, false)
+      case (_: Template) :: _ => (false, true, true) // WITH and DERIVES
+      case other :: _ =>
+        findPreviousTypeDef(other)
+          .map {
+            case tpeDef @ TypeDef(_, template: Template) if tpeDef.isClassDef =>
+              if template.parents.forall(parent =>
+                  parent.symbol.exists && (
+                    parent.symbol.owner == ctx.definitions.ObjectClass ||
+                      parent.symbol == ctx.definitions.ObjectClass ||
+                      parent.symbol == ctx.definitions.EnumClass
+                  )
+                )
+              then (true, false, true)
+              else (false, true, true)
+            case other => (false, false, false)
+          }
+          .getOrElse((false, false, false))
+
+    result
+  end checkPossibleTemplateParents
+
 end KeywordsCompletions

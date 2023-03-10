@@ -1,7 +1,5 @@
 package scala.meta.internal.pc
 
-import scala.meta.XtensionClassifiable
-import scala.meta.tokens.Token // for token.is
 // scalafmt: { maxColumn = 120 }
 
 /**
@@ -27,8 +25,10 @@ case class Keyword(
     isParam: Boolean = false,
     isScala3: Boolean = false,
     isImport: Boolean = false,
-    commitCharacter: Option[String] = None,
-    reversedTokensPredicate: Option[Array[Token] => Boolean] = None
+    canBeExtended: Boolean = false,
+    canDerive: Boolean = false,
+    requiresExtend: Boolean = false,
+    commitCharacter: Option[String] = None
 ) {
 
   def insertText: String =
@@ -53,11 +53,12 @@ case class Keyword(
       isScala3: Boolean,
       isSelect: Boolean,
       isImport: Boolean,
-      allowToplevel: Boolean,
-      leadingReverseTokens: => Array[Token]
+      canBeExtended: Boolean,
+      canDerive: Boolean,
+      hasExtend: Boolean,
+      allowToplevel: Boolean
   ): Boolean = {
     val isAllowedInThisScalaVersion = (this.isScala3 && isScala3) || !this.isScala3
-    lazy val predicate = this.reversedTokensPredicate.exists(pred => pred(leadingReverseTokens))
     this.name.startsWith(name) && isAllowedInThisScalaVersion &&
     // don't complete keywords if it's in `xxx.key@@`
     !isSelect && {
@@ -70,9 +71,10 @@ case class Keyword(
       (this.isMethodBody && isMethodBody) ||
       (this.isParam && isParam) ||
       (this.isImport && isImport) ||
-      ((this.name == "extends" || this.name == "derives") && predicate)
-    } &&
-    (this.name != "extension" || predicate)
+      (this.canBeExtended && canBeExtended) ||
+      (this.canDerive && canDerive) ||
+      (this.requiresExtend && hasExtend)
+    } && (this.name != "extension" || !canDerive || !canBeExtended)
   }
 }
 
@@ -88,7 +90,8 @@ object Keyword {
     Keyword("given", isBlock = true, isTemplate = true, isDefinition = true, isScala3 = true),
     Keyword(
       "derives",
-      reversedTokensPredicate = Some(arr => extendsPred(arr) || derivesAfterExtends(arr)),
+      canBeExtended = true,
+      canDerive = true,
       isScala3 = true
     ),
     Keyword(
@@ -98,7 +101,7 @@ object Keyword {
       isDefinition = true,
       isPackage = true,
       isScala3 = true,
-      reversedTokensPredicate = Some(!extendsPred(_))
+      canBeExtended = false
     ),
     Keyword("type", isTemplate = true, isDefinition = true),
     Keyword("class", isTemplate = true, isPackage = true, isDefinition = true),
@@ -129,7 +132,8 @@ object Keyword {
     Keyword("throw", isExpression = true),
     Keyword("implicit", isBlock = true, isTemplate = true),
     Keyword("return", isMethodBody = true),
-    Keyword("extends", reversedTokensPredicate = Some(extendsPred)),
+    Keyword("extends", canBeExtended = true),
+    Keyword("with", requiresExtend = true),
     Keyword("match"), // already implemented by CompletionPosition
     Keyword("case"), // already implemented by CompletionPosition and "case class"
     Keyword("override"), // already implemented by CompletionPosition
@@ -137,41 +141,10 @@ object Keyword {
     Keyword("macro"), // in-frequently used language feature
     // The keywords below were left out in the first iteration of implementing keyword completions
     // since they appear in positions that are a bit more difficult to detect on the syntax tree.
-    Keyword("with"),
     Keyword("catch"),
     Keyword("finally"),
     Keyword("then"),
     Keyword("*", isImport = true, isScala3 = true)
   )
-
-  private def extendsPred(leadingReverseTokens: Array[Token]): Boolean = {
-    leadingReverseTokens
-      .filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF])
-      .take(3)
-      .toList match {
-      // (class|trait|object) classname ext@@
-      case (_: Token.Ident) :: (_: Token.Ident) :: kw :: Nil =>
-        if (kw.is[Token.KwClass] || kw.is[Token.KwTrait] || kw.is[Token.KwObject] || kw.is[Token.KwEnum]) true
-        else false
-      // ... classname() ext@@
-      case (_: Token.Ident) :: (_: Token.RightParen) :: _ => true
-      // ... classname[T] ext@@
-      case (_: Token.Ident) :: (_: Token.RightBracket) :: _ => true
-      case _ => false
-    }
-  }
-
-  private def derivesAfterExtends(leadingReverseTokens: Array[Token]): Boolean = {
-    leadingReverseTokens
-      .filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF])
-      .take(4)
-      .toList match {
-      // ... extends A(,|with) B der@@
-      case (_: Token.Ident) :: (_: Token.Ident) :: sep :: _ if sep.is[Token.KwWith] || sep.is[Token.Comma] => true
-      // ... extends A der@@
-      case (_: Token.Ident) :: (_: Token.Ident) :: (_: Token.KwExtends) :: _ => true
-      case _ => false
-    }
-  }
 
 }

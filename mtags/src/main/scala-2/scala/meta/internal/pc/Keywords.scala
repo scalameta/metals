@@ -4,6 +4,8 @@ import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.XtensionClassifiable
+import scala.meta.tokens.Token // for token.is
 
 import org.eclipse.{lsp4j => l}
 
@@ -72,11 +74,61 @@ trait Keywords { this: MetalsGlobal =>
                 isSelect = isSelect,
                 isImport = isImport,
                 allowToplevel = isAmmoniteScript,
-                leadingReverseTokens = reverseTokens
+                canBeExtended = canBeExtended(reverseTokens),
+                canDerive = canDerive(reverseTokens),
+                hasExtend = hasExtend(reverseTokens)
               ) =>
             mkTextEditMember(kw, editRange)
         }
       case _ => List.empty
+    }
+  }
+
+  private def canBeExtended(leadingReverseTokens: Array[Token]): Boolean = {
+    leadingReverseTokens
+      .filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF])
+      .take(3)
+      .toList match {
+      // (class|trait|object) classname ext@@
+      case (_: Token.Ident) :: (_: Token.Ident) :: kw :: Nil =>
+        if (
+          kw.is[Token.KwClass] || kw.is[Token.KwTrait] || kw
+            .is[Token.KwObject] || kw.is[Token.KwEnum]
+        ) true
+        else false
+      // ... classname() ext@@
+      case (_: Token.Ident) :: (_: Token.RightParen) :: _ => true
+      // ... classname[T] ext@@
+      case (_: Token.Ident) :: (_: Token.RightBracket) :: _ => true
+      case _ => false
+    }
+  }
+
+  private def canDerive(leadingReverseTokens: Array[Token]): Boolean = {
+    leadingReverseTokens
+      .filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF])
+      .take(4)
+      .toList match {
+      // ... extends A(,|with) B der@@
+      case (_: Token.Ident) :: (_: Token.Ident) :: sep :: _
+          if sep.is[Token.KwWith] || sep.is[Token.Comma] =>
+        true
+      // ... extends A der@@
+      case (_: Token.Ident) :: (_: Token.Ident) :: (_: Token.KwExtends) :: _ =>
+        true
+      case _ => false
+    }
+  }
+
+  private def hasExtend(leadingReverseTokens: Array[Token]): Boolean = {
+    leadingReverseTokens
+      .filterNot(t => t.is[Token.Whitespace] || t.is[Token.EOF])
+      .take(4)
+      .toList match {
+      // ... extends A wit@@
+      case (_: Token.Ident) :: (_: Token.Ident) :: (_: Token.KwExtends) :: _ =>
+        true
+      case _ => false
     }
   }
 
