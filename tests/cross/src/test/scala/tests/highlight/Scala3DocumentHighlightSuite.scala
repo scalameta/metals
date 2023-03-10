@@ -126,6 +126,17 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
+    "extension-with-type",
+    """|object Mincase:
+       |  extension [X](x: X)
+       |    def <<foobar>>(): Unit = ???
+       |
+       |  val x = 1.<<foo@@bar>>()
+       |  val y = (1: Int).<<foobar>>()
+       |""".stripMargin,
+  )
+
+  check(
     "extension-complex",
     """|object Extensions:
        |
