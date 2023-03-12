@@ -31,6 +31,7 @@ import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb
@@ -95,7 +96,10 @@ final class TestSuitesProvider(
       case _ => ()
     }
 
-  override def onDelete(file: AbsolutePath): Unit = {
+  override def onDelete(file: SemanticdbPath): Unit = ()
+  override def reset(): Unit = ()
+
+  def onFileDelete(file: AbsolutePath): Unit = {
     val removed = index.remove(file)
     if (isExplorerEnabled) {
       val removeEvents = removed
@@ -111,8 +115,6 @@ final class TestSuitesProvider(
       updateClientIfNonEmpty(removeEvents)
     }
   }
-
-  override def reset(): Unit = ()
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath

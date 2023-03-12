@@ -1455,14 +1455,15 @@ class MetalsLspService(
       }
       onChange(List(path)).asJava
     } else if (path.isSemanticdb) {
+      val semanticdbPath = SemanticdbPath(path)
       Future {
         event.eventType match {
           case EventType.Delete =>
-            semanticDBIndexer.onDelete(event.path)
+            semanticDBIndexer.onDelete(semanticdbPath)
           case EventType.CreateOrModify =>
-            semanticDBIndexer.onChange(event.path)
+            semanticDBIndexer.onChange(semanticdbPath)
           case EventType.Overflow =>
-            semanticDBIndexer.onOverflow(event.path)
+            semanticDBIndexer.onOverflow(semanticdbPath)
         }
       }.asJava
     } else if (path.isBuild) {
