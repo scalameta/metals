@@ -7,6 +7,7 @@ import java.nio.file.Path
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
@@ -64,7 +65,11 @@ class SemanticdbIndexer(
     if (Files.isDirectory(dir)) {
       val stream = Files.walk(dir)
       try {
-        // stream.forEach(onChange(_))
+        stream.forEach {
+          case path if path.isSemanticdb =>
+            SemanticdbPath(AbsolutePath(path))
+          case _ => ()
+        }
       } finally {
         stream.close()
       }
