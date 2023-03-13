@@ -75,34 +75,39 @@ abstract class PcCollector[T](
       parent: Option[Tree]
   )(tree: Tree, pos: SourcePosition, symbol: Option[Symbol]): T
 
+  /**
+   * @return (adjusted position, should strip backticks)
+   */
   def adjust(
       pos1: SourcePosition,
       forRename: Boolean = false,
   ): (SourcePosition, Boolean) =
-    val pos0 =
-      val span = pos1.span
-      if span.exists && span.point > span.end then
-        pos1.withSpan(
-          span
-            .withStart(span.point)
-            .withEnd(span.point + (span.end - span.start))
-        )
-      else pos1
+    if !pos1.span.isCorrect then (pos1, false)
+    else
+      val pos0 =
+        val span = pos1.span
+        if span.exists && span.point > span.end then
+          pos1.withSpan(
+            span
+              .withStart(span.point)
+              .withEnd(span.point + (span.end - span.start))
+          )
+        else pos1
 
-    val pos =
-      if sourceText(pos0.`end` - 1) == ',' then pos0.withEnd(pos0.`end` - 1)
-      else pos0
-    val isBackticked =
-      sourceText(pos.start) == '`' && sourceText(pos.end - 1) == '`'
-    // when the old name contains backticks, the position is incorrect
-    val isOldNameBackticked = sourceText(pos.start) != '`' &&
-      sourceText(pos.start - 1) == '`' &&
-      sourceText(pos.end) == '`'
-    if isBackticked && forRename then
-      (pos.withStart(pos.start + 1).withEnd(pos.`end` - 1), true)
-    else if isOldNameBackticked then
-      (pos.withStart(pos.start - 1).withEnd(pos.`end` + 1), false)
-    else (pos, false)
+      val pos =
+        if sourceText(pos0.`end` - 1) == ',' then pos0.withEnd(pos0.`end` - 1)
+        else pos0
+      val isBackticked =
+        sourceText(pos.start) == '`' && sourceText(pos.end - 1) == '`'
+      // when the old name contains backticks, the position is incorrect
+      val isOldNameBackticked = sourceText(pos.start) != '`' &&
+        sourceText(pos.start - 1) == '`' &&
+        sourceText(pos.end) == '`'
+      if isBackticked && forRename then
+        (pos.withStart(pos.start + 1).withEnd(pos.`end` - 1), true)
+      else if isOldNameBackticked then
+        (pos.withStart(pos.start - 1).withEnd(pos.`end` + 1), false)
+      else (pos, false)
   end adjust
 
   def symbolAlternatives(sym: Symbol) =
@@ -357,8 +362,8 @@ abstract class PcCollector[T](
          * etc.
          */
         case df: NamedDefTree
-            if df.span.isCorrect && filter(df) &&
-              !isGeneratedGiven(df) =>
+            if df.span.isCorrect && df.nameSpan.isCorrect &&
+              filter(df) && !isGeneratedGiven(df) =>
           val annots = collectTrees(df.mods.annotations)
           val traverser =
             new PcCollector.DeepFolderWithParent[Set[T]](
