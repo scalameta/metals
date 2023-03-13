@@ -809,7 +809,7 @@ class Completions(
         def postProcess(items: List[CompletionValue]): List[CompletionValue] =
           items.map {
             case CompletionValue.Compiler(label, sym, suffix)
-                if sym.info.paramNamess.nonEmpty && isMember(sym) =>
+                if isMember(sym) =>
               CompletionValue.Compiler(
                 label,
                 substituteTypeVars(sym),
