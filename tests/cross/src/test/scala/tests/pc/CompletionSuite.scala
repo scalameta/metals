@@ -266,7 +266,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |toFactory(from: From): Factory[A, C]
            |formatted(fmtstr: String): String
            |→[B](y: B): (A, B)
-           |iterableFactory[A]: Factory[A, CC[A]]
+           |iterableFactory[A]: Factory[A, List[A]]
            |asInstanceOf[X0]: X0
            |equals(x$0: Any): Boolean
            |getClass[X0 >: List.type](): Class[? <: X0]
@@ -1550,6 +1550,16 @@ class CompletionSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     "",
     filter = _.startsWith("_"),
+  )
+
+  check(
+    "no-params-method",
+    """|object O {
+       |  Some(1).get@@
+       |}
+       |""".stripMargin,
+    "get: Int",
+    topLines = Some(1),
   )
 
 }
