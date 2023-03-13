@@ -2,7 +2,7 @@
 
 <<class>>/*keyword*/ <<Locals>>/*class*/ {
   {
-    <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<2>>/*number*/
+    <<val>>/*keyword*/ <<x>>/*variable,definition,readonly*/ = <<2>>/*number*/
     <<x>>/*variable,readonly*/ <<+>>/*method,abstract*/ <<2>>/*number*/
   }
 }

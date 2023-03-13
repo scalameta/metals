@@ -10,13 +10,13 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |
         |class <<Test>>/*class*/{
         |
-        | var <<wkStr>>/*variable*/ = "Dog-"
-        | val <<nameStr>>/*variable,readonly*/ = "Jack"
+        | var <<wkStr>>/*variable,definition*/ = "Dog-"
+        | val <<nameStr>>/*variable,definition,readonly*/ = "Jack"
         |
-        | def <<Main>>/*method*/={
+        | def <<Main>>/*method,definition*/={
         |
-        |  val <<preStr>>/*variable,readonly*/= "I am "
-        |  var <<postStr>>/*variable*/= "in a house. "
+        |  val <<preStr>>/*variable,definition,readonly*/= "I am "
+        |  var <<postStr>>/*variable,definition*/= "in a house. "
         |  <<wkStr>>/*variable*/=<<nameStr>>/*variable,readonly*/ <<+>>/*method*/ "Cat-"
         |
         |  <<testC>>/*class*/.<<bc>>/*method*/(<<preStr>>/*variable,readonly*/
@@ -27,7 +27,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |
         |object <<testC>>/*class*/{
         |
-        | def <<bc>>/*method*/(<<msg>>/*parameter,readonly*/:<<String>>/*type*/)={
+        | def <<bc>>/*method,definition*/(<<msg>>/*parameter,readonly,declaration*/:<<String>>/*type*/)={
         |   <<println>>/*method*/(<<msg>>/*parameter,readonly*/)
         | }
         |}
@@ -42,9 +42,9 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |
         |   /**
         |   * Test of Comment Block
-        |   */  val <<x>>/*variable,readonly*/ = 1
+        |   */  val <<x>>/*variable,definition,readonly*/ = 1
         |
-        |  def <<add>>/*method*/(<<a>>/*parameter,readonly*/ : <<Int>>/*class,abstract*/) = {
+        |  def <<add>>/*method,definition*/(<<a>>/*parameter,readonly,declaration*/ : <<Int>>/*class,abstract*/) = {
         |    // Single Line Comment
         |    <<a>>/*parameter,readonly*/ <<+>>/*method,abstract*/ 1 // com = 1
         |   }
@@ -58,9 +58,9 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
             |
             |   /**
             |   * Test of Comment Block
-            |   */  val <<x>>/*variable,readonly*/ = 1
+            |   */  val <<x>>/*variable,definition,readonly*/ = 1
             |
-            |  def <<add>>/*method*/(<<a>>/*parameter,readonly*/ : <<Int>>/*class,abstract*/) = {
+            |  def <<add>>/*method,definition*/(<<a>>/*parameter,readonly,declaration*/ : <<Int>>/*class,abstract*/) = {
             |    // Single Line Comment
             |    <<a>>/*parameter,readonly*/ <<+>>/*method*/ 1 // com = 1
             |   }
@@ -74,14 +74,14 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
     s"""|package <<example>>/*namespace*/
         |
         |object <<ab>>/*class*/ {
-        |  var  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = 1
-        |  val  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = 4.94065645841246544e-324d
-        |  val  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = 1.40129846432481707e-45
-        |  val  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = 9223372036854775807L
+        |  var  <<iVar>>/*variable,definition*/:<<Int>>/*class,abstract*/ = 1
+        |  val  <<iVal>>/*variable,definition,readonly*/:<<Double>>/*class,abstract*/ = 4.94065645841246544e-324d
+        |  val  <<fVal>>/*variable,definition,readonly*/:<<Float>>/*class,abstract*/ = 1.40129846432481707e-45
+        |  val  <<lVal>>/*variable,definition,readonly*/:<<Long>>/*class,abstract*/ = 9223372036854775807L
         |}
         |
         |object <<sample10>>/*class*/ {
-        |  def <<main>>/*method*/(<<args>>/*parameter,readonly*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+        |  def <<main>>/*method,definition*/(<<args>>/*parameter,readonly,declaration*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
         |    <<println>>/*method*/(
         |     (<<ab>>/*class*/.<<iVar>>/*variable*/ <<+>>/*method,abstract*/ <<ab>>/*class*/.<<iVal>>/*variable,readonly*/).<<toString>>/*method*/
         |    )
@@ -94,14 +94,14 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         s"""|package <<example>>/*namespace*/
             |
             |object <<ab>>/*class*/ {
-            |  var  <<iVar>>/*variable*/:<<Int>>/*class,abstract*/ = 1
-            |  val  <<iVal>>/*variable,readonly*/:<<Double>>/*class,abstract*/ = 4.94065645841246544e-324d
-            |  val  <<fVal>>/*variable,readonly*/:<<Float>>/*class,abstract*/ = 1.40129846432481707e-45
-            |  val  <<lVal>>/*variable,readonly*/:<<Long>>/*class,abstract*/ = 9223372036854775807L
+            |  var  <<iVar>>/*variable,definition*/:<<Int>>/*class,abstract*/ = 1
+            |  val  <<iVal>>/*variable,definition,readonly*/:<<Double>>/*class,abstract*/ = 4.94065645841246544e-324d
+            |  val  <<fVal>>/*variable,definition,readonly*/:<<Float>>/*class,abstract*/ = 1.40129846432481707e-45
+            |  val  <<lVal>>/*variable,definition,readonly*/:<<Long>>/*class,abstract*/ = 9223372036854775807L
             |}
             |
             |object <<sample10>>/*class*/ {
-            |  def <<main>>/*method*/(<<args>>/*parameter,readonly*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+            |  def <<main>>/*method,definition*/(<<args>>/*parameter,readonly,declaration*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
             |    <<println>>/*method*/(
             |     (<<ab>>/*class*/.<<iVar>>/*variable*/ <<+>>/*method*/ <<ab>>/*class*/.<<iVal>>/*variable,readonly*/).<<toString>>/*method*/
             |    )
@@ -117,28 +117,29 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |package <<a>>/*namespace*/.<<b>>/*namespace*/
         |object <<Sample5>>/*class*/ {
         |
-        |  def <<main>>/*method*/(<<args>>/*parameter,readonly*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-        |      val <<itr>>/*variable,readonly*/ = new <<IntIterator>>/*class*/(5)
-        |      var <<str>>/*variable*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ ","
+        |  type <<PP>>/*type,definition*/ = <<Int>>/*class,abstract*/
+        |  def <<main>>/*method,definition*/(<<args>>/*parameter,readonly,declaration*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+        |      val <<itr>>/*variable,definition,readonly*/ = new <<IntIterator>>/*class*/(5)
+        |      var <<str>>/*variable,definition*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ ","
         |          <<str>>/*variable*/ += <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/
         |      <<println>>/*method*/("count:"<<+>>/*method*/<<str>>/*variable*/)
         |  }
         |
-        |  trait <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,abstract*/] {
-        |    def <<next>>/*method,abstract*/(): <<A>>/*typeParameter,abstract*/
+        |  trait <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,declaration,abstract*/] {
+        |    def <<next>>/*method,declaration,abstract*/(): <<A>>/*typeParameter,abstract*/
         |  }
         |
         |  abstract class <<hasLogger>>/*class,abstract*/ {
-        |    def <<log>>/*method*/(<<str>>/*parameter,readonly*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter,readonly*/)}
+        |    def <<log>>/*method,definition*/(<<str>>/*parameter,readonly,declaration*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter,readonly*/)}
         |  }
         |
-        |  class <<IntIterator>>/*class*/(<<to>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+        |  class <<IntIterator>>/*class*/(<<to>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
         |  extends <<hasLogger>>/*class,abstract*/ with <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
-        |    private var <<current>>/*variable*/ = 0
-        |    override def <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
+        |    private var <<current>>/*variable,definition*/ = 0
+        |    override def <<next>>/*method,definition*/(): <<Int>>/*class,abstract*/ = {
         |      if (<<current>>/*variable*/ <<<>>/*method,abstract*/ <<to>>/*variable,readonly*/) {
         |        <<log>>/*method*/("main")
-        |        val <<t>>/*variable,readonly*/ = <<current>>/*variable*/
+        |        val <<t>>/*variable,definition,readonly*/ = <<current>>/*variable*/
         |        <<current>>/*variable*/ = <<current>>/*variable*/ <<+>>/*method,abstract*/ 1
         |        <<t>>/*variable,readonly*/
         |      } else 0
@@ -155,28 +156,29 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
             |package <<a>>/*namespace*/.<<b>>/*namespace*/
             |object <<Sample5>>/*class*/ {
             |
-            |  def <<main>>/*method*/(<<args>>/*parameter,readonly*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-            |      val <<itr>>/*variable,readonly*/ = new <<IntIterator>>/*class*/(5)
-            |      var <<str>>/*variable*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ ","
+            |  type <<PP>>/*type,definition*/ = <<Int>>/*class,abstract*/
+            |  def <<main>>/*method,definition*/(<<args>>/*parameter,readonly,declaration*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+            |      val <<itr>>/*variable,definition,readonly*/ = new <<IntIterator>>/*class*/(5)
+            |      var <<str>>/*variable,definition*/ = <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/ <<+>>/*method*/ ","
             |          <<str>>/*variable*/ += <<itr>>/*variable,readonly*/.<<next>>/*method*/().<<toString>>/*method*/
             |      <<println>>/*method*/("count:"<<+>>/*method*/<<str>>/*variable*/)
             |  }
             |
-            |  trait <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,abstract*/] {
-            |    def <<next>>/*method*/(): <<A>>/*typeParameter,abstract*/
+            |  trait <<Iterator>>/*interface,abstract*/[<<A>>/*typeParameter,definition,abstract*/] {
+            |    def <<next>>/*method,declaration*/(): <<A>>/*typeParameter,abstract*/
             |  }
             |
             |  abstract class <<hasLogger>>/*class,abstract*/ {
-            |    def <<log>>/*method*/(<<str>>/*parameter,readonly*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter,readonly*/)}
+            |    def <<log>>/*method,definition*/(<<str>>/*parameter,readonly,declaration*/:<<String>>/*type*/) = {<<println>>/*method*/(<<str>>/*parameter,readonly*/)}
             |  }
             |
-            |  class <<IntIterator>>/*class*/(<<to>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+            |  class <<IntIterator>>/*class*/(<<to>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
             |  extends <<hasLogger>>/*class,abstract*/ with <<Iterator>>/*interface,abstract*/[<<Int>>/*class,abstract*/]  {
-            |    private var <<current>>/*variable*/ = 0
-            |    override def <<next>>/*method*/(): <<Int>>/*class,abstract*/ = {
+            |    private var <<current>>/*variable,definition*/ = 0
+            |    override def <<next>>/*method,definition*/(): <<Int>>/*class,abstract*/ = {
             |      if (<<current>>/*variable*/ <<<>>/*method*/ <<to>>/*variable,readonly*/) {
             |        <<log>>/*method*/("main")
-            |        val <<t>>/*variable,readonly*/ = <<current>>/*variable*/
+            |        val <<t>>/*variable,definition,readonly*/ = <<current>>/*variable*/
             |        <<current>>/*variable*/ = <<current>>/*variable*/ <<+>>/*method*/ 1
             |        <<t>>/*variable,readonly*/
             |      } else 0
@@ -194,10 +196,10 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
     s"""|package <<example>>/*namespace*/
         |object <<sample9>>/*class*/ {
         |  @<<deprecated>>/*class*/("this method will be removed", "FooLib 12.0")
-        |  def <<oldMethod>>/*method,deprecated*/(<<x>>/*parameter,readonly*/: <<Int>>/*class,abstract*/) = <<x>>/*parameter,readonly*/
+        |  def <<oldMethod>>/*method,definition,deprecated*/(<<x>>/*parameter,readonly,declaration*/: <<Int>>/*class,abstract*/) = <<x>>/*parameter,readonly*/
         |
-        |  def <<main>>/*method*/(<<args>>/*parameter,readonly*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
-        |    val <<str>>/*variable,readonly*/ = <<oldMethod>>/*method,deprecated*/(2).<<toString>>/*method*/
+        |  def <<main>>/*method,definition*/(<<args>>/*parameter,readonly,declaration*/: <<Array>>/*class*/[<<String>>/*type*/]) ={
+        |    val <<str>>/*variable,definition,readonly*/ = <<oldMethod>>/*method,deprecated*/(2).<<toString>>/*method*/
         |     <<println>>/*method*/("Hello, world!"<<+>>/*method*/ <<str>>/*variable,readonly*/)
         |  }
         |}
@@ -211,7 +213,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |
         |object <<sample3>>/*class*/ {
         |
-        |  def <<sorted1>>/*method*/(<<x>>/*parameter,readonly*/: <<Int>>/*class,abstract*/)
+        |  def <<sorted1>>/*method,definition*/(<<x>>/*parameter,readonly,declaration*/: <<Int>>/*class,abstract*/)
         |     = <<SortedSet>>/*class*/(<<x>>/*parameter,readonly*/)
         |}
         |
@@ -222,30 +224,30 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
     "anonymous-class",
     s"""|package <<example>>/*namespace*/ 
         |object <<A>>/*class*/ {
-        |  trait <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] {
-        |    def <<method>>/*method,abstract*/(<<asf>>/*parameter,readonly*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
+        |  trait <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,declaration,abstract*/] {
+        |    def <<method>>/*method,declaration,abstract*/(<<asf>>/*parameter,readonly,declaration*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
         |  }
         |
-        |  abstract class <<Alp>>/*class,abstract*/(<<alp>>/*variable,readonly*/: <<Int>>/*class,abstract*/) extends <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
-        |    def <<method>>/*method*/(<<adf>>/*parameter,readonly*/: <<String>>/*type*/) = 123
+        |  abstract class <<Alp>>/*class,abstract*/(<<alp>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/) extends <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
+        |    def <<method>>/*method,definition*/(<<adf>>/*parameter,readonly,declaration*/: <<String>>/*type*/) = 123
         |  }
-        |  val <<a>>/*variable,readonly*/ = new <<Alp>>/*class,abstract*/(<<alp>>/*parameter,readonly*/ = 10) {
-        |    override def <<method>>/*method*/(<<adf>>/*parameter,readonly*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = 321
+        |  val <<a>>/*variable,definition,readonly*/ = new <<Alp>>/*class,abstract*/(<<alp>>/*parameter,readonly*/ = 10) {
+        |    override def <<method>>/*method,definition*/(<<adf>>/*parameter,readonly,declaration*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = 321
         |  }
         |}""".stripMargin,
     // In Scala 3 methods in `trait` are not abstract
     compat = Map(
       "3" -> s"""|package <<example>>/*namespace*/ 
                  |object <<A>>/*class*/ {
-                 |  trait <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] {
-                 |    def <<method>>/*method*/(<<asf>>/*parameter,readonly*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
+                 |  trait <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,definition,abstract*/] {
+                 |    def <<method>>/*method,declaration*/(<<asf>>/*parameter,readonly,declaration*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
                  |  }
                  |
-                 |  abstract class <<Alp>>/*class,abstract*/(<<alp>>/*variable,readonly*/: <<Int>>/*class,abstract*/) extends <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
-                 |    def <<method>>/*method*/(<<adf>>/*parameter,readonly*/: <<String>>/*type*/) = 123
+                 |  abstract class <<Alp>>/*class,abstract*/(<<alp>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/) extends <<Methodable>>/*interface,abstract*/[<<String>>/*type*/] {
+                 |    def <<method>>/*method,definition*/(<<adf>>/*parameter,readonly,declaration*/: <<String>>/*type*/) = 123
                  |  }
-                 |  val <<a>>/*variable,readonly*/ = new <<Alp>>/*class,abstract*/(<<alp>>/*parameter,readonly*/ = 10) {
-                 |    override def <<method>>/*method*/(<<adf>>/*parameter,readonly*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = 321
+                 |  val <<a>>/*variable,definition,readonly*/ = new <<Alp>>/*class,abstract*/(<<alp>>/*parameter,readonly*/ = 10) {
+                 |    override def <<method>>/*method,definition*/(<<adf>>/*parameter,readonly,declaration*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = 321
                  |  }
                  |}""".stripMargin
     ),
@@ -261,6 +263,21 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |  // rename reference
         |  <<NoBad>>/*class*/(null)
         |}""".stripMargin,
+  )
+
+  check(
+    "pattern-match",
+    s"""|package <<example>>/*namespace*/
+        |
+        |class <<Imports>>/*class*/ {
+        |  
+        |  val <<a>>/*variable,definition,readonly*/ = <<Option>>/*class*/(<<Option>>/*class*/(""))
+        |  <<a>>/*variable,readonly*/ match {
+        |    case <<Some>>/*class*/(<<Some>>/*class*/(<<b>>/*variable,declaration,readonly*/)) => <<b>>/*variable,readonly*/
+        |    case <<Some>>/*class*/(<<b>>/*variable,declaration,readonly*/) => <<b>>/*variable,readonly*/
+        |    case <<other>>/*variable,declaration,readonly*/ => 
+        |  }
+}}""".stripMargin,
   )
 
 }

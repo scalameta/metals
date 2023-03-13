@@ -1,7 +1,7 @@
 <<package>>/*keyword*/ <<example>>/*namespace*/
 
 <<object>>/*keyword*/ <<Vars>>/*class*/ {
-  <<var>>/*keyword*/ <<a>>/*variable*/ = <<2>>/*number*/
+  <<var>>/*keyword*/ <<a>>/*variable,definition*/ = <<2>>/*number*/
 
   <<a>>/*variable*/ = <<2>>/*number*/
 
