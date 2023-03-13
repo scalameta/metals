@@ -16,21 +16,18 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
 
   check(
     "comments",
-    s"""|
-        |<<object>>/*keyword*/ <<Main>>/*class*/{
-        |
-        |   <</**>>/*comment*/
-        |<<   * Test of Comment Block>>/*comment*/
-        |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<1>>/*number*/
-        |
-        |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
-        |    <<// Single Line Comment>>/*comment*/
-        |    <<a>>/*parameter*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
-        |   }
-        |}
-        |
-        |
-        |""".stripMargin,
+    """|<<object>>/*keyword*/ <<Main>>/*class*/{
+       |
+       |   <</**>>/*comment*/
+       |<<   * Test of Comment Block>>/*comment*/
+       |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,definition,readonly*/ = <<1>>/*number*/
+       |
+       |  <<def>>/*keyword*/ <<add>>/*method,definition*/(<<a>>/*parameter,declaration*/ : <<Int>>/*class,abstract*/) = {
+       |    <<// Single Line Comment>>/*comment*/
+       |    <<a>>/*parameter*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
+       |   }
+       |}
+       |""".stripMargin,
   )
 
   check(
@@ -42,8 +39,8 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |<<import>>/*keyword*/ <<java>>/*namespace*/.<<nio>>/*namespace*/.<<file>>/*namespace*/.<<AccessMode>>/*enum*/.<<WRITE>>/*enumMember*/
         |<<import>>/*keyword*/ <<java>>/*namespace*/.<<nio>>/*namespace*/.<<file>>/*namespace*/.<<AccessMode>>/*enum*/.<<EXECUTE>>/*enumMember*/
         |<<object>>/*keyword*/ <<Main>>/*class*/ {
-        |  <<val>>/*keyword*/ <<vTrue>>/*variable,readonly*/ = <<true>>/*keyword*/
-        |  <<val>>/*keyword*/ <<vFalse>>/*variable,readonly*/ = <<false>>/*keyword*/
+        |  <<val>>/*keyword*/ <<vTrue>>/*variable,definition,readonly*/ = <<true>>/*keyword*/
+        |  <<val>>/*keyword*/ <<vFalse>>/*variable,definition,readonly*/ = <<false>>/*keyword*/
         |  (<<null>>/*keyword*/: <<AccessMode>>/*enumMember,abstract*/) <<match>>/*keyword*/ {
         |    <<case>>/*keyword*/ <<READ>>/*enumMember*/ <<=>>>/*operator*/ <<0>>/*number*/
         |    <<case>>/*keyword*/ <<WRITE>>/*enumMember*/ <<=>>>/*operator*/
@@ -81,7 +78,7 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
     """|<<package>>/*keyword*/ <<a>>/*namespace*/
        |
        |<<object>>/*keyword*/ <<A>>/*class*/ {
-       |  <<case>>/*keyword*/ <<class>>/*keyword*/ <<B>>/*class*/(<<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+       |  <<case>>/*keyword*/ <<class>>/*keyword*/ <<B>>/*class*/(<<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
        |}
        |""".stripMargin,
   )

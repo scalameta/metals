@@ -16,6 +16,32 @@ final class PcSemanticTokensProvider(
 ) {
   // Initialize Tree
   object Collector extends PcCollector[Option[Node]](cp, params) {
+
+    /**
+     * Declaration is set only for parameters, defs/vals/vars without rhs,
+     * type parameterss and inside pattern matches. In all those cases we don't
+     * have a specific value.
+     */
+    private def isDeclaration(tree: compiler.Tree) = tree match {
+      case _: compiler.Bind => true
+      case df: compiler.ValOrDefDef => df.rhs.isEmpty
+      case tdef: compiler.TypeDef =>
+        tdef.rhs.symbol == compiler.NoSymbol
+      case _ => false
+    }
+
+    /**
+     * Definition is set only for defs/vals/vars/type with rhs.
+     * We don;t want to set it for enum cases despite the fact
+     * that the compiler sees them as vals, as it's not clear
+     * if they should be declaration/definition at all.
+     */
+    private def isDefinition(tree: compiler.Tree) = tree match {
+      case df: compiler.ValOrDefDef => df.rhs.nonEmpty
+      case tdef: compiler.TypeDef => tdef.rhs.symbol != compiler.NoSymbol
+      case _ => false
+    }
+
     override def collect(
         parent: Option[compiler.Tree]
     )(
@@ -23,11 +49,19 @@ final class PcSemanticTokensProvider(
         pos: compiler.Position,
         symbol: Option[compiler.Symbol]
     ): Option[Node] = {
-      val sym = symbol.fold(tree.symbol)(s => s)
+      val sym = symbol.fold(tree.symbol)(identity)
       if (
         !pos.isDefined || sym == null || sym == compiler.NoSymbol || sym.isConstructor
       ) None
-      else Some(makeNode(sym, adjust(pos)._1))
+      else
+        Some(
+          makeNode(
+            sym = sym,
+            pos = adjust(pos)._1,
+            isDefinition = isDefinition(tree),
+            isDeclaration = isDeclaration(tree)
+          )
+        )
     }
   }
   def provide(): List[Node] =
@@ -41,7 +75,9 @@ final class PcSemanticTokensProvider(
 
   def makeNode(
       sym: Collector.compiler.Symbol,
-      pos: Collector.compiler.Position
+      pos: Collector.compiler.Position,
+      isDefinition: Boolean,
+      isDeclaration: Boolean
   ): Node = {
     var mod: Int = 0
     def addPwrToMod(tokenID: String) = {
@@ -86,6 +122,8 @@ final class PcSemanticTokensProvider(
     if (sym.isAbstract) addPwrToMod(SemanticTokenModifiers.Abstract)
     if (sym.isDeprecated) addPwrToMod(SemanticTokenModifiers.Deprecated)
     if (sym.owner.isModule) addPwrToMod(SemanticTokenModifiers.Static)
+    if (isDeclaration) addPwrToMod(SemanticTokenModifiers.Declaration)
+    if (isDefinition) addPwrToMod(SemanticTokenModifiers.Definition)
 
     TokenNode(pos.start, pos.end, typ, mod)
 

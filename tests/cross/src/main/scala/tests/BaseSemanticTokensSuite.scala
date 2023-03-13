@@ -7,8 +7,6 @@ import scala.meta.internal.metals.CompilerVirtualFileParams
 
 import munit.Location
 import munit.TestOptions
-import tests.BasePCSuite
-import tests.TestSemanticTokens
 
 class BaseSemanticTokensSuite extends BasePCSuite {
 

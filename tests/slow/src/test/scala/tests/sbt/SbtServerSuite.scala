@@ -280,7 +280,7 @@ class SbtServerSuite
   test("semantic-highlight") {
     cleanWorkspace()
     val expected =
-      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,definition,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
           |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
           |  .<<settings>>/*method*/(
           |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
