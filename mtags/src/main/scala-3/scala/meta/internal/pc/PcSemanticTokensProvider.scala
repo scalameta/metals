@@ -54,7 +54,9 @@ final class PcSemanticTokensProvider(
     // get Type
     val typ =
       if sym.is(Flags.Param) && !sym.isTypeParam
-      then getTypeId(SemanticTokenTypes.Parameter)
+      then
+        addPwrToMod(SemanticTokenModifiers.Readonly)
+        getTypeId(SemanticTokenTypes.Parameter)
       else if sym.isTypeParam || sym.isSkolem then
         getTypeId(SemanticTokenTypes.TypeParameter)
       else if sym.is(Flags.Enum) || sym.isAllOf(Flags.EnumVal)

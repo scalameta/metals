@@ -50,9 +50,10 @@ final class PcSemanticTokensProvider(
     }
     // get Type
     val typ =
-      if (sym.isValueParameter)
+      if (sym.isValueParameter) {
+        addPwrToMod(SemanticTokenModifiers.Readonly)
         getTypeId(SemanticTokenTypes.Parameter)
-      else if (sym.isTypeParameter || sym.isTypeSkolem)
+      } else if (sym.isTypeParameter || sym.isTypeSkolem)
         getTypeId(SemanticTokenTypes.TypeParameter)
       else if (
         sym.companion
