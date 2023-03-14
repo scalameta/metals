@@ -235,4 +235,35 @@ class HoverDefnSuite extends BaseHoverSuite {
     "val x: 1 | 2".hover,
   )
 
+  check(
+    "dealias-appliedtype-params",
+    """|trait Base {
+       |  type T
+       |  def f(t: T): Option[T] = Some(t)
+       |}
+       |
+       |object Derived extends Base {
+       |  override type T = Int
+       |}
+       |object O {
+       |  <<val @@x = Derived.f(42)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |val x: Option[Int]
+       |```
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|**Expression type**:
+           |```scala
+           |Option[Int]
+           |```
+           |**Symbol signature**:
+           |```scala
+           |val x: Option[T]
+           |```
+           |""".stripMargin.hover
+    ),
+  )
 }
