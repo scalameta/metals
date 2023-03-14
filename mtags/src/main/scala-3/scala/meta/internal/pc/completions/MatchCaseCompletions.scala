@@ -156,7 +156,7 @@ object CaseKeywordCompletion:
         && (sym.isPublic || sym.isAccessibleFrom(selectorSym.info))
       indexedContext.scopeSymbols
         .foreach(s =>
-          val ts = s.info.dealias.typeSymbol
+          val ts = s.info.metalsDealias.typeSymbol
           if (isValid(ts)) then visit(autoImportsGen.inferSymbolImport(ts))
         )
       // Step 2: walk through known subclasses of sealed types.

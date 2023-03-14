@@ -83,8 +83,7 @@ object HoverProvider:
         case Nil =>
           fallbackToDynamics(path, printer)
         case symbolTpes @ ((symbol, tpe) :: _) =>
-          val exprTpw = tpe.widenTermRefExpr.dealias
-
+          val exprTpw = tpe.widenTermRefExpr.metalsDealias
           val hoverString =
             tpw match
               // https://github.com/lampepfl/dotty/issues/8891
