@@ -34,7 +34,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
     "named-arguments",
     s"""|package <<example>>/*namespace*/
         |
-        |def <<m>>/*method*/(<<xs>>/*parameter*/: <<Int>>/*class,abstract*/*) = <<xs>>/*parameter*/.<<map>>/*method*/(<<_>>/*parameter*/ <<+>>/*method*/ 1)
+        |def <<m>>/*method*/(<<xs>>/*parameter,readonly*/: <<Int>>/*class,abstract*/*) = <<xs>>/*parameter,readonly*/.<<map>>/*method*/(<<_>>/*parameter,readonly*/ <<+>>/*method*/ 1)
         |val <<a>>/*variable,readonly*/ = <<m>>/*method*/(xs = 1,2,3)
         |""".stripMargin,
   )

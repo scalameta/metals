@@ -23,9 +23,9 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |<<   * Test of Comment Block>>/*comment*/
         |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<1>>/*number*/
         |
-        |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
+        |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter,readonly*/ : <<Int>>/*class,abstract*/) = {
         |    <<// Single Line Comment>>/*comment*/
-        |    <<a>>/*parameter*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
+        |    <<a>>/*parameter,readonly*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
         |   }
         |}
         |
