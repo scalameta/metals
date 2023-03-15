@@ -32,15 +32,20 @@ class ScalatestFinderSuite extends FunSuite {
        |      Set.empty.head
        |    }
        |  }
+       |
+       |  ignore("An empty Set should have size 1") {
+       |    assert(Set.empty.size == 1)
+       |  }
        |}
        |""".stripMargin,
     FullyQualifiedName("SetSuite"),
-    Vector(
+    Set(
       ("An empty Set should have size 0", QuickRange(5, 2, 5, 65)),
       (
         "Invoking head on an empty Set should produce NoSuchElementException",
         QuickRange(9, 2, 9, 77),
       ),
+      ("An empty Set should have size 1", QuickRange(15, 2, 15, 43)),
     ),
     ScalatestStyle.AnyFunSuite,
   )
@@ -60,16 +65,25 @@ class ScalatestFinderSuite extends FunSuite {
        |          Set.empty.head
        |        }
        |      }
+       |
+       |      "have size 1" ignore {
+       |        assert(Set.empty.size == 1)
+       |      }
+       |
        |    }
        |  }
        |}
        |""".stripMargin,
     FullyQualifiedName("SetSpec"),
-    Vector(
+    Set(
       ("A Set when empty should have size 0", QuickRange(4, 6, 4, 19)),
       (
         "A Set when empty should produce NoSuchElementException when head is invoked",
         QuickRange(8, 6, 8, 59),
+      ),
+      ( // this is ignored test
+        "A Set when empty should have size 1",
+        QuickRange(14, 6, 14, 19),
       ),
     ),
     ScalatestStyle.AnyWordSpec,
@@ -90,10 +104,15 @@ class ScalatestFinderSuite extends FunSuite {
        |      Set.empty.head
        |    }
        |  }
+       |
+       |  ignore should "have size 1" in {
+       |    assert(Set.empty.size == 1)
+       |  }
        |}
        |""".stripMargin,
     FullyQualifiedName("FlatSpec"),
-    Vector(
+    Set(
+      ("An empty Set should have size 1", QuickRange(14, 2, 14, 29)),
       (
         "An empty Set should produce NoSuchElementException when head is invoked",
         QuickRange(8, 2, 8, 65),
@@ -125,7 +144,7 @@ class ScalatestFinderSuite extends FunSuite {
        |}
        |""".stripMargin,
     FullyQualifiedName("FunSpec"),
-    Vector(
+    Set(
       ("A Set when empty should have size 0", QuickRange(6, 6, 6, 30)),
       (
         "A Set when empty should produce NoSuchElementException when head is invoked",
@@ -152,16 +171,24 @@ class ScalatestFinderSuite extends FunSuite {
        |          Set.empty.head
        |        }
        |      }
+       |
+       |      "should have size 1" ignore {
+       |        assert(Set.empty.size == 1)
+       |      }
        |    }
        |  }
        |}
        |""".stripMargin,
     FullyQualifiedName("FreeSpec"),
-    Vector(
+    Set(
       ("A Set when empty should have size 0", QuickRange(6, 6, 6, 26)),
       (
         "A Set when empty should produce NoSuchElementException when head is invoked",
         QuickRange(10, 6, 10, 66),
+      ),
+      ( // this is ignored test
+        "A Set when empty should have size 1",
+        QuickRange(16, 6, 16, 26),
       ),
     ),
     ScalatestStyle.AnyFreeSpec,
@@ -184,15 +211,23 @@ class ScalatestFinderSuite extends FunSuite {
        |      Set.empty.head
        |    }
        |  }
+       |
+       |  ignore("an empty Set should have size 1") {
+       |    assert(Set.empty.size == 1)
+       |  }
        |}
        |
        |""".stripMargin,
     FullyQualifiedName("PropSpec"),
-    Vector(
+    Set(
       ("an empty Set should have size 0", QuickRange(4, 2, 4, 45)),
       (
         "invoking head on an empty set should produce NoSuchElementException",
         QuickRange(8, 2, 10, 3),
+      ),
+      ( // this is ignored test
+        "an empty Set should have size 1",
+        QuickRange(16, 2, 16, 43),
       ),
     ),
     ScalatestStyle.AnyPropSpec,
@@ -202,7 +237,7 @@ class ScalatestFinderSuite extends FunSuite {
       name: TestOptions,
       sourceText: String,
       suite: FullyQualifiedName,
-      expected: Vector[(String, QuickRange)],
+      expected: Set[(String, QuickRange)],
       style: ScalatestStyle,
       scalaVersion: String = BuildInfo.scala213,
   )(implicit loc: Location): Unit =
@@ -213,13 +248,16 @@ class ScalatestFinderSuite extends FunSuite {
       val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
       buffers.put(path, sourceText)
 
-      val result = for {
-        tree <- trees.get(path)
-      } yield ScalatestTestFinder.findTestLocations(path, style, tree, suite)
+      val result = trees
+        .get(path)
+        .map(tree =>
+          ScalatestTestFinder.findTestLocations(path, style, tree, suite).toSet
+        )
+        .getOrElse(Set.empty)
 
       val expected0 = expected.map { case (name, range) => (name, range.toLsp) }
       val obtained =
-        result.getOrElse(Vector.empty).map(t => (t.name, t.location.getRange))
+        result.map(t => (t.name, t.location.getRange))
 
       assertEquals(obtained, expected0)
     }
