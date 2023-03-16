@@ -8,6 +8,10 @@ class Worksheet211LspSuite extends tests.BaseWorksheetLspSuite(V.scala211)
 class Worksheet3LspSuite extends tests.BaseWorksheetLspSuite(V.scala3) {
   override def versionSpecificCodeToValidate: String =
     """given str: String = """""
+
+  override def versionSpecificScalacOptionsToValidate: List[String] = List(
+    "-Ycheck-reentrant"
+  )
 }
 
 class LatestWorksheet3LspSuite

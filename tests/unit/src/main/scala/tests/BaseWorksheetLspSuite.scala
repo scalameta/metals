@@ -28,6 +28,11 @@ abstract class BaseWorksheetLspSuite(
 
   def versionSpecificCodeToValidate: String = ""
 
+  /**
+   * These options when provided should not break worksheets.
+   */
+  def versionSpecificScalacOptionsToValidate: List[String] = Nil
+
   // sourcecode is not yet published for Scala 3
   if (!ScalaVersions.isScala3Version(scalaVersion))
     test("completion") {
@@ -669,11 +674,15 @@ abstract class BaseWorksheetLspSuite(
   test("export") {
     assume(!isWindows, "This test is flaky on Windows")
     cleanWorkspace()
+
+    val opts = versionSpecificScalacOptionsToValidate
+      .map(opt => s"\"$opt\"")
+      .mkString(",")
     for {
       _ <- initialize(
         s"""
            |/metals.json
-           |{"a": {"scalaVersion": "${scalaVersion}"}}
+           |{"a": {"scalaVersion": "${scalaVersion}", "scalacOptions": [$opts]}}
            |/a/src/main/scala/foo/Main.worksheet.sc
            |case class Hi(a: Int, b: Int, c: Int)
            |val hi1 =
