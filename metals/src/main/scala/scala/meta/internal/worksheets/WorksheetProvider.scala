@@ -416,6 +416,8 @@ class WorksheetProvider(
         val scalacOptions = info.scalac.getOptions.asScala
           .filterNot(_.contains("semanticdb"))
           .filterNot(_.contains("-Wconf"))
+          // seems to break worksheet support
+          .filterNot(_.contains("Ycheck-reentrant"))
           .filterNot(_.contains("org.wartremover.warts.NonUnitStatements"))
           .asJava
         val mdoc = embedded
