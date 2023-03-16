@@ -576,17 +576,18 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         if (param.name.startsWith(termNames.EVIDENCE_PARAM_PREFIX)) {
           Nil
         } else {
-          val index = k
+          // if byName is empty the indexes are correct, otherwise we should recalculate them
+          val paramIndex = if (byName.isEmpty) Some(k) else None
           k += 1
           val label =
             /* For unapply methods we translate return value, which contains only types
              * and not parameters.
              */
             if (param.isParameter)
-              printer.paramLabel(param, index)
+              printer.paramLabel(param, paramIndex)
             else
               printer.printType(param.tpe)
-          val docstring = printer.paramDocstring(index)
+          val docstring = printer.paramDocstring(param, paramIndex)
           val byNameLabel =
             if (isByNamedOrdered) s"<$label>"
             else label
