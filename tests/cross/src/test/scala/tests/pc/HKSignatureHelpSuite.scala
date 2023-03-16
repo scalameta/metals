@@ -30,4 +30,43 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
     ),
   )
 
+  // https://github.com/scalameta/metals/issues/5055
+  check(
+    "named".tag(IgnoreScala3),
+    """|
+       |object demo {
+       |  val f: Int = fun(
+       |    logHeaders = true,
+       |    logBody = true,
+       |    logAction = None,
+       |    @@
+       |  )
+       |  def defaultRedactHeadersWhen(name: String): Boolean = false
+       |  
+       |  /**
+       |    * 
+       |    *
+       |    * @param logHeaders
+       |    * @param logBody
+       |    * @param redactHeadersWhen test description
+       |    * @param logAction
+       |    * @return
+       |    */
+       |  def fun(
+       |    logHeaders: Boolean,
+       |    logBody: Boolean,
+       |    redactHeadersWhen: String => Boolean = defaultRedactHeadersWhen,
+       |    logAction: Option[String => Unit] = None,
+       |  ): Int = ???
+       |}
+       |""".stripMargin,
+    """|**Parameters**
+       |- `redactHeadersWhen`: test description
+       |fun(<logHeaders: Boolean>, <logBody: Boolean>, <logAction: Option[String => Unit] = None>, <redactHeadersWhen: String => Boolean = defaultRedactHeadersWhen>): Int
+       |                                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+       |  @param <redactHeadersWhen test description
+       |""".stripMargin,
+    includeDocs = true,
+  )
+
 }
