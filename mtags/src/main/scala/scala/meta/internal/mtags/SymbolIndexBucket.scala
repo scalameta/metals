@@ -173,6 +173,12 @@ class SymbolIndexBucket(
       querySymbol: Symbol,
       symbol: Symbol
   ): List[SymbolDefinition] = {
+    definitions.updateWith(symbol.value) {
+      case Some(defs) =>
+        Some(defs.filter(_.path.exists))
+      case None => None
+    }
+
     if (!definitions.contains(symbol.value)) {
       // Fallback 1: enter the toplevel symbol definition
       val toplevel = symbol.toplevel
