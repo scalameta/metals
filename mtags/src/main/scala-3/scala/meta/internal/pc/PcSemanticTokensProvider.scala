@@ -23,11 +23,12 @@ final class PcSemanticTokensProvider(
     driver: InteractiveDriver,
     params: VirtualFileParams,
 ):
-
   /**
-   * Declaration is set only for parameters, defs/vals/vars without rhs,
-   * type parameterss and inside pattern matches. In all those cases we don't
-   * have a specific value.
+   * Declaration is set for:
+   * 1. parameters,
+   * 2. defs/vals/vars without rhs,
+   * 3. type parameters,
+   * In all those cases we don't have a specific value for sure.
    */
   private def isDeclaration(tree: Tree) = tree match
     case df: ValOrDefDef => df.rhs.isEmpty
@@ -35,16 +36,19 @@ final class PcSemanticTokensProvider(
       df.rhs match
         case _: Template => false
         case _ => df.rhs.isEmpty
-    case df: Bind => true
     case _ => false
 
   /**
-   * Definition is set only for defs/vals/vars/type with rhs.
-   * We don;t want to set it for enum cases despite the fact
+   * Definition is set for:
+   * 1. defs/vals/vars/type with rhs.
+   * 2. pattern matches
+   *
+   * We don't want to set it for enum cases despite the fact
    * that the compiler sees them as vals, as it's not clear
    * if they should be declaration/definition at all.
    */
   private def isDefinition(tree: Tree) = tree match
+    case df: Bind => true
     case df: ValOrDefDef =>
       !df.rhs.isEmpty && !df.symbol.isAllOf(Flags.EnumCase)
     case df: TypeDef =>
