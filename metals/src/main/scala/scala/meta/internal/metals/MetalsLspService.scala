@@ -1502,7 +1502,7 @@ class MetalsLspService(
           compilations.compileFiles(List(path)),
           Future {
             diagnostics.didDelete(path)
-            testProvider.onDelete(path)
+            testProvider.onFileDelete(path)
           },
         )
       )
