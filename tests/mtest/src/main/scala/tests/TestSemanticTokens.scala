@@ -47,10 +47,16 @@ object TestSemanticTokens {
   // Here we try to pick the same node as `SemanticTokenProvider` will.
   def pcSemanticString(fileContent: String, nodes: List[Node]): String = {
     val wkStr = new StringBuilder
+
+    // Scalameta tokenizer will drop anything anyway that doesn't match an existing identifier
+    def isIdentifier(start: Int, end: Int) =
+      (fileContent.slice(start, end).matches("^[\\d\\w`+-_!@]+$"))
+
     def iter(nodes: List[Node], curr: Int): Int = {
       nodes match {
         case head :: rest
-            if (curr <= head.start && head.start() != head.end()) =>
+            if (curr <= head.start && head.start() != head
+              .end()) && isIdentifier(head.start(), head.end()) =>
           val isValid = rest
             .takeWhile(node =>
               node.end() < head.end() || (node.end() == head.end() && node
@@ -58,7 +64,12 @@ object TestSemanticTokens {
             )
             .isEmpty
           if (isValid) {
-            val candidates = head :: rest.takeWhile(_.start() == head.start())
+            val candidates = head :: rest.takeWhile(nxt =>
+              nxt.start() == head.start() && isIdentifier(
+                nxt.start(),
+                nxt.end(),
+              )
+            )
             val node = candidates.maxBy(node =>
               SemanticTokens.getTypePriority(node.tokenType())
             )

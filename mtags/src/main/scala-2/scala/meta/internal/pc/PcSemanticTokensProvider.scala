@@ -23,7 +23,6 @@ final class PcSemanticTokensProvider(
      * have a specific value.
      */
     private def isDeclaration(tree: compiler.Tree) = tree match {
-      case _: compiler.Bind => true
       case df: compiler.ValOrDefDef => df.rhs.isEmpty
       case tdef: compiler.TypeDef =>
         tdef.rhs.symbol == compiler.NoSymbol
@@ -37,6 +36,7 @@ final class PcSemanticTokensProvider(
      * if they should be declaration/definition at all.
      */
     private def isDefinition(tree: compiler.Tree) = tree match {
+      case _: compiler.Bind => true
       case df: compiler.ValOrDefDef => df.rhs.nonEmpty
       case tdef: compiler.TypeDef => tdef.rhs.symbol != compiler.NoSymbol
       case _ => false
@@ -52,8 +52,9 @@ final class PcSemanticTokensProvider(
       val sym = symbol.fold(tree.symbol)(identity)
       if (
         !pos.isDefined || sym == null || sym == compiler.NoSymbol || sym.isConstructor
-      ) None
-      else
+      ) {
+        None
+      } else {
         Some(
           makeNode(
             sym = sym,
@@ -62,6 +63,7 @@ final class PcSemanticTokensProvider(
             isDeclaration = isDeclaration(tree)
           )
         )
+      }
     }
   }
   def provide(): List[Node] =

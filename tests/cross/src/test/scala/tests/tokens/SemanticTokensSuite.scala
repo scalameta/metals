@@ -273,11 +273,23 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |  
         |  val <<a>>/*variable,definition,readonly*/ = <<Option>>/*class*/(<<Option>>/*class*/(""))
         |  <<a>>/*variable,readonly*/ match {
-        |    case <<Some>>/*class*/(<<Some>>/*class*/(<<b>>/*variable,declaration,readonly*/)) => <<b>>/*variable,readonly*/
-        |    case <<Some>>/*class*/(<<b>>/*variable,declaration,readonly*/) => <<b>>/*variable,readonly*/
-        |    case <<other>>/*variable,declaration,readonly*/ => 
+        |    case <<Some>>/*class*/(<<Some>>/*class*/(<<b>>/*variable,definition,readonly*/)) => <<b>>/*variable,readonly*/
+        |    case <<Some>>/*class*/(<<b>>/*variable,definition,readonly*/) => <<b>>/*variable,readonly*/
+        |    case <<other>>/*variable,definition,readonly*/ => 
         |  }
-}}""".stripMargin,
+        |}""".stripMargin,
   )
 
+  check(
+    "pattern-match-value",
+    s"""|package <<example>>/*namespace*/
+        |
+        |object <<A>>/*class*/ {
+        |  val <<x>>/*variable,definition,readonly*/ = <<List>>/*variable,readonly*/(1,2,3)
+        |  val <<s>>/*variable,definition,readonly*/ = <<Some>>/*class*/(1)
+        |  val <<Some>>/*class*/(<<s1>>/*variable,definition,readonly*/) = <<s>>/*variable,readonly*/
+        |  val <<Some>>/*class*/(<<s2>>/*variable,definition,readonly*/) = <<s>>/*variable,readonly*/
+        |}
+        |""".stripMargin,
+  )
 }

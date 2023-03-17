@@ -23,7 +23,6 @@ final class PcSemanticTokensProvider(
     driver: InteractiveDriver,
     params: VirtualFileParams,
 ):
-
   /**
    * Declaration is set only for parameters, defs/vals/vars without rhs,
    * type parameterss and inside pattern matches. In all those cases we don't
@@ -35,7 +34,6 @@ final class PcSemanticTokensProvider(
       df.rhs match
         case _: Template => false
         case _ => df.rhs.isEmpty
-    case df: Bind => true
     case _ => false
 
   /**
@@ -45,6 +43,7 @@ final class PcSemanticTokensProvider(
    * if they should be declaration/definition at all.
    */
   private def isDefinition(tree: Tree) = tree match
+    case df: Bind => true
     case df: ValOrDefDef =>
       !df.rhs.isEmpty && !df.symbol.isAllOf(Flags.EnumCase)
     case df: TypeDef =>
