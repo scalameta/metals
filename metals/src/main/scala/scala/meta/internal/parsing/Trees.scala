@@ -1,15 +1,13 @@
 package scala.meta.internal.parsing
 
-import java.nio.file.Files
-
 import scala.collection.concurrent.TrieMap
 import scala.reflect.ClassTag
 
 import scala.meta._
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parse
@@ -30,8 +28,7 @@ import org.eclipse.{lsp4j => l}
 final class Trees(
     buffers: Buffers,
     scalaVersionSelector: ScalaVersionSelector,
-    workspace: AbsolutePath,
-) {
+)(implicit reports: ReportContext) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
 
@@ -141,13 +138,10 @@ final class Trees(
     } catch {
       // if the parsers breaks we should not throw the exception further
       case _: StackOverflowError =>
-        val reportsDir = workspace.resolve(Directories.reports)
-        val newPathCopy =
-          reportsDir.resolve(
-            "stackoverflow_" + System.currentTimeMillis() + "_" + path.filename
-          )
-        Files.createDirectories(reportsDir.toNIO)
-        newPathCopy.writeText(text)
+        val newPathCopy = reports.unsanitized.createReport(
+          s"stackoverflow_${path.filename}",
+          text,
+        )
         val message =
           s"Could not parse $path, saved the current snapshot to ${newPathCopy}"
         scribe.warn(message)

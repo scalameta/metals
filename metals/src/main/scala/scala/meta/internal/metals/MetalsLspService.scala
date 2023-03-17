@@ -43,6 +43,7 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -189,6 +190,11 @@ class MetalsLspService(
 
   val tables: Tables = register(new Tables(workspace, time))
 
+  implicit val reports: StdReportContext = new StdReportContext(workspace)
+
+  val zipReportsProvider: ZipReportsProvider =
+    new ZipReportsProvider(doctor.getTargetsInfoForReports, reports)
+
   private val buildTools: BuildTools = new BuildTools(
     workspace,
     bspGlobalDirectories,
@@ -288,7 +294,7 @@ class MetalsLspService(
   )
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
-  private val trees = new Trees(buffers, scalaVersionSelector, workspace)
+  private val trees = new Trees(buffers, scalaVersionSelector)
 
   private val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
@@ -1168,9 +1174,10 @@ class MetalsLspService(
         None
     }
 
-    uriOpt match {
-      case Some(uri) => {
-        val path = uri.toAbsolutePath
+    val pathOpt = uriOpt.flatMap(_.toAbsolutePathSafe)
+
+    pathOpt match {
+      case Some(path) => {
         focusedDocument = Some(path)
         buildTargets
           .inverseSources(path)
@@ -1867,6 +1874,23 @@ class MetalsLspService(
         Future {
           doctor.onVisibilityDidChange(true)
           doctor.executeRunDoctor()
+        }.asJavaObject
+      case ServerCommands.ZipReports() =>
+        Future {
+          val zip = zipReportsProvider.zip()
+          val pos = new l.Position(0, 0)
+          val location = new Location(
+            zip.toURI.toString(),
+            new l.Range(pos, pos),
+          )
+          languageClient.metalsExecuteClientCommand(
+            ClientCommands.GotoLocation.toExecuteCommandParams(
+              ClientCommands.WindowLocation(
+                location.getUri(),
+                location.getRange(),
+              )
+            )
+          )
         }.asJavaObject
       case ServerCommands.ListBuildTargets() =>
         Future {
@@ -2735,6 +2759,11 @@ class MetalsLspService(
         case e: IndexingExceptions.PathIndexingException =>
           scribe.error(s"issues while parsing: ${e.path}", e.underlying)
         case e: IndexingExceptions.InvalidSymbolException =>
+          reports.incognito.createReport(
+            "invalid-symbol",
+            s"""Symbol: ${e.symbol}""".stripMargin,
+            e,
+          )
           scribe.error(s"searching for `${e.symbol}` failed", e.underlying)
         case _: NoSuchFileException =>
         // only comes for badly configured jar with `/Users` path added.

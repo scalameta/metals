@@ -488,9 +488,6 @@ object MetalsEnrichments
       else Files.move(path.toNIO, newPath.toNIO)
     }
 
-    def createDirectories(): AbsolutePath =
-      AbsolutePath(Files.createDirectories(path.dealias.toNIO))
-
     def createAndGetDirectories(): Seq[AbsolutePath] = {
       def createDirectoriesRec(
           absolutePath: AbsolutePath,
@@ -511,31 +508,6 @@ object MetalsEnrichments
 
     def deleteRecursively(): Unit = {
       path.listRecursive.toList.reverse.foreach(_.delete())
-    }
-
-    def writeText(text: String): Unit = {
-      path.parent.createDirectories()
-      val tmp = Files.createTempFile("metals", path.filename)
-      // Write contents first to a temporary file and then try to
-      // atomically move the file to the destination. The atomic move
-      // reduces the risk that another tool will concurrently read the
-      // file contents during a half-complete file write.
-      Files.write(
-        tmp,
-        text.getBytes(StandardCharsets.UTF_8),
-        StandardOpenOption.TRUNCATE_EXISTING,
-      )
-      try {
-        Files.move(
-          tmp,
-          path.toNIO,
-          StandardCopyOption.REPLACE_EXISTING,
-          StandardCopyOption.ATOMIC_MOVE,
-        )
-      } catch {
-        case NonFatal(_) =>
-          Files.move(tmp, path.toNIO, StandardCopyOption.REPLACE_EXISTING)
-      }
     }
 
     def appendText(text: String): Unit = {
@@ -601,7 +573,21 @@ object MetalsEnrichments
         case _ => None
       }
 
-    def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
+    def toAbsolutePathSafe(implicit
+        reports: ReportContext
+    ): Option[AbsolutePath] =
+      try {
+        Some(toAbsolutePath)
+      } catch {
+        case NonFatal(e) =>
+          reports.incognito.createReport(
+            "absolute-path",
+            s"""|Uri: $value
+                |""".stripMargin,
+            e,
+          )
+          None
+      }
 
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
 
