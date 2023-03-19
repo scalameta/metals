@@ -53,7 +53,7 @@ module.exports = {
         ]
       }
     ],
-    require.resolve("@easyops-cn/docusaurus-search-local"),
+    "@easyops-cn/docusaurus-search-local",
   ],
   "themeConfig": {
     "prism": {
