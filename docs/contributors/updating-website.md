@@ -36,6 +36,10 @@ You can now build and launch the website using these commands:
 cd website
 yarn install # only the first time, to install the dependencies
 yarn start
+
+# To test search feature in local development
+yarn build
+yarn serve
 ```
 
 Now visit [localhost:3000](http://localhost:3000) and you should see a local version of the
