@@ -22,7 +22,7 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
 
 @State(Scope.Benchmark)
-class SemanticHighlightBench extends PcBenchmark {
+class SemanticTokensBench extends PcBenchmark {
   var highlightRequests: Map[String, String] = Map.empty
 
   private def fromZipPath(zip: AbsolutePath, path: String) = {

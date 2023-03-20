@@ -11,7 +11,7 @@
 }
 
 <<object>>/*keyword*/ <<MacroAnnotations>>/*class*/ {
-  <<import>>/*keyword*/ <<scala>>/*namespace*/.<<meta>>/*namespace*/.<<_>>/*variable*/
+  <<import>>/*keyword*/ <<scala>>/*namespace*/.<<meta>>/*namespace*/.<<_>>/*variable,readonly*/
   <<// IntelliJ has never managed to goto definition for the inner classes from Trees.scala>>/*comment*/
   <<// due to the macro annotations.>>/*comment*/
   <<val>>/*keyword*/ <<x>>/*variable,definition,readonly*/: <<Defn>>/*class*/.<<Class>>/*interface,abstract*/ = <<Defn>>/*class*/.<<Class>>/*class*/(
