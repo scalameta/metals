@@ -82,6 +82,9 @@ object HoverProvider:
       ) match
         case Nil =>
           fallbackToDynamics(path, printer)
+        case (symbol, tpe) :: _
+            if symbol.name == nme.selectDynamic || symbol.name == nme.applyDynamic =>
+          fallbackToDynamics(path, printer)
         case symbolTpes @ ((symbol, tpe) :: _) =>
           val exprTpw = tpe.widenTermRefExpr.dealias
 
@@ -138,10 +141,7 @@ object HoverProvider:
       path: List[Tree],
       printer: MetalsPrinter,
   )(using Context): ju.Optional[HoverSignature] = path match
-    case Apply(
-          Select(sel, n),
-          List(Literal(Constant(name: String))),
-        ) :: _ if n == nme.selectDynamic || n == nme.applyDynamic =>
+    case SelectDynamicExtractor(sel, n, name) =>
       def findRefinement(tp: Type): ju.Optional[HoverSignature] =
         tp match
           case RefinedType(info, refName, tpe) if name == refName.toString() =>
@@ -163,3 +163,19 @@ object HoverProvider:
       ju.Optional.empty()
 
 end HoverProvider
+
+object SelectDynamicExtractor:
+  def unapply(path: List[Tree]) =
+    path match
+      case Apply(
+            Select(sel, n),
+            List(Literal(Constant(name: String))),
+          ) :: _ if n == nme.selectDynamic || n == nme.applyDynamic =>
+        Some(sel, n, name)
+      case Select(_, _) :: Apply(
+            Select(sel, n),
+            List(Literal(Constant(name: String))),
+          ) :: _ if n == nme.selectDynamic || n == nme.applyDynamic =>
+        Some(sel, n, name)
+      case _ => None
+end SelectDynamicExtractor
