@@ -266,7 +266,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
       tpe.dealias match
         case app @ AppliedType(tycon, params) =>
           // we dealias applied type params by hand, because `dealias` doesn't do it
-          AppliedType(tycon, params.map(_.dealias))
+          AppliedType(tycon, params.map(_.metalsDealias))
         case dealised => dealised
 
 end MtagsEnrichments
