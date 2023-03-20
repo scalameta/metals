@@ -12,6 +12,7 @@ import scala.meta.pc.Node
 import scala.meta.pc.VirtualFileParams
 import scala.meta.tokens._
 
+import org.eclipse.lsp4j.SemanticTokenModifiers
 import org.eclipse.lsp4j.SemanticTokenTypes
 
 /**
@@ -131,10 +132,13 @@ object SemanticTokensProvider {
       case ident: Token.Ident =>
         identTypeAndMod(ident, nodesIterator) match {
           case (-1, 0, _) =>
-            (typeOfNonIdentToken(tk, isScala3), 0, nodesIterator)
+            val (tpe, mod) = typeModOfNonIdentToken(tk, isScala3)
+            (tpe, mod, nodesIterator)
           case res => res
         }
-      case _ => (typeOfNonIdentToken(tk, isScala3), 0, nodesIterator)
+      case _ =>
+        val (tpe, mod) = typeModOfNonIdentToken(tk, isScala3)
+        (tpe, mod, nodesIterator)
     }
   }
 
@@ -176,69 +180,80 @@ object SemanticTokensProvider {
    *  TokenTypes that can be on multilines are handled in another func.
    *  See Token.Comment in this file.
    */
-  private def typeOfNonIdentToken(
+  private def typeModOfNonIdentToken(
       tk: scala.meta.tokens.Token,
       isScala3: Boolean,
-  ): Integer = {
-    tk match {
-      // Alphanumeric keywords
-      case _: Token.ModifierKeyword => getTypeId(SemanticTokenTypes.Modifier)
-      case _: Token.Keyword => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.KwNull => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.KwTrue => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.KwFalse => getTypeId(SemanticTokenTypes.Keyword)
+  ): (Integer, Integer) = {
 
-      // extends Symbolic keywords
-      case _: Token.Hash => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.Viewbound => getTypeId(SemanticTokenTypes.Operator)
-      case _: Token.LeftArrow => getTypeId(SemanticTokenTypes.Operator)
-      case _: Token.Subtype => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.RightArrow => getTypeId(SemanticTokenTypes.Operator)
-      case _: Token.Supertype => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.At => getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.Underscore => getTypeId(SemanticTokenTypes.Variable)
-      case _: Token.TypeLambdaArrow => getTypeId(SemanticTokenTypes.Operator)
-      case _: Token.ContextArrow => getTypeId(SemanticTokenTypes.Operator)
+    val tokenType: Int =
+      tk match {
+        // Alphanumeric keywords
+        case _: Token.ModifierKeyword => getTypeId(SemanticTokenTypes.Modifier)
+        case _: Token.Keyword => getTypeId(SemanticTokenTypes.Keyword)
+        case _: Token.KwNull => getTypeId(SemanticTokenTypes.Keyword)
+        case _: Token.KwTrue => getTypeId(SemanticTokenTypes.Keyword)
+        case _: Token.KwFalse => getTypeId(SemanticTokenTypes.Keyword)
 
-      // Constant
-      case _: Token.Constant.Int | _: Token.Constant.Long |
-          _: Token.Constant.Float | _: Token.Constant.Double =>
-        getTypeId(SemanticTokenTypes.Number)
-      case _: Token.Constant.String | _: Token.Constant.Char =>
-        getTypeId(SemanticTokenTypes.String)
-      case _: Token.Constant.Symbol => getTypeId(SemanticTokenTypes.Property)
+        // extends Symbolic keywords
+        case _: Token.Hash => getTypeId(SemanticTokenTypes.Keyword)
+        case _: Token.Viewbound => getTypeId(SemanticTokenTypes.Operator)
+        case _: Token.LeftArrow => getTypeId(SemanticTokenTypes.Operator)
+        case _: Token.Subtype => getTypeId(SemanticTokenTypes.Keyword)
+        case _: Token.RightArrow => getTypeId(SemanticTokenTypes.Operator)
+        case _: Token.Supertype => getTypeId(SemanticTokenTypes.Keyword)
+        case _: Token.At => getTypeId(SemanticTokenTypes.Keyword)
+        case _: Token.Underscore => getTypeId(SemanticTokenTypes.Variable)
+        case _: Token.TypeLambdaArrow => getTypeId(SemanticTokenTypes.Operator)
+        case _: Token.ContextArrow => getTypeId(SemanticTokenTypes.Operator)
 
-      // Comment
-      case _: Token.Comment => getTypeId(SemanticTokenTypes.Comment)
+        // Constant
+        case _: Token.Constant.Int | _: Token.Constant.Long |
+            _: Token.Constant.Float | _: Token.Constant.Double =>
+          getTypeId(SemanticTokenTypes.Number)
+        case _: Token.Constant.String | _: Token.Constant.Char =>
+          getTypeId(SemanticTokenTypes.String)
+        case _: Token.Constant.Symbol => getTypeId(SemanticTokenTypes.Property)
 
-      // Interpolation
-      case _: Token.Interpolation.Id | _: Token.Interpolation.SpliceStart =>
-        getTypeId(SemanticTokenTypes.Keyword)
-      case _: Token.Interpolation.Start | _: Token.Interpolation.Part |
-          _: Token.Interpolation.SpliceEnd | _: Token.Interpolation.End =>
-        getTypeId(SemanticTokenTypes.String) // $ symbol
+        // Comment
+        case _: Token.Comment => getTypeId(SemanticTokenTypes.Comment)
 
-      case _ if isScala3 =>
-        trySoftKeyword(tk)
+        // Interpolation
+        case _: Token.Interpolation.Id | _: Token.Interpolation.SpliceStart =>
+          getTypeId(SemanticTokenTypes.Keyword)
+        case _: Token.Interpolation.Start | _: Token.Interpolation.Part |
+            _: Token.Interpolation.SpliceEnd | _: Token.Interpolation.End =>
+          getTypeId(SemanticTokenTypes.String) // $ symbol
 
-      // Default
-      case _ => tokenFallback(tk)
-    }
+        case _ if isScala3 && trySoftKeyword(tk) != -1 =>
+          trySoftKeyword(tk)
+        case _ => -1
+      }
+
+    val tokenModifier: Int =
+      tokenType match {
+        case _ if tokenType == getTypeId(SemanticTokenTypes.Variable) =>
+          1 << getModifierId(SemanticTokenModifiers.Readonly)
+        case _ => 0
+      }
+    if (tokenType != -1) (tokenType, tokenModifier)
+    else
+      tokenFallback(tk)
 
   }
-  def tokenFallback(tk: scala.meta.tokens.Token): Int = {
+  def tokenFallback(tk: scala.meta.tokens.Token): (Integer, Integer) = {
     tk.text.headOption match {
-      case Some(upper) if upper.isUpper => getTypeId(SemanticTokenTypes.Class)
+      case Some(upper) if upper.isUpper =>
+        (getTypeId(SemanticTokenTypes.Class), 0)
       case Some(lower) if lower.isLower =>
-        getTypeId(SemanticTokenTypes.Variable)
-      case _ => -1
+        val readOnlyMod = 1 << getModifierId(SemanticTokenModifiers.Readonly)
+        (getTypeId(SemanticTokenTypes.Variable), readOnlyMod)
+      case _ => (-1, 0)
     }
   }
 
   def trySoftKeyword(tk: Token): Integer = {
     val SoftKeywordsUnapply = new SoftKeywords(scala.meta.dialects.Scala3)
     tk match {
-
       case SoftKeywordsUnapply.KwAs() => getTypeId(SemanticTokenTypes.Keyword)
       case SoftKeywordsUnapply.KwDerives() =>
         getTypeId(SemanticTokenTypes.Keyword)
@@ -256,7 +271,7 @@ object SemanticTokensProvider {
         getTypeId(SemanticTokenTypes.Keyword)
       case SoftKeywordsUnapply.KwUsing() =>
         getTypeId(SemanticTokenTypes.Keyword)
-      case _ => tokenFallback(tk)
+      case _ => -1
     }
 
   }
@@ -295,11 +310,12 @@ object SemanticTokensProvider {
                   getTypeId(SemanticTokenTypes.Keyword),
                 )
               case tk =>
-                val tokenType = typeOfNonIdentToken(tk, false)
+                val (tpe, mod) = typeModOfNonIdentToken(tk, false)
                 convertTokensToIntList(
                   tk.text,
                   delta,
-                  tokenType,
+                  tpe,
+                  mod,
                 )
             }
             buffer.addAll(
@@ -308,11 +324,12 @@ object SemanticTokensProvider {
             delta = delta0
           }
         case _ =>
-          val tokenType = typeOfNonIdentToken(tk, false)
+          val (tpe, mod) = typeModOfNonIdentToken(tk, false)
           val (toAdd, delta0) = convertTokensToIntList(
             tk.text,
             delta,
-            tokenType,
+            tpe,
+            mod,
           )
           buffer.addAll(
             toAdd
