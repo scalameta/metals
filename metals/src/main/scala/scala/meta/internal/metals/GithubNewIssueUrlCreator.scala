@@ -15,17 +15,17 @@ import scala.meta.internal.builds.BuildTools
 import org.eclipse.lsp4j.ClientInfo
 
 class GithubNewIssueUrlCreator(
-    tables: Tables,
-    buildTargets: BuildTargets,
-    currentBuildServer: () => Option[BspSession],
-    calculateNewBuildServer: () => BspResolvedResult,
+    folderInfo: List[GitHubIssueFolderInfo],
     clientInfo: ClientInfo,
-    buildTools: BuildTools,
 ) {
 
   def buildUrl(): String = {
     val scalaVersions =
-      buildTargets.allScala.map(_.scalaVersion).toSet.mkString("; ")
+      folderInfo
+        .flatMap(_.buildTargets.allScala)
+        .map(_.scalaVersion)
+        .toSet
+        .mkString("; ")
     val clientVersion =
       Option(clientInfo.getVersion()).map(v => s" v$v").getOrElse("")
     val body =
@@ -62,37 +62,58 @@ class GithubNewIssueUrlCreator(
           |-->
           |
           |### Workspace information:
-          |
           | - **Scala versions:** $scalaVersions$selectedBuildTool$selectedBuildServer
-          | - **All build tools in workspace:** ${buildTools.all.mkString("; ")}
+          | - **All build tools in workspace:** ${folderInfo.flatMap(_.buildTools.all).mkString("; ")}
           |""".stripMargin
     s"https://github.com/scalameta/metals/issues/new?body=${URLEncoder.encode(body)}"
   }
 
   private def selectedBuildTool(): String = {
-    tables.buildTool
-      .selectedBuildTool()
-      .map { value =>
-        s"""|
-            | - **Build tool:** ${value}""".stripMargin
+    val buildTools =
+      folderInfo.map { info =>
+        info.tables.buildTool
+          .selectedBuildTool()
       }
-      .getOrElse("")
+
+    if (buildTools.find(_.isDefined).isDefined) {
+      val value = buildTools.zipWithIndex
+        .map { case (buildTool, indx) =>
+          s"$indx. $buildTool"
+        }
+        .mkString("\n    ")
+      s"""|
+          | - **Build tools:** ${value}""".stripMargin
+    } else ""
   }
 
   private def selectedBuildServer(): String = {
-    val buildServer = currentBuildServer()
-      .map(s => s"${s.main.name} v${s.main.version}")
-      .getOrElse {
-        calculateNewBuildServer() match {
-          case ResolvedBloop => "Disconnected: Bloop"
-          case ResolvedBspOne(details) => s"Disconnected: ${details.getName()}"
-          case ResolvedMultiple(_, details) =>
-            s"Disconnected: Multiple Found ${details.map(_.getName()).mkString("; ")}"
-          case ResolvedNone => s"Disconnected: None Found"
-        }
+    val buildServers =
+      folderInfo.zipWithIndex.map { case (info, indx) =>
+        import info._
+        val buildServer = currentBuildServer()
+          .map(s => s"${s.main.name} v${s.main.version}")
+          .getOrElse {
+            calculateNewBuildServer() match {
+              case ResolvedBloop => "Disconnected: Bloop"
+              case ResolvedBspOne(details) =>
+                s"Disconnected: ${details.getName()}"
+              case ResolvedMultiple(_, details) =>
+                s"Disconnected: Multiple Found ${details.map(_.getName()).mkString("; ")}"
+              case ResolvedNone => s"Disconnected: None Found"
+            }
+          }
+        s"$indx. $buildServer"
       }
-
     s"""|
-        | - **Build server:** $buildServer""".stripMargin
+        | - **Build servers:**
+        |    ${buildServers.mkString("\n    ")}""".stripMargin
   }
 }
+
+case class GitHubIssueFolderInfo(
+    tables: Tables,
+    buildTargets: BuildTargets,
+    currentBuildServer: () => Option[BspSession],
+    calculateNewBuildServer: () => BspResolvedResult,
+    buildTools: BuildTools,
+)

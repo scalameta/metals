@@ -628,10 +628,15 @@ object ServerCommands {
          |""".stripMargin,
     )
 
-  val GotoLog = new Command(
+  case class FolderIdentifier(
+      uri: String
+  )
+
+  val GotoLog = new ParametrizedCommand[FolderIdentifier](
     "goto-log",
     "Check logs",
     "Open the Metals logs to troubleshoot issues.",
+    ???, // TODO::
   )
 
   val OpenIssue = new Command(

@@ -4,7 +4,6 @@ import java.io.InputStream
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.file.Paths
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -214,7 +213,7 @@ final class Ammonite(
     }
   }
 
-  def reload(): Future[Unit] = stop().asScala.flatMap(_ => start())
+  def reload(): Future[Unit] = stop().flatMap(_ => start())
 
   def start(doc: Option[AbsolutePath] = None): Future[Unit] = {
 
@@ -265,9 +264,9 @@ final class Ammonite(
       }
   }
 
-  def stop(): CompletableFuture[Object] = {
+  def stop(): Future[Unit] = {
     lastImportVersions = VersionsOption(None, None)
-    disconnectOldBuildServer().asJavaObject
+    disconnectOldBuildServer()
   }
 }
 

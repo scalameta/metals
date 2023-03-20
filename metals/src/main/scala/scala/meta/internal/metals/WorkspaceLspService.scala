@@ -11,6 +11,8 @@ import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.NewProjectProvider
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -24,6 +26,7 @@ import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.pc
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
 import scala.meta.internal.tvp.MetalsTreeViewProvider
+import scala.meta.internal.tvp.NoopTreeViewProvider
 import scala.meta.internal.tvp.TreeViewChildrenParams
 import scala.meta.internal.tvp.TreeViewNodeCollapseDidChangeParams
 import scala.meta.internal.tvp.TreeViewNodeRevealResult
@@ -82,6 +85,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.messages
+import scala.meta.internal.tvp.TreeViewProvider
 
 class WorkspaceLspService(
     ec: ExecutionContextExecutorService,
@@ -93,6 +97,7 @@ class WorkspaceLspService(
 ) extends ScalaLspService {
   import serverInputs._
   implicit val ex: ExecutionContextExecutorService = ec
+  private val cancelables = new MutableCancelable()
 
   private val clientConfig =
     ClientConfiguration(
@@ -111,6 +116,13 @@ class WorkspaceLspService(
   @volatile
   private var userConfig: UserConfiguration = initialUserConfig
 
+  private val shellRunner = register {
+    new ShellRunner(languageClient, () => userConfig, time, statusBar)
+  }
+
+  var focusedDocument: Option[AbsolutePath] = None
+  private val recentlyFocusedFiles = new ActiveFiles(time)
+
   val folderServices: List[MetalsLspService] = folders
     .withFilter { case (_, uri) =>
       !BuildTools.default(uri).isEmpty
@@ -125,6 +137,8 @@ class WorkspaceLspService(
         clientConfig,
         () => userConfig,
         statusBar,
+        () => focusedDocument,
+        shellRunner,
         uri,
         name,
       )
@@ -141,21 +155,50 @@ class WorkspaceLspService(
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
 
-  lazy val treeView = new MetalsTreeViewProvider(
-    folderServices.map(_.treeView),
+  val treeView: TreeViewProvider =
+    if (clientConfig.isTreeViewProvider) {
+      new MetalsTreeViewProvider(
+        folderServices.map(_.treeView),
+        languageClient,
+        sh,
+      )
+    } else NoopTreeViewProvider
+
+  private val newProjectProvider: NewProjectProvider = new NewProjectProvider(
     languageClient,
-    sh,
+    statusBar,
+    clientConfig,
+    shellRunner,
+    clientConfig.icons,
+    folders.head._2,
   )
 
-  def getServiceFor(uri: String): MetalsLspService = {
+  private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
+    folderServices.map(_.gitHubIssueFolderInfo),
+    initializeParams.getClientInfo(),
+  )
+
+  def register[T <: Cancelable](cancelable: T): T = {
+    cancelables.add(cancelable)
+    cancelable
+  }
+
+  def getServiceFor(path: AbsolutePath): MetalsLspService = {
     val folder =
       for {
-        path <- uri.toAbsolutePathSafe
         workSpaceFolder <- folderServices
           .filter(service => path.toNIO.startsWith(service.folder.toNIO))
           .sortBy(_.folder.toNIO.getNameCount())
           .lastOption
       } yield workSpaceFolder
+    folder.getOrElse(folderServices.head) // fallback to the first one
+  }
+
+  def getServiceFor(uri: String): MetalsLspService = {
+    val folder =
+      for {
+        path <- uri.toAbsolutePathSafe
+      } yield getServiceFor(path)
     folder.getOrElse(folderServices.head) // fallback to the first one
   }
 
@@ -191,16 +234,24 @@ class WorkspaceLspService(
 
   override def didOpen(
       params: DidOpenTextDocumentParams
-  ): CompletableFuture[Unit] =
+  ): CompletableFuture[Unit] = {
+    focusedDocument.foreach(recentlyFocusedFiles.add)
+    focusedDocument = Some(params.getTextDocument.getUri.toAbsolutePath)
     getServiceFor(params.getTextDocument().getUri()).didOpen(params)
+  }
 
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] =
     getServiceFor(params.getTextDocument().getUri()).didChange(params)
 
-  override def didClose(params: DidCloseTextDocumentParams): Unit =
+  override def didClose(params: DidCloseTextDocumentParams): Unit = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    if (focusedDocument.contains(path)) {
+      focusedDocument = recentlyFocusedFiles.pollRecent()
+    }
     getServiceFor(params.getTextDocument().getUri()).didClose(params)
+  }
 
   override def didSave(
       params: DidSaveTextDocumentParams
@@ -537,7 +588,9 @@ class WorkspaceLspService(
         None
     }
     uriOpt match {
-      case Some(uri) => getServiceFor(uri).didFocus(uri)
+      case Some(uri) =>
+        focusedDocument = Some(uri.toAbsolutePath)
+        getServiceFor(uri).didFocus(uri)
       case None =>
         CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
     }
@@ -581,8 +634,7 @@ class WorkspaceLspService(
         val uri = params.textDocument.getUri()
         getServiceFor(uri).chooseClass(uri, params.kind == "class").asJavaObject
       case ServerCommands.RunDoctor(params) =>
-        // .get() should be safe since we create those commands
-        getServiceForName(params.folderId).get.rundoctor().asJavaObject
+        getServiceFor(params.folderId).rundoctor().asJavaObject
       case ServerCommands.ListBuildTargets() =>
         Future { // TODO:: this probably should be per folder
           folderServices
@@ -604,10 +656,10 @@ class WorkspaceLspService(
       //         else Future.successful(())
       //       }
       //     } yield ()).asJavaObject
-      //   case ServerCommands.OpenIssue() =>
-      //     Future
-      //       .successful(Urls.openBrowser(githubNewIssueUrlCreator.buildUrl()))
-      //       .asJavaObject
+      case ServerCommands.OpenIssue() =>
+        Future
+          .successful(Urls.openBrowser(githubNewIssueUrlCreator.buildUrl()))
+          .asJavaObject
       case OpenBrowserCommand(url) =>
         Future.successful(Urls.openBrowser(url)).asJavaObject
       case ServerCommands.CascadeCompile() =>
@@ -618,66 +670,68 @@ class WorkspaceLspService(
         foreachSeq(_.cancelCompile(), ignoreValue = true)
       case ServerCommands.PresentationCompilerRestart() =>
         foreachSeq(_.restartCompiler(), ignoreValue = true)
-      //   case ServerCommands.GotoPosition(location) =>
-      //     Future {
-      //       languageClient.metalsExecuteClientCommand(
-      //         ClientCommands.GotoLocation.toExecuteCommandParams(
-      //           ClientCommands.WindowLocation(
-      //             location.getUri(),
-      //             location.getRange(),
-      //           )
-      //         )
-      //       )
-      //     }.asJavaObject
+      case ServerCommands.GotoPosition(location) =>
+        Future {
+          languageClient.metalsExecuteClientCommand(
+            ClientCommands.GotoLocation.toExecuteCommandParams(
+              ClientCommands.WindowLocation(
+                location.getUri(),
+                location.getRange(),
+              )
+            )
+          )
+        }.asJavaObject
 
-      //   case ServerCommands.GotoSymbol(symbol) =>
-      //     Future {
-      //       for {
-      //         location <- definitionProvider
-      //           .fromSymbol(symbol, focusedDocument)
-      //           .asScala
-      //           .headOption
-      //       } {
-      //         languageClient.metalsExecuteClientCommand(
-      //           ClientCommands.GotoLocation.toExecuteCommandParams(
-      //             ClientCommands.WindowLocation(
-      //               location.getUri(),
-      //               location.getRange(),
-      //             )
-      //           )
-      //         )
-      //       }
-      //     }.asJavaObject
-      //   case ServerCommands.GotoLog() =>
-      //     Future {
-      //       val log = workspace.resolve(Directories.log)
-      //       val linesCount = log.readText.linesIterator.size
-      //       val pos = new l.Position(linesCount, 0)
-      //       val location = new Location(
-      //         log.toURI.toString(),
-      //         new l.Range(pos, pos),
-      //       )
-      //       languageClient.metalsExecuteClientCommand(
-      //         ClientCommands.GotoLocation.toExecuteCommandParams(
-      //           ClientCommands.WindowLocation(
-      //             location.getUri(),
-      //             location.getRange(),
-      //           )
-      //         )
-      //       )
-      //     }.asJavaObject
+      case ServerCommands.GotoSymbol(symbol) =>
+        Future {
+          for {
+            location <- folderServices.foldLeft(Option.empty[Location]) {
+              case (None, service) => service.getLocationForSymbol(symbol)
+              case (someLoc, _) => someLoc
+            }
+          } {
+            languageClient.metalsExecuteClientCommand(
+              ClientCommands.GotoLocation.toExecuteCommandParams(
+                ClientCommands.WindowLocation(
+                  location.getUri(),
+                  location.getRange(),
+                )
+              )
+            )
+          }
+        }.asJavaObject
+      case ServerCommands.GotoLog(params: ServerCommands.FolderIdentifier) =>
+        Future {
+          val log = getServiceFor(params.uri).folder.resolve(Directories.log)
+          val linesCount = log.readText.linesIterator.size
+          val pos = new lsp4j.Position(linesCount, 0)
+          val location = new Location(
+            log.toURI.toString(),
+            new lsp4j.Range(pos, pos),
+          )
+          languageClient.metalsExecuteClientCommand(
+            ClientCommands.GotoLocation.toExecuteCommandParams(
+              ClientCommands.WindowLocation(
+                location.getUri(),
+                location.getRange(),
+              )
+            )
+          )
+        }.asJavaObject
 
-      //   case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
-      //     debugProvider
-      //       .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
-      //       .flatMap(_ => debugProvider.asSession(params))
-      //       .asJavaObject
+      case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
+        ??? // TODO::
+      // debugProvider
+      //   .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
+      //   .flatMap(_ => debugProvider.asSession(params))
+      //   .asJavaObject
 
-      //   case ServerCommands.StartMainClass(params) if params.mainClass != null =>
-      //     debugProvider
-      //       .resolveMainClassParams(params)
-      //       .flatMap(debugProvider.asSession)
-      //       .asJavaObject
+      case ServerCommands.StartMainClass(params) if params.mainClass != null =>
+        ???
+      // debugProvider
+      //   .resolveMainClassParams(params)
+      //   .flatMap(debugProvider.asSession)
+      //   .asJavaObject
 
       //   case ServerCommands.StartTestSuite(params)
       //       if params.target != null && params.requestData != null =>
@@ -712,19 +766,14 @@ class WorkspaceLspService(
       //       scribe.debug(s"Executing AnalyzeStacktrace ${command}")
       //     }.asJavaObject
 
-      //   case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
-      //     Future {
-      //       val command =
-      //         supermethods.getGoToSuperMethodCommand(textDocumentPositionParams)
-      //       command.foreach(languageClient.metalsExecuteClientCommand)
-      //       scribe.debug(s"Executing GoToSuperMethod ${command}")
-      //     }.asJavaObject
+      case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
+        getServiceFor(textDocumentPositionParams.getTextDocument().getUri())
+          .gotoSupermethod(textDocumentPositionParams)
 
-      //   case ServerCommands.SuperMethodHierarchy(textDocumentPositionParams) =>
-      //     scribe.debug(s"Executing SuperMethodHierarchy ${params.getCommand()}")
-      //     supermethods
-      //       .jumpToSelectedSuperMethod(textDocumentPositionParams)
-      //       .asJavaObject
+      case ServerCommands.SuperMethodHierarchy(textDocumentPositionParams) =>
+        scribe.debug(s"Executing SuperMethodHierarchy ${params.getCommand()}")
+        getServiceFor(textDocumentPositionParams.getTextDocument().getUri())
+          .superMethodHierarchy(textDocumentPositionParams)
 
       //   case ServerCommands.ResetChoicePopup() =>
       //     val argsMaybe = Option(params.getArguments())
@@ -742,57 +791,42 @@ class WorkspaceLspService(
       //         popupChoiceReset.interactiveReset()
       //     }).asJavaObject
 
-      //   case ServerCommands.ResetNotifications() =>
-      //     Future {
-      //       tables.dismissedNotifications.resetAll()
-      //     }.asJavaObject
+      case ServerCommands.ResetNotifications() =>
+        foreachSeq(_.resetNotifications(), ignoreValue = true)
 
-      //   case ServerCommands.NewScalaFile(args) =>
-      //     val directoryURI = args.lift(0).flatten.map(new URI(_))
-      //     val name = args.lift(1).flatten
-      //     val fileType = args.lift(2).flatten
-      //     newFileProvider
-      //       .handleFileCreation(directoryURI, name, fileType, isScala = true)
-      //       .asJavaObject
-
-      //   case ServerCommands.NewJavaFile(args) =>
-      //     val directoryURI = args.lift(0).flatten.map(new URI(_))
-      //     val name = args.lift(1).flatten
-      //     val fileType = args.lift(2).flatten
-      //     newFileProvider
-      //       .handleFileCreation(directoryURI, name, fileType, isScala = false)
-      //       .asJavaObject
-
-      //   case ServerCommands.StartAmmoniteBuildServer() =>
-      //     ammonite.start().asJavaObject
-      //   case ServerCommands.StopAmmoniteBuildServer() =>
-      //     ammonite.stop()
-
-      //   case ServerCommands.StartScalaCliServer() =>
-      //     val f = focusedDocument match {
-      //       case None => Future.unit
-      //       case Some(path) =>
-      //         val scalaCliPath = scalaCliDirOrFile(path)
-      //         if (scalaCli.loaded(scalaCliPath)) Future.unit
-      //         else scalaCli.start(scalaCliPath)
-      //     }
-      //     f.asJavaObject
-      //   case ServerCommands.StopScalaCliServer() =>
-      //     scalaCli.stop()
-
-      //   case ServerCommands.NewScalaProject() =>
-      //     newProjectProvider.createNewProjectFromTemplate().asJavaObject
-
-      //   case ServerCommands.CopyWorksheetOutput(path) =>
-      //     val worksheetPath = path.toAbsolutePath
-      //     val output = worksheetProvider.copyWorksheetOutput(worksheetPath)
-
-      //     if (output.nonEmpty) {
-      //       Future(output).asJavaObject
-      //     } else {
-      //       languageClient.showMessage(Messages.Worksheets.unableToExport)
-      //       Future.successful(()).asJavaObject
-      //     }
+      case ServerCommands.NewScalaFile(args) =>
+        val directoryURI = args.lift(0).flatten
+        val name = args.lift(1).flatten
+        val fileType = args.lift(2).flatten
+        directoryURI
+          .map(getServiceFor)
+          .getOrElse(folderServices.head)
+          .handleFileCreation(directoryURI, name, fileType, isScala = true)
+      case ServerCommands.NewJavaFile(args) =>
+        val directoryURI = args.lift(0).flatten
+        val name = args.lift(1).flatten
+        val fileType = args.lift(2).flatten
+        directoryURI
+          .map(getServiceFor)
+          .getOrElse(folderServices.head)
+          .handleFileCreation(directoryURI, name, fileType, isScala = false)
+      case ServerCommands.StartAmmoniteBuildServer() =>
+        foreachSeq(_.ammoniteStart(), ignoreValue = false)
+      case ServerCommands.StopAmmoniteBuildServer() =>
+        foreachSeq(_.ammoniteStop(), ignoreValue = false)
+      case ServerCommands.StartScalaCliServer() =>
+        val f = focusedDocument match {
+          case None => Future.unit
+          case Some(path) =>
+            getServiceFor(path).startScalaCli(path)
+        }
+        f.asJavaObject
+      case ServerCommands.StopScalaCliServer() =>
+        foreachSeq(_.stopScalaCli(), ignoreValue = true)
+      case ServerCommands.NewScalaProject() =>
+        newProjectProvider.createNewProjectFromTemplate().asJavaObject
+      case ServerCommands.CopyWorksheetOutput(path) =>
+        getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
       //   case actionCommand
       //       if codeActionProvider.allActionCommandsIds(
       //         actionCommand.getCommand()
@@ -814,17 +848,16 @@ class WorkspaceLspService(
       //         )
       //         .withObjectValue
       //     }
-      //   case cmd =>
-      //     ServerCommands.all
-      //       .find(command => command.id == cmd.getCommand())
-      //       .fold {
-      //         scribe.error(s"Unknown command '$cmd'")
-      //       } { foundCommand =>
-      //         scribe.error(
-      //           s"Expected '${foundCommand.arguments}', but got '${cmd.getArguments()}'"
-      //         )
-      //       }
-      case _ =>
+      case cmd =>
+        ServerCommands.all
+          .find(command => command.id == cmd.getCommand())
+          .fold {
+            scribe.error(s"Unknown command '$cmd'")
+          } { foundCommand =>
+            scribe.error(
+              s"Expected '${foundCommand.arguments}', but got '${cmd.getArguments()}'"
+            )
+          }
         Future.successful(()).asJavaObject
     }
 
@@ -933,7 +966,10 @@ class WorkspaceLspService(
       .asJava
   }
 
-  def cancel(): Unit = folderServices.foreach(_.cancel())
+  def cancel(): Unit = {
+    cancelables.cancel()
+    folderServices.foreach(_.cancel())
+  }
 
   def initialized(): Future[Unit] = {
     statusBar.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)

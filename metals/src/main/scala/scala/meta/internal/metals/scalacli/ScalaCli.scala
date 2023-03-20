@@ -7,7 +7,6 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -293,8 +292,7 @@ class ScalaCli(
     }
   }
 
-  def stop(): CompletableFuture[Object] =
-    disconnectOldBuildServer().asJavaObject
+  def stop(): Future[Unit] = disconnectOldBuildServer()
 
 }
 
