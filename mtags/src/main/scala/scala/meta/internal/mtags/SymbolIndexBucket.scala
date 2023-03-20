@@ -215,22 +215,20 @@ class SymbolIndexBucket(
    * This action is performed when a symbol is queried, to avoid returning incorrect results.
    */
   private def removeOldEntries(symbol: Symbol): Unit = {
-    if (toplevels.contains(symbol.value)) {
-      toplevels.updateWith(symbol.value) {
-        case Some(defs) =>
-          val newSet = defs.filter(_.exists)
-          if (newSet.isEmpty) None else Some(newSet)
-        case None => None
-      }
+    toplevels.get(symbol.value) match {
+      case None => ()
+      case Some(acc) =>
+        val updated = acc.filter(_.exists)
+        if (updated.isEmpty) toplevels.remove(symbol.value)
+        else toplevels(symbol.value) = updated
     }
 
-    if (definitions.contains(symbol.value)) {
-      definitions.updateWith(symbol.value) {
-        case Some(defs) =>
-          val newSet = defs.filter(_.path.exists)
-          if (newSet.isEmpty) None else Some(newSet)
-        case None => None
-      }
+    definitions.get(symbol.value) match {
+      case None => ()
+      case Some(acc) =>
+        val updated = acc.filter(_.path.exists)
+        if (updated.isEmpty) definitions.remove(symbol.value)
+        else definitions(symbol.value) = updated
     }
   }
 
@@ -264,11 +262,9 @@ class SymbolIndexBucket(
     docs.documents.foreach { document =>
       document.occurrences.foreach { occ =>
         if (occ.symbol.isGlobal && occ.role.isDefinition) {
-          val toAdd = SymbolLocation(file, occ.range)
-          definitions.updateWith(occ.symbol) {
-            case Some(acc) => Some(acc + toAdd)
-            case None => Some(Set(toAdd))
-          }
+          val acc = definitions.getOrElse(occ.symbol, Set.empty)
+          definitions.put(occ.symbol, acc + SymbolLocation(file, occ.range))
+
           // val acc = definitions.getOrElse(occ.symbol, Set.empty)
           // definitions.put(occ.symbol, acc + SymbolLocation(file, occ.range))
         } else {
