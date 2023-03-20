@@ -9,8 +9,8 @@
     <<val>>/*keyword*/ <<_>>/*variable*/ = <<42>>/*number*/
   }
   <<// infix + inferred apply/implicits/tparams>>/*comment*/
-  (<<List>>/*variable,readonly*/(<<1>>/*number*/)
+  (<<List>>/*class*/(<<1>>/*number*/)
     .<<map>>/*method*/(<<_>>/*variable*/ <<+>>/*method,abstract*/ <<1>>/*number*/)
     <<++>>/*method*/
-      <<List>>/*variable,readonly*/(<<3>>/*number*/))
+      <<List>>/*class*/(<<3>>/*number*/))
 }
