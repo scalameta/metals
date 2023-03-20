@@ -64,6 +64,30 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
         |  <<V>>/*variable,readonly*/.scalameta
         |end StructuralTypes
         |""".stripMargin,
+    compat = Map(
+      ">=3.3.1-RC1-bin-20230318-7226ba6-NIGHTLY" ->
+        s"""|package <<example>>/*namespace*/
+            |
+            |import <<reflect>>/*namespace*/.<<Selectable>>/*class*/.<<reflectiveSelectable>>/*method*/
+            |
+            |object <<StructuralTypes>>/*class*/:
+            |  type <<User>>/*type*/ = {
+            |    def <<name>>/*method*/: <<String>>/*type*/
+            |    def <<age>>/*method*/: <<Int>>/*class,abstract*/
+            |  }
+            |
+            |  val <<user>>/*variable,readonly*/ = null.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
+            |  <<user>>/*variable,readonly*/.<<name>>/*method*/
+            |  <<user>>/*variable,readonly*/.<<age>>/*method*/
+            |
+            |  val <<V>>/*variable,readonly*/: <<Object>>/*class*/ {
+            |    def <<scalameta>>/*method*/: <<String>>/*type*/
+            |  } = new:
+            |    def <<scalameta>>/*method*/ = "4.0"
+            |  <<V>>/*variable,readonly*/.<<scalameta>>/*method*/
+            |end StructuralTypes
+            |""".stripMargin
+    ),
   )
 
   check(
