@@ -15,6 +15,7 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
@@ -22,62 +23,12 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.{lsp4j => l}
 
 class MetalsTreeViewProvider(
-    workspace: () => AbsolutePath,
+    trees: List[MetalsTreeFolderViewProvider],
     languageClient: MetalsLanguageClient,
-    buildTargets: BuildTargets,
-    compilations: () => TreeViewCompilations,
-    definitionIndex: GlobalSymbolIndex,
-    statistics: StatisticsConfig,
-    doCompile: BuildTargetIdentifier => Unit,
     sh: ScheduledExecutorService,
-    isBloop: () => Boolean,
 ) extends TreeViewProvider {
   private val ticks =
     TrieMap.empty[String, ScheduledFuture[_]]
-  private val isVisible = TrieMap.empty[String, Boolean].withDefaultValue(false)
-  private val isCollapsed = TrieMap.empty[BuildTargetIdentifier, Boolean]
-  private val pendingProjectUpdates =
-    ConcurrentHashSet.empty[BuildTargetIdentifier]
-  private val classpath = new ClasspathSymbols(
-    isStatisticsEnabled = statistics.isTreeView
-  )
-  val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
-    definitionIndex,
-    Project,
-    "libraries",
-    "Libraries",
-    identity,
-    _.toURI.toString(),
-    _.toAbsolutePath,
-    _.filename,
-    _.toString,
-    () => buildTargets.allWorkspaceJars,
-    (path, symbol) => classpath.symbols(path, symbol),
-  )
-
-  val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
-    definitionIndex,
-    Project,
-    "projects",
-    "Projects",
-    _.getId(),
-    _.getUri(),
-    uri => new BuildTargetIdentifier(uri),
-    _.getDisplayName(),
-    _.baseDirectory,
-    { () =>
-      buildTargets.all.filter(target =>
-        buildTargets.buildTargetSources(target.getId()).nonEmpty
-      )
-    },
-    { (id, symbol) =>
-      if (isBloop()) doCompile(id)
-      buildTargets
-        .targetClassDirectories(id)
-        .flatMap(cd => classpath.symbols(cd.toAbsolutePath, symbol))
-        .iterator
-    },
-  )
 
   override def init(): Unit = {
     languageClient.metalsTreeViewDidChange(
@@ -91,94 +42,8 @@ class MetalsTreeViewProvider(
     )
   }
 
-  override def reset(): Unit = {
-    classpath.reset()
-  }
+  override def reset(): Unit = trees.foreach(_.reset())
 
-  private def flushPendingProjectUpdates(): Unit = {
-    val toUpdate = pendingProjectUpdates.asScala.iterator
-      .filter { id =>
-        !isCollapsed.getOrElse(id, true) &&
-        isVisible(Project)
-      }
-      .flatMap(buildTargets.info)
-      .toArray
-    if (toUpdate.nonEmpty) {
-      val nodes = toUpdate.map { target =>
-        projects
-          .toViewNode(target)
-          .copy(collapseState = MetalsTreeItemCollapseState.expanded)
-      }
-      languageClient.metalsTreeViewDidChange(
-        TreeViewDidChangeParams(nodes)
-      )
-    }
-  }
-
-  override def onBuildTargetDidCompile(id: BuildTargetIdentifier): Unit = {
-    buildTargets
-      .targetClassDirectories(id)
-      .foreach(cd => classpath.clearCache(cd.toAbsolutePath))
-    if (isCollapsed.contains(id)) {
-      pendingProjectUpdates.add(id)
-      flushPendingProjectUpdates()
-    } else {
-      () // do nothing if the user never expanded the tree view node.
-    }
-  }
-
-  override def onCollapseDidChange(
-      params: TreeViewNodeCollapseDidChangeParams
-  ): Unit = {
-    if (projects.matches(params.nodeUri)) {
-      val uri = projects.fromUri(params.nodeUri)
-      if (uri.isRoot) {
-        isCollapsed(uri.key) = params.collapsed
-      }
-    }
-  }
-
-  override def onVisibilityDidChange(
-      params: TreeViewVisibilityDidChangeParams
-  ): Unit = {
-    isVisible(params.viewId) = params.visible
-    if (params.visible) {
-      params.viewId match {
-        case Compile =>
-          ticks(params.viewId) = sh.scheduleAtFixedRate(
-            () => tickBuildTreeView(),
-            1,
-            1,
-            TimeUnit.SECONDS,
-          )
-        case Project =>
-          flushPendingProjectUpdates()
-        case _ =>
-      }
-    } else {
-      ticks.remove(params.viewId).foreach(_.cancel(false))
-    }
-  }
-
-  override def parent(
-      params: TreeViewParentParams
-  ): TreeViewParentResult = {
-    TreeViewParentResult(
-      params.viewId match {
-        case Project =>
-          val uri = params.nodeUri
-          if (libraries.matches(uri)) {
-            libraries.parent(uri).orNull
-          } else if (projects.matches(uri)) {
-            projects.parent(uri).orNull
-          } else {
-            null
-          }
-        case _ =>
-          null
-      }
-    )
-  }
   def echoCommand(command: BaseCommand, icon: String): TreeViewNode =
     TreeViewNode(
       viewId = "help",
@@ -193,13 +58,17 @@ class MetalsTreeViewProvider(
       icon = icon,
       tooltip = command.description,
     )
+
   override def children(
       params: TreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = {
     val children: Array[TreeViewNode] = params.viewId match {
       case Help =>
         Array(
-          echoCommand(ServerCommands.RunDoctor, "bug"),
+          echoCommand(
+            ServerCommands.RunDoctor,
+            "bug",
+          ), // TODO:: we need to add arg here
           echoCommand(ServerCommands.GotoLog, "bug"),
           echoCommand(ServerCommands.ReadVscodeDocumentation, "book"),
           echoCommand(ServerCommands.ReadBloopDocumentation, "book"),
@@ -211,22 +80,7 @@ class MetalsTreeViewProvider(
           echoCommand(ServerCommands.ScalametaTwitter, "twitter"),
         )
       case Project =>
-        Option(params.nodeUri) match {
-          case None if buildTargets.all.nonEmpty =>
-            Array(
-              projects.root,
-              libraries.root,
-            )
-          case Some(uri) =>
-            if (libraries.matches(uri)) {
-              libraries.children(uri)
-            } else if (projects.matches(uri)) {
-              projects.children(uri)
-            } else {
-              Array.empty
-            }
-          case _ => Array.empty
-        }
+        trees.map(_.getProjectRoot(Option(params.nodeUri))).flatten.toArray
       case Build =>
         Option(params.nodeUri) match {
           case None =>
@@ -257,21 +111,14 @@ class MetalsTreeViewProvider(
             Array()
         }
       case Compile =>
-        Option(params.nodeUri) match {
-          case None =>
-            ongoingCompilations
-          case Some(uri) =>
-            if (uri == ongoingCompilationNode.nodeUri) {
-              ongoingCompilations
-            } else {
-              ongoingCompileNode(new BuildTargetIdentifier(uri)).toArray
-            }
-        }
+        trees
+          .map(_.getOngoingCompilations(Option(params.nodeUri)))
+          .flatten
+          .toArray
       case _ => Array.empty
     }
     MetalsTreeViewChildrenResult(children)
   }
-
   override def reveal(
       path: AbsolutePath,
       pos: l.Position,
@@ -295,16 +142,10 @@ class MetalsTreeViewProvider(
         (!isLeading, distance)
       }
       val result =
-        if (path.isDependencySource(workspace()) || path.isJarFileSystem) {
-          buildTargets
-            .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
-            .map { inferred =>
-              libraries.toUri(inferred.jar, inferred.symbol).parentChain
-            }
-        } else {
-          buildTargets
-            .inverseSources(path)
-            .map(id => projects.toUri(id, closestSymbol.symbol).parentChain)
+        trees.foldLeft(Option.empty[List[String]]) {
+          case (None, treeViewProvider) =>
+            treeViewProvider.revealResult(path, closestSymbol)
+          case (Some(value), _) => Some(value)
         }
       result.map { uriChain =>
         uriChain.foreach { uri =>
@@ -315,6 +156,232 @@ class MetalsTreeViewProvider(
       }
     }
   }
+
+  override def onCollapseDidChange(
+      params: TreeViewNodeCollapseDidChangeParams
+  ): Unit = trees.foreach(_.onCollapseDidChange(params))
+
+  override def parent(
+      params: TreeViewParentParams
+  ): TreeViewParentResult =
+    params.viewId match {
+      case Project =>
+        trees
+          .map(_.parent(params.nodeUri))
+          .collectFirst { case Some(value) =>
+            value
+          }
+          .getOrElse(TreeViewParentResult(null))
+      case _ => TreeViewParentResult(null)
+    }
+
+  override def onVisibilityDidChange(
+      params: TreeViewVisibilityDidChangeParams
+  ): Unit = {
+    if (params.visible) {
+      params.viewId match {
+        case TreeViewProvider.Compile =>
+          ticks(params.viewId) = sh.scheduleAtFixedRate(
+            () => {
+              val all = trees.map(_.tickBuildTreeView()).collect {
+                case Some(value) => value
+              }
+              if (all.nonEmpty) {
+                languageClient.metalsTreeViewDidChange(
+                  TreeViewDidChangeParams(all.flatten.toArray)
+                )
+              }
+            },
+            1,
+            1,
+            TimeUnit.SECONDS,
+          )
+        case TreeViewProvider.Project =>
+          val toUpdate = trees.map(_.flushPendingProjectUpdates).collect {
+            case Some(value) => value
+          }
+          if (toUpdate.nonEmpty) {
+            languageClient.metalsTreeViewDidChange(
+              TreeViewDidChangeParams(toUpdate.flatten.toArray)
+            )
+          }
+        case _ =>
+      }
+    } else {
+      ticks.remove(params.viewId).foreach(_.cancel(false))
+    }
+  }
+
+  override def onBuildTargetDidCompile(
+      id: BuildTargetIdentifier
+  ): Unit = {
+    val toUpdate = trees.map(_.onBuildTargetDidCompile(id)).collect {
+      case Some(value) => value
+    }
+    if (toUpdate.nonEmpty) {
+      languageClient.metalsTreeViewDidChange(
+        TreeViewDidChangeParams(toUpdate.flatten.toArray)
+      )
+    }
+  }
+}
+
+class MetalsTreeFolderViewProvider(
+    folderId: String,
+    folder: () => AbsolutePath,
+    buildTargets: BuildTargets,
+    compilations: () => TreeViewCompilations,
+    definitionIndex: GlobalSymbolIndex,
+    doCompile: BuildTargetIdentifier => Unit,
+    isBloop: () => Boolean,
+    statistics: StatisticsConfig,
+) {
+  private val classpath = new ClasspathSymbols(
+    isStatisticsEnabled = statistics.isTreeView
+  )
+  private val isVisible = TrieMap.empty[String, Boolean].withDefaultValue(false)
+  private val isCollapsed = TrieMap.empty[BuildTargetIdentifier, Boolean]
+  private val pendingProjectUpdates =
+    ConcurrentHashSet.empty[BuildTargetIdentifier]
+  val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
+    definitionIndex,
+    TreeViewProvider.Project,
+    s"libraries-${folderId}",
+    s"Libraries for $folderId",
+    identity,
+    _.toURI.toString(),
+    _.toAbsolutePath,
+    _.filename,
+    _.toString,
+    () => buildTargets.allWorkspaceJars,
+    (path, symbol) => classpath.symbols(path, symbol),
+  )
+
+  val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
+    definitionIndex,
+    TreeViewProvider.Project,
+    s"projects-${folderId}",
+    s"Projects for $folderId",
+    _.getId(),
+    _.getUri(),
+    uri => new BuildTargetIdentifier(uri),
+    _.getDisplayName(),
+    _.baseDirectory,
+    { () =>
+      buildTargets.all.filter(target =>
+        buildTargets.buildTargetSources(target.getId()).nonEmpty
+      )
+    },
+    { (id, symbol) =>
+      if (isBloop()) doCompile(id)
+      buildTargets
+        .targetClassDirectories(id)
+        .flatMap(cd => classpath.symbols(cd.toAbsolutePath, symbol))
+        .iterator
+    },
+  )
+
+  def flushPendingProjectUpdates(): Option[Array[TreeViewNode]] = {
+    val toUpdate = pendingProjectUpdates.asScala.iterator
+      .filter { id =>
+        !isCollapsed.getOrElse(id, true) &&
+        isVisible(TreeViewProvider.Project)
+      }
+      .flatMap(buildTargets.info)
+      .toArray
+    if (toUpdate.nonEmpty) {
+      val nodes = toUpdate.map { target =>
+        projects
+          .toViewNode(target)
+          .copy(collapseState = MetalsTreeItemCollapseState.expanded)
+      }
+      Some(nodes)
+    } else {
+      None
+    }
+  }
+
+  def onBuildTargetDidCompile(
+      id: BuildTargetIdentifier
+  ): Option[Array[TreeViewNode]] = {
+    buildTargets
+      .targetClassDirectories(id)
+      .foreach(cd => classpath.clearCache(cd.toAbsolutePath))
+    if (isCollapsed.contains(id)) {
+      pendingProjectUpdates.add(id)
+      flushPendingProjectUpdates()
+    } else {
+      None // do nothing if the user never expanded the tree view node.
+    }
+  }
+
+  def onCollapseDidChange(
+      params: TreeViewNodeCollapseDidChangeParams
+  ): Unit = {
+    if (projects.matches(params.nodeUri)) {
+      val uri = projects.fromUri(params.nodeUri)
+      if (uri.isRoot) {
+        isCollapsed(uri.key) = params.collapsed
+      }
+    }
+  }
+
+  def parent(
+      uri: String
+  ): Option[TreeViewParentResult] =
+    if (libraries.matches(uri)) {
+      Some(TreeViewParentResult(libraries.parent(uri).orNull))
+    } else if (projects.matches(uri)) {
+      Some(TreeViewParentResult(projects.parent(uri).orNull))
+    } else {
+      None
+    }
+
+  def getOngoingCompilations(nodeUri: Option[String]): Array[TreeViewNode] =
+    nodeUri match {
+      case None =>
+        ongoingCompilations
+      case Some(uri) =>
+        if (uri == ongoingCompilationNode.nodeUri) {
+          ongoingCompilations
+        } else {
+          ongoingCompileNode(new BuildTargetIdentifier(uri)).toArray
+        }
+    }
+
+  def getProjectRoot(nodeUri: Option[String]): Array[TreeViewNode] =
+    nodeUri match {
+      case None if buildTargets.all.nonEmpty =>
+        Array(
+          projects.root,
+          libraries.root,
+        )
+      case Some(uri) =>
+        if (libraries.matches(uri)) {
+          libraries.children(uri)
+        } else if (projects.matches(uri)) {
+          projects.children(uri)
+        } else {
+          Array.empty
+        }
+      case _ => Array.empty
+    }
+
+  def revealResult(
+      path: AbsolutePath,
+      closestSymbol: SymbolOccurrence,
+  ): Option[List[String]] =
+    if (path.isDependencySource(folder()) || path.isJarFileSystem) {
+      buildTargets
+        .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
+        .map { inferred =>
+          libraries.toUri(inferred.jar, inferred.symbol).parentChain
+        }
+    } else {
+      buildTargets
+        .inverseSources(path)
+        .map(id => projects.toUri(id, closestSymbol.symbol).parentChain)
+    }
 
   private def ongoingCompilations: Array[TreeViewNode] = {
     compilations().buildTargets.flatMap(ongoingCompileNode).toArray
@@ -327,7 +394,7 @@ class MetalsTreeViewProvider(
       compilation <- compilations().get(id)
       info <- buildTargets.info(id)
     } yield TreeViewNode(
-      Compile,
+      TreeViewProvider.Compile,
       id.getUri,
       s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)",
       icon = "compile",
@@ -336,9 +403,9 @@ class MetalsTreeViewProvider(
 
   private def ongoingCompilationNode: TreeViewNode = {
     TreeViewNode(
-      Compile,
+      TreeViewProvider.Compile,
       null,
-      Compile,
+      TreeViewProvider.Compile,
     )
   }
 
@@ -347,15 +414,18 @@ class MetalsTreeViewProvider(
 
   private val wasEmpty = new AtomicBoolean(true)
   private val isEmpty = new AtomicBoolean(true)
-  private def tickBuildTreeView(): Unit = {
+  def tickBuildTreeView(): Option[Array[TreeViewNode]] = {
     isEmpty.set(compilations().isEmpty)
-    if (wasEmpty.get() && isEmpty.get()) {
-      () // Nothing changed since the last notification.
+    val result = if (wasEmpty.get() && isEmpty.get()) {
+      None // Nothing changed since the last notification.
     } else {
-      languageClient.metalsTreeViewDidChange(
-        TreeViewDidChangeParams(toplevelTreeNodes)
-      )
+      Some(toplevelTreeNodes)
     }
     wasEmpty.set(isEmpty.get())
+    result
+  }
+
+  def reset(): Unit = {
+    classpath.reset()
   }
 }

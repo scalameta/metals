@@ -4,7 +4,6 @@ import java.util.concurrent.CompletableFuture
 import java.{util => ju}
 
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -17,11 +16,14 @@ import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.WindowStateDidChangeParams
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
+import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.pc
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
+import scala.meta.internal.tvp.MetalsTreeViewProvider
 import scala.meta.internal.tvp.TreeViewChildrenParams
 import scala.meta.internal.tvp.TreeViewNodeCollapseDidChangeParams
 import scala.meta.internal.tvp.TreeViewNodeRevealResult
@@ -32,6 +34,9 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
 
 import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
@@ -77,12 +82,6 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.messages
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
-import scala.meta.internal.metals.logging.LanguageClientLogger
-import com.google.gson.JsonNull
-import scala.meta.internal.metals.doctor.Doctor
 
 class WorkspaceLspService(
     ec: ExecutionContextExecutorService,
@@ -93,7 +92,7 @@ class WorkspaceLspService(
     val folders: List[(String, AbsolutePath)],
 ) extends ScalaLspService {
   import serverInputs._
-  implicit val ex: ExecutionContext = ec
+  implicit val ex: ExecutionContextExecutorService = ec
 
   private val clientConfig =
     ClientConfiguration(
@@ -112,7 +111,7 @@ class WorkspaceLspService(
   @volatile
   private var userConfig: UserConfiguration = initialUserConfig
 
-  val folderServices = folders
+  val folderServices: List[MetalsLspService] = folders
     .withFilter { case (_, uri) =>
       !BuildTools.default(uri).isEmpty
     }
@@ -142,20 +141,19 @@ class WorkspaceLspService(
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
 
-  private val doctor: Doctor =
-    new Doctor(
-      ???,
-      languageClient,
-      clientConfig,
-    )
+  lazy val treeView = new MetalsTreeViewProvider(
+    folderServices.map(_.treeView),
+    languageClient,
+    sh,
+  )
 
   def getServiceFor(uri: String): MetalsLspService = {
     val folder =
       for {
         path <- uri.toAbsolutePathSafe
         workSpaceFolder <- folderServices
-          .filter(service => path.toNIO.startsWith(service.workspace.toNIO))
-          .sortBy(_.workspace.toNIO.getNameCount())
+          .filter(service => path.toNIO.startsWith(service.folder.toNIO))
+          .sortBy(_.folder.toNIO.getNameCount())
           .lastOption
       } yield workSpaceFolder
     folder.getOrElse(folderServices.head) // fallback to the first one
@@ -166,8 +164,30 @@ class WorkspaceLspService(
   ): Option[MetalsLspService] =
     for {
       workSpaceFolder <- folderServices
-        .find(service => service.workspaceId == workspaceFolder)
+        .find(service => service.folderId == workspaceFolder)
     } yield workSpaceFolder
+
+  def getServiceForExactUri(
+      folderUri: String
+  ): Option[MetalsLspService] =
+    for {
+      workSpaceFolder <- folderServices
+        .find(service => service.folder.toString == folderUri)
+    } yield workSpaceFolder
+
+  def foreachSeq[A](
+      f: MetalsLspService => Future[A],
+      ignoreValue: Boolean = false,
+  ): CompletableFuture[Object] = {
+    val res = Future.sequence(folderServices.map(f))
+    if (ignoreValue) res.ignoreValue.asJavaObject
+    else res.asJavaObject
+  }
+
+  def collectSeq[A, B](f: MetalsLspService => Future[A])(
+      compose: List[A] => B
+  ): Future[B] =
+    Future.sequence(folderServices.map(f)).collect { case v => compose(v) }
 
   override def didOpen(
       params: DidOpenTextDocumentParams
@@ -307,11 +327,30 @@ class WorkspaceLspService(
   override def workspaceSymbol(
       params: WorkspaceSymbolParams
   ): CompletableFuture[ju.List[SymbolInformation]] =
-    ???
+    CancelTokens.future { token =>
+      collectSeq(_.workspaceSymbol(params, token))(_.flatten.asJava)
+    }
 
   override def willRenameFiles(
       params: RenameFilesParams
-  ): CompletableFuture[WorkspaceEdit] = ???
+  ): CompletableFuture[WorkspaceEdit] =
+    CancelTokens.future { _ =>
+      val moves = params.getFiles.asScala.toSeq.map { rename =>
+        val service = getServiceFor(rename.getOldUri())
+        val oldPath = rename.getOldUri().toAbsolutePath
+        val newPath = rename.getNewUri().toAbsolutePath
+        /* Changing package for files moved out of the workspace or between folders will cause unexpected issues
+         * This showed up with emacs automated backups.
+         */
+        if (newPath.startWith(service.folder))
+          service.willRenameFile(oldPath, newPath)
+        else
+          Future.successful(
+            new WorkspaceEdit(Map.empty[String, ju.List[TextEdit]].asJava)
+          )
+      }
+      Future.sequence(moves).map(_.mergeChanges)
+    }
 
   override def didChangeConfiguration(
       params: DidChangeConfigurationParams
@@ -408,56 +447,108 @@ class WorkspaceLspService(
 
   override def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
-  ): CompletableFuture[Unit] = ???
+  ): CompletableFuture[Unit] =
+    Future
+      .sequence(
+        params
+          .getChanges()
+          .asScala
+          .iterator
+          .toList
+          .map(event => {
+            val uri = event.getUri()
+            (uri.toAbsolutePath, getServiceFor(uri))
+          })
+          .groupBy(_._2)
+          .map { case (service, paths) =>
+            service.didChangeWatchedFiles(paths.map(_._1))
+          }
+      )
+      .ignoreValue
+      .asJava
 
   override def treeViewChildren(
       params: TreeViewChildrenParams
-  ): CompletableFuture[MetalsTreeViewChildrenResult] = ???
+  ): CompletableFuture[MetalsTreeViewChildrenResult] = {
+    Future {
+      treeView.children(params)
+    }.asJava
+  }
 
   override def treeViewParent(
       params: TreeViewParentParams
-  ): CompletableFuture[TreeViewParentResult] = ???
-
-  override def treeViewReveal(
-      params: TextDocumentPositionParams
-  ): CompletableFuture[TreeViewNodeRevealResult] = ???
-
-  override def findTextInDependencyJars(
-      params: FindTextInDependencyJarsRequest
-  ): CompletableFuture[ju.List[Location]] = ???
-
-  override def doctorVisibilityDidChange(
-      params: DoctorVisibilityDidChangeParams
-  ): CompletableFuture[Unit] = ???
+  ): CompletableFuture[TreeViewParentResult] = {
+    Future {
+      treeView.parent(params)
+    }.asJava
+  }
 
   override def treeViewVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams
-  ): CompletableFuture[Unit] = ???
+  ): CompletableFuture[Unit] =
+    Future {
+      treeView.onVisibilityDidChange(params)
+    }.asJava
 
   override def treeViewNodeCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams
-  ): CompletableFuture[Unit] = ???
+  ): CompletableFuture[Unit] =
+    Future {
+      treeView.onCollapseDidChange(params)
+    }.asJava
+
+  override def treeViewReveal(
+      params: TextDocumentPositionParams
+  ): CompletableFuture[TreeViewNodeRevealResult] =
+    Future {
+      treeView
+        .reveal(
+          params.getTextDocument().getUri().toAbsolutePath,
+          params.getPosition(),
+        )
+        .orNull
+    }.asJava
+
+  override def findTextInDependencyJars(
+      params: FindTextInDependencyJarsRequest
+  ): CompletableFuture[ju.List[Location]] =
+    collectSeq(_.findTextInDependencyJars(params))(_.flatten.asJava).asJava
+
+  override def doctorVisibilityDidChange(
+      params: DoctorVisibilityDidChangeParams
+  ): CompletableFuture[Unit] =
+    params.folder.flatMap(getServiceForExactUri) match {
+      case Some(service) => service.doctorVisibilityDidChange(params)
+      case None => Future.successful(()).asJava
+    }
 
   override def didFocus(
       params: AnyRef
-  ): CompletableFuture[DidFocusResult.Value] = ???
-
-  override def windowStateDidChange(params: WindowStateDidChangeParams): Unit =
-    ???
-
-  def foreachSeq[A](
-      f: MetalsLspService => Future[A],
-      ignoreValue: Boolean = false,
-  ): CompletableFuture[Object] = {
-    val res = Future.sequence(folderServices.map(f))
-    if (ignoreValue) res.ignoreValue.asJavaObject
-    else res.asJavaObject
+  ): CompletableFuture[DidFocusResult.Value] = {
+    val uriOpt: Option[String] = params match {
+      case string: String =>
+        Option(string)
+      case (h: String) :: Nil =>
+        Option(h)
+      case _ =>
+        scribe.warn(
+          s"Unexpected notification params received for didFocusTextDocument: $params"
+        )
+        None
+    }
+    uriOpt match {
+      case Some(uri) => getServiceFor(uri).didFocus(uri)
+      case None =>
+        CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
+    }
   }
 
-  def collectSeq[A, B](f: MetalsLspService => Future[A])(
-      compose: List[A] => B
-  ): Future[B] =
-    Future.sequence(folderServices.map(f)).collect { case v => compose(v) }
+  override def windowStateDidChange(params: WindowStateDidChangeParams): Unit =
+    if (params.focused) {
+      folderServices.foreach(_.unpause())
+    } else {
+      folderServices.foreach(_.pause())
+    }
 
   override def executeCommand(
       params: ExecuteCommandParams
@@ -489,11 +580,9 @@ class WorkspaceLspService(
       case ServerCommands.ChooseClass(params) =>
         val uri = params.textDocument.getUri()
         getServiceFor(uri).chooseClass(uri, params.kind == "class").asJavaObject
-      case ServerCommands.RunDoctor() =>
-        Future {
-          doctor.onVisibilityDidChange(true)
-          doctor.executeRunDoctor()
-        }.asJavaObject
+      case ServerCommands.RunDoctor(params) =>
+        // .get() should be safe since we create those commands
+        getServiceForName(params.folderId).get.rundoctor().asJavaObject
       case ServerCommands.ListBuildTargets() =>
         Future { // TODO:: this probably should be per folder
           folderServices

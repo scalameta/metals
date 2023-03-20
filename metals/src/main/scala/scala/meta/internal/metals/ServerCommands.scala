@@ -10,6 +10,7 @@ import org.eclipse.lsp4j
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.wildfly.common.annotation.NotNull
 
 /**
  * LSP commands supported by the Metals language server.
@@ -182,13 +183,24 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  val RunDoctor = new Command(
+  final case class RunDoctorParams(
+      @NotNull folderId: String
+  )
+
+  val RunDoctor = new ParametrizedCommand[RunDoctorParams](
     "doctor-run",
     "Run doctor",
     """|Open the Metals doctor to troubleshoot potential problems with the build.
        |
        |This command can be helpful in scenarios where features are not working as expected such
        |as compile errors are not appearing or completions are not correct.
+       |""".stripMargin,
+    """|An object with of the workspace folder for which the doctor should be run.
+       |```json
+       |{
+       |  folderId: "root"
+       |}
+       |```
        |""".stripMargin,
   )
 

@@ -1775,11 +1775,11 @@ final case class TestingServer(
         sys.error(s"$path: not found pattern '$linePattern'")
       )
     val reveal =
-      headFolderWorkspaceServer.treeView
+      server.treeView
         .reveal(toPath(filename), new l.Position(line, 0))
         .get
     val parents = (reveal.uriChain :+ null).map { uri =>
-      headFolderWorkspaceServer.treeView.children(
+      server.treeView.children(
         TreeViewChildrenParams(reveal.viewId, uri)
       )
     }
@@ -1818,7 +1818,7 @@ final case class TestingServer(
   )(implicit loc: munit.Location): Unit = {
     val viewId: String = TreeViewProvider.Project
     val result =
-      headFolderWorkspaceServer.treeView
+      server.treeView
         .children(TreeViewChildrenParams(viewId, uri))
         .nodes
     val obtained = result
