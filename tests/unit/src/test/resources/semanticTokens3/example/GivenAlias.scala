@@ -3,7 +3,7 @@
 <<given>>/*keyword*/ <<intValue>>/*variable,readonly*/: <<Int>>/*class,abstract*/ = <<4>>/*number*/
 <<given>>/*keyword*/ <<String>>/*type*/ = <<"str">>/*string*/
 <<given>>/*keyword*/ (<<using>>/*keyword*/ <<i>>/*parameter,readonly*/: <<Int>>/*class,abstract*/): <<Double>>/*class,abstract*/ = <<4.0>>/*number*/
-<<given>>/*keyword*/ [<<T>>/*typeParameter,abstract*/]: <<List>>/*type*/[<<T>>/*typeParameter,abstract*/] = <<Nil>>/*variable,readonly*/
+<<given>>/*keyword*/ [<<T>>/*typeParameter,abstract*/]: <<List>>/*type*/[<<T>>/*typeParameter,abstract*/] = <<Nil>>/*class*/
 <<given>>/*keyword*/ <<given_Char>>/*variable,readonly*/: <<Char>>/*class,abstract*/ = <<'?'>>/*string*/
 <<given>>/*keyword*/ <<`given_Float`>>/*variable,readonly*/: <<Float>>/*class,abstract*/ = <<3.0>>/*number*/
 <<given>>/*keyword*/ <<`* *`>>/*variable,readonly*/ : <<Long>>/*class,abstract*/ = <<5>>/*number*/
@@ -32,7 +32,7 @@
   <<def>>/*keyword*/ <<doY>>/*method*/ = <<"7">>/*string*/
 
 <<given>>/*keyword*/ [<<T>>/*typeParameter,abstract*/]: <<Zg>>/*interface,abstract*/[<<T>>/*typeParameter,abstract*/] <<with>>/*keyword*/
-  <<def>>/*keyword*/ <<doZ>>/*method*/: <<List>>/*type*/[<<T>>/*typeParameter,abstract*/] = <<Nil>>/*variable,readonly*/
+  <<def>>/*keyword*/ <<doZ>>/*method*/: <<List>>/*type*/[<<T>>/*typeParameter,abstract*/] = <<Nil>>/*class*/
 
 <<val>>/*keyword*/ <<a>>/*variable,readonly*/ = <<intValue>>/*variable,readonly*/
 <<val>>/*keyword*/ <<b>>/*variable,readonly*/ = <<given_String>>/*variable,readonly*/

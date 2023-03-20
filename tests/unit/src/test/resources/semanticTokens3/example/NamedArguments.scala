@@ -3,7 +3,7 @@
 <<case>>/*keyword*/ <<class>>/*keyword*/ <<User>>/*class*/(
     <<name>>/*variable,readonly*/: <<String>>/*type*/ = {
       <<// assert default values have occurrences>>/*comment*/
-      <<Map>>/*variable,readonly*/.<<toString>>/*method*/
+      <<Map>>/*class*/.<<toString>>/*method*/
     }
 )
 <<object>>/*keyword*/ <<NamedArguments>>/*class*/ {
@@ -27,7 +27,7 @@
   ) <<def>>/*keyword*/ <<b>>/*method,deprecated*/ = <<1>>/*number*/
 
   <<// vararg>>/*comment*/
-  <<List>>/*variable,readonly*/(
+  <<List>>/*class*/(
     <<elems>>/*variable*/ = <<2>>/*number*/
   )
 
