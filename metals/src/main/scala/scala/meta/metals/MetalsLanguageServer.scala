@@ -11,6 +11,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Folder
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerInputs
@@ -20,7 +21,6 @@ import scala.meta.internal.metals.WorkspaceLspService
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
-import scala.meta.io.AbsolutePath
 import scala.meta.metals.ServerState.ShuttingDown
 import scala.meta.metals.lsp.DelegatingScalaService
 import scala.meta.metals.lsp.LanguageServer
@@ -151,7 +151,7 @@ class MetalsLanguageServer(
             )
             .asJava
         case Some(root) =>
-          val service = createService(List(("root", root)), params)
+          val service = createService(List(Folder(root, "root", None)), params)
 
           setupJna()
           MetalsLogger.setupLspLogger(root, redirectSystemOut)
@@ -181,7 +181,7 @@ class MetalsLanguageServer(
   }
 
   private def createService(
-      workspaceFolders: List[(String, AbsolutePath)],
+      workspaceFolders: List[Folder],
       initializeParams: InitializeParams,
   ): WorkspaceLspService = new WorkspaceLspService(
     ec,

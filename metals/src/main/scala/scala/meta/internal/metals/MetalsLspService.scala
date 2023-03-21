@@ -125,12 +125,15 @@ class MetalsLspService(
     initTreeView: () => Unit,
     val folder: AbsolutePath,
     val folderId: String,
+    folderVisibleName: Option[String],
 ) extends Cancelable
     with TextDocumentService {
   import serverInputs._
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
+
+  def getVisibleName: String = folderVisibleName.getOrElse(folder.toString())
 
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)

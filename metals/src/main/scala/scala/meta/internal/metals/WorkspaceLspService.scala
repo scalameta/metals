@@ -96,7 +96,7 @@ class WorkspaceLspService(
     serverInputs: MetalsServerInputs,
     client: MetalsLanguageClient,
     initializeParams: lsp4j.InitializeParams,
-    val folders: List[(String, AbsolutePath)],
+    val folders: List[Folder],
 ) extends ScalaLspService {
   import serverInputs._
   implicit val ex: ExecutionContextExecutorService = ec
@@ -127,10 +127,10 @@ class WorkspaceLspService(
   private val recentlyFocusedFiles = new ActiveFiles(time)
 
   val folderServices: List[MetalsLspService] = folders
-    .withFilter { case (_, uri) =>
+    .withFilter { case Folder(uri, _, _) =>
       !BuildTools.default(uri).isEmpty
     }
-    .map { case (name, uri) =>
+    .map { case Folder(uri, id, name) =>
       new MetalsLspService(
         ec,
         sh,
@@ -145,6 +145,7 @@ class WorkspaceLspService(
         timerProvider,
         initTreeView,
         uri,
+        id,
         name,
       )
     }
@@ -177,13 +178,19 @@ class WorkspaceLspService(
     clientConfig,
     shellRunner,
     clientConfig.icons,
-    folders.head._2,
+    folders.head.uri,
   )
 
   private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
     folderServices.map(_.gitHubIssueFolderInfo),
     initializeParams.getClientInfo(),
   )
+
+  private val workspaceChoicePopup: WorkspaceChoicePopup =
+    new WorkspaceChoicePopup(
+      () => folderServices,
+      languageClient,
+    )
 
   def register[T <: Cancelable](cancelable: T): T = {
     cancelables.add(cancelable)
@@ -209,23 +216,31 @@ class WorkspaceLspService(
     folder.getOrElse(folderServices.head) // fallback to the first one
   }
 
-  def currentService(): Option[MetalsLspService] =
-    folderServices match {
-      case head :: Nil => Some(head)
-      case _ => focusedDocument.map(getServiceFor)
-    }
-
-  def onCurrentFolder(f: MetalsLspService => Future[Unit]): Future[Unit] =
-    currentService() match {
+  def onCurrentFolder(
+      f: MetalsLspService => Future[Unit],
+      actionName: String,
+  ): Future[Unit] = {
+    def currentService(): Future[Option[MetalsLspService]] =
+      folderServices match {
+        case head :: Nil => Future { Some(head) }
+        case _ =>
+          focusedDocument.map(getServiceFor) match {
+            case Some(service) => Future { Some(service) }
+            case None =>
+              workspaceChoicePopup.interactiveChooseFolder(actionName)
+          }
+      }
+    currentService().flatMap {
       case Some(service) => f(service)
       case None =>
         languageClient
           .showMessage(
             lsp4j.MessageType.Info,
-            "No workspace folder chosen to execute the command for.",
+            s"No workspace folder chosen to execute $actionName.",
           )
         Future.successful(())
     }
+  }
 
   def getServiceForName(
       workspaceFolder: String
@@ -526,7 +541,10 @@ class WorkspaceLspService(
   override def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
   ): CompletableFuture[Unit] =
-    onCurrentFolder(_.doctorVisibilityDidChange(params)).asJava
+    onCurrentFolder(
+      _.doctorVisibilityDidChange(params),
+      "change doctor visibility",
+    ).asJava
 
   override def didFocus(
       params: AnyRef
@@ -599,7 +617,7 @@ class WorkspaceLspService(
         val uri = params.textDocument.getUri()
         getServiceFor(uri).chooseClass(uri, params.kind == "class").asJavaObject
       case ServerCommands.RunDoctor() =>
-        onCurrentFolder(_.rundoctor()).asJavaObject
+        onCurrentFolder(_.rundoctor(), "run doctor").asJavaObject
       case ServerCommands.ListBuildTargets() =>
         Future {
           folderServices
@@ -657,27 +675,30 @@ class WorkspaceLspService(
           }
         }.asJavaObject
       case ServerCommands.GotoLog() =>
-        onCurrentFolder { service =>
-          Future {
-            val log = service.folder.resolve(Directories.log)
-            val linesCount = log.readText.linesIterator.size
-            val pos = new lsp4j.Position(linesCount, 0)
-            val location = new Location(
-              log.toURI.toString(),
-              new lsp4j.Range(pos, pos),
-            )
-            languageClient.metalsExecuteClientCommand(
-              ClientCommands.GotoLocation.toExecuteCommandParams(
-                ClientCommands.WindowLocation(
-                  location.getUri(),
-                  location.getRange(),
+        onCurrentFolder(
+          service =>
+            Future {
+              val log = service.folder.resolve(Directories.log)
+              val linesCount = log.readText.linesIterator.size
+              val pos = new lsp4j.Position(linesCount, 0)
+              val location = new Location(
+                log.toURI.toString(),
+                new lsp4j.Range(pos, pos),
+              )
+              languageClient.metalsExecuteClientCommand(
+                ClientCommands.GotoLocation.toExecuteCommandParams(
+                  ClientCommands.WindowLocation(
+                    location.getUri(),
+                    location.getRange(),
+                  )
                 )
               )
-            )
-          }
-        }.asJavaObject
+            },
+          "go to log",
+        ).asJavaObject
 
-      // case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
+      case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
+        ???
       // TODO::
       // debugProvider
       //   .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
@@ -1023,5 +1044,6 @@ class WorkspaceLspService(
         }
     } else Future.unit
   }
-
 }
+// TODO:: delete id, uri is enough
+case class Folder(uri: AbsolutePath, id: String, visibleName: Option[String])
