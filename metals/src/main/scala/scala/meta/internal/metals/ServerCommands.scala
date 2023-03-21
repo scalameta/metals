@@ -10,7 +10,6 @@ import org.eclipse.lsp4j
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import org.wildfly.common.annotation.NotNull
 
 /**
  * LSP commands supported by the Metals language server.
@@ -183,11 +182,7 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  final case class RunDoctorParams(
-      @NotNull folderId: String
-  )
-
-  val RunDoctor = new ParametrizedCommand[RunDoctorParams](
+  val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
     """|Open the Metals doctor to troubleshoot potential problems with the build.
@@ -628,15 +623,10 @@ object ServerCommands {
          |""".stripMargin,
     )
 
-  case class FolderIdentifier(
-      uri: String
-  )
-
-  val GotoLog = new ParametrizedCommand[FolderIdentifier](
+  val GotoLog = new Command(
     "goto-log",
     "Check logs",
     "Open the Metals logs to troubleshoot issues.",
-    ???, // TODO::
   )
 
   val OpenIssue = new Command(

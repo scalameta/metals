@@ -6,18 +6,17 @@ import scala.concurrent.Future
 import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.services.LanguageClient
 
 class PopupChoiceReset(
     workspace: AbsolutePath,
     tables: Tables,
-    languageClient: MetalsLanguageClient,
     doctor: Doctor,
     slowConnect: () => Future[BuildChange],
     bspConnector: BspConnector,
@@ -48,8 +47,17 @@ class PopupChoiceReset(
     result.foreach(_ => doctor.executeRefreshDoctor())
     result
   }
+}
 
-  def interactiveReset()(implicit ec: ExecutionContext): Future[Unit] = {
+object PopupChoiceReset {
+  final val BuildTool = "Build tool selection"
+  final val BuildImport = "Build import"
+  final val BuildServer = "Build server selection"
+
+  def interactiveReset(
+      languageClient: LanguageClient,
+      reset: String => Future[Unit],
+  )(implicit ec: ExecutionContext): Future[Unit] = {
     def choicesParams(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
@@ -83,10 +91,4 @@ class PopupChoiceReset(
         }
       }
   }
-}
-
-object PopupChoiceReset {
-  final val BuildTool = "Build tool selection"
-  final val BuildImport = "Build import"
-  final val BuildServer = "Build server selection"
 }

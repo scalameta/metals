@@ -628,6 +628,5 @@ final class Doctor(
 }
 
 case class DoctorVisibilityDidChangeParams(
-    folder: Option[String],
-    visible: Boolean,
+    visible: Boolean
 )

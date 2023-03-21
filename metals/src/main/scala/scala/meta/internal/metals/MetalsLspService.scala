@@ -79,12 +79,10 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
-import scala.meta.pc.DisplayableException
 import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
-import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
@@ -123,6 +121,8 @@ class MetalsLspService(
     statusBar: StatusBar,
     focusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
+    timerProvider: TimerProvider,
+    initTreeView: () => Unit,
     val folder: AbsolutePath,
     val folderId: String,
 ) extends Cancelable
@@ -223,7 +223,7 @@ class MetalsLspService(
     () => testProvider.refreshTestSuites(),
     () => {
       if (clientConfig.isDoctorVisibilityProvider())
-        ??? // doctor.executeRefreshDoctor()
+        doctor.executeRefreshDoctor()
       else ()
     },
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
@@ -236,7 +236,10 @@ class MetalsLspService(
       () => folder,
       buildTargets,
       fileWatchFilter,
-      params => didChangeWatchedFiles(params),
+      params => {
+        didChangeWatchedFiles(params, ???)
+        initTreeView()
+      },
     )
   )
   val indexingPromise: Promise[Unit] = Promise[Unit]()
@@ -249,18 +252,16 @@ class MetalsLspService(
       Cancelable.empty,
     )
   )
-  private val onBuildChanged =
+  private def onBuildChanged =
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
       onBuildChangedUnbatched
     )
-  val pauseables: Pauseable = Pauseable.fromPausables(
+  def pauseables: Pauseable = Pauseable.fromPausables(
     onBuildChanged ::
       parseTrees ::
       compilations.pauseables
   )
 
-  private val timerProvider: TimerProvider =
-    new TimerProvider(time) // TODO:: one may be enough
   private val trees = new Trees(buffers, scalaVersionSelector, folder)
 
   private val documentSymbolProvider = new DocumentSymbolProvider(
@@ -363,7 +364,8 @@ class MetalsLspService(
       statusBar,
       time,
       report => {
-        didCompileTarget(report)
+        didCompileTarget(report, ???)
+        initTreeView()
         compilers.didCompile(report)
       },
       onBuildTargetDidCompile = { target =>
@@ -376,7 +378,10 @@ class MetalsLspService(
         }
         worksheetProvider.onBuildTargetDidCompile(target)
       },
-      onBuildTargetDidChangeFunc = maybeQuickConnectToBuildServer,
+      onBuildTargetDidChangeFunc = params => {
+        maybeQuickConnectToBuildServer(params)
+        initTreeView()
+      },
     )
 
   private val bloopServers: BloopServers = new BloopServers(
@@ -765,11 +770,18 @@ class MetalsLspService(
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
     folder,
     tables,
-    languageClient,
     doctor,
-    () => slowConnectToBuildServer(forceImport = true),
+    () => {
+      val res = slowConnectToBuildServer(forceImport = true)
+      initTreeView()
+      res
+    },
     bspConnector,
-    () => quickConnectToBuildServer(),
+    () => {
+      val res = quickConnectToBuildServer()
+      initTreeView()
+      res
+    },
   )
   private val findTextInJars: FindTextInDependencyJars =
     new FindTextInDependencyJars(
@@ -915,6 +927,81 @@ class MetalsLspService(
   def onShutdown(): Unit = {
     tables.fingerprints.save(fingerprints.getAllFingerprints())
     cancel()
+  }
+
+  def onUserConfigUpdate(old: UserConfiguration): Future[Unit] = {
+    if (userConfig().excludedPackages != old.excludedPackages) {
+      excludedPackageHandler = ExcludedPackagesHandler.fromUserConfiguration(
+        userConfig().excludedPackages.getOrElse(Nil)
+      )
+      workspaceSymbols.indexClasspath()
+    }
+
+    userConfig().fallbackScalaVersion.foreach { version =>
+      if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
+        val params =
+          Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
+            version
+          )
+        languageClient.showMessage(params)
+      }
+    }
+
+    if (userConfig().symbolPrefixes != old.symbolPrefixes) {
+      compilers.restartAll()
+    }
+
+    val resetDecorations =
+      if (
+        userConfig().showImplicitArguments != old.showImplicitArguments ||
+        userConfig().showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
+        userConfig().showInferredType != old.showInferredType
+      ) {
+        buildServerPromise.future.flatMap { _ =>
+          syntheticsDecorator.refresh()
+        }
+      } else {
+        Future.successful(())
+      }
+
+    val restartBuildServer = bspSession
+      .map { session =>
+        if (session.main.isBloop) {
+          bloopServers
+            .ensureDesiredVersion(
+              userConfig().currentBloopVersion,
+              session.version,
+              userConfig().bloopVersion.nonEmpty,
+              old.bloopVersion.isDefined,
+              () => autoConnectToBuildServer,
+            )
+            .flatMap { _ =>
+              bloopServers.ensureDesiredJvmSettings(
+                userConfig().bloopJvmProperties,
+                userConfig().javaHome,
+                () => autoConnectToBuildServer(),
+              )
+            }
+        } else if (
+          userConfig().ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
+            .exists(Ammonite.isAmmBuildTarget)
+        ) {
+          languageClient
+            .showMessageRequest(Messages.AmmoniteJvmParametersChange.params())
+            .asScala
+            .flatMap {
+              case item
+                  if item == Messages.AmmoniteJvmParametersChange.restart =>
+                ammonite.reload()
+              case _ =>
+                Future.successful(())
+            }
+        } else {
+          Future.successful(())
+        }
+      }
+      .getOrElse(Future.successful(()))
+    Future.sequence(List(restartBuildServer, resetDecorations)).map(_ => ())
   }
 
   override def didOpen(
@@ -1087,7 +1174,10 @@ class MetalsLspService(
       .asJava
   }
 
-  private def didCompileTarget(report: CompileReport): Unit = {
+  private def didCompileTarget(
+      report: CompileReport,
+      treeView: TreeViewProvider,
+  ): Unit = {
     if (!isReliableFileWatcher) {
       // NOTE(olafur) this step is exclusively used when running tests on
       // non-Linux computers to avoid flaky failures caused by delayed file
@@ -1100,7 +1190,7 @@ class MetalsLspService(
         generatedFile <- semanticdb.listRecursive
       } {
         val event = FileWatcherEvent.createOrModify(generatedFile.toNIO)
-        didChangeWatchedFiles(event).get()
+        didChangeWatchedFiles(event, treeView).get()
       }
     }
   }
@@ -1137,7 +1227,8 @@ class MetalsLspService(
    * anything expensive on the main thread
    */
   private def didChangeWatchedFiles(
-      event: FileWatcherEvent
+      event: FileWatcherEvent,
+      treeView: TreeViewProvider,
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
@@ -1641,6 +1732,24 @@ class MetalsLspService(
   def ammoniteStart(): Future[Unit] = ammonite.start()
   def ammoniteStop(): Future[Unit] = ammonite.stop()
 
+  def switchBspServer(): Future[Unit] =
+    for {
+      isSwitched <- bspConnector.switchBuildServer(
+        folder,
+        () => slowConnectToBuildServer(forceImport = true),
+      )
+      _ <- {
+        if (isSwitched) quickConnectToBuildServer()
+        else Future.successful(())
+      }
+    } yield ()
+
+  def resetPopupChoice(value: String): Future[Unit] =
+    popupChoiceReset.reset(value)
+
+  def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
+    stacktraceAnalyzer.analyzeCommand(content)
+
   def executeCommand(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] = {
@@ -1656,19 +1765,9 @@ class MetalsLspService(
       case ServerCommands.DiscoverMainClasses(_) => ???
       case ServerCommands.RunScalafix(_) => ???
       case ServerCommands.ChooseClass(_) => ???
-      case ServerCommands.RunDoctor(_) => ???
+      case ServerCommands.RunDoctor => ???
       case ServerCommands.ListBuildTargets() => ???
-      case ServerCommands.BspSwitch() =>
-        (for {
-          isSwitched <- bspConnector.switchBuildServer(
-            folder,
-            () => slowConnectToBuildServer(forceImport = true),
-          )
-          _ <- {
-            if (isSwitched) quickConnectToBuildServer()
-            else Future.successful(())
-          }
-        } yield ()).asJavaObject
+      case ServerCommands.BspSwitch() => ???
       case ServerCommands.OpenIssue() => ???
       case OpenBrowserCommand(_) => ???
       case ServerCommands.CascadeCompile() => ???
@@ -1677,7 +1776,7 @@ class MetalsLspService(
       case ServerCommands.PresentationCompilerRestart() => ???
       case ServerCommands.GotoPosition(_) => ???
       case ServerCommands.GotoSymbol(_) => ???
-      case ServerCommands.GotoLog(_) => ???
+      case ServerCommands.GotoLog => ???
       case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
         debugProvider
           .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
@@ -1723,23 +1822,21 @@ class MetalsLspService(
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
         }.asJavaObject
 
-      case ServerCommands.GotoSuperMethod(_) => ???
-      case ServerCommands.SuperMethodHierarchy(_) => ???
-      case ServerCommands.ResetChoicePopup() =>
-        val argsMaybe = Option(params.getArguments())
-        (argsMaybe.flatMap(_.asScala.headOption) match {
-          case Some(arg: JsonPrimitive) =>
-            val value = arg.getAsString().replace("+", " ")
-            scribe.debug(
-              s"Executing ResetChoicePopup ${params.getCommand()} for choice ${value}"
-            )
-            popupChoiceReset.reset(value)
-          case _ =>
-            scribe.debug(
-              s"Executing ResetChoicePopup ${params.getCommand()} in interactive mode."
-            )
-            popupChoiceReset.interactiveReset()
-        }).asJavaObject
+      case ServerCommands.ResetChoicePopup() => ???
+      // val argsMaybe = Option(params.getArguments())
+      // (argsMaybe.flatMap(_.asScala.headOption) match {
+      //   case Some(arg: JsonPrimitive) =>
+      //     val value = arg.getAsString().replace("+", " ")
+      //     scribe.debug(
+      //       s"Executing ResetChoicePopup ${params.getCommand()} for choice ${value}"
+      //     )
+      //     popupChoiceReset.reset(value)
+      //   case _ =>
+      //     scribe.debug(
+      //       s"Executing ResetChoicePopup ${params.getCommand()} in interactive mode."
+      //     )
+      //     popupChoiceReset.interactiveReset()
+      // }).asJavaObject
 
       case ServerCommands.ResetNotifications() => ???
       case ServerCommands.NewScalaFile(_) => ???
@@ -1754,23 +1851,7 @@ class MetalsLspService(
           if codeActionProvider.allActionCommandsIds(
             actionCommand.getCommand()
           ) =>
-        val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
-          case e: DisplayableException => e.getMessage()
-          case e: Exception if (e.getCause() match {
-                case _: DisplayableException => true
-                case _ => false
-              }) =>
-            e.getCause().getMessage()
-        }
-        CancelTokens.future { token =>
-          codeActionProvider
-            .executeCommands(params, token)
-            .recover(
-              getOptDisplayableMessage andThen (languageClient
-                .showMessage(l.MessageType.Info, _))
-            )
-            .withObjectValue
-        }
+        ???
       case _ => ???
     }
   }
@@ -1783,10 +1864,10 @@ class MetalsLspService(
 
   def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
-  ): CompletableFuture[Unit] =
+  ): Future[Unit] =
     Future {
       doctor.onVisibilityDidChange(params.visible)
-    }.asJava
+    }
 
   def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
@@ -2040,7 +2121,6 @@ class MetalsLspService(
         case None =>
           Future.successful(BuildChange.None)
       }
-      // _ = treeView.init() TODO::
     } yield result)
       .recover { case NonFatal(e) =>
         disconnectOldBuildServer()
@@ -2163,7 +2243,7 @@ class MetalsLspService(
     () => interactiveSemanticdbs,
     () => buildClient,
     () => semanticDBIndexer,
-    () => ???, // TODO:: treeView,
+    () => treeView,
     () => worksheetProvider,
     () => symbolSearch,
     () => buildTools,
@@ -2226,7 +2306,9 @@ class MetalsLspService(
   ): Future[BuildChange] = {
     val isBuildChange = paths.exists(buildTools.isBuildRelated(folder, _))
     if (isBuildChange) {
-      slowConnectToBuildServer(forceImport = false)
+      val res = slowConnectToBuildServer(forceImport = false)
+      initTreeView()
+      res
     } else {
       Future.successful(BuildChange.None)
     }

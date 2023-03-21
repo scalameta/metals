@@ -8,6 +8,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
+import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.BuildTools
@@ -42,6 +43,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
@@ -110,7 +112,7 @@ class WorkspaceLspService(
     val languageClient = new ConfiguredLanguageClient(client, clientConfig)
     // Set the language client so that we can forward log messages to the client
     LanguageClientLogger.languageClient = Some(languageClient)
-    // TODO:: cancelables.add(() => languageClient.shutdown())
+    cancelables.add(() => languageClient.shutdown())
     languageClient
   }
 
@@ -140,6 +142,8 @@ class WorkspaceLspService(
         statusBar,
         () => focusedDocument,
         shellRunner,
+        timerProvider,
+        initTreeView,
         uri,
         name,
       )
@@ -164,6 +168,8 @@ class WorkspaceLspService(
         sh,
       )
     } else NoopTreeViewProvider
+
+  def initTreeView(): Unit = treeView.init()
 
   private val newProjectProvider: NewProjectProvider = new NewProjectProvider(
     languageClient,
@@ -203,6 +209,24 @@ class WorkspaceLspService(
     folder.getOrElse(folderServices.head) // fallback to the first one
   }
 
+  def currentService(): Option[MetalsLspService] =
+    folderServices match {
+      case head :: Nil => Some(head)
+      case _ => focusedDocument.map(getServiceFor)
+    }
+
+  def onCurrentFolder(f: MetalsLspService => Future[Unit]): Future[Unit] =
+    currentService() match {
+      case Some(service) => f(service)
+      case None =>
+        languageClient
+          .showMessage(
+            lsp4j.MessageType.Info,
+            "No workspace folder chosen to execute the command for.",
+          )
+        Future.successful(())
+    }
+
   def getServiceForName(
       workspaceFolder: String
   ): Option[MetalsLspService] =
@@ -222,8 +246,13 @@ class WorkspaceLspService(
   def foreachSeq[A](
       f: MetalsLspService => Future[A],
       ignoreValue: Boolean = false,
+      withF: Option[() => Unit] = None,
   ): CompletableFuture[Object] = {
-    val res = Future.sequence(folderServices.map(f))
+    val res0 = Future.sequence(folderServices.map(f))
+    val res = withF match {
+      case Some(f) => res0.andThen { case Success(_) => f() }
+      case None => res0
+    }
     if (ignoreValue) res.ignoreValue.asJavaObject
     else res.asJavaObject
   }
@@ -414,88 +443,16 @@ class WorkspaceLspService(
     updateConfiguration(metalsSection).asJava
   }
 
-  private def updateConfiguration(json: JsonObject): Future[Unit] = {
-    ???
-    // UserConfiguration.fromJson(json, clientConfig) match {
-    //   case Left(errors) =>
-    //     errors.foreach { error => scribe.error(s"config error: $error") }
-    //     Future.successful(())
-    //   case Right(newUserConfig) =>
-    //     val old = userConfig
-    //     userConfig = newUserConfig
-    //     if (userConfig.excludedPackages != old.excludedPackages) {
-    //       excludedPackageHandler =
-    //         ExcludedPackagesHandler.fromUserConfiguration(
-    //           userConfig.excludedPackages.getOrElse(Nil)
-    //         )
-    //       workspaceSymbols.indexClasspath()
-    //     }
-
-    //     userConfig.fallbackScalaVersion.foreach { version =>
-    //       if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
-    //         val params =
-    //           Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
-    //             version
-    //           )
-    //         languageClient.showMessage(params)
-    //       }
-    //     }
-
-    //     if (userConfig.symbolPrefixes != old.symbolPrefixes) {
-    //       compilers.restartAll()
-    //     }
-
-    //     val resetDecorations =
-    //       if (
-    //         userConfig.showImplicitArguments != old.showImplicitArguments ||
-    //         userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
-    //         userConfig.showInferredType != old.showInferredType
-    //       ) {
-    //         buildServerPromise.future.flatMap { _ =>
-    //           syntheticsDecorator.refresh()
-    //         }
-    //       } else {
-    //         Future.successful(())
-    //       }
-
-    //     val restartBuildServer = bspSession
-    //       .map { session =>
-    //         if (session.main.isBloop) {
-    //           bloopServers
-    //             .ensureDesiredVersion(
-    //               userConfig.currentBloopVersion,
-    //               session.version,
-    //               userConfig.bloopVersion.nonEmpty,
-    //               old.bloopVersion.isDefined,
-    //               () => autoConnectToBuildServer,
-    //             )
-    //             .flatMap { _ =>
-    //               bloopServers.ensureDesiredJvmSettings(
-    //                 userConfig.bloopJvmProperties,
-    //                 userConfig.javaHome,
-    //                 () => autoConnectToBuildServer(),
-    //               )
-    //             }
-    //         } else if (
-    //           userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
-    //             .exists(Ammonite.isAmmBuildTarget)
-    //         ) {
-    //           languageClient
-    //             .showMessageRequest(Messages.AmmoniteJvmParametersChange.params())
-    //             .asScala
-    //             .flatMap {
-    //               case item if item == Messages.AmmoniteJvmParametersChange.restart =>
-    //                 ammonite.reload()
-    //               case _ =>
-    //                 Future.successful(())
-    //             }
-    //         } else {
-    //           Future.successful(())
-    //         }
-    //       }
-    //       .getOrElse(Future.successful(()))
-    //     Future.sequence(List(restartBuildServer, resetDecorations)).map(_ => ())
-  }
+  private def updateConfiguration(json: JsonObject): Future[Unit] =
+    UserConfiguration.fromJson(json, clientConfig) match {
+      case Left(errors) =>
+        errors.foreach { error => scribe.error(s"config error: $error") }
+        Future.successful(())
+      case Right(newUserConfig) =>
+        val old = userConfig
+        userConfig = newUserConfig
+        collectSeq(_.onUserConfigUpdate(old))(_ => ())
+    }
 
   override def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
@@ -569,10 +526,7 @@ class WorkspaceLspService(
   override def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
   ): CompletableFuture[Unit] =
-    params.folder.flatMap(getServiceForExactUri) match {
-      case Some(service) => service.doctorVisibilityDidChange(params)
-      case None => Future.successful(()).asJava
-    }
+    onCurrentFolder(_.doctorVisibilityDidChange(params)).asJava
 
   override def didFocus(
       params: AnyRef
@@ -597,6 +551,8 @@ class WorkspaceLspService(
     }
   }
 
+  def withTreeViewInit() {}
+
   override def windowStateDidChange(params: WindowStateDidChangeParams): Unit =
     if (params.focused) {
       folderServices.foreach(_.unpause())
@@ -611,13 +567,21 @@ class WorkspaceLspService(
       case ServerCommands.ScanWorkspaceSources() =>
         foreachSeq(_.indexSources(), ignoreValue = true)
       case ServerCommands.RestartBuildServer() =>
-        foreachSeq(_.restartBuildServer())
+        // TODO:: this shouldn't be done foreach, since there is only one bloop server
+        foreachSeq(_.restartBuildServer(), withF = Some(initTreeView))
       case ServerCommands.GenerateBspConfig() =>
-        foreachSeq(_.generateBspConfig(), ignoreValue = true)
+        foreachSeq(
+          _.generateBspConfig(),
+          ignoreValue = true,
+          withF = Some(initTreeView),
+        )
       case ServerCommands.ImportBuild() =>
-        foreachSeq(_.slowConnectToBuildServer(forceImport = true))
+        foreachSeq(
+          _.slowConnectToBuildServer(forceImport = true),
+          withF = Some(initTreeView),
+        )
       case ServerCommands.ConnectBuildServer() =>
-        foreachSeq(_.quickConnectToBuildServer())
+        foreachSeq(_.quickConnectToBuildServer(), withF = Some(initTreeView))
       case ServerCommands.DisconnectBuildServer() =>
         foreachSeq(_.disconnectOldBuildServer(), ignoreValue = true)
       case ServerCommands.DecodeFile(uri) =>
@@ -634,10 +598,10 @@ class WorkspaceLspService(
       case ServerCommands.ChooseClass(params) =>
         val uri = params.textDocument.getUri()
         getServiceFor(uri).chooseClass(uri, params.kind == "class").asJavaObject
-      case ServerCommands.RunDoctor(params) =>
-        getServiceFor(params.folderId).rundoctor().asJavaObject
+      case ServerCommands.RunDoctor() =>
+        onCurrentFolder(_.rundoctor()).asJavaObject
       case ServerCommands.ListBuildTargets() =>
-        Future { // TODO:: this probably should be per folder
+        Future {
           folderServices
             .flatMap(
               _.buildTargets.all.toList
@@ -646,17 +610,8 @@ class WorkspaceLspService(
             )
             .asJava
         }.asJavaObject
-      //   case ServerCommands.BspSwitch() =>
-      //     (for {
-      //       isSwitched <- bspConnector.switchBuildServer(
-      //         workspace,
-      //         () => slowConnectToBuildServer(forceImport = true),
-      //       )
-      //       _ <- {
-      //         if (isSwitched) quickConnectToBuildServer()
-      //         else Future.successful(())
-      //       }
-      //     } yield ()).asJavaObject
+      case ServerCommands.BspSwitch() =>
+        foreachSeq(_.switchBspServer(), withF = Some(initTreeView))
       case ServerCommands.OpenIssue() =>
         Future
           .successful(Urls.openBrowser(githubNewIssueUrlCreator.buildUrl()))
@@ -701,34 +656,35 @@ class WorkspaceLspService(
             )
           }
         }.asJavaObject
-      case ServerCommands.GotoLog(params: ServerCommands.FolderIdentifier) =>
-        Future {
-          val log = getServiceFor(params.uri).folder.resolve(Directories.log)
-          val linesCount = log.readText.linesIterator.size
-          val pos = new lsp4j.Position(linesCount, 0)
-          val location = new Location(
-            log.toURI.toString(),
-            new lsp4j.Range(pos, pos),
-          )
-          languageClient.metalsExecuteClientCommand(
-            ClientCommands.GotoLocation.toExecuteCommandParams(
-              ClientCommands.WindowLocation(
-                location.getUri(),
-                location.getRange(),
+      case ServerCommands.GotoLog() =>
+        onCurrentFolder { service =>
+          Future {
+            val log = service.folder.resolve(Directories.log)
+            val linesCount = log.readText.linesIterator.size
+            val pos = new lsp4j.Position(linesCount, 0)
+            val location = new Location(
+              log.toURI.toString(),
+              new lsp4j.Range(pos, pos),
+            )
+            languageClient.metalsExecuteClientCommand(
+              ClientCommands.GotoLocation.toExecuteCommandParams(
+                ClientCommands.WindowLocation(
+                  location.getUri(),
+                  location.getRange(),
+                )
               )
             )
-          )
+          }
         }.asJavaObject
 
-      case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
-        ??? // TODO::
+      // case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
+      // TODO::
       // debugProvider
       //   .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
       //   .flatMap(_ => debugProvider.asSession(params))
       //   .asJavaObject
 
-      case ServerCommands.StartMainClass(params) if params.mainClass != null =>
-        ???
+      // case ServerCommands.StartMainClass(params) if params.mainClass != null =>
       // debugProvider
       //   .resolveMainClassParams(params)
       //   .flatMap(debugProvider.asSession)
@@ -760,12 +716,15 @@ class WorkspaceLspService(
       //       .flatMap(debugProvider.asSession)
       //       .asJavaObject
 
-      //   case ServerCommands.AnalyzeStacktrace(content) =>
-      //     Future {
-      //       val command = stacktraceAnalyzer.analyzeCommand(content)
-      //       command.foreach(languageClient.metalsExecuteClientCommand)
-      //       scribe.debug(s"Executing AnalyzeStacktrace ${command}")
-      //     }.asJavaObject
+      case ServerCommands.AnalyzeStacktrace(content) =>
+        Future {
+          // Getting the service for focused document and first one otherwise
+          val service =
+            focusedDocument.map(getServiceFor).getOrElse(folderServices.head)
+          val command = service.analyzeStackTrace(content)
+          command.foreach(languageClient.metalsExecuteClientCommand)
+          scribe.debug(s"Executing AnalyzeStacktrace ${command}")
+        }.asJavaObject
 
       case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
         getServiceFor(textDocumentPositionParams.getTextDocument().getUri())
@@ -776,21 +735,23 @@ class WorkspaceLspService(
         getServiceFor(textDocumentPositionParams.getTextDocument().getUri())
           .superMethodHierarchy(textDocumentPositionParams)
 
-      //   case ServerCommands.ResetChoicePopup() =>
-      //     val argsMaybe = Option(params.getArguments())
-      //     (argsMaybe.flatMap(_.asScala.headOption) match {
-      //       case Some(arg: JsonPrimitive) =>
-      //         val value = arg.getAsString().replace("+", " ")
-      //         scribe.debug(
-      //           s"Executing ResetChoicePopup ${params.getCommand()} for choice ${value}"
-      //         )
-      //         popupChoiceReset.reset(value)
-      //       case _ =>
-      //         scribe.debug(
-      //           s"Executing ResetChoicePopup ${params.getCommand()} in interactive mode."
-      //         )
-      //         popupChoiceReset.interactiveReset()
-      //     }).asJavaObject
+      case ServerCommands.ResetChoicePopup() =>
+        def resetPopupChoice(value: String) =
+          collectSeq(_.resetPopupChoice(value))(_ => ())
+        val argsMaybe = Option(params.getArguments())
+        (argsMaybe.flatMap(_.asScala.headOption) match {
+          case Some(arg: JsonPrimitive) =>
+            val value = arg.getAsString().replace("+", " ")
+            scribe.debug(
+              s"Executing ResetChoicePopup ${params.getCommand()} for choice ${value}"
+            )
+            resetPopupChoice(value)
+          case _ =>
+            scribe.debug(
+              s"Executing ResetChoicePopup ${params.getCommand()} in interactive mode."
+            )
+            PopupChoiceReset.interactiveReset(languageClient, resetPopupChoice)
+        }).asJavaObject
 
       case ServerCommands.ResetNotifications() =>
         foreachSeq(_.resetNotifications(), ignoreValue = true)
@@ -985,6 +946,7 @@ class WorkspaceLspService(
     syncUserconfiguration().flatMap { _ =>
       Future
         .sequence(folderServices.map(_.initialized()))
+        .andThen { case Success(_) => treeView.init() }
         .ignoreValue
     }
   }

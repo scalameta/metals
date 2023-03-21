@@ -65,10 +65,7 @@ class MetalsTreeViewProvider(
     val children: Array[TreeViewNode] = params.viewId match {
       case Help =>
         Array(
-          echoCommand(
-            ServerCommands.RunDoctor,
-            "bug",
-          ), // TODO:: we need to add arg here
+          echoCommand(ServerCommands.RunDoctor, "bug"),
           echoCommand(ServerCommands.GotoLog, "bug"),
           echoCommand(ServerCommands.ReadVscodeDocumentation, "book"),
           echoCommand(ServerCommands.ReadBloopDocumentation, "book"),
