@@ -264,9 +264,6 @@ class SymbolIndexBucket(
         if (occ.symbol.isGlobal && occ.role.isDefinition) {
           val acc = definitions.getOrElse(occ.symbol, Set.empty)
           definitions.put(occ.symbol, acc + SymbolLocation(file, occ.range))
-
-          // val acc = definitions.getOrElse(occ.symbol, Set.empty)
-          // definitions.put(occ.symbol, acc + SymbolLocation(file, occ.range))
         } else {
           // do nothing, we only care about global symbol definitions.
         }
