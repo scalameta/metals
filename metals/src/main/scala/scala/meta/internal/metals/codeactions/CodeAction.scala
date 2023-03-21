@@ -4,8 +4,8 @@ import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.CodeActionCommand
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -19,7 +19,7 @@ trait CodeAction {
   def kind: String
 
   type CommandData
-  type ActionCommand = ParametrizedCommand[CommandData]
+  type ActionCommand = CodeActionCommand[CommandData]
   def command: Option[ActionCommand] = None
 
   @nowarn
@@ -30,6 +30,7 @@ trait CodeAction {
   def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
+      folderId: String,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]]
 
   implicit val actionDiagnosticOrdering: Ordering[l.CodeAction] =

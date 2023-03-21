@@ -27,7 +27,11 @@ class ExtractValueCodeAction(
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorExtract
 
-  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
+  override def contribute(
+      params: CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath

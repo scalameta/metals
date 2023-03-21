@@ -15,8 +15,12 @@ import org.eclipse.{lsp4j => l}
 class MillifyDependencyCodeAction(buffers: Buffers) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
-  override def contribute(params: l.CodeActionParams, token: CancelToken)(
-      implicit ec: ExecutionContext
+  override def contribute(
+      params: l.CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
+      ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()

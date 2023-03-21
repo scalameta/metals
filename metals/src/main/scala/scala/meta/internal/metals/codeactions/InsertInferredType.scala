@@ -55,6 +55,7 @@ class InsertInferredType(
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
+      folderId: String,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = Future {
 
     def typeMismatch: Option[(String, l.Diagnostic)] = {
@@ -74,7 +75,8 @@ class InsertInferredType(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             range,
-          )
+          ),
+          folderId,
         )
 
       CodeActionBuilder.build(
@@ -130,7 +132,8 @@ class InsertInferredType(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             range.getStart(),
-          )
+          ),
+          folderId,
         )
 
       CodeActionBuilder.build(

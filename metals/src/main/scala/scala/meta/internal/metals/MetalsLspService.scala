@@ -667,6 +667,7 @@ class MetalsLspService(
     trees,
     diagnostics,
     languageClient,
+    folderId,
   )
 
   private val doctor: Doctor = new Doctor(
@@ -822,7 +823,16 @@ class MetalsLspService(
     fingerprints.addAll(tables.fingerprints.load())
   }
 
-  def allActionCommandsIds() = codeActionProvider.allActionCommandsIds
+  def allActionCommandsIds = codeActionProvider.allActionCommandsIds
+
+  def isCorrectFolderForCodeActionCommand(
+      params: l.ExecuteCommandParams
+  ): Boolean = codeActionProvider.isCorrectFolder(params)
+
+  def executeCodeActionCommand(
+      params: l.ExecuteCommandParams,
+      token: CancelToken,
+  ): Future[Unit] = codeActionProvider.executeCommands(params, token)
 
   def registerNiceToHaveFilePatterns(): Unit = {
     for {

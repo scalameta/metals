@@ -100,6 +100,67 @@ case class ParametrizedCommand[T: ClassTag](
   }
 }
 
+case class FolderIdentifier(
+    val folder: String
+)
+
+case class CodeActionCommand[T: ClassTag](
+    id: String,
+    title: String,
+    description: String,
+    arguments: String,
+) extends BaseCommand {
+  private val parser = new JsonParser.Of[T]
+
+  def unapply(params: l.ExecuteCommandParams): Option[T] = {
+    val args = Option(params.getArguments()).toList.flatMap(_.asScala)
+    if (args.size != 2 || !isApplicableCommand(params)) None
+    else {
+      args(0) match {
+        case parser.Jsonized(t1) =>
+          Option(t1)
+        case _ => None
+      }
+    }
+  }
+
+  def toCommandLink(
+      argument: T,
+      commandInHtmlFormat: CommandHTMLFormat,
+      folderId: String,
+  ): String =
+    commandInHtmlFormat.createLink(
+      id,
+      List(
+        argument.toJson.toString(),
+        FolderIdentifier(folderId).toJson.toString(),
+      ),
+    )
+
+  def toLsp(argument: T, folderId: String): l.Command =
+    new l.Command(
+      title,
+      id,
+      List(
+        argument.toJson.asInstanceOf[AnyRef],
+        FolderIdentifier(folderId).toJson.asInstanceOf[AnyRef],
+      ).asJava,
+    )
+
+  def toExecuteCommandParams(
+      argument: T,
+      folderId: String,
+  ): l.ExecuteCommandParams = {
+    new l.ExecuteCommandParams(
+      id,
+      List[Object](
+        argument.toJson,
+        folderId.toJson,
+      ).asJava,
+    )
+  }
+}
+
 case class ListParametrizedCommand[T: ClassTag](
     id: String,
     title: String,

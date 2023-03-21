@@ -102,8 +102,12 @@ class ConvertToNamedArguments(
         t.syntax
     }
   }
-  override def contribute(params: l.CodeActionParams, token: CancelToken)(
-      implicit ec: ExecutionContext
+  override def contribute(
+      params: l.CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
+      ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
 
     val path = params.getTextDocument().getUri().toAbsolutePath
@@ -136,7 +140,8 @@ class ConvertToNamedArguments(
                 .ConvertToNamedArgsRequest(
                   position,
                   apply.argIndices.map(new Integer(_)).asJava,
-                )
+                ),
+              folderId,
             )
 
           val codeAction = CodeActionBuilder.build(

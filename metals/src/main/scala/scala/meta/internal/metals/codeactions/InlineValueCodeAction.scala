@@ -32,8 +32,12 @@ class InlineValueCodeAction(
 
   override def kind: String = l.CodeActionKind.RefactorInline
 
-  override def contribute(params: l.CodeActionParams, token: CancelToken)(
-      implicit ec: ExecutionContext
+  override def contribute(
+      params: l.CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
+      ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val pathStr = params.getTextDocument.getUri
     val path = pathStr.toAbsolutePath
@@ -51,7 +55,8 @@ class InlineValueCodeAction(
             new l.TextDocumentPositionParams(
               params.getTextDocument(),
               params.getRange().getStart(),
-            )
+            ),
+            folderId,
           )
         CodeActionBuilder.build(
           title = InlineValueCodeAction.title(termName.value),

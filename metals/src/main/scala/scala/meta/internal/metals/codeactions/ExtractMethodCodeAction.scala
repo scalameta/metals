@@ -56,7 +56,11 @@ class ExtractMethodCodeAction(
     } yield ()
   }
 
-  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
+  override def contribute(
+      params: CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
@@ -107,7 +111,8 @@ class ExtractMethodCodeAction(
               params.getTextDocument(),
               exprRange,
               defnPos.pos.toLsp.getStart(),
-            )
+            ),
+            folderId,
           )
           CodeActionBuilder.build(
             title = ExtractMethodCodeAction.title(scopeName),

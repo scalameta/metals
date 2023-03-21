@@ -20,7 +20,9 @@ final class CodeActionProvider(
     trees: Trees,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
+    folderId: String,
 )(implicit ec: ExecutionContext) {
+  private val folderIdParser = new JsonParser.Of[FolderIdentifier]
 
   private val extractMemberAction =
     new ExtractRenameMember(trees, languageClient)
@@ -74,7 +76,7 @@ final class CodeActionProvider(
 
     val actions = allActions.collect {
       case action if isRequestedKind(action) =>
-        action.contribute(params, token)
+        action.contribute(params, token, folderId)
     }
 
     Future.sequence(actions).map(_.flatten)
@@ -90,6 +92,19 @@ final class CodeActionProvider(
       data <- actionCommand.unapply(params)
     } yield action.handleCommand(data, token)
     Future.sequence(running).map(_ => ())
+  }
+
+  def isCorrectFolder(
+      params: l.ExecuteCommandParams
+  ): Boolean = {
+    val args = Option(params.getArguments()).toList.flatMap(_.asScala)
+    if (args.size != 2) false
+    else
+      args(1) match {
+        case folderIdParser.Jsonized(t1) =>
+          Option(t1).contains(folderId)
+        case _ => false
+      }
   }
 
   val allActionCommandsIds: Set[String] =

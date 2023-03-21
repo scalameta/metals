@@ -20,6 +20,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
+      folderId: String,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     val uri = params.getTextDocument.getUri

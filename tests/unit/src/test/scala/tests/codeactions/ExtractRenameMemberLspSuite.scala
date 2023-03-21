@@ -465,7 +465,7 @@ class ExtractRenameMemberLspSuite
       val cancelToken = EmptyCancelToken
 
       val codeActionFut =
-        extractRenameMember.contribute(codeActionParams, cancelToken)
+        extractRenameMember.contribute(codeActionParams, cancelToken, "root")
 
       for {
         codeActions <- codeActionFut

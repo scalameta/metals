@@ -30,7 +30,11 @@ sealed abstract class OrganizeImports(
       file: AbsolutePath,
       params: CodeActionParams,
   ): Boolean
-  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
+  override def contribute(
+      params: CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
     val uri = params.getTextDocument.getUri

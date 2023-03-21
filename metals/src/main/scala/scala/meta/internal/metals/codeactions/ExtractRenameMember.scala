@@ -42,8 +42,12 @@ class ExtractRenameMember(
   override def command: Option[ActionCommand] =
     Some(ServerCommands.ExtractMemberDefinition)
 
-  override def contribute(params: l.CodeActionParams, token: CancelToken)(
-      implicit ec: ExecutionContext
+  override def contribute(
+      params: l.CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
+      ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
@@ -100,7 +104,7 @@ class ExtractRenameMember(
             getMemberType(head.member).map { memberType =>
               val title =
                 ExtractRenameMember.title(memberType, head.member.name.value)
-              extractClassAction(uri, head.member, title)
+              extractClassAction(uri, head.member, title, folderId)
             }.toList
 
           case head :: Nil
@@ -119,7 +123,7 @@ class ExtractRenameMember(
                 memberType,
                 defn.member.name.value,
               )
-            } yield extractClassAction(uri, defn.member, title)
+            } yield extractClassAction(uri, defn.member, title, folderId)
 
             codeActionOpt.toList
         }
@@ -328,6 +332,7 @@ class ExtractRenameMember(
       uri: String,
       member: Member,
       title: String,
+      folderId: String,
   ): l.CodeAction = {
     val range = member.name.pos.toLsp
 
@@ -336,7 +341,8 @@ class ExtractRenameMember(
         new l.TextDocumentPositionParams(
           new l.TextDocumentIdentifier(uri),
           range.getStart(),
-        )
+        ),
+        folderId,
       )
 
     CodeActionBuilder.build(

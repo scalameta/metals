@@ -33,7 +33,11 @@ class CreateCompanionObjectCodeAction(
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
-  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
+  override def contribute(
+      params: CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val uri = params.getTextDocument().getUri()

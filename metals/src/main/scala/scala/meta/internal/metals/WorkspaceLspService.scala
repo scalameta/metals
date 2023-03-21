@@ -32,9 +32,11 @@ import scala.meta.internal.tvp.TreeViewNodeCollapseDidChangeParams
 import scala.meta.internal.tvp.TreeViewNodeRevealResult
 import scala.meta.internal.tvp.TreeViewParentParams
 import scala.meta.internal.tvp.TreeViewParentResult
+import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
+import scala.meta.pc.DisplayableException
 
 import com.google.gson.Gson
 import com.google.gson.JsonElement
@@ -85,7 +87,6 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.messages
-import scala.meta.internal.tvp.TreeViewProvider
 
 class WorkspaceLspService(
     ec: ExecutionContextExecutorService,
@@ -827,27 +828,33 @@ class WorkspaceLspService(
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
-      //   case actionCommand
-      //       if codeActionProvider.allActionCommandsIds(
-      //         actionCommand.getCommand()
-      //       ) =>
-      //     val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
-      //       case e: DisplayableException => e.getMessage()
-      //       case e: Exception if (e.getCause() match {
-      //             case _: DisplayableException => true
-      //             case _ => false
-      //           }) =>
-      //         e.getCause().getMessage()
-      //     }
-      //     CancelTokens.future { token =>
-      //       codeActionProvider
-      //         .executeCommands(params, token)
-      //         .recover(
-      //           getOptDisplayableMessage andThen (languageClient
-      //             .showMessage(l.MessageType.Info, _))
-      //         )
-      //         .withObjectValue
-      //     }
+      case actionCommand
+          if folderServices.head.allActionCommandsIds(
+            actionCommand.getCommand()
+          ) =>
+        val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
+          case e: DisplayableException => e.getMessage()
+          case e: Exception if (e.getCause() match {
+                case _: DisplayableException => true
+                case _ => false
+              }) =>
+            e.getCause().getMessage()
+        }
+        val service = folderServices.find(
+          _.isCorrectFolderForCodeActionCommand(params)
+        ) match {
+          case Some(service) => service
+          case None => folderServices.head
+        }
+        CancelTokens.future { token =>
+          service
+            .executeCodeActionCommand(params, token)
+            .recover(
+              getOptDisplayableMessage andThen (languageClient
+                .showMessage(lsp4j.MessageType.Info, _))
+            )
+            .withObjectValue
+        }
       case cmd =>
         ServerCommands.all
           .find(command => command.id == cmd.getCommand())
@@ -869,9 +876,7 @@ class WorkspaceLspService(
         val capabilities = new lsp4j.ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new lsp4j.ExecuteCommandOptions(
-            (ServerCommands.allIds ++
-              // TODO:: we probably want to make id of workspace a part of the command id
-              folderServices.flatMap(_.allActionCommandsIds())).toList.asJava
+            (ServerCommands.allIds ++ folderServices.head.allActionCommandsIds).toList.asJava
           )
         )
         capabilities.setFoldingRangeProvider(true)

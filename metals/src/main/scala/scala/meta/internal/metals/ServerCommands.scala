@@ -566,7 +566,7 @@ object ServerCommands {
   )
 
   val ExtractMemberDefinition =
-    new ParametrizedCommand[TextDocumentPositionParams](
+    new CodeActionCommand[TextDocumentPositionParams](
       "extract-member-definition",
       "Extract member definition",
       """|Whenever a user chooses a code action to extract a definition of a Class/Trait/Object/Enum this
@@ -576,7 +576,7 @@ object ServerCommands {
          |""".stripMargin,
     )
 
-  val InsertInferredType = new ParametrizedCommand[TextDocumentPositionParams](
+  val InsertInferredType = new CodeActionCommand[TextDocumentPositionParams](
     "insert-inferred-type",
     "Insert inferred type of a value",
     """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
@@ -586,7 +586,7 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  val InlineValue = new ParametrizedCommand[TextDocumentPositionParams](
+  val InlineValue = new CodeActionCommand[TextDocumentPositionParams](
     "inline-value",
     "Inline value",
     """|Whenever a user chooses code action to inline a value this command is later ran to
@@ -601,7 +601,7 @@ object ServerCommands {
       range: lsp4j.Range,
       extractPosition: lsp4j.Position,
   )
-  val ExtractMethod = new ParametrizedCommand[ExtractMethodParams](
+  val ExtractMethod = new CodeActionCommand[ExtractMethodParams](
     "extract-method",
     "Extract method from range",
     """|Whenever a user chooses code action to extract method, this command is later ran to
@@ -618,7 +618,7 @@ object ServerCommands {
       argIndices: ju.List[Integer],
   )
   val ConvertToNamedArguments =
-    new ParametrizedCommand[ConvertToNamedArgsRequest](
+    new CodeActionCommand[ConvertToNamedArgsRequest](
       "convert-to-named-arguments",
       "Convert positional arguments to named ones",
       """|Whenever a user chooses code action to convert to named arguments, this command is later run to 

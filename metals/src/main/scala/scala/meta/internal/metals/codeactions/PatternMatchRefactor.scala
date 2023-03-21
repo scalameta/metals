@@ -81,8 +81,12 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
     case _ => Seq.empty
   }
 
-  override def contribute(params: l.CodeActionParams, token: CancelToken)(
-      implicit ec: ExecutionContext
+  override def contribute(
+      params: l.CodeActionParams,
+      token: CancelToken,
+      folderId: String,
+  )(implicit
+      ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
 
     val path = params.getTextDocument().getUri().toAbsolutePath
