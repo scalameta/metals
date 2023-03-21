@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichements._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 

@@ -529,6 +529,45 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+    "extends-with-class".tag(IgnoreScala2),
+    """
+      |package foo
+      |
+      |class Foo extends Any wi@@
+    """.stripMargin,
+    """|with
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-class-nested",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  class Boo ext@@
+      |}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-class-nested-with-body",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  class Boo ext@@ {
+      |    def test: Int = ???
+      |  }
+      |}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
     "extends-obj",
     """
       |package foo
@@ -606,7 +645,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |package foo
       |
       |// can't provide extends keyword completion if there's newline between class
-      |// because the completion engine tokenize only the line 
+      |// because the completion engine tokenize only the line
       |class Main
       |  exten@@
     """.stripMargin,
@@ -620,7 +659,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
-    "extends-enum",
+    "extends-enum".tag(IgnoreScala2),
     """
       |package foo
       |

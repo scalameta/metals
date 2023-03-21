@@ -20,7 +20,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.ClasspathLoader
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichements._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 

@@ -1,12 +1,10 @@
 package scala.meta.internal.mtags
 
-import java.util
 import java.util.logging.Level
 import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.annotation.tailrec
-import scala.collection.AbstractIterator
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.CompilerOffsetParams
@@ -198,7 +196,6 @@ trait CommonMtagsEnrichments {
       isScalaScript && !isWorksheet && !doc.endsWith("/build.sc")
     def isMill: Boolean =
       doc.endsWith("/build.sc")
-    def asSymbol: Symbol = Symbol(doc)
     def endsWithAt(value: String, offset: Int): Boolean = {
       val start = offset - value.length
       start >= 0 &&
@@ -210,18 +207,5 @@ trait CommonMtagsEnrichments {
       content.setValue(doc)
       content
     }
-  }
-
-  implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {
-
-    /**
-     * Returns iterator that consumes the priority queue in-order using `poll()`.
-     */
-    def pollingIterator: Iterator[A] =
-      new AbstractIterator[A] {
-        override def hasNext: Boolean = !q.isEmpty
-        override def next(): A = q.poll()
-      }
-
   }
 }

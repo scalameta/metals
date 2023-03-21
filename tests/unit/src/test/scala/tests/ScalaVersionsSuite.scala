@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.semver.SemVer
 
 class ScalaVersionsSuite extends BaseSuite {
 

@@ -9,6 +9,7 @@ import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IdentifierComparator
@@ -38,7 +39,6 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
 import dotty.tools.dotc.util.SrcPos
-import scala.meta.internal.mtags.CoursierComplete
 
 class Completions(
     pos: SourcePosition,

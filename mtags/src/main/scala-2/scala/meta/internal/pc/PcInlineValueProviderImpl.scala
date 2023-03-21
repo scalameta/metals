@@ -5,6 +5,7 @@ import scala.annotation.tailrec
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.InlineValueProvider.Errors
 import scala.meta.pc.OffsetParams
+import scala.meta._
 
 import org.eclipse.{lsp4j => l}
 
@@ -51,10 +52,12 @@ final class PcInlineValueProviderImpl(
 
       val defRhsPos = definition.tree.rhs.pos
       val defPos = definition.tree.pos
+      val rhsSourceString = text.slice(defRhsPos.start, defRhsPos.end).mkString
       val defEdit = Definition(
         defPos.toLsp,
-        text.slice(defRhsPos.start, defRhsPos.end).mkString,
+        rhsSourceString,
         RangeOffset(defPos.start, defPos.end),
+        definitionNeedsBrackets(rhsSourceString),
         deleteDefinition
       )
 
@@ -130,14 +133,16 @@ final class PcInlineValueProviderImpl(
                 && importContext.nameIsInScope(sym.name)) =>
             sym.fullNameSyntax
         }
-      if (conflicts.isEmpty)
+      if (conflicts.isEmpty) {
+        val parentPos = ref.parent.map(p => RangeOffset(p.pos.start, p.pos.end))
         Right(
           Reference(
             ref.pos.toLsp,
-            ref.parent.map(p => RangeOffset(p.pos.start, p.pos.end))
+            parentPos,
+            referenceNeedsBrackets(parentPos)
           )
         )
-      else Left(Errors.variablesAreShadowed(conflicts.mkString(", ")))
+      } else Left(Errors.variablesAreShadowed(conflicts.mkString(", ")))
     }
 
     refs.foldLeft((Right(List())): Either[String, List[Reference]])(
@@ -147,6 +152,33 @@ final class PcInlineValueProviderImpl(
           currentRef <- buildRef(ref).right
         } yield currentRef :: collectedRefs
     )
+  }
+
+  def definitionNeedsBrackets(rhs: String): Boolean =
+    rhs.parse[Term].toOption match {
+      case Some(_: Term.ApplyInfix) => true
+      case Some(_: Term.Function) => true
+      case Some(_: Term.ForYield) => true
+      case Some(_: Term.PartialFunction) => true
+      case Some(_: Term.PolyFunction) => true
+      case Some(_: Term.AnonymousFunction) => true
+      case Some(_: Term.Do) => true
+      case Some(_: Term.While) => true
+      case _ => false
+    }
+
+  def referenceNeedsBrackets(
+      parentPos: Option[RangeOffset]
+  ): Boolean = {
+    parentPos.flatMap(t =>
+      text.slice(t.start, t.end).parse[Term].toOption
+    ) match {
+      case Some(_: Term.ApplyInfix) => true
+      case Some(_: Term.ApplyUnary) => true
+      case Some(_: Term.Select) => true
+      case Some(_: Term.Name) => true // apply
+      case _ => false
+    }
   }
 
   case class Occurence(tree: Tree, parent: Option[Tree], pos: Position) {

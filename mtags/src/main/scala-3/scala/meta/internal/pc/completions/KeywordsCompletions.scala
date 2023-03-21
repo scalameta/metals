@@ -3,6 +3,7 @@ package scala.meta.internal.pc.completions
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.Keyword
 import scala.meta.tokenizers.XtensionTokenizeInputLike
+import scala.meta.internal.pc.KeywordCompletionsUtils
 import scala.meta.tokens.Token
 
 import dotty.tools.dotc.ast.tpd.*
@@ -52,6 +53,11 @@ object KeywordsCompletions:
             case Some(toks) => toks.tokens.reverse
             case None => Array.empty[Token]
         end reverseTokens
+
+        val canBeExtended = KeywordCompletionsUtils.canBeExtended(reverseTokens)
+        val canDerive = KeywordCompletionsUtils.canDerive(reverseTokens)
+        val hasExtend = KeywordCompletionsUtils.hasExtend(reverseTokens)
+
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -67,7 +73,9 @@ object KeywordsCompletions:
                 isSelect = isSelect,
                 isImport = isImport,
                 allowToplevel = true,
-                leadingReverseTokens = reverseTokens,
+                canBeExtended = canBeExtended,
+                canDerive = canDerive,
+                hasExtend = hasExtend,
               ) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }

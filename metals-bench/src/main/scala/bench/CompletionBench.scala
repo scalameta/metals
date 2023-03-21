@@ -2,10 +2,7 @@ package bench
 
 import java.net.URI
 import java.util.concurrent.TimeUnit
-<<<<<<< HEAD
-=======
 
->>>>>>> 88ff2925ab (cleanup imports)
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.pc.PresentationCompiler
 

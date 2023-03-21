@@ -18,6 +18,8 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
+import dotty.tools.dotc.core.Types.ConstantType
+import dotty.tools.dotc.core.StdNames
 
 final class PcInlineValueProviderImpl(
     val driver: InteractiveDriver,
@@ -55,12 +57,36 @@ final class PcInlineValueProviderImpl(
         defPos.toLsp,
         adjustRhs(definition.tree.rhs.sourcePos),
         RangeOffset(defPos.start, defPos.end),
+        definitionRequiresBrackets(definition.tree.rhs),
         deleteDefinition,
       )
 
       (defEdit, refsEdits)
     end for
   end defAndRefs
+
+  object ApplyInfix:
+    def unapply(apply: Apply): Boolean = apply match
+      case Apply(Select(pre, _), _) if apply.tpe.isInstanceOf[ConstantType] =>
+        true
+      case _ => false
+
+  private def definitionRequiresBrackets(tree: Tree): Boolean =
+    tree match
+      case ApplyInfix() => true
+      case _: Block => true
+      case _: Closure => true
+      case _ => false
+  end definitionRequiresBrackets
+
+  private def referenceRequiresBrackets(tree: Tree): Boolean =
+    tree match
+      case ApplyInfix() => true
+      case _: Apply => StdNames.nme.raw.isUnary(tree.symbol.name)
+      case _: Select => true
+      case _: Ident => true
+      case _ => false
+  end referenceRequiresBrackets
 
   private def adjustRhs(pos: SourcePosition) =
     def extend(point: Int, acceptedChar: Char, step: Int): Int =
@@ -144,6 +170,7 @@ final class PcInlineValueProviderImpl(
             occurence.parent.map(p =>
               RangeOffset(p.sourcePos.start, p.sourcePos.end)
             ),
+            occurence.parent.map(referenceRequiresBrackets).getOrElse(false),
           )
         )
       else Left(Errors.variablesAreShadowed(conflictingSymbols.mkString(", ")))

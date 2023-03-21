@@ -2,14 +2,21 @@ package scala.meta.internal.mtags
 
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.nio.file.StandardOpenOption
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.PriorityQueue
+import java.util.logging.Logger
+
 import scala.annotation.tailrec
+import scala.collection.AbstractIterator
+import scala.util.control.NonFatal
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import scala.{meta => m}
+
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
@@ -19,10 +26,12 @@ import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+
 import geny.Generator
 import org.eclipse.{lsp4j => l}
-import java.util.logging.Logger
+import java.nio.file.StandardCopyOption
 
+object ScalametaCommonEnrichements extends ScalametaCommonEnrichements {}
 trait ScalametaCommonEnrichements extends CommonMtagsEnrichments {
 
   private def logger: Logger =
@@ -192,6 +201,7 @@ trait ScalametaCommonEnrichements extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionStringDocMeta(doc: String) {
+    def asSymbol: Symbol = Symbol(doc)
 
     def checkIfNotInComment(
         treeStart: Int,
@@ -388,6 +398,34 @@ trait ScalametaCommonEnrichements extends CommonMtagsEnrichments {
 
     def startWith(other: AbsolutePath): Boolean =
       path.toNIO.startsWith(other.toNIO)
+
+    def createDirectories(): AbsolutePath =
+      AbsolutePath(Files.createDirectories(path.dealias.toNIO))
+
+    def writeText(text: String): Unit = {
+      path.parent.createDirectories()
+      val tmp = Files.createTempFile("metals", path.filename)
+      // Write contents first to a temporary file and then try to
+      // atomically move the file to the destination. The atomic move
+      // reduces the risk that another tool will concurrently read the
+      // file contents during a half-complete file write.
+      Files.write(
+        tmp,
+        text.getBytes(StandardCharsets.UTF_8),
+        StandardOpenOption.TRUNCATE_EXISTING
+      )
+      try {
+        Files.move(
+          tmp,
+          path.toNIO,
+          StandardCopyOption.REPLACE_EXISTING,
+          StandardCopyOption.ATOMIC_MOVE
+        )
+      } catch {
+        case NonFatal(_) =>
+          Files.move(tmp, path.toNIO, StandardCopyOption.REPLACE_EXISTING)
+      }
+    }
   }
 
   implicit class XtensionSymbolInformationKind(kind: s.SymbolInformation.Kind) {
@@ -471,4 +509,17 @@ trait ScalametaCommonEnrichements extends CommonMtagsEnrichments {
   }
 
   val EXTENSION: Int = s.SymbolInformation.Property.values.map(_.value).max << 1
+
+  implicit class XtensionJavaPriorityQueue[A](q: PriorityQueue[A]) {
+
+    /**
+     * Returns iterator that consumes the priority queue in-order using `poll()`.
+     */
+    def pollingIterator: Iterator[A] =
+      new AbstractIterator[A] {
+        override def hasNext: Boolean = !q.isEmpty
+        override def next(): A = q.poll()
+      }
+
+  }
 }

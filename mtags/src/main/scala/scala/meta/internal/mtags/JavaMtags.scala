@@ -6,7 +6,7 @@ import java.util.Comparator
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichements._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
