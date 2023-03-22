@@ -17,9 +17,9 @@ def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
 def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
-def isStablePC(v: Option[(Long, Long)]): Boolean = v.contains(
-  (3, 3)
-) // to be changed according to the first version with Stable PC
+def isStablePC(v: Option[(Long, Long)]): Boolean =
+  false // replace after dotty starts publishing stable PC
+// v.contains((3, 3)) // to be changed according to the first version with Stable PC
 
 def crossSetting[A](
     scalaVersion: String,

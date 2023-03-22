@@ -10,6 +10,8 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.untpd
+import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Symbols.NoSymbol
@@ -40,6 +42,7 @@ final class PcInlineValueProviderImpl(
     Occurence(tree, parent, adjustedPos)
 
   override def defAndRefs(): Either[String, (Definition, List[Reference])] =
+    val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
     val allOccurences = result()
     for
       definition <- allOccurences
@@ -57,7 +60,7 @@ final class PcInlineValueProviderImpl(
         defPos.toLsp,
         adjustRhs(definition.tree.rhs.sourcePos),
         RangeOffset(defPos.start, defPos.end),
-        definitionRequiresBrackets(definition.tree.rhs),
+        definitionRequiresBrackets(definition.tree.rhs)(using newctx),
         deleteDefinition,
       )
 
@@ -65,28 +68,35 @@ final class PcInlineValueProviderImpl(
     end for
   end defAndRefs
 
-  object ApplyInfix:
-    def unapply(apply: Apply): Boolean = apply match
-      case Apply(Select(pre, _), _) if apply.tpe.isInstanceOf[ConstantType] =>
-        true
+  // format: off
+  private def definitionRequiresBrackets(tree: Tree)(using Context): Boolean =
+    NavigateAST.untypedPath(tree.span).headOption.map {
+      case _: untpd.If
+         | _: untpd.Function
+         | _: untpd.Match
+         | _: untpd.ForYield
+         | _: untpd.InfixOp
+         | _: untpd.ParsedTry
+         | _: untpd.Try
+         | _: untpd.Block
+         | _: untpd.Typed => true
       case _ => false
+    }.getOrElse(false)
 
-  private def definitionRequiresBrackets(tree: Tree): Boolean =
-    tree match
-      case ApplyInfix() => true
-      case _: Block => true
-      case _: Closure => true
-      case _ => false
   end definitionRequiresBrackets
 
-  private def referenceRequiresBrackets(tree: Tree): Boolean =
-    tree match
-      case ApplyInfix() => true
-      case _: Apply => StdNames.nme.raw.isUnary(tree.symbol.name)
-      case _: Select => true
-      case _: Ident => true
-      case _ => false
+  private def referenceRequiresBrackets(tree: Tree)(using Context): Boolean =
+    NavigateAST.untypedPath(tree.span) match
+      case (_: untpd.InfixOp) :: _ => true
+      case _ =>
+        tree match
+          case _: Apply => StdNames.nme.raw.isUnary(tree.symbol.name)
+          case _: Select
+             | _: Ident => true
+          case _ => false
+
   end referenceRequiresBrackets
+  // format: on
 
   private def adjustRhs(pos: SourcePosition) =
     def extend(point: Int, acceptedChar: Char, step: Int): Int =
@@ -170,7 +180,9 @@ final class PcInlineValueProviderImpl(
             occurence.parent.map(p =>
               RangeOffset(p.sourcePos.start, p.sourcePos.end)
             ),
-            occurence.parent.map(referenceRequiresBrackets).getOrElse(false),
+            occurence.parent
+              .map(p => referenceRequiresBrackets(p)(using newctx))
+              .getOrElse(false),
           )
         )
       else Left(Errors.variablesAreShadowed(conflictingSymbols.mkString(", ")))
