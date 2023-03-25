@@ -1,9 +1,14 @@
-import $ivy.`org.kohsuke:github-api:1.114`
+//> using scala "3.2.2"
+//> using dep "org.kohsuke:github-api:1.314"
+//> using dep "com.lihaoyi::os-lib:0.9.1"
+//> using dep "com.lihaoyi::mainargs:0.4.0"
+//> using options "-Wunused:all", "-deprecation"
 
 import scala.collection.mutable.ListBuffer
-import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.jdk.CollectionConverters._
 
+import mainargs.main
 import org.kohsuke.github.GitHubBuilder
 
 import java.text.SimpleDateFormat
