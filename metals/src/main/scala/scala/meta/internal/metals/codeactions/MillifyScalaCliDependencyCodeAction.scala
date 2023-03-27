@@ -74,8 +74,8 @@ object MillifyScalaCliDependencyCodeAction {
   def convertSbtToMillStyleIfPossible(
       sbtStyleDirective: String
   ): Option[String] =
-    sbtStyleDirective.split(" ").toSeq match {
-      case Seq(
+    sbtStyleDirective.split(" ") match {
+      case Array(
             "//>",
             "using",
             dependencyIdentifierLike,
@@ -85,8 +85,8 @@ object MillifyScalaCliDependencyCodeAction {
             "%",
             version,
           )
-          if isDependencyIdentifier(dependencyIdentifierLike) &&
-            isSbtDependencyDelimiter(groupDelimiter) =>
+          if dependencyIdentifiers(dependencyIdentifierLike) &&
+            sbtDependencyDelimiters(groupDelimiter) =>
         val groupArtifactJoin = groupDelimiter.replace('%', ':')
         val millStyleDependency =
           s"$groupId$groupArtifactJoin$artifactId:$version".replace("\"", "")
@@ -96,13 +96,8 @@ object MillifyScalaCliDependencyCodeAction {
       case _ => None
     }
 
-  // TODO I guess it should be a part of ScalaCli common module to ease the refactoring
-  // in case other identifiers are introduced
-  private def isDependencyIdentifier(identifier: String) =
-    Set("dep", "lib", "plugin")(identifier)
-
-  private def isSbtDependencyDelimiter(identifier: String) =
-    Set("%", "%%", "%%%")(identifier)
+  private val dependencyIdentifiers = Set("dep", "lib", "plugin")
+  private val sbtDependencyDelimiters = Set("%", "%%", "%%%")
 
   def isScalaCliUsingDirectiveComment(text: String) =
     text.startsWith("//> using")
