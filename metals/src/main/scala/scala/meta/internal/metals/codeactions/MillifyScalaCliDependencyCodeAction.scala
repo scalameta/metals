@@ -72,7 +72,7 @@ object MillifyScalaCliDependencyCodeAction {
   def convertSbtToMillStyleIfPossible(
       sbtStyleDirective: String
   ): Option[String] =
-    sbtStyleDirective.split(" ") match {
+    sbtStyleDirective.split(" ").filterNot(_.isEmpty) match {
       case Array(
             "//>",
             "using",
