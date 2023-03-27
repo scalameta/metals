@@ -66,11 +66,10 @@ final class ConvertToNamedArgumentsProvider(
             args.zipWithIndex
               .zip(paramss(fun))
               .collect {
-                case ((arg, index), param) if argIndices.contains(index) => {
+                case ((arg, index), param) if argIndices.contains(index) =>
                   val position = arg.sourcePos.toLsp
                   position.setEnd(position.getStart())
                   new l.TextEdit(position, s"$param = ")
-                }
               }
           )
 

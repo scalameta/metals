@@ -152,7 +152,7 @@ class Completions(
             var i = span.end
             while i < (text.length() - 1) && text(i).isWhitespace do i = i + 1
 
-            if (i < text.length()) then text(i) == '['
+            if i < text.length() then text(i) == '['
             else false
           else false
 
@@ -326,7 +326,7 @@ class Completions(
            * but it will not show up from classpath. We can suggest
            * constructors based on those synthetic applies.
            */
-          if (sym.isClass && companionSynthetic) then sym.companionModule.info
+          if sym.isClass && companionSynthetic then sym.companionModule.info
           else sym.info
         val applSymbols = info.member(nme.apply).allSymbols
         sym :: applSymbols
