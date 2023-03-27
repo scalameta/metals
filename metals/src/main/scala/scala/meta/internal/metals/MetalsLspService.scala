@@ -240,7 +240,7 @@ class MetalsLspService(
       buildTargets,
       fileWatchFilter,
       params => {
-        didChangeWatchedFiles(params, ???)
+        didChangeWatchedFiles(params)
         initTreeView()
       },
     )
@@ -367,7 +367,7 @@ class MetalsLspService(
       statusBar,
       time,
       report => {
-        didCompileTarget(report, ???)
+        didCompileTarget(report)
         initTreeView()
         compilers.didCompile(report)
       },
@@ -873,7 +873,7 @@ class MetalsLspService(
     }
   }
 
-  private def startHttpServer(): Unit = {
+  private def startHttpServer(workspaceLspServer: WorkspaceLspService): Unit = {
     if (clientConfig.isHttpEnabled) {
       val host = "localhost"
       val port = 5031
@@ -889,6 +889,7 @@ class MetalsLspService(
           e => completeCommand(e),
           () => doctor.problemsHtmlPage(url),
           (uri) => fileDecoderProvider.getTastyForURI(uri),
+          workspaceLspServer,
         )
       )
       httpServer = Some(server)
@@ -914,14 +915,14 @@ class MetalsLspService(
 
   def connectTables(): Connection = tables.connect()
 
-  def initialized(): Future[Unit] =
+  def initialized(server: WorkspaceLspService): Future[Unit] =
     Future
       .sequence(
         List[Future[Unit]](
           quickConnectToBuildServer().ignoreValue,
           slowConnectToBuildServer(forceImport = false).ignoreValue,
           Future(workspaceSymbols.indexClasspath()),
-          Future(startHttpServer()),
+          Future(startHttpServer(server)),
           Future(formattingProvider.load()),
         )
       )
@@ -1177,10 +1178,7 @@ class MetalsLspService(
       .asJava
   }
 
-  private def didCompileTarget(
-      report: CompileReport,
-      treeView: TreeViewProvider,
-  ): Unit = {
+  private def didCompileTarget(report: CompileReport): Unit = {
     if (!isReliableFileWatcher) {
       // NOTE(olafur) this step is exclusively used when running tests on
       // non-Linux computers to avoid flaky failures caused by delayed file
@@ -1193,7 +1191,7 @@ class MetalsLspService(
         generatedFile <- semanticdb.listRecursive
       } {
         val event = FileWatcherEvent.createOrModify(generatedFile.toNIO)
-        didChangeWatchedFiles(event, treeView).get()
+        didChangeWatchedFiles(event).get()
       }
     }
   }
@@ -1230,8 +1228,7 @@ class MetalsLspService(
    * anything expensive on the main thread
    */
   private def didChangeWatchedFiles(
-      event: FileWatcherEvent,
-      treeView: TreeViewProvider,
+      event: FileWatcherEvent
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
@@ -1612,12 +1609,9 @@ class MetalsLspService(
     indexer.indexWorkspaceSources(buildTargets.allWritableData)
   }
 
-  def restartBuildServer(): Future[BuildChange] = {
-    bspSession.foreach { session =>
-      if (session.main.isBloop) bloopServers.shutdownServer()
-    }
-    autoConnectToBuildServer()
-  }
+  def shutDownBloop(): Boolean = bloopServers.shutdownServer()
+
+  def isBloop(): Boolean = bspSession.exists(_.main.isBloop)
 
   def decodeFile(uri: String): Future[DecoderResponse] =
     fileDecoderProvider.decodedFileContents(uri)
@@ -1753,111 +1747,60 @@ class MetalsLspService(
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
     stacktraceAnalyzer.analyzeCommand(content)
 
-  def executeCommand(
-      params: ExecuteCommandParams
-  ): CompletableFuture[Object] = {
-    params match {
-      case ServerCommands.ScanWorkspaceSources() => ???
-      case ServerCommands.RestartBuildServer() => ???
-      case ServerCommands.GenerateBspConfig() => ???
-      case ServerCommands.ImportBuild() => ???
-      case ServerCommands.ConnectBuildServer() => ???
-      case ServerCommands.DisconnectBuildServer() => ???
-      case ServerCommands.DecodeFile(_) => ???
-      case ServerCommands.DiscoverTestSuites(_) => ???
-      case ServerCommands.DiscoverMainClasses(_) => ???
-      case ServerCommands.RunScalafix(_) => ???
-      case ServerCommands.ChooseClass(_) => ???
-      case ServerCommands.RunDoctor => ???
-      case ServerCommands.ListBuildTargets() => ???
-      case ServerCommands.BspSwitch() => ???
-      case ServerCommands.OpenIssue() => ???
-      case OpenBrowserCommand(_) => ???
-      case ServerCommands.CascadeCompile() => ???
-      case ServerCommands.CleanCompile() => ???
-      case ServerCommands.CancelCompile() => ???
-      case ServerCommands.PresentationCompilerRestart() => ???
-      case ServerCommands.GotoPosition(_) => ???
-      case ServerCommands.GotoSymbol(_) => ???
-      case ServerCommands.GotoLog => ???
-      case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
-        debugProvider
-          .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
-          .flatMap(_ => debugProvider.asSession(params))
-          .asJavaObject
+  def debugDiscovery(params: DebugDiscoveryParams): CompletableFuture[Object] =
+    debugProvider
+      .debugDiscovery(params)
+      .flatMap(debugProvider.asSession)
+      .asJavaObject
 
-      case ServerCommands.StartMainClass(params) if params.mainClass != null =>
-        debugProvider
-          .resolveMainClassParams(params)
-          .flatMap(debugProvider.asSession)
-          .asJavaObject
+  def findBuildTargetByDisplayName(target: String): Option[b.BuildTarget] =
+    buildTargets.findByDisplayName(target)
 
-      case ServerCommands.StartTestSuite(params)
-          if params.target != null && params.requestData != null =>
-        debugProvider
-          .resolveTestSelectionParams(params)
-          .flatMap(debugProvider.asSession)
-          .asJavaObject
+  def createDebugSession(
+      target: b.BuildTargetIdentifier
+  ): Future[DebugSession] =
+    debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
 
-      case ServerCommands.ResolveAndStartTestSuite(params)
-          if params.testClass != null =>
-        debugProvider
-          .resolveTestClassParams(params)
-          .flatMap(debugProvider.asSession)
-          .asJavaObject
+  def findTestClassAndItsBuildTarget(
+      params: DebugUnresolvedTestClassParams
+  ): Future[(MetalsLspService, List[(String, b.BuildTarget)])] =
+    debugProvider.findTestClassAndItsBuildTarget(params).map((this, _))
 
-      case ServerCommands.StartAttach(params) if params.hostName != null =>
-        debugProvider
-          .resolveAttachRemoteParams(params)
-          .flatMap(debugProvider.asSession)
-          .asJavaObject
+  def startTestSuiteForResolved(
+      targets: List[(String, b.BuildTarget)],
+      params: DebugUnresolvedTestClassParams,
+  ): Future[DebugSession] = debugProvider
+    .buildTestClassParams(targets, params)
+    .flatMap(debugProvider.asSession)
 
-      case ServerCommands.DiscoverAndRun(params) =>
-        debugProvider
-          .debugDiscovery(params)
-          .flatMap(debugProvider.asSession)
-          .asJavaObject
+  def findMainClassAndItsBuildTarget(
+      params: DebugUnresolvedMainClassParams
+  ): Future[(MetalsLspService, List[(b.ScalaMainClass, b.BuildTarget)])] =
+    debugProvider.findMainClassAndItsBuildTarget(params).map((this, _))
 
-      case ServerCommands.AnalyzeStacktrace(content) =>
-        Future {
-          val command = stacktraceAnalyzer.analyzeCommand(content)
-          command.foreach(languageClient.metalsExecuteClientCommand)
-          scribe.debug(s"Executing AnalyzeStacktrace ${command}")
-        }.asJavaObject
+  def startMainClass(
+      foundClasses: List[(b.ScalaMainClass, b.BuildTarget)],
+      params: DebugUnresolvedMainClassParams,
+  ): Future[DebugSession] = debugProvider
+    .buildMainClassParams(foundClasses, params)
+    .flatMap(debugProvider.asSession)
 
-      case ServerCommands.ResetChoicePopup() => ???
-      // val argsMaybe = Option(params.getArguments())
-      // (argsMaybe.flatMap(_.asScala.headOption) match {
-      //   case Some(arg: JsonPrimitive) =>
-      //     val value = arg.getAsString().replace("+", " ")
-      //     scribe.debug(
-      //       s"Executing ResetChoicePopup ${params.getCommand()} for choice ${value}"
-      //     )
-      //     popupChoiceReset.reset(value)
-      //   case _ =>
-      //     scribe.debug(
-      //       s"Executing ResetChoicePopup ${params.getCommand()} in interactive mode."
-      //     )
-      //     popupChoiceReset.interactiveReset()
-      // }).asJavaObject
+  def supportsBuildTarget(
+      target: b.BuildTargetIdentifier
+  ): Option[b.BuildTarget] =
+    buildTargets.info(target)
 
-      case ServerCommands.ResetNotifications() => ???
-      case ServerCommands.NewScalaFile(_) => ???
-      case ServerCommands.NewJavaFile(_) => ???
-      case ServerCommands.StartAmmoniteBuildServer() => ???
-      case ServerCommands.StopAmmoniteBuildServer() => ???
-      case ServerCommands.StartScalaCliServer() => ???
-      case ServerCommands.StopScalaCliServer() => ???
-      case ServerCommands.NewScalaProject() => ???
-      case ServerCommands.CopyWorksheetOutput(_) => ???
-      case actionCommand
-          if codeActionProvider.allActionCommandsIds(
-            actionCommand.getCommand()
-          ) =>
-        ???
-      case _ => ???
-    }
-  }
+  def startTestSuite(
+      target: b.BuildTarget,
+      params: ScalaTestSuitesDebugRequest,
+  ): Future[DebugSession] = debugProvider
+    .startTestSuite(target, params)
+    .flatMap(debugProvider.asSession)
+
+  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] =
+    debugProvider
+      .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
+      .flatMap(_ => debugProvider.asSession(params))
 
   def willRenameFile(
       oldPath: AbsolutePath,
@@ -2091,7 +2034,7 @@ class MetalsLspService(
       }
   }
 
-  private def autoConnectToBuildServer(): Future[BuildChange] = {
+  def autoConnectToBuildServer(): Future[BuildChange] = {
     def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
       case change if !change.isFailed =>
         Future

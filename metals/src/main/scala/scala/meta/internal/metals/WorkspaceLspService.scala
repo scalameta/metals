@@ -569,7 +569,7 @@ class WorkspaceLspService(
     }
   }
 
-  def withTreeViewInit() {}
+  // def withTreeViewInit() {}
 
   override def windowStateDidChange(params: WindowStateDidChangeParams): Unit =
     if (params.focused) {
@@ -578,6 +578,21 @@ class WorkspaceLspService(
       folderServices.foreach(_.pause())
     }
 
+  private def notFound(objectName: String, id: String) =
+    languageClient.showMessage(
+      Messages.errorMessageParams(s"$objectName not found: $id")
+    )
+
+  private def definedInMultipleWorkspaceFolders(
+      objectName: String,
+      id: String,
+  ) =
+    languageClient.showMessage(
+      Messages.errorMessageParams(
+        s"$objectName defined in multiple workspace folders: $id"
+      )
+    )
+
   override def executeCommand(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] =
@@ -585,8 +600,8 @@ class WorkspaceLspService(
       case ServerCommands.ScanWorkspaceSources() =>
         foreachSeq(_.indexSources(), ignoreValue = true)
       case ServerCommands.RestartBuildServer() =>
-        // TODO:: this shouldn't be done foreach, since there is only one bloop server
-        foreachSeq(_.restartBuildServer(), withF = Some(initTreeView))
+        folderServices.find(_.isBloop()).foreach(_.shutDownBloop())
+        foreachSeq(_.autoConnectToBuildServer(), withF = Some(initTreeView))
       case ServerCommands.GenerateBspConfig() =>
         foreachSeq(
           _.generateBspConfig(),
@@ -698,45 +713,94 @@ class WorkspaceLspService(
         ).asJavaObject
 
       case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
-        ???
-      // TODO::
-      // debugProvider
-      //   .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
-      //   .flatMap(_ => debugProvider.asSession(params))
-      //   .asJavaObject
+        folderServices.find(s =>
+          params.getTargets().asScala.forall(s.supportsBuildTarget(_).isDefined)
+        ) match {
+          case Some(service) => service.startDebugProvider(params).asJavaObject
+          case None =>
+            // TODO:: show error message
+            Future.successful(()).asJavaObject
+        }
+      case ServerCommands.StartMainClass(params) if params.mainClass != null =>
+        Future
+          .sequence(
+            folderServices.map(_.findMainClassAndItsBuildTarget(params))
+          )
+          .flatMap { list =>
+            list.filter(_._2.isEmpty) match {
+              case (service, buildTargets) :: Nil =>
+                service.startMainClass(buildTargets, params)
+              case list =>
+                if (list.isEmpty) notFound("Main class", params.mainClass)
+                else
+                  definedInMultipleWorkspaceFolders(
+                    "Main class",
+                    params.mainClass,
+                  )
+                Future.successful(())
+            }
+          }
+          .asJavaObject
 
-      // case ServerCommands.StartMainClass(params) if params.mainClass != null =>
-      // debugProvider
-      //   .resolveMainClassParams(params)
-      //   .flatMap(debugProvider.asSession)
-      //   .asJavaObject
-
-      //   case ServerCommands.StartTestSuite(params)
-      //       if params.target != null && params.requestData != null =>
-      //     debugProvider
-      //       .resolveTestSelectionParams(params)
-      //       .flatMap(debugProvider.asSession)
-      //       .asJavaObject
-
-      //   case ServerCommands.ResolveAndStartTestSuite(params)
-      //       if params.testClass != null =>
-      //     debugProvider
-      //       .resolveTestClassParams(params)
-      //       .flatMap(debugProvider.asSession)
-      //       .asJavaObject
-
-      //   case ServerCommands.StartAttach(params) if params.hostName != null =>
-      //     debugProvider
-      //       .resolveAttachRemoteParams(params)
-      //       .flatMap(debugProvider.asSession)
-      //       .asJavaObject
-
-      //   case ServerCommands.DiscoverAndRun(params) =>
-      //     debugProvider
-      //       .debugDiscovery(params)
-      //       .flatMap(debugProvider.asSession)
-      //       .asJavaObject
-
+      case ServerCommands.StartTestSuite(params)
+          if params.target != null && params.requestData != null =>
+        val foundBuildtargets =
+          folderServices
+            .map(s => (s, s.supportsBuildTarget(params.target)))
+            .collect { case (s, Some(b)) => (s, b) }
+        foundBuildtargets match {
+          case (service, target) :: Nil =>
+            service.startTestSuite(target, params).asJavaObject
+          case list =>
+            if (list.isEmpty) notFound("Build target", params.target.toString())
+            else
+              definedInMultipleWorkspaceFolders(
+                "Build target",
+                params.target.toString(),
+              )
+            Future.successful(()).asJavaObject
+        }
+      case ServerCommands.ResolveAndStartTestSuite(params)
+          if params.testClass != null =>
+        Future
+          .sequence(
+            folderServices.map(_.findTestClassAndItsBuildTarget(params))
+          )
+          .flatMap { list =>
+            list.filter(_._2.isEmpty) match {
+              case (service, buildTargets) :: Nil =>
+                service.startTestSuiteForResolved(buildTargets, params)
+              case list =>
+                if (list.isEmpty) notFound("Test class", params.testClass)
+                else
+                  definedInMultipleWorkspaceFolders(
+                    "Test class",
+                    params.testClass,
+                  )
+                Future.successful(())
+            }
+          }
+          .asJavaObject
+      case ServerCommands.StartAttach(params) if params.hostName != null =>
+        // TODO:: this should probably come with workspace name
+        val foundBuildtargets =
+          folderServices
+            .map(s => (s, s.findBuildTargetByDisplayName(params.buildTarget)))
+            .collect { case (s, Some(bt)) => (s, bt.getId()) }
+        foundBuildtargets match {
+          case (service, target) :: Nil =>
+            service.createDebugSession(target).asJavaObject
+          case list =>
+            if (list.isEmpty) notFound("Build target", params.buildTarget)
+            else
+              definedInMultipleWorkspaceFolders(
+                "Build target",
+                params.buildTarget,
+              )
+            Future.successful(()).asJavaObject
+        }
+      case ServerCommands.DiscoverAndRun(params) =>
+        getServiceFor(params.path).debugDiscovery(params)
       case ServerCommands.AnalyzeStacktrace(content) =>
         Future {
           // Getting the service for focused document and first one otherwise
@@ -965,8 +1029,9 @@ class WorkspaceLspService(
       service.connectTables()
     }
     syncUserconfiguration().flatMap { _ =>
-      Future
-        .sequence(folderServices.map(_.initialized()))
+      Future // TODO:: we should probably have only one http server
+        //                 and remove this ---v
+        .sequence(folderServices.map(_.initialized(this)))
         .andThen { case Success(_) => treeView.init() }
         .ignoreValue
     }
