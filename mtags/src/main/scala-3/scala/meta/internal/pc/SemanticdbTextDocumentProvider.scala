@@ -6,9 +6,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.mtags.MtagsEnrichments.*
 
-import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.semanticdb.ExtractSemanticDB
 import dotty.tools.dotc.semanticdb.Language

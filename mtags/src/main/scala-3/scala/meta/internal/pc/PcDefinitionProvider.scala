@@ -3,8 +3,6 @@ package scala.meta.internal.pc
 import java.nio.file.Paths
 import java.util.ArrayList
 
-import scala.annotation.tailrec
-import scala.concurrent.Future
 import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -16,17 +14,11 @@ import dotty.tools.dotc.CompilationUnit
 import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
-import dotty.tools.dotc.ast.untpd.DerivingTemplate
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.ModuleClass
-import dotty.tools.dotc.core.NameOps.*
-import dotty.tools.dotc.core.Names
-import dotty.tools.dotc.core.Names.*
-import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.transform.SymUtils.*
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Location
@@ -46,7 +38,7 @@ class PcDefinitionProvider(
   private def definitions(findTypeDef: Boolean): DefinitionResult =
     val uri = params.uri
     val filePath = Paths.get(uri)
-    val diagnostics = driver.run(
+    driver.run(
       uri,
       SourceFile.virtual(filePath.toString, params.text),
     )
@@ -60,9 +52,8 @@ class PcDefinitionProvider(
     given ctx: Context = driver.localContext(params)
     val indexedContext = IndexedContext(ctx)
     val result =
-      if findTypeDef then
-        findTypeDefinitions(tree, path, pos, driver, indexedContext)
-      else findDefinitions(tree, path, pos, driver, indexedContext)
+      if findTypeDef then findTypeDefinitions(path, pos, indexedContext)
+      else findDefinitions(path, pos, indexedContext)
 
     if (result.locations().isEmpty()) then
       fallbackToUntyped(unit, pos)(using ctx)
@@ -92,10 +83,8 @@ class PcDefinitionProvider(
   end fallbackToUntyped
 
   private def findDefinitions(
-      tree: Tree,
       path: List[Tree],
       pos: SourcePosition,
-      driver: InteractiveDriver,
       indexed: IndexedContext,
   ): DefinitionResult =
     import indexed.ctx
@@ -106,10 +95,8 @@ class PcDefinitionProvider(
   end findDefinitions
 
   private def findTypeDefinitions(
-      tree: Tree,
       path: List[Tree],
       pos: SourcePosition,
-      driver: InteractiveDriver,
       indexed: IndexedContext,
   ): DefinitionResult =
     import indexed.ctx

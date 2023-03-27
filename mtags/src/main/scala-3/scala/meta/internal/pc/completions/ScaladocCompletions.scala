@@ -5,7 +5,6 @@ import scala.meta.pc.PresentationCompilerConfig
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Flags.Method
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameKinds.*
 import dotty.tools.dotc.core.Symbols.NoSymbol

@@ -2,10 +2,8 @@ package scala.meta.internal.pc
 
 import java.nio.file.Paths
 
-import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Contexts.Context
@@ -34,7 +32,6 @@ final class ConvertToNamedArgumentsProvider(
     val pos = driver.sourcePosition(params)
     val trees = driver.openedTrees(uri)
     val tree = Interactive.pathTo(trees, pos)(using newctx).headOption
-    val result = collection.mutable.ListBuffer.empty[l.TextEdit]
 
     def paramss(fun: tpd.Tree)(using Context): List[String] =
       fun.tpe match

@@ -17,22 +17,18 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameKinds.DefaultGetterName
-import dotty.tools.dotc.core.NameKinds.NameKind
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.SymDenotations.SymDenotation
-import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.{lsp4j as l}
 
 object OverrideCompletions:
@@ -176,13 +172,11 @@ object OverrideCompletions:
     end FindTypeDef
 
     val uri = params.uri
-    val ctx = driver.currentCtx
     driver.run(
       uri,
       SourceFile.virtual(uri.toASCIIString, params.text),
     )
     val unit = driver.currentCtx.run.units.head
-    val tree = unit.tpdTree
     val pos = driver.sourcePosition(params)
 
     val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
@@ -305,10 +299,7 @@ object OverrideCompletions:
         )
       )
       .toList
-    val (edits, imports) = toEdits(
-      completionValues,
-      autoImports,
-    )
+    val (edits, imports) = toEdits(completionValues)
 
     if edits.isEmpty then Nil
     else
@@ -371,8 +362,7 @@ object OverrideCompletions:
   end implementAllFor
 
   private def toEdits(
-      completions: List[CompletionValue.Override],
-      autoImports: AutoImportsGenerator,
+      completions: List[CompletionValue.Override]
   ): (List[String], Set[l.TextEdit]) =
     completions.foldLeft(
       (List.empty[String], Set.empty[l.TextEdit])

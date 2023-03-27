@@ -258,8 +258,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       |  test($f@@)
       |}
       |""".stripMargin,
-    s"""|$$foo = ${Character.SPACE_SEPARATOR}
-        |""".stripMargin,
+    """|$$foo = """.stripMargin,
     topLines = Option(1),
   )
 
@@ -273,14 +272,14 @@ class CompletionArgSuite extends BaseCompletionSuite {
       |  test($f@@)
       |}
       |""".stripMargin,
-    s"""|$$foo = ${Character.SPACE_SEPARATOR}
-        |$$foo = ${1 :???}, | = ${2 :???}
+    s"""|$$$$foo =${' '}
+        |$$$$foo = $${1:???}, | = $${2:???}
         |""".stripMargin,
     topLines = Option(2),
     compat = Map(
-      "3" -> """|$$foo =
-                |$$foo = ${1:???}, $$bar = ${2:???}
-                |""".stripMargin
+      "3" -> s"""|$$$$foo =${' '}
+                 |$$$$foo = $${1:???}, $$$$bar = $${2:???}
+                 |""".stripMargin
     ),
   )
 

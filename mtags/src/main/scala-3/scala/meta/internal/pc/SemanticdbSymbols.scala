@@ -1,19 +1,11 @@
 package scala.meta.internal.pc
 
-import java.lang.Character.isJavaIdentifierPart
-import java.lang.Character.isJavaIdentifierStart
-
-import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
-import scala.meta.internal.mtags.MtagsEnrichments.*
-
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
-import dotty.tools.dotc.transform.SymUtils.*
 
 object SemanticdbSymbols:
 

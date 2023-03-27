@@ -2,9 +2,6 @@ package scala.meta.internal.pc
 
 import java.nio.file.Paths
 
-import scala.collection.mutable
-import scala.collection.mutable.Builder
-import scala.collection.mutable.ListBuffer
 import scala.meta as m
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -12,18 +9,13 @@ import scala.meta.internal.pc.MetalsInteractive.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.MetalsPrinter.IncludeDefaultParam
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.DeepFolder
-import dotty.tools.dotc.ast.tpd.TreeTraverser
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Flags.Method
-import dotty.tools.dotc.core.Names.Name
-import dotty.tools.dotc.core.Names.TermName
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.MethodType
 import dotty.tools.dotc.core.Types.PolyType
@@ -32,7 +24,6 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j as l}
 

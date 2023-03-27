@@ -3,24 +3,17 @@ package scala.meta.internal.pc.printer
 import java.{util as ju}
 
 import scala.annotation.tailrec
-import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports
-import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext
-import scala.meta.internal.pc.SemanticdbSymbols
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Hashable.Binders
-import dotty.tools.dotc.core.NameKinds
-import dotty.tools.dotc.core.NameKinds.EvidenceParamName
 import dotty.tools.dotc.core.Names
-import dotty.tools.dotc.core.Names.Designator
 import dotty.tools.dotc.core.Names.Name
-import dotty.tools.dotc.core.Names.SimpleName
 import dotty.tools.dotc.core.Names.termName
 import dotty.tools.dotc.core.Symbols
 import dotty.tools.dotc.core.Symbols.*

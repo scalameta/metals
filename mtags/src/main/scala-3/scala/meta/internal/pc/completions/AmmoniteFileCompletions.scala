@@ -2,12 +2,10 @@ package scala.meta.internal.pc
 package completions
 
 import java.nio.file.Path
-import java.{util as ju}
 
 import scala.collection.JavaConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImport
 
 import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.ast.tpd.*

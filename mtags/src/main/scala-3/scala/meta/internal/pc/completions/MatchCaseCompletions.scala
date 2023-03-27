@@ -2,19 +2,15 @@ package scala.meta.internal.pc
 package completions
 
 import java.net.URI
-import java.{util as ju}
 
 import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.AutoImports.SymbolImport
-import scala.meta.internal.pc.IndexedContext.Result
 import scala.meta.internal.pc.MetalsInteractive.*
-import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
 
@@ -24,7 +20,6 @@ import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.AndType
@@ -33,8 +28,6 @@ import dotty.tools.dotc.core.Types.NoType
 import dotty.tools.dotc.core.Types.OrType
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
-import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
 
@@ -71,7 +64,6 @@ object CaseKeywordCompletion:
     val definitions = indexedContext.ctx.definitions
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
     val completionGenerator = CompletionValueGenerator(
-      indexedContext,
       completionPos,
       clientSupportsSnippets,
       patternOnly,
@@ -89,7 +81,6 @@ object CaseKeywordCompletion:
               if definitions.isFunctionType(head) || head.isRef(
                 definitions.PartialFunctionClass
               ) =>
-            val dealiased = head.widenDealias
             val argTypes =
               head.argTypes.init
             new Parents(argTypes, definitions)
@@ -245,7 +236,6 @@ object CaseKeywordCompletion:
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
 
     val completionGenerator = CompletionValueGenerator(
-      indexedContext,
       completionPos,
       clientSupportsSnippets,
     )
@@ -397,7 +387,6 @@ class Parents(val selector: Type, definitions: Definitions)(using Context):
 end Parents
 
 class CompletionValueGenerator(
-    indexedContext: IndexedContext,
     completionPos: CompletionPos,
     clientSupportsSnippets: Boolean,
     patternOnly: Option[String] = None,
@@ -459,7 +448,7 @@ class CompletionValueGenerator(
       sym: Symbol,
       label: String,
       autoImport: Option[l.TextEdit],
-  )(using Context): CompletionValue.CaseKeyword =
+  ): CompletionValue.CaseKeyword =
     val cursorSuffix =
       (if patternOnly.nonEmpty then "" else " ") +
         (if clientSupportsSnippets then "$0" else "")

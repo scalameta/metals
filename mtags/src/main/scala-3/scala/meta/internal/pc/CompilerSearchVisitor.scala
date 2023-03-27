@@ -9,14 +9,11 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.*
 
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.*
-import dotty.tools.dotc.core.SymDenotations.*
 import dotty.tools.dotc.core.Symbols.*
 
 class CompilerSearchVisitor(
-    query: String,
-    visitSymbol: Symbol => Boolean,
+    visitSymbol: Symbol => Boolean
 )(using ctx: Context, reports: ReportContext)
     extends SymbolSearchVisitor:
 

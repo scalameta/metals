@@ -1,26 +1,19 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports
-import scala.meta.internal.pc.AutoImports.SymbolIdent
 import scala.meta.internal.pc.InlineValueProvider.Errors
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
-import dotty.tools.dotc.core.Types.ConstantType
 import dotty.tools.dotc.core.StdNames
 
 final class PcInlineValueProviderImpl(
@@ -161,7 +154,6 @@ final class PcInlineValueProviderImpl(
     def buildRef(occurence: Occurence): Either[String, Reference] =
       val path =
         Interactive.pathTo(unit.tpdTree, occurence.pos.span)(using newctx)
-      val parentSymbol = path.find(_.isDef).map(_.symbol)
       val indexedContext = IndexedContext(
         MetalsInteractive.contextOfPath(path)(using newctx)
       )

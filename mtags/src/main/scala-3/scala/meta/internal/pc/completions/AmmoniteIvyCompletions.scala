@@ -6,7 +6,6 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd.ImportSelector
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.util.SourcePosition
 
 object AmmoniteIvyCompletions:
   def contribute(

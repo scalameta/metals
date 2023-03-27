@@ -9,7 +9,6 @@ import scala.meta.tokens.Token
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.{lsp4j as l}
 
 object KeywordsCompletions:
 

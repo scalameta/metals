@@ -12,17 +12,13 @@ import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
-import scala.meta.internal.pc.IdentifierComparator
-import scala.meta.internal.pc.completions.KeywordsCompletions
 import scala.meta.internal.pc.completions.OverrideCompletions.OverrideExtractor
 import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
-import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Denotations.*
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
@@ -33,8 +29,6 @@ import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.transform.SymUtils.*
-import dotty.tools.dotc.util.NameTransformer
-import dotty.tools.dotc.util.NoSourcePosition
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
@@ -563,10 +557,6 @@ class Completions(
           ivy.decoded == "$dep")
       case _ => false
 
-  private def description(sym: Symbol): String =
-    if sym.isType then sym.showFullName
-    else sym.info.widenTermRefExpr.show
-
   private def enrichWithSymbolSearch(
       visit: CompletionValue => Boolean,
       qualType: Type = ctx.definitions.AnyType,
@@ -584,33 +574,29 @@ class Completions(
         }
         Some(SymbolSearch.Result.INCOMPLETE)
       case CompletionKind.Scope =>
-        val visitor = new CompilerSearchVisitor(
-          query,
-          sym =>
-            indexedContext.lookupSym(sym) match
-              case IndexedContext.Result.InScope =>
-                visit(CompletionValue.scope(sym.decodedName, sym))
-              case _ =>
-                completionsWithSuffix(
-                  sym,
-                  sym.decodedName,
-                  CompletionValue.Workspace(_, _, _, sym),
-                ).map(visit).forall(_ == true),
-        )
-        Some(search.search(query, buildTargetIdentifier, visitor))
-      case CompletionKind.Members if query.nonEmpty =>
-        val visitor = new CompilerSearchVisitor(
-          query,
-          sym =>
-            if sym.is(ExtensionMethod) &&
-              qualType.widenDealias <:< sym.extensionParam.info.widenDealias
-            then
+        val visitor = new CompilerSearchVisitor(sym =>
+          indexedContext.lookupSym(sym) match
+            case IndexedContext.Result.InScope =>
+              visit(CompletionValue.scope(sym.decodedName, sym))
+            case _ =>
               completionsWithSuffix(
                 sym,
                 sym.decodedName,
-                CompletionValue.Extension(_, _, _),
-              ).map(visit).forall(_ == true)
-            else false,
+                CompletionValue.Workspace(_, _, _, sym),
+              ).map(visit).forall(_ == true),
+        )
+        Some(search.search(query, buildTargetIdentifier, visitor))
+      case CompletionKind.Members if query.nonEmpty =>
+        val visitor = new CompilerSearchVisitor(sym =>
+          if sym.is(ExtensionMethod) &&
+            qualType.widenDealias <:< sym.extensionParam.info.widenDealias
+          then
+            completionsWithSuffix(
+              sym,
+              sym.decodedName,
+              CompletionValue.Extension(_, _, _),
+            ).map(visit).forall(_ == true)
+          else false,
         )
         Some(search.searchMethods(query, buildTargetIdentifier, visitor))
       case CompletionKind.Members => // query.isEmpry

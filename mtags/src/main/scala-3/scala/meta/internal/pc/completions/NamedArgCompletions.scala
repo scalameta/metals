@@ -4,14 +4,7 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IndexedContext
 
 import dotty.tools.dotc.ast.Trees.ValDef
-import dotty.tools.dotc.ast.tpd.Apply
-import dotty.tools.dotc.ast.tpd.Block
-import dotty.tools.dotc.ast.tpd.Ident
-import dotty.tools.dotc.ast.tpd.Literal
-import dotty.tools.dotc.ast.tpd.NamedArg
-import dotty.tools.dotc.ast.tpd.Select
-import dotty.tools.dotc.ast.tpd.Template
-import dotty.tools.dotc.ast.tpd.Tree
+import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
@@ -19,7 +12,6 @@ import dotty.tools.dotc.core.NameKinds.DefaultGetterName
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.Type
-import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.util.SourcePosition
 
 object NamedArgCompletions:
@@ -36,7 +28,6 @@ object NamedArgCompletions:
         contribute(
           Some(ident),
           app,
-          pos,
           indexedContext,
           clientSupportsSnippets,
         )
@@ -45,7 +36,6 @@ object NamedArgCompletions:
         contribute(
           Some(ident),
           app,
-          pos,
           indexedContext,
           clientSupportsSnippets,
         )
@@ -66,7 +56,6 @@ object NamedArgCompletions:
   private def contribute(
       ident: Option[Ident],
       apply: Apply,
-      pos: SourcePosition,
       indexedContext: IndexedContext,
       clientSupportsSnippets: Boolean,
   )(using Context): List[CompletionValue] =
