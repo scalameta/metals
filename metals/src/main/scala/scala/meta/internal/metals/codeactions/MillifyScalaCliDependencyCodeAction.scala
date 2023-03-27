@@ -14,8 +14,6 @@ import scala.meta.tokens.Token._
 
 import org.eclipse.{lsp4j => l}
 
-// TODO prepare LSP spec if it works in manual tests
-// there are some similarities to MillifyDependencyCodeAction so maybe they can be extracted
 class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.QuickFix
