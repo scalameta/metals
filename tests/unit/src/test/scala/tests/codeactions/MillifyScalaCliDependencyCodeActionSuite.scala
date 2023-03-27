@@ -28,4 +28,27 @@ class MillifyScalaCliDependencyCodeActionSuite
     scalaCliLayout = true,
   )
 
+  val sbtStyleDependencyMultiSpace =
+    """    "org.scalameta"     %% "munit"   % "0.7.26""""
+
+  check(
+    "convert-dependency-multiple-whitespace",
+    s"""|//> <<>>using lib $sbtStyleDependencyMultiSpace
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    s"""Convert to $convertTo""",
+    s"""|//> using lib $convertedDependency
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    scalaCliOptions = List("--actions", "-S", scalaVersion),
+    expectNoDiagnostics = false,
+    scalaCliLayout = true,
+  )
+
 }
