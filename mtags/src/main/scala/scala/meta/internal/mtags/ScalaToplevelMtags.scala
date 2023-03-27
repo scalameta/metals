@@ -609,7 +609,9 @@ class ScalaToplevelMtags(
   def valIdentifiers: List[Identifier] = {
     var resultList: List[Identifier] = Nil
     var isUnapply = false
-    while (scanner.curr.token != EQUALS && scanner.curr.token != COLON) {
+    while (
+      scanner.curr.token != EQUALS && scanner.curr.token != COLON && scanner.curr.token != EOF
+    ) {
       scanner.curr.token match {
         case IDENTIFIER => {
           val pos = newPosition

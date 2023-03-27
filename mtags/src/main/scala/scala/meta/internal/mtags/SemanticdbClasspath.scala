@@ -46,22 +46,19 @@ final case class SemanticdbClasspath(
 object SemanticdbClasspath {
   def toScala(
       workspace: AbsolutePath,
-      semanticdb: AbsolutePath
+      semanticdb: SemanticdbPath
   ): Option[AbsolutePath] = {
-    require(
-      semanticdb.toNIO.getFileName.toString.endsWith(".semanticdb"),
-      semanticdb
-    )
     semanticdb.toNIO.semanticdbRoot.map { root =>
       workspace
         .resolve(
-          semanticdb
+          semanticdb.absolutePath
             .resolveSibling(_.stripSuffix(".semanticdb"))
             .toRelative(AbsolutePath(root))
         )
         .dealias
     }
   }
+
   def fromScalaOrJava(path: RelativePath): RelativePath = {
     require(path.isScalaOrJavaFilename, path.toString)
     val semanticdbSibling = path.resolveSibling(_ + ".semanticdb")

@@ -24,6 +24,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.metals.logging.LanguageClientLogger
+import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.pc
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
 import scala.meta.internal.tvp.MetalsTreeViewProvider
@@ -211,7 +212,7 @@ class WorkspaceLspService(
   def getServiceFor(uri: String): MetalsLspService = {
     val folder =
       for {
-        path <- uri.toAbsolutePathSafe
+        path <- uri.toAbsolutePathSafe(EmptyReportContext)
       } yield getServiceFor(path)
     folder.getOrElse(folderServices.head) // fallback to the first one
   }
@@ -630,9 +631,14 @@ class WorkspaceLspService(
         getServiceFor(uri).runScalafix(uri).asJavaObject
       case ServerCommands.ChooseClass(params) =>
         val uri = params.textDocument.getUri()
-        getServiceFor(uri).chooseClass(uri, params.kind == "class").asJavaObject
+        val searchGranularity =
+          if (params.kind == "class") ClassFinderGranularity.ClassFiles
+          else ClassFinderGranularity.Tasty
+        getServiceFor(uri).chooseClass(uri, searchGranularity).asJavaObject
       case ServerCommands.RunDoctor() =>
         onCurrentFolder(_.rundoctor(), "run doctor").asJavaObject
+      case ServerCommands.ZipReports() =>
+        onCurrentFolder(_.zipReports(), "zip reports").asJavaObject
       case ServerCommands.ListBuildTargets() =>
         Future {
           folderServices

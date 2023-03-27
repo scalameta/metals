@@ -2,7 +2,7 @@
 
 <<given>>/*keyword*/ <<intValue>>/*variable,readonly*/: <<Int>>/*class,abstract*/ = <<4>>/*number*/
 <<given>>/*keyword*/ <<String>>/*type*/ = <<"str">>/*string*/
-<<given>>/*keyword*/ (<<using>>/*keyword*/ <<i>>/*parameter*/: <<Int>>/*class,abstract*/): <<Double>>/*class,abstract*/ = <<4.0>>/*number*/
+<<given>>/*keyword*/ (<<using>>/*keyword*/ <<i>>/*parameter,readonly*/: <<Int>>/*class,abstract*/): <<Double>>/*class,abstract*/ = <<4.0>>/*number*/
 <<given>>/*keyword*/ [<<T>>/*typeParameter,abstract*/]: <<List>>/*type*/[<<T>>/*typeParameter,abstract*/] = <<Nil>>/*variable,readonly*/
 <<given>>/*keyword*/ <<given_Char>>/*variable,readonly*/: <<Char>>/*class,abstract*/ = <<'?'>>/*string*/
 <<given>>/*keyword*/ <<`given_Float`>>/*variable,readonly*/: <<Float>>/*class,abstract*/ = <<3.0>>/*number*/

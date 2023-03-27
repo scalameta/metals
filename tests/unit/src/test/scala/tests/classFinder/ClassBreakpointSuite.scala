@@ -178,6 +178,6 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
       buffers.put(path, sourceText)
       val sym = classFinder.findClass(path, pos.toLsp.getStart())
       assert(sym.isDefined)
-      assertNoDiff(sym.get, expected)
+      assertNoDiff(sym.get.value, expected)
     }
 }

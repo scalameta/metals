@@ -3,6 +3,7 @@ package scala.meta.internal.pc.completions
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.Fuzzy
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.AutoImports.AutoImport
@@ -41,7 +42,7 @@ object InterpolatorCompletions:
       search: SymbolSearch,
       config: PresentationCompilerConfig,
       buildTargetIdentifier: String,
-  )(using Context) =
+  )(using Context, ReportContext) =
     InterpolationSplice(pos.span.point, text.toCharArray(), text) match
       case Some(interpolator) =>
         InterpolatorCompletions.contributeScope(
@@ -122,7 +123,7 @@ object InterpolatorCompletions:
       areSnippetsSupported: Boolean,
       search: SymbolSearch,
       buildTargetIdentifier: String,
-  )(using Context): List[CompletionValue] =
+  )(using Context, ReportContext): List[CompletionValue] =
     def newText(
         name: String,
         suffix: Option[String],
@@ -241,7 +242,7 @@ object InterpolatorCompletions:
       search: SymbolSearch,
       config: PresentationCompilerConfig,
       buildTargetIdentifier: String,
-  )(using ctx: Context): List[CompletionValue] =
+  )(using ctx: Context, reportsContext: ReportContext): List[CompletionValue] =
     val litStartPos = lit.span.start
     val litEndPos = lit.span.end - Cursor.value.length()
     val span = position.span

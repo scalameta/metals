@@ -370,14 +370,14 @@ lazy val metals = project
       V.guava,
       "com.geirsson" %% "metaconfig-core" % "0.11.1",
       // for measuring memory footprint
-      "org.openjdk.jol" % "jol-core" % "0.16",
+      "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.9",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.8.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.15.0",
+      "org.flywaydb" % "flyway-core" % "9.16.1",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
@@ -651,6 +651,8 @@ lazy val metalsDependencies = project
   .in(file("target/.dependencies"))
   .settings(
     publish / skip := true,
+    // silent the intransitive dependency warning
+    publishMavenStyle := false,
     libraryDependencies ++= List(
       // The dependencies listed below are only listed so Scala Steward
       // will pick them up and update them. They aren't actually used.
@@ -662,6 +664,7 @@ lazy val metalsDependencies = project
       "ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop,
       "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
+      "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter intransitive (),
     ),
   )
   .disablePlugins(ScalafixPlugin)

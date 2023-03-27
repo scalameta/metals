@@ -6,6 +6,7 @@ import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.Try
@@ -400,6 +401,7 @@ class Compilers(
            * @param remaining the rest of the tokens to analyze
            * @return the first found that should be contained with the rest
            */
+          @tailrec
           def findCorrectStart(
               line: Integer,
               character: Integer,
@@ -432,9 +434,34 @@ class Compilers(
             }
           }
 
+          @tailrec
+          def adjustForScala3Worksheet(
+              remaining: List[Integer],
+              acc: List[List[Integer]] = List.empty,
+          ): List[Integer] = {
+            remaining match {
+              case Nil => acc.reverse.flatten
+              case deltaLine :: deltaColumn :: next if deltaLine != 0 =>
+                // we need to remove additional indent
+                val adjustedColumn: Integer = (Math.max(0, deltaColumn - 2))
+                val adjusted: List[Integer] =
+                  List(deltaLine, adjustedColumn) ++ next.take(3)
+                adjustForScala3Worksheet(
+                  next.drop(3),
+                  adjusted :: acc,
+                )
+              case _ =>
+                adjustForScala3Worksheet(
+                  remaining.drop(5),
+                  remaining.take(5) :: acc,
+                )
+            }
+          }
+
           val vFile =
             CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
           val isScala3 = ScalaVersions.isScala3Version(compiler.scalaVersion())
+
           compiler
             .semanticTokens(vFile)
             .asScala
@@ -445,9 +472,13 @@ class Compilers(
                 isScala3,
               )
 
-              new SemanticTokens(
-                findCorrectStart(0, 0, plist.asScala.toList).asJava
-              )
+              val tokens =
+                findCorrectStart(0, 0, plist.asScala.toList)
+              if (isScala3 && path.isWorksheet) {
+                new SemanticTokens(adjustForScala3Worksheet(tokens).asJava)
+              } else {
+                new SemanticTokens(tokens.asJava)
+              }
             }
         }
         .getOrElse(Future.successful(new SemanticTokens(emptyTokens)))

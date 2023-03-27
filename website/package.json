@@ -10,10 +10,11 @@
   "devDependencies": {},
   "dependencies": {
     "@docusaurus/core": "2.3.1",
+    "@docusaurus/plugin-client-redirects": "2.3.1",
     "@docusaurus/preset-classic": "2.3.1",
+    "@easyops-cn/docusaurus-search-local": "^0.35.0",
     "clsx": "^1.1.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@docusaurus/plugin-client-redirects": "2.3.1"
+    "react-dom": "^18.2.0"
   }
 }

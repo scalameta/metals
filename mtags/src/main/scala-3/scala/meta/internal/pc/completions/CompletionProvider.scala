@@ -6,6 +6,7 @@ import java.nio.file.Path
 import scala.annotation.tailrec
 import scala.collection.JavaConverters.*
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportEdits
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
@@ -39,7 +40,7 @@ class CompletionProvider(
     buildTargetIdentifier: String,
     workspace: Option[Path],
     workspaceId: String,
-):
+)(using reports: ReportContext):
   def completions(): CompletionList =
     val uri = params.uri
 

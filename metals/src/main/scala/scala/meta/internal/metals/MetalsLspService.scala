@@ -40,6 +40,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -64,6 +65,7 @@ import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinder
+import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
@@ -166,6 +168,11 @@ class MetalsLspService(
 
   val tables: Tables = register(new Tables(folder, time))
 
+  implicit val reports: StdReportContext = new StdReportContext(folder)
+
+  val zipReportsProvider: ZipReportsProvider =
+    new ZipReportsProvider(doctor.getTargetsInfoForReports, reports)
+
   private val buildTools: BuildTools = new BuildTools(
     folder,
     bspGlobalDirectories,
@@ -265,7 +272,7 @@ class MetalsLspService(
       compilations.pauseables
   )
 
-  private val trees = new Trees(buffers, scalaVersionSelector, folder)
+  private val trees = new Trees(buffers, scalaVersionSelector)
 
   private val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
@@ -1082,7 +1089,6 @@ class MetalsLspService(
     buildTargets
       .inverseSources(path)
       .foreach(focusedDocumentBuildTarget.set)
-
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
@@ -1255,14 +1261,15 @@ class MetalsLspService(
       }
       onChange(List(path)).asJava
     } else if (path.isSemanticdb) {
+      val semanticdbPath = SemanticdbPath(path)
       Future {
         event.eventType match {
           case EventType.Delete =>
-            semanticDBIndexer.onDelete(event.path)
+            semanticDBIndexer.onDelete(semanticdbPath)
           case EventType.CreateOrModify =>
-            semanticDBIndexer.onChange(event.path)
+            semanticDBIndexer.onChange(semanticdbPath)
           case EventType.Overflow =>
-            semanticDBIndexer.onOverflow(event.path)
+            semanticDBIndexer.onOverflow(semanticdbPath)
         }
       }.asJava
     } else if (path.isBuild) {
@@ -1643,11 +1650,11 @@ class MetalsLspService(
 
   def chooseClass(
       uri: String,
-      includeInnerClasses: Boolean,
+      granurality: ClassFinderGranularity,
   ): Future[DecoderResponse] =
     fileDecoderProvider.chooseClassFromFile(
       uri.toAbsolutePath,
-      includeInnerClasses,
+      granurality,
     )
 
   def cascadeCompile(): Future[Unit] =
@@ -1717,7 +1724,6 @@ class MetalsLspService(
       worksheetPath: AbsolutePath
   ): CompletableFuture[Object] = {
     val output = worksheetProvider.copyWorksheetOutput(worksheetPath)
-
     if (output.nonEmpty) {
       Future(output).asJavaObject
     } else {
@@ -1818,6 +1824,24 @@ class MetalsLspService(
   def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
   ): Future[List[Location]] = findTextInJars.find(params)
+
+  def zipReports(): Future[Unit] =
+    Future {
+      val zip = zipReportsProvider.zip()
+      val pos = new l.Position(0, 0)
+      val location = new Location(
+        zip.toURI.toString(),
+        new l.Range(pos, pos),
+      )
+      languageClient.metalsExecuteClientCommand(
+        ClientCommands.GotoLocation.toExecuteCommandParams(
+          ClientCommands.WindowLocation(
+            location.getUri(),
+            location.getRange(),
+          )
+        )
+      )
+    }
 
   def generateBspConfig(): Future[Unit] = {
     val servers: List[BuildServerProvider] =
@@ -2363,6 +2387,11 @@ class MetalsLspService(
         case e: IndexingExceptions.PathIndexingException =>
           scribe.error(s"issues while parsing: ${e.path}", e.underlying)
         case e: IndexingExceptions.InvalidSymbolException =>
+          reports.incognito.createReport(
+            "invalid-symbol",
+            s"""Symbol: ${e.symbol}""".stripMargin,
+            e,
+          )
           scribe.error(s"searching for `${e.symbol}` failed", e.underlying)
         case _: NoSuchFileException =>
         // only comes for badly configured jar with `/Users` path added.

@@ -4,7 +4,6 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.parsing.ClassFinder
 
 import munit.FunSuite
-
 abstract class BaseClassFinderSuite extends FunSuite {
   def init(scalaVersion: String): (Buffers, ClassFinder) = {
     val (buffers, trees) = TreeUtils.getTrees(scalaVersion)

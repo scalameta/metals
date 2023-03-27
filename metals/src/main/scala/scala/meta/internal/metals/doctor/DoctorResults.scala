@@ -75,6 +75,20 @@ final case class DoctorTargetInfo(
       "recommendation" -> recommenedFix,
     )
 
+  def toMap(exclude: List[String] = List()): Map[String, String] =
+    Map(
+      "buildTarget" -> name,
+      "gotoCommand" -> gotoCommand,
+      "compilationStatus" -> compilationStatus.explanation,
+      "targetType" -> targetType,
+      "diagnostics" -> diagnosticsStatus.explanation,
+      "interactive" -> interactiveStatus.explanation,
+      "semanticdb" -> indexesStatus.explanation,
+      "debugging" -> debuggingStatus.explanation,
+      "java" -> javaStatus.explanation,
+      "recommendation" -> recommenedFix,
+    ) -- exclude
+
 }
 
 /**

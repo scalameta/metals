@@ -344,7 +344,7 @@ trait Signatures { compiler: MetalsGlobal =>
           if (implicitEvidenceTermParams.contains(param)) {
             Nil
           } else {
-            val result = paramLabel(param, i)
+            val result = paramLabel(param, Some(i))
             i += 1
             result :: Nil
           }
@@ -388,13 +388,17 @@ trait Signatures { compiler: MetalsGlobal =>
         case Nil => Params.NormalKind
       }
     }
-    def paramDocstring(paramIndex: Int): String = {
-      if (isDocs) infoParams(paramIndex).fold("")(_.docstring())
+    def indexOfParam(param: Symbol): Int =
+      infoParamsA.indexWhere(_.displayName() == param.name.toString())
+    def paramDocstring(param: Symbol, paramIndex: Option[Int]): String = {
+      val indexInSignature = paramIndex.getOrElse(indexOfParam(param))
+      if (isDocs) infoParams(indexInSignature).fold("")(_.docstring())
       else ""
     }
-    def paramLabel(param: Symbol, index: Int): String = {
+    def paramLabel(param: Symbol, paramIndex: Option[Int]): String = {
+      val indexInSignature = paramIndex.getOrElse(indexOfParam(param))
       val paramTypeString = printType(shortType(param.info, shortenedNames))
-      val name = infoParams(index) match {
+      val name = infoParams(indexInSignature) match {
         case Some(value) if param.name.startsWith("x$") =>
           value.displayName()
         case _ => param.nameString
@@ -410,10 +414,11 @@ trait Signatures { compiler: MetalsGlobal =>
       } else {
         val default =
           if (includeDefaultParam && param.isParamWithDefault) {
-            val defaultValue = infoParams(index).map(_.defaultValue()) match {
-              case Some(value) if !value.isEmpty => value
-              case _ => "..."
-            }
+            val defaultValue =
+              infoParams(indexInSignature).map(_.defaultValue()) match {
+                case Some(value) if !value.isEmpty => value
+                case _ => "..."
+              }
             s" = $defaultValue"
           } else {
             ""

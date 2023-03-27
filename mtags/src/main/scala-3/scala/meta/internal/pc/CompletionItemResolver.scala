@@ -60,7 +60,7 @@ object CompletionItemResolver extends ItemResolver:
     if companion == NoSymbol || gsym.is(JavaDefined) then
       if gsymDoc.isEmpty then
         if gsym.isAliasType then
-          fullDocstring(gsym.info.dealias.typeSymbol, search)
+          fullDocstring(gsym.info.metalsDealias.typeSymbol, search)
         else if gsym.is(Method) then
           gsym.info.finalResultType match
             case tr @ TermRef(_, sym) =>

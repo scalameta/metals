@@ -21,11 +21,13 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.mtags.Md5Fingerprints
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.HoverMarkup
 import scala.meta.internal.semanticdb.MethodSignature
+import scala.meta.internal.semanticdb.Scala.Descriptor.Method
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
@@ -78,7 +80,7 @@ final class SyntheticsDecorationProvider(
     }
   }
 
-  override def onDelete(path: AbsolutePath): Unit = ()
+  override def onDelete(path: SemanticdbPath): Unit = ()
   override def reset(): Unit = ()
 
   override def onChange(
@@ -381,14 +383,20 @@ final class SyntheticsDecorationProvider(
 
   private def toDecorationString(
       textDoc: TextDocument
-  )(symbol: String): String = {
+  )(symbol: String): String =
     if (symbol.isLocal)
       textDoc.symbols
         .find(_.symbol == symbol)
         .map(_.displayName)
         .getOrElse("_")
-    else symbol.desc.name.value
-  }
+    else
+      symbol.desc match {
+        // for contructors we print the class name
+        case Method("<init>", disambiguator) =>
+          val classSymbol = symbol.stripSuffix("`<init>`" + disambiguator + ".")
+          "new " ++ classSymbol.desc.name.value
+        case symDesc => symDesc.name.value
+      }
 
   private def decorationOptions(
       lspRange: l.Range,

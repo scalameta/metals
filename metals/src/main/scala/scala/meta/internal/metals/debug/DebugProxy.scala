@@ -211,9 +211,7 @@ private[debug] final class DebugProxy(
 
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
-      // As long as the color codes are valid this should correctly strip
-      // anything that is ESC (U+001B) plus [
-      val msgWithoutColorCodes = raw.replaceAll("\u001B\\[[;\\d]*m", "");
+      val msgWithoutColorCodes = filerANSIColorCodes(raw)
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
       client.consume(message)

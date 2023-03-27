@@ -11,24 +11,24 @@
   <<val>>/*keyword*/ <<user1>>/*variable,readonly*/ =
     <<User>>/*class*/
       .<<apply>>/*method*/(
-        <<name>>/*parameter*/ = <<"John">>/*string*/
+        <<name>>/*parameter,readonly*/ = <<"John">>/*string*/
       )
   <<val>>/*keyword*/ <<user2>>/*variable,readonly*/: <<User>>/*class*/ =
     <<User>>/*class*/(
-      <<name>>/*parameter*/ = <<susan>>/*variable,readonly*/
+      <<name>>/*parameter,readonly*/ = <<susan>>/*variable,readonly*/
     ).<<copy>>/*method*/(
-      <<name>>/*parameter*/ = <<susan>>/*variable,readonly*/
+      <<name>>/*parameter,readonly*/ = <<susan>>/*variable,readonly*/
     )
 
   <<// anonymous classes>>/*comment*/
   <<@>>/*keyword*/<<deprecated>>/*class*/(
-    <<message>>/*parameter*/ = <<"a">>/*string*/,
-    <<since>>/*parameter*/ = <<susan>>/*variable,readonly*/,
+    <<message>>/*parameter,readonly*/ = <<"a">>/*string*/,
+    <<since>>/*parameter,readonly*/ = <<susan>>/*variable,readonly*/,
   ) <<def>>/*keyword*/ <<b>>/*method,deprecated*/ = <<1>>/*number*/
 
   <<// vararg>>/*comment*/
   <<List>>/*variable,readonly*/(
-    <<elems>>/*parameter*/ = <<2>>/*number*/
+    <<elems>>/*parameter,readonly*/ = <<2>>/*number*/
   )
 
 }

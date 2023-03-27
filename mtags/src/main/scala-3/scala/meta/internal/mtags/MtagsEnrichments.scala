@@ -20,6 +20,7 @@ import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.SymDenotations.NoDenotation
 import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Types.AppliedType
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
@@ -259,5 +260,13 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
           List(EmptyTree)
     end expandRangeToEnclosingApply
   end extension
+
+  extension (tpe: Type)
+    def metalsDealias(using Context): Type =
+      tpe.dealias match
+        case app @ AppliedType(tycon, params) =>
+          // we dealias applied type params by hand, because `dealias` doesn't do it
+          AppliedType(tycon, params.map(_.dealias))
+        case dealised => dealised
 
 end MtagsEnrichments

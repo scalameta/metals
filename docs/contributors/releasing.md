@@ -27,12 +27,12 @@ title: Making a release
 
 ### Draft the release notes
 
-You might use `./bin/merged_prs.sc` script to generate merged PRs list
-between two last release tags. It can be run using ammonite:
+You might use the `./bin/merged_prs.sc` script to generate merged PRs list
+between two last release tags. It can be run using scala-cli:
 
 ```
-cs install ammonite
-amm ./bin/merged_prs.sc <tag1> <tag2> "<github_api_token>"
+cs install scala-cli 
+scala-cli ./bin/merged_prs.sc -- <tag1> <tag2> "<github_api_token>"
 ```
 
 It will need a [basic github API token](https://github.com/settings/tokens) (don't need any additional scopes) to run, which may be specified via

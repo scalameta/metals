@@ -2,7 +2,7 @@
 
 <<class>>/*keyword*/ <<ImplicitConversions>>/*class*/ {
   <<implicit>>/*modifier*/ <<def>>/*keyword*/ <<string2Number>>/*method*/(
-      <<string>>/*parameter*/: <<String>>/*type*/
+      <<string>>/*parameter,readonly*/: <<String>>/*type*/
   ): <<Int>>/*class,abstract*/ = <<42>>/*number*/
   <<val>>/*keyword*/ <<message>>/*variable,readonly*/ = <<"">>/*string*/
   <<val>>/*keyword*/ <<number>>/*variable,readonly*/ = <<42>>/*number*/
@@ -20,7 +20,7 @@
   <<// interpolators>>/*comment*/
   <<s>>/*keyword*/<<">>/*string*/<<Hello >>/*string*/<<$>>/*keyword*/<<message>>/*variable,readonly*/<< >>/*string*/<<$>>/*keyword*/<<number>>/*variable,readonly*/<<">>/*string*/
   <<s>>/*keyword*/<<""">>/*string*/<<Hello>>/*string*/
-<<     |>>/*string*/<<$>>/*keyword*/<<message>>/*variable,readonly*/<<>>/*string*/
+<<     |>>/*string*/<<$>>/*keyword*/<<message>>/*variable,readonly*/
 <<     |>>/*string*/<<$>>/*keyword*/<<number>>/*variable,readonly*/<<""">>/*string*/.<<stripMargin>>/*method*/
 
   <<val>>/*keyword*/ <<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/ = <<char>>/*variable,readonly*/

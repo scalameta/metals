@@ -156,7 +156,7 @@ class SemanticdbTreePrinter(
       isExplicitTuple: => Boolean = false,
   ): Option[String] =
     t match {
-      case s.Tree.Empty => None
+      case s.Tree.Empty => Some("...")
       case s.OriginalTree(_) => None
       case s.TypeApplyTree(function, typeArguments)
           // only print type parameters for tuple if it's not a tuple literal

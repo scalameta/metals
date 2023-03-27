@@ -23,9 +23,9 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |<<   * Test of Comment Block>>/*comment*/
         |<<   */>>/*comment*/  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<1>>/*number*/
         |
-        |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter*/ : <<Int>>/*class,abstract*/) = {
+        |  <<def>>/*keyword*/ <<add>>/*method*/(<<a>>/*parameter,readonly*/ : <<Int>>/*class,abstract*/) = {
         |    <<// Single Line Comment>>/*comment*/
-        |    <<a>>/*parameter*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
+        |    <<a>>/*parameter,readonly*/ <<+>>/*method,abstract*/ <<1>>/*number*/ <<// com = 1>>/*comment*/
         |   }
         |}
         |
@@ -51,6 +51,39 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
         |  }
         |}
         |""".stripMargin,
+  )
+
+  check(
+    "multiline-comment",
+    """| <</** This is >>/*comment*/
+       |<<*  a multiline>>/*comment*/
+       |<<*  comment>>/*comment*/
+       |<<*/>>/*comment*/
+       |
+       |<<object>>/*keyword*/ <<A>>/*class*/ {}
+       |""".stripMargin,
+  )
+
+  check(
+    "using-directive",
+    """|<<//>>>/*comment*/ <<using>>/*keyword*/ <<lib>>/*variable*/ <<"abc::abc:123">>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<scala>>/*variable*/ <<"3.1.1">>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<options>>/*variable*/ <<"-Xasync">>/*string*/, <<"-Xfatal-warnings">>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<packaging>>/*variable*/.<<provided>>/*variable*/ <<"org.apache.spark::spark-sql">>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<target>>/*variable*/.<<platform>>/*variable*/ <<"scala-js">>/*string*/, <<"scala-native">>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<lib>>/*variable*/ <<"io.circe::circe-core:0.14.0">>/*string*/, <<"io.circe::circe-core_native::0.14.0">>/*string*/
+       |<<object>>/*keyword*/ <<A>>/*class*/ {}
+       |""".stripMargin,
+  )
+
+  check(
+    "simple",
+    """|<<package>>/*keyword*/ <<a>>/*namespace*/
+       |
+       |<<object>>/*keyword*/ <<A>>/*class*/ {
+       |  <<case>>/*keyword*/ <<class>>/*keyword*/ <<B>>/*class*/(<<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+       |}
+       |""".stripMargin,
   )
 
   def check(

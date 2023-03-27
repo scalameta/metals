@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
@@ -21,7 +22,9 @@ object TreeUtils {
         () => UserConfiguration(fallbackScalaVersion = scalaVersion),
         buildTargets,
       )
-    val trees = new Trees(buffers, selector, AbsolutePath(Paths.get(".")))
+    implicit val reports = new StdReportContext(AbsolutePath(Paths.get(".")))
+    val trees =
+      new Trees(buffers, selector)
     (buffers, trees)
   }
 }

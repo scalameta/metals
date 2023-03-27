@@ -20,14 +20,46 @@ import org.eclipse.lsp4j.SemanticTokenTypes
  */
 object SemanticTokensProvider {
 
-  def getTokens(isScala3: Boolean, params: VirtualFileParams): Tokens = {
+  def getTokens(isScala3: Boolean, text: String): Tokens = {
     import scala.meta._
     if (isScala3) {
       implicit val dialect = scala.meta.dialects.Scala3
-      params.text().tokenize.get
+      text.tokenize.get
     } else {
-      params.text().tokenize.get
+      text.tokenize.get
     }
+  }
+
+  private def convertTokensToIntList(
+      text: String,
+      delta0: Line,
+      tokenType: Integer,
+      tokenModifier: Integer = 0,
+  ): (List[Integer], Line) = {
+    var delta = delta0
+    val buffer = ListBuffer.empty[Integer]
+    if (tokenType != -1 && text.length() > 0) {
+      val lines = text.split("\n", -1).toList
+      lines.foreach { l =>
+        if (l.length() > 0)
+          buffer.addAll(
+            List(
+              delta.number,
+              delta.offset,
+              l.length(),
+              tokenType,
+              tokenModifier,
+            )
+          )
+        delta = Line(1, 0)
+      }
+      delta = Line(0, lines.last.length())
+    } else {
+      val lines = text.split("\n", -1)
+      if (lines.length > 1) delta = delta.moveLine(lines.length - 1)
+      delta = delta.moveOffset(lines.last.length())
+    }
+    (buffer.toList, delta)
   }
 
   /**
@@ -43,81 +75,39 @@ object SemanticTokensProvider {
       params: VirtualFileParams,
       isScala3: Boolean,
   ): ju.List[Integer] = {
+    val tokens = getTokens(isScala3, params.text())
+
+    val (delta0, cliTokens, tokens0) =
+      initialScalaCliTokens(tokens.toList)
 
     val buffer = ListBuffer.empty[Integer]
+    buffer.addAll(cliTokens)
 
-    var cLine = Line(0, 0) // Current Line
-    var lastProvided = SingleLineToken(cLine, 0, None)
+    var delta = delta0
     var nodesIterator: List[Node] = nodes
-    for (tk <- getTokens(isScala3, params)) yield {
+    for (tk <- tokens0) {
       val (tokenType, tokenModifier, nodesIterator0) =
         getTypeAndMod(tk, nodesIterator, isScala3)
       nodesIterator = nodesIterator0
-      var cOffset = tk.pos.start // Current Offset
-      var providing = SingleLineToken(cLine, cOffset, Some(lastProvided.copy()))
-
-      // If a meta-Token is over multiline,
-      // semantic-token is provided by each line.
-      // For ecample, Comment or Literal String.
-      for (wkStr <- tk.text.toCharArray.toList.map(c => c.toString)) {
-        cOffset += 1
-        if (wkStr == "\r") providing.countCR
-
-        // Token Break
-        if (wkStr == "\n" | cOffset == tk.pos.end) {
-          providing.endOffset =
-            if (wkStr == "\n") cOffset - 1
-            else cOffset
-
-          if (tokenType != -1) {
-            buffer.++=(
-              List(
-                providing.deltaLine,
-                providing.deltaStartChar,
-                providing.charSize,
-                tokenType,
-                tokenModifier,
-              )
-            )
-            lastProvided = providing
-          }
-          // Line Break
-          if (wkStr == "\n") {
-            cLine = Line(cLine.number + 1, cOffset)
-          }
-          providing = SingleLineToken(cLine, cOffset, Some(lastProvided.copy()))
-        }
-
-      } // end for-wkStr
-
-    } // end for-tk
-
+      val (toAdd, delta0) = convertTokensToIntList(
+        tk.text,
+        delta,
+        tokenType,
+        tokenModifier,
+      )
+      buffer.addAll(
+        toAdd
+      )
+      delta = delta0
+    }
     buffer.toList.asJava
-
   }
-
   case class Line(
       val number: Int,
-      val startOffset: Int,
-  )
-  case class SingleLineToken(
-      line: Line, // line which token on
-      startOffset: Int, // Offset from start of file.
-      lastToken: Option[SingleLineToken],
+      val offset: Int,
   ) {
-    var endOffset: Int = 0
-    var crCount: Int = 0
-    def charSize: Int = endOffset - startOffset - crCount
-    def deltaLine: Int =
-      line.number - this.lastToken.map(_.line.number).getOrElse(0)
-
-    def deltaStartChar: Int = {
-      if (deltaLine == 0)
-        startOffset - lastToken.map(_.startOffset).getOrElse(0)
-      else
-        startOffset - line.startOffset
-    }
-    def countCR: Unit = { crCount += 1 }
+    def moveLine(n: Int): Line = Line(number + n, 0)
+    def moveOffset(off: Int): Line = Line(number, off + offset)
   }
 
   /**
@@ -272,5 +262,60 @@ object SemanticTokensProvider {
         true
       case _ => false
     }
+
+  def initialScalaCliTokens(
+      tokens: List[Token]
+  ): (Line, List[Integer], List[Token]) = {
+    var delta = Line(0, 0)
+    val buffer = ListBuffer.empty[Integer]
+    val cliTokens = tokens.takeWhile(_.isWhiteSpaceOrComment)
+    val rest = tokens.drop(cliTokens.length)
+    def makeInitialTokens(tk: Token) = {
+      tk match {
+        case comm: Token.Comment if comm.value.startsWith(">") =>
+          val cliTokens = getTokens(false, comm.value)
+          cliTokens.foreach { tk =>
+            val (toAdd, delta0) = tk match {
+              case start: Token.Ident if start.value == ">" =>
+                convertTokensToIntList(
+                  "//>",
+                  delta,
+                  getTypeId(SemanticTokenTypes.Comment),
+                )
+              case using: Token.Ident if using.value == "using" =>
+                convertTokensToIntList(
+                  using.value,
+                  delta,
+                  getTypeId(SemanticTokenTypes.Keyword),
+                )
+              case tk =>
+                val tokenType = typeOfNonIdentToken(tk, false)
+                convertTokensToIntList(
+                  tk.text,
+                  delta,
+                  tokenType,
+                )
+            }
+            buffer.addAll(
+              toAdd
+            )
+            delta = delta0
+          }
+        case _ =>
+          val tokenType = typeOfNonIdentToken(tk, false)
+          val (toAdd, delta0) = convertTokensToIntList(
+            tk.text,
+            delta,
+            tokenType,
+          )
+          buffer.addAll(
+            toAdd
+          )
+          delta = delta0
+      }
+    }
+    cliTokens.foreach(makeInitialTokens)
+    (delta, buffer.toList, rest)
+  }
 
 }

@@ -28,6 +28,11 @@ abstract class BaseWorksheetLspSuite(
 
   def versionSpecificCodeToValidate: String = ""
 
+  /**
+   * These options when provided should not break worksheets.
+   */
+  def versionSpecificScalacOptionsToValidate: List[String] = Nil
+
   // sourcecode is not yet published for Scala 3
   if (!ScalaVersions.isScala3Version(scalaVersion))
     test("completion") {
@@ -85,6 +90,27 @@ abstract class BaseWorksheetLspSuite(
         )
       } yield ()
     }
+
+  test("ANSI") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/Main.worksheet.sc
+           |pprint.pprintln("Hello, world!")
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/Main.worksheet.sc")
+      // check that ANSI colors were stripped
+      _ = assertNotContains(client.workspaceDecorations, "\u001b")
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|pprint.pprintln("Hello, world!") // "Hello, world!"
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 
   test("outside-target") {
     cleanWorkspace()
@@ -648,11 +674,15 @@ abstract class BaseWorksheetLspSuite(
   test("export") {
     assume(!isWindows, "This test is flaky on Windows")
     cleanWorkspace()
+
+    val opts = versionSpecificScalacOptionsToValidate
+      .map(opt => s"\"$opt\"")
+      .mkString(",")
     for {
       _ <- initialize(
         s"""
            |/metals.json
-           |{"a": {"scalaVersion": "${scalaVersion}"}}
+           |{"a": {"scalaVersion": "${scalaVersion}", "scalacOptions": [$opts]}}
            |/a/src/main/scala/foo/Main.worksheet.sc
            |case class Hi(a: Int, b: Int, c: Int)
            |val hi1 =
@@ -872,55 +902,54 @@ abstract class BaseWorksheetLspSuite(
       } yield ()
     }
 
-  if (!ScalaVersions.isScala3Version(scalaVersion))
-    test("semantic-highlighting") {
+  test("semantic-highlighting") {
 
-      val expected =
-        if (scalaVersion == V.scala212)
-          """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-             |<<val>>/*keyword*/ <<hi1>>/*variable,readonly*/ =
-             |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
-             |<<val>>/*keyword*/ <<hi2>>/*variable,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
-             |
-             |<<val>>/*keyword*/ <<hellos>>/*variable,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
-             |""".stripMargin
-        else
-          """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-             |<<val>>/*keyword*/ <<hi1>>/*variable,readonly*/ =
-             |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
-             |<<val>>/*keyword*/ <<hi2>>/*variable,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
-             |
-             |<<val>>/*keyword*/ <<hellos>>/*variable,readonly*/ = <<List>>/*variable,readonly*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
-             |""".stripMargin
+    val expected =
+      if (scalaVersion == V.scala212)
+        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+           |<<val>>/*keyword*/ <<hi1>>/*variable,readonly*/ =
+           |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
+           |<<val>>/*keyword*/ <<hi2>>/*variable,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
+           |
+           |<<val>>/*keyword*/ <<hellos>>/*variable,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+           |""".stripMargin
+      else
+        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+           |<<val>>/*keyword*/ <<hi1>>/*variable,readonly*/ =
+           |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
+           |<<val>>/*keyword*/ <<hi2>>/*variable,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
+           |
+           |<<val>>/*keyword*/ <<hellos>>/*variable,readonly*/ = <<List>>/*variable,readonly*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+           |""".stripMargin
 
-      val fileContent =
-        TestSemanticTokens.removeSemanticHighlightDecorations(expected)
-      for {
-        _ <- initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": {
-             |    "scalaVersion": "$scalaVersion"
-             |  }
-             |}
-             |/a/src/main/scala/foo/Main.worksheet.sc
-             |$fileContent
-             |""".stripMargin
-        )
-        _ <- server.didChangeConfiguration(
-          """{
-            |  "enable-semantic-highlighting": true
-            |}
-            |""".stripMargin
-        )
-        _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
-        _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
-        _ <- server.assertSemanticHighlight(
-          "a/src/main/scala/foo/Main.worksheet.sc",
-          expected,
-          fileContent,
-        )
-      } yield ()
-    }
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |$fileContent
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      _ <- server.assertSemanticHighlight(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
 }

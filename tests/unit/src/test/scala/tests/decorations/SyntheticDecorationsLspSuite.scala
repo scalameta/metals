@@ -852,4 +852,38 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
     } yield ()
   }
+
+  test("value-of") {
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/Main.scala
+           |object O {
+           |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
+           |  val m = foo[500]
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object O {
+           |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
+           |  val m = foo[500](new ValueOf(...))
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }

@@ -12,8 +12,6 @@ class SemanticTokensExpectSuite extends DirectoryExpectSuite("semanticTokens") {
     classpath = input.classpath.entries.map(_.toNIO),
     workspaceId = "root",
   )
-  implicit val ec: scala.concurrent.ExecutionContext =
-    scala.concurrent.ExecutionContext.global
   override def testCases(): List[ExpectTestCase] = {
     input.scalaFiles.map { file =>
       ExpectTestCase(

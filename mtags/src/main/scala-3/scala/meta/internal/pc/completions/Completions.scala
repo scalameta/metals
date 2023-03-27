@@ -7,6 +7,7 @@ import java.nio.file.Paths
 import scala.collection.mutable
 
 import scala.meta.internal.metals.Fuzzy
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
@@ -51,7 +52,7 @@ class Completions(
     workspace: Option[Path],
     autoImports: AutoImportsGenerator,
     options: List[String],
-):
+)(using ReportContext):
 
   implicit val context: Context = ctx
 
@@ -151,7 +152,7 @@ class Completions(
             var i = span.end
             while i < (text.length() - 1) && text(i).isWhitespace do i = i + 1
 
-            if (i < text.length()) then text(i) == '['
+            if i < text.length() then text(i) == '['
             else false
           else false
 
@@ -325,7 +326,7 @@ class Completions(
            * but it will not show up from classpath. We can suggest
            * constructors based on those synthetic applies.
            */
-          if (sym.isClass && companionSynthetic) then sym.companionModule.info
+          if sym.isClass && companionSynthetic then sym.companionModule.info
           else sym.info
         val applSymbols = info.member(nme.apply).allSymbols
         sym :: applSymbols
@@ -809,7 +810,7 @@ class Completions(
         def postProcess(items: List[CompletionValue]): List[CompletionValue] =
           items.map {
             case CompletionValue.Compiler(label, sym, suffix)
-                if sym.info.paramNamess.nonEmpty && isMember(sym) =>
+                if isMember(sym) =>
               CompletionValue.Compiler(
                 label,
                 substituteTypeVars(sym),

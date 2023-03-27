@@ -39,6 +39,12 @@ object Developers {
       url("https://github.com/kpodsiad)"),
     ),
     Developer(
+      "kasiaMarek",
+      "Katarzyna Marek",
+      "kmarek@virtuslab.com ",
+      url("https://github.com/kasiaMarek)"),
+    ),
+    Developer(
       "olafurpg",
       "Ólafur Páll Geirsson",
       "olafurpg@gmail.com",

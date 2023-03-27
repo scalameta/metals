@@ -52,7 +52,8 @@ module.exports = {
           }
         ]
       }
-    ]
+    ],
+    "@easyops-cn/docusaurus-search-local",
   ],
   "themeConfig": {
     "prism": {
@@ -131,11 +132,6 @@ module.exports = {
       "logo": {
         "src": "img/scalameta-logo.png"
       }
-    },
-    "algolia": {
-      "appId": "DZKJ3Z5JFX",
-      "apiKey": "e8f55852e303f6374dfa716be910cf08",
-      "indexName": "metals"
     }
   }
 }

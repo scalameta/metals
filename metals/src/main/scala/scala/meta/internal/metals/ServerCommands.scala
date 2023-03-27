@@ -199,6 +199,13 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val ZipReports = new Command(
+    "zip-reports",
+    "Create a zip with error reports",
+    """|Creates a zip from incognito and bloop reports with additional information about build targets.
+       |""".stripMargin,
+  )
+
   val RunScalafix = new ParametrizedCommand[TextDocumentPositionParams](
     "scalafix-run",
     "Run all Scalafix Rules",
@@ -748,6 +755,7 @@ object ServerCommands {
       StopScalaCliServer,
       OpenIssue,
       OpenFeatureRequest,
+      ZipReports,
     )
 
   val allIds: Set[String] = all.map(_.id).toSet

@@ -56,7 +56,7 @@ sealed trait IndexedContext:
     )
 
   private def isTypeAliasOf(alias: Symbol, sym: Symbol): Boolean =
-    alias.isAliasType && alias.info.dealias.typeSymbol == sym
+    alias.isAliasType && alias.info.metalsDealias.typeSymbol == sym
 
   final def isEmpty: Boolean = this match
     case IndexedContext.Empty => true
