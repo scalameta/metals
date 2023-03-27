@@ -24,7 +24,7 @@ object ExcludedPackagesHandler {
   val defaultExclusions: List[String] = List(
     "META-INF/", "images/", "toolbarButtonGraphics/", "jdk/", "sun/", "oracle/",
     "java/awt/desktop/", "org/jcp/", "org/omg/", "org/graalvm/", "com/oracle/",
-    "com/sun/", "com/apple/", "apple/", "com/sourcegraph/shaded/",
+    "com/sun/", "com/apple/", "apple/", "com/sourcegraph/shaded/"
   )
 
   val default: ExcludedPackagesHandler = ExcludedPackagesHandler(

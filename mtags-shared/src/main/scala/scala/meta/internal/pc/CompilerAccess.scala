@@ -24,7 +24,7 @@ abstract class CompilerAccess[Reporter, Compiler](
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => CompilerWrapper[Reporter, Compiler],
-    shouldResetJobQueue: Boolean,
+    shouldResetJobQueue: Boolean
 )(implicit ec: ExecutionContextExecutor) {
   private val logger: Logger =
     Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
@@ -67,7 +67,7 @@ abstract class CompilerAccess[Reporter, Compiler](
             }
           },
           2,
-          TimeUnit.SECONDS,
+          TimeUnit.SECONDS
         )
       }
     }
@@ -78,7 +78,7 @@ abstract class CompilerAccess[Reporter, Compiler](
    */
   def withInterruptableCompiler[T](
       default: T,
-      token: CancelToken,
+      token: CancelToken
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
     val isFinished = new AtomicBoolean(false)
     var queueThread = Option.empty[Thread]
@@ -88,7 +88,7 @@ abstract class CompilerAccess[Reporter, Compiler](
         try withSharedCompiler(default)(thunk)
         finally isFinished.set(true)
       },
-      token,
+      token
     )
     // Interrupt the queue thread
     token.onCancel.whenCompleteAsync(
@@ -108,7 +108,7 @@ abstract class CompilerAccess[Reporter, Compiler](
           }
         }
       },
-      ec,
+      ec
     )
     result
   }
@@ -120,7 +120,7 @@ abstract class CompilerAccess[Reporter, Compiler](
    */
   def withNonInterruptableCompiler[T](
       default: T,
-      token: CancelToken,
+      token: CancelToken
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
     onCompilerJobQueue(() => withSharedCompiler(default)(thunk), token)
   }
@@ -144,7 +144,7 @@ abstract class CompilerAccess[Reporter, Compiler](
             retryWithCleanCompiler(
               thunk,
               default,
-              message,
+              message
             )
           }
           .getOrElse {
@@ -161,12 +161,12 @@ abstract class CompilerAccess[Reporter, Compiler](
   private def retryWithCleanCompiler[T](
       thunk: CompilerWrapper[Reporter, Compiler] => T,
       default: T,
-      cause: String,
+      cause: String
   ): T = {
     shutdownCurrentCompiler()
     logger.log(
       Level.INFO,
-      s"compiler crashed due to $cause, retrying with new compiler instance.",
+      s"compiler crashed due to $cause, retrying with new compiler instance."
     )
     try thunk(loadCompiler())
     catch {
@@ -186,7 +186,7 @@ abstract class CompilerAccess[Reporter, Compiler](
 
   private def onCompilerJobQueue[T](
       thunk: () => T,
-      token: CancelToken,
+      token: CancelToken
   ): CompletableFuture[T] = {
     val result = new CompletableFuture[T]()
     jobs.submit(
@@ -196,7 +196,7 @@ abstract class CompilerAccess[Reporter, Compiler](
         Thread.interrupted() // clear interrupt bit
         result.complete(thunk())
         ()
-      },
+      }
     )
 
     // User cancelled task.
@@ -206,7 +206,7 @@ abstract class CompilerAccess[Reporter, Compiler](
           result.cancel(false)
         }
       },
-      ec,
+      ec
     )
     // Task has timed out, cancel this request and shutdown the current compiler.
     sh.foreach { scheduler =>
@@ -225,7 +225,7 @@ abstract class CompilerAccess[Reporter, Compiler](
           }
         },
         config.timeoutDelay(),
-        config.timeoutUnit(),
+        config.timeoutUnit()
       )
     }
 

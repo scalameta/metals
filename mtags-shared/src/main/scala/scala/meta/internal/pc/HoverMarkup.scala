@@ -14,7 +14,7 @@ object HoverMarkup {
       expressionType: String,
       optSymbolSignature: Option[String],
       docstring: String,
-      forceExpressionType: Boolean = false,
+      forceExpressionType: Boolean = false
   ): String = {
     val markdown = new StringBuilder()
     if (forceExpressionType || optSymbolSignature.isEmpty) {

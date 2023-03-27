@@ -6,5 +6,5 @@ case class TokenNode(
     start: Int,
     end: Int,
     tokenType: Int,
-    tokenModifier: Int,
+    tokenModifier: Int
 ) extends Node

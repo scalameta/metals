@@ -19,7 +19,7 @@ final class HtmlBuilder() {
   def section(title: String, content: HtmlBuilder => Unit): HtmlBuilder = {
     element(
       "section",
-      "class='container with-title' style='margin-bottom: .75rem'",
+      "class='container with-title' style='margin-bottom: .75rem'"
     )(
       _.element("h2", "class='title'")(_.text(title))
         .element("div")(content)
@@ -28,7 +28,7 @@ final class HtmlBuilder() {
   def page(
       title: String,
       headElems: List[String] = Nil,
-      bodyAttributes: String = "",
+      bodyAttributes: String = ""
   )(
       body: HtmlBuilder => Unit
   ): HtmlBuilder = this
@@ -86,7 +86,7 @@ final class HtmlBuilder() {
 
   def element(
       name: String,
-      attr: String = "",
+      attr: String = ""
   )(fn: HtmlBuilder => Unit): this.type = {
     sb.append("<")
       .append(name)

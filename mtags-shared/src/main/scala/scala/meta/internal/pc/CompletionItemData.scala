@@ -10,7 +10,7 @@ case class CompletionItemData(
     target: String,
     // The kind of the completion item, for example `override def`
     kind: java.lang.Integer = null,
-    additionalSymbols: java.util.List[String] = null,
+    additionalSymbols: java.util.List[String] = null
 ) {
   def toJson: JsonElement = {
     val obj = new JsonObject()

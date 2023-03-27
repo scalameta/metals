@@ -34,13 +34,13 @@ class CompilerJobQueue(newExecutor: () => ThreadPoolExecutor) {
   def submit(result: CompletableFuture[_], fn: () => Unit): Unit = {
     onExecutor(
       _.execute(new CompilerJobQueue.Job(result, fn)),
-      () => result.completeExceptionally(new CancellationException()),
+      () => result.completeExceptionally(new CancellationException())
     )
   }
 
   private def onExecutor[A](
       f: ThreadPoolExecutor => A,
-      fallback: () => A,
+      fallback: () => A
   ): A = {
     state.get() match {
       case State.Empty =>
@@ -121,7 +121,7 @@ object CompilerJobQueue {
         /* maximumPoolSize */ 1,
         /* keepAliveTime */ 0,
         /* unit */ TimeUnit.MILLISECONDS,
-        /* workQueue */ new LastInFirstOutBlockingQueue,
+        /* workQueue */ new LastInFirstOutBlockingQueue
       )
       singleThreadExecutor.setRejectedExecutionHandler((r, _) => {
         r match {
@@ -164,9 +164,9 @@ object CompilerJobQueue {
             // a `BlockingQueue[Runnable]` and Java queues are invariant.
             -java.lang.Long.compare(
               o1.asInstanceOf[Job].start,
-              o2.asInstanceOf[Job].start,
+              o2.asInstanceOf[Job].start
             )
           }
-        },
+        }
       )
 }

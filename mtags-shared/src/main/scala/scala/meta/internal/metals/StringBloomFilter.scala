@@ -37,7 +37,7 @@ class StringBloomFilter(estimatedSize: Int) {
   val bloom: BloomFilter[java.lang.Long] = BloomFilter.create(
     Funnels.longFunnel(),
     Integer.valueOf(estimatedSize),
-    maxFalsePositiveRatio,
+    maxFalsePositiveRatio
   )
   def isFull: Boolean = bloom.expectedFpp() > maxFalsePositiveRatio
   // NOTE(olafur): we don't use the XXHashFactory.fastestInstance() instance

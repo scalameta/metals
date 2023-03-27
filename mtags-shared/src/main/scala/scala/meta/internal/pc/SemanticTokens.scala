@@ -25,7 +25,7 @@ object SemanticTokens {
     SemanticTokenTypes.Number,
     SemanticTokenTypes.Regexp,
     SemanticTokenTypes.Operator,
-    SemanticTokenTypes.Decorator,
+    SemanticTokenTypes.Decorator
   )
 
   val TokenModifiers: List[String] = List(
@@ -38,7 +38,7 @@ object SemanticTokens {
     SemanticTokenModifiers.Async,
     SemanticTokenModifiers.Modification,
     SemanticTokenModifiers.Documentation,
-    SemanticTokenModifiers.DefaultLibrary,
+    SemanticTokenModifiers.DefaultLibrary
   )
 
   val getTypeId: Map[String, Int] = TokenTypes.zipWithIndex.toMap
@@ -61,7 +61,7 @@ object SemanticTokens {
     TokenTypes.indexOf(SemanticTokenTypes.Method) -> 2,
     // In `case class A(a: Int)` we have class variable `a` and `apply` and `copy` parameter `a`
     // We want to pick class variable, so parameter has lower priority
-    TokenTypes.indexOf(SemanticTokenTypes.Parameter) -> 1,
+    TokenTypes.indexOf(SemanticTokenTypes.Parameter) -> 1
   ).withDefault(_ => 0)
 
 }

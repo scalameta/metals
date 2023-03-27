@@ -16,7 +16,7 @@ trait ItemResolver {
       info: SymbolDocumentation,
       metalsConfig: PresentationCompilerConfig,
       docstring: => String,
-      isJava: => Boolean,
+      isJava: => Boolean
   ): CompletionItem = {
     if (isJava) {
       val data = item.data.getOrElse(CompletionItemData.empty)
@@ -85,7 +85,7 @@ trait ItemResolver {
   // to close causing other problems.
   protected def replaceJavaParameters(
       info: SymbolDocumentation,
-      detail: String,
+      detail: String
   ): String = {
     info
       .parameters()
@@ -95,14 +95,14 @@ trait ItemResolver {
       .foldLeft(detail) { case (accum, (param, i)) =>
         accum.replace(
           s"x$$${i + adjustIndexOfJavaParams}",
-          param.displayName(),
+          param.displayName()
         )
       }
   }
 
   protected def replaceScalaDefaultParams(
       base: String,
-      defaults: Seq[String],
+      defaults: Seq[String]
   ): String = {
     val matcher = "= \\.\\.\\.".r.pattern.matcher(base)
     val out = new StringBuffer()

@@ -26,7 +26,7 @@ case class PresentationCompilerConfigImpl(
     timeoutDelay: Long = 20,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS,
     semanticdbCompilerOptions: util.List[String] =
-      PresentationCompilerConfig.defaultSemanticdbCompilerOptions(),
+      PresentationCompilerConfig.defaultSemanticdbCompilerOptions()
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =
@@ -82,6 +82,6 @@ case class PresentationCompilerConfigImpl(
           case "ascii" => Some(OverrideDefFormat.Ascii)
           case _ => None
         }
-        .getOrElse(this.overrideDefFormat),
+        .getOrElse(this.overrideDefFormat)
     )
 }

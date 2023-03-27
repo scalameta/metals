@@ -45,7 +45,7 @@ object Fuzzy extends Fuzzy
 class Fuzzy {
   private class Delimiter(
       val isFinished: Boolean,
-      val idx: Int,
+      val idx: Int
   )
 
   /**
@@ -59,7 +59,7 @@ class Fuzzy {
   def matches(
       query: CharSequence,
       symbol: CharSequence,
-      skipNames: Int = 0,
+      skipNames: Int = 0
   ): Boolean = {
     val li = lastIndex(symbol)
     // Loops through all names in the query/symbol strings in reverse order (last names first)
@@ -102,7 +102,7 @@ class Fuzzy {
       query.length,
       lastIndex(symbol),
       0,
-      skipNames,
+      skipNames
     )
   }
 
@@ -110,7 +110,7 @@ class Fuzzy {
       query: CharSequence,
       symbol: CharSequence,
       sa: Int,
-      sb: Int,
+      sb: Int
   ): Boolean = {
     if (query.length == sb - sa) {
       var idx = 0
@@ -185,7 +185,7 @@ class Fuzzy {
 
   private def lastDelimiter(
       string: CharSequence,
-      fromIndex: Int,
+      fromIndex: Int
   ): Delimiter = {
     var curr = fromIndex - 2
     var continue = true
@@ -208,7 +208,7 @@ class Fuzzy {
       qb: Int,
       symbol: CharSequence,
       sa: Int,
-      sb: Int,
+      sb: Int
   ): Boolean = {
     // @param ql the last index in query at which qa.isUpper && charAt(qa) == charAt(sa)
     // @param sl the last index in symbol at which qa.isUpper && charAt(qa) == charAt(sa)
@@ -286,7 +286,7 @@ class Fuzzy {
    */
   def bloomFilterSymbolStrings(
       symbol: String,
-      hasher: StringBloomFilter,
+      hasher: StringBloomFilter
   ): Unit = {
     if (symbol.endsWith("$sp.class")) return
     hasher.reset()
@@ -322,13 +322,13 @@ class Fuzzy {
     }
     TrigramSubstrings.foreach(
       upper.toString,
-      trigram => hasher.putCharSequence(trigram),
+      trigram => hasher.putCharSequence(trigram)
     )
   }
 
   def bloomFilterSymbolStrings(
       symbols: Iterable[String],
-      hasher: StringBloomFilter,
+      hasher: StringBloomFilter
   ): Unit = {
     symbols.foreach(sym => bloomFilterSymbolStrings(sym, hasher))
   }
@@ -359,7 +359,7 @@ class Fuzzy {
    */
   def bloomFilterQueryStrings(
       query: String,
-      includeTrigrams: Boolean = true,
+      includeTrigrams: Boolean = true
   ): Iterable[CharSequence] = {
     if (query.length < ExactSearchLimit) {
       List(ExactCharSequence(query))

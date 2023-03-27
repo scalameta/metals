@@ -7,7 +7,7 @@ import scala.meta.pc.DefinitionResult
 
 case class DefinitionResultImpl(
     symbol: String,
-    locations: ju.List[Location],
+    locations: ju.List[Location]
 ) extends DefinitionResult
 
 object DefinitionResultImpl {

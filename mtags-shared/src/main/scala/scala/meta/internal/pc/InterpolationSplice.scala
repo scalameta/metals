@@ -13,7 +13,7 @@ object InterpolationSplice {
   def apply(
       offset: Int,
       chars: Array[Char],
-      originalText: String,
+      originalText: String
   ): Option[InterpolationSplice] = {
     var i = offset
     while (
@@ -47,7 +47,7 @@ object InterpolationSplice {
             (originalText.charAt(offset) match {
               case '"' => false // end of string literal
               case ch => ch.isUnicodeIdentifierPart
-            }),
+            })
         )
       )
     } else {

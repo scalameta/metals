@@ -55,7 +55,7 @@ object IdentifierComparator extends Comparator[CharSequence] {
   private def compareDigitSequences(
       s1: CharSequence,
       s2: CharSequence,
-      start: Int,
+      start: Int
   ): Int = {
     val (first, zeros1) = extractDigits(s1, start)
     val (second, zeros2) = extractDigits(s2, start)
@@ -96,7 +96,7 @@ object IdentifierComparator extends Comparator[CharSequence] {
    */
   private def extractDigits(
       cs: CharSequence,
-      start: Int,
+      start: Int
   ): (CharSequence, Int) = {
     val firstDigit = skipLeadingZeros(cs, start)
     val lastDigit = seekNonDigit(cs, firstDigit)

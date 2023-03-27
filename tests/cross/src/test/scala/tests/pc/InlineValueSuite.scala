@@ -3,9 +3,9 @@ package tests.pc
 import java.net.URI
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.mtags.CommonMtagsEnrichments
-import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.pc.InlineValueProvider.{Errors => InlineErrors}
 import scala.meta.pc.DisplayableException
 

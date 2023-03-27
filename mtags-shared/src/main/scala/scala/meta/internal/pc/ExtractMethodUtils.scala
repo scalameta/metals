@@ -4,7 +4,7 @@ trait ExtractMethodUtils {
   def adjustIndent(
       line: String,
       newIndent: String,
-      oldIndentLen: Int,
+      oldIndentLen: Int
   ): String = {
     var i = 0
     val additional = if (newIndent.indexOf("\t") != -1) "\t" else "  "
@@ -30,7 +30,7 @@ trait ExtractMethodUtils {
       start: Int,
       end: Int,
       newIndent: String,
-      oldIndentLen: Int,
+      oldIndentLen: Int
   ): String = {
     text
       .slice(start, end)

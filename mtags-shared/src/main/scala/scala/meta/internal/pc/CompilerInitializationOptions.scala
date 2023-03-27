@@ -30,7 +30,7 @@ case class CompilerInitializationOptions(
     isSignatureHelpDocumentationEnabled: Option[Boolean],
     overrideDefFormat: Option[String],
     parameterHintsCommand: Option[String],
-    snippetAutoIndent: Option[Boolean],
+    snippetAutoIndent: Option[Boolean]
 )
 
 object CompilerInitializationOptions {
@@ -44,6 +44,6 @@ object CompilerInitializationOptions {
       None,
       None,
       None,
-      None,
+      None
     )
 }

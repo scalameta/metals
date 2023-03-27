@@ -28,7 +28,7 @@ case class Keyword(
     canBeExtended: Boolean = false,
     canDerive: Boolean = false,
     requiresExtend: Boolean = false,
-    commitCharacter: Option[String] = None,
+    commitCharacter: Option[String] = None
 ) {
 
   def insertText: String =
@@ -56,7 +56,7 @@ case class Keyword(
       canBeExtended: Boolean,
       canDerive: Boolean,
       hasExtend: Boolean,
-      allowToplevel: Boolean,
+      allowToplevel: Boolean
   ): Boolean = {
     val isAllowedInThisScalaVersion = (this.isScala3 && isScala3) || !this.isScala3
     this.name.startsWith(name) && isAllowedInThisScalaVersion &&
@@ -92,7 +92,7 @@ object Keyword {
       "derives",
       canBeExtended = true,
       canDerive = true,
-      isScala3 = true,
+      isScala3 = true
     ),
     Keyword(
       "extension",
@@ -101,7 +101,7 @@ object Keyword {
       isDefinition = true,
       isPackage = true,
       isScala3 = true,
-      canBeExtended = false,
+      canBeExtended = false
     ),
     Keyword("type", isTemplate = true, isDefinition = true),
     Keyword("class", isTemplate = true, isPackage = true, isDefinition = true),
@@ -144,7 +144,7 @@ object Keyword {
     Keyword("catch"),
     Keyword("finally"),
     Keyword("then"),
-    Keyword("*", isImport = true, isScala3 = true),
+    Keyword("*", isImport = true, isScala3 = true)
   )
 
 }

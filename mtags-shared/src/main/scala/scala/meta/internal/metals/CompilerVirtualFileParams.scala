@@ -7,5 +7,5 @@ import scala.meta.pc.{CancelToken, VirtualFileParams}
 case class CompilerVirtualFileParams(
     uri: URI,
     text: String,
-    token: CancelToken = EmptyCancelToken,
+    token: CancelToken = EmptyCancelToken
 ) extends VirtualFileParams

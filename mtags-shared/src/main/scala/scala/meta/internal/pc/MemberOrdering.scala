@@ -33,7 +33,7 @@ object MemberOrdering {
       (IsSynthetic, "synthetic"),
       (IsDeprecated, "deprecated"),
       (IsEvilMethod, "evilMethod"),
-      (IsNotAbstract, "notAbstract"),
+      (IsNotAbstract, "notAbstract")
     ).collect { case (i, name) if (value & i) > 0 => name }
       .mkString(", ")
   }

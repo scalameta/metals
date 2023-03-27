@@ -19,7 +19,7 @@ object TrigramSubstrings {
   def foreach(
       string: String,
       f: String => Unit,
-      maxResults: Int = DefaultMaxTrigrams,
+      maxResults: Int = DefaultMaxTrigrams
   ): Unit = {
     val N = string.length
     val arr = new Array[Char](3)
@@ -65,7 +65,7 @@ object TrigramSubstrings {
    */
   def uppercased(
       query: String,
-      maxCount: Int = DefaultMaxTrigrams,
+      maxCount: Int = DefaultMaxTrigrams
   ): ArrayBuffer[String] = {
 
     def runForeach[U](f: String => U): Unit = {

@@ -7,7 +7,7 @@ case class CompilerOffsetParams(
     uri: URI,
     text: String,
     offset: Int,
-    token: CancelToken = EmptyCancelToken,
+    token: CancelToken = EmptyCancelToken
 ) extends OffsetParams
 
 case class CompilerRangeParams(
@@ -15,13 +15,13 @@ case class CompilerRangeParams(
     text: String,
     offset: Int,
     endOffset: Int,
-    token: CancelToken = EmptyCancelToken,
+    token: CancelToken = EmptyCancelToken
 ) extends RangeParams {
   def toCompilerOffsetParams: CompilerOffsetParams =
     CompilerOffsetParams(
       uri,
       text,
       offset,
-      token,
+      token
     )
 }

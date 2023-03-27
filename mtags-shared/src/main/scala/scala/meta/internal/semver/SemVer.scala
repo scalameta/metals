@@ -10,7 +10,7 @@ object SemVer {
       patch: Int,
       releaseCandidate: Option[Int] = None,
       milestone: Option[Int] = None,
-      nightlyDate: Option[Int] = None,
+      nightlyDate: Option[Int] = None
   ) {
     def >(that: Version): Boolean = {
       val diff = toList
@@ -43,7 +43,7 @@ object SemVer {
         Some(s"$major.$minor.$patch"),
         releaseCandidate.map(s => s"-RC$s"),
         milestone.map(s => s"-M$s"),
-        nightlyDate.map(d => s"-$d-NIGHTLY"),
+        nightlyDate.map(d => s"-$d-NIGHTLY")
       ).flatten.mkString("")
 
   }

@@ -30,7 +30,7 @@ trait InlineValueProvider {
     if (definition.requiresBrackets && ref.requiresBrackets)
       new l.TextEdit(
         ref.range,
-        s"""(${definition.rhs})""",
+        s"""(${definition.rhs})"""
       )
     else new l.TextEdit(ref.range, definition.rhs)
 
@@ -39,15 +39,15 @@ trait InlineValueProvider {
       extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
         definition.rangeOffsets.start,
         definition.rangeOffsets.end,
-        definition.range,
+        definition.range
       ),
-      "",
+      ""
     )
 
   private def extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
       startOffset: Int,
       endOffset: Int,
-      range: l.Range,
+      range: l.Range
   ): l.Range = {
     @tailrec
     def expand(step: Int, currentIndex: Int): Int = {
@@ -61,7 +61,7 @@ trait InlineValueProvider {
     val startWithSpace = expand(-1, startOffset - 1)
     val startPos = new l.Position(
       range.getStart.getLine,
-      range.getStart.getCharacter - (startOffset - startWithSpace) + 1,
+      range.getStart.getCharacter - (startOffset - startWithSpace) + 1
     )
     val endPos =
       if (endWithSpace < text.size && text(endWithSpace) == '\n')
@@ -69,12 +69,12 @@ trait InlineValueProvider {
       else if (endWithSpace < text.size && text(endWithSpace) == ';')
         new l.Position(
           range.getEnd.getLine,
-          range.getEnd.getCharacter + endWithSpace - endOffset + 1,
+          range.getEnd.getCharacter + endWithSpace - endOffset + 1
         )
       else
         new l.Position(
           range.getEnd.getLine,
-          range.getEnd.getCharacter + endWithSpace - endOffset,
+          range.getEnd.getCharacter + endWithSpace - endOffset
         )
 
     new l.Range(startPos, endPos)
@@ -101,11 +101,11 @@ case class Definition(
     rhs: String,
     rangeOffsets: RangeOffset,
     requiresBrackets: Boolean,
-    shouldBeRemoved: Boolean,
+    shouldBeRemoved: Boolean
 )
 
 case class Reference(
     range: l.Range,
     parentOffsets: Option[RangeOffset],
-    requiresBrackets: Boolean,
+    requiresBrackets: Boolean
 )

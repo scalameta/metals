@@ -15,7 +15,7 @@ object EmptySymbolSearch extends SymbolSearch {
   override def search(
       query: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor,
+      visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     SymbolSearch.Result.COMPLETE
   }
@@ -23,7 +23,7 @@ object EmptySymbolSearch extends SymbolSearch {
   override def searchMethods(
       query: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor,
+      visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     SymbolSearch.Result.COMPLETE
   }
@@ -34,14 +34,14 @@ object EmptySymbolSearch extends SymbolSearch {
 
   override def definitionSourceToplevels(
       symbol: String,
-      sourceUri: URI,
+      sourceUri: URI
   ): ju.List[String] = {
     ju.Collections.emptyList()
   }
 
   override def documentation(
       symbol: String,
-      parents: ParentSymbols,
+      parents: ParentSymbols
   ): Optional[SymbolDocumentation] =
     Optional.empty()
 }

@@ -11,7 +11,7 @@ package scala.meta.internal.pc
 case class AutoImportPosition(
     offset: Int,
     indent: Int,
-    padTop: Boolean,
+    padTop: Boolean
 ) {
 
   def this(offset: Int, text: String, padTop: Boolean) =
