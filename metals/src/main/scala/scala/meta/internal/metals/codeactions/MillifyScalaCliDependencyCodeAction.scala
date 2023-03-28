@@ -57,18 +57,21 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
 object MillifyScalaCliDependencyCodeAction {
 
   private def buildAction(comment: Comment, kind: String, path: AbsolutePath)(
-      replacementText: String
+      suggestion: ReplacementSuggestion
   ) =
     CodeActionBuilder.build(
-      title = actionTitle(replacementText),
+      title = actionTitle(suggestion.millStyleDependency),
       kind = kind,
-      changes =
-        List(path -> List(new l.TextEdit(comment.pos.toLsp, replacementText))),
+      changes = List(
+        path -> List(
+          new l.TextEdit(comment.pos.toLsp, suggestion.replacementText)
+        )
+      ),
     )
 
   private def convertSbtToMillStyleIfPossible(
       sbtStyleDirective: String
-  ): Option[String] =
+  ): Option[ReplacementSuggestion] =
     sbtStyleDirective.split(" ").filterNot(_.isEmpty) match {
       case Array(
             "//>",
@@ -85,9 +88,9 @@ object MillifyScalaCliDependencyCodeAction {
         val groupArtifactJoin = groupDelimiter.replace('%', ':')
         val millStyleDependency =
           s"$groupId$groupArtifactJoin$artifactId:$version".replace("\"", "")
-        val replacementText =
-          s"//> using $dependencyIdentifierLike \"$millStyleDependency\""
-        Some(replacementText)
+        Some(
+          ReplacementSuggestion(dependencyIdentifierLike, millStyleDependency)
+        )
       case _ => None
     }
 
@@ -100,7 +103,14 @@ object MillifyScalaCliDependencyCodeAction {
       case _ => false
     }
 
-  private def actionTitle(transformed: String): String =
-    s"Convert to $transformed"
+  private def actionTitle(millStyleDependency: String): String =
+    s"""Convert to "$millStyleDependency""""
 
+  private case class ReplacementSuggestion(
+      dependencyIdentifier: String,
+      millStyleDependency: String,
+  ) {
+    val replacementText =
+      s"//> using $dependencyIdentifier \"$millStyleDependency\""
+  }
 }
