@@ -98,7 +98,7 @@ object MillifyScalaCliDependencyCodeAction {
   private val dependencyIdentifiers = Set("dep", "lib", "plugin")
   private val sbtDependencyDelimiters = Set("%", "%%", "%%%")
 
-  def isScalaCliUsingDirectiveComment(text: String) =
+  def isScalaCliUsingDirectiveComment(text: String): Boolean =
     text.startsWith("//> using")
 
   private def actionTitle(transformed: String): String =
