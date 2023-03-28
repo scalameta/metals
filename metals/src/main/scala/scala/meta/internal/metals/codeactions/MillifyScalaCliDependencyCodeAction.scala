@@ -28,9 +28,14 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
 
     val tokenized =
       if (couldBeScalaCli && range.getStart == range.getEnd)
-        buffers
-          .get(path)
-          .flatMap(Trees.defaultTokenizerDialect(_).tokenize.toOption)
+        for {
+          buffer <- buffers.get(path)
+          line = buffer.linesIterator
+            .drop(range.getStart.getLine)
+            .take(range.getEnd().getLine() - range.getStart().getLine() + 1)
+            .mkString("\n")
+          tree <- Trees.defaultTokenizerDialect(line).tokenize.toOption
+        } yield tree
       else None
 
     tokenized
