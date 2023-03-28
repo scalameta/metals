@@ -16,7 +16,7 @@ class MillifyScalaCliDependencyCodeActionSuite
         |  println("Hello")
         |}
         |""".stripMargin,
-    s"""Convert to $convertTo""",
+    s"""Convert to $convertedDependency""",
     s"""|//> using lib $convertedDependency
         |
         |object Hello extends App {
@@ -39,7 +39,7 @@ class MillifyScalaCliDependencyCodeActionSuite
         |  println("Hello")
         |}
         |""".stripMargin,
-    s"""Convert to $convertTo""",
+    s"""Convert to $convertedDependency""",
     s"""|//> using lib $convertedDependency
         |
         |object Hello extends App {
