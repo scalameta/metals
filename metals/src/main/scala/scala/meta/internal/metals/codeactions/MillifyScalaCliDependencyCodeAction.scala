@@ -45,16 +45,12 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
             t.pos.startLine == range.getStart.getLine
               && t.pos.endLine == range.getEnd.getLine
           )
-          .collect {
+          .collectFirst {
             case comment: Comment
                 if isScalaCliUsingDirectiveComment(comment.toString()) =>
-              comment
-          }
-          .collectFirst { comment =>
-            convertSbtToMillStyleIfPossible(comment.toString())
-              .map(buildAction(comment, kind, path)(_))
-              .map(List(_))
-              .getOrElse(List.empty)
+              convertSbtToMillStyleIfPossible(comment.toString())
+                .map(buildAction(comment, kind, path)(_))
+                .toList
           }
       }
       .getOrElse(List.empty)
