@@ -64,7 +64,13 @@ object MetalsPlugin extends AutoPlugin {
         case defined @ Some(_) => defined
       }
     },
-    javacOptions ++= {
+    Compile / compile / javacOptions ++= {
+      if (javaSemanticdbEnabled.value)
+        javaSemanticdbOptions.value
+      else
+        Nil
+    },
+    Test / compile / javacOptions ++= {
       if (javaSemanticdbEnabled.value)
         javaSemanticdbOptions.value
       else
