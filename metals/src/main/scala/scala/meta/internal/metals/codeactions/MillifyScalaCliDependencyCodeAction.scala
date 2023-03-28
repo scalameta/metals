@@ -41,10 +41,6 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
     tokenized
       .flatMap { tokens =>
         tokens
-          .filter(t =>
-            t.pos.startLine == range.getStart.getLine
-              && t.pos.endLine == range.getEnd.getLine
-          )
           .collectFirst {
             case comment: Comment
                 if isScalaCliUsingDirectiveComment(comment.toString()) =>
@@ -70,7 +66,7 @@ object MillifyScalaCliDependencyCodeAction {
         List(path -> List(new l.TextEdit(comment.pos.toLsp, replacementText))),
     )
 
-  def convertSbtToMillStyleIfPossible(
+  private def convertSbtToMillStyleIfPossible(
       sbtStyleDirective: String
   ): Option[String] =
     sbtStyleDirective.split(" ").filterNot(_.isEmpty) match {
@@ -98,8 +94,11 @@ object MillifyScalaCliDependencyCodeAction {
   private val dependencyIdentifiers = Set("dep", "lib", "plugin")
   private val sbtDependencyDelimiters = Set("%", "%%", "%%%")
 
-  def isScalaCliUsingDirectiveComment(text: String): Boolean =
-    text.startsWith("//> using")
+  private def isScalaCliUsingDirectiveComment(text: String): Boolean =
+    text.split(" ").filterNot(_.isEmpty).toList match {
+      case "//>" :: "using" :: _ => true
+      case _ => false
+    }
 
   private def actionTitle(transformed: String): String =
     s"Convert to $transformed"
