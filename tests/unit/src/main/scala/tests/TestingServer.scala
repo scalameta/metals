@@ -642,7 +642,6 @@ final case class TestingServer(
     scribe.info(s"Executing command [$command]")
     val args: java.util.List[Object] =
       params.map(_.toJson.asInstanceOf[Object]).asJava
-
     server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
 

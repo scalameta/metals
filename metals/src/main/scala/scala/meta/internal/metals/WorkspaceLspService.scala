@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.nio.file.ProviderMismatchException
 import java.util.concurrent.CompletableFuture
 import java.{util => ju}
 
@@ -8,7 +9,6 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
-import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.BuildTools
@@ -120,39 +120,6 @@ class WorkspaceLspService(
   @volatile
   private var userConfig: UserConfiguration = initialUserConfig
 
-  private val shellRunner = register {
-    new ShellRunner(languageClient, () => userConfig, time, statusBar)
-  }
-
-  var focusedDocument: Option[AbsolutePath] = None
-  private val recentlyFocusedFiles = new ActiveFiles(time)
-
-  val folderServices: List[MetalsLspService] = folders
-    .withFilter { case Folder(uri, _, _) =>
-      !BuildTools.default(uri).isEmpty
-    }
-    .map { case Folder(uri, id, name) =>
-      new MetalsLspService(
-        ec,
-        sh,
-        serverInputs,
-        languageClient,
-        initializeParams,
-        clientConfig,
-        () => userConfig,
-        statusBar,
-        () => focusedDocument,
-        shellRunner,
-        timerProvider,
-        initTreeView,
-        uri,
-        id,
-        name,
-      )
-    }
-
-  assert(folderServices.nonEmpty)
-
   val statusBar: StatusBar = new StatusBar(
     languageClient,
     time,
@@ -160,7 +127,49 @@ class WorkspaceLspService(
     clientConfig,
   )
 
+  private val shellRunner = register {
+    new ShellRunner(languageClient, () => userConfig, time, statusBar)
+  }
+
+  var focusedDocument: Option[AbsolutePath] = None
+  private val recentlyFocusedFiles = new ActiveFiles(time)
+
   private val timerProvider: TimerProvider = new TimerProvider(time)
+
+  val folderServices: List[MetalsLspService] = {
+    def createService(folder: Folder) =
+      folder match {
+        case Folder(uri, id, name) =>
+          new MetalsLspService(
+            ec,
+            sh,
+            serverInputs,
+            languageClient,
+            initializeParams,
+            clientConfig,
+            () => userConfig,
+            statusBar,
+            () => focusedDocument,
+            shellRunner,
+            timerProvider,
+            initTreeView,
+            uri,
+            id,
+            name,
+          )
+      }
+
+    val res = folders
+      .withFilter { case Folder(uri, _, _) =>
+        !BuildTools.default(uri).isEmpty
+      }
+      .map(createService)
+
+    if (res.isEmpty) List(createService(folders.head))
+    else res
+  }
+
+  assert(folderServices.nonEmpty)
 
   val treeView: TreeViewProvider =
     if (clientConfig.isTreeViewProvider) {
@@ -199,14 +208,20 @@ class WorkspaceLspService(
   }
 
   def getServiceFor(path: AbsolutePath): MetalsLspService = {
-    val folder =
-      for {
-        workSpaceFolder <- folderServices
-          .filter(service => path.toNIO.startsWith(service.folder.toNIO))
-          .sortBy(_.folder.toNIO.getNameCount())
-          .lastOption
-      } yield workSpaceFolder
-    folder.getOrElse(folderServices.head) // fallback to the first one
+    try {
+      val folder =
+        for {
+          workSpaceFolder <- folderServices
+            .filter(service => path.toNIO.startsWith(service.folder.toNIO))
+            .sortBy(_.folder.toNIO.getNameCount())
+            .lastOption
+        } yield workSpaceFolder
+      folder.getOrElse(folderServices.head) // fallback to the first one
+    } catch {
+      case _: ProviderMismatchException =>
+        // fallback to the first one
+        folderServices.head
+    }
   }
 
   def getServiceFor(uri: String): MetalsLspService = {
@@ -262,13 +277,8 @@ class WorkspaceLspService(
   def foreachSeq[A](
       f: MetalsLspService => Future[A],
       ignoreValue: Boolean = false,
-      withF: Option[() => Unit] = None,
   ): CompletableFuture[Object] = {
-    val res0 = Future.sequence(folderServices.map(f))
-    val res = withF match {
-      case Some(f) => res0.andThen { case Success(_) => f() }
-      case None => res0
-    }
+    val res = Future.sequence(folderServices.map(f))
     if (ignoreValue) res.ignoreValue.asJavaObject
     else res.asJavaObject
   }
@@ -386,7 +396,7 @@ class WorkspaceLspService(
     val res =
       for {
         data <- item.data
-        service <- getServiceForName(data.workspaceId)
+        service <- getServiceForName(data.folderId)
       } yield service.completionItemResolve(item)
     res.getOrElse(Future.successful(item).asJava)
   }
@@ -570,8 +580,6 @@ class WorkspaceLspService(
     }
   }
 
-  // def withTreeViewInit() {}
-
   override def windowStateDidChange(params: WindowStateDidChangeParams): Unit =
     if (params.focused) {
       folderServices.foreach(_.unpause())
@@ -602,20 +610,18 @@ class WorkspaceLspService(
         foreachSeq(_.indexSources(), ignoreValue = true)
       case ServerCommands.RestartBuildServer() =>
         folderServices.find(_.isBloop()).foreach(_.shutDownBloop())
-        foreachSeq(_.autoConnectToBuildServer(), withF = Some(initTreeView))
+        foreachSeq(_.autoConnectToBuildServer())
       case ServerCommands.GenerateBspConfig() =>
         foreachSeq(
           _.generateBspConfig(),
           ignoreValue = true,
-          withF = Some(initTreeView),
         )
       case ServerCommands.ImportBuild() =>
         foreachSeq(
-          _.slowConnectToBuildServer(forceImport = true),
-          withF = Some(initTreeView),
+          _.slowConnectToBuildServer(forceImport = true)
         )
       case ServerCommands.ConnectBuildServer() =>
-        foreachSeq(_.quickConnectToBuildServer(), withF = Some(initTreeView))
+        foreachSeq(_.quickConnectToBuildServer())
       case ServerCommands.DisconnectBuildServer() =>
         foreachSeq(_.disconnectOldBuildServer(), ignoreValue = true)
       case ServerCommands.DecodeFile(uri) =>
@@ -650,7 +656,7 @@ class WorkspaceLspService(
             .asJava
         }.asJavaObject
       case ServerCommands.BspSwitch() =>
-        foreachSeq(_.switchBspServer(), withF = Some(initTreeView))
+        foreachSeq(_.switchBspServer())
       case ServerCommands.OpenIssue() =>
         Future
           .successful(Urls.openBrowser(githubNewIssueUrlCreator.buildUrl()))
@@ -733,7 +739,7 @@ class WorkspaceLspService(
             folderServices.map(_.findMainClassAndItsBuildTarget(params))
           )
           .flatMap { list =>
-            list.filter(_._2.isEmpty) match {
+            list.filter(_._2.nonEmpty) match {
               case (service, buildTargets) :: Nil =>
                 service.startMainClass(buildTargets, params)
               case list =>
@@ -773,7 +779,7 @@ class WorkspaceLspService(
             folderServices.map(_.findTestClassAndItsBuildTarget(params))
           )
           .flatMap { list =>
-            list.filter(_._2.isEmpty) match {
+            list.filter(_._2.nonEmpty) match {
               case (service, buildTargets) :: Nil =>
                 service.startTestSuiteForResolved(buildTargets, params)
               case list =>
@@ -1038,7 +1044,6 @@ class WorkspaceLspService(
       Future // TODO:: we should probably have only one http server
         //                 and remove this ---v
         .sequence(folderServices.map(_.initialized(this)))
-        .andThen { case Success(_) => treeView.init() }
         .ignoreValue
     }
   }
@@ -1115,6 +1120,7 @@ class WorkspaceLspService(
         }
     } else Future.unit
   }
+
 }
 // TODO:: delete id, uri is enough
 case class Folder(uri: AbsolutePath, id: String, visibleName: Option[String])

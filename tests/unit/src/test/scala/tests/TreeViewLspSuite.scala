@@ -96,29 +96,29 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}",
+        s"projects-root:${server.buildTarget("a")}",
         "",
       )
       _ <- server.didOpen("a/src/main/scala/a/First.scala")
       _ <- server.didOpen("b/src/main/scala/b/Third.scala")
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}",
+        s"projects-root:${server.buildTarget("a")}",
         """|_empty_/ -
            |a/ -
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/_empty_/",
+        s"projects-root:${server.buildTarget("a")}!/_empty_/",
         """|Zero class +
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/_empty_/Zero#",
+        s"projects-root:${server.buildTarget("a")}!/_empty_/Zero#",
         """|a val
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/a/",
+        s"projects-root:${server.buildTarget("a")}!/a/",
         """|First class -
            |First object
            |Second class -
@@ -126,13 +126,13 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/a/First#",
+        s"projects-root:${server.buildTarget("a")}!/a/First#",
         """|a() method
            |b val
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/a/Second#",
+        s"projects-root:${server.buildTarget("a")}!/a/Second#",
         """|a() method
            |b val
            |c var
@@ -159,21 +159,21 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       )
       _ = {
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("sourcecode")}",
+          s"libraries-root:${server.jar("sourcecode")}",
           "sourcecode/ +",
         )
         server.assertTreeViewChildren(
-          s"libraries:",
+          s"libraries-root:",
           expectedLibrariesString,
         )
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("scala-library")}!/scala/Some#",
+          s"libraries-root:${server.jar("scala-library")}!/scala/Some#",
           """|value val
              |get() method
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("lsp4j")}!/org/eclipse/lsp4j/FileChangeType#",
+          s"libraries-root:${server.jar("lsp4j")}!/org/eclipse/lsp4j/FileChangeType#",
           """|Created enum
              |Changed enum
              |Deleted enum
@@ -184,12 +184,12 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("circe-core")}!/_root_/",
+          s"libraries-root:${server.jar("circe-core")}!/_root_/",
           """|io/ +
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("cats-core")}!/cats/instances/symbol/",
+          s"libraries-root:${server.jar("cats-core")}!/cats/instances/symbol/",
           """|package object
              |""".stripMargin,
         )
@@ -217,9 +217,9 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             },
           ),
           s"""|root
-              |  Projects (0)
-              |  Libraries (${expectedLibrariesCount})
-              |  Libraries (${expectedLibrariesCount})
+              |  Projects for root (0)
+              |  Libraries for root (${expectedLibrariesCount})
+              |  Libraries for root (${expectedLibrariesCount})
               |    sourcecode_2.13-0.1.7.jar
               |    sourcecode_2.13-0.1.7.jar
               |      sourcecode/
@@ -270,9 +270,9 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             },
           ),
           s"""|root
-              |  Projects (0)
-              |  Libraries (${expectedLibrariesCount})
-              |  Libraries (${expectedLibrariesCount})
+              |  Projects for root (0)
+              |  Libraries for root (${expectedLibrariesCount})
+              |  Libraries for root (${expectedLibrariesCount})
               |    org.eclipse.lsp4j-0.5.0.jar
               |    org.eclipse.lsp4j.generator-0.5.0.jar
               |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar
@@ -501,7 +501,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       // Trigger a compilation of Second.scala
       _ <- server.didOpen("b/src/main/scala/b/Second.scala")
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("b")}",
+        s"projects-root:${server.buildTarget("b")}",
         "b/ +",
       )
 
@@ -517,7 +517,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       // contains no `*.class` files yet. This is Bloop-specific behavior
       // and may be not an issue with other clients.
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("b")}",
+        s"projects-root:${server.buildTarget("b")}",
         "",
       )
 
@@ -529,7 +529,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       // background compilation of project "b" has completed, even if it was a
       // no-op.
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("b")}",
+        s"projects-root:${server.buildTarget("b")}",
         "b/ +",
       )
 

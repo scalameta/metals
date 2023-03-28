@@ -72,7 +72,6 @@ class Compilers(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
-    workspaceId: String,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -1016,7 +1015,7 @@ class Compilers(
   ): PresentationCompiler = {
     val pc: PresentationCompiler =
       mtags match {
-        case MtagsBinaries.BuildIn => new ScalaPresentationCompiler(workspaceId)
+        case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
         case artifacts: MtagsBinaries.Artifacts =>
           embedded.presentationCompiler(artifacts, classpath)
 

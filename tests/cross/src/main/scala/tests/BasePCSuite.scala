@@ -82,7 +82,7 @@ abstract class BasePCSuite extends BaseSuite {
 
     val scalacOpts = scalacOptions(myclasspath)
 
-    new ScalaPresentationCompiler("root")
+    new ScalaPresentationCompiler()
       .withSearch(search)
       .withConfiguration(config)
       .withExecutorService(executorService)

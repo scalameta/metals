@@ -39,7 +39,7 @@ class CompletionProvider(
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String,
     workspace: Option[Path],
-    workspaceId: String,
+    folderId: String,
 )(using reports: ReportContext):
   def completions(): CompletionList =
     val uri = params.uri
@@ -187,7 +187,7 @@ class CompletionProvider(
       completion.insertMode.foreach(item.setInsertTextMode)
 
       completion
-        .completionData(buildTargetIdentifier, workspaceId)
+        .completionData(buildTargetIdentifier, folderId)
         .foreach(data => item.setData(data.toJson))
 
       item.setTags(completion.lspTags.asJava)

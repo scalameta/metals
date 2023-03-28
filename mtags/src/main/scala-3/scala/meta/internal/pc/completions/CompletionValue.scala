@@ -30,7 +30,7 @@ sealed trait CompletionValue:
   def insertMode: Option[InsertTextMode] = None
   def completionData(
       buildTargetIdentifier: String,
-      workspaceId: String,
+      folderId: String,
   )(using Context): Option[CompletionItemData] = None
   def command: Option[String] = None
 
@@ -51,13 +51,13 @@ object CompletionValue:
 
     override def completionData(
         buildTargetIdentifier: String,
-        workspaceId: String,
+        folderId: String,
     )(using Context): Option[CompletionItemData] =
       Some(
         CompletionItemData(
           SemanticdbSymbols.symbolName(symbol),
           buildTargetIdentifier,
-          workspaceId,
+          folderId,
           kind = completionItemDataKind,
         )
       )

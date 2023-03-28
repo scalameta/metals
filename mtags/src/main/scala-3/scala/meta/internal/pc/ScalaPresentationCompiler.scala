@@ -49,11 +49,11 @@ case class ScalaPresentationCompiler(
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
-    workspace: Option[Path] = None,
-    workspaceId: String,
+    folderUri: Option[Path] = None,
+    folderId: String,
 ) extends PresentationCompiler:
 
-  def this(workspaceId: String) = this("", Nil, Nil, workspaceId = workspaceId)
+  def this() = this("", Nil, Nil, folderId = "root")
 
   import InteractiveDriver.*
 
@@ -62,7 +62,7 @@ case class ScalaPresentationCompiler(
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   private val forbiddenDoubleOptions = Set("-release")
   given ReportContext =
-    workspace.map(StdReportContext(_)).getOrElse(EmptyReportContext)
+    folderUri.map(StdReportContext(_)).getOrElse(EmptyReportContext)
 
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(
@@ -124,8 +124,8 @@ case class ScalaPresentationCompiler(
         params,
         config,
         buildTargetIdentifier,
-        workspace,
-        workspaceId,
+        folderUri,
+        folderId,
       ).completions()
 
     }
@@ -179,7 +179,7 @@ case class ScalaPresentationCompiler(
       EmptyCancelToken,
     ) { access =>
       val driver = access.compiler()
-      val provider = SemanticdbTextDocumentProvider(driver, workspace)
+      val provider = SemanticdbTextDocumentProvider(driver, folderUri)
       provider.textDocument(filename, code)
     }
 
@@ -398,7 +398,7 @@ case class ScalaPresentationCompiler(
     copy(search = search)
 
   def withWorkspace(workspace: Path): PresentationCompiler =
-    copy(workspace = Some(workspace))
+    copy(folderUri = Some(workspace))
 
   override def isLoaded() = compilerAccess.isLoaded()
 

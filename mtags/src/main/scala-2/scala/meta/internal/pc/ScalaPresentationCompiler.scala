@@ -51,8 +51,8 @@ case class ScalaPresentationCompiler(
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
-    workspace: Option[Path] = None,
-    workspaceId: String
+    folderUri: Option[Path] = None,
+    folderId: String
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -66,7 +66,7 @@ case class ScalaPresentationCompiler(
     copy(search = search)
 
   override def withWorkspace(workspace: Path): PresentationCompiler =
-    copy(workspace = Some(workspace))
+    copy(folderUri = Some(workspace))
 
   override def withExecutorService(
       executorService: ExecutorService
@@ -83,8 +83,8 @@ case class ScalaPresentationCompiler(
   ): PresentationCompiler =
     copy(config = config)
 
-  def this(workspaceId: String) =
-    this(buildTargetIdentifier = "", workspaceId = workspaceId)
+  def this() =
+    this(buildTargetIdentifier = "", folderId = "root")
 
   val compilerAccess =
     new ScalaCompilerAccess(
@@ -148,7 +148,7 @@ case class ScalaPresentationCompiler(
       EmptyCompletionList(),
       params.token
     ) { pc =>
-      new CompletionProvider(pc.compiler(), workspaceId, params).completions()
+      new CompletionProvider(pc.compiler(), folderId, params).completions()
     }
 
   override def implementAbstractMembers(
@@ -156,7 +156,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new CompletionProvider(pc.compiler(), workspaceId, params).implementAll()
+      new CompletionProvider(pc.compiler(), folderId, params).implementAll()
     }
   }
 
@@ -376,7 +376,7 @@ case class ScalaPresentationCompiler(
       search,
       buildTargetIdentifier,
       config,
-      workspace
+      folderUri
     )
   }
 

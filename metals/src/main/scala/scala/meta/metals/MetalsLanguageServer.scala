@@ -155,7 +155,7 @@ class MetalsLanguageServer(
           val service = createService(List(Folder(root, "root", None)), params)
 
           setupJna()
-          MetalsLogger.setupLspLogger(root, redirectSystemOut)
+          MetalsLogger.setupLspLogger(List(root), redirectSystemOut)
 
           val clientInfo = Option(params.getClientInfo()).fold("") { info =>
             s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"

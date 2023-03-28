@@ -248,7 +248,6 @@ class MetalsLspService(
       fileWatchFilter,
       params => {
         didChangeWatchedFiles(params)
-        initTreeView()
       },
     )
   )
@@ -262,11 +261,13 @@ class MetalsLspService(
       Cancelable.empty,
     )
   )
-  private def onBuildChanged =
+
+  private val onBuildChanged =
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
       onBuildChangedUnbatched
     )
-  def pauseables: Pauseable = Pauseable.fromPausables(
+
+  val pauseables: Pauseable = Pauseable.fromPausables(
     onBuildChanged ::
       parseTrees ::
       compilations.pauseables
@@ -375,7 +376,6 @@ class MetalsLspService(
       time,
       report => {
         didCompileTarget(report)
-        initTreeView()
         compilers.didCompile(report)
       },
       onBuildTargetDidCompile = { target =>
@@ -390,7 +390,6 @@ class MetalsLspService(
       },
       onBuildTargetDidChangeFunc = params => {
         maybeQuickConnectToBuildServer(params)
-        initTreeView()
       },
     )
 
@@ -626,7 +625,6 @@ class MetalsLspService(
       trees,
       mtagsResolver,
       sourceMapper,
-      folderId,
     )
   )
 
@@ -738,7 +736,7 @@ class MetalsLspService(
 
   var httpServer: Option[MetalsHttpServer] = None
 
-  def treeView =
+  val treeView =
     new MetalsTreeFolderViewProvider(
       folderId,
       () => folder,
@@ -782,15 +780,11 @@ class MetalsLspService(
     tables,
     doctor,
     () => {
-      val res = slowConnectToBuildServer(forceImport = true)
-      initTreeView()
-      res
+      slowConnectToBuildServer(forceImport = true)
     },
     bspConnector,
     () => {
-      val res = quickConnectToBuildServer()
-      initTreeView()
-      res
+      quickConnectToBuildServer()
     },
   )
   private val findTextInJars: FindTextInDependencyJars =
@@ -2091,6 +2085,7 @@ class MetalsLspService(
         case None =>
           Future.successful(BuildChange.None)
       }
+      _ = initTreeView()
     } yield result)
       .recover { case NonFatal(e) =>
         disconnectOldBuildServer()
@@ -2276,9 +2271,7 @@ class MetalsLspService(
   ): Future[BuildChange] = {
     val isBuildChange = paths.exists(buildTools.isBuildRelated(folder, _))
     if (isBuildChange) {
-      val res = slowConnectToBuildServer(forceImport = false)
-      initTreeView()
-      res
+      slowConnectToBuildServer(forceImport = false)
     } else {
       Future.successful(BuildChange.None)
     }

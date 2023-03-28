@@ -41,7 +41,7 @@ abstract class PcBenchmark {
   }
 
   def newPC(search: SymbolSearch = newSearch()): PresentationCompiler = {
-    new ScalaPresentationCompiler("root")
+    new ScalaPresentationCompiler()
       .withSearch(search)
       .newInstance("", classpath.asJava, Nil.asJava)
   }

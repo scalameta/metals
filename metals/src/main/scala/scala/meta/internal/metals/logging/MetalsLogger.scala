@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.logging
 
+import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
@@ -45,29 +46,42 @@ object MetalsLogger {
       .replace()
   }
 
-  def redirectSystemOut(logfile: AbsolutePath): Unit = {
-    Files.createDirectories(logfile.toNIO.getParent)
-    val logStream = Files.newOutputStream(
-      logfile.toNIO,
-      StandardOpenOption.APPEND,
-      StandardOpenOption.CREATE,
+  def redirectSystemOut(logfile: AbsolutePath): Unit = redirectSystemOut(
+    List(logfile)
+  )
+
+  def redirectSystemOut(logfiles: List[AbsolutePath]): Unit = {
+    logfiles.foreach(logfile =>
+      Files.createDirectories(logfile.toNIO.getParent)
     )
-    val out = new PrintStream(logStream)
+    val logStreams = logfiles.map(logfile =>
+      Files.newOutputStream(
+        logfile.toNIO,
+        StandardOpenOption.APPEND,
+        StandardOpenOption.CREATE,
+      )
+    )
+    val out = new PrintStream(new MutipleOutputsStream(logStreams))
     System.setOut(out)
     System.setErr(out)
-    configureRootLogger(logfile)
+    configureRootLogger(logfiles)
   }
 
-  private def configureRootLogger(logfile: AbsolutePath): Unit = {
-    Logger.root
-      .clearModifiers()
-      .clearHandlers()
-      .withHandler(
-        writer = newFileWriter(logfile),
-        formatter = defaultFormat,
-        minimumLevel = Some(level),
-        modifiers = List(MetalsFilter()),
-      )
+  private def configureRootLogger(logfile: List[AbsolutePath]): Unit = {
+    logfile
+      .foldLeft(
+        Logger.root
+          .clearModifiers()
+          .clearHandlers()
+      ) { (logger, logfile) =>
+        logger
+          .withHandler(
+            writer = newFileWriter(logfile),
+            formatter = defaultFormat,
+            minimumLevel = Some(level),
+            modifiers = List(MetalsFilter()),
+          )
+      }
       .withHandler(
         writer = LanguageClientLogger,
         formatter = MetalsLogger.defaultFormat,
@@ -95,13 +109,13 @@ object MetalsLogger {
   }
 
   def setupLspLogger(
-      workspace: AbsolutePath,
+      folders: List[AbsolutePath],
       redirectSystemStreams: Boolean,
   ): Unit = {
-    val newLogFile = workspace.resolve(workspaceLogPath)
-    scribe.info(s"logging to file $newLogFile")
+    val newLogFiles = folders.map(_.resolve(workspaceLogPath))
+    scribe.info(s"logging to files ${newLogFiles.mkString(",")}")
     if (redirectSystemStreams) {
-      redirectSystemOut(newLogFile)
+      redirectSystemOut(newLogFiles)
     }
   }
 
@@ -118,4 +132,8 @@ object MetalsLogger {
   def silentInTests: LoggerSupport[Unit] =
     if (MetalsServerConfig.isTesting) silent
     else default
+}
+
+class MutipleOutputsStream(outputs: List[OutputStream]) extends OutputStream {
+  override def write(b: Int): Unit = outputs.foreach(_.write(b))
 }
