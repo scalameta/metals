@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.reflect.internal.util.RangePosition
+
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.VirtualFileParams
 
@@ -195,13 +197,19 @@ abstract class PcCollector[T](
     // needed for classOf[AB@@C]`
     case lit @ Literal(Constant(TypeRef(_, sym, _))) if lit.pos.includes(pos) =>
       val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
-
-      Some(
-        symbolAlternatives(sym),
-        lit.pos
-          .withStart(posStart)
-          .withEnd(posStart + sym.decodedName.length())
-      )
+      if (posStart == -1) None
+      else
+        Some(
+          (
+            symbolAlternatives(sym),
+            new RangePosition(
+              lit.pos.source,
+              posStart,
+              lit.pos.point,
+              posStart + sym.decodedName.length
+            )
+          )
+        )
     case _ =>
       None
   }
@@ -427,13 +435,18 @@ abstract class PcCollector[T](
         case lit @ Literal(Constant(TypeRef(_, sym, _)))
             if soughtFilter(_(sym)) =>
           val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
-          acc + collect(
-            lit,
-            lit.pos
-              .withStart(posStart)
-              .withEnd(posStart + sym.decodedName.length()),
-            Option(sym)
-          )
+          if (posStart == -1) acc
+          else
+            acc + collect(
+              lit,
+              new RangePosition(
+                lit.pos.source,
+                posStart,
+                lit.pos.point,
+                posStart + sym.decodedName.length
+              ),
+              Option(sym)
+            )
 
         case _ =>
           tree.children.foldLeft(acc)(traverse(_, _))
