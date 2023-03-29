@@ -30,10 +30,10 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
       if (couldBeScalaCli && range.getStart == range.getEnd)
         for {
           buffer <- buffers.get(path)
-          line = buffer.linesIterator
+          line <- buffer.linesIterator
             .drop(range.getStart.getLine)
-            .take(range.getEnd().getLine() - range.getStart().getLine() + 1)
-            .mkString("\n")
+            .take(1)
+            .headOption
           tree <- Trees.defaultTokenizerDialect(line).tokenize.toOption
         } yield tree
       else None
@@ -110,7 +110,7 @@ object MillifyScalaCliDependencyCodeAction {
       dependencyIdentifier: String,
       millStyleDependency: String,
   ) {
-    val replacementText =
+    val replacementText: String =
       s"//> using $dependencyIdentifier \"$millStyleDependency\""
   }
 }
