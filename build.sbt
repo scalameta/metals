@@ -147,7 +147,7 @@ commands ++= Seq(
     val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
-    "interfaces/publishLocal" :: "mtagsShared::publishLocal" :: s"++${V.scala213} metals/publishLocal" :: publishMtags
+    "interfaces/publishLocal" :: s"++${V.scala213} metals/publishLocal" :: publishMtags
   },
   Command.command("cross-test-latest-nightly") { s =>
     val max =
@@ -605,15 +605,20 @@ def runMtagsPublishLocal(
     .appendWithSession(
       List(
         mtags / scalaVersion := scalaV,
+        mtagsShared / scalaVersion := scalaV,
         ThisBuild / version := projectV,
         ThisBuild / useSuperShell := false,
       ),
       state,
     )
-  val (s, _) = Project
+  val (s1, _) = Project
     .extract(newState)
-    .runTask(mtags / publishLocal, newState)
-  s
+    .runTask(mtagsShared / publishLocal, newState)
+
+  val (s2, _) = Project
+    .extract(s1)
+    .runTask(mtags / publishLocal, s1)
+  s2
 }
 
 def crossPublishLocal(scalaV: String) =
