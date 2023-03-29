@@ -207,4 +207,8 @@ class DelegatingScalaService(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] = underlying.semanticTokensFull(params)
 
+  override def didChangeWorkspaceFolders(
+      params: DidChangeWorkspaceFoldersParams
+  ): CompletableFuture[Unit] = underlying.didChangeWorkspaceFolders(params)
+
 }

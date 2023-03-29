@@ -23,7 +23,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.{lsp4j => l}
 
 class MetalsTreeViewProvider(
-    trees: List[MetalsTreeFolderViewProvider],
+    getTrees: () => List[MetalsTreeFolderViewProvider],
     languageClient: MetalsLanguageClient,
     sh: ScheduledExecutorService,
 ) extends TreeViewProvider {
@@ -42,7 +42,7 @@ class MetalsTreeViewProvider(
     )
   }
 
-  override def reset(): Unit = trees.foreach(_.reset())
+  override def reset(): Unit = getTrees().foreach(_.reset())
 
   def echoCommand(command: BaseCommand, icon: String): TreeViewNode =
     TreeViewNode(
@@ -62,6 +62,7 @@ class MetalsTreeViewProvider(
   override def children(
       params: TreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = {
+    val trees = getTrees()
     val children: Array[TreeViewNode] = params.viewId match {
       case Help =>
         Array(
@@ -139,7 +140,7 @@ class MetalsTreeViewProvider(
         (!isLeading, distance)
       }
       val result =
-        trees.foldLeft(Option.empty[List[String]]) {
+        getTrees().foldLeft(Option.empty[List[String]]) {
           case (None, treeViewProvider) =>
             treeViewProvider.revealResult(path, closestSymbol)
           case (Some(value), _) => Some(value)
@@ -156,14 +157,14 @@ class MetalsTreeViewProvider(
 
   override def onCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams
-  ): Unit = trees.foreach(_.onCollapseDidChange(params))
+  ): Unit = getTrees().foreach(_.onCollapseDidChange(params))
 
   override def parent(
       params: TreeViewParentParams
   ): TreeViewParentResult =
     params.viewId match {
       case Project =>
-        trees
+        getTrees()
           .map(_.parent(params.nodeUri))
           .collectFirst { case Some(value) =>
             value
@@ -175,6 +176,7 @@ class MetalsTreeViewProvider(
   override def onVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams
   ): Unit = {
+    val trees = getTrees()
     if (params.visible) {
       params.viewId match {
         case TreeViewProvider.Compile =>
@@ -212,7 +214,7 @@ class MetalsTreeViewProvider(
   override def onBuildTargetDidCompile(
       id: BuildTargetIdentifier
   ): Unit = {
-    val toUpdate = trees.map(_.onBuildTargetDidCompile(id)).collect {
+    val toUpdate = getTrees().map(_.onBuildTargetDidCompile(id)).collect {
       case Some(value) => value
     }
     if (toUpdate.nonEmpty) {
@@ -225,7 +227,7 @@ class MetalsTreeViewProvider(
 
 class MetalsTreeFolderViewProvider(
     folderId: String,
-    folder: () => AbsolutePath,
+    folder: Folder,
     buildTargets: BuildTargets,
     compilations: () => TreeViewCompilations,
     definitionIndex: GlobalSymbolIndex,
@@ -244,7 +246,7 @@ class MetalsTreeFolderViewProvider(
     definitionIndex,
     TreeViewProvider.Project,
     s"libraries-${folderId}",
-    s"Libraries for $folderId",
+    s"Libraries for ${folder.nameOrUri}",
     identity,
     _.toURI.toString(),
     _.toAbsolutePath,
@@ -258,7 +260,7 @@ class MetalsTreeFolderViewProvider(
     definitionIndex,
     TreeViewProvider.Project,
     s"projects-${folderId}",
-    s"Projects for $folderId",
+    s"Projects for ${folder.nameOrUri}",
     _.getId(),
     _.getUri(),
     uri => new BuildTargetIdentifier(uri),
@@ -368,7 +370,7 @@ class MetalsTreeFolderViewProvider(
       path: AbsolutePath,
       closestSymbol: SymbolOccurrence,
   ): Option[List[String]] =
-    if (path.isDependencySource(folder()) || path.isJarFileSystem) {
+    if (path.isDependencySource(folder.uri) || path.isJarFileSystem) {
       buildTargets
         .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
         .map { inferred =>

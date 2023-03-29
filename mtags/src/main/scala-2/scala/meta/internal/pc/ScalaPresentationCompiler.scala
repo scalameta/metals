@@ -65,6 +65,9 @@ case class ScalaPresentationCompiler(
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
 
+  override def withFolderId(folderId: String): PresentationCompiler =
+    copy(folderId = folderId)
+
   override def withWorkspace(workspace: Path): PresentationCompiler =
     copy(folderUri = Some(workspace))
 

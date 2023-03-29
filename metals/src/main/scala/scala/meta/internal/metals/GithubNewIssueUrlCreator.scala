@@ -15,13 +15,14 @@ import scala.meta.internal.builds.BuildTools
 import org.eclipse.lsp4j.ClientInfo
 
 class GithubNewIssueUrlCreator(
-    folderInfo: List[GitHubIssueFolderInfo],
+    getFoldersInfo: () => List[GitHubIssueFolderInfo],
     clientInfo: ClientInfo,
 ) {
 
   def buildUrl(): String = {
+    val foldersInfo = getFoldersInfo()
     val scalaVersions =
-      folderInfo
+      getFoldersInfo()
         .flatMap(_.buildTargets.allScala)
         .map(_.scalaVersion)
         .toSet
@@ -62,15 +63,17 @@ class GithubNewIssueUrlCreator(
           |-->
           |
           |### Workspace information:
-          | - **Scala versions:** $scalaVersions$selectedBuildTool$selectedBuildServer
-          | - **All build tools in workspace:** ${folderInfo.flatMap(_.buildTools.all).mkString("; ")}
+          | - **Scala versions:** $scalaVersions${selectedBuildTool(foldersInfo)}${selectedBuildServer(foldersInfo)}
+          | - **All build tools in workspace:** ${foldersInfo.flatMap(_.buildTools.all).mkString("; ")}
           |""".stripMargin
     s"https://github.com/scalameta/metals/issues/new?body=${URLEncoder.encode(body)}"
   }
 
-  private def selectedBuildTool(): String = {
+  private def selectedBuildTool(
+      foldersInfo: List[GitHubIssueFolderInfo]
+  ): String = {
     val buildTools =
-      folderInfo.map { info =>
+      foldersInfo.map { info =>
         info.tables.buildTool
           .selectedBuildTool()
       }
@@ -86,9 +89,11 @@ class GithubNewIssueUrlCreator(
     } else ""
   }
 
-  private def selectedBuildServer(): String = {
+  private def selectedBuildServer(
+      foldersInfo: List[GitHubIssueFolderInfo]
+  ): String = {
     val buildServers =
-      folderInfo.zipWithIndex.map { case (info, indx) =>
+      foldersInfo.zipWithIndex.map { case (info, indx) =>
         import info._
         val buildServer = currentBuildServer()
           .map(s => s"${s.main.name} v${s.main.version}")

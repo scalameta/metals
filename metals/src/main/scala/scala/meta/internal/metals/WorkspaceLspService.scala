@@ -11,7 +11,6 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
-import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.DidFocusResult
@@ -136,45 +135,37 @@ class WorkspaceLspService(
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
 
-  val folderServices: List[MetalsLspService] = {
-    def createService(folder: Folder) =
-      folder match {
-        case Folder(uri, id, name) =>
-          new MetalsLspService(
-            ec,
-            sh,
-            serverInputs,
-            languageClient,
-            initializeParams,
-            clientConfig,
-            () => userConfig,
-            statusBar,
-            () => focusedDocument,
-            shellRunner,
-            timerProvider,
-            initTreeView,
-            uri,
-            id,
-            name,
-          )
-      }
+  def createService(folder: Folder): MetalsLspService =
+    folder match {
+      case Folder(uri, name) =>
+        new MetalsLspService(
+          ec,
+          sh,
+          serverInputs,
+          languageClient,
+          initializeParams,
+          clientConfig,
+          () => userConfig,
+          statusBar,
+          () => focusedDocument,
+          shellRunner,
+          timerProvider,
+          initTreeView,
+          uri,
+          java.util.UUID.randomUUID.toString,
+          name,
+        )
+    }
 
-    val res = folders
-      .withFilter { case Folder(uri, _, _) =>
-        !BuildTools.default(uri).isEmpty
-      }
-      .map(createService)
-
-    if (res.isEmpty) List(createService(folders.head))
-    else res
-  }
-
+  val workspaceFolders: WorkspaceFolders =
+    new WorkspaceFolders(folders, createService, this)
+  def folderServices = workspaceFolders.getFolderServices
   assert(folderServices.nonEmpty)
 
   val treeView: TreeViewProvider =
     if (clientConfig.isTreeViewProvider) {
       new MetalsTreeViewProvider(
-        folderServices.map(_.treeView),
+        () => folderServices.map(_.treeView),
         languageClient,
         sh,
       )
@@ -192,7 +183,7 @@ class WorkspaceLspService(
   )
 
   private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
-    folderServices.map(_.gitHubIssueFolderInfo),
+    () => folderServices.map(_.gitHubIssueFolderInfo),
     initializeParams.getClientInfo(),
   )
 
@@ -263,7 +254,7 @@ class WorkspaceLspService(
   ): Option[MetalsLspService] =
     for {
       workSpaceFolder <- folderServices
-        .find(service => service.folderId == workspaceFolder)
+        .find(service => service.folderId.toString == workspaceFolder)
     } yield workSpaceFolder
 
   def getServiceForExactUri(
@@ -500,6 +491,16 @@ class WorkspaceLspService(
           }
       )
       .ignoreValue
+      .asJava
+
+  override def didChangeWorkspaceFolders(
+      params: lsp4j.DidChangeWorkspaceFoldersParams
+  ): CompletableFuture[Unit] =
+    workspaceFolders
+      .changeFolderServices(
+        params.getEvent().getRemoved().map(Folder.apply).asScala.toList,
+        params.getEvent().getAdded().map(Folder.apply).asScala.toList,
+      )
       .asJava
 
   override def treeViewChildren(
@@ -1011,7 +1012,11 @@ class WorkspaceLspService(
         val fileOperationsServerCapabilities =
           new lsp4j.FileOperationsServerCapabilities()
         fileOperationsServerCapabilities.setWillRename(fileOperationOptions)
-        val workspaceCapabilities = new lsp4j.WorkspaceServerCapabilities()
+        val workspaceCapabilitiesOptions = new lsp4j.WorkspaceFoldersOptions()
+        workspaceCapabilitiesOptions.setSupported(true)
+        workspaceCapabilitiesOptions.setChangeNotifications(true)
+        val workspaceCapabilities =
+          new lsp4j.WorkspaceServerCapabilities(workspaceCapabilitiesOptions)
         workspaceCapabilities.setFileOperations(
           fileOperationsServerCapabilities
         )
@@ -1122,5 +1127,17 @@ class WorkspaceLspService(
   }
 
 }
-// TODO:: delete id, uri is enough
-case class Folder(uri: AbsolutePath, id: String, visibleName: Option[String])
+
+case class Folder(uri: AbsolutePath, visibleName: Option[String]) {
+  def nameOrUri: String = visibleName.getOrElse(uri.toString())
+}
+
+object Folder {
+  def apply(folder: lsp4j.WorkspaceFolder): Folder = {
+    val name = Option(folder.getName()) match {
+      case Some("") => None
+      case maybeValue => maybeValue
+    }
+    Folder(folder.getUri().toAbsolutePath, name)
+  }
+}

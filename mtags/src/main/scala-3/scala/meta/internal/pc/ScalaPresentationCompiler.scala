@@ -397,6 +397,9 @@ case class ScalaPresentationCompiler(
   def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
 
+  def withFolderId(folderId: String): PresentationCompiler =
+    copy(folderId = folderId)
+
   def withWorkspace(workspace: Path): PresentationCompiler =
     copy(folderUri = Some(workspace))
 

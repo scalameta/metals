@@ -40,4 +40,9 @@ trait WorkspaceService {
       params: DidChangeWatchedFilesParams
   ): CompletableFuture[Unit]
 
+  @JsonNotification("workspace/didChangeWorkspaceFolders")
+  def didChangeWorkspaceFolders(
+      params: DidChangeWorkspaceFoldersParams
+  ): CompletableFuture[Unit]
+
 }

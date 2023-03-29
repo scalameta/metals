@@ -72,6 +72,7 @@ class Compilers(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
+    folderId: String,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -963,7 +964,8 @@ class Compilers(
       pc: PresentationCompiler,
       search: SymbolSearch,
   ): PresentationCompiler =
-    pc.withSearch(search)
+    pc.withFolderId(folderId)
+      .withSearch(search)
       .withExecutorService(ec)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
@@ -1015,18 +1017,20 @@ class Compilers(
   ): PresentationCompiler = {
     val pc: PresentationCompiler =
       mtags match {
-        case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
+        case MtagsBinaries.BuildIn =>
+          new ScalaPresentationCompiler()
         case artifacts: MtagsBinaries.Artifacts =>
           embedded.presentationCompiler(artifacts, classpath)
 
       }
 
     val filteredOptions = plugins.filterSupportedOptions(options)
-    configure(pc, search).newInstance(
-      name,
-      classpath.asJava,
-      (log ++ filteredOptions).asJava,
-    )
+    configure(pc, search)
+      .newInstance(
+        name,
+        classpath.asJava,
+        (log ++ filteredOptions).asJava,
+      )
   }
 
   private def toDebugCompletionType(

@@ -625,6 +625,7 @@ class MetalsLspService(
       trees,
       mtagsResolver,
       sourceMapper,
+      folderId,
     )
   )
 
@@ -739,7 +740,7 @@ class MetalsLspService(
   val treeView =
     new MetalsTreeFolderViewProvider(
       folderId,
-      () => folder,
+      Folder(folder, folderVisibleName),
       buildTargets,
       () => buildClient.ongoingCompilations(),
       definitionIndex,

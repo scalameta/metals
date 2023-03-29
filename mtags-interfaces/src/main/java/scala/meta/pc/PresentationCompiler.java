@@ -207,6 +207,11 @@ public abstract class PresentationCompiler {
 	public abstract PresentationCompiler withSearch(SymbolSearch search);
 
 	/**
+	 * Provide a new folder id to use for the presentation compiler.
+	 */
+	public abstract PresentationCompiler withFolderId(String folderId);
+
+	/**
 	 * Provide a custom executor service to run asynchronous cancellation or
 	 * requests.
 	 */
@@ -244,7 +249,7 @@ public abstract class PresentationCompiler {
 	 *                              better-monadic-for.
 	 */
 	public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
-			List<String> options);
+		List<String> options);
 
 	// =============================
 	// Intentionally missing methods

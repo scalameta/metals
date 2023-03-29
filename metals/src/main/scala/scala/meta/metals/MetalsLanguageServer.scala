@@ -126,15 +126,22 @@ class MetalsLanguageServer(
         )
         .asJava
     } else {
-      // NOTE: we purposefully don't check workspaceFolders here
-      // since Metals technically doesn't support it. Once we implement
-      // https://github.com/scalameta/metals-feature-requests/issues/87 we'll
-      // have to change this.
-      val root =
-        Option(params.getRootUri())
-          .orElse(Option(params.getRootPath()))
-          .map(_.toAbsolutePath)
-      root match {
+      val folders = {
+        val workspaceFolders =
+          Option(params.getWorkspaceFolders())
+            .map(_.asScala)
+            .toList
+            .flatten
+            .map(Folder.apply)
+        if (workspaceFolders.nonEmpty) workspaceFolders
+        else
+          Option(params.getRootUri())
+            .orElse(Option(params.getRootPath()))
+            .map(root => Folder(root.toAbsolutePath, Some("root")))
+            .toList
+      }
+
+      folders match {
         // ugly check to avoid starting the server if proper languageClient wasn't plugged
         case _ if !isLanguageClientConnected.get =>
           Future
@@ -142,33 +149,34 @@ class MetalsLanguageServer(
               new IllegalStateException("Language client wasn't connected!")
             )
             .asJava
-        case None =>
+        case Nil =>
           languageClient.get.showMessage(Messages.noRoot)
           Future
             .failed(
               new IllegalArgumentException(
-                "There is no root directory in InitializeParams"
+                "There is no root directory and no workspace folders in InitializeParams"
               )
             )
             .asJava
-        case Some(root) =>
-          val service = createService(List(Folder(root, "root", None)), params)
+        case folders =>
+          val service = createService(folders, params)
+          val folderUris = folders.map(_.uri)
 
           setupJna()
-          MetalsLogger.setupLspLogger(List(root), redirectSystemOut)
+          MetalsLogger.setupLspLogger(folderUris, redirectSystemOut)
 
           val clientInfo = Option(params.getClientInfo()).fold("") { info =>
             s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
           }
           scribe.info(
-            s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$root' $clientInfo."
+            s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderUris
+                .mkString(", ")}' $clientInfo."
           )
 
           serverState.set(ServerState.Initialized(service))
           metalsService.underlying = service
 
-          // TODO:: do this foreach
-          new StdReportContext(root).cleanUpOldReports()
+          folderUris.foreach(new StdReportContext(_).cleanUpOldReports())
 
           service.initialize()
       }

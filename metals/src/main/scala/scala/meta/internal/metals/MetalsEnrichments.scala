@@ -574,7 +574,7 @@ object MetalsEnrichments
       }
 
     def toAbsolutePathSafe(implicit
-        reports: ReportContext
+        reports: ReportContext = EmptyReportContext
     ): Option[AbsolutePath] =
       try {
         Some(toAbsolutePath)

@@ -187,7 +187,7 @@ class CompletionProvider(
       completion.insertMode.foreach(item.setInsertTextMode)
 
       completion
-        .completionData(buildTargetIdentifier, folderId)
+        .completionData(buildTargetIdentifier, folderId.toString())
         .foreach(data => item.setData(data.toJson))
 
       item.setTags(completion.lspTags.asJava)
