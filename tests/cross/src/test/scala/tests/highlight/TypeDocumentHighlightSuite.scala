@@ -189,4 +189,13 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin,
   )
 
+  check(
+    "symbolic-type",
+    """|object A {
+       |  type <<!!>>[+T, -U] = Int
+       |  def m(x: Int <<!@@!>> String) = ???
+       |}
+       |""".stripMargin,
+  )
+
 }

@@ -264,8 +264,12 @@ abstract class PcCollector[T](
             case _ => false
           }
 
-        def soughtFilter(f: Set[Symbol] => Boolean): Boolean = {
-          f(sought)
+        // 1. In most cases, we try to compare by Symbol#==.
+        // 2. If there is NoSymbol at a node, we check if the identifier there has the same decoded name.
+        //    It it does, we look up the symbol at this position using `fallbackSymbol` or `members`,
+        //    and again check if this time we got symbol equal by Symbol#==.
+        def soughtFilter(f: Symbol => Boolean): Boolean = {
+          sought.exists(f)
         }
 
         traverseSought(soughtTreeFilter, soughtFilter).toList
@@ -276,14 +280,14 @@ abstract class PcCollector[T](
 
   def resultAllOccurences(): Set[T] = {
     def noTreeFilter = (tree: Tree) => true
-    def noSoughtFilter = (f: Set[Symbol] => Boolean) => true
+    def noSoughtFilter = (f: (Symbol => Boolean)) => true
 
     traverseSought(noTreeFilter, noSoughtFilter)
   }
 
   def traverseSought(
       filter: Tree => Boolean,
-      soughtFilter: (Set[Symbol] => Boolean) => Boolean
+      soughtFilter: (Symbol => Boolean) => Boolean
   ): Set[T] = {
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     def traverseWithParent(parent: Option[Tree])(
@@ -357,9 +361,7 @@ abstract class PcCollector[T](
             }
             .collect {
               case AssignOrNamedArg(i @ Ident(name), _)
-                  if soughtFilter(sought =>
-                    sought.exists(sym => sym.name == name)
-                  ) =>
+                  if soughtFilter(_.decodedName == name.decoded) =>
                 collect(
                   i,
                   i.pos,
@@ -381,9 +383,9 @@ abstract class PcCollector[T](
          */
         case id: Ident
             if id.symbol == NoSymbol &&
-              soughtFilter(sought => sought.exists(_.name == id.name)) =>
+              soughtFilter(_.decodedName == id.name.decoded) =>
           fallbackSymbol(id.name, id.pos) match {
-            case Some(sym) if soughtFilter(sought => sought(sym)) =>
+            case Some(sym) if soughtFilter(_ == sym) =>
               acc + collect(
                 id,
                 id.pos
@@ -407,7 +409,7 @@ abstract class PcCollector[T](
         case imp: Import if filter(imp) =>
           val res = imp.selectors.foldLeft(traverse(acc, imp.expr)) {
             case (acc, sel)
-                if soughtFilter(sought => sought.exists(_.name == sel.name)) =>
+                if soughtFilter(_.decodedName == sel.name.decoded) =>
               val positions =
                 if (sel.rename != null && !sel.rename.isEmpty)
                   Set(
@@ -415,7 +417,16 @@ abstract class PcCollector[T](
                     sel.namePosition(pos.source)
                   )
                 else Set(sel.namePosition(pos.source))
-              val symbol = imp.expr.symbol.info.member(sel.name)
+              val symbol = imp.expr.symbol.info.member(sel.name) match {
+                // We can get NoSymbol when we import "_" or when the names don't match
+                // eg. "@@" doesn't match "$at$at".
+                // Then we try to find member based on decodedName
+                case ns: NoSymbol =>
+                  imp.expr.symbol.info.members
+                    .find(_.name.decoded == sel.name.decoded)
+                    .getOrElse(ns)
+                case sym => sym
+              }
               acc ++ positions.map(pos => collect(imp, pos, Option(symbol)))
             case (acc, _) =>
               acc
@@ -423,7 +434,7 @@ abstract class PcCollector[T](
           res
         // catch all missed named trees
         case name: NameTree
-            if soughtFilter(_(name.symbol)) && name.pos.isRange =>
+            if soughtFilter(_ == name.symbol) && name.pos.isRange =>
           tree.children.foldLeft(
             acc + collect(
               name,
@@ -433,7 +444,7 @@ abstract class PcCollector[T](
 
         // needed for `classOf[<<ABC>>]`
         case lit @ Literal(Constant(TypeRef(_, sym, _)))
-            if soughtFilter(_(sym)) =>
+            if soughtFilter(_ == sym) =>
           val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
           if (posStart == -1) acc
           else

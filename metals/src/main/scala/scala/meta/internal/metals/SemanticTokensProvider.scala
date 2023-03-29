@@ -224,7 +224,7 @@ object SemanticTokensProvider {
             _: Token.Interpolation.SpliceEnd | _: Token.Interpolation.End =>
           getTypeId(SemanticTokenTypes.String) // $ symbol
 
-        case _ if isScala3 && trySoftKeyword(tk) != -1 =>
+        case _ if isScala3 && !tk.isWhiteSpaceOrComment =>
           trySoftKeyword(tk)
         case _ => -1
       }
@@ -235,9 +235,11 @@ object SemanticTokensProvider {
           1 << getModifierId(SemanticTokenModifiers.Readonly)
         case _ => 0
       }
+
     if (tokenType != -1) (tokenType, tokenModifier)
-    else
+    else if (!tk.isWhiteSpaceOrComment) {
       tokenFallback(tk)
+    } else (-1, 0)
 
   }
   def tokenFallback(tk: scala.meta.tokens.Token): (Integer, Integer) = {
@@ -251,8 +253,8 @@ object SemanticTokensProvider {
     }
   }
 
+  private val SoftKeywordsUnapply = new SoftKeywords(scala.meta.dialects.Scala3)
   def trySoftKeyword(tk: Token): Integer = {
-    val SoftKeywordsUnapply = new SoftKeywords(scala.meta.dialects.Scala3)
     tk match {
       case SoftKeywordsUnapply.KwAs() => getTypeId(SemanticTokenTypes.Keyword)
       case SoftKeywordsUnapply.KwDerives() =>

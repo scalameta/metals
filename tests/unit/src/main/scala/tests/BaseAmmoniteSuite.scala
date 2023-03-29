@@ -678,7 +678,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     val expected =
       """|
          |
-         |<<import>>/*keyword*/ <<util>>/*namespace*/.{<<Failure>>/*class*/ <<=>>>/*operator*/ <<NotGood>>/*class*/}
+         |<<import>>/*keyword*/ <<scala>>/*namespace*/.<<util>>/*namespace*/.{<<Failure>>/*class*/ <<=>>>/*operator*/ <<NotGood>>/*class*/}
          |<<import>>/*keyword*/ <<math>>/*namespace*/.{<<floor>>/*method*/ <<=>>>/*operator*/ <<_>>/*variable,readonly*/, <<_>>/*variable,readonly*/}
          |
          |<<class>>/*keyword*/ <<Imports>>/*class*/ {
