@@ -1,7 +1,10 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import scala.meta.pc.{CancelToken, OffsetParams, RangeParams}
+
+import scala.meta.pc.CancelToken
+import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
 
 case class CompilerOffsetParams(
     uri: URI,

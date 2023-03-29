@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.ExecutionContextExecutor
+
 import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.reporting.StoreReporter

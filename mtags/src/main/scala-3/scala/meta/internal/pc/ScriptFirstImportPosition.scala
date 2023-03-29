@@ -1,10 +1,11 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
-import scala.meta.tokens.Tokens
-import scala.meta.tokens.Token
-import scala.meta.XtensionTokenizeInputLike
+
 import scala.meta.XtensionClassifiable
+import scala.meta.XtensionTokenizeInputLike
+import scala.meta.tokens.Token
+import scala.meta.tokens.Tokens
 
 object ScriptFirstImportPosition:
 

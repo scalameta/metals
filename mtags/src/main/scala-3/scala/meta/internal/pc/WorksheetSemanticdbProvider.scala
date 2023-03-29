@@ -1,7 +1,8 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.mtags.MtagsEnrichments.*
 import java.nio.file.Path
+
+import scala.meta.internal.mtags.MtagsEnrichments.*
 
 trait WorksheetSemanticdbProvider:
 

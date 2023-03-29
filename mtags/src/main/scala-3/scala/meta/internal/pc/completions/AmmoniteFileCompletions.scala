@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 package completions
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.collection.JavaConverters.*
@@ -13,7 +14,6 @@ import dotty.tools.dotc.ast.untpd.ImportSelector
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.StdNames.*
 import org.eclipse.{lsp4j as l}
-import java.nio.file.Files
 
 object AmmoniteFileCompletions:
 

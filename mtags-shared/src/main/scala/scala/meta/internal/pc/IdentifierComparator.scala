@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.util.Comparator
+
 import scala.annotation.tailrec
 
 /**

@@ -1,7 +1,8 @@
 package tests
 
-import munit.FunSuite
 import scala.meta.internal.semver.SemVer
+
+import munit.FunSuite
 
 class SemVerSuite extends FunSuite {
 

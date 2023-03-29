@@ -7,8 +7,8 @@ import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
-import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IdentifierComparator

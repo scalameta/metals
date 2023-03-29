@@ -2,10 +2,10 @@ package scala.meta.internal.pc
 
 import scala.annotation.tailrec
 
+import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.InlineValueProvider.Errors
 import scala.meta.pc.OffsetParams
-import scala.meta._
 
 import org.eclipse.{lsp4j => l}
 

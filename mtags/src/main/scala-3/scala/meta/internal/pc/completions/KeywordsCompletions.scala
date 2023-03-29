@@ -2,8 +2,8 @@ package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.Keyword
-import scala.meta.tokenizers.XtensionTokenizeInputLike
 import scala.meta.internal.pc.KeywordCompletionsUtils
+import scala.meta.tokenizers.XtensionTokenizeInputLike
 import scala.meta.tokens.Token
 
 import dotty.tools.dotc.ast.tpd.*
