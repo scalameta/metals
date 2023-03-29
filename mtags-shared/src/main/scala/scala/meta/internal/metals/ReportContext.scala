@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 
@@ -127,7 +128,7 @@ object StdReportContext {
   val HOME_STR = "<HOME>"
   val ZIP_FILE_NAME = "reports.zip"
 
-  def reportsDir: Path = Path.of(".metals").resolve(".reports")
+  def reportsDir: Path = Paths.get(".metals").resolve(".reports")
   def apply(path: Path) = new StdReportContext(path)
 }
 
