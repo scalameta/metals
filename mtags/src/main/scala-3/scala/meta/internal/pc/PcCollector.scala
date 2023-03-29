@@ -250,7 +250,7 @@ abstract class PcCollector[T](
 
   def resultAllOccurences(): Set[T] =
     def noTreeFilter = (tree: Tree) => true
-    def noSoughtFilter = (f: Set[Symbol] => Boolean) => true
+    def noSoughtFilter = (f: Symbol => Boolean) => true
 
     traverseSought(noTreeFilter, noSoughtFilter)
 
@@ -302,8 +302,8 @@ abstract class PcCollector[T](
             case imp: Import if owners(imp.expr.symbol) => true
             case _ => false
 
-        def soughtFilter(f: Set[Symbol] => Boolean): Boolean =
-          f(sought)
+        def soughtFilter(f: Symbol => Boolean): Boolean =
+          sought.exists(f)
 
         traverseSought(soughtTreeFilter, soughtFilter).toList
 
@@ -315,7 +315,7 @@ abstract class PcCollector[T](
 
   def traverseSought(
       filter: Tree => Boolean,
-      soughtFilter: (Set[Symbol] => Boolean) => Boolean,
+      soughtFilter: (Symbol => Boolean) => Boolean,
   ): Set[T] =
     def collectNamesWithParent(
         occurences: Set[T],
@@ -335,9 +335,7 @@ abstract class PcCollector[T](
          */
         case ident: Ident if ident.span.isCorrect && filter(ident) =>
           // symbols will differ for params in different ext methods, but source pos will be the same
-          if soughtFilter(sought =>
-              sought.exists(_.sourcePos == ident.symbol.sourcePos)
-            )
+          if soughtFilter(_.sourcePos == ident.symbol.sourcePos)
           then
             occurences + collect(
               ident,
@@ -383,15 +381,13 @@ abstract class PcCollector[T](
         case apply: Apply =>
           val args: List[NamedArg] = apply.args.collect {
             case arg: NamedArg
-                if soughtFilter(sought =>
-                  sought.exists(sym =>
-                    sym.name == arg.name &&
-                      // foo(name = "123") for normal params
-                      (sym.owner == apply.symbol ||
-                        // Bar(name = "123") for case class, copy and apply methods
-                        apply.symbol.is(Flags.Synthetic) &&
-                        (sym.owner == apply.symbol.owner.companion || sym.owner == apply.symbol.owner))
-                  )
+                if soughtFilter(sym =>
+                  sym.name == arg.name &&
+                    // foo(name = "123") for normal params
+                    (sym.owner == apply.symbol ||
+                      // Bar(name = "123") for case class, copy and apply methods
+                      apply.symbol.is(Flags.Synthetic) &&
+                      (sym.owner == apply.symbol.owner.companion || sym.owner == apply.symbol.owner))
                 ) =>
               arg
           }
@@ -434,19 +430,28 @@ abstract class PcCollector[T](
           imp.selectors
             .collect {
               case sel: ImportSelector
-                  if soughtFilter(sought =>
-                    sought.exists(_.name == sel.name)
-                  ) =>
+                  if soughtFilter(_.decodedName == sel.name.decoded) =>
                 // Show both rename and main together
                 val spans =
                   if !sel.renamed.isEmpty then
                     Set(sel.renamed.span, sel.imported.span)
                   else Set(sel.imported.span)
+                // See https://github.com/scalameta/metals/pull/5100
+                val symbol = imp.expr.symbol.info.member(sel.name).symbol match
+                  // We can get NoSymbol when we import "_", "*"", "given" or when the names don't match
+                  // eg. "@@" doesn't match "$at$at".
+                  // Then we try to find member based on decodedName
+                  case NoSymbol =>
+                    imp.expr.symbol.info.allMembers
+                      .find(_.name.decoded == sel.name.decoded)
+                      .map(_.symbol)
+                      .getOrElse(NoSymbol)
+                  case sym => sym
                 spans.filter(_.isCorrect).map { span =>
                   collect(
                     imp,
                     pos.withSpan(span),
-                    Some(imp.expr.symbol.info.member(sel.name).symbol),
+                    Some(symbol),
                   )
                 }
             }

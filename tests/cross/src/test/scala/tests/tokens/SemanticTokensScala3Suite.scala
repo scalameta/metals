@@ -124,4 +124,20 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
        |""".stripMargin,
   )
 
+  check(
+    "import-selector",
+    """|package <<a>>/*namespace*/
+       |
+       |import <<a>>/*namespace*/.<<Tag>>/*class*/.<<@@>>/*type*/
+       |
+       |object <<A>>/*class*/ {
+       |  case class <<B>>/*class*/(<<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+       |}
+       |
+       |object <<Tag>>/*class*/ {
+       |  type <<@@>>/*type,definition*/ = <<Int>>/*class,abstract*/
+       |}
+       |""".stripMargin,
+  )
+
 }

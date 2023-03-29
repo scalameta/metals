@@ -165,6 +165,21 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
        |""".stripMargin,
   )
 
+  check(
+    "import-selector",
+    """|<<package>>/*keyword*/ <<a>>/*namespace*/
+       |
+       |<<import>>/*keyword*/ <<a>>/*namespace*/.<<Tag>>/*class*/.<<@@>>/*type*/
+       |
+       |<<object>>/*keyword*/ <<A>>/*class*/ {
+       |  <<case>>/*keyword*/ <<class>>/*keyword*/ <<B>>/*class*/(<<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+       |}
+       |
+       |<<object>>/*keyword*/ <<Tag>>/*class*/ {
+       |  <<type>>/*keyword*/ <<@@>>/*type,definition*/ = <<Int>>/*class,abstract*/
+       |}""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       expected: String,
