@@ -173,12 +173,6 @@ object MtagsEnrichments extends ScalametaCommonEnrichements:
 
     def stripBackticks: String = s.stripPrefix("`").stripSuffix("`")
 
-    def checkIfNotInComment(
-        treeStart: Int,
-        treeEnd: Int,
-        currentOffset: Int,
-    ): Boolean = ???
-
   extension (search: SymbolSearch)
     def symbolDocumentation(symbol: Symbol)(using
         Context

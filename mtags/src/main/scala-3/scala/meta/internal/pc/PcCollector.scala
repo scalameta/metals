@@ -246,7 +246,7 @@ abstract class PcCollector[T](
       case _ => resultAllOccurences().toList
 
   def resultAllOccurences(): Set[T] =
-    def noTreeFilter: Tree => Boolean = _ => true
+    def noTreeFilter = (tree: Tree) => true
     def noSoughtFilter = (f: Set[Symbol] => Boolean) => true
 
     traverseSought(noTreeFilter, noSoughtFilter)

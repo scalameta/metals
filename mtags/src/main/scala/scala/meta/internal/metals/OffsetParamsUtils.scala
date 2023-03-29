@@ -1,4 +1,4 @@
-package scala.meta.internal.mtags
+package scala.meta.internal.metals
 
 import java.net.URI
 import java.net.URISyntaxException

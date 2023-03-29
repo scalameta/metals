@@ -264,7 +264,6 @@ lazy val mtagsShared = project
   .settings(sharedSettings)
   .settings(
     moduleName := "mtags-shared",
-    scalacOptions += "-Ywarn-unused",
     crossTarget := target.value / s"scala-${scalaVersion.value}",
     crossScalaVersions := {
       V.supportedScalaVersions ++ V.nightlyScala3Versions
@@ -397,7 +396,7 @@ lazy val mtags3 = project
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
   )
-  .dependsOn(interfaces, mtagsShared)
+  .dependsOn(mtagsShared)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags = project
@@ -406,7 +405,7 @@ lazy val mtags = project
     mtagsSettings,
     moduleName := "mtags",
   )
-  .dependsOn(interfaces, mtagsShared)
+  .dependsOn(mtagsShared)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val metals = project
