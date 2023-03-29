@@ -12,7 +12,7 @@ import scala.meta.io.AbsolutePath
 
 class ReportsSuite extends BaseSuite {
   val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
-  val reportsProvider = new StdReportContext(workspace)
+  val reportsProvider = new StdReportContext(workspace.toNIO)
   val zipReportsProvider =
     new ZipReportsProvider(exampleBuildTargetsInfo, reportsProvider)
 
@@ -36,7 +36,7 @@ class ReportsSuite extends BaseSuite {
     val path =
       reportsProvider.incognito.createReport("test_error", exampleText())
     val obtained =
-      new String(Files.readAllBytes(path.get.toNIO), StandardCharsets.UTF_8)
+      new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertEquals(exampleText(StdReportContext.WORKSPACE_STR), obtained)
     assert(Report.fromFile(path.get.toFile).nonEmpty)
   }
@@ -73,7 +73,7 @@ class ReportsSuite extends BaseSuite {
     )
     val pathToReadMe = zipReportsProvider.zip()
     val zipPath =
-      reportsProvider.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME).toNIO
+      reportsProvider.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)
     assert(Files.exists(zipPath))
     assert(Files.exists(pathToReadMe.toNIO))
     Files.delete(pathToReadMe.toNIO)

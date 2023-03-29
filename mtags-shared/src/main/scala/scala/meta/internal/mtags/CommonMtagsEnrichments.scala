@@ -1,5 +1,10 @@
 package scala.meta.internal.mtags
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.util.logging.Level
 import java.util.logging.Logger
 import java.{util => ju}
@@ -171,6 +176,51 @@ trait CommonMtagsEnrichments {
         new l.Position(startLine, startCharacter),
         new l.Position(endLine, endCharacter)
       )
+  }
+
+  implicit class XtensionNIOPath(path: Path) {
+    def filename: String = path.getFileName().toString()
+    def exists: Boolean = {
+      Files.exists(path)
+    }
+
+    // Using [[Files.isSymbolicLink]] is not enough.
+    // It will be false when one of the parents is a symlink (e.g. /dir/link/file.txt)
+    def dealias: Path = {
+      if (exists) { // cannot dealias non-existing path
+        path.toRealPath()
+      } else {
+        path
+      }
+    }
+
+    def createDirectories(): Path =
+      Files.createDirectories(path.dealias)
+
+    def writeText(text: String): Unit = {
+      path.getParent.createDirectories()
+      val tmp = Files.createTempFile("metals", path.filename)
+      // Write contents first to a temporary file and then try to
+      // atomically move the file to the destination. The atomic move
+      // reduces the risk that another tool will concurrently read the
+      // file contents during a half-complete file write.
+      Files.write(
+        tmp,
+        text.getBytes(StandardCharsets.UTF_8),
+        StandardOpenOption.TRUNCATE_EXISTING
+      )
+      try {
+        Files.move(
+          tmp,
+          path,
+          StandardCopyOption.REPLACE_EXISTING,
+          StandardCopyOption.ATOMIC_MOVE
+        )
+      } catch {
+        case NonFatal(_) =>
+          Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING)
+      }
+    }
   }
 
   implicit class XtensionStringDoc(doc: String) {

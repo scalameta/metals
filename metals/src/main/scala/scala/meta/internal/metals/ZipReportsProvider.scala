@@ -21,11 +21,11 @@ class ZipReportsProvider(
   }
 
   private def crateReportReadme(): AbsolutePath = {
-    val path = reportContext.reportsDir.resolve("READ_ME.md")
+    val path = AbsolutePath(reportContext.reportsDir.resolve("READ_ME.md"))
     if (Files.notExists(path.toNIO)) {
       path.writeText(
         s"""|Please attach `${StdReportContext.ZIP_FILE_NAME}` to your GitHub issue.
-            |Reports zip URI: ${reportContext.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME).toURI(false)}
+            |Reports zip URI: ${reportContext.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME).toUri}
             |""".stripMargin
       )
     }
@@ -44,7 +44,9 @@ class ZipReportsProvider(
   }
 
   private def zipReports(additionalToZip: List[FileToZip]): AbsolutePath = {
-    val path = reportContext.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)
+    val path = AbsolutePath(
+      reportContext.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)
+    )
     val zipOut = new ZipOutputStream(Files.newOutputStream(path.toNIO))
 
     for {

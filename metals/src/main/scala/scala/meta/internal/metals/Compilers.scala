@@ -13,10 +13,10 @@ import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.Compilers.PresentationCompilerKey
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
+import scala.meta.internal.metals.Compilers.PresentationCompilerKey
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.LogMessages

@@ -11,7 +11,7 @@ import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.mtags.ScalametaCommonEnrichements._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath

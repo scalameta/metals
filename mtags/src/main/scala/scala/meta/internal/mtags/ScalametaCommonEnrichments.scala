@@ -31,11 +31,11 @@ import scala.meta.io.RelativePath
 import geny.Generator
 import org.eclipse.{lsp4j => l}
 
-object ScalametaCommonEnrichements extends ScalametaCommonEnrichements {}
-trait ScalametaCommonEnrichements extends CommonMtagsEnrichments {
+object ScalametaCommonEnrichments extends ScalametaCommonEnrichments {}
+trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
 
   private def logger: Logger =
-    Logger.getLogger(classOf[ScalametaCommonEnrichements].getName)
+    Logger.getLogger(classOf[ScalametaCommonEnrichments].getName)
 
   implicit class XtensionMetaPosition(pos: m.Position) {
     def toSemanticdb: s.Range = {
@@ -155,8 +155,7 @@ trait ScalametaCommonEnrichements extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionPathMetals(file: Path) {
-    def isClassfile: Boolean = filename.endsWith(".class")
-    def filename: String = file.getFileName().toString()
+    def isClassfile: Boolean = file.filename.endsWith(".class")
     def toLanguage: Language = {
       val filename = file.getFileName
       if (filename == null) Language.UNKNOWN_LANGUAGE

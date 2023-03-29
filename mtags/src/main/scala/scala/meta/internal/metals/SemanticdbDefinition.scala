@@ -6,7 +6,7 @@ import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.ScalaToplevelMtags
-import scala.meta.internal.mtags.ScalametaCommonEnrichements._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence

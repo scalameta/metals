@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.ScalametaCommonEnrichements._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Range

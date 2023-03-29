@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.mtags.ScalametaCommonEnrichements._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.{semanticdb => s}
 
 import org.eclipse.{lsp4j => l}

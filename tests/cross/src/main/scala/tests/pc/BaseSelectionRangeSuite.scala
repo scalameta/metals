@@ -7,7 +7,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.mtags.ScalametaCommonEnrichements._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.pc.OffsetParams
 
 import munit.TestOptions
