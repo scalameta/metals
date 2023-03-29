@@ -6,7 +6,7 @@ class MillifyScalaCliDependencyCodeActionSuite
     """"org.scalameta" %% "munit" % "0.7.26""""
 
   val convertedDependency = """"org.scalameta::munit:0.7.26""""
-  val convertTo = s"""//> using lib $convertedDependency"""
+  val convertTo: String = s"""//> using lib $convertedDependency"""
 
   check(
     "convert-dependency",
