@@ -531,4 +531,22 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |
        |""".stripMargin,
   )
+
+  check(
+    "macro".tag(IgnoreScala2),
+    """|
+       |
+       |import scala.quoted.*
+       |
+       |def myMacroImpl(using Quotes) =
+       |  import quotes.reflect.Ident
+       |  def foo = ??? match
+       |    case x: I/*scala/quoted/Quotes#reflectModule#Ident# Quotes.scala*/@@dent => x
+       |
+       |  def bar: Ident = foo
+       |
+       |  ???
+       |
+       |""".stripMargin,
+  )
 }

@@ -243,6 +243,18 @@ object MetalsInteractive:
             target.sourcePos.contains(pos) =>
         List((target.symbol, target.typeOpt))
 
+      /* TypeTest class https://dotty.epfl.ch/docs/reference/other-new-features/type-test.html
+       * compiler automatically adds unapply if possible, we need to find the type symbol
+       */
+      case (head @ CaseDef(pat, _, _)) :: _
+          if defn.TypeTestClass == pat.symbol.owner =>
+        pat match
+          case UnApply(fun, _, pats) =>
+            val tpeSym = pats.head.typeOpt.typeSymbol
+            List((tpeSym, tpeSym.info))
+          case _ =>
+            Nil
+
       case path @ head :: tail =>
         if head.symbol.is(Synthetic) then
           enclosingSymbolsWithExpressionType(
