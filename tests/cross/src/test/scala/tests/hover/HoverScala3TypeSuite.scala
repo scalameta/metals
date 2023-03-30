@@ -284,6 +284,45 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |end StructuralTypes
        |""".stripMargin,
     """|def scalameta: String
+    """.stripMargin.hover,
+  )
+
+  check(
+    "macro",
+    """|
+       |import scala.quoted.*
+       |
+       |def myMacroImpl(using Quotes) =
+       |  import quotes.reflect.Ident
+       |  def foo = ??? match
+       |    case x: I@@dent => x
+       |
+       |  def bar: Ident = foo
+       |
+       |  ???
+       |
+       |""".stripMargin,
+    """|type Ident: Ident
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "macro2",
+    """|
+       |
+       |import scala.quoted.*
+       |
+       |def myMacroImpl(using Quotes) =
+       |  import quotes.reflect.Ident
+       |  def foo = ??? match
+       |    case x: Ident => x
+       |
+       |  def bar: Ide@@nt = foo
+       |
+       |  ???
+       |
+       |""".stripMargin,
+    """|type Ident: Ident
        |""".stripMargin.hover,
   )
 }
