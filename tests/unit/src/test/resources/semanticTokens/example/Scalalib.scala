@@ -1,8 +1,8 @@
 <<package>>/*keyword*/ <<example>>/*namespace*/
 
 <<class>>/*keyword*/ <<Scalalib>>/*class*/ {
-  <<val>>/*keyword*/ <<nil>>/*variable,readonly*/ = <<List>>/*variable,readonly*/()
-  <<val>>/*keyword*/ <<lst>>/*variable,readonly*/ = <<List>>/*variable,readonly*/[
+  <<val>>/*keyword*/ <<nil>>/*variable,definition,readonly*/ = <<List>>/*class*/()
+  <<val>>/*keyword*/ <<lst>>/*variable,definition,readonly*/ = <<List>>/*class*/[
     (
         <<Nothing>>/*class,abstract*/,
         <<Null>>/*class,abstract*/,

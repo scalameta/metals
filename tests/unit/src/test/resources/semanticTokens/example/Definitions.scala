@@ -5,7 +5,7 @@
 
 <<class>>/*keyword*/ <<Definitions>>/*class*/ {
   <<Predef>>/*class*/.<<any2stringadd>>/*method,deprecated*/(<<1>>/*number*/)
-  <<List>>/*variable,readonly*/[
+  <<List>>/*class*/[
     <<java>>/*namespace*/.<<util>>/*namespace*/.<<Map>>/*class*/.<<Entry>>/*interface,abstract*/[
       <<java>>/*namespace*/.<<lang>>/*namespace*/.<<Integer>>/*class*/,
       <<java>>/*namespace*/.<<lang>>/*namespace*/.<<Double>>/*class*/,

@@ -9,23 +9,24 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
 
   check(
     "enum",
-    s"""|package <<example>>/*namespace*/
-        |
-        |enum <<FooEnum>>/*enum,abstract*/:
-        |  case <<Bar>>/*enum*/, <<Baz>>/*enum*/
-        |object <<FooEnum>>/*class*/
-        |""".stripMargin,
+    """|package <<example>>/*namespace*/
+       |
+       |enum <<FooEnum>>/*enum,abstract*/:
+       |  case <<Bar>>/*enum*/, <<Baz>>/*enum*/
+       |object <<FooEnum>>/*class*/
+       |""".stripMargin,
   )
 
   check(
     "enum1",
-    s"""|package <<example>>/*namespace*/
-        |
-        |enum <<FooEnum>>/*enum,abstract*/:
-        |  case <<A>>/*enum*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-        |  case <<B>>/*enum*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-        |  case <<C>>/*enum*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-        |""".stripMargin,
+    """|package <<example>>/*namespace*/
+       |
+       |enum <<FooEnum>>/*enum,abstract*/:
+       |  case <<A>>/*enum*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+       |  case <<B>>/*enum*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+       |  case <<C>>/*enum*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+       |
+       |""".stripMargin,
   )
 
   // Issue: Sequential parameters are not highlighted
@@ -34,8 +35,8 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
     "named-arguments",
     s"""|package <<example>>/*namespace*/
         |
-        |def <<m>>/*method*/(<<xs>>/*parameter,readonly*/: <<Int>>/*class,abstract*/*) = <<xs>>/*parameter,readonly*/.<<map>>/*method*/(<<_>>/*parameter,readonly*/ <<+>>/*method*/ 1)
-        |val <<a>>/*variable,readonly*/ = <<m>>/*method*/(xs = 1,2,3)
+        |def <<m>>/*method,definition*/(<<xs>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/*) = <<xs>>/*parameter,readonly*/.<<map>>/*method*/(<<_>>/*parameter,readonly*/ <<+>>/*method*/ 1)
+        |val <<a>>/*variable,definition,readonly*/ = <<m>>/*method*/(xs = 1,2,3)
         |""".stripMargin,
   )
 
@@ -48,19 +49,19 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
         |import <<reflect>>/*namespace*/.<<Selectable>>/*class*/.<<reflectiveSelectable>>/*method*/
         |
         |object <<StructuralTypes>>/*class*/:
-        |  type <<User>>/*type*/ = {
-        |    def <<name>>/*method*/: <<String>>/*type*/
-        |    def <<age>>/*method*/: <<Int>>/*class,abstract*/
+        |  type <<User>>/*type,definition*/ = {
+        |    def <<name>>/*method,declaration*/: <<String>>/*type*/
+        |    def <<age>>/*method,declaration*/: <<Int>>/*class,abstract*/
         |  }
         |
-        |  val <<user>>/*variable,readonly*/ = null.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
+        |  val <<user>>/*variable,definition,readonly*/ = null.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
         |  <<user>>/*variable,readonly*/.name
         |  <<user>>/*variable,readonly*/.age
         |
-        |  val <<V>>/*variable,readonly*/: <<Object>>/*class*/ {
-        |    def <<scalameta>>/*method*/: <<String>>/*type*/
+        |  val <<V>>/*variable,definition,readonly*/: <<Object>>/*class*/ {
+        |    def <<scalameta>>/*method,declaration*/: <<String>>/*type*/
         |  } = new:
-        |    def <<scalameta>>/*method*/ = "4.0"
+        |    def <<scalameta>>/*method,definition*/ = "4.0"
         |  <<V>>/*variable,readonly*/.scalameta
         |end StructuralTypes
         |""".stripMargin,
@@ -71,19 +72,19 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
             |import <<reflect>>/*namespace*/.<<Selectable>>/*class*/.<<reflectiveSelectable>>/*method*/
             |
             |object <<StructuralTypes>>/*class*/:
-            |  type <<User>>/*type*/ = {
-            |    def <<name>>/*method*/: <<String>>/*type*/
-            |    def <<age>>/*method*/: <<Int>>/*class,abstract*/
+            |  type <<User>>/*type,definition*/ = {
+            |    def <<name>>/*method,declaration*/: <<String>>/*type*/
+            |    def <<age>>/*method,declaration*/: <<Int>>/*class,abstract*/
             |  }
             |
-            |  val <<user>>/*variable,readonly*/ = null.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
+            |  val <<user>>/*variable,definition,readonly*/ = null.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
             |  <<user>>/*variable,readonly*/.<<name>>/*method*/
             |  <<user>>/*variable,readonly*/.<<age>>/*method*/
             |
-            |  val <<V>>/*variable,readonly*/: <<Object>>/*class*/ {
-            |    def <<scalameta>>/*method*/: <<String>>/*type*/
+            |  val <<V>>/*variable,definition,readonly*/: <<Object>>/*class*/ {
+            |    def <<scalameta>>/*method,declaration*/: <<String>>/*type*/
             |  } = new:
-            |    def <<scalameta>>/*method*/ = "4.0"
+            |    def <<scalameta>>/*method,definition*/ = "4.0"
             |  <<V>>/*variable,readonly*/.<<scalameta>>/*method*/
             |end StructuralTypes
             |""".stripMargin
@@ -95,11 +96,32 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
     s"""|package <<example>>/*namespace*/
         |
         |object <<A>>/*class*/ {
-        |  val <<a>>/*variable,readonly*/ = 1
-        |  var <<b>>/*variable*/ = 2
-        |  val <<c>>/*variable,readonly*/ = <<List>>/*variable,readonly*/(1,<<a>>/*variable,readonly*/,<<b>>/*variable*/)
+        |  val <<a>>/*variable,definition,readonly*/ = 1
+        |  var <<b>>/*variable,definition*/ = 2
+        |  val <<c>>/*variable,definition,readonly*/ = <<List>>/*class*/(1,<<a>>/*variable,readonly*/,<<b>>/*variable*/)
         |  <<b>>/*variable*/ = <<a>>/*variable,readonly*/
         |""".stripMargin,
+  )
+
+  check(
+    "predef",
+    """
+      |object <<Main>>/*class*/ {
+      |  val <<a>>/*variable,definition,readonly*/ = <<List>>/*class*/(1,2,3)
+      |  val <<y>>/*variable,definition,readonly*/ = <<Vector>>/*class*/(1,2)
+      |  val <<z>>/*variable,definition,readonly*/ = <<Set>>/*class*/(1,2,3)
+      |  val <<w>>/*variable,definition,readonly*/ = <<Right>>/*class*/(1)
+      |}""".stripMargin,
+  )
+
+  check(
+    "case-class",
+    """|case class <<Foo>>/*class*/(<<i>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<j>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+       |
+       |object <<A>>/*class*/ {
+       |  val <<f>>/*variable,definition,readonly*/ = <<Foo>>/*class*/(1,2)
+       |}
+       |""".stripMargin,
   )
 
 }

@@ -61,6 +61,7 @@ final class CodeActionProvider(
     new ConvertToNamedArguments(trees, compilers, languageClient),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
     new MillifyDependencyCodeAction(buffers),
+    new MillifyScalaCliDependencyCodeAction(buffers),
   )
 
   def codeActions(

@@ -1332,7 +1332,7 @@ final case class TestingServer(
       filePath: String,
       expected: String,
       fileContent: String,
-  ): Future[Unit] = {
+  )(implicit location: munit.Location): Future[Unit] = {
     val uri = toPath(filePath).toTextDocumentIdentifier
     val params = new org.eclipse.lsp4j.SemanticTokensParams(uri)
 

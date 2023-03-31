@@ -23,13 +23,57 @@ final class PcSemanticTokensProvider(
     driver: InteractiveDriver,
     params: VirtualFileParams,
 ):
+  /**
+   * Declaration is set for:
+   * 1. parameters,
+   * 2. defs/vals/vars without rhs,
+   * 3. type parameters,
+   * In all those cases we don't have a specific value for sure.
+   */
+  private def isDeclaration(tree: Tree) = tree match
+    case df: ValOrDefDef => df.rhs.isEmpty
+    case df: TypeDef =>
+      df.rhs match
+        case _: Template => false
+        case _ => df.rhs.isEmpty
+    case _ => false
+
+  /**
+   * Definition is set for:
+   * 1. defs/vals/vars/type with rhs.
+   * 2. pattern matches
+   *
+   * We don't want to set it for enum cases despite the fact
+   * that the compiler sees them as vals, as it's not clear
+   * if they should be declaration/definition at all.
+   */
+  private def isDefinition(tree: Tree) = tree match
+    case df: Bind => true
+    case df: ValOrDefDef =>
+      !df.rhs.isEmpty && !df.symbol.isAllOf(Flags.EnumCase)
+    case df: TypeDef =>
+      df.rhs match
+        case _: Template => false
+        case _ => !df.rhs.isEmpty
+    case _ => false
+
   object Collector extends PcCollector[Option[Node]](driver, params):
     override def collect(
         parent: Option[Tree]
     )(tree: Tree, pos: SourcePosition, symbol: Option[Symbol]): Option[Node] =
-      val sym = symbol.fold(tree.symbol)(s => s)
+      val sym = symbol.fold(tree.symbol)(identity)
       if !pos.exists || sym == null || sym == NoSymbol then None
-      else Some(makeNode(sym, adjust(pos)._1))
+      else
+        Some(
+          makeNode(
+            sym = sym,
+            pos = adjust(pos)._1,
+            isDefinition = isDefinition(tree),
+            isDeclaration = isDeclaration(tree),
+          )
+        )
+    end collect
+  end Collector
 
   given Context = Collector.ctx
 
@@ -45,6 +89,8 @@ final class PcSemanticTokensProvider(
   def makeNode(
       sym: Symbol,
       pos: SourcePosition,
+      isDefinition: Boolean,
+      isDeclaration: Boolean,
   ): Node =
 
     var mod: Int = 0
@@ -76,6 +122,8 @@ final class PcSemanticTokensProvider(
         if sym.isGetter | sym.isSetter then
           getTypeId(SemanticTokenTypes.Variable)
         else getTypeId(SemanticTokenTypes.Method) // "def"
+      else if isPredefClass(sym) then
+        getTypeId(SemanticTokenTypes.Class) // "class"
       else if sym.isTerm &&
         (!sym.is(Flags.Param) || sym.is(Flags.ParamAccessor))
       then
@@ -90,7 +138,13 @@ final class PcSemanticTokensProvider(
     if sym.annotations.exists(_.symbol.decodedName == "deprecated")
     then addPwrToMod(SemanticTokenModifiers.Deprecated)
 
+    if isDeclaration then addPwrToMod(SemanticTokenModifiers.Declaration)
+    if isDefinition then addPwrToMod(SemanticTokenModifiers.Definition)
+
     TokenNode(pos.start, pos.`end`, typ, mod)
   end makeNode
+
+  def isPredefClass(sym: Symbol)(using Context) =
+    sym.is(Flags.Method) && sym.info.resultType.typeSymbol.is(Flags.Module)
 
 end PcSemanticTokensProvider

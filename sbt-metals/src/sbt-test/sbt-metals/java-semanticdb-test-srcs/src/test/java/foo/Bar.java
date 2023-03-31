@@ -1,5 +1,5 @@
 package foo;
 
 class Bar {
-  
+
 }
