@@ -529,7 +529,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
-    "extends-with-class".tag(IgnoreScala2),
+    "extends-with-class",
     """
       |package foo
       |

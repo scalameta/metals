@@ -61,20 +61,23 @@ final class PcInlineValueProviderImpl(
     end for
   end defAndRefs
 
-  // format: off
   private def definitionRequiresBrackets(tree: Tree)(using Context): Boolean =
-    NavigateAST.untypedPath(tree.span).headOption.map {
-      case _: untpd.If
-         | _: untpd.Function
-         | _: untpd.Match
-         | _: untpd.ForYield
-         | _: untpd.InfixOp
-         | _: untpd.ParsedTry
-         | _: untpd.Try
-         | _: untpd.Block
-         | _: untpd.Typed => true
-      case _ => false
-    }.getOrElse(false)
+    NavigateAST
+      .untypedPath(tree.span)
+      .headOption
+      .map {
+        case _: untpd.If => true
+        case _: untpd.Function => true
+        case _: untpd.Match => true
+        case _: untpd.ForYield => true
+        case _: untpd.InfixOp => true
+        case _: untpd.ParsedTry => true
+        case _: untpd.Try => true
+        case _: untpd.Block => true
+        case _: untpd.Typed => true
+        case _ => false
+      }
+      .getOrElse(false)
 
   end definitionRequiresBrackets
 
@@ -84,8 +87,8 @@ final class PcInlineValueProviderImpl(
       case _ =>
         tree match
           case _: Apply => StdNames.nme.raw.isUnary(tree.symbol.name)
-          case _: Select
-             | _: Ident => true
+          case _: Select => true
+          case _: Ident => true
           case _ => false
 
   end referenceRequiresBrackets

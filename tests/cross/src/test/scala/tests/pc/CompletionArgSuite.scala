@@ -272,14 +272,14 @@ class CompletionArgSuite extends BaseCompletionSuite {
       |  test($f@@)
       |}
       |""".stripMargin,
-    s"""|$$$$foo =${' '}
-        |$$$$foo = $${1:???}, | = $${2:???}
-        |""".stripMargin,
+    """|$$foo = 
+       |$$foo = ${1:???}, | = ${2:???}
+       |""".stripMargin,
     topLines = Option(2),
     compat = Map(
-      "3" -> s"""|$$$$foo =${' '}
-                 |$$$$foo = $${1:???}, $$$$bar = $${2:???}
-                 |""".stripMargin
+      "3" -> """|$$foo = 
+                |$$foo = ${1:???}, $$bar = ${2:???}
+                |""".stripMargin
     ),
   )
 

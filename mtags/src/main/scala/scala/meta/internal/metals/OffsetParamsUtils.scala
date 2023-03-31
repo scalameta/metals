@@ -6,8 +6,6 @@ import java.nio.file.Paths
 
 import scala.meta.inputs.Position
 import scala.meta.internal.inputs.XtensionInputSyntaxStructure
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.pc.CancelToken
 import scala.meta.pc.OffsetParams
 

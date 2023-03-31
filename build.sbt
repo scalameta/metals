@@ -17,9 +17,6 @@ def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
 def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
-def isStablePC(v: Option[(Long, Long)]): Boolean = false
-// replace after dotty starts publishing stable PC
-// v.contains((3, 3)) // to be changed according to the first version with Stable PC
 
 def crossSetting[A](
     scalaVersion: String,
@@ -34,19 +31,6 @@ def crossSetting[A](
     case partialVersion if isScala213(partialVersion) => if2 ::: if213
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
-  }
-
-/* Logic for adding specific options only if given Scala version contains
- *   stable Presentation Compiler API
- */
-def crossScalaStablePC[A](
-    scalaVersion: String,
-    ifStablePC: List[A] = Nil,
-    default: List[A] = Nil,
-): List[A] =
-  CrossVersion.partialVersion(scalaVersion) match {
-    case partialVersion if isStablePC(partialVersion) => ifStablePC
-    case _ => default
   }
 
 logo := Welcome.logo
@@ -269,7 +253,6 @@ lazy val mtagsShared = project
       V.supportedScalaVersions ++ V.nightlyScala3Versions
     },
     crossVersion := CrossVersion.binary,
-    Compile / packageSrc / publishArtifact := true,
     Compile / doc / javacOptions ++= List(
       "-tag",
       "implNote:a:Implementation Note:",
@@ -304,26 +287,12 @@ val mtagsSettings = List(
   },
   crossTarget := target.value / s"scala-${scalaVersion.value}",
   crossVersion := CrossVersion.full,
-  Compile / unmanagedSourceDirectories := Seq(
-    (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala"
-  ),
-  Compile / unmanagedSourceDirectories ++= crossScalaStablePC(
+  Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
+    (ThisBuild / baseDirectory).value / "mtags",
     scalaVersion.value,
-    ifStablePC = Nil,
-    default = multiScalaDirectories(
-      (ThisBuild / baseDirectory).value / "mtags",
-      scalaVersion.value,
-    ),
   ),
   // @note needed to deal with issues with dottyDoc
   Compile / doc / sources := Seq.empty,
-  libraryDependencies ++= crossScalaStablePC(
-    scalaVersion.value,
-    ifStablePC = List(
-      "org.scala-lang" %% "scala3-presentation-compiler" % scalaVersion.value
-    ),
-    default = Nil,
-  ),
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags

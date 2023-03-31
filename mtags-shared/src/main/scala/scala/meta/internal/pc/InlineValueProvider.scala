@@ -1,7 +1,6 @@
 package scala.meta.internal.pc
 
-import scala.annotation.tailrec
-import scala.meta.internal.mtags.MtagsEnrichments.extendRangeToIncludeWhiteCharsAndTheFollowingNewLine
+import scala.meta.internal.mtags.CommonMtagsEnrichments.extendRangeToIncludeWhiteCharsAndTheFollowingNewLine
 
 import org.eclipse.{lsp4j => l}
 
