@@ -163,7 +163,7 @@ final case class TestingServer(
   languageServer.connectToLanguageClient(client)
 
   lazy val server = languageServer.getOldMetalsLanguageServer
-  lazy val headFolderWorkspaceServer = server.folderServices.head
+  def headFolderWorkspaceServer = server.folderServices.head
 
   implicit val reports: ReportContext = new StdReportContext(workspace)
 
@@ -190,7 +190,7 @@ final case class TestingServer(
       includeKind: Boolean = false,
       includeFilename: Boolean = false,
   ): String = {
-    val infos = headFolderWorkspaceServer.workspaceSymbol(query)
+    val infos = server.workspaceSymbol(query)
     infos.foreach(info => {
       val path = info.getLocation().getUri().toAbsolutePath
       if (path.isJarFileSystem)
@@ -591,10 +591,12 @@ final case class TestingServer(
   }
 
   def assertBuildServerConnection(): Unit = {
-    require(
-      headFolderWorkspaceServer.bspSession.isDefined,
-      "Build server did not initialize",
-    )
+    server.folderServices.foreach { service =>
+      require(
+        service.bspSession.isDefined,
+        s"Build server ${service.folder} did not initialize",
+      )
+    }
   }
 
   def toPath(filename: String): AbsolutePath = {

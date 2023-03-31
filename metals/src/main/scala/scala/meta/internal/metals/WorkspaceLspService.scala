@@ -1132,6 +1132,9 @@ class WorkspaceLspService(
     } else Future.unit
   }
 
+  def workspaceSymbol(query: String): Seq[SymbolInformation] =
+    folderServices.flatMap(_.workspaceSymbol(query))
+
 }
 
 case class Folder(uri: AbsolutePath, visibleName: Option[String]) {
