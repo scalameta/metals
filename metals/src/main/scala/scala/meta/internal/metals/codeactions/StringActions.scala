@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
@@ -20,7 +21,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     val uri = params.getTextDocument.getUri

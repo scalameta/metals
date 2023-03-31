@@ -38,8 +38,7 @@ class CompletionProvider(
     params: OffsetParams,
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String,
-    workspace: Option[Path],
-    folderId: String,
+    folderUri: Option[Path],
 )(using reports: ReportContext):
   def completions(): CompletionList =
     val uri = params.uri
@@ -83,7 +82,7 @@ class CompletionProvider(
             indexedCtx,
             path,
             config,
-            workspace,
+            folderUri,
             autoImportsGen,
             driver.settings,
           ).completions()
@@ -174,7 +173,7 @@ class CompletionProvider(
         insertText,
       )
       val item = new CompletionItem(label)
-      workspace.foreach(ws => item.setData(ws.toString))
+      folderUri.foreach(ws => item.setData(ws.toString))
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
       item.setFilterText(
@@ -187,7 +186,7 @@ class CompletionProvider(
       completion.insertMode.foreach(item.setInsertTextMode)
 
       completion
-        .completionData(buildTargetIdentifier, folderId.toString())
+        .completionData(buildTargetIdentifier, folderUri.toString())
         .foreach(data => item.setData(data.toJson))
 
       item.setTags(completion.lspTags.asJava)

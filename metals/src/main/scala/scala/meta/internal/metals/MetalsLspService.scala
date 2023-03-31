@@ -126,7 +126,6 @@ class MetalsLspService(
     timerProvider: TimerProvider,
     initTreeView: () => Unit,
     val folder: AbsolutePath,
-    val folderId: String,
     folderVisibleName: Option[String],
 ) extends Cancelable
     with TextDocumentService {
@@ -170,8 +169,8 @@ class MetalsLspService(
 
   implicit val reports: StdReportContext = new StdReportContext(folder)
 
-  val zipReportsProvider: ZipReportsProvider =
-    new ZipReportsProvider(doctor.getTargetsInfoForReports, reports)
+  val folderReportsZippper: FolderReportsZippper =
+    FolderReportsZippper(doctor.getTargetsInfoForReports, reports)
 
   private val buildTools: BuildTools = new BuildTools(
     folder,
@@ -625,7 +624,6 @@ class MetalsLspService(
       trees,
       mtagsResolver,
       sourceMapper,
-      folderId,
     )
   )
 
@@ -681,7 +679,7 @@ class MetalsLspService(
     trees,
     diagnostics,
     languageClient,
-    folderId,
+    folder,
   )
 
   private val doctor: Doctor = new Doctor(
@@ -739,7 +737,6 @@ class MetalsLspService(
 
   val treeView =
     new MetalsTreeFolderViewProvider(
-      folderId,
       Folder(folder, folderVisibleName),
       buildTargets,
       () => buildClient.ongoingCompilations(),
@@ -886,7 +883,6 @@ class MetalsLspService(
         MetalsHttpServer(
           host,
           port,
-          this,
           () => render(),
           e => completeCommand(e),
           () => doctor.problemsHtmlPage(url),
@@ -1819,24 +1815,6 @@ class MetalsLspService(
   def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
   ): Future[List[Location]] = findTextInJars.find(params)
-
-  def zipReports(): Future[Unit] =
-    Future {
-      val zip = zipReportsProvider.zip()
-      val pos = new l.Position(0, 0)
-      val location = new Location(
-        zip.toURI.toString(),
-        new l.Range(pos, pos),
-      )
-      languageClient.metalsExecuteClientCommand(
-        ClientCommands.GotoLocation.toExecuteCommandParams(
-          ClientCommands.WindowLocation(
-            location.getUri(),
-            location.getRange(),
-          )
-        )
-      )
-    }
 
   def generateBspConfig(): Future[Unit] = {
     val servers: List[BuildServerProvider] =

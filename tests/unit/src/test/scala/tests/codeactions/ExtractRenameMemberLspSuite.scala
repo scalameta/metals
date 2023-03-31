@@ -4,6 +4,7 @@ import java.nio.file.Paths
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -465,7 +466,11 @@ class ExtractRenameMemberLspSuite
       val cancelToken = EmptyCancelToken
 
       val codeActionFut =
-        extractRenameMember.contribute(codeActionParams, cancelToken, "root")
+        extractRenameMember.contribute(
+          codeActionParams,
+          cancelToken,
+          FolderIdentifier("root"),
+        )
 
       for {
         codeActions <- codeActionFut

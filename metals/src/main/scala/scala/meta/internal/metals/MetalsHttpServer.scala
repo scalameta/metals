@@ -16,7 +16,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.InputStreamIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLspService
 
 import io.undertow.Handlers.path
 import io.undertow.Handlers.websocket
@@ -77,7 +76,6 @@ object MetalsHttpServer {
   def apply(
       host: String,
       preferredPort: Int,
-      languageService: MetalsLspService,
       render: () => String,
       complete: HttpServerExchange => Unit,
       doctor: () => String,

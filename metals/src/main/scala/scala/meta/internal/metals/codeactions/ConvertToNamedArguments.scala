@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -105,7 +106,7 @@ class ConvertToNamedArguments(
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
@@ -141,7 +142,7 @@ class ConvertToNamedArguments(
                   position,
                   apply.argIndices.map(new Integer(_)).asJava,
                 ),
-              folderId,
+              folder,
             )
 
           val codeAction = CodeActionBuilder.build(

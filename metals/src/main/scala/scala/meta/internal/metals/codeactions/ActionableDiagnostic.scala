@@ -15,7 +15,7 @@ class ActionableDiagnostic() extends CodeAction {
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     def createActionableDiagnostic(

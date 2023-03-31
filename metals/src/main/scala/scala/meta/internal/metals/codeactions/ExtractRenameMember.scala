@@ -15,6 +15,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -45,7 +46,7 @@ class ExtractRenameMember(
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
@@ -104,7 +105,7 @@ class ExtractRenameMember(
             getMemberType(head.member).map { memberType =>
               val title =
                 ExtractRenameMember.title(memberType, head.member.name.value)
-              extractClassAction(uri, head.member, title, folderId)
+              extractClassAction(uri, head.member, title, folder)
             }.toList
 
           case head :: Nil
@@ -123,7 +124,7 @@ class ExtractRenameMember(
                 memberType,
                 defn.member.name.value,
               )
-            } yield extractClassAction(uri, defn.member, title, folderId)
+            } yield extractClassAction(uri, defn.member, title, folder)
 
             codeActionOpt.toList
         }
@@ -332,7 +333,7 @@ class ExtractRenameMember(
       uri: String,
       member: Member,
       title: String,
-      folderId: String,
+      folder: FolderIdentifier,
   ): l.CodeAction = {
     val range = member.name.pos.toLsp
 
@@ -342,7 +343,7 @@ class ExtractRenameMember(
           new l.TextDocumentIdentifier(uri),
           range.getStart(),
         ),
-        folderId,
+        folder,
       )
 
     CodeActionBuilder.build(

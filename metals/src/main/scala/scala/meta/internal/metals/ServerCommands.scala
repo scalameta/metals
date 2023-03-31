@@ -190,13 +190,6 @@ object ServerCommands {
        |This command can be helpful in scenarios where features are not working as expected such
        |as compile errors are not appearing or completions are not correct.
        |""".stripMargin,
-    """|An object with of the workspace folder for which the doctor should be run.
-       |```json
-       |{
-       |  folderId: "root"
-       |}
-       |```
-       |""".stripMargin,
   )
 
   val ZipReports = new Command(

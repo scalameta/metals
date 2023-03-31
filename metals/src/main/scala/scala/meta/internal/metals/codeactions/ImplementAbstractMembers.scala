@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -18,7 +19,7 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
     Future.sequence(
       params

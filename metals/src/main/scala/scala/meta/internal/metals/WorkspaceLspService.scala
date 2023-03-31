@@ -152,7 +152,6 @@ class WorkspaceLspService(
           timerProvider,
           initTreeView,
           uri,
-          java.util.UUID.randomUUID.toString,
           name,
         )
     }
@@ -218,7 +217,7 @@ class WorkspaceLspService(
   def getServiceFor(uri: String): MetalsLspService = {
     val folder =
       for {
-        path <- uri.toAbsolutePathSafe(EmptyReportContext)
+        path <- uri.toAbsolutePathSafe()
       } yield getServiceFor(path)
     folder.getOrElse(folderServices.head) // fallback to the first one
   }
@@ -248,14 +247,6 @@ class WorkspaceLspService(
         Future.successful(())
     }
   }
-
-  def getServiceForName(
-      workspaceFolder: String
-  ): Option[MetalsLspService] =
-    for {
-      workSpaceFolder <- folderServices
-        .find(service => service.folderId.toString == workspaceFolder)
-    } yield workSpaceFolder
 
   def getServiceForExactUri(
       folderUri: String
@@ -387,8 +378,7 @@ class WorkspaceLspService(
     val res =
       for {
         data <- item.data
-        service <- getServiceForName(data.folderId)
-      } yield service.completionItemResolve(item)
+      } yield getServiceFor(data.folderUri).completionItemResolve(item)
     res.getOrElse(Future.successful(item).asJava)
   }
 
@@ -645,7 +635,23 @@ class WorkspaceLspService(
       case ServerCommands.RunDoctor() =>
         onCurrentFolder(_.rundoctor(), "run doctor").asJavaObject
       case ServerCommands.ZipReports() =>
-        onCurrentFolder(_.zipReports(), "zip reports").asJavaObject
+        Future {
+          val zip =
+            ZipReportsProvider.zip(folderServices.map(_.folderReportsZippper))
+          val pos = new lsp4j.Position(0, 0)
+          val location = new Location(
+            zip.toURI.toString(),
+            new lsp4j.Range(pos, pos),
+          )
+          languageClient.metalsExecuteClientCommand(
+            ClientCommands.GotoLocation.toExecuteCommandParams(
+              ClientCommands.WindowLocation(
+                location.getUri(),
+                location.getRange(),
+              )
+            )
+          )
+        }.asJavaObject
       case ServerCommands.ListBuildTargets() =>
         Future {
           folderServices

@@ -50,10 +50,9 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderUri: Option[Path] = None,
-    folderId: String,
 ) extends PresentationCompiler:
 
-  def this() = this("", Nil, Nil, folderId = "root")
+  def this() = this("", Nil, Nil)
 
   import InteractiveDriver.*
 
@@ -125,7 +124,6 @@ case class ScalaPresentationCompiler(
         config,
         buildTargetIdentifier,
         folderUri,
-        folderId,
       ).completions()
 
     }
@@ -396,9 +394,6 @@ case class ScalaPresentationCompiler(
 
   def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
-
-  def withFolderId(folderId: String): PresentationCompiler =
-    copy(folderId = folderId)
 
   def withWorkspace(workspace: Path): PresentationCompiler =
     copy(folderUri = Some(workspace))

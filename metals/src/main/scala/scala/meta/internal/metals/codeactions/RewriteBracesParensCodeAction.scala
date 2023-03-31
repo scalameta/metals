@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 import scala.meta.Term
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
@@ -38,7 +39,7 @@ class RewriteBracesParensCodeAction(
   override def contribute(
       params: CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {

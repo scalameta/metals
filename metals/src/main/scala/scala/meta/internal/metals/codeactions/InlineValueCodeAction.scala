@@ -9,6 +9,7 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -35,7 +36,7 @@ class InlineValueCodeAction(
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
@@ -56,7 +57,7 @@ class InlineValueCodeAction(
               params.getTextDocument(),
               params.getRange().getStart(),
             ),
-            folderId,
+            folder,
           )
         CodeActionBuilder.build(
           title = InlineValueCodeAction.title(termName.value),

@@ -226,7 +226,6 @@ class MetalsTreeViewProvider(
 }
 
 class MetalsTreeFolderViewProvider(
-    folderId: String,
     folder: Folder,
     buildTargets: BuildTargets,
     compilations: () => TreeViewCompilations,
@@ -245,7 +244,7 @@ class MetalsTreeFolderViewProvider(
   val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
     definitionIndex,
     TreeViewProvider.Project,
-    s"libraries-${folderId}",
+    s"libraries-${folder.uri.toString()}",
     s"Libraries for ${folder.nameOrUri}",
     identity,
     _.toURI.toString(),
@@ -259,7 +258,7 @@ class MetalsTreeFolderViewProvider(
   val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
     definitionIndex,
     TreeViewProvider.Project,
-    s"projects-${folderId}",
+    s"projects-${folder.uri.toString()}",
     s"Projects for ${folder.nameOrUri}",
     _.getId(),
     _.getUri(),

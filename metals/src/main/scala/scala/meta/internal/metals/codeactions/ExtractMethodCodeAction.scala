@@ -9,6 +9,7 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -59,7 +60,7 @@ class ExtractMethodCodeAction(
   override def contribute(
       params: CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
@@ -112,7 +113,7 @@ class ExtractMethodCodeAction(
               exprRange,
               defnPos.pos.toLsp.getStart(),
             ),
-            folderId,
+            folder,
           )
           CodeActionBuilder.build(
             title = ExtractMethodCodeAction.title(scopeName),

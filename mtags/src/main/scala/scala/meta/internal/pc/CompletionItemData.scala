@@ -8,7 +8,7 @@ import com.google.gson.JsonPrimitive
 case class CompletionItemData(
     symbol: String,
     target: String,
-    folderId: String,
+    folderUri: String = null,
     // The kind of the completion item, for example `override def`
     kind: java.lang.Integer = null,
     additionalSymbols: java.util.List[String] = null
@@ -17,7 +17,9 @@ case class CompletionItemData(
     val obj = new JsonObject()
     obj.add("symbol", new JsonPrimitive(symbol))
     obj.add("target", new JsonPrimitive(target))
-    obj.add("folderId", new JsonPrimitive(folderId))
+    if (folderUri != null) {
+      obj.add("folderUri", new JsonPrimitive(s"file://${folderUri}"))
+    }
     if (kind != null) {
       obj.add("kind", new JsonPrimitive(kind))
     }
@@ -31,7 +33,7 @@ case class CompletionItemData(
 }
 
 object CompletionItemData {
-  def empty: CompletionItemData = CompletionItemData("", "", "root")
+  def empty: CompletionItemData = CompletionItemData("", "")
   val None: java.lang.Integer = 0
   // This is an `override def` completion item.
   val OverrideKind: java.lang.Integer = 1

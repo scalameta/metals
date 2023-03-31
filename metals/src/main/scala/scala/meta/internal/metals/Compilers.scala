@@ -72,7 +72,6 @@ class Compilers(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
-    folderId: String,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -964,8 +963,7 @@ class Compilers(
       pc: PresentationCompiler,
       search: SymbolSearch,
   ): PresentationCompiler =
-    pc.withFolderId(folderId)
-      .withSearch(search)
+    pc.withSearch(search)
       .withExecutorService(ec)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)

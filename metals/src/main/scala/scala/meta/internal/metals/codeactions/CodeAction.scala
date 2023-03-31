@@ -5,6 +5,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.CodeActionCommand
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.pc.CancelToken
 
@@ -30,7 +31,7 @@ trait CodeAction {
   def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]]
 
   implicit val actionDiagnosticOrdering: Ordering[l.CodeAction] =

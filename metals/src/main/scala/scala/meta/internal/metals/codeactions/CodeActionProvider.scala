@@ -8,6 +8,7 @@ import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.parsing.Trees
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -20,9 +21,10 @@ final class CodeActionProvider(
     trees: Trees,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
-    folderId: String,
+    folder: AbsolutePath,
 )(implicit ec: ExecutionContext) {
   private val folderIdParser = new JsonParser.Of[FolderIdentifier]
+  private val folderId = FolderIdentifier(folder.toString())
 
   private val extractMemberAction =
     new ExtractRenameMember(trees, languageClient)
@@ -102,7 +104,7 @@ final class CodeActionProvider(
     else
       args(1) match {
         case folderIdParser.Jsonized(t1) =>
-          Option(t1).contains(folderId)
+          Option(t1).contains(folder.toString())
         case _ => false
       }
   }

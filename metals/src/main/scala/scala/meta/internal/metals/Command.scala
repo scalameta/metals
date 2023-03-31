@@ -102,7 +102,7 @@ case class ParametrizedCommand[T: ClassTag](
 
 case class FolderIdentifier(
     val folder: String
-)
+) extends AnyVal
 
 case class CodeActionCommand[T: ClassTag](
     id: String,
@@ -127,35 +127,35 @@ case class CodeActionCommand[T: ClassTag](
   def toCommandLink(
       argument: T,
       commandInHtmlFormat: CommandHTMLFormat,
-      folderId: String,
+      folder: FolderIdentifier,
   ): String =
     commandInHtmlFormat.createLink(
       id,
       List(
         argument.toJson.toString(),
-        FolderIdentifier(folderId).toJson.toString(),
+        folder.toJson.toString(),
       ),
     )
 
-  def toLsp(argument: T, folderId: String): l.Command =
+  def toLsp(argument: T, folder: FolderIdentifier): l.Command =
     new l.Command(
       title,
       id,
       List(
         argument.toJson.asInstanceOf[AnyRef],
-        FolderIdentifier(folderId).toJson.asInstanceOf[AnyRef],
+        folder.toJson.asInstanceOf[AnyRef],
       ).asJava,
     )
 
   def toExecuteCommandParams(
       argument: T,
-      folderId: String,
+      folder: FolderIdentifier,
   ): l.ExecuteCommandParams = {
     new l.ExecuteCommandParams(
       id,
       List[Object](
         argument.toJson,
-        folderId.toJson,
+        folder.toJson,
       ).asJava,
     )
   }

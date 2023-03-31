@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
@@ -21,7 +22,7 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     val uri = params.getTextDocument().getUri()

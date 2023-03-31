@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
@@ -33,7 +34,7 @@ sealed abstract class OrganizeImports(
   override def contribute(
       params: CodeActionParams,
       token: CancelToken,
-      folderId: String,
+      folder: FolderIdentifier,
   )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {

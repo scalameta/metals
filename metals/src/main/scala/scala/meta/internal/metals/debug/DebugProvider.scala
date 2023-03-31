@@ -617,17 +617,6 @@ class DebugProvider(
     result
   }
 
-  // def resolveTestClassParams(
-  //     params: DebugUnresolvedTestClassParams
-  // )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
-  //   val result = withRebuildRetry(() => {
-  //     buildTargetClassesFinder
-  //       .findTestClassAndItsBuildTarget(
-  //         params.testClass,
-  //         Option(params.buildTarget),
-  //       )
-  //   }).flatMap {
-
   def createDebugSession(
       target: b.BuildTargetIdentifier
   ): Future[DebugSessionParams] =
