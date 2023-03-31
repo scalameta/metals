@@ -7,6 +7,7 @@ import java.security.MessageDigest
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.Properties
 import scala.util.Try
 
 import scala.meta.internal.io.FileIO
@@ -21,6 +22,7 @@ import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
@@ -66,10 +68,28 @@ final class BspServers(
   ): Future[BuildServerConnection] = {
 
     def newConnection(): Future[SocketConnection] = {
-      scribe.info(s"Running BSP server ${details.getArgv}")
 
+      val args = details.getArgv.asScala.toList
+        /* When running on Windows, the sbt script is passed as an argument to the
+         * BSP server. If the script path is encoded using URI encoding the server
+         * will fail to start. The workaround is to add `file://`.
+         * https://github.com/scalameta/metals/issues/5027
+         * and also:
+         * https://learn.microsoft.com/en-us/troubleshoot/windows-client/networking/url-encoding-unc-paths-not-url-decoded
+         */
+        .map { arg =>
+          if (
+            Properties.isWin && arg.contains("-Dsbt.script=") &&
+            !arg.contains("file://") && URIEncoderDecoder.decode(arg) != arg
+          )
+            arg.replace("-Dsbt.script=", "-Dsbt.script=file://")
+          else
+            arg
+        }
+
+      scribe.info(s"Running BSP server $args")
       val proc = SystemProcess.run(
-        details.getArgv.asScala.toList,
+        args,
         projectDirectory,
         redirectErrorOutput = false,
         Map(),
