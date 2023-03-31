@@ -91,6 +91,20 @@ final class InferredTypeProvider(
     def imports: List[TextEdit] =
       shortenedNames.imports(autoImportsGen)
 
+    def optDealias(tpe: Type): Type =
+      def isInScope(tpe: Type): Boolean =
+        tpe match
+          case tref: TypeRef =>
+            indexedCtx.lookupSym(
+              tref.currentSymbol
+            ) == IndexedContext.Result.InScope
+          case AppliedType(tycon, args) =>
+            isInScope(tycon) && args.forall(isInScope)
+          case _ => true
+      if isInScope(tpe)
+      then tpe
+      else tpe.metalsDealias
+
     def printType(tpe: Type): String =
       val printer = MetalsPrinter.forInferredType(
         shortenedNames,
@@ -123,7 +137,7 @@ final class InferredTypeProvider(
           adjustOpt.foreach(adjust => endPos.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             endPos,
-            ": " + printType(tpt.tpe) + {
+            ": " + printType(optDealias(tpt.tpe)) + {
               if withParens then ")" else ""
             },
           )
@@ -197,7 +211,7 @@ final class InferredTypeProvider(
           adjustOpt.foreach(adjust => end.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             end,
-            ": " + printType(tpt.tpe),
+            ": " + printType(optDealias(tpt.tpe)),
           )
         end typeNameEdit
 
@@ -227,7 +241,7 @@ final class InferredTypeProvider(
         def baseEdit(withParens: Boolean) =
           new TextEdit(
             bind.endPos.toLsp,
-            ": " + printType(body.tpe) + {
+            ": " + printType(optDealias(body.tpe)) + {
               if withParens then ")" else ""
             },
           )
@@ -260,7 +274,7 @@ final class InferredTypeProvider(
       case Some(i @ Ident(name)) =>
         val typeNameEdit = new TextEdit(
           i.endPos.toLsp,
-          ": " + printType(i.tpe.widen),
+          ": " + printType(optDealias(i.tpe.widen)),
         )
         typeNameEdit :: imports
 

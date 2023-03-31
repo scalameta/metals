@@ -750,7 +750,7 @@ class SbtBloopLspSuite
 
   test("semantic-highlight") {
     val expected =
-      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,definition,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
           |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
           |  .<<settings>>/*method*/(
           |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
@@ -768,7 +768,7 @@ class SbtBloopLspSuite
           |    <<name>>/*variable,readonly*/ <<:=>>/*method*/ <<"bsp-tests-source-sets">>/*string*/
           |  )
           |
-          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*variable,readonly*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
+          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*class*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
           |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalatest">>/*string*/ <<%%>>/*method*/ <<"scalatest">>/*string*/ <<%>>/*method*/ <<"3.2.9">>/*string*/ <<%>>/*method*/ <<Test>>/*variable,readonly*/
           |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalameta">>/*string*/ <<%%>>/*method*/ <<"scalameta">>/*string*/ <<%>>/*method*/ <<"4.6.0">>/*string*/
           |

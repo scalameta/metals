@@ -55,8 +55,7 @@ class PcDefinitionProvider(
       if findTypeDef then findTypeDefinitions(path, pos, indexedContext)
       else findDefinitions(path, pos, indexedContext)
 
-    if (result.locations().isEmpty()) then
-      fallbackToUntyped(unit, pos)(using ctx)
+    if result.locations().isEmpty() then fallbackToUntyped(unit, pos)(using ctx)
     else result
   end definitions
 

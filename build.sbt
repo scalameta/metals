@@ -422,14 +422,14 @@ lazy val metals = project
       V.guava,
       "com.geirsson" %% "metaconfig-core" % "0.11.1",
       // for measuring memory footprint
-      "org.openjdk.jol" % "jol-core" % "0.16",
+      "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.9",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.8.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.15.0",
+      "org.flywaydb" % "flyway-core" % "9.16.1",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
@@ -470,7 +470,7 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for comparing versions
-      "io.get-coursier" %% "versions" % "0.3.1",
+      "io.get-coursier" %% "versions" % "0.3.2",
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,

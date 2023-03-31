@@ -507,6 +507,51 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def isExtension: Boolean = (EXTENSION & info.properties) != 0
   }
 
+  def extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
+      source: Array[Char],
+      acceptedAdditionalTrailingChars: List[Char] = List()
+  )(
+      startOffset: Int,
+      endOffset: Int
+  ): (Int, Int) = {
+    @tailrec
+    def expandRec(
+        step: Int,
+        currentIndex: Int,
+        acceptedChars: List[Char] = List('\t', ' ')
+    ): Int = {
+      val nextIndex = currentIndex + step
+      if (
+        nextIndex >= 0
+        && nextIndex < source.size
+        && acceptedChars.contains(source(nextIndex))
+      ) expandRec(step, nextIndex)
+      else currentIndex
+    }
+
+    val startWithSpace = expandRec(-1, startOffset)
+    val endWithSpace =
+      if (startWithSpace == 0 || source(startWithSpace - 1) == '\n')
+        expandRec(
+          1,
+          endOffset - 1,
+          List('\t', ' ', ';') ++ acceptedAdditionalTrailingChars
+        ) + 1
+      else
+        expandRec(
+          1,
+          endOffset - 1,
+          List('\t', ' ') ++ acceptedAdditionalTrailingChars
+        ) + 1
+    val endCharsAcceptedOnce = List(';', '\n')
+    if (
+      endWithSpace < source.size
+      && endCharsAcceptedOnce.contains(source(endWithSpace))
+    )
+      (startWithSpace, endWithSpace + 1)
+    else (startWithSpace, endWithSpace)
+  }
+
   val EXTENSION: Int = s.SymbolInformation.Property.values.map(_.value).max << 1
 
   implicit class XtensionJavaPriorityQueue[A](q: PriorityQueue[A]) {

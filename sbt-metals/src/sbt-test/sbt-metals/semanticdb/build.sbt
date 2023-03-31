@@ -71,7 +71,7 @@ def assertSemanticdbForScala2 = Def.task {
   val sv = scalaVersion.value
   val project = thisProject.value
   val config = configuration.value
-  val jOptions = javacOptions.value
+  val jOptions = (compile / javacOptions).value
 
   assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
   assertPlugin(sOptions, s"semanticdb-scalac", sv, BuildInfo.semanticdbVersion)

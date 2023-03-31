@@ -906,20 +906,20 @@ abstract class BaseWorksheetLspSuite(
 
     val expected =
       if (scalaVersion == V.scala212)
-        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-           |<<val>>/*keyword*/ <<hi1>>/*variable,readonly*/ =
+        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+           |<<val>>/*keyword*/ <<hi1>>/*variable,definition,readonly*/ =
            |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
-           |<<val>>/*keyword*/ <<hi2>>/*variable,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
+           |<<val>>/*keyword*/ <<hi2>>/*variable,definition,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
            |
-           |<<val>>/*keyword*/ <<hellos>>/*variable,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+           |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
            |""".stripMargin
       else
-        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
-           |<<val>>/*keyword*/ <<hi1>>/*variable,readonly*/ =
+        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+           |<<val>>/*keyword*/ <<hi1>>/*variable,definition,readonly*/ =
            |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
-           |<<val>>/*keyword*/ <<hi2>>/*variable,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
+           |<<val>>/*keyword*/ <<hi2>>/*variable,definition,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
            |
-           |<<val>>/*keyword*/ <<hellos>>/*variable,readonly*/ = <<List>>/*variable,readonly*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+           |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
            |""".stripMargin
 
     val fileContent =

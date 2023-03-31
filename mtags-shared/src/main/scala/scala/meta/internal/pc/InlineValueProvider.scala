@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
+import scala.meta.internal.mtags.MtagsEnrichments.extendRangeToIncludeWhiteCharsAndTheFollowingNewLine
 
 import org.eclipse.{lsp4j => l}
 
@@ -36,7 +37,7 @@ trait InlineValueProvider {
 
   private def definitionTextEdit(definition: Definition): l.TextEdit =
     new l.TextEdit(
-      extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
+      extend(
         definition.rangeOffsets.start,
         definition.rangeOffsets.end,
         definition.range
@@ -44,33 +45,22 @@ trait InlineValueProvider {
       ""
     )
 
-  private def extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
+  private def extend(
       startOffset: Int,
       endOffset: Int,
       range: l.Range
   ): l.Range = {
-    @tailrec
-    def expand(step: Int, currentIndex: Int): Int = {
-      def isWhiteSpace =
-        text(currentIndex) == ' ' || text(currentIndex) == '\t'
-      if (currentIndex >= 0 && currentIndex < text.size && isWhiteSpace)
-        expand(step, currentIndex + step)
-      else currentIndex
-    }
-    val endWithSpace = expand(1, endOffset)
-    val startWithSpace = expand(-1, startOffset - 1)
+    val (startWithSpace, endWithSpace): (Int, Int) =
+      extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
+        text
+      )(startOffset, endOffset)
     val startPos = new l.Position(
       range.getStart.getLine,
-      range.getStart.getCharacter - (startOffset - startWithSpace) + 1
+      range.getStart.getCharacter - (startOffset - startWithSpace)
     )
     val endPos =
-      if (endWithSpace < text.size && text(endWithSpace) == '\n')
+      if (endWithSpace - 1 >= 0 && text(endWithSpace - 1) == '\n')
         new l.Position(range.getEnd.getLine + 1, 0)
-      else if (endWithSpace < text.size && text(endWithSpace) == ';')
-        new l.Position(
-          range.getEnd.getLine,
-          range.getEnd.getCharacter + endWithSpace - endOffset + 1
-        )
       else
         new l.Position(
           range.getEnd.getLine,

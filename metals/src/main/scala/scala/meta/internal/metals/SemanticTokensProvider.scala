@@ -75,33 +75,39 @@ object SemanticTokensProvider {
       params: VirtualFileParams,
       isScala3: Boolean,
   ): ju.List[Integer] = {
-    val tokens = getTokens(isScala3, params.text())
+    // no semantic data was available, we can revert to default highlighting
+    if (nodes.isEmpty) {
+      scribe.warn("Could not find semantic tokens for: " + params.uri())
+      List.empty[Integer].asJava
+    } else {
+      val tokens = getTokens(isScala3, params.text())
+      val (delta0, cliTokens, tokens0) =
+        initialScalaCliTokens(tokens.toList)
 
-    val (delta0, cliTokens, tokens0) =
-      initialScalaCliTokens(tokens.toList)
+      val buffer = ListBuffer.empty[Integer]
+      buffer.addAll(cliTokens)
 
-    val buffer = ListBuffer.empty[Integer]
-    buffer.addAll(cliTokens)
-
-    var delta = delta0
-    var nodesIterator: List[Node] = nodes
-    for (tk <- tokens0) {
-      val (tokenType, tokenModifier, nodesIterator0) =
-        getTypeAndMod(tk, nodesIterator, isScala3)
-      nodesIterator = nodesIterator0
-      val (toAdd, delta0) = convertTokensToIntList(
-        tk.text,
-        delta,
-        tokenType,
-        tokenModifier,
-      )
-      buffer.addAll(
-        toAdd
-      )
-      delta = delta0
+      var delta = delta0
+      var nodesIterator: List[Node] = nodes
+      for (tk <- tokens0) {
+        val (tokenType, tokenModifier, nodesIterator0) =
+          getTypeAndMod(tk, nodesIterator, isScala3)
+        nodesIterator = nodesIterator0
+        val (toAdd, delta0) = convertTokensToIntList(
+          tk.text,
+          delta,
+          tokenType,
+          tokenModifier,
+        )
+        buffer.addAll(
+          toAdd
+        )
+        delta = delta0
+      }
+      buffer.toList.asJava
     }
-    buffer.toList.asJava
   }
+
   case class Line(
       val number: Int,
       val offset: Int,

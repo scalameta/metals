@@ -148,7 +148,7 @@ object CaseKeywordCompletion:
       indexedContext.scopeSymbols
         .foreach(s =>
           val ts = s.info.metalsDealias.typeSymbol
-          if (isValid(ts)) then visit(autoImportsGen.inferSymbolImport(ts))
+          if isValid(ts) then visit(autoImportsGen.inferSymbolImport(ts))
         )
       // Step 2: walk through known subclasses of sealed types.
       val sealedDescs = subclassesForType(parents.selector.widen.bounds.hi)

@@ -437,7 +437,7 @@ abstract class PcCollector[T](
                   ) =>
                 // Show both rename and main together
                 val spans =
-                  if (!sel.renamed.isEmpty) then
+                  if !sel.renamed.isEmpty then
                     Set(sel.renamed.span, sel.imported.span)
                   else Set(sel.imported.span)
                 spans.filter(_.isCorrect).map { span =>
