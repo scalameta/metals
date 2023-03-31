@@ -86,6 +86,50 @@ class SemanticHighlightLspSuite extends BaseLspSuite("SemanticHighlight") {
        |""".stripMargin,
   )
 
+  check(
+    "predef",
+    """|<<object>>/*keyword*/ <<Main>>/*class*/ {
+       |  <<val>>/*keyword*/ <<x>>/*variable,readonly*/ = <<List>>/*class*/(<<1>>/*number*/,<<2>>/*number*/,<<3>>/*number*/)
+       |  <<val>>/*keyword*/ <<y>>/*variable,readonly*/ = <<a>>/*variable,readonly*/ <<match>>/*keyword*/ {
+       |    <<case>>/*keyword*/ <<List>>/*class*/(<<a>>/*variable*/,<<b>>/*variable*/,<<c>>/*variable*/) <<=>>>/*operator*/ <<a>>/*variable,readonly*/
+       |    <<case>>/*keyword*/ <<_>>/*variable*/ <<=>>>/*operator*/ <<0>>/*number*/
+       |  }
+       |  <<val>>/*keyword*/ <<z>>/*variable,readonly*/ = <<Set>>/*class*/(<<1>>/*number*/,<<2>>/*number*/,<<3>>/*number*/)
+       |  <<val>>/*keyword*/ <<w>>/*variable,readonly*/ = <<Right>>/*class*/(<<1>>/*number*/)
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class",
+    """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Foo>>/*class*/(<<i>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<j>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+       |
+       |
+       |<<object>>/*keyword*/ <<A>>/*class*/ {
+       |  <<val>>/*keyword*/ <<f>>/*variable,readonly*/ = <<Foo>>/*class*/(<<1>>/*number*/,<<2>>/*number*/)
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "mutable",
+    """|<<package>>/*keyword*/ <<a>>/*namespace*/
+       |
+       |<<object>>/*keyword*/ <<A>>/*class*/ {
+       |  <<var>>/*keyword*/ <<abc>>/*variable*/ = <<123>>/*number*/
+       |  <<var>>/*keyword*/ <<edf>>/*variable*/ = <<abc>>/*variable*/ <<+>>/*method,abstract*/ <<2>>/*number*/
+       |  <<abc>>/*variable*/ = <<edf>>/*variable*/ <<->>/*method,abstract*/ <<2>>/*number*/
+       |  <<A>>/*class*/.<<edf>>/*variable*/ = <<A>>/*class*/.<<abc>>/*variable*/ 
+       |
+       |  <<def>>/*keyword*/ <<m>>/*method*/() = {
+       |    <<var>>/*keyword*/ <<beta>>/*variable*/ = <<3>>/*number*/
+       |    <<beta>>/*variable*/ = <<beta>>/*variable*/ <<+>>/*method,abstract*/ <<1>>/*number*/
+       |    <<beta>>/*variable*/
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       expected: String,

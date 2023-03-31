@@ -234,4 +234,56 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
     """|def foo2: Int
        |""".stripMargin.hover,
   )
+
+  check(
+    "structural-types",
+    """|
+       |import reflect.Selectable.reflectiveSelectable
+       |
+       |object StructuralTypes:
+       |   type User = {
+       |   def name: String
+       |   def age: Int
+       |   }
+       |
+       |   val user = null.asInstanceOf[User]
+       |   user.name
+       |   user.ag@@e
+       |
+       |   val V: Object {
+       |   def scalameta: String
+       |   } = new:
+       |   def scalameta = "4.0"
+       |   V.scalameta
+       |end StructuralTypes
+       |""".stripMargin,
+    """|def age: Int
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "structural-types1",
+    """|
+       |import reflect.Selectable.reflectiveSelectable
+       |
+       |object StructuralTypes:
+       |   type User = {
+       |   def name: String
+       |   def age: Int
+       |   }
+       |
+       |   val user = null.asInstanceOf[User]
+       |   user.name
+       |   user.age
+       |
+       |   val V: Object {
+       |   def scalameta: String
+       |   } = new:
+       |   def scalameta = "4.0"
+       |   V.scala@@meta
+       |end StructuralTypes
+       |""".stripMargin,
+    """|def scalameta: String
+       |""".stripMargin.hover,
+  )
 }

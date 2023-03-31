@@ -758,6 +758,96 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "dealias",
+    """|class Foo() {
+       |  type T = Int
+       |  def getT: T = 1
+       |}
+       |
+       |object O {
+       | val <<c>> = new Foo().getT
+       |}
+       |""".stripMargin,
+    """|class Foo() {
+       |  type T = Int
+       |  def getT: T = 1
+       |}
+       |
+       |object O {
+       | val c: Int = new Foo().getT
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "dealias2",
+    """|object Foo {
+       |  type T = Int
+       |  def getT: T = 1
+       |  val <<c>> = getT
+       |}
+       |""".stripMargin,
+    """|object Foo {
+       |  type T = Int
+       |  def getT: T = 1
+       |  val c: T = getT
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "dealias3".tag(IgnoreScala2),
+    """|object Foo:
+       |  opaque type T = Int
+       |  def getT: T = 1
+       |val <<c>> = Foo.getT
+       |""".stripMargin,
+    """|import Foo.T
+       |object Foo:
+       |  opaque type T = Int
+       |  def getT: T = 1
+       |val c: T = Foo.getT
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "dealias4".tag(IgnoreScala2),
+    """|object O:
+       | type M = Int
+       | type W = M => Int
+       | def get: W = ???
+       |
+       |val <<m>> = O.get
+       |""".stripMargin,
+    """|object O:
+       | type M = Int
+       | type W = M => Int
+       | def get: W = ???
+       |
+       |val m: Int => Int = O.get
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "dealias5".tag(IgnoreScala2),
+    """|object O:
+       | opaque type M = Int
+       | type W = M => Int
+       | def get: W = ???
+       |
+       |val <<m>> = O.get
+       |""".stripMargin,
+    """|import O.M
+       |object O:
+       | opaque type M = Int
+       | type W = M => Int
+       | def get: W = ???
+       |
+       |val m: M => Int = O.get
+       |""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

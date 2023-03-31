@@ -97,9 +97,30 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
         |object <<A>>/*class*/ {
         |  val <<a>>/*variable,readonly*/ = 1
         |  var <<b>>/*variable*/ = 2
-        |  val <<c>>/*variable,readonly*/ = <<List>>/*variable,readonly*/(1,<<a>>/*variable,readonly*/,<<b>>/*variable*/)
+        |  val <<c>>/*variable,readonly*/ = <<List>>/*class*/(1,<<a>>/*variable,readonly*/,<<b>>/*variable*/)
         |  <<b>>/*variable*/ = <<a>>/*variable,readonly*/
         |""".stripMargin,
+  )
+
+  check(
+    "predef",
+    """
+      |object <<Main>>/*class*/ {
+      |  val <<a>>/*variable,readonly*/ = <<List>>/*class*/(1,2,3)
+      |  val <<y>>/*variable,readonly*/ = <<Vector>>/*class*/(1,2)
+      |  val <<z>>/*variable,readonly*/ = <<Set>>/*class*/(1,2,3)
+      |  val <<w>>/*variable,readonly*/ = <<Right>>/*class*/(1)
+      |}""".stripMargin,
+  )
+
+  check(
+    "case-class",
+    """|case class <<Foo>>/*class*/(<<i>>/*variable,readonly*/: <<Int>>/*class,abstract*/, <<j>>/*variable,readonly*/: <<Int>>/*class,abstract*/)
+       |
+       |object <<A>>/*class*/ {
+       |  val <<f>>/*variable,readonly*/ = <<Foo>>/*class*/(1,2)
+       |}
+       |""".stripMargin,
   )
 
 }

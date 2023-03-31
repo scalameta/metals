@@ -14,6 +14,7 @@ abstract class BaseRenameFilesLspSuite(name: String)
       fileRenames: Map[String, String],
       expectedRenames: Map[String, String],
       sourcesAreCompiled: Boolean = false,
+      scalaVersion: Option[String] = None,
   )(implicit loc: Location): Unit = {
     test(name) {
       cleanWorkspace()
@@ -21,7 +22,7 @@ abstract class BaseRenameFilesLspSuite(name: String)
       for {
         _ <- initialize(
           s"""/metals.json
-             |${defaultMetalsJson()}
+             |${defaultMetalsJson(scalaVersion)}
              |$layout""".stripMargin
         )
         expectedSources = calcExpectedSources(
@@ -41,7 +42,7 @@ abstract class BaseRenameFilesLspSuite(name: String)
     }
   }
 
-  private def defaultMetalsJson(scalaVersion: Option[String] = None): String = {
+  private def defaultMetalsJson(scalaVersion: Option[String]): String = {
     val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
     s"""|{
         |  "a" : {
@@ -54,7 +55,7 @@ abstract class BaseRenameFilesLspSuite(name: String)
       layoutWithMarkers: String,
       expectedRenames: Map[String, String],
   ) = {
-    val renameRex = """<<([ a-zA-Z0-9_.,-/=>;]+)>>""".r
+    val renameRex = """<<([ a-zA-Z0-9_.,-/=>;:\n]+)>>""".r
     FileLayout
       .mapFromString(layoutWithMarkers)
       .view

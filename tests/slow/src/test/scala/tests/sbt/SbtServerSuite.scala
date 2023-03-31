@@ -298,7 +298,7 @@ class SbtServerSuite
           |    <<name>>/*variable,readonly*/ <<:=>>/*method*/ <<"bsp-tests-source-sets">>/*string*/
           |  )
           |
-          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*variable,readonly*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
+          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*class*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
           |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalatest">>/*string*/ <<%%>>/*method*/ <<"scalatest">>/*string*/ <<%>>/*method*/ <<"3.2.9">>/*string*/ <<%>>/*method*/ <<Test>>/*variable,readonly*/
           |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalameta">>/*string*/ <<%%>>/*method*/ <<"scalameta">>/*string*/ <<%>>/*method*/ <<"4.6.0">>/*string*/
           |

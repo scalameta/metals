@@ -76,9 +76,10 @@ final class PcSemanticTokensProvider(
         getTypeId(SemanticTokenTypes.Namespace) // "package"
       else if (sym.isModule) getTypeId(SemanticTokenTypes.Class) // "object"
       else if (sym.isSourceMethod)
-        if (sym.isGetter | sym.isSetter)
+        if (sym.isAccessor)
           getTypeId(SemanticTokenTypes.Variable)
         else getTypeId(SemanticTokenTypes.Method) // "def"
+      else if (isPredefClass(sym)) getTypeId(SemanticTokenTypes.Class)
       else if (sym.isTerm && (!sym.isParameter || sym.isParamAccessor)) {
         addPwrToMod(SemanticTokenModifiers.Readonly)
         getTypeId(SemanticTokenTypes.Variable) // "val"
@@ -91,5 +92,14 @@ final class PcSemanticTokensProvider(
     TokenNode(pos.start, pos.end, typ, mod)
 
   }
+
+  private def isPredefClass(sym: Collector.compiler.Symbol) =
+    sym.info match {
+      case Collector.compiler.NullaryMethodType(
+            Collector.compiler.SingleType(_, value)
+          ) if value.isModule =>
+        true
+      case _ => false
+    }
 
 }
