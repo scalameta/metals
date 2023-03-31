@@ -144,15 +144,15 @@ class ExtractValueLspSuite
     s"""|${ExtractValueCodeAction.title("1 + 2")}
         |${ExtractValueCodeAction.title("1 + method2(1 + 2)")}
         |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
-    s"""|object Main {
-        |  def method2(i: Int) : Int = ???
-        |  def method1(s: String): Unit = {
-        |    println("Hello!"); 
-        |    val newValue = 1 + 2
-        |    method2(1 + method2(newValue))
-        |  }
-        |}
-        |""".stripMargin,
+    """|object Main {
+       |  def method2(i: Int) : Int = ???
+       |  def method1(s: String): Unit = {
+       |    println("Hello!"); 
+       |    val newValue = 1 + 2
+       |    method2(1 + method2(newValue))
+       |  }
+       |}
+       |""".stripMargin,
   )
 
   check(
