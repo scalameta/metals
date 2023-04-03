@@ -26,13 +26,14 @@ trait MillIvyCompletions {
   }
 
   case class MillIvyCompletion(
+      coursierComplete: CoursierComplete,
       pos: Position,
       text: String,
       dependency: String
   ) extends CompletionPosition {
     override def contribute: List[Member] = {
       val completions =
-        CoursierComplete.complete(dependency.replace(CURSOR, ""))
+        coursierComplete.complete(dependency.replace(CURSOR, ""))
       val (editStart, editEnd) =
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp

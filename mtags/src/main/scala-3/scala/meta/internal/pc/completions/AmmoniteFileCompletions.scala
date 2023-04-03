@@ -1,14 +1,12 @@
 package scala.meta.internal.pc
 package completions
 
+import java.nio.file.Files
 import java.nio.file.Path
-import java.{util as ju}
 
 import scala.collection.JavaConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImport
-import scala.meta.io.AbsolutePath
 
 import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.ast.tpd.*
@@ -72,24 +70,32 @@ object AmmoniteFileCompletions:
         // drop / or \
         val current = workspace.resolve(script.drop(1))
         val importPath = translateImportToPath(select).drop(1)
-        val currentPath = AbsolutePath(
-          current.getParent.resolve(importPath)
-        )
+        val currentPath = current.getParent.resolve(importPath).toAbsolutePath
         val parentTextEdit =
           if query.exists(_.isEmpty()) &&
-            currentPath.parentOpt.isDefined && currentPath.isDirectory
+            Files.exists(currentPath.getParent) && Files.isDirectory(
+              currentPath
+            )
           then List(parent)
           else Nil
-        currentPath.list.toList
-          .filter(_.filename.stripSuffix(".sc") != fileName)
+        Files
+          .list(currentPath)
+          .toList
+          .asScala
+          .toList
+          .filter(_.getFileName.toString.stripSuffix(".sc") != fileName)
           .collect {
             case file
-                if (file.isDirectory || file.isAmmoniteScript) &&
-                  query.exists(CompletionFuzzy.matches(_, file.filename)) =>
+                if (Files.isDirectory(
+                  file
+                ) || file.toAbsolutePath.toString.isAmmoniteScript) &&
+                  query.exists(
+                    CompletionFuzzy.matches(_, file.getFileName.toString)
+                  ) =>
               CompletionValue.FileSystemMember(
-                file.filename,
+                file.getFileName.toString,
                 editRange,
-                isDirectory = file.isDirectory,
+                isDirectory = Files.isDirectory(file),
               )
           } ++ parentTextEdit
       case _ =>

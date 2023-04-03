@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
@@ -19,26 +18,13 @@ import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
-import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.*
-import scala.meta.internal.pc.CompilerAccess
-import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
-import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
-import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.ast.tpd.*
-import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.util.*
 import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.jsonrpc.{messages as jm}
 import org.eclipse.{lsp4j as l}
 
 case class ScalaPresentationCompiler(
@@ -53,8 +39,6 @@ case class ScalaPresentationCompiler(
 ) extends PresentationCompiler:
 
   def this() = this("", Nil, Nil)
-
-  import InteractiveDriver.*
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
 

@@ -13,6 +13,8 @@ import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.metals.CompilerOffsetParamsUtils
+import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
@@ -491,7 +493,7 @@ class Compilers(
   ): Future[CompletionList] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       val offsetParams =
-        CompilerOffsetParams.fromPos(pos, token)
+        CompilerOffsetParamsUtils.fromPos(pos, token)
       pc.complete(offsetParams)
         .asScala
         .map { list =>
@@ -509,7 +511,7 @@ class Compilers(
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.autoImports(
         name,
-        CompilerOffsetParams.fromPos(pos, token),
+        CompilerOffsetParamsUtils.fromPos(pos, token),
         findExtensionMethods,
       ).asScala
         .map { list =>
@@ -524,7 +526,7 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.insertInferredType(CompilerOffsetParams.fromPos(pos, token))
+      pc.insertInferredType(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
@@ -537,7 +539,7 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.inlineValue(CompilerOffsetParams.fromPos(pos, token))
+      pc.inlineValue(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
         .map(adjust.adjustTextEdits)
     }.getOrElse(Future.successful(Nil.asJava))
@@ -547,7 +549,7 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[DocumentHighlight]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.documentHighlight(CompilerOffsetParams.fromPos(pos, token))
+      pc.documentHighlight(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
         .map { highlights =>
           adjust.adjustDocumentHighlight(highlights)
@@ -564,8 +566,8 @@ class Compilers(
     withPCAndAdjustLsp(doc.getUri(), range, extractionPos) {
       (pc, metaRange, metaExtractionPos, adjust) =>
         pc.extractMethod(
-          CompilerRangeParams.fromPos(metaRange, token),
-          CompilerOffsetParams.fromPos(metaExtractionPos, token),
+          CompilerRangeParamsUtils.fromPos(metaRange, token),
+          CompilerOffsetParamsUtils.fromPos(metaExtractionPos, token),
         ).asScala
           .map { edits =>
             adjust.adjustTextEdits(edits)
@@ -580,7 +582,7 @@ class Compilers(
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(position) { (pc, pos, adjust) =>
       pc.convertToNamedArguments(
-        CompilerOffsetParams.fromPos(pos, token),
+        CompilerOffsetParamsUtils.fromPos(pos, token),
         argIndices,
       ).asScala
         .map { edits =>
@@ -594,7 +596,7 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.implementAbstractMembers(CompilerOffsetParams.fromPos(pos, token))
+      pc.implementAbstractMembers(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
@@ -607,7 +609,7 @@ class Compilers(
       token: CancelToken,
   ): Future[Option[HoverSignature]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.hover(CompilerRangeParams.offsetOrRange(pos, token))
+      pc.hover(CompilerRangeParamsUtils.offsetOrRange(pos, token))
         .asScala
         .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
@@ -619,7 +621,7 @@ class Compilers(
   ): Future[ju.Optional[LspRange]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.prepareRename(
-        CompilerRangeParams.offsetOrRange(pos, token)
+        CompilerRangeParamsUtils.offsetOrRange(pos, token)
       ).asScala
         .map { range =>
           range.map(adjust.adjustRange(_))
@@ -633,7 +635,7 @@ class Compilers(
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.rename(
-        CompilerRangeParams.offsetOrRange(pos, token),
+        CompilerRangeParamsUtils.offsetOrRange(pos, token),
         params.getNewName(),
       ).asScala
         .map { edits =>
@@ -662,11 +664,11 @@ class Compilers(
       findTypeDef: Boolean,
   ): Future[DefinitionResult] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val params = CompilerOffsetParams.fromPos(pos, token)
+      val params = CompilerOffsetParamsUtils.fromPos(pos, token)
       val defResult =
         if (findTypeDef) pc.typeDefinition(params)
         else
-          pc.definition(CompilerOffsetParams.fromPos(pos, token))
+          pc.definition(CompilerOffsetParamsUtils.fromPos(pos, token))
       defResult.asScala
         .map { c =>
           adjust.adjustLocations(c.locations())
@@ -697,7 +699,7 @@ class Compilers(
       token: CancelToken,
   ): Future[SignatureHelp] =
     withPCAndAdjustLsp(params) { (pc, pos, _) =>
-      pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
+      pc.signatureHelp(CompilerOffsetParamsUtils.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def selectionRange(
@@ -706,7 +708,7 @@ class Compilers(
   ): Future[ju.List[SelectionRange]] = {
     withPCAndAdjustLsp(params) { (pc, positions) =>
       val offsetPositions: ju.List[OffsetParams] =
-        positions.map(CompilerOffsetParams.fromPos(_, token))
+        positions.map(CompilerOffsetParamsUtils.fromPos(_, token))
       pc.selectionRange(offsetPositions).asScala
     }.getOrElse(Future.successful(Nil.asJava))
   }

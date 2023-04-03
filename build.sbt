@@ -243,6 +243,24 @@ lazy val interfaces = project
     ),
   )
 
+lazy val mtagsShared = project
+  .in(file("mtags-shared"))
+  .settings(sharedSettings)
+  .settings(
+    moduleName := "mtags-shared",
+    crossTarget := target.value / s"scala-${scalaVersion.value}",
+    crossScalaVersions := {
+      V.supportedScalaVersions ++ V.nightlyScala3Versions
+    },
+    crossVersion := CrossVersion.binary,
+    Compile / packageSrc / publishArtifact := true,
+    libraryDependencies ++= List(
+      "org.lz4" % "lz4-java" % "1.8.0",
+      "io.get-coursier" % "interface" % V.coursierInterfaces,
+    ),
+  )
+  .dependsOn(interfaces)
+
 def multiScalaDirectories(root: File, scalaVersion: String) = {
   val base = root / "src" / "main"
   val result = mutable.ListBuffer.empty[File]
@@ -344,7 +362,7 @@ lazy val mtags3 = project
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
   )
-  .dependsOn(interfaces)
+  .dependsOn(mtagsShared)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags = project
@@ -353,7 +371,7 @@ lazy val mtags = project
     mtagsSettings,
     moduleName := "mtags",
   )
-  .dependsOn(interfaces)
+  .dependsOn(mtagsShared)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val metals = project
@@ -552,15 +570,20 @@ def runMtagsPublishLocal(
     .appendWithSession(
       List(
         mtags / scalaVersion := scalaV,
+        mtagsShared / scalaVersion := scalaV,
         ThisBuild / version := projectV,
         ThisBuild / useSuperShell := false,
       ),
       state,
     )
-  val (s, _) = Project
+  val (s1, _) = Project
     .extract(newState)
-    .runTask(mtags / publishLocal, newState)
-  s
+    .runTask(mtagsShared / publishLocal, newState)
+
+  val (s2, _) = Project
+    .extract(s1)
+    .runTask(mtags / publishLocal, s1)
+  s2
 }
 
 def crossPublishLocal(scalaV: String) =
@@ -628,7 +651,7 @@ lazy val cross = project
     sharedSettings,
     crossScalaVersions := V.nonDeprecatedScalaVersions,
   )
-  .dependsOn(mtest, mtags)
+  .dependsOn(mtest)
 
 def isInTestShard(name: String, logger: Logger): Boolean = {
   val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))

@@ -3,6 +3,7 @@ package tests.codeactions
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.CoursierComplete
 
 import coursier.version.Version
@@ -11,7 +12,8 @@ class ScalaCliActionsSuite
     extends BaseCodeActionLspSuite("actionableDiagnostic") {
 
   val oldOsLibVersion: Version = Version("0.7.8")
-  val newestOsLib: String = CoursierComplete
+  val coursierComplete = new CoursierComplete(scalaCompilerVersion)
+  val newestOsLib: String = coursierComplete
     .complete("com.lihaoyi::os-lib:")
     .headOption
     .getOrElse("0.8.1")

@@ -8,6 +8,8 @@ import scala.collection.mutable
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.InterpolationSplice
@@ -25,6 +27,7 @@ trait Completions { this: MetalsGlobal =>
 
   val clientSupportsSnippets: Boolean =
     metalsConfig.isCompletionSnippetsEnabled()
+  val coursierComplete = new CoursierComplete(BuildInfo.scalaCompilerVersion)
 
   /**
    * A member for symbols on the classpath that are not in scope, produced via workspace/symbol.
@@ -464,11 +467,11 @@ trait Completions { this: MetalsGlobal =>
 
     latestEnclosingArg match {
       case MillIvyExtractor(dep) =>
-        MillIvyCompletion(pos, text, dep)
+        MillIvyCompletion(coursierComplete, pos, text, dep)
       case SbtLibExtractor(pos, dep) if pos.source.path.isSbt =>
-        SbtLibCompletion(pos, dep)
+        SbtLibCompletion(coursierComplete, pos, dep)
       case ScalaCliExtractor(dep) =>
-        ScalaCliCompletion(pos, text, dep)
+        ScalaCliCompletion(coursierComplete, pos, text, dep)
       case _ if isScaladocCompletion(pos, text) =>
         val associatedDef = onUnitOf(pos.source) { unit =>
           new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)
@@ -539,7 +542,14 @@ trait Completions { this: MetalsGlobal =>
             imp,
             pos
           ) || isWorksheetIvyCompletionPosition(imp, pos) =>
-        AmmoniteIvyCompletion(select, selector, pos, editRange, text)
+        AmmoniteIvyCompletion(
+          coursierComplete,
+          select,
+          selector,
+          pos,
+          editRange,
+          text
+        )
       case _ =>
         inferCompletionPosition(
           pos,

@@ -191,7 +191,7 @@ class MetalsLspService(
 
   val tables: Tables = register(new Tables(workspace, time))
 
-  implicit val reports: StdReportContext = new StdReportContext(workspace)
+  implicit val reports: StdReportContext = new StdReportContext(workspace.toNIO)
 
   val zipReportsProvider: ZipReportsProvider =
     new ZipReportsProvider(doctor.getTargetsInfoForReports, reports)

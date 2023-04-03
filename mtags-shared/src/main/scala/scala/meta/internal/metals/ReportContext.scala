@@ -3,10 +3,9 @@ package scala.meta.internal.metals
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.meta.io.RelativePath
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
 
 trait ReportContext {
   def unsanitized: Reporter
@@ -21,12 +20,12 @@ trait ReportContext {
 }
 
 trait Reporter {
-  def createReport(name: String, text: String): Option[AbsolutePath]
+  def createReport(name: String, text: String): Option[Path]
   def createReport(
       name: String,
       text: String,
       e: Throwable
-  ): Option[AbsolutePath]
+  ): Option[Path]
   def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
   ): List[Report]
@@ -34,8 +33,8 @@ trait Reporter {
   def deleteAll(): Unit
 }
 
-class StdReportContext(workspace: AbsolutePath) extends ReportContext {
-  lazy val reportsDir: AbsolutePath =
+class StdReportContext(workspace: Path) extends ReportContext {
+  lazy val reportsDir: Path =
     workspace.resolve(StdReportContext.reportsDir).createDirectories()
 
   val unsanitized =
@@ -56,12 +55,11 @@ class StdReportContext(workspace: AbsolutePath) extends ReportContext {
 
   override def deleteAll(): Unit = {
     all.foreach(_.deleteAll())
-    Files.delete(reportsDir.resolve(StdReportContext.ZIP_FILE_NAME).toNIO)
+    Files.delete(reportsDir.resolve(StdReportContext.ZIP_FILE_NAME))
   }
 }
 
-class StdReporter(workspace: AbsolutePath, pathToReports: RelativePath)
-    extends Reporter {
+class StdReporter(workspace: Path, pathToReports: Path) extends Reporter {
   private lazy val reportsDir =
     workspace.resolve(pathToReports).createDirectories()
 
@@ -70,7 +68,7 @@ class StdReporter(workspace: AbsolutePath, pathToReports: RelativePath)
   override def createReport(
       name: String,
       text: String
-  ): Option[AbsolutePath] = {
+  ): Option[Path] = {
     val path = reportsDir.resolve(s"r_${name}_${System.currentTimeMillis()}")
     path.writeText(sanitize(text))
     Some(path)
@@ -80,7 +78,7 @@ class StdReporter(workspace: AbsolutePath, pathToReports: RelativePath)
       name: String,
       text: String,
       e: Throwable
-  ): Option[AbsolutePath] =
+  ): Option[Path] =
     createReport(
       name,
       s"""|$text
@@ -112,7 +110,7 @@ class StdReporter(workspace: AbsolutePath, pathToReports: RelativePath)
 
   override def getReports(): List[Report] = {
     val reportsDir = workspace.resolve(pathToReports)
-    if (reportsDir.exists && reportsDir.isDirectory) {
+    if (reportsDir.exists && Files.isDirectory(reportsDir)) {
       reportsDir.toFile.listFiles().toList.map(Report.fromFile(_)).collect {
         case Some(l) => l
       }
@@ -130,9 +128,8 @@ object StdReportContext {
   val HOME_STR = "<HOME>"
   val ZIP_FILE_NAME = "reports.zip"
 
-  def reportsDir: RelativePath =
-    RelativePath(".metals").resolve(".reports")
-  def apply(path: Path) = new StdReportContext(AbsolutePath(path))
+  def reportsDir: Path = Paths.get(".metals").resolve(".reports")
+  def apply(path: Path) = new StdReportContext(path)
 }
 
 case class Report(file: File, timestamp: Long) {
@@ -152,14 +149,14 @@ object Report {
 
 object EmptyReporter extends Reporter {
 
-  override def createReport(name: String, text: String): Option[AbsolutePath] =
+  override def createReport(name: String, text: String): Option[Path] =
     None
 
   override def createReport(
       name: String,
       text: String,
       e: Throwable
-  ): Option[AbsolutePath] = None
+  ): Option[Path] = None
 
   override def cleanUpOldReports(maxReportsNumber: Int): List[Report] = List()
 

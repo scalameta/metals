@@ -59,13 +59,14 @@ trait SbtLibCompletions {
   }
 
   case class SbtLibCompletion(
+      coursierComplete: CoursierComplete,
       pos: Position,
       dependency: String
   ) extends CompletionPosition {
     override def contribute: List[TextEditMember] = {
       val cursorLen = if (dependency.contains(CURSOR)) CURSOR.length() else 0
       val completions =
-        CoursierComplete.complete(
+        coursierComplete.complete(
           dependency.replace(CURSOR, ""),
           includeScala = false
         )

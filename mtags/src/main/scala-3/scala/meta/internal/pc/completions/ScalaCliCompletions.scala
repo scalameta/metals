@@ -5,7 +5,12 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.util.SourcePosition
-class ScalaCliCompletions(pos: SourcePosition, text: String):
+
+class ScalaCliCompletions(
+    coursierComplete: CoursierComplete,
+    pos: SourcePosition,
+    text: String,
+):
   def unapply(path: List[Tree]) =
     def scalaCliDep = CoursierComplete.isScalaCliDep(
       pos.lineContent.take(pos.column).stripPrefix("/*<script>*/")
@@ -18,7 +23,7 @@ class ScalaCliCompletions(pos: SourcePosition, text: String):
       case head :: next => None
 
   def contribute(dependency: String) =
-    val completions = CoursierComplete.complete(dependency)
+    val completions = coursierComplete.complete(dependency)
     val (editStart, editEnd) = CoursierComplete.inferEditRange(pos.point, text)
     val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
     completions

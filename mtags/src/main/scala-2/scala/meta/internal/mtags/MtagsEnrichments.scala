@@ -24,7 +24,7 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 
 object MtagsEnrichments extends MtagsEnrichments
-trait MtagsEnrichments extends CommonMtagsEnrichments {
+trait MtagsEnrichments extends ScalametaCommonEnrichments {
 
   implicit class XtensionIteratorCollection[T](it: Iterator[T]) {
     def headOption: Option[T] = {

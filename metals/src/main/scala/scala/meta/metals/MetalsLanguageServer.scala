@@ -167,7 +167,7 @@ class MetalsLanguageServer(
           serverState.set(ServerState.Initialized(service))
           metalsService.underlying = service
 
-          new StdReportContext(workspace).cleanUpOldReports()
+          new StdReportContext(workspace.toNIO).cleanUpOldReports()
 
           service.initialize()
       }

@@ -1,8 +1,6 @@
 package scala.meta.internal.metals
 
-import java.lang.StringBuilder
-
-import scala.meta.io.AbsolutePath
+import java.nio.file.Path
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -69,8 +67,8 @@ final class HtmlBuilder() {
       case _ => "#009688"
     }
 
-  def path(p: AbsolutePath): HtmlBuilder = {
-    raw("</br>").text(p.toString())
+  def path(p: Path): HtmlBuilder = {
+    raw("</br>").text(p.toAbsolutePath.toString())
   }
 
   def call(fn: HtmlBuilder => Unit): HtmlBuilder = {

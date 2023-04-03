@@ -9,6 +9,7 @@ trait AmmoniteIvyCompletions {
   this: MetalsGlobal =>
 
   case class AmmoniteIvyCompletion(
+      coursierComplete: CoursierComplete,
       select: Tree,
       selector: List[ImportSelector],
       pos: Position,
@@ -40,7 +41,7 @@ trait AmmoniteIvyCompletions {
               val (start, _) = CoursierComplete.inferEditRange(pos.point, text)
               (start, imp)
             }
-          val completions = CoursierComplete.complete(completeInput)
+          val completions = coursierComplete.complete(completeInput)
           val ivyEditRange = pos.withStart(rangeStart).withEnd(pos.point).toLsp
           completions.zipWithIndex.map { case (c, index) =>
             new TextEditMember(

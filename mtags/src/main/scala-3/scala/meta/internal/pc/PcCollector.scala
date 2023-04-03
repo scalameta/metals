@@ -1,19 +1,14 @@
 package scala.meta.internal.pc
 
-import java.net.URI
 import java.nio.file.Paths
 
-import scala.annotation.nowarn
-import scala.annotation.tailrec
 import scala.meta as m
 
-import scala.meta.Import.apply
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.VirtualFileParams
 
-import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.Positioned
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
@@ -485,7 +480,7 @@ abstract class PcCollector[T](
   // NOTE: Connected to https://github.com/lampepfl/dotty/issues/16771
   // `sel.nameSpan` is calculated incorrectly in (1 + 2).toString
   // See test DocumentHighlightSuite.select-parentheses
-  private def selectNameSpan(sel: Select)(using Context): Span =
+  private def selectNameSpan(sel: Select): Span =
     val span = sel.span
     if span.exists then
       val point = span.point
