@@ -676,6 +676,8 @@ class WorkspaceLspService(
         getServiceFor(unresolvedParams.path)
           .discoverMainClasses(unresolvedParams)
           .asJavaObject
+      case ServerCommands.ResetWorkspace() =>
+        resetWorkspace().asJavaObject
       case ServerCommands.RunScalafix(params) =>
         val uri = params.getTextDocument().getUri()
         getServiceFor(uri).runScalafix(uri).asJavaObject

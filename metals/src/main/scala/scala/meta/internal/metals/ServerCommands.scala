@@ -48,6 +48,13 @@ object ServerCommands {
     """Unconditionally stop the current running Bloop server and start a new one using Bloop launcher""",
   )
 
+  val ResetWorkspace = new Command(
+    "reset-workspace",
+    "Clean and restart Bloop server",
+    """Remove all .bloop directories and restart Bloop server. 
+      |This will ensure that Bloop will have a fully reset state.""".stripMargin,
+  )
+
   val ScanWorkspaceSources = new Command(
     "sources-scan",
     "Scan sources",
@@ -749,6 +756,7 @@ object ServerCommands {
       OpenIssue,
       OpenFeatureRequest,
       ZipReports,
+      ResetWorkspace,
     )
 
   val allIds: Set[String] = all.map(_.id).toSet

@@ -99,6 +99,8 @@ class MetalsTreeViewProvider(
               TreeViewNode
                 .fromCommand(ServerCommands.RestartBuildServer, "debug-stop"),
               TreeViewNode
+                .fromCommand(ServerCommands.ResetWorkspace, "clean-all"),
+              TreeViewNode
                 .fromCommand(
                   ServerCommands.ResetNotifications,
                   "notifications-clear",
