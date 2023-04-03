@@ -121,29 +121,46 @@ abstract class BasePCSuite extends BaseSuite {
       index: GlobalSymbolIndex,
       scalaVersion: String,
   ): Unit = {
+    val libDependency =
+      Dependency.of(
+        "org.scala-lang",
+        "scala-library",
+        // NOTE(gabro): we should ideally just use BuildoInfoVersions.scalaVersion
+        // but using the 2.11 stdlib would cause a lot tests to break for little benefit.
+        // Additionally, when using Scala 3 the 2.13 Scala library is used.
+        scalaVersion match {
+          case v if v.startsWith("2.13") => v
+          case v if isScala3Version(v) => BuildInfoVersions.scala213
+          case v if v.startsWith("2.12") => v
+          case _ => BuildInfoVersions.scala212
+        },
+      )
+    val deps = if (isScala3Version(scalaVersion)) {
+      Seq(
+        libDependency,
+        Dependency.of(
+          "org.scala-lang",
+          "scala3-library_3",
+          scalaVersion,
+        ),
+      )
+    } else {
+      Seq(libDependency)
+    }
     val sources = Fetch
       .create()
       .withClassifiers(Set("sources").asJava)
-      .withDependencies(
-        Dependency.of(
-          "org.scala-lang",
-          "scala-library",
-          // NOTE(gabro): we should ideally just use BuildoInfoVersions.scalaVersion
-          // but using the 2.11 stdlib would cause a lot tests to break for little benefit.
-          // Additionally, when using Scala 3 the 2.13 Scala library is used.
-          scalaVersion match {
-            case v if v.startsWith("2.13") => v
-            case v if isScala3Version(v) => BuildInfoVersions.scala213
-            case v if v.startsWith("2.12") => v
-            case _ => BuildInfoVersions.scala212
-          },
-        )
-      )
+      .withDependencies(deps: _*)
       .withRepositories(allRepos: _*)
       .fetch()
       .asScala
     sources.foreach { jar =>
-      index.addSourceJar(AbsolutePath(jar), dialects.Scala213)
+      val dialect = if (isScala3Version(scalaVersion)) {
+        dialects.Scala3
+      } else {
+        dialects.Scala213
+      }
+      index.addSourceJar(AbsolutePath(jar), dialect)
     }
   }
 

@@ -243,6 +243,33 @@ object MetalsInteractive:
             target.sourcePos.contains(pos) =>
         List((target.symbol, target.typeOpt))
 
+      /* In some cases type might be represented by TypeTree, however it's possible
+       * that the type tree will not be marked properly as synthetic even if it doesn't
+       * exist in the code.
+       *
+       * For example for `Li@@st(1)` we will get the type tree representing [Int]
+       * despite it not being in the code.
+       *
+       * To work around it we check if the current and parent spans match, if they match
+       * this most likely means that the type tree is synthetic, since it has efectively
+       * span of 0.
+       */
+      case (tpt: TypeTree) :: parent :: _
+          if tpt.span != parent.span && !tpt.symbol.is(Synthetic) =>
+        List((tpt.symbol, tpt.tpe))
+
+      /* TypeTest class https://dotty.epfl.ch/docs/reference/other-new-features/type-test.html
+       * compiler automatically adds unapply if possible, we need to find the type symbol
+       */
+      case (head @ CaseDef(pat, _, _)) :: _
+          if defn.TypeTestClass == pat.symbol.owner =>
+        pat match
+          case UnApply(fun, _, pats) =>
+            val tpeSym = pats.head.typeOpt.typeSymbol
+            List((tpeSym, tpeSym.info))
+          case _ =>
+            Nil
+
       case path @ head :: tail =>
         if head.symbol.is(Synthetic) then
           enclosingSymbolsWithExpressionType(
