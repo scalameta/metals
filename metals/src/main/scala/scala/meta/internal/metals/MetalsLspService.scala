@@ -167,7 +167,7 @@ class MetalsLspService(
 
   val tables: Tables = register(new Tables(folder, time))
 
-  implicit val reports: StdReportContext = new StdReportContext(folder)
+  implicit val reports: StdReportContext = new StdReportContext(folder.toNIO)
 
   val folderReportsZippper: FolderReportsZippper =
     FolderReportsZippper(doctor.getTargetsInfoForReports, reports)

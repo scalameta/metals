@@ -258,8 +258,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       |  test($f@@)
       |}
       |""".stripMargin,
-    """|$$foo = 
-       |""".stripMargin,
+    """|$$foo = """.stripMargin,
     topLines = Option(1),
   )
 
@@ -368,9 +367,9 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
-        |  val hello = "" 
+        |  val hello = ""
         |  val relevant = 123
-        |  ___ 
+        |  ___
         |}
         |""".stripMargin,
     "foo(rele@@)",
@@ -382,8 +381,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
-        |  val hello = "" 
-        |  ___ 
+        |  val hello = ""
+        |  ___
         |}
         |""".stripMargin,
     "foo(auto@@)",
@@ -401,7 +400,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  def foo(animal: Animal, furniture: Furniture) : Int = 42
         |  val dog = new Dog()
         |  val chair = new Chair()
-        |  ___ 
+        |  ___
         |}
         |""".stripMargin,
     "foo(auto@@)",
@@ -414,7 +413,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  def foo(argument : Int, other : String, last : String = "") : Int = argument
         |  val number = 5
         |  val argument = 123
-        |  val hello = "" 
+        |  val hello = ""
         |  ___
         |}
         |""".stripMargin,

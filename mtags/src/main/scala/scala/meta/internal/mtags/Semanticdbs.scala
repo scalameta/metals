@@ -7,7 +7,7 @@ import scala.meta.AbsolutePath
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.mtags.SymbolOccurrenceOrdering._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation

@@ -32,12 +32,12 @@ class ExtractValueLspSuite
     "for-comprehension",
     """|object Main {
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main() = {
        |    val opt = Option(1)
        |    for {
        |       i <- opt
-       |       res = method2(i + 23 + <<123>>)      
+       |       res = method2(i + 23 + <<123>>)
        |    } yield res
        |  }
        |}
@@ -46,13 +46,13 @@ class ExtractValueLspSuite
         |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main() = {
        |    val opt = Option(1)
        |    for {
        |       i <- opt
        |       newValue = i + 23 + 123
-       |       res = method2(newValue)      
+       |       res = method2(newValue)
        |    } yield res
        |  }
        |}
@@ -63,11 +63,11 @@ class ExtractValueLspSuite
     "for-comprehension-head",
     """|object Main {
        |  def method2(i: Int): Option[String]  = ???
-       |  
+       |
        |  def main() = {
        |    val i = 0
        |    for {
-       |       res <- method2(i + 23 + <<123>>)      
+       |       res <- method2(i + 23 + <<123>>)
        |    } yield res
        |  }
        |}
@@ -76,12 +76,12 @@ class ExtractValueLspSuite
         |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int): Option[String]  = ???
-       |  
+       |
        |  def main() = {
        |    val i = 0
        |    val newValue = i + 23 + 123
        |    for {
-       |       res <- method2(newValue)      
+       |       res <- method2(newValue)
        |    } yield res
        |  }
        |}
@@ -114,7 +114,7 @@ class ExtractValueLspSuite
     "single-def-split",
     """|object Main {
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) =
        |    method2(i + 23 + <<123>>)
        |}
@@ -123,7 +123,7 @@ class ExtractValueLspSuite
         |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) = {
        |    val newValue = i + 23 + 123
        |    method2(newValue)

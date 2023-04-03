@@ -1,13 +1,13 @@
 package scala.meta.internal.metals
 
-import scala.meta.io.AbsolutePath
+import java.nio.file.Path
 
 object LoggerReporter extends Reporter {
 
   override def createReport(
       name: String,
       text: String,
-  ): Option[AbsolutePath] = {
+  ): Option[Path] = {
     scribe.info(s"Report $name: $text")
     None
   }
@@ -16,7 +16,7 @@ object LoggerReporter extends Reporter {
       name: String,
       text: String,
       e: Throwable,
-  ): Option[AbsolutePath] = {
+  ): Option[Path] = {
     scribe.info(s"""|Report $name: $text
                     |Error: ${e.getMessage()}""".stripMargin)
     None

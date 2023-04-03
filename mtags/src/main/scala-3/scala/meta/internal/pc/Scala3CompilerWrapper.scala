@@ -1,10 +1,5 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.pc.CompilerWrapper
-import scala.meta.internal.pc.ReporterAccess
-
-import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
 
 class Scala3CompilerWrapper(driver: MetalsDriver)

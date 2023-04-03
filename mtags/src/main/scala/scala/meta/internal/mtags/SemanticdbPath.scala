@@ -2,7 +2,7 @@ package scala.meta.internal.mtags
 
 import java.nio.file.Path
 
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.io.AbsolutePath
 
 /**

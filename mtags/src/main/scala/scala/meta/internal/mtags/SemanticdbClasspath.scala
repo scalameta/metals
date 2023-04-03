@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets
 import scala.meta.AbsolutePath
 import scala.meta.Classpath
 import scala.meta.internal.mtags
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.mtags.Semanticdbs.FoundSemanticDbPath
 import scala.meta.io.RelativePath
 

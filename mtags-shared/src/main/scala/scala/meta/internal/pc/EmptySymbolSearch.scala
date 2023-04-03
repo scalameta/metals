@@ -28,11 +28,11 @@ object EmptySymbolSearch extends SymbolSearch {
     SymbolSearch.Result.COMPLETE
   }
 
-  def definition(symbol: String, source: URI): ju.List[Location] = {
+  override def definition(symbol: String, source: URI): ju.List[Location] = {
     ju.Collections.emptyList()
   }
 
-  def definitionSourceToplevels(
+  override def definitionSourceToplevels(
       symbol: String,
       sourceUri: URI
   ): ju.List[String] = {

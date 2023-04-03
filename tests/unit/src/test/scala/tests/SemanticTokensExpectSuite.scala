@@ -5,6 +5,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticTokensProvider
 import scala.meta.internal.pc.ScalaPresentationCompiler
+
 class SemanticTokensExpectSuite extends DirectoryExpectSuite("semanticTokens") {
 
   override lazy val input: InputProperties = InputProperties.scala2()

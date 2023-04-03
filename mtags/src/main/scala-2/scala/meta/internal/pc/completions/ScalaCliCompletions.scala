@@ -28,6 +28,7 @@ trait ScalaCliCompletions {
   }
 
   case class ScalaCliCompletion(
+      coursierComplete: CoursierComplete,
       pos: Position,
       text: String,
       dependency: String
@@ -35,7 +36,7 @@ trait ScalaCliCompletions {
 
     override def contribute: List[Member] = {
       val completions =
-        CoursierComplete.complete(dependency)
+        coursierComplete.complete(dependency)
       val (editStart, editEnd) =
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp

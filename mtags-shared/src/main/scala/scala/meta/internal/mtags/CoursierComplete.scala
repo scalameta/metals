@@ -1,6 +1,5 @@
 package scala.meta.internal.mtags
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -8,13 +7,12 @@ import scala.concurrent.duration._
 import scala.util.Try
 import scala.util.matching.Regex
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.semver.SemVer.Version
-import scala.meta.internal.tokenizers.Chars
 
 import coursierapi.Complete
 
-object CoursierComplete {
-  lazy val scalaVersion = BuildInfo.scalaCompilerVersion
+class CoursierComplete(scalaVersion: String) {
   lazy val api: Complete = coursierapi.Complete
     .create()
     .withScalaVersion(scalaVersion)
@@ -57,10 +55,14 @@ object CoursierComplete {
       }.getOrElse(allCompletions.sortWith(_ >= _))
     else allCompletions
   }
+}
+
+object CoursierComplete {
 
   def inferEditRange(point: Int, text: String): (Int, Int) = {
     def isArtifactPart(c: Char): Boolean =
-      Chars.isIdentifierPart(c) || c == '.' || c == '-'
+      (c == '$') || c.isUnicodeIdentifierPart || c == '.' || c == '-'
+
     val editStart = {
       var i = point - 1
       while (i >= 0 && isArtifactPart(text.charAt(i))) { i -= 1 }

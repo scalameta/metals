@@ -8,7 +8,6 @@ import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.Trees
-import scala.meta.io.AbsolutePath
 
 object TreeUtils {
   def getTrees(scalaVersion: String): (Buffers, Trees) = getTrees(
@@ -22,7 +21,7 @@ object TreeUtils {
         () => UserConfiguration(fallbackScalaVersion = scalaVersion),
         buildTargets,
       )
-    implicit val reports = new StdReportContext(AbsolutePath(Paths.get(".")))
+    implicit val reports = new StdReportContext(Paths.get(".").toAbsolutePath)
     val trees =
       new Trees(buffers, selector)
     (buffers, trees)

@@ -176,7 +176,9 @@ class MetalsLanguageServer(
           serverState.set(ServerState.Initialized(service))
           metalsService.underlying = service
 
-          folderUris.foreach(new StdReportContext(_).cleanUpOldReports())
+          folderUris.foreach(folder =>
+            new StdReportContext(folder.toNIO).cleanUpOldReports()
+          )
 
           service.initialize()
       }

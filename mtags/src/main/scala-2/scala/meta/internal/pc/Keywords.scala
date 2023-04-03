@@ -4,6 +4,7 @@ import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.KeywordCompletionsUtils
 
 import org.eclipse.{lsp4j => l}
 
@@ -72,7 +73,10 @@ trait Keywords { this: MetalsGlobal =>
                 isSelect = isSelect,
                 isImport = isImport,
                 allowToplevel = isAmmoniteScript,
-                leadingReverseTokens = reverseTokens
+                canBeExtended =
+                  KeywordCompletionsUtils.canBeExtended(reverseTokens),
+                canDerive = KeywordCompletionsUtils.canDerive(reverseTokens),
+                hasExtend = KeywordCompletionsUtils.hasExtend(reverseTokens)
               ) =>
             mkTextEditMember(kw, editRange)
         }

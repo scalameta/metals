@@ -3,9 +3,6 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.{util as ju}
 
-import scala.collection.concurrent.TrieMap
-
-import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.Diagnostic
 import dotty.tools.dotc.util.SourceFile

@@ -29,7 +29,7 @@ import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.{lsp4j as l}
 
-object MtagsEnrichments extends CommonMtagsEnrichments:
+object MtagsEnrichments extends ScalametaCommonEnrichments:
 
   extension (driver: InteractiveDriver)
 
@@ -170,6 +170,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
   extension (s: String)
     def backticked: String =
       KeywordWrapper.Scala3.backtickWrap(s)
+
     def stripBackticks: String = s.stripPrefix("`").stripSuffix("`")
 
   extension (search: SymbolSearch)

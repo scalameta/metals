@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import java.lang.StringBuilder
-
 import scala.collection.mutable.ArrayBuffer
 
 object TrigramSubstrings {

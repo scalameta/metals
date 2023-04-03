@@ -1,18 +1,15 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports
-import scala.meta.internal.pc.AutoImports.SymbolIdent
 import scala.meta.internal.pc.InlineValueProvider.Errors
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.PresentationCompilerConfig
 
+import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.Symbols.NoSymbol
+import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
@@ -38,6 +35,7 @@ final class PcInlineValueProviderImpl(
     Occurence(tree, parent, adjustedPos)
 
   override def defAndRefs(): Either[String, (Definition, List[Reference])] =
+    val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
     val allOccurences = result()
     for
       definition <- allOccurences
@@ -55,12 +53,46 @@ final class PcInlineValueProviderImpl(
         defPos.toLsp,
         adjustRhs(definition.tree.rhs.sourcePos),
         RangeOffset(defPos.start, defPos.end),
+        definitionRequiresBrackets(definition.tree.rhs)(using newctx),
         deleteDefinition,
       )
 
       (defEdit, refsEdits)
     end for
   end defAndRefs
+
+  private def definitionRequiresBrackets(tree: Tree)(using Context): Boolean =
+    NavigateAST
+      .untypedPath(tree.span)
+      .headOption
+      .map {
+        case _: untpd.If => true
+        case _: untpd.Function => true
+        case _: untpd.Match => true
+        case _: untpd.ForYield => true
+        case _: untpd.InfixOp => true
+        case _: untpd.ParsedTry => true
+        case _: untpd.Try => true
+        case _: untpd.Block => true
+        case _: untpd.Typed => true
+        case _ => false
+      }
+      .getOrElse(false)
+
+  end definitionRequiresBrackets
+
+  private def referenceRequiresBrackets(tree: Tree)(using Context): Boolean =
+    NavigateAST.untypedPath(tree.span) match
+      case (_: untpd.InfixOp) :: _ => true
+      case _ =>
+        tree match
+          case _: Apply => StdNames.nme.raw.isUnary(tree.symbol.name)
+          case _: Select => true
+          case _: Ident => true
+          case _ => false
+
+  end referenceRequiresBrackets
+  // format: on
 
   private def adjustRhs(pos: SourcePosition) =
     def extend(point: Int, acceptedChar: Char, step: Int): Int =
@@ -125,7 +157,6 @@ final class PcInlineValueProviderImpl(
     def buildRef(occurence: Occurence): Either[String, Reference] =
       val path =
         Interactive.pathTo(unit.tpdTree, occurence.pos.span)(using newctx)
-      val parentSymbol = path.find(_.isDef).map(_.symbol)
       val indexedContext = IndexedContext(
         MetalsInteractive.contextOfPath(path)(using newctx)
       )
@@ -144,6 +175,9 @@ final class PcInlineValueProviderImpl(
             occurence.parent.map(p =>
               RangeOffset(p.sourcePos.start, p.sourcePos.end)
             ),
+            occurence.parent
+              .map(p => referenceRequiresBrackets(p)(using newctx))
+              .getOrElse(false),
           )
         )
       else Left(Errors.variablesAreShadowed(conflictingSymbols.mkString(", ")))
