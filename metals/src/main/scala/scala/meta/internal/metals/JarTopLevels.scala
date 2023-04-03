@@ -134,4 +134,11 @@ final class JarTopLevels(conn: () => Connection) {
         .toMillis + ":" + attributes.size()
     )
   }
+
+  def clearAll(): Unit = {
+    val statement1 = conn().prepareStatement("truncate table toplevel_symbol")
+    statement1.execute()
+    val statement2 = conn().prepareStatement("delete from indexed_jar")
+    statement2.execute()
+  }
 }

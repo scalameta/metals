@@ -158,6 +158,14 @@ final class Tables(
     }
   }
 
+  def cleanAll(): Unit = {
+    jarSymbols.clearAll()
+    digests.clearAll()
+    dependencySources.clearAll()
+    worksheetSources.clearAll()
+    fingerprints.clearAll()
+  }
+
 }
 
 object Tables {

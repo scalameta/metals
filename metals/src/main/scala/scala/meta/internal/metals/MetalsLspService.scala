@@ -2515,4 +2515,45 @@ class MetalsLspService(
     }
   }
 
+  private def resetWorkspace(): Future[Unit] = {
+    def clearBloopDir(): Unit = {
+      val bloopDir = workspace.resolve(".bloop")
+      val directories = bloopDir.list.filter(_.isDirectory).toList
+
+      try {
+        directories.foreach(_.deleteRecursively())
+        val remainingDirs =
+          bloopDir.list.filter(f => f.exists && f.isDirectory).toList
+        if (remainingDirs.isEmpty) {
+          scribe.info("Deleted all the directories inside .bloop directory.")
+          tables.cleanAll()
+        } else {
+          val str = remainingDirs.mkString(", ")
+          scribe.error(
+            s"Couldn't delete all the directories in .bloop directory, remaining: $str"
+          )
+        }
+      } catch {
+        case e: Throwable =>
+          languageClient.showMessage(Messages.ResetWorkspaceFailed)
+          scribe.error(
+            "Couldn't delete all the directories inside .bloop: " +
+              e.getMessage()
+          )
+      }
+    }
+
+    if (buildTools.isBloop) {
+      bspSession.foreach { session =>
+        if (session.main.isBloop) bloopServers.shutdownServer()
+      }
+      disconnectOldBuildServer()
+        .map(_ => clearBloopDir())
+        .flatMap { _ => autoConnectToBuildServer().map(_ => ()) }
+    } else {
+      scribe.warn("Couldn't reset workspace, no Bloop connection found.")
+      Future.successful(())
+    }
+  }
+
 }

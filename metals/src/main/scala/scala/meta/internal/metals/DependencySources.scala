@@ -28,4 +28,9 @@ final class DependencySources(conn: () => Connection) {
       new BuildTargetIdentifier(rs.getString(1))
     }
   }.headOption
+
+  def clearAll(): Unit = {
+    val statement = conn().prepareStatement("truncate table dependency_source")
+    statement.execute()
+  }
 }

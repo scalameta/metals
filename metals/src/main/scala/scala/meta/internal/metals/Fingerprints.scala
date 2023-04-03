@@ -19,7 +19,7 @@ import scala.meta.io.AbsolutePath
  */
 final class Fingerprints(conn: () => Connection) {
 
-  private def clearAll(): Unit = {
+  def clearAll(): Unit = {
     val statement = conn().prepareStatement("truncate table fingerprints")
     statement.execute()
   }
