@@ -253,10 +253,7 @@ lazy val mtagsShared = project
       V.supportedScalaVersions ++ V.nightlyScala3Versions
     },
     crossVersion := CrossVersion.binary,
-    Compile / doc / javacOptions ++= List(
-      "-tag",
-      "implNote:a:Implementation Note:",
-    ),
+    Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
