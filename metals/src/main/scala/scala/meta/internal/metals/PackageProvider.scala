@@ -249,7 +249,7 @@ class PackageProvider(
       newPkgName: String,
   ): TextEdit = {
     val importees = mkImportees(refsNames.toList)
-    val importString = s"\nimport $newPkgName.$importees"
+    val importString = s"import $newPkgName.$importees\n"
 
     val optLastPkg = for {
       tree <- optTree
@@ -338,7 +338,7 @@ class PackageProvider(
             }
           val newImportPos = posNextToEndOf(importer.pos)
           val newImportEdit =
-            new TextEdit(newImportPos, s"import $newImportStr")
+            new TextEdit(newImportPos, s"import $newImportStr\n")
           newImportEdit :: oldImportEdits
         }
       }
