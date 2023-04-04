@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.MillifyScalaCliDependencyCodeAction._
@@ -22,7 +21,6 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folder: FolderIdentifier,
   )(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {

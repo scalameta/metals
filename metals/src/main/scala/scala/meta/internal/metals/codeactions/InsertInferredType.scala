@@ -8,7 +8,6 @@ import scala.meta.Enumerator
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
@@ -56,7 +55,6 @@ class InsertInferredType(
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
-      folder: FolderIdentifier,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = Future {
 
     def typeMismatch: Option[(String, l.Diagnostic)] = {
@@ -76,8 +74,7 @@ class InsertInferredType(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             range,
-          ),
-          folder,
+          )
         )
 
       CodeActionBuilder.build(
@@ -133,8 +130,7 @@ class InsertInferredType(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             range.getStart(),
-          ),
-          folder,
+          )
         )
 
       CodeActionBuilder.build(

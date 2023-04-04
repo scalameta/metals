@@ -11,7 +11,6 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
@@ -28,11 +27,7 @@ class ExtractValueCodeAction(
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorExtract
 
-  override def contribute(
-      params: CodeActionParams,
-      token: CancelToken,
-      folder: FolderIdentifier,
-  )(implicit
+  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath

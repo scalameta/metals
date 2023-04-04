@@ -9,7 +9,6 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -57,11 +56,7 @@ class ExtractMethodCodeAction(
     } yield ()
   }
 
-  override def contribute(
-      params: CodeActionParams,
-      token: CancelToken,
-      folder: FolderIdentifier,
-  )(implicit
+  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
@@ -112,8 +107,7 @@ class ExtractMethodCodeAction(
               params.getTextDocument(),
               exprRange,
               defnPos.pos.toLsp.getStart(),
-            ),
-            folder,
+            )
           )
           CodeActionBuilder.build(
             title = ExtractMethodCodeAction.title(scopeName),

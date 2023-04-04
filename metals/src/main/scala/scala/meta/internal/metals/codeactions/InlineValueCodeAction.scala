@@ -9,7 +9,6 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -33,12 +32,8 @@ class InlineValueCodeAction(
 
   override def kind: String = l.CodeActionKind.RefactorInline
 
-  override def contribute(
-      params: l.CodeActionParams,
-      token: CancelToken,
-      folder: FolderIdentifier,
-  )(implicit
-      ec: ExecutionContext
+  override def contribute(params: l.CodeActionParams, token: CancelToken)(
+      implicit ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val pathStr = params.getTextDocument.getUri
     val path = pathStr.toAbsolutePath
@@ -56,8 +51,7 @@ class InlineValueCodeAction(
             new l.TextDocumentPositionParams(
               params.getTextDocument(),
               params.getRange().getStart(),
-            ),
-            folder,
+            )
           )
         CodeActionBuilder.build(
           title = InlineValueCodeAction.title(termName.value),

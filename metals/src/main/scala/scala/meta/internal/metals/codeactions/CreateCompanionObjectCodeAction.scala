@@ -9,7 +9,6 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -34,11 +33,7 @@ class CreateCompanionObjectCodeAction(
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
-  override def contribute(
-      params: CodeActionParams,
-      token: CancelToken,
-      folder: FolderIdentifier,
-  )(implicit
+  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val uri = params.getTextDocument().getUri()

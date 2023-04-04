@@ -15,7 +15,6 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -43,12 +42,8 @@ class ExtractRenameMember(
   override def command: Option[ActionCommand] =
     Some(ServerCommands.ExtractMemberDefinition)
 
-  override def contribute(
-      params: l.CodeActionParams,
-      token: CancelToken,
-      folder: FolderIdentifier,
-  )(implicit
-      ec: ExecutionContext
+  override def contribute(params: l.CodeActionParams, token: CancelToken)(
+      implicit ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
@@ -105,7 +100,7 @@ class ExtractRenameMember(
             getMemberType(head.member).map { memberType =>
               val title =
                 ExtractRenameMember.title(memberType, head.member.name.value)
-              extractClassAction(uri, head.member, title, folder)
+              extractClassAction(uri, head.member, title)
             }.toList
 
           case head :: Nil
@@ -124,7 +119,7 @@ class ExtractRenameMember(
                 memberType,
                 defn.member.name.value,
               )
-            } yield extractClassAction(uri, defn.member, title, folder)
+            } yield extractClassAction(uri, defn.member, title)
 
             codeActionOpt.toList
         }
@@ -333,7 +328,6 @@ class ExtractRenameMember(
       uri: String,
       member: Member,
       title: String,
-      folder: FolderIdentifier,
   ): l.CodeAction = {
     val range = member.name.pos.toLsp
 
@@ -342,8 +336,7 @@ class ExtractRenameMember(
         new l.TextDocumentPositionParams(
           new l.TextDocumentIdentifier(uri),
           range.getStart(),
-        ),
-        folder,
+        )
       )
 
     CodeActionBuilder.build(

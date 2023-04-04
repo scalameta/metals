@@ -5,7 +5,6 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
@@ -31,11 +30,7 @@ sealed abstract class OrganizeImports(
       file: AbsolutePath,
       params: CodeActionParams,
   ): Boolean
-  override def contribute(
-      params: CodeActionParams,
-      token: CancelToken,
-      folder: FolderIdentifier,
-  )(implicit
+  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
     val uri = params.getTextDocument.getUri

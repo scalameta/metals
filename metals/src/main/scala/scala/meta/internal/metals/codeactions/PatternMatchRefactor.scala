@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Term
-import scala.meta.internal.metals.FolderIdentifier
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
@@ -82,12 +81,8 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
     case _ => Seq.empty
   }
 
-  override def contribute(
-      params: l.CodeActionParams,
-      token: CancelToken,
-      folder: FolderIdentifier,
-  )(implicit
-      ec: ExecutionContext
+  override def contribute(params: l.CodeActionParams, token: CancelToken)(
+      implicit ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
 
     val path = params.getTextDocument().getUri().toAbsolutePath

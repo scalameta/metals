@@ -684,7 +684,6 @@ class MetalsLspService(
     trees,
     diagnostics,
     languageClient,
-    folder,
   )
 
   private val doctor: Doctor = new Doctor(
@@ -841,10 +840,6 @@ class MetalsLspService(
   }
 
   def allActionCommandsIds = codeActionProvider.allActionCommandsIds
-
-  def isCorrectFolderForCodeActionCommand(
-      params: l.ExecuteCommandParams
-  ): Boolean = codeActionProvider.isCorrectFolder(params)
 
   def executeCodeActionCommand(
       params: l.ExecuteCommandParams,

@@ -917,19 +917,16 @@ class WorkspaceLspService(
               }) =>
             e.getCause().getMessage()
         }
-        val service = folderServices.find(
-          _.isCorrectFolderForCodeActionCommand(params)
-        ) match {
-          case Some(service) => service
-          case None => folderServices.head
-        }
         CancelTokens.future { token =>
-          service
-            .executeCodeActionCommand(params, token)
-            .recover(
-              getOptDisplayableMessage andThen (languageClient
-                .showMessage(lsp4j.MessageType.Info, _))
+          currentFolder
+            .map(
+              _.executeCodeActionCommand(params, token)
+                .recover(
+                  getOptDisplayableMessage andThen (languageClient
+                    .showMessage(lsp4j.MessageType.Info, _))
+                )
             )
+            .getOrElse(Future.successful(()))
             .withObjectValue
         }
       case cmd =>
