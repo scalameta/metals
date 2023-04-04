@@ -79,7 +79,7 @@ class BuildServerConnection private (
 
   def isMill: Boolean = name == MillBuildTool.name
 
-  def isScalaCLI: Boolean = name == ScalaCli.name
+  def isScalaCLI: Boolean = ScalaCli.names(name)
 
   def isAmmonite: Boolean = name == Ammonite.name
 
