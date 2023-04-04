@@ -61,7 +61,7 @@ class UnsupportedDebuggingLspSuite
            |""".stripMargin
       )
       _ <-
-        server.headFolderWorkspaceServer.compilations
+        server.server.compilations
           .compileFile(server.toPath("a/src/main/scala/Main.scala"))
     } yield {
       val clientCommands = client.clientCommands.asScala.map(_.getCommand).toSet

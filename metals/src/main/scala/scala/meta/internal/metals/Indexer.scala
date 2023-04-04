@@ -31,7 +31,7 @@ import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.tvp.MetalsTreeFolderViewProvider
+import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 
@@ -65,7 +65,7 @@ final case class Indexer(
     interactiveSemanticdbs: () => InteractiveSemanticdbs,
     buildClient: () => ForwardingMetalsBuildClient,
     semanticDBIndexer: () => SemanticdbIndexer,
-    treeView: () => MetalsTreeFolderViewProvider,
+    treeView: () => FolderTreeViewProvider,
     worksheetProvider: () => WorksheetProvider,
     symbolSearch: () => MetalsSymbolSearch,
     buildTools: () => BuildTools,

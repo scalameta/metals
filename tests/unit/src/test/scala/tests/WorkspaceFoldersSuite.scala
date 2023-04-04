@@ -31,7 +31,7 @@ class WorkspaceFoldersSuite
         ),
         expectError = false,
       )
-      _ = assert(server.server.folderServices.length == 2)
+      _ = assert(server.fullServer.folderServices.length == 2)
       _ = assertNoDiff(
         server.workspaceSymbol("MyObject"),
         s"""|a.MyObjectA

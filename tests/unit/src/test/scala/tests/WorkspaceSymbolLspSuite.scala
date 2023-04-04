@@ -84,7 +84,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       _ <- Future {
         request = Future
           .sequence(1.to(10).map { _ =>
-            server.server
+            server.fullServer
               .workspaceSymbol(new WorkspaceSymbolParams("PazQux.I"))
               .asScala
               .map(_.asScala.toList)

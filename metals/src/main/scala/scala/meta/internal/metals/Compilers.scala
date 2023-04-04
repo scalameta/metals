@@ -1017,20 +1017,18 @@ class Compilers(
   ): PresentationCompiler = {
     val pc: PresentationCompiler =
       mtags match {
-        case MtagsBinaries.BuildIn =>
-          new ScalaPresentationCompiler()
+        case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
         case artifacts: MtagsBinaries.Artifacts =>
           embedded.presentationCompiler(artifacts, classpath)
 
       }
 
     val filteredOptions = plugins.filterSupportedOptions(options)
-    configure(pc, search)
-      .newInstance(
-        name,
-        classpath.asJava,
-        (log ++ filteredOptions).asJava,
-      )
+    configure(pc, search).newInstance(
+      name,
+      classpath.asJava,
+      (log ++ filteredOptions).asJava,
+    )
   }
 
   private def toDebugCompletionType(

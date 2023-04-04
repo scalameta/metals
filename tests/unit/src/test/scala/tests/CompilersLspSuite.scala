@@ -40,7 +40,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
       )
       _ = assertEquals(
         2,
-        server.headFolderWorkspaceServer.loadedPresentationCompilerCount(),
+        server.server.loadedPresentationCompilerCount(),
       )
       _ <-
         server.didSave("b/src/main/scala/b/B.scala")(_ => "package b; object B")
@@ -49,7 +49,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
       _ = assertNoDiagnostics()
       _ = assertEquals(
         0,
-        server.headFolderWorkspaceServer.loadedPresentationCompilerCount(),
+        server.server.loadedPresentationCompilerCount(),
       )
     } yield ()
   }

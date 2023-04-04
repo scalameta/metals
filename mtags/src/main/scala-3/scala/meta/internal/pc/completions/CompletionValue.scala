@@ -24,10 +24,9 @@ sealed trait CompletionValue:
   def completionItemKind(using Context): CompletionItemKind
   def description(printer: MetalsPrinter)(using Context): String = ""
   def insertMode: Option[InsertTextMode] = None
-  def completionData(
-      buildTargetIdentifier: String,
-      folderId: String,
-  )(using Context): Option[CompletionItemData] = None
+  def completionData(buildTargetIdentifier: String)(using
+      Context
+  ): Option[CompletionItemData] = None
   def command: Option[String] = None
 
   /**
@@ -46,14 +45,12 @@ object CompletionValue:
     def completionItemDataKind = CompletionItemData.None
 
     override def completionData(
-        buildTargetIdentifier: String,
-        folderId: String,
+        buildTargetIdentifier: String
     )(using Context): Option[CompletionItemData] =
       Some(
         CompletionItemData(
           SemanticdbSymbols.symbolName(symbol),
           buildTargetIdentifier,
-          folderId,
           kind = completionItemDataKind,
         )
       )

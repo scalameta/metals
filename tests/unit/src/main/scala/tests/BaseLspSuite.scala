@@ -104,7 +104,7 @@ abstract class BaseLspSuite(
       expectedName: String
   )(implicit loc: Location): Unit = {
     val obtained =
-      server.headFolderWorkspaceServer.bspSession.get.mainConnection.name
+      server.server.bspSession.get.mainConnection.name
     assertNoDiff(obtained, expectedName)
   }
 

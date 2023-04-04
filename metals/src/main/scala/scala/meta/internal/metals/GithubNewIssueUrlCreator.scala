@@ -73,13 +73,12 @@ class GithubNewIssueUrlCreator(
       foldersInfo: List[GitHubIssueFolderInfo]
   ): String = {
     val buildTools =
-      foldersInfo.map { info =>
-        info.tables.buildTool
-          .selectedBuildTool()
+      foldersInfo.map(_.selectedBuildTool()).zipWithIndex.collect {
+        case (Some(buildTool), ind) => (buildTool, ind)
       }
 
-    if (buildTools.find(_.isDefined).isDefined) {
-      val value = buildTools.zipWithIndex
+    if (buildTools.nonEmpty) {
+      val value = buildTools
         .map { case (buildTool, indx) =>
           s"$indx. $buildTool"
         }
@@ -116,7 +115,7 @@ class GithubNewIssueUrlCreator(
 }
 
 case class GitHubIssueFolderInfo(
-    tables: Tables,
+    selectedBuildTool: () => Option[String],
     buildTargets: BuildTargets,
     currentBuildServer: () => Option[BspSession],
     calculateNewBuildServer: () => BspResolvedResult,

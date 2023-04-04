@@ -171,7 +171,6 @@ class CompletionProvider(
         insertText,
       )
       val item = new CompletionItem(label)
-      folderUri.foreach(ws => item.setData(ws.toString))
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
       item.setFilterText(
@@ -184,7 +183,7 @@ class CompletionProvider(
       completion.insertMode.foreach(item.setInsertTextMode)
 
       completion
-        .completionData(buildTargetIdentifier, folderUri.toString())
+        .completionData(buildTargetIdentifier)
         .foreach(data => item.setData(data.toJson))
 
       item.setTags(completion.lspTags.asJava)

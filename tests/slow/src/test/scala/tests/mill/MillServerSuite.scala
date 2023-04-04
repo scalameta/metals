@@ -76,11 +76,11 @@ class MillServerSuite
         // below it won't wait until it reconnects to Mill like we want, so we set it back
         // and then it will be completed after the BSP config generation and the server
         // connects.
-        _ = server.headFolderWorkspaceServer.buildServerPromise = Promise()
+        _ = server.server.buildServerPromise = Promise()
         // At this point, we want to use mill-bsp server, so create the mill-bsp.json file.
         _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
         // We need to wait a bit just to ensure the connection is made
-        _ <- server.headFolderWorkspaceServer.buildServerPromise.future
+        _ <- server.server.buildServerPromise.future
       } yield {
         assert(millBspConfig.exists)
         server.assertBuildServerConnection()

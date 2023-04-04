@@ -19,7 +19,7 @@ class WindowStateDidChangeLspSuite
       _ = assertNoDiagnostics()
 
       _ = server.windowStateDidChange(focused = false)
-      _ = assert(server.headFolderWorkspaceServer.pauseables.isPaused.get())
+      _ = assert(server.server.pauseables.isPaused.get())
       didChange = server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("= 42", "=")
       )
@@ -28,7 +28,7 @@ class WindowStateDidChangeLspSuite
       _ = assert(!didChange.isCompleted)
 
       _ = server.windowStateDidChange(focused = true)
-      _ = assert(!server.headFolderWorkspaceServer.pauseables.isPaused.get())
+      _ = assert(!server.server.pauseables.isPaused.get())
       _ <- didChange
       _ = assertNoDiff(
         client.workspaceDiagnostics,

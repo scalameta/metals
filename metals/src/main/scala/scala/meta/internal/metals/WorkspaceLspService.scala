@@ -11,6 +11,7 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
+import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.DidFocusResult
@@ -20,6 +21,9 @@ import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.debug.BuildTargetNotFoundException
+import scala.meta.internal.metals.debug.BuildTargetUndefinedException
+import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.metals.logging.LanguageClientLogger
@@ -159,7 +163,6 @@ class WorkspaceLspService(
   val workspaceFolders: WorkspaceFolders =
     new WorkspaceFolders(folders, createService, this)
   def folderServices = workspaceFolders.getFolderServices
-  assert(folderServices.nonEmpty)
 
   val treeView: TreeViewProvider =
     if (clientConfig.isTreeViewProvider) {
@@ -197,22 +200,21 @@ class WorkspaceLspService(
     cancelable
   }
 
-  def getServiceFor(path: AbsolutePath): MetalsLspService = {
+  def getServiceForOpt(path: AbsolutePath): Option[MetalsLspService] =
     try {
-      val folder =
-        for {
-          workSpaceFolder <- folderServices
-            .filter(service => path.toNIO.startsWith(service.folder.toNIO))
-            .sortBy(_.folder.toNIO.getNameCount())
-            .lastOption
-        } yield workSpaceFolder
-      folder.getOrElse(folderServices.head) // fallback to the first one
+      for {
+        workSpaceFolder <- folderServices
+          .filter(service => path.toNIO.startsWith(service.folder.toNIO))
+          .sortBy(_.folder.toNIO.getNameCount())
+          .lastOption
+      } yield workSpaceFolder
     } catch {
-      case _: ProviderMismatchException =>
-        // fallback to the first one
-        folderServices.head
+      case _: ProviderMismatchException => None
     }
-  }
+
+  def getServiceFor(path: AbsolutePath): MetalsLspService =
+    if (folderServices.length == 1) folderServices.head
+    else getServiceForOpt(path).getOrElse(folderServices.head)
 
   def getServiceFor(uri: String): MetalsLspService = {
     val folder =
@@ -222,15 +224,25 @@ class WorkspaceLspService(
     folder.getOrElse(folderServices.head) // fallback to the first one
   }
 
-  def onCurrentFolder(
-      f: MetalsLspService => Future[Unit],
+  def currentFolder: Option[MetalsLspService] =
+    focusedDocument.flatMap(getServiceForOpt)
+
+  /**
+   * Execute on current folder (for focused document).
+   * In no focused document create a popup for user to choose the folder.
+   * @param f -- action to be executed
+   * @param actionName -- action name to display for popup
+   */
+  def onCurrentFolder[A](
+      f: MetalsLspService => Future[A],
       actionName: String,
-  ): Future[Unit] = {
+      default: () => A,
+  ): Future[A] = {
     def currentService(): Future[Option[MetalsLspService]] =
       folderServices match {
         case head :: Nil => Future { Some(head) }
         case _ =>
-          focusedDocument.map(getServiceFor) match {
+          focusedDocument.flatMap(getServiceForOpt) match {
             case Some(service) => Future { Some(service) }
             case None =>
               workspaceChoicePopup.interactiveChooseFolder(actionName)
@@ -244,9 +256,15 @@ class WorkspaceLspService(
             lsp4j.MessageType.Info,
             s"No workspace folder chosen to execute $actionName.",
           )
-        Future.successful(())
+        Future.successful(default())
     }
   }
+
+  def onCurrentFolder(
+      f: MetalsLspService => Future[Unit],
+      actionName: String,
+  ): Future[Unit] =
+    onCurrentFolder(f, actionName, () => ())
 
   def getServiceForExactUri(
       folderUri: String
@@ -374,13 +392,10 @@ class WorkspaceLspService(
 
   override def completionItemResolve(
       item: CompletionItem
-  ): CompletableFuture[CompletionItem] = {
-    val res =
-      for {
-        data <- item.data
-      } yield getServiceFor(data.folderUri).completionItemResolve(item)
-    res.getOrElse(Future.successful(item).asJava)
-  }
+  ): CompletableFuture[CompletionItem] =
+    currentFolder
+      .map(_.completionItemResolve(item))
+      .getOrElse(Future.successful(item).asJava)
 
   override def signatureHelp(
       params: TextDocumentPositionParams
@@ -578,20 +593,23 @@ class WorkspaceLspService(
       folderServices.foreach(_.pause())
     }
 
-  private def notFound(objectName: String, id: String) =
+  private def displayNotFound(objectName: String, id: String) =
     languageClient.showMessage(
       Messages.errorMessageParams(s"$objectName not found: $id")
     )
 
-  private def definedInMultipleWorkspaceFolders(
-      objectName: String,
-      id: String,
-  ) =
-    languageClient.showMessage(
-      Messages.errorMessageParams(
-        s"$objectName defined in multiple workspace folders: $id"
+  private def onFirstSatifying[T, R](mapTo: MetalsLspService => Future[T])(
+      satisfies: T => Boolean,
+      exec: (MetalsLspService, T) => Future[R],
+      onNotFound: () => Future[R],
+  ): Future[R] =
+    Future
+      .sequence(folderServices.map(service => mapTo(service).map((service, _))))
+      .flatMap(
+        _.find { case (_, value) => satisfies(value) }
+          .map(exec.tupled)
+          .getOrElse(onNotFound())
       )
-    )
 
   override def executeCommand(
       params: ExecuteCommandParams
@@ -603,18 +621,27 @@ class WorkspaceLspService(
         folderServices.find(_.isBloop()).foreach(_.shutDownBloop())
         foreachSeq(_.autoConnectToBuildServer())
       case ServerCommands.GenerateBspConfig() =>
-        foreachSeq(
+        onCurrentFolder(
           _.generateBspConfig(),
-          ignoreValue = true,
-        )
+          "generate BSP config",
+        ).asJavaObject
       case ServerCommands.ImportBuild() =>
-        foreachSeq(
-          _.slowConnectToBuildServer(forceImport = true)
-        )
+        onCurrentFolder(
+          _.slowConnectToBuildServer(forceImport = true),
+          "import build",
+          default = () => BuildChange.None,
+        ).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
-        foreachSeq(_.quickConnectToBuildServer())
+        onCurrentFolder(
+          _.quickConnectToBuildServer(),
+          "connect build server",
+          default = () => BuildChange.None,
+        ).asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
-        foreachSeq(_.disconnectOldBuildServer(), ignoreValue = true)
+        onCurrentFolder(
+          _.disconnectOldBuildServer(),
+          "disconnect old build server",
+        ).asJavaObject
       case ServerCommands.DecodeFile(uri) =>
         getServiceFor(uri).decodeFile(uri).asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
@@ -633,7 +660,7 @@ class WorkspaceLspService(
           else ClassFinderGranularity.Tasty
         getServiceFor(uri).chooseClass(uri, searchGranularity).asJavaObject
       case ServerCommands.RunDoctor() =>
-        onCurrentFolder(_.rundoctor(), "run doctor").asJavaObject
+        onCurrentFolder(_.runDoctor(), "run doctor").asJavaObject
       case ServerCommands.ZipReports() =>
         Future {
           val zip =
@@ -663,7 +690,7 @@ class WorkspaceLspService(
             .asJava
         }.asJavaObject
       case ServerCommands.BspSwitch() =>
-        foreachSeq(_.switchBspServer())
+        onCurrentFolder(_.switchBspServer(), "switch BSP server").asJavaObject
       case ServerCommands.OpenIssue() =>
         Future
           .successful(Urls.openBrowser(githubNewIssueUrlCreator.buildUrl()))
@@ -671,9 +698,9 @@ class WorkspaceLspService(
       case OpenBrowserCommand(url) =>
         Future.successful(Urls.openBrowser(url)).asJavaObject
       case ServerCommands.CascadeCompile() =>
-        foreachSeq(_.cascadeCompile(), ignoreValue = true)
+        onCurrentFolder(_.cascadeCompile(), "cascade compile").asJavaObject
       case ServerCommands.CleanCompile() =>
-        foreachSeq(_.cleanCompile(), ignoreValue = true)
+        onCurrentFolder(_.cleanCompile(), "clean compile").asJavaObject
       case ServerCommands.CancelCompile() =>
         foreachSeq(_.cancelCompile(), ignoreValue = true)
       case ServerCommands.PresentationCompilerRestart() =>
@@ -732,92 +759,68 @@ class WorkspaceLspService(
         ).asJavaObject
 
       case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
+        val targets = params.getTargets().asScala
         folderServices.find(s =>
-          params.getTargets().asScala.forall(s.supportsBuildTarget(_).isDefined)
+          targets.forall(s.supportsBuildTarget(_).isDefined)
         ) match {
           case Some(service) => service.startDebugProvider(params).asJavaObject
           case None =>
-            // TODO:: show error message
-            Future.successful(()).asJavaObject
+            languageClient.showMessage(
+              Messages.errorMessageParams(
+                s"Could not find folder for build targets: ${targets.mkString(",")}"
+              )
+            )
+            Future.failed(DebugProvider.WorkspaceErrorsException).asJavaObject
         }
       case ServerCommands.StartMainClass(params) if params.mainClass != null =>
-        Future
-          .sequence(
-            folderServices.map(_.findMainClassAndItsBuildTarget(params))
-          )
-          .flatMap { list =>
-            list.filter(_._2.nonEmpty) match {
-              case (service, buildTargets) :: Nil =>
-                service.startMainClass(buildTargets, params)
-              case list =>
-                if (list.isEmpty) notFound("Main class", params.mainClass)
-                else
-                  definedInMultipleWorkspaceFolders(
-                    "Main class",
-                    params.mainClass,
-                  )
-                Future.successful(())
-            }
-          }
-          .asJavaObject
+        onFirstSatifying(_.findMainClassAndItsBuildTarget(params))(
+          _.nonEmpty,
+          (service, buildTargets) =>
+            service.startMainClass(buildTargets, params),
+          () => {
+            displayNotFound("Main class", params.mainClass)
+            Future.failed(new ju.NoSuchElementException(params.mainClass))
+          },
+        ).asJavaObject
 
       case ServerCommands.StartTestSuite(params)
           if params.target != null && params.requestData != null =>
-        val foundBuildtargets =
-          folderServices
-            .map(s => (s, s.supportsBuildTarget(params.target)))
-            .collect { case (s, Some(b)) => (s, b) }
-        foundBuildtargets match {
-          case (service, target) :: Nil =>
-            service.startTestSuite(target, params).asJavaObject
-          case list =>
-            if (list.isEmpty) notFound("Build target", params.target.toString())
-            else
-              definedInMultipleWorkspaceFolders(
-                "Build target",
-                params.target.toString(),
-              )
-            Future.successful(()).asJavaObject
-        }
+        onFirstSatifying(service =>
+          Future.successful(service.supportsBuildTarget(params.target))
+        )(
+          _.isDefined,
+          (service, someTarget) =>
+            service.startTestSuite(someTarget.get, params),
+          () => {
+            displayNotFound("Build target", params.target.toString())
+            Future.failed(BuildTargetNotFoundException(params.target.getUri))
+          },
+        ).asJavaObject
       case ServerCommands.ResolveAndStartTestSuite(params)
           if params.testClass != null =>
-        Future
-          .sequence(
-            folderServices.map(_.findTestClassAndItsBuildTarget(params))
-          )
-          .flatMap { list =>
-            list.filter(_._2.nonEmpty) match {
-              case (service, buildTargets) :: Nil =>
-                service.startTestSuiteForResolved(buildTargets, params)
-              case list =>
-                if (list.isEmpty) notFound("Test class", params.testClass)
-                else
-                  definedInMultipleWorkspaceFolders(
-                    "Test class",
-                    params.testClass,
-                  )
-                Future.successful(())
-            }
-          }
-          .asJavaObject
+        onFirstSatifying(_.findTestClassAndItsBuildTarget(params))(
+          _.nonEmpty,
+          (service, buildTargets) =>
+            service.startTestSuiteForResolved(buildTargets, params),
+          () => {
+            displayNotFound("Test class", params.testClass)
+            Future.failed(new ju.NoSuchElementException(params.testClass))
+          },
+        ).asJavaObject
       case ServerCommands.StartAttach(params) if params.hostName != null =>
-        // TODO:: this should probably come with workspace name
-        val foundBuildtargets =
-          folderServices
-            .map(s => (s, s.findBuildTargetByDisplayName(params.buildTarget)))
-            .collect { case (s, Some(bt)) => (s, bt.getId()) }
-        foundBuildtargets match {
-          case (service, target) :: Nil =>
-            service.createDebugSession(target).asJavaObject
-          case list =>
-            if (list.isEmpty) notFound("Build target", params.buildTarget)
-            else
-              definedInMultipleWorkspaceFolders(
-                "Build target",
-                params.buildTarget,
-              )
-            Future.successful(()).asJavaObject
-        }
+        onFirstSatifying(service =>
+          Future.successful(
+            service.findBuildTargetByDisplayName(params.buildTarget)
+          )
+        )(
+          _.isDefined,
+          (service, someTarget) =>
+            service.createDebugSession(someTarget.get.getId()),
+          () => {
+            displayNotFound("Build target", params.buildTarget)
+            Future.failed(BuildTargetUndefinedException())
+          },
+        ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
         getServiceFor(params.path).debugDiscovery(params)
       case ServerCommands.AnalyzeStacktrace(content) =>
@@ -840,8 +843,6 @@ class WorkspaceLspService(
           .superMethodHierarchy(textDocumentPositionParams)
 
       case ServerCommands.ResetChoicePopup() =>
-        def resetPopupChoice(value: String) =
-          collectSeq(_.resetPopupChoice(value))(_ => ())
         val argsMaybe = Option(params.getArguments())
         (argsMaybe.flatMap(_.asScala.headOption) match {
           case Some(arg: JsonPrimitive) =>
@@ -849,16 +850,22 @@ class WorkspaceLspService(
             scribe.debug(
               s"Executing ResetChoicePopup ${params.getCommand()} for choice ${value}"
             )
-            resetPopupChoice(value)
+            onCurrentFolder(_.resetPopupChoice(value), "reset choice")
           case _ =>
             scribe.debug(
               s"Executing ResetChoicePopup ${params.getCommand()} in interactive mode."
             )
-            PopupChoiceReset.interactiveReset(languageClient, resetPopupChoice)
+            onCurrentFolder(
+              _.interactivePopupChoiceReset(),
+              "interactive reset choice",
+            )
         }).asJavaObject
 
       case ServerCommands.ResetNotifications() =>
-        foreachSeq(_.resetNotifications(), ignoreValue = true)
+        onCurrentFolder(
+          _.resetNotifications(),
+          "reset dismissed notifications",
+        ).asJavaObject
 
       case ServerCommands.NewScalaFile(args) =>
         val directoryURI = args.lift(0).flatten
@@ -867,7 +874,7 @@ class WorkspaceLspService(
         directoryURI
           .map(getServiceFor)
           .getOrElse(folderServices.head)
-          .handleFileCreation(directoryURI, name, fileType, isScala = true)
+          .createFile(directoryURI, name, fileType, isScala = true)
       case ServerCommands.NewJavaFile(args) =>
         val directoryURI = args.lift(0).flatten
         val name = args.lift(1).flatten
@@ -875,18 +882,18 @@ class WorkspaceLspService(
         directoryURI
           .map(getServiceFor)
           .getOrElse(folderServices.head)
-          .handleFileCreation(directoryURI, name, fileType, isScala = false)
+          .createFile(directoryURI, name, fileType, isScala = false)
       case ServerCommands.StartAmmoniteBuildServer() =>
         foreachSeq(_.ammoniteStart(), ignoreValue = false)
       case ServerCommands.StopAmmoniteBuildServer() =>
         foreachSeq(_.ammoniteStop(), ignoreValue = false)
       case ServerCommands.StartScalaCliServer() =>
-        val f = focusedDocument match {
+        val res = focusedDocument match {
           case None => Future.unit
           case Some(path) =>
             getServiceFor(path).startScalaCli(path)
         }
-        f.asJavaObject
+        res.asJavaObject
       case ServerCommands.StopScalaCliServer() =>
         foreachSeq(_.stopScalaCli(), ignoreValue = true)
       case ServerCommands.NewScalaProject() =>

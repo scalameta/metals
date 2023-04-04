@@ -145,7 +145,7 @@ case class ScalaPresentationCompiler(
       EmptyCompletionList(),
       params.token
     ) { pc =>
-      new CompletionProvider(pc.compiler(), folderUri, params).completions()
+      new CompletionProvider(pc.compiler(), params).completions()
     }
 
   override def implementAbstractMembers(
@@ -153,7 +153,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new CompletionProvider(pc.compiler(), folderUri, params).implementAll()
+      new CompletionProvider(pc.compiler(), params).implementAll()
     }
   }
 

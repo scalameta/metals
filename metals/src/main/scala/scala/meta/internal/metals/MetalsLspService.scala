@@ -703,7 +703,7 @@ class MetalsLspService(
   )
 
   val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
-    tables,
+    () => tables.buildTool.selectedBuildTool(),
     buildTargets,
     () => bspSession,
     () => bspConnector.resolve(),
@@ -741,7 +741,7 @@ class MetalsLspService(
   var httpServer: Option[MetalsHttpServer] = None
 
   val treeView =
-    new MetalsTreeFolderViewProvider(
+    new FolderTreeViewProvider(
       Folder(folder, folderVisibleName),
       buildTargets,
       () => buildClient.ongoingCompilations(),
@@ -781,15 +781,13 @@ class MetalsLspService(
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
     folder,
     tables,
+    languageClient,
     doctor,
-    () => {
-      slowConnectToBuildServer(forceImport = true)
-    },
+    () => slowConnectToBuildServer(forceImport = true),
     bspConnector,
-    () => {
-      quickConnectToBuildServer()
-    },
+    () => quickConnectToBuildServer(),
   )
+
   private val findTextInJars: FindTextInDependencyJars =
     new FindTextInDependencyJars(
       buildTargets,
@@ -1665,7 +1663,7 @@ class MetalsLspService(
 
   def restartCompiler(): Future[Unit] = Future { compilers.restartAll() }
 
-  def rundoctor(): Future[Unit] =
+  def runDoctor(): Future[Unit] =
     Future {
       doctor.onVisibilityDidChange(true)
       doctor.executeRunDoctor()
@@ -1698,7 +1696,7 @@ class MetalsLspService(
     tables.dismissedNotifications.resetAll()
   }
 
-  def handleFileCreation(
+  def createFile(
       directoryURI: Option[String],
       name: Option[String],
       fileType: Option[String],
@@ -1746,6 +1744,9 @@ class MetalsLspService(
   def resetPopupChoice(value: String): Future[Unit] =
     popupChoiceReset.reset(value)
 
+  def interactivePopupChoiceReset(): Future[Unit] =
+    popupChoiceReset.interactiveReset()
+
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
     stacktraceAnalyzer.analyzeCommand(content)
 
@@ -1765,8 +1766,8 @@ class MetalsLspService(
 
   def findTestClassAndItsBuildTarget(
       params: DebugUnresolvedTestClassParams
-  ): Future[(MetalsLspService, List[(String, b.BuildTarget)])] =
-    debugProvider.findTestClassAndItsBuildTarget(params).map((this, _))
+  ): Future[List[(String, b.BuildTarget)]] =
+    debugProvider.findTestClassAndItsBuildTarget(params)
 
   def startTestSuiteForResolved(
       targets: List[(String, b.BuildTarget)],
@@ -1777,8 +1778,8 @@ class MetalsLspService(
 
   def findMainClassAndItsBuildTarget(
       params: DebugUnresolvedMainClassParams
-  ): Future[(MetalsLspService, List[(b.ScalaMainClass, b.BuildTarget)])] =
-    debugProvider.findMainClassAndItsBuildTarget(params).map((this, _))
+  ): Future[List[(b.ScalaMainClass, b.BuildTarget)]] =
+    debugProvider.findMainClassAndItsBuildTarget(params)
 
   def startMainClass(
       foundClasses: List[(b.ScalaMainClass, b.BuildTarget)],
@@ -1789,8 +1790,7 @@ class MetalsLspService(
 
   def supportsBuildTarget(
       target: b.BuildTargetIdentifier
-  ): Option[b.BuildTarget] =
-    buildTargets.info(target)
+  ): Option[b.BuildTarget] = buildTargets.info(target)
 
   def startTestSuite(
       target: b.BuildTarget,

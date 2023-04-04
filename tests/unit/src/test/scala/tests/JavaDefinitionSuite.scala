@@ -118,7 +118,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
       for {
         _ <- initialize(layout)
         // trigger extraction into readonly
-        info = server.headFolderWorkspaceServer.workspaceSymbol(depSymbol)
+        info = server.server.workspaceSymbol(depSymbol)
         matchedInfo = info.find(_.getLocation().getUri().contains(path))
         uri = matchedInfo match {
           case None =>
@@ -130,7 +130,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
         }
         pos = depSourcePosition(uri, query)
 
-        locations <- server.server
+        locations <- server.fullServer
           .definition(
             new l.TextDocumentPositionParams(
               new l.TextDocumentIdentifier(uri),

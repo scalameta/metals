@@ -8,7 +8,6 @@ import com.google.gson.JsonPrimitive
 case class CompletionItemData(
     symbol: String,
     target: String,
-    folderUri: String = null,
     // The kind of the completion item, for example `override def`
     kind: java.lang.Integer = null,
     additionalSymbols: java.util.List[String] = null
@@ -17,9 +16,6 @@ case class CompletionItemData(
     val obj = new JsonObject()
     obj.add("symbol", new JsonPrimitive(symbol))
     obj.add("target", new JsonPrimitive(target))
-    if (folderUri != null) {
-      obj.add("folderUri", new JsonPrimitive(s"file://${folderUri}"))
-    }
     if (kind != null) {
       obj.add("kind", new JsonPrimitive(kind))
     }

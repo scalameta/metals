@@ -31,9 +31,13 @@ class WorkspaceChoicePopup(
       params
     }
 
-    languageClient
-      .showMessageRequest(choicesParams())
-      .asScala
-      .map { item => folders().find(_.getVisibleName == item) }
+    val currentFolders = folders()
+    if (currentFolders.length == 1) Future.successful(currentFolders.headOption)
+    else {
+      languageClient
+        .showMessageRequest(choicesParams())
+        .asScala
+        .map { item => currentFolders.find(_.getVisibleName == item) }
+    }
   }
 }

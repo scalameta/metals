@@ -36,7 +36,7 @@ trait ScriptsAssertions { self: BaseLspSuite =>
         .getOrElse(0)
       content.indexToLspPosition(idx + pipeIdx)
     }
-    server.server
+    server.fullServer
       .definition(
         new TextDocumentPositionParams(
           new TextDocumentIdentifier(server.toPath(file).toNIO.toUri.toString),
@@ -88,7 +88,7 @@ trait ScriptsAssertions { self: BaseLspSuite =>
       line: Int,
       char: Int,
   ): Future[String] =
-    server.server
+    server.fullServer
       .hover(
         new HoverExtParams(
           new TextDocumentIdentifier(

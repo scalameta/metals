@@ -30,7 +30,7 @@ abstract class BaseImportSuite(
       fail("no checksum for workspace")
     }
   def assertNoStatus()(implicit loc: Location): Unit =
-    server.headFolderWorkspaceServer.tables.digests
+    server.server.tables.digests
       .getStatus(currentChecksum()) match {
       case Some(value) =>
         fail(s"expected no status. obtained $value")
@@ -41,7 +41,7 @@ abstract class BaseImportSuite(
       fn: Digest.Status => Boolean
   )(implicit loc: Location): Unit = {
     val checksum = currentChecksum()
-    server.headFolderWorkspaceServer.tables.digests.getStatus(checksum) match {
+    server.server.tables.digests.getStatus(checksum) match {
       case Some(status) =>
         assert(fn(status))
       case None =>

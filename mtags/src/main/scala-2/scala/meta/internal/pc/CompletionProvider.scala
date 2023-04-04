@@ -1,7 +1,6 @@
 package scala.meta.internal.pc
 
 import java.net.URI
-import java.nio.file.Path
 import java.{util => ju}
 
 import scala.collection.mutable
@@ -20,7 +19,6 @@ import org.eclipse.{lsp4j => l}
 
 class CompletionProvider(
     val compiler: MetalsGlobal,
-    folderUri: Option[Path],
     params: OffsetParams
 ) {
   import compiler._
@@ -242,7 +240,6 @@ class CompletionProvider(
         CompletionItemData(
           semanticdbSymbol(member.sym),
           buildTargetIdentifier,
-          folderUri.map(_.toString).getOrElse(null),
           kind = completionItemDataKind,
           additionalSymbols
         ).toJson

@@ -34,12 +34,12 @@ class BspBuildChangedSuite extends BaseLspSuite("bsp-build-changed") {
         """.stripMargin,
       )
       _ = {
-        server.headFolderWorkspaceServer.buildServerPromise = Promise()
+        server.server.buildServerPromise = Promise()
       }
       // workspaceReload on Bill triggers a buildTarget/didChange,
       // which should trigger a build server disconnection / reconnection
-      _ <- server.headFolderWorkspaceServer.bspSession.get.workspaceReload()
-      _ <- server.headFolderWorkspaceServer.buildServerPromise.future
+      _ <- server.server.bspSession.get.workspaceReload()
+      _ <- server.server.buildServerPromise.future
       _ = {
         val logs = workspace
           .resolve(Bill.logName)

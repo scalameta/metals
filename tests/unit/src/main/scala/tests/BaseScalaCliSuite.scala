@@ -67,7 +67,7 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
       server.client.showMessageRequestHandler
     server.client.showMessageRequestHandler = { params =>
       def useBsp = Files.exists(
-        server.headFolderWorkspaceServer.folder
+        server.server.folder
           .resolve(".bsp/scala-cli.json")
           .toNIO
       )
@@ -177,7 +177,7 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
       _ <- server.initialized()
       _ = FileLayout.fromString(simpleFileLayout, workspace)
       _ = FileLayout.fromString(bspLayout, workspace)
-      _ <- server.headFolderWorkspaceServer.indexingPromise.future
+      _ <- server.server.indexingPromise.future
       _ <- server.didOpen("MyTests.scala")
       _ <- assertDefinitionAtLocation(
         "MyTests.scala",

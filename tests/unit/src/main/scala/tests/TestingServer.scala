@@ -162,8 +162,8 @@ final case class TestingServer(
   )
   languageServer.connectToLanguageClient(client)
 
-  lazy val server = languageServer.getOldMetalsLanguageServer
-  def headFolderWorkspaceServer = server.folderServices.head
+  lazy val fullServer = languageServer.getOldMetalsLanguageServer
+  def server = fullServer.folderServices.head
 
   implicit val reports: ReportContext = new StdReportContext(workspace.toNIO)
 
@@ -171,7 +171,7 @@ final case class TestingServer(
     buffers,
     new ScalaVersionSelector(
       () => initialUserConfig,
-      headFolderWorkspaceServer.buildTargets,
+      server.buildTargets,
     ),
   )
 
@@ -179,7 +179,7 @@ final case class TestingServer(
   def statusBarHistory: String = {
     // collect both published items in the client and pending items from the server.
     val all = List(
-      server.statusBar.pendingItems,
+      fullServer.statusBar.pendingItems,
       client.statusParams.asScala.map(_.text),
     ).flatten
     all.distinct.mkString("\n")
@@ -190,7 +190,7 @@ final case class TestingServer(
       includeKind: Boolean = false,
       includeFilename: Boolean = false,
   ): String = {
-    val infos = server.workspaceSymbol(query)
+    val infos = fullServer.workspaceSymbol(query)
     infos.foreach(info => {
       val path = info.getLocation().getUri().toAbsolutePath
       if (path.isJarFileSystem)
@@ -213,7 +213,7 @@ final case class TestingServer(
   }
   def workspaceSources(): Seq[AbsolutePath] = {
     for {
-      sourceItem <- headFolderWorkspaceServer.buildTargets.sourceItems.toSeq
+      sourceItem <- server.buildTargets.sourceItems.toSeq
       if sourceItem.exists
       source <-
         if (sourceItem.isScalaOrJava)
@@ -223,7 +223,7 @@ final case class TestingServer(
   }
 
   def buildTargetSourceJars(buildTarget: String): Future[Seq[String]] = {
-    headFolderWorkspaceServer.bspSession match {
+    server.bspSession match {
       case Some(session) =>
         val main = session.mainConnection
         for {
@@ -432,7 +432,7 @@ final case class TestingServer(
       token <- trees.tokenized(input).get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
-      definition = headFolderWorkspaceServer
+      definition = server
         .definitionResult(params)
         .asJava
         .get()
@@ -458,7 +458,7 @@ final case class TestingServer(
         ref.location.getRange.getStart,
         new ReferenceContext(true),
       )
-      val obtainedLocations = headFolderWorkspaceServer.referencesResult(params)
+      val obtainedLocations = server.referencesResult(params)
       references ++= obtainedLocations.flatMap { result =>
         result.locations.map { l =>
           newRef(result.symbol, l)
@@ -591,7 +591,7 @@ final case class TestingServer(
   }
 
   def assertBuildServerConnection(): Unit = {
-    server.folderServices.foreach { service =>
+    fullServer.folderServices.foreach { service =>
       require(
         service.bspSession.isDefined,
         s"Build server ${service.folder} did not initialize",
@@ -614,7 +614,7 @@ final case class TestingServer(
   ): Future[Any] = {
     Debug.printEnclosing()
     scribe.info(s"Executing command [${command.id}]")
-    server.executeCommand(command.toExecuteCommandParams(param)).asScala
+    fullServer.executeCommand(command.toExecuteCommandParams(param)).asScala
   }
 
   def executeCommand[T](
@@ -623,13 +623,13 @@ final case class TestingServer(
   ): Future[Any] = {
     Debug.printEnclosing()
     scribe.info(s"Executing command [${command.id}]")
-    server.executeCommand(command.toExecuteCommandParams(param: _*)).asScala
+    fullServer.executeCommand(command.toExecuteCommandParams(param: _*)).asScala
   }
 
   def executeCommand[T](command: Command): Future[Any] = {
     Debug.printEnclosing()
     scribe.info(s"Executing command [${command.id}]")
-    server.executeCommand(command.toExecuteCommandParams()).asScala
+    fullServer.executeCommand(command.toExecuteCommandParams()).asScala
   }
 
   /**
@@ -644,7 +644,7 @@ final case class TestingServer(
     scribe.info(s"Executing command [$command]")
     val args: java.util.List[Object] =
       params.map(_.toJson.asInstanceOf[Object]).asJava
-    server.executeCommand(new ExecuteCommandParams(command, args)).asScala
+    fullServer.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
 
   def waitFor(millis: Long): Future[Unit] = Future { Thread.sleep(millis) }
@@ -707,11 +707,11 @@ final case class TestingServer(
   }
 
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
-    server.didFocus(toPath(filename).toURI.toString).asScala
+    fullServer.didFocus(toPath(filename).toURI.toString).asScala
   }
 
   def windowStateDidChange(focused: Boolean): Unit = {
-    server.windowStateDidChange(WindowStateDidChangeParams(focused))
+    fullServer.windowStateDidChange(WindowStateDidChangeParams(focused))
   }
 
   def didSave(filename: String)(fn: String => String): Future[Unit] = {
@@ -723,7 +723,7 @@ final case class TestingServer(
       abspath.toNIO,
       newText.getBytes(StandardCharsets.UTF_8),
     )
-    server
+    fullServer
       .didSave(
         new DidSaveTextDocumentParams(
           new TextDocumentIdentifier(abspath.toURI.toString)
@@ -737,7 +737,7 @@ final case class TestingServer(
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
     val newText = fn(oldText)
-    server
+    fullServer
       .didChange(
         new DidChangeTextDocumentParams(
           new VersionedTextDocumentIdentifier(abspath.toURI.toString, 0),
@@ -748,14 +748,14 @@ final case class TestingServer(
   }
 
   def analyzeStacktrace(stacktrace: String): Seq[l.CodeLens] = {
-    headFolderWorkspaceServer.stacktraceAnalyzer.stacktraceLenses(
+    server.stacktraceAnalyzer.stacktraceLenses(
       stacktrace.split('\n').toList
     )
   }
 
   def exportEvaluation(filename: String): Option[String] = {
     val path = toPath(filename)
-    headFolderWorkspaceServer.worksheetProvider.copyWorksheetOutput(path)
+    server.worksheetProvider.copyWorksheetOutput(path)
   }
 
   def didOpen(filename: String): Future[Unit] = {
@@ -764,7 +764,7 @@ final case class TestingServer(
     val uri = abspath.toURI.toString
     val extension = PathIO.extension(abspath.toNIO)
     val text = abspath.readText
-    server
+    fullServer
       .didOpen(
         new DidOpenTextDocumentParams(
           new TextDocumentItem(uri, extension, 0, text)
@@ -778,7 +778,7 @@ final case class TestingServer(
     val abspath = toPath(filename)
     val uri = abspath.toURI.toString
     Future.successful {
-      server
+      fullServer
         .didClose(
           new DidCloseTextDocumentParams(
             new TextDocumentIdentifier(uri)
@@ -788,7 +788,7 @@ final case class TestingServer(
   }
 
   def shutdown(): Future[Unit] = {
-    server.shutdown().asScala
+    fullServer.shutdown().asScala
   }
 
   def didChangeConfiguration(config: String): Future[Unit] = {
@@ -799,7 +799,7 @@ final case class TestingServer(
     didChangeJson.add("metals", json)
 
     val params = new DidChangeConfigurationParams(didChangeJson)
-    server.didChangeConfiguration(params).asScala
+    fullServer.didChangeConfiguration(params).asScala
   }
 
   def willRenameFiles(
@@ -813,7 +813,7 @@ final case class TestingServer(
     }.asJava
     val params = new l.RenameFilesParams(lspRenames)
     for {
-      editsOrNull <- server.willRenameFiles(params).asScala
+      editsOrNull <- fullServer.willRenameFiles(params).asScala
       edits = Option(editsOrNull).getOrElse(new WorkspaceEdit)
       updatedSources = workspaceFiles.map { file =>
         val path = workspace.resolve(file)
@@ -841,7 +841,7 @@ final case class TestingServer(
     val pos = m.Position.Range(input, point, point)
     val params =
       new CompletionParams(path.toTextDocumentIdentifier, pos.toLsp.getStart)
-    server.completion(params).asScala
+    fullServer.completion(params).asScala
   }
 
   def foldingRange(filename: String): Future[String] = {
@@ -849,7 +849,7 @@ final case class TestingServer(
     val uri = path.toURI.toString
     val params = new FoldingRangeRequestParams(new TextDocumentIdentifier(uri))
     for {
-      ranges <- server.foldingRange(params).asScala
+      ranges <- fullServer.foldingRange(params).asScala
       textEdits = RangesTextEdits.fromFoldingRanges(ranges)
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
@@ -879,7 +879,7 @@ final case class TestingServer(
         List(pos.toLsp.getStart).asJava,
       )
 
-    server.selectionRange(params).asScala
+    fullServer.selectionRange(params).asScala
   }
 
   def assertSelectionRanges(
@@ -911,7 +911,7 @@ final case class TestingServer(
         autoIndent,
         triggerChar,
       )
-      multiline <- server.onTypeFormatting(params).asScala
+      multiline <- fullServer.onTypeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
         multiline.asScala.toList,
@@ -937,7 +937,7 @@ final case class TestingServer(
         root,
         formattingOptions,
       )
-      multiline <- server.rangeFormatting(params).asScala
+      multiline <- fullServer.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
         multiline.asScala.toList,
@@ -960,7 +960,7 @@ final case class TestingServer(
         root,
         formattingOptions,
       )
-      multiline <- server.rangeFormatting(params).asScala
+      multiline <- fullServer.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
         multiline.asScala.toList,
@@ -1001,9 +1001,7 @@ final case class TestingServer(
         }
     }
 
-    val compilations = paths.map(path =>
-      headFolderWorkspaceServer.compilations.compileFile(path)
-    )
+    val compilations = paths.map(path => server.compilations.compileFile(path))
     for {
       _ <- Future.sequence(compilations)
       _ <- waitFor(util.concurrent.TimeUnit.SECONDS.toMillis(1))
@@ -1040,12 +1038,12 @@ final case class TestingServer(
     val handler = { refreshCount: Int =>
       if (refreshCount > 0)
         for {
-          lenses <- server.codeLens(params).asScala.map(_.asScala)
+          lenses <- fullServer.codeLens(params).asScala.map(_.asScala)
         } {
           if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
           else if (retries > 0) {
             retries -= 1
-            headFolderWorkspaceServer.compilations.compileFile(path)
+            server.compilations.compileFile(path)
           } else {
             val error = s"Could not fetch any code lenses in $maxRetries tries"
             codeLenses.tryFailure(new NoSuchElementException(error))
@@ -1055,12 +1053,12 @@ final case class TestingServer(
 
     for {
       _ <-
-        server
+        fullServer
           .didFocus(uri)
           .asScala // model is refreshed only for focused document
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
-      _ <- headFolderWorkspaceServer.compilations.compileFile(path)
+      _ <- server.compilations.compileFile(path)
       lenses <- codeLenses.future
     } yield lenses
   }
@@ -1073,7 +1071,7 @@ final case class TestingServer(
     val items =
       completion.getItems.asScala
         .sortBy(_.getLabel())
-        .map(item => server.completionItemResolve(item).get())
+        .map(item => fullServer.completionItemResolve(item).get())
     items.iterator
       .filter(item => filter(item.getLabel()))
       .map { item =>
@@ -1294,7 +1292,7 @@ final case class TestingServer(
   ): Future[String] = {
     for {
       (text, params) <- hoverExtParams(filename, query, root)
-      hover <- server.hover(params).asScala
+      hover <- fullServer.hover(params).asScala
     } yield TestHovers.renderAsString(text, Option(hover), includeRange = false)
   }
 
@@ -1321,7 +1319,7 @@ final case class TestingServer(
           if (kind.nonEmpty) kind.asJava else null,
         ),
       )
-      codeActions <- server
+      codeActions <- fullServer
         .codeAction(params)
         .asScala
         .map(_.asScala.filter(filterAction))
@@ -1339,7 +1337,7 @@ final case class TestingServer(
     val params = new org.eclipse.lsp4j.SemanticTokensParams(uri)
 
     for {
-      obtainedTokens <- server.semanticTokensFull(params).asScala
+      obtainedTokens <- fullServer.semanticTokensFull(params).asScala
     } yield {
       val obtained =
         if (obtainedTokens != null)
@@ -1376,7 +1374,7 @@ final case class TestingServer(
   ): Future[List[Location]] = {
     for {
       (text, params) <- offsetParams(filename, query, root)
-      definition <- server.definition(params).asScala
+      definition <- fullServer.definition(params).asScala
     } yield {
       definition.asScala.toList
     }
@@ -1389,7 +1387,7 @@ final case class TestingServer(
   ): Future[String] = {
     for {
       (text, params) <- offsetParams(filename, query, root)
-      highlights <- server.documentHighlights(params).asScala
+      highlights <- fullServer.documentHighlights(params).asScala
     } yield {
       TestRanges.renderHighlightsAsString(text, highlights.asScala.toList)
     }
@@ -1424,14 +1422,14 @@ final case class TestingServer(
   ): Future[Map[String, String]] = {
     for {
       (_, params) <- offsetParams(filename, query, workspace)
-      prepare <- server.prepareRename(params).asScala
+      prepare <- fullServer.prepareRename(params).asScala
       renameParams = new RenameParams
       _ = renameParams.setNewName(newName)
       _ = renameParams.setPosition(params.getPosition())
       _ = renameParams.setTextDocument(params.getTextDocument())
       renames <-
         if (prepare != null) {
-          server.rename(renameParams).asScala
+          fullServer.rename(renameParams).asScala
         } else {
           Future.successful(new WorkspaceEdit)
         }
@@ -1505,7 +1503,7 @@ final case class TestingServer(
     Debug.printEnclosing()
     for {
       (_, params) <- offsetParams(filename, query, workspace)
-      implementations <- server.implementation(params).asScala
+      implementations <- fullServer.implementation(params).asScala
     } yield {
       TestRanges.renderLocationsAsString(base, implementations.asScala.toList)
     }
@@ -1522,7 +1520,7 @@ final case class TestingServer(
         params.getPosition(),
         new ReferenceContext(true),
       )
-      referenceLocations <- server.references(refParams).asScala
+      referenceLocations <- fullServer.references(refParams).asScala
     } yield {
       referenceLocations.asScala.toList
     }
@@ -1547,7 +1545,7 @@ final case class TestingServer(
       new l.Position(pos.startLine, pos.startColumn),
       new ReferenceContext(true),
     )
-    server.references(params).asScala.map { r =>
+    fullServer.references(params).asScala.map { r =>
       r.asScala
         .sortBy { l =>
           val start = l.getRange().getStart()
@@ -1584,7 +1582,7 @@ final case class TestingServer(
         params.getTextDocument(),
         params.getPosition(),
       )
-      result <- server.prepareCallHierarchy(prepareParams).asScala
+      result <- fullServer.prepareCallHierarchy(prepareParams).asScala
     } yield {
       result.asScala.headOption
     }
@@ -1595,7 +1593,7 @@ final case class TestingServer(
   ): Future[List[CallHierarchyIncomingCall]] = {
     item.setData(item.getData.toJsonObject)
     for {
-      result <- server
+      result <- fullServer
         .callHierarchyIncomingCalls(new CallHierarchyIncomingCallsParams(item))
         .asScala
     } yield {
@@ -1608,7 +1606,7 @@ final case class TestingServer(
   ): Future[List[CallHierarchyOutgoingCall]] = {
     item.setData(item.getData.toJsonObject)
     for {
-      result <- server
+      result <- fullServer
         .callHierarchyOutgoingCalls(new CallHierarchyOutgoingCallsParams(item))
         .asScala
     } yield {
@@ -1618,7 +1616,7 @@ final case class TestingServer(
 
   def formatting(filename: String): Future[Unit] = {
     val path = toPath(filename)
-    server
+    fullServer
       .formatting(
         new DocumentFormattingParams(
           new TextDocumentIdentifier(path.toURI.toString),
@@ -1657,7 +1655,7 @@ final case class TestingServer(
     var last = List[String]()
     trees.tokenized(input).get.foreach { token =>
       val params = token.toPositionParams(identifier)
-      val definition = headFolderWorkspaceServer
+      val definition = server
         .definitionOrReferences(params, definitionOnly = true)
         .asJava
         .get()
@@ -1720,7 +1718,7 @@ final case class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val params = new DocumentSymbolParams(identifier)
     for {
-      documentSymbols <- server.documentSymbol(params).asScala
+      documentSymbols <- fullServer.documentSymbol(params).asScala
     } yield {
       val symbols =
         documentSymbols.getLeft.asScala.toSeq.toSymbolInformation(uri)
@@ -1735,12 +1733,12 @@ final case class TestingServer(
   }
 
   def buildTarget(displayName: String): String = {
-    headFolderWorkspaceServer.buildTargets
+    server.buildTargets
       .findByDisplayName(displayName)
       .map(_.getId().getUri())
       .getOrElse {
         val alternatives =
-          headFolderWorkspaceServer.buildTargets.all
+          server.buildTargets.all
             .map(_.getDisplayName())
             .mkString(" ")
         throw new NoSuchElementException(
@@ -1750,12 +1748,12 @@ final case class TestingServer(
   }
 
   def jar(filename: String): String = {
-    headFolderWorkspaceServer.buildTargets.allWorkspaceJars
+    server.buildTargets.allWorkspaceJars
       .find(_.filename.contains(filename))
       .map(_.toURI.toString())
       .getOrElse {
         val alternatives =
-          headFolderWorkspaceServer.buildTargets.allWorkspaceJars
+          server.buildTargets.allWorkspaceJars
             .map(_.filename)
             .mkString(" ")
         throw new NoSuchElementException(
@@ -1779,11 +1777,11 @@ final case class TestingServer(
         sys.error(s"$path: not found pattern '$linePattern'")
       )
     val reveal =
-      server.treeView
+      fullServer.treeView
         .reveal(toPath(filename), new l.Position(line, 0))
         .get
     val parents = (reveal.uriChain :+ null).map { uri =>
-      server.treeView.children(
+      fullServer.treeView.children(
         TreeViewChildrenParams(reveal.viewId, uri)
       )
     }
@@ -1822,7 +1820,7 @@ final case class TestingServer(
   )(implicit loc: munit.Location): Unit = {
     val viewId: String = TreeViewProvider.Project
     val result =
-      server.treeView
+      fullServer.treeView
         .children(TreeViewChildrenParams(viewId, uri))
         .nodes
     val obtained = result
@@ -1847,7 +1845,7 @@ final case class TestingServer(
       include: String,
       pattern: String,
   ): Future[List[Location]] = {
-    server
+    fullServer
       .findTextInDependencyJars(
         FindTextInDependencyJarsRequest(
           FindTextInFilesOptions(include = include, exclude = null),

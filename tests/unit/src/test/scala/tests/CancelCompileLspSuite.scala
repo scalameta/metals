@@ -44,8 +44,8 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
           |object C { val x: String = b.B.x }
           |""".stripMargin
       )
-      _ <- server.headFolderWorkspaceServer.buildServerPromise.future
-      (compileReport, _) <- server.headFolderWorkspaceServer.compilations
+      _ <- server.server.buildServerPromise.future
+      (compileReport, _) <- server.server.compilations
         .compileFile(
           workspace.resolve("c/src/main/scala/c/C.scala")
         )
@@ -56,7 +56,7 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
         }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertEquals(compileReport.getStatusCode(), StatusCode.CANCELLED)
-      _ <- server.headFolderWorkspaceServer.compilations.compileFile(
+      _ <- server.server.compilations.compileFile(
         workspace.resolve("c/src/main/scala/c/C.scala")
       )
       _ = assertNoDiff(

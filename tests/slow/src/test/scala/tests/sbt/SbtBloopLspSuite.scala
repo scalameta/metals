@@ -101,7 +101,7 @@ class SbtBloopLspSuite
             |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
-      _ <- server.headFolderWorkspaceServer.buildServerPromise.future
+      _ <- server.server.buildServerPromise.future
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
@@ -131,7 +131,7 @@ class SbtBloopLspSuite
             |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
-      _ <- server.headFolderWorkspaceServer.buildServerPromise.future
+      _ <- server.server.buildServerPromise.future
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
