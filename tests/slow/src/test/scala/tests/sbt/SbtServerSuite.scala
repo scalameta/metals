@@ -101,6 +101,38 @@ class SbtServerSuite
     }
   }
 
+  test("generate") {
+    def sbtLaunchJar = workspace.resolve(".bsp/sbt-launch.jar")
+    def sbtBspConfig = workspace.resolve(".bsp/sbt.json")
+    def isBspConfigValid =
+      sbtBspConfig.readText.contains(sbtLaunchJar.toString())
+    def sbtBspPlugin = workspace.resolve("project/metals.sbt")
+    def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
+    cleanWorkspace()
+    writeLayout(SbtBuildLayout("", V.scala213))
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        // Project has no .bloop directory so user is asked to "import via bloop"
+        // since bloop is still the default
+        importBuildMessage,
+      )
+      _ = client.messageRequests.clear() // restart
+      _ = assert(!sbtBspConfig.exists)
+      // At this point, we want to use sbt server, so create the sbt.json file.
+      _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
+    } yield {
+      assert(sbtLaunchJar.exists)
+      assert(isBspConfigValid)
+      assert(sbtBspPlugin.exists)
+      assert(sbtBspConfig.exists)
+      assert(sbtJdiPlugin.exists)
+      assert(sbtJdiPlugin.readText.contains("sbt-jdi-tools"))
+    }
+  }
+
   test("reload") {
     cleanWorkspace()
     client.importBuildChanges = ImportBuildChanges.yes
