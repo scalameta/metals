@@ -191,7 +191,10 @@ class MetalsLspService(
 
   val tables: Tables = register(new Tables(workspace, time))
 
-  implicit val reports: StdReportContext = new StdReportContext(workspace.toNIO)
+  implicit val reports: StdReportContext = new StdReportContext(
+    workspace.toNIO,
+    ReportLevel.fromString(MetalsServerConfig.default.loglevel),
+  )
 
   val zipReportsProvider: ZipReportsProvider =
     new ZipReportsProvider(doctor.getTargetsInfoForReports, reports)
@@ -2768,10 +2771,12 @@ class MetalsLspService(
         case e: IndexingExceptions.PathIndexingException =>
           scribe.error(s"issues while parsing: ${e.path}", e.underlying)
         case e: IndexingExceptions.InvalidSymbolException =>
-          reports.incognito.createReport(
-            "invalid-symbol",
-            s"""Symbol: ${e.symbol}""".stripMargin,
-            e,
+          reports.incognito.create(
+            Report(
+              "invalid-symbol",
+              s"""Symbol: ${e.symbol}""".stripMargin,
+              e,
+            )
           )
           scribe.error(s"searching for `${e.symbol}` failed", e.underlying)
         case _: NoSuchFileException =>

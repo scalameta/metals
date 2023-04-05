@@ -580,11 +580,13 @@ object MetalsEnrichments
         Some(toAbsolutePath)
       } catch {
         case NonFatal(e) =>
-          reports.incognito.createReport(
-            "absolute-path",
-            s"""|Uri: $value
-                |""".stripMargin,
-            e,
+          reports.incognito.create(
+            Report(
+              "absolute-path",
+              s"""|Uri: $value
+                  |""".stripMargin,
+              e,
+            )
           )
           None
       }

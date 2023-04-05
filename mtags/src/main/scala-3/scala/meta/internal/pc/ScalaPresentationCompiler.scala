@@ -16,6 +16,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.pc.completions.CompletionProvider
@@ -36,6 +37,7 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None,
+    reportsLevel: ReportLevel = ReportLevel.Info,
 ) extends PresentationCompiler:
 
   def this() = this("", Nil, Nil)
@@ -45,7 +47,12 @@ case class ScalaPresentationCompiler(
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   private val forbiddenDoubleOptions = Set("-release")
   given ReportContext =
-    workspace.map(StdReportContext(_)).getOrElse(EmptyReportContext)
+    workspace
+      .map(StdReportContext(_, reportsLevel))
+      .getOrElse(EmptyReportContext)
+
+  override def withReportsLoggerLevel(level: String): PresentationCompiler =
+    copy(reportsLevel = ReportLevel.fromString(level))
 
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(

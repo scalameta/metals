@@ -969,6 +969,7 @@ class Compilers(
       .withExecutorService(ec)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
+      .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
       .withConfiguration {
         val options =
           InitializationOptions.from(initializeParams).compilerOptions
