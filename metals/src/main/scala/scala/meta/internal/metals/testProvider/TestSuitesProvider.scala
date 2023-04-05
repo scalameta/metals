@@ -357,6 +357,8 @@ final class TestSuitesProvider(
       entries.foreach(index.put(_))
     }
 
+    if (isCodeLensEnabled) client.refreshModel()
+
     if (isExplorerEnabled) {
       val addedTestCases = addedEntries.mapValues {
         _.flatMap { entry =>
