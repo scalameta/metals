@@ -201,6 +201,13 @@ public abstract class PresentationCompiler {
 	public abstract void restart();
 
 	/**
+	 * Set logger level for reports.
+	 */
+	public PresentationCompiler withReportsLoggerLevel(String level) {
+		return this;
+	};
+
+	/**
 	 * Provide a SymbolSearch to extract docstrings, java parameter names and Scala
 	 * default parameter values.
 	 */

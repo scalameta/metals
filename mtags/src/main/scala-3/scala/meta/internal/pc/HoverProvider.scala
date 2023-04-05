@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 import java.{util as ju}
 
+import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.HoverSignature
@@ -26,7 +28,7 @@ object HoverProvider:
       params: OffsetParams,
       driver: InteractiveDriver,
       search: SymbolSearch,
-  ): ju.Optional[HoverSignature] =
+  )(implicit reportContext: ReportContext): ju.Optional[HoverSignature] =
     val uri = params.uri
     val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
     driver.run(uri, sourceFile)
@@ -46,7 +48,33 @@ object HoverProvider:
     val enclosing = path.expandRangeToEnclosingApply(pos)
 
     if tp.isError || tpw == NoType || tpw.isError || path.isEmpty
-    then ju.Optional.empty()
+    then
+      def report =
+        val posId =
+          if path.isEmpty || path.head.sourcePos == null || !path.head.sourcePos.exists
+          then pos.start
+          else path.head.sourcePos.start
+        Report(
+          "empty-hover-scala3",
+          s"""|$uri
+              |pos: ${pos.toLsp}
+              |
+              |tp: $tp
+              |has error: ${tp.isError}
+              |
+              |tpw: $tpw
+              |has error: ${tpw.isError}
+              |
+              |path:
+              |- ${path.map(_.toString()).mkString("\n- ")}
+              |trees:
+              |- ${trees.map(_.toString()).mkString("\n- ")}
+              |""".stripMargin,
+          s"$uri::$posId",
+        )
+      end report
+      reportContext.unsanitized.create(report, ifVerbose = true)
+      ju.Optional.empty()
     else
       val skipCheckOnName =
         !pos.isPoint // don't check isHoveringOnName for RangeHover

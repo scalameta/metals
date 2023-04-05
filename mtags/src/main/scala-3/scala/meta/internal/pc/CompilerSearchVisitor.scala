@@ -5,6 +5,7 @@ import java.util.logging.Logger
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.*
 
@@ -23,10 +24,12 @@ class CompilerSearchVisitor(
     sym != NoSymbol && sym.isPublic
   catch
     case NonFatal(e) =>
-      reports.incognito.createReport(
-        "is_public",
-        s"""Symbol: $sym""".stripMargin,
-        e,
+      reports.incognito.create(
+        Report(
+          "is_public",
+          s"""Symbol: $sym""".stripMargin,
+          e,
+        )
       )
       logger.log(Level.SEVERE, e.getMessage(), e)
       false
