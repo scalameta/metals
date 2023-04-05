@@ -33,7 +33,7 @@ import org.eclipse.lsp4j.InitializeResult
  */
 abstract class BaseLspSuite(
     suiteName: String,
-    initializer: BuildServerInitializer = QuickBuildInitializer,
+    protected val initializer: BuildServerInitializer = QuickBuildInitializer,
 ) extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default

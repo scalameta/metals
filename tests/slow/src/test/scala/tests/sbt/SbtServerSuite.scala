@@ -1,5 +1,7 @@
 package tests.sbt
 
+import scala.concurrent.Future
+
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.Messages
@@ -7,6 +9,7 @@ import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
@@ -74,8 +77,6 @@ class SbtServerSuite
     def sbtBspConfig = workspace.resolve(".bsp/sbt.json")
     def isBspConfigValid =
       sbtBspConfig.readText.contains(sbtLaunchJar.toString())
-    def sbtBspPlugin = workspace.resolve("project/metals.sbt")
-    def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
     cleanWorkspace()
     writeLayout(SbtBuildLayout("", V.scala213))
     for {
@@ -94,42 +95,40 @@ class SbtServerSuite
     } yield {
       assert(sbtLaunchJar.exists)
       assert(isBspConfigValid)
-      assert(sbtBspPlugin.exists)
       assert(sbtBspConfig.exists)
-      assert(sbtJdiPlugin.exists)
-      assert(sbtJdiPlugin.readText.contains("sbt-jdi-tools"))
     }
   }
 
-  test("generate") {
-    def sbtLaunchJar = workspace.resolve(".bsp/sbt-launch.jar")
-    def sbtBspConfig = workspace.resolve(".bsp/sbt.json")
-    def isBspConfigValid =
-      sbtBspConfig.readText.contains(sbtLaunchJar.toString())
-    def sbtBspPlugin = workspace.resolve("project/metals.sbt")
-    def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
-    cleanWorkspace()
-    writeLayout(SbtBuildLayout("", V.scala213))
-    for {
-      _ <- server.initialize()
-      _ <- server.initialized()
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        // Project has no .bloop directory so user is asked to "import via bloop"
-        // since bloop is still the default
-        importBuildMessage,
+  test("reload plugins") {
+    // should reload existing server after writing the metals.sbt plugin file
+    cleanWorkspace
+    val layout = SbtBuildLayout("", V.scala213)
+    writeLayout(layout)
+    assert(workspace.exists)
+    def startSbtServer(): Future[Int] = {
+      val sbtProcess = SystemProcess.run(
+        List("sbt", "-client", "exit"),
+        workspace,
+        true,
+        Map.empty,
       )
-      _ = client.messageRequests.clear() // restart
-      _ = assert(!sbtBspConfig.exists)
-      // At this point, we want to use sbt server, so create the sbt.json file.
-      _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
+      sbtProcess.complete
+    }
+    for {
+      code <- startSbtServer
+      _ = assert(code == 0)
+      _ = assert(workspace.resolve(".bsp/sbt.json").exists)
+      _ <- initializer.initialize(workspace, server, client, layout, false)
+      _ <- server.initialized()
     } yield {
-      assert(sbtLaunchJar.exists)
-      assert(isBspConfigValid)
-      assert(sbtBspPlugin.exists)
-      assert(sbtBspConfig.exists)
-      assert(sbtJdiPlugin.exists)
-      assert(sbtJdiPlugin.readText.contains("sbt-jdi-tools"))
+      // should not contain the 'Navigation will not work for this build due to mis-configuration.' message
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildMessage,
+          Messages.BspSwitch.message,
+        ).mkString("\n"),
+      )
     }
   }
 
