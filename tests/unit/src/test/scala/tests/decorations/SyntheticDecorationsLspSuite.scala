@@ -131,7 +131,33 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  val ordered = \"acb\".sorted@@",
-        s"""|**Synthetics**:
+        s"""|```scala
+            |def sorted[B >: Char](implicit ord: Ordering[B]): String
+            |```
+            |Sorts the characters of this string according to an Ordering.
+            |
+            | The sort is stable. That is, elements that are equal (as determined by
+            | `ord.compare`) appear in the same order in the sorted sequence as in the original.
+            |
+            |
+            |**Notes**
+            |- This method treats a string as a plain sequence of
+            |Char code units and makes no attempt to keep
+            |surrogate pairs or codepoint sequences together.
+            |The user is responsible for making sure such cases
+            |are handled correctly. Failing to do so may result in
+            |an invalid Unicode string.
+            |
+            |**Parameters**
+            |- `ord`: the ordering to be used to compare elements.
+            |
+            |**Returns:** a string consisting of the chars of this string
+            |             sorted according to the ordering `ord`.
+            |
+            |**See**
+            |- [scala.math.Ordering](scala.math.Ordering)
+            |
+            |**Synthetics**:
             |
             |([Char](command:metals.goto?$orderingParams))
             |[[Char](command:metals.goto?$charParams)]

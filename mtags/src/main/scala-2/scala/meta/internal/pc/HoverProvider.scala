@@ -18,7 +18,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
   def hover(): Option[HoverSignature] = params match {
     case range: RangeParams =>
       range.trimWhitespaceInRange.flatMap(hoverOffset)
-    case _ if params.isWhitespace => None
+    case _ if params.isWhitespace && params.prevIsWhitespaceOrDelimeter => None
     case _ => hoverOffset(params)
   }
 
