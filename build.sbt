@@ -230,7 +230,7 @@ lazy val interfaces = project
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     mimaPreviousArtifacts := Set(
-      "org.scalameta" % "mtags-interfaces" % "0.11.10"
+      "org.scalameta" % "mtags-interfaces" % "0.11.11"
     ),
     crossPaths := false,
     libraryDependencies ++= List(
