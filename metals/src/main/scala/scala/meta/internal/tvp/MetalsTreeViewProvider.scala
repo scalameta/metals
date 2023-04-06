@@ -62,7 +62,7 @@ class MetalsTreeViewProvider(
   override def children(
       params: TreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = {
-    val trees = getFolderTreeViewProviders()
+    val folderTreeViewProviders = getFolderTreeViewProviders()
     val children: Array[TreeViewNode] = params.viewId match {
       case Help =>
         Array(
@@ -78,7 +78,11 @@ class MetalsTreeViewProvider(
           echoCommand(ServerCommands.ScalametaTwitter, "twitter"),
         )
       case Project =>
-        trees.map(_.getProjectRoot(Option(params.nodeUri))).flatten.toArray
+        val showFolderName = folderTreeViewProviders.length > 1
+        folderTreeViewProviders
+          .map(_.getProjectRoot(Option(params.nodeUri), showFolderName))
+          .flatten
+          .toArray
       case Build =>
         Option(params.nodeUri) match {
           case None =>
@@ -109,7 +113,7 @@ class MetalsTreeViewProvider(
             Array()
         }
       case Compile =>
-        trees
+        folderTreeViewProviders
           .map(_.getOngoingCompilations(Option(params.nodeUri)))
           .flatten
           .toArray
@@ -245,8 +249,9 @@ class FolderTreeViewProvider(
   val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
     definitionIndex,
     TreeViewProvider.Project,
-    s"libraries-${folder.uri.toString()}",
-    s"Libraries for ${folder.nameOrUri}",
+    s"libraries",
+    s"Libraries",
+    folder,
     identity,
     _.toURI.toString(),
     _.toAbsolutePath,
@@ -259,8 +264,9 @@ class FolderTreeViewProvider(
   val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
     definitionIndex,
     TreeViewProvider.Project,
-    s"projects-${folder.uri.toString()}",
-    s"Projects for ${folder.nameOrUri}",
+    s"projects",
+    s"Projects",
+    folder,
     _.getId(),
     _.getUri(),
     uri => new BuildTargetIdentifier(uri),
@@ -348,12 +354,15 @@ class FolderTreeViewProvider(
         }
     }
 
-  def getProjectRoot(nodeUri: Option[String]): Array[TreeViewNode] =
+  def getProjectRoot(
+      nodeUri: Option[String],
+      showFolderName: Boolean,
+  ): Array[TreeViewNode] =
     nodeUri match {
       case None if buildTargets.all.nonEmpty =>
         Array(
-          projects.root,
-          libraries.root,
+          projects.root(showFolderName),
+          libraries.root(showFolderName),
         )
       case Some(uri) =>
         if (libraries.matches(uri)) {

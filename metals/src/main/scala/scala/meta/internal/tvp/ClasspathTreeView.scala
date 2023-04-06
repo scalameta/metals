@@ -1,5 +1,6 @@
 package scala.meta.internal.tvp
 
+import scala.meta.internal.metals.Folder
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
@@ -17,8 +18,9 @@ import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 class ClasspathTreeView[Value, Key](
     definitionIndex: GlobalSymbolIndex,
     viewId: String,
-    scheme: String,
+    schemeId: String,
     title: String,
+    folder: Folder,
     id: Value => Key,
     encode: Key => String,
     decode: String => Key,
@@ -27,14 +29,18 @@ class ClasspathTreeView[Value, Key](
     toplevels: () => Iterator[Value],
     loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation],
 ) {
+  val scheme: String = s"$schemeId-${folder.uri.toString()}"
   val rootUri: String = scheme + ":"
-  def root: TreeViewNode =
+
+  def root(showFolderName: Boolean): TreeViewNode = {
+    val folderPart = if (showFolderName) s" (${folder.nameOrUri})" else ""
     TreeViewNode(
       viewId,
       rootUri,
-      title + s" (${toplevels().size})",
+      title + folderPart + s" (${toplevels().size})",
       collapseState = MetalsTreeItemCollapseState.collapsed,
     )
+  }
 
   def matches(uri: String): Boolean = uri.startsWith(rootUri)
 

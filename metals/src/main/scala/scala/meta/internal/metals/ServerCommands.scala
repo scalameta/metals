@@ -225,7 +225,7 @@ object ServerCommands {
 
   val CleanCompile = new Command(
     "compile-clean",
-    "Clean compile workspace",
+    "Clean compile",
     """|Recompile all build targets in this workspace.
        |
        |By default, Metals compiles the files incrementally. In case of any compile artifacts corruption 

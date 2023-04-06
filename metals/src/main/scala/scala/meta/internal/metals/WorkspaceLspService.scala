@@ -1061,8 +1061,8 @@ class WorkspaceLspService(
       service.connectTables()
     }
     syncUserconfiguration().flatMap { _ =>
-      Future // TODO:: we should probably have only one http server
-        //                 and remove this ---v
+      Future // TODO:: change to single http server (https://github.com/scalameta/metals/issues/5129)
+        //                       and remove this ---v
         .sequence(folderServices.map(_.initialized(this)))
         .ignoreValue
     }
