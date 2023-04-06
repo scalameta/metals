@@ -98,9 +98,7 @@ case class SbtBuildTool(
       case Some(version) =>
         scribe.info(s"sbt ${version} found for workspace.")
         val valid = isCompatibleVersion(firstVersionWithBsp, version)
-        if (valid) {
-          writeSbtMetalsPlugins(workspace)
-        } else {
+        if (!valid) {
           scribe.warn(
             s"Unable to start sbt bsp server. Make sure you have sbt >= $firstVersionWithBsp defined in your build.properties file."
           )
@@ -184,11 +182,12 @@ object SbtBuildTool {
 
   /**
    * Write the sbt plugin in the sbt project directory
+   * Return true if the metals plugin file changed.
    */
   def writePlugins(
       projectDir: AbsolutePath,
       plugins: PluginDetails*
-  ): Unit = {
+  ): Boolean = {
     val content =
       s"""|// DO NOT EDIT! This file is auto-generated.
           |
@@ -203,18 +202,24 @@ object SbtBuildTool {
     if (pluginFileShouldChange) {
       Files.write(metalsPluginFile.toNIO, bytes)
     }
+    pluginFileShouldChange
   }
 
   /**
    * Write all the plugins used by Metals when connected to sbt server:
    * - the sbt-metals plugin in the project directory
    * - the sbt-jdi-tools plugin in the project/project directory
+   *
+   * Return true if any plugin file changed, meaning we should reload
    */
-  def writeSbtMetalsPlugins(workspace: AbsolutePath): Unit = {
+  def writeSbtMetalsPlugins(workspace: AbsolutePath): Boolean = {
     val mainMeta = workspace.resolve("project")
     val metaMeta = workspace.resolve("project").resolve("project")
-    writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
-    writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+    val writtenPlugin =
+      writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
+    val writtenMeta =
+      writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+    writtenPlugin || writtenMeta
   }
 
   private case class PluginDetails private (
