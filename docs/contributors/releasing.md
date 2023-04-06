@@ -46,7 +46,7 @@ you will need to make sure everything is included there.
 
 ### Update Metals version
 
-- `build.sbt` - update `localSnapshotVersion`
+- `build.sbt` - update `localSnapshotVersion` and `mimaPreviousArtifacts`
 - `.github/ISSUE_TEMPLATE/bug_report.yml` - update `Version of Metals`
 - `./bin/test-release.sh` - remove any unsupported Scala versions and
   add newly supported ones. This will be needed later to test the new release.
