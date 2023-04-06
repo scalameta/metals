@@ -5,21 +5,18 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.metals.logging.MetalsLogger
 
 class WorkspaceFolders(
     initialFolders: List[Folder],
     createService: Folder => MetalsLspService,
     onInitialize: MetalsLspService => Future[Unit],
     shoutdownMetals: () => Future[Unit],
+    redirectSystemOut: Boolean,
 )(implicit ec: ExecutionContext) {
 
-  private val folderServices: AtomicReference[List[MetalsLspService]] = {
-    val res = createServices(initialFolders)
-    if (res.isEmpty)
-      new AtomicReference(List(createService(initialFolders.head)))
-    else new AtomicReference(res)
-  }
+  private val folderServices: AtomicReference[List[MetalsLspService]] =
+    new AtomicReference(initialFolders.map(createService))
 
   def getFolderServices: List[MetalsLspService] = folderServices.get()
 
@@ -34,7 +31,8 @@ class WorkspaceFolders(
     def isIn(services: List[MetalsLspService], service: MetalsLspService) =
       services.exists(_.folder == service.folder)
 
-    val newServices = createServices(toAdd).map { newService =>
+    val newServices = toAdd.map { folder =>
+      val newService = createService(folder)
       newService.loadFingerPrints()
       newService.registerNiceToHaveFilePatterns()
       newService.connectTables()
@@ -49,6 +47,10 @@ class WorkspaceFolders(
           val newToAdd = newServices.filterNot(isIn(current, _))
           afterRemove ++ newToAdd
         }
+      MetalsLogger.setupLspLogger(
+        folderServices.get().map(_.folder),
+        redirectSystemOut,
+      )
       for {
         _ <- Future.sequence(
           newServices.filterNot(isIn(prev, _)).map(onInitialize)
@@ -58,9 +60,8 @@ class WorkspaceFolders(
     }
   }
 
-  private def createServices(folders: List[Folder]): List[MetalsLspService] =
-    folders
-      .withFilter { case Folder(uri, _) => !BuildTools.default(uri).isEmpty }
-      .map(createService)
+  // private def createServices(folders: List[Folder]): List[MetalsLspService] =
+  //   folders
+  //     .map(createService)
 
 }

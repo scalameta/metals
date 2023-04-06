@@ -166,7 +166,9 @@ class WorkspaceLspService(
       createService,
       _.initialized(this),
       () => shutdown().asScala,
+      redirectSystemOut,
     )
+
   def folderServices = workspaceFolders.getFolderServices
 
   val treeView: TreeViewProvider =
