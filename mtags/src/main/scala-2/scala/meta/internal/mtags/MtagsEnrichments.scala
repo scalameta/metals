@@ -52,6 +52,17 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
       params.offset() >= params.text().length ||
       params.text().charAt(params.offset()).isWhitespace
     }
+
+    def prevIsWhitespaceOrDelimeter: Boolean = {
+      val prevOffset = params.offset() - 1
+      prevOffset < 0 ||
+      prevOffset >= params.text().length ||
+      (params.text().charAt(prevOffset) match {
+        case '(' | ')' | '{' | '}' | '[' | ']' | ',' | '=' | '.' => true
+        case w if w.isWhitespace => true
+        case _ => false
+      })
+    }
   }
   implicit class XtensionIterableOps[T](lst: Iterable[T]) {
     def distinctBy[B](fn: T => B): List[T] = {
