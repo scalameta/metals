@@ -219,9 +219,9 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             },
           ),
           s"""|root
-              |  Projects for root (0)
-              |  Libraries for root (${expectedLibrariesCount})
-              |  Libraries for root (${expectedLibrariesCount})
+              |  Projects (0)
+              |  Libraries (${expectedLibrariesCount})
+              |  Libraries (${expectedLibrariesCount})
               |    sourcecode_2.13-0.1.7.jar
               |    sourcecode_2.13-0.1.7.jar
               |      sourcecode/
@@ -272,9 +272,9 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             },
           ),
           s"""|root
-              |  Projects for root (0)
-              |  Libraries for root (${expectedLibrariesCount})
-              |  Libraries for root (${expectedLibrariesCount})
+              |  Projects (0)
+              |  Libraries (${expectedLibrariesCount})
+              |  Libraries (${expectedLibrariesCount})
               |    org.eclipse.lsp4j-0.5.0.jar
               |    org.eclipse.lsp4j.generator-0.5.0.jar
               |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar
