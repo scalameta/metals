@@ -122,6 +122,9 @@ abstract class PcCollector[T](
           info.member(sym.asTerm.name.setterName).symbol,
           info.member(sym.asTerm.name.getterName).symbol,
         ) ++ sym.allOverriddenSymbols.toSet
+      // type used in primary constructor will not match the one used in the class
+      else if sym.isTypeParam && sym.owner.isPrimaryConstructor then
+        Set(sym, sym.owner.owner.info.member(sym.name).symbol)
       else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
   end symbolAlternatives
@@ -325,7 +328,6 @@ abstract class PcCollector[T](
           symbol: Option[Symbol] = None,
       ) =
         this.collect(parent)(tree, pos, symbol)
-
       tree match
         /**
          * All indentifiers such as:

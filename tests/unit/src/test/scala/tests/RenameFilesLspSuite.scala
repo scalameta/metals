@@ -305,7 +305,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Mars.scala" -> s"$prefix/B/Mars.scala"),
-    expectedRenames = Map("A" -> "B", "//" -> "\nimport B.{Phobos, Deimos}//"),
+    expectedRenames = Map("A" -> "B", "//" -> "import B.{Phobos, Deimos}\n//"),
     sourcesAreCompiled = true,
   )
 
@@ -358,7 +358,113 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/B/C/Sun.scala"),
-    expectedRenames = Map("B" -> "B.C", "//" -> "\nimport A.B.C.Sun//"),
+    expectedRenames = Map("B" -> "B.C", "//" -> "import A.B.C.Sun\n//"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "simple-wildcard-import",
+    s"""|/$prefix/two/Foo.scala
+        |package <<two>>
+        |class Foo
+        |class BB
+        |/$prefix/one/One.scala
+        |package one
+        |
+        |import <<two._>>
+        |
+        |class One(f: Foo)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
+    expectedRenames = Map("two" -> "three", "two._" -> "three.Foo"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "wildcard-imports-from-multiple-files",
+    s"""|/$prefix/two/BB.scala
+        |package two
+        |class BB
+        |
+        |/$prefix/two/Foo.scala
+        |package <<two>>
+        |class Foo
+        |
+        |/$prefix/one/One.scala
+        |package one
+        |
+        |import two._
+        |<<//>>
+        |class One(f: Foo)
+        |class Two(f: BB)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
+    expectedRenames = Map("two" -> "three", "//" -> "import three.Foo\n//"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "wildcard-and-rename-mult-files",
+    s"""|/$prefix/two/Foo.scala
+        |package <<two>>
+        |class Foo
+        |
+        |/$prefix/two/BB.scala
+        |package two
+        |class BB
+        |
+        |/$prefix/one/One.scala
+        |package one
+        |
+        |import <<two._>>
+        |import two.{BB => CC}
+        |
+        |class One(f: Foo)
+        |class Two(f: CC)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
+    expectedRenames = Map("two" -> "three", "two._" -> "three.Foo"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "wildcard-and-rename",
+    s"""|/$prefix/two/Foo.scala
+        |package <<two>>
+        |class Foo
+        |class BB
+        |
+        |/$prefix/one/One.scala
+        |package one
+        |
+        |import <<two>>.{BB => CC,<<_>>}
+        |
+        |class One(f: Foo)
+        |class Two(f: CC)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
+    expectedRenames = Map("two" -> "three", "_" -> " Foo"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "wildcard-and-rename2",
+    s"""|/$prefix/two/Foo.scala
+        |package <<two>>
+        |class Foo
+        |class BB
+        |
+        |/$prefix/one/One.scala
+        |package one
+        |
+        |import <<two._>>
+        |import <<two>>.{BB => CC}
+        |
+        |class One(f: Foo)
+        |class Two(f: CC)
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
+    expectedRenames = Map("two" -> "three", "two._" -> "three.Foo"),
     sourcesAreCompiled = true,
   )
 
@@ -382,7 +488,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
       "A" -> "C",
       "Phobos => P, " -> "",
       ", Deimos" -> "",
-      "//" -> "import C.{Phobos => P, Deimos}//",
+      "//" -> "import C.{Phobos => P, Deimos}\n//",
     ),
     sourcesAreCompiled = true,
   )
@@ -401,6 +507,44 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Dep.scala" -> s"$prefix/A/inner/Dep.scala"),
     expectedRenames = Map(),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "unimport1",
+    s"""|/$prefix/A/Sun.scala
+        |package <<A>>
+        |object Sun
+        |object Moon 
+        |/$prefix/B/Moon.scala
+        |package B
+        |import <<A.{Moon => _, _}>>
+        |object Moon {
+        | val sun = Sun
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/C/Moon.scala"),
+    expectedRenames = Map("A" -> "C", "A.{Moon => _, _}" -> "C.Sun"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "unimport2",
+    s"""|/$prefix/A/Sun.scala
+        |package <<A>>
+        |object Sun
+        |object Moon 
+        |/$prefix/B/Moon.scala
+        |package B
+        |import <<A._>>
+        |<<import A.{Moon => _}>>
+        |object Moon {
+        | val sun = Sun
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/C/Moon.scala"),
+    expectedRenames =
+      Map("A" -> "C", "A._" -> "C.Sun", "import A.{Moon => _}" -> ""),
     sourcesAreCompiled = true,
   )
 
@@ -474,7 +618,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A" -> s"$prefix/C"),
-    expectedRenames = Map("A" -> "C", "//" -> "\nimport C.B.Sun//"),
+    expectedRenames = Map("A" -> "C", "//" -> "import C.B.Sun\n//"),
     sourcesAreCompiled = true,
   )
 
@@ -492,7 +636,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B" -> s"$prefix/A/C"),
-    expectedRenames = Map("B" -> "C", "//" -> "\nimport A.C.Sun//"),
+    expectedRenames = Map("B" -> "C", "//" -> "import A.C.Sun\n//"),
     sourcesAreCompiled = true,
   )
 }

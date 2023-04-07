@@ -223,6 +223,7 @@ class ScalaCli(
       .map(Seq(_))
       .orElse {
         findInPath("scala-cli")
+          .orElse(findInPath("scala"))
           .filter(requireMinVersion(_, minVersion))
           .map(p => Seq(p.toString))
       }
@@ -319,7 +320,7 @@ object ScalaCli {
         finished.tryComplete(res)
       }
       SocketConnection(
-        ScalaCli.name,
+        ScalaCli.names.head,
         new ClosableOutputStream(proc.outputStream, "Scala CLI error stream"),
         proc.inputStream,
         List(Cancelable { () => proc.cancel }),
@@ -371,7 +372,7 @@ object ScalaCli {
   def scalaCliMainClass: String =
     "scala.cli.ScalaCli"
 
-  val name = "scala-cli"
+  val names: Set[String] = Set("scala-cli", "scala")
 
   sealed trait ConnectionState
   object ConnectionState {

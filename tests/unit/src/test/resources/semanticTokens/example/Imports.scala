@@ -1,7 +1,7 @@
 <<package>>/*keyword*/ <<example>>/*namespace*/
 
 <<import>>/*keyword*/ <<util>>/*namespace*/.{<<Failure>>/*class*/ <<=>>>/*operator*/ <<NotGood>>/*class*/}
-<<import>>/*keyword*/ <<math>>/*namespace*/.{<<floor>>/*method*/ <<=>>>/*operator*/ <<_>>/*variable*/, <<_>>/*variable*/}
+<<import>>/*keyword*/ <<math>>/*namespace*/.{<<floor>>/*method*/ <<=>>>/*operator*/ <<_>>/*variable,readonly*/, <<_>>/*variable,readonly*/}
 
 <<class>>/*keyword*/ <<Imports>>/*class*/ {
   <<// rename reference>>/*comment*/

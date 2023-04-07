@@ -5,7 +5,6 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -674,52 +673,51 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
-  if (!ScalaVersions.isScala3Version(scalaVersion))
-    test("semantic-highlighting") {
+  test("semantic-highlighting") {
 
-      val expected =
-        """|
-           |
-           |<<import>>/*keyword*/ <<util>>/*namespace*/.{<<Failure>>/*class*/ <<=>>>/*operator*/ <<NotGood>>/*class*/}
-           |<<import>>/*keyword*/ <<math>>/*namespace*/.{<<floor>>/*method*/ <<=>>>/*operator*/ <<_>>/*variable*/, <<_>>/*variable*/}
-           |
-           |<<class>>/*keyword*/ <<Imports>>/*class*/ {
-           |  <<// rename reference>>/*comment*/
-           |  <<NotGood>>/*class*/(<<null>>/*keyword*/)
-           |  <<max>>/*method*/(<<1>>/*number*/, <<2>>/*number*/)
+    val expected =
+      """|
+         |
+         |<<import>>/*keyword*/ <<util>>/*namespace*/.{<<Failure>>/*class*/ <<=>>>/*operator*/ <<NotGood>>/*class*/}
+         |<<import>>/*keyword*/ <<math>>/*namespace*/.{<<floor>>/*method*/ <<=>>>/*operator*/ <<_>>/*variable,readonly*/, <<_>>/*variable,readonly*/}
+         |
+         |<<class>>/*keyword*/ <<Imports>>/*class*/ {
+         |  <<// rename reference>>/*comment*/
+         |  <<NotGood>>/*class*/(<<null>>/*keyword*/)
+         |  <<max>>/*method*/(<<1>>/*number*/, <<2>>/*number*/)
+         |}
+         |""".stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
            |}
+           |/main.sc
+           |$fileContent
            |""".stripMargin
-
-      val fileContent =
-        TestSemanticTokens.removeSemanticHighlightDecorations(expected)
-
-      for {
-        _ <- initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": {
-             |    "scalaVersion": "$scalaVersion"
-             |  }
-             |}
-             |/main.sc
-             |$fileContent
-             |""".stripMargin
-        )
-        _ <- server.didChangeConfiguration(
-          """{
-            |  "enable-semantic-highlighting": true
-            |}
-            |""".stripMargin
-        )
-        _ <- server.didOpen("main.sc")
-        _ <- server.didSave("main.sc")(identity)
-        _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
-        _ <- server.assertSemanticHighlight(
-          "main.sc",
-          expected,
-          fileContent,
-        )
-      } yield ()
-    }
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("main.sc")
+      _ <- server.didSave("main.sc")(identity)
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
+      _ <- server.assertSemanticHighlight(
+        "main.sc",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
 }
