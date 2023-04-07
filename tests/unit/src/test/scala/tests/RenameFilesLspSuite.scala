@@ -17,6 +17,20 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   )
 
   renamed(
+    "basic-file-to-dir",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A.B>>
+        |object Sun
+        |/$prefix/C/D/Moon.scala
+        |package C.D
+        |object Moon
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D"),
+    expectedRenames = Map("A.B" -> "C.D"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
     "no-package",
     s"""|/$prefix/A/Sun.scala
         |object Sun 
@@ -247,12 +261,31 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "references-wildcard-imports",
     s"""|/$prefix/A/B/Sun.scala
         |package <<A>>.B
-        |object Sun 
+        |object Sun
         |/$prefix/B/Moon.scala
         |package B
-        |import <<A>>.B._
-        |import <<A>>.B.{Sun, _}
-        |object Moon 
+        |<<import A.B._
+        |import A.B.{Sun, _}>>
+        |object Moon
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C/B"),
+    expectedRenames =
+      Map("A" -> "C", "import A.B._\nimport A.B.{Sun, _}" -> "import C.B.Sun"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "two",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A>>.B
+        |object Sun
+        |/$prefix/A/B/Saturn.scala
+        |package <<A>>.B
+        |object Saturn
+        |/$prefix/B/Moon.scala
+        |package B
+        |import <<A>>.B.{Sun, Saturn}
+        |object Moon
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C/B"),
     expectedRenames = Map("A" -> "C"),
@@ -262,7 +295,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   renamed(
     "references-package-object",
     s"""|/$prefix/A/B/package.scala
-        |<<package A>>
+        |package <<A>>
         |package object <<B>> {
         | trait Sun
         |}
@@ -272,7 +305,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |object Moon 
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C/D"),
-    expectedRenames = Map("package A" -> "package C", "B" -> "D", "A" -> "C"),
+    expectedRenames = Map("B" -> "D", "A" -> "C"),
     sourcesAreCompiled = true,
   )
 
@@ -305,7 +338,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Mars.scala" -> s"$prefix/B/Mars.scala"),
-    expectedRenames = Map("A" -> "B", "//" -> "import B.{Phobos, Deimos}\n//"),
+    expectedRenames = Map("A" -> "B", "//" -> "import B.{Deimos, Phobos}\n//"),
     sourcesAreCompiled = true,
   )
 
@@ -316,14 +349,13 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |object Sun { }
         |/$prefix/B/Moon.scala
         |package B
-        |import <<A>>.{B => BB}
-        |import <<A>>._ 
+        |import <<A.B._>>
         |object Moon {
-        |  println(BB.Sun)
+        |  println(Sun)
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A" -> s"$prefix/C"),
-    expectedRenames = Map("A" -> "C"),
+    expectedRenames = Map("A" -> "C", "A.B._" -> "C.B.Sun"),
     sourcesAreCompiled = true,
   )
 
@@ -358,7 +390,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/B/C/Sun.scala"),
-    expectedRenames = Map("B" -> "B.C", "//" -> "import A.B.C.Sun\n//"),
+    expectedRenames = Map("B" -> "B.C", "//" -> "import C.Sun\n//"),
     sourcesAreCompiled = true,
   )
 
@@ -416,14 +448,17 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |/$prefix/one/One.scala
         |package one
         |
-        |import <<two._>>
-        |import two.{BB => CC}
+        |<<import two._
+        |import two.{BB => CC}>>
         |
         |class One(f: Foo)
         |class Two(f: CC)
         |""".stripMargin,
     fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
-    expectedRenames = Map("two" -> "three", "two._" -> "three.Foo"),
+    expectedRenames = Map(
+      "two" -> "three",
+      "import two._\nimport two.{BB => CC}" -> "import two.{BB => CC}\nimport three.Foo",
+    ),
     sourcesAreCompiled = true,
   )
 
@@ -437,13 +472,15 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |/$prefix/one/One.scala
         |package one
         |
-        |import <<two>>.{BB => CC,<<_>>}
+        |import <<two>>.{BB => CC<<,_>>}
+        |<<//>>
         |
         |class One(f: Foo)
         |class Two(f: CC)
         |""".stripMargin,
     fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
-    expectedRenames = Map("two" -> "three", "_" -> " Foo"),
+    expectedRenames =
+      Map("two" -> "three", ",_" -> "", "//" -> "import three.Foo\n//"),
     sourcesAreCompiled = true,
   )
 
@@ -458,13 +495,17 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |package one
         |
         |import <<two._>>
-        |import <<two>>.{BB => CC}
+        |import <<two.{BB => CC}>>
         |
         |class One(f: Foo)
         |class Two(f: CC)
         |""".stripMargin,
     fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
-    expectedRenames = Map("two" -> "three", "two._" -> "three.Foo"),
+    expectedRenames = Map(
+      "two" -> "three",
+      "two._" -> "three.{BB => CC}",
+      "two.{BB => CC}" -> "three.Foo",
+    ),
     sourcesAreCompiled = true,
   )
 
@@ -537,20 +578,20 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |/$prefix/B/Moon.scala
         |package B
         |import <<A._>>
-        |<<import A.{Moon => _}>>
+        |<<import A.{Moon => _}
+        |>>
         |object Moon {
         | val sun = Sun
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/C/Moon.scala"),
     expectedRenames =
-      Map("A" -> "C", "A._" -> "C.Sun", "import A.{Moon => _}" -> ""),
+      Map("A" -> "C", "A._" -> "C.Sun", "import A.{Moon => _}\n" -> ""),
     sourcesAreCompiled = true,
   )
 
-  /* Cases that are not yet supported */
   renamed(
-    "unsupported-common-pkg-part".ignore,
+    "common-pkg-part",
     s"""|/$prefix/A/B/Dep.scala
         |package A
         |package <<B>> {
@@ -568,7 +609,47 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   )
 
   renamed(
-    "unsupported-inner-pkg".ignore,
+    "qualified-refs",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A>>.B
+        |object Sun 
+        |/$prefix/X/Moon.scala
+        |package X
+        |
+        |object Moon {
+        |  <<A>>.B.Sun // should be refactored
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/B/Moon.scala"),
+    expectedRenames = Map("A" -> "C"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "static-obj",
+    s"""|/$prefix/A/Dep.scala
+        |package <<A>>
+        |object Obj {
+        | case class Dep()
+        | val END = 1
+        |}
+        |/$prefix/B/Usage.scala
+        |package B
+        |import <<A>>.Obj.Dep
+        |import <<A>>.Obj
+        |
+        |class Usage(b : Dep) {
+        | val m = <<A>>.Obj.Dep
+        | val f = Obj.END
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Dep.scala" -> s"$prefix/M/Dep.scala"),
+    expectedRenames = Map("A" -> "M"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "inner-pkg",
     s"""|/$prefix/A/Dep.scala
         |package <<A>> {
         |  class Foo
@@ -588,55 +669,240 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   )
 
   renamed(
-    "static-obj".ignore,
-    s"""|/$prefix/A/Dep.scala
-        |package <<A>>
-        |object Obj {
-        | case class Dep()
-        |}
-        |/$prefix/B/Usage.scala
-        |package B
-        |import <<A>>.Obj.Dep
-        |
-        |class Usage(b : Dep)
-        |""".stripMargin,
-    fileRenames = Map(s"$prefix/A/Dep.scala" -> s"$prefix/M/Dep.scala"),
-    expectedRenames = Map("A" -> "M"),
-    sourcesAreCompiled = true,
-  )
-
-  renamed(
-    "unsupported-qualified-refs",
+    "qualified-refs-dir-move",
     s"""|/$prefix/A/B/Sun.scala
         |package <<A>>.B
         |object Sun 
         |/$prefix/X/Moon.scala
         |package X
-        |<<//>>should not import anything
+        |
         |object Moon {
-        |  A.B.Sun // should be refactored
+        |  <<A>>.B.Sun
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A" -> s"$prefix/C"),
-    expectedRenames = Map("A" -> "C", "//" -> "import C.B.Sun\n//"),
+    expectedRenames = Map("A" -> "C"),
     sourcesAreCompiled = true,
   )
 
   renamed(
-    "unsupported-package-renames",
+    "partially-qualified-names",
     s"""|/$prefix/A/B/Sun.scala
         |package A.<<B>>
         |object Sun 
         |/$prefix/X/Moon.scala
         |package X
-        |import A.{B => BB}
-        |<<//>>should not import anything
+        |import A.B
+        |<<//>>
+        |object Moon {
+        |  println(<<B.Sun>>)
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B" -> s"$prefix/A/C"),
+    expectedRenames =
+      Map("B" -> "C", "B.Sun" -> "Sun", "//" -> "import A.C.Sun\n//"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "top-level-declarations",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A>>
+        |package object <<B>> {
+        | val m : Int = 3
+        |}
+        |/$prefix/X/Moon.scala
+        |package X
+        |import <<A>>.<<B>>.m
+        |object Moon {
+        | val o = m
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
+    expectedRenames = Map("A" -> "C", "B" -> "D"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "implicits-scala3",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A.B>>
+        |
+        |case class Sun()
+        |case class Moon()
+        |
+        |given m : Moon = Moon()
+        |
+        |extension(sun: Sun)
+        | def get2(using m : Moon) = 2
+        |
+        |/$prefix/X/Moon.scala
+        |package X
+        |import <<A.B.*
+        |import A.B.given>>
+        |object Moon:
+        |  val o = Sun().get2
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
+    expectedRenames = Map(
+      "A.B" -> "C.D",
+      "A.B.*\nimport A.B.given" -> "C.D.given\nimport C.D.Sun",
+    ),
+    sourcesAreCompiled = true,
+    scalaVersion = Some("3.2.0"),
+  )
+
+  renamed(
+    "wildcard-caseclass",
+    s"""|/$prefix/A/Sun.scala
+        |package <<A>>
+        |case class Sun()
+        |/$prefix/X/Moon.scala
+        |package X
+        |import <<A>>.<<_>>
+        |object Moon {
+        |  val o = Sun()
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/C/Sun.scala"),
+    expectedRenames = Map("A" -> "C", "_" -> "Sun"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "after-import-comment",
+    s"""|/$prefix/A/B/Sun.scala
+        |package A
+        |package <<B>>
+        |case class Sun()
+        |/$prefix/A/D/Solaris.scala
+        |package A
+        |package D
+        |case class Solaris()
+        |/$prefix/A/B/Moon.scala
+        |package A
+        |package B
+        |import D.Solaris //this is a comment
+        |<<//>>
+        |object Moon {
+        | val sun = Sun()
+        | val solaris = Solaris()
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/D/Sun.scala"),
+    expectedRenames = Map("B" -> "D", "//" -> "import D.Sun\n//"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "import-new-given",
+    s"""|/$prefix/A/B/Solaris.scala
+        |package A
+        |package <<B>>
+        |case class Solaris()
+        |given Solaris = Solaris()
+        |/$prefix/A/B/Moon.scala
+        |package A
+        |package B
+        |<<//>>
+        |object Moon:
+        | def calculate(using solaris: Solaris) = 2
+        | val result = calculate
+        |""".stripMargin,
+    fileRenames =
+      Map(s"$prefix/A/B/Solaris.scala" -> s"$prefix/A/D/Solaris.scala"),
+    expectedRenames = Map("B" -> "D", "//" -> "import D.{Solaris, given}\n//"),
+    sourcesAreCompiled = true,
+    scalaVersion = Some("3.2.0"),
+  )
+
+  renamed(
+    "implicits",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A>>
+        |package object <<B>> {
+        | case class Sun()
+        | case class Moon()
+        | implicit val m : Moon = Moon()
+        | implicit class XtentionSun(s : Sun) {
+        |   def get2(implicit m : Moon) = 2
+        | }
+        |}
+        |/$prefix/X/Moon.scala
+        |package X
+        |import <<A>>.<<B>>.<<_>>
+        |object Moon {
+        | val o = Sun().get2
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
+    expectedRenames =
+      Map("A" -> "C", "B" -> "D", "_" -> "{m, Sun, XtentionSun}"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "move-to-the-same",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A.B>>
+        |object Sun {
+        | val isHot = true
+        |}
+        |/$prefix/A/Moon.scala
+        |package A
+        |<<import B.Sun
+        |>>import <<B.Sun>>.isHot
+        |
+        |object Moon {
+        |  val sun = Sun
+        |  val isSunHot = Sun.isHot
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/Sun.scala"),
+    expectedRenames =
+      Map("A.B" -> "A", "import B.Sun\n" -> "", "B.Sun" -> "Sun"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "move-to-the-same2",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A.B>>
+        |object Sun {
+        | val isHot = true
+        |}
+        |/$prefix/X/Moon.scala
+        |package X
+        |<<import A.B.Sun
+        |>>
+        |
+        |object Moon {
+        |  val sun = Sun
+        |  val alsoSun = <<A.B.>>Sun
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/X/Sun.scala"),
+    expectedRenames = Map("A.B" -> "X", "import A.B.Sun\n" -> "", "A.B." -> ""),
+    sourcesAreCompiled = true,
+  )
+
+  /* Cases that are not yet supported */
+
+  renamed(
+    "unsupported-package-renames".ignore,
+    s"""|/$prefix/A/B/Sun.scala
+        |package A.<<B>>
+        |object Sun 
+        |/$prefix/X/Moon.scala
+        |package X
+        |import A.{<<B>> => BB}
+        |
         |object Moon {
         |  println(BB.Sun)
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B" -> s"$prefix/A/C"),
-    expectedRenames = Map("B" -> "C", "//" -> "import A.C.Sun\n//"),
+    expectedRenames = Map("B" -> "C"),
     sourcesAreCompiled = true,
   )
 }

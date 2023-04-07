@@ -55,7 +55,7 @@ abstract class BaseRenameFilesLspSuite(name: String)
       layoutWithMarkers: String,
       expectedRenames: Map[String, String],
   ) = {
-    val renameRex = """<<([ a-zA-Z0-9_.,-/=>;:\n\{\}]+)>>""".r
+    val renameRex = """<<([ a-zA-Z0-9_.,-/=>;:\n\{\}*]+)>>""".r
     FileLayout
       .mapFromString(layoutWithMarkers)
       .view
