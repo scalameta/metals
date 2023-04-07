@@ -60,8 +60,4 @@ class WorkspaceFolders(
     }
   }
 
-  // private def createServices(folders: List[Folder]): List[MetalsLspService] =
-  //   folders
-  //     .map(createService)
-
 }
