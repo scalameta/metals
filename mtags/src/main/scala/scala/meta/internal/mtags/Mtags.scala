@@ -3,7 +3,7 @@ package scala.meta.internal.mtags
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
@@ -28,7 +28,12 @@ final class Mtags {
     } else if (language.isScala) {
       addLines(language, input.text)
       val mtags =
-        new ScalaToplevelMtags(input, includeInnerClasses = false, dialect)
+        new ScalaToplevelMtags(
+          input,
+          includeInnerClasses = false,
+          includeMembers = false,
+          dialect
+        )
       mtags
         .index()
         .occurrences
@@ -49,7 +54,9 @@ final class Mtags {
     addLines(language, input.text)
     val result =
       if (language.isJava) {
-        JavaMtags.index(input).index()
+        JavaMtags
+          .index(input, includeMembers = true)
+          .index()
       } else if (language.isScala) {
         ScalaMtags.index(input, dialect).index()
       } else {
@@ -90,9 +97,10 @@ object Mtags {
   ): TextDocument = {
     input.toLanguage match {
       case Language.JAVA =>
-        new JavaMtags(input).index()
+        new JavaMtags(input, includeMembers = true).index()
       case Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(input, true, dialect)
+        val mtags =
+          new ScalaToplevelMtags(input, true, includeMembers = true, dialect)
         mtags.index()
       case _ =>
         TextDocument()

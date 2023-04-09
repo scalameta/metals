@@ -8,8 +8,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.Importee
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.TokenEditDistance
@@ -52,7 +55,7 @@ final class ReferenceProvider(
     index.clear()
   }
 
-  override def onDelete(file: AbsolutePath): Unit = {
+  override def onDelete(file: SemanticdbPath): Unit = {
     index.remove(file.toNIO)
   }
 
@@ -86,12 +89,31 @@ final class ReferenceProvider(
     }
   }
 
+  def referencesForWildcardImport(
+      sym: String,
+      source: AbsolutePath,
+      directlyImportedSymbols: Set[String],
+  ): List[String] = {
+    semanticdbs.textDocument(source).documentIncludingStale match {
+      case Some(doc) =>
+        doc.occurrences
+          .map(_.symbol)
+          .distinct
+          .filter(s =>
+            s.ownerChain.contains(sym) && s != sym && !directlyImportedSymbols
+              .contains(s)
+          )
+          .toList
+      case None => List()
+    }
+  }
+
   /**
    * Find references for the given params.
    *
    * @return - All found list of references, it is a list of result because
    *           in some cases, multiple symbols are attached to the given position.
-   *           (e.g. exntesion parameter). See: https://github.com/scalameta/scalameta/issues/2443
+   *           (e.g. extension parameter). See: https://github.com/scalameta/scalameta/issues/2443
    */
   def references(
       params: ReferenceParams,
@@ -101,8 +123,14 @@ final class ReferenceProvider(
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
-        val results: List[ResolvedSymbolOccurrence] =
-          definition.positionOccurrences(source, params.getPosition, doc)
+        val results: List[ResolvedSymbolOccurrence] = {
+          val posOccurrences =
+            definition.positionOccurrences(source, params.getPosition, doc)
+          if (posOccurrences.isEmpty)
+            // handling case `import a.{A as @@B}`
+            occerencesForRenamedImport(source, params, doc)
+          else posOccurrences
+        }
         results.map { result =>
           val occurrence = result.occurrence.get
           val distance = result.distance
@@ -132,6 +160,24 @@ final class ReferenceProvider(
         )
     }
   }
+
+  // for `import package.{AA as B@@B}` we look for occurences at `import package.{@@AA as BB}`,
+  // since rename is not a position occurence in semanticDB
+  private def occerencesForRenamedImport(
+      source: AbsolutePath,
+      params: ReferenceParams,
+      document: TextDocument,
+  ): List[ResolvedSymbolOccurrence] =
+    (for {
+      rename <- trees.findLastEnclosingAt[Importee.Rename](
+        source,
+        params.getPosition(),
+      )
+    } yield definition.positionOccurrences(
+      source,
+      rename.name.pos.toLsp.getStart(),
+      document,
+    )).getOrElse(List())
 
   // Returns alternatives symbols for which "goto definition" resolves to the occurrence symbol.
   private def referenceAlternatives(
@@ -259,6 +305,7 @@ final class ReferenceProvider(
                 findRealRange,
                 includeSynthetics,
                 sourcePath.isJava,
+                source,
               )
             } catch {
               case NonFatal(e) =>
@@ -321,6 +368,7 @@ final class ReferenceProvider(
           findRealRange,
           includeSynthetics,
           source.isJava,
+          source,
         )
       else Seq.empty
 
@@ -335,6 +383,7 @@ final class ReferenceProvider(
         )
       else
         Seq.empty
+
     workspaceRefs ++ local
   }
 
@@ -347,6 +396,7 @@ final class ReferenceProvider(
       findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean,
       isJava: Boolean,
+      source: AbsolutePath,
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -365,6 +415,7 @@ final class ReferenceProvider(
       if !reference.role.isDefinition || isIncludeDeclaration
       range <- reference.range.toList
     } {
+
       if (isJava) {
         add(range)
       }

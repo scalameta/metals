@@ -98,9 +98,7 @@ case class SbtBuildTool(
       case Some(version) =>
         scribe.info(s"sbt ${version} found for workspace.")
         val valid = isCompatibleVersion(firstVersionWithBsp, version)
-        if (valid) {
-          writeSbtMetalsPlugins(workspace)
-        } else {
+        if (!valid) {
           scribe.warn(
             s"Unable to start sbt bsp server. Make sure you have sbt >= $firstVersionWithBsp defined in your build.properties file."
           )
@@ -184,11 +182,12 @@ object SbtBuildTool {
 
   /**
    * Write the sbt plugin in the sbt project directory
+   * Return true if the metals plugin file changed.
    */
   def writePlugins(
       projectDir: AbsolutePath,
       plugins: PluginDetails*
-  ): Unit = {
+  ): Boolean = {
     val content =
       s"""|// DO NOT EDIT! This file is auto-generated.
           |
@@ -203,18 +202,24 @@ object SbtBuildTool {
     if (pluginFileShouldChange) {
       Files.write(metalsPluginFile.toNIO, bytes)
     }
+    pluginFileShouldChange
   }
 
   /**
    * Write all the plugins used by Metals when connected to sbt server:
    * - the sbt-metals plugin in the project directory
    * - the sbt-jdi-tools plugin in the project/project directory
+   *
+   * Return true if any plugin file changed, meaning we should reload
    */
-  def writeSbtMetalsPlugins(workspace: AbsolutePath): Unit = {
+  def writeSbtMetalsPlugins(workspace: AbsolutePath): Boolean = {
     val mainMeta = workspace.resolve("project")
     val metaMeta = workspace.resolve("project").resolve("project")
-    writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
-    writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+    val writtenPlugin =
+      writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
+    val writtenMeta =
+      writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+    writtenPlugin || writtenMeta
   }
 
   private case class PluginDetails private (
@@ -223,20 +228,22 @@ object SbtBuildTool {
       resolver: Option[String],
   )
 
+  private def sonatypeResolver(version: String): Option[String] =
+    if (version.contains("SNAPSHOT"))
+      Some(
+        """resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
+      )
+    else None
+
   /**
    * Short description and artifact for the sbt-bloop plugin
    */
   private def bloopPluginDetails(version: String): PluginDetails = {
-    val resolver =
-      if (isSnapshotVersion(version))
-        Some("""Resolver.bintrayRepo("scalacenter", "releases")""")
-      else None
-
     PluginDetails(
       description =
         Seq("This file enables sbt-bloop to create bloop config files."),
       artifact = s""""ch.epfl.scala" % "sbt-bloop" % "$version"""",
-      resolver,
+      sonatypeResolver(version),
     )
   }
 
@@ -244,20 +251,13 @@ object SbtBuildTool {
    * Short description and artifact for the sbt-metals plugin
    */
   private def metalsPluginDetails: PluginDetails = {
-    val resolver =
-      if (isSnapshotVersion(BuildInfo.metalsVersion))
-        Some(
-          """"Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
-        )
-      else None
-
     PluginDetails(
       Seq(
         "This plugin enables semantic information to be produced by sbt.",
         "It also adds support for debugging using the Debug Adapter Protocol",
       ),
       s""""org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"""",
-      resolver,
+      sonatypeResolver(BuildInfo.metalsVersion),
     )
   }
 
@@ -287,14 +287,11 @@ object SbtBuildTool {
       resolver = None,
     )
 
-  private def isSnapshotVersion(version: String): Boolean =
-    version.contains("+")
-
   /**
    * Contents of metals.sbt file that is to be installed in the workspace.
    */
   private def sbtPlugin(plugin: PluginDetails): String = {
-    val resolvers = plugin.resolver.map(r => s"resolvers += $r").getOrElse("")
+    val resolvers = plugin.resolver.getOrElse("")
     val description = plugin.description.mkString("// ", "\n// ", "")
 
     s"""|$description

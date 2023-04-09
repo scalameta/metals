@@ -21,6 +21,21 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
+    "arg-newline",
+    s"""|object Main {
+        |  def foo(banana: String, apple: String) = ???
+        |  foo(
+        |    @@
+        |  )
+        |}
+        |""".stripMargin,
+    """|apple = : String
+       |banana = : String
+       |""".stripMargin,
+    topLines = Option(2),
+  )
+
+  check(
     "arg1",
     s"""|object Main {
         |  assert(assertion = true, @@)
@@ -103,8 +118,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
            |Main arg4
            |""".stripMargin,
       "3.1" ->
-        """|age = : Int
-           |address = : String
+        """|address = : String
+           |age = : Int
            |followers = : Int
            |""".stripMargin,
     ),
@@ -115,23 +130,15 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|
         |$user
         |object Main {
-        |  User("", @@ address = "")
+        |  User("", @@, address = "")
         |}
         |""".stripMargin,
-    """|address = : String
+    """|age = : Int
        |followers = : Int
        |Main arg5
        |User arg5
        |""".stripMargin,
     topLines = Option(4),
-    compat = Map(
-      "3" ->
-        """|age = : Int
-           |followers = : Int
-           |Main arg5
-           |User arg5
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -251,8 +258,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       |  test($f@@)
       |}
       |""".stripMargin,
-    """|$$foo = 
-       |""".stripMargin,
+    """|$$foo = """.stripMargin,
     topLines = Option(1),
   )
 
@@ -361,9 +367,9 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
-        |  val hello = "" 
+        |  val hello = ""
         |  val relevant = 123
-        |  ___ 
+        |  ___
         |}
         |""".stripMargin,
     "foo(rele@@)",
@@ -375,8 +381,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
-        |  val hello = "" 
-        |  ___ 
+        |  val hello = ""
+        |  ___
         |}
         |""".stripMargin,
     "foo(auto@@)",
@@ -394,7 +400,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  def foo(animal: Animal, furniture: Furniture) : Int = 42
         |  val dog = new Dog()
         |  val chair = new Chair()
-        |  ___ 
+        |  ___
         |}
         |""".stripMargin,
     "foo(auto@@)",
@@ -407,7 +413,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  def foo(argument : Int, other : String, last : String = "") : Int = argument
         |  val number = 5
         |  val argument = 123
-        |  val hello = "" 
+        |  val hello = ""
         |  ___
         |}
         |""".stripMargin,
@@ -477,6 +483,30 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument2 = x : Int
        |""".stripMargin,
     topLines = Some(4),
+    compat = Map(
+      /* Minor implementation detail between Scala 2 and Scala 3
+       * which shouldn't cause any issue and making it work the same
+       * would require non trivial code. `argument1 = x ` is not a
+       * NamedArgument in Scala 2 but a simple TextEditMember, which means
+       * `argument1 = ` will be prioritized.
+       */
+      "3" ->
+        """|argument1 = : Int
+           |argument1 = x : Int
+           |argument2 = : Int
+           |argument2 = x : Int
+           |""".stripMargin
+    ),
   )
 
+  check(
+    "infix",
+    s"""|object Main{
+        |  val lst: List[Int] = List(1, 2, 3)
+        |  lst.map(x => x * x@@ )
+        |}
+        |""".stripMargin,
+    """|x: Int
+       |""".stripMargin,
+  )
 }

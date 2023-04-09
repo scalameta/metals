@@ -1,5 +1,7 @@
 package tests.sbt
 
+import scala.concurrent.Future
+
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.Messages
@@ -7,6 +9,7 @@ import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
@@ -14,6 +17,7 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseImportSuite
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
+import tests.TestSemanticTokens
 
 /**
  * Basic suite to ensure that a connection to sbt server can be made.
@@ -26,6 +30,13 @@ class SbtServerSuite
   val supportedBspVersion = V.sbtVersion
   val scalaVersion = V.scala213
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
+  var compilationCount = 0
+
+  override def beforeEach(context: BeforeEach): Unit = {
+    compilationCount = 0
+    onStartCompilation = { () => compilationCount += 1 }
+    super.beforeEach(context)
+  }
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -66,8 +77,6 @@ class SbtServerSuite
     def sbtBspConfig = workspace.resolve(".bsp/sbt.json")
     def isBspConfigValid =
       sbtBspConfig.readText.contains(sbtLaunchJar.toString())
-    def sbtBspPlugin = workspace.resolve("project/metals.sbt")
-    def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
     cleanWorkspace()
     writeLayout(SbtBuildLayout("", V.scala213))
     for {
@@ -86,10 +95,40 @@ class SbtServerSuite
     } yield {
       assert(sbtLaunchJar.exists)
       assert(isBspConfigValid)
-      assert(sbtBspPlugin.exists)
       assert(sbtBspConfig.exists)
-      assert(sbtJdiPlugin.exists)
-      assert(sbtJdiPlugin.readText.contains("sbt-jdi-tools"))
+    }
+  }
+
+  test("reload plugins") {
+    // should reload existing server after writing the metals.sbt plugin file
+    cleanWorkspace
+    val layout = SbtBuildLayout("", V.scala213)
+    writeLayout(layout)
+    assert(workspace.exists)
+    def startSbtServer(): Future[Int] = {
+      val sbtProcess = SystemProcess.run(
+        List("sbt", "-client", "exit"),
+        workspace,
+        true,
+        Map.empty,
+      )
+      sbtProcess.complete
+    }
+    for {
+      code <- startSbtServer
+      _ = assert(code == 0)
+      _ = assert(workspace.resolve(".bsp/sbt.json").exists)
+      _ <- initializer.initialize(workspace, server, client, layout, false)
+      _ <- server.initialized()
+    } yield {
+      // should not contain the 'Navigation will not work for this build due to mis-configuration.' message
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildMessage,
+          Messages.BspSwitch.message,
+        ).mkString("\n"),
+      )
     }
   }
 
@@ -97,12 +136,22 @@ class SbtServerSuite
     cleanWorkspace()
     client.importBuildChanges = ImportBuildChanges.yes
     for {
-      _ <- initialize(SbtBuildLayout("", V.scala213))
+      _ <- initialize(
+        SbtBuildLayout(
+          """|/a/src/main/scala/A.scala
+             |
+             |object A{
+             |
+             |}
+             |""".stripMargin,
+          V.scala213,
+        )
+      )
       // reload build after build.sbt changes
       _ <- server.executeCommand(ServerCommands.ResetNotifications)
       _ <- server.didSave("build.sbt") { text =>
         s"""$text
-           |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
+           |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.3.0"
            |""".stripMargin
       }
       _ = {
@@ -112,14 +161,38 @@ class SbtServerSuite
         )
         client.showMessages.clear()
       }
-      _ <- server.didSave("build.sbt") { _ =>
-        s"""scalaVersion := "${V.scala213}"
-           |libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
-           |""".stripMargin
+      _ <- server.didSave("build.sbt") { text =>
+        text.replace("ibraryDependencies", "libraryDependencies")
       }
       _ = {
         assert(client.workspaceErrorShowMessages.isEmpty)
       }
+      _ <- server.didSave("build.sbt") { text =>
+        text.replace(
+          "val a = project.in(file(\"a\"))",
+          """|val a = project.in(file("a")).settings(
+             |  libraryDependencies += "org.scalameta" %% "scalameta" % "4.6.0"
+             |)
+             |""".stripMargin,
+        )
+      }
+      _ = {
+        assert(client.workspaceErrorShowMessages.isEmpty)
+      }
+      _ <- server.didSave("a/src/main/scala/A.scala") { _ =>
+        """|object A{
+           |  val a: scala.meta.Defn.Class = ???
+           |}
+           |""".stripMargin
+      }
+      _ <- server.assertHoverAtLine(
+        "a/src/main/scala/A.scala",
+        "  val a: scala.meta.Defn.C@@lass = ???",
+        """|```scala
+           |abstract trait Class: Defn.Class
+           |```
+           |""".stripMargin,
+      )
     } yield ()
   }
 
@@ -206,4 +279,84 @@ class SbtServerSuite
       )
     }
   }
+
+  test("infinite-loop") {
+    cleanWorkspace()
+    val layout =
+      s"""|/project/build.properties
+          |sbt.version=$supportedMetaBuildVersion
+          |/build.sbt
+          |${SbtBuildLayout.commonSbtSettings}
+          |Compile / sourceGenerators += Def.task {
+          |  val content = "object Foo\\n"
+          |  val file = target.value / "Foo.scala"
+          |  IO.write(file, content)
+          |  Seq(file)
+          |}
+          |""".stripMargin
+    for {
+      _ <- initialize(layout)
+      // make sure to compile once
+      _ <- server.server.compilations.compileFile(
+        workspace.resolve("target/Foo.scala")
+      )
+    } yield {
+      // Sleep 100 ms: that should be enough to see the compilation looping
+      Thread.sleep(100)
+      // Check that the compilation is not looping
+      assertEquals(compilationCount, 1)
+    }
+  }
+
+  test("semantic-highlight") {
+    cleanWorkspace()
+    val expected =
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,definition,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+          |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
+          |  .<<settings>>/*method*/(
+          |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
+          |    <<inThisBuild>>/*method*/(
+          |      <<List>>/*class*/(
+          |        <<organization>>/*variable,readonly*/ <<:=>>/*method*/ <<"com.example">>/*string*/,
+          |        <<scalaVersion>>/*variable,readonly*/ <<:=>>/*method*/ <<"2.13.10">>/*string*/,
+          |        <<scalacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(<<"-Xsource:3">>/*string*/, <<"-Xlint:adapted-args">>/*string*/),
+          |        <<javacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(
+          |          <<"-Xlint:all">>/*string*/,
+          |          <<"-Xdoclint:accessibility,html,syntax">>/*string*/
+          |        )
+          |      )
+          |    ),
+          |    <<name>>/*variable,readonly*/ <<:=>>/*method*/ <<"bsp-tests-source-sets">>/*string*/
+          |  )
+          |
+          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*class*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
+          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalatest">>/*string*/ <<%%>>/*method*/ <<"scalatest">>/*string*/ <<%>>/*method*/ <<"3.2.9">>/*string*/ <<%>>/*method*/ <<Test>>/*variable,readonly*/
+          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalameta">>/*string*/ <<%%>>/*method*/ <<"scalameta">>/*string*/ <<%>>/*method*/ <<"4.6.0">>/*string*/
+          |
+           """.stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+    for {
+      _ <- initialize(
+        s"""|/build.sbt
+            |$fileContent
+           """.stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("build.sbt")
+      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.assertSemanticHighlight(
+        "build.sbt",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
+
 }

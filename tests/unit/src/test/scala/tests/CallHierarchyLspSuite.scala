@@ -17,18 +17,18 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |""".stripMargin
       )
       _ <- assertIncomingCalls(
-        """|/a/src/main/scala/a/Main.scala
-           |package a
-           |
-           |object Main {
-           |  def a() {}
-           |  def b() { a() }
-           |  def <<c>>/*1*/() { <?<b>?>/*1*/() }
-           |  def d() { a() }
-           |}
-           |
-           |""".stripMargin,
-        Some(result("1")),
+        input = """|/a/src/main/scala/a/Main.scala
+                   |package a
+                   |
+                   |object Main {
+                   |  def a() {}
+                   |  def b() { a() }
+                   |  def <<c>>/*1*/() { <?<b>?>/*1*/() }
+                   |  def d() { a() }
+                   |}
+                   |
+                   |""".stripMargin,
+        item = Some(result("1")),
       )
     } yield ()
   }
@@ -309,7 +309,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("complex-pats") {
+  test("complex-pats-incoming") {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/Main.scala
@@ -322,6 +322,11 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |
            |""".stripMargin
       )
+    } yield ()
+  }
+
+  test("complex-pats-outgoing") {
+    for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/Main.scala
            |package a
@@ -336,7 +341,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("primary-constructor") {
+  test("primary-constructor-incoming") {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/Main.scala
@@ -350,6 +355,11 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |
            |""".stripMargin
       )
+    } yield ()
+  }
+
+  test("primary-constructor-outgoing") {
+    for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/Main.scala
            |package a
@@ -365,7 +375,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("secondary-constructor") {
+  test("secondary-constructor-incoming") {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/Main.scala
@@ -381,6 +391,11 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |
            |""".stripMargin
       )
+    } yield ()
+  }
+
+  test("secondary-constructor-outgoing") {
+    for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/Main.scala
            |package a
@@ -398,7 +413,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("case-class-constructor") {
+  test("case-class-constructor-incoming") {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/Main.scala
@@ -412,6 +427,11 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |
            |""".stripMargin
       )
+    } yield ()
+  }
+
+  test("case-class-constructor-outgoing") {
+    for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/Main.scala
            |package a
@@ -427,7 +447,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("apply") {
+  test("apply-incoming") {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/User.scala
@@ -451,6 +471,11 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |
            |""".stripMargin
       )
+    } yield ()
+  }
+
+  test("apply-outgoing") {
+    for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/User.scala
            |package a
@@ -476,7 +501,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("unapply") {
+  test("unapply-incoming") {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/User.scala
@@ -503,7 +528,11 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |
            |""".stripMargin
       )
+    } yield ()
+  }
 
+  test("unapply-outgoing") {
+    for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/User.scala
            |package a
@@ -565,6 +594,30 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |object Demo {
            |  val r: Service[String] = ???
            |  def main() = r.get()
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("incoming-calls-finds-parent-calls") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Demo.scala
+           |package a
+           |
+           |trait Service {
+           |  def get(): Unit
+           |}
+           |
+           |class Impl extends Service {
+           | def g@@et(): Unit = ()
+           |}
+           |
+           |object Demo {
+           |  val s: Service = new Impl
+           |  def <<main>>/*1*/() = s.<?<get>?>/*1*/()
            |}
            |
            |""".stripMargin

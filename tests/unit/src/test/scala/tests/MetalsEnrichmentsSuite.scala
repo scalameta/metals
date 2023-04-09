@@ -22,18 +22,21 @@ class MetalsEnrichmentsSuite extends BaseSuite {
     assertEquals(relativeCreated, expected)
   }
 
-  test("dont-decode-uri") {
-    val uri =
-      "file:///Users/happyMetalsUser/hello%20space%20world/src/main/scala/Main.scala"
-    val path = uri.toAbsolutePath
-    assert(path.toString().contains("hello space world"))
-  }
+  // windows doesn't %20 as escapes
+  if (!isWindows) {
+    test("dont-decode-uri") {
+      val uri =
+        "file:///Users/happyMetalsUser/hello%20space%20world/src/main/scala/Main.scala"
+      val path = uri.toAbsolutePath
+      assert(path.toString().contains("hello space world"))
+    }
 
-  test("encode-uri-space") {
-    val uri =
-      "file:///Users/happyMetalsUser/hello space+world/src/main/scala/Main.scala"
-    val path = uri.toAbsolutePath
-    assert(path.toString().contains("hello space+world"))
+    test("encode-uri-space") {
+      val uri =
+        "file:///Users/happyMetalsUser/hello space+world/src/main/scala/Main.scala"
+      val path = uri.toAbsolutePath
+      assert(path.toString().contains("hello space+world"))
+    }
   }
 
 }

@@ -564,18 +564,12 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |       ^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "2.11" ->
-        """|Class `Some[A]` represents existing values of type
-           | `A`.
-           |<init>(x: Int): Some[Int]
-           |       ^^^^^^
-           |""".stripMargin,
       "3" ->
         """|Class `Some[A]` represents existing values of type
            | `A`.
            |Some[A](value: A)
            |        ^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     ),
   )
 

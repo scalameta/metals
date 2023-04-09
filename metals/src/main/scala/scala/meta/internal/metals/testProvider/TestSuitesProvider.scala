@@ -31,6 +31,7 @@ import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb
@@ -95,7 +96,10 @@ final class TestSuitesProvider(
       case _ => ()
     }
 
-  override def onDelete(file: AbsolutePath): Unit = {
+  override def onDelete(file: SemanticdbPath): Unit = ()
+  override def reset(): Unit = ()
+
+  def onFileDelete(file: AbsolutePath): Unit = {
     val removed = index.remove(file)
     if (isExplorerEnabled) {
       val removeEvents = removed
@@ -111,8 +115,6 @@ final class TestSuitesProvider(
       updateClientIfNonEmpty(removeEvents)
     }
   }
-
-  override def reset(): Unit = ()
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
@@ -355,6 +357,8 @@ final class TestSuitesProvider(
       entries.foreach(index.put(_))
     }
 
+    if (isCodeLensEnabled) client.refreshModel()
+
     if (isExplorerEnabled) {
       val addedTestCases = addedEntries.mapValues {
         _.flatMap { entry =>
@@ -419,6 +423,11 @@ final class TestSuitesProvider(
       currentTarget.testSymbols
         .readOnlySnapshot()
         .toList
+        // sort the symbols lexically so that symbols with the same fullyQualifiedName
+        // will be grouped, and the class will come before companion object (i.e.
+        // `a.b.WordSpec#` < `a.b.WordSpec.`). This ensures that the class is put into the cache
+        // instead of the companion object.
+        .sortBy { case (symbol, _) => symbol }
         .foldLeft(List.empty[TestEntry]) {
           case (entries, (symbol, testSymbolInfo)) =>
             val fullyQualifiedName =

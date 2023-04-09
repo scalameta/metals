@@ -559,6 +559,18 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin,
   )
 
+  check(
+    "java-scala-implementation",
+    """|/a/src/main/scala/a/Test.scala
+       |package a
+       |class <<Test>> extends TestJava with TestScala {}
+       |trait TestScala {}
+       |/a/src/main/java/a/TestJava.java
+       |package a;
+       |public interface TestJ@@ava {}
+       |""".stripMargin,
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.4", "io.circe::circe-generic:0.12.0")
 

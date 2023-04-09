@@ -33,7 +33,7 @@ import org.eclipse.lsp4j.InitializeResult
  */
 abstract class BaseLspSuite(
     suiteName: String,
-    initializer: BuildServerInitializer = QuickBuildInitializer,
+    protected val initializer: BuildServerInitializer = QuickBuildInitializer,
 ) extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default
@@ -53,6 +53,7 @@ abstract class BaseLspSuite(
   protected def initializationOptions: Option[InitializationOptions] = None
 
   private var useVirtualDocs = false
+  protected val changeSpacesToDash = true
 
   protected def useVirtualDocuments = useVirtualDocs
 
@@ -61,10 +62,8 @@ abstract class BaseLspSuite(
 
   override def afterAll(): Unit = {
     if (server != null) {
-      server.server.cancelAll()
+      server.languageServer.cancelAll()
     }
-    ex.shutdown()
-    sh.shutdown()
   }
 
   def writeLayout(layout: String): Unit = {
@@ -96,7 +95,10 @@ abstract class BaseLspSuite(
   )(implicit loc: Location): Unit = {
     def functionRetry(retry: Int): Future[Unit] = {
       fn.recoverWith {
-        case _ if retry > 0 => functionRetry(retry - 1)
+        case _ if retry > 0 =>
+          cancelServer()
+          newServer(testOpts.name)
+          functionRetry(retry - 1)
         case e => Future.failed(e)
       }
     }
@@ -128,23 +130,28 @@ abstract class BaseLspSuite(
 
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(
-      workspace,
-      client,
-      buffers,
-      config,
-      bspGlobalDirectories,
-      sh,
-      time,
-      initOptions,
-      mtagsResolver,
-      onStartCompilation,
-    )(ex)
-    server.server.userConfig = this.userConfig
+      workspace = workspace,
+      client = client,
+      buffers = buffers,
+      config = config,
+      initialUserConfig = this.userConfig,
+      bspGlobalDirectories = bspGlobalDirectories,
+      sh = sh,
+      time = time,
+      initializationOptions = initOptions,
+      mtagsResolver = mtagsResolver,
+      onStartCompilation = onStartCompilation,
+    )(
+      ex
+    )
   }
 
+  /**
+   * Cancel the server without cancelling its thread pools.
+   */
   def cancelServer(): Unit = {
     if (server != null) {
-      server.server.cancel()
+      server.languageServer.cancel()
     }
   }
 
@@ -156,11 +163,15 @@ abstract class BaseLspSuite(
   }
 
   protected def createWorkspace(name: String): AbsolutePath = {
-    val path = PathIO.workingDirectory
+    val pathToSuite = PathIO.workingDirectory
       .resolve("target")
       .resolve("e2e")
       .resolve(suiteName)
-      .resolve(name.replace(' ', '-'))
+
+    val path =
+      if (changeSpacesToDash)
+        pathToSuite.resolve(name.replace(' ', '-'))
+      else pathToSuite.resolve(name)
 
     Files.createDirectories(path.toNIO)
     path

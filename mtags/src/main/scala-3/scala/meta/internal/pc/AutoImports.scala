@@ -5,17 +5,14 @@ import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImportEdits
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
 import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Denotations.*
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
-import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import org.eclipse.{lsp4j as l}
@@ -254,7 +251,16 @@ object AutoImports extends AutoImportsBackticks:
         imports: List[ImportSel]
     )(using Context): Option[l.TextEdit] =
       if imports.nonEmpty then
-        val indent = " " * importPosition.indent
+        val indent0 = " " * importPosition.indent
+        val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLsp
+
+        // for worksheets, we need to remove 2 whitespaces, because it ends up being wrapped in an object
+        // see WorksheetProvider.worksheetScala3AdjustmentsForPC
+        val indent =
+          if pos.source.path.isWorksheet &&
+            editPos.getStart().getCharacter() == 0
+          then indent0.drop(2)
+          else indent0
         val topPadding =
           if importPosition.padTop then "\n"
           else ""
@@ -268,7 +274,6 @@ object AutoImports extends AutoImportsBackticks:
           .map(sel => s"${indent}import $sel")
           .mkString(topPadding, "\n", "\n")
 
-        val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLsp
         Some(new l.TextEdit(editPos, formatted))
       else None
     end renderImports
@@ -361,8 +366,8 @@ object AutoImports extends AutoImportsBackticks:
       )
 
     val scriptPos =
-      if path.endsWith(".sc") then forScript(isAmmonite = false)
-      else if path.endsWith(".amm.sc.scala") then forScript(isAmmonite = true)
+      if path.isAmmoniteGeneratedFile then forScript(isAmmonite = true)
+      else if path.isScalaCLIGeneratedFile then forScript(isAmmonite = false)
       else None
 
     scriptPos

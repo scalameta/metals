@@ -21,8 +21,12 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
+import scala.meta.pc.DisplayableException
+import scala.meta.pc.HoverSignature
+import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
@@ -34,11 +38,10 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
@@ -119,6 +122,22 @@ case class ScalaPresentationCompiler(
 
   def didClose(uri: URI): Unit = {}
 
+  override def semanticTokens(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[Node]] = {
+
+    val empty: ju.List[Node] = new ju.ArrayList[Node]()
+    compilerAccess.withInterruptableCompiler(
+      empty,
+      params.token
+    ) { pc =>
+      new PcSemanticTokensProvider(
+        pc.compiler(),
+        params
+      ).provide().asJava
+    }
+  }
+
   override def complete(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
@@ -144,6 +163,21 @@ case class ScalaPresentationCompiler(
       new InferredTypeProvider(pc.compiler(), params).inferredTypeEdits().asJava
     }
   }
+
+  override def inlineValue(
+      params: OffsetParams
+  ): CompletableFuture[ju.List[TextEdit]] = {
+    val empty: Either[String, List[TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(empty, params.token) { pc =>
+        new PcInlineValueProviderImpl(pc.compiler(), params).getInlineTextEdits
+      })
+      .thenApply {
+        case Right(edits: List[TextEdit]) => edits.asJava
+        case Left(error: String) => throw new DisplayableException(error)
+      }
+  }
+
   override def extractMethod(
       range: RangeParams,
       extractionPos: OffsetParams
@@ -162,14 +196,19 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       argIndices: ju.List[Integer]
   ): CompletableFuture[ju.List[TextEdit]] = {
-    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new ConvertToNamedArgumentsProvider(
-        pc.compiler(),
-        params,
-        argIndices.asScala.map(_.toInt).toSet
-      ).convertToNamedArguments.asJava
-    }
+    val empty: Either[String, List[TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(empty, params.token) { pc =>
+        new ConvertToNamedArgumentsProvider(
+          pc.compiler(),
+          params,
+          argIndices.asScala.map(_.toInt).toSet
+        ).convertToNamedArguments
+      })
+      .thenApply {
+        case Left(error: String) => throw new DisplayableException(error)
+        case Right(edits: List[TextEdit]) => edits.asJava
+      }
   }
 
   override def autoImports(
@@ -212,6 +251,16 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc => new SignatureHelpProvider(pc.compiler()).signatureHelp(params) }
 
+  override def prepareRename(
+      params: OffsetParams
+  ): CompletableFuture[ju.Optional[Range]] =
+    compilerAccess.withNonInterruptableCompiler(
+      Optional.empty[Range](),
+      params.token
+    ) { pc =>
+      new PcRenameProvider(pc.compiler(), params, None).prepareRename().asJava
+    }
+
   override def rename(
       params: OffsetParams,
       name: String
@@ -220,14 +269,14 @@ case class ScalaPresentationCompiler(
       List[TextEdit]().asJava,
       params.token
     ) { pc =>
-      new PcRenameProvider(pc.compiler(), params, name).rename().asJava
+      new PcRenameProvider(pc.compiler(), params, Some(name)).rename().asJava
     }
 
   override def hover(
       params: OffsetParams
-  ): CompletableFuture[Optional[Hover]] =
+  ): CompletableFuture[Optional[HoverSignature]] =
     compilerAccess.withNonInterruptableCompiler(
-      Optional.empty[Hover](),
+      Optional.empty[HoverSignature](),
       params.token
     ) { pc =>
       Optional.ofNullable(

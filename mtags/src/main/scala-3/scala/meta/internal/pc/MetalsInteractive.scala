@@ -8,15 +8,11 @@ import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.ContextOps.*
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.CyclicReference
-import dotty.tools.dotc.core.Denotations.Denotation
-import dotty.tools.dotc.core.Denotations.MultiPreDenotation
-import dotty.tools.dotc.core.Denotations.PreDenotation
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.Type
-import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.SourceTree
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
@@ -69,8 +65,8 @@ object MetalsInteractive:
               case _ =>
             }
             localCtx
-          case tree @ Template(constr, parents, self, _) =>
-            if (constr :: self :: parents).contains(nested) then outer
+          case tree @ Template(constr, _, self, _) =>
+            if (constr :: self :: tree.parents).contains(nested) then outer
             else
               contextOfStat(
                 tree.body,
@@ -242,6 +238,33 @@ object MetalsInteractive:
           if target.span.isSourceDerived &&
             target.sourcePos.contains(pos) =>
         List((target.symbol, target.typeOpt))
+
+      /* In some cases type might be represented by TypeTree, however it's possible
+       * that the type tree will not be marked properly as synthetic even if it doesn't
+       * exist in the code.
+       *
+       * For example for `Li@@st(1)` we will get the type tree representing [Int]
+       * despite it not being in the code.
+       *
+       * To work around it we check if the current and parent spans match, if they match
+       * this most likely means that the type tree is synthetic, since it has efectively
+       * span of 0.
+       */
+      case (tpt: TypeTree) :: parent :: _
+          if tpt.span != parent.span && !tpt.symbol.is(Synthetic) =>
+        List((tpt.symbol, tpt.tpe))
+
+      /* TypeTest class https://dotty.epfl.ch/docs/reference/other-new-features/type-test.html
+       * compiler automatically adds unapply if possible, we need to find the type symbol
+       */
+      case (head @ CaseDef(pat, _, _)) :: _
+          if defn.TypeTestClass == pat.symbol.owner =>
+        pat match
+          case UnApply(fun, _, pats) =>
+            val tpeSym = pats.head.typeOpt.typeSymbol
+            List((tpeSym, tpeSym.info))
+          case _ =>
+            Nil
 
       case path @ head :: tail =>
         if head.symbol.is(Synthetic) then

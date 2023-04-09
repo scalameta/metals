@@ -149,9 +149,34 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
       |}""".stripMargin,
   )
 
-  def check(name: TestOptions, testCase: String)(implicit
-      loc: Location
+  check(
+    "single-java",
+    """
+      |class Main {
+      |  public static void main(String[] args) {
+      |     System.out.<<print@@ln>>("Hello world");
+      |  }
+      |}""".stripMargin,
+    forJava = true,
+  )
+
+  check(
+    "multiple-java",
+    """
+      |class Main {
+      |  public static void main(String[] args) {
+      |    int <<abc>> = 123;
+      |    <<abc>>++;
+      |    System.out.println(<<ab@@c>>);
+      |  }
+      |}""".stripMargin,
+    forJava = true,
+  )
+
+  def check(name: TestOptions, testCase: String, forJava: Boolean = false)(
+      implicit loc: Location
   ): Unit = {
+    val fileName = if (forJava) "Main.java" else "Main.scala"
     val edit = testCase.replaceAll("(<<|>>)", "")
     val expected = testCase.replaceAll("@@", "")
     val base = testCase.replaceAll("(<<|>>|@@)", "")
@@ -160,13 +185,13 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
         _ <- initialize(
           s"""/metals.json
              |{"a":{}}
-             |/a/src/main/scala/a/Main.scala
+             |/a/src/main/scala/a/$fileName
              |$base
       """.stripMargin
         )
-        _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+        _ <- server.didOpen(s"a/src/main/scala/a/$fileName")
         _ <- server.assertHighlight(
-          "a/src/main/scala/a/Main.scala",
+          s"a/src/main/scala/a/$fileName",
           edit,
           expected,
         )

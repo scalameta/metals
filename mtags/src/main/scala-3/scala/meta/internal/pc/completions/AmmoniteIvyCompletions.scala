@@ -6,10 +6,10 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd.ImportSelector
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.util.SourcePosition
 
 object AmmoniteIvyCompletions:
   def contribute(
+      coursierComplete: CoursierComplete,
       selector: List[ImportSelector],
       completionPos: CompletionPos,
       text: String,
@@ -18,7 +18,7 @@ object AmmoniteIvyCompletions:
     val query = selector.collectFirst {
       case sel: ImportSelector
           if sel.sourcePos.encloses(pos) && sel.sourcePos.`end` > pos.`end` =>
-        sel.name.decoded
+        sel.name.decoded.replace(Cursor.value, "")
     }
     query match
       case None => Nil
@@ -32,7 +32,7 @@ object AmmoniteIvyCompletions:
             val (rangeStart, rangeEnd) =
               CoursierComplete.inferEditRange(pos.point, text)
             pos.withStart(rangeStart).withEnd(rangeEnd).toLsp
-        val completions = CoursierComplete.complete(dependency)
+        val completions = coursierComplete.complete(dependency)
         completions
           .map(insertText =>
             CompletionValue.IvyImport(

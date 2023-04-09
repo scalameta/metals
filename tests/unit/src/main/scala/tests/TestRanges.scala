@@ -1,5 +1,7 @@
 package tests
 
+import scala.collection.mutable.Buffer
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TextEdits
 
@@ -15,9 +17,17 @@ object TestRanges extends RangeReplace {
     val resolved = for {
       (file, code) <- sourceFiles.toSeq
       validLocations = locations.filter(_.getUri().contains(file))
-    } yield file -> validLocations.foldLeft(code) { (base, location) =>
-      replaceInRange(base, location.getRange)
-    }
+    } yield file -> validLocations
+      .foldLeft((code, List.empty[(Int, Int)])) {
+        case ((base, alreadyAddedMarkings), location) =>
+          replaceInRangeWithAdjustmens(
+            code,
+            base,
+            location.getRange,
+            alreadyAddedMarkings,
+          )
+      }
+      ._1
     resolved.toMap
   }
 
@@ -26,19 +36,18 @@ object TestRanges extends RangeReplace {
       code: String,
       workspaceEdit: WorkspaceEdit,
   ): Option[String] = {
-    for {
-      validLocations <-
-        workspaceEdit
-          .getDocumentChanges()
-          .asScala
-          .find(change =>
-            change.isLeft &&
-              change.getLeft.getTextDocument.getUri.contains(file)
-          )
-    } yield TextEdits.applyEdits(
-      code,
-      validLocations.getLeft.getEdits.asScala.toList,
-    )
+    val changes =
+      Option(workspaceEdit.getChanges()).map(_.asScala).getOrElse(Buffer.empty)
 
+    val documentChanges =
+      Option(workspaceEdit.getDocumentChanges())
+        .map(_.asScala.collect { case e if e.isLeft() => e.getLeft() })
+        .getOrElse(Buffer.empty)
+        .map(edit => (edit.getTextDocument().getUri, edit.getEdits))
+
+    (changes ++ documentChanges).collectFirst {
+      case (editFile, edits) if editFile.contains(file) =>
+        TextEdits.applyEdits(code, edits.asScala.toList)
+    }
   }
 }

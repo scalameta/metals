@@ -14,15 +14,21 @@ trait ScalaCliCompletions {
           CoursierComplete.isScalaCliDep(
             pos.lineContent.replace(CURSOR, "").take(pos.column - 1)
           )
-        case (_: PackageDef) :: Nil if pos.source.file.path.endsWith(".sc") =>
+        // generated script file will end with .sc.scala
+        case (_: Template) :: (_: ModuleDef) :: _
+            if pos.source.file.path.endsWith(".sc.scala") =>
           CoursierComplete.isScalaCliDep(
-            pos.lineContent.replace(CURSOR, "").take(pos.column - 1)
+            pos.lineContent
+              .stripPrefix("/*<script>*/")
+              .replace(CURSOR, "")
+              .take(pos.column - 1)
           )
         case _ => None
       }
   }
 
   case class ScalaCliCompletion(
+      coursierComplete: CoursierComplete,
       pos: Position,
       text: String,
       dependency: String
@@ -30,7 +36,7 @@ trait ScalaCliCompletions {
 
     override def contribute: List[Member] = {
       val completions =
-        CoursierComplete.complete(dependency)
+        coursierComplete.complete(dependency)
       val (editStart, editEnd) =
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp

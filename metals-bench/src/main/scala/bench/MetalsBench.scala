@@ -154,4 +154,12 @@ class MetalsBench {
     )
   }
 
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def alltoplevelsScalaIndex(): Unit = {
+    scalaDependencySources.inputs.foreach { input =>
+      Mtags.allToplevels(input, dialects.Scala3)
+    }
+  }
+
 }

@@ -145,8 +145,11 @@ private[callHierarchy] trait CallHierarchyHelpers {
       tree.parent match {
         case Some(tuple @ (_: Pat.Tuple)) =>
           getIndicesFromPat(tuple, tuple.args.indexOf(tree) :: indices)
-        case Some(extract @ (_: Pat.Extract)) =>
-          getIndicesFromPat(extract, extract.args.indexOf(tree) :: indices)
+        case Some(argClause @ (_: Pat.ArgClause)) =>
+          getIndicesFromPat(
+            argClause,
+            argClause.values.indexOf(tree) :: indices,
+          )
         case Some(parent) => getIndicesFromPat(parent, indices)
         case None => (tree, indices)
       }

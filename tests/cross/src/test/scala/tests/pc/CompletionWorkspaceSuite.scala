@@ -511,10 +511,28 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |
        |object Main {
        |  @noinline
-       |  def foo: ArrayBuffer [Int] = ???
+       |  def foo: ArrayBuffer[$0] [Int] = ???
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable",
+    compat = Map(
+      "2" ->
+        """|import scala.collection.mutable.ArrayBuffer
+           |
+           |object Main {
+           |  @noinline
+           |  def foo: ArrayBuffer [Int] = ???
+           |}
+           |""".stripMargin,
+      ">=3.2.1" ->
+        """|import scala.collection.mutable.ArrayBuffer
+           |
+           |object Main {
+           |  @noinline
+           |  def foo: ArrayBuffer [Int] = ???
+           |}
+           |""".stripMargin,
+    ),
   )
 
   checkEdit(
@@ -530,10 +548,30 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |import scala.collection.mutable.ArrayBuffer
        |object Main {
        |  @deprecated("", "")
-       |  class Foo extends ArrayBuffer[Int]
+       |  class Foo extends ArrayBuffer[$0][Int]
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable",
+    compat = Map(
+      "2" ->
+        """|package annotationclass
+           |
+           |import scala.collection.mutable.ArrayBuffer
+           |object Main {
+           |  @deprecated("", "")
+           |  class Foo extends ArrayBuffer[Int]
+           |}
+           |""".stripMargin,
+      ">=3.2.1" ->
+        """|package annotationclass
+           |
+           |import scala.collection.mutable.ArrayBuffer
+           |object Main {
+           |  @deprecated("", "")
+           |  class Foo extends ArrayBuffer[Int]
+           |}
+           |""".stripMargin,
+    ),
   )
 
   checkEdit(
@@ -549,10 +587,30 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |import scala.collection.mutable.ArrayBuffer
        |object Main {
        |  @deprecated("", "")
-       |  trait Foo extends ArrayBuffer[Int]
+       |  trait Foo extends ArrayBuffer[$0][Int]
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable",
+    compat = Map(
+      "2" ->
+        """|package annotationtrait
+           |
+           |import scala.collection.mutable.ArrayBuffer
+           |object Main {
+           |  @deprecated("", "")
+           |  trait Foo extends ArrayBuffer[Int]
+           |}
+           |""".stripMargin,
+      ">=3.2.1" ->
+        """|package annotationtrait
+           |
+           |import scala.collection.mutable.ArrayBuffer
+           |object Main {
+           |  @deprecated("", "")
+           |  trait Foo extends ArrayBuffer[Int]
+           |}
+           |""".stripMargin,
+    ),
   )
 
   checkEdit(
@@ -566,10 +624,28 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |
        |import scala.concurrent.Future
        |case class Foo(
-       |  name: Future[String]
+       |  name: Future[$0][String]
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
+    compat = Map(
+      "2" ->
+        """|package classparam
+           |
+           |import scala.concurrent.Future
+           |case class Foo(
+           |  name: Future[String]
+           |)
+           |""".stripMargin,
+      ">=3.2.1" ->
+        """|package classparam
+           |
+           |import scala.concurrent.Future
+           |case class Foo(
+           |  name: Future[String]
+           |)
+           |""".stripMargin,
+    ),
   )
 
   checkEdit(
@@ -772,5 +848,53 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  val a = ListBuffer($0)
        |}""".stripMargin,
     filter = _.contains("[A]"),
+  )
+
+  checkEdit(
+    "type-import",
+    """|package a {
+       |  object A {
+       |    type Beta = String
+       |    def m(): Int = ???
+       |  }
+       |}
+       |
+       |package b {
+       |  object B{
+       |    val x: Bet@@
+       |  }
+       |}""".stripMargin,
+    """|package a {
+       |  object A {
+       |    type Beta = String
+       |    def m(): Int = ???
+       |  }
+       |}
+       |
+       |package b {
+       |
+       |  import a.A
+       |  object B{
+       |    val x: A.Beta
+       |  }
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|import a.A.Beta
+           |package a {
+           |  object A {
+           |    type Beta = String
+           |    def m(): Int = ???
+           |  }
+           |}
+           |
+           |package b {
+           |  object B{
+           |    val x: Beta
+           |  }
+           |}
+           |""".stripMargin
+    ),
   )
 }

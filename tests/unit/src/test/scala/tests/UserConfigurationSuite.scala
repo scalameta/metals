@@ -23,7 +23,7 @@ class UserConfigurationSuite extends BaseSuite {
       // java11 ambiguous .putAll via Properties/Hashtable, use .put
       props.foreach { case (k, v) => jprops.put(k, v) }
       val obtained =
-        UserConfiguration.fromJson(json, ClientConfiguration.Default(), jprops)
+        UserConfiguration.fromJson(json, ClientConfiguration.default, jprops)
       fn(obtained)
     }
   }

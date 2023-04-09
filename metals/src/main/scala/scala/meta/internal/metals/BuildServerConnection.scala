@@ -34,6 +34,7 @@ import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 import org.eclipse.lsp4j.services.LanguageClient
 
 /**
@@ -78,7 +79,7 @@ class BuildServerConnection private (
 
   def isMill: Boolean = name == MillBuildTool.name
 
-  def isScalaCLI: Boolean = name == ScalaCli.name
+  def isScalaCLI: Boolean = ScalaCli.names(name)
 
   def isAmmonite: Boolean = name == Ammonite.name
 
@@ -95,7 +96,7 @@ class BuildServerConnection private (
       "1.4.10",
       version,
     )
-    isSbt || isScalaCLI || (isBloop && supportNewDebugAdapter)
+    !isBloop || (isBloop && supportNewDebugAdapter)
   }
 
   def workspaceDirectory: AbsolutePath = workspace
@@ -173,9 +174,13 @@ class BuildServerConnection private (
     register(server => server.buildTargetScalaTestClasses(params)).asScala
   }
 
-  def startDebugSession(params: DebugSessionParams): Future[URI] = {
-    register(server => server.debugSessionStart(params)).asScala
-      .map(address => URI.create(address.getUri))
+  def startDebugSession(
+      params: DebugSessionParams,
+      cancelPromise: Promise[Unit],
+  ): Future[URI] = {
+    val completableFuture = register(server => server.debugSessionStart(params))
+    cancelPromise.future.foreach(_ => completableFuture.cancel(true))
+    completableFuture.asScala.map(address => URI.create(address.getUri))
   }
 
   def jvmRunEnvironment(
@@ -365,18 +370,24 @@ class BuildServerConnection private (
           }
         case t
             if implicitly[ClassTag[T]].runtimeClass.getSimpleName != "Object" =>
+          val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
+          val message = onFail
+            .map { case (_, msg) => msg }
+            .getOrElse(s"Failed to run request with params ${name}")
+
+          t match {
+            case _: CancellationException =>
+              scribe.info(message)
+            case issue: MessageIssueException =>
+              scribe.info(issue.getRpcMessage().toString())
+            case _ =>
+              scribe.info(message, t)
+          }
           onFail
-            .map { case (defaultResult, message) =>
-              t match {
-                case _: CancellationException =>
-                  scribe.info(message)
-                case _ =>
-                  scribe.info(message, t)
-              }
+            .map { case (defaultResult, _) =>
               Future.successful(defaultResult)
             }
             .getOrElse({
-              val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
               Future.failed(new MetalsBspException(name, t))
             })
       }

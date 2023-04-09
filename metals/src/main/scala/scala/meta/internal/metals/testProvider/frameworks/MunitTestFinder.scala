@@ -188,7 +188,7 @@ class MunitTestFinder(
       case head :: tail =>
         head match {
           case lit: Lit.String => Some(lit)
-          case _ => extractLiteralName(head.children ::: tail ::: acc)
+          case _ => extractLiteralName(head.children ::: tail)
         }
       case immutable.Nil => None
     }
@@ -204,7 +204,7 @@ class MunitTestFinder(
                 Some((term, lit))
               case None => loop(tail)
             }
-          case _ => loop(head.children ::: tail ::: acc)
+          case _ => loop(head.children ::: tail)
         }
       case immutable.Nil => None
     }

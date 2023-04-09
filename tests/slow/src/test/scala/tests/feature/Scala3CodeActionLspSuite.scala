@@ -8,6 +8,7 @@ import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 import scala.meta.internal.metals.codeactions.ImplementAbstractMembers
+import scala.meta.internal.metals.codeactions.InlineValueCodeAction
 import scala.meta.internal.metals.codeactions.InsertInferredType
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
@@ -200,7 +201,7 @@ class Scala3CodeActionLspSuite
     "single-def-split",
     """|object Main {
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) =
        |    method2(i + 23 + <<123>>)
        |}
@@ -210,7 +211,7 @@ class Scala3CodeActionLspSuite
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) = {
        |    val newValue = i + 23 + 123
        |    method2(newValue)
@@ -223,7 +224,7 @@ class Scala3CodeActionLspSuite
     "single-def-split-optional",
     """|object Main:
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) =
        |  method2(i + 23 + <<123>>)
        |
@@ -233,7 +234,7 @@ class Scala3CodeActionLspSuite
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
-       |  
+       |
        |  def main(i : Int) =
        |    val newValue = i + 23 + 123
        |    method2(newValue)
@@ -248,7 +249,7 @@ class Scala3CodeActionLspSuite
        |  val a = 1
        |  a + 2
        |}
-       |  
+       |
        |def main(i : Int) = method2(i + 23 + <<123>>)
        |
        |""".stripMargin,
@@ -259,7 +260,7 @@ class Scala3CodeActionLspSuite
        |  val a = 1
        |  a + 2
        |}
-       |  
+       |
        |def main(i : Int) = {
        |  val newValue = i + 23 + 123
        |  method2(newValue)
@@ -340,10 +341,10 @@ class Scala3CodeActionLspSuite
     "named-basic",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
-       |  Foo<<(>>1, 2, param3 = 3)
+       |  Foo(<<1>>, 2, param3 = 3)
        |  Foo(4,5,6)
        |}""".stripMargin,
-    s"""|${ExtractMethodCodeAction.title("object `Something`")}
+    s"""|${ExtractValueCodeAction.title("1")}
         |${ConvertToNamedArguments.title("Foo(...)")}""".stripMargin,
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
@@ -438,7 +439,7 @@ class Scala3CodeActionLspSuite
         |  val b = 4
         |  val c = 3
         |  def method(i: Int, j: Int) = i + 1
-        |  val a = { 
+        |  val a = {
         |    val c = 5
         |    <<123 + method(c, b) + method(b,c)>>
         |  }
@@ -453,7 +454,7 @@ class Scala3CodeActionLspSuite
         |  def newMethod(c: Int): Int =
         |    123 + method(c, b) + method(b,c)
         |
-        |  val a = { 
+        |  val a = {
         |    val c = 5
         |    newMethod(c)
         |  }
@@ -495,6 +496,88 @@ class Scala3CodeActionLspSuite
     selectedActionIndex = 1,
   )
 
+  checkExtractedMember(
+    "extract-object-main-annot",
+    """|package a
+       |@main def buildSite() =  ???
+       |
+       |object <<B>> {}
+       |""".stripMargin,
+    s"""|${ExtractRenameMember.title("object", "B")}""".stripMargin,
+    """|package a
+       |@main def buildSite() =  ???
+       |
+       |""".stripMargin,
+    newFile = (
+      "B.scala",
+      s"""|package a
+          |
+          |object B {}
+          |""".stripMargin,
+    ),
+  )
+
+  checkExtractedMember(
+    "extract-toplevel-val",
+    """|package a
+       |
+       |val abc = ???
+       |class <<B>>()
+       |""".stripMargin,
+    expectedActions = ExtractRenameMember.title("class", "B"),
+    """|package a
+       |
+       |val abc = ???
+       |""".stripMargin,
+    newFile = (
+      "B.scala",
+      s"""|package a
+          |
+          |class B()
+          |""".stripMargin,
+    ),
+  )
+
+  checkExtractedMember(
+    "extract-toplevel-given",
+    """|
+       |given String = "hello"
+       |class <<B>>()
+       |""".stripMargin,
+    expectedActions = ExtractRenameMember.title("class", "B"),
+    """|
+       |given String = "hello"
+       |""".stripMargin,
+    newFile = (
+      "B.scala",
+      s"""|
+          |class B()
+          |""".stripMargin,
+    ),
+  )
+
+  check(
+    "issue",
+    """|object Main {
+       | def u : Unit = {
+       | val `<<l>>` : List[Char] = List(1)
+       | def m(i : Int) : Int = ???
+       | def get(): Unit = `l`.map(x => m(x))
+       | }
+       |}
+       |""".stripMargin,
+    s"""|${InlineValueCodeAction.title("l")}""".stripMargin,
+    """|object Main {
+       | def u : Unit = {
+       | def m(i : Int) : Int = ???
+       | def get(): Unit = List(1).map(x => m(x))
+       | }
+       |}
+       |""".stripMargin,
+  )
+
+  private def getPath(name: String) = s"a/src/main/scala/a/$name"
+
   def checkExtractedMember(
       name: TestOptions,
       input: String,
@@ -520,7 +603,5 @@ class Scala3CodeActionLspSuite
       },
     )
   }
-
-  private def getPath(name: String) = s"a/src/main/scala/a/$name"
 
 }

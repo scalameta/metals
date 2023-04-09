@@ -37,9 +37,17 @@ case class UnsupportedScalaVersion(version: String) extends ScalaProblem {
 }
 
 case class DeprecatedScalaVersion(version: String) extends ScalaProblem {
+  private def recommendedVersion = ScalaVersions.recommendedVersion(version)
   override def message: String =
-    s"Scala $version might not be supported in upcoming versions of Metals, " +
-      s"please upgrade to Scala ${ScalaVersions.recommendedVersion(version)}."
+    s"Scala $version might no longer be supported by Metals in the future, " +
+      s"to get the best support possible it's recommended to update to at least $recommendedVersion."
+}
+
+case class DeprecatedRemovedScalaVersion(version: String) extends ScalaProblem {
+  private def recommendedVersion = ScalaVersions.recommendedVersion(version)
+  override def message: String =
+    s"Scala $version is no longer supported by Metals, " +
+      s"to get the best support possible it's recommended to update to at least $recommendedVersion."
 }
 
 case class FutureScalaVersion(version: String) extends ScalaProblem {
@@ -77,10 +85,17 @@ case object UnsupportedSbtVersion extends ScalaProblem {
     "Code navigation is not supported for this sbt version, please " +
       s"upgrade to at least ${BuildInfo.minimumSupportedSbtVersion} and reimport the build"
 }
-case object DeprecatedSbtVersion extends ScalaProblem {
+case class DeprecatedSbtVersion(sbtVersion: String, scalaVersion: String)
+    extends ScalaProblem {
   override def message: String =
-    "Code navigation might not be supported in the future for this sbt version, " +
-      s"please upgrade to at least ${BuildInfo.minimumSupportedSbtVersion} and reimport the build"
+    s"sbt version $sbtVersion uses Scala $scalaVersion, which might no longer be supported by Metals in the future. "
+  s"To get the best support possible it's recommended to update to at least ${BuildInfo.minimumSupportedSbtVersion} and reimport the build."
+}
+case class DeprecatedRemovedSbtVersion(sbtVersion: String, scalaVersion: String)
+    extends ScalaProblem {
+  override def message: String =
+    s"sbt version $sbtVersion uses Scala $scalaVersion, which is no longer supported by Metals. " +
+      s"To get the best support possible it's recommended to update at least ${BuildInfo.minimumSupportedSbtVersion} and reimport the build."
 }
 case object FutureSbtVersion extends ScalaProblem {
   override def message: String =

@@ -1,24 +1,24 @@
 class A >>region>>{
-  def foo =
-    for>>region>> {
+  def foo =>>region>>
+    for {
       x <- ???
-    } <<region<<yield {
+    } yield {
       ???
-    }
+    }<<region<<
 
-  def noSpacing =
+  def noSpacing =>>region>>
     for{
       x <- ???
-    }yield>>region>>{
+    }yield{
       ???
       ???
       ???
     }<<region<<
 
-  def why =
-    for>>region>>
+  def why =>>region>>
+    for
 
-      {
+      >>region>>{
       x <- ???
       y <- ???
       z <- ???
@@ -31,5 +31,5 @@ class A >>region>>{
   // yes, it is the body
   {
     ???
-  }
+  }<<region<<
 }<<region<<

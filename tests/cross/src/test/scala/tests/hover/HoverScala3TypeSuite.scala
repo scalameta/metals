@@ -234,4 +234,95 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
     """|def foo2: Int
        |""".stripMargin.hover,
   )
+
+  check(
+    "structural-types",
+    """|
+       |import reflect.Selectable.reflectiveSelectable
+       |
+       |object StructuralTypes:
+       |   type User = {
+       |   def name: String
+       |   def age: Int
+       |   }
+       |
+       |   val user = null.asInstanceOf[User]
+       |   user.name
+       |   user.ag@@e
+       |
+       |   val V: Object {
+       |   def scalameta: String
+       |   } = new:
+       |   def scalameta = "4.0"
+       |   V.scalameta
+       |end StructuralTypes
+       |""".stripMargin,
+    """|def age: Int
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "structural-types1",
+    """|
+       |import reflect.Selectable.reflectiveSelectable
+       |
+       |object StructuralTypes:
+       |   type User = {
+       |   def name: String
+       |   def age: Int
+       |   }
+       |
+       |   val user = null.asInstanceOf[User]
+       |   user.name
+       |   user.age
+       |
+       |   val V: Object {
+       |   def scalameta: String
+       |   } = new:
+       |   def scalameta = "4.0"
+       |   V.scala@@meta
+       |end StructuralTypes
+       |""".stripMargin,
+    """|def scalameta: String
+    """.stripMargin.hover,
+  )
+
+  check(
+    "macro",
+    """|
+       |import scala.quoted.*
+       |
+       |def myMacroImpl(using Quotes) =
+       |  import quotes.reflect.Ident
+       |  def foo = ??? match
+       |    case x: I@@dent => x
+       |
+       |  def bar: Ident = foo
+       |
+       |  ???
+       |
+       |""".stripMargin,
+    """|type Ident: Ident
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "macro2",
+    """|
+       |
+       |import scala.quoted.*
+       |
+       |def myMacroImpl(using Quotes) =
+       |  import quotes.reflect.Ident
+       |  def foo = ??? match
+       |    case x: Ident => x
+       |
+       |  def bar: Ide@@nt = foo
+       |
+       |  ???
+       |
+       |""".stripMargin,
+    """|type Ident: Ident
+       |""".stripMargin.hover,
+  )
 }

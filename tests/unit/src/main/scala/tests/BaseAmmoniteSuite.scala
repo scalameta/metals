@@ -114,11 +114,23 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
             |
             |val schema = Schema.loadFromString("{}")
             |println(schema.isSuccess)
+            |
+            |/build.sc
+            |
+            |// this part may contain some config
+            |@
+            |import mill._
+            |import mill.scalalib._
+            |object demo extends ScalaModule {
+            |  def scalaVersion: T[String] = T("2.13.10")
+            |}
             |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
       _ <- server.didSave("main.sc")(identity)
+      _ = assertNoDiagnostics()
+      _ <- server.didOpen("build.sc")
       _ = assertNoDiagnostics()
     } yield ()
   }
@@ -658,6 +670,54 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         "import $ivy.`com.lihaoyi::upickle:1.4`@@",
       )
       _ = assertNoDiff(noCompletions, "")
+    } yield ()
+  }
+
+  test("semantic-highlighting") {
+
+    val expected =
+      """|
+         |
+         |<<import>>/*keyword*/ <<util>>/*namespace*/.{<<Failure>>/*class*/ <<=>>>/*operator*/ <<NotGood>>/*class*/}
+         |<<import>>/*keyword*/ <<math>>/*namespace*/.{<<floor>>/*method*/ <<=>>>/*operator*/ <<_>>/*variable,readonly*/, <<_>>/*variable,readonly*/}
+         |
+         |<<class>>/*keyword*/ <<Imports>>/*class*/ {
+         |  <<// rename reference>>/*comment*/
+         |  <<NotGood>>/*class*/(<<null>>/*keyword*/)
+         |  <<max>>/*method*/(<<1>>/*number*/, <<2>>/*number*/)
+         |}
+         |""".stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/main.sc
+           |$fileContent
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("main.sc")
+      _ <- server.didSave("main.sc")(identity)
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
+      _ <- server.assertSemanticHighlight(
+        "main.sc",
+        expected,
+        fileContent,
+      )
     } yield ()
   }
 }

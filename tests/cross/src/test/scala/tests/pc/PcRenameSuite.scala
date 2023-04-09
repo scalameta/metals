@@ -19,6 +19,18 @@ class PcRenameSuite extends BasePcRenameSuite {
   )
 
   check(
+    "apply",
+    """|object A{
+       |  List(1, 2, 3).map{ _ =>
+       |    val <<a>> = 123
+       |    <<@@a>> + 1
+       |  }
+       |}  
+       |""".stripMargin,
+    wrap = false,
+  )
+
+  check(
     "generics",
     """|trait S1[X] { def <<torename>>(p: X): String = "" }
        |trait T1[Z] extends S1[Z] { override def <<torename>>(p: Z): String = super.<<torename>>(p) }
@@ -337,5 +349,106 @@ class PcRenameSuite extends BasePcRenameSuite {
        |    <<v5>> == true
        |  }
        |""".stripMargin,
+  )
+
+  check(
+    "worksheet-method",
+    """|trait S1[X] { def <<torename>>(p: X): String = "" }
+       |trait T1[Z] extends S1[Z] { override def <<tore@@name>>(p: Z): String = super.<<torename>>(p) }
+       |""".stripMargin,
+    filename = "A.worksheet.sc",
+    wrap = false,
+  )
+
+  check(
+    "worksheet-classes",
+    """|sealed abstract class <<Sy@@mbol>>
+       |case class Method(name: String) extends <<Symbol>>
+       |case class Variable(value: String) extends <<Symbol>>
+       |""".stripMargin,
+    newName = "Tree",
+    filename = "A.worksheet.sc",
+    wrap = false,
+  )
+
+  check(
+    "not-compiling",
+    """|package a
+       |object Main {
+       |  def method() = {
+       |    List(1) + 2
+       |    val <<abc>>: Option[Int] = ???
+       |    <<ab@@c>>.map(_ + 1)
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-param".tag(IgnoreScala2),
+    """|extension (<<sb@@d>>: String)
+       |  def double = <<sbd>> + <<sbd>>
+       |  def double2 = <<sbd>> + <<sbd>>
+       |end extension
+       |""".stripMargin,
+    newName = "greeting",
+  )
+
+  check(
+    "extension-params-ref".tag(IgnoreScala2),
+    """|extension (<<sbd>>: String)
+       |  def double = <<sb@@d>> + <<sbd>>
+       |  def double2 = <<sbd>> + <<sbd>>
+       |end extension
+       |""".stripMargin,
+    newName = "greeting",
+  )
+
+  check(
+    "extension-type-param".tag(IgnoreScala2),
+    """|extension [T](<<x@@s>>: List[T])
+       |  def double = <<xs>> ++ <<xs>>
+       |  def double2 = <<xs>> ++ <<xs>>
+       |end extension
+       |""".stripMargin,
+    newName = "ABC",
+  )
+
+  check(
+    "extension-type-param-ref".tag(IgnoreScala2),
+    """|extension [T](<<xs>>: List[T])
+       |  def double = <<xs>> ++ <<xs>>
+       |  def double2 = <<xs>> ++ <<x@@s>>
+       |end extension
+       |""".stripMargin,
+    newName = "ABC",
+  )
+
+  check(
+    "class-of",
+    """|object Test {
+       |  classOf[String]
+       |  def test() = {
+       |    val <<tes@@tVal>> = "test"
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "testing",
+  )
+
+  check(
+    "trailling-comma",
+    """|object A{
+       |  val <<`to-Rename`>> = 123
+       |}
+       |object B{
+       |  val toRename = 
+       |    List(
+       |      A.<<`to-R@@ename`>>,
+       |      A.<<`to-Rename`>>,
+       |    )
+       |}
+       |""".stripMargin,
+    newName = "`other-rename`",
   )
 }

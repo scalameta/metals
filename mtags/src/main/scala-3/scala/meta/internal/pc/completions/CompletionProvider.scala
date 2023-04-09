@@ -3,14 +3,13 @@ package completions
 
 import java.nio.file.Path
 
-import scala.annotation.tailrec
 import scala.collection.JavaConverters.*
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportEdits
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.printer.MetalsPrinter
-import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
@@ -38,7 +37,7 @@ class CompletionProvider(
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String,
     workspace: Option[Path],
-):
+)(using reports: ReportContext):
   def completions(): CompletionList =
     val uri = params.uri
 
@@ -122,7 +121,6 @@ class CompletionProvider(
    */
   private def applyCompletionCursor(params: OffsetParams): String =
     import params.*
-
     val isStartMultilineComment =
       val i = params.offset()
       i >= 3 && (params.text().charAt(i - 1) match
@@ -131,30 +129,13 @@ class CompletionProvider(
           params.text().charAt(i - 3) == '/'
         case _ => false
       )
-
-    @tailrec
-    def isEmptyLine(idx: Int, initial: Int): Boolean =
-      if idx < 0 then true
-      else if idx >= text.length then isEmptyLine(idx - 1, initial)
-      else
-        val ch = text.charAt(idx)
-        val isNewline = ch == '\n'
-        if Chars.isWhitespace(ch) || (isNewline && idx == initial) then
-          isEmptyLine(idx - 1, initial)
-        else if isNewline then true
-        else false
-    // for s" $@@ " or s" ${@@ "
-    def isDollar = offset > 2 && (text.charAt(offset - 1) == '$' ||
-      text.charAt(offset - 1) == '{' && text.charAt(offset - 2) == '$')
-
     if isStartMultilineComment then
       // Insert potentially missing `*/` to avoid comment out all codes after the "/**".
-      text.substring(0, offset) + "*/" + text.substring(offset)
-    else if isEmptyLine(offset, offset) || isDollar then
+      text.substring(0, offset) + Cursor.value + "*/" + text.substring(offset)
+    else
       text.substring(0, offset) + Cursor.value + text.substring(
         offset
       )
-    else text
   end applyCompletionCursor
 
   private def completionItems(
@@ -239,7 +220,6 @@ class CompletionProvider(
           CompletionValue.Interpolator
     ) =
       val sym = v.symbol
-      val suffix = v.snippetSuffix
       path match
         case (_: Ident) :: (_: Import) :: _ =>
           mkItem(sym.fullNameBackticked)

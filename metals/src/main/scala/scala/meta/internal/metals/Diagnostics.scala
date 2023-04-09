@@ -267,7 +267,15 @@ final class Diagnostics(
         d.getSeverity,
         d.getSource,
       )
-      if (d.getCode() != null) ld.setCode(d.getCode())
+      // Scala 3 sets the diagnostic code to -1 for NoExplanation Messages. Ideally
+      // this will change and we won't need this check in the future, but for now
+      // let's not forward them.
+      if (
+        d.getCode() != null && d
+          .getCode()
+          .isLeft() && d.getCode().getLeft() != "-1"
+      )
+        ld.setCode(d.getCode())
       ld.setData(d.getData)
       ld
     }

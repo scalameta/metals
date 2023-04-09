@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.pc.HoverMarkup
 
 import org.eclipse.lsp4j.Hover
@@ -12,11 +12,11 @@ trait TestHovers {
     def hover: String = {
       string.trim.linesIterator.toList match {
         case List(symbolSignature) =>
-          HoverMarkup("", symbolSignature, "")
+          HoverMarkup("", Some(symbolSignature), "")
         case List(expressionType, symbolSignature) =>
           HoverMarkup(
             expressionType,
-            symbolSignature,
+            Some(symbolSignature),
             "",
             forceExpressionType = true,
           )
@@ -32,7 +32,7 @@ trait TestHovers {
         case List(expressionType, symbolSignature) =>
           HoverMarkup(
             expressionType,
-            symbolSignature,
+            Some(symbolSignature),
             "",
             forceExpressionType = true,
           )

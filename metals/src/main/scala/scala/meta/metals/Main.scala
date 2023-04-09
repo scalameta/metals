@@ -1,14 +1,11 @@
 package scala.meta.metals
 
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.MetalsLanguageServer
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -49,13 +46,8 @@ object Main {
     val tracePrinter = Trace.setupTracePrinter("LSP")
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
-    val initialConfig = MetalsServerConfig.default
-    val server = new MetalsLanguageServer(
-      ec,
-      redirectSystemOut = true,
-      charset = StandardCharsets.UTF_8,
-      initialConfig = initialConfig,
-    )
+    val sh = Executors.newSingleThreadScheduledExecutor()
+    val server = new MetalsLanguageServer(ec, sh)
     try {
       val launcher = new Launcher.Builder[MetalsLanguageClient]()
         .traceMessages(tracePrinter.orNull)
@@ -66,6 +58,7 @@ object Main {
         .setLocalService(server)
         .create()
       val clientProxy = launcher.getRemoteProxy
+      // important, plug language client before starting listening!
       server.connectToLanguageClient(clientProxy)
       launcher.startListening().get()
     } catch {
@@ -75,6 +68,7 @@ object Main {
     } finally {
       server.cancelAll()
       ec.shutdownNow()
+      sh.shutdownNow()
 
       sys.exit(0)
     }

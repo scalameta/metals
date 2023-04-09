@@ -1,17 +1,10 @@
 package bench
 
 import java.net.URI
-import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.ExcludedPackagesHandler
-import scala.meta.internal.pc.ScalaPresentationCompiler
-import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
-import scala.meta.pc.SymbolSearch
 
 import org.eclipse.lsp4j.CompletionList
 import org.openjdk.jmh.annotations.Benchmark
@@ -20,27 +13,14 @@ import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.OutputTimeUnit
 import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
-import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
-import tests.Library
-import tests.TestingSymbolSearch
 
 @State(Scope.Benchmark)
-abstract class CompletionBench {
-  var libraries: List[Library] = Nil
-  var completions: Map[String, SourceCompletion] = Map.empty
+class CompletionBench extends PcBenchmark {
 
-  def runSetup(): Unit
+  var completionRequests: Map[String, SourceCompletion] = Map.empty
 
-  def presentationCompiler(): PresentationCompiler
-
-  @Setup
-  def setup(): Unit = {
-    runSetup()
-  }
-
-  def downloadLibraries(): Unit = {
-    libraries = Library.jdk :: Library.allScala2
+  def beforeAll(): Unit = {
     val akka = Corpus.akka()
     val replicator =
       "akka-2.5.19/akka-cluster/src/main/scala/akka/cluster/ClusterDaemon.scala"
@@ -50,7 +30,7 @@ abstract class CompletionBench {
     val fastparse = Corpus.fastparse()
     val exprs =
       "fastparse-2.1.0/scalaparse/src/scalaparse/Exprs.scala"
-    completions = Map(
+    completionRequests = Map(
       "scopeOpen" -> SourceCompletion.fromPath(
         "A.scala",
         """
@@ -91,11 +71,12 @@ abstract class CompletionBench {
       ),
     )
   }
+
   @Param(
     Array("scopeOpen", "scopeDeep", "memberDeep", "scopeTypers", "memberTypers",
       "scopeFastparse", "memberFastparse")
   )
-  var completion: String = _
+  var currentCompletionRequest: String = _
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
@@ -106,27 +87,9 @@ abstract class CompletionBench {
     result
   }
 
-  def currentCompletion: SourceCompletion = completions(completion)
-
-  def classpath: List[Path] =
-    libraries.flatMap(_.classpath.entries.map(_.toNIO))
-  def sources: List[AbsolutePath] = libraries.flatMap(_.sources.entries)
-
-  def newSearch(): SymbolSearch = {
-    require(libraries.nonEmpty)
-    new TestingSymbolSearch(
-      ClasspathSearch.fromClasspath(
-        classpath,
-        ExcludedPackagesHandler.default,
-      )
-    )
-  }
-
-  def newPC(search: SymbolSearch = newSearch()): PresentationCompiler = {
-    new ScalaPresentationCompiler()
-      .withSearch(search)
-      .newInstance("", classpath.asJava, Nil.asJava)
-  }
+  def currentCompletion: SourceCompletion = completionRequests(
+    currentCompletionRequest
+  )
 
   def scopeComplete(pc: PresentationCompiler): CompletionList = {
     val code = "import Java\n"
@@ -138,15 +101,4 @@ abstract class CompletionBench {
       )
     ).get()
   }
-}
-
-class CachedSearchAndCompilerCompletionBench extends CompletionBench {
-  var pc: PresentationCompiler = _
-
-  override def runSetup(): Unit = {
-    downloadLibraries()
-    pc = newPC()
-  }
-
-  override def presentationCompiler(): PresentationCompiler = pc
 }

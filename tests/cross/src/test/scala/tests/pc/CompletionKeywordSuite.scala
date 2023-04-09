@@ -408,11 +408,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     "",
     // to avoid newMain annotation
     filter = str => !str.contains("newMain"),
-    compat = Map(
-      "3" ->
-        """|head :: next scala.collection.immutable
-           |Nil scala.collection.immutable""".stripMargin
-    ),
   )
 
   check(
@@ -534,6 +529,45 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+    "extends-with-class",
+    """
+      |package foo
+      |
+      |class Foo extends Any wi@@
+    """.stripMargin,
+    """|with
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-class-nested",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  class Boo ext@@
+      |}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-class-nested-with-body",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  class Boo ext@@ {
+      |    def test: Int = ???
+      |  }
+      |}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
     "extends-obj",
     """
       |package foo
@@ -562,6 +596,17 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |
       |class Foo(x: Int) ext@@
     """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-with-type-param",
+    """
+      |package foo
+      |
+      |class Foo[A] ext@@
+      """.stripMargin,
     """|extends
        |""".stripMargin,
   )
@@ -600,7 +645,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |package foo
       |
       |// can't provide extends keyword completion if there's newline between class
-      |// because the completion engine tokenize only the line 
+      |// because the completion engine tokenize only the line
       |class Main
       |  exten@@
     """.stripMargin,
@@ -611,6 +656,140 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
           """|extends
              |""".stripMargin
       ),
+  )
+
+  check(
+    "extends-enum".tag(IgnoreScala2),
+    """
+      |package foo
+      |
+      |enum Foo(x: Int) ext@@
+        """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "derives-object",
+    """
+      |package foo
+      |
+      |object Foo der@@
+      """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-constructor",
+    """
+      |package foo
+      |
+      |class Foo(x: Int) der@@
+      """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-comma-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |trait Baz {}
+      |
+      |class Foo(x: Int) extends Bar, Baz der@@
+        """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |class Foo(x: Int) extends Bar der@@
+          """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-extends-type-param",
+    """
+      |package foo
+      |
+      |trait Bar[B] {}
+      |class Foo(x: Int) extends Bar[Int] der@@
+            """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |trait Baz {}
+      |
+      |class Foo(x: Int) extends Bar with Baz der@@
+              """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-constructor-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |class Baz(b: Int) {}
+      |
+      |class Foo(x: Int) extends Bar with Baz(1) der@@
+                """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "no-derives",
+    """
+      |package foo
+      |
+      |object Main {
+      |  def main = {
+      |    foo.der@@
+      |  }
+      |}
+      """.stripMargin,
+    "",
   )
 
 }

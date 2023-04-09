@@ -15,20 +15,8 @@ client over [JSON-RPC](https://www.jsonrpc.org/specification).
 Use [Coursier](https://github.com/coursier/coursier) to obtain the JVM classpath
 of Metals:
 
-```sh
-coursier bootstrap org.scalameta:metals_2.13:@VERSION@ -o metals -f
-```
+```scala mdoc:bootstrap
 
-(optional) It's recommended to enable JVM string de-duplication and provide a
-generous stack size and memory options.
-
-```sh
-coursier bootstrap \
-  --java-opt -XX:+UseG1GC \
-  --java-opt -XX:+UseStringDeduplication  \
-  --java-opt -Xss4m \
-  --java-opt -Xms100m \
-  org.scalameta:metals_2.13:@VERSION@ -o metals -f
 ```
 
 See [Metals server properties](#metals-server-properties) for additional system

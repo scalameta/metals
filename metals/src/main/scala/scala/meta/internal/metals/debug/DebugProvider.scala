@@ -26,10 +26,10 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
-import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
@@ -38,8 +38,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
+import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -81,6 +83,8 @@ class DebugProvider(
     semanticdbs: Semanticdbs,
     compilers: Compilers,
     statusBar: StatusBar,
+    sourceMapper: SourceMapper,
+    userConfig: () => UserConfiguration,
 ) extends Cancelable {
 
   import DebugProvider._
@@ -96,7 +100,8 @@ class DebugProvider(
   )
 
   def start(
-      parameters: b.DebugSessionParams
+      parameters: b.DebugSessionParams,
+      cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     for {
       sessionName <- Future.fromTry(parseSessionName(parameters))
@@ -105,7 +110,12 @@ class DebugProvider(
         .fold[Future[BuildServerConnection]](BuildServerUnavailableError)(
           Future.successful
         )
-      debugServer <- start(sessionName, jvmOptionsTranslatedParams, buildServer)
+      debugServer <- start(
+        sessionName,
+        jvmOptionsTranslatedParams,
+        buildServer,
+        cancelPromise,
+      )
     } yield debugServer
   }
 
@@ -113,6 +123,7 @@ class DebugProvider(
       sessionName: String,
       parameters: b.DebugSessionParams,
       buildServer: BuildServerConnection,
+      cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     val inetAddress = InetAddress.getByName("127.0.0.1")
     val proxyServer = new ServerSocket(0, 50, inetAddress)
@@ -130,16 +141,23 @@ class DebugProvider(
       val targets = parameters.getTargets().asScala.toSeq
 
       compilations.compilationFinished(targets).flatMap { _ =>
-        buildServer
-          .startDebugSession(parameters)
-          .withTimeout(60, TimeUnit.SECONDS)
+        val conn = buildServer
+          .startDebugSession(parameters, cancelPromise)
           .map { uri =>
             val socket = connect(uri)
             connectedToServer.trySuccess(())
             socket
           }
+
+        val connWithTimeout =
+          // if slow task is supported users can stop it themselves
+          if (clientConfig.slowTaskIsOn()) conn
+          else conn.withTimeout(60, TimeUnit.SECONDS)
+
+        connWithTimeout
           .recover { case exception =>
             connectedToServer.tryFailure(exception)
+            cancelPromise.trySuccess(())
             throw exception
           }
       }
@@ -172,6 +190,7 @@ class DebugProvider(
         workspace,
         clientConfig.disableColorOutput(),
         statusBar,
+        sourceMapper,
       )
     }
     val server = new DebugServer(sessionName, uri, proxyFactory)
@@ -370,6 +389,59 @@ class DebugProvider(
 
     result.failed.foreach(reportErrors)
     result
+  }
+
+  def asSession(
+      debugParams: DebugSessionParams
+  )(implicit ec: ExecutionContext): Future[DebugSession] = {
+    val cancelPromise = Promise[Unit]()
+    for {
+      server <- statusBar.trackSlowFuture(
+        "Starting debug server",
+        start(debugParams, cancelPromise),
+        () => cancelPromise.trySuccess(()),
+      )
+    } yield {
+      statusBar.addMessage("Started debug server!")
+      DebugSession(server.sessionName, server.uri.toString)
+    }
+  }
+
+  /**
+   * Tries to discover the main class to run and returns
+   * DebugSessionParams that contains the shellCommand field.
+   * This is used so that clients can easily run the full command
+   * if they want.
+   */
+  def runCommandDiscovery(
+      unresolvedParams: DebugDiscoveryParams
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    debugDiscovery(unresolvedParams).map(enrichWithMainShellCommand)
+  }
+
+  private def enrichWithMainShellCommand(
+      params: b.DebugSessionParams
+  ): b.DebugSessionParams = {
+    params.getData() match {
+      case json: JsonElement
+          if params.getDataKind == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+        json.as[b.ScalaMainClass] match {
+          case Success(main) if params.getTargets().size > 0 =>
+            val updatedData = buildTargetClasses.jvmRunEnvironment
+              .get(params.getTargets().get(0))
+              .zip(userConfig().usedJavaBinary) match {
+              case None =>
+                main.toJson
+              case Some((env, javaHome)) =>
+                ExtendedScalaMainClass(main, env, javaHome, workspace).toJson
+            }
+            params.setData(updatedData)
+          case _ =>
+        }
+
+      case _ =>
+    }
+    params
   }
 
   /**
@@ -828,29 +900,15 @@ object DebugProvider {
       case GlobalSymbol(
             GlobalSymbol(
               owner,
-              Descriptor.Term(sourceOwner),
+              Descriptor.Term(_),
             ),
             Descriptor.Method(name, _),
-          ) if sourceOwner.endsWith("$package") =>
+          ) =>
         val converted = GlobalSymbol(owner, Descriptor.Term(name))
         Some(converted.value)
       case _ =>
         None
     }
-  }
-
-  object DebugParametersJsonParsers {
-    lazy val debugSessionParamsParser = new JsonParser.Of[b.DebugSessionParams]
-    lazy val mainClassParamsParser =
-      new JsonParser.Of[DebugUnresolvedMainClassParams]
-    lazy val testSuitesParamsParser =
-      new JsonParser.Of[ScalaTestSuitesDebugRequest]
-    lazy val testClassParamsParser =
-      new JsonParser.Of[DebugUnresolvedTestClassParams]
-    lazy val attachRemoteParamsParser =
-      new JsonParser.Of[DebugUnresolvedAttachRemoteParams]
-    lazy val unresolvedParamsParser =
-      new JsonParser.Of[DebugDiscoveryParams]
   }
 
   val ScalaTestSelection = "scala-test-suites-selection"

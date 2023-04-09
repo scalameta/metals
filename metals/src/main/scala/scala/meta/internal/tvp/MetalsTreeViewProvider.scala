@@ -205,6 +205,7 @@ class MetalsTreeViewProvider(
           echoCommand(ServerCommands.ReadBloopDocumentation, "book"),
           echoCommand(ServerCommands.ChatOnDiscord, "discord"),
           echoCommand(ServerCommands.OpenIssue, "issue-opened"),
+          echoCommand(ServerCommands.OpenFeatureRequest, "github"),
           echoCommand(ServerCommands.MetalsGithub, "github"),
           echoCommand(ServerCommands.BloopGithub, "github"),
           echoCommand(ServerCommands.ScalametaTwitter, "twitter"),

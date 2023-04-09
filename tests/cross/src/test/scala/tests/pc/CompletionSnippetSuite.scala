@@ -311,7 +311,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "trailing-eta",
+    // only works if we have the full function name typed
+    "trailing-eta".tag(IgnoreScala3),
     s"""|object Main {
         |  def trailing(a: Int) = ()
         |  ___
@@ -385,7 +386,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Try
-       |Breaks.TryBlock
        |""".stripMargin,
     // additional completion when apply method is present
     compat = Map(

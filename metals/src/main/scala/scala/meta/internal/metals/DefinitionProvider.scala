@@ -5,6 +5,8 @@ import java.{util => ju}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Term
+import scala.meta.Type
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -25,10 +27,13 @@ import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.tokens.Token
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
@@ -60,6 +65,7 @@ final class DefinitionProvider(
     scalaVersionSelector: ScalaVersionSelector,
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
+    workspaceSearch: WorkspaceSymbolProvider,
 )(implicit ec: ExecutionContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -93,7 +99,7 @@ final class DefinitionProvider(
       } else {
         Future.successful(fromSnapshot)
       }
-    fromIndex.flatMap { result =>
+    val fromCompilerOrSemanticdb = fromIndex.flatMap { result =>
       if (result.isEmpty && path.isScalaFilename) {
         compilers().definition(params, token)
       } else {
@@ -103,6 +109,85 @@ final class DefinitionProvider(
         Future.successful(result)
       }
     }
+
+    fromCompilerOrSemanticdb.map { definition =>
+      if (definition.isEmpty && !definition.symbol.endsWith("/")) {
+        fromSearch(path, params.getPosition(), token).getOrElse(definition)
+      } else {
+        definition
+      }
+    }
+  }
+
+  /**
+   *  Tries to find an identifier token at the current position
+   *  to use it for symbol search. This is the last possibility for
+   *  finding the definition.
+   *
+   * @param path path of the current file
+   * @param pos position we are searching for
+   * @return possible definition locations based on exact symbol search
+   */
+  def fromSearch(
+      path: AbsolutePath,
+      pos: Position,
+      token: CancelToken,
+  ): Option[DefinitionResult] = {
+
+    val defResult = for {
+      sourceText <- buffers.get(path)
+      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
+      metaPos <- pos.toMeta(virtualFile)
+      tokens <- trees.tokenized(virtualFile).toOption
+      ident <- tokens.collectFirst {
+        case id: Token.Ident if id.pos.encloses(metaPos) => id
+      }
+    } yield {
+      lazy val nameTree = trees.findLastEnclosingAt(path, pos)
+
+      // for sure is not a class/trait/enum if we access it via select
+      lazy val isInSelectPosition = nameTree.exists { name =>
+        name.parent.exists {
+          case Type.Select(qual, _) if nameTree.contains(qual) => true
+          case Term.Select(qual, _) if nameTree.contains(qual) => true
+          case _ => false
+        }
+      }
+
+      lazy val isInTypePosition = nameTree.exists(_.is[Type.Name])
+
+      def filterViaHeuristics(symbolInfo: SymbolInformation) = {
+        val kind = symbolInfo.getKind()
+        val isClassLike =
+          kind == SymbolKind.Class || kind == SymbolKind.Enum || kind == SymbolKind.Interface
+        if (isClassLike && isInSelectPosition) false
+        else if (kind == SymbolKind.Object && isInTypePosition) false
+        else true
+      }
+
+      val locs = workspaceSearch
+        .searchExactFrom(ident.value, path, token)
+
+      val reducedGuesses =
+        if (locs.size > 1)
+          locs.filter(filterViaHeuristics)
+        else
+          locs
+
+      if (reducedGuesses.nonEmpty) {
+        scribe.warn(s"Using indexes to guess the definition of ${ident.value}")
+        Some(
+          DefinitionResult(
+            reducedGuesses.map(_.getLocation()).asJava,
+            ident.value,
+            None,
+            None,
+          )
+        )
+      } else None
+
+    }
+    defResult.flatten
   }
 
   def fromSymbol(

@@ -14,6 +14,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.HoverSignature
 
 import org.eclipse.{lsp4j => l}
 
@@ -70,10 +71,6 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
       )
     else info.displayName
 
-  // Regular expression to capture the group inside hovers that indicate the symbol signature.
-  private val symbolSignatureExtractor =
-    """Symbol signature\*\*:\n```scala\n(.*)\n```""".r
-
   private def getDetail(
       signature: String,
       visited: Array[String],
@@ -83,15 +80,6 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
     (if (visited.dropRight(1).contains(symbol)) icons.sync + " "
      else "") + signature
 
-  private def getSignatureFromHover(hover: Option[l.Hover]): Option[String] =
-    for {
-      hover <- hover
-      hoverContent <- hover.getContents().asScala.toOption
-      `match` <- symbolSignatureExtractor.findFirstMatchIn(
-        hoverContent.getValue
-      )
-    } yield Option(`match`.group(1)).getOrElse("") // `group` may return null
-
   private def buildItem(
       symbolInformations: Seq[s.SymbolInformation],
       source: AbsolutePath,
@@ -99,7 +87,7 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
       visited: Array[String],
       symbol: String,
       selectionRange: s.Range,
-      hover: Option[l.Hover],
+      hover: Option[HoverSignature],
   ): Option[l.CallHierarchyItem] = {
     symbolInformations
       .find(_.symbol == symbol)
@@ -111,7 +99,7 @@ private[callHierarchy] final class CallHierarchyItemBuilder(
           range,
           selectionRange.toLsp,
           getDetail(
-            getSignatureFromHover(hover).getOrElse(""),
+            hover.flatMap(_.signature().asScala).getOrElse(""),
             visited,
             symbol,
           ),

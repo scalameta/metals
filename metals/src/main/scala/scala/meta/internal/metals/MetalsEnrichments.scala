@@ -488,9 +488,6 @@ object MetalsEnrichments
       else Files.move(path.toNIO, newPath.toNIO)
     }
 
-    def createDirectories(): AbsolutePath =
-      AbsolutePath(Files.createDirectories(path.dealias.toNIO))
-
     def createAndGetDirectories(): Seq[AbsolutePath] = {
       def createDirectoriesRec(
           absolutePath: AbsolutePath,
@@ -511,31 +508,6 @@ object MetalsEnrichments
 
     def deleteRecursively(): Unit = {
       path.listRecursive.toList.reverse.foreach(_.delete())
-    }
-
-    def writeText(text: String): Unit = {
-      path.parent.createDirectories()
-      val tmp = Files.createTempFile("metals", path.filename)
-      // Write contents first to a temporary file and then try to
-      // atomically move the file to the destination. The atomic move
-      // reduces the risk that another tool will concurrently read the
-      // file contents during a half-complete file write.
-      Files.write(
-        tmp,
-        text.getBytes(StandardCharsets.UTF_8),
-        StandardOpenOption.TRUNCATE_EXISTING,
-      )
-      try {
-        Files.move(
-          tmp,
-          path.toNIO,
-          StandardCopyOption.REPLACE_EXISTING,
-          StandardCopyOption.ATOMIC_MOVE,
-        )
-      } catch {
-        case NonFatal(_) =>
-          Files.move(tmp, path.toNIO, StandardCopyOption.REPLACE_EXISTING)
-      }
     }
 
     def appendText(text: String): Unit = {
@@ -601,7 +573,21 @@ object MetalsEnrichments
         case _ => None
       }
 
-    def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
+    def toAbsolutePathSafe(implicit
+        reports: ReportContext
+    ): Option[AbsolutePath] =
+      try {
+        Some(toAbsolutePath)
+      } catch {
+        case NonFatal(e) =>
+          reports.incognito.createReport(
+            "absolute-path",
+            s"""|Uri: $value
+                |""".stripMargin,
+            e,
+          )
+          None
+      }
 
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
 
@@ -925,11 +911,10 @@ object MetalsEnrichments
   }
 
   implicit class XtensionClientCapabilities(
-      initializeParams: Option[l.InitializeParams]
+      params: l.InitializeParams
   ) {
     def supportsHierarchicalDocumentSymbols: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         documentSymbol <- Option(textDocument.getDocumentSymbol)
@@ -940,7 +925,6 @@ object MetalsEnrichments
 
     def supportsCompletionSnippets: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         completion <- Option(textDocument.getCompletion)
@@ -950,7 +934,6 @@ object MetalsEnrichments
 
     def foldOnlyLines: Boolean = {
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         settings <- Option(textDocument.getFoldingRange)
@@ -960,7 +943,6 @@ object MetalsEnrichments
 
     def supportsCodeActionLiterals: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         codeAction <- Option(textDocument.getCodeAction)
@@ -1076,5 +1058,26 @@ object MetalsEnrichments
     // LSP Position is 0-based, while breakpoints are 1-based
     def toLsp = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
   }
+
+  implicit class XtensionWorkspaceEdits(edits: Seq[l.WorkspaceEdit]) {
+    def mergeChanges: l.WorkspaceEdit = {
+      val changes = edits.view
+        .flatMap(e => Option(e.getChanges()).map(_.asScala))
+        .flatten
+        .groupMapReduce(_._1)(_._2.asScala) { _ ++ _ }
+        .mapValues(_.distinct.asJava) // deduplicate same changes
+        .toMap
+        .asJava
+      new l.WorkspaceEdit(changes)
+    }
+  }
+
+  /**
+   * Strips ANSI colors.
+   * As long as the color codes are valid this should correctly strip
+   * anything that is ESC (U+001B) plus [
+   */
+  def filerANSIColorCodes(str: String): String =
+    str.replaceAll("\u001B\\[[;\\d]*m", "")
 
 }

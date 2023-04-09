@@ -17,22 +17,18 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameKinds.DefaultGetterName
-import dotty.tools.dotc.core.NameKinds.NameKind
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.SymDenotations.SymDenotation
-import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.{lsp4j as l}
 
 object OverrideCompletions:
@@ -55,7 +51,7 @@ object OverrideCompletions:
       search: SymbolSearch,
       config: PresentationCompilerConfig,
       autoImportsGen: AutoImportsGenerator,
-      fallbackName: Option[Name],
+      fallbackName: Option[String],
   ): List[CompletionValue] =
     import indexedContext.ctx
     val clazz = td.symbol.asClass
@@ -88,7 +84,12 @@ object OverrideCompletions:
     // because they are not method definitions (not starting from `def`).
     val flags = completing.map(_.flags & interestingFlags).getOrElse(EmptyFlags)
 
-    val name = completing.fold(fallbackName)(sym => Some(sym.name))
+    val name =
+      completing
+        .fold(fallbackName)(sym => Some(sym.name.show))
+        .map(_.replace(Cursor.value, ""))
+        .filter(!_.isEmpty())
+
     // not using `td.tpe.abstractTermMembers` because those members includes
     // the abstract members in `td.tpe`. For example, when we type `def foo@@`,
     // `td.tpe.abstractTermMembers` contains `method foo: <error>` and it overrides the parent `foo` method.
@@ -103,7 +104,7 @@ object OverrideCompletions:
       .collect {
         case denot
             if name
-              .fold(true)(name => denot.name.startsWith(name.show)) &&
+              .fold(true)(name => denot.name.startsWith(name)) &&
               !denot.symbol.isType =>
           denot.symbol
       }
@@ -157,17 +158,25 @@ object OverrideCompletions:
         case (dd: DefDef) :: (_: Template) :: (td: TypeDef) :: _
             if dd.symbol.isConstructor =>
           Some(td)
+
+        // case class <<Foo>>(a: Int) extends ...
+        // if there is no companion object Foo, td would be Foo$
+        // we have to look for defininion of Foo class
+        case (dd: DefDef) :: (t: Template) :: (td: TypeDef) :: parent :: _
+            if dd.symbol.decodedName == "apply" =>
+          fallbackFromParent(
+            parent: Tree,
+            dd.symbol.owner.decodedName,
+          )
         case _ => None
     end FindTypeDef
 
     val uri = params.uri
-    val ctx = driver.currentCtx
     driver.run(
       uri,
       SourceFile.virtual(uri.toASCIIString, params.text),
     )
     val unit = driver.currentCtx.run.units.head
-    val tree = unit.tpdTree
     val pos = driver.sourcePosition(params)
 
     val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
@@ -265,8 +274,16 @@ object OverrideCompletions:
         else ""
       (indent, indent, lastIndent)
     end calcIndent
+    val abstractMembers = defn.tpe.abstractTermMembers.map(_.symbol)
 
-    val overridables = defn.tpe.abstractTermMembers.map(_.symbol)
+    val caseClassOwners = Set("Product", "Equals")
+    val overridables =
+      if defn.symbol.is(Flags.CaseClass) then
+        abstractMembers.filter(sym =>
+          sym.sourcePos.exists || !caseClassOwners(sym.owner.decodedName)
+        )
+      else abstractMembers
+
     val completionValues = overridables
       .map(sym =>
         toCompletionValue(
@@ -282,11 +299,7 @@ object OverrideCompletions:
         )
       )
       .toList
-
-    val (edits, imports) = toEdits(
-      completionValues,
-      autoImports,
-    )
+    val (edits, imports) = toEdits(completionValues)
 
     if edits.isEmpty then Nil
     else
@@ -297,10 +310,10 @@ object OverrideCompletions:
             !sym.isTypeParam &&
             !sym.is(ParamAccessor) && // `num` of `class Foo(num: int)`
             sym.span.exists &&
+            !(sym.span.isZeroExtent && defn.symbol.is(Flags.CaseClass)) &&
             defn.sourcePos.contains(sym.sourcePos)
         )
         .sortBy(_.sourcePos.start)
-
       val source = indexedContext.ctx.source
 
       val shouldCompleteBraces = decls.isEmpty && hasBraces(text, defn).isEmpty
@@ -321,8 +334,8 @@ object OverrideCompletions:
           val span = decl.sourcePos.span.withStart(pos).withEnd(pos)
           defn.sourcePos.withSpan(span)
         )
-      val editPos = posFromDecls.getOrElse(inferEditPosition(text, defn))
 
+      val editPos = posFromDecls.getOrElse(inferEditPosition(text, defn))
       lazy val shouldCompleteWith = defn match
         case dd: DefDef =>
           dd.symbol.is(Given)
@@ -349,8 +362,7 @@ object OverrideCompletions:
   end implementAllFor
 
   private def toEdits(
-      completions: List[CompletionValue.Override],
-      autoImports: AutoImportsGenerator,
+      completions: List[CompletionValue.Override]
   ): (List[String], Set[l.TextEdit]) =
     completions.foldLeft(
       (List.empty[String], Set.empty[l.TextEdit])
@@ -488,6 +500,16 @@ object OverrideCompletions:
     else None
   end hasBraces
 
+  private def fallbackFromParent(parent: Tree, name: String)(using Context) =
+    val stats = parent match
+      case t: Template => Some(t.body)
+      case pkg: PackageDef => Some(pkg.stats)
+      case b: Block => Some(b.stats)
+      case _ => None
+    stats.flatMap(_.collectFirst {
+      case td: TypeDef if td.symbol.decodedName == name => td
+    })
+
   object OverrideExtractor:
     def unapply(path: List[Tree])(using Context) =
       path match
@@ -511,7 +533,9 @@ object OverrideCompletions:
         // class FooImpl extends Foo:
         //   ov|
         case (ident: Ident) :: (t: Template) :: (td: TypeDef) :: _
-            if t.parents.nonEmpty && "override".startsWith(ident.name.show) =>
+            if t.parents.nonEmpty && "override".startsWith(
+              ident.name.show.replace(Cursor.value, "")
+            ) =>
           Some(
             (
               td,
@@ -524,7 +548,11 @@ object OverrideCompletions:
 
         // class Main extends Val:
         //    def @@
-        case (t: Template) :: (td: TypeDef) :: _ if t.parents.nonEmpty =>
+        case (id: Ident) :: (t: Template) :: (td: TypeDef) :: _
+            if t.parents.nonEmpty && id.name.decoded.replace(
+              Cursor.value,
+              "",
+            ) == "def" =>
           Some(
             (
               td,
@@ -534,23 +562,8 @@ object OverrideCompletions:
               None,
             )
           )
-
         // class Main extends Val:
-        //    hello@@
-        case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
-            if t.parents.nonEmpty =>
-          Some(
-            (
-              td,
-              Some(sel.symbol),
-              sel.sourcePos.start,
-              false,
-              None,
-            )
-          )
-
-        // class Main extends Val:
-        //    he@@ // incomplete symbol
+        //    he@@
         case (id: Ident) :: (t: Template) :: (td: TypeDef) :: _
             if t.parents.nonEmpty =>
           Some(
@@ -559,7 +572,7 @@ object OverrideCompletions:
               None,
               id.sourcePos.start,
               false,
-              Some(id.name),
+              Some(id.name.show),
             )
           )
 

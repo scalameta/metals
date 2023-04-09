@@ -2,13 +2,13 @@ package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.Keyword
+import scala.meta.internal.pc.KeywordCompletionsUtils
 import scala.meta.tokenizers.XtensionTokenizeInputLike
 import scala.meta.tokens.Token
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.{lsp4j as l}
 
 object KeywordsCompletions:
 
@@ -34,6 +34,7 @@ object KeywordsCompletions:
         val isPackage = this.isPackage(path)
         val isParam = this.isParam(path)
         val isSelect = this.isSelect(path)
+        val isImport = this.isImport(path)
         lazy val text = completionPos.cursorPos.source.content.mkString
         lazy val reverseTokens: Array[Token] =
           // Try not to tokenize the whole file
@@ -51,6 +52,11 @@ object KeywordsCompletions:
             case Some(toks) => toks.tokens.reverse
             case None => Array.empty[Token]
         end reverseTokens
+
+        val canBeExtended = KeywordCompletionsUtils.canBeExtended(reverseTokens)
+        val canDerive = KeywordCompletionsUtils.canDerive(reverseTokens)
+        val hasExtend = KeywordCompletionsUtils.hasExtend(reverseTokens)
+
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -64,8 +70,11 @@ object KeywordsCompletions:
                 isParam = isParam,
                 isScala3 = true,
                 isSelect = isSelect,
+                isImport = isImport,
                 allowToplevel = true,
-                leadingReverseTokens = reverseTokens,
+                canBeExtended = canBeExtended,
+                canDerive = canDerive,
+                hasExtend = hasExtend,
               ) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }
@@ -112,6 +121,11 @@ object KeywordsCompletions:
     enclosing match
       case (_: Apply) :: (_: Select) :: _ => true
       case (_: Select) :: _ => true
+      case _ => false
+
+  private def isImport(enclosing: List[Tree]): Boolean =
+    enclosing match
+      case Import(_, _) :: _ => true
       case _ => false
 
   private def isDefinition(

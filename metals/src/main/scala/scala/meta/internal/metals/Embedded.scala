@@ -128,6 +128,7 @@ final class Embedded(
     val jars =
       Embedded.downloadMdoc(
         scalaBinaryVersion,
+        scalaVersion,
         Some(fullResolution),
       )
 
@@ -226,20 +227,27 @@ object Embedded {
     }
   }
 
-  private def mtagsDependency(scalaVersion: String): Dependency =
+  private def mtagsDependency(
+      scalaVersion: String,
+      metalsVersion: String,
+  ): Dependency =
     Dependency.of(
       "org.scalameta",
       s"mtags_$scalaVersion",
-      BuildInfo.metalsVersion,
+      metalsVersion,
     )
 
   private def mdocDependency(
-      scalaBinaryVersion: String
+      scalaBinaryVersion: String,
+      scalaVersion: Option[String],
   ): Dependency = {
     Dependency.of(
       "org.scalameta",
       s"mdoc_${scalaBinaryVersion}",
-      if (scalaBinaryVersion == "2.11") "2.2.24" else BuildInfo.mdocVersion,
+      if (scalaBinaryVersion == "2.11") "2.2.24"
+      // from 2.2.24 mdoc is compiled with 3.1.x which is incompatible with 3.0.x
+      else if (scalaVersion.exists(_.startsWith("3.0"))) "2.2.23"
+      else BuildInfo.mdocVersion,
     )
   }
 
@@ -250,7 +258,7 @@ object Embedded {
       BuildInfo.scalametaVersion,
     )
 
-  private def downloadDependency(
+  def downloadDependency(
       dep: Dependency,
       scalaVersion: Option[String],
       classfiers: Seq[String] = Seq.empty,
@@ -295,15 +303,19 @@ object Embedded {
     )
   }
 
-  def downloadMtags(scalaVersion: String): List[Path] =
-    downloadDependency(mtagsDependency(scalaVersion), Some(scalaVersion))
+  def downloadMtags(scalaVersion: String, metalsVersion: String): List[Path] =
+    downloadDependency(
+      mtagsDependency(scalaVersion, metalsVersion),
+      Some(scalaVersion),
+    )
 
   def downloadMdoc(
       scalaBinaryVersion: String,
+      scalaVersion: Option[String],
       resolutionParams: Option[ResolutionParams] = None,
   ): List[Path] =
     downloadDependency(
-      mdocDependency(scalaBinaryVersion),
+      mdocDependency(scalaBinaryVersion, scalaVersion),
       scalaVersion = None,
       resolution = resolutionParams,
     )

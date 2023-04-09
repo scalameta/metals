@@ -1,5 +1,7 @@
 package tests
 
+import scala.concurrent.Future
+
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
@@ -15,6 +17,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     )
 
   test("definition") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         """|
@@ -105,7 +108,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |object Main/*L5*/ extends App/*App.scala*/ {
            |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
-           |  println/*Predef.scala*/(message/*<no symbol>*/)
+           |  println/*Predef.scala*/(message/*L4*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |>>>>>>>/*<no symbol>*/
@@ -116,7 +119,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |import org.scalatest.funsuite.AnyFunSuite/*AnyFunSuite.scala*/
            |object MainSuite/*L6*/ extends AnyFunSuite/*AnyFunSuite.scala*/ {
            |  test/*AnyFunSuiteLike.scala*/(testName/*<no symbol>*/) {
-           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
+           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
            |    assert/*Assertions.scala*/(condition/*L8*/)
            |  }
            |}
@@ -348,6 +351,71 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
+  test("fallback-to-workspace-search") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": { "dependsOn": [ "a" ] }
+          |
+          |}
+          |/a/src/main/scala/a/Main.scala
+          |package a
+          |class Main
+          |object Main {
+          |  // Error that makes the whole target not compile
+          |  val name: Int = "John"
+          |  case class Bar()
+          |}
+          |/b/src/main/scala/b/Foo.scala
+          |package b
+          |import a.Main
+          |
+          |object Foo{
+          |  val nm = Main.name
+          |  val foo = Main.Bar()
+          |  val m: Main = new Main()
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("b/src/main/scala/b/Foo.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Main.scala:5:19: error: type mismatch;
+           | found   : String("John")
+           | required: Int
+           |  val name: Int = "John"
+           |                  ^^^^^^
+           |""".stripMargin,
+      )
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |class Main/*L1*/
+           |object Main/*L2*/ {
+           |  // Error that makes the whole target not compile
+           |  val name/*L4*/: Int/*Int.scala*/ = "John"
+           |  case class Bar/*L5*/()
+           |}
+           |/b/src/main/scala/b/Foo.scala
+           |package b
+           |import a/*<no symbol>*/.Main/*;Main.scala:1;Main.scala:2*/
+           |
+           |object Foo/*L3*/{
+           |  val nm/*L4*/ = Main/*Main.scala:2*/.name/*Main.scala:4*/
+           |  val foo/*L5*/ = Main/*Main.scala:2*/.Bar/*Main.scala:5*/()
+           |  val m/*L6*/: Main/*Main.scala:1*/ = new Main/*Main.scala:1*/()
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("rambo", withoutVirtualDocs = true) {
     cleanDatabase()
     for {
@@ -441,5 +509,66 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       )
     } yield ()
   }
+
+  // The tested library is released with JDK 11
+  if (!isJava8)
+    test("jar-with-plus", withoutVirtualDocs = true) {
+      import scala.meta.internal.metals.MetalsEnrichments._
+      val testCase =
+        """|package a
+           |
+           |import com.thoughtworks.dsl.D@@sl
+           |class Main {
+           |  val foo = ""
+           |}""".stripMargin
+      val fileContents = testCase.replace("@@", "")
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{
+             |  "a": { 
+             |    "libraryDependencies" : ["com.thoughtworks.dsl::dsl:2.0.0-M0+1-b691cde8"] 
+             |  }
+             |}
+             |/a/src/main/scala/example/MainA.scala
+             |$fileContents
+             |""".stripMargin
+        )
+        _ = server.didOpen("a/src/main/scala/example/MainA.scala")
+        _ = assertNoDiff(
+          server.workspaceDefinitions,
+          """|/a/src/main/scala/example/MainA.scala
+             |package a
+             |
+             |import com.thoughtworks.dsl.Dsl/*Dsl.scala*/
+             |class Main/*L3*/ {
+             |  val foo/*L4*/ = ""
+             |}
+             |""".stripMargin,
+        )
+        definition <- server.definition(
+          "a/src/main/scala/example/MainA.scala",
+          testCase,
+          workspace,
+        )
+        _ = assert(definition.nonEmpty, "Definition for Dsl class not found")
+        mainDefUri = definition.head.getUri()
+        contents <-
+          // jar is returned if virtual files are supported
+          if (mainDefUri.startsWith("jar"))
+            server.executeDecodeFileCommand(mainDefUri).map { result =>
+              assert(
+                result.value != null,
+                "No file contents returned for Dsl.scala",
+              )
+              result.value
+
+            }
+          else Future.successful(mainDefUri.toAbsolutePath.readText)
+      } yield {
+        assertContains(contents, "trait Dsl[-Keyword, Domain, +Value]")
+      }
+    }
 
 }

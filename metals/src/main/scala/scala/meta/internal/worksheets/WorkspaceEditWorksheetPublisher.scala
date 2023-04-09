@@ -6,6 +6,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.HoverMarkup
+import scala.meta.internal.worksheets.MdocEnrichments._
 import scala.meta.internal.worksheets.MdocEnrichments.truncatify
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher._
 import scala.meta.io.AbsolutePath
@@ -108,7 +109,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
     RenderEditResult(
       new Range(startPosition, endPosition),
       renderMessage(statement),
-      statement.details(),
+      statement.prettyDetails(),
     )
   }
 

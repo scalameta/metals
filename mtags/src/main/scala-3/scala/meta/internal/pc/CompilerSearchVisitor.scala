@@ -5,18 +5,16 @@ import java.util.logging.Logger
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.*
 
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.*
-import dotty.tools.dotc.core.SymDenotations.*
 import dotty.tools.dotc.core.Symbols.*
 
 class CompilerSearchVisitor(
-    query: String,
-    visitSymbol: Symbol => Boolean,
-)(using ctx: Context)
+    visitSymbol: Symbol => Boolean
+)(using ctx: Context, reports: ReportContext)
     extends SymbolSearchVisitor:
 
   val logger: Logger = Logger.getLogger(classOf[CompilerSearchVisitor].getName)
@@ -25,6 +23,11 @@ class CompilerSearchVisitor(
     sym != NoSymbol && sym.isPublic
   catch
     case NonFatal(e) =>
+      reports.incognito.createReport(
+        "is_public",
+        s"""Symbol: $sym""".stripMargin,
+        e,
+      )
       logger.log(Level.SEVERE, e.getMessage(), e)
       false
 

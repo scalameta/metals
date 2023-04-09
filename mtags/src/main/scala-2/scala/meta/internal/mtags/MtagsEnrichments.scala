@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import java.net.URI
 import java.net.URLDecoder
+import java.nio.file.FileSystemNotFoundException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Paths
 import java.util.concurrent.CancellationException
@@ -9,6 +10,7 @@ import java.util.concurrent.CancellationException
 import scala.collection.mutable
 import scala.reflect.internal.util.Position
 import scala.util.Failure
+import scala.util.Properties
 import scala.util.Success
 import scala.util.Try
 import scala.{meta => m}
@@ -22,7 +24,7 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 
 object MtagsEnrichments extends MtagsEnrichments
-trait MtagsEnrichments extends CommonMtagsEnrichments {
+trait MtagsEnrichments extends ScalametaCommonEnrichments {
 
   implicit class XtensionIteratorCollection[T](it: Iterator[T]) {
     def headOption: Option[T] = {
@@ -130,21 +132,41 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       value.size > 1 && value.head == '`' && value.last == '`'
     def toAbsolutePath: AbsolutePath = toAbsolutePath(true)
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
+
+      /* Windows sometimes treats % literally, but not sure if it's always the case.
+       * https://learn.microsoft.com/en-us/troubleshoot/windows-client/networking/url-encoding-unc-paths-not-url-decoded
+       * This function tries to apply different heuristics to get the proper file system.
+       */
+      def withTryDecode(value: String)(f: String => AbsolutePath) = {
+        try {
+          if (Properties.isWin) f(URLDecoder.decode(value, "UTF-8"))
+          else f(value)
+        } catch {
+          // fallback to try without decoding
+          case _: FileSystemNotFoundException if Properties.isWin =>
+            f(value)
+          // prevents infinity recursion and double check for double escaped %
+          case _: NoSuchFileException | _: FileSystemNotFoundException
+              if value.contains("%25") =>
+            f(URLDecoder.decode(value, "UTF-8"))
+        }
+      }
+
       // jar schemes must have "jar:file:"" instead of "jar:file%3A" or jar file system won't recognise the URI.
       // but don't overdecode as URIs may not be recognised e.g. "com-microsoft-java-debug-core-0.32.0%2B1.jar" is correct
       if (value.toUpperCase.startsWith("JAR%3AFILE"))
-        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
+        withTryDecode(value)(
+          URLDecoder.decode(_, "UTF-8").toAbsolutePath(followSymlink)
+        )
       else if (value.toUpperCase.startsWith("JAR:FILE%3A"))
-        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
+        withTryDecode(value)(
+          URLDecoder.decode(_, "UTF-8").toAbsolutePath(followSymlink)
+        )
       else if (value.toUpperCase.startsWith("JAR")) {
-        try {
-          new URI("jar", value.stripPrefix("jar:"), null)
+        withTryDecode(value.stripPrefix("jar:"))(
+          new URI("jar", _, null)
             .toAbsolutePath(followSymlink)
-        } catch {
-          // prevents infinity recursion and double check for double escaped %
-          case _: NoSuchFileException if value.contains("%25") =>
-            URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
-        }
+        )
       } else {
         val stripped = value.stripPrefix("metals:")
         val percentEncoded = URIEncoderDecoder.encode(stripped)

@@ -2,19 +2,15 @@ package scala.meta.internal.pc
 package completions
 
 import java.net.URI
-import java.{util as ju}
 
 import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.AutoImports.SymbolImport
-import scala.meta.internal.pc.IndexedContext.Result
 import scala.meta.internal.pc.MetalsInteractive.*
-import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
 
@@ -24,15 +20,14 @@ import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.AndType
+import dotty.tools.dotc.core.Types.ClassInfo
 import dotty.tools.dotc.core.Types.NoType
+import dotty.tools.dotc.core.Types.OrType
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
-import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
 
@@ -63,12 +58,12 @@ object CaseKeywordCompletion:
       autoImportsGen: AutoImportsGenerator,
       patternOnly: Option[String] = None,
       hasBind: Boolean = false,
+      includeExhaustive: Option[NewLineOptions] = None,
   ): List[CompletionValue] =
     import indexedContext.ctx
     val definitions = indexedContext.ctx.definitions
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
     val completionGenerator = CompletionValueGenerator(
-      indexedContext,
       completionPos,
       clientSupportsSnippets,
       patternOnly,
@@ -86,7 +81,6 @@ object CaseKeywordCompletion:
               if definitions.isFunctionType(head) || head.isRef(
                 definitions.PartialFunctionClass
               ) =>
-            val dealiased = head.widenDealias
             val argTypes =
               head.argTypes.init
             new Parents(argTypes, definitions)
@@ -153,54 +147,59 @@ object CaseKeywordCompletion:
         && (sym.isPublic || sym.isAccessibleFrom(selectorSym.info))
       indexedContext.scopeSymbols
         .foreach(s =>
-          val ts = s.info.dealias.typeSymbol
-          if (isValid(ts)) then visit(autoImportsGen.inferSymbolImport(ts))
+          val ts = s.info.metalsDealias.typeSymbol
+          if isValid(ts) then visit(autoImportsGen.inferSymbolImport(ts))
         )
       // Step 2: walk through known subclasses of sealed types.
-      val sealedDescs = MetalsSealedDesc.sealedStrictDescendants(selectorSym)
+      val sealedDescs = subclassesForType(parents.selector.widen.bounds.hi)
       sealedDescs.foreach { sym =>
         val symbolImport = autoImportsGen.inferSymbolImport(sym)
         visit(symbolImport)
       }
-      val res = result.result()
-
-      val members =
-        res.flatMap { symImport =>
-          completionGenerator
-            .labelForCaseMember(symImport.sym, symImport.name)
-            .map(label => (symImport.sym, label, symImport.importSel))
-
-        }
-
-      val caseItems = members.map((sym, label, importSel) =>
+      val res = result.result().flatMap {
+        case si @ SymbolImport(sym, name, importSel) =>
+          completionGenerator.labelForCaseMember(sym, name.value).map { label =>
+            (si, label)
+          }
+      }
+      val caseItems = res.map((si, label) =>
         completionGenerator.toCompletionValue(
-          sym,
+          si.sym,
           label,
-          autoImportsGen.renderImports(importSel.toList),
+          autoImportsGen.renderImports(si.importSel.toList),
         )
       )
-
-      selector match
+      includeExhaustive match
         // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
         // which works like exhaustive match.
-        case EmptyTree =>
+        case Some(NewLineOptions(moveToNewLine, addNewLineAfter)) =>
           val sealedMembers =
-            members.filter((sym, _, _) => sealedDescs.contains(sym))
+            val sealedMembers0 =
+              res.filter((si, _) => sealedDescs.contains(si.sym))
+            sortSubclasses(
+              selectorSym.info,
+              sealedMembers0,
+              completionPos.sourceUri,
+              search,
+            )
           sealedMembers match
             case Nil => caseItems
-            case (_, firstLabel, _) :: tail =>
+            case (_, label) :: tail =>
+              val (newLine, addIndent) =
+                if moveToNewLine then ("\n\t", "\t") else ("", "")
               val insertText = Some(
                 tail
-                  .map((_, label, _) => label)
+                  .map(_._2)
                   .mkString(
-                    if clientSupportsSnippets then s"\n\t${firstLabel} $$0\n\t"
-                    else s"\n\t${firstLabel}\n\t",
-                    "\n\t",
-                    "\n",
+                    if clientSupportsSnippets then
+                      s"$newLine${label} $$0\n$addIndent"
+                    else s"$newLine${label}\n$addIndent",
+                    s"\n$addIndent",
+                    if addNewLineAfter then "\n" else "",
                   )
               )
               val allImports =
-                sealedMembers.flatMap((_, _, importSel) => importSel).distinct
+                sealedMembers.flatMap(_._1.importSel).distinct
               val importEdit = autoImportsGen.renderImports(allImports)
               val exhaustive = CompletionValue.MatchCompletion(
                 s"case (exhaustive)",
@@ -210,7 +209,7 @@ object CaseKeywordCompletion:
               )
               exhaustive :: caseItems
           end match
-        case _ => caseItems
+        case None => caseItems
       end match
     end if
 
@@ -237,7 +236,6 @@ object CaseKeywordCompletion:
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
 
     val completionGenerator = CompletionValueGenerator(
-      indexedContext,
       completionPos,
       clientSupportsSnippets,
     )
@@ -246,35 +244,17 @@ object CaseKeywordCompletion:
       case tr @ TypeRef(_, _) => tr.underlying
       case t => t
 
-    def subclassesForType(tpe: Type)(using Context): List[Symbol] =
-      val parents = ListBuffer.empty[Symbol]
-      // Get parent types from refined type
-      def loop(tpe: Type): Unit =
-        tpe match
-          case AndType(tp1, tp2) => // for refined type like A with B with C
-            loop(tp1)
-            loop(tp2)
-          case t => parents += tpe.typeSymbol
-      loop(tpe.widen.bounds.hi)
-      val subclasses = parents.toList.map { parent =>
-        // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
-        if parent.isAllOf(JavaEnumTrait) then parent.children
-        else MetalsSealedDesc.sealedStrictDescendants(parent)
-      } match
-        case Nil => Nil
-        case subcls => subcls.reduce(_.intersect(_))
-
+    val sortedSubclasses =
+      val subclasses =
+        subclassesForType(tpe.widen.bounds.hi)
+          .map(autoImportsGen.inferSymbolImport)
+          .flatMap(si =>
+            completionGenerator.labelForCaseMember(si.sym, si.name).map((si, _))
+          )
       sortSubclasses(tpe, subclasses, completionPos.sourceUri, search)
-    end subclassesForType
 
-    val sortedSubclasses = subclassesForType(tpe)
     val (labels, imports) =
-      sortedSubclasses.flatMap { sym =>
-        val enter = autoImportsGen.inferSymbolImport(sym)
-        completionGenerator
-          .labelForCaseMember(enter.sym, enter.name)
-          .map(label => (label, enter.importSel))
-      }.unzip
+      sortedSubclasses.map((si, label) => (label, si.importSel)).unzip
 
     val (obracket, cbracket) = if noIndent then (" {", "}") else ("", "")
     val basicMatch = CompletionValue.MatchCompletion(
@@ -311,13 +291,14 @@ object CaseKeywordCompletion:
     completions
   end matchContribute
 
-  private def sortSubclasses(
+  private def sortSubclasses[A](
       tpe: Type,
-      syms: List[Symbol],
+      syms: List[(SymbolImport, String)],
       uri: URI,
       search: SymbolSearch,
-  )(using Context): List[Symbol] =
-    if syms.forall(_.sourcePos.exists) then syms.sortBy(_.sourcePos.point)
+  )(using Context): List[(SymbolImport, String)] =
+    if syms.forall(_._1.sym.sourcePos.exists) then
+      syms.sortBy(_._1.sym.sourcePos.point)
     else
       val defnSymbols = search
         .definitionSourceToplevels(
@@ -327,10 +308,53 @@ object CaseKeywordCompletion:
         .asScala
         .zipWithIndex
         .toMap
-      syms.sortBy { sym =>
+      syms.sortBy { case (SymbolImport(sym, _, _), _) =>
         val semancticName = SemanticdbSymbols.symbolName(sym)
         defnSymbols.getOrElse(semancticName, -1)
       }
+
+  def subclassesForType(tpe: Type)(using Context): List[Symbol] =
+    /**
+     * Split type made of & and | types to a list of simple types.
+     * For example, `(A | D) & (B & C)` returns `List(A, D, B, C).
+     * Later we use them to generate subclasses of each of these types.
+     */
+    def getParentTypes(tpe: Type, acc: List[Symbol]): List[Symbol] =
+      tpe match
+        case AndType(tp1, tp2) =>
+          getParentTypes(tp2, getParentTypes(tp1, acc))
+        case OrType(tp1, tp2) =>
+          getParentTypes(tp2, getParentTypes(tp1, acc))
+        case t =>
+          tpe.typeSymbol :: acc
+
+    /**
+     * Check if `sym` is a subclass of type `tpe`.
+     * For `class A extends B with C with D` we have to construct B & C & D type,
+     * because `A <:< (B & C) == false`.
+     */
+    def isExhaustiveMember(sym: Symbol): Boolean =
+      val symTpe = sym.info match
+        case cl: ClassInfo =>
+          cl.parents
+            .reduceLeftOption((tp1, tp2) => tp1.&(tp2))
+            .getOrElse(sym.info)
+        case simple => simple
+      symTpe <:< tpe
+
+    val parents = getParentTypes(tpe, List.empty)
+    parents.toList.map { parent =>
+      // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
+      if parent.isAllOf(JavaEnumTrait) then parent.children
+      else MetalsSealedDesc.sealedStrictDescendants(parent)
+    } match
+      case Nil => Nil
+      case subcls :: Nil => subcls
+      case subcls =>
+        val subclasses = subcls.flatten.distinct
+        subclasses.filter(isExhaustiveMember)
+
+  end subclassesForType
 
 end CaseKeywordCompletion
 
@@ -363,7 +387,6 @@ class Parents(val selector: Type, definitions: Definitions)(using Context):
 end Parents
 
 class CompletionValueGenerator(
-    indexedContext: IndexedContext,
     completionPos: CompletionPos,
     clientSupportsSnippets: Boolean,
     patternOnly: Option[String] = None,
@@ -373,7 +396,12 @@ class CompletionValueGenerator(
     patternOnly match
       case None => true
       case Some("") => true
-      case Some(query) => CompletionFuzzy.matches(query, name)
+      case Some(Cursor.value) => true
+      case Some(query) =>
+        CompletionFuzzy.matches(
+          query.replace(Cursor.value, ""),
+          name,
+        )
 
   def labelForCaseMember(sym: Symbol, name: String)(using
       Context
@@ -420,7 +448,7 @@ class CompletionValueGenerator(
       sym: Symbol,
       label: String,
       autoImport: Option[l.TextEdit],
-  )(using Context): CompletionValue.CaseKeyword =
+  ): CompletionValue.CaseKeyword =
     val cursorSuffix =
       (if patternOnly.nonEmpty then "" else " ") +
         (if clientSupportsSnippets then "$0" else "")
@@ -489,35 +517,33 @@ class MatchCaseExtractor(
       path match
         // foo mat@@
         case (sel @ Select(qualifier, name)) :: _
-            if "match".startsWith(name.toString()) && text.charAt(
-              completionPos.start - 1
-            ) == ' ' =>
+            if name.toString() != Cursor.value && "match"
+              .startsWith(
+                name.toString().replace(Cursor.value, "")
+              ) && (text
+              .charAt(
+                completionPos.start - 1
+              ) == ' ' || text.charAt(completionPos.start - 1) == '.') =>
           Some(qualifier)
-        // foo match @@
-        case (c: CaseDef) :: (m: Match) :: _
-            if completionPos.query.startsWith("match") =>
-          Some(m.selector)
-        // foo ma@tch (no cases)
-        case (m @ Match(
-              _,
-              CaseDef(Literal(Constant(null)), _, _) :: Nil,
-            )) :: _ =>
-          Some(m.selector)
         case _ => None
   end MatchExtractor
   object CaseExtractor:
-    def unapply(path: List[Tree])(using Context): Option[(Tree, Tree)] =
+    def unapply(path: List[Tree])(using
+        Context
+    ): Option[(Tree, Tree, Option[NewLineOptions])] =
       path match
         // foo match
         // case None => ()
         // ca@@
         case (id @ Ident(name)) :: Block(stats, expr) :: parent :: _
             if "case"
-              .startsWith(name.toString()) && stats.lastOption.exists(
+              .startsWith(
+                name.toString().replace(Cursor.value, "")
+              ) && stats.lastOption.exists(
               _.isInstanceOf[Match]
             ) && expr == id =>
           val selector = stats.last.asInstanceOf[Match].selector
-          Some((selector, parent))
+          Some((selector, parent, None))
         // List(Option(1)).collect {
         //   case Some(value) => ()
         //   ca@@
@@ -527,22 +553,30 @@ class MatchCaseExtractor(
               expr,
             ) :: (cd: CaseDef) :: (m: Match) :: parent :: _
             if ident == expr && "case"
-              .startsWith(name.toString()) &&
+              .startsWith(
+                name.toString().replace(Cursor.value, "")
+              ) &&
               cd.sourcePos.startLine != pos.startLine =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, None))
         // foo match
         //  ca@@
         case (_: CaseDef) :: (m: Match) :: parent :: _ =>
-          Some((m.selector, parent))
+          Some((m.selector, parent, None))
         // List(foo).map { ca@@ }
-        case (ident @ Ident(name)) :: Block(stats, expr) :: (appl @ Apply(
-              fun,
-              args,
-            )) :: _
+        case (ident @ Ident(name)) :: (block @ Block(stats, expr)) ::
+            (apply @ Apply(fun, args)) :: _
             if stats.isEmpty && ident == expr && "case".startsWith(
-              name.toString()
+              name.toString().replace(Cursor.value, "")
             ) =>
-          Some((EmptyTree, appl))
+          val moveToNewLine = ident.sourcePos.line == apply.sourcePos.line
+          val addNewLineAfter = apply.sourcePos.endLine == ident.sourcePos.line
+          Some(
+            (
+              EmptyTree,
+              apply,
+              Some(NewLineOptions(moveToNewLine, addNewLineAfter)),
+            )
+          )
 
         case _ => None
   end CaseExtractor
@@ -559,13 +593,16 @@ class MatchCaseExtractor(
             if pos.start - c.sourcePos.start > 4 =>
           Some((m.selector, parent, ""))
         // case Som@@
-        case Ident(name) :: CaseExtractor(selector, parent) =>
+        case Ident(name) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, name.decoded))
         // case abc @ Som@@
-        case Ident(name) :: Bind(_, _) :: CaseExtractor(selector, parent) =>
+        case Ident(name) :: Bind(_, _) :: CaseExtractor(selector, parent, _) =>
+          Some((selector, parent, name.decoded))
+        // case abc@@
+        case Bind(name, Ident(_)) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, name.decoded))
         // case abc @ @@
-        case Bind(_, _) :: CaseExtractor(selector, parent) =>
+        case Bind(name, Literal(_)) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, ""))
         case _ => None
 
@@ -575,20 +612,24 @@ class MatchCaseExtractor(
     def unapply(path: List[Tree])(using Context) =
       path match
         // case _: Som@@ =>
-        case Ident(name) :: Typed(_, _) :: CaseExtractor(selector, parent) =>
+        case Ident(name) :: Typed(_, _) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, name.decoded))
         // case _: @@ =>
-        case Typed(_, _) :: CaseExtractor(selector, parent) =>
+        case Typed(_, _) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, ""))
         // case ab: @@ =>
-        case Bind(_, Typed(_, _)) :: CaseExtractor(selector, parent) =>
+        case Bind(_, Typed(_, _)) :: CaseExtractor(selector, parent, _) =>
           Some((selector, parent, ""))
         // case ab: Som@@ =>
         case Ident(name) :: Typed(_, _) :: Bind(_, _) :: CaseExtractor(
               selector,
               parent,
+              _,
             ) =>
           Some((selector, parent, name.decoded))
         case _ => None
   end TypedCasePatternExtractor
+
 end MatchCaseExtractor
+
+case class NewLineOptions(moveToNewLine: Boolean, addNewLineAfter: Boolean)

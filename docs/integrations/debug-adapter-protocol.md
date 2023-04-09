@@ -1,20 +1,23 @@
 ---
 id: debug-adapter-protocol
-sidebar_label: Debug Adapter Protocol
-title: Debug Adapter Protocol
+sidebar_label: Running and debugging
+title: Running and debugging
 ---
 
 Metals implements the Debug Adapter Protocol, which can be used by the editor to
-communicate with JVM to run and debug code.
+communicate with JVM to run and debug code. Alternatively, Metals is also able
+to provide editors with all the information needed to run the code (this is
+currently supported in run code lenses for main classes).
 
-## How to add support for debugging in my editor?
+## How to add support for debugging or running in my editor?
 
 There are two main ways to add support for debugging depending on the
 capabilities exposed by the client.
 
 ### Via code lenses
 
-The editor needs to handle two commands in its language client extension:
+If you want to use DAP the editor needs to handle two commands in its language
+client extension:
 [`metals-run-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala)
 and
 [`metals-debug-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala).
@@ -26,6 +29,17 @@ starting the run/debug session is as follows:
 Then we can request the debug adapter URI from the metals server using the
 [`debug-adapter-start`](https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ServerCommands.scala)
 command.
+
+Starting a Debug Adapter Protocol session might take some time, since it needs
+to set up all the neccesary utilities for debugging. Metals also provides a
+`shellCommand` field, which will be present in the command attached to the run
+main methods code lenses. This field can be used to simply run the process
+quickly without the debugging capabilities.
+
+If you can't or won't support DAP, you can use the `runProvider` instead of
+`debugProvider `option in the initialization options sent from the editor to the
+Metals server. This will make sure that only the `run` code lense show up with
+the needed `shellCommand` field.
 
 ### Via explicit main or test commands
 
@@ -104,10 +118,33 @@ keys that can be sent as well with the same format as above.
 
 ```json
 {
-  "path": "file:///path/to/my/file.scala"
+  "path": "file:///path/to/my/file.scala",
   "runType": "testTarget"
 }
 ```
+
+Instead of `debug-adapter-start` if you only want to get data about the command
+to run you can use `discover-jvm-run-command`, which takes the same json as
+above, but instead of starting the DAP session it will return the
+`DebugSessionParams` object containing targets that this main class can be run
+for along with the data about the main class which will take form of:
+
+```json
+{
+  "targets": ["id1"],
+  "dataKind": "scala-main-class",
+  "data": {
+    "class": "Foo",
+    "arguments": [],
+    "jvmOptions": [],
+    "environmentVariables": [],
+    "shellCommand": "java ..."
+  }
+}
+```
+
+where `shellCommand` will be the exact command to run if you want to run it on
+your own without DAP.
 
 ### Wiring it all together
 
@@ -117,6 +154,12 @@ the run/debug session. For reference, take a look at the
 [vscode implementation](https://github.com/scalameta/metals-vscode/blob/master/src/scalaDebugger.ts)
 and how it is
 [wired up together](https://github.com/scalameta/metals-vscode/blob/master/src/extension.ts#L356)
+
+## Supported Testing Frameworks
+
+```scala mdoc:test-frameworks
+
+```
 
 ## Debugging the connection
 

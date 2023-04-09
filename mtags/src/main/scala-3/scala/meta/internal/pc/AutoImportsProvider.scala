@@ -1,27 +1,21 @@
 package scala.meta.internal.pc
 
 import java.nio.file.Paths
-import java.{util as ju}
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.completions.CompletionPos
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
-import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Decorators.*
-import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
-import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.util.Spans
 import org.eclipse.{lsp4j as l}
 
 final class AutoImportsProvider(
@@ -31,7 +25,7 @@ final class AutoImportsProvider(
     params: OffsetParams,
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String,
-):
+)(using ReportContext):
 
   def autoImports(isExtension: Boolean): List[AutoImportsResult] =
     val uri = params.uri
@@ -66,7 +60,7 @@ final class AutoImportsProvider(
     def isExactMatch(sym: Symbol, query: String): Boolean =
       sym.name.show == query
 
-    val visitor = new CompilerSearchVisitor(name, visit)
+    val visitor = new CompilerSearchVisitor(visit)
     if isExtension then
       search.searchMethods(name, buildTargetIdentifier, visitor)
     else search.search(name, buildTargetIdentifier, visitor)

@@ -152,7 +152,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|sliding[B >: Int](size: Int, step: Int = 1): $1$.GroupedIterator[B]
+        """|sliding[B >: Int](size: Int, step: Int = 1): List[Int]#iterator.GroupedIterator[B]
            |""".stripMargin
     ),
   )
@@ -443,14 +443,10 @@ class CompletionDocSuite extends BaseCompletionSuite {
         |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.11" ->
-        s"""|$executionDocstringPre2134
-            |global: ExecutionContextExecutor
-            |""".stripMargin,
       "2.12" ->
         s"""|$executionDocstringPre2134
             |global: ExecutionContext
-            |""".stripMargin,
+            |""".stripMargin
     ),
   )
 

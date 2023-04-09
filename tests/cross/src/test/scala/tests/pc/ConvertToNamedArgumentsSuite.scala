@@ -1,10 +1,13 @@
 package tests.pc
 
 import java.net.URI
+import java.util.concurrent.ExecutionException
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.pc.CodeActionErrorMessages
+import scala.meta.pc.DisplayableException
 
 import munit.Location
 import munit.TestOptions
@@ -76,6 +79,38 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
        |  val a = new Foo(param1 = 1, param2 = 2)(param3 = 3)
        |}""".stripMargin,
   )
+
+  checkError(
+    "java-object",
+    """|object A{
+       |  val a = <<new java.util.Vector(3)>>
+       |}
+       |""".stripMargin,
+    List(0, 1),
+    CodeActionErrorMessages.ConvertToNamedArguments.IsJavaObject,
+  )
+
+  def checkError(
+      name: TestOptions,
+      original: String,
+      argIndices: List[Int],
+      expectedErrorMsg: String,
+  ): Unit = {
+    test(name) {
+      try {
+        val edits = convertToNamedArgs(original, argIndices)
+        val (code, _, _) = params(original)
+        val obtained = TextEdits.applyEdits(code, edits)
+        fail(s"No error. Result: \n $obtained")
+      } catch {
+        case e: ExecutionException =>
+          e.getCause() match {
+            case cause: DisplayableException =>
+              assertNoDiff(cause.getMessage(), expectedErrorMsg)
+          }
+      }
+    }
+  }
 
   def checkEdit(
       name: TestOptions,

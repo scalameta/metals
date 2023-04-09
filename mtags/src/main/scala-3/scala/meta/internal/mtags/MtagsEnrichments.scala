@@ -1,7 +1,5 @@
 package scala.meta.internal.mtags
 
-import java.net.URI
-
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
@@ -9,14 +7,11 @@ import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.pc.MetalsInteractive
 import scala.meta.internal.pc.SemanticdbSymbols
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.ParentSymbols
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
-import dotty.tools.dotc.Driver
 import dotty.tools.dotc.ast.tpd.*
-import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Denotations.*
 import dotty.tools.dotc.core.Flags.*
@@ -25,16 +20,16 @@ import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.SymDenotations.NoDenotation
 import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Types.AppliedType
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
-import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.{lsp4j as l}
 
-object MtagsEnrichments extends CommonMtagsEnrichments:
+object MtagsEnrichments extends ScalametaCommonEnrichments:
 
   extension (driver: InteractiveDriver)
 
@@ -64,13 +59,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
           "No source files were passed to the Scala 3 presentation compiler"
         )
       val unit = driver.currentCtx.run.units.head
-      val tree = unit.tpdTree
       val pos = driver.sourcePosition(params)
-      val path =
-        Interactive.pathTo(driver.openedTrees(params.uri), pos)(using
-          driver.currentCtx
-        )
-
       val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
       val tpdPath =
         Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
@@ -181,6 +170,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
   extension (s: String)
     def backticked: String =
       KeywordWrapper.Scala3.backtickWrap(s)
+
     def stripBackticks: String = s.stripPrefix("`").stripSuffix("`")
 
   extension (search: SymbolSearch)
@@ -271,5 +261,13 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
           List(EmptyTree)
     end expandRangeToEnclosingApply
   end extension
+
+  extension (tpe: Type)
+    def metalsDealias(using Context): Type =
+      tpe.dealias match
+        case app @ AppliedType(tycon, params) =>
+          // we dealias applied type params by hand, because `dealias` doesn't do it
+          AppliedType(tycon, params.map(_.metalsDealias))
+        case dealised => dealised
 
 end MtagsEnrichments

@@ -12,7 +12,7 @@ final class ConvertToNamedArgumentsProvider(
 ) {
 
   import compiler._
-  def convertToNamedArguments: List[l.TextEdit] = {
+  def convertToNamedArguments: Either[String, List[l.TextEdit]] = {
     val unit = addCompilationUnit(
       code = params.text(),
       filename = params.uri().toString(),
@@ -44,12 +44,24 @@ final class ConvertToNamedArgumentsProvider(
       }
     }
 
+    def handleWithJavaFilter(symbol: Symbol, edits: => List[l.TextEdit]) = {
+      if (symbol.isJava)
+        Left(CodeActionErrorMessages.ConvertToNamedArguments.IsJavaObject)
+      else Right(edits)
+    }
+
     typedTree match {
-      case FromNewApply(fun, args) =>
-        makeTextEdits(fun.tpe.paramss.flatten, args)
-      case Apply(fun, args) =>
-        makeTextEdits(fun.tpe.params, args)
-      case _ => Nil
+      case FromNewApply(fun, args) if fun.symbol != null =>
+        handleWithJavaFilter(
+          fun.symbol,
+          makeTextEdits(fun.tpe.paramss.flatten, args)
+        )
+      case Apply(fun, args) if fun.symbol != null && !fun.symbol.isJava =>
+        handleWithJavaFilter(
+          fun.symbol,
+          makeTextEdits(fun.tpe.params, args)
+        )
+      case _ => Right(Nil)
     }
   }
 }

@@ -102,22 +102,30 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
 
     val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
 
-    cleanWorkspace()
+    // if item is already specified we did already create the workspace
+    // note(@tgodzik) Might need some further refactor
+    val init = if (item.isEmpty) {
+      cleanWorkspace()
+      for {
+        _ <- initialize(
+          s"""/metals.json
+             |{"a":
+             |  {
+             |    "scalaVersion" : "$actualScalaVersion",
+             |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
+             |  }
+             |}
+             |${input
+              .replaceAll(toEscape(), "")}""".stripMargin
+        )
+        _ <- Future.sequence(
+          files.map(file => server.didOpen(s"${file._1}"))
+        )
+      } yield ()
+    } else Future.successful(())
+
     for {
-      _ <- initialize(
-        s"""/metals.json
-           |{"a":
-           |  {
-           |    "scalaVersion" : "$actualScalaVersion",
-           |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
-           |  }
-           |}
-           |${input
-            .replaceAll(toEscape(), "")}""".stripMargin
-      )
-      _ <- Future.sequence(
-        files.map(file => server.didOpen(s"${file._1}"))
-      )
+      _ <- init
       mayItem <- item match {
         case item @ Some(_) => Future.successful(item)
         case None => server.prepareCallHierarchy(filename, edit)

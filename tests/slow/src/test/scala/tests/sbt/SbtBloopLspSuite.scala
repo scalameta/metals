@@ -20,6 +20,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
 import tests.ScriptsAssertions
+import tests.TestSemanticTokens
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
@@ -119,6 +120,45 @@ class SbtBloopLspSuite
       )
     } yield ()
   }
+
+  test("bloop-snapshot") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.server.buildServerPromise.future
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          importBuildMessage,
+          progressMessage,
+        ).mkString("\n"),
+      )
+      _ = client.messageRequests.clear() // restart
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "bloop-version": "1.5.6-134-46452098-SNAPSHOT"
+          |}
+          |""".stripMargin
+      )
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          BloopVersionChange.msg,
+          progressMessage,
+        ).mkString("\n"),
+      )
+      _ = assertStatus(_.isInstalled)
+    } yield ()
+  }
+
   test("force-command-multiple") {
     cleanWorkspace()
     for {
@@ -707,4 +747,55 @@ class SbtBloopLspSuite
       )
     } yield ()
   }
+
+  test("semantic-highlight") {
+    val expected =
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,definition,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+          |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
+          |  .<<settings>>/*method*/(
+          |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
+          |    <<inThisBuild>>/*method*/(
+          |      <<List>>/*class*/(
+          |        <<organization>>/*variable,readonly*/ <<:=>>/*method*/ <<"com.example">>/*string*/,
+          |        <<scalaVersion>>/*variable,readonly*/ <<:=>>/*method*/ <<"2.13.10">>/*string*/,
+          |        <<scalacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(<<"-Xsource:3">>/*string*/, <<"-Xlint:adapted-args">>/*string*/),
+          |        <<javacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(
+          |          <<"-Xlint:all">>/*string*/,
+          |          <<"-Xdoclint:accessibility,html,syntax">>/*string*/
+          |        )
+          |      )
+          |    ),
+          |    <<name>>/*variable,readonly*/ <<:=>>/*method*/ <<"bsp-tests-source-sets">>/*string*/
+          |  )
+          |
+          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*class*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
+          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalatest">>/*string*/ <<%%>>/*method*/ <<"scalatest">>/*string*/ <<%>>/*method*/ <<"3.2.9">>/*string*/ <<%>>/*method*/ <<Test>>/*variable,readonly*/
+          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalameta">>/*string*/ <<%%>>/*method*/ <<"scalameta">>/*string*/ <<%>>/*method*/ <<"4.6.0">>/*string*/
+          |
+         """.stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+    for {
+      _ <- initialize(
+        s"""|/build.sbt
+            |$fileContent
+         """.stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("build.sbt")
+      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.assertSemanticHighlight(
+        "build.sbt",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
+
 }

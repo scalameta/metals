@@ -118,6 +118,38 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val DiscoverMainClasses = new ParametrizedCommand[DebugDiscoveryParams](
+    "discover-jvm-run-command",
+    "Discover main classes to run and return the object",
+    """|Gets the DebugSession object that also contains a command to run in shell based 
+       |on JVM environment including classpath, jvmOptions and environment parameters.
+       |""".stripMargin,
+    """|DebugUnresolvedTestClassParams object
+       |Example:
+       |```json
+       |{
+       |    "path": "path/to/file.scala",
+       |    "runType": "run"
+       |}
+       |```
+       |
+       |Response:
+       |```json
+       |{
+       |  "targets": ["id1"],
+       |  "dataKind": "scala-main-class",
+       |  "data": {
+       |    "class": "Foo",
+       |    "arguments": [],
+       |    "jvmOptions": [],
+       |    "environmentVariables": [],
+       |    "shellCommand": "java ..."
+       |  }
+       |}
+       |```
+       |""".stripMargin,
+  )
+
   /** If uri is null discover all test suites, otherwise discover testcases in file */
   final case class DiscoverTestParams(
       @Nullable uri: String = null
@@ -157,6 +189,13 @@ object ServerCommands {
        |
        |This command can be helpful in scenarios where features are not working as expected such
        |as compile errors are not appearing or completions are not correct.
+       |""".stripMargin,
+  )
+
+  val ZipReports = new Command(
+    "zip-reports",
+    "Create a zip with error reports",
+    """|Creates a zip from incognito and bloop reports with additional information about build targets.
        |""".stripMargin,
   )
 
@@ -231,10 +270,10 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  val StartDebugAdapter = new Command(
+  val StartDebugAdapter = new ParametrizedCommand[b.DebugSessionParams](
     "debug-adapter-start",
     "Start debug adapter",
-    "Start debug adapter",
+    "Start a new debugger session with fully specified DebugSessionParams",
     s"""|DebugSessionParameters object
         |Example:
         |```json
@@ -247,27 +286,91 @@ object ServerCommands {
         |}
         |```
         |
-        |or DebugUnresolvedMainClassParams object
+        |""".stripMargin,
+  )
+
+  val StartMainClass = new ParametrizedCommand[DebugUnresolvedMainClassParams](
+    "debug-adapter-start",
+    "Start main class",
+    "Start a new debugger session by resolving a main class by name and target",
+    s"""|DebugUnresolvedMainClassParams object
         |Example:
         |```json
         |{
-        |   mainClass: "com.foo.App",
-        |   buildTarget: "foo",
-        |   args: ["bar"],
-        |   jvmOptions: ["-Dfile.encoding=UTF-16"],
-        |   env: {"NUM" : "123"},
-        |   envFile: ".env"
+        |  "mainClass": "path/to/file.scala",
+        |  "buildTarget": "metals"
         |}
         |```
         |
-        |or DebugUnresolvedTestClassParams object
+        |""".stripMargin,
+  )
+
+  val StartTestSuite = new ParametrizedCommand[ScalaTestSuitesDebugRequest](
+    "debug-adapter-start",
+    "Start test suite",
+    "Start a new debugger session for a test suite, can be used to run a single test case",
+    s"""|ScalaTestSuitesDebugRequest object
         |Example:
         |```json
         |{
-        |   testClass: "com.foo.FooSuite",
-        |   buildTarget: "foo"
+        |  "target": "metals"
+        |  "requestData" : {
+        |    "suites": ["com.foo.FooSuite"],
+        |    "jvmOptions": []],
+        |    "environmentVariables": [],
+        |   }
         |}
         |```
+        |
+        |""".stripMargin,
+  )
+
+  val ResolveAndStartTestSuite =
+    new ParametrizedCommand[DebugUnresolvedTestClassParams](
+      "debug-adapter-start",
+      "Start test suite",
+      "Start a new debugger session by resolving a test suite by name and possibly target.",
+      s"""|DebugUnresolvedTestClassParams object
+          |Example:
+          |```json
+          |{
+          |   "testClass": "com.foo.FooSuite"
+          |}
+          |```
+          |
+          |""".stripMargin,
+    )
+
+  val StartAttach = new ParametrizedCommand[DebugUnresolvedAttachRemoteParams](
+    "debug-adapter-start",
+    "Attach to a running jvm process",
+    "Start a new debugger session by attaching to existing jvm process.",
+    s"""|DebugUnresolvedAttachRemoteParams object
+        |Example:
+        |```json
+        |{
+        |    "hostName": "localhost",
+        |    "port": 1234,
+        |    "buildTarget": "metals",
+        |}
+        |```
+        |
+        |""".stripMargin,
+  )
+
+  val DiscoverAndRun = new ParametrizedCommand[DebugDiscoveryParams](
+    "debug-adapter-start",
+    "Try to discover a test or main to run.",
+    "Start a new debugger session by running the discovered test or main class.",
+    s"""|DebugDiscoveryParams object
+        |Example:
+        |```json
+        |{
+        |    "path": "path/to/file.scala",
+        |    "runType": "run",
+        |}
+        |```
+        |
         |""".stripMargin,
   )
 
@@ -477,6 +580,17 @@ object ServerCommands {
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
        |""".stripMargin,
   )
+
+  val InlineValue = new ParametrizedCommand[TextDocumentPositionParams](
+    "inline-value",
+    "Inline value",
+    """|Whenever a user chooses code action to inline a value this command is later ran to
+       |find all the references to choose the correct inline version (if possible to perform)
+       |""".stripMargin,
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+       |""".stripMargin,
+  )
+
   final case class ExtractMethodParams(
       param: TextDocumentIdentifier,
       range: lsp4j.Range,
@@ -515,10 +629,16 @@ object ServerCommands {
     "Open the Metals logs to troubleshoot issues.",
   )
 
-  val OpenIssue = new OpenBrowserCommand(
-    "https://github.com/scalameta/metals/issues/new/choose",
-    "Open issue on GitHub",
-    "Open the Metals repository on GitHub to ask a question, report a bug or request a new feature.",
+  val OpenIssue = new Command(
+    "open-new-github-issue",
+    "Open an issue on GitHub",
+    "Open the Metals repository on GitHub to ask a question or report a bug.",
+  )
+
+  val OpenFeatureRequest = new OpenBrowserCommand(
+    "https://github.com/scalameta/metals-feature-requests/issues/new?template=feature-request.yml",
+    "Open a feature request",
+    "Open the Metals repository on GitHub to open a feature request.",
   )
 
   val MetalsGithub = new OpenBrowserCommand(
@@ -591,6 +711,7 @@ object ServerCommands {
       CleanCompile,
       ConvertToNamedArguments,
       CopyWorksheetOutput,
+      DiscoverMainClasses,
       DiscoverTestSuites,
       ExtractMemberDefinition,
       GenerateBspConfig,
@@ -599,6 +720,7 @@ object ServerCommands {
       GotoSymbol,
       ImportBuild,
       InsertInferredType,
+      InlineValue,
       NewScalaFile,
       NewJavaFile,
       NewScalaProject,
@@ -615,10 +737,18 @@ object ServerCommands {
       ScanWorkspaceSources,
       StartAmmoniteBuildServer,
       StartDebugAdapter,
+      StartMainClass,
+      StartTestSuite,
+      ResolveAndStartTestSuite,
+      StartAttach,
+      DiscoverAndRun,
       StopAmmoniteBuildServer,
       SuperMethodHierarchy,
       StartScalaCliServer,
       StopScalaCliServer,
+      OpenIssue,
+      OpenFeatureRequest,
+      ZipReports,
     )
 
   val allIds: Set[String] = all.map(_.id).toSet

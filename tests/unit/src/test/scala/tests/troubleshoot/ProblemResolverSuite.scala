@@ -10,6 +10,8 @@ import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.doctor.DeprecatedRemovedSbtVersion
+import scala.meta.internal.metals.doctor.DeprecatedRemovedScalaVersion
 import scala.meta.internal.metals.doctor.DeprecatedSbtVersion
 import scala.meta.internal.metals.doctor.DeprecatedScalaVersion
 import scala.meta.internal.metals.doctor.FutureSbtVersion
@@ -52,6 +54,12 @@ class ProblemResolverSuite extends FunSuite {
   )
 
   checkRecommendation(
+    "deprecated-removed-scala-version",
+    scalaVersion = "2.12.9",
+    DeprecatedRemovedScalaVersion("2.12.9").message,
+  )
+
+  checkRecommendation(
     "future-scala-version",
     scalaVersion = "2.12.50",
     FutureScalaVersion("2.12.50").message,
@@ -72,8 +80,15 @@ class ProblemResolverSuite extends FunSuite {
 
   checkRecommendation(
     "deprecated-sbt-version",
+    scalaVersion = "2.12.10",
+    DeprecatedSbtVersion("1.3.0", "2.12.10").message,
+    sbtVersion = Some("1.3.0"),
+  )
+
+  checkRecommendation(
+    "deprecated-removed-sbt-version",
     scalaVersion = "2.12.9",
-    DeprecatedSbtVersion.message,
+    DeprecatedRemovedSbtVersion("1.3.0", "2.12.9").message,
     sbtVersion = Some("1.3.0"),
   )
 

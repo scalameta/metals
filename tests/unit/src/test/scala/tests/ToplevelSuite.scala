@@ -14,7 +14,11 @@ import scala.meta.internal.mtags.Mtags
 /**
  * Assert that Mtags.toplevels method works as expected.
  */
-class ToplevelSuite extends SingleFileExpectSuite("toplevels.expect") {
+abstract class ToplevelSuite(
+    input: InputProperties,
+    dialect: Dialect,
+    filename: String,
+) extends SingleFileExpectSuite(filename) {
   override def obtained(): String = {
     val toplevels = ListBuffer.empty[String]
     val missingSymbols = ListBuffer.empty[String]
@@ -36,11 +40,24 @@ class ToplevelSuite extends SingleFileExpectSuite("toplevels.expect") {
         }
       }
     }
-    forInput(InputProperties.scala2(), Scala213)
-    forInput(InputProperties.scala3(), Scala3)
+    forInput(input, dialect)
     if (missingSymbols.nonEmpty) {
       fail(s"missing symbols:\n${missingSymbols.mkString("\n")}")
     }
     toplevels.sorted.mkString("\n")
   }
 }
+
+class ToplevelsScala3Suite
+    extends ToplevelSuite(
+      InputProperties.scala3(),
+      Scala3,
+      "toplevels-scala3.expect",
+    )
+
+class ToplevelsScala2Suite
+    extends ToplevelSuite(
+      InputProperties.scala2(),
+      Scala213,
+      "toplevels.expect",
+    )

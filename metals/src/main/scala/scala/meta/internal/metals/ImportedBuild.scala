@@ -21,7 +21,6 @@ case class ImportedBuild(
     sources: SourcesResult,
     dependencySources: DependencySourcesResult,
     wrappedSources: WrappedSourcesResult,
-    jvmRunEnvironment: JvmRunEnvironmentResult,
 ) {
   def ++(other: ImportedBuild): ImportedBuild = {
     val updatedBuildTargets = new WorkspaceBuildTargetsResult(
@@ -42,9 +41,6 @@ case class ImportedBuild(
     val updatedWrappedSources = new WrappedSourcesResult(
       (wrappedSources.getItems.asScala ++ other.wrappedSources.getItems.asScala).asJava
     )
-    val updatedJvmRunEnvironment = new JvmRunEnvironmentResult(
-      (jvmRunEnvironment.getItems.asScala ++ other.jvmRunEnvironment.getItems.asScala).asJava
-    )
     ImportedBuild(
       updatedBuildTargets,
       updatedScalacOptions,
@@ -52,7 +48,6 @@ case class ImportedBuild(
       updatedSources,
       updatedDependencySources,
       updatedWrappedSources,
-      updatedJvmRunEnvironment,
     )
   }
 
@@ -71,7 +66,6 @@ object ImportedBuild {
       new SourcesResult(ju.Collections.emptyList()),
       new DependencySourcesResult(ju.Collections.emptyList()),
       new WrappedSourcesResult(ju.Collections.emptyList()),
-      new JvmRunEnvironmentResult(ju.Collections.emptyList()),
     )
 
   def fromConnection(
@@ -93,7 +87,6 @@ object ImportedBuild {
       wrappedSources <- conn.buildTargetWrappedSources(
         new WrappedSourcesParams(ids)
       )
-      runEnv <- conn.jvmRunEnvironment(new JvmRunEnvironmentParams(ids))
     } yield {
       ImportedBuild(
         workspaceBuildTargets,
@@ -102,7 +95,6 @@ object ImportedBuild {
         sources,
         dependencySources,
         wrappedSources,
-        runEnv,
       )
     }
 

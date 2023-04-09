@@ -3,8 +3,6 @@ package scala.meta.internal.pc
 import java.nio.file.Paths
 import java.util.ArrayList
 
-import scala.annotation.tailrec
-import scala.concurrent.Future
 import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -12,17 +10,15 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 
+import dotty.tools.dotc.CompilationUnit
+import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.ModuleClass
-import dotty.tools.dotc.core.NameOps.*
-import dotty.tools.dotc.core.Names
-import dotty.tools.dotc.core.Names.*
-import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.transform.SymUtils.*
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Location
@@ -42,7 +38,7 @@ class PcDefinitionProvider(
   private def definitions(findTypeDef: Boolean): DefinitionResult =
     val uri = params.uri
     val filePath = Paths.get(uri)
-    val diagnostics = driver.run(
+    driver.run(
       uri,
       SourceFile.virtual(filePath.toString, params.text),
     )
@@ -52,18 +48,42 @@ class PcDefinitionProvider(
     val pos = driver.sourcePosition(params)
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
+
     given ctx: Context = driver.localContext(params)
     val indexedContext = IndexedContext(ctx)
-    if findTypeDef then
-      findTypeDefinitions(tree, path, pos, driver, indexedContext)
-    else findDefinitions(tree, path, pos, driver, indexedContext)
+    val result =
+      if findTypeDef then findTypeDefinitions(path, pos, indexedContext)
+      else findDefinitions(path, pos, indexedContext)
+
+    if result.locations().isEmpty() then fallbackToUntyped(unit, pos)(using ctx)
+    else result
   end definitions
 
+  /**
+   * Some nodes might disapear from the typed tree, since they are mostly
+   * used as syntactic sugar. In those cases we check the untyped tree
+   * and try to get the symbol from there, which might actually be there,
+   * because these are the same nodes that go through the typer.
+   *
+   * This will happen for:
+   * - `.. derives Show`
+   * @param unit compilation unit of the file
+   * @param pos cursor position
+   * @return definition result
+   */
+  private def fallbackToUntyped(unit: CompilationUnit, pos: SourcePosition)(
+      using ctx: Context
+  ) =
+    lazy val untpdPath = NavigateAST
+      .untypedPath(pos.span)
+      .collect { case t: untpd.Tree => t }
+
+    definitionsForSymbol(untpdPath.headOption.map(_.symbol).toList, pos)
+  end fallbackToUntyped
+
   private def findDefinitions(
-      tree: Tree,
       path: List[Tree],
       pos: SourcePosition,
-      driver: InteractiveDriver,
       indexed: IndexedContext,
   ): DefinitionResult =
     import indexed.ctx
@@ -74,10 +94,8 @@ class PcDefinitionProvider(
   end findDefinitions
 
   private def findTypeDefinitions(
-      tree: Tree,
       path: List[Tree],
       pos: SourcePosition,
-      driver: InteractiveDriver,
       indexed: IndexedContext,
   ): DefinitionResult =
     import indexed.ctx

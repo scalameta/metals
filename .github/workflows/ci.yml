@@ -69,7 +69,7 @@ jobs:
             name: Gradle MacOS integration
             os: macOS-latest
           - type: sbt
-            command: bin/test.sh 'sbt-metals/scripted; slow/testOnly -- tests.sbt.*'
+            command: bin/test.sh 'slow/testOnly -- tests.sbt.*'
             name: Sbt integration
             os: ubuntu-latest
           - type: sbt-metals jdk8
@@ -108,6 +108,10 @@ jobs:
           - type: scalafmt
             command: ./bin/scalafmt --test
             name: Formatting
+            os: ubuntu-latest
+          - type: MiMa
+            command: sbt interfaces/mimaReportBinaryIssues
+            name: MiMa
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

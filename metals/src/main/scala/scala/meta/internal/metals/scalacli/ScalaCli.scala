@@ -44,6 +44,8 @@ import scala.meta.io.AbsolutePath
 import coursier.version.Version
 import org.eclipse.lsp4j.services.LanguageClient
 
+// todo https://github.com/scalameta/metals/issues/4788
+// clean () =>, use plain values
 class ScalaCli(
     compilers: () => Compilers,
     compilations: Compilations,
@@ -51,7 +53,7 @@ class ScalaCli(
     buffers: Buffers,
     indexWorkspace: () => Future[Unit],
     diagnostics: () => Diagnostics,
-    tables: () => Tables,
+    tables: Tables,
     buildClient: () => MetalsBuildClient,
     languageClient: LanguageClient,
     config: () => MetalsServerConfig,
@@ -222,6 +224,7 @@ class ScalaCli(
       .map(Seq(_))
       .orElse {
         findInPath("scala-cli")
+          .orElse(findInPath("scala"))
           .filter(requireMinVersion(_, minVersion))
           .map(p => Seq(p.toString))
       }
@@ -263,7 +266,7 @@ class ScalaCli(
         buildClient(),
         languageClient,
         () => ScalaCli.socketConn(command, connDir),
-        tables().dismissedNotifications.ReconnectScalaCli,
+        tables.dismissedNotifications.ReconnectScalaCli,
         config(),
         "Scala CLI",
         supportsWrappedSources = Some(true),
@@ -319,7 +322,7 @@ object ScalaCli {
         finished.tryComplete(res)
       }
       SocketConnection(
-        "ScalaCli",
+        ScalaCli.names.head,
         new ClosableOutputStream(proc.outputStream, "Scala CLI error stream"),
         proc.inputStream,
         List(Cancelable { () => proc.cancel }),
@@ -371,7 +374,7 @@ object ScalaCli {
   def scalaCliMainClass: String =
     "scala.cli.ScalaCli"
 
-  val name = "scala-cli"
+  val names: Set[String] = Set("scala-cli", "scala")
 
   sealed trait ConnectionState
   object ConnectionState {

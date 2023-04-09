@@ -8,6 +8,8 @@ import scala.collection.mutable
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.InterpolationSplice
@@ -25,6 +27,7 @@ trait Completions { this: MetalsGlobal =>
 
   val clientSupportsSnippets: Boolean =
     metalsConfig.isCompletionSnippetsEnabled()
+  val coursierComplete = new CoursierComplete(BuildInfo.scalaCompilerVersion)
 
   /**
    * A member for symbols on the classpath that are not in scope, produced via workspace/symbol.
@@ -435,7 +438,6 @@ trait Completions { this: MetalsGlobal =>
       completions: CompletionResult,
       latestEnclosingArg: List[Tree]
   ): CompletionPosition = {
-    val PatternMatch = new PatternMatch(pos)
     val ScalaCliExtractor = new ScalaCliExtractor(pos)
     def fromIdentApply(
         ident: Ident,
@@ -443,7 +445,18 @@ trait Completions { this: MetalsGlobal =>
     ): CompletionPosition = {
       if (hasLeadingBrace(ident, text)) {
         if (isCasePrefix(ident.name)) {
-          CaseKeywordCompletion(EmptyTree, editRange, pos, text, apply)
+          val moveToNewLine = ident.pos.line == apply.pos.line
+          val addNewLineAfter = apply.pos.focusEnd.line == ident.pos.line
+          CaseKeywordCompletion(
+            EmptyTree,
+            editRange,
+            pos,
+            text,
+            source,
+            apply,
+            includeExhaustive =
+              Some(NewLineOptions(moveToNewLine, addNewLineAfter))
+          )
         } else {
           NoneCompletion
         }
@@ -454,11 +467,11 @@ trait Completions { this: MetalsGlobal =>
 
     latestEnclosingArg match {
       case MillIvyExtractor(dep) =>
-        MillIvyCompletion(pos, text, dep)
+        MillIvyCompletion(coursierComplete, pos, text, dep)
       case SbtLibExtractor(pos, dep) if pos.source.path.isSbt =>
-        SbtLibCompletion(pos, dep)
+        SbtLibCompletion(coursierComplete, pos, dep)
       case ScalaCliExtractor(dep) =>
-        ScalaCliCompletion(pos, text, dep)
+        ScalaCliCompletion(coursierComplete, pos, text, dep)
       case _ if isScaladocCompletion(pos, text) =>
         val associatedDef = onUnitOf(pos.source) { unit =>
           new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)
@@ -472,10 +485,6 @@ trait Completions { this: MetalsGlobal =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
-      case Ident(_) :: PatternMatch(c, m) =>
-        CasePatternCompletion(isTyped = false, c, m)
-      case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
-        CasePatternCompletion(isTyped = true, c, m)
       case (lit @ Literal(Constant(_: String))) :: head :: _ =>
         InterpolationSplice(pos.point, pos.source.content, text) match {
           case Some(i) =>
@@ -484,18 +493,36 @@ trait Completions { this: MetalsGlobal =>
             isPossibleInterpolatorMember(lit, head, text, pos)
               .getOrElse(NoneCompletion)
         }
-
-      case (m @ Match(_, Nil)) :: parent :: _ =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
-      case Ident(name) :: (cd: CaseDef) :: (m: Match) :: parent :: _
-          if isCasePrefix(name) && pos.line != cd.pos.line =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
-      case (ident @ Ident(name)) :: Block(
-            _,
-            expr
-          ) :: (_: CaseDef) :: (m: Match) :: parent :: _
-          if ident == expr && isCasePrefix(name) =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
+      case CaseExtractors.CaseExtractor(selector, parent) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
+          pos,
+          text,
+          source,
+          parent
+        )
+      case CaseExtractors.CasePatternExtractor(selector, parent, name) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
+          pos,
+          text,
+          source,
+          parent,
+          patternOnly = Some(name.stripSuffix("_CURSOR_"))
+        )
+      case CaseExtractors.TypedCasePatternExtractor(selector, parent, name) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
+          pos,
+          text,
+          source,
+          parent,
+          patternOnly = Some(name.stripSuffix("_CURSOR_")),
+          hasBind = true
+        )
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
         FilenameCompletion(c, p, pos, editRange)
       case OverrideExtractor(name, template, start, isCandidate) =>
@@ -515,7 +542,14 @@ trait Completions { this: MetalsGlobal =>
             imp,
             pos
           ) || isWorksheetIvyCompletionPosition(imp, pos) =>
-        AmmoniteIvyCompletion(select, selector, pos, editRange, text)
+        AmmoniteIvyCompletion(
+          coursierComplete,
+          select,
+          selector,
+          pos,
+          editRange,
+          text
+        )
       case _ =>
         inferCompletionPosition(
           pos,
@@ -551,9 +585,9 @@ trait Completions { this: MetalsGlobal =>
   def isWorksheetIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
     tree match {
       case Import(select, _) =>
-        pos.source.file.name.isWorksheet && (select
-          .toString() == "<$ivy: error>" || select
-          .toString() == "<$dep: error>")
+        pos.source.file.name.isWorksheet &&
+        (select.toString().startsWith("<$ivy: error>") ||
+          select.toString().startsWith("<$dep: error>"))
       case _ => false
     }
 
@@ -626,16 +660,6 @@ trait Completions { this: MetalsGlobal =>
         NoneCompletion
     }
 
-  }
-
-  class PatternMatch(pos: Position) {
-    def unapply(enclosing: List[Tree]): Option[(CaseDef, Match)] =
-      enclosing match {
-        case (c: CaseDef) :: (m: Match) :: _ if c.pat.pos.includes(pos) =>
-          Some((c, m))
-        case _ =>
-          None
-      }
   }
 
   class MetalsLocator(pos: Position, acceptTransparent: Boolean = false)

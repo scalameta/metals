@@ -14,8 +14,12 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       _parameterHintsCommand = paramHint
     )
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala2)
+  override val compatProcess: Map[String, String => String] = Map(
+    "3" -> { (s: String) =>
+      // In Scala3 wildcard type has been changed from [_] to [?]
+      s.replace("Some[_]", "Some[?]")
+    }
+  )
 
   checkEdit(
     "empty",
@@ -52,6 +56,17 @@ class CompletionPatternSuite extends BaseCompletionSuite {
     """
       |object A {
       |  Option(1) match {
+      |    case ma@@
+      |  }
+      |}""".stripMargin,
+    "",
+  )
+
+  check(
+    "bind2",
+    """
+      |object A {
+      |  Option(1) match {
       |    case abc @ @@ =>
       |  }
       |}""".stripMargin,
@@ -60,6 +75,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(2),
   )
+
   check(
     "bind-ident",
     """
@@ -80,8 +96,13 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case _: @@ =>
       |  }
       |}""".stripMargin,
-    """|Some[?] scala
+    """|None scala
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|Some[?] scala
+           |""".stripMargin
+    ),
     topLines = Some(1),
   )
   check(
@@ -92,7 +113,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case _: S@@ =>
       |  }
       |}""".stripMargin,
-    """|Some[?] scala
+    """|Some[_] scala
        |""".stripMargin,
     topLines = Some(1),
   )
@@ -105,8 +126,13 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case ab: @@ =>
       |  }
       |}""".stripMargin,
-    """|Some[?] scala
+    """|None scala
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|Some[?] scala
+           |""".stripMargin
+    ),
     topLines = Some(1),
   )
 
@@ -118,7 +144,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case ab: S@@ =>
       |  }
       |}""".stripMargin,
-    """|Some[?] scala
+    """|Some[_] scala
        |""".stripMargin,
     topLines = Some(1),
   )

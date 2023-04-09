@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
@@ -19,16 +20,18 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
     AbsolutePath(out)
   }
 
+  private lazy val bloopMavenPluginVersion = BuildInfo.mavenBloopVersion
+
   def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
-    def command(versionToUse: String) =
+    val command =
       List(
         "generate-sources",
-        s"ch.epfl.scala:maven-bloop_2.13:$versionToUse:bloopInstall",
+        s"ch.epfl.scala:bloop-maven-plugin:$bloopMavenPluginVersion:bloopInstall",
         "-DdownloadSources=true",
       )
     userConfig().mavenScript match {
       case Some(script) =>
-        script :: command(userConfig().currentBloopVersion)
+        script :: command
       case None =>
         writeProperties()
         val javaArgs = List[String](
@@ -46,7 +49,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
         List(
           javaArgs,
           jarArgs,
-          command(userConfig().currentBloopVersion),
+          command,
         ).flatten
     }
   }

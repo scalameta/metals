@@ -92,7 +92,8 @@ class InsertInferredType(
             case _: Pat.Bind => None
             case vl: Defn.Val if vl.decltpe.isEmpty => Some(insertType)
             case vr: Defn.Var if vr.decltpe.isEmpty => Some(insertType)
-            case _: Pat | _: Enumerator => Some(insertTypeToPattern)
+            case _: Pat | _: Enumerator | _: Pat.ArgClause =>
+              Some(insertTypeToPattern)
           }
           .getOrElse(None)
       case Defn.Def(_, _, _, _, tpe, _) if tpe.isEmpty =>

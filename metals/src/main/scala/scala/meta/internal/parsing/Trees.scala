@@ -4,10 +4,14 @@ import scala.collection.concurrent.TrieMap
 import scala.reflect.ClassTag
 
 import scala.meta._
+import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parse
+import scala.meta.parsers.ParseException
 import scala.meta.parsers.Parsed
 
 import org.eclipse.lsp4j.Diagnostic
@@ -24,7 +28,7 @@ import org.eclipse.{lsp4j => l}
 final class Trees(
     buffers: Buffers,
     scalaVersionSelector: ScalaVersionSelector,
-) {
+)(implicit reports: ReportContext) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
 
@@ -41,9 +45,9 @@ final class Trees(
   private def enclosedChildren(
       children: List[Tree],
       pos: Position,
-  ): Option[Tree] = {
+  ): List[Tree] = {
     children
-      .find { child =>
+      .filter { child =>
         child.pos.start <= pos.start && pos.start <= child.pos.end
       }
   }
@@ -66,10 +70,13 @@ final class Trees(
       t match {
         case t: T =>
           enclosedChildren(t.children, pos)
-            .flatMap(loop(_, pos))
+            .flatMap(loop(_, pos).toList)
+            .headOption
             .orElse(if (predicate(t)) Some(t) else None)
         case other =>
-          enclosedChildren(other.children, pos).flatMap(loop(_, pos))
+          enclosedChildren(other.children, pos)
+            .flatMap(loop(_, pos).toList)
+            .headOption
       }
     }
 
@@ -117,19 +124,34 @@ final class Trees(
   private def parse(
       path: AbsolutePath,
       dialect: Dialect,
-  ): Option[Parsed[Tree]] = {
+  ): Option[Parsed[Tree]] =
     for {
       text <- buffers.get(path).orElse(path.readTextOpt)
-    } yield {
+    } yield try {
       val input = Input.VirtualFile(path.toURI.toString(), text)
-      if (path.isAmmoniteScript) {
+      if (path.isAmmoniteScript || path.isMill) {
         val ammoniteInput = Input.Ammonite(input)
         dialect(ammoniteInput).parse(Parse.parseAmmonite)
       } else {
         dialect(input).parse[Source]
       }
+    } catch {
+      // if the parsers breaks we should not throw the exception further
+      case _: StackOverflowError =>
+        val newPathCopy = reports.unsanitized.createReport(
+          s"stackoverflow_${path.filename}",
+          text,
+        )
+        val message =
+          s"Could not parse $path, saved the current snapshot to ${newPathCopy}"
+        scribe.warn(message)
+        Parsed.Error(
+          Position.None,
+          message,
+          new ParseException(Position.None, message),
+        )
     }
-  }
+
 }
 
 object Trees {

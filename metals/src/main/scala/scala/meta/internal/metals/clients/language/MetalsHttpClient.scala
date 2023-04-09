@@ -253,7 +253,7 @@ final class MetalsHttpClient(
         .section(
           "window/logMessage",
           _.text("Path: ")
-            .path(workspace.resolve(Directories.log))
+            .path(workspace.resolve(Directories.log).toNIO)
             .element("section", "class='container is-dark'")(
               _.element(
                 "pre",
@@ -275,7 +275,7 @@ final class MetalsHttpClient(
               builder
                 .element("p")(
                   _.text(s"$description (enabled=${path.isFile}):")
-                    .path(path)
+                    .path(path.toNIO)
                 )
             }
           },

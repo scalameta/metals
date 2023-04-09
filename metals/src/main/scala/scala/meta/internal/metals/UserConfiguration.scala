@@ -48,6 +48,7 @@ case class UserConfiguration(
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
+    enableSemanticHighlighting: Boolean = false,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
@@ -239,6 +240,15 @@ object UserConfiguration {
         """|When this option is enabled, each place where an implicit method or class is used has it 
            |displayed either as additional decorations if they are supported by the editor or 
            |shown in the hover.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "enable-semantic-highlighting",
+        "false",
+        "false",
+        "Use semantic tokens highlight (experimental).",
+        """|When this option is enabled, Metals will provide semantic tokens for clients that support it.
+           |The feature is still experimental and does not work for all sources.
            |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -492,6 +502,8 @@ object UserConfiguration {
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val enableIndentOnPaste =
       getBooleanKey("enable-indent-on-paste").getOrElse(true)
+    val enableSemanticHighlighting =
+      getBooleanKey("enable-semantic-highlighting").getOrElse(false)
     val excludedPackages =
       getStringListKey("excluded-packages")
     // `automatic` should be treated as None
@@ -544,6 +556,7 @@ object UserConfiguration {
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
+          enableSemanticHighlighting,
           excludedPackages,
           defaultScalaVersion,
           disableTestCodeLenses,

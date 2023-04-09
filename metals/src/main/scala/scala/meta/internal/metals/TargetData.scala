@@ -17,8 +17,6 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.JavacOptionsResult
-import ch.epfl.scala.bsp4j.JvmEnvironmentItem
-import ch.epfl.scala.bsp4j.JvmRunEnvironmentResult
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.SourceItem
 import ch.epfl.scala.bsp4j.SourceItemKind.DIRECTORY
@@ -37,8 +35,6 @@ final class TargetData {
     TrieMap.empty[BuildTargetIdentifier, JavaTarget]
   val scalaTargetInfo: MMap[BuildTargetIdentifier, ScalaTarget] =
     TrieMap.empty[BuildTargetIdentifier, ScalaTarget]
-  val jvmRunEnvironments: MMap[BuildTargetIdentifier, JvmEnvironmentItem] =
-    TrieMap.empty[BuildTargetIdentifier, JvmEnvironmentItem]
   val inverseDependencies
       : MMap[BuildTargetIdentifier, ListBuffer[BuildTargetIdentifier]] =
     TrieMap.empty[BuildTargetIdentifier, ListBuffer[BuildTargetIdentifier]]
@@ -47,6 +43,8 @@ final class TargetData {
   val inverseDependencySources: MMap[AbsolutePath, Set[BuildTargetIdentifier]] =
     TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
   val buildTargetGeneratedDirs: MMap[AbsolutePath, Unit] =
+    TrieMap.empty[AbsolutePath, Unit]
+  val buildTargetGeneratedFiles: MMap[AbsolutePath, Unit] =
     TrieMap.empty[AbsolutePath, Unit]
   val sourceJarNameToJarFile: MMap[String, AbsolutePath] =
     TrieMap.empty[String, AbsolutePath]
@@ -184,15 +182,14 @@ final class TargetData {
   ): Unit = {
     val sourceItemPath = sourceItem.getUri.toAbsolutePath(followSymlink = false)
 
-    sourceItem.getKind() match {
-      case DIRECTORY => {
-        if (sourceItem.getGenerated()) {
+    sourceItem.getKind match {
+      case DIRECTORY =>
+        if (sourceItem.getGenerated)
           buildTargetGeneratedDirs(sourceItemPath) = ()
-        }
-      }
-      case FILE => {
+      case FILE =>
+        if (sourceItem.getGenerated)
+          buildTargetGeneratedFiles(sourceItemPath) = ()
         sourceItemFiles.add(sourceItemPath)
-      }
     }
     addSourceItem(sourceItemPath, buildTarget)
   }
@@ -212,6 +209,7 @@ final class TargetData {
     inverseDependencies.clear()
     buildTargetSources.clear()
     buildTargetGeneratedDirs.clear()
+    buildTargetGeneratedFiles.clear()
     inverseDependencySources.clear()
     sourceJarNameToJarFile.clear()
     isSourceRoot.clear()
@@ -233,10 +231,13 @@ final class TargetData {
   }
 
   def checkIfGeneratedSource(source: Path): Boolean = {
+    val absolutePath = AbsolutePath(source)
+    buildTargetGeneratedFiles.contains(absolutePath) ||
     buildTargetGeneratedDirs.keys.exists(generatedDir =>
-      source.startsWith(generatedDir.toNIO)
+      absolutePath.toNIO.startsWith(generatedDir.toNIO)
     )
   }
+
   def checkIfGeneratedDir(path: AbsolutePath): Boolean =
     buildTargetGeneratedDirs.contains(path)
 
@@ -262,18 +263,13 @@ final class TargetData {
     }
   }
 
-  def addJvmEnvironment(
-      result: JvmRunEnvironmentResult
+  def addJavacOptions(
+      result: JavacOptionsResult,
+      bspSession: Option[BuildServerConnection],
   ): Unit = {
-    result.getItems.asScala.foreach { env =>
-      jvmRunEnvironments(env.getTarget()) = env
-    }
-  }
-
-  def addJavacOptions(result: JavacOptionsResult): Unit = {
     result.getItems.asScala.foreach { javac =>
       info(javac.getTarget()).foreach { info =>
-        javaTargetInfo(javac.getTarget) = JavaTarget(info, javac)
+        javaTargetInfo(javac.getTarget) = JavaTarget(info, javac, bspSession)
       }
     }
   }
@@ -314,6 +310,8 @@ object TargetData {
 
   trait MappedSource {
     def path: AbsolutePath
+    def lineForServer(line: Int): Option[Int] = None
+    def lineForClient(line: Int): Option[Int] = None
     def update(
         content: String
     ): (Input.VirtualFile, l.Position => l.Position, AdjustLspData)

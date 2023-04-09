@@ -13,20 +13,26 @@ import org.eclipse.lsp4j.InitializeParams
  * and `initializationOptions`.
  *
  * @param initalConfig Initial server properties
+ * @param initializeParams The initialize params sent from the client in the first request
  */
-case class ClientConfiguration(initialConfig: MetalsServerConfig) {
+final class ClientConfiguration(
+    val initialConfig: MetalsServerConfig,
+    initializeParams: Option[InitializeParams],
+) {
 
-  private var experimentalCapabilities = ClientExperimentalCapabilities.Default
-  private var initializationOptions = InitializationOptions.Default
-  private var clientCapabilities: Option[ClientCapabilities] = None
+  private val clientCapabilities: Option[ClientCapabilities] =
+    initializeParams.flatMap(params => Option(params.getCapabilities))
 
-  def update(params: InitializeParams): Unit = {
-    experimentalCapabilities = ClientExperimentalCapabilities.from(
-      params.getCapabilities
+  private val experimentalCapabilities =
+    clientCapabilities
+      .fold(ClientExperimentalCapabilities.Default)(
+        ClientExperimentalCapabilities.from
+      )
+
+  private val initializationOptions =
+    initializeParams.fold(InitializationOptions.Default)(
+      InitializationOptions.from
     )
-    initializationOptions = InitializationOptions.from(params)
-    clientCapabilities = Some(params.getCapabilities())
-  }
 
   def extract[T](primary: Option[T], secondary: Option[T], default: T): T = {
     primary.orElse(secondary).getOrElse(default)
@@ -126,6 +132,9 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
       false,
     )
 
+  def isRunProvider(): Boolean =
+    initializationOptions.runProvider.getOrElse(false)
+
   def isDecorationProvider(): Boolean =
     extract(
       initializationOptions.decorationProvider,
@@ -174,8 +183,31 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
     } yield refreshSupport
     codeLenseRefreshSupport.getOrElse(false)
   }
+
+  def semanticTokensRefreshSupport(): Boolean = {
+    val semanticTokensRefreshSupport: Option[Boolean] = for {
+      capabilities <- clientCapabilities
+      workspace <- Option(capabilities.getWorkspace())
+      semanticTokens <- Option(workspace.getSemanticTokens())
+      refreshSupport <- Option(semanticTokens.getRefreshSupport())
+    } yield refreshSupport
+    semanticTokensRefreshSupport.getOrElse(false)
+  }
 }
 
 object ClientConfiguration {
-  def Default(): ClientConfiguration = ClientConfiguration(MetalsServerConfig())
+  val default: ClientConfiguration = ClientConfiguration(MetalsServerConfig())
+
+  def apply(
+      initialConfig: MetalsServerConfig,
+      initializeParams: InitializeParams,
+  ): ClientConfiguration = {
+    new ClientConfiguration(initialConfig, Some(initializeParams))
+  }
+
+  def apply(
+      initialConfig: MetalsServerConfig
+  ): ClientConfiguration = {
+    new ClientConfiguration(initialConfig, None)
+  }
 }

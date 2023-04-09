@@ -17,7 +17,7 @@ class A >>region>>{
 
   def longSingleLineBlock = { ???; ???; ???; }
 
-  def chain = >>region>>Seq(1).map>>region>>{
+  def chain =>>region>> Seq(1).map{
     x =>
     x + 1
      + 1
@@ -26,7 +26,7 @@ class A >>region>>{
      + 1
      + 1
      + 1
-  }<<region<<.map>>region>>{
+  }.map>>region>>{
     _ + 1
     + 1
     + 1
@@ -35,7 +35,7 @@ class A >>region>>{
     + 1
   }<<region<<<<region<<
 
-  def chain = >>region>>Seq(1).map(
+  def chain =>>region>> Seq(1).map(
     x =>
     >>region>>x + 1
      + 1
@@ -53,7 +53,7 @@ class A >>region>>{
     + 1<<region<<
   )<<region<<
 
-  def mappedSequence = >>region>>Seq().map {
+  def mappedSequence =>>region>> Seq().map {
     x => x.toString()
 
 

@@ -30,7 +30,7 @@ module.exports = {
           "blogSidebarTitle": "All Blog Posts",
         },
         "theme": {
-          "customCss": "../src/css/customTheme.css"
+          "customCss": "./src/css/customTheme.css"
         },
         "gtag": {
           "trackingID": "UA-140140828-1"
@@ -52,17 +52,15 @@ module.exports = {
           }
         ]
       }
-    ]
+    ],
+    "@easyops-cn/docusaurus-search-local",
   ],
   "themeConfig": {
     "prism": {
       "additionalLanguages": ["lisp"],
     },
     "colorMode": {
-      "switchConfig": {
-        "darkIcon": "🌙",
-        "lightIcon": "☀️"
-      }
+      "respectPrefersColorScheme": true
     },
     "navbar": {
       "title": "Metals",
@@ -134,10 +132,6 @@ module.exports = {
       "logo": {
         "src": "img/scalameta-logo.png"
       }
-    },
-    "algolia": {
-      "apiKey": "c865f6d974a3072a35d4b53d48ac2307",
-      "indexName": "metals"
     }
   }
 }

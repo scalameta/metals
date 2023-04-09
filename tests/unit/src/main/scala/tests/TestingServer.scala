@@ -42,14 +42,16 @@ import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
@@ -68,7 +70,6 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
-import _root_.org.eclipse.lsp4j.DocumentSymbolCapabilities
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -93,6 +94,7 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.DocumentSymbolCapabilities
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FoldingRangeCapabilities
@@ -135,6 +137,7 @@ final case class TestingServer(
     val client: TestingClient,
     buffers: Buffers,
     config: MetalsServerConfig,
+    initialUserConfig: UserConfiguration,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
     time: Time,
@@ -144,26 +147,29 @@ final case class TestingServer(
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
 
-  val server = new MetalsLanguageServer(
+  val languageServer = new scala.meta.metals.MetalsLanguageServer(
     ex,
-    buffers = buffers,
-    redirectSystemOut = false,
-    initialConfig = config,
-    progressTicks = ProgressTicks.none,
-    bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
-    time = time,
-    isReliableFileWatcher = System.getenv("CI") != "true",
-    mtagsResolver = mtagsResolver,
-    onStartCompilation = onStartCompilation,
-    classpathSearchIndexer = TestingServer.testingClasspathSearchIndexer,
+    TestingServer.testServerInputs(
+      buffers = buffers,
+      initialServerConfig = config,
+      initialUserConfig = initialUserConfig,
+      bspGlobalDirectories = bspGlobalDirectories,
+      time = time,
+      mtagsResolver = mtagsResolver,
+      onStartCompilation = onStartCompilation,
+    ),
   )
-  server.connectToLanguageClient(client)
+  languageServer.connectToLanguageClient(client)
 
-  private val trees = new Trees(
+  lazy val server = languageServer.getOldMetalsLanguageServer
+
+  implicit val reports: ReportContext = new StdReportContext(workspace.toNIO)
+
+  private lazy val trees = new Trees(
     buffers,
     new ScalaVersionSelector(
-      () => UserConfiguration.default,
+      () => initialUserConfig,
       server.buildTargets,
     ),
   )
@@ -573,11 +579,11 @@ final case class TestingServer(
         .asJava
     )
     params.setRootUri(workspace.toURI.toString)
-    server.initialize(params).asScala
+    languageServer.initialize(params).asScala
   }
 
   def initialized(): Future[Unit] = {
-    server.initialized(new InitializedParams).asScala
+    languageServer.initialized(new InitializedParams).asScala
   }
 
   def assertBuildServerConnection(): Unit = {
@@ -682,12 +688,13 @@ final case class TestingServer(
   }
 
   def startDebuggingUnresolved(
-      params: AnyRef
+      params: AnyRef,
+      stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue,
   ): Future[TestDebugger] = {
     assertSystemExit(params)
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
       .collect { case DebugSession(_, uri) =>
-        TestDebugger(URI.create(uri), Stoppage.Handler.Continue)
+        TestDebugger(URI.create(uri), stoppageHandler)
       }
   }
 
@@ -783,6 +790,30 @@ final case class TestingServer(
 
     val params = new DidChangeConfigurationParams(didChangeJson)
     server.didChangeConfiguration(params).asScala
+  }
+
+  def willRenameFiles(
+      workspaceFiles: Set[String],
+      fileRenames: Map[String, String],
+  ): Future[Map[String, String]] = {
+    val lspRenames = fileRenames.toList.map { case (oldFilename, newFilename) =>
+      val oldUri = workspace.resolve(oldFilename).toURI.toString
+      val newUri = workspace.resolve(newFilename).toURI.toString
+      new l.FileRename(oldUri, newUri)
+    }.asJava
+    val params = new l.RenameFilesParams(lspRenames)
+    for {
+      editsOrNull <- server.willRenameFiles(params).asScala
+      edits = Option(editsOrNull).getOrElse(new WorkspaceEdit)
+      updatedSources = workspaceFiles.map { file =>
+        val path = workspace.resolve(file)
+        val code = path.readText
+        val updatedCode = TestRanges
+          .renderEditAsString(file, code, edits)
+          .getOrElse(code)
+        file -> updatedCode
+      }.toMap
+    } yield updatedSources
   }
 
   def completionList(
@@ -1287,6 +1318,32 @@ final case class TestingServer(
       codeActions.map(_.getTitle()).mkString("\n"),
     )
 
+  def assertSemanticHighlight(
+      filePath: String,
+      expected: String,
+      fileContent: String,
+  )(implicit location: munit.Location): Future[Unit] = {
+    val uri = toPath(filePath).toTextDocumentIdentifier
+    val params = new org.eclipse.lsp4j.SemanticTokensParams(uri)
+
+    for {
+      obtainedTokens <- server.semanticTokensFull(params).asScala
+    } yield {
+      val obtained =
+        if (obtainedTokens != null)
+          TestSemanticTokens.semanticString(
+            fileContent,
+            obtainedTokens.getData().map(_.toInt).asScala.toList,
+          )
+        else expected
+
+      Assertions.assertNoDiff(
+        obtained,
+        expected,
+      )
+    }
+  }
+
   def assertHighlight(
       filename: String,
       query: String,
@@ -1297,6 +1354,19 @@ final case class TestingServer(
       highlight <- highlight(filename, query, root)
     } yield {
       Assertions.assertNoDiff(highlight, expected)
+    }
+  }
+
+  def definition(
+      filename: String,
+      query: String,
+      root: AbsolutePath,
+  ): Future[List[Location]] = {
+    for {
+      (text, params) <- offsetParams(filename, query, root)
+      definition <- server.definition(params).asScala
+    } yield {
+      definition.asScala.toList
     }
   }
 
@@ -1882,4 +1952,28 @@ object TestingServer {
       }
 
     }
+
+  def testServerInputs(
+      buffers: Buffers,
+      time: Time,
+      initialServerConfig: MetalsServerConfig,
+      initialUserConfig: UserConfiguration,
+      bspGlobalDirectories: List[AbsolutePath],
+      mtagsResolver: MtagsResolver,
+      onStartCompilation: () => Unit,
+  ): MetalsServerInputs = MetalsServerInputs(
+    buffers,
+    time,
+    initialServerConfig,
+    initialUserConfig,
+    bspGlobalDirectories,
+    mtagsResolver,
+    onStartCompilation,
+    redirectSystemOut = false,
+    progressTicks = ProgressTicks.none,
+    isReliableFileWatcher = System.getenv("CI") != "true",
+    classpathSearchIndexer = TestingServer.testingClasspathSearchIndexer,
+    charset = StandardCharsets.UTF_8,
+  )
+
 }

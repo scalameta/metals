@@ -173,4 +173,20 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |}""".stripMargin,
   )
 
+  check(
+    "trait-param1",
+    """|trait Zg[<<T@@T>>]{
+       |  def doZ: List[<<TT>>]
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "trait-param2",
+    """|trait Zg[<<TT>>]{
+       |  def doZ: List[<<T@@T>>]
+       |}
+       |""".stripMargin,
+  )
+
 }

@@ -212,15 +212,6 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "2.11.12" ->
-        """package sort
-          |object App {
-          |  Option(1) match {
-          |\tcase Some(x) => $0
-          |\tcase None =>
-          |}
-          |}
-          |""".stripMargin,
       "3" -> s"""package sort
                 |object App {
                 |  Option(1) match
@@ -228,7 +219,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |\tcase None =>
                 |
                 |}
-                |""".stripMargin,
+                |""".stripMargin
     ),
     filter = _.contains("exhaustive"),
   )
@@ -251,9 +242,6 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     """|match
        |match (exhaustive) Foo (2 cases)
        |""".stripMargin,
-    compat = Map(
-      "2.11" -> "match"
-    ),
   )
 
   checkEdit(
@@ -475,18 +463,23 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     ),
   )
   check(
-    "exhaustive-map".tag(IgnoreScala2),
+    "exhaustive-map",
     """
       |object A {
       |  List(Option(1)).map{ ca@@ }
       |}""".stripMargin,
-    """|case (exhaustive) Option (2 cases)
+    """|case (exhaustive) Option[A] (2 cases)
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|case (exhaustive) Option (2 cases)
+           |""".stripMargin
+    ),
     filter = _.contains("exhaustive"),
   )
 
   checkEdit(
-    "exhaustive-map-edit".tag(IgnoreScala2),
+    "exhaustive-map-edit",
     """
       |object A {
       |  List(Option(1)).map{cas@@}
@@ -498,6 +491,213 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |\tcase None =>
        |}
        |}""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
+    "exhaustive-map-edit-2",
+    """|sealed trait B
+       |case class C(c: Int) extends B
+       |case class D(d: Int) extends B
+       |case class E(e: Int) extends B
+       |
+       |object A {
+       |  val b: B = ???
+       |  List(b).map{cas@@
+       |  }
+       |}""".stripMargin,
+    s"""|sealed trait B
+        |case class C(c: Int) extends B
+        |case class D(d: Int) extends B
+        |case class E(e: Int) extends B
+        |
+        |object A {
+        |  val b: B = ???
+        |  List(b).map{
+        |\tcase C(c) => $$0
+        |\tcase D(d) =>
+        |\tcase E(e) =>
+        |  }
+        |}""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
+    "exhaustive-map-edit-3",
+    s"""|sealed trait B
+        |case class C(c: Int) extends B
+        |case class D(d: Int) extends B
+        |case class E(e: Int) extends B
+        |
+        |object A {
+        |  val b: B = ???
+        |  List(b).map{
+        |\tcas@@
+        |  }
+        |}""".stripMargin,
+    s"""|sealed trait B
+        |case class C(c: Int) extends B
+        |case class D(d: Int) extends B
+        |case class E(e: Int) extends B
+        |
+        |object A {
+        |  val b: B = ???
+        |  List(b).map{
+        |\tcase C(c) => $$0
+        |case D(d) =>
+        |case E(e) =>
+        |  }
+        |}""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
+    "exhaustive-enum-tags".tag(IgnoreScala2),
+    s"""|object Tags:
+        |  trait Hobby
+        |  trait Chore
+        |  trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Activity & (Physical | Chore)): Double = 
+        |  act mat@@
+        |
+        |""".stripMargin,
+    s"""|object Tags:
+        |  trait Hobby
+        |  trait Chore
+        |  trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Activity & (Physical | Chore)): Double = 
+        |  act match
+        |\tcase Sports(time, intensity) => $$0
+        |\tcase Cleaning =>
+        |\tcase DishWashing(amount) =>
+        |
+        |""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
+    "exhaustive-enum-tags2".tag(IgnoreScala2),
+    s"""|object Tags:
+        |  trait Hobby
+        |  trait Chore
+        |  trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Activity & Physical): Double = 
+        |  act mat@@
+        |
+        |""".stripMargin,
+    s"""|object Tags:
+        |  trait Hobby
+        |  trait Chore
+        |  trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Activity & Physical): Double = 
+        |  act match
+        |\tcase Sports(time, intensity) => $$0
+        |\tcase Cleaning => 
+        |
+        |""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
+    "exhaustive-enum-tags3".tag(IgnoreScala2),
+    s"""|object Tags:
+        |  sealed trait Hobby
+        |  sealed trait Chore
+        |  sealed trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning(time: Int)                   extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Hobby | Physical & Chore): Double =
+        |  act mat@@
+        |
+        |""".stripMargin,
+    s"""|object Tags:
+        |  sealed trait Hobby
+        |  sealed trait Chore
+        |  sealed trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning(time: Int)                   extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Hobby | Physical & Chore): Double =
+        |  act match
+        |\tcase Reading(book, author) => $$0
+        |\tcase Sports(time, intensity) =>
+        |\tcase Cleaning(time) =>
+        |\tcase Singing(song) =>
+        |
+        |""".stripMargin,
     filter = _.contains("exhaustive"),
   )
 

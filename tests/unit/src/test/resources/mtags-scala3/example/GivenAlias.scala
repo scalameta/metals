@@ -6,16 +6,15 @@ given /*example.GivenAlias$package.given_Double().*/(using i/*example.GivenAlias
 given /*example.GivenAlias$package.given_List_T().*/[T/*example.GivenAlias$package.given_List_T().[T]*/]: List[T] = Nil
 given given_Char/*example.GivenAlias$package.given_Char.*/: Char = '?'
 given `given_Float`/*example.GivenAlias$package.given_Float.*/: Float = 3.0
-given `* *`/*example.GivenAlias$package.`* *`.*/: Long = 5
+given `* *`/*example.GivenAlias$package.`* *`.*/ : Long = 5
 
 def method/*example.GivenAlias$package.method().*/(using /*example.GivenAlias$package.method().(``)*/Int) = ""
 
-object X/*example.X.*/ {
+object X/*example.X.*/:
   given /*example.X.given_Double.*/Double = 4.0
   val double/*example.X.double.*/ = given_Double
 
   given of/*example.X.of().*/[A/*example.X.of().[A]*/]: Option[A] = ???
-}
 
 trait Xg/*example.Xg#*/:
   def doX/*example.Xg#doX().*/: Int
@@ -35,7 +34,6 @@ given (using /*example.GivenAlias$package.given_Yg#(``)*/Xg): Yg/*example.GivenA
 given [T/*example.GivenAlias$package.given_Zg_T#[T]*/]: Zg[T]/*example.GivenAlias$package.given_Zg_T().*/ with
   def doZ/*example.GivenAlias$package.given_Zg_T#doZ().*/: List[T] = Nil
 
-
 val a/*example.GivenAlias$package.a.*/ = intValue
 val b/*example.GivenAlias$package.b.*/ = given_String
 val c/*example.GivenAlias$package.c.*/ = X.given_Double
@@ -47,4 +45,3 @@ val i/*example.GivenAlias$package.i.*/ = X.of[Int]
 val x/*example.GivenAlias$package.x.*/ = given_Xg
 val y/*example.GivenAlias$package.y.*/ = given_Yg
 val z/*example.GivenAlias$package.z.*/ = given_Zg_T[String]
-

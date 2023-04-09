@@ -1,14 +1,14 @@
 trait Foo[A]:
   def foo: String
 
-given Foo[String] with 
+given Foo[String] with
   def a: String =
     "f" +
       "o" +
       "o"
 
-given Foo[String] with 
-  def a: String = 
+given Foo[String] with
+  def a: String =
     "f" +
       "o" +
       "o"

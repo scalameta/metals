@@ -17,7 +17,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
-import scala.meta.internal.metals.config.StatusBarState
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -36,7 +35,7 @@ import org.eclipse.lsp4j.MessageType
  *   as long as the attached `Future[_]` is not completed.
  */
 final class StatusBar(
-    client: () => MetalsLanguageClient,
+    client: MetalsLanguageClient,
     time: Time,
     progressTicks: ProgressTicks = ProgressTicks.braille,
     clientConfig: ClientConfiguration,
@@ -53,10 +52,10 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (clientConfig.statusBarState == StatusBarState.Off)
+    if (!clientConfig.slowTaskIsOn)
       trackBlockingTask(message)(thunk)
     else {
-      val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
       try {
         thunk
       } catch {
@@ -69,11 +68,18 @@ final class StatusBar(
     }
   }
 
-  def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
-    if (clientConfig.statusBarState == StatusBarState.Off)
+  def trackSlowFuture[T](
+      message: String,
+      thunk: Future[T],
+      onCancel: () => Unit = () => (),
+  ): Future[T] = {
+    if (!clientConfig.slowTaskIsOn)
       trackFuture(message, thunk)
     else {
-      val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
+      task.thenApply { response =>
+        if (response.cancel) onCancel()
+      }
       thunk.onComplete {
         case Failure(exception) =>
           slowTaskFailed(message, exception)
@@ -81,12 +87,13 @@ final class StatusBar(
         case Success(_) =>
           task.cancel(true)
       }
+      thunk
     }
   }
 
   private def slowTaskFailed(message: String, e: Throwable): Unit = {
     scribe.error(s"failed: $message", e)
-    client().logMessage(
+    client.logMessage(
       new MessageParams(
         MessageType.Error,
         s"$message failed, see metals.log for more details.",
@@ -151,12 +158,12 @@ final class StatusBar(
               MetalsStatusParams(value.formattedMessage, show = show)
           }
           value.show()
-          client().metalsStatus(params)
+          client.metalsStatus(params)
           isHidden = false
         }
       case None =>
         if (!isHidden && !isActiveMessage) {
-          client().metalsStatus(MetalsStatusParams("", hide = true))
+          client.metalsStatus(MetalsStatusParams("", hide = true))
           isHidden = true
           activeItem = None
         }

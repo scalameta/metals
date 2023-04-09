@@ -2,16 +2,12 @@ package scala.meta.internal.pc
 package completions
 
 import scala.meta.internal.pc.printer.MetalsPrinter
-import scala.meta.internal.pc.printer.ShortenedNames.ShortName
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.Type
-import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.transform.SymUtils.*
-import dotty.tools.dotc.util.ParsedComment
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.InsertTextMode
@@ -145,7 +141,8 @@ object CompletionValue:
   case class NamedArg(
       label: String,
       tpe: Type,
-  ) extends CompletionValue:
+      symbol: Symbol,
+  ) extends Symbolic:
     override def insertText: Option[String] = Some(label.replace("$", "$$"))
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Field
@@ -155,6 +152,7 @@ object CompletionValue:
     override def labelWithDescription(printer: MetalsPrinter)(using
         Context
     ): String = label
+  end NamedArg
 
   case class Autofill(
       value: String
@@ -246,7 +244,7 @@ object CompletionValue:
   def namedArg(label: String, sym: Symbol)(using
       Context
   ): CompletionValue =
-    NamedArg(label, sym.info.widenTermRefExpr)
+    NamedArg(label, sym.info.widenTermRefExpr, sym)
 
   def keyword(label: String, insertText: String): CompletionValue =
     Keyword(label, Some(insertText))

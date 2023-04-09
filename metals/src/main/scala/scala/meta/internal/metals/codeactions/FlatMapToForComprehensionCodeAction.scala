@@ -7,9 +7,11 @@ import scala.concurrent.Future
 import scala.meta.Case
 import scala.meta.Enumerator
 import scala.meta.Lit
+import scala.meta.Name
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.Type
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -214,12 +216,12 @@ class FlatMapToForComprehensionCodeAction(
         allowedToGetInsideApply: Boolean,
     ): Term =
       tree match {
-        case Term.Apply(fun, args) if allowedToGetInsideApply =>
+        case apply @ Term.Apply(fun, args) if allowedToGetInsideApply =>
           val newFun = replacePlaceHolder(fun, newName, allowedToGetInsideApply)
           val newArgs = args.map(
             replacePlaceHolder(_, newName, allowedToGetInsideApply = false)
           )
-          Term.Apply(newFun, newArgs)
+          Term.Apply(newFun, Term.ArgClause(newArgs, apply.argClause.mod))
 
         case Term.Eta(expr) if allowedToGetInsideApply =>
           replacementTimes += 1
@@ -231,19 +233,25 @@ class FlatMapToForComprehensionCodeAction(
             replacePlaceHolder(arg, newName, allowedToGetInsideApply),
           )
 
-        case Term.ApplyUsing(fun, args) if allowedToGetInsideApply =>
+        case apply @ Term.ApplyUsing(fun, args) if allowedToGetInsideApply =>
           val newFun = replacePlaceHolder(fun, newName, allowedToGetInsideApply)
           val newArgs = args.map(
             replacePlaceHolder(_, newName, allowedToGetInsideApply = false)
           )
-          Term.ApplyUsing(newFun, newArgs)
+          Term.ApplyUsing(newFun, Term.ArgClause(newArgs, apply.argClause.mod))
 
-        case Term.ApplyInfix(lhs, op, targs, args) if allowedToGetInsideApply =>
+        case apply @ Term.ApplyInfix(lhs, op, targs, args)
+            if allowedToGetInsideApply =>
           val newLHS =
             replacePlaceHolder(lhs, newName, allowedToGetInsideApply)
           val newArgs = args
             .map(replacePlaceHolder(_, newName, allowedToGetInsideApply))
-          Term.ApplyInfix(newLHS, op, targs, newArgs)
+          Term.ApplyInfix(
+            newLHS,
+            op,
+            Type.ArgClause(targs),
+            Term.ArgClause(newArgs, apply.argClause.mod),
+          )
 
         case Term.Select(qual, name) =>
           Term.Select(
@@ -270,6 +278,7 @@ class FlatMapToForComprehensionCodeAction(
           _: Term.Name | _: Pat.Typed | _: Pat.Var =>
         true
       case Pat.Tuple(pats) => pats.forall(isSimple)
+      case Pat.ArgClause(pats) => pats.forall(isSimple)
       case Pat.Xml(_, args) => args.forall(isSimple)
       case _ => false
     }
@@ -280,7 +289,8 @@ class FlatMapToForComprehensionCodeAction(
       nameGenerator: MetalsNames,
   ): Option[(Pat, Term)] = {
     tree match {
-      case Term.Function(List(param), term) if param.name.value.isEmpty =>
+      case Term.Function(List(param), term)
+          if param.name.is[Name.Placeholder] =>
         val newName = nameGenerator.createNewName()
         Some(Pat.Var(Term.Name(newName)), term)
       case Term.Function(List(param), term) =>

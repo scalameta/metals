@@ -31,13 +31,15 @@ import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Position
+
+// todo https://github.com/scalameta/metals/issues/4788
+// clean () =>, use plain values
 
 /**
  * Coordinates build target data fetching and caching, and the re-computation of various
@@ -49,7 +51,7 @@ final case class Indexer(
     languageClient: DelegatingLanguageClient,
     bspSession: () => Option[BspSession],
     executionContext: ExecutionContextExecutorService,
-    tables: () => Tables,
+    tables: Tables,
     statusBar: () => StatusBar,
     timerProvider: TimerProvider,
     scalafixProvider: () => ScalafixProvider,
@@ -85,12 +87,14 @@ final case class Indexer(
       forceRefresh: Boolean,
       buildTool: BuildTool,
       checksum: String,
+      importBuild: BspSession => Future[Unit],
   ): Future[BuildChange] = {
     def reloadAndIndex(session: BspSession): Future[BuildChange] = {
       workspaceReload().persistChecksumStatus(Status.Started, buildTool)
 
       session
         .workspaceReload()
+        .flatMap(_ => importBuild(session))
         .map { _ =>
           scribe.info("Correctly reloaded workspace")
           profiledIndexWorkspace(() => doctor().check())
@@ -125,7 +129,7 @@ final case class Indexer(
                 if (userResponse.isYes) {
                   reloadAndIndex(session)
                 } else {
-                  tables().dismissedNotifications.ImportChanges
+                  tables.dismissedNotifications.ImportChanges
                     .dismiss(2, TimeUnit.MINUTES)
                   Future.successful(BuildChange.None)
                 }
@@ -198,8 +202,10 @@ final case class Indexer(
           importedBuild.scalacOptions,
           bspSession().map(_.mainConnection),
         )
-        data.addJavacOptions(importedBuild.javacOptions)
-        data.addJvmEnvironment(importedBuild.jvmRunEnvironment)
+        data.addJavacOptions(
+          importedBuild.javacOptions,
+          bspSession().map(_.mainConnection),
+        )
 
         // For "wrapped sources", we create dedicated TargetData.MappedSource instances,
         // able to convert back and forth positions from the user-facing file to
@@ -280,6 +286,10 @@ final case class Indexer(
                   adjustLspData,
                 )
               }
+              override def lineForServer(line: Int): Option[Int] =
+                Some(line + topWrapperLineCount)
+              override def lineForClient(line: Int): Option[Int] =
+                Some(line - topWrapperLineCount)
             }
           data.addMappedSource(path, mappedSource)
         }
@@ -353,7 +363,7 @@ final case class Indexer(
       sh.schedule(
         new Runnable {
           override def run(): Unit = {
-            tables().jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
+            tables.jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
           }
         },
         2,
@@ -493,7 +503,6 @@ final case class Indexer(
       targetOpt: Option[b.BuildTargetIdentifier],
       data: Seq[TargetData],
   ): Unit = {
-
     try {
       val sourceToIndex0 =
         sourceMapper.mappedTo(source).getOrElse(source)
@@ -522,30 +531,25 @@ final case class Indexer(
         val input = sourceToIndex0.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        SemanticdbDefinition.foreach(input, dialect) {
+        SemanticdbDefinition.foreach(input, dialect, includeMembers = true) {
           case SemanticdbDefinition(info, occ, owner) =>
-            if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-              occ.range.foreach { range =>
-                symbols += WorkspaceSymbolInformation(
-                  info.symbol,
-                  info.kind,
-                  range.toLsp,
-                )
-              }
-            }
-            // what we really want to index are "extension" methods
-            // However, we filter by `Kind.Method` because semanticdb doesn't have properties
-            // that represents "extension".
-            // Knowing `SemanticdbDefinition.foreach` uses `ScalaToplevelMtags` and it puts
-            // `Kind.Method` only to extension methods, we can safely filter extension methods
-            // by `info.kind == Kind.Method`. (TODO: add exntension properties to semanticdb schema).
-            if (info.kind == Kind.METHOD) {
+            if (info.isExtension) {
               occ.range.foreach { range =>
                 methodSymbols += WorkspaceSymbolInformation(
                   info.symbol,
                   info.kind,
                   range.toLsp,
                 )
+              }
+            } else {
+              if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
+                occ.range.foreach { range =>
+                  symbols += WorkspaceSymbolInformation(
+                    info.symbol,
+                    info.kind,
+                    range.toLsp,
+                  )
+                }
               }
             }
             if (
@@ -580,14 +584,14 @@ final case class Indexer(
    * @param path JAR path
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
-    tables().jarSymbols.getTopLevels(path) match {
+    tables.jarSymbols.getTopLevels(path) match {
       case Some(toplevels) =>
         val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
         definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
       case None =>
         val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
         val toplevels = definitionIndex.addSourceJar(path, dialect)
-        tables().jarSymbols.putTopLevels(path, toplevels)
+        tables.jarSymbols.putTopLevels(path, toplevels)
     }
   }
 

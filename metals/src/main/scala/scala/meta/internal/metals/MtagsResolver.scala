@@ -13,19 +13,54 @@ import coursierapi.error.SimpleResolutionError
 import org.jsoup.Jsoup
 
 trait MtagsResolver {
+
+  /**
+   * Try and resolve mtags module for a given version of Scala.
+   * Can contain a bunch of fallbacks in case of non stable versions.
+   * @return information to use and load the presentation compiler implementation
+   */
   def resolve(scalaVersion: String): Option[MtagsBinaries]
+
+  /**
+   * Check if a given Scala version is supported in Metals.
+   *
+   * @param version Scala version to check
+   */
   def isSupportedScalaVersion(version: String): Boolean =
     resolve(version).isDefined
+
+  /**
+   * Check if this version of Scala is supported in a previous
+   * binary compatible Metals version. Needed for the doctor.
+   * @param version scala version to check
+   */
+  def isSupportedInOlderVersion(version: String): Boolean
 }
 
 object MtagsResolver {
 
   def default(): MtagsResolver = new Default
 
+  /**
+   * Map of removed Scala versions since 0.11.10.
+   * Points to the last Metals version that supported it.
+   */
+  private val removedScalaVersions = Map(
+    "2.13.1" -> "0.11.10",
+    "2.13.2" -> "0.11.10",
+    "2.12.9" -> "0.11.10",
+    "3.0.0" -> "0.11.10",
+    "3.0.1" -> "0.11.10",
+    "3.2.2-RC1" -> "0.11.10",
+  )
+
   class Default extends MtagsResolver {
 
     private val states =
       new ConcurrentHashMap[String, State]()
+
+    def isSupportedInOlderVersion(version: String): Boolean =
+      removedScalaVersions.contains(version)
 
     def resolve(scalaVersion: String): Option[MtagsBinaries] = {
       resolve(scalaVersion, original = None)
@@ -49,7 +84,16 @@ object MtagsResolver {
 
       def fetch(tries: Int = 0): State = {
         try {
-          val jars = Embedded.downloadMtags(scalaVersion)
+          val metalsVersion = removedScalaVersions.getOrElse(
+            scalaVersion,
+            BuildInfo.metalsVersion,
+          )
+          if (metalsVersion != BuildInfo.metalsVersion) {
+            scribe.warn(
+              s"$scalaVersion is no longer supported in the current Metals versions, using the last known supported version $metalsVersion"
+            )
+          }
+          val jars = Embedded.downloadMtags(scalaVersion, metalsVersion)
           State.Success(MtagsBinaries.Artifacts(scalaVersion, jars))
         } catch {
           case NonFatal(e) =>
@@ -90,7 +134,9 @@ object MtagsResolver {
           case State.Success(v) => Some(v)
           // Try to download latest supported snapshot
           case _: State.Failure
-              if original.isEmpty && scalaVersion.contains("NIGHTLY") =>
+              if original.isEmpty &&
+                scalaVersion.contains("NIGHTLY") ||
+                scalaVersion.contains("nonbootstrapped") =>
             findLatestSnapshot(scalaVersion) match {
               case None => None
               case Some(latestSnapshot) =>

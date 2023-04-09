@@ -4,6 +4,7 @@ package classFinder
 import java.nio.file.Paths
 
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.io.AbsolutePath
 
 import munit.Location
@@ -26,12 +27,13 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
        |def foo(): Unit = ()
        |def foo2(): Unit = ()
        |""".stripMargin,
-    List(
+    Vector(
       "Class Foo a.Foo.tasty",
       "Class Bar a.Bar.tasty",
       "Toplevel package a.Main$package.tasty",
     ),
     scalaVersion = V.scala3,
+    searchGranularity = ClassFinderGranularity.Tasty,
   )
 
   check(
@@ -50,13 +52,13 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
        |def foo(): Unit = ()
        |def foo2(): Unit = ()
        |""".stripMargin,
-    List(
+    Vector(
       "Class Foo a.Foo.class", "Object Foo a.Foo$.class",
       "Class InnerClass a.Foo$InnerClass.class", "Class Bar a.Bar.class",
       "Class InnerClass a.Bar$InnerClass.class",
       "Toplevel package a.Main$package.class",
     ),
-    checkInnerClasses = true,
+    searchGranularity = ClassFinderGranularity.ClassFiles,
     scalaVersion = V.scala3,
   )
 
@@ -91,7 +93,7 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
          |  }
          |}
          |""".stripMargin,
-      List(
+      Vector(
         "Class Foo a.Foo.class", "Class InnerClass a.Foo$InnerClass.class",
         "Trait InnerTrait a.Foo$InnerTrait.class",
         "Object InnerObject a.Foo$InnerObject$.class",
@@ -108,16 +110,47 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
         "Trait VeryInnerTrait a.Bar$Bar2$Bar3$VeryInnerTrait.class",
         "Object VeryInnerObject a.Bar$Bar2$Bar3$VeryInnerObject$.class",
       ),
-      checkInnerClasses = true,
+      searchGranularity = ClassFinderGranularity.ClassFiles,
       scalaVersion = scalaVer,
     )
   }
 
+  check(
+    "implicit-class-anyval",
+    """|package a
+       |object Foo {
+       |  implicit class FooOps(private val x: Int) extends AnyVal {
+       |    def foo: Int = x
+       |  }
+       |}
+       |""".stripMargin,
+    Vector(
+      "Object Foo a.Foo$.class",
+      "Class FooOps a.Foo$FooOps.class",
+      "Object FooOps a.Foo$FooOps$.class",
+    ),
+    scalaVersion = V.scala213,
+    searchGranularity = ClassFinderGranularity.ClassFiles,
+  )
+
+  check(
+    "case-class-generated-companion",
+    """|package a
+       |case class Foo(x: Int)
+       |""".stripMargin,
+    Vector(
+      "Class Foo a.Foo.class",
+      "Object Foo a.Foo$.class",
+    ),
+    scalaVersion = V.scala213,
+    searchGranularity = ClassFinderGranularity.ClassFiles,
+  )
+
   def check(
       name: TestOptions,
       sourceText: String,
-      expected: List[String],
-      checkInnerClasses: Boolean = false,
+      expected: Vector[String],
+      searchGranularity: ClassFinderGranularity,
       filename: String = "Main.scala",
       scalaVersion: String = V.scala213,
   )(implicit loc: Location): Unit =
@@ -125,12 +158,12 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
       val (buffers, classFinder) = init(scalaVersion)
       val path = AbsolutePath(Paths.get(filename))
       buffers.put(path, sourceText)
-      val classes = classFinder.findAllClasses(path, checkInnerClasses)
+      val classes = classFinder.findAllClasses(path, searchGranularity)
 
       assert(classes.isDefined)
       assertEquals(
         classes.get
-          .map(c => s"${c.friendlyName} ${c.description}"),
+          .map(c => s"${c.prettyName} ${c.resourceMangledName}"),
         expected,
       )
     }

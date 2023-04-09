@@ -651,9 +651,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
              |$existingFiles
           """.stripMargin
         )
-        _ <-
-          server
-            .executeCommand(command, args: _*)
+        _ <- server.executeCommand(command, args: _*)
         _ = {
           assertNoDiff(
             client.workspaceMessageRequests,

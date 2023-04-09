@@ -5,8 +5,8 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.JavaMtags
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.ScalaToplevelMtags
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -38,12 +38,21 @@ case class SemanticdbDefinition(
 }
 
 object SemanticdbDefinition {
-  def foreach(input: Input.VirtualFile, dialect: Dialect)(
+  def foreach(
+      input: Input.VirtualFile,
+      dialect: Dialect,
+      includeMembers: Boolean
+  )(
       fn: SemanticdbDefinition => Unit
   ): Unit = {
     input.toLanguage match {
       case Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(input, true, dialect) {
+        val mtags = new ScalaToplevelMtags(
+          input,
+          includeInnerClasses = true,
+          includeMembers = includeMembers,
+          dialect
+        ) {
           override def visitOccurrence(
               occ: SymbolOccurrence,
               info: SymbolInformation,
@@ -58,7 +67,7 @@ object SemanticdbDefinition {
             () // ignore because we don't need to index untokenizable files.
         }
       case Language.JAVA =>
-        val mtags = new JavaMtags(input) {
+        val mtags = new JavaMtags(input, includeMembers) {
           override def visitOccurrence(
               occ: SymbolOccurrence,
               info: SymbolInformation,

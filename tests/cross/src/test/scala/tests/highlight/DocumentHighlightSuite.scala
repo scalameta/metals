@@ -657,7 +657,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
 
   check(
     // Scala 2.12.x has a bug where the namePos points at `object`
-    // working around would it involve a lot of additional logic
+    // working around it would involve a lot of additional logic
     "package-object".tag(IgnoreScala212),
     """|package example
        |
@@ -688,4 +688,53 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |}""".stripMargin,
   )
 
+  check(
+    "shadowing",
+    """|object Main {
+       |  val abc = {
+       |    val <<abc>> = 1
+       |    <<a@@bc>> + 1
+       |  }
+       |  val d = abc + 1
+       |}""".stripMargin,
+  )
+
+  check(
+    "select-parentheses",
+    """|object Main {
+       |  val a = (1 + 2 + 3).<<toStr@@ing>>
+       |}""".stripMargin,
+  )
+
+  check(
+    "select-parentheses2".tag(IgnoreScala2),
+    """|object Main {
+       |  val a = (1 + 2 + 3) <<:@@:>> Nil
+       |}""".stripMargin,
+  )
+
+  check(
+    "trailling-comma".tag(IgnoreScala2),
+    """
+      |object Main {
+      |  val a = 1
+      |  val <<b>> = 2
+      |  List(
+      |    a,
+      |    <<b@@>>,
+      |  )
+      |}""".stripMargin,
+  )
+  check(
+    "trailling-comma2".tag(IgnoreScala2),
+    """
+      |object Main {
+      |  val a = 1
+      |  val <<`ab`>> = 2
+      |  List(
+      |    a,
+      |    <<`ab@@`>>,
+      |  )
+      |}""".stripMargin,
+  )
 }

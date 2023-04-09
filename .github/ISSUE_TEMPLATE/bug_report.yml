@@ -51,7 +51,7 @@ body:
     id: version
     attributes:
       label: Version of Metals
-      placeholder: v0.11.9
+      placeholder: v0.11.11
     validations:
       required: true
 

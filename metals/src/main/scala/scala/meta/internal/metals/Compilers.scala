@@ -6,12 +6,15 @@ import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.metals.CompilerOffsetParamsUtils
+import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
@@ -22,6 +25,7 @@ import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
+import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -34,11 +38,12 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
+import org.eclipse.lsp4j.SemanticTokens
+import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
@@ -63,7 +68,7 @@ class Compilers(
     embedded: Embedded,
     statusBar: StatusBar,
     sh: ScheduledExecutorService,
-    initializeParams: Option[InitializeParams],
+    initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
     scalaVersionSelector: ScalaVersionSelector,
     trees: Trees,
@@ -192,7 +197,7 @@ class Compilers(
                 "object Ma\n",
                 "object Ma".length(),
               )
-            )
+            ).thenApply(_.map(_.toLsp()))
           }
         }
       }
@@ -371,13 +376,124 @@ class Compilers(
       .getOrElse(Future.successful(Nil))
   }
 
+  def semanticTokens(
+      params: SemanticTokensParams,
+      token: CancelToken,
+  ): Future[SemanticTokens] = {
+    val emptyTokens = Collections.emptyList[Integer]();
+    if (!userConfig().enableSemanticHighlighting) {
+      Future { new SemanticTokens(emptyTokens) }
+    } else {
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      loadCompiler(path)
+        .map { compiler =>
+          val (input, _, adjust) =
+            sourceAdjustments(
+              params.getTextDocument().getUri(),
+              compiler.scalaVersion(),
+            )
+
+          /**
+           * Find the start that is actually contained in the file and not
+           * in the added parts such as imports in sbt.
+           *
+           * @param line line within the adjusted source
+           * @param character line within the adjusted source
+           * @param remaining the rest of the tokens to analyze
+           * @return the first found that should be contained with the rest
+           */
+          @tailrec
+          def findCorrectStart(
+              line: Integer,
+              character: Integer,
+              remaining: List[Integer],
+          ): List[Integer] = {
+            remaining match {
+              case lineDelta :: charDelta :: next =>
+                val newCharacter: Integer =
+                  // only increase character delta if the same line
+                  if (lineDelta == 0) character + charDelta
+                  else charDelta
+
+                val adjustedTokenPos = adjust.adjustPos(
+                  new LspPosition(line + lineDelta, newCharacter),
+                  adjustToZero = false,
+                )
+                if (
+                  adjustedTokenPos.getLine() >= 0 &&
+                  adjustedTokenPos.getCharacter() >= 0
+                )
+                  (adjustedTokenPos.getLine(): Integer) ::
+                    (adjustedTokenPos.getCharacter(): Integer) :: next
+                else
+                  findCorrectStart(
+                    line + lineDelta,
+                    newCharacter,
+                    next.drop(3),
+                  )
+              case _ => Nil
+            }
+          }
+
+          @tailrec
+          def adjustForScala3Worksheet(
+              remaining: List[Integer],
+              acc: List[List[Integer]] = List.empty,
+          ): List[Integer] = {
+            remaining match {
+              case Nil => acc.reverse.flatten
+              case deltaLine :: deltaColumn :: next if deltaLine != 0 =>
+                // we need to remove additional indent
+                val adjustedColumn: Integer = (Math.max(0, deltaColumn - 2))
+                val adjusted: List[Integer] =
+                  List(deltaLine, adjustedColumn) ++ next.take(3)
+                adjustForScala3Worksheet(
+                  next.drop(3),
+                  adjusted :: acc,
+                )
+              case _ =>
+                adjustForScala3Worksheet(
+                  remaining.drop(5),
+                  remaining.take(5) :: acc,
+                )
+            }
+          }
+
+          val vFile =
+            CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
+          val isScala3 = ScalaVersions.isScala3Version(compiler.scalaVersion())
+
+          compiler
+            .semanticTokens(vFile)
+            .asScala
+            .map { nodes =>
+              val plist = SemanticTokensProvider.provide(
+                nodes.asScala.toList,
+                vFile,
+                isScala3,
+              )
+
+              val tokens =
+                findCorrectStart(0, 0, plist.asScala.toList)
+              if (isScala3 && path.isWorksheet) {
+                new SemanticTokens(adjustForScala3Worksheet(tokens).asJava)
+              } else {
+                new SemanticTokens(tokens.asJava)
+              }
+            }
+        }
+        .getOrElse(Future.successful(new SemanticTokens(emptyTokens)))
+    }
+
+  }
+
   def completions(
       params: CompletionParams,
       token: CancelToken,
   ): Future[CompletionList] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       val offsetParams =
-        CompilerOffsetParams.fromPos(pos, token)
+        CompilerOffsetParamsUtils.fromPos(pos, token)
       pc.complete(offsetParams)
         .asScala
         .map { list =>
@@ -395,7 +511,7 @@ class Compilers(
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.autoImports(
         name,
-        CompilerOffsetParams.fromPos(pos, token),
+        CompilerOffsetParamsUtils.fromPos(pos, token),
         findExtensionMethods,
       ).asScala
         .map { list =>
@@ -410,7 +526,7 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.insertInferredType(CompilerOffsetParams.fromPos(pos, token))
+      pc.insertInferredType(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
@@ -418,12 +534,22 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
+  def inlineEdits(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[ju.List[TextEdit]] =
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.inlineValue(CompilerOffsetParamsUtils.fromPos(pos, token))
+        .asScala
+        .map(adjust.adjustTextEdits)
+    }.getOrElse(Future.successful(Nil.asJava))
+
   def documentHighlight(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[ju.List[DocumentHighlight]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.documentHighlight(CompilerOffsetParams.fromPos(pos, token))
+      pc.documentHighlight(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
         .map { highlights =>
           adjust.adjustDocumentHighlight(highlights)
@@ -440,8 +566,8 @@ class Compilers(
     withPCAndAdjustLsp(doc.getUri(), range, extractionPos) {
       (pc, metaRange, metaExtractionPos, adjust) =>
         pc.extractMethod(
-          CompilerRangeParams.fromPos(metaRange, token),
-          CompilerOffsetParams.fromPos(metaExtractionPos, token),
+          CompilerRangeParamsUtils.fromPos(metaRange, token),
+          CompilerOffsetParamsUtils.fromPos(metaExtractionPos, token),
         ).asScala
           .map { edits =>
             adjust.adjustTextEdits(edits)
@@ -456,7 +582,7 @@ class Compilers(
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(position) { (pc, pos, adjust) =>
       pc.convertToNamedArguments(
-        CompilerOffsetParams.fromPos(pos, token),
+        CompilerOffsetParamsUtils.fromPos(pos, token),
         argIndices,
       ).asScala
         .map { edits =>
@@ -470,7 +596,7 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.implementAbstractMembers(CompilerOffsetParams.fromPos(pos, token))
+      pc.implementAbstractMembers(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
@@ -481,13 +607,27 @@ class Compilers(
   def hover(
       params: HoverExtParams,
       token: CancelToken,
-  ): Future[Option[Hover]] = {
+  ): Future[Option[HoverSignature]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.hover(CompilerRangeParams.offsetOrRange(pos, token))
+      pc.hover(CompilerRangeParamsUtils.offsetOrRange(pos, token))
         .asScala
         .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
   }.getOrElse(Future.successful(None))
+
+  def prepareRename(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[ju.Optional[LspRange]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.prepareRename(
+        CompilerRangeParamsUtils.offsetOrRange(pos, token)
+      ).asScala
+        .map { range =>
+          range.map(adjust.adjustRange(_))
+        }
+    }
+  }.getOrElse(Future.successful(None.asJava))
 
   def rename(
       params: RenameParams,
@@ -495,7 +635,7 @@ class Compilers(
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.rename(
-        CompilerRangeParams.offsetOrRange(pos, token),
+        CompilerRangeParamsUtils.offsetOrRange(pos, token),
         params.getNewName(),
       ).asScala
         .map { edits =>
@@ -524,11 +664,11 @@ class Compilers(
       findTypeDef: Boolean,
   ): Future[DefinitionResult] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val params = CompilerOffsetParams.fromPos(pos, token)
+      val params = CompilerOffsetParamsUtils.fromPos(pos, token)
       val defResult =
         if (findTypeDef) pc.typeDefinition(params)
         else
-          pc.definition(CompilerOffsetParams.fromPos(pos, token))
+          pc.definition(CompilerOffsetParamsUtils.fromPos(pos, token))
       defResult.asScala
         .map { c =>
           adjust.adjustLocations(c.locations())
@@ -559,7 +699,7 @@ class Compilers(
       token: CancelToken,
   ): Future[SignatureHelp] =
     withPCAndAdjustLsp(params) { (pc, pos, _) =>
-      pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
+      pc.signatureHelp(CompilerOffsetParamsUtils.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def selectionRange(
@@ -568,7 +708,7 @@ class Compilers(
   ): Future[ju.List[SelectionRange]] = {
     withPCAndAdjustLsp(params) { (pc, positions) =>
       val offsetPositions: ju.List[OffsetParams] =
-        positions.map(CompilerOffsetParams.fromPos(_, token))
+        positions.map(CompilerOffsetParamsUtils.fromPos(_, token))
       pc.selectionRange(offsetPositions).asScala
     }.getOrElse(Future.successful(Nil.asJava))
   }
@@ -829,13 +969,11 @@ class Compilers(
       .withExecutorService(ec)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
-      .withConfiguration(
-        initializeParams
-          .map(params => {
-            val options = InitializationOptions.from(params).compilerOptions
-            config.initialConfig.compilers.update(options)
-          })
-          .getOrElse(config.initialConfig.compilers)
+      .withConfiguration {
+        val options =
+          InitializationOptions.from(initializeParams).compilerOptions
+        config.initialConfig.compilers
+          .update(options)
           .copy(
             _symbolPrefixes = userConfig().symbolPrefixes,
             isCompletionSnippetsEnabled =
@@ -843,7 +981,7 @@ class Compilers(
             _isStripMarginOnTypeFormattingEnabled =
               () => userConfig().enableStripMarginOnTypeFormatting,
           )
-      )
+      }
 
   def newCompiler(
       target: ScalaTarget,

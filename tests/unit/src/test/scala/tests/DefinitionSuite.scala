@@ -73,9 +73,16 @@ abstract class DefinitionSuiteBase(
             def symbol(path: AbsolutePath, range: s.Range): Option[Symbol] = {
               for {
                 document <- Semanticdbs.loadTextDocuments(path).documents
-                occ <- document.occurrences.find(
-                  _.range.contains(range)
-                )
+                occ <- document.occurrences.find { occ =>
+                  // zero ranges will not be used by definition
+                  def nonZeroRanges = occ.range.exists(r =>
+                    r.startCharacter != r.endCharacter
+                  ) && range.startCharacter != range.endCharacter
+                  nonZeroRanges && (
+                    occ.range.exists(range.encloses) ||
+                      occ.range.exists(_.encloses(range))
+                  )
+                }
               } yield Symbol(occ.symbol)
             }.headOption
             val obtained = symbol(semanticdbPath, token.pos.toRange)

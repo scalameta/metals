@@ -46,14 +46,16 @@ final class JavaFoldingRangeExtractor(
   def extract(): List[FoldingRange] = {
     val scanner = ToolFactory.createScanner(true, true, false, true)
     scanner.setSource(text.toCharArray())
-
     @tailrec
     def swallowUntilSemicolon(token: Int, line: Int): Int = {
-      val addLine = scanner.getCurrentTokenSource.count(_ == '\n')
-      if (token != ITerminalSymbols.TokenNameSEMICOLON) {
-        swallowUntilSemicolon(scanner.getNextToken(), line + addLine)
-      } else {
-        line + addLine
+      if (token == ITerminalSymbols.TokenNameEOF) line
+      else {
+        val addLine = scanner.getCurrentTokenSource.count(_ == '\n')
+        if (token != ITerminalSymbols.TokenNameSEMICOLON) {
+          swallowUntilSemicolon(scanner.getNextToken(), line + addLine)
+        } else {
+          line + addLine
+        }
       }
     }
 

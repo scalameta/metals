@@ -3,10 +3,12 @@ package scala.meta.internal.metals
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.{util => ju}
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.io.Source
 import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -18,10 +20,6 @@ import scala.meta.internal.mtags.MD5
 import scala.meta.internal.process.SystemProcess
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigSyntax
 
 class JavaInteractiveSemanticdb(
     javac: AbsolutePath,
@@ -255,41 +253,34 @@ object JdkVersion {
       }
   }
 
-  def fromReleaseFile(javaHome: AbsolutePath): Option[JdkVersion] = {
-    val releaseFile = javaHome.resolve("release")
-    if (releaseFile.exists) {
-      val properties = ConfigFactory.parseFile(
-        releaseFile.toFile,
-        ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES),
-      )
-      try {
-        val version = properties
-          .getString("JAVA_VERSION")
-          .stripPrefix("\"")
-          .stripSuffix("\"")
-        JdkVersion.parse(version)
-      } catch {
-        case NonFatal(e) =>
-          scribe.error("Failed to read jdk version from `release` file", e)
-          None
+  def fromReleaseFile(javaHome: AbsolutePath): Option[JdkVersion] =
+    Seq(javaHome.resolve("release"), javaHome.parent.resolve("release"))
+      .filter(_.exists)
+      .flatMap { releaseFile =>
+        val props = new ju.Properties
+        props.load(Source.fromFile(releaseFile.toFile).bufferedReader())
+        props.asScala
+          .get("JAVA_VERSION")
+          .map(_.stripPrefix("\"").stripSuffix("\""))
+          .flatMap(jv => JdkVersion.parse(jv))
       }
-    } else None
-
-  }
+      .headOption
 
   def parse(v: String): Option[JdkVersion] = {
-    val numbers = v
-      .split('-')
-      .head
-      .split('.')
-      .toList
-      .take(2)
-      .map(s => Try(s.toInt).toOption)
+    val numbers = Try {
+      v
+        .split('-')
+        .head
+        .split('.')
+        .toList
+        .take(2)
+        .flatMap(s => Try(s.toInt).toOption)
+    }.toOption
 
     numbers match {
-      case Some(1) :: Some(minor) :: _ =>
+      case Some(1 :: minor :: _) =>
         Some(JdkVersion(minor))
-      case Some(single) :: _ =>
+      case Some(single :: _) =>
         Some(JdkVersion(single))
       case _ => None
     }

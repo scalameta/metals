@@ -312,11 +312,12 @@ object Messages {
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
 
+    def msg: String =
+      s"Bloop version was updated, do you want to restart the running Bloop server?"
+
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
-      params.setMessage(
-        s"Bloop version was updated, do you want to restart the running Bloop server?"
-      )
+      params.setMessage(msg)
       params.setType(MessageType.Warning)
       params.setActions(
         List(
@@ -703,8 +704,20 @@ object Messages {
     ): String = {
       val using = "legacy " + usingString(usingNow)
       val recommended = recommendationString(usingNow)
-      s"You are using $using, which might not be supported in future versions of Metals. " +
-        s"Please upgrade to $recommended."
+      s"You are using $using, which might no longer be supported by Metals in the future. " +
+        s"To get the best support possible it's recommended to update to at least $recommended."
+    }
+  }
+
+  object DeprecatedRemovedScalaVersion {
+    def message(
+        usingNow: Set[String]
+    ): String = {
+      val using = "legacy " + usingString(usingNow)
+      val isAre = if (usingNow.size == 1) "is" else "are"
+      val recommended = recommendationString(usingNow)
+      s"You are using $using, which $isAre no longer supported by Metals. " +
+        s"To get the best support possible it's recommended to update to at least $recommended."
     }
   }
 
@@ -756,7 +769,14 @@ object Messages {
 
   object DeprecatedSbtVersion {
     def message: String = {
-      s"You are using an old sbt version, navigation for which might not be supported in the future versions of Metals. " +
+      s"You are using an old sbt version, support for which might stop being bugfixed in the future versions of Metals. " +
+        s"Please upgrade to at least sbt ${BuildInfo.minimumSupportedSbtVersion}."
+    }
+  }
+
+  object DeprecatedRemovedSbtVersion {
+    def message: String = {
+      s"You are using an old sbt version, support for which is no longer being bugfixed. " +
         s"Please upgrade to at least sbt ${BuildInfo.minimumSupportedSbtVersion}."
     }
   }

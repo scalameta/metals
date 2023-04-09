@@ -13,10 +13,10 @@ class StatusBarSuite extends BaseSuite {
   val time = new FakeTime
   val client = new TestingClient(PathIO.workingDirectory, Buffers())
   var status = new StatusBar(
-    () => client,
+    client,
     time,
     ProgressTicks.dots,
-    ClientConfiguration.Default,
+    ClientConfiguration.default,
   )
   override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()

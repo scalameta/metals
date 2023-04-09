@@ -9,7 +9,6 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolQuery
-import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc.SymbolSearchVisitor
 
 object TestingWorkspaceSearch {
@@ -27,19 +26,22 @@ class TestingWorkspaceSearch {
     for {
       (path, (text, dialect)) <- inputs
     } {
-      SemanticdbDefinition.foreach(Input.VirtualFile(path, text), dialect) {
-        defn =>
-          if (query.matches(defn.info, s.SymbolInformation.Kind.METHOD)) {
-            val c = defn.toCached
-            if (filter(c)) {
-              visitor.visitWorkspaceSymbol(
-                Paths.get(path),
-                c.symbol,
-                c.kind,
-                c.range,
-              )
-            }
+      SemanticdbDefinition.foreach(
+        Input.VirtualFile(path, text),
+        dialect,
+        includeMembers = true,
+      ) { defn =>
+        if (query.matches(defn.info)) {
+          val c = defn.toCached
+          if (filter(c)) {
+            visitor.visitWorkspaceSymbol(
+              Paths.get(path),
+              c.symbol,
+              c.kind,
+              c.range,
+            )
           }
+        }
       }
     }
 }

@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
@@ -15,25 +14,17 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
-import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.*
-import scala.meta.internal.pc.CompilerAccess
-import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
-import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
-import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.ast.tpd.*
-import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.util.*
 import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j as l}
 
 case class ScalaPresentationCompiler(
@@ -49,20 +40,20 @@ case class ScalaPresentationCompiler(
 
   def this() = this("", Nil, Nil)
 
-  import InteractiveDriver.*
-
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   private val forbiddenDoubleOptions = Set("-release")
+  given ReportContext =
+    workspace.map(StdReportContext(_)).getOrElse(EmptyReportContext)
 
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(
       config,
       sh,
       () => new Scala3CompilerWrapper(newDriver),
-    )(
-      using ec
+    )(using
+      ec
     )
 
   private def removeDoubleOptions(options: List[String]): List[String] =
@@ -84,6 +75,17 @@ case class ScalaPresentationCompiler(
           File.pathSeparator
         ) :: Nil
     new MetalsDriver(settings)
+
+  override def semanticTokens(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[Node]] =
+    compilerAccess.withInterruptableCompiler(
+      new ju.ArrayList[Node](),
+      params.token(),
+    ) { access =>
+      val driver = access.compiler()
+      new PcSemanticTokensProvider(driver, params).provide().asJava
+    }
 
   override def getTasty(
       targetUri: URI,
@@ -226,6 +228,21 @@ case class ScalaPresentationCompiler(
         .asJava
     }
 
+  override def inlineValue(
+      params: OffsetParams
+  ): CompletableFuture[ju.List[l.TextEdit]] =
+    val empty: Either[String, List[l.TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(empty, params.token) { pc =>
+        new PcInlineValueProviderImpl(pc.compiler(), params)
+          .getInlineTextEdits()
+      })
+      .thenApply {
+        case Right(edits: List[TextEdit]) => edits.asJava
+        case Left(error: String) => throw new DisplayableException(error)
+      }
+  end inlineValue
+
   override def extractMethod(
       range: RangeParams,
       extractionPos: OffsetParams,
@@ -248,14 +265,20 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       argIndices: ju.List[Integer],
   ): CompletableFuture[ju.List[l.TextEdit]] =
-    val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new ConvertToNamedArgumentsProvider(
-        pc.compiler(),
-        params,
-        argIndices.asScala.map(_.toInt).toSet,
-      ).convertToNamedArguments.asJava
-    }
+    val empty: Either[String, List[l.TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(empty, params.token) { pc =>
+        new ConvertToNamedArgumentsProvider(
+          pc.compiler(),
+          params,
+          argIndices.asScala.map(_.toInt).toSet,
+        ).convertToNamedArguments
+      })
+      .thenApplyAsync {
+        case Left(error: String) => throw new DisplayableException(error)
+        case Right(edits: List[l.TextEdit]) => edits.asJava
+      }
+  end convertToNamedArguments
   override def selectionRange(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[l.SelectionRange]] =
@@ -270,15 +293,30 @@ case class ScalaPresentationCompiler(
     }
   end selectionRange
 
-  def hover(params: OffsetParams): CompletableFuture[ju.Optional[l.Hover]] =
+  def hover(
+      params: OffsetParams
+  ): CompletableFuture[ju.Optional[HoverSignature]] =
     compilerAccess.withNonInterruptableCompiler(
-      ju.Optional.empty[l.Hover](),
+      ju.Optional.empty[HoverSignature](),
       params.token,
     ) { access =>
       val driver = access.compiler()
       HoverProvider.hover(params, driver, search)
     }
   end hover
+
+  def prepareRename(
+      params: OffsetParams
+  ): CompletableFuture[ju.Optional[l.Range]] =
+    compilerAccess.withNonInterruptableCompiler(
+      Optional.empty[l.Range](),
+      params.token,
+    ) { access =>
+      val driver = access.compiler()
+      Optional.ofNullable(
+        PcRenameProvider(driver, params, None).prepareRename().orNull
+      )
+    }
 
   def rename(
       params: OffsetParams,
@@ -289,7 +327,7 @@ case class ScalaPresentationCompiler(
       params.token,
     ) { access =>
       val driver = access.compiler()
-      PcRenameProvider(driver, params, name).rename().asJava
+      PcRenameProvider(driver, params, Some(name)).rename().asJava
     }
 
   def newInstance(

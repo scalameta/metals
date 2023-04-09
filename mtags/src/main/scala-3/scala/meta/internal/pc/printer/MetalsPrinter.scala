@@ -4,12 +4,9 @@ import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImport
-import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
-import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
@@ -24,9 +21,6 @@ import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.*
-import dotty.tools.dotc.printing.Printer
-import dotty.tools.dotc.printing.RefinedPrinter
-import dotty.tools.dotc.printing.Texts.Text
 
 class MetalsPrinter(
     names: ShortenedNames,
@@ -52,8 +46,6 @@ class MetalsPrinter(
       AbsOverride,
       Lazy,
     )
-
-  private val defaultWidth = 1000
 
   def shortenedNames: List[ShortName] = names.namesToImport
 
@@ -118,7 +110,9 @@ class MetalsPrinter(
     if sym.is(Flags.Package) || sym.isClass then
       " " + dotcPrinter.fullName(sym.owner)
     else if sym.is(Flags.Module) || typeSymbol.is(Flags.Module) then
-      " " + dotcPrinter.fullName(typeSymbol.owner)
+      if typeSymbol != NoSymbol then
+        " " + dotcPrinter.fullName(typeSymbol.owner)
+      else " " + dotcPrinter.fullName(sym.owner)
     else if sym.is(Flags.Method) then
       defaultMethodSignature(sym, info, onlyMethodParams = true)
     else tpe(info)

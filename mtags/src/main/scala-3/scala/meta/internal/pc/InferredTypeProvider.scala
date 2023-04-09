@@ -1,24 +1,20 @@
 package scala.meta.internal.pc
 
-import java.net.URI
 import java.nio.file.Paths
 
 import scala.annotation.tailrec
 import scala.meta as m
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
-import scala.meta.tokens.{Token as T}
 
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
@@ -95,6 +91,20 @@ final class InferredTypeProvider(
     def imports: List[TextEdit] =
       shortenedNames.imports(autoImportsGen)
 
+    def optDealias(tpe: Type): Type =
+      def isInScope(tpe: Type): Boolean =
+        tpe match
+          case tref: TypeRef =>
+            indexedCtx.lookupSym(
+              tref.currentSymbol
+            ) == IndexedContext.Result.InScope
+          case AppliedType(tycon, args) =>
+            isInScope(tycon) && args.forall(isInScope)
+          case _ => true
+      if isInScope(tpe)
+      then tpe
+      else tpe.metalsDealias
+
     def printType(tpe: Type): String =
       val printer = MetalsPrinter.forInferredType(
         shortenedNames,
@@ -103,39 +113,6 @@ final class InferredTypeProvider(
         includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
       )
       printer.tpe(tpe)
-
-    /*
-     * Get the exact position in ValDef pattern for val (a, b) = (1, 2)
-     * val ((a, c), b) = ((1, 3), 2) will be covered by Bind
-     * This is needed to Scala versions pre 3.1.2.
-     */
-    def editForTupleUnapply(
-        applied: AppliedType,
-        metaPattern: m.Pat,
-        valdefOffset: Int,
-    )(using ctx: Context) =
-      import scala.meta.*
-      metaPattern match
-        case tpl: m.Pat.Tuple =>
-          val newOffset = params.offset - valdefOffset + 4
-          val tupleIndex = tpl.args.indexWhere { p =>
-            p.pos.start <= newOffset && p.pos.end >= newOffset
-          }
-          if tupleIndex >= 0 then
-            val tuplePartTpe = applied.args(tupleIndex)
-            val typeEndPos = tpl.args(tupleIndex).pos.end
-            val namePos = typeEndPos + valdefOffset - 4
-            val lspPos = new SourcePosition(source, Spans.Span(namePos)).toLsp
-            val typeNameEdit =
-              new TextEdit(
-                lspPos,
-                ": " + printType(tuplePartTpe),
-              )
-            typeNameEdit :: imports
-          else Nil
-        case _ => Nil
-      end match
-    end editForTupleUnapply
 
     path.headOption match
       /* `val a = 1` or `var b = 2`
@@ -147,15 +124,20 @@ final class InferredTypeProvider(
        * `.map((a: Int) => a + a)`
        */
       case Some(vl @ ValDef(sym, tpt, rhs)) =>
-        val isParam = path.tail.headOption.exists(_.symbol.isAnonymousFunction)
+        val isParam = path match
+          case head :: next :: _ if next.symbol.isAnonymousFunction => true
+          case head :: (b @ Block(stats, expr)) :: next :: _
+              if next.symbol.isAnonymousFunction =>
+            true
+          case _ => false
         def baseEdit(withParens: Boolean): TextEdit =
-          val keywordOffset = if vl.symbol.is(Flags.Param) then 0 else 4
+          val keywordOffset = if isParam then 0 else 4
           val endPos =
             findNamePos(params.text, vl, keywordOffset).endPos.toLsp
           adjustOpt.foreach(adjust => endPos.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             endPos,
-            ": " + printType(tpt.tpe) + {
+            ": " + printType(optDealias(tpt.tpe)) + {
               if withParens then ")" else ""
             },
           )
@@ -198,20 +180,6 @@ final class InferredTypeProvider(
         def simpleType =
           typeNameEdit ::: imports
 
-        def tupleType(applied: AppliedType) =
-          import scala.meta.*
-          val pattern =
-            params.text.substring(vl.startPos.start, tpt.startPos.start)
-
-          dialects.Scala3("val " + pattern + "???").parse[Source] match
-            case Parsed.Success(Source(List(valDef: m.Defn.Val))) =>
-              editForTupleUnapply(
-                applied,
-                valDef.pats.head,
-                vl.startPos.start,
-              )
-            case _ => simpleType
-
         rhs match
           case t: Tree[?]
               if t.typeOpt.isErroneous && retryType && !tpt.sourcePos.span.isZeroExtent =>
@@ -223,12 +191,7 @@ final class InferredTypeProvider(
                 )
               )
             )
-          case _ =>
-            tpt.tpe match
-              case applied: AppliedType =>
-                tupleType(applied)
-              case _ =>
-                simpleType
+          case _ => simpleType
         end match
       /* `def a[T](param : Int) = param`
        *     turns into
@@ -236,12 +199,21 @@ final class InferredTypeProvider(
        */
       case Some(df @ DefDef(name, _, tpt, rhs)) =>
         def typeNameEdit =
-          val end = tpt.endPos.toLsp
+          /* NOTE: In Scala 3.1.3, `List((1,2)).map((<<a>>,b) => ...)`
+           * turns into `List((1,2)).map((:Inta,b) => ...)`,
+           * because `tpt.SourcePos == df.namePos.startPos`, so we use `df.namePos.endPos` instead
+           * After dropping support for 3.1.3 this can be removed
+           */
+          val end =
+            if tpt.endPos.end > df.namePos.end then tpt.endPos.toLsp
+            else df.namePos.endPos.toLsp
+
           adjustOpt.foreach(adjust => end.setEnd(adjust.adjustedEndPos))
           new TextEdit(
             end,
-            ": " + printType(tpt.tpe),
+            ": " + printType(optDealias(tpt.tpe)),
           )
+        end typeNameEdit
 
         def lastColon =
           var i = tpt.startPos.start
@@ -269,7 +241,7 @@ final class InferredTypeProvider(
         def baseEdit(withParens: Boolean) =
           new TextEdit(
             bind.endPos.toLsp,
-            ": " + printType(body.tpe) + {
+            ": " + printType(optDealias(body.tpe)) + {
               if withParens then ")" else ""
             },
           )
@@ -280,15 +252,12 @@ final class InferredTypeProvider(
            */
           case _ :: (unappl @ UnApply(_, _, patterns)) :: _
               if patterns.size > 1 =>
-            import scala.meta.*
             val firstEnd = patterns(0).endPos.end
             val secondStart = patterns(1).startPos.start
             val hasDot = params
               .text()
               .substring(firstEnd, secondStart)
-              .tokenize
-              .toOption
-              .exists(_.tokens.exists(_.is[T.Comma]))
+              .exists(_ == ',')
             if !hasDot then
               val leftParen = new TextEdit(body.startPos.toLsp, "(")
               leftParen :: baseEdit(withParens = true) :: Nil
@@ -305,7 +274,7 @@ final class InferredTypeProvider(
       case Some(i @ Ident(name)) =>
         val typeNameEdit = new TextEdit(
           i.endPos.toLsp,
-          ": " + printType(i.tpe.widen),
+          ": " + printType(optDealias(i.tpe.widen)),
         )
         typeNameEdit :: imports
 

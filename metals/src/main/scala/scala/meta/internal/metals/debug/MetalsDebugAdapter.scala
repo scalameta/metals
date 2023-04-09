@@ -26,7 +26,7 @@ private[debug] class MetalsDebugAdapter(sourcePathAdapter: SourcePathAdapter) {
     }
   }
 
-  def adaptStackFrameSource(sourcePath: String): Option[AbsolutePath] = {
+  def adaptStackFrameSource(sourcePath: AbsolutePath): Option[AbsolutePath] = {
     sourcePathAdapter.toMetalsPath(sourcePath)
   }
 }

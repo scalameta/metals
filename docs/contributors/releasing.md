@@ -27,12 +27,12 @@ title: Making a release
 
 ### Draft the release notes
 
-You might use `./bin/merged_prs.sc` script to generate merged PRs list
-between two last release tags. It can be run using ammonite:
+You might use the `./bin/merged_prs.sc` script to generate merged PRs list
+between two last release tags. It can be run using scala-cli:
 
 ```
-cs install ammonite
-amm ./bin/merged_prs.sc <tag1> <tag2> "<github_api_token>"
+cs install scala-cli 
+scala-cli ./bin/merged_prs.sc -- <tag1> <tag2> "<github_api_token>"
 ```
 
 It will need a [basic github API token](https://github.com/settings/tokens) (don't need any additional scopes) to run, which may be specified via
@@ -46,7 +46,7 @@ you will need to make sure everything is included there.
 
 ### Update Metals version
 
-- `build.sbt` - update `localSnapshotVersion`
+- `build.sbt` - update `localSnapshotVersion` and `mimaPreviousArtifacts`
 - `.github/ISSUE_TEMPLATE/bug_report.yml` - update `Version of Metals`
 - `./bin/test-release.sh` - remove any unsupported Scala versions and
   add newly supported ones. This will be needed later to test the new release.

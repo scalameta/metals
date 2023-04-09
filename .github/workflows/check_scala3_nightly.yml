@@ -12,7 +12,6 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "17"
-          cache: "sbt"
       - name: "Query maven-central"
         run: |
           sbt 'save-non-published-nightlies versions'
@@ -20,4 +19,4 @@ jobs:
             gh workflow run mtags-auto-release.yml -f scala_version=$version
           done <versions
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

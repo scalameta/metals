@@ -265,6 +265,29 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
   )
 
   check(
+    "triple-quotes-remove-interpolation-custom",
+    """|package a
+       |
+       |object A {
+       |  implicit class ExtStringContext(sc: StringContext) {
+       |     def foo(args: Any*): String = ???
+       |  }
+       |  val str = foo'''this <<is a>> string'''
+       |}
+       |""".stripMargin.replace("'", "\""),
+    s"${StringActions.removeInterpolationTitle}",
+    """|package a
+       |
+       |object A {
+       |  implicit class ExtStringContext(sc: StringContext) {
+       |     def foo(args: Any*): String = ???
+       |  }
+       |  val str = '''this is a string'''
+       |}
+       |""".stripMargin.replace("'", "\""),
+  )
+
+  check(
     "mix-strings-multiline",
     """|package a
        |

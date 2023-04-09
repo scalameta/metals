@@ -48,34 +48,48 @@ final class RunTestCodeLens(
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
     trees: Trees,
+    workspace: AbsolutePath,
 ) extends CodeLens {
 
-  override def isEnabled: Boolean = clientConfig.isDebuggingProvider()
+  override def isEnabled: Boolean =
+    clientConfig.isDebuggingProvider() || clientConfig.isRunProvider()
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
   ): Seq[l.CodeLens] = {
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
-    if (path.isAmmoniteScript || path.isWorksheet) {
-      Seq.empty
-    } else {
-      val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
-      val lenses = for {
-        buildTargetId <- buildTargets.inverseSources(path)
-        buildTarget <- buildTargets.info(buildTargetId)
-        connection <- buildTargets.buildServerOf(buildTargetId)
-        // although hasDebug is already available in BSP capabilities
-        // see https://github.com/build-server-protocol/build-server-protocol/pull/161
-        // most of the bsp servers such as bloop and sbt might not support it.
-        if buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt,
-      } yield {
-        val classes = buildTargetClasses.classesOf(buildTargetId)
-        codeLenses(textDocument, buildTargetId, classes, distance, path)
-      }
+    val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
+    val lenses = for {
+      buildTargetId <- buildTargets.inverseSources(path)
+      buildTarget <- buildTargets.info(buildTargetId)
+      // generate code lenses only for JVM based targets for Scala
+      if buildTarget.asScalaBuildTarget.forall(
+        _.getPlatform == b.ScalaPlatform.JVM
+      )
+      connection <- buildTargets.buildServerOf(buildTargetId)
+      // although hasDebug is already available in BSP capabilities
+      // see https://github.com/build-server-protocol/build-server-protocol/pull/161
+      // most of the bsp servers such as bloop and sbt might not support it.
+    } yield {
+      val classes = buildTargetClasses.classesOf(buildTargetId)
+      if (connection.isScalaCLI && path.isAmmoniteScript) {
+        scalaCliCodeLenses(textDocument, buildTargetId, classes, distance)
+      } else if (
+        buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt
+      ) {
+        codeLenses(
+          textDocument,
+          buildTargetId,
+          classes,
+          distance,
+          path,
+        )
+      } else { Nil }
 
-      lenses.getOrElse(Seq.empty)
     }
+
+    lenses.getOrElse(Seq.empty)
   }
 
   /**
@@ -160,7 +174,11 @@ final class RunTestCodeLens(
           .get(symbol)
           .map(mainCommand(target, _))
           .getOrElse(Nil)
-        val tests = testClasses(target, classes, symbol)
+        val tests =
+          // Currently tests can only be run via DAP
+          if (clientConfig.isDebuggingProvider())
+            testClasses(target, classes, symbol)
+          else Nil
         val fromAnnot = DebugProvider
           .mainFromAnnotation(occurrence, textDocument)
           .flatMap { symbol =>
@@ -174,12 +192,51 @@ final class RunTestCodeLens(
         main ++ tests ++ fromAnnot ++ javaMains
       }
       if commands.nonEmpty
-      range <-
-        occurrence.range
-          .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
-          .toList
+      range <- occurrenceRange(occurrence, distance).toList
       command <- commands
     } yield new l.CodeLens(range, command, null)
+  }
+
+  private def occurrenceRange(
+      occurrence: SymbolOccurrence,
+      distance: TokenEditDistance,
+  ): Option[l.Range] =
+    occurrence.range
+      .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
+
+  private def scalaCliCodeLenses(
+      textDocument: TextDocument,
+      target: BuildTargetIdentifier,
+      classes: BuildTargetClasses.Classes,
+      distance: TokenEditDistance,
+  ): Seq[l.CodeLens] = {
+    val scriptFileName = textDocument.uri.stripSuffix(".sc")
+
+    val expectedMainClass =
+      if (scriptFileName.contains('/')) s"${scriptFileName}_sc."
+      else s"_empty_/${scriptFileName}_sc."
+    val main =
+      classes.mainClasses
+        .get(expectedMainClass)
+        .map(mainCommand(target, _))
+        .getOrElse(Nil)
+
+    val fromAnnotations = textDocument.occurrences.flatMap { occ =>
+      for {
+        sym <- DebugProvider.mainFromAnnotation(occ, textDocument)
+        cls <- classes.mainClasses.get(sym)
+        range <- occurrenceRange(occ, distance)
+      } yield mainCommand(target, cls).map { cmd =>
+        new l.CodeLens(range, cmd, null)
+      }
+    }.flatten
+    fromAnnotations ++ main.map(command =>
+      new l.CodeLens(
+        new l.Range(new l.Position(0, 0), new l.Position(0, 2)),
+        command,
+        null,
+      )
+    )
   }
 
   /**
@@ -220,23 +277,25 @@ final class RunTestCodeLens(
       target: b.BuildTargetIdentifier,
       main: b.ScalaMainClass,
   ): List[l.Command] = {
-    val data = buildTargets
-      .jvmRunEnvironment(target)
+    val data = buildTargetClasses.jvmRunEnvironment
+      .get(target)
       .zip(userConfig().usedJavaBinary) match {
       case None =>
         main.toJson
       case Some((env, javaHome)) =>
-        ExtendedScalaMainClass(main, env, javaHome).toJson
+        ExtendedScalaMainClass(main, env, javaHome, workspace).toJson
     }
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
       sessionParams(target, dataKind, data)
     }
 
-    List(
-      command("run", StartRunSession, params),
-      command("debug", StartDebugSession, params),
-    )
+    if (clientConfig.isDebuggingProvider())
+      List(
+        command("run", StartRunSession, params),
+        command("debug", StartDebugSession, params),
+      )
+    else List(command("run", StartRunSession, params))
   }
 
   private def sessionParams(

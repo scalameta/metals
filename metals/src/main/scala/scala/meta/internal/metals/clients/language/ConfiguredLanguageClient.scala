@@ -88,11 +88,18 @@ final class ConfiguredLanguageClient(
     if (clientConfig.codeLenseRefreshSupport)
       underlying.refreshCodeLenses.thenApply(_ => ())
     else if (
-      clientConfig.isExecuteClientCommandProvider && clientConfig.isDebuggingProvider
+      clientConfig.isExecuteClientCommandProvider &&
+      (clientConfig.isDebuggingProvider || clientConfig.isRunProvider())
     ) {
       val params = ClientCommands.RefreshModel.toExecuteCommandParams()
       CompletableFuture.completedFuture(metalsExecuteClientCommand(params))
     } else CompletableFuture.completedFuture(())
+  }
+
+  override def refreshSemanticTokens(): CompletableFuture[Void] = {
+    if (clientConfig.semanticTokensRefreshSupport()) {
+      underlying.refreshSemanticTokens()
+    } else CompletableFuture.allOf()
   }
 
   override def metalsExecuteClientCommand(
@@ -143,6 +150,7 @@ final class ConfiguredLanguageClient(
     val result = new ShowMessageRequestParams()
     result.setMessage(params.placeHolder)
     result.setActions(params.items.map(item => new MessageActionItem(item.id)))
+    result.setType(MessageType.Info)
     result
   }
 
