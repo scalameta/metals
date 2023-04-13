@@ -37,7 +37,7 @@ functionality.
     <td align="center">Single click</td>
     <td align="center">Single click</td>
     <td align="center">Single click</td>
-    <td align="center">Few steps</td>
+    <td align="center">Single click</td>
   </tr>
   <tr>
     <td>Build import</td>
@@ -135,7 +135,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">Comments</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Document symbols</td>
@@ -177,7 +177,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">Status bar, Input box, Decoration protocol, Did focus</td>
-    <td align="center">Status bar</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
      <td>Organize imports</td>
@@ -198,7 +198,7 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center">❌</td>
+     <td align="center">✅</td>
   </tr>
   <tr>
      <td>Find text in dependency JAR files</td>
