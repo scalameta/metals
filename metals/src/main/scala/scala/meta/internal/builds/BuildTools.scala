@@ -36,7 +36,7 @@ final class BuildTools(
   // Bloop since Metals thinks it's in state that's auto-connectable before the
   // user is even prompted.
   def isAutoConnectable: Boolean = {
-    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade())
+    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || (isBsp && isBazel)
   }
   def isBloop: Boolean = {
     hasJsonFile(workspace.resolve(".bloop"))
