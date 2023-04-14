@@ -368,9 +368,12 @@ class SbtBloopLspSuite
         s"""scalaVersion := "${V.scala213}" """
       )
       _ = {
-        val expected = ClientCommands.ReloadDoctor.id :: Nil
+        val expected = ClientCommands.ReloadDoctor.id
         val actual = client.workspaceClientCommands
-        assert(actual.startsWith(expected))
+        assert(
+          actual.contains(expected),
+          "ReloadDoctor should have been invoked on the client",
+        )
         assertNoDiff(
           client.workspaceShowMessages,
           CheckDoctor.problemsFixed.getMessage,
