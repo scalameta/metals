@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "0.11.12-SNAPSHOT"
+def localSnapshotVersion = "0.11.13-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -230,7 +230,7 @@ lazy val interfaces = project
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     mimaPreviousArtifacts := Set(
-      "org.scalameta" % "mtags-interfaces" % "0.11.11"
+      "org.scalameta" % "mtags-interfaces" % "0.11.12"
     ),
     crossPaths := false,
     libraryDependencies ++= List(
