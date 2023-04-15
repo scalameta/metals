@@ -58,11 +58,12 @@ class SelectionRangeProvider(
           selectionRange.setRange(tree.sourcePos.toLsp)
           selectionRange
         }
+
+      // if cursor is in comment return range in comment4
       val commentRanges = getCommentRanges(pos, path, param.text()).map { x =>
         new SelectionRange():
           setRange(x)
       }.toList
-      // if cursor is in comment return range in comment
 
       (commentRanges ++ bareRanges)
         .reduceRightOption(setParent)
@@ -123,66 +124,33 @@ object SelectionRangeProvider:
       offsetStart: Int,
   ) =
     val cursorStartShifted = cursorStart.start - offsetStart
-    // lspStartOffset.
     val commentList: List[(Int, Int, Position)] = tokenList.collect {
       case x: Comment =>
-        println(
-          s"find Comment \"${x}\" at ${(x.start, x.`end`)} " // :
-        ) // , ${(x.start, x.`end`, x.pos)}
+        // println(s"find Comment \"${x}\" at ${(x.start, x.`end`)} ")
         (x.start, x.`end`, x.pos)
     }
 
-    // WIP: when there are multiple single line comments,select them together
-    val merged = tokenList
-      .foldLeft(List[List[Comment]](List())) { (acc, tok) =>
-        val accRev = acc.reverse
-        val accRevHd = accRev.head
-        val accRevTl = accRev.tail
-        tok match
-          case x: Comment => (accRevHd :+ x) :: accRevTl
-          case x: Trivia => accRevHd :: accRevTl
-          case _ => acc :+ List()
-      }
-      .filter(_.nonEmpty)
-      .reverse
-      .filter(_.length >= 2)
-      .map(x => (x.head.start, x.last.`end`, x.head.pos))
-
-    println("merged: " + merged.map(x => (x._1, x._2)))
-
     val commentWithin =
-      (commentList) // ++ merged)
+      commentList
         .filter((commentStart, commentEnd, _) =>
           commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd
         )
         .map { (commentStart, commentEnd, oldPos) =>
           val oldLsp = oldPos.toLsp
 
-          // val (s, e) = (oldLsp.getStart(), oldLsp.getEnd())
-          // val newS = lsp4j.Position(
-          //   s.getLine() + lspStartOffset.getLine(),
-          //   s.getCharacter() + lspStartOffset.getCharacter(),
-          // )
-
-          // val newE = lsp4j.Position(
-          //   e.getLine() + lspStartOffset.getLine(),
-          //   e.getCharacter() + lspStartOffset.getCharacter(),
-          // )
-
-          // TODO: need to add offset to Position!
+          // TODO: need to add offset to Position in oldPos.input for more efficient impl
           val newPos: Position =
             meta.Position.Range(
-              oldPos.input, // TODO: need to add offset to this!
+              oldPos.input,
               commentStart + offsetStart,
               commentEnd + offsetStart,
             )
-          newPos.toLsp // convert
-          // lsp4j.Range(newS, newE)
+          newPos.toLsp
         }
     commentWithin
   end commentRangesFromTokens
 
-  /** check pos.start,if it is within comment then expand to comment */
+  /** get comments under cursor */
   def getCommentRanges(
       cursor: SourcePosition,
       path: List[tpd.Tree],
