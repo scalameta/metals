@@ -215,10 +215,16 @@ class SymbolIndexBucket(
    * This action is performed when a symbol is queried, to avoid returning incorrect results.
    */
   private def removeOldEntries(symbol: Symbol): Unit = {
+    val exists =
+      (toplevels.get(symbol.value).getOrElse(Set.empty) ++ definitions
+        .get(symbol.value)
+        .map(_.map(_.path))
+        .getOrElse(Set.empty)).filter(_.exists)
+
     toplevels.get(symbol.value) match {
       case None => ()
       case Some(acc) =>
-        val updated = acc.filter(_.exists)
+        val updated = acc.filter(exists(_))
         if (updated.isEmpty) toplevels.remove(symbol.value)
         else toplevels(symbol.value) = updated
     }
@@ -226,7 +232,7 @@ class SymbolIndexBucket(
     definitions.get(symbol.value) match {
       case None => ()
       case Some(acc) =>
-        val updated = acc.filter(_.path.exists)
+        val updated = acc.filter(loc => exists(loc.path))
         if (updated.isEmpty) definitions.remove(symbol.value)
         else definitions(symbol.value) = updated
     }
