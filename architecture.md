@@ -86,16 +86,17 @@ You can find more information about DAP [here](https://github.com/scalacenter/bl
 
 ## MtagsIndexer
 
-MtagsIndexers are the approximate SemanticDB's `TextDocument` generator based on syntax information.
-They are useful when we're interested in symbol name and their locations, and not interested in further information such as their types and document's synthetics.
+MtagsIndexers are primarily designed for symbol indexing, generating approximate SemanticDB `TextDocument` instances based on syntax information. They are particularly useful when we are interested in symbol names and their locations, without requiring further information such as their types or document synthetics.
 
-We use mtags-generated SemanticDB instead of compiler-generated SemanticDB because sometimes we want to rely on symbol index even when the compiler cannot generate SemanticDB: 3rd-party dependencies, not-compilable code, or compilable but not yet compiled code.
+We use Mtags-generated SemanticDB instead of compiler-generated SemanticDB because there are times when we want to rely on a symbol index even if the compiler cannot generate SemanticDB: for example, with 3rd-party dependencies, non-compilable code, or not yet compiled code.
 
-One of the endpoint is `scala.meta.internal.mtags.Mtags` that dispatches to several `MtagsIndexer` implementations.
+The endpoints is `scala.meta.internal.mtags.Mtags`, which dispatches to several MtagsIndexer implementations:
 
-- `ScalaMtags` parses the given Scala file using scalameta's parser.
-  - To see which symbols ScalaMtags extract, the unit tests (`MtagsSuite.scala` and `tests/unit/src/test/resources/mtags`) is a good resource.
-- `ScalaToplevelMtags` **tokenizes** the given Scala file using scalameta, and parse it on Metals side.
-  - We skip extracting nested symbols (such as functions and members defined in toplevel class, trait, and object). We can skip nested symbols because we're not interested in the nested symbols when doing symbol search.
+- `ScalaMtags` parses the provided Scala file using Scalameta's parser.
+  - To see which symbols ScalaMtags extracts, refer to the unit tests (`MtagsSuite.scala` and `tests/unit/src/test/resources/mtags`).
+p `ScalaToplevelMtags` tokenizes the given Scala file using Scalameta, and parses it on the Metals side with custom parser.
+  - To enable fast indexing with a low memory footprint, nested symbols (such as functions and members defined in top-level classes, traits, and objects) are skipped since nested symbols are not of interest when performing symbol search.
+  - See [Fast goto definition with low memory footprint | Metals](https://scalameta.org/metals/blog/2018/12/12/fast-goto-definition) for more details.
   - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
 - `JavaMtags` parses the given Java file using `qdox`.
+- `JavaToplevelMtags` tokenize and parses Java code in the same way as `ScalaToplevelMtags`. We use our own custom tokenizer and parser instead of `qdox` for fast indexing.
