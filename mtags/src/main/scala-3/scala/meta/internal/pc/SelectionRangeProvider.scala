@@ -109,14 +109,8 @@ object SelectionRangeProvider:
   import dotty.tools.dotc.ast.tpd
 
   // overwrites implicit 'implicit def current: Scala213' in scalameta
-  implicit val sca3toplevel: Dialect =
+  implicit val sca3AllowToplevel: Dialect =
     dialects.Scala3.withAllowToplevelTerms(true)
-
-  def sourcePos2SelectionRange(pos: SourcePosition): SelectionRange =
-    new SelectionRange():
-      setRange(
-        pos.toLsp
-      )
 
   def commentRangesFromTokens(
       tokenList: List[Token],
@@ -124,14 +118,13 @@ object SelectionRangeProvider:
       offsetStart: Int,
   ) =
     val cursorStartShifted = cursorStart.start - offsetStart
-    val commentList: List[(Int, Int, Position)] = tokenList.collect {
-      case x: Comment =>
-        // println(s"find Comment \"${x}\" at ${(x.start, x.`end`)} ")
-        (x.start, x.`end`, x.pos)
-    }
 
     val commentWithin =
-      commentList
+      tokenList
+        .collect { case x: Comment =>
+          // println(s"find Comment \"${x}\" at ${(x.start, x.`end`)} ")
+          (x.start, x.`end`, x.pos)
+        }
         .filter((commentStart, commentEnd, _) =>
           commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd
         )
@@ -159,7 +152,7 @@ object SelectionRangeProvider:
     val (treeStart, treeEnd) = path.headOption
       .map(t => (t.sourcePos.start, t.sourcePos.`end`))
       .getOrElse((0, srcText.size))
-    val lspStartOffset = treeStart
+    val startOffset = 0 // should be set to treeStart, but currently set to 0
 
     // only parse comments from first range to reduce computation
     val srcSliced = srcText // .slice(treeStart, treeEnd)
@@ -170,7 +163,7 @@ object SelectionRangeProvider:
     commentRangesFromTokens(
       tokens.toList.flatten,
       cursor,
-      lspStartOffset,
+      startOffset,
     )
   end getCommentRanges
 end SelectionRangeProvider
