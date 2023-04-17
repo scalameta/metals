@@ -25,6 +25,8 @@ trait AdjustLspData {
       adjustPos(range.getEnd),
     )
 
+  def adjustSemanticTokens(tokens: List[Integer]): List[Integer] = tokens
+
   def adjustTextEdits(
       edits: ju.List[TextEdit]
   ): java.util.List[TextEdit] = {
