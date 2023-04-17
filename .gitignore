@@ -52,5 +52,9 @@ website/.cache-loader
 project/metals.sbt
 coursier
 
+# Scala CLI
+
+.scala-build/
+
 # Sourcegraph specific
 index.scip
