@@ -4,6 +4,7 @@ import java.{util => ju}
 
 import scala.annotation.switch
 import scala.collection.mutable.ListBuffer
+import scala.util.matching.Regex
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsers.SoftKeywords
@@ -85,24 +86,14 @@ object SemanticTokensProvider {
       List.empty[Integer].asJava
     } else {
       val tokens = getTokens(isScala3, params.text())
-      val (delta0, cliTokens, tokens0) =
-        initialScalaCliTokens(tokens.toList)
-
       val buffer = ListBuffer.empty[Integer]
-      buffer.addAll(cliTokens)
 
-      var delta = delta0
+      var delta = Line(0, 0)
       var nodesIterator: List[Node] = nodes
-      for (tk <- tokens0) {
-        val (tokenType, tokenModifier, nodesIterator0) =
-          getTypeAndMod(tk, nodesIterator, isScala3)
+      for (tk <- tokens) {
+        val (toAdd, nodesIterator0, delta0) =
+          handleToken(tk, nodesIterator, isScala3, delta)
         nodesIterator = nodesIterator0
-        val (toAdd, delta0) = convertTokensToIntList(
-          tk.text,
-          delta,
-          tokenType,
-          tokenModifier,
-        )
         buffer.addAll(
           toAdd
         )
@@ -124,11 +115,10 @@ object SemanticTokensProvider {
    * returns (SemanticTokenType, SemanticTokenModifier) of @param tk
    */
   private def getTypeAndMod(
-      tk: scala.meta.tokens.Token,
+      tk: Token,
       nodesIterator: List[Node],
       isScala3: Boolean,
-  ): (Int, Int, List[Node]) = {
-
+  ): (Int, Int, List[Node]) =
     tk match {
       case ident: Token.Ident if isOperatorName(ident) =>
         (getTypeId(SemanticTokenTypes.Operator), 0, nodesIterator)
@@ -142,6 +132,36 @@ object SemanticTokensProvider {
       case _ =>
         val (tpe, mod) = typeModOfNonIdentToken(tk, isScala3)
         (tpe, mod, nodesIterator)
+    }
+
+  private def isDocString(str: String) = {
+    str.stripTrailing.split("\n").forall(_.stripLeading().startsWith("*"))
+  }
+
+  private def handleToken(
+      tk: scala.meta.tokens.Token,
+      nodesIterator: List[Node],
+      isScala3: Boolean,
+      delta: Line,
+  ): (List[Integer], List[Node], Line) = {
+    tk match {
+      case comm: Token.Comment if comm.value.startsWith(">") =>
+        val (toAdd, delta0) = makeScalaCliTokens(comm, delta)
+        (toAdd, nodesIterator, delta0)
+      case comm: Token.Comment if isDocString(comm.value) =>
+        val (toAdd, delta0) = makeDocStringTokens(comm, delta)
+        (toAdd, nodesIterator, delta0)
+      case _ =>
+        val (tokenType, tokenModifier, remainingNodes) =
+          getTypeAndMod(tk, nodesIterator, isScala3)
+
+        val (toAdd, delta0) = convertTokensToIntList(
+          tk.text,
+          delta,
+          tokenType,
+          tokenModifier,
+        )
+        (toAdd, remainingNodes, delta0)
     }
   }
 
@@ -289,61 +309,100 @@ object SemanticTokensProvider {
       case _ => false
     }
 
-  def initialScalaCliTokens(
-      tokens: List[Token]
-  ): (Line, List[Integer], List[Token]) = {
-    var delta = Line(0, 0)
+  def makeScalaCliTokens(
+      comm: Token.Comment,
+      initialDelta: Line,
+  ): (List[Integer], Line) = {
+    val cliTokens = getTokens(false, comm.value)
     val buffer = ListBuffer.empty[Integer]
-    val cliTokens = tokens.takeWhile(_.isWhiteSpaceOrComment)
-    val rest = tokens.drop(cliTokens.length)
-    def makeInitialTokens(tk: Token) = {
-      tk match {
-        case comm: Token.Comment if comm.value.startsWith(">") =>
-          val cliTokens = getTokens(false, comm.value)
-          cliTokens.foreach { tk =>
-            val (toAdd, delta0) = tk match {
-              case start: Token.Ident if start.value == ">" =>
-                convertTokensToIntList(
-                  "//>",
-                  delta,
-                  getTypeId(SemanticTokenTypes.Comment),
-                )
-              case using: Token.Ident if using.value == "using" =>
-                convertTokensToIntList(
-                  using.value,
-                  delta,
-                  getTypeId(SemanticTokenTypes.Keyword),
-                )
-              case tk =>
-                val (tpe, mod) = typeModOfNonIdentToken(tk, false)
-                convertTokensToIntList(
-                  tk.text,
-                  delta,
-                  tpe,
-                  mod,
-                )
-            }
-            buffer.addAll(
-              toAdd
-            )
-            delta = delta0
-          }
-        case _ =>
+    var delta = initialDelta
+    cliTokens.foreach { tk =>
+      val (toAdd, delta0) = tk match {
+        case start: Token.Ident if start.value == ">" =>
+          convertTokensToIntList(
+            "//>",
+            delta,
+            getTypeId(SemanticTokenTypes.Comment),
+          )
+        case using: Token.Ident if using.value == "using" =>
+          convertTokensToIntList(
+            using.value,
+            delta,
+            getTypeId(SemanticTokenTypes.Keyword),
+          )
+        case tk =>
           val (tpe, mod) = typeModOfNonIdentToken(tk, false)
-          val (toAdd, delta0) = convertTokensToIntList(
+          convertTokensToIntList(
             tk.text,
             delta,
             tpe,
             mod,
           )
-          buffer.addAll(
-            toAdd
-          )
-          delta = delta0
       }
+      buffer.addAll(
+        toAdd
+      )
+      delta = delta0
     }
-    cliTokens.foreach(makeInitialTokens)
-    (delta, buffer.toList, rest)
+    (buffer.toList, delta)
+  }
+
+  def makeDocStringTokens(
+      comm: Token.Comment,
+      initialDelta: Line,
+  ): (List[Integer], Line) = {
+    val docstring = "/*" + comm.value + "*/"
+    val buffer = ListBuffer.empty[Integer]
+    val reg: Regex = "(@param\\s+\\w+)|(@[a-z]*)|(\\[\\[.*\\]\\])".r
+    val indecesToHighlight =
+      reg
+        .findAllMatchIn(docstring)
+        .map(m =>
+          if (docstring.charAt(m.start) == '@') (m.start, m.end)
+          else (m.start + 2, m.end - 2)
+        )
+        .toList
+    var delta = initialDelta
+    var currIdx = 0
+    indecesToHighlight.foreach { case (start, end) =>
+      val (commentHighlight, commentDelta) =
+        convertTokensToIntList(
+          docstring.substring(currIdx, start),
+          delta,
+          getTypeId(SemanticTokenTypes.Comment),
+        )
+      buffer.addAll(commentHighlight)
+      delta = commentDelta
+      val (tokenType, tokenMod) =
+        docstring.charAt(start) match {
+          case '@' =>
+            (
+              getTypeId(SemanticTokenTypes.Macro),
+              0,
+            )
+          case _ =>
+            (getTypeId(SemanticTokenTypes.String), 0)
+        }
+      val (toAdd, delta0) =
+        convertTokensToIntList(
+          docstring.substring(start, end),
+          delta,
+          tokenType,
+          tokenMod,
+        )
+      buffer.addAll(toAdd)
+      delta = delta0
+      currIdx = end
+    }
+    val (toAdd, delta0) =
+      convertTokensToIntList(
+        docstring.substring(currIdx, docstring.length),
+        delta,
+        getTypeId(SemanticTokenTypes.Comment),
+      )
+    buffer.addAll(toAdd)
+    delta = delta0
+    (buffer.toList, delta)
   }
 
 }
