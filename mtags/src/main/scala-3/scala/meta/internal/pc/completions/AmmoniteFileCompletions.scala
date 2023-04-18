@@ -80,7 +80,6 @@ object AmmoniteFileCompletions:
           else Nil
         Files
           .list(currentPath)
-          .toList
           .asScala
           .toList
           .filter(_.getFileName.toString.stripSuffix(".sc") != fileName)
