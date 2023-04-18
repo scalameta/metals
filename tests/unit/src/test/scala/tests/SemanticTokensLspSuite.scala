@@ -73,15 +73,16 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
        |<<object>>/*keyword*/ <<A>>/*class*/ {}
        |""".stripMargin,
   )
-  
+
   check(
-    "scaladoc",
+    "docstring",
     """|<<object>>/*keyword*/ <<A>>/*class*/ {
        |  <</**>>/*comment*/
        |<<    * Some example Scaladoc>>/*comment*/
-       |<<    * >>/*comment*/<<@param xs>>/*macro*/<< is [[>>/*comment*/<<scala.collection.immutable.List>>/*string*/<<]]>>/*comment*/
-       |<<    * >>/*comment*/<<@return>>/*macro*/<< the same list>>/*comment*/
-       |<<    * >>/*comment*/<<@note>>/*macro*/<< This is a note>>/*comment*/
+       |<<    * >>/*comment*/<<@param>>/*keyword*/<< >>/*comment*/<<xs>>/*variable,readonly*/<< is [[>>/*comment*/<<scala.collection.immutable.List>>/*string*/<<]]>>/*comment*/
+       |<<    * >>/*comment*/<<@throws>>/*keyword*/<< >>/*comment*/<<java.util.Exception>>/*class*/<< is [[>>/*comment*/<<scala.collection.immutable.List>>/*string*/<<]]>>/*comment*/
+       |<<    * >>/*comment*/<<@return>>/*keyword*/<< the same list>>/*comment*/
+       |<<    * >>/*comment*/<<@note>>/*keyword*/<< This is a note>>/*comment*/
        |<<    */>>/*comment*/
        |  <<def>>/*keyword*/ <<m>>/*method,definition*/(<<xs>>/*parameter,declaration,readonly*/: <<List>>/*type*/[<<Int>>/*class,abstract*/]): <<List>>/*type*/[<<Int>>/*class,abstract*/] = <<xs>>/*parameter,readonly*/
        |}

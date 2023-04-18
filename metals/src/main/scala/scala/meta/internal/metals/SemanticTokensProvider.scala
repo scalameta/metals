@@ -135,7 +135,7 @@ object SemanticTokensProvider {
     }
 
   private def isDocString(str: String) = {
-    str.stripTrailing.split("\n").forall(_.stripLeading().startsWith("*"))
+    str.trim.split("\n").forall(_.trim.startsWith("*"))
   }
 
   private def handleToken(
@@ -351,48 +351,34 @@ object SemanticTokensProvider {
       comm: Token.Comment,
       initialDelta: Line,
   ): (List[Integer], Line) = {
-    val docstring = "/*" + comm.value + "*/"
+    val docstring = comm.toString()
     val buffer = ListBuffer.empty[Integer]
-    val reg: Regex = "(@param\\s+\\w+)|(@[a-z]*)|(\\[\\[.*\\]\\])".r
-    val indecesToHighlight =
-      reg
-        .findAllMatchIn(docstring)
-        .map(m =>
-          if (docstring.charAt(m.start) == '@') (m.start, m.end)
-          else (m.start + 2, m.end - 2)
-        )
-        .toList
+
+    val docstringTokens = DocstringToken.getDocstringTokens(docstring)
     var delta = initialDelta
     var currIdx = 0
-    indecesToHighlight.foreach { case (start, end) =>
+    docstringTokens.foreach { tk =>
+      // Comment highlight between docstring tokens
       val (commentHighlight, commentDelta) =
         convertTokensToIntList(
-          docstring.substring(currIdx, start),
+          docstring.substring(currIdx, tk.start),
           delta,
           getTypeId(SemanticTokenTypes.Comment),
         )
       buffer.addAll(commentHighlight)
       delta = commentDelta
-      val (tokenType, tokenMod) =
-        docstring.charAt(start) match {
-          case '@' =>
-            (
-              getTypeId(SemanticTokenTypes.Macro),
-              0,
-            )
-          case _ =>
-            (getTypeId(SemanticTokenTypes.String), 0)
-        }
-      val (toAdd, delta0) =
+      // Highlight for docstring token (@param, @throws, etc.)
+      val (tokenHighlight, tokenDelta) =
         convertTokensToIntList(
-          docstring.substring(start, end),
+          tk.text,
           delta,
-          tokenType,
-          tokenMod,
+          tk.tokenType,
+          tk.tokenModifier,
         )
-      buffer.addAll(toAdd)
-      delta = delta0
-      currIdx = end
+
+      buffer.addAll(tokenHighlight)
+      delta = tokenDelta
+      currIdx = tk.end
     }
     val (toAdd, delta0) =
       convertTokensToIntList(
@@ -405,4 +391,87 @@ object SemanticTokensProvider {
     (buffer.toList, delta)
   }
 
+  case class DocstringToken(
+      start: Int,
+      end: Int,
+      text: String,
+      tokenType: Integer,
+      tokenModifier: Integer,
+  )
+
+  object DocstringToken {
+
+    val paramOrThrows: String = "(@param|@tparam|@throws)\\s+([\\w.]+)"
+    val apiLink: String = "\\[\\[(.*)\\]\\]"
+    val other: String = "(@[a-zA-Z]+)"
+    val reg: Regex = s"$paramOrThrows|$apiLink|$other".r
+
+    def getDocstringTokens(docstring: String): List[DocstringToken] =
+      reg
+        .findAllMatchIn(docstring)
+        .flatMap(fromMatch)
+        .toList
+
+    def fromMatch(m: Regex.Match): List[DocstringToken] = {
+      m.subgroups match {
+        // @throws exception
+        case "@throws" :: param :: _ if param != null =>
+          val keywordToken = DocstringToken(
+            m.start(1),
+            m.end(1),
+            "@throws",
+            getTypeId(SemanticTokenTypes.Keyword),
+            0,
+          )
+          val paramToken = DocstringToken(
+            m.start(2),
+            m.end(2),
+            param,
+            getTypeId(SemanticTokenTypes.Class),
+            0,
+          )
+          List(keywordToken, paramToken)
+        // @param param | @tparam param
+        case keyword :: param :: _ if param != null && keyword != null =>
+          val keywordToken = DocstringToken(
+            m.start(1),
+            m.end(1),
+            keyword,
+            getTypeId(SemanticTokenTypes.Keyword),
+            0,
+          )
+          val paramToken = DocstringToken(
+            m.start(2),
+            m.end(2),
+            param,
+            getTypeId(SemanticTokenTypes.Variable),
+            1 << getModifierId(SemanticTokenModifiers.Readonly),
+          )
+          List(keywordToken, paramToken)
+        // [[apiLink]]
+        case _ :: _ :: apiLink :: _ if apiLink != null =>
+          List(
+            DocstringToken(
+              m.start(3),
+              m.end(3),
+              m.group(3),
+              getTypeId(SemanticTokenTypes.String),
+              0,
+            )
+          )
+        // @return | @note | ...
+        case _ :: _ :: _ :: other :: _ if other != null =>
+          List(
+            DocstringToken(
+              m.start(4),
+              m.end(4),
+              m.group(4),
+              getTypeId(SemanticTokenTypes.Keyword),
+              0,
+            )
+          )
+        case _ => List.empty
+      }
+    }
+  }
 }
