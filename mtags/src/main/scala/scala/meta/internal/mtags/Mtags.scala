@@ -17,23 +17,19 @@ final class Mtags {
       dialect: Dialect = dialects.Scala213
   ): List[String] = {
     val language = input.toLanguage
-    if (language.isJava) {
-      // NOTE(olafur): this is incorrect in the following cases:
-      // - the source file has multiple top-level classes, in which case we
-      //   don't index the package private classes.
-      // - if the path is not relative to the source directory, in which case
-      //   the produced symbol is incorrect.
-      val toplevelClass = input.path.stripPrefix("/").stripSuffix(".java") + "#"
-      List(toplevelClass)
-    } else if (language.isScala) {
-      addLines(language, input.text)
+
+    if (language.isJava || language.isScala) {
       val mtags =
-        new ScalaToplevelMtags(
-          input,
-          includeInnerClasses = false,
-          includeMembers = false,
-          dialect
-        )
+        if (language.isJava)
+          new JavaToplevelMtags(input)
+        else
+          new ScalaToplevelMtags(
+            input,
+            includeInnerClasses = false,
+            includeMembers = false,
+            dialect
+          )
+      addLines(language, input.text)
       mtags
         .index()
         .occurrences

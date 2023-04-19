@@ -1,27 +1,24 @@
 //> using scala "3.2.2"
 //> using dep "org.kohsuke:github-api:1.314"
 //> using dep "com.lihaoyi::os-lib:0.9.1"
-//> using dep "com.lihaoyi::mainargs:0.4.0"
 //> using options "-Wunused:all", "-deprecation"
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
-import mainargs.main
 import org.kohsuke.github.GitHubBuilder
 
 import java.text.SimpleDateFormat
 import java.util.Date
 
-val defaultToken = sys.env.get("GITHUB_TOKEN")
 val codename = "Aluminium"
 
 @main
 def main(
     firstTag: String,
     lastTag: String,
-    githubToken: Seq[String] = defaultToken.toSeq,
+    githubToken: String,
 ) = {
   val author = os.proc(List("git", "config", "user.name")).call().out.trim()
   val commits = os
@@ -51,14 +48,10 @@ def main(
     "--pretty=format:%H",
   )
 
-  val token = githubToken.headOption.getOrElse {
-    throw new Exception("No github API token was specified")
-  }
-
   val output = os.proc(command).call().out.trim()
 
   val gh = new GitHubBuilder()
-    .withOAuthToken(token)
+    .withOAuthToken(githubToken)
     .build()
 
   val foundPRs = mutable.Set.empty[Int]

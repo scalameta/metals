@@ -20,6 +20,10 @@ import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.ReportLevel
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
@@ -42,6 +46,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
@@ -50,7 +55,8 @@ case class ScalaPresentationCompiler(
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
-    folderUri: Option[Path] = None
+    folderUri: Option[Path] = None,
+    reportsLevel: ReportLevel = ReportLevel.Info
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -59,6 +65,14 @@ case class ScalaPresentationCompiler(
 
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
+
+  implicit val reportContex: ReportContext =
+    folderUri
+      .map(new StdReportContext(_, reportsLevel))
+      .getOrElse(EmptyReportContext)
+
+  override def withReportsLoggerLevel(level: String): PresentationCompiler =
+    copy(reportsLevel = ReportLevel.fromString(level))
 
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)

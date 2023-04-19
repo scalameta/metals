@@ -173,6 +173,9 @@ class SymbolIndexBucket(
       querySymbol: Symbol,
       symbol: Symbol
   ): List[SymbolDefinition] = {
+
+    removeOldEntries(symbol)
+
     if (!definitions.contains(symbol.value)) {
       // Fallback 1: enter the toplevel symbol definition
       val toplevel = symbol.toplevel
@@ -206,6 +209,35 @@ class SymbolIndexBucket(
         .getOrElse(List.empty)
     }
   }
+
+  /**
+   * Remove possible old, outdated entries from the toplevels and definitions.
+   * This action is performed when a symbol is queried, to avoid returning incorrect results.
+   */
+  private def removeOldEntries(symbol: Symbol): Unit = {
+    val exists =
+      (toplevels.get(symbol.value).getOrElse(Set.empty) ++ definitions
+        .get(symbol.value)
+        .map(_.map(_.path))
+        .getOrElse(Set.empty)).filter(_.exists)
+
+    toplevels.get(symbol.value) match {
+      case None => ()
+      case Some(acc) =>
+        val updated = acc.filter(exists(_))
+        if (updated.isEmpty) toplevels.remove(symbol.value)
+        else toplevels(symbol.value) = updated
+    }
+
+    definitions.get(symbol.value) match {
+      case None => ()
+      case Some(acc) =>
+        val updated = acc.filter(loc => exists(loc.path))
+        if (updated.isEmpty) definitions.remove(symbol.value)
+        else definitions(symbol.value) = updated
+    }
+  }
+
   // similar as addSourceFile except indexes all global symbols instead of
   // only non-trivial toplevel symbols.
   private def addMtagsSourceFile(file: AbsolutePath): Unit = {

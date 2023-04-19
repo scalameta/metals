@@ -7,6 +7,7 @@ import scala.meta._
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.io.AbsolutePath
@@ -138,9 +139,11 @@ final class Trees(
     } catch {
       // if the parsers breaks we should not throw the exception further
       case _: StackOverflowError =>
-        val newPathCopy = reports.unsanitized.createReport(
-          s"stackoverflow_${path.filename}",
-          text,
+        val newPathCopy = reports.unsanitized.create(
+          Report(
+            s"stackoverflow_${path.filename}",
+            text,
+          )
         )
         val message =
           s"Could not parse $path, saved the current snapshot to ${newPathCopy}"

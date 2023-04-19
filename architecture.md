@@ -101,3 +101,20 @@ The main code for debugging resides in `scala.meta.internal.metals.debug` packag
 DebugProvider sets up the communication between the debug server process started by the build server and the client. This communication is handled in [DebugProxy.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/debug/DebugProxy.scala) which translates some of the messages in order to enrich them with the information from Metals itself.
 
 You can find more information about DAP [here](https://github.com/scalacenter/bloop/blob/main/docs/debug-adapter.md)
+
+## MtagsIndexer
+
+MtagsIndexers are primarily designed for symbol indexing, generating approximate SemanticDB `TextDocument` instances based on syntax information. They are particularly useful when we are interested in symbol names and their locations, without requiring further information such as their types or document synthetics.
+
+We use Mtags-generated SemanticDB instead of compiler-generated SemanticDB because there are times when we want to rely on a symbol index even if the compiler cannot generate SemanticDB: for example, with 3rd-party dependencies, non-compilable code, or not yet compiled code.
+
+The endpoints is `scala.meta.internal.mtags.Mtags`, which dispatches to several MtagsIndexer implementations:
+
+- `ScalaMtags` parses the provided Scala file using Scalameta's parser.
+  - To see which symbols ScalaMtags extracts, refer to the unit tests (`MtagsSuite.scala` and `tests/unit/src/test/resources/mtags`).
+p `ScalaToplevelMtags` tokenizes the given Scala file using Scalameta, and parses it on the Metals side with custom parser.
+  - To enable fast indexing with a low memory footprint, nested symbols (such as functions and members defined in top-level classes, traits, and objects) are skipped since nested symbols are not of interest when performing symbol search.
+  - See [Fast goto definition with low memory footprint | Metals](https://scalameta.org/metals/blog/2018/12/12/fast-goto-definition) for more details.
+  - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
+- `JavaMtags` parses the given Java file using `qdox`.
+- `JavaToplevelMtags` tokenize and parses Java code in the same way as `ScalaToplevelMtags`. We use our own custom tokenizer and parser instead of `qdox` for fast indexing.

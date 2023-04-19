@@ -4,27 +4,15 @@ import java.nio.file.Path
 
 object LoggerReporter extends Reporter {
 
-  override def createReport(
-      name: String,
-      text: String,
-  ): Option[Path] = {
-    scribe.info(s"Report $name: $text")
+  override def create(report: => Report, ifVerbose: Boolean): Option[Path] = {
+    scribe.info(s"Report ${report.name}: ${report.fullText}")
     None
   }
 
-  override def createReport(
-      name: String,
-      text: String,
-      e: Throwable,
-  ): Option[Path] = {
-    scribe.info(s"""|Report $name: $text
-                    |Error: ${e.getMessage()}""".stripMargin)
-    None
-  }
+  override def cleanUpOldReports(maxReportsNumber: Int): List[ReportFile] =
+    List()
 
-  override def cleanUpOldReports(maxReportsNumber: Int): List[Report] = List()
-
-  override def getReports(): List[Report] = List()
+  override def getReports(): List[ReportFile] = List()
 
   override def deleteAll(): Unit = {}
 }

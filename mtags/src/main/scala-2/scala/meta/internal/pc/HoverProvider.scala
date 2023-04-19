@@ -3,12 +3,16 @@ package scala.meta.internal.pc
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 
+import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 
-class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
+class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
+    reportContext: ReportContext
+) {
   import compiler._
 
   def hover(): Option[HoverSignature] = params match {
@@ -39,6 +43,35 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         val tree = typedHoverTreeAt(pos, unit)
         (pos, tree)
     }
+
+    def report = {
+      val hasErroneousType =
+        if (tree.tpe != null) tree.tpe.isErroneous
+        else "type null"
+      val fileName = params.uri().toString()
+      val posId =
+        if (tree.pos.isDefined) tree.pos.start
+        else pos.start
+
+      Report(
+        "empty-hover-scala2",
+        s"""|$fileName
+            |pos: ${pos.toLsp}
+            |
+            |is error: $hasErroneousType
+            |symbol: ${tree.symbol}
+            |tpe: ${tree.tpe}
+            |
+            |tree:
+            |$tree
+            |
+            |full tree:
+            |${unit.body}
+            |""".stripMargin,
+        s"$fileName::$posId"
+      )
+    }
+
     tree match {
       case i @ Import(_, _) =>
         for {
@@ -62,14 +95,23 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
             seenFromType(tree, symbol),
             expanded.tpe,
             pos,
-            expanded.pos
+            expanded.pos,
+            Some(report)
           )
         } else {
           for {
             sym <- Option(tree.symbol)
             tpe <- Option(tree.tpe)
             seenFrom = seenFromType(tree, sym)
-            hover <- toHover(sym, sym.keyString, seenFrom, tpe, pos, tree.pos)
+            hover <- toHover(
+              sym,
+              sym.keyString,
+              seenFrom,
+              tpe,
+              pos,
+              tree.pos,
+              Some(report)
+            )
           } yield hover
         }
       case UnApply(fun, _) if fun.symbol != null =>
@@ -79,7 +121,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           seenFromType(tree, fun.symbol),
           tree.tpe,
           pos,
-          pos
+          pos,
+          Some(report)
         )
       // Def, val or val definition, example `val x: Int = 1`
       // Matches only if the cursor is over the definition name.
@@ -96,7 +139,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           symbol.info,
           symbol.info,
           pos,
-          v.pos
+          v.pos,
+          Some(report)
         )
       // Bound variable in a pattern match, example `head` in `case head :: tail =>`
       case _: Bind =>
@@ -107,7 +151,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           seenFrom = symbol.info,
           tpe = symbol.info,
           pos = pos,
-          range = pos
+          range = pos,
+          Some(report)
         )
       case _: Literal if params.isInstanceOf[RangeParams] =>
         val symbol = tree.symbol
@@ -117,7 +162,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           seenFrom = null,
           tpe = tree.tpe,
           pos = pos,
-          range = pos
+          range = pos,
+          Some(report)
         )
       case _ =>
         // Don't show hover for non-identifiers.
@@ -138,70 +184,80 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       seenFrom: Type,
       tpe: Type,
       pos: Position,
-      range: Position
+      range: Position,
+      report: => Option[Report] = None
   ): Option[HoverSignature] = {
-    if (tpe == null || tpe.isErroneous || tpe == NoType) None
-    else if (
-      pos.start != pos.end && (symbol == null || symbol == NoSymbol || symbol.isErroneous)
-    ) {
-      val context = doLocateContext(pos)
-      val history = new ShortenedNames(
-        lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
-      )
-      val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
-      val lspRange = if (range.isRange) Some(range.toLsp) else None
-      Some(new ScalaHover(expressionType = Some(prettyType), range = lspRange))
-    } else if (symbol == null || tpe.typeSymbol.isAnonymousClass) None
-    else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
-      Some(
-        new ScalaHover(
-          expressionType = Some(
-            s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
+    val result =
+      if (tpe == null || tpe.isErroneous || tpe == NoType) None
+      else if (
+        pos.start != pos.end && (symbol == null || symbol == NoSymbol || symbol.isErroneous)
+      ) {
+        val context = doLocateContext(pos)
+        val history = new ShortenedNames(
+          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
+        )
+        val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
+        val lspRange = if (range.isRange) Some(range.toLsp) else None
+        Some(
+          new ScalaHover(expressionType = Some(prettyType), range = lspRange)
+        )
+      } else if (symbol == null || tpe.typeSymbol.isAnonymousClass) None
+      else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
+        Some(
+          new ScalaHover(
+            expressionType = Some(
+              s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
+            )
           )
         )
-      )
-    } else {
-      val context = doLocateContext(pos)
-      val history = new ShortenedNames(
-        lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
-      )
-      val symbolInfo =
-        if (seenFrom.isErroneous) symbol.info
-        else seenFrom
-      val printer = new SignaturePrinter(
-        symbol,
-        history,
-        symbolInfo.widen,
-        includeDocs = true
-      )
-      val name =
-        if (symbol.isConstructor) "this"
-        else symbol.name.decoded
-      val flags = List(symbolFlagString(symbol), keyword, name)
-        .filterNot(_.isEmpty)
-        .mkString(" ")
-      val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
-      val macroSuffix =
-        if (symbol.isMacro) " = macro"
-        else ""
-      val prettySignature = printer.defaultMethodSignature(flags) + macroSuffix
-      val docstring =
-        if (metalsConfig.isHoverDocumentationEnabled) {
-          symbolDocumentation(symbol).fold("")(_.docstring())
-        } else {
-          ""
-        }
-      Some(
-        ScalaHover(
-          expressionType = Some(prettyType),
-          symbolSignature = Some(prettySignature),
-          docstring = Some(docstring),
-          forceExpressionType =
-            pos.start != pos.end || !prettySignature.endsWith(prettyType),
-          range = if (range.isRange) Some(range.toLsp) else None
+      } else {
+        val context = doLocateContext(pos)
+        val history = new ShortenedNames(
+          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
         )
-      )
+        val symbolInfo =
+          if (seenFrom.isErroneous) symbol.info
+          else seenFrom
+        val printer = new SignaturePrinter(
+          symbol,
+          history,
+          symbolInfo.widen,
+          includeDocs = true
+        )
+        val name =
+          if (symbol.isConstructor) "this"
+          else symbol.name.decoded
+        val flags = List(symbolFlagString(symbol), keyword, name)
+          .filterNot(_.isEmpty)
+          .mkString(" ")
+        val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
+        val macroSuffix =
+          if (symbol.isMacro) " = macro"
+          else ""
+        val prettySignature =
+          printer.defaultMethodSignature(flags) + macroSuffix
+        val docstring =
+          if (metalsConfig.isHoverDocumentationEnabled) {
+            symbolDocumentation(symbol).fold("")(_.docstring())
+          } else {
+            ""
+          }
+        Some(
+          ScalaHover(
+            expressionType = Some(prettyType),
+            symbolSignature = Some(prettySignature),
+            docstring = Some(docstring),
+            forceExpressionType =
+              pos.start != pos.end || !prettySignature.endsWith(prettyType),
+            range = if (range.isRange) Some(range.toLsp) else None
+          )
+        )
+      }
+
+    if (result.isEmpty) {
+      report.foreach(reportContext.unsanitized.create(_, ifVerbose = true))
     }
+    result
   }
 
   def symbolFlagString(sym: Symbol): String = {
