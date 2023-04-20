@@ -256,25 +256,15 @@ class MetalsGlobal(
       this(string + ".", string)
   }
 
-  private def backtickify(tpe: Type): Type = {
-    def backtickifySymbol(sym: Symbol) =
-      if (
-        Identifier.needsBacktick(sym.name.decoded)
-        && sym.owner != definitions.ScalaPackageClass
-      ) {
-        val name0: sym.NameType = sym.rawname
-        val name: Name = name0.newName(Identifier.backtickWrap(name0))
-        sym.setName(name)
-      } else sym
-
-    tpe match {
-      case TypeRef(p, sym, args) =>
-        TypeRef(backtickify(p), backtickifySymbol(sym), args.map(backtickify))
-      case SingleType(tpe, sym) =>
-        SingleType(backtickify(tpe), backtickifySymbol(sym))
-      case _ => tpe
-    }
-  }
+  private def backtickify(sym: Symbol) =
+    if (
+      Identifier.needsBacktick(sym.name.decoded)
+      && sym.owner != definitions.ScalaPackageClass
+    ) {
+      val name0: sym.NameType = sym.rawname
+      val name: Name = name0.newName(Identifier.backtickWrap(name0))
+      sym.setName(name)
+    } else sym
 
   /**
    * Shortens fully qualified package prefixes to make type signatures easier to read.
@@ -293,8 +283,13 @@ class MetalsGlobal(
       isVisited += key
       val result = tpe match {
         case TypeRef(pre, sym, args) =>
+          def backtickifiedSymbol = backtickify(sym)
           if (history.isSymbolInScope(sym, pre)) {
-            TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+            TypeRef(
+              NoPrefix,
+              backtickifiedSymbol,
+              args.map(arg => loop(arg, None))
+            )
           } else {
             val ownerSymbol = pre.termSymbol
             def hasConflictingMembersInScope =
@@ -319,7 +314,7 @@ class MetalsGlobal(
               case Some(rename) if canRename(rename, ownerSymbol) =>
                 TypeRef(
                   new PrettyType(rename.toString),
-                  sym,
+                  backtickifiedSymbol,
                   args.map(arg => loop(arg, None))
                 )
               case _ =>
@@ -344,18 +339,22 @@ class MetalsGlobal(
                       loop(tpe.dealias, name)
                     } else if (history.owners(pre.typeSymbol)) {
                       if (history.nameResolvesToSymbol(sym.name, sym)) {
-                        TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+                        TypeRef(
+                          NoPrefix,
+                          backtickifiedSymbol,
+                          args.map(arg => loop(arg, None))
+                        )
                       } else {
                         TypeRef(
                           ThisType(pre.typeSymbol),
-                          sym,
+                          backtickifiedSymbol,
                           args.map(arg => loop(arg, None))
                         )
                       }
                     } else {
                       TypeRef(
                         loop(pre, Some(ShortName(sym))),
-                        sym,
+                        backtickifiedSymbol,
                         args.map(arg => loop(arg, None))
                       )
                     }
@@ -363,6 +362,7 @@ class MetalsGlobal(
             }
           }
         case SingleType(pre, sym) =>
+          def backtickifiedSymbol = backtickify(sym)
           if (sym.hasPackageFlag || sym.isPackageObjectOrClass) {
             val dotSyntaxFriendlyName = name.map { name0 =>
               if (name0.symbol.isStatic) name0
@@ -379,15 +379,19 @@ class MetalsGlobal(
               }
             }
             if (history.tryShortenName(dotSyntaxFriendlyName)) NoPrefix
-            else tpe
+            else SingleType(pre, backtickifiedSymbol)
           } else {
-            if (history.isSymbolInScope(sym, pre)) SingleType(NoPrefix, sym)
+            if (history.isSymbolInScope(sym, pre))
+              SingleType(NoPrefix, backtickifiedSymbol)
             else {
               pre match {
                 case ThisType(psym) if history.isSymbolInScope(psym, pre) =>
-                  SingleType(NoPrefix, sym)
+                  SingleType(NoPrefix, backtickifiedSymbol)
                 case _ =>
-                  SingleType(loop(pre, Some(ShortName(sym))), sym)
+                  SingleType(
+                    loop(pre, Some(ShortName(sym))),
+                    backtickifiedSymbol
+                  )
               }
             }
           }
@@ -469,7 +473,7 @@ class MetalsGlobal(
 
     longType match {
       case ThisType(_) => longType
-      case _ => backtickify(loop(longType, None))
+      case _ => loop(longType, None)
     }
   }
 
