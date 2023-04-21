@@ -38,7 +38,7 @@ import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 import org.eclipse.lsp4j.services.LanguageClient
 
 /**
- * An actively running and initialized BSP connection.
+ * An actively running and initialized BSP connection
  */
 class BuildServerConnection private (
     reestablishConnection: () => Future[
