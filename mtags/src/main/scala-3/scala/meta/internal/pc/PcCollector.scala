@@ -139,6 +139,14 @@ abstract class PcCollector[T](
   // First identify the symbol we are at, comments identify @@ as current cursor position
   def soughtSymbols(path: List[Tree]): Option[(Set[Symbol], SourcePosition)] =
     val sought = path match
+      /* reference of an extension paramter
+       * extension [EF](<<xs>>: List[EF])
+       *   def double(ys: List[EF]) = <<x@@s>> ++ ys
+       */
+      case (id: Ident) :: _
+          if id.symbol
+            .is(Flags.Param) && id.symbol.owner.is(Flags.ExtensionMethod) =>
+        Some(findAllExtensionParamSymbols(id.sourcePos, id.name, id.symbol))
       /* simple identifier:
        * val a = val@@ue + value
        */
@@ -204,45 +212,122 @@ abstract class PcCollector[T](
           .selector(pos.span)
           .map(sym => (symbolAlternatives(sym), sym.sourcePos))
 
-      case _ =>
-        None
+      case _ => None
 
     sought match
-      case Some(value) => sought
-      case None =>
-        // Fallback check for extension method parameter
-        def collectExtMethods(
-            acc: Set[(Symbol, SourcePosition)],
-            tree: untpd.Tree,
-        ) =
-          tree match
-            case ExtMethods(paramss, _) =>
-              acc ++ paramss
-                .flatMap(
-                  _.map(p =>
-                    (
-                      p.symbol,
-                      p.namePos,
-                    )
-                  )
-                )
-                .toSet
-            case _ => acc
-        val traverser =
-          new untpd.UntypedDeepFolder[Set[(Symbol, SourcePosition)]](
-            collectExtMethods
-          )
-        val extParams: Set[(Symbol, SourcePosition)] =
-          traverser(Set.empty[(Symbol, SourcePosition)], unit.untpdTree)
-        extParams.collectFirst {
-          case (sym, symPos)
-              if symPos.span.contains(
-                pos.span
-              ) && sym != NoSymbol && !sym.isError =>
-            (symbolAlternatives(sym), symPos)
-        }
-    end match
+      case None => seekInExtensionParameters()
+      case _ => sought
+
   end soughtSymbols
+
+  private def findAllExtensionParamSymbols(
+      pos: SourcePosition,
+      name: Name,
+      sym: Symbol,
+  ) =
+    def collectMethods(acc: List[untpd.Tree], tree: untpd.Tree) =
+      tree match
+        case ExtMethods(paramss, methods)
+            if methods.exists(_.span.contains(pos.span)) =>
+          methods
+        case _ => acc
+    val traverser =
+      new untpd.UntypedDeepFolder[List[untpd.Tree]](
+        collectMethods
+      )
+    val methods: List[untpd.Tree] =
+      traverser(
+        List.empty[untpd.Tree],
+        unit.untpdTree,
+      )
+    val default = (symbolAlternatives(sym), pos)
+    if methods.isEmpty then default
+    else
+      collectAllExtensionParamSymbols(
+        unit.tpdTree,
+        ExtensionParamOccurence(name, pos, sym, methods),
+      ).getOrElse(default)
+  end findAllExtensionParamSymbols
+
+  private def seekInExtensionParameters() =
+    def collectExtParamsOccurences(
+        acc: Set[ExtensionParamOccurence],
+        tree: untpd.Tree,
+    ) =
+      def collectParams(methods: List[untpd.Tree])(
+          acc: Set[ExtensionParamOccurence],
+          tree: untpd.Tree,
+      ): Set[ExtensionParamOccurence] =
+        tree match
+          case v: untpd.ValOrTypeDef if (v.nameSpan.contains(pos.span)) =>
+            acc + ExtensionParamOccurence(v.name, v.namePos, v.symbol, methods)
+          case i: untpd.Ident if (i.sourcePos.span.contains(pos.span)) =>
+            acc + ExtensionParamOccurence(
+              i.name,
+              i.sourcePos,
+              i.symbol,
+              methods,
+            )
+          case _ => acc
+
+      tree match
+        case ExtMethods(paramss, methods) =>
+          acc ++
+            paramss.flatMap(_.flatMap {
+              val traverser =
+                new untpd.UntypedDeepFolder[Set[ExtensionParamOccurence]](
+                  collectParams(methods)
+                )
+              traverser(Set.empty, _)
+            })
+        case _ => acc
+    end collectExtParamsOccurences
+
+    val traverser =
+      new untpd.UntypedDeepFolder[Set[ExtensionParamOccurence]](
+        collectExtParamsOccurences
+      )
+    val occurrences: Set[ExtensionParamOccurence] =
+      traverser(
+        Set.empty[ExtensionParamOccurence],
+        unit.untpdTree,
+      )
+    occurrences.headOption.flatMap(
+      collectAllExtensionParamSymbols(
+        path.headOption.getOrElse(unit.tpdTree),
+        _,
+      )
+    )
+  end seekInExtensionParameters
+
+  private def collectAllExtensionParamSymbols(
+      tree: tpd.Tree,
+      occurrence: ExtensionParamOccurence,
+  ): Option[(Set[Symbol], SourcePosition)] =
+    occurrence match
+      case ExtensionParamOccurence(_, namePos, symbol, _)
+          if symbol != NoSymbol && !symbol.isError && !symbol.owner.is(
+            Flags.ExtensionMethod
+          ) =>
+        Some((symbolAlternatives(symbol), namePos))
+      case ExtensionParamOccurence(name, namePos, _, methods) =>
+        val symbols =
+          for
+            method <- methods.toSet
+            symbol <-
+              Interactive.pathTo(tree, method.span) match
+                case (d: DefDef) :: _ =>
+                  d.paramss.flatten.collect {
+                    case param if param.name.decoded == name.decoded =>
+                      param.symbol
+                  }
+                case _ => Set.empty[Symbol]
+            if (symbol != NoSymbol && !symbol.isError)
+            withAlt <- symbolAlternatives(symbol)
+          yield withAlt
+        if symbols.nonEmpty then Some((symbols, namePos)) else None
+  end collectAllExtensionParamSymbols
+
   def result(): List[T] =
     params match
       case _: OffsetParams => resultWithSought()
@@ -514,3 +599,10 @@ object PcCollector:
     def apply(x: X, tree: Tree)(using Context) =
       traverser.traverse(x, tree, None)
 end PcCollector
+
+case class ExtensionParamOccurence(
+    name: Name,
+    pos: SourcePosition,
+    sym: Symbol,
+    methods: List[untpd.Tree],
+)

@@ -192,4 +192,59 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |val a = <<`giv@@en_D`>>""".stripMargin,
   )
 
+  check(
+    "extension-with-type-param1",
+    """|extension [<<E@@F>>](xs: List[<<EF>>])
+       |    def double(ys: List[<<EF>>]) = xs ++ ys
+       |    def double2(ys: List[<<EF>>]) = xs ++ ys
+       |end extension""".stripMargin,
+  )
+
+  check(
+    "extension-with-type-param2",
+    """|extension [EF, <<E@@M>>](xs: Either[<<EM>>, EF])
+       |    def id() = xs
+       |end extension""".stripMargin,
+  )
+
+  check(
+    "extension-with-type-param3",
+    """|extension [<<EF>>](xs: List[<<E@@F>>])
+       |    def double(ys: List[<<EF>>]) = xs ++ ys
+       |    def double2(ys: List[<<EF>>]) = xs ++ ys
+       |end extension""".stripMargin,
+  )
+
+  check(
+    "extension-with-type-param4",
+    """|val i: <<Int>> = 3
+       |extension (xs: List[<<In@@t>>])
+       |  def id() = xs
+       |end extension""".stripMargin,
+  )
+
+  check(
+    "extension-with-type-param5",
+    """|extension [<<EF>>](xs: List[<<EF>>])
+       |    def double(ys: List[<<E@@F>>]) = xs ++ ys
+       |    def double2(ys: List[<<EF>>]) = xs ++ ys
+       |end extension""".stripMargin,
+  )
+
+  check(
+    "extension-with-type-param6",
+    """|extension [EF](xs: List[EF])
+       |    def double(<<y@@s>>: List[EF]) = xs ++ <<ys>>
+       |    def double2(ys: List[EF]) = xs ++ ys
+       |end extension""".stripMargin,
+  )
+
+  check(
+    "extension-with-type-param7",
+    """|extension [EF](<<xs>>: List[EF])
+       |    def double(ys: List[EF]) = <<x@@s>> ++ ys
+       |    def double2(ys: List[EF]) = <<xs>> ++ ys
+       |end extension""".stripMargin,
+  )
+
 }
