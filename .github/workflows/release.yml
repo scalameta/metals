@@ -17,6 +17,19 @@ jobs:
           cache: 'sbt'
       - name: Publish
         run: |
+          LOCKED=true
+          while [ $LOCKED = true ]; do
+            # if there are several release jobs at the same time
+            # allow to continue the one which id is less than others
+            FIRST_IN_PROGRESS=$(gh api /repos/scalameta/metals/actions/workflows/release.yml/runs -q ".workflow_runs[]|select(.status==\"in_progress\")|.id"  | sort | head -n 1)
+            if [ "$FIRST_IN_PROGRESS" == "$GITHUB_RUN_ID" ]; then
+              LOCKED=false
+            else
+              echo "Waiting the completion of other release job..."
+              sleep 20
+            fi
+          done
+
           COMMAND="ci-release"
           UPDATE_DOCS=true
           if [[ $GITHUB_REF == "refs/tags"* ]] && [[ $GITHUB_REF_NAME == "mtags_v"* ]]; then
