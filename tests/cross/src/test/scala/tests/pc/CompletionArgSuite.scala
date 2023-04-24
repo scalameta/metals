@@ -536,4 +536,41 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|xxx = : Int
        |""".stripMargin,
   )
+
+  check(
+    "context-function-as-param".tag(IgnoreScala2),
+    s"""|case class Context()
+        |
+        |def foo(arg1: (Context) ?=> Int, arg2: Int): String = ???
+        |val m = foo(ar@@)
+        |""".stripMargin,
+    """|arg1 = : (Context) ?=> Int
+       |arg2 = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "context-function-as-param2".tag(IgnoreScala2),
+    s"""|case class Context()
+        |
+        |def foo(arg1: Context ?=> Int, arg2: Context ?=> Int): String = ???
+        |val m = foo(arg1 = ???, a@@)
+        |""".stripMargin,
+    """|arg2 = : (Context) ?=> Int
+       |""".stripMargin,
+    topLines = Some(1),
+  )
+
+  check(
+    "context-function-as-param3".tag(IgnoreScala2),
+    s"""|case class Context()
+        |
+        |def foo(arg1: (Boolean, Context) ?=> Int ?=> String, arg2: (Boolean, Context) ?=> Int ?=> String): String = ???
+        |val m = foo(arg1 = ???, a@@)
+        |""".stripMargin,
+    """|arg2 = : (Boolean, Context) ?=> (Int) ?=> String
+       |""".stripMargin,
+    topLines = Some(1),
+  )
 }
