@@ -1,13 +1,15 @@
 package scala.meta.internal.metals
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.DiagnosticData
 
 import org.eclipse.{lsp4j => l}
 
 object ScalacDiagnostic {
 
-  object ScalaAction {
-    def unapply(d: l.Diagnostic): Option[l.TextEdit] = d.asTextEdit
+  object DiagnosticData {
+    def unapply(d: l.Diagnostic): Option[Either[l.TextEdit, DiagnosticData]] =
+      d.asDiagnosticData
   }
 
   object NotAMember {

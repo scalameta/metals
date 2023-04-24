@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.io.IOException
+import java.lang.reflect.Type
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
@@ -35,6 +36,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.codeactions.DiagnosticData
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -46,6 +48,12 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -667,6 +675,34 @@ object MetalsEnrichments
     }
     def asTextEdit: Option[l.TextEdit] = {
       decodeJson(d.getData, classOf[l.TextEdit])
+    }
+    object EitherDeserializer
+        extends JsonDeserializer[Either[l.TextEdit, DiagnosticData]] {
+      override def deserialize(
+          json: JsonElement,
+          typeOfT: Type,
+          context: JsonDeserializationContext,
+      ): Either[l.TextEdit, DiagnosticData] = {
+        json match {
+          case o: JsonObject if o.has("edits") =>
+            Right(new Gson().fromJson(o, classOf[DiagnosticData]))
+          case o => Left(new Gson().fromJson(o, classOf[l.TextEdit]))
+        }
+      }
+    }
+
+    def asDiagnosticData: Option[Either[l.TextEdit, DiagnosticData]] = {
+      val gson = new GsonBuilder()
+        .registerTypeAdapter(
+          classOf[Either[l.TextEdit, DiagnosticData]],
+          EitherDeserializer,
+        )
+        .create()
+      decodeJson(
+        d.getData,
+        classOf[Either[l.TextEdit, DiagnosticData]],
+        Some(gson),
+      )
     }
   }
 
