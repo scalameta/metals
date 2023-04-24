@@ -35,9 +35,12 @@ trait ArgCompletions { this: MetalsGlobal =>
           case _ => Nil
         }
       } else {
-        method.tpe.paramss.headOption
-          .getOrElse(methodSym.paramss.flatten)
+        if (methodSym.isClass) methodSym.constrParamAccessors
+        else
+          method.tpe.paramss.headOption
+            .getOrElse(methodSym.paramss.flatten)
       }
+
     lazy val isNamed: Set[Name] = apply.args.iterator
       .filterNot(_ == ident)
       .zip(baseParams.iterator)

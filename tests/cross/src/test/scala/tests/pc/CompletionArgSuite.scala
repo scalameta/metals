@@ -509,4 +509,31 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|x: Int
        |""".stripMargin,
   )
+
+  check(
+    "contructor-param",
+    """|class Foo (xxx: Int)
+       |
+       |object Main {
+       |  val foo = new Foo(x@@)
+       |}
+       |""".stripMargin,
+    """|xxx = : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "contructor-param2",
+    """|class Foo ()
+       |
+       |object Foo {
+       |  def apply(xxx: Int): Foo = ???
+       |}
+       |object Main {
+       |  val foo = Foo(x@@)
+       |}
+       |""".stripMargin,
+    """|xxx = : Int
+       |""".stripMargin,
+  )
 }
