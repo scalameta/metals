@@ -46,7 +46,9 @@ object NamedArgCompletions:
 
   private def isInfix(pos: SourcePosition, apply: Apply)(using ctx: Context) =
     apply.fun match
-      // is a select statement without a dot `qual.name` and is not a synthetic apply etc.
+      case Select(New(_), _) => false
+      case Select(_, name) if name.decoded == "apply" => false
+      // is a select statement without a dot `qual.name`
       case sel @ Select(qual, _) if !sel.symbol.is(Flags.Synthetic) =>
         !(qual.span.end until sel.nameSpan.start)
           .map(pos.source.apply)
