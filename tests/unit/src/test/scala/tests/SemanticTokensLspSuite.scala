@@ -62,6 +62,19 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
   )
 
   check(
+    "multiline-comment-with-whitespace",
+    """| <</** This is >>/*comment*/
+       |<<*  a multiline>>/*comment*/
+       |
+       |<<*  comment>>/*comment*/
+       |
+       |<<*/>>/*comment*/
+       |
+       |<<object>>/*keyword*/ <<A>>/*class*/ {}
+       |""".stripMargin,
+  )
+
+  check(
     "using-directive",
     """|<<//>>>/*comment*/ <<using>>/*keyword*/ <<lib>>/*variable,readonly*/ <<"abc::abc:123">>/*string*/
        |<<//>>>/*comment*/ <<using>>/*keyword*/ <<scala>>/*variable,readonly*/ <<"3.1.1">>/*string*/
