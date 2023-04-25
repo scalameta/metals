@@ -42,7 +42,7 @@ object SemanticTokensProvider {
     if (tokenType != -1 && text.length() > 0) {
       val lines = text.split("\n", -1).toList
       lines.foreach { l =>
-        if (l.length() > 0)
+        if (l.length() > 0) {
           buffer.addAll(
             List(
               delta.number,
@@ -52,7 +52,10 @@ object SemanticTokensProvider {
               tokenModifier,
             )
           )
-        delta = Line(1, 0)
+          delta = Line(1, 0)
+        } else {
+          delta = delta.moveLine(1)
+        }
       }
       delta = Line(0, lines.last.length())
     } else {
