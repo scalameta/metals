@@ -261,11 +261,26 @@ final case class Indexer(
                 topWrapperLineCount + scPos.getLine,
                 scPos.getCharacter,
               )
+
+          // in scala-cli, first of scala Code begins with /*<script>*/, which we need to remove
+          val adjustFirstLineChar: Position => Int = {
+            val offset = sourceItem
+              .getTopWrapper()
+              .split("\n", -1)
+              .lastOption
+              .map(_.length())
+              .getOrElse(0)
+            pos =>
+              if (pos.getLine() - topWrapperLineCount == 0)
+                pos.getCharacter() - offset
+              else pos.getCharacter()
+          }
+
           val fromScala: Position => Position =
             scalaPos =>
               new Position(
                 scalaPos.getLine - topWrapperLineCount,
-                scalaPos.getCharacter,
+                adjustFirstLineChar(scalaPos),
               )
           val mappedSource: TargetData.MappedSource =
             new TargetData.MappedSource {

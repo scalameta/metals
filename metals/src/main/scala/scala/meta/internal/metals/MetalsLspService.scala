@@ -1710,18 +1710,10 @@ class MetalsLspService(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] = {
     CancelTokens.future { token =>
-      val isScalaCliScipt =
-        scalaCli.loaded(params.getTextDocument().getUri().toAbsolutePath)
-      compilers
-        .semanticTokens(
-          params,
-          token,
-          isScalaCliScript = isScalaCliScipt,
-        )
-        .map { semanticTokens =>
-          if (semanticTokens.getData().isEmpty()) null
-          else semanticTokens
-        }
+      compilers.semanticTokens(params, token).map { semanticTokens =>
+        if (semanticTokens.getData().isEmpty()) null
+        else semanticTokens
+      }
     }
   }
 

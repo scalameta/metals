@@ -379,7 +379,6 @@ class Compilers(
   def semanticTokens(
       params: SemanticTokensParams,
       token: CancelToken,
-      isScalaCliScript: Boolean = false,
   ): Future[SemanticTokens] = {
     val emptyTokens = Collections.emptyList[Integer]();
     if (!userConfig().enableSemanticHighlighting) {
@@ -409,7 +408,6 @@ class Compilers(
               character: Integer,
               remaining: List[Integer],
           ): List[Integer] = {
-            pprint.log(remaining.take(30).grouped(5).toList)
             remaining match {
               case lineDelta :: charDelta :: next =>
                 val newCharacter: Integer =
@@ -421,7 +419,6 @@ class Compilers(
                   new LspPosition(line + lineDelta, newCharacter),
                   adjustToZero = false,
                 )
-                pprint.log(adjustedTokenPos)
                 if (
                   adjustedTokenPos.getLine() >= 0 &&
                   adjustedTokenPos.getCharacter() >= 0
@@ -462,22 +459,6 @@ class Compilers(
             }
           }
 
-          /**
-           * ScalaCli scripts begin with
-           * `object script{
-           * /*<script>*/`
-           * First line is deleted by `findCorrectStart`.
-           * We need to delete token for /*<script>*/ and adjust delta for next token
-           */
-          def adjustForScalaCliScript(tokens: List[Integer]) = {
-            val withoutPrefix = tokens.drop(5)
-            withoutPrefix match {
-              case lineDelta :: charDelta :: rest if charDelta >= 12 =>
-                lineDelta :: ((charDelta - 12): Integer) :: rest
-              case _ => withoutPrefix
-            }
-          }
-
           val vFile =
             CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
           val isScala3 = ScalaVersions.isScala3Version(compiler.scalaVersion())
@@ -495,8 +476,6 @@ class Compilers(
                 findCorrectStart(0, 0, plist.asScala.toList)
               if (isScala3 && path.isWorksheet) {
                 new SemanticTokens(adjustForScala3Worksheet(tokens).asJava)
-              } else if (path.isScalaScript && isScalaCliScript) {
-                new SemanticTokens(adjustForScalaCliScript(tokens).asJava)
               } else {
                 new SemanticTokens(tokens.asJava)
               }
