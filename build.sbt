@@ -46,10 +46,6 @@ inThisBuild(
     },
     scalaVersion := V.scala213,
     crossScalaVersions := List(V.scala213),
-    scalacOptions ++= List(
-      "-target:jvm-1.8",
-      "-Yrangepos",
-    ),
     scalafixDependencies += "com.github.liancheng" %% "organize-imports" % V.organizeImportRule,
     organization := "org.scalameta",
     licenses := Seq(
@@ -196,7 +192,23 @@ val sharedJavacOptions = List(
   }
 )
 
-val sharedSettings = sharedJavacOptions ++ List(
+val sharedScalacOptions = List(
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case partialVersion
+          if isScala211(partialVersion) ||
+            // Scala 2.12 has a bug on older version that break with `-release`
+            isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
+        List("-target:jvm-1.8", "-Yrangepos", "-Xexperimental")
+      case partialVersion if isScala3(partialVersion) =>
+        List("-release", "8", "-language:implicitConversions", "-Xsemanticdb")
+      case _ =>
+        List("-release", "8", "-Yrangepos")
+    }
+  }
+)
+
+val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -204,19 +216,6 @@ val sharedSettings = sharedJavacOptions ++ List(
         "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
       )
     ),
-  ),
-  scalacOptions ++= crossSetting(
-    scalaVersion.value,
-    if3 = List(
-      "-language:implicitConversions",
-      "-Xtarget:8",
-      "-Xsemanticdb",
-    ),
-    if211 = List("-Xexperimental"),
-  ),
-  scalacOptions --= crossSetting(
-    scalaVersion.value,
-    if3 = List("-Yrangepos", "-target:jvm-1.8"),
   ),
   scalacOptions ++= lintingOptions(scalaVersion.value),
 )
@@ -509,6 +508,7 @@ lazy val `sbt-metals` = project
     scalaVersion := V.scala212,
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
   )
+  .settings(sharedScalacOptions)
   .enablePlugins(BuildInfoPlugin, SbtPlugin)
   .disablePlugins(ScalafixPlugin)
 
