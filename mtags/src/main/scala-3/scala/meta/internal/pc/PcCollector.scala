@@ -9,6 +9,7 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.VirtualFileParams
 
+import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.Positioned
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
@@ -42,6 +43,7 @@ abstract class PcCollector[T](
   given ctx: Context = driver.currentCtx
 
   val unit = driver.currentCtx.run.units.head
+  val compilatonUnitContext = ctx.fresh.setCompilationUnit(unit)
   val offset = params match
     case op: OffsetParams => op.offset()
     case _ => 0
@@ -220,84 +222,58 @@ abstract class PcCollector[T](
 
   end soughtSymbols
 
+  lazy val extensionMethods =
+    NavigateAST
+      .untypedPath(pos.span)(using compilatonUnitContext)
+      .collectFirst { case em @ ExtMethods(_, _) => em }
+
   private def findAllExtensionParamSymbols(
       pos: SourcePosition,
       name: Name,
       sym: Symbol,
   ) =
-    def collectMethods(acc: List[untpd.Tree], tree: untpd.Tree) =
-      tree match
-        case ExtMethods(paramss, methods)
-            if methods.exists(_.span.contains(pos.span)) =>
-          methods
-        case _ => acc
-    val traverser =
-      new untpd.UntypedDeepFolder[List[untpd.Tree]](
-        collectMethods
-      )
-    val methods: List[untpd.Tree] =
-      traverser(
-        List.empty[untpd.Tree],
-        unit.untpdTree,
-      )
-    val default = (symbolAlternatives(sym), pos)
-    if methods.isEmpty then default
-    else
-      collectAllExtensionParamSymbols(
-        unit.tpdTree,
-        ExtensionParamOccurence(name, pos, sym, methods),
-      ).getOrElse(default)
+    val symbols =
+      for
+        methods <- extensionMethods.map(_.methods)
+        symbols <- collectAllExtensionParamSymbols(
+          unit.tpdTree,
+          ExtensionParamOccurence(name, pos, sym, methods),
+        )
+      yield symbols
+    symbols.getOrElse((symbolAlternatives(sym), pos))
   end findAllExtensionParamSymbols
 
   private def seekInExtensionParameters() =
-    def collectExtParamsOccurences(
-        acc: Set[ExtensionParamOccurence],
-        tree: untpd.Tree,
-    ) =
-      def collectParams(methods: List[untpd.Tree])(
-          acc: Set[ExtensionParamOccurence],
-          tree: untpd.Tree,
-      ): Set[ExtensionParamOccurence] =
-        tree match
-          case v: untpd.ValOrTypeDef if (v.nameSpan.contains(pos.span)) =>
-            acc + ExtensionParamOccurence(v.name, v.namePos, v.symbol, methods)
-          case i: untpd.Ident if (i.sourcePos.span.contains(pos.span)) =>
-            acc + ExtensionParamOccurence(
+    def collectParams(
+        extMethods: ExtMethods
+    ): Option[ExtensionParamOccurence] =
+      MetalsNavigateAST
+        .pathToExtensionParam(pos.span, extMethods)(using compilatonUnitContext)
+        .collectFirst {
+          case v: untpd.ValOrTypeDef =>
+            ExtensionParamOccurence(
+              v.name,
+              v.namePos,
+              v.symbol,
+              extMethods.methods,
+            )
+          case i: untpd.Ident =>
+            ExtensionParamOccurence(
               i.name,
               i.sourcePos,
               i.symbol,
-              methods,
+              extMethods.methods,
             )
-          case _ => acc
+        }
 
-      tree match
-        case ExtMethods(paramss, methods) =>
-          acc ++
-            paramss.flatMap(_.flatMap {
-              val traverser =
-                new untpd.UntypedDeepFolder[Set[ExtensionParamOccurence]](
-                  collectParams(methods)
-                )
-              traverser(Set.empty, _)
-            })
-        case _ => acc
-    end collectExtParamsOccurences
-
-    val traverser =
-      new untpd.UntypedDeepFolder[Set[ExtensionParamOccurence]](
-        collectExtParamsOccurences
-      )
-    val occurrences: Set[ExtensionParamOccurence] =
-      traverser(
-        Set.empty[ExtensionParamOccurence],
-        unit.untpdTree,
-      )
-    occurrences.headOption.flatMap(
-      collectAllExtensionParamSymbols(
+    for
+      extensionMethodScope <- extensionMethods
+      occurence <- collectParams(extensionMethodScope)
+      symbols <- collectAllExtensionParamSymbols(
         path.headOption.getOrElse(unit.tpdTree),
-        _,
+        occurence,
       )
-    )
+    yield symbols
   end seekInExtensionParameters
 
   private def collectAllExtensionParamSymbols(
@@ -364,21 +340,11 @@ abstract class PcCollector[T](
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
 
-        def isExtensionParam(sym: Symbol) =
-          val extensionParam = for
-            extensionMethod <- sym.ownersIterator.drop(1).nextOption()
-            if extensionMethod.is(Flags.ExtensionMethod)
-          yield extensionMethod.extensionParam
-          extensionParam.exists(param => sym == param)
-
-        lazy val extensionParam = sought.exists(isExtensionParam)
-
         def soughtTreeFilter(tree: Tree): Boolean =
           tree match
             case ident: Ident
-                if (soughtOrOverride(ident.symbol) ||
-                  isForComprehensionOwner(ident) ||
-                  (extensionParam && isExtensionParam(ident.symbol))) =>
+                if soughtOrOverride(ident.symbol) ||
+                  isForComprehensionOwner(ident) =>
               true
             case sel: Select if soughtOrOverride(sel.symbol) => true
             case df: NamedDefTree
