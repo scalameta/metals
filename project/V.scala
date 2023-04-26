@@ -86,11 +86,18 @@ object V {
     "2.13.8",
     "2.13.9",
   )
-  def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
-  // The minimum sbt version that uses a non-deprecated Scala version.
-  // Currently uses Scala 2.12.12 - update upon deprecation.
-  def minimumSupportedSbtVersion = "1.4.0"
+  def minimumSupportedSbtVersion = {
+    // Update when deprecating a Scala version together with sbt version
+    val sbtScalaVersion = "2.12.14"
+    if (!nonDeprecatedScala2Versions.contains(sbtScalaVersion))
+      throw new RuntimeException(
+        "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"
+      )
+    "1.5.3"
+  }
+
+  def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
   def nonDeprecatedScala3Versions =
