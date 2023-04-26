@@ -1,8 +1,10 @@
 package tests.pc
 
 class SelectionRangeCommentSuite extends BaseSelectionRangeSuite {
-  
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(IgnoreScala2)
+
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala2
+  )
 
   check(
     "match",
