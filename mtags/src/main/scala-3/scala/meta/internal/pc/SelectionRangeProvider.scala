@@ -104,13 +104,11 @@ class SelectionRangeProvider(
 end SelectionRangeProvider
 
 object SelectionRangeProvider:
+
+  import scala.meta.dialects.Scala3
   import scala.meta.*
   import scala.meta.Token.Comment
   import dotty.tools.dotc.ast.tpd
-
-  // overwrites implicit 'implicit def current: Scala213' in scalameta
-  implicit val sca3AllowToplevel: Dialect =
-    dialects.Scala3.withAllowToplevelTerms(true)
 
   def commentRangesFromTokens(
       tokenList: List[Token],
@@ -119,28 +117,19 @@ object SelectionRangeProvider:
   ) =
     val cursorStartShifted = cursorStart.start - offsetStart
 
-    val commentWithin =
-      tokenList
-        .collect { case x: Comment =>
-          // println(s"find Comment \"${x}\" at ${(x.start, x.`end`)} ")
-          (x.start, x.`end`, x.pos)
-        }
-        .filter((commentStart, commentEnd, _) =>
-          commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd
-        )
-        .map { (commentStart, commentEnd, oldPos) =>
-          val oldLsp = oldPos.toLsp
+    tokenList
+      .collect { case x: Comment =>
+        (x.start, x.end, x.pos)
+      }
+      .collect {
+        case (commentStart, commentEnd, _)
+            if commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd =>
+          cursorStart
+            .withStart(commentStart + offsetStart)
+            .withEnd(commentEnd + offsetStart)
+            .toLsp
 
-          // TODO: need to add offset to Position in oldPos.input for more efficient impl
-          val newPos: Position =
-            meta.Position.Range(
-              oldPos.input,
-              commentStart + offsetStart,
-              commentEnd + offsetStart,
-            )
-          newPos.toLsp
-        }
-    commentWithin
+      }
   end commentRangesFromTokens
 
   /** get comments under cursor */
@@ -148,22 +137,21 @@ object SelectionRangeProvider:
       cursor: SourcePosition,
       path: List[tpd.Tree],
       srcText: String,
-  )(using Context) =
+  )(using Context): List[lsp4j.Range] =
     val (treeStart, treeEnd) = path.headOption
-      .map(t => (t.sourcePos.start, t.sourcePos.`end`))
+      .map(t => (t.sourcePos.start, t.sourcePos.end))
       .getOrElse((0, srcText.size))
-    val startOffset = 0 // should be set to treeStart, but currently set to 0
 
     // only parse comments from first range to reduce computation
-    val srcSliced = srcText // .slice(treeStart, treeEnd)
+    val srcSliced = srcText.slice(treeStart, treeEnd)
 
     val tokens = srcSliced.tokenize.toOption
-    if tokens.isEmpty then pprint.log("fail to parse in getCommentRanges!")
-
-    commentRangesFromTokens(
-      tokens.toList.flatten,
-      cursor,
-      startOffset,
-    )
+    if tokens.isEmpty then Nil
+    else
+      commentRangesFromTokens(
+        tokens.toList.flatten,
+        cursor,
+        treeStart,
+      )
   end getCommentRanges
 end SelectionRangeProvider
