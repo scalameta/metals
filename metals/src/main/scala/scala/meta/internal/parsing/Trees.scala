@@ -129,7 +129,9 @@ final class Trees(
     for {
       text <- buffers.get(path).orElse(path.readTextOpt)
     } yield try {
-      val input = Input.VirtualFile(path.toURI.toString(), text)
+      val skipFistShebang =
+        if (text.startsWith("#!")) text.replaceFirst("#!", "//") else text
+      val input = Input.VirtualFile(path.toURI.toString(), skipFistShebang)
       if (path.isAmmoniteScript || path.isMill) {
         val ammoniteInput = Input.Ammonite(input)
         dialect(ammoniteInput).parse(Parse.parseAmmonite)
