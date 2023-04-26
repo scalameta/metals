@@ -5,23 +5,21 @@ import java.{util as ju}
 
 import scala.collection.JavaConverters.*
 
+import scala.meta.inputs.Position
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.SelectionRangeProvider.*
 import scala.meta.pc.OffsetParams
+import scala.meta.tokens.Token
+import scala.meta.tokens.Token.Trivia
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.util.SourceFile
-import org.eclipse.lsp4j.SelectionRange
-
-import SelectionRangeProvider.*
 import dotty.tools.dotc.semanticdb.Scala3
-
-import scala.meta.tokens.Token
+import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
-import scala.meta.inputs.Position
-import scala.meta.tokens.Token.Trivia
 import org.eclipse.lsp4j
+import org.eclipse.lsp4j.SelectionRange
 
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
