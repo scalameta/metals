@@ -228,6 +228,7 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
     for {
       _ <- scalaCliInitialize(useBsp)(
         s"""/MyTests.sc
+           |#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
            |//> using scala "$scalaVersion"
            |//> using lib "com.lihaoyi::utest::0.7.9"
            |//> using lib "com.lihaoyi::pprint::0.6.4"
@@ -256,7 +257,6 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("MyTests.sc")
-
       _ <- waitForImport(useBsp)
 
       // via Scala CLI-generated Semantic DB
@@ -285,6 +285,16 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
         "utest/Tests.scala",
         "import utest.framework.{TestCallTree, Tr@@ee}",
         "utest/framework/Tree.scala",
+      )
+      // make sure we don't get errors connected to shebang
+      parserDiagnostics = client.diagnostics
+        .get(workspace.resolve("MyTests.sc"))
+        .toList
+        .flatten
+        .filter(_.getSource() == "scalameta")
+      _ = assert(
+        parserDiagnostics.isEmpty,
+        s"Expected no scalameta errors, got: $parserDiagnostics",
       )
 
     } yield ()
