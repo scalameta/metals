@@ -140,4 +140,10 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
        |""".stripMargin,
   )
 
+  check(
+    "main-annot",
+    """|@<<main>>/*class*/ def <<main>>/*method,definition*/(<<args>>/*parameter,declaration,readonly*/: <<Array>>/*class*/[<<String>>/*type*/]): <<Unit>>/*class,abstract*/ = ()
+       |""".stripMargin,
+  )
+
 }
