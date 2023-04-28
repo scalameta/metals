@@ -1617,9 +1617,9 @@ class MetalsLspService(
   def decodeFile(uri: String): Future[DecoderResponse] =
     fileDecoderProvider.decodedFileContents(uri)
 
-  def discoverTestSuites(uri: String): Future[util.List[BuildTargetUpdate]] =
+  def discoverTestSuites(uri: Option[String]): Future[List[BuildTargetUpdate]] =
     Future {
-      testProvider.discoverTests(Option(uri).map(_.toAbsolutePath))
+      testProvider.discoverTests(uri.map(_.toAbsolutePath))
     }
 
   def discoverMainClasses(

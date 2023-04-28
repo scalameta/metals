@@ -165,8 +165,8 @@ final class TestSuitesProvider(
    */
   def discoverTests(
       path: Option[AbsolutePath]
-  ): java.util.List[BuildTargetUpdate] = {
-    val updates = path match {
+  ): List[BuildTargetUpdate] = {
+    path match {
       case Some(path0) => getTestCasesForPath(path0, None)
       case None =>
         index.allSuites.map { case (buildTarget, entries) =>
@@ -176,7 +176,6 @@ final class TestSuitesProvider(
           )
         }.toList
     }
-    updates.asJava
   }
 
   /**

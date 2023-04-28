@@ -660,7 +660,18 @@ class WorkspaceLspService(
       case ServerCommands.DecodeFile(uri) =>
         getServiceFor(uri).decodeFile(uri).asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
-        getServiceFor(params.uri).discoverTestSuites(params.uri).asJavaObject
+        Option(params.uri) match {
+          case None =>
+            Future
+              .sequence(folderServices.map(_.discoverTestSuites(uri = None)))
+              .map(_.flatten.asJava)
+              .asJavaObject
+          case Some(uri) =>
+            getServiceFor(params.uri)
+              .discoverTestSuites(uri = Some(uri))
+              .map(_.asJava)
+              .asJavaObject
+        }
       case ServerCommands.DiscoverMainClasses(unresolvedParams) =>
         getServiceFor(unresolvedParams.path)
           .discoverMainClasses(unresolvedParams)
