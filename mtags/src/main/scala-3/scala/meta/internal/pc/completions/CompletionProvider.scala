@@ -36,7 +36,7 @@ class CompletionProvider(
     params: OffsetParams,
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String,
-    workspace: Option[Path],
+    folderPath: Option[Path],
 )(using reports: ReportContext):
   def completions(): CompletionList =
     val uri = params.uri
@@ -80,7 +80,7 @@ class CompletionProvider(
             indexedCtx,
             path,
             config,
-            workspace,
+            folderPath,
             autoImportsGen,
             driver.settings,
           ).completions()

@@ -76,11 +76,11 @@ object MetalsHttpServer {
   def apply(
       host: String,
       preferredPort: Int,
-      languageService: MetalsLspService,
       render: () => String,
       complete: HttpServerExchange => Unit,
       doctor: () => String,
       tasty: (URI) => Future[Either[String, String]],
+      server: WorkspaceLspService,
   )(implicit ec: ExecutionContext): MetalsHttpServer = {
     val port = freePort(host, preferredPort)
     scribe.info(s"Selected port $port")
@@ -114,7 +114,7 @@ object MetalsHttpServer {
                 params <- Option(exchange.getQueryParameters.get("command"))
                 command <- params.asScala.headOption
               } yield command
-              languageService.executeCommand(
+              server.executeCommand(
                 new ExecuteCommandParams(
                   command.getOrElse("<unknown command>"),
                   Collections.emptyList(),

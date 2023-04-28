@@ -55,7 +55,7 @@ case class ScalaPresentationCompiler(
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
-    workspace: Option[Path] = None,
+    folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info
 ) extends PresentationCompiler {
 
@@ -67,7 +67,7 @@ case class ScalaPresentationCompiler(
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
   implicit val reportContex: ReportContext =
-    workspace
+    folderPath
       .map(new StdReportContext(_, reportsLevel))
       .getOrElse(EmptyReportContext)
 
@@ -78,7 +78,7 @@ case class ScalaPresentationCompiler(
     copy(search = search)
 
   override def withWorkspace(workspace: Path): PresentationCompiler =
-    copy(workspace = Some(workspace))
+    copy(folderPath = Some(workspace))
 
   override def withExecutorService(
       executorService: ExecutorService
@@ -158,7 +158,9 @@ case class ScalaPresentationCompiler(
     compilerAccess.withInterruptableCompiler(
       EmptyCompletionList(),
       params.token
-    ) { pc => new CompletionProvider(pc.compiler(), params).completions() }
+    ) { pc =>
+      new CompletionProvider(pc.compiler(), params).completions()
+    }
 
   override def implementAbstractMembers(
       params: OffsetParams
@@ -385,7 +387,7 @@ case class ScalaPresentationCompiler(
       search,
       buildTargetIdentifier,
       config,
-      workspace
+      folderPath
     )
   }
 

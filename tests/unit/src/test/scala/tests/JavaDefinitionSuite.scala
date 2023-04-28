@@ -130,7 +130,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
         }
         pos = depSourcePosition(uri, query)
 
-        locations <- server.server
+        locations <- server.fullServer
           .definition(
             new l.TextDocumentPositionParams(
               new l.TextDocumentIdentifier(uri),

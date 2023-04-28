@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import scala.meta.internal.metals.FolderReportsZippper
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportFile
@@ -14,8 +15,8 @@ import scala.meta.io.AbsolutePath
 class ReportsSuite extends BaseSuite {
   val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
   val reportsProvider = new StdReportContext(workspace.toNIO)
-  val zipReportsProvider =
-    new ZipReportsProvider(exampleBuildTargetsInfo, reportsProvider)
+  val folderReportsZippper: FolderReportsZippper =
+    FolderReportsZippper(exampleBuildTargetsInfo, reportsProvider)
 
   def exampleBuildTargetsInfo(): List[Map[String, String]] =
     List(
@@ -110,7 +111,7 @@ class ReportsSuite extends BaseSuite {
         exampleText(),
       )
     )
-    val pathToReadMe = zipReportsProvider.zip()
+    val pathToReadMe = ZipReportsProvider.zip(List(folderReportsZippper))
     val zipPath =
       reportsProvider.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)
     assert(Files.exists(zipPath))

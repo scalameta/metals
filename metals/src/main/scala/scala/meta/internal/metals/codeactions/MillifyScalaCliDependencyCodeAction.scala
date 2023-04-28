@@ -18,8 +18,11 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.QuickFix
 
-  override def contribute(params: l.CodeActionParams, token: CancelToken)(
-      implicit ec: ExecutionContext
+  override def contribute(
+      params: l.CodeActionParams,
+      token: CancelToken,
+  )(implicit
+      ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
 
     val path = params.getTextDocument().getUri().toAbsolutePath

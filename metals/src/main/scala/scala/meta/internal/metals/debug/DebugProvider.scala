@@ -27,7 +27,6 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugSession
-import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
@@ -521,16 +520,22 @@ class DebugProvider(
     result
   }
 
-  def resolveMainClassParams(
-      params: DebugUnresolvedMainClassParams
-  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
-    val result = withRebuildRetry(() =>
+  def findMainClassAndItsBuildTarget(params: DebugUnresolvedMainClassParams)(
+      implicit ec: ExecutionContext
+  ): Future[List[(ScalaMainClass, b.BuildTarget)]] =
+    withRebuildRetry(() =>
       buildTargetClassesFinder
         .findMainClassAndItsBuildTarget(
           params.mainClass,
           Option(params.buildTarget),
         )
-    ).flatMap {
+    )
+
+  def buildMainClassParams(
+      foundClasses: List[(ScalaMainClass, b.BuildTarget)],
+      params: DebugUnresolvedMainClassParams,
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    val result = foundClasses match {
       case (_, target) :: _ if buildClient.buildHasErrors(target.getId()) =>
         Future.failed(WorkspaceErrorsException)
       case (clazz, target) :: others =>
@@ -561,16 +566,22 @@ class DebugProvider(
     result
   }
 
-  def resolveTestClassParams(
+  def findTestClassAndItsBuildTarget(
       params: DebugUnresolvedTestClassParams
-  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
-    val result = withRebuildRetry(() => {
+  )(implicit ec: ExecutionContext): Future[List[(String, b.BuildTarget)]] =
+    withRebuildRetry(() => {
       buildTargetClassesFinder
         .findTestClassAndItsBuildTarget(
           params.testClass,
           Option(params.buildTarget),
         )
-    }).flatMap {
+    })
+
+  def buildTestClassParams(
+      targets: List[(String, b.BuildTarget)],
+      params: DebugUnresolvedTestClassParams,
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    val result = targets match {
       case (_, target) :: _ if buildClient.buildHasErrors(target.getId()) =>
         Future.failed(WorkspaceErrorsException)
       case (clazz, target) :: others =>
@@ -606,58 +617,37 @@ class DebugProvider(
     result
   }
 
-  def resolveAttachRemoteParams(
-      params: DebugUnresolvedAttachRemoteParams
-  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
-    val result = buildTargets.findByDisplayName(params.buildTarget) match {
-      case Some(target) =>
-        Future.successful(
+  def createDebugSession(
+      target: b.BuildTargetIdentifier
+  ): Future[DebugSessionParams] =
+    Future.successful(
+      new b.DebugSessionParams(
+        singletonList(target),
+        b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE,
+        ().toJson,
+      )
+    )
+
+  def startTestSuite(
+      buildTarget: b.BuildTarget,
+      request: ScalaTestSuitesDebugRequest,
+  )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
+    def makeDebugSession() = {
+      val debugSession =
+        if (supportsTestSelection(request.target))
           new b.DebugSessionParams(
-            singletonList(target.getId()),
-            b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE,
-            ().toJson,
+            singletonList(buildTarget.getId),
+            DebugProvider.ScalaTestSelection,
+            request.requestData.toJson,
           )
-        )
-      case None =>
-        Future.failed(BuildTargetUndefinedException())
+        else
+          new b.DebugSessionParams(
+            singletonList(buildTarget.getId),
+            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+            request.requestData.suites.map(_.className).toJson,
+          )
+      Future.successful(debugSession)
     }
-    result.failed.foreach(reportErrors)
-    result
-  }
-
-  /**
-   * Validate if build target provided in params exists.
-   * On the contrary, test classes aren't validated.
-   *
-   * If build tool doesn't support test selection fallback to the already
-   * defined and supported SCALA_TEST_SUITES request kind.
-   */
-  def resolveTestSelectionParams(
-      request: ScalaTestSuitesDebugRequest
-  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
-    val makeDebugSession = () =>
-      buildTargets.info(request.target) match {
-        case Some(buildTarget) =>
-          val debugSession =
-            if (supportsTestSelection(request.target))
-              new b.DebugSessionParams(
-                singletonList(buildTarget.getId),
-                DebugProvider.ScalaTestSelection,
-                request.requestData.toJson,
-              )
-            else
-              new b.DebugSessionParams(
-                singletonList(buildTarget.getId),
-                b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-                request.requestData.suites.map(_.className).toJson,
-              )
-          Future.successful(debugSession)
-        case None =>
-          val error = BuildTargetNotFoundException(request.target.getUri)
-          reportErrors(error)
-          Future.failed(error)
-      }
-
     for {
       _ <- compilations.compileTarget(request.target)
       _ <- ensureNoWorkspaceErrors(List(request.target))

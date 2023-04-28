@@ -102,17 +102,9 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       else {
         val path =
           reportsDir.resolve(s"r_${report.name}_${System.currentTimeMillis()}")
-        val text = report.error match {
-          case Some(error) =>
-            s"""|${report.text}
-                |Error message: ${error.getMessage()}
-                |Error: $error
-                |""".stripMargin
-          case None => report.text
-        }
         sanitizedId.foreach(reported += _)
         val idString = sanitizedId.map(id => s"$idPrefix$id\n").getOrElse("")
-        path.writeText(s"$idString${sanitize(text)}")
+        path.writeText(s"$idString${sanitize(report.fullText)}")
         Some(path)
       }
     }
@@ -209,6 +201,16 @@ case class Report(
       text = s"""|${this.text}
                  |$moreInfo"""".stripMargin
     )
+
+  def fullText: String =
+    error match {
+      case Some(error) =>
+        s"""|$text
+            |Error message: ${error.getMessage()}
+            |Error: $error
+            |""".stripMargin
+      case None => text
+    }
 }
 
 object Report {

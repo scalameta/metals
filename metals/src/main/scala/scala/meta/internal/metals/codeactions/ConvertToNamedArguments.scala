@@ -102,6 +102,7 @@ class ConvertToNamedArguments(
         t.syntax
     }
   }
+
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {

@@ -30,7 +30,8 @@ abstract class BaseImportSuite(
       fail("no checksum for workspace")
     }
   def assertNoStatus()(implicit loc: Location): Unit =
-    server.server.tables.digests.getStatus(currentChecksum()) match {
+    server.server.tables.digests
+      .getStatus(currentChecksum()) match {
       case Some(value) =>
         fail(s"expected no status. obtained $value")
       case None =>

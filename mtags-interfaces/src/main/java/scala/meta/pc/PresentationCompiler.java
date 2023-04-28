@@ -251,7 +251,7 @@ public abstract class PresentationCompiler {
 	 *                              better-monadic-for.
 	 */
 	public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
-			List<String> options);
+		List<String> options);
 
 	// =============================
 	// Intentionally missing methods

@@ -118,7 +118,7 @@ class SbtServerSuite
       code <- startSbtServer
       _ = assert(code == 0)
       _ = assert(workspace.resolve(".bsp/sbt.json").exists)
-      _ <- initializer.initialize(workspace, server, client, layout, false)
+      _ <- initializer.initialize(workspace, server, client, false)
       _ <- server.initialized()
     } yield {
       // should not contain the 'Navigation will not work for this build due to mis-configuration.' message

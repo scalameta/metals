@@ -11,17 +11,17 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Folder
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.ThreadPools
+import scala.meta.internal.metals.WorkspaceLspService
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
-import scala.meta.io.AbsolutePath
 import scala.meta.metals.ServerState.ShuttingDown
 import scala.meta.metals.lsp.DelegatingScalaService
 import scala.meta.metals.lsp.LanguageServer
@@ -126,15 +126,22 @@ class MetalsLanguageServer(
         )
         .asJava
     } else {
-      // NOTE: we purposefully don't check workspaceFolders here
-      // since Metals technically doesn't support it. Once we implement
-      // https://github.com/scalameta/metals-feature-requests/issues/87 we'll
-      // have to change this.
-      val root =
-        Option(params.getRootUri())
-          .orElse(Option(params.getRootPath()))
-          .map(_.toAbsolutePath)
-      root match {
+      val folders = {
+        val workspaceFolders =
+          Option(params.getWorkspaceFolders())
+            .map(_.asScala)
+            .toList
+            .flatten
+            .map(Folder.apply)
+        if (workspaceFolders.nonEmpty) workspaceFolders
+        else
+          Option(params.getRootUri())
+            .orElse(Option(params.getRootPath()))
+            .map(root => Folder(root.toAbsolutePath, Some("root")))
+            .toList
+      }
+
+      folders match {
         // ugly check to avoid starting the server if proper languageClient wasn't plugged
         case _ if !isLanguageClientConnected.get =>
           Future
@@ -142,32 +149,36 @@ class MetalsLanguageServer(
               new IllegalStateException("Language client wasn't connected!")
             )
             .asJava
-        case None =>
+        case Nil =>
           languageClient.get.showMessage(Messages.noRoot)
           Future
             .failed(
               new IllegalArgumentException(
-                "There is no root directory in InitializeParams"
+                "There is no root directory and no workspace folders in InitializeParams"
               )
             )
             .asJava
-        case Some(workspace) =>
-          val service = createService(workspace, params)
+        case folders =>
+          val service = createService(folders, params)
+          val folderPaths = folders.map(_.path)
 
           setupJna()
-          MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
+          MetalsLogger.setupLspLogger(folderPaths, redirectSystemOut)
 
           val clientInfo = Option(params.getClientInfo()).fold("") { info =>
             s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
           }
           scribe.info(
-            s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
+            s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPaths
+                .mkString(", ")}' $clientInfo."
           )
 
           serverState.set(ServerState.Initialized(service))
           metalsService.underlying = service
 
-          new StdReportContext(workspace.toNIO).cleanUpOldReports()
+          folderPaths.foreach(folder =>
+            new StdReportContext(folder.toNIO).cleanUpOldReports()
+          )
 
           service.initialize()
       }
@@ -184,15 +195,15 @@ class MetalsLanguageServer(
   }
 
   private def createService(
-      workspace: AbsolutePath,
+      workspaceFolders: List[Folder],
       initializeParams: InitializeParams,
-  ): MetalsLspService = new MetalsLspService(
+  ): WorkspaceLspService = new WorkspaceLspService(
     ec,
     sh,
     serverInputs,
-    workspace,
     languageClient.get,
     initializeParams,
+    workspaceFolders,
   )
 
   private val isInitialized = new AtomicBoolean(false)
@@ -242,7 +253,7 @@ class MetalsLanguageServer(
 
   // todo https://github.com/scalameta/metals/issues/4785
   @deprecated
-  def getOldMetalsLanguageServer: MetalsLspService = serverState.get match {
+  def getOldMetalsLanguageServer: WorkspaceLspService = serverState.get match {
     case ServerState.Initialized(service) => service
     case _ => throw new IllegalStateException("Server is not initialized")
   }

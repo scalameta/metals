@@ -24,9 +24,9 @@ sealed trait CompletionValue:
   def completionItemKind(using Context): CompletionItemKind
   def description(printer: MetalsPrinter)(using Context): String = ""
   def insertMode: Option[InsertTextMode] = None
-  def completionData(
-      buildTargetIdentifier: String
-  )(using Context): Option[CompletionItemData] = None
+  def completionData(buildTargetIdentifier: String)(using
+      Context
+  ): Option[CompletionItemData] = None
   def command: Option[String] = None
 
   /**

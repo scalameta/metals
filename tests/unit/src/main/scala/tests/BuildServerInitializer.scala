@@ -22,8 +22,8 @@ sealed trait BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
       expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
   )(implicit ec: ExecutionContext): Future[InitializeResult]
 }
 
@@ -37,12 +37,15 @@ object QuickBuildInitializer extends BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
       expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
-    QuickBuild.bloopInstall(workspace)
+    val foldersToInit =
+      if (workspaceFolders.nonEmpty) workspaceFolders.map(workspace.resolve)
+      else List(workspace)
+    foldersToInit.foreach(QuickBuild.bloopInstall)
     for {
-      initializeResult <- server.initialize()
+      initializeResult <- server.initialize(workspaceFolders)
       _ <- server.initialized()
     } yield {
       if (!expectError) {
@@ -63,8 +66,8 @@ object BloopImportInitializer extends BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
       expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()
@@ -91,8 +94,8 @@ object SbtServerInitializer extends BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
       expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     val sbtVersion =
       SbtBuildTool
@@ -153,8 +156,8 @@ object MillServerInitializer extends BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
       expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()

@@ -70,19 +70,41 @@ abstract class BaseLspSuite(
     FileLayout.fromString(layout, workspace)
   }
 
+  def writeLayout(layout: String, folderName: String): Unit = {
+    FileLayout.fromString(layout, workspace.resolve(folderName))
+  }
+
   def initialize(
       layout: String,
       expectError: Boolean = false,
   ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
-    initializer.initialize(workspace, server, client, layout, expectError)
+    initializer.initialize(workspace, server, client, expectError)
+  }
+
+  def initialize(
+      layout: Map[String, String],
+      expectError: Boolean,
+  ): Future[InitializeResult] = {
+    Debug.printEnclosing()
+    layout.foreach { case (folderName, layout) =>
+      writeLayout(layout, folderName)
+    }
+    initializer.initialize(
+      workspace,
+      server,
+      client,
+      expectError,
+      layout.keys.toList,
+    )
   }
 
   def assertConnectedToBuildServer(
       expectedName: String
   )(implicit loc: Location): Unit = {
-    val obtained = server.server.bspSession.get.mainConnection.name
+    val obtained =
+      server.server.bspSession.get.mainConnection.name
     assertNoDiff(obtained, expectedName)
   }
 

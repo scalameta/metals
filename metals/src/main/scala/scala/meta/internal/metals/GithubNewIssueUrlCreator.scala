@@ -15,17 +15,18 @@ import scala.meta.internal.builds.BuildTools
 import org.eclipse.lsp4j.ClientInfo
 
 class GithubNewIssueUrlCreator(
-    tables: Tables,
-    buildTargets: BuildTargets,
-    currentBuildServer: () => Option[BspSession],
-    calculateNewBuildServer: () => BspResolvedResult,
+    getFoldersInfo: () => List[GitHubIssueFolderInfo],
     clientInfo: ClientInfo,
-    buildTools: BuildTools,
 ) {
 
   def buildUrl(): String = {
+    val foldersInfo = getFoldersInfo()
     val scalaVersions =
-      buildTargets.allScala.map(_.scalaVersion).toSet.mkString("; ")
+      getFoldersInfo()
+        .flatMap(_.buildTargets.allScala)
+        .map(_.scalaVersion)
+        .toSet
+        .mkString("; ")
     val clientVersion =
       Option(clientInfo.getVersion()).map(v => s" v$v").getOrElse("")
     val body =
@@ -62,37 +63,61 @@ class GithubNewIssueUrlCreator(
           |-->
           |
           |### Workspace information:
-          |
-          | - **Scala versions:** $scalaVersions$selectedBuildTool$selectedBuildServer
-          | - **All build tools in workspace:** ${buildTools.all.mkString("; ")}
+          | - **Scala versions:** $scalaVersions${selectedBuildTool(foldersInfo)}${selectedBuildServer(foldersInfo)}
+          | - **All build tools in workspace:** ${foldersInfo.flatMap(_.buildTools.all).mkString("; ")}
           |""".stripMargin
     s"https://github.com/scalameta/metals/issues/new?body=${URLEncoder.encode(body)}"
   }
 
-  private def selectedBuildTool(): String = {
-    tables.buildTool
-      .selectedBuildTool()
-      .map { value =>
-        s"""|
-            | - **Build tool:** ${value}""".stripMargin
+  private def selectedBuildTool(
+      foldersInfo: List[GitHubIssueFolderInfo]
+  ): String = {
+    val buildTools =
+      foldersInfo.map(_.selectedBuildTool()).zipWithIndex.collect {
+        case (Some(buildTool), ind) => (buildTool, ind)
       }
-      .getOrElse("")
+
+    if (buildTools.nonEmpty) {
+      val value = buildTools
+        .map { case (buildTool, indx) =>
+          s"$indx. $buildTool"
+        }
+        .mkString("\n    ")
+      s"""|
+          | - **Build tools:** ${value}""".stripMargin
+    } else ""
   }
 
-  private def selectedBuildServer(): String = {
-    val buildServer = currentBuildServer()
-      .map(s => s"${s.main.name} v${s.main.version}")
-      .getOrElse {
-        calculateNewBuildServer() match {
-          case ResolvedBloop => "Disconnected: Bloop"
-          case ResolvedBspOne(details) => s"Disconnected: ${details.getName()}"
-          case ResolvedMultiple(_, details) =>
-            s"Disconnected: Multiple Found ${details.map(_.getName()).mkString("; ")}"
-          case ResolvedNone => s"Disconnected: None Found"
-        }
+  private def selectedBuildServer(
+      foldersInfo: List[GitHubIssueFolderInfo]
+  ): String = {
+    val buildServers =
+      foldersInfo.zipWithIndex.map { case (info, indx) =>
+        import info._
+        val buildServer = currentBuildServer()
+          .map(s => s"${s.main.name} v${s.main.version}")
+          .getOrElse {
+            calculateNewBuildServer() match {
+              case ResolvedBloop => "Disconnected: Bloop"
+              case ResolvedBspOne(details) =>
+                s"Disconnected: ${details.getName()}"
+              case ResolvedMultiple(_, details) =>
+                s"Disconnected: Multiple Found ${details.map(_.getName()).mkString("; ")}"
+              case ResolvedNone => s"Disconnected: None Found"
+            }
+          }
+        s"$indx. $buildServer"
       }
-
     s"""|
-        | - **Build server:** $buildServer""".stripMargin
+        | - **Build servers:**
+        |    ${buildServers.mkString("\n    ")}""".stripMargin
   }
 }
+
+case class GitHubIssueFolderInfo(
+    selectedBuildTool: () => Option[String],
+    buildTargets: BuildTargets,
+    currentBuildServer: () => Option[BspSession],
+    calculateNewBuildServer: () => BspResolvedResult,
+    buildTools: BuildTools,
+)

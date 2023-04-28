@@ -67,7 +67,9 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
       server.client.showMessageRequestHandler
     server.client.showMessageRequestHandler = { params =>
       def useBsp = Files.exists(
-        server.server.workspace.resolve(".bsp/scala-cli.json").toNIO
+        server.server.folder
+          .resolve(".bsp/scala-cli.json")
+          .toNIO
       )
       if (params == Messages.ImportScalaScript.params())
         Some(
