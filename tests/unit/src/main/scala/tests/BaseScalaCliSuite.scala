@@ -297,6 +297,41 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
         s"Expected no scalameta errors, got: $parserDiagnostics",
       )
 
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      expected =
+        s"""|<<#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80>>/*comment*/
+            |<<//> using scala "$scalaVersion">>/*comment*/
+            |<<//> using lib "com.lihaoyi::utest::0.7.9">>/*comment*/
+            |<<//> using lib "com.lihaoyi::pprint::0.6.4">>/*comment*/
+            |
+            |<<import>>/*keyword*/ <<foo>>/*class*/.<<Foo>>/*class*/
+            |<<import>>/*keyword*/ <<utest>>/*namespace*/.<<_>>/*variable,readonly*/
+            |
+            |<<pprint>>/*namespace*/.<<log>>/*method*/(<<2>>/*number*/) <<// top-level statement should be fine in a script>>/*comment*/
+            |
+            |<<object>>/*keyword*/ <<MyTests>>/*class*/ <<extends>>/*keyword*/ <<TestSuite>>/*class,abstract*/ {
+            |  <<pprint>>/*namespace*/.<<log>>/*method*/(<<2>>/*number*/)
+            |  <<val>>/*keyword*/ <<tests>>/*variable,definition,readonly*/ = <<Tests>>/*class*/ {
+            |    <<test>>/*class*/(<<"foo">>/*string*/) {
+            |      <<assert>>/*method*/(<<2>>/*number*/ <<+>>/*method,abstract*/ <<2>>/*number*/ <<==>>/*method,abstract*/ <<4>>/*number*/)
+            |    }
+            |    <<test>>/*class*/(<<"nope">>/*string*/) {
+            |      <<assert>>/*method*/(<<2>>/*number*/ <<+>>/*method,abstract*/ <<2>>/*number*/ <<==>>/*method,abstract*/ (<<new>>/*keyword*/ <<Foo>>/*class*/).<<value>>/*method*/)
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+
+      _ <- server.assertSemanticHighlight(
+        "MyTests.sc",
+        expected,
+        TestSemanticTokens.removeSemanticHighlightDecorations(expected),
+      )
     } yield ()
 
   test("relative-semanticdb-root") {

@@ -84,7 +84,17 @@ object SemanticTokensProvider {
       scribe.warn("Could not find semantic tokens for: " + params.uri())
       List.empty[Integer].asJava
     } else {
-      val tokens = getTokens(isScala3, params.text())
+      val text = params.text()
+      val skipFistShebang =
+        if (text.startsWith("#!")) text.replaceFirst("#!", "//")
+        else if (text.contains("/*<script>*/#!")) // for Scala CLI scripts {
+          text.replaceFirst(
+            "/\\*<script>\\*/#!",
+            "/*<script>*///",
+          )
+        else text
+
+      val tokens = getTokens(isScala3, skipFistShebang)
       val (delta0, cliTokens, tokens0) =
         initialScalaCliTokens(tokens.toList)
 
