@@ -379,7 +379,7 @@ class FolderTreeViewProvider(
       path: AbsolutePath,
       closestSymbol: SymbolOccurrence,
   ): Option[List[String]] =
-    if (path.isDependencySource(folder.uri) || path.isJarFileSystem) {
+    if (path.isDependencySource(folder.path) || path.isJarFileSystem) {
       buildTargets
         .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
         .map { inferred =>

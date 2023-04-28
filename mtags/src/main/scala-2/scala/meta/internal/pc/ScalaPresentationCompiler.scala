@@ -55,7 +55,7 @@ case class ScalaPresentationCompiler(
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
-    folderUri: Option[Path] = None,
+    folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info
 ) extends PresentationCompiler {
 
@@ -67,7 +67,7 @@ case class ScalaPresentationCompiler(
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
   implicit val reportContex: ReportContext =
-    folderUri
+    folderPath
       .map(new StdReportContext(_, reportsLevel))
       .getOrElse(EmptyReportContext)
 
@@ -78,7 +78,7 @@ case class ScalaPresentationCompiler(
     copy(search = search)
 
   override def withWorkspace(workspace: Path): PresentationCompiler =
-    copy(folderUri = Some(workspace))
+    copy(folderPath = Some(workspace))
 
   override def withExecutorService(
       executorService: ExecutorService
@@ -387,7 +387,7 @@ case class ScalaPresentationCompiler(
       search,
       buildTargetIdentifier,
       config,
-      folderUri
+      folderPath
     )
   }
 

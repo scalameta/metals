@@ -188,7 +188,7 @@ class WorkspaceLspService(
     clientConfig,
     shellRunner,
     clientConfig.icons,
-    folders.head.uri,
+    folders.head.path,
   )
 
   private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
@@ -226,7 +226,8 @@ class WorkspaceLspService(
   def getServiceFor(uri: String): MetalsLspService = {
     val folder =
       for {
-        path <- uri.toAbsolutePathSafe()
+        // "metalsDecode" prefix is used for showing special files and is not an actual file system
+        path <- uri.stripPrefix("metalsDecode:").toAbsolutePathSafe()
       } yield getServiceFor(path)
     folder.getOrElse(folderServices.head) // fallback to the first one
   }
@@ -564,11 +565,18 @@ class WorkspaceLspService(
 
   override def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
-  ): CompletableFuture[Unit] =
-    onCurrentFolder(
-      _.doctorVisibilityDidChange(params),
-      "change doctor visibility",
-    ).asJava
+  ): CompletableFuture[Unit] = {
+    focusedDocument
+      .flatMap(getServiceForOpt)
+      .map(_.doctorVisibilityDidChange(params))
+      .getOrElse(
+        /* If we can't find the focused document, we still want to notify all the services.
+         * If a doctor is not visible this will have no effect.
+         */
+        Future.sequence(folderServices.map(_.doctorVisibilityDidChange(params)))
+      )
+      .asJavaUnit
+  }
 
   override def didFocus(
       params: AnyRef
@@ -891,7 +899,12 @@ class WorkspaceLspService(
           .getOrElse(folderServices.head)
           .createFile(directoryURI, name, fileType, isScala = false)
       case ServerCommands.StartAmmoniteBuildServer() =>
-        foreachSeq(_.ammoniteStart(), ignoreValue = false)
+        val res = focusedDocument match {
+          case None => Future.unit
+          case Some(path) =>
+            getServiceFor(path).ammoniteStart()
+        }
+        res.asJavaObject
       case ServerCommands.StopAmmoniteBuildServer() =>
         foreachSeq(_.ammoniteStop(), ignoreValue = false)
       case ServerCommands.StartScalaCliServer() =>
@@ -1148,8 +1161,8 @@ class WorkspaceLspService(
 
 }
 
-case class Folder(uri: AbsolutePath, visibleName: Option[String]) {
-  def nameOrUri: String = visibleName.getOrElse(uri.toString())
+case class Folder(path: AbsolutePath, visibleName: Option[String]) {
+  def nameOrUri: String = visibleName.getOrElse(path.toString())
 }
 
 object Folder {

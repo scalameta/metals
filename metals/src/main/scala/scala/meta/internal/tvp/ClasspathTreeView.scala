@@ -29,7 +29,7 @@ class ClasspathTreeView[Value, Key](
     toplevels: () => Iterator[Value],
     loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation],
 ) {
-  val scheme: String = s"$schemeId-${folder.uri.toString()}"
+  val scheme: String = s"$schemeId-${folder.path.toString()}"
   val rootUri: String = scheme + ":"
 
   def root(showFolderName: Boolean): TreeViewNode = {

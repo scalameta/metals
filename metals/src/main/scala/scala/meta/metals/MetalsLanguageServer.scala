@@ -160,23 +160,23 @@ class MetalsLanguageServer(
             .asJava
         case folders =>
           val service = createService(folders, params)
-          val folderUris = folders.map(_.uri)
+          val folderPaths = folders.map(_.path)
 
           setupJna()
-          MetalsLogger.setupLspLogger(folderUris, redirectSystemOut)
+          MetalsLogger.setupLspLogger(folderPaths, redirectSystemOut)
 
           val clientInfo = Option(params.getClientInfo()).fold("") { info =>
             s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
           }
           scribe.info(
-            s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderUris
+            s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPaths
                 .mkString(", ")}' $clientInfo."
           )
 
           serverState.set(ServerState.Initialized(service))
           metalsService.underlying = service
 
-          folderUris.foreach(folder =>
+          folderPaths.foreach(folder =>
             new StdReportContext(folder.toNIO).cleanUpOldReports()
           )
 

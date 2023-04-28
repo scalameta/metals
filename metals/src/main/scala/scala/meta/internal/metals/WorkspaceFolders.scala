@@ -25,9 +25,9 @@ class WorkspaceFolders(
       toAdd: List[Folder],
   ): Future[Unit] = {
     val actualToRemove =
-      toRemove.filterNot(folder => toAdd.exists(_.uri == folder.uri))
+      toRemove.filterNot(folder => toAdd.exists(_.path == folder.path))
     def shouldBeRemoved(service: MetalsLspService) =
-      actualToRemove.exists(_.uri == service.folder)
+      actualToRemove.exists(_.path == service.folder)
     def isIn(services: List[MetalsLspService], service: MetalsLspService) =
       services.exists(_.folder == service.folder)
 

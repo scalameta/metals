@@ -36,7 +36,7 @@ case class ScalaPresentationCompiler(
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
-    folderUri: Option[Path] = None,
+    folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
 ) extends PresentationCompiler:
 
@@ -47,7 +47,7 @@ case class ScalaPresentationCompiler(
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   private val forbiddenDoubleOptions = Set("-release")
   given ReportContext =
-    folderUri
+    folderPath
       .map(StdReportContext(_, reportsLevel))
       .getOrElse(EmptyReportContext)
 
@@ -114,7 +114,7 @@ case class ScalaPresentationCompiler(
         params,
         config,
         buildTargetIdentifier,
-        folderUri,
+        folderPath,
       ).completions()
 
     }
@@ -168,7 +168,7 @@ case class ScalaPresentationCompiler(
       EmptyCancelToken,
     ) { access =>
       val driver = access.compiler()
-      val provider = SemanticdbTextDocumentProvider(driver, folderUri)
+      val provider = SemanticdbTextDocumentProvider(driver, folderPath)
       provider.textDocument(filename, code)
     }
 
@@ -387,7 +387,7 @@ case class ScalaPresentationCompiler(
     copy(search = search)
 
   def withWorkspace(workspace: Path): PresentationCompiler =
-    copy(folderUri = Some(workspace))
+    copy(folderPath = Some(workspace))
 
   override def isLoaded() = compilerAccess.isLoaded()
 
