@@ -1623,4 +1623,30 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(1),
   )
 
+  // In Scala 3 we get: (x$1 : (String, Unit)) @unchecked scala
+  // should be solved by https://github.com/scalameta/metals/pull/5292
+  check(
+    "for-comprehension".tag(IgnoreScala3),
+    """|object B {
+       |  val a = for {
+       |    foo <- List("a", "b", "c")
+       |    abc@@ = println("Print!")
+       |  } yield abc
+       |}
+       |""".stripMargin,
+    "",
+  )
+
+  check(
+    "for-comprehension2".tag(IgnoreScala3),
+    """|object B {
+       |  val a = for {
+       |    foo <- List("a", "b", "c")
+       |    abcCURSORde = println("Print!")
+       |  } yield abc@@
+       |}
+       |""".stripMargin,
+    "abcCURSORde: Unit",
+  )
+
 }
