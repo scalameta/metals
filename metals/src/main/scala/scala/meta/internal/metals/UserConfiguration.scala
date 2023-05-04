@@ -123,7 +123,7 @@ object UserConfiguration {
         """empty string `""`.""",
         """"/usr/local/bin/mill"""",
         "Mill script",
-        """Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`.
+        """Optional absolute path to a `mill` executable to use for running `mill mill.contrib.bloop.Bloop/install`.
           |By default, Metals uses mill wrapper script with 0.5.0 mill version. Update this setting if your `mill` script requires more customizations
           |like using environment variables.
           |""".stripMargin,

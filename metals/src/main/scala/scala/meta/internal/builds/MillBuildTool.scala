@@ -82,12 +82,12 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
       "--import" :: "ivy:com.lihaoyi::mill-contrib-bloop:" :: Nil
     else "--predef" :: predefScriptPath.toString :: Nil
   }
-        
+
   private def bloopCmd(millVersion: String) = {
     // Bloop was moved to the bloop package in 0.9.3
     // https://github.com/com-lihaoyi/mill/pull/992
     val useBloopPackage = SemVer.isCompatibleVersion("0.9.3", millVersion)
-      
+
     if (useBloopPackage)
       "mill.contrib.bloop.Bloop/install"
     else "mill.contrib.Bloop/install"
@@ -95,7 +95,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val millVersion = getMillVersion(workspace)
-      
+
     val cmd =
       bloopImportArgs(millVersion) ::: bloopCmd(millVersion) :: Nil
     putTogetherArgs(cmd, millVersion, workspace)
