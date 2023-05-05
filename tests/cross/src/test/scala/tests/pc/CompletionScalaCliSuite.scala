@@ -132,6 +132,18 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     "circe-core_native0.4",
   )
 
+  check(
+    "version-sort",
+    """|//> using dep "com.lihaoyi::pprint:0.7@@"
+       |package A
+       |""".stripMargin,
+    """|0.7.3
+       |0.7.2
+       |0.7.1
+       |0.7.0
+       |""".stripMargin,
+  )
+
   private def scriptWrapper(code: String, filename: String): String =
     // Vaguely looks like a scala file that ScalaCLI generates
     // from a sc file.
