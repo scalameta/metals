@@ -2360,9 +2360,9 @@ class MetalsLspService(
         case e @ (_: ParseException | _: TokenizeException) =>
           scribe.error(e.toString)
         case e: IndexingExceptions.InvalidJarException =>
-          scribe.warn(s"invalid jar: ${e.path}", e.underlying)
+          scribe.warn(s"invalid jar: ${e.path}", e.getCause)
         case e: IndexingExceptions.PathIndexingException =>
-          scribe.error(s"issues while parsing: ${e.path}", e.underlying)
+          scribe.error(s"issues while parsing: ${e.path}", e.getCause)
         case e: IndexingExceptions.InvalidSymbolException =>
           reports.incognito.create(
             Report(
@@ -2371,7 +2371,7 @@ class MetalsLspService(
               e,
             )
           )
-          scribe.error(s"searching for `${e.symbol}` failed", e.underlying)
+          scribe.error(s"searching for `${e.symbol}` failed", e.getCause)
         case _: NoSuchFileException =>
         // only comes for badly configured jar with `/Users` path added.
         case NonFatal(e) =>

@@ -47,7 +47,7 @@ final class OnDemandSymbolIndex(
     catch {
       case NonFatal(e) =>
         onErrorOption(
-          IndexingExceptions.InvalidSymbolException(symbol.value, e)
+          new IndexingExceptions.InvalidSymbolException(symbol.value, e)
         )
     }
   }
@@ -56,7 +56,7 @@ final class OnDemandSymbolIndex(
     try findSymbolDefinition(symbol)
     catch {
       case NonFatal(e) =>
-        onError(IndexingExceptions.InvalidSymbolException(symbol.value, e))
+        onError(new IndexingExceptions.InvalidSymbolException(symbol.value, e))
         List.empty
     }
 
@@ -83,10 +83,10 @@ final class OnDemandSymbolIndex(
           getOrCreateBucket(dialect).addSourceJar(jar)
         } catch {
           case e: ZipError =>
-            onError(IndexingExceptions.InvalidJarException(jar, e))
+            onError(new IndexingExceptions.InvalidJarException(jar, e))
             List.empty
           case e: ZipException =>
-            onError(IndexingExceptions.InvalidJarException(jar, e))
+            onError(new IndexingExceptions.InvalidJarException(jar, e))
             List.empty
         }
       }
@@ -128,7 +128,7 @@ final class OnDemandSymbolIndex(
     try thunk
     catch {
       case NonFatal(e) =>
-        onError(IndexingExceptions.PathIndexingException(path, e))
+        onError(new IndexingExceptions.PathIndexingException(path, e))
         fallback
     }
 
