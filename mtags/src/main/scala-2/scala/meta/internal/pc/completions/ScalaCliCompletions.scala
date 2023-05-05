@@ -34,6 +34,16 @@ trait ScalaCliCompletions {
       dependency: String
   ) extends CompletionPosition {
 
+    override def compare(o1: Member, o2: Member): Int =
+      (o1, o2) match {
+        case (c1: TextEditMember, c2: TextEditMember) =>
+          val (comp1, comp2) = (c1.edit.getNewText(), c2.edit.getNewText())
+          // For version completions, we want to show the latest version first
+          if (comp1.headOption.exists(_.isDigit)) -comp1.compareTo(comp2)
+          else super.compare(o1, o2)
+        case _ => super.compare(o1, o2)
+      }
+
     override def contribute: List[Member] = {
       val completions =
         coursierComplete.complete(dependency)
