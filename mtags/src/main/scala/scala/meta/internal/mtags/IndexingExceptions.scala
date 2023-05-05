@@ -3,12 +3,12 @@ package scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
 object IndexingExceptions {
-  case class InvalidJarException(path: AbsolutePath, underlying: Throwable)
-      extends Exception(path.toString)
+  class InvalidJarException(val path: AbsolutePath, underlying: Throwable)
+      extends Exception(path.toString, underlying)
 
-  case class InvalidSymbolException(symbol: String, underlying: Throwable)
-      extends Exception(symbol)
+  class InvalidSymbolException(val symbol: String, underlying: Throwable)
+      extends Exception(symbol, underlying)
 
-  case class PathIndexingException(path: AbsolutePath, underlying: Throwable)
-      extends Exception(path.toString())
+  class PathIndexingException(val path: AbsolutePath, underlying: Throwable)
+      extends Exception(path.toString(), underlying)
 }
