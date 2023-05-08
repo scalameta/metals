@@ -681,6 +681,11 @@ class WorkspaceLspService(
       case ServerCommands.RunScalafix(params) =>
         val uri = params.getTextDocument().getUri()
         getServiceFor(uri).runScalafix(uri).asJavaObject
+      case ServerCommands.ScalafixRunOnly(params) =>
+        val uri = params.textDocumentPositionParams.getTextDocument().getUri()
+        val rules =
+          Option(params.rules).fold(List.empty[String])(_.asScala.toList)
+        getServiceFor(uri).runScalafixRules(uri, rules).asJavaObject
       case ServerCommands.ChooseClass(params) =>
         val uri = params.textDocument.getUri()
         val searchGranularity =

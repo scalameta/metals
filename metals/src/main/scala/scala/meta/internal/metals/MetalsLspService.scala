@@ -1631,18 +1631,24 @@ class MetalsLspService(
 
   def runScalafix(uri: String): Future[ApplyWorkspaceEditResponse] =
     scalafixProvider
-      .runAllRules(
-        uri.toAbsolutePath
+      .runAllRules(uri.toAbsolutePath)
+      .flatMap(applyEdits(uri, _))
+
+  def runScalafixRules(
+      uri: String,
+      rules: List[String],
+  ): Future[ApplyWorkspaceEditResponse] =
+    scalafixProvider
+      .runRulesOrPrompt(uri.toAbsolutePath, rules)
+      .flatMap(applyEdits(uri, _))
+
+  private def applyEdits(uri: String, edits: List[TextEdit]) = languageClient
+    .applyEdit(
+      new l.ApplyWorkspaceEditParams(
+        new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
       )
-      .flatMap { edits =>
-        languageClient
-          .applyEdit(
-            new l.ApplyWorkspaceEditParams(
-              new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
-            )
-          )
-          .asScala
-      }
+    )
+    .asScala
 
   def chooseClass(
       uri: String,

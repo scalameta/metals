@@ -21,11 +21,13 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
+import scala.meta.internal.metals.clients.language.RawMetalsQuickPickResult
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import scala.meta.io.AbsolutePath
 
@@ -105,6 +107,9 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
   var inputBoxHandler: MetalsInputBoxParams => RawMetalsInputBoxResult = {
     _: MetalsInputBoxParams => RawMetalsInputBoxResult(cancelled = true)
+  }
+  var quickPickHandler: MetalsQuickPickParams => RawMetalsQuickPickResult = {
+    _: MetalsQuickPickParams => RawMetalsQuickPickResult(cancelled = true)
   }
 
   private val refreshCount = new AtomicInteger
@@ -353,6 +358,15 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.prompt)
       inputBoxHandler(params)
+    }
+  }
+
+  override def rawMetalsQuickPick(
+      params: MetalsQuickPickParams
+  ): CompletableFuture[RawMetalsQuickPickResult] = {
+    CompletableFuture.completedFuture {
+      messageRequests.addLast(params.placeHolder)
+      quickPickHandler(params)
     }
   }
 

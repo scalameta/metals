@@ -107,7 +107,8 @@ object TestGroups {
       "tests.codeactions.MillifyDependencyLspSuite",
       "tests.RenameFilesLspSuite", "tests.codeactions.ExtractMethodLspSuite",
       "tests.SemanticTokensExpectSuite",
-      "tests.debug.DebugProtocolCancelationSuite", "tests.RemovedScalaLspSuite"),
+      "tests.debug.DebugProtocolCancelationSuite", "tests.RemovedScalaLspSuite",
+      "tests.scalafix.ScalafixRunOnlyLspSuite"),
   )
 
 }
