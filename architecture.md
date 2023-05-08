@@ -10,11 +10,11 @@ This document describes the high-level architecture of Metals following the phil
 
 ## Language Server
 
-`MetalsLanguageServer.scala` is an entrypoint to Metals. This class is responsible for handling LSP [lifecycle messages](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages). Upon receiving initialize request, an instance of `MetalsLspService.scala` which is responsible for handling other LSP requests.
+`MetalsLanguageServer.scala` is an entrypoint to Metals. This class is responsible for handling LSP [lifecycle messages](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#lifeCycleMessages). Upon receiving an initialize request, an instance of `WorkspaceLspService.scala` containing a dedicated instance of `MetalsLspService.scala` for each workspace folder is created. Together they are responsible for handling other LSP requests.
 
 ## LSP endpoints
 
-The most important file of this project is `MetalsLspService.scala`. In this file, we implement all of the LSP endpoints. All endpoints we use are defined in the `scala.meta.metals.lsp` package in 3 files:
+In `WorkspaceLspService.scala` we implement all of the LSP endpoints. All endpoints we use are defined in the `scala.meta.metals.lsp` package in 3 files:
 
 - `WorkspaceService.scala`
 - `TextDocumentService.scala`
@@ -27,15 +27,15 @@ For example, you will find the endpoint for `textDocument/completion` request in
 def completion(...) = ...
 ```
 
-Such endpoint is then implemented by `MetalsLspService`.
+`WorkspaceLspService` keeps track of the currently opened [workspace folders](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders) each treated as a separate Scala project. We keep an instance of `MetalsLspService` per workspace folder or a single instance for a single root project. The main purpose of `WorkspaceLspService` is redirecting requests/notifications to the correct instance of `MetalsLspService`.
 
-In addition to the implementation of LSP endpoints, this file creates and manages many components, for instance:
+`MetalsLspService` is the most important class of the project, it creates and manages many components, for instance:
 
 - `private val compilers: Compilers = ...`
 - `private val codeLensProvider: CodeLensProvider = ...`
 - `private val diagnostics: Diagnostics = ...`
 
-Hacking in Metals usually starts with recognizing in which component one has to make a change to get something woorking.
+Hacking in Metals usually starts with recognizing in which component one has to make a change to get something working.
 
 ## Presentation compiler
 
@@ -112,7 +112,7 @@ The endpoints is `scala.meta.internal.mtags.Mtags`, which dispatches to several 
 
 - `ScalaMtags` parses the provided Scala file using Scalameta's parser.
   - To see which symbols ScalaMtags extracts, refer to the unit tests (`MtagsSuite.scala` and `tests/unit/src/test/resources/mtags`).
-p `ScalaToplevelMtags` tokenizes the given Scala file using Scalameta, and parses it on the Metals side with custom parser.
+    p `ScalaToplevelMtags` tokenizes the given Scala file using Scalameta, and parses it on the Metals side with custom parser.
   - To enable fast indexing with a low memory footprint, nested symbols (such as functions and members defined in top-level classes, traits, and objects) are skipped since nested symbols are not of interest when performing symbol search.
   - See [Fast goto definition with low memory footprint | Metals](https://scalameta.org/metals/blog/2018/12/12/fast-goto-definition) for more details.
   - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
