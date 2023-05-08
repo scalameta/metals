@@ -211,6 +211,35 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val ScalafixRunOnly = new ParametrizedCommand[RunScalafixRulesParams](
+    "scalafix-run-only",
+    "Run a set of Scalafix Rules",
+    """|Run a set of Scalafix rules in your codebase.
+       |
+       |If no rules are specified, this command will prompt the user to select one from a list
+       |of their project's enabled rules.
+       |
+       |If you want to run all rules, use the `scalafix-run` command instead.
+       |""".stripMargin,
+    """|RunScalafixRulesParams object
+       |Example:
+       |```json
+       |{
+       |  "textDocumentPositionParams": {
+       |    "textDocument": {
+       |      "uri": "path/to/file.scala"
+       |    },
+       |    "position": {
+       |      "line": 70,
+       |      "character": 33
+       |    }
+       |  },
+       |  "rules": ["ExplicitResultTypes"]
+       |}
+       |```
+       |""".stripMargin,
+  )
+
   val CascadeCompile = new Command(
     "compile-cascade",
     "Cascade compile",
@@ -731,6 +760,7 @@ object ServerCommands {
       RestartBuildServer,
       RunDoctor,
       RunScalafix,
+      ScalafixRunOnly,
       DecodeFile,
       DisconnectBuildServer,
       ListBuildTargets,
@@ -801,4 +831,9 @@ case class DebugDiscoveryParams(
     @Nullable jvmOptions: java.util.List[String] = null,
     @Nullable env: java.util.Map[String, String] = null,
     @Nullable envFile: String = null,
+)
+
+case class RunScalafixRulesParams(
+    textDocumentPositionParams: TextDocumentPositionParams,
+    @Nullable rules: java.util.List[String] = null,
 )

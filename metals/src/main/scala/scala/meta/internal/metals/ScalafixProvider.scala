@@ -16,6 +16,8 @@ import scala.util.Try
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
@@ -86,17 +88,18 @@ case class ScalafixProvider(
 
   def runAllRules(file: AbsolutePath): Future[List[l.TextEdit]] = {
     val definedRules = rulesFromScalafixConf()
-    val result = for {
-      buildId <- buildTargets.inverseSources(file)
-      target <- buildTargets.scalaTarget(buildId)
-    } yield {
-      runScalafixRules(
-        file,
-        target,
-        definedRules.toList,
-      )
-    }
-    result.getOrElse(Future.successful(Nil))
+    runRules(file, definedRules.toList)
+  }
+
+  def runRulesOrPrompt(
+      file: AbsolutePath,
+      rules: List[String],
+  ): Future[List[l.TextEdit]] = {
+    val definedRules = rulesFromScalafixConf()
+    val rulesFut =
+      if (rules.isEmpty) askForRule(definedRules).map(_.toList)
+      else Future.successful(rules)
+    rulesFut.flatMap(runRules(file, _))
   }
 
   def organizeImports(
@@ -478,6 +481,33 @@ case class ScalafixProvider(
       }
   }
 
+  private def askForRule(rules: Set[String]): Future[Option[String]] =
+    languageClient
+      .metalsQuickPick(
+        MetalsQuickPickParams(
+          items = rules.toList.map(r => MetalsQuickPickItem(r, r)).asJava,
+          placeHolder = "Rule",
+        )
+      )
+      .asScala
+      .map(resultOpt => resultOpt.map(_.itemId))
+
+  private def runRules(
+      file: AbsolutePath,
+      rules: List[String],
+  ): Future[List[l.TextEdit]] = {
+    val result = for {
+      buildId <- buildTargets.inverseSources(file)
+      target <- buildTargets.scalaTarget(buildId)
+    } yield {
+      runScalafixRules(
+        file,
+        target,
+        rules,
+      )
+    }
+    result.getOrElse(Future.successful(Nil))
+  }
 }
 
 object ScalafixProvider {
