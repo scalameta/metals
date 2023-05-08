@@ -52,7 +52,7 @@ import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.Doctor
-import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
+import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
@@ -85,7 +85,6 @@ import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
-import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
@@ -127,6 +126,7 @@ class MetalsLspService(
     initTreeView: () => Unit,
     val folder: AbsolutePath,
     folderVisibleName: Option[String],
+    headDoctor: HeadDoctor,
 ) extends Cancelable
     with TextDocumentService {
   import serverInputs._
@@ -235,7 +235,7 @@ class MetalsLspService(
     () => testProvider.refreshTestSuites(),
     () => {
       if (clientConfig.isDoctorVisibilityProvider())
-        doctor.executeRefreshDoctor()
+        headDoctor.executeRefreshDoctor()
       else ()
     },
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
@@ -692,19 +692,19 @@ class MetalsLspService(
     languageClient,
   )
 
-  private val doctor: Doctor = new Doctor(
+  val doctor: Doctor = new Doctor(
     folder,
     buildTargets,
     diagnostics,
     languageClient,
     () => bspSession,
     () => bspConnector.resolve(),
-    () => httpServer,
     tables,
     clientConfig,
     mtagsResolver,
     () => userConfig().javaHome,
     maybeJdkVersion,
+    getVisibleName,
   )
 
   val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
@@ -742,8 +742,6 @@ class MetalsLspService(
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
-
-  var httpServer: Option[MetalsHttpServer] = None
 
   val treeView =
     new FolderTreeViewProvider(
@@ -787,7 +785,7 @@ class MetalsLspService(
     folder,
     tables,
     languageClient,
-    doctor,
+    headDoctor.executeRefreshDoctor,
     () => slowConnectToBuildServer(forceImport = true),
     bspConnector,
     () => quickConnectToBuildServer(),
@@ -876,55 +874,17 @@ class MetalsLspService(
     }
   }
 
-  private def startHttpServer(workspaceLspServer: WorkspaceLspService): Unit = {
-    if (clientConfig.isHttpEnabled) {
-      val host = "localhost"
-      val port = 5031
-      var url = s"http://$host:$port"
-      var render: () => String = () => ""
-      var completeCommand: HttpServerExchange => Unit = (_) => ()
-      val server = register(
-        MetalsHttpServer(
-          host,
-          port,
-          () => render(),
-          e => completeCommand(e),
-          () => doctor.problemsHtmlPage(url),
-          (uri) => fileDecoderProvider.getTastyForURI(uri),
-          workspaceLspServer,
-        )
-      )
-      httpServer = Some(server)
-      val newClient = new MetalsHttpClient(
-        folder,
-        () => url,
-        languageClient.underlying,
-        () => server.reload(),
-        clientConfig.icons,
-        time,
-        sh,
-        clientConfig,
-      )
-      render = () => newClient.renderHtml
-      completeCommand = e => newClient.completeCommand(e)
-      languageClient.underlying = newClient
-      server.start()
-      url = server.address
-    }
-  }
-
   val isInitialized = new AtomicBoolean(false)
 
   def connectTables(): Connection = tables.connect()
 
-  def initialized(server: WorkspaceLspService): Future[Unit] =
+  def initialized(): Future[Unit] =
     Future
       .sequence(
         List[Future[Unit]](
           quickConnectToBuildServer().ignoreValue,
           slowConnectToBuildServer(forceImport = false).ignoreValue,
           Future(workspaceSymbols.indexClasspath()),
-          Future(startHttpServer(server)),
           Future(formattingProvider.load()),
         )
       )
@@ -1678,12 +1638,6 @@ class MetalsLspService(
 
   def restartCompiler(): Future[Unit] = Future { compilers.restartAll() }
 
-  def runDoctor(): Future[Unit] =
-    Future {
-      doctor.onVisibilityDidChange(true)
-      doctor.executeRunDoctor()
-    }
-
   def getLocationForSymbol(symbol: String): Option[Location] =
     definitionProvider
       .fromSymbol(symbol, focusedDocument())
@@ -1824,13 +1778,6 @@ class MetalsLspService(
       newPath: AbsolutePath,
   ): Future[WorkspaceEdit] =
     packageProvider.willMovePath(oldPath, newPath)
-
-  def doctorVisibilityDidChange(
-      params: DoctorVisibilityDidChangeParams
-  ): Future[Unit] =
-    Future {
-      doctor.onVisibilityDidChange(params.visible)
-    }
 
   def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
@@ -2143,7 +2090,7 @@ class MetalsLspService(
     bspSession = Some(session)
     for {
       _ <- importBuild(session)
-      _ <- indexer.profiledIndexWorkspace(() => doctor.check())
+      _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
       _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
@@ -2170,7 +2117,7 @@ class MetalsLspService(
 
   private val indexer = Indexer(
     () => workspaceReload,
-    () => doctor,
+    runDoctorCheck,
     languageClient,
     () => bspSession,
     executionContext,
@@ -2559,4 +2506,10 @@ class MetalsLspService(
       }
       .flatMap(_ => autoConnectToBuildServer().map(_ => ()))
   }
+
+  def getTastyForURI(uri: URI): Future[Either[String, String]] =
+    fileDecoderProvider.getTastyForURI(uri)
+
+  def runDoctorCheck(): Unit = doctor.check(headDoctor)
+
 }

@@ -13,7 +13,6 @@ import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
 import scala.meta.internal.bsp.ResolvedMultiple
 import scala.meta.internal.bsp.ResolvedNone
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
@@ -25,15 +24,11 @@ import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsHttpServer
 import scala.meta.internal.metals.MtagsResolver
-import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PopupChoiceReset
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.Tables
-import scala.meta.internal.metals.Urls
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -51,14 +46,13 @@ final class Doctor(
     languageClient: MetalsLanguageClient,
     currentBuildServer: () => Option[BspSession],
     calculateNewBuildServer: () => BspResolvedResult,
-    httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     clientConfig: ClientConfiguration,
     mtagsResolver: MtagsResolver,
     javaHome: () => Option[String],
     maybeJDKVersion: Option[JdkVersion],
+    folderName: String,
 )(implicit ec: ExecutionContext) {
-  private val isVisible = new AtomicBoolean(false)
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
     new ProblemResolver(
@@ -70,103 +64,32 @@ final class Doctor(
       maybeJDKVersion,
     )
 
-  def onVisibilityDidChange(newState: Boolean): Unit = {
-    isVisible.set(newState)
-  }
-
-  /**
-   * Returns a full HTML page for the HTTP client.
-   */
-  def problemsHtmlPage(url: String): String = {
-    val livereload = Urls.livereload(url)
-    HtmlBuilder()
-      .page(
-        doctorTitle,
-        List(livereload, HtmlBuilder.htmlCSS),
-        HtmlBuilder.bodyStyle,
-      ) { html =>
-        html.section("Build targets", buildTargetsTable)
-      }
-      .render
-  }
-
-  /**
-   * Executes the "Run doctor" server command.
-   */
-  def executeRunDoctor(): Unit = {
-    executeDoctor(
-      clientCommand = ClientCommands.RunDoctor,
-      onServer = server => {
-        Urls.openBrowser(server.address + "/doctor")
-      },
-    )
-  }
-
   def isUnsupportedBloopVersion(): Boolean =
     problemResolver.isUnsupportedBloopVersion()
 
   /**
    * Executes the "Reload doctor" server command.
    */
-  private def executeReloadDoctor(summary: Option[String]): Unit = {
+  private def executeReloadDoctor(
+      summary: Option[String],
+      headDoctor: HeadDoctor,
+  ): Unit = {
     val hasProblemsNow = summary.isDefined
     if (hasProblems.get() && !hasProblemsNow) {
       hasProblems.set(false)
       languageClient.showMessage(CheckDoctor.problemsFixed)
     }
-    executeRefreshDoctor()
-  }
-
-  def executeRefreshDoctor(): Unit = {
-    executeDoctor(
-      clientCommand = ClientCommands.ReloadDoctor,
-      onServer = server => {
-        server.reload()
-      },
-    )
-  }
-
-  /**
-   * @param clientCommand RunDoctor or ReloadDoctor
-   * @param onServer piece of logic that will be executed when http server is enabled
-   */
-  private def executeDoctor(
-      clientCommand: ParametrizedCommand[String],
-      onServer: MetalsHttpServer => Unit,
-  ): Unit = {
-    val isVisibilityProvider = clientConfig.isDoctorVisibilityProvider()
-    val shouldDisplay = isVisibilityProvider && isVisible.get()
-    if (shouldDisplay || !isVisibilityProvider) {
-      if (
-        clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled
-      ) {
-        val output = clientConfig.doctorFormat match {
-          case DoctorFormat.Json => buildTargetsJson()
-          case DoctorFormat.Html => buildTargetsHtml()
-        }
-        val params = clientCommand.toExecuteCommandParams(output)
-        languageClient.metalsExecuteClientCommand(params)
-      } else {
-        httpServer() match {
-          case Some(server) =>
-            onServer(server)
-          case None =>
-            scribe.warn(
-              "Unable to run doctor. Make sure `isHttpEnabled` is set to `true`."
-            )
-        }
-      }
-    }
+    headDoctor.executeRefreshDoctor()
   }
 
   /**
    * Checks if there are any potential problems and if any, notifies the user.
    */
-  def check(): Unit = {
+  def check(headDoctor: HeadDoctor): Unit = {
     val scalaTargets = buildTargets.allScala.toList
     val javaTargets = buildTargets.allJava.toList
     val summary = problemResolver.problemMessage(scalaTargets, javaTargets)
-    executeReloadDoctor(summary)
+    executeReloadDoctor(summary, headDoctor)
     summary match {
       case Some(problem) =>
         val notification = tables.dismissedNotifications.DoctorWarning
@@ -177,8 +100,7 @@ final class Doctor(
           hasProblems.set(true)
           languageClient.showMessageRequest(params).asScala.foreach { item =>
             if (item == CheckDoctor.moreInformation) {
-              onVisibilityDidChange(true)
-              executeRunDoctor()
+              headDoctor.executeRunDoctor()
             } else if (item == CheckDoctor.dismissForever) {
               notification.dismissForever()
             }
@@ -248,40 +170,21 @@ final class Doctor(
     }
   }
 
-  private def buildTargetsHtml(): String = {
-    new HtmlBuilder()
-      .element("h1")(_.text(doctorTitle))
-      .call(buildTargetsTable)
-      .render
-  }
-
-  private def getJdkInfo(): Option[String] =
-    for {
-      version <- Option(System.getProperty("java.version"))
-      vendor <- Option(System.getProperty("java.vendor"))
-      home <- Option(System.getProperty("java.home"))
-    } yield s"$version from $vendor located at $home"
-
-  private def buildTargetsJson(): String = {
+  def buildTargetsJson(): DoctorFolderResults = {
     val targetIds = allTargetIds()
     val buildToolHeading = selectedBuildToolMessage()
 
     val (buildServerHeading, _) = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
-    val jdkInfo = getJdkInfo().map(info => s"$jdkVersionTitle$info")
-    val serverInfo = s"$serverVersionTitle${BuildInfo.metalsVersion}"
     val header =
-      DoctorHeader(
+      DoctorFolderHeader(
         buildToolHeading,
         buildServerHeading,
         importBuildHeading,
-        jdkInfo,
-        serverInfo,
-        buildTargetDescription,
       )
-    val results = if (targetIds.isEmpty) {
-      DoctorResults(
-        doctorTitle,
+    if (targetIds.isEmpty) {
+      DoctorFolderResults(
+        folderName,
         header,
         Some(
           List(
@@ -293,7 +196,7 @@ final class Doctor(
         ),
         None,
         List.empty,
-      ).toJson
+      )
     } else {
       val allTargetsInfo = targetIds
         .flatMap(extractTargetInfo)
@@ -308,15 +211,14 @@ final class Doctor(
         DoctorExplanation.JavaSupport.toJson(allTargetsInfo),
       )
 
-      DoctorResults(
-        doctorTitle,
+      DoctorFolderResults(
+        folderName,
         header,
         None,
         Some(allTargetsInfo),
         explanations,
-      ).toJson
+      )
     }
-    ujson.write(results)
   }
 
   private def gotoBuildTargetCommand(
@@ -344,7 +246,13 @@ final class Doctor(
     s"command:metals.reset-choice?${URLEncoder.encode(param, StandardCharsets.UTF_8.name())}"
   }
 
-  private def buildTargetsTable(html: HtmlBuilder): Unit = {
+  def buildTargetsTable(
+      html: HtmlBuilder,
+      includeWorkspaceFolderName: Boolean,
+  ): Unit = {
+    if (includeWorkspaceFolderName) {
+      html.element("h2")(_.text(folderName))
+    }
     selectedBuildToolMessage().foreach { msg =>
       html.element("p")(
         _.text(msg)
@@ -383,25 +291,6 @@ final class Doctor(
         _.text(message)
       )
     }
-
-    val jdkInfo = getJdkInfo()
-
-    jdkInfo.foreach { jdkMsg =>
-      html.element("p") { builder =>
-        builder.bold(jdkVersionTitle)
-        builder.text(jdkMsg)
-      }
-    }
-
-    html.element("p") { builder =>
-      builder.bold(serverVersionTitle)
-      builder.text(BuildInfo.metalsVersion)
-    }
-
-    html
-      .element("p")(
-        _.text(buildTargetDescription)
-      )
 
     val targetIds = allTargetIds()
     if (targetIds.isEmpty) {
@@ -617,14 +506,6 @@ final class Doctor(
         .getOrElse(""),
     )
   }
-
-  private val doctorTitle = "Metals Doctor"
-  private val jdkVersionTitle = "Metals Java: "
-  private val serverVersionTitle = "Metals Server version: "
-  private val buildTargetDescription =
-    "These are the installed build targets for this workspace. " +
-      "One build target corresponds to one classpath. For example, normally one sbt project maps to " +
-      "two build targets: main and test."
   private val noBuildTargetsTitle =
     s"${Icons.unicode.alert} No build targets were detected in this workspace so most functionality won't work."
   private val noBuildTargetRecOne =

@@ -41,11 +41,24 @@ object ClientCommands {
         |   */
         |  version: String;
         |  /**
-        |   * Contains decisions that were made about what build tool or build server
-        |   * the user has chosen. There is also other brief information about understanding
+        |   * Contains metals version and jdk info and a brief information about understanding
         |   * the Doctor placed in here as well. (since version 3 (replaces headerText))
         |   */
         |   header: DoctorHeader;
+        |   /**
+        |   * Troubleshooting help for each workspace folder.
+        |   */
+        |   folders: DoctorFolderResult[];
+        |}
+        |
+        |```
+        |```json
+        |export interface DoctorFolderResult {
+        |   /**
+        |   * Contains decisions that were made about what build tool or build server
+        |   * the user has chosen.
+        |   */
+        |   header: DoctorFolderHeader
         |   /**
         |    * If build targets are detected in your workspace, they will be listed here with
         |    * the status of related functionality of Metals for each build target.
@@ -56,10 +69,19 @@ object ClientCommands {
         |   /** Explanations for the various statuses present in the doctor */
         |   explanations?: DoctorExplanation[];
         |}
-        |
         |```
         |```json
         |export interface DoctorHeader {
+        |  /** java version and location information */
+        |  jdkInfo?: string;
+        |  /** the version of the server that is being used */
+        |  serverInfo: string;
+        |  /** small description on what a build target is */
+        |  buildTargetDescription: string;
+        |}
+        |```
+        |```json
+        |export interface DoctorFolderHeader {
         |  /** if Metals detected multiple build tools, this specifies the one the user has chosen */
         |  buildTool?: string;
         |  /** the build server that is being used */
@@ -68,12 +90,6 @@ object ClientCommands {
         |   *  how to get it back.
         |   */
         |  importBuildStatus?: string;
-        |  /** java version and location information */
-        |  jdkInfo?: string;
-        |  /** the version of the server that is being used */
-        |  serverInfo: string;
-        |  /** small description on what a build target is */
-        |  buildTargetDescription: string;
         |}
         |```
         |```json

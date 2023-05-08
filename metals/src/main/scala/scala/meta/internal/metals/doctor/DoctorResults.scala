@@ -7,15 +7,33 @@ import ujson.Obj
 final case class DoctorResults(
     title: String,
     header: DoctorHeader,
+    folders: List[DoctorFolderResults],
+) {
+  def toJson: Obj =
+    ujson.Obj(
+      "title" -> title,
+      "header" -> header.toJson,
+      "folders" -> folders.map(_.toJson),
+      "version" -> DoctorResults.version,
+    )
+}
+
+object DoctorResults {
+  // Version of the Doctor json that is returned.
+  val version = 4
+}
+
+final case class DoctorFolderResults(
+    folder: String,
+    header: DoctorFolderHeader,
     messages: Option[List[DoctorMessage]],
     targets: Option[Seq[DoctorTargetInfo]],
     explanations: List[Obj],
 ) {
   def toJson: Obj = {
     val json = ujson.Obj(
-      "title" -> title,
+      "folder" -> folder,
       "header" -> header.toJson,
-      "version" -> DoctorResults.version,
     )
     messages.foreach(messageList =>
       json("messages") = messageList.map(_.toJson)
@@ -24,11 +42,6 @@ final case class DoctorResults(
     json("explanations") = explanations
     json
   }
-}
-
-object DoctorResults {
-  // Version of the Doctor json that is returned.
-  val version = 3
 }
 
 final case class DoctorMessage(title: String, recommendations: List[String]) {
@@ -92,19 +105,11 @@ final case class DoctorTargetInfo(
 }
 
 /**
- * @param buildTool if Metals detected multiple build tools, this specifies
- *        the one the user has chosen
- * @param buildServer the build server that is being used
- * @param importBuildStatus if the user has turned the import prompt off, this
- *        will include a message on how to get it back.
  * @param jdkInfo java version and location information
  * @param serverInfo the version of the server that is being used
  * @param buildTargetDescription small description on what a build target is
  */
 final case class DoctorHeader(
-    buildTool: Option[String],
-    buildServer: String,
-    importBuildStatus: Option[String],
     jdkInfo: Option[String],
     serverInfo: String,
     buildTargetDescription: String,
@@ -112,14 +117,34 @@ final case class DoctorHeader(
   def toJson: Obj = {
     val base =
       ujson.Obj(
-        "buildServer" -> buildServer,
         "serverInfo" -> serverInfo,
         "buildTargetDescription" -> buildTargetDescription,
+      )
+    jdkInfo.foreach { jdki => base.update("jdkInfo", jdki) }
+    base
+  }
+}
+
+/**
+ * @param buildTool if Metals detected multiple build tools, this specifies
+ *        the one the user has chosen
+ * @param buildServer the build server that is being used
+ * @param importBuildStatus if the user has turned the import prompt off, this
+ *        will include a message on how to get it back.
+ */
+final case class DoctorFolderHeader(
+    buildTool: Option[String],
+    buildServer: String,
+    importBuildStatus: Option[String],
+) {
+  def toJson: Obj = {
+    val base =
+      ujson.Obj(
+        "buildServer" -> buildServer
       )
 
     buildTool.foreach { bt => base.update("buildTool", bt) }
     importBuildStatus.foreach { ibs => base.update("importBuildStatus", ibs) }
-    jdkInfo.foreach { jdki => base.update("jdkInfo", jdki) }
     base
   }
 }
