@@ -48,7 +48,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  * and respond to UI dialogues through their browser instead.
  */
 final class MetalsHttpClient(
-    workspace: AbsolutePath,
+    folders: List[AbsolutePath],
     url: () => String,
     initial: MetalsLanguageClient,
     triggerReload: () => Unit,
@@ -252,14 +252,18 @@ final class MetalsHttpClient(
         .section("window/showMessage", showMessagesFormatted)
         .section(
           "window/logMessage",
-          _.text("Path: ")
-            .path(workspace.resolve(Directories.log).toNIO)
-            .element("section", "class='container is-dark'")(
-              _.element(
-                "pre",
-                "style='overflow:auto;max-height:400px;min-height:100px;color:white;'",
-              )(logsFormatted)
-            ),
+          builder =>
+            builder
+              .text("Paths: ")
+              .unorderedList(folders)(folder =>
+                builder.path(folder.resolve(Directories.log).toNIO)
+              )
+              .element("section", "class='container is-dark'")(
+                _.element(
+                  "pre",
+                  "style='overflow:auto;max-height:400px;min-height:100px;color:white;'",
+                )(logsFormatted)
+              ),
         )
         .section(
           "Log files",
