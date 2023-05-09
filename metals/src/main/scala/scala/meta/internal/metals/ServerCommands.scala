@@ -50,9 +50,12 @@ object ServerCommands {
 
   val ResetWorkspace = new Command(
     "reset-workspace",
-    "Clean and restart Bloop server",
-    """Remove all .bloop directories and restart Bloop server. 
-      |This will ensure that Bloop will have a fully reset state.""".stripMargin,
+    "Clean and restart build server",
+    """|Clean metals cache and restart build server.
+       |
+       |When using Bloop, clears all directories in .bloop.
+       |This will ensure that Bloop will have a fully reset state.
+       |""".stripMargin,
   )
 
   val ScanWorkspaceSources = new Command(

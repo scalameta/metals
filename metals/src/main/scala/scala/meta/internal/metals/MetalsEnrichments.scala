@@ -507,7 +507,7 @@ object MetalsEnrichments
     }
 
     def deleteRecursively(): Unit = {
-      path.listRecursive.toList.reverse.foreach(_.delete())
+      path.listRecursive.toList.reverse.foreach(f => if (f.exists) f.delete())
     }
 
     def appendText(text: String): Unit = {

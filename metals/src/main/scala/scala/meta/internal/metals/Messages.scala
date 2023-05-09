@@ -130,7 +130,7 @@ object Messages {
 
   val ResetWorkspaceFailed = new MessageParams(
     MessageType.Error,
-    "Failed to reset the workspace.",
+    "Failed to reset the workspace. See the log for more details.",
   )
 
   def bloopInstallProgress(buildToolExecName: String) =

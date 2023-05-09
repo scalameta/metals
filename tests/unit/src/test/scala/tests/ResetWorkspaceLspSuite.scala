@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.ServerCommands
 
-class ResetWorkspaceLspSuite extends BaseLspSuite(s"clean-all") {
+class ResetWorkspaceLspSuite extends BaseLspSuite(s"reset-workspace") {
 
   test("basic") {
     for {
