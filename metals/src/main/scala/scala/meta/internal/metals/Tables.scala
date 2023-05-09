@@ -159,11 +159,16 @@ final class Tables(
   }
 
   def cleanAll(): Unit = {
-    jarSymbols.clearAll()
-    digests.clearAll()
-    dependencySources.clearAll()
-    worksheetSources.clearAll()
-    fingerprints.clearAll()
+    try {
+      jarSymbols.clearAll()
+      digests.clearAll()
+      dependencySources.clearAll()
+      worksheetSources.clearAll()
+      fingerprints.clearAll()
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"failed to clean database: $databasePath", e)
+    }
   }
 
 }

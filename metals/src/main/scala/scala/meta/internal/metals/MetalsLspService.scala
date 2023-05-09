@@ -2507,45 +2507,41 @@ class MetalsLspService(
     }
   }
 
-  private def resetWorkspace(): Future[Unit] = {
-    def clearBloopDir(): Unit = {
-      val bloopDir = workspace.resolve(".bloop")
-      val directories = bloopDir.list.filter(_.isDirectory).toList
-
-      try {
-        directories.foreach(_.deleteRecursively())
-        val remainingDirs =
-          bloopDir.list.filter(f => f.exists && f.isDirectory).toList
-        if (remainingDirs.isEmpty) {
-          scribe.info("Deleted all the directories inside .bloop directory.")
-          tables.cleanAll()
-        } else {
-          val str = remainingDirs.mkString(", ")
-          scribe.error(
-            s"Couldn't delete all the directories in .bloop directory, remaining: $str"
-          )
-        }
-      } catch {
-        case e: Throwable =>
-          languageClient.showMessage(Messages.ResetWorkspaceFailed)
-          scribe.error(
-            "Couldn't delete all the directories inside .bloop: " +
-              e.getMessage()
-          )
+  private def clearBloopDir(): Unit = {
+    try {
+      val bloopDir = folder.resolve(".bloop")
+      bloopDir.list.foreach { f =>
+        if (f.exists && f.isDirectory) f.deleteRecursively()
       }
+      val remainingDirs =
+        bloopDir.list.filter(f => f.exists && f.isDirectory).toList
+      if (remainingDirs.isEmpty) {
+        scribe.info(
+          "Deleted directories inside .bloop"
+        )
+      } else {
+        val str = remainingDirs.mkString(", ")
+        scribe.error(
+          s"Couldn't delete directories inside .bloop, remaining: $str"
+        )
+      }
+    } catch {
+      case e: Throwable =>
+        languageClient.showMessage(Messages.ResetWorkspaceFailed)
+        scribe.error("Error while deleting directories inside .bloop", e)
     }
 
-    if (buildTools.isBloop) {
-      bspSession.foreach { session =>
-        if (session.main.isBloop) bloopServers.shutdownServer()
-      }
-      disconnectOldBuildServer()
-        .map(_ => clearBloopDir())
-        .flatMap { _ => autoConnectToBuildServer().map(_ => ()) }
-    } else {
-      scribe.warn("Couldn't reset workspace, no Bloop connection found.")
-      Future.successful(())
-    }
   }
 
+  def resetWorkspace(): Future[Unit] = {
+    if (buildTools.isBloop) {
+      shutDownBloop()
+    }
+    disconnectOldBuildServer()
+      .map { _ =>
+        if (buildTools.isBloop) clearBloopDir()
+        tables.cleanAll()
+      }
+      .flatMap(_ => autoConnectToBuildServer().map(_ => ()))
+  }
 }
