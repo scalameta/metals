@@ -573,4 +573,23 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(1),
   )
+
+  check(
+    "second-arg-first",
+    """|case class Test(
+       |    testA: String,
+       |    testB: Option[String],
+       |    testC: String,
+       |)
+       |object Main {
+       |  def test(x: Test) = {
+       |    x.copy(testB = ???, te@@)
+       |  }
+       |}
+       |""".stripMargin,
+    """|testA = : String
+       |testC = : String
+       |""".stripMargin,
+    topLines = Some(2),
+  )
 }
