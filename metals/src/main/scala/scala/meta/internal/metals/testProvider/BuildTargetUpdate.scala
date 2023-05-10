@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.testProvider
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import org.eclipse.{lsp4j => l}
@@ -8,16 +9,22 @@ import org.eclipse.{lsp4j => l}
 final case class BuildTargetUpdate(
     targetName: String,
     targetUri: String,
+    folderName: String,
+    folderUri: String,
     events: java.util.List[TestExplorerEvent],
 )
 object BuildTargetUpdate {
   def apply(
       buildTarget: BuildTarget,
+      folderName: String,
+      folderUri: AbsolutePath,
       events: Seq[TestExplorerEvent],
   ): BuildTargetUpdate =
     BuildTargetUpdate(
       buildTarget.getDisplayName,
       buildTarget.getId.getUri,
+      folderName,
+      folderUri.toNIO.toString(),
       events.asJava,
     )
 }

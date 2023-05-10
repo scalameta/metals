@@ -54,6 +54,8 @@ final class TestSuitesProvider(
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
     client: MetalsLanguageClient,
+    folderName: String,
+    folderUri: AbsolutePath,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider
     with CodeLens {
@@ -105,7 +107,7 @@ final class TestSuitesProvider(
       val removeEvents = removed
         .groupBy(_.buildTarget)
         .map { case (buildTarget, entries) =>
-          BuildTargetUpdate(
+          buildTargetUpdate(
             buildTarget,
             entries.map(_.suiteDetails.asRemoveEvent),
           )
@@ -170,7 +172,7 @@ final class TestSuitesProvider(
       case Some(path0) => getTestCasesForPath(path0, None)
       case None =>
         index.allSuites.map { case (buildTarget, entries) =>
-          BuildTargetUpdate(
+          buildTargetUpdate(
             buildTarget,
             entries.map(_.suiteDetails.asAddEvent).toList,
           )
@@ -236,7 +238,7 @@ final class TestSuitesProvider(
     events
       .groupBy { case (target, _) => target }
       .map { case (buildTarget, events) =>
-        BuildTargetUpdate(
+        buildTargetUpdate(
           buildTarget,
           events.map { case (_, event) => event },
         )
@@ -267,7 +269,7 @@ final class TestSuitesProvider(
         }
         buildTarget <- metadata.entries.map(_.buildTarget).distinct
       } yield {
-        BuildTargetUpdate(buildTarget, events)
+        buildTargetUpdate(buildTarget, events)
       }
     buildTargetUpdates
   }
@@ -473,7 +475,7 @@ final class TestSuitesProvider(
         .filter { case (_, events) => events.nonEmpty }
 
     aggregated.map { case (target, events) =>
-      BuildTargetUpdate(target, events)
+      buildTargetUpdate(target, events)
     }.toList
   }
 
@@ -515,5 +517,16 @@ final class TestSuitesProvider(
       }
     entryOpt
   }
+
+  private def buildTargetUpdate(
+      buildTarget: BuildTarget,
+      events: Seq[TestExplorerEvent],
+  ): BuildTargetUpdate =
+    BuildTargetUpdate(
+      buildTarget,
+      folderName,
+      folderUri,
+      events,
+    )
 
 }

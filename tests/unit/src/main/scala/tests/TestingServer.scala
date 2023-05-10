@@ -1001,7 +1001,11 @@ final case class TestingServer(
         }
     }
 
-    val compilations = paths.map(path => server.compilations.compileFile(path))
+    val compilations =
+      paths.map(path =>
+        fullServer.getServiceFor(path).compilations.compileFile(path)
+      )
+
     for {
       _ <- Future.sequence(compilations)
       _ <- waitFor(util.concurrent.TimeUnit.SECONDS.toMillis(1))
