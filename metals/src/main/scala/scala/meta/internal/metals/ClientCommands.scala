@@ -203,6 +203,8 @@ object ClientCommands {
       |export interface BuildTargetUpdate {
       |  targetName: TargetName;
       |  targetUri: TargetUri;
+      |  folderName: FolderName;
+      |  folderUri: FolderUri;
       |  events: TestExplorerEvent[];
       |}
       |

@@ -469,6 +469,8 @@ class MetalsLspService(
     clientConfig,
     userConfig,
     languageClient,
+    getVisibleName,
+    folder,
   )
 
   private val codeLensProvider: CodeLensProvider = {

@@ -47,7 +47,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     ),
     () => {
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -83,7 +83,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     List("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
     () => {
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -146,7 +146,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     ),
     () => {
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -210,7 +210,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     List("app/src/main/scala/JunitTestSuite.scala"),
     () => {
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -290,7 +290,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     List("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
     () => {
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -383,7 +383,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     List("app/src/main/scala/MunitTestSuite.scala"),
     () => {
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -440,7 +440,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     List("app/src/main/scala/MunitTestSuite.scala"),
     () => {
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -511,7 +511,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       val symbol = "_empty_/JunitTestSuite#"
       val file = "app/src/main/scala/JunitTestSuite.scala"
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -560,7 +560,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       val symbol = "a/FunSuite#"
       val file = "app/src/main/scala/a/FunSuite.scala"
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -615,7 +615,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       val symbol = "a/b/WordSpec#"
       val file = "app/src/main/scala/a/b/WordSpec.scala"
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -676,7 +676,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       val symbol = "a/b/WordSpec#"
       val file = "app/src/main/scala/a/b/WordSpec.scala"
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -727,7 +727,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       val symbol = "_empty_/FlatSpec#"
       val file = "app/src/main/scala/FlatSpec.scala"
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -781,7 +781,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       val symbol = "_empty_/FunSpec#"
       val file = "app/src/main/scala/FunSpec.scala"
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -835,7 +835,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       val symbol = "_empty_/FreeSpec#"
       val file = "app/src/main/scala/FreeSpec.scala"
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -887,7 +887,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       val symbol = "_empty_/PropSpec#"
       val file = "app/src/main/scala/PropSpec.scala"
       List(
-        BuildTargetUpdate(
+        rootBuildTargetUpdate(
           "app",
           targetUri,
           List[TestExplorerEvent](
@@ -1009,4 +1009,16 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   private def classUriFor(relativePath: String): String =
     workspace.resolve(relativePath).toURI.toString
 
+  private def rootBuildTargetUpdate(
+      targetName: String,
+      targetUri: String,
+      events: java.util.List[TestExplorerEvent],
+  ): BuildTargetUpdate =
+    BuildTargetUpdate(
+      targetName,
+      targetUri,
+      "root",
+      server.server.folder.toNIO.toString,
+      events,
+    )
 }
