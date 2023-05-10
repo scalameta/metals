@@ -261,6 +261,9 @@ abstract class PcCollector[T](
             case imp: Import =>
               owners(imp.expr.symbol) && imp.selectors
                 .exists(sel => soughtNames(sel.name))
+            case bind: Bind =>
+              (soughtOrOverride(bind.symbol)) ||
+              isForComprehensionOwner(bind)
             case _ => false
           }
 
@@ -370,6 +373,21 @@ abstract class PcCollector[T](
                 )
             }
           tree.children.foldLeft(acc ++ named)(traverse(_, _))
+
+        /**
+         * Unapply patterns such as:
+         * for {
+         *   (<<a>>,<<b>>) <- List((1,2))
+         * }
+         * case <<bar>>: Bar =>
+         */
+        case bind: Bind if filter(bind) =>
+          bind.children.foldLeft(
+            acc + collect(
+              bind,
+              bind.namePos
+            )
+          )(traverse(_, _))
 
         /**
          * We don't automatically traverser types like:

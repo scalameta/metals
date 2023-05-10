@@ -737,4 +737,21 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  )
       |}""".stripMargin,
   )
+
+  check(
+    "for-comp-bind",
+    """
+      |object Main {
+      |  case class Bar(fooBar: Int, goo: Int)
+      |  val abc = for {
+      |    foo <- List(1)
+      |    _ = Option(1)
+      |    Bar(<<fooBar>>, goo) <- List(Bar(foo, 123))
+      |    baz = <<fooBar>> + goo
+      |  } yield {
+      |    val x = foo + <<foo@@Bar>> + baz
+      |    x
+      |  }
+      |}""".stripMargin,
+  )
 }
