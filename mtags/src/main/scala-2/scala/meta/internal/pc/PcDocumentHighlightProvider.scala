@@ -18,6 +18,8 @@ final class PcDocumentHighlightProvider(
     tree match {
       case _: MemberDef =>
         new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)
+      case _: Bind =>
+        new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Write)
       case _ =>
         new DocumentHighlight(pos.toLsp, DocumentHighlightKind.Read)
     }
