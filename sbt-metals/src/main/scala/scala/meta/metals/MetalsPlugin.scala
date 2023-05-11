@@ -51,14 +51,14 @@ object MetalsPlugin extends AutoPlugin {
     javaHome := {
       javaHome.value match {
         case None =>
-          // In case if jdk is >= 17 we need to set `javaHome` explicitly
+          // In case if jdk is >= 12 we need to set `javaHome` explicitly
           // to force sbt creating ForkJavaCompiler.
           // Otherwise it creates LocalJavaCompiler that ignores `-J` flags
           // and semanticdb plugin fails compilation
           // See sbt.internal.inc.javac.JavaCompiler.directOrFork
           // https://github.com/sbt/zinc/blob/dd1f3596494b4c4d7a19256bc921e765d3dc12c8/internal/zinc-compile-core/src/main/scala/sbt/internal/inc/javac/JavaCompiler.scala#L41-L67
           JdkVersion.getJavaVersionFromJavaHome(processJavaHome) match {
-            case Some(v) if v.major >= 17 => Some(processJavaHome)
+            case Some(v) if v.major >= 12 => Some(processJavaHome)
             case _ => None
           }
         case defined @ Some(_) => defined
@@ -104,7 +104,7 @@ object MetalsPlugin extends AutoPlugin {
 
   def javaSemanticdbOptions: Def.Initialize[Seq[String]] = {
     def exportsFlags(version: JdkVersion): List[String] = {
-      if (version.major >= 17) {
+      if (version.major >= 12) {
         val compilerPackages = List(
           "com.sun.tools.javac.api", "com.sun.tools.javac.code",
           "com.sun.tools.javac.model", "com.sun.tools.javac.tree",
