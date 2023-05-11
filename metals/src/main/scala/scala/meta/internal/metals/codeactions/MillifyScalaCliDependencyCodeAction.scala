@@ -48,7 +48,9 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
             case comment: Comment
                 if isScalaCliUsingDirectiveComment(comment.toString()) =>
               convertSbtToMillStyleIfPossible(comment.toString())
-                .map(buildAction(comment, kind, path)(_))
+                .map(
+                  buildAction(comment, kind, path, range.getStart.getLine)(_)
+                )
                 .toList
           }
       }
@@ -59,18 +61,34 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
 
 object MillifyScalaCliDependencyCodeAction {
 
-  private def buildAction(comment: Comment, kind: String, path: AbsolutePath)(
+  private def buildAction(
+      comment: Comment,
+      kind: String,
+      path: AbsolutePath,
+      commentStartLine: Int,
+  )(
       suggestion: ReplacementSuggestion
-  ) =
+  ) = {
+    val pos = new l.Range(
+      new l.Position(
+        comment.pos.startLine + commentStartLine,
+        comment.pos.startColumn,
+      ),
+      new l.Position(
+        comment.pos.endLine + commentStartLine,
+        comment.pos.endColumn,
+      ),
+    )
     CodeActionBuilder.build(
       title = actionTitle(suggestion.millStyleDependency),
       kind = kind,
       changes = List(
         path -> List(
-          new l.TextEdit(comment.pos.toLsp, suggestion.replacementText)
+          new l.TextEdit(pos, suggestion.replacementText)
         )
       ),
     )
+  }
 
   private def convertSbtToMillStyleIfPossible(
       sbtStyleDirective: String
