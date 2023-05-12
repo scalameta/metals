@@ -12,9 +12,12 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.meta.io.RelativePath
 
-import sun.misc.Unsafe
-
 object ClasspathLoader {
+
+  abstract class Unsafe {
+    def objectFieldOffset(field: java.lang.reflect.Field): Long
+    def getObject(obj: AnyRef, offset: Long): AnyRef
+  }
 
   /**
    * Utility to get SystemClassLoader/ClassLoader urls in java8 and java9+
@@ -31,9 +34,10 @@ object ClasspathLoader {
         .startsWith("jdk.internal.loader.ClassLoaders$")
     ) {
       try {
-        val field = classOf[Unsafe].getDeclaredField("theUnsafe")
+        val unsafeClass = classLoader.loadClass("sun.misc.Unsafe")
+        val field = unsafeClass.getDeclaredField("theUnsafe")
         field.setAccessible(true)
-        val unsafe = field.get(null).asInstanceOf[Unsafe]
+        val unsafe = field.get(null)
 
         // jdk.internal.loader.ClassLoaders.AppClassLoader.ucp
         val ucpField = {
@@ -46,14 +50,33 @@ object ClasspathLoader {
             classLoader.getClass()
           }
         }.getDeclaredField("ucp")
-        val ucpFieldOffset: Long = unsafe.objectFieldOffset(ucpField)
-        val ucpObject = unsafe.getObject(classLoader, ucpFieldOffset)
+
+        def objectFieldOffset(field: java.lang.reflect.Field): Long =
+          unsafeClass
+            .getMethod(
+              "objectFieldOffset",
+              classOf[java.lang.reflect.Field]
+            )
+            .invoke(unsafe, field)
+            .asInstanceOf[Long]
+
+        def getObject(obj: AnyRef, offset: Long): AnyRef =
+          unsafeClass
+            .getMethod(
+              "getObject",
+              classOf[AnyRef],
+              classOf[Long]
+            )
+            .invoke(unsafe, obj, offset.asInstanceOf[AnyRef])
+            .asInstanceOf[AnyRef]
+
+        val ucpFieldOffset = objectFieldOffset(ucpField)
+        val ucpObject = getObject(classLoader, ucpFieldOffset)
 
         // jdk.internal.loader.URLClassPath.path
         val pathField = ucpField.getType().getDeclaredField("path")
-        val pathFieldOffset = unsafe.objectFieldOffset(pathField)
-        val paths: Seq[URL] = unsafe
-          .getObject(ucpObject, pathFieldOffset)
+        val pathFieldOffset = objectFieldOffset(pathField)
+        val paths: Seq[URL] = getObject(ucpObject, pathFieldOffset)
           .asInstanceOf[util.ArrayList[URL]]
           .asScala
 
