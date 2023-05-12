@@ -8,7 +8,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.pc.InterruptException
-import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.SymbolSearch
@@ -220,9 +219,4 @@ final class WorkspaceSymbolProvider(
     search(query, visitor, None)
     visitor.allResults()
   }
-}
-
-object WorkspaceSymbolProvider {
-  def isRelevantKind(kind: Kind): Boolean =
-    WorkspaceSymbolQuery.isRelevantKind(kind)
 }
