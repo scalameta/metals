@@ -184,6 +184,23 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     } yield ()
   }
 
+
+  test("connecting-scalacli-as-fallback") {
+     cleanWorkspace()
+     FileLayout.fromString(simpleFileLayout, workspace)
+     for {
+       _ <- server.initialize()
+       _ <- server.initialized()
+       _ <- server.server.indexingPromise.future
+       _ <- server.didOpen("MyTests.scala")
+       _ <- assertDefinitionAtLocation(
+         "MyTests.scala",
+         "new Fo@@o",
+         "foo.sc",
+       )
+     } yield ()
+  }
+
   test("relative-semanticdb-root") {
     for {
       _ <- scalaCliInitialize(useBsp = false)(

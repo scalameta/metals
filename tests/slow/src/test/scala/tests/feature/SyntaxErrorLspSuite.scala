@@ -161,7 +161,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  test("no-build-tool") {
+  test("no-build-tool") { // we fallback to scala-cli
     for {
       _ <- initialize(
         """
@@ -173,7 +173,10 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       _ <- server.didOpen("A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|A.scala:1:20: error: illegal start of simple expression
+        """|A.scala:1:20: error: expression expected but '}' found
+           |object A { val x = }
+           |                   ^
+           |A.scala:1:20: error: illegal start of simple expression
            |object A { val x = }
            |                   ^
            |""".stripMargin,
