@@ -305,7 +305,6 @@ final class ReferenceProvider(
                 findRealRange,
                 includeSynthetics,
                 sourcePath.isJava,
-                source,
               )
             } catch {
               case NonFatal(e) =>
@@ -368,7 +367,6 @@ final class ReferenceProvider(
           findRealRange,
           includeSynthetics,
           source.isJava,
-          source,
         )
       else Seq.empty
 
@@ -396,7 +394,6 @@ final class ReferenceProvider(
       findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean,
       isJava: Boolean,
-      source: AbsolutePath,
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
