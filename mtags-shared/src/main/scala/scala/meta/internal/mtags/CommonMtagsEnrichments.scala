@@ -1,17 +1,21 @@
 package scala.meta.internal.mtags
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.util.PriorityQueue
 import java.util.logging.Level
 import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.annotation.tailrec
+import scala.collection.AbstractIterator
 import scala.util.control.NonFatal
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
@@ -184,6 +188,21 @@ trait CommonMtagsEnrichments {
       Files.exists(path)
     }
 
+    def toURI: URI = {
+      toURI(Files.isDirectory(path))
+    }
+
+    def toURI(isDirectory: Boolean): URI = {
+      val suffix = if (isDirectory) "/" else ""
+      // Can't use toNIO.toUri because it produces an absolute URI.
+      val names = path.iterator().asScala
+      val uris = names.map { name =>
+        // URI encode each part of the path individually.
+        new URI(null, null, name.toString, null)
+      }
+      URI.create(uris.mkString("", "/", suffix))
+    }
+
     // Using [[Files.isSymbolicLink]] is not enough.
     // It will be false when one of the parents is a symlink (e.g. /dir/link/file.txt)
     def dealias: Path = {
@@ -302,5 +321,18 @@ trait CommonMtagsEnrichments {
     )
       (startWithSpace, endWithSpace + 1)
     else (startWithSpace, endWithSpace)
+  }
+
+  implicit class XtensionJavaPriorityQueue[A](q: PriorityQueue[A]) {
+
+    /**
+     * Returns iterator that consumes the priority queue in-order using `poll()`.
+     */
+    def pollingIterator: Iterator[A] =
+      new AbstractIterator[A] {
+        override def hasNext: Boolean = !q.isEmpty
+        override def next(): A = q.poll()
+      }
+
   }
 }

@@ -67,7 +67,7 @@ object MetalsTestEnrichments {
             if (info.isExtension) {
               methodSymbols += defn.toCached
             } else {
-              if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
+              if (info.kind.isRelevantKind) {
                 symbols += defn.toCached
               }
             }

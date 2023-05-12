@@ -9,6 +9,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+import scala.meta.internal.mtags.ScalametaCommonEnrichments.XtensionWorkspaceSymbolQuery
 import scala.meta.pc.SymbolSearchVisitor
 
 object TestingWorkspaceSearch {

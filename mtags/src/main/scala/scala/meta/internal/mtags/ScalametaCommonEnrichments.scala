@@ -7,11 +7,9 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.util.PriorityQueue
 import java.util.logging.Logger
 
 import scala.annotation.tailrec
-import scala.collection.AbstractIterator
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -447,6 +445,15 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         case k.INTERFACE => l.SymbolKind.Interface
         case _ => l.SymbolKind.Class
       }
+
+    def isRelevantKind: Boolean = {
+      kind match {
+        case k.OBJECT | k.PACKAGE_OBJECT | k.CLASS | k.TRAIT | k.INTERFACE |
+            k.METHOD | k.TYPE =>
+          true
+        case _ => false
+      }
+    }
   }
 
   implicit class XtensionInputOffset(input: Input) {
@@ -505,20 +512,18 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
   implicit class XtensionSymbolInformation(info: s.SymbolInformation) {
     // This works only for SymbolInformation produced in metals in `ScalaTopLevelMtags`.
     def isExtension: Boolean = (EXTENSION & info.properties) != 0
+
   }
 
   val EXTENSION: Int = s.SymbolInformation.Property.values.map(_.value).max << 1
 
-  implicit class XtensionJavaPriorityQueue[A](q: PriorityQueue[A]) {
-
-    /**
-     * Returns iterator that consumes the priority queue in-order using `poll()`.
-     */
-    def pollingIterator: Iterator[A] =
-      new AbstractIterator[A] {
-        override def hasNext: Boolean = !q.isEmpty
-        override def next(): A = q.poll()
-      }
+  implicit class XtensionWorkspaceSymbolQuery(
+      query: m.internal.metals.WorkspaceSymbolQuery
+  ) {
+    def matches(info: s.SymbolInformation): Boolean = {
+      info.kind.isRelevantKind && query.matches(info.symbol)
+    }
 
   }
+
 }

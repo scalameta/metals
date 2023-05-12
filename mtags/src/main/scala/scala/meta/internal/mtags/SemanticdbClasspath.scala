@@ -16,8 +16,8 @@ final case class SemanticdbClasspath(
     charset: Charset = StandardCharsets.UTF_8,
     fingerprints: Md5Fingerprints = Md5Fingerprints.empty
 ) extends Semanticdbs {
-  val loader = new ClasspathLoader()
-  loader.addClasspath(classpath)
+  val loader = new OpenClassLoader()
+  loader.addClasspath(classpath.entries.map(_.toNIO))
 
   def getSemanticdbPath(scalaOrJavaPath: AbsolutePath): AbsolutePath = {
     semanticdbPath(scalaOrJavaPath).getOrElse(
@@ -30,15 +30,20 @@ final case class SemanticdbClasspath(
     )
   }
   def semanticdbPath(scalaOrJavaPath: AbsolutePath): Option[AbsolutePath] = {
-    loader.load(resourcePath(scalaOrJavaPath))
+    loader.resolve(resourcePath(scalaOrJavaPath).toNIO).map(AbsolutePath.apply)
   }
+
   def textDocument(scalaOrJavaPath: AbsolutePath): TextDocumentLookup = {
     Semanticdbs.loadTextDocument(
       scalaOrJavaPath,
       sourceroot,
       charset,
       fingerprints,
-      path => loader.load(path).map(FoundSemanticDbPath(_, None))
+      path =>
+        loader
+          .resolve(path.toNIO)
+          .map(AbsolutePath(_))
+          .map(FoundSemanticDbPath(_, None))
     )
   }
 }

@@ -156,7 +156,7 @@ final class TargetData {
         classpathEntry <- classpathEntries
         if isVisited.add(classpathEntry)
       } yield classpathEntry,
-      PackageIndex.bootClasspath.iterator,
+      PackageIndex.bootClasspath.map(AbsolutePath.apply).iterator,
     ).flatten
   }
 

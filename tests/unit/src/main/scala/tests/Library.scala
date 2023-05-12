@@ -22,7 +22,7 @@ object Library {
   def jdk: Library =
     Library(
       "JDK",
-      Classpath(PackageIndex.bootClasspath),
+      Classpath(PackageIndex.bootClasspath.map(AbsolutePath.apply)),
       Classpath(JdkSources().right.get :: Nil),
     )
   def cats: Seq[AbsolutePath] =
