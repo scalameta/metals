@@ -227,6 +227,7 @@ final class Compilations(
       targets: Seq[b.BuildTargetIdentifier],
   ): CancelableFuture[b.CompileResult] = {
     val params = new b.CompileParams(targets.asJava)
+    params.setArguments(List("--best-effort").asJava)
     targets.foreach(target => isCompiling(target) = true)
     val compilation = connection.compile(params)
 

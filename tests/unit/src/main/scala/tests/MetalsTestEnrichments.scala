@@ -111,6 +111,7 @@ object MetalsTestEnrichments {
         Nil.asJava,
         libraries.flatMap(_.classpath.entries).map(_.toURI.toString).asJava,
         "",
+        null,
       )
       data0.addScalacOptions(
         new ScalacOptionsResult(List(item).asJava),

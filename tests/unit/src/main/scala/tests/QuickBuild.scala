@@ -259,6 +259,7 @@ case class QuickBuild(
       ),
       resolution = Some(C.Resolution(resolution.toList)),
       resources = None,
+      signaturesDir = None,
       tags = Some(tags),
       sourceGenerators = None,
     )

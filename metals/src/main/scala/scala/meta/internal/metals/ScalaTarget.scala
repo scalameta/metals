@@ -89,6 +89,11 @@ case class ScalaTarget(
         path.toNIO
     }
 
+  def bestEffortPath: Option[Path] =
+    Option(scalac.getBestEffortDirectory()).map(_.toAbsolutePath.toNIO)
+
+  def isBestEffort: Boolean = bestEffortPath.nonEmpty
+
   def classDirectory: String = scalac.getClassDirectory()
 
   def scalaVersion: String = scalaInfo.getScalaVersion()

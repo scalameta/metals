@@ -506,6 +506,7 @@ object BuildServerConnection {
       javaSemanticdbVersion: String,
       semanticdbVersion: String,
       supportedScalaVersions: java.util.List[String],
+      enableBestEffortMode: Boolean,
   )
 
   /**
@@ -520,6 +521,7 @@ object BuildServerConnection {
       BuildInfo.javaSemanticdbVersion,
       BuildInfo.scalametaVersion,
       BuildInfo.supportedScala2Versions.asJava,
+      true,
     )
 
     val initializeResult = server.buildInitialize {

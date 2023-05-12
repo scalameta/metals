@@ -16,8 +16,10 @@ object V {
 
   val ammonite = "2.5.9"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.8"
-  val bloopConfig = "1.5.5"
+  val bloop =
+    "1.5.6-186-49850d9a-20230421-0950-SNAPSHOT" // "1.5.6" // TODO change after release
+  val bloopConfig =
+    "1.5.5-27-61ebd6-DIRTYd73116ff-SNAPSHOT" // "1.5.5" // TODO change after release
   val bsp = "2.1.0-M5"
   val coursier = "2.1.5"
   val coursierInterfaces =

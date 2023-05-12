@@ -252,19 +252,19 @@ class Compilers(
       .getOrElse(Future.successful(Nil))
   }
 
-  def didCompile(report: CompileReport): Unit = {
-    if (report.getErrors > 0) {
-      buildTargetPCFromCache(report.getTarget).foreach(_.restart())
-    } else {
-      // Restart PC for all build targets that depend on this target since the classfiles
-      // may have changed.
-      for {
-        target <- buildTargets.allInverseDependencies(report.getTarget)
-        compiler <- buildTargetPCFromCache(target)
-      } {
-        compiler.restart()
-      }
+  def didCompile(report: CompileReport): Unit = { // TODO reimplement
+    // if (report.getErrors > 0) {
+    //   buildTargetPCFromCache(report.getTarget).foreach(_.restart())
+    // } else {
+    //   // Restart PC for all build targets that depend on this target since the classfiles
+    //   // may have changed.
+    for {
+      target <- buildTargets.allInverseDependencies(report.getTarget)
+      compiler <- buildTargetPCFromCache(target)
+    } {
+      compiler.restart()
     }
+    // }
   }
 
   def completionItemResolve(
@@ -1082,7 +1082,23 @@ class Compilers(
   ): PresentationCompiler = {
     val classpath =
       target.scalac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-    newCompiler(target, mtags, classpath, search)
+
+    val bestEffortDirs = target.info
+      .getDependencies()
+      .asScala
+      .flatMap { buildId =>
+        buildTargets.scalaTarget(buildId).flatMap(_.bestEffortPath)
+      }
+      .toSeq
+
+    val selfBestEffortDir = target.bestEffortPath.toSeq
+
+    newCompiler(
+      target,
+      mtags,
+      classpath ++ bestEffortDirs ++ selfBestEffortDir,
+      search,
+    )
   }
 
   def newCompiler(
@@ -1116,11 +1132,32 @@ class Compilers(
       }
 
     val filteredOptions = plugins.filterSupportedOptions(options)
+    val nonBestEffortOptions =
+      filterBestEffortOptions(filteredOptions) :+ "-Ywith-best-effort-tasty"
     configure(pc, search).newInstance(
       name,
       classpath.asJava,
-      (log ++ filteredOptions).asJava,
+      (log ++ nonBestEffortOptions).asJava,
     )
+  }
+
+  // Best Effort option `-Ybest-effort-dir` is useless for PC,
+  // as it may unnecesarily dump semanticdb and tasty files
+  private def filterBestEffortOptions(options: Seq[String]): Seq[String] = {
+    var removeArg = false
+    options.filter { option =>
+      if (option.startsWith("-Ybest-effort-dir")) {
+        removeArg = true
+        false
+      } else if (!option.startsWith("-")) {
+        val filtering = !removeArg
+        removeArg = false
+        filtering
+      } else {
+        removeArg = false
+        false
+      }
+    }
   }
 
   private def toDebugCompletionType(
