@@ -254,6 +254,7 @@ final class Compilations(
     ) {
       params.setArguments(List("--verbose").asJava)
     }
+    params.setArguments(List("--best-effort").asJava)
     targets.foreach { target =>
       isCompiling(target) = true
     }

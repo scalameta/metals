@@ -1,5 +1,8 @@
 package scala.meta.internal.metals
 
+import scala.util.Success
+import scala.util.Try
+
 import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.builds.BazelBuildTool
@@ -110,6 +113,20 @@ case class ScalaTarget(
       None
     else
       Some(scalac.getClasspath().asScala.toList)
+
+  def bestEffortPath: java.nio.file.Path =
+    targetroot.resolve(Directories.bestEffort).toNIO
+
+  def isBestEffort: Boolean = {
+    val minVersion = SemVer.Version.fromString("3.5.0")
+    Try(SemVer.Version.fromString(scalaVersion)) match {
+      case Success(version) =>
+        // we compare only major and minor, as we still want RCs and nightlys to work as well
+        version.major >= minVersion.major &&
+        version.minor >= minVersion.minor
+      case _ => false
+    }
+  }
 
   def classDirectory: String = scalac.getClassDirectory()
 
