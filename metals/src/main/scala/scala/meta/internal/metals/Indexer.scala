@@ -55,7 +55,7 @@ final case class Indexer(
     statusBar: () => StatusBar,
     timerProvider: TimerProvider,
     scalafixProvider: () => ScalafixProvider,
-    indexingPromise: Promise[Unit],
+    indexingPromise: () => Promise[Unit],
     buildData: () => Seq[Indexer.BuildTool],
     clientConfig: ClientConfiguration,
     definitionIndex: OnDemandSymbolIndex,
@@ -147,7 +147,7 @@ final case class Indexer(
           try indexWorkspace(check)
           finally {
             Future(scalafixProvider().load())
-            indexingPromise.trySuccess(())
+            indexingPromise().trySuccess(())
           }
         }
       },
