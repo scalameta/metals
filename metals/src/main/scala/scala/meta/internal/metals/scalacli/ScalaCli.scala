@@ -152,7 +152,7 @@ class ScalaCli(
     }
   }
 
-  private lazy val baseCommand = {
+  private lazy val localScalaCli: Option[Seq[String]] = {
 
     def endsWithCaseInsensitive(s: String, suffix: String): Boolean =
       s.length >= suffix.length &&
@@ -217,7 +217,7 @@ class ScalaCli(
       version.exists(ver => minVersion0.compareTo(ver) <= 0)
     }
 
-    val cliCommand = userConfig().scalaCliLauncher
+    userConfig().scalaCliLauncher
       .filter(_.trim.nonEmpty)
       .map(Seq(_))
       .orElse {
@@ -226,25 +226,56 @@ class ScalaCli(
           .filter(requireMinVersion(_, ScalaCli.minVersion))
           .map(p => Seq(p.toString))
       }
-      .getOrElse {
-        scribe.warn(
-          s"scala-cli >= ${ScalaCli.minVersion} not found in PATH, fetching and starting a JVM-based Scala CLI"
-        )
-        val cp = ScalaCli.scalaCliClassPath()
-        Seq(
-          ScalaCli.javaCommand,
-          "-cp",
-          cp.mkString(File.pathSeparator),
-          ScalaCli.scalaCliMainClass,
-        )
-      }
-    cliCommand ++ Seq("bsp")
+  }
+
+  private lazy val cliCommand = {
+    localScalaCli.getOrElse {
+      scribe.warn(
+        s"scala-cli >= ${ScalaCli.minVersion} not found in PATH, fetching and starting a JVM-based Scala CLI"
+      )
+      jvmBased()
+    }
+  }
+
+  def jvmBased(): Seq[String] = {
+    val cp = ScalaCli.scalaCliClassPath()
+    Seq(
+      ScalaCli.javaCommand,
+      "-cp",
+      cp.mkString(File.pathSeparator),
+      ScalaCli.scalaCliMainClass,
+    )
   }
 
   def loaded(path: AbsolutePath): Boolean =
     ifConnectedOrElse(st =>
       st.path == path || path.toNIO.startsWith(st.path.toNIO)
     )(false)
+
+  def setupIDE(path: AbsolutePath): Future[Unit] = {
+    localScalaCli
+      .map { cliCommand =>
+        val command = cliCommand ++ Seq("setup-ide", path.toString())
+        scribe.info(s"Running $command")
+        val proc = SystemProcess.run(
+          command.toList,
+          path,
+          redirectErrorOutput = false,
+          env = Map(),
+          processOut = None,
+          processErr = Some(line => scribe.info("Scala CLI: " + line)),
+          discardInput = false,
+          threadNamePrefix = "scala-cli-setup-ide",
+        )
+        proc.complete.ignoreValue
+      }
+      .getOrElse {
+        start(path)
+      }
+  }
+
+  def path: Option[AbsolutePath] =
+    ifConnectedOrElse(st => Option(st.path))(None)
 
   def start(path: AbsolutePath): Future[Unit] = {
     disconnectOldBuildServer().onComplete {
@@ -253,7 +284,7 @@ class ScalaCli(
       case Success(()) =>
     }
 
-    val command = baseCommand :+ path.toString()
+    val command = cliCommand :+ "bsp" :+ path.toString()
 
     val connDir = if (path.isDirectory) path else path.parent
 
@@ -283,7 +314,7 @@ class ScalaCli(
           scribe.error("Error starting Scala CLI", ex)
           Success(())
         case Success(_) =>
-          scribe.info("Scala CLI started")
+          scribe.info(s"Scala CLI started for $path")
           Success(())
       }
     } else {

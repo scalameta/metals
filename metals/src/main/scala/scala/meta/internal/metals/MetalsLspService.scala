@@ -881,17 +881,20 @@ class MetalsLspService(
   def connectTables(): Connection = tables.connect()
 
   def initialized(): Future[Unit] =
-    Future
-      .sequence(
-        List[Future[Unit]](
-          Future(buildTools.initialize()),
-          quickConnectToBuildServer().ignoreValue,
-          slowConnectToBuildServer(forceImport = false).ignoreValue,
-          Future(workspaceSymbols.indexClasspath()),
-          Future(formattingProvider.load()),
-        )
-      )
-      .ignoreValue
+    for {
+      _ <- maybeSetupScalaCli()
+      _ <-
+        Future
+          .sequence(
+            List[Future[Unit]](
+              Future(buildTools.initialize()),
+              quickConnectToBuildServer().ignoreValue,
+              slowConnectToBuildServer(forceImport = false).ignoreValue,
+              Future(workspaceSymbols.indexClasspath()),
+              Future(formattingProvider.load()),
+            )
+          )
+    } yield ()
 
   def onShutdown(): Unit = {
     tables.fingerprints.save(fingerprints.getAllFingerprints())
@@ -1904,7 +1907,16 @@ class MetalsLspService(
               tables.buildServers.chooseServer(ScalaCliBuildTool.name)
               quickConnectToBuildServer()
             case Some(digest) if isBloopOrEmpty =>
-              slowConnectToBloopServer(forceImport, buildTool, digest)
+              for {
+                _ <-
+                  if (scalaCli.loaded(folder)) scalaCli.stop()
+                  else Future.successful(())
+                buildChange <- slowConnectToBloopServer(
+                  forceImport,
+                  buildTool,
+                  digest,
+                )
+              } yield buildChange
             case Some(digest) =>
               indexer.reloadWorkspaceAndIndex(
                 forceImport,
@@ -1917,6 +1929,20 @@ class MetalsLspService(
           Future.successful(BuildChange.None)
       }
     } yield buildChange
+
+  /**
+   * If there is no auto-connectable build server and no supported build tool is found
+   * we assume it's a scala-cli project.
+   */
+  def maybeSetupScalaCli(): Future[Unit] = {
+    if (
+      !buildTools.isAutoConnectable
+      && buildTools.loadSupported.isEmpty
+      && folder.hasScalaFiles
+    ) {
+      scalaCli.setupIDE(folder)
+    } else Future.successful(())
+  }
 
   private def slowConnectToBloopServer(
       forceImport: Boolean,

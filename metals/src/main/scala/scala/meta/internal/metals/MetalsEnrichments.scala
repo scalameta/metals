@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -293,6 +294,16 @@ object MetalsEnrichments
   }
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
+
+    def hasScalaFiles: Boolean = {
+      def isScalaDir(file: File): Boolean = {
+        file.listFiles().exists { file =>
+          if (file.isDirectory()) isScalaDir(file)
+          else file.getName().endsWith(".scala")
+        }
+      }
+      path.isDirectory && isScalaDir(path.toFile)
+    }
 
     def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
 
