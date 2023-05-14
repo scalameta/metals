@@ -1,8 +1,8 @@
 package scala.meta.internal.pc
 
 import java.net.URI
-import java.util.ServiceLoader
 import javax.tools.JavaCompiler
+import javax.tools.ToolProvider
 
 import scala.jdk.CollectionConverters._
 
@@ -17,8 +17,7 @@ class JavaMetalsGlobal(
     val metalsConfig: PresentationCompilerConfig
 ) {
 
-  private val COMPILER: JavaCompiler =
-    ServiceLoader.load(classOf[JavaCompiler]).iterator.next
+  private val COMPILER: JavaCompiler = ToolProvider.getSystemJavaCompiler()
 
   def compilationTask(sourceCode: String, uri: URI): JavacTask = {
     val javaFileObject = SourceJavaFileObject.make(sourceCode, uri)

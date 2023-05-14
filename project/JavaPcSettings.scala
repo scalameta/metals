@@ -18,7 +18,7 @@ object JavaPcSettings {
           val version = System.getProperty("java.version")
 
           if (version.startsWith("1.")) version.substring(2, 3)
-          else version.substring(0, version.indexOf("."))
+          else version.takeWhile(_ != '.')
         },
         Compile / unmanagedJars ++= {
           if (currentJavaVersion.value == "8")

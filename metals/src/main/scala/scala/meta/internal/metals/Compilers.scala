@@ -861,14 +861,12 @@ class Compilers(
     val name = target.javac.getTarget.getUri
     val classpath =
       target.javac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-    val options = target.javac.getOptions.asScala.toSeq
-    val filteredOptions = plugins.filterSupportedOptions(options)
 
     Some(
       configure(pc, search).newInstance(
         name,
         classpath.asJava,
-        (log ++ filteredOptions).asJava,
+        log.asJava,
       )
     )
   }

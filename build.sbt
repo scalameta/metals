@@ -131,7 +131,10 @@ commands ++= Seq(
     val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
-    "interfaces/publishLocal" :: s"++${V.scala213} metals/publishLocal" :: publishMtags
+    "interfaces/publishLocal" ::
+      s"++${V.scala213} metals/publishLocal" ::
+      "mtags-java/publishLocal" ::
+      publishMtags
   },
   Command.command("cross-test-latest-nightly") { s =>
     val max =
