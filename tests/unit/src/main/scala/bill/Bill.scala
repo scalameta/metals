@@ -35,7 +35,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags
-import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
@@ -390,12 +389,11 @@ object Bill {
 
   }
 
-  def myClassLoader: ClassLoader =
-    this.getClass.getClassLoader
   def myClasspath: Seq[Path] =
-    ClasspathLoader
-      .getURLs(myClassLoader)
-      .map(url => Paths.get(url.toURI))
+    System
+      .getProperty("java.class.path")
+      .split(java.io.File.pathSeparator)
+      .map(Paths.get(_))
       .toSeq
 
   def cwd: Path = Paths.get(System.getProperty("user.dir"))

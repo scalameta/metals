@@ -13,7 +13,6 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 
 /**
@@ -241,11 +240,14 @@ object PackageIndex {
     } yield entry
 
   private def findJar(name: String) = {
-    ClasspathLoader
-      .getURLs(this.getClass.getClassLoader)
+    System
+      .getProperty("java.class.path")
+      .split(java.io.File.pathSeparator)
       .iterator
-      .filter(_.getPath.contains(name))
-      .map(url => Paths.get(url.toURI))
+      .map(Paths.get(_))
+      .filter(path =>
+        Files.exists(path) && path.getFileName.toString.contains(name)
+      )
       .toSeq
   }
 
