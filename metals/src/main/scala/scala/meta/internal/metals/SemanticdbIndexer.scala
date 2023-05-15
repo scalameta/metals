@@ -67,7 +67,7 @@ class SemanticdbIndexer(
       try {
         stream.forEach {
           case path if path.isSemanticdb =>
-            SemanticdbPath(AbsolutePath(path))
+            onChange(SemanticdbPath(AbsolutePath(path)))
           case _ => ()
         }
       } finally {

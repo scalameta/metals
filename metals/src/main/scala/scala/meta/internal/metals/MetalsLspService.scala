@@ -253,7 +253,7 @@ class MetalsLspService(
       },
     )
   )
-  val indexingPromise: Promise[Unit] = Promise[Unit]()
+  var indexingPromise: Promise[Unit] = Promise[Unit]()
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
     CancelableFuture(
@@ -2165,7 +2165,7 @@ class MetalsLspService(
     () => statusBar,
     timerProvider,
     () => scalafixProvider,
-    indexingPromise,
+    () => indexingPromise,
     () =>
       Seq(
         Indexer.BuildTool(

@@ -1,6 +1,7 @@
 package tests.sbt
 
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
@@ -141,7 +142,8 @@ class SbtServerSuite
           """|/a/src/main/scala/A.scala
              |
              |object A{
-             |
+             |  val foo = 1
+             |  foo + foo
              |}
              |""".stripMargin,
           V.scala213,
@@ -161,12 +163,31 @@ class SbtServerSuite
         )
         client.showMessages.clear()
       }
+      // This is a little hacky but up above this promise is suceeded already, so down
+      // below it won't wait until it reconnects to Sbt and indexed like we want
+      _ = server.server.indexingPromise = Promise()
       _ <- server.didSave("build.sbt") { text =>
         text.replace("ibraryDependencies", "libraryDependencies")
       }
       _ = {
         assert(client.workspaceErrorShowMessages.isEmpty)
       }
+      _ <- server.server.indexingPromise.future
+      references <- server.references("a/src/main/scala/A.scala", "foo")
+      _ = assertEmpty(client.workspaceDiagnostics)
+      _ = assertNoDiff(
+        references,
+        """|a/src/main/scala/A.scala:3:7: info: reference
+           |  val foo = 1
+           |      ^^^
+           |a/src/main/scala/A.scala:4:3: info: reference
+           |  foo + foo
+           |  ^^^
+           |a/src/main/scala/A.scala:4:9: info: reference
+           |  foo + foo
+           |        ^^^
+           |""".stripMargin,
+      )
       _ <- server.didSave("build.sbt") { text =>
         text.replace(
           "val a = project.in(file(\"a\"))",
@@ -191,6 +212,19 @@ class SbtServerSuite
         """|```scala
            |abstract trait Class: Defn.Class
            |```
+           |""".stripMargin,
+      )
+      _ = assertNoDiff(
+        references,
+        """|a/src/main/scala/A.scala:3:7: info: reference
+           |  val foo = 1
+           |      ^^^
+           |a/src/main/scala/A.scala:4:3: info: reference
+           |  foo + foo
+           |  ^^^
+           |a/src/main/scala/A.scala:4:9: info: reference
+           |  foo + foo
+           |        ^^^
            |""".stripMargin,
       )
     } yield ()

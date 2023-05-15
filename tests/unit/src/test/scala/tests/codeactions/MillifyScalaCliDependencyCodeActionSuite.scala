@@ -1,5 +1,7 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.BuildInfo
+
 class MillifyScalaCliDependencyCodeActionSuite
     extends BaseCodeActionLspSuite("millifyScalaCliDependency") {
   val sbtStyleDependency =
@@ -41,6 +43,28 @@ class MillifyScalaCliDependencyCodeActionSuite
         |""".stripMargin,
     s"""Convert to $convertedDependency""",
     s"""|//> using lib $convertedDependency
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    scalaCliOptions = List("--actions", "-S", scalaVersion),
+    expectNoDiagnostics = false,
+    scalaCliLayout = true,
+  )
+
+  check(
+    "convert-dependency-multiple",
+    s"""|//> using scala "${BuildInfo.scala213}"
+        |//> <<>>using lib $sbtStyleDependencyMultiSpace
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    s"""Convert to $convertedDependency""",
+    s"""|//> using scala "${BuildInfo.scala213}"
+        |//> using lib $convertedDependency
         |
         |object Hello extends App {
         |  println("Hello")
