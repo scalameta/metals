@@ -21,7 +21,6 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
-import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
@@ -216,29 +215,15 @@ class Compilers(
 
     loadCompiler(path)
       .map { pc =>
-        val inputAndAdjust =
-          if (
-            path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
-          ) {
-            WorksheetProvider.worksheetScala3AdjustmentsForPC(originInput)
-          } else {
-            None
-          }
-
-        val (input, adjust) = inputAndAdjust.getOrElse(
-          originInput,
-          AdjustedLspData.default,
-        )
-
         for {
           ds <-
             pc
               .didChange(
-                CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+                CompilerVirtualFileParams(path.toNIO.toUri(), originInput.value)
               )
               .asScala
         } yield {
-          ds.asScala.map(adjust.adjustDiagnostic).toList
+          ds.asScala.map(AdjustedLspData.default.adjustDiagnostic).toList
         }
       }
       .getOrElse(Future.successful(Nil))

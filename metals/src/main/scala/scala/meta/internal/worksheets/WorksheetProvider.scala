@@ -12,10 +12,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta._
 import scala.meta.inputs.Input.VirtualFile
-import scala.meta.internal.metals.AdjustLspData
-import scala.meta.internal.metals.AdjustedLspData
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
@@ -448,34 +445,4 @@ object WorksheetProvider {
   }
   final case class MdocRef(scalaVersion: String, value: Mdoc)
 
-  def worksheetScala3AdjustmentsForPC(
-      originInput: Input.VirtualFile
-  ): Option[(Input.VirtualFile, AdjustLspData)] = {
-    val ident = "  "
-    val withOuter = s"""|object worksheet{
-                        |$ident${originInput.value.replace("\n", "\n" + ident)}
-                        |}""".stripMargin
-    val modifiedInput =
-      originInput.copy(value = withOuter)
-    val adjustLspData = AdjustedLspData.create(
-      pos => {
-        new Position(pos.getLine() - 1, pos.getCharacter() - ident.size)
-      },
-      filterOutLocations = { loc => !loc.getUri().isWorksheet },
-    )
-    Some((modifiedInput, adjustLspData))
-  }
-
-  def worksheetScala3Adjustments(
-      originInput: Input.VirtualFile
-  ): Option[(Input.VirtualFile, Position => Position, AdjustLspData)] = {
-    worksheetScala3AdjustmentsForPC(originInput).map { case (input, adjust) =>
-      def adjustRequest(position: Position) = new Position(
-        position.getLine() + 1,
-        position.getCharacter() + 2,
-      )
-      (input, adjustRequest, adjust)
-
-    }
-  }
 }
