@@ -6,6 +6,7 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -144,6 +145,12 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   }
 
   override val buildServerName: Option[String] = Some(MillBuildTool.name)
+
+  override def isBspCompatible(bsp: String): Boolean =
+    bsp match {
+      case SbtBuildTool.name => false
+      case _ => !ScalaCli.names.contains(bsp)
+    }
 }
 
 object MillBuildTool {

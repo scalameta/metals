@@ -7,6 +7,7 @@ import java.util.Properties
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.isCompatibleVersion
 import scala.meta.io.AbsolutePath
@@ -169,6 +170,12 @@ case class SbtBuildTool(
   override def toString: String = SbtBuildTool.name
 
   def executableName = SbtBuildTool.name
+
+  override def isBspCompatible(bsp: String): Boolean =
+    bsp match {
+      case MillBuildTool.name => false
+      case _ => !ScalaCli.names.contains(bsp)
+    }
 }
 
 object SbtBuildTool {

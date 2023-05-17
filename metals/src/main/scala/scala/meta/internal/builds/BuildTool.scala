@@ -6,6 +6,7 @@ import java.nio.file.StandardCopyOption
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
 trait BuildTool {
@@ -40,6 +41,12 @@ trait BuildTool {
 
   def executableName: String
 
+  def isBspCompatible(bsp: String): Boolean =
+    bsp match {
+      case SbtBuildTool.name => false
+      case MillBuildTool.name => false
+      case _ => !ScalaCli.names.contains(bsp)
+    }
 }
 
 object BuildTool {

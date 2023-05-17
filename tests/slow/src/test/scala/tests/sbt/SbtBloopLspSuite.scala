@@ -800,5 +800,4 @@ class SbtBloopLspSuite
       )
     } yield ()
   }
-
 }

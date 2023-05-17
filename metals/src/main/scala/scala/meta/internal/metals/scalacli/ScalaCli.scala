@@ -247,6 +247,9 @@ class ScalaCli(
       st.path == path || path.toNIO.startsWith(st.path.toNIO)
     )(false)
 
+  def path: Option[AbsolutePath] =
+    ifConnectedOrElse(st => Option(st.path))(None)
+
   def start(path: AbsolutePath): Future[Unit] = {
     disconnectOldBuildServer().onComplete {
       case Failure(e) =>

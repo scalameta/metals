@@ -7,6 +7,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.Digest.Status
+import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages._
@@ -39,6 +40,9 @@ final class BloopInstall(
       isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] = {
     if (isImportInProcess.compareAndSet(false, true)) {
+      if (tables.buildServers.selectedServer().nonEmpty) {
+        tables.buildServers.chooseServer(BloopServers.name)
+      }
       buildTool.bloopInstall(
         workspace,
         args => {
@@ -163,8 +167,13 @@ final class BloopInstall(
       digest: String,
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
     tables.digests.setStatus(digest, Status.Requested)
+    val server = tables.buildServers.selectedServer()
     val (params, yes) =
-      if (buildTools.isBloop) {
+      if (
+        buildTools.isBloop && (server.contains(
+          BloopServers.name
+        ) || server.isEmpty)
+      ) {
         ImportBuildChanges.params(buildTool.toString) ->
           ImportBuildChanges.yes
       } else {

@@ -163,11 +163,12 @@ object Messages {
 
     def notNow: MessageActionItem = Messages.notNow
 
+    def newBuildTool(buildToolName: String): String =
+      s"New $buildToolName workspace detected, would you like to import the build?"
+
     def params(buildToolName: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
-      params.setMessage(
-        s"New $buildToolName workspace detected, would you like to import the build?"
-      )
+      params.setMessage(newBuildTool(buildToolName))
       params.setType(MessageType.Info)
       params.setActions(
         List(
