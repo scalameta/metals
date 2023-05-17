@@ -37,6 +37,21 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
+    "simple-empty",
+    """|package example
+       |
+       |object enrichments:
+       |  extension (num: Int)
+       |    def incr: Int = num + 1
+       |
+       |def main = 100.@@
+       |""".stripMargin,
+    """|incr: Int (extension)
+       |""".stripMargin,
+    filter = _.contains("(extension)"),
+  )
+
+  check(
     "filter-by-type",
     """|package example
        |
