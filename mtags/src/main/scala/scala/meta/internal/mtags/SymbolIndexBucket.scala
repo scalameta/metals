@@ -3,9 +3,12 @@ package scala.meta.internal.mtags
 import java.io.UncheckedIOException
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
+import java.util.logging.Level
+import java.util.logging.Logger
 
 import scala.collection.concurrent.TrieMap
 import scala.util.Properties
+import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
@@ -44,6 +47,8 @@ class SymbolIndexBucket(
 ) {
 
   import SymbolIndexBucket.stdLibPatches
+
+  private val logger = Logger.getLogger(classOf[SymbolIndexBucket].getName)
 
   def close(): Unit = sourceJars.close()
 
@@ -182,11 +187,11 @@ class SymbolIndexBucket(
       val toplevel = symbol.toplevel
       toplevels.get(toplevel.value) match {
         case Some(files) =>
-          files.foreach(addMtagsSourceFile)
+          files.foreach(addMtagsSourceFile(_))
         case _ =>
           loadFromSourceJars(trivialPaths(toplevel))
             .orElse(loadFromSourceJars(modulePaths(toplevel)))
-            .foreach(_.foreach(addMtagsSourceFile))
+            .foreach(_.foreach(addMtagsSourceFile(_)))
       }
     }
     if (!definitions.contains(symbol.value)) {
@@ -241,7 +246,10 @@ class SymbolIndexBucket(
 
   // similar as addSourceFile except indexes all global symbols instead of
   // only non-trivial toplevel symbols.
-  private def addMtagsSourceFile(file: AbsolutePath): Unit = {
+  private def addMtagsSourceFile(
+      file: AbsolutePath,
+      retry: Boolean = true
+  ): Unit = try {
     val docs: s.TextDocuments = PathIO.extension(file.toNIO) match {
       case "scala" | "java" | "sc" =>
         val language = file.toLanguage
@@ -259,6 +267,10 @@ class SymbolIndexBucket(
     if (docs.documents.nonEmpty) {
       addTextDocuments(file, docs)
     }
+  } catch {
+    case NonFatal(e) =>
+      logger.log(Level.WARNING, s"Error indexing $file", e)
+      if (retry) addMtagsSourceFile(file, retry = false)
   }
 
   // Records all global symbol definitions.
