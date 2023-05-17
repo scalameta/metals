@@ -136,7 +136,7 @@ abstract class BaseDapSuite(
         _ = assertNoDiagnostics()
         debugger <- createDebugger(navigator)
         _ <- debugger.initialize
-        _ <- debugger.launch
+        _ <- debugger.launch(debug = true)
         _ <- setBreakpoints(debugger, debugLayout)
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
