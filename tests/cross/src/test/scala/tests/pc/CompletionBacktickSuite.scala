@@ -127,4 +127,81 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
       filter = _.contains("a: String"),
     )
 
+  checkEdit(
+    "soft-keyword-select",
+    """|object Main {
+       |  case class Pos(start: Int, end: Int)
+       |  val a = Pos(1,2)
+       |  val b = a.end@@
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  case class Pos(start: Int, end: Int)
+       |  val a = Pos(1,2)
+       |  val b = a.end
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "soft-keyword-ident",
+    """|object Main {
+       |  case class Pos(start: Int, end: Int) {
+       |    val point = start - end@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  case class Pos(start: Int, end: Int) {
+       |    val point = start - end
+       |  }
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  case class Pos(start: Int, end: Int) {
+           |    val point = start - `end`
+           |  }
+           |}
+           |""".stripMargin
+    ),
+  )
+
+  checkEdit(
+    "soft-keyword-extension".tag(IgnoreScala2),
+    """|object A {
+       |  extension (a: String) def end = a.last
+       |}
+       |object Main {
+       |  val a = "abc".end@@
+       |}
+       |""".stripMargin,
+    """|import A.end
+       |object A {
+       |  extension (a: String) def end = a.last
+       |}
+       |object Main {
+       |  val a = "abc".end
+       |}
+       |""".stripMargin,
+    filter = _.contains("end: Char"),
+  )
+
+  checkEdit(
+    "keyword-select",
+    """|object Main {
+       |  case class Pos(start: Int, `lazy`: Boolean)
+       |  val a = Pos(1,true)
+       |  val b = a.laz@@
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  case class Pos(start: Int, `lazy`: Boolean)
+       |  val a = Pos(1,true)
+       |  val b = a.`lazy`
+       |}
+       |""".stripMargin,
+  )
+
 }
