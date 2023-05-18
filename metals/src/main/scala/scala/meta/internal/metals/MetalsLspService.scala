@@ -183,8 +183,7 @@ class MetalsLspService(
   )
 
   private val optJavaHome =
-    (userConfig().javaHome orElse JdkSources.defaultJavaHome)
-      .map(AbsolutePath(_))
+    JdkSources.defaultJavaHome(userConfig().javaHome).headOption
   private val maybeJdkVersion: Option[JdkVersion] =
     JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
 
