@@ -20,7 +20,6 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
-import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Messages
@@ -66,7 +65,6 @@ class WorksheetProvider(
     diagnostics: Diagnostics,
     embedded: Embedded,
     publisher: WorksheetPublisher,
-    compilers: Compilers,
     compilations: Compilations,
     scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext)
@@ -83,9 +81,10 @@ class WorksheetProvider(
     Executors.newSingleThreadScheduledExecutor()
   private val cancelables = new MutableCancelable()
   private val mdocs = new TrieMap[MdocKey, MdocRef]()
-  private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
   private val exportableEvaluations =
     new TrieMap[VirtualFile, EvaluatedWorksheet]()
+  private val worksheetPcData =
+    new TrieMap[AbsolutePath, WorksheetPcData]()
 
   private def fallabackMdoc: Mdoc = {
     val scalaVersion =
@@ -360,23 +359,22 @@ class WorksheetProvider(
     val relativePath = path.toRelative(workspace)
     val evaluatedWorksheet =
       mdoc.evaluateWorksheet(relativePath.toString(), input.value)
-    val classpath = evaluatedWorksheet.classpath().asScala.toList
-    val previousDigest = worksheetsDigests.getOrElse(path, "")
-    val newDigest = calculateDigest(classpath)
     exportableEvaluations.update(
       input,
       evaluatedWorksheet,
     )
 
-    if (newDigest != previousDigest) {
-      worksheetsDigests.put(path, newDigest)
-      val sourceDeps = fetchDependencySources(
-        evaluatedWorksheet.dependencies().asScala.toSeq
-      )
-      compilers.restartWorksheetPresentationCompiler(
+    val oldDigest = worksheetPcData.get(path).getOrElse("")
+    val classpath = evaluatedWorksheet.classpath().asScala.toList
+    val newDigest = calculateDigest(classpath)
+    if (oldDigest != newDigest) {
+      worksheetPcData.put(
         path,
-        classpath,
-        sourceDeps.filter(_.toString().endsWith("-sources.jar")),
+        WorksheetPcData(
+          newDigest,
+          getDependencies(evaluatedWorksheet),
+          classpath,
+        ),
       )
     }
 
@@ -393,6 +391,16 @@ class WorksheetProvider(
     )
     evaluatedWorksheet
   }
+
+  def getWorksheetPCData(path: AbsolutePath): Option[WorksheetPcData] =
+    worksheetPcData.get(path)
+
+  private def getDependencies(
+      evaluatedWorksheet: EvaluatedWorksheet
+  ) =
+    fetchDependencySources(
+      evaluatedWorksheet.dependencies().asScala.toSeq
+    ).filter(_.toString().endsWith("-sources.jar"))
 
   private def getMdoc(path: AbsolutePath): Mdoc = {
     val mdoc = for {
@@ -479,3 +487,9 @@ object WorksheetProvider {
     }
   }
 }
+
+case class WorksheetPcData(
+    digest: String,
+    dependencies: List[Path],
+    classpath: List[Path],
+)

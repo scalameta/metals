@@ -7,6 +7,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 
 import scala.annotation.tailrec
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.Try
@@ -22,6 +23,7 @@ import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
@@ -75,6 +77,7 @@ class Compilers(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
+    worksheetProvider: WorksheetProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -90,6 +93,8 @@ class Compilers(
     Collections.synchronizedMap(
       new java.util.HashMap[AbsolutePath, PresentationCompiler]
     )
+
+  private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
 
   private val cache = jcache.asScala
   private def buildTargetPCFromCache(
@@ -172,6 +177,7 @@ class Compilers(
     Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
     cache.clear()
     worksheetsCache.clear()
+    worksheetsDigests.clear()
   }
 
   def restartAll(): Unit = {
@@ -740,10 +746,28 @@ class Compilers(
   def loadWorksheetCompiler(
       path: AbsolutePath
   ): Option[PresentationCompiler] = {
-    worksheetsCache.get(path)
+    worksheetProvider.getWorksheetPCData(path).flatMap { data =>
+      maybeRestartWorksheetPresentationCompiler(path, data)
+      worksheetsCache.get(path)
+    }
   }
 
-  def restartWorksheetPresentationCompiler(
+  private def maybeRestartWorksheetPresentationCompiler(
+      path: AbsolutePath,
+      data: WorksheetPcData,
+  ): Unit = {
+    val previousDigest = worksheetsDigests.getOrElse(path, "")
+    if (data.digest != previousDigest) {
+      worksheetsDigests.put(path, data.digest)
+      restartWorksheetPresentationCompiler(
+        path,
+        data.classpath,
+        data.dependencies,
+      )
+    }
+  }
+
+  private def restartWorksheetPresentationCompiler(
       path: AbsolutePath,
       classpath: List[Path],
       sources: List[Path],

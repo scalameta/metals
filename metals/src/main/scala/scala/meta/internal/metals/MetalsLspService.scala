@@ -618,6 +618,32 @@ class MetalsLspService(
     definitionProvider,
   )
 
+  val worksheetProvider: WorksheetProvider = {
+    val worksheetPublisher =
+      if (clientConfig.isDecorationProvider)
+        new DecorationWorksheetPublisher(
+          clientConfig.isInlineDecorationProvider()
+        )
+      else
+        new WorkspaceEditWorksheetPublisher(buffers, trees)
+
+    register(
+      new WorksheetProvider(
+        folder,
+        buffers,
+        buildTargets,
+        languageClient,
+        userConfig,
+        statusBar,
+        diagnostics,
+        embedded,
+        worksheetPublisher,
+        compilations,
+        scalaVersionSelector,
+      )
+    )
+  }
+
   private val compilers: Compilers = register(
     new Compilers(
       folder,
@@ -635,6 +661,7 @@ class MetalsLspService(
       trees,
       mtagsResolver,
       sourceMapper,
+      worksheetProvider,
     )
   )
 
@@ -755,33 +782,6 @@ class MetalsLspService(
       () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false),
       clientConfig.initialConfig.statistics,
     )
-
-  val worksheetProvider: WorksheetProvider = {
-    val worksheetPublisher =
-      if (clientConfig.isDecorationProvider)
-        new DecorationWorksheetPublisher(
-          clientConfig.isInlineDecorationProvider()
-        )
-      else
-        new WorkspaceEditWorksheetPublisher(buffers, trees)
-
-    register(
-      new WorksheetProvider(
-        folder,
-        buffers,
-        buildTargets,
-        languageClient,
-        userConfig,
-        statusBar,
-        diagnostics,
-        embedded,
-        worksheetPublisher,
-        compilers,
-        compilations,
-        scalaVersionSelector,
-      )
-    )
-  }
 
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
     folder,
