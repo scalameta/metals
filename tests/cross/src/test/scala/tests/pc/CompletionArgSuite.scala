@@ -592,4 +592,111 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(2),
   )
+
+  check(
+    "case-class-apply",
+    """|object Main {
+       |  def m() = {
+       |    case class A(foo: Int, fooBar: Int)
+       |    println(A(foo@@))
+       |  }
+       |}
+       |""".stripMargin,
+    """|foo = : Int
+       |fooBar = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "case-class-apply1",
+    """|object Main {
+       |  def m() = {
+       |    case class A(foo: Int, fooBar: Int)
+       |    object A { def apply(foo: Int) = new A(foo, 3) }
+       |    println(A(foo@@))
+       |  }
+       |}
+       |""".stripMargin,
+    """|foo = : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class-apply2",
+    """|object Main {
+       |  def m() = {
+       |    case class A(foo: Int, fooBar: Int)
+       |    object A { def apply(foo: Int) = new A(foo, 3) }
+       |    println(A(foo = 1, foo@@))
+       |  }
+       |}
+       |""".stripMargin,
+    """|fooBar = : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class-apply3",
+    """|case class A(val foo: Int, val fooBar: Int)
+       |object A {
+       |  def apply(foo: Int): A = new A(foo, 3)
+       |}
+       |
+       |object Main {
+       |  for {
+       |      a <- List(1, 2, 3)
+       |      x = A(foo@@)
+       |   }
+       |}
+       |""".stripMargin,
+    """|foo = : Int
+       |foo = a : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class-apply4",
+    """|case class A(val foo: Int, val fooBar: Int)
+       |object A {
+       |  def apply(foo: Int): A = new A(foo, 3)
+       |}
+       |
+       |object Main {
+       |  for {
+       |      a <- List(1, 2, 3)
+       |      x = A(foo = 1, foo@@)
+       |   }
+       |}
+       |""".stripMargin,
+    """|fooBar = : Int
+       |fooBar = a : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class-for-comp",
+    """|case class Abc(foo: Int, fooBar: Int)
+       |object Main {
+       |   for {
+       |      a <- List(1, 2, 3)
+       |      x = Abc(foo@@)
+       |   }
+       |}
+       |""".stripMargin,
+    """|foo = : Int
+       |fooBar = : Int
+       |foo = a : Int
+       |fooBar = a : Int
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|foo = : Int
+           |foo = a : Int
+           |fooBar = : Int
+           |fooBar = a : Int
+           |""".stripMargin
+    ),
+    topLines = Some(4),
+  )
 }

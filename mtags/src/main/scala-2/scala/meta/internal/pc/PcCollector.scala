@@ -47,10 +47,10 @@ abstract class PcCollector[T](
   def symbolAlternatives(sym: Symbol): Set[Symbol] = {
     val all =
       if (sym.isClass) {
-        if (sym.owner.isMethod) Set(sym) ++ localCompanion(sym)
+        if (sym.owner.isMethod) Set(sym) ++ sym.localCompanion(pos)
         else Set(sym, sym.companionModule, sym.companion.moduleClass)
       } else if (sym.isModuleOrModuleClass) {
-        if (sym.owner.isMethod) Set(sym) ++ localCompanion(sym)
+        if (sym.owner.isMethod) Set(sym) ++ sym.localCompanion(pos)
         else Set(sym, sym.companionClass, sym.moduleClass)
       } else if (sym.isTerm && (sym.owner.isClass || sym.owner.isConstructor)) {
         val info =
@@ -73,20 +73,7 @@ abstract class PcCollector[T](
    * @param sym symbol to find a companion for
    * @return companion if it exists
    */
-  def localCompanion(sym: Symbol): Option[Symbol] = {
-    val nameToLookFor =
-      if (sym.isModuleClass) sym.name.companionName.companionName
-      else sym.name.companionName
-    val context = doLocateImportContext(pos)
-    context.lookupSymbol(
-      nameToLookFor,
-      s => s.owner == sym.owner
-    ) match {
-      case LookupSucceeded(_, symbol) =>
-        Some(symbol)
-      case _ => None
-    }
-  }
+
   def adjust(
       pos: Position,
       forRename: Boolean = false
@@ -154,7 +141,7 @@ abstract class PcCollector[T](
                   else
                     applyOwner.companion match {
                       case NoSymbol =>
-                        localCompanion(applyOwner).getOrElse(NoSymbol)
+                        applyOwner.localCompanion(pos).getOrElse(NoSymbol)
                       case comp => comp
                     }
                 val info = constructorOwner.info
