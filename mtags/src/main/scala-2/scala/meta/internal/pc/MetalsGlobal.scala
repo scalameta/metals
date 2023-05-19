@@ -896,6 +896,32 @@ class MetalsGlobal(
     def dealiased: Symbol =
       if (sym.isAliasType) sym.info.dealias.typeSymbol
       else sym.dealiasedSingleType
+
+    /**
+     * For classes defined in methods it's not possible to find
+     * companion via methods in symbol.
+     *
+     * @param pos position for locating context
+     * @return companion if it exists
+     */
+    def localCompanion(pos: Position): Option[Symbol] =
+      if (!sym.owner.isMethod) Some(sym.companion)
+      else {
+        val nameToLookFor =
+          if (sym.isModuleClass) sym.name.companionName.companionName
+          else sym.name.companionName
+        locateContext(pos).flatMap(
+          _.lookupSymbol(
+            nameToLookFor,
+            s => s.owner == sym.owner
+          ) match {
+            case LookupSucceeded(_, symbol) =>
+              Some(symbol)
+            case _ => None
+          }
+        )
+      }
+
   }
 
   def metalsSeenFromType(tree: Tree, symbol: Symbol): Type = {

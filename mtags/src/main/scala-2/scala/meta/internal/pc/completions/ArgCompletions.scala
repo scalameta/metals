@@ -22,7 +22,10 @@ trait ArgCompletions { this: MetalsGlobal =>
     val method: Tree = typedTreeAt(funPos)
     val methodSym = method.symbol
     lazy val baseParams: List[Symbol] =
-      if (method.tpe == null) {
+      if (methodSym.isModule)
+        getParamsFromObject()
+      else if (methodSym.isClass) methodSym.constrParamAccessors
+      else if (method.tpe == null)
         method match {
           case Ident(name) =>
             metalsScopeMembers(funPos)
@@ -34,11 +37,9 @@ trait ArgCompletions { this: MetalsGlobal =>
               .getOrElse(Nil)
           case _ => Nil
         }
-      } else {
-        if (methodSym.isClass) methodSym.constrParamAccessors
-        else
-          method.tpe.paramss.headOption
-            .getOrElse(methodSym.paramss.flatten)
+      else {
+        method.tpe.paramss.headOption
+          .getOrElse(methodSym.paramss.flatten)
       }
 
     lazy val isNamed: Set[Name] = apply.args.iterator
@@ -167,6 +168,18 @@ trait ArgCompletions { this: MetalsGlobal =>
           )
         }
       }
+    }
+
+    private def getParamsFromObject(): List[Symbol] = {
+      methodSym.info.members
+        .collect {
+          case m
+              if m.decodedName == "apply" &&
+                m.paramss.flatten.length >= apply.args.length =>
+            m.paramss.flatten
+        }
+        .lastOption // for case classes, apply in companion object is after the default one
+        .getOrElse(Nil)
     }
 
     override def contribute: List[Member] = {
