@@ -499,13 +499,14 @@ class ScalaToplevelMtags(
           )
         )
       case GIVEN =>
-        val name = newIdentifier
-        method(
-          name.name,
-          region.overloads.disambiguator(name.name),
-          name.pos,
-          SymbolInformation.Property.GIVEN.value
-        )
+        newGivenIdentifier.foreach { name =>
+          method(
+            name.name,
+            region.overloads.disambiguator(name.name),
+            name.pos,
+            SymbolInformation.Property.GIVEN.value
+          )
+        }
     }
 
   }
@@ -603,6 +604,33 @@ class ScalaToplevelMtags(
       case THIS =>
         None
       case _ => fail("identifier")
+    }
+  }
+
+  def newGivenIdentifier: Option[Identifier] = {
+    @tailrec
+    def consumeParams(): Unit = {
+      acceptTrivia()
+      scanner.curr.token match {
+        case LPAREN =>
+          acceptBalancedDelimeters(LPAREN, RPAREN)
+          consumeParams()
+        case LBRACKET =>
+          acceptBalancedDelimeters(LBRACKET, RBRACKET)
+          consumeParams()
+        case _ =>
+      }
+    }
+
+    scanner.curr.token match {
+      case IDENTIFIER =>
+        val identifier = newIdentifier
+        consumeParams()
+        scanner.curr.token match {
+          case COLON => Some(identifier)
+          case _ => None
+        }
+      case _ => None
     }
   }
 

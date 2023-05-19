@@ -428,6 +428,28 @@ class ScalaToplevelSuite extends BaseSuite {
     all = true,
   )
 
+  check(
+    "givens",
+    """|package a
+       |given intValue: Int = 4
+       |given String = "str"
+       |given (using i: Int): Double = 4.0
+       |given [T]: List[T] = Nil
+       |given given_Char: Char = '?'
+       |given `given_Float`: Float = 3.0
+       |given `* *` : Long = 5
+       |given [T]: List[T] =
+       |  val m = 3 
+       |  ???
+       |given listOrd[T](using ord: List[T]): List[List[T]] = ???
+       |""".stripMargin,
+    List("a/", "a/Test$package.", "a/Test$package.`* *`().",
+      "a/Test$package.given_Char().", "a/Test$package.given_Float().",
+      "a/Test$package.intValue().", "a/Test$package.listOrd()."),
+    dialect = dialects.Scala3,
+    all = true,
+  )
+
   def check(
       options: TestOptions,
       code: String,
