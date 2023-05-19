@@ -87,8 +87,7 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): SymbolSearch.Result = {
     workspaceMethodSearch(query, visitor, target)
-    if (query.isEmpty()) SymbolSearch.Result.INCOMPLETE
-    else SymbolSearch.Result.COMPLETE
+    SymbolSearch.Result.COMPLETE
   }
 
   def indexClasspath(): Unit = {
