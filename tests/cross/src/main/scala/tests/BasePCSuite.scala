@@ -1,19 +1,13 @@
 package tests
 
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
-import scala.util.control.NonFatal
-
+import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.ClasspathSearch
-import scala.meta.internal.metals.Docstrings
-import scala.meta.internal.metals.ExcludedPackagesHandler
-import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -32,21 +26,22 @@ import munit.Tag
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
-abstract class BasePCSuite extends BaseSuite {
+abstract class BasePCSuite extends BaseSuite with PCSuite {
 
   val scalaNightlyRepo: MavenRepository =
     MavenRepository.of(
       "https://scala-ci.typesafe.com/artifactory/scala-integration/"
     )
-  val allRepos: Seq[Repository] =
+
+  override val allRepos: Seq[Repository] =
     Repository.defaults().asScala.toSeq :+ scalaNightlyRepo
 
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
-  val scalaVersion = BuildInfoVersions.scalaVersion
-  protected val index = new DelegatingGlobalSymbolIndex()
-  protected val workspace = new TestingWorkspaceSearch
+  val scalaVersion: String = BuildInfoVersions.scalaVersion
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
+  val dialect: Dialect =
+    if (scalaVersion.startsWith("3.")) dialects.Scala3 else dialects.Scala213
 
   protected lazy val presentationCompiler: PresentationCompiler = {
     val scalaLibrary =
@@ -55,35 +50,19 @@ abstract class BasePCSuite extends BaseSuite {
       else
         PackageIndex.scalaLibrary
 
-    val fetch = Fetch
-      .create()
-      .withRepositories(allRepos: _*)
+    val fetchRepos = fetch
+    extraDependencies(scalaVersion).foreach(fetchRepos.addDependencies(_))
 
-    extraDependencies(scalaVersion).foreach(fetch.addDependencies(_))
-    val extraLibraries: Seq[Path] = fetch
-      .fetch()
-      .asScala
-      .map(_.toPath())
-      .toSeq
+    val myclasspath: Seq[Path] = extraLibraries(fetchRepos) ++ scalaLibrary
 
-    val myclasspath: Seq[Path] = extraLibraries ++ scalaLibrary
-
-    if (requiresJdkSources)
-      JdkSources().foreach(jdk => index.addSourceJar(jdk, dialects.Scala213))
+    if (requiresJdkSources) indexJdkSources
     if (requiresScalaLibrarySources)
       indexScalaLibrary(index, scalaVersion)
-    val search = new TestingSymbolSearch(
-      ClasspathSearch
-        .fromClasspath(myclasspath, ExcludedPackagesHandler.default),
-      new Docstrings(index),
-      workspace,
-      index,
-    )
 
     val scalacOpts = scalacOptions(myclasspath)
 
     new ScalaPresentationCompiler()
-      .withSearch(search)
+      .withSearch(search(myclasspath))
       .withConfiguration(config)
       .withExecutorService(executorService)
       .withScheduledExecutorService(executorService)
@@ -209,48 +188,15 @@ abstract class BasePCSuite extends BaseSuite {
       ),
     )
 
-  def params(code: String, filename: String = "test.scala"): (String, Int) = {
-    val code2 = code.replace("@@", "")
-    val offset = code.indexOf("@@")
-    if (offset < 0) {
-      fail("missing @@")
-    }
-    inspectDialect(filename, code2)
-    (code2, offset)
-  }
-
-  def hoverParams(
+  override def params(
       code: String,
       filename: String = "test.scala",
-  ): (String, Int, Int) = {
-    val code2 = code.replace("@@", "").replace("%<%", "").replace("%>%", "")
-    val positionOffset =
-      code.replace("%<%", "").replace("%>%", "").indexOf("@@")
-    val startOffset = code.replace("@@", "").indexOf("%<%")
-    val endOffset = code.replace("@@", "").replace("%<%", "").indexOf("%>%")
-    (positionOffset, startOffset, endOffset) match {
-      case (po, so, eo) if po < 0 && so < 0 && eo < 0 =>
-        fail("missing @@ and (%<% and %>%)")
-      case (_, so, eo) if so >= 0 && eo >= 0 =>
-        (code2, so, eo)
-      case (po, _, _) =>
-        inspectDialect(filename, code2)
-        (code2, po, po)
-    }
-  }
+  ): (String, Int) = super.params(code, filename)
 
-  private def inspectDialect(filename: String, code2: String) = {
-    val file = tmp.resolve(filename)
-    Files.write(file.toNIO, code2.getBytes(StandardCharsets.UTF_8))
-    val dialect =
-      if (scalaVersion.startsWith("3.")) dialects.Scala3 else dialects.Scala213
-    try index.addSourceFile(file, Some(tmp), dialect)
-    catch {
-      case NonFatal(e) =>
-        println(s"warn: ${e.getMessage()}")
-    }
-    workspace.inputs(filename) = (code2, dialect)
-  }
+  override def hoverParams(
+      code: String,
+      filename: String = "test.scala",
+  ): (String, Int, Int) = super.hoverParams(code, filename)
 
   def doc(e: JEither[String, MarkupContent]): String = {
     if (e == null) ""
