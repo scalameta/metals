@@ -381,7 +381,7 @@ abstract class PcCollector[T](
          * }
          * case <<bar>>: Bar =>
          */
-        case bind: Bind if filter(bind) =>
+        case bind: Bind if bind.pos.isDefined && filter(bind) =>
           bind.children.foldLeft(
             acc + collect(
               bind,
