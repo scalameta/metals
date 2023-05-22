@@ -44,7 +44,7 @@ object SemanticdbDefinition {
       includeMembers: Boolean
   )(
       fn: SemanticdbDefinition => Unit
-  ): Unit = {
+  )(implicit rc: ReportContext): Unit = {
     input.toLanguage match {
       case Language.SCALA =>
         val mtags = new ScalaToplevelMtags(

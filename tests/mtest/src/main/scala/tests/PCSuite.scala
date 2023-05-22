@@ -11,8 +11,10 @@ import scala.meta.dialects
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.ReportContext
 import scala.meta.io.AbsolutePath
 
 import coursierapi.Fetch
@@ -44,7 +46,9 @@ trait PCSuite {
     .map(_.toPath())
     .toSeq
 
-  protected def search(myclasspath: Seq[Path]): TestingSymbolSearch = {
+  protected def search(
+      myclasspath: Seq[Path]
+  )(implicit rc: ReportContext = EmptyReportContext): TestingSymbolSearch = {
     new TestingSymbolSearch(
       ClasspathSearch
         .fromClasspath(myclasspath, ExcludedPackagesHandler.default),

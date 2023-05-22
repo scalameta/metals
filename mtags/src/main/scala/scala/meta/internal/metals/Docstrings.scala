@@ -28,7 +28,7 @@ import scala.meta.pc.SymbolDocumentation
  *
  * Handles both javadoc and scaladoc.
  */
-class Docstrings(index: GlobalSymbolIndex) {
+class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
   val cache = new TrieMap[String, SymbolDocumentation]()
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
@@ -141,5 +141,7 @@ class Docstrings(index: GlobalSymbolIndex) {
 }
 
 object Docstrings {
-  def empty: Docstrings = new Docstrings(OnDemandSymbolIndex.empty())
+  def empty(implicit rc: ReportContext): Docstrings = new Docstrings(
+    OnDemandSymbolIndex.empty()
+  )
 }

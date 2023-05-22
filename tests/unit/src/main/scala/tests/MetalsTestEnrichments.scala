@@ -71,7 +71,7 @@ object MetalsTestEnrichments {
                 symbols += defn.toCached
               }
             }
-        }
+        }(m.internal.metals.EmptyReportContext)
         wsp.didChange(source, symbols.toSeq, methodSymbols.toSeq)
       }
     }

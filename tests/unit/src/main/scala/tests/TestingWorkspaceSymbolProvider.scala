@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.CompressedPackageIndex
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -11,7 +12,8 @@ object TestingWorkspaceSymbolProvider {
   def apply(
       workspace: AbsolutePath,
       saveClassFileToDisk: Boolean = true,
-      index: OnDemandSymbolIndex = OnDemandSymbolIndex.empty(),
+      index: OnDemandSymbolIndex =
+        OnDemandSymbolIndex.empty()(EmptyReportContext),
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
   ): WorkspaceSymbolProvider = {
     new WorkspaceSymbolProvider(
@@ -21,6 +23,6 @@ object TestingWorkspaceSymbolProvider {
       saveClassFileToDisk = saveClassFileToDisk,
       () => ExcludedPackagesHandler.default,
       bucketSize = bucketSize,
-    )
+    )(EmptyReportContext)
   }
 }

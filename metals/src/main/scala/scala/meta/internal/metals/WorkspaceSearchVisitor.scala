@@ -32,7 +32,8 @@ class WorkspaceSearchVisitor(
     token: CancelChecker,
     index: GlobalSymbolIndex,
     saveClassFileToDisk: Boolean,
-) extends SymbolSearchVisitor {
+)(implicit rc: ReportContext)
+    extends SymbolSearchVisitor {
   private val fromWorkspace = new ju.ArrayList[l.SymbolInformation]()
   private val fromClasspath = new ju.ArrayList[l.SymbolInformation]()
   private val bufferedClasspath = new ju.ArrayList[(String, String)]()
