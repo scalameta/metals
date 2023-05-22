@@ -106,8 +106,9 @@ final class ConfiguredLanguageClient(
       underlying
         .refreshSemanticTokens()
         .handle { (msg, ex) =>
-          scribe.warn(s"Error while refreshing semantic tokens: $msg", ex)
-          null
+          if (ex != null)
+            scribe.warn(s"Error while refreshing semantic tokens: $msg", ex)
+          msg
         }
     } else CompletableFuture.allOf()
   }
