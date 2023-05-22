@@ -79,7 +79,7 @@ final case class Indexer(
     symbolDocs: Docstrings,
     scalaVersionSelector: ScalaVersionSelector,
     sourceMapper: SourceMapper,
-) {
+)(implicit rc: ReportContext) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
 

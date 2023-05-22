@@ -30,7 +30,8 @@ class StandaloneSymbolSearch(
     saveSymbolFileToDisk: Boolean,
     sourceMapper: SourceMapper,
     workspaceFallback: Option[SymbolSearch] = None,
-) extends SymbolSearch {
+)(implicit rc: ReportContext)
+    extends SymbolSearch {
 
   private val dependencySourceCache =
     new TrieMap[AbsolutePath, ju.List[String]]()
@@ -131,7 +132,7 @@ object StandaloneSymbolSearch {
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
       sourceMapper: SourceMapper,
-  ): StandaloneSymbolSearch = {
+  )(implicit rc: ReportContext): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
         scalaVersion,
@@ -162,7 +163,7 @@ object StandaloneSymbolSearch {
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
       sourceMapper: SourceMapper,
-  ): StandaloneSymbolSearch = {
+  )(implicit rc: ReportContext): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
 

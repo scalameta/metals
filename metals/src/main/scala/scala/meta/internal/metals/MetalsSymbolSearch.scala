@@ -24,7 +24,8 @@ class MetalsSymbolSearch(
     docs: Docstrings,
     wsp: WorkspaceSymbolProvider,
     defn: DefinitionProvider,
-) extends SymbolSearch {
+)(implicit rc: ReportContext)
+    extends SymbolSearch {
   // A cache for definitionSourceToplevels.
   // The key is an absolute path to the dependency source file, and
   // the value is the list of symbols that the file contains.

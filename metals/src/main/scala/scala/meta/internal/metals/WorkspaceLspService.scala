@@ -104,6 +104,7 @@ class WorkspaceLspService(
 ) extends ScalaLspService {
   import serverInputs._
   implicit val ex: ExecutionContextExecutorService = ec
+  implicit val rc: ReportContext = LoggerReportContext
   private val cancelables = new MutableCancelable()
 
   private val clientConfig =

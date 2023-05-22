@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.io.{ListFiles => _}
+import scala.meta.internal.metals.ReportContext
 import scala.meta.io.AbsolutePath
 
 /**
@@ -28,7 +29,8 @@ final class OnDemandSymbolIndex(
     dialectBuckets: TrieMap[Dialect, SymbolIndexBucket],
     onError: PartialFunction[Throwable, Unit],
     toIndexSource: AbsolutePath => AbsolutePath
-) extends GlobalSymbolIndex {
+)(implicit rc: ReportContext)
+    extends GlobalSymbolIndex {
   val mtags = new Mtags
   var indexedSources = 0L
   def close(): Unit = {
@@ -150,7 +152,7 @@ object OnDemandSymbolIndex {
         throw e
       },
       toIndexSource: AbsolutePath => AbsolutePath = identity
-  ): OnDemandSymbolIndex = {
+  )(implicit rc: ReportContext): OnDemandSymbolIndex = {
     new OnDemandSymbolIndex(TrieMap.empty, onError, toIndexSource)
   }
 

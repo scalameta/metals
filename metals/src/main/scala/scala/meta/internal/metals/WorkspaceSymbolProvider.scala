@@ -29,7 +29,7 @@ final class WorkspaceSymbolProvider(
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
-) {
+)(implicit rc: ReportContext) {
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
 

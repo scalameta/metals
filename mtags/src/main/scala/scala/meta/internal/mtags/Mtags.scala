@@ -3,12 +3,14 @@ package scala.meta.internal.mtags
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 
-final class Mtags {
+final class Mtags(implicit rc: ReportContext) {
   def totalLinesOfCode: Long = javaLines + scalaLines
   def totalLinesOfScala: Long = scalaLines
   def totalLinesOfJava: Long = javaLines
@@ -73,7 +75,9 @@ final class Mtags {
   }
 }
 object Mtags {
-  def index(input: Input.VirtualFile, dialect: Dialect): TextDocument = {
+  def index(input: Input.VirtualFile, dialect: Dialect)(implicit
+      rc: ReportContext = EmptyReportContext
+  ): TextDocument = {
     new Mtags().index(input.toLanguage, input, dialect)
   }
 
@@ -90,7 +94,7 @@ object Mtags {
   def allToplevels(
       input: Input.VirtualFile,
       dialect: Dialect
-  ): TextDocument = {
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
     input.toLanguage match {
       case Language.JAVA =>
         new JavaMtags(input, includeMembers = true).index()
@@ -105,7 +109,7 @@ object Mtags {
   def toplevels(
       input: Input.VirtualFile,
       dialect: Dialect = dialects.Scala213
-  ): List[String] = {
+  )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
     new Mtags().toplevels(input, dialect)
   }
 

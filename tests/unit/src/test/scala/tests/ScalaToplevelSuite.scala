@@ -429,7 +429,7 @@ class ScalaToplevelSuite extends BaseSuite {
   )
 
   check(
-    "givens",
+    "given-aliases",
     """|package a
        |given intValue: Int = 4
        |given String = "str"

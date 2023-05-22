@@ -6,6 +6,7 @@ import scala.tools.nsc.interactive.Global
 
 import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.Mtags
@@ -148,7 +149,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def indexSources(): Unit = {
-    val index = OnDemandSymbolIndex.empty()
+    val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
     fullClasspath.entries.foreach(entry =>
       index.addSourceJar(entry, dialects.Scala213)
     )

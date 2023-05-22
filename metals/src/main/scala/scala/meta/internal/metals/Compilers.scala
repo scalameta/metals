@@ -75,7 +75,7 @@ class Compilers(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
-)(implicit ec: ExecutionContextExecutorService)
+)(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
   val plugins = new CompilerPlugins()
 

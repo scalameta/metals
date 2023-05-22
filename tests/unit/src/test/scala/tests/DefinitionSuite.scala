@@ -2,6 +2,7 @@ package tests
 
 import scala.meta._
 import scala.meta.internal.inputs._
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
@@ -35,7 +36,7 @@ abstract class DefinitionSuiteBase(
   override lazy val input: InputProperties = inputProps
 
   override def testCases(): List[ExpectTestCase] = {
-    val index = OnDemandSymbolIndex.empty()
+    val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
       index.addSourceFile(source.file, Some(source.sourceDirectory), dialect)
