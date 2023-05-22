@@ -897,4 +897,45 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
            |""".stripMargin
     ),
   )
+
+  checkEdit(
+    "directly-in-pkg".tag(IgnoreScala2),
+    """|package a:
+       |  object Y:
+       |    val bar = 123
+       |  val fooBar = 123
+       |
+       |package b:
+       |  def main() = fooB@@
+       |""".stripMargin,
+    """|import a.fooBar
+       |package a:
+       |  object Y:
+       |    val bar = 123
+       |  val fooBar = 123
+       |
+       |package b:
+       |  def main() = fooBar
+       |""".stripMargin,
+  )
+
+  check(
+    "nested-pkg".tag(IgnoreScala2),
+    """|package a:
+       |  package c: // some comment
+       |    def increment2 = 2
+       |  def increment = 1
+       |
+       |package d:
+       |  val increment3 = 3
+       |
+       |
+       |package b:
+       |  def main: Unit = incre@@
+       |""".stripMargin,
+    """|increment3: Int
+       |increment: Int
+       |increment2: Int
+       |""".stripMargin,
+  )
 }

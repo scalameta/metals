@@ -130,4 +130,50 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  check(
+    "directly-in-pkg1",
+    """|
+       |package example:
+       |  extension (num: Int)
+       |    def incr: Int = num + 1
+       |
+       |package example2: 
+       |  def main = 100.inc@@
+       |""".stripMargin,
+    """|incr: Int (extension)
+       |""".stripMargin,
+  )
+
+  check(
+    "directly-in-pkg2",
+    """|package example:
+       |  object X:
+       |    def fooBar(num: Int) = num + 1
+       |  extension (num: Int) def incr: Int = num + 1
+       |
+       |package example2: 
+       |  def main = 100.inc@@
+       |""".stripMargin,
+    """|incr: Int (extension)
+       |""".stripMargin,
+  )
+
+  check(
+    "nested-pkg",
+    """|package a:  // some comment
+       |  package c: 
+       |    extension (num: Int)
+       |        def increment2 = num + 2
+       |  extension (num: Int)
+       |    def increment = num + 1
+       |
+       |
+       |package b:
+       |  def main: Unit = 123.incre@@
+       |""".stripMargin,
+    """|increment: Int (extension)
+       |increment2: Int (extension)
+       |""".stripMargin,
+  )
+
 }
