@@ -67,11 +67,11 @@ object MetalsTestEnrichments {
             if (info.isExtension) {
               methodSymbols += defn.toCached
             } else {
-              if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
+              if (info.kind.isRelevantKind) {
                 symbols += defn.toCached
               }
             }
-        }
+        }(m.internal.metals.EmptyReportContext)
         wsp.didChange(source, symbols.toSeq, methodSymbols.toSeq)
       }
     }

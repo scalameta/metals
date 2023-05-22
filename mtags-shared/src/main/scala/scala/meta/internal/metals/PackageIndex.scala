@@ -1,12 +1,7 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import java.nio.file.FileSystems
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.SimpleFileVisitor
+import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.jar.JarFile
@@ -17,12 +12,8 @@ import scala.reflect.NameTransformer
 import scala.util.Properties
 import scala.util.control.NonFatal
 
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.ClasspathLoader
-import scala.meta.internal.mtags.ScalametaCommonEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.meta.io.Classpath
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
 
 /**
  * An index to lookup classfiles contained in a given classpath.
@@ -30,21 +21,23 @@ import scala.meta.io.Classpath
 class PackageIndex() {
   val logger: Logger = Logger.getLogger(classOf[PackageIndex].getName)
   val packages = new util.HashMap[String, util.Set[String]]()
-  private val isVisited = new util.HashSet[AbsolutePath]()
+  private val isVisited = new util.HashSet[Path]()
   private val enterPackage =
     new util.function.Function[String, util.HashSet[String]] {
       override def apply(t: String): util.HashSet[String] = {
         new util.HashSet[String]()
       }
     }
-  def visit(entry: AbsolutePath): Unit = {
+  def visit(entry: Path): Unit = {
     if (isVisited.contains(entry)) ()
     else {
       isVisited.add(entry)
       try {
-        if (entry.isDirectory) {
+        if (Files.isDirectory(entry)) {
           visitDirectoryEntry(entry)
-        } else if (entry.isFile && entry.extension == "jar") {
+        } else if (
+          Files.isRegularFile(entry) && entry.toString.endsWith(".jar")
+        ) {
           visitJarEntry(entry)
         }
       } catch {
@@ -61,20 +54,22 @@ class PackageIndex() {
     }
   }
 
-  private def visitDirectoryEntry(dir: AbsolutePath): Unit = {
+  private def visitDirectoryEntry(dir: Path): Unit = {
     Files.walkFileTree(
-      dir.toNIO,
+      dir,
       new SimpleFileVisitor[Path] {
         override def visitFile(
             file: Path,
             attrs: BasicFileAttributes
         ): FileVisitResult = {
           val member = file.getFileName.toString
-          if (member.endsWith(".class")) {
-            val relpath = AbsolutePath(file.getParent).toRelative(dir)
-            val pkg = relpath.toURI(isDirectory = true).toString
-            addMember(pkg, member)
-          }
+          Option(file.getParent)
+            .filter(_ => member.endsWith(".class"))
+            .foreach { parent =>
+              val relpath = dir.relativize(parent)
+              val pkg = relpath.toURI(isDirectory = true).toString
+              addMember(pkg, member)
+            }
           FileVisitResult.CONTINUE
         }
         override def preVisitDirectory(
@@ -88,7 +83,56 @@ class PackageIndex() {
     )
   }
 
-  private def visitJarEntry(jarpath: AbsolutePath): Unit = {
+  /**
+   * Returns the parent directory of the absolute string path
+   *
+   * Examples:
+   *
+   * {{{
+   *   dirname("/a/b/") == "/a/"
+   *   dirname("/a/b") == "/a/"
+   *   dirname("/") == "/"
+   * }}}
+   *
+   * @param abspath
+   *   a string path that matches the syntax of ZipFile entries.
+   */
+  def dirname(abspath: String): String = {
+    val isDir = abspath.endsWith("/")
+    val end =
+      if (isDir) abspath.lastIndexOf('/', abspath.length - 2)
+      else abspath.lastIndexOf('/')
+    if (end < 0) "/"
+    else abspath.substring(0, end + 1)
+  }
+
+  /**
+   * Returns the name of top-level file or directory of the absolute string path
+   *
+   * Examples:
+   *
+   * {{{
+   *   basename("/a/b/") == "b"
+   *   basename("/a/b") == "b"
+   *   basename("/") == ""
+   * }}}
+   *
+   * @param abspath
+   *   a string path that matches the syntax of ZipFile entries.
+   */
+  def basename(abspath: String): String = {
+    val end = abspath.lastIndexOf('/')
+    val isDir = end == abspath.length - 1
+    if (end < 0) abspath
+    else if (!isDir) abspath.substring(end + 1)
+    else {
+      val start = abspath.lastIndexOf('/', end - 1)
+      if (start < 0) abspath.substring(0, end)
+      else abspath.substring(start + 1, end)
+    }
+  }
+
+  private def visitJarEntry(jarpath: Path): Unit = {
     val file = jarpath.toFile
     val jar = new JarFile(file)
     try {
@@ -100,8 +144,8 @@ class PackageIndex() {
           !element.getName.startsWith("META-INF") &&
           element.getName.endsWith(".class")
         ) {
-          val pkg = PathIO.dirname(element.getName)
-          val member = PathIO.basename(element.getName)
+          val pkg = dirname(element.getName)
+          val member = basename(element.getName)
           addMember(pkg, member)
         }
       }
@@ -110,10 +154,12 @@ class PackageIndex() {
         val classpathAttr = manifest.getMainAttributes.getValue("Class-Path")
         if (classpathAttr != null) {
           classpathAttr.split(" ").foreach { relpath =>
-            val abspath = AbsolutePath(jarpath.toNIO.getParent).resolve(relpath)
-            if (abspath.isFile || abspath.isDirectory) {
-              visit(abspath)
-            }
+            Option(jarpath.getParent)
+              .map(_.resolve(relpath))
+              .find(abspath =>
+                Files.isRegularFile(abspath) || Files.isDirectory(abspath)
+              )
+              .foreach(visit)
           }
         }
       }
@@ -135,10 +181,8 @@ class PackageIndex() {
     val dir = fs.getPath("/packages")
     for {
       pkg <- Files.newDirectoryStream(dir).iterator().asScala
-      symbol = pkg.toString.stripPrefix("/packages/").replace('.', '/') + "/"
-      absoluteModuleLink <- AbsolutePath(pkg).list
+      moduleLink <- Files.list(pkg).iterator.asScala
     } {
-      val moduleLink = absoluteModuleLink.toNIO
       val module =
         if (!Files.isSymbolicLink(moduleLink)) moduleLink
         else Files.readSymbolicLink(moduleLink)
@@ -162,7 +206,7 @@ class PackageIndex() {
               file: Path,
               attrs: BasicFileAttributes
           ): FileVisitResult = {
-            val filename = file.getFileName().toString()
+            val filename = file.getFileName.toString
             if (filename.endsWith(".class")) {
               addMember(activeDirectory, filename)
             }
@@ -182,25 +226,28 @@ object PackageIndex {
   ): PackageIndex = {
     val packages = new PackageIndex()
     packages.visitBootClasspath(isExcludedPackage)
-    classpath.foreach { path => packages.visit(AbsolutePath(path)) }
+    classpath.foreach { path => packages.visit(path) }
     packages
   }
-  def bootClasspath: List[AbsolutePath] =
+  def bootClasspath: List[Path] =
     for {
       entries <- sys.props.collectFirst {
         case (k, v) if k.endsWith(".boot.class.path") =>
-          Classpath(v).entries
+          v.split(java.io.File.pathSeparator).map(Paths.get(_)).toList
       }.toList
       entry <- entries
-      if entry.isFile
+      if Files.isRegularFile(entry)
     } yield entry
 
   private def findJar(name: String) = {
-    ClasspathLoader
-      .getURLs(this.getClass.getClassLoader)
+    System
+      .getProperty("java.class.path")
+      .split(java.io.File.pathSeparator)
       .iterator
-      .filter(_.getPath.contains(name))
-      .map(url => Paths.get(url.toURI))
+      .map(Paths.get(_))
+      .filter(path =>
+        Files.exists(path) && path.getFileName.toString.contains(name)
+      )
       .toSeq
   }
 

@@ -292,4 +292,33 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |}
         |""".stripMargin,
   )
+
+  // When for-comprehension includes line with `=`, we get `scala.x$1`, `scala.x$2` symbols on `foo`.
+  // Both `scala` and `x$#` have position on `foo`, and we don't want to highlight it as a `scala` package,
+  // so we need `namespace` to have lower priority than `variable`.
+  check(
+    "for-comprehension",
+    s"""|package <<example>>/*namespace*/
+        |
+        |object <<B>>/*class*/ {
+        |  val <<a>>/*variable,definition,readonly*/ = for {
+        |    <<foo>>/*variable,definition,readonly*/ <- <<List>>/*class*/("a", "b", "c")
+        |    _ = <<println>>/*method*/("print!")
+        |  } yield <<foo>>/*variable,readonly*/
+        |}
+        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|package <<example>>/*namespace*/
+           |
+           |object <<B>>/*class*/ {
+           |  val <<a>>/*variable,definition,readonly*/ = for {
+           |    <<foo>>/*variable,definition,readonly*/ <- <<List>>/*class*/("a", "b", "c")
+           |    <<_>>/*class,abstract*/ = <<println>>/*method*/("print!")
+           |  } yield <<foo>>/*variable,readonly*/
+           |}
+           |""".stripMargin
+    ),
+  )
+
 }

@@ -26,7 +26,8 @@ class MetalsTreeViewProvider(
     getFolderTreeViewProviders: () => List[FolderTreeViewProvider],
     languageClient: MetalsLanguageClient,
     sh: ScheduledExecutorService,
-) extends TreeViewProvider {
+)(implicit rc: ReportContext)
+    extends TreeViewProvider {
   private val ticks =
     TrieMap.empty[String, ScheduledFuture[_]]
 

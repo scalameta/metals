@@ -55,6 +55,13 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
 
   override def refreshModel(): CompletableFuture[Unit] =
     CompletableFuture.completedFuture(())
+
+  override def refreshCodeLenses(): CompletableFuture[Void] =
+    CompletableFuture.completedFuture(null)
+
+  override def refreshSemanticTokens(): CompletableFuture[Void] =
+    CompletableFuture.completedFuture(null)
+
 }
 
 object NoopLanguageClient extends NoopLanguageClient

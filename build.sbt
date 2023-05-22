@@ -127,7 +127,10 @@ commands ++= Seq(
     val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
-    "interfaces/publishLocal" :: s"++${V.scala213} metals/publishLocal" :: publishMtags
+    "interfaces/publishLocal" ::
+      s"++${V.scala213} metals/publishLocal" ::
+      "mtags-java/publishLocal" ::
+      publishMtags
   },
   Command.command("cross-test-latest-nightly") { s =>
     val max =
@@ -255,6 +258,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
+      "com.google.protobuf" % "protobuf-java" % "3.23.1",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -373,6 +377,10 @@ lazy val mtags = project
   .dependsOn(mtagsShared)
   .enablePlugins(BuildInfoPlugin)
 
+lazy val `mtags-java` = project
+  .configure(JavaPcSettings.settings(sharedSettings))
+  .dependsOn(interfaces, mtagsShared)
+
 lazy val metals = project
   .settings(
     sharedSettings,
@@ -394,7 +402,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.9.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.17.0",
+      "org.flywaydb" % "flyway-core" % "9.18.0",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
@@ -494,7 +502,7 @@ lazy val metals = project
       "scala3" -> V.scala3,
     ),
   )
-  .dependsOn(mtags)
+  .dependsOn(mtags, `mtags-java`)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -609,7 +617,8 @@ def publishAllMtags(
 def publishBinaryMtags =
   (interfaces / publishLocal)
     .dependsOn(
-      publishAllMtags(V.quickPublishScalaVersions)
+      `mtags-java` / publishLocal,
+      publishAllMtags(V.quickPublishScalaVersions),
     )
 
 lazy val mtest = project
@@ -652,6 +661,14 @@ lazy val cross = project
     crossScalaVersions := V.nonDeprecatedScalaVersions,
   )
   .dependsOn(mtest)
+
+lazy val javapc = project
+  .in(file("tests/javapc"))
+  .settings(
+    testSettings,
+    sharedSettings,
+  )
+  .dependsOn(mtest, `mtags-java`)
 
 def isInTestShard(name: String, logger: Logger): Boolean = {
   val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))

@@ -25,6 +25,22 @@ trait TestHovers {
       }
     }
 
+    def javaHover: String = {
+      string.trim.linesIterator.toList match {
+        case List(symbolSignature) =>
+          HoverMarkup.javaHoverMarkup("", symbolSignature, "")
+        case List(expressionType, symbolSignature) =>
+          HoverMarkup.javaHoverMarkup(
+            expressionType,
+            symbolSignature,
+            "",
+            forceExpressionType = true,
+          )
+        case _ =>
+          string
+      }
+    }
+
     def hoverRange: String =
       string.trim.linesIterator.toList match {
         case List(symbolSignature) =>

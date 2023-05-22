@@ -104,6 +104,7 @@ class WorkspaceLspService(
 ) extends ScalaLspService {
   import serverInputs._
   implicit val ex: ExecutionContextExecutorService = ec
+  implicit val rc: ReportContext = LoggerReportContext
   private val cancelables = new MutableCancelable()
 
   private val clientConfig =
@@ -113,7 +114,8 @@ class WorkspaceLspService(
     )
 
   private val languageClient = {
-    val languageClient = new ConfiguredLanguageClient(client, clientConfig)
+    val languageClient =
+      new ConfiguredLanguageClient(client, clientConfig, () => userConfig)
     // Set the language client so that we can forward log messages to the client
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())

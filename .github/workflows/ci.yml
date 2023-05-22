@@ -97,6 +97,10 @@ jobs:
             command: sbt +cross/test
             name: Scala cross tests
             os: ubuntu-latest
+          - type: mtags-java
+            command: sbt javapc/test
+            name: Scala javapc tests
+            os: ubuntu-latest
           - type: cross-latest-nightly
             command: sbt cross-test-latest-nightly
             name: Scala3 latest NIGHTLY cross test

@@ -235,8 +235,8 @@ abstract class PcCollector[T](
          */
         def isForComprehensionOwner(named: NameTree) =
           soughtNames(named.name) &&
-            named.symbol.owner.isAnonymousFunction && owners.exists(
-              pos.isDefined && _.pos.point == named.symbol.owner.pos.point
+            named.symbol.owner.isAnonymousFunction && owners.exists(owner =>
+              pos.isDefined && owner.pos.isDefined && owner.pos.point == named.symbol.owner.pos.point
             )
 
         def soughtOrOverride(sym: Symbol) =

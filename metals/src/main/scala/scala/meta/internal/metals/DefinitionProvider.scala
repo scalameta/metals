@@ -66,7 +66,7 @@ final class DefinitionProvider(
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
     workspaceSearch: WorkspaceSymbolProvider,
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext, rc: ReportContext) {
 
   val destinationProvider = new DestinationProvider(
     index,

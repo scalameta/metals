@@ -19,6 +19,7 @@ import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
+import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -74,7 +75,7 @@ class Compilers(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
-)(implicit ec: ExecutionContextExecutorService)
+)(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
   val plugins = new CompilerPlugins()
 
@@ -720,13 +721,17 @@ class Compilers(
     def fromBuildTarget: Option[PresentationCompiler] = {
       val target = buildTargets
         .inverseSources(path)
+
       target match {
         case None => Some(fallbackCompiler(path))
-        case Some(value) => loadCompiler(value)
+        case Some(value) =>
+          if (path.isScalaFilename) loadCompiler(value)
+          else if (path.isJavaFilename) loadJavaCompiler(value)
+          else None
       }
     }
 
-    if (!path.isScalaFilename) None
+    if (!path.isScalaFilename && !path.isJavaFilename) None
     else if (path.isWorksheet)
       loadWorksheetCompiler(path).orElse(fromBuildTarget)
     else fromBuildTarget
@@ -818,6 +823,13 @@ class Compilers(
     target.flatMap(loadCompilerForTarget)
   }
 
+  def loadJavaCompiler(
+      targetId: BuildTargetIdentifier
+  ): Option[PresentationCompiler] = {
+    val target = buildTargets.javaTarget(targetId)
+    target.flatMap(loadJavaCompilerForTarget)
+  }
+
   def loadCompilerForTarget(
       scalaTarget: ScalaTarget
   ): Option[PresentationCompiler] = {
@@ -839,6 +851,24 @@ class Compilers(
         scribe.warn(s"unsupported Scala ${scalaTarget.scalaVersion}")
         None
     }
+  }
+
+  def loadJavaCompilerForTarget(
+      target: JavaTarget
+  ): Option[PresentationCompiler] = {
+    val pc = JavaPresentationCompiler()
+
+    val name = target.javac.getTarget.getUri
+    val classpath =
+      target.javac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
+
+    Some(
+      configure(pc, search).newInstance(
+        name,
+        classpath.asJava,
+        log.asJava,
+      )
+    )
   }
 
   private def withPCAndAdjustLsp[T](

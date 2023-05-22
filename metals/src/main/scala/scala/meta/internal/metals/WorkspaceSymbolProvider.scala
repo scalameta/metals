@@ -8,7 +8,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.pc.InterruptException
-import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.SymbolSearch
@@ -30,7 +29,7 @@ final class WorkspaceSymbolProvider(
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
-) {
+)(implicit rc: ReportContext) {
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
 
@@ -88,8 +87,7 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): SymbolSearch.Result = {
     workspaceMethodSearch(query, visitor, target)
-    if (query.isEmpty()) SymbolSearch.Result.INCOMPLETE
-    else SymbolSearch.Result.COMPLETE
+    SymbolSearch.Result.COMPLETE
   }
 
   def indexClasspath(): Unit = {
@@ -220,9 +218,4 @@ final class WorkspaceSymbolProvider(
     search(query, visitor, None)
     visitor.allResults()
   }
-}
-
-object WorkspaceSymbolProvider {
-  def isRelevantKind(kind: Kind): Boolean =
-    WorkspaceSymbolQuery.isRelevantKind(kind)
 }

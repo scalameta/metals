@@ -3,14 +3,18 @@ package scala.meta.internal.mtags
 import java.io.UncheckedIOException
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
+import java.util.logging.Level
+import java.util.logging.Logger
 
 import scala.collection.concurrent.TrieMap
 import scala.util.Properties
+import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.mtags.OpenClassLoader
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -36,7 +40,7 @@ final case class SymbolLocation(
 class SymbolIndexBucket(
     toplevels: TrieMap[String, Set[AbsolutePath]],
     definitions: TrieMap[String, Set[SymbolLocation]],
-    sourceJars: ClasspathLoader,
+    sourceJars: OpenClassLoader,
     toIndexSource: AbsolutePath => AbsolutePath = identity,
     mtags: Mtags,
     dialect: Dialect
@@ -44,10 +48,12 @@ class SymbolIndexBucket(
 
   import SymbolIndexBucket.stdLibPatches
 
+  private val logger = Logger.getLogger(classOf[SymbolIndexBucket].getName)
+
   def close(): Unit = sourceJars.close()
 
   def addSourceDirectory(dir: AbsolutePath): List[(String, AbsolutePath)] = {
-    if (sourceJars.addEntry(dir)) {
+    if (sourceJars.addEntry(dir.toNIO)) {
       dir.listRecursive.toList.flatMap {
         case source if source.isScala =>
           addSourceFile(source, Some(dir)).map(sym => (sym, source))
@@ -59,7 +65,7 @@ class SymbolIndexBucket(
   }
 
   def addSourceJar(jar: AbsolutePath): List[(String, AbsolutePath)] = {
-    if (sourceJars.addEntry(jar)) {
+    if (sourceJars.addEntry(jar.toNIO)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
@@ -81,7 +87,7 @@ class SymbolIndexBucket(
       jar: AbsolutePath,
       symbols: List[(String, AbsolutePath)]
   ): Unit = {
-    if (sourceJars.addEntry(jar)) {
+    if (sourceJars.addEntry(jar.toNIO)) {
       val patched =
         if (stdLibPatches.isScala3Library(jar))
           symbols.map { case (sym, path) =>
@@ -181,11 +187,11 @@ class SymbolIndexBucket(
       val toplevel = symbol.toplevel
       toplevels.get(toplevel.value) match {
         case Some(files) =>
-          files.foreach(addMtagsSourceFile)
+          files.foreach(addMtagsSourceFile(_))
         case _ =>
           loadFromSourceJars(trivialPaths(toplevel))
             .orElse(loadFromSourceJars(modulePaths(toplevel)))
-            .foreach(_.foreach(addMtagsSourceFile))
+            .foreach(_.foreach(addMtagsSourceFile(_)))
       }
     }
     if (!definitions.contains(symbol.value)) {
@@ -240,7 +246,10 @@ class SymbolIndexBucket(
 
   // similar as addSourceFile except indexes all global symbols instead of
   // only non-trivial toplevel symbols.
-  private def addMtagsSourceFile(file: AbsolutePath): Unit = {
+  private def addMtagsSourceFile(
+      file: AbsolutePath,
+      retry: Boolean = true
+  ): Unit = try {
     val docs: s.TextDocuments = PathIO.extension(file.toNIO) match {
       case "scala" | "java" | "sc" =>
         val language = file.toLanguage
@@ -258,6 +267,10 @@ class SymbolIndexBucket(
     if (docs.documents.nonEmpty) {
       addTextDocuments(file, docs)
     }
+  } catch {
+    case NonFatal(e) =>
+      logger.log(Level.WARNING, s"Error indexing $file", e)
+      if (retry) addMtagsSourceFile(file, retry = false)
   }
 
   // Records all global symbol definitions.
@@ -284,9 +297,9 @@ class SymbolIndexBucket(
     paths match {
       case Nil => None
       case head :: tail =>
-        sourceJars.loadAll(head) match {
+        sourceJars.resolveAll(head) match {
           case Nil => loadFromSourceJars(tail)
-          case values => Some(values)
+          case values => Some(values.map(AbsolutePath.apply))
         }
     }
   }
@@ -308,7 +321,7 @@ class SymbolIndexBucket(
       val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
       val javaSymbol = noExtension.replace("/", ".")
       for {
-        cls <- sourceJars.loadClass(javaSymbol).toList
+        cls <- sourceJars.loadClassSafe(javaSymbol).toList
         // note(@tgodzik) Modules are only available in Java 9+, so we need to invoke this reflectively
         module <- Option(
           cls.getClass().getMethod("getModule").invoke(cls)
@@ -337,7 +350,7 @@ object SymbolIndexBucket {
     new SymbolIndexBucket(
       TrieMap.empty,
       TrieMap.empty,
-      new ClasspathLoader(),
+      new OpenClassLoader,
       toIndexSource,
       mtags,
       dialect

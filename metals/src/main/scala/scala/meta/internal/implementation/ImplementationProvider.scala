@@ -13,6 +13,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -46,7 +47,7 @@ final class ImplementationProvider(
     definitionProvider: DefinitionProvider,
     trees: Trees,
     scalaVersionSelector: ScalaVersionSelector,
-)(implicit ec: ExecutionContext)
+)(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
   import ImplementationProvider._
 
