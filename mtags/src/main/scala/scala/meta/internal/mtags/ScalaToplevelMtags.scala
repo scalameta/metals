@@ -111,9 +111,18 @@ class ScalaToplevelMtags(
       (includeInnerClasses || expect.isPackageBody) && !expect.ignoreBody
     def needToParseExtension(expect: ExpectTemplate): Boolean =
       includeInnerClasses && expect.isExtension && !expect.ignoreBody
+
     def nextIsNL: Boolean = {
       scanner.nextToken()
-      isNewline
+      scanner.curr.token match {
+        case WHITESPACE if isNewline => true
+        case WHITESPACE =>
+          nextIsNL
+        case COMMENT =>
+          scanner.skipComment()
+          nextIsNL
+        case _ => false
+      }
     }
 
     def needEmitMember(region: Region): Boolean =
@@ -128,7 +137,8 @@ class ScalaToplevelMtags(
         if (dialect.allowSignificantIndentation) {
           data.token match {
             case WHITESPACE | COMMENT => region
-            case _ => exitIndented(region, indent)
+            case _ =>
+              resetRegion(exitIndented(region, indent))
           }
         } else region
       data.token match {
@@ -185,7 +195,7 @@ class ScalaToplevelMtags(
           withOwner(currRegion.owner) {
             term(name.name, name.pos, Kind.METHOD, EXTENSION)
           }
-          loop(indent, isAfterNewline = false, region, newExpectIgnoreBody)
+          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         // inline extension method `extension (...) def foo = ...`
         case DEF if expectTemplate.map(needToParseExtension).getOrElse(false) =>
           expectTemplate match {
@@ -199,7 +209,7 @@ class ScalaToplevelMtags(
               withOwner(expect.owner) {
                 term(name.name, name.pos, Kind.METHOD, EXTENSION)
               }
-              loop(indent, isAfterNewline = false, region, None)
+              loop(indent, isAfterNewline = false, currRegion, None)
           }
         case DEF | VAL | VAR | GIVEN | TYPE
             if dialect.allowToplevelStatements &&
@@ -214,25 +224,25 @@ class ScalaToplevelMtags(
           loop(
             indent,
             isAfterNewline = false,
-            region.withTermOwner(owner),
+            currRegion.withTermOwner(owner),
             expectTemplate
           )
         case DEF | VAL | VAR | GIVEN | TYPE
             if needEmitTermMember() && expectTemplate
               .map(!_.isExtension)
               .getOrElse(true) =>
-          withOwner(region.termOwner) {
-            emitTerm(region)
+          withOwner(currRegion.termOwner) {
+            emitTerm(currRegion)
           }
           loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         case IMPORT =>
           // skip imports becase they might have `given` kw
           acceptToStatSep()
-          loop(indent, isAfterNewline = false, region, expectTemplate)
+          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case COMMENT =>
           // skip comment becase they might break indentation
           scanner.nextToken()
-          loop(indent, isAfterNewline = false, region, expectTemplate)
+          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case WHITESPACE if dialect.allowSignificantIndentation =>
           if (isNewline) {
             expectTemplate match {
@@ -258,7 +268,7 @@ class ScalaToplevelMtags(
                 loop(
                   0,
                   isAfterNewline = true,
-                  region,
+                  currRegion,
                   expectTemplate
                 )
             }
@@ -269,7 +279,7 @@ class ScalaToplevelMtags(
             loop(
               nextIndentLevel,
               isAfterNewline,
-              region,
+              currRegion,
               expectTemplate
             )
           }
@@ -330,7 +340,7 @@ class ScalaToplevelMtags(
               loop(
                 indent,
                 isAfterNewline = false,
-                expect.startInParenRegion(region),
+                expect.startInParenRegion(currRegion),
                 None
               )
             }
@@ -340,20 +350,25 @@ class ScalaToplevelMtags(
               loop(indent, isAfterNewline = false, currRegion, expectTemplate)
             }
           }
-        case RPAREN if region.changeCaseClassState(true).emitIdentifier =>
+        case RPAREN if currRegion.changeCaseClassState(true).emitIdentifier =>
           scanner.nextToken()
-          loop(indent, isAfterNewline = false, region.prev, newExpectTemplate)
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion.prev,
+            newExpectTemplate
+          )
         case COMMA =>
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           scanner.nextToken()
           loop(
             indent,
             isAfterNewline = false,
-            region.changeCaseClassState(true),
+            currRegion.changeCaseClassState(true),
             nextExpectTemplate
           )
-        case IDENTIFIER if region.emitIdentifier && includeMembers =>
-          withOwner(region.owner) {
+        case IDENTIFIER if currRegion.emitIdentifier && includeMembers =>
+          withOwner(currRegion.owner) {
             term(
               scanner.curr.name,
               newPosition,
@@ -364,7 +379,7 @@ class ScalaToplevelMtags(
           loop(
             indent,
             isAfterNewline = false,
-            region.changeCaseClassState(false),
+            currRegion.changeCaseClassState(false),
             expectTemplate
           )
         case CASE =>
