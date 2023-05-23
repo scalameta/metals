@@ -645,7 +645,7 @@ object FileDecoderProviderLspSuite {
         |    99:         STRINGconst 39 [app/src/main/scala/Main.scala]
         |   101:
         |
-        | 38 position bytes:
+        | 44 position bytes:
         |   lines: 3
         |   line sizes: 23, 11, 0
         |   positions:
@@ -662,6 +662,9 @@ object FileDecoderProviderLspSuite {
         |        61: 31 .. 31
         |        71: 31 .. 31
         |        77: 31 .. 31
+        |        89: 24 .. 35
+        |        95: 24 .. 24
+        |        99: 24 .. 24
         |
         | source paths:
         |         0: app/src/main/scala/Main.scala
@@ -731,7 +734,7 @@ object FileDecoderProviderLspSuite {
         |    46:         STRINGconst 25 [app/src/main/scala/Main.scala]
         |    48:
         |
-        | 23 position bytes:
+        | 29 position bytes:
         |   lines: 4
         |   line sizes: 23, 9, 9, 0
         |   positions:
@@ -741,6 +744,9 @@ object FileDecoderProviderLspSuite {
         |        15: 30 .. 30
         |        21: 24 .. 24
         |        25: 24 .. 24
+        |        36: 24 .. 33
+        |        42: 24 .. 24
+        |        46: 24 .. 24
         |
         | source paths:
         |         0: app/src/main/scala/Main.scala
@@ -861,7 +867,7 @@ object FileDecoderProviderLspSuite {
         |   112:         STRINGconst 39 [app/src/main/scala/Main.scala]
         |   114:
         |
-        | 43 position bytes:
+        | 50 position bytes:
         |   lines: 4
         |   line sizes: 23, 11, 20, 0
         |   positions:
@@ -881,6 +887,9 @@ object FileDecoderProviderLspSuite {
         |        83: 36 .. 56
         |        87: 47 .. 51
         |        93: 54 .. 56
+        |       102: 36 .. 56
+        |       108: 36 .. 36
+        |       112: 36 .. 36
         |
         | source paths:
         |         0: app/src/main/scala/Main.scala
@@ -1016,7 +1025,7 @@ object FileDecoderProviderLspSuite {
         |}
         |SourceFile: "Main.scala"
         |  TASTY: length = 0x10 (unknown attribute)
-        |   00 4C ED 51 38 8A 55 00 00 EB FF 96 61 37 65 00
+        |   00 81 B7 4A 08 F8 25 E9 00 05 17 CC AA BB 27 80
         |
         |  Scala: length = 0x0 (unknown attribute)
         |
