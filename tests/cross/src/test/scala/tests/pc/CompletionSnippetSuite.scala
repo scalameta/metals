@@ -488,4 +488,24 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     """.stripMargin,
   )
 
+  checkEdit(
+    "package-object-backticks".tag(IgnoreScala3),
+    s"""|package a
+        |package object `x-x` {
+        |  type AAA = Int
+        |}
+        |object O {
+        |  val f : `x-x`.A@@
+        |}
+        |""".stripMargin,
+    s"""|package a
+        |package object `x-x` {
+        |  type AAA = Int
+        |}
+        |object O {
+        |  val f : `x-x`.AAA
+        |}
+        |""".stripMargin,
+  )
+
 }
