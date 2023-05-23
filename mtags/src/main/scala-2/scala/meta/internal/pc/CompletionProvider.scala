@@ -329,7 +329,8 @@ class CompletionProvider(
         completion.isCandidate(head) &&
         !head.sym.name.containsName(CURSOR) &&
         isNotLocalForwardReference &&
-        !isAliasCompletion(head)
+        !isAliasCompletion(head) &&
+        !head.sym.isPackageObjectOrClass
       ) {
         isSeen += id
         buf += head

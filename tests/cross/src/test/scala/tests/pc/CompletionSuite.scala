@@ -1496,7 +1496,6 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "2" ->
         """|scala _root_
-           |`package` - scala
            |""".stripMargin
     ),
   )

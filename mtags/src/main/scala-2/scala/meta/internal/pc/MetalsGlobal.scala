@@ -260,6 +260,7 @@ class MetalsGlobal(
     if (
       Identifier.needsBacktick(sym.name.decoded)
       && sym.owner != definitions.ScalaPackageClass
+      && !sym.isPackageObjectOrClass
     ) {
       val name0: sym.NameType = sym.rawname
       val name: Name = name0.newName(Identifier.backtickWrap(name0))
