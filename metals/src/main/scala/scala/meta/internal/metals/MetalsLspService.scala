@@ -365,6 +365,9 @@ class MetalsLspService(
     )
   )
 
+  private val bspErrorHandler: BSPErrorHandler =
+    new BSPErrorHandler(languageClient, folder)
+
   private val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,
@@ -390,6 +393,7 @@ class MetalsLspService(
       onBuildTargetDidChangeFunc = params => {
         maybeQuickConnectToBuildServer(params)
       },
+      bspErrorHandler,
     )
 
   private val bloopServers: BloopServers = new BloopServers(

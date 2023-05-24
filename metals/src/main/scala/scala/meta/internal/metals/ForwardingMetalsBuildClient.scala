@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.BSPErrorHandler
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClientConfiguration
@@ -41,6 +42,7 @@ final class ForwardingMetalsBuildClient(
     didCompile: CompileReport => Unit,
     onBuildTargetDidCompile: BuildTargetIdentifier => Unit,
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
+    bspErrorHandler: BSPErrorHandler,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -97,7 +99,7 @@ final class ForwardingMetalsBuildClient(
   def onBuildLogMessage(params: l.MessageParams): Unit =
     params.getType match {
       case l.MessageType.Error =>
-        scribe.error(params.getMessage)
+        bspErrorHandler.onError(params.getMessage())
       case l.MessageType.Warning =>
         scribe.warn(params.getMessage)
       case l.MessageType.Info =>
