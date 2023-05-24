@@ -233,8 +233,8 @@ sbt
 ## Manual tests
 
 Some functionality is best to manually test through an editor. A common workflow
-while iterating on a new feature is to run `publishLocal` and then open an
-editor in a small demo build.
+while iterating on a new feature is to run `publishLocal;++3.2.2 mtags/publishLocal`(change 3.2.2 to the Scala version you want to test) and then run `Metals:Restart server` for opened projects or open an
+new demo project.
 
 It's important to note that `sbt publishLocal` will create artifacts only for
 the Scala version currently used in Metals and trying to use the snapshot
