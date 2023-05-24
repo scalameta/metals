@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Files
-
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -78,23 +76,31 @@ class PackageProvider(
   def willMovePath(
       oldPath: AbsolutePath,
       newPath: AbsolutePath,
-  )(implicit ec: ExecutionContext): Future[WorkspaceEdit] =
-    if (oldPath.isDirectory) willMoveDir(oldPath, newPath)
-    else if (newPath.isDirectory)
-      willMoveFile(oldPath, newPath.resolve(oldPath.filename))
-    else willMoveFile(oldPath, newPath)
+  )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = {
+    val edit = AbsoluteDir.from(oldPath) match {
+      case Some(oldDir) =>
+        Some(willMoveDir(oldDir, AbsoluteDir(newPath)))
+      case None =>
+        AbsoluteFile
+          .from(oldPath)
+          .map(willMoveFile(_, AbsoluteFile.from(newPath, oldPath.filename)))
+    }
+    edit.getOrElse(Future.successful(new WorkspaceEdit()))
+  }
 
   private def willMoveDir(
-      oldDirPath: AbsolutePath,
-      newDirPath: AbsolutePath,
+      oldDirPath: AbsoluteDir,
+      newDirPath: AbsoluteDir,
   )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = {
     val filesWithTrees = oldDirPath.listRecursive
       .filter(_.isScalaFilename)
-      .map(oldFilePath =>
-        oldFilePath -> newDirPath.resolve(oldFilePath.toRelative(oldDirPath))
+      .flatMap(oldFilePath =>
+        AbsoluteFile.from(oldFilePath).map { oldFile =>
+          oldFile -> AbsoluteFile(newDirPath.resolve(oldFile, oldDirPath))
+        }
       )
       .flatMap { case rename @ (oldPath, _) =>
-        trees.get(oldPath).map((rename, _))
+        trees.get(oldPath.value).map((rename, _))
       }
       .toList
 
@@ -104,8 +110,8 @@ class PackageProvider(
           calcMovedFileEdits(
             tree,
             oldFilePath,
-            deducePackageParts(oldFilePath),
-            deducePackageParts(newFilePath),
+            deducePackageParts(oldFilePath.value),
+            deducePackageParts(newFilePath.value),
           ).getOrElse(new WorkspaceEdit())
         }
       }
@@ -122,14 +128,14 @@ class PackageProvider(
   }
 
   private def calcRefsEditsForDirMove(
-      oldDirPath: AbsolutePath,
-      newDirPath: AbsolutePath,
-      files: List[AbsolutePath],
+      oldDirPath: AbsoluteDir,
+      newDirPath: AbsoluteDir,
+      files: List[AbsoluteFile],
   )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = Future {
-    val oldPackageParts = calcPathToSourceRoot(oldDirPath)
-    val newPackageParts = calcPathToSourceRoot(newDirPath)
+    val oldPackageParts = calcPathToSourceRoot(oldDirPath.value)
+    val newPackageParts = calcPathToSourceRoot(newDirPath.value)
     def isOneOfMovedFiles(uri: String) =
-      files.exists(_.toURI.toString() == uri)
+      files.exists(_.value.toURI.toString() == uri)
     val references =
       files.flatMap { path =>
         for {
@@ -145,14 +151,14 @@ class PackageProvider(
     )
   }
 
-  private def willMoveFile(oldPath: AbsolutePath, newPath: AbsolutePath)(
+  private def willMoveFile(oldPath: AbsoluteFile, newPath: AbsoluteFile)(
       implicit ec: ExecutionContext
   ): Future[WorkspaceEdit] = Future {
     val edit =
       for {
-        tree <- trees.get(oldPath)
-        oldPackageParts = deducePackageParts(oldPath)
-        newPackageParts = deducePackageParts(newPath)
+        tree <- trees.get(oldPath.value)
+        oldPackageParts = deducePackageParts(oldPath.value)
+        newPackageParts = deducePackageParts(newPath.value)
         fileEdits <- calcMovedFileEdits(
           tree,
           oldPath,
@@ -160,7 +166,7 @@ class PackageProvider(
           newPackageParts.toList,
         )
       } yield {
-        val oldUri = oldPath.toURI.toString()
+        val oldUri = oldPath.stringUri
         val references =
           findTopLevelDecls(oldPath, oldPackageParts).flatMap(
             findReferences(_, oldPath)
@@ -179,7 +185,7 @@ class PackageProvider(
 
   private def calcMovedFileEdits(
       tree: Tree,
-      oldPath: AbsolutePath,
+      oldPath: AbsoluteFile,
       expectedOldPackageParts: List[String],
       newPackageParts: List[String],
   ): Option[WorkspaceEdit] = {
@@ -199,7 +205,7 @@ class PackageProvider(
           lastPart <- newPackageParts.lastOption
           edits <- calcPackageEdit(pkgs, newPackageParts.dropRight(1), oldPath)
           objectEdit = workspaceEdit(
-            oldPath,
+            oldPath.value,
             lastPart,
             obj.name.pos.toLsp,
           )
@@ -645,82 +651,86 @@ class PackageProvider(
   }
 
   private def findTopLevelDecls(
-      path: AbsolutePath,
+      path: AbsoluteFile,
       topLevelPackageParts: List[String],
   ): List[TopLevelDeclaration] = {
     val filename = path.filename
     val filenamePart = filename.stripSuffix(".scala").stripSuffix(".sc")
-    val content = new String(Files.readAllBytes(path.toNIO))
-    val input = Input.VirtualFile(filename, content)
+    val result = for {
+      content <- path.content()
+    } yield {
+      val input = Input.VirtualFile(filename, content)
 
-    def isPackageObjectLike(symbol: String) =
-      Set("package", filenamePart ++ "$package").contains(symbol)
-    def isTopLevelPackageOrPackageObject(symbol: String): Boolean =
-      symbol.isPackage || {
-        val (desc, owner) = DescriptorParser(symbol)
-        (isPackageObjectLike(desc.name.value)
-        && isTopLevelPackageOrPackageObject(owner))
-      }
-
-    def alternatives(si: s.SymbolInformation): Set[String] =
-      if (si.isCase) Set(s"${si.symbol.dropRight(1)}.") else Set.empty
-
-    val dialect = {
-      val optDialect =
-        for {
-          buidTargetId <- buildTargets.inverseSources(path)
-          scalaTarget <- buildTargets.scalaTarget(buidTargetId)
-        } yield ScalaVersions.dialectForScalaVersion(
-          scalaTarget.scalaVersion,
-          includeSource3 = true,
-        )
-      optDialect.getOrElse(dialects.Scala213)
-    }
-    m.internal.mtags.Mtags
-      .index(input, dialect)
-      .symbols
-      .flatMap { si =>
-        if (si.symbol.isPackage)
-          None
-        else {
-          val (desc, owner) = DescriptorParser(si.symbol)
-          val descName = desc.name.value
-          if (
-            isTopLevelPackageOrPackageObject(owner) && !isPackageObjectLike(
-              descName
-            )
-          ) {
-            val packageParts =
-              owner
-                .split('/')
-                .filter {
-                  case "" => false
-                  case ObjectSymbol(obj) => !isPackageObjectLike(obj)
-                  case _ => true
-                }
-                .drop(topLevelPackageParts.length)
-                .toList
-            Some(
-              TopLevelDeclaration(
-                descName,
-                packageParts,
-                si.isGiven || si.isExtension,
-                alternatives(si) + si.symbol,
-              )
-            )
-          } else None
+      def isPackageObjectLike(symbol: String) =
+        Set("package", filenamePart ++ "$package").contains(symbol)
+      def isTopLevelPackageOrPackageObject(symbol: String): Boolean =
+        symbol.isPackage || {
+          val (desc, owner) = DescriptorParser(symbol)
+          (isPackageObjectLike(desc.name.value)
+          && isTopLevelPackageOrPackageObject(owner))
         }
+
+      def alternatives(si: s.SymbolInformation): Set[String] =
+        if (si.isCase) Set(s"${si.symbol.dropRight(1)}.") else Set.empty
+
+      val dialect = {
+        val optDialect =
+          for {
+            buidTargetId <- buildTargets.inverseSources(path.value)
+            scalaTarget <- buildTargets.scalaTarget(buidTargetId)
+          } yield ScalaVersions.dialectForScalaVersion(
+            scalaTarget.scalaVersion,
+            includeSource3 = true,
+          )
+        optDialect.getOrElse(dialects.Scala213)
       }
-      .groupBy(decl => (decl.name, decl.innerPackageParts))
-      .collect { case ((name, innerPackageParts), otherDecl) =>
-        TopLevelDeclaration(
-          name,
-          innerPackageParts,
-          otherDecl.map(_.isGivenOrExtension).reduce(_ || _),
-          otherDecl.flatMap(_.symbols).toSet,
-        )
-      }
-      .toList
+      m.internal.mtags.Mtags
+        .index(input, dialect)
+        .symbols
+        .flatMap { si =>
+          if (si.symbol.isPackage)
+            None
+          else {
+            val (desc, owner) = DescriptorParser(si.symbol)
+            val descName = desc.name.value
+            if (
+              isTopLevelPackageOrPackageObject(owner) && !isPackageObjectLike(
+                descName
+              )
+            ) {
+              val packageParts =
+                owner
+                  .split('/')
+                  .filter {
+                    case "" => false
+                    case ObjectSymbol(obj) => !isPackageObjectLike(obj)
+                    case _ => true
+                  }
+                  .drop(topLevelPackageParts.length)
+                  .toList
+              Some(
+                TopLevelDeclaration(
+                  descName,
+                  packageParts,
+                  si.isGiven || si.isExtension,
+                  alternatives(si) + si.symbol,
+                )
+              )
+            } else None
+          }
+        }
+        .groupBy(decl => (decl.name, decl.innerPackageParts))
+        .collect { case ((name, innerPackageParts), otherDecl) =>
+          TopLevelDeclaration(
+            name,
+            innerPackageParts,
+            otherDecl.map(_.isGivenOrExtension).reduce(_ || _),
+            otherDecl.flatMap(_.symbols).toSet,
+          )
+        }
+        .toList
+    }
+    result.getOrElse(List.empty)
   }
 
   private def extendPositionToIncludeNewLine(pos: inputs.Position) = {
@@ -731,10 +741,14 @@ class PackageProvider(
 
   private def findReferences(
       decl: TopLevelDeclaration,
-      path: AbsolutePath,
+      path: AbsoluteFile,
   ): List[Reference] = {
     refProvider
-      .workspaceReferences(path, decl.symbols, isIncludeDeclaration = false)
+      .workspaceReferences(
+        path.value,
+        decl.symbols,
+        isIncludeDeclaration = false,
+      )
       .map { loc =>
         Reference(decl, loc.getRange(), loc.getUri())
       }
@@ -787,13 +801,13 @@ class PackageProvider(
   private def calcPackageEdit(
       oldPackages: List[PackageWithName],
       newPackages: List[String],
-      oldPath: AbsolutePath,
+      oldPath: AbsoluteFile,
   ): Option[WorkspaceEdit] = {
     val edits = findPackageEdits(newPackages, oldPackages)
     if (edits.isEmpty) None
     else
       for {
-        source <- buffers.get(oldPath).orElse(oldPath.readTextOpt)
+        source <- buffers.get(oldPath.value).orElse(oldPath.content())
       } yield pkgEditsToWorkspaceEdit(edits, source.toCharArray(), oldPath)
   }
 
@@ -835,7 +849,7 @@ class PackageProvider(
   private def pkgEditsToWorkspaceEdit(
       edits: List[PackageEdit],
       source: Array[Char],
-      oldPath: AbsolutePath,
+      oldPath: AbsoluteFile,
   ): WorkspaceEdit = {
     val extend: (Int, Int) => (Int, Int) =
       extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(source, List(':'))
@@ -853,7 +867,7 @@ class PackageProvider(
           } else List(topEditRange)
         editRanges.map { case (startOffset, endOffset) =>
           workspaceEdit(
-            oldPath,
+            oldPath.value,
             "",
             new m.Position.Range(pkg.pos.input, startOffset, endOffset).toLsp,
           )
@@ -861,7 +875,11 @@ class PackageProvider(
       // rename package
       case PackageEdit(pkg, newParts) =>
         val edit =
-          workspaceEdit(oldPath, newParts.mkString("."), pkg.ref.pos.toLsp)
+          workspaceEdit(
+            oldPath.value,
+            newParts.mkString("."),
+            pkg.ref.pos.toLsp,
+          )
         List(edit)
     }.mergeChanges
   }
@@ -1062,4 +1080,30 @@ class PackageObject(filenamePart: String) {
   def symbols(owner: String): Set[String] = if (owner.isEmpty())
     packageObjectLike
   else packageObjectLike.map(owner ++ _)
+}
+
+case class AbsoluteDir(val value: AbsolutePath) extends AnyVal {
+  def listRecursive = value.listRecursive
+  def resolve(file: AbsoluteFile, relativeTo: AbsoluteDir): AbsolutePath =
+    value.resolve(file.value.toRelative(relativeTo.value))
+}
+object AbsoluteDir {
+  def from(path: AbsolutePath): Option[AbsoluteDir] =
+    if (path.isDirectory) Some(new AbsoluteDir(path))
+    else None
+}
+case class AbsoluteFile(val value: AbsolutePath) extends AnyVal {
+  def filename = value.filename
+  def content() = value.readTextOpt
+  def stringUri: String = value.toURI.toString()
+}
+
+object AbsoluteFile {
+  def from(path: AbsolutePath, fileName: String): AbsoluteFile =
+    if (path.isDirectory) new AbsoluteFile(path.resolve(fileName))
+    else new AbsoluteFile(path)
+
+  def from(path: AbsolutePath): Option[AbsoluteFile] =
+    if (path.isFile) Some(new AbsoluteFile(path))
+    else None
 }
