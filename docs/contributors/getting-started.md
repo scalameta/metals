@@ -232,15 +232,14 @@ sbt
 
 ## Manual tests
 
-Some functionality is best to manually test through an editor. A common workflow
-while iterating on a new feature is to run `publishLocal;++3.2.2 mtags/publishLocal`(change 3.2.2 to the Scala version you want to test) and then run `Metals:Restart server` for opened projects or open an
-new demo project.
+To try out new features manually through an editor, run `publishLocal;++3.2.2 mtags/publishLocal`(change 3.2.2 to the Scala version you want to test) to publish metals binary locally, and refer to the detailed process for two different editor below for subsequent steps. 
 
-It's important to note that `sbt publishLocal` will create artifacts only for
+In more details, It's important to note that `sbt publishLocal` will create artifacts only for
 the Scala version currently used in Metals and trying to use the snapshot
 version with any other Scala version will not work. In that case you need to run
 a full cross publish with `sbt +publishLocal`, however this will take quite some
 time, so you may want to target a specific version to publish like `++3.1.1 mtags/publishLocal`.
+
 
 ### Visual Studio Code
 
@@ -249,13 +248,13 @@ Install the Metals extension from the Marketplace by searching for "Metals".
 [Click here to install the Metals VS Code plugin](vscode:extension/scalameta.metals)
 
 Next, update the "Server version" setting under preferences to point to the
-version you published locally via `sbt publishLocal`.
+version you published locally via `sbt publishLocal`(usually called xx-SNAPSHOT).
 
 ![Metals server version setting](https://i.imgur.com/ogVWI1t.png)
 
 When you make changes in the Metals Scala codebase
 
-- run `sbt publishLocal`
+- publish metals binary as described above.
 - execute the "Metals: Restart server" command in Visual Studio Code (via
   command palette)
 
