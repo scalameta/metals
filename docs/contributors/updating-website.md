@@ -5,7 +5,7 @@ title: Contributing to the website
 
 This website is built using [Docusaurus](https://docusaurus.io/).
 
-For simple changes to the documentation, click on the `Edit` button at the top
+For simple changes to the documentation, click on the `Edit` button at the bottom
 of each page and submit those changes directly on GitHub.
 
 ## Running the site locally
