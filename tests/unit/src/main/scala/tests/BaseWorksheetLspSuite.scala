@@ -612,10 +612,17 @@ abstract class BaseWorksheetLspSuite(
                  |type Structural = {
                  |^
                  |""".stripMargin,
-            "3" ->
+            V.scala3 ->
               """|a/src/main/scala/Main.worksheet.sc:5:1: error:
                  |Found:    MdocApp.this.Structural
                  |Required: Selectable
+                 |new Foo().asInstanceOf[Structural].foo()
+                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                 |""".stripMargin,
+            "3" ->
+              """|a/src/main/scala/Main.worksheet.sc:5:1: error:
+                 |Found:    MdocApp.this.Structural
+                 |Required: Selectable | Dynamic
                  |new Foo().asInstanceOf[Structural].foo()
                  |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                  |""".stripMargin,
