@@ -497,8 +497,7 @@ class WorkspaceLspService(
           .iterator
           .toList
           .map(event => {
-            val uri = event.getUri()
-            (uri.toAbsolutePath, getServiceFor(uri))
+            (event, getServiceFor(event.getUri()))
           })
           .groupBy(_._2)
           .map { case (service, paths) =>

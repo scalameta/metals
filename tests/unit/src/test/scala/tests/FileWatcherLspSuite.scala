@@ -3,7 +3,13 @@ package tests
 import java.nio.file.Files
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.RecursivelyDelete
+
+import org.eclipse.lsp4j.DidChangeWatchedFilesParams
+import org.eclipse.lsp4j.FileChangeType
+import org.eclipse.lsp4j.FileEvent
 
 class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
 
@@ -117,6 +123,53 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
       _ = assertIsNotDirectory(workspace.resolve("b/src/main/java"))
       _ = assertIsNotDirectory(workspace.resolve("c/src/main/java"))
       _ = assertIsNotDirectory(workspace.resolve("a/non/existent/one/e"))
+    } yield ()
+  }
+
+  test("didChangeWatchedFiles-notification") {
+    cleanWorkspace()
+    FileLayout.fromString(
+      """|/metals.json
+         |{
+         |  "a": { }
+         |}
+         |/a/src/main/scala/A.scala
+         |package a
+         |object A
+         |/buildd.sbt
+         |
+         |""".stripMargin,
+      workspace,
+    )
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = Files.delete(workspace.resolve("buildd.sbt").toNIO)
+      _ = FileLayout.fromString(
+        s"""|/build.sbt
+            |""".stripMargin,
+        workspace,
+      )
+      _ <- server.fullServer
+        .didChangeWatchedFiles(
+          new DidChangeWatchedFilesParams(
+            List(
+              new FileEvent(
+                workspace.resolve("buildd.sbt").toURI.toString(),
+                FileChangeType.Deleted,
+              ),
+              new FileEvent(
+                workspace.resolve("build.sbt").toURI.toString(),
+                FileChangeType.Created,
+              ),
+            ).asJava
+          )
+        )
+        .asScala
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.ImportBuild.params("sbt").getMessage(),
+      )
     } yield ()
   }
 }
