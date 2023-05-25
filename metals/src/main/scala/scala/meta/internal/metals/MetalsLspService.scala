@@ -1198,15 +1198,22 @@ class MetalsLspService(
   }
 
   def didChangeWatchedFiles(
-      paths: List[AbsolutePath]
+      events: List[FileEvent]
   ): Future[Unit] = {
-    val importantPath =
-      paths
-        .filterNot(path =>
-          savedFiles.isRecentlyActive(path) || path.isDirectory
+    val importantEvents =
+      events
+        .filterNot(event =>
+          event.getUri().toAbsolutePathSafe match {
+            case None => true
+            case Some(path) =>
+              savedFiles.isRecentlyActive(path) || path.isDirectory
+          }
         ) // de-duplicate didSave events.
         .toSeq
-    onChange(importantPath)
+    val (deleteEvents, changeAndCreateEvents) =
+      importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
+    deleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
+    onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
   }
 
   /**
