@@ -95,7 +95,7 @@ class Compilers(
   private def buildTargetPCFromCache(
       id: BuildTargetIdentifier
   ): Option[PresentationCompiler] =
-    cache.get(PresentationCompilerKey.BuildTarget(id))
+    cache.get(PresentationCompilerKey.BuildTarget(id)).filter(_ != null)
 
   private val worksheetsCache = jworksheetsCache.asScala
 
