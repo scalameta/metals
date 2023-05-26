@@ -6,6 +6,7 @@ import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
@@ -162,7 +163,12 @@ final class ForwardingMetalsBuildClient(
           compilation <- compilations.remove(report.getTarget)
         } {
           diagnostics.onFinishCompileBuildTarget(report, params.getStatus())
-          didCompile(report)
+          try {
+            didCompile(report)
+          } catch {
+            case NonFatal(e) =>
+              scribe.error(s"failed to process compile report", e)
+          }
           val target = report.getTarget
           compilation.promise.trySuccess(report)
           val name = buildTargets.info(report.getTarget) match {
