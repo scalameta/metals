@@ -254,7 +254,16 @@ final case class Indexer(
 
           val path = sourceItem.getUri.toAbsolutePath
           val generatedPath = sourceItem.getGeneratedUri.toAbsolutePath
-          val topWrapperLineCount = sourceItem.getTopWrapper.count(_ == '\n')
+          val updatedContent = generatedPath.readText
+          val scriptStart = "/*<script>*/"
+          val topWrapper = updatedContent
+            .substring(
+              0,
+              updatedContent.indexOf(scriptStart) + scriptStart.length(),
+            ) + "\n"
+          val topWrapperLineCount = topWrapper.count(_ == '\n')
+          val bottomWrapper = updatedContent
+            .substring(updatedContent.indexOf("/*</script>*/"))
           val toScala: Position => Position =
             scPos =>
               new Position(
@@ -274,8 +283,7 @@ final case class Indexer(
                   content: String
               ): (Input.VirtualFile, Position => Position, AdjustLspData) = {
                 val adjustLspData = AdjustedLspData.create(fromScala)
-                val updatedContent =
-                  sourceItem.getTopWrapper + content + sourceItem.getBottomWrapper
+                val updatedContent = topWrapper + content + bottomWrapper
                 (
                   Input.VirtualFile(
                     generatedPath.toNIO.toString
