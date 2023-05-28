@@ -220,7 +220,7 @@ object ShortenedNames:
     def apply(sym: Symbol)(using ctx: Context): ShortName =
       ShortName(sym.name, sym)
 
-  case class PrettyType(name: String) extends Type:
+  case class PrettyType(name: String) extends TermType:
     def hash: Int = 0
     def computeHash(bind: Binders) = hash
     override def toString = name
