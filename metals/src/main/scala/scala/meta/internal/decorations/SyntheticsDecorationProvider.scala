@@ -488,7 +488,8 @@ final class SyntheticsDecorationProvider(
         case param: m.Term.Param =>
           if (param.decltpe.isEmpty) List(param.name.pos.toSemanticdb) else Nil
         case cs: m.Case =>
-          explorePatterns(List(cs.pat)) ++ visit(cs.body)
+          // if the case is too long then it'll be too messy
+          visit(cs.body) // explorePatterns(List(cs.pat)) ++ visit(cs.body)
         case vl: m.Defn.Val =>
           val values =
             if (vl.decltpe.isEmpty) explorePatterns(vl.pats) else Nil
