@@ -4,8 +4,6 @@ package completions
 import java.nio.file.Files
 import java.nio.file.Path
 
-import scala.collection.JavaConverters.*
-
 import scala.meta.internal.mtags.MtagsEnrichments.*
 
 import dotty.tools.dotc.ast.tpd.Tree

@@ -15,7 +15,7 @@
 
     <<val>>/*keyword*/ <<y>>/*variable,definition,readonly*/ = <<new>>/*keyword*/ <<Foo>>/*interface,abstract*/ {}
 
-    <<y>>/*variable,readonly*/.<<y>>/*variable,readonly*/
+    <<val>>/*keyword*/ <<yy>>/*variable,definition,readonly*/ = <<y>>/*variable,readonly*/.<<y>>/*variable,readonly*/
 
     <<new>>/*keyword*/ <<LocalDeclarations>>/*interface,abstract*/ <<with>>/*keyword*/ <<Foo>>/*interface,abstract*/:
       <<override>>/*modifier*/ <<def>>/*keyword*/ <<foo>>/*method,definition*/(): <<Unit>>/*class,abstract*/ = <<bar>>/*method*/()

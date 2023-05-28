@@ -62,6 +62,13 @@ object InputProperties extends AutoPlugin {
           .map(_.data)
           .mkString(File.pathSeparator),
       )
+      props.put(
+        "semanticdbTargets",
+        List(
+          (input / Compile / semanticdbTargetRoot).value,
+          (input / Test / semanticdbTargetRoot).value,
+        ).mkString(File.pathSeparator),
+      )
       IO.write(props, "input", out)
       List(out)
     }

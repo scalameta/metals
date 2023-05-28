@@ -1,5 +1,7 @@
 package tests
 
+import java.nio.file.Path
+
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
@@ -12,6 +14,7 @@ case class InputProperties(
     sourceDirectories: List[AbsolutePath],
     classpath: Classpath,
     dependencySources: Classpath,
+    semanticdbTargets: List[Path],
 ) {
 
   def scalaFiles: List[InputFile] = {
@@ -58,9 +61,17 @@ object InputProperties {
       sourceDirectories = Classpath(getKey("sourceDirectories")).entries,
       classpath = Classpath(getKey("classpath")),
       dependencySources = Classpath(getKey("dependencySources")),
+      semanticdbTargets =
+        Classpath(getKey("semanticdbTargets")).entries.map(_.toNIO),
     )
   }
 
   def fromDirectory(directory: AbsolutePath): InputProperties =
-    InputProperties(directory, List(directory), Classpath(Nil), Classpath(Nil))
+    InputProperties(
+      directory,
+      List(directory),
+      Classpath(Nil),
+      Classpath(Nil),
+      Nil,
+    )
 }

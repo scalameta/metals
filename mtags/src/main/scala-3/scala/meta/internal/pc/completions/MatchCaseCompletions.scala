@@ -239,7 +239,6 @@ object CaseKeywordCompletion:
       completionPos,
       clientSupportsSnippets,
     )
-    val result = ListBuffer.empty[CompletionValue]
     val tpe = selector.tpe.widen.bounds.hi match
       case tr @ TypeRef(_, _) => tr.underlying
       case t => t
