@@ -10,7 +10,6 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 
-import dotty.tools.dotc.CompilationUnit
 import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
@@ -42,8 +41,6 @@ class PcDefinitionProvider(
       uri,
       SourceFile.virtual(filePath.toString, params.text),
     )
-    val unit = driver.currentCtx.run.units.head
-    val tree = unit.tpdTree
 
     val pos = driver.sourcePosition(params)
     val path =
@@ -55,7 +52,7 @@ class PcDefinitionProvider(
       if findTypeDef then findTypeDefinitions(path, pos, indexedContext)
       else findDefinitions(path, pos, indexedContext)
 
-    if result.locations().isEmpty() then fallbackToUntyped(unit, pos)(using ctx)
+    if result.locations().isEmpty() then fallbackToUntyped(pos)(using ctx)
     else result
   end definitions
 
@@ -71,9 +68,7 @@ class PcDefinitionProvider(
    * @param pos cursor position
    * @return definition result
    */
-  private def fallbackToUntyped(unit: CompilationUnit, pos: SourcePosition)(
-      using ctx: Context
-  ) =
+  private def fallbackToUntyped(pos: SourcePosition)(using Context) =
     lazy val untpdPath = NavigateAST
       .untypedPath(pos.span)
       .collect { case t: untpd.Tree => t }

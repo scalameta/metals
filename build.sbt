@@ -532,7 +532,7 @@ lazy val input = project
     ),
     scalacOptions ++= Seq("-P:semanticdb:synthetics:on", "-Ymacro-annotations"),
     scalacOptions ~= { options =>
-      options.filter(_ != "-Wunused")
+      options.filter(!_.contains("-Wunused"))
     },
   )
   .disablePlugins(ScalafixPlugin)
@@ -550,6 +550,9 @@ lazy val input3 = project
     ),
     scalaVersion := V.scala3,
     publish / skip := true,
+    scalacOptions ~= { options =>
+      options.filter(!_.contains("-Wunused"))
+    },
   )
   .disablePlugins(ScalafixPlugin)
 

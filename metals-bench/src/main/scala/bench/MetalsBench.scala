@@ -32,7 +32,12 @@ class MetalsBench {
 
   MetalsLogger.updateDefaultFormat()
   val inputs: InputProperties = InputProperties.scala2()
-  val classpath = new SemanticdbClasspath(inputs.sourceroot, inputs.classpath)
+  val classpath =
+    new SemanticdbClasspath(
+      inputs.sourceroot,
+      inputs.classpath,
+      inputs.semanticdbTargets,
+    )
   val documents: List[(AbsolutePath, TextDocument)] =
     inputs.scalaFiles.map { input =>
       (input.file, classpath.textDocument(input.file).get)

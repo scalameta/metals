@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.*
 
-import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
 import scala.meta.pc.PresentationCompilerConfig

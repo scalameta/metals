@@ -15,7 +15,7 @@ object LocalDeclarations:
 
     val y = new Foo {}
 
-    y.y
+    val yy = y.y
 
     new LocalDeclarations with Foo:
       override def foo(): Unit = bar()
