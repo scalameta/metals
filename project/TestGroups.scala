@@ -108,7 +108,14 @@ object TestGroups {
       "tests.RenameFilesLspSuite", "tests.codeactions.ExtractMethodLspSuite",
       "tests.SemanticTokensExpectSuite",
       "tests.debug.DebugProtocolCancelationSuite", "tests.RemovedScalaLspSuite",
-      "tests.scalafix.ScalafixRunOnlyLspSuite"),
+      "tests.scalafix.ScalafixRunOnlyLspSuite", "tests.ToplevelsScala2Suite",
+      "tests.GradleRepositoriesTest", "tests.BuildIssueLspSuite",
+      "tests.WorkspaceFoldersSuite", "tests.ReportsSuite",
+      "tests.codeactions.MillifyScalaCliDependencyCodeActionSuite",
+      "tests.RunProviderLensLspSuite", "tests.SemanticTokensLspSuite",
+      "tests.ToplevelsScala3Suite", "tests.codeactions.InlineValueLspSuite",
+      "tests.JavaToplevelSuite", "tests.ToplevelLibrarySuite",
+      "tests.FoldingRangeScala3LineFoldingOnlySuite"),
   )
 
 }
