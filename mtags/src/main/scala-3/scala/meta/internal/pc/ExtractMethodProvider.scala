@@ -4,6 +4,7 @@ import java.nio.file.Paths
 
 import scala.meta as m
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.MetalsInteractive.*
 import scala.meta.internal.pc.printer.MetalsPrinter
@@ -33,7 +34,8 @@ final class ExtractMethodProvider(
     driver: InteractiveDriver,
     search: SymbolSearch,
     noIndent: Boolean,
-) extends ExtractMethodUtils:
+)(using ReportContext)
+    extends ExtractMethodUtils:
 
   def extractMethod(): List[TextEdit] =
     val text = range.text()

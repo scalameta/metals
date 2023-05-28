@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import scala.annotation.tailrec
 import scala.meta as m
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
@@ -50,7 +51,7 @@ final class InferredTypeProvider(
     driver: InteractiveDriver,
     config: PresentationCompilerConfig,
     symbolSearch: SymbolSearch,
-):
+)(using ReportContext):
 
   case class AdjustTypeOpts(
       text: String,
