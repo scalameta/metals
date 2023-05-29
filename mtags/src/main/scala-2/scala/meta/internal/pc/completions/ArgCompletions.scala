@@ -21,49 +21,85 @@ trait ArgCompletions { this: MetalsGlobal =>
     val funPos = apply.fun.pos
     val method: Tree = typedTreeAt(funPos)
     val methodSym = method.symbol
-    lazy val baseParams: List[Symbol] =
-      if (methodSym.isModule)
-        getParamsFromObject()
-      else if (methodSym.isClass) methodSym.constrParamAccessors
+    lazy val baseParamss: List[List[Symbol]] = {
+      if (methodSym.isModule) getParamsFromObject(methodSym)
+      else if (
+        methodSym.isMethod && methodSym.decodedName == "apply" && methodSym.owner.isModuleClass
+      ) getParamsFromObject(methodSym.owner)
+      else if (methodSym.isClass) List(methodSym.constrParamAccessors)
       else if (method.tpe == null)
         method match {
           case Ident(name) =>
             metalsScopeMembers(funPos)
-              .collectFirst {
+              .map {
                 case m: Member
-                    if m.symNameDropLocal == name && m.sym != NoSymbol && m.sym.paramss.nonEmpty =>
+                    if m.symNameDropLocal == name && m.sym != NoSymbol && m.sym.paramss.nonEmpty && checkIfArgsMatch(
+                      m.sym.paramss.head
+                    ) =>
                   m.sym.paramss.head
+                case _ => Nil
               }
-              .getOrElse(Nil)
           case _ => Nil
         }
       else {
-        method.tpe.paramss.headOption
-          .getOrElse(methodSym.paramss.flatten)
+        method.tpe match {
+          case OverloadedType(_, alts) =>
+            alts.flatMap(_.info.paramss.headOption)
+          case _ =>
+            List(
+              method.tpe.paramss.headOption
+                .getOrElse(methodSym.paramss.flatten)
+            )
+        }
       }
+    }
 
-    lazy val isNamed: Set[Name] = apply.args.iterator
-      .filterNot(_ == ident)
-      .zip(baseParams.iterator)
-      .map {
-        case (AssignOrNamedArg(Ident(name), _), _) =>
-          name
-        case (_, param) =>
-          param.name
+    def checkIfArgsMatch(possibleMatch: List[Symbol]): Boolean = {
+      apply.args.length <= possibleMatch.length &&
+      !apply.args.zipWithIndex.exists {
+        case (Ident(name), _) if name.decodedName.endsWith(CURSOR) => false
+        case (AssignOrNamedArg(Ident(name), rhs), _) =>
+          !possibleMatch.exists { param =>
+            name.decodedName == param.name.decodedName &&
+            (rhs.tpe == null || rhs.tpe <:< param.tpe)
+          }
+        case (rhs, i) =>
+          rhs.tpe != null && !(rhs.tpe <:< possibleMatch(i).tpe)
       }
-      .toSet
+    }
+    lazy val baseParamssWithisNamed: List[(List[Symbol], Set[Name])] =
+      baseParamss.map { baseParams =>
+        val isNamed =
+          apply.args.iterator
+            .filterNot(_ == ident)
+            .zip(baseParams.iterator)
+            .map {
+              case (AssignOrNamedArg(Ident(name), _), _) =>
+                name
+              case (_, param) =>
+                param.name
+            }
+            .toSet
+        (baseParams, isNamed)
+      }
     val prefix: String = ident.name.toString.stripSuffix(CURSOR)
-    lazy val allParams: List[Symbol] = {
-      baseParams.iterator.filterNot { param =>
-        isNamed(param.name) ||
-        param.isSynthetic
-      }.toList
+    lazy val allParams: List[Symbol] = baseParamssWithisNamed.flatMap {
+      case (baseParams, isNamed) =>
+        baseParams.iterator.filterNot { param =>
+          isNamed(param.name) ||
+          param.isSynthetic
+        }.toList
     }
     lazy val params: List[Symbol] =
-      allParams.filter(param => param.name.startsWith(prefix))
+      allParams
+        .filter(param => param.name.startsWith(prefix))
+        .foldLeft(List.empty[Symbol])((acc, curr) =>
+          if (acc.exists(el => el.name == curr.name && el.tpe == curr.tpe)) acc
+          else curr :: acc
+        )
+        .reverse
     lazy val isParamName: Set[String] = params.iterator
       .map(_.name)
-      .filterNot(isNamed)
       .map(_.toString().trim())
       .toSet
 
@@ -129,7 +165,7 @@ trait ArgCompletions { this: MetalsGlobal =>
       val isExplicitlyCalled = suffix.startsWith(prefix)
       val hasParamsToFill = allParams.count(!_.hasDefault) > 1
       if (
-        (shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets
+        baseParamss.length == 1 && (shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets
       ) {
         val editText = allParams.zipWithIndex
           .collect {
@@ -170,20 +206,18 @@ trait ArgCompletions { this: MetalsGlobal =>
       }
     }
 
-    private def getParamsFromObject(): List[Symbol] = {
-      methodSym.info.members
-        .collect {
-          case m
-              if m.decodedName == "apply" &&
-                m.paramss.flatten.length >= apply.args.length =>
-            m.paramss.flatten
-        }
-        .lastOption // for case classes, apply in companion object is after the default one
-        .getOrElse(Nil)
+    private def getParamsFromObject(objectSym: Symbol): List[List[Symbol]] = {
+      objectSym.info.members.collect {
+        case m
+            if m.decodedName == "apply" && m.paramss.nonEmpty && checkIfArgsMatch(
+              m.paramss.head
+            ) =>
+          m.paramss.head
+      }.toList
     }
 
     override def contribute: List[Member] = {
-      params.map(param =>
+      params.distinct.map(param =>
         new NamedArgMember(param)
       ) ::: findPossibleDefaults() ::: fillAllFields()
     }

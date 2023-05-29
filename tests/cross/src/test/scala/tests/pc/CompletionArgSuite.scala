@@ -163,16 +163,10 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  Option[Int](@@)
         |}
         |""".stripMargin,
-    """|x = : Int
+    """|x = : A
        |Main arg7
        |""".stripMargin,
     topLines = Option(2),
-    compat = Map(
-      "3" ->
-        """|x = : A
-           |Main arg7
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -508,6 +502,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|x: Int
        |""".stripMargin,
+    topLines = Some(1),
   )
 
   check(
@@ -619,6 +614,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|foo = : Int
+       |fooBar = : Int
        |""".stripMargin,
   )
 
@@ -641,6 +637,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|case class A(val foo: Int, val fooBar: Int)
        |object A {
        |  def apply(foo: Int): A = new A(foo, 3)
+       |  def m = 3
        |}
        |
        |object Main {
@@ -651,8 +648,19 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|foo = : Int
+       |fooBar = : Int
        |foo = a : Int
+       |fooBar = a : Int
        |""".stripMargin,
+    topLines = Some(4),
+    compat = Map(
+      "3" ->
+        """|foo = : Int
+           |foo = a : Int
+           |fooBar = : Int
+           |fooBar = a : Int
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -721,5 +729,252 @@ class CompletionArgSuite extends BaseCompletionSuite {
            |""".stripMargin
     ),
     topLines = Some(4),
+  )
+  check(
+    "overloaded",
+    """|object Main {
+       |  def m(inn : Int) = ???
+       |  def m(idd : Option[Int]) = ???
+       |  def k = m(i@@)
+       |}
+       |""".stripMargin,
+    """|idd = : Option[Int]
+       |inn = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "overloaded-with-param",
+    """|object Main {
+       |  def m(idd : String, abb: Int): Int = ???
+       |  def m(inn : Int, uuu: Option[Int]): Int = ???
+       |  def m(inn : Int, aaa: Int): Int = ???
+       |  def k: Int = m(1, a@@)
+       |}
+       |""".stripMargin,
+    """|aaa = : Int
+       |assert(assertion: Boolean): Unit
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "overloaded-with-named-param",
+    """|object Main {
+       |  def m(idd : String, abb: Int): Int = ???
+       |  def m(inn : Int, uuu: Option[Int]): Int = ???
+       |  def m(inn : Int, aaa: Int): Int = ???
+       |  def k: Int = m(inn = 1, a@@)
+       |}
+       |""".stripMargin,
+    """|aaa = : Int
+       |assert(assertion: Boolean): Unit
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "overloaded-generic",
+    """|object Main {
+       |  val h = 3
+       |  val l : List[Int] = List(1,2,3)
+       |  def m[T](inn : List[T], yy: Int, aaa: Int, abb: Option[Int]): Int = ???
+       |  def m[T](inn : List[T], yy: Int, aaa: Int, abb: Int): Int = ???
+       |  def k: Int = m(yy = 3, inn = l, a@@)
+       |}
+       |""".stripMargin,
+    """|aaa = : Int
+       |abb = : Int
+       |abb = : Option[Int]
+       |aaa = h : Int
+       |abb = h : Int
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|aaa = : Int
+           |aaa = h : Int
+           |abb = : Option[Int]
+           |abb = : Int
+           |abb = h : Int
+           |""".stripMargin
+    ),
+    topLines = Some(5),
+  )
+
+  check(
+    "overloaded-methods",
+    """|class A() {
+       |  def m(anInt : Int): Int = ???
+       |  def m(aString : String): String = ???
+       |}
+       |object O {
+       |  def m(aaa: Int): Int = ???
+       |  val k = new A().m(a@@)
+       |}
+       |""".stripMargin,
+    """|aString = : String
+       |anInt = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  // type of `myInstance` is resolved to `null` for Scala 2
+  check(
+    "overloaded-methods2".tag(IgnoreScala2),
+    """|class A() {
+       |  def m(anInt : Int): Int = ???
+       |  def m(aString : String): String = ???
+       |  private def m(aBoolean: Boolean): Boolean = ???
+       |}
+       |object O {
+       |  def m(aaa: Int): Int = ???
+       |  val myInstance = new A()
+       |  val k = myInstance.m(a@@)
+       |}
+       |""".stripMargin,
+    """|aString = : String
+       |anInt = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "overloaded-select",
+    """|package a.b {
+       |  object A {
+       |    def m(anInt : Int): Int = ???
+       |    def m(aString : String): String = ???
+       |  }
+       |}
+       |object O {
+       |  def m(aaa: Int): Int = ???
+       |  val k = a.b.A.m(a@@)
+       |}
+       |""".stripMargin,
+    """|aString = : String
+       |anInt = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "overloaded-in-a-class",
+    """|trait Planet
+       |case class Venus() extends Planet
+       |class Main[T <: Planet](t : T) {
+       |  def m(inn: Planet, abb: Option[Int]): Int = ???
+       |  def m(inn: Planet, aaa: Int): Int = ???
+       |  def k = m(t, a@@)
+       |}
+       |""".stripMargin,
+    """|aaa = : Int
+       |abb = : Option[Int]
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "overloaded-function-param".tag(IgnoreScala2),
+    """|def m[T](i: Int)(inn: T => Int, abb: Option[Int]): Int = ???
+       |def m[T](i: Int)(inn: T => Int, aaa: Int): Int = ???
+       |def m[T](i: Int)(inn: T => String, acc: List[Int]): Int = ???
+       |def k = m(1)(inn = identity[Int], a@@)
+       |""".stripMargin,
+    """|aaa = : Int
+       |abb = : Option[Int]
+       |assert(assertion: Boolean): Unit
+       |""".stripMargin,
+    topLines = Some(3),
+  )
+
+  check(
+    "overloaded-function-param2".tag(IgnoreScala2),
+    """|def m[T](i: Int)(inn: T => Int, abb: Option[Int]): Int = ???
+       |def m[T](i: Int)(inn: T => Int, aaa: Int): Int = ???
+       |def m[T](i: String)(inn: T => Int, acc: List[Int]): Int = ???
+       |def k = m(1)(inn = identity[Int], a@@)
+       |""".stripMargin,
+    """|aaa = : Int
+       |abb = : Option[Int]
+       |assert(assertion: Boolean): Unit
+       |""".stripMargin,
+    topLines = Some(3),
+  )
+
+  // doesn't filter properly for Scala 2, since the filtering heuristic for matching methods
+  // isn't accurate enough (polymorphic args types are resolved to `null`)
+  check(
+    "overloaded-function-param3".tag(IgnoreScala2),
+    """|object M {
+       |  def m[T](inn: Int => T, abb: Option[Int]): Int = ???
+       |  def m[T](inn: String => T, aaa: Int): Int = ???
+       |  def k = m(identity[Int], a@@)
+       |}
+       |""".stripMargin,
+    """|abb = : Option[Int]
+       |""".stripMargin,
+    topLines = Some(1),
+  )
+
+  check(
+    "overloaded-bounds".tag(IgnoreScala2),
+    """|trait Planet
+       |case class Moon()
+       |object Main {
+       |  def m[M](inn: M, abb: Option[Int]): T = ???
+       |  def m[M](inn: M, acc: List[Int]): T = ???
+       |  def m[M <: Planet](inn: M, aaa: Int): T = ???
+       |  def k: T = m(Moon(), a@@)
+       |
+       |""".stripMargin,
+    """|abb = : Option[Int]
+       |acc = : List[Int]
+       |assert(assertion: Boolean): Unit
+       |""".stripMargin,
+    topLines = Some(3),
+  )
+
+  check(
+    "overloaded-or-type".tag(IgnoreScala2),
+    """|object Main:
+       |  val h : Int = 3
+       |  def m[T](inn: String | T, abb: Option[Int]): Int = ???
+       |  def m(inn: Int, aaa: Int): Int = ???
+       |  def k: Int = m(3, a@@)
+       |""".stripMargin,
+    """|aaa = : Int
+       |aaa = h : Int
+       |abb = : Option[Int]
+       |""".stripMargin,
+    topLines = Some(3),
+  )
+
+  check(
+    "overloaded-applied-type".tag(IgnoreScala2),
+    """|trait MyCollection[+T]
+       |class IntCollection() extends MyCollection[Int]
+       |def m[T](inn: MyCollection[T], abb: Option[Int]): Int = ???
+       |def m[T](inn: MyCollection[T], aaa: Int): Int = ???
+       |def k = m(IntCollection(), a@@)
+       |""".stripMargin,
+    """|aaa = : Int
+       |abb = : Option[Int]
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "overloaded-extension-methods".ignore,
+    """|extension(i: Int)
+       |  def m(inn : Int, aaa : Int): Int = ???
+       |  def m(inn : Int, abb : Option[Int]): Int = ???
+       |
+       |val k = 1.m(3, a@@)
+       |""".stripMargin,
+    """|aaa = : Int
+       |abb = : Option[Int]
+       |""".stripMargin,
+    topLines = Some(2),
   )
 }
