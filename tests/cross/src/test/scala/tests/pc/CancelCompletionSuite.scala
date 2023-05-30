@@ -50,7 +50,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit = {
     test(name) {
-      val (code, offset) = params(query)
+      val (code, offset) = params(query, "A.scala")
       val token = new AlwaysCancelToken
       try {
         presentationCompiler
@@ -124,7 +124,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
                   |  val x = asser@@
                   |}
                """.stripMargin
-    val (code, offset) = params(query)
+    val (code, offset) = params(query, "A.scala")
     val uri = URI.create("file:///A.scala")
     try {
       presentationCompiler
