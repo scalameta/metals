@@ -2,6 +2,7 @@ package tests
 
 import java.nio.file.Files
 
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -150,6 +151,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
             |""".stripMargin,
         workspace,
       )
+      _ = server.server.tables.buildTool.chooseBuildTool(SbtBuildTool.name)
       _ <- server.fullServer
         .didChangeWatchedFiles(
           new DidChangeWatchedFilesParams(

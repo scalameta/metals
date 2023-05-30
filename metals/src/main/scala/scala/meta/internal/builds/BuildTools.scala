@@ -63,6 +63,8 @@ final class BuildTools(
     }
   }
   def isMill: Boolean = workspace.resolve("build.sc").isFile
+  def isScalaCli: Boolean =
+    ScalaCliBuildTool.pathToScalaCliBsp(workspace).isFile
   def isGradle: Boolean = {
     val defaultGradlePaths = List(
       "settings.gradle",
@@ -108,6 +110,7 @@ final class BuildTools(
     if (isGradle) buf += GradleBuildTool(userConfig)
     if (isMaven) buf += MavenBuildTool(userConfig)
     if (isMill) buf += MillBuildTool(userConfig)
+    if (isScalaCli) buf += ScalaCliBuildTool(workspace)
 
     buf.result()
   }
@@ -118,12 +121,19 @@ final class BuildTools(
     else names
   }
 
-  def isBuildRelated(workspace: AbsolutePath, path: AbsolutePath): Boolean = {
-    if (isSbt) SbtBuildTool.isSbtRelatedPath(workspace, path)
-    else if (isGradle) GradleBuildTool.isGradleRelatedPath(workspace, path)
-    else if (isMaven) MavenBuildTool.isMavenRelatedPath(workspace, path)
-    else if (isMill) MillBuildTool.isMillRelatedPath(path)
-    else false
+  def isBuildRelated(
+      workspace: AbsolutePath,
+      path: AbsolutePath,
+  ): Option[String] = {
+    if (isSbt && SbtBuildTool.isSbtRelatedPath(workspace, path))
+      Some(SbtBuildTool.name)
+    else if (isGradle && GradleBuildTool.isGradleRelatedPath(workspace, path))
+      Some(GradleBuildTool.name)
+    else if (isMaven && MavenBuildTool.isMavenRelatedPath(workspace, path))
+      Some(MavenBuildTool.name)
+    else if (isMill && MillBuildTool.isMillRelatedPath(path))
+      Some(MillBuildTool.name)
+    else None
   }
 }
 

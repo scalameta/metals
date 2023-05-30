@@ -24,7 +24,13 @@ final class BuildToolSelector(
     tables.buildTool.selectedBuildTool match {
       case Some(chosen) =>
         Future(buildTools.find(_.executableName == chosen))
-      case None => requestBuildToolChoice(buildTools)
+      case None =>
+        buildTools match {
+          case buildTool :: Nil =>
+            tables.buildTool.chooseBuildTool(buildTool.executableName)
+            Future.successful(Some(buildTool))
+          case _ => requestBuildToolChoice(buildTools)
+        }
     }
 
   private def requestBuildToolChoice(

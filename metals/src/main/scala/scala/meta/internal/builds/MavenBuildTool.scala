@@ -66,10 +66,11 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
 
   override def toString(): String = "Maven"
 
-  def executableName = "mvn"
+  def executableName = MavenBuildTool.name
 }
 
 object MavenBuildTool {
+  def name = "mvn"
   def isMavenRelatedPath(
       workspace: AbsolutePath,
       path: AbsolutePath,
