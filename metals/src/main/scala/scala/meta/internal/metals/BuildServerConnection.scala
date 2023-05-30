@@ -77,7 +77,7 @@ class BuildServerConnection private (
 
   def isSbt: Boolean = name == SbtBuildTool.name
 
-  def isMill: Boolean = name == MillBuildTool.name
+  def isMill: Boolean = name == MillBuildTool.bspName
 
   def isScalaCLI: Boolean = ScalaCli.names(name)
 

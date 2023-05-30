@@ -112,7 +112,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def toString(): String = "Mill"
 
-  override def executableName = "mill"
+  override def executableName = MillBuildTool.name
 
   private def predefScript =
     "import $ivy.`com.lihaoyi::mill-contrib-bloop:$MILL_VERSION`".getBytes()
@@ -143,11 +143,12 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
     }
   }
 
-  override val buildServerName: Option[String] = Some(MillBuildTool.name)
+  override val buildServerName: Option[String] = Some(MillBuildTool.bspName)
 }
 
 object MillBuildTool {
-  val name: String = "mill-bsp"
+  val bspName: String = "mill-bsp"
+  val name: String = "mill"
   // Mill emits semanticDB in a different way where it's not actually detected in the javac/scalac
   // options like other tools. Therefore for these versions we ensure we don't warn the user that
   // semanticdb isn't being produced and we instead trust Mill to do the job.

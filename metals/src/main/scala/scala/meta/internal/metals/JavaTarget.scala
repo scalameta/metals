@@ -60,7 +60,7 @@ case class JavaTarget(
    */
   private def semanticDbEnabledAlternatively = bspConnection.exists {
     buildServer =>
-      buildServer.name == MillBuildTool.name &&
+      buildServer.name == MillBuildTool.bspName &&
       SemVer.isCompatibleVersion(
         MillBuildTool.javaSemanticDbSupport,
         buildServer.version,

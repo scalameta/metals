@@ -109,10 +109,12 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
 
   override def toString: String = "Gradle"
 
-  def executableName = "gradle"
+  def executableName = GradleBuildTool.name
 }
 
 object GradleBuildTool {
+  def name = "gradle"
+
   def isGradleRelatedPath(
       workspace: AbsolutePath,
       path: AbsolutePath,

@@ -67,7 +67,7 @@ case class ScalaTarget(
    */
   private def semanticDbEnabledAlternatively = bspConnection.exists {
     buildServer =>
-      buildServer.name == MillBuildTool.name &&
+      buildServer.name == MillBuildTool.bspName &&
       SemVer.isCompatibleVersion(
         MillBuildTool.scalaSemanticDbSupport,
         buildServer.version,
