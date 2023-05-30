@@ -204,9 +204,9 @@ val sharedScalacOptions = List(
             isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
         List("-target:jvm-1.8", "-Yrangepos", "-Xexperimental")
       case partialVersion if isScala3(partialVersion) =>
-        List("-release", "8", "-language:implicitConversions", "-Xsemanticdb")
+        List("-Xtarget:8", "-language:implicitConversions", "-Xsemanticdb")
       case _ =>
-        List("-release", "8", "-Yrangepos")
+        List("-target:jvm-1.8", "-Yrangepos")
     }
   }
 )
