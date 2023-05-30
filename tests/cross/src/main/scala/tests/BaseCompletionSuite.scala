@@ -38,7 +38,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       original: String,
       filename: String = "A.scala",
   ): Seq[CompletionItem] = {
-    val (code, offset) = params(original)
+    val (code, offset) = params(original, filename)
     val result = resolvedCompletions(
       CompilerOffsetParams(
         Paths.get(filename).toUri(),
@@ -144,7 +144,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       }
       if (items.size <= itemIndex) fail("Not enough completion items")
       val item = items(itemIndex)
-      val (code, _) = params(original)
+      val (code, _) = params(original, filename)
       val obtained = TextEdits.applyEdits(code, item)
       assertNoDiff(
         obtained,

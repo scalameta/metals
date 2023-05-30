@@ -28,7 +28,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
   )(implicit loc: Location): Unit = {
     test(name) {
       val pkg = scala.meta.Term.Name(name.name).syntax
-      val (code, offset) = params(s"package $pkg\n" + original)
+      val (code, offset) = params(s"package $pkg\n" + original, "A.scala")
       val result =
         presentationCompiler
           .signatureHelp(

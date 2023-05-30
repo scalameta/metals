@@ -23,7 +23,7 @@ class BaseDocumentHighlightSuite extends BasePCSuite with RangeReplace {
       val expected = original.replaceAll("@@", "")
       val base = original.replaceAll("(<<|>>|@@)", "")
 
-      val (code, offset) = params(edit)
+      val (code, offset) = params(edit, "Highlight.scala")
       val highlights = presentationCompiler
         .documentHighlight(
           CompilerOffsetParams(
