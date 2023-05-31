@@ -34,7 +34,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
       val expected =
         original.replaceAll("@@", "").replaceAll("\\<\\<\\S*\\>\\>", newName)
       val base = original.replaceAll("(<<|>>|@@)", "")
-      val (code, offset) = params(edit,filename)
+      val (code, offset) = params(edit, filename)
       val renames = presentationCompiler
         .rename(
           CompilerOffsetParams(

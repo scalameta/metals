@@ -899,7 +899,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "directly-in-pkg".tag(IgnoreScala2),
+    "directly-in-pkg".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
     """|package a:
        |  object Y:
        |    val bar = 123
@@ -920,7 +920,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "nested-pkg".tag(IgnoreScala2),
+    "nested-pkg".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
     """|package a:
        |  package c: // some comment
        |    def increment2 = 2
@@ -938,4 +938,26 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |increment2: Int
        |""".stripMargin,
   )
+
+  check(
+    "indent-method".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    """|package a:
+       |  val y = 123
+       |  given intGiven: Int = 123
+       |  type Alpha = String
+       |  class Foo(x: Int)
+       |  object X:
+       |    val x = 123
+       |  def fooBar(x: Int) = x + 1
+       |  package b:
+       |    def fooBar(x: String) = x.length
+       |
+       |package c:
+       |  def main() = foo@@
+       |""".stripMargin,
+    """|fooBar(x: Int): Int
+       |fooBar(x: String): Int
+       |""".stripMargin,
+  )
+
 }
