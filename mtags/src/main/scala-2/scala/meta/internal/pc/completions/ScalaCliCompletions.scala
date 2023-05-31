@@ -2,6 +2,7 @@ package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.pc.MetalsGlobal
+import scala.meta.internal.semver.SemVer.Version
 
 import org.eclipse.{lsp4j => l}
 
@@ -39,7 +40,8 @@ trait ScalaCliCompletions {
         case (c1: TextEditMember, c2: TextEditMember) =>
           val (comp1, comp2) = (c1.edit.getNewText(), c2.edit.getNewText())
           // For version completions, we want to show the latest version first
-          if (comp1.headOption.exists(_.isDigit)) -comp1.compareTo(comp2)
+          if (comp1.headOption.exists(_.isDigit))
+            Version.fromString(comp2).compare(Version.fromString(comp1))
           else super.compare(o1, o2)
         case _ => super.compare(o1, o2)
       }

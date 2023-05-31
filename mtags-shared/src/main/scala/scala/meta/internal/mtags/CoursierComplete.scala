@@ -4,7 +4,6 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.Try
 import scala.util.matching.Regex
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -48,11 +47,7 @@ class CoursierComplete(scalaVersion: String) {
     val allCompletions = (scalaCompletions ++ javaCompletions).distinct
     // Attempt to sort versions in reverse order
     if (dependency.replaceAll(":+", ":").count(_ == ':') == 2)
-      Try {
-        allCompletions.sortWith(
-          Version.fromString(_) >= Version.fromString(_)
-        )
-      }.getOrElse(allCompletions.sortWith(_ >= _))
+      allCompletions.sortWith(Version.fromString(_) >= Version.fromString(_))
     else allCompletions
   }
 }

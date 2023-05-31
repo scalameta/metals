@@ -38,6 +38,11 @@ object SemVer {
 
     def >=(that: Version): Boolean = this > that || this == that
 
+    def compare(that: Version): Int =
+      if (this > that) 1
+      else if (this < that) -1
+      else 0
+
     override def toString: String =
       List(
         Some(s"$major.$minor.$patch"),
@@ -51,7 +56,8 @@ object SemVer {
   object Version {
     def fromString(version: String): Version = {
       val parts = version.split("\\.|-")
-      val Array(major, minor, patch) = parts.take(3).map(_.toInt)
+      val Array(major, minor, patch) =
+        parts.take(3).map(part => Try { part.toInt }.getOrElse(0))
       val (rc, milestone) = parts
         .lift(3)
         .map { v =>
