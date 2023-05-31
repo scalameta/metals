@@ -740,4 +740,17 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     ),
   )
 
+  check(
+    "for-comp",
+    """|object A {
+       |  val a = for {
+       |    foo <- List("a", "b", "c")
+       |    abc = println("Print!")
+       |  } yield bar@@
+       |
+       |}
+       |""".stripMargin,
+    "",
+  )
+
 }
