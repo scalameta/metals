@@ -56,8 +56,6 @@ class ScalaToplevelMtags(
   scanner.reader.nextChar()
   def isDone: Boolean = scanner.curr.token == EOF
 
-  private var sourceTopLevelAdded = false
-
   private def resetRegion(region: Region): Region = {
     currentOwner = region.owner
     region
@@ -106,7 +104,7 @@ class ScalaToplevelMtags(
       )
 
     def needEmitFileOwner(region: Region): Boolean =
-      !sourceTopLevelAdded && region.produceSourceToplevel
+      region.produceSourceToplevel
     def needToParseBody(expect: ExpectTemplate): Boolean =
       (includeInnerClasses || expect.isPackageBody) && !expect.ignoreBody
     def needToParseExtension(expect: ExpectTemplate): Boolean =
@@ -163,14 +161,13 @@ class ScalaToplevelMtags(
               }
 
               if (needEmitFileOwner(currRegion)) {
-                sourceTopLevelAdded = true
                 val pos = newPosition
                 withOwner(currRegion.owner) {
                   term(name, pos, Kind.OBJECT, 0)
                 }
               }
               owner
-            } else currentOwner
+            } else currRegion.termOwner
           scanner.nextToken()
           loop(
             indent,
@@ -214,7 +211,6 @@ class ScalaToplevelMtags(
         case DEF | VAL | VAR | GIVEN | TYPE
             if dialect.allowToplevelStatements &&
               needEmitFileOwner(currRegion) =>
-          sourceTopLevelAdded = true
           val pos = newPosition
           val srcName = input.filename.stripSuffix(".scala")
           val name = s"$srcName$$package"
@@ -323,7 +319,7 @@ class ScalaToplevelMtags(
           }
         case RBRACE =>
           val nextRegion = currRegion match {
-            case Region.InBrace(_, prev, _) => resetRegion(prev)
+            case Region.InBrace(_, prev, _, _) => resetRegion(prev)
             case r => r
           }
           scanner.nextToken()
@@ -707,13 +703,13 @@ object ScalaToplevelMtags {
       if (isPackageBody) r.prev else r
 
     def startInBraceRegion(prev: Region, extension: Boolean = false): Region =
-      Region.InBrace(owner, adjustRegion(prev), extension)
+      new Region.InBrace(owner, adjustRegion(prev), extension)
 
     def startInParenRegion(prev: Region): Region =
       Region.InParen(owner, adjustRegion(prev), true)
 
     def startIndentedRegion(prev: Region, extension: Boolean = false): Region =
-      Region.Indented(owner, indent, adjustRegion(prev), extension)
+      new Region.Indented(owner, indent, adjustRegion(prev), extension)
 
   }
 
@@ -721,7 +717,7 @@ object ScalaToplevelMtags {
     def prev: Region
     def owner: String
     def acceptMembers: Boolean
-    def produceSourceToplevel: Boolean
+    def produceSourceToplevel: Boolean = termOwner.isPackage
     def isExtension: Boolean = false
     val overloads: OverloadDisambiguator = new OverloadDisambiguator()
     def termOwner: String =
@@ -739,7 +735,6 @@ object ScalaToplevelMtags {
       val owner: String = Symbols.EmptyPackage
       val prev: Region = self
       val acceptMembers: Boolean = true
-      val produceSourceToplevel: Boolean = true
       override val withTermOwner: String => RootRegion = termOwner =>
         RootRegion(termOwner)
     }
@@ -751,7 +746,6 @@ object ScalaToplevelMtags {
     ) extends Region {
       def this(owner: String, prev: Region) = this(owner, prev, owner)
       val acceptMembers: Boolean = true
-      val produceSourceToplevel: Boolean = true
       override val withTermOwner: String => Package = termOwner =>
         Package(owner, prev, termOwner)
     }
@@ -759,24 +753,40 @@ object ScalaToplevelMtags {
     final case class InBrace(
         owner: String,
         prev: Region,
-        extension: Boolean = false
+        extension: Boolean = false,
+        override val termOwner: String
     ) extends Region {
+      def this(
+          owner: String,
+          prev: Region,
+          extension: Boolean
+      ) = this(owner, prev, extension, owner)
       def acceptMembers: Boolean =
         owner.endsWith("/")
 
-      val produceSourceToplevel: Boolean = false
       override def isExtension = extension
+
+      override val withTermOwner: String => InBrace = termOwner =>
+        InBrace(owner, prev, extension, termOwner)
     }
     final case class Indented(
         owner: String,
         exitIndent: Int,
         prev: Region,
-        extension: Boolean = false
+        extension: Boolean = false,
+        override val termOwner: String
     ) extends Region {
+      def this(
+          owner: String,
+          exitIndent: Int,
+          prev: Region,
+          extension: Boolean
+      ) = this(owner, exitIndent, prev, extension, owner)
       def acceptMembers: Boolean =
         owner.endsWith("/")
-      val produceSourceToplevel: Boolean = false
       override def isExtension = extension
+      override val withTermOwner: String => Indented = termOwner =>
+        Indented(owner, exitIndent, prev, extension, termOwner)
     }
 
     final case class InParen(
@@ -785,7 +795,7 @@ object ScalaToplevelMtags {
         override val emitIdentifier: Boolean
     ) extends Region {
       def acceptMembers: Boolean = false
-      val produceSourceToplevel: Boolean = false
+      override val produceSourceToplevel: Boolean = false
       override val changeCaseClassState: Boolean => Region = ei =>
         this.copy(emitIdentifier = ei)
     }

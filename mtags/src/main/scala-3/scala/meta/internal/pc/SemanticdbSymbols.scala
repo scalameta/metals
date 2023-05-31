@@ -11,19 +11,13 @@ object SemanticdbSymbols:
 
   def inverseSemanticdbSymbol(sym: String)(using ctx: Context): List[Symbol] =
     import scala.meta.internal.semanticdb.Scala.*
-
     val defns = ctx.definitions
     import defns.*
     def loop(s: String): List[Symbol] =
       if s.isNone || s.isRootPackage then RootPackage :: Nil
       else if s.isEmptyPackage then EmptyPackageVal :: Nil
       else if s.isPackage then
-        try
-          val pkg = requiredPackage(s.stripSuffix("/").replace("/", "."))
-          if pkg == NoSymbol then Nil
-          else
-            val moduleclasses = pkg.info.decls.filter(_.is(ModuleClass))
-            pkg :: moduleclasses.toList
+        try requiredPackage(s.stripSuffix("/").replace("/", ".")) :: Nil
         catch
           case NonFatal(_) =>
             Nil
@@ -68,7 +62,7 @@ object SemanticdbSymbols:
                     .alternatives
                     .iterator
                     .map(_.symbol)
-                    // .filter(sym => symbolName(sym) == s)
+                    .filter(sym => symbolName(sym) == s)
                     .toList
 
         parentSymbol.flatMap(tryMember)

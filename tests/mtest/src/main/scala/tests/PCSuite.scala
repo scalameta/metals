@@ -87,8 +87,8 @@ trait PCSuite {
 
   private def addSourceToIndex(filename: String, code2: String): Unit = {
     val file = tmp.resolve(filename)
+    Files.createDirectories(file.toNIO.getParent)
     Files.write(file.toNIO, code2.getBytes(StandardCharsets.UTF_8))
-
     try index.addSourceFile(file, Some(tmp), dialect)
     catch {
       case NonFatal(e) =>
