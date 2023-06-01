@@ -16,6 +16,7 @@ coursier fetch \
   org.scalameta:mtags_3.2.0:$version \
   org.scalameta:mtags_3.2.1:$version \
   org.scalameta:mtags_3.2.2:$version \
+  org.scalameta:mtags_3.3.0:$version \
   org.scalameta:mtags_2.13.1:$version \
   org.scalameta:mtags_2.13.2:$version \
   org.scalameta:mtags_2.13.3:$version \
@@ -35,4 +36,5 @@ coursier fetch \
   org.scalameta:mtags_2.12.15:$version \
   org.scalameta:mtags_2.12.16:$version \
   org.scalameta:mtags_2.12.17:$version \
+  org.scalameta:mtags_2.12.18:$version \
   org.scalameta:mtags_2.11.12:$version $suffix
