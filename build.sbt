@@ -104,6 +104,7 @@ def configureMtagsScalaVersionDynamically(
     List(
       mtest / scalaVersion := scalaV,
       mtags / scalaVersion := scalaV,
+      mtagsShared / scalaVersion := scalaV,
       cross / scalaVersion := scalaV,
     )
   val extracted = Project.extract(state)
