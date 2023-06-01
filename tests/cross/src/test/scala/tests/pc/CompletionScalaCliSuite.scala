@@ -89,7 +89,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
   check(
     "plugin".tag(
       IgnoreScalaVersion(version =>
-        Set("2.12.12", "2.12.16", "3.2.2", "3.3.0")(version) ||
+        Set("2.12.16", "2.12.18")(version) ||
           version.contains(
             "NIGHTLY"
           ) || version.contains(

@@ -99,6 +99,7 @@ def configureMtagsScalaVersionDynamically(
   val scalaVersionSettings =
     List(
       mtest / scalaVersion := scalaV,
+      mtagsShared / scalaVersion := scalaV,
       mtags / scalaVersion := scalaV,
       cross / scalaVersion := scalaV,
     )
