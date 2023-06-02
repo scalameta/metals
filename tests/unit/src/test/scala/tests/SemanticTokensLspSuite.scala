@@ -94,9 +94,21 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
     """|<<//>>>/*comment*/ <<using>>/*keyword*/ <<lib>>/*variable,readonly*/ <<"abc::abc:123">>/*string*/
        |<<//>>>/*comment*/ <<using>>/*keyword*/ <<scala>>/*variable,readonly*/ <<"3.1.1">>/*string*/
        |<<//>>>/*comment*/ <<using>>/*keyword*/ <<options>>/*variable,readonly*/ <<"-Xasync">>/*string*/, <<"-Xfatal-warnings">>/*string*/
-       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<packaging>>/*variable,readonly*/.<<provided>>/*variable,readonly*/ <<"org.apache.spark::spark-sql">>/*string*/
-       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<target>>/*variable,readonly*/.<<platform>>/*variable,readonly*/ <<"scala-js">>/*string*/, <<"scala-native">>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<packaging.provided>>/*variable,readonly*/ <<"org.apache.spark::spark-sql">>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<target.platform>>/*variable,readonly*/ <<"scala-js">>/*string*/, <<"scala-native">>/*string*/
        |<<//>>>/*comment*/ <<using>>/*keyword*/ <<lib>>/*variable,readonly*/ <<"io.circe::circe-core:0.14.0">>/*string*/, <<"io.circe::circe-core_native::0.14.0">>/*string*/
+       |<<object>>/*keyword*/ <<A>>/*class*/ {}
+       |""".stripMargin,
+  )
+
+  check(
+    "using-directives-no-quotes",
+    """|<<//>>>/*comment*/ <<using>>/*keyword*/ <<lib>>/*variable,readonly*/ <<abc::abc:123>>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<scala>>/*variable,readonly*/ <<3.1.1>>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<options>>/*variable,readonly*/ <<-Xasync>>/*string*/, <<-Xfatal-warnings>>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<packaging.provided>>/*variable,readonly*/ <<org.apache.spark::spark-sql>>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<target.platform>>/*variable,readonly*/ <<scala-js>>/*string*/, <<scala-native>>/*string*/
+       |<<//>>>/*comment*/ <<using>>/*keyword*/ <<lib>>/*variable,readonly*/ <<io.circe::circe-core:0.14.0>>/*string*/, <<io.circe::circe-core_native::0.14.0>>/*string*/
        |<<object>>/*keyword*/ <<A>>/*class*/ {}
        |""".stripMargin,
   )

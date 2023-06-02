@@ -309,45 +309,48 @@ object SemanticTokensProvider {
       case _ => false
     }
 
-  def makeScalaCliTokens(
+  private def makeScalaCliTokens(
       comm: Token.Comment,
       initialDelta: Line,
   ): (List[Integer], Line) = {
-    val cliTokens = getTokens(false, comm.value)
+
+    val directive = comm.toString()
     val buffer = ListBuffer.empty[Integer]
+    val parts = directive.split("[,\\s]+").toList.zipWithIndex
     var delta = initialDelta
-    cliTokens.foreach { tk =>
-      val (toAdd, delta0) = tk match {
-        case start: Token.Ident if start.value == ">" =>
-          convertTokensToIntList(
-            "//>",
-            delta,
-            getTypeId(SemanticTokenTypes.Comment),
-          )
-        case using: Token.Ident if using.value == "using" =>
-          convertTokensToIntList(
-            using.value,
-            delta,
-            getTypeId(SemanticTokenTypes.Keyword),
-          )
-        case tk =>
-          val (tpe, mod) = typeModOfNonIdentToken(tk, false)
-          convertTokensToIntList(
-            tk.text,
-            delta,
-            tpe,
-            mod,
-          )
-      }
-      buffer.addAll(
-        toAdd
+    var text = directive
+    parts.foreach { case (part, partIdx) =>
+      val tokenType = getUsingTokenType(part, partIdx)
+      val tokenMod =
+        if (tokenType == getTypeId(SemanticTokenTypes.Variable))
+          1 << getModifierId(SemanticTokenModifiers.Readonly)
+        else 0
+      val idx = text.indexOf(part)
+      delta = delta.moveOffset(idx)
+      val (toAdd, delta0) = convertTokensToIntList(
+        part,
+        delta,
+        tokenType,
+        tokenMod,
       )
+      buffer.addAll(toAdd)
       delta = delta0
+      text = text.substring(idx + part.length)
     }
     (buffer.toList, delta)
   }
+  private def getUsingTokenType(part: String, idx: Int): Int = {
+    idx match {
+      case 0 =>
+        if (part == "//>") getTypeId(SemanticTokenTypes.Comment) else -1
+      case 1 =>
+        if (part == "using") getTypeId(SemanticTokenTypes.Keyword) else -1
+      case 2 => getTypeId(SemanticTokenTypes.Variable)
+      case _ => getTypeId(SemanticTokenTypes.String)
+    }
+  }
 
-  def makeDocStringTokens(
+  private def makeDocStringTokens(
       comm: Token.Comment,
       initialDelta: Line,
   ): (List[Integer], Line) = {
