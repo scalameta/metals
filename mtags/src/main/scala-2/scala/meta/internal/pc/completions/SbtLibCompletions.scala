@@ -67,7 +67,8 @@ trait SbtLibCompletions {
       val completions =
         coursierComplete.complete(
           dependency.replace(CURSOR, ""),
-          includeScala = false
+          includeScala = false,
+          supportNonJvm = false
         )
       val editRange =
         pos.withStart(pos.start + 1).withEnd(pos.end - 1 - cursorLen).toLsp

@@ -20,35 +20,78 @@ class CoursierComplete(scalaVersion: String) {
       else scalaVersion.split('.').take(2).mkString(".")
     )
 
+  private def completions(s: String): List[String] = {
+    val futureCompletions = Future {
+      api.withInput(s).complete().getCompletions().asScala.toList
+    }
+    try Await.result(futureCompletions, 10.seconds)
+    catch {
+      case _: Throwable => Nil
+    }
+  }
+
+  /**
+   * Returns a list of completions for the given dependency string.
+   *
+   * @param dependency The dependency string to complete
+   * @param includeScala Include dependencies without specified scala version
+   * @param supportNonJvm Default to `::` before version if dependency name doesn't end with `sjs` or `native`
+   */
   def complete(
       dependency: String,
-      includeScala: Boolean = true
+      includeScala: Boolean = true,
+      supportNonJvm: Boolean = true
   ): List[String] = {
+    // Version completions
+    if (dependency.replaceAll(":+", ":").count(_ == ':') == 2) {
+      versionCompletions(dependency, supportNonJvm)
+    } else {
+      val javaCompletions = completions(dependency)
+      val scalaCompletions =
+        if (
+          includeScala &&
+          dependency.endsWith(":") && dependency.count(_ == ':') == 1
+        )
+          completions(dependency + ":").map(":" + _)
+        else List.empty
 
-    def completions(s: String): List[String] = {
-      val futureCompletions = Future {
-        api.withInput(s).complete().getCompletions().asScala.toList
-      }
-      try Await.result(futureCompletions, 10.seconds)
-      catch {
-        case _: Throwable => Nil
-      }
+      (scalaCompletions ++ javaCompletions).distinct
     }
+  }
 
-    val javaCompletions = completions(dependency)
-    val scalaCompletions =
-      if (
-        includeScala &&
-        dependency.endsWith(":") && dependency.count(_ == ':') == 1
-      )
-        completions(dependency + ":").map(":" + _)
-      else List.empty
+  private def versionCompletions(
+      dependency: String,
+      supportNonJvm: Boolean
+  ): List[String] = {
+    val (adjusted, hasDoubleColon) = adjustDoubleColon(dependency)
+    val sortedCompletions = completions(adjusted).sortWith(
+      Version.fromString(_) >= Version.fromString(_)
+    )
 
-    val allCompletions = (scalaCompletions ++ javaCompletions).distinct
-    // Attempt to sort versions in reverse order
-    if (dependency.replaceAll(":+", ":").count(_ == ':') == 2)
-      allCompletions.sortWith(Version.fromString(_) >= Version.fromString(_))
-    else allCompletions
+    // If dependency name doesn't end with `sjs` or `native` and we can default to `::` before version
+    if (!hasDoubleColon && supportNonJvm && !hasSpecifiedPlatform(dependency))
+      sortedCompletions.map(":" + _)
+    else sortedCompletions
+
+  }
+
+  private def adjustDoubleColon(dependency: String): (String, Boolean) = {
+    val doubleColon = dependency.lastIndexOf("::")
+    val firstColon = dependency.indexOf(":")
+
+    if (doubleColon > firstColon) {
+      val depString = (dependency.substring(0, doubleColon) +
+        dependency.substring(doubleColon + 1, dependency.length()))
+      (depString, true)
+    } else (dependency, false)
+  }
+
+  private def hasSpecifiedPlatform(dependency: String): Boolean = {
+    val firstColon = dependency.indexOf(":")
+    val lastColon = dependency.lastIndexOf(":")
+    val withoutVersion = dependency
+      .substring(firstColon, lastColon)
+    withoutVersion.contains("_sjs") || withoutVersion.contains("_native")
   }
 }
 

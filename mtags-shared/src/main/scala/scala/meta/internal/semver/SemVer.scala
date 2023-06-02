@@ -49,12 +49,12 @@ object SemVer {
     def fromString(version: String): Version = {
       val parts = version.split("\\.|-")
       val Array(major, minor, patch) =
-        parts.take(3).map(part => Try { part.toInt }.getOrElse(0))
+        parts.take(3).map(tryToInt)
       val (rc, milestone) = parts
         .lift(3)
         .map { v =>
-          if (v.startsWith("RC")) (Some(v.stripPrefix("RC").toInt), None)
-          else if (v.startsWith("M")) (None, Some(v.stripPrefix("M").toInt))
+          if (v.startsWith("RC")) (Some(tryToInt(v.stripPrefix("RC"))), None)
+          else if (v.startsWith("M")) (None, Some(tryToInt(v.stripPrefix("M"))))
           else (None, None)
         }
         .getOrElse((None, None))
@@ -67,6 +67,8 @@ object SemVer {
     }
 
   }
+
+  private def tryToInt(s: String): Int = Try { s.toInt }.toOption.getOrElse(0)
 
   def isCompatibleVersion(minimumVersion: String, version: String): Boolean = {
     Version.fromString(version) >= Version.fromString(minimumVersion)
