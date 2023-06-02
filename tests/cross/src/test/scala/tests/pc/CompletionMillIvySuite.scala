@@ -27,6 +27,16 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
     filename = "build.sc",
   )
 
+  checkEdit(
+    "scala-completions-edit",
+    """|val dependency = ivy"io.circe:@@"
+       |""".stripMargin,
+    """|val dependency = ivy"io.circe::circe-config"
+       |""".stripMargin,
+    filename = "build.sc",
+    filter = _ == "circe-config",
+  )
+
   check(
     "scala-completions",
     """|val dependency = ivy"io.circe::circe-core@@"
@@ -48,4 +58,51 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
        |""".stripMargin,
     filename = "build.sc",
   )
+
+  check(
+    "version-double-colon",
+    """|val dependency = ivy"org.typelevel:cats-core_2.11::@@"
+       |""".stripMargin,
+    """|1.0.1
+       |1.0.0
+       |1.0.0-RC2
+       |1.0.0-RC1
+       |1.0.0-MF
+       |""".stripMargin,
+    filter = _.startsWith("1.0"),
+    filename = "build.sc",
+  )
+
+  checkEdit(
+    "version-no-double-colon-edit",
+    """|val dependency = ivy"org.typelevel:cats-core_2.11:@@"
+       |""".stripMargin,
+    """|val dependency = ivy"org.typelevel:cats-core_2.11:1.0.1"
+       |""".stripMargin,
+    filter = _ == "1.0.1",
+    filename = "build.sc",
+  )
+
+  check(
+    "version-double-colon2",
+    """|val dependency = ivy"org.typelevel:cats-core_2.11::1.0.@@"
+       |""".stripMargin,
+    """|1.0.1
+       |1.0.0
+       |1.0.0-RC2
+       |1.0.0-RC1
+       |1.0.0-MF
+       |""".stripMargin,
+    filename = "build.sc",
+  )
+
+  checkEdit(
+    "version-double-colon-edit",
+    """|val dependency = ivy"org.typelevel:cats-core_2.11::1.0.1@@"
+       |""".stripMargin,
+    """|val dependency = ivy"org.typelevel:cats-core_2.11::1.0.1"
+       |""".stripMargin,
+    filename = "build.sc",
+  )
+
 }

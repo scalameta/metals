@@ -31,7 +31,12 @@ trait MillIvyCompletions {
   ) extends DependencyCompletion {
     override def contribute: List[Member] = {
       val completions =
-        coursierComplete.complete(dependency.replace(CURSOR, ""))
+        coursierComplete.complete(
+          dependency.replace(CURSOR, ""),
+          // NOTE: module has to extend ScalaNativeModule or ScalaJSModule to support `::` before version
+          // so we can't use `::` before version by default
+          supportNonJvm = false
+        )
       val (editStart, editEnd) =
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp

@@ -16,6 +16,7 @@ class ScalaCliActionsSuite
   val newestOsLib: String = coursierComplete
     .complete("com.lihaoyi::os-lib:")
     .headOption
+    .map(_.stripPrefix(":"))
     .getOrElse("0.8.1")
 
   checkScalaCLI(
