@@ -559,13 +559,7 @@ object ScalafixProvider {
     }
     val builtInRuleDeps = builtInRules(scalaBinaryVersion)
 
-    val allDeps = List(
-      Dependency.of(
-        "com.github.liancheng",
-        s"organize-imports_$scalaBinaryVersion",
-        BuildInfo.organizeImportVersion,
-      )
-    ) ++ fromSettings ++ rules.flatMap(builtInRuleDeps.get)
+    val allDeps = fromSettings ++ rules.flatMap(builtInRuleDeps.get)
     // only get newest versions for each dependency
     allDeps
       .sortBy(_.getVersion())

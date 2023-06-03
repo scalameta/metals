@@ -31,7 +31,6 @@ object V {
   val mill = "0.10.12"
   val mdoc = "2.3.7"
   val munit = "1.0.0-M7"
-  val organizeImportRule = "0.6.0"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
