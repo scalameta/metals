@@ -453,7 +453,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
     params.tokens.flatMap { tokens =>
       getStringLiterals(tokens, params, false)
         .filter(_.hasStripMargin)
-        .map { expr =>
+        .map { _ =>
           val range = params.range
           val splitLines = params.splitLines
           indent(splitLines, startPos, range)

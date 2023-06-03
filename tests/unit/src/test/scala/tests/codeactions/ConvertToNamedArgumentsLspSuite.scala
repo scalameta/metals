@@ -166,13 +166,13 @@ class ConvertToNamedArgumentsLspSuite
     "implicit-param",
     """|object Something {
        |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
-       |  implicit val x = 3
+       |  implicit val x: Int = 3
        |  foo(1, <<2>>)
        |}""".stripMargin,
     s"${ConvertToNamedArguments.title("foo(...)")}",
     """|object Something {
        |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
-       |  implicit val x = 3
+       |  implicit val x: Int = 3
        |  foo(param1 = 1, param2 = 2)
        |}""".stripMargin,
     filterAction = filterAction,

@@ -4,7 +4,7 @@ object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.18"
-  val scala213 = "2.13.10"
+  val scala213 = "2.13.11"
   val scala3 = "3.3.0"
   val scala3RC: Option[String] = Some("3.3.1-RC1")
   val sbtScala = "2.12.16"
@@ -70,10 +70,10 @@ object V {
     "2.12.12",
     "2.12.13",
     "2.12.14",
-    "2.13.3",
     "2.13.4",
     "2.13.5",
     "2.13.6",
+    "2.13.7",
   )
 
   def nonDeprecatedScala2Versions = Seq(
@@ -82,9 +82,9 @@ object V {
     "2.12.17",
     "2.12.16",
     "2.12.15",
-    "2.13.7",
     "2.13.8",
     "2.13.9",
+    "2.13.10",
   )
 
   def minimumSupportedSbtVersion = {
