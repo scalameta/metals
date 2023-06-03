@@ -445,7 +445,7 @@ final class ReferenceProvider(
   }
 
   private val noAdjustRange: AdjustRange =
-    (range: s.Range, text: String, symbol: String) => Some(range)
+    (range: s.Range, _: String, _: String) => Some(range)
   type AdjustRange = (s.Range, String, String) => Option[s.Range]
 
   private def resizeReferencedPackages(): Unit = {
