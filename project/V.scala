@@ -36,7 +36,7 @@ object V {
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
   val scalaCli = "0.2.1"
-  val scalafix = "0.10.4"
+  val scalafix = "0.11.0"
   val scalafmt = "3.7.4"
   val scalameta = "4.7.8"
   val scribe = "3.11.5"
