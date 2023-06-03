@@ -1746,7 +1746,7 @@ class MetalsLspService(
   override def completionItemResolve(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
-    CancelTokens.future { token =>
+    CancelTokens.future { _ =>
       if (clientConfig.isCompletionItemResolve) {
         compilers.completionItemResolve(item)
       } else {
@@ -1784,7 +1784,7 @@ class MetalsLspService(
   override def foldingRange(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
-    CancelTokens.future { token =>
+    CancelTokens.future { _ =>
       val path = params.getTextDocument().getUri().toAbsolutePath
       if (path.isScala)
         parseTrees.currentFuture.map(_ =>
