@@ -1258,6 +1258,15 @@ class CompletionSuite extends BaseCompletionSuite {
        |implicitConversions scala.languageFeature
        |""".stripMargin,
     topLines = Some(5),
+    compat = Map(
+      "2.13.11" ->
+        """|dynamics scala.languageFeature
+           |existentials scala.languageFeature
+           |experimental scala.languageFeature
+           |implicitConversions scala.languageFeature
+           |postfixOps scala.languageFeature
+           |""".stripMargin
+    ),
   )
 
   check(
