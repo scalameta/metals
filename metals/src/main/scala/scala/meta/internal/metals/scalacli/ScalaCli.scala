@@ -217,19 +217,18 @@ class ScalaCli(
       version.exists(ver => minVersion0.compareTo(ver) <= 0)
     }
 
-    val minVersion = "0.1.3"
     val cliCommand = userConfig().scalaCliLauncher
       .filter(_.trim.nonEmpty)
       .map(Seq(_))
       .orElse {
         findInPath("scala-cli")
           .orElse(findInPath("scala"))
-          .filter(requireMinVersion(_, minVersion))
+          .filter(requireMinVersion(_, ScalaCli.minVersion))
           .map(p => Seq(p.toString))
       }
       .getOrElse {
         scribe.warn(
-          s"scala-cli >= $minVersion not found in PATH, fetching and starting a JVM-based Scala CLI"
+          s"scala-cli >= ${ScalaCli.minVersion} not found in PATH, fetching and starting a JVM-based Scala CLI"
         )
         val cp = ScalaCli.scalaCliClassPath()
         Seq(
@@ -298,6 +297,7 @@ class ScalaCli(
 }
 
 object ScalaCli {
+  val minVersion = "0.1.3"
 
   private def socketConn(
       command: Seq[String],

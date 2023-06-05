@@ -2,6 +2,7 @@ package scala.meta.internal.builds
 
 import java.nio.file.Files
 import java.util.Properties
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopServers
@@ -27,6 +28,7 @@ final class BuildTools(
     userConfig: () => UserConfiguration,
     explicitChoiceMade: () => Boolean,
 ) {
+  private val lastDetectedBuildTools = new AtomicReference(Set.empty[String])
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicity chosen
   // to use another build server besides Bloop or it's a BSP server for a build
@@ -64,7 +66,7 @@ final class BuildTools(
   }
   def isMill: Boolean = workspace.resolve("build.sc").isFile
   def isScalaCli: Boolean =
-    ScalaCliBuildTool.pathToScalaCliBsp(workspace).isFile
+    ScalaCliBuildTool.pathsToScalaCliBsp(workspace).exists(_.isFile)
   def isGradle: Boolean = {
     val defaultGradlePaths = List(
       "settings.gradle",
@@ -84,6 +86,7 @@ final class BuildTools(
       GradleBuildTool(userConfig),
       MavenBuildTool(userConfig),
       MillBuildTool(userConfig),
+      ScalaCliBuildTool(workspace),
     )
   }
 
@@ -122,8 +125,7 @@ final class BuildTools(
   }
 
   def isBuildRelated(
-      workspace: AbsolutePath,
-      path: AbsolutePath,
+      path: AbsolutePath
   ): Option[String] = {
     if (isSbt && SbtBuildTool.isSbtRelatedPath(workspace, path))
       Some(SbtBuildTool.name)
@@ -134,6 +136,17 @@ final class BuildTools(
     else if (isMill && MillBuildTool.isMillRelatedPath(path))
       Some(MillBuildTool.name)
     else None
+  }
+
+  def initialize(): Set[String] = {
+    lastDetectedBuildTools.getAndSet(
+      loadSupported().map(_.executableName).toSet
+    )
+  }
+
+  def newBuildTool(buildTool: String): Boolean = {
+    val before = lastDetectedBuildTools.getAndUpdate(_ + buildTool)
+    !before.contains(buildTool)
   }
 }
 

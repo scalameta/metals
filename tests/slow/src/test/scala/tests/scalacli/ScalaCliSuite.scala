@@ -2,6 +2,7 @@ package tests.scalacli
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -222,6 +223,41 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         "scripts/foo.sc",
         0,
       )
+    } yield ()
+  }
+
+  test("add-sbt") {
+    cleanWorkspace()
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""/src/Main.scala
+           |object Main:
+           |  def foo = 3
+           |""".stripMargin
+      )
+      _ = assert(
+        server.server.tables.buildTool.selectedBuildTool().contains("scala-cli")
+      )
+      _ = assert(
+        server.server.tables.buildServers.selectedServer().contains("scala-cli")
+      )
+      _ = FileLayout.fromString(
+        s"""|/build.sbt
+            |ThisBuild / scalaVersion     := "3.3.0"
+            |ThisBuild / version          := "0.1.0-SNAPSHOT"
+            |
+            |lazy val root = (project in file("."))
+            |""".stripMargin,
+        workspace,
+      )
+      _ = client.switchBuildTool = Messages.NewBuildToolDetected.switch
+      _ = client.importBuild = Messages.ImportBuild.yes
+      _ <- server.didSave("build.sbt")(identity)
+      _ = assert(
+        server.server.tables.buildTool.selectedBuildTool().contains("sbt")
+      )
+      _ = assert(server.server.tables.buildServers.selectedServer().isEmpty)
+      _ = assert(server.server.bspSession.exists(_.main.isBloop))
     } yield ()
   }
 
