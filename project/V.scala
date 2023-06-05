@@ -31,12 +31,11 @@ object V {
   val mill = "0.10.12"
   val mdoc = "2.3.7"
   val munit = "1.0.0-M7"
-  val organizeImportRule = "0.6.0"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
   val scalaCli = "0.2.1"
-  val scalafix = "0.10.4"
+  val scalafix = "0.11.0"
   val scalafmt = "3.7.4"
   val scalameta = "4.7.8"
   val scribe = "3.11.5"

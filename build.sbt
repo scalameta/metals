@@ -46,7 +46,6 @@ inThisBuild(
     },
     scalaVersion := V.scala213,
     crossScalaVersions := List(V.scala213),
-    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % V.organizeImportRule,
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -483,7 +482,6 @@ lazy val metals = project
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
       "scalaCliVersion" -> V.scalaCli,
-      "organizeImportVersion" -> V.organizeImportRule,
       "millVersion" -> V.mill,
       "debugAdapterVersion" -> V.debugAdapter,
       "sbtJdiToolsVersion" -> V.sbtJdiTools,
