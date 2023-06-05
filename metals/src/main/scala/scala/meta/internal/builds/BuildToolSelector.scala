@@ -3,6 +3,7 @@ package scala.meta.internal.builds
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.ChooseBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
@@ -47,6 +48,24 @@ final class BuildToolSelector(
           tables.buildTool.chooseBuildTool(buildTool.executableName)
         )
         foundBuildTool
+      }
+  }
+
+  def onNewBuildToolAdded(
+      newBuildTool: BuildTool,
+      currentBuildTool: BuildTool,
+  ): Future[Boolean] = {
+    languageClient
+      .showMessageRequest(
+        Messages.NewBuildToolDetected.params(newBuildTool, currentBuildTool)
+      )
+      .asScala
+      .map {
+        case Messages.NewBuildToolDetected.switch =>
+          tables.buildServers.reset()
+          tables.buildTool.chooseBuildTool(newBuildTool.executableName)
+          true
+        case _ => false
       }
   }
 }

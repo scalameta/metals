@@ -117,9 +117,9 @@ final class Doctor(
     buildTargets.allBuildTargetIds
 
   private def selectedBuildToolMessage(): Option[(String, Boolean)] = {
-    val explicitChoice = buildTools.loadSupported().length > 1
+    val isExplicitChoice = buildTools.loadSupported().length > 1
     tables.buildTool.selectedBuildTool().map { value =>
-      (s"Build definition is coming from ${value}.", explicitChoice)
+      (s"Build definition is coming from ${value}.", isExplicitChoice)
     }
   }
 

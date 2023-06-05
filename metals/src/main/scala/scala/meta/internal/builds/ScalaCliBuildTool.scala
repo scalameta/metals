@@ -3,13 +3,11 @@ package scala.meta.internal.builds
 import java.security.MessageDigest
 
 import scala.concurrent.Future
-import scala.util.Try
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
-
-import com.google.gson.JsonParser
 
 class ScalaCliBuildTool(val workspaceVersion: Option[String])
     extends BuildTool {
@@ -23,7 +21,7 @@ class ScalaCliBuildTool(val workspaceVersion: Option[String])
   override def digest(workspace: AbsolutePath): Option[String] =
     ScalaCliDigest.current(workspace)
 
-  override def minimumVersion: String = "0.1.4"
+  override def minimumVersion: String = ScalaCli.minVersion
 
   override def version: String = workspaceVersion.getOrElse(recommendedVersion)
 
@@ -37,20 +35,20 @@ class ScalaCliBuildTool(val workspaceVersion: Option[String])
 
 object ScalaCliBuildTool {
   def name = "scala-cli"
-
-  def pathToScalaCliBsp(root: AbsolutePath): AbsolutePath =
-    root.resolve(".bsp").resolve("scala-cli.json")
+  def pathsToScalaCliBsp(root: AbsolutePath): List[AbsolutePath] = List(
+    root.resolve(".bsp").resolve("scala-cli.json"),
+    root.resolve(".bsp").resolve("scala.json"),
+  )
 
   def apply(root: AbsolutePath): ScalaCliBuildTool = {
-    val workspaceFolder =
-      Try(
-        JsonParser
-          .parseString(pathToScalaCliBsp(root).readText)
-          .getAsJsonObject()
-          .get("version")
-          .getAsString()
-      ).toOption
-    new ScalaCliBuildTool(workspaceFolder)
+    val workspaceFolderVersions =
+      for {
+        path <- pathsToScalaCliBsp(root)
+        text <- path.readTextOpt
+        json = ujson.read(text)
+        version <- json("version").strOpt
+      } yield version
+    new ScalaCliBuildTool(workspaceFolderVersions.headOption)
   }
 }
 
@@ -59,9 +57,10 @@ object ScalaCliDigest extends Digestable {
       workspace: AbsolutePath,
       digest: MessageDigest,
   ): Boolean = {
-    Digest.digestFileBytes(
-      ScalaCliBuildTool.pathToScalaCliBsp(workspace),
-      digest,
-    )
+    ScalaCliBuildTool
+      .pathsToScalaCliBsp(workspace)
+      .foldRight(true)((path, acc) =>
+        acc && Digest.digestFileBytes(path, digest)
+      )
   }
 }

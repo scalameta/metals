@@ -884,6 +884,7 @@ class MetalsLspService(
     Future
       .sequence(
         List[Future[Unit]](
+          Future(buildTools.initialize()),
           quickConnectToBuildServer().ignoreValue,
           slowConnectToBuildServer(forceImport = false).ignoreValue,
           Future(workspaceSymbols.indexClasspath()),
@@ -1253,6 +1254,7 @@ class MetalsLspService(
           Future(indexer.reindexWorkspaceSources(paths)),
           compilations.compileFiles(paths),
           onBuildChanged(paths).ignoreValue,
+          Future.sequence(paths.map(onBuildToolAdded)),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
@@ -2220,12 +2222,38 @@ class MetalsLspService(
   private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {
-    val changedBuilds = paths.flatMap(buildTools.isBuildRelated(folder, _))
+    val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
     val buildChange = for {
       chosenBuildTool <- tables.buildTool.selectedBuildTool()
       if (changedBuilds.contains(chosenBuildTool))
     } yield slowConnectToBuildServer(forceImport = false)
     buildChange.getOrElse(Future.successful(BuildChange.None))
+  }
+
+  private def onBuildToolAdded(
+      path: AbsolutePath
+  ): Future[BuildChange] = {
+    val supportedBuildTools = buildTools.loadSupported()
+    val maybeBuildChange = for {
+      currentBuildToolName <- tables.buildTool.selectedBuildTool()
+      currentBuildTool <- supportedBuildTools.find(
+        _.executableName == currentBuildToolName
+      )
+      addedBuildName <- buildTools.isBuildRelated(path)
+      if (buildTools.newBuildTool(addedBuildName))
+      if (addedBuildName != currentBuildToolName)
+      newBuildTool <- supportedBuildTools.find(
+        _.executableName == addedBuildName
+      )
+    } yield {
+      buildToolSelector
+        .onNewBuildToolAdded(newBuildTool, currentBuildTool)
+        .flatMap { switch =>
+          if (switch) slowConnectToBuildServer(forceImport = false)
+          else Future.successful(BuildChange.None)
+        }
+    }
+    maybeBuildChange.getOrElse(Future.successful(BuildChange.None))
   }
 
   /**
