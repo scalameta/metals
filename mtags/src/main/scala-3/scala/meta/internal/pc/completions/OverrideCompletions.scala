@@ -5,6 +5,7 @@ import java.{util as ju}
 
 import scala.collection.JavaConverters.*
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
@@ -52,7 +53,7 @@ object OverrideCompletions:
       config: PresentationCompilerConfig,
       autoImportsGen: AutoImportsGenerator,
       fallbackName: Option[String],
-  ): List[CompletionValue] =
+  )(using ReportContext): List[CompletionValue] =
     import indexedContext.ctx
     val clazz = td.symbol.asClass
     val syntheticCoreMethods: Set[Name] =
@@ -133,7 +134,7 @@ object OverrideCompletions:
       driver: InteractiveDriver,
       search: SymbolSearch,
       config: PresentationCompilerConfig,
-  ): ju.List[l.TextEdit] =
+  )(using ReportContext): ju.List[l.TextEdit] =
     object FindTypeDef:
       def unapply(path: List[Tree])(using Context): Option[TypeDef] = path match
         // class <<Foo>> extends ... {}
@@ -224,7 +225,7 @@ object OverrideCompletions:
       config: PresentationCompilerConfig,
   )(
       defn: TargetDef
-  )(using Context): List[l.TextEdit] =
+  )(using Context, ReportContext): List[l.TextEdit] =
     def calcIndent(
         defn: TargetDef,
         decls: List[Symbol],
@@ -392,7 +393,7 @@ object OverrideCompletions:
       config: PresentationCompilerConfig,
       autoImportsGen: AutoImportsGenerator,
       shouldAddOverrideKwd: Boolean,
-  )(using Context): CompletionValue.Override =
+  )(using Context, ReportContext): CompletionValue.Override =
     val renames = AutoImport.renameConfigMap(config)
     val printer = MetalsPrinter.standard(
       indexedContext,

@@ -27,4 +27,10 @@ final class WorksheetDependencySources(conn: () => Connection) {
       rs.getString(1).toAbsolutePath
     }
   }.headOption
+
+  def clearAll(): Unit = {
+    val statement =
+      conn().prepareStatement("truncate table worksheet_dependency_source")
+    statement.execute()
+  }
 }

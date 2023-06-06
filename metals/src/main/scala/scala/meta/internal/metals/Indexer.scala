@@ -27,7 +27,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
@@ -47,7 +46,7 @@ import org.eclipse.lsp4j.Position
  */
 final case class Indexer(
     workspaceReload: () => WorkspaceReload,
-    doctor: () => Doctor,
+    doctorCheck: () => Unit,
     languageClient: DelegatingLanguageClient,
     bspSession: () => Option[BspSession],
     executionContext: ExecutionContextExecutorService,
@@ -97,7 +96,7 @@ final case class Indexer(
         .flatMap(_ => importBuild(session))
         .map { _ =>
           scribe.info("Correctly reloaded workspace")
-          profiledIndexWorkspace(() => doctor().check())
+          profiledIndexWorkspace(doctorCheck)
           workspaceReload().persistChecksumStatus(Status.Installed, buildTool)
           BuildChange.Reloaded
         }

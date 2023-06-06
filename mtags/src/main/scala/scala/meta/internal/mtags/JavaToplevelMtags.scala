@@ -55,7 +55,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   }
 
   @tailrec
-  private def skipMultilineComment(prevStar: Boolean = false): Unit = {
+  private def skipMultilineComment(prevStar: Boolean): Unit = {
     reader.nextChar()
     if (prevStar) {
       if (reader.ch == '/') reader.nextChar()

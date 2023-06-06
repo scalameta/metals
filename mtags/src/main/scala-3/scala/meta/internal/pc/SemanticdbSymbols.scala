@@ -11,10 +11,8 @@ object SemanticdbSymbols:
 
   def inverseSemanticdbSymbol(sym: String)(using ctx: Context): List[Symbol] =
     import scala.meta.internal.semanticdb.Scala.*
-
     val defns = ctx.definitions
     import defns.*
-
     def loop(s: String): List[Symbol] =
       if s.isNone || s.isRootPackage then RootPackage :: Nil
       else if s.isEmptyPackage then EmptyPackageVal :: Nil

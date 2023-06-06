@@ -2,22 +2,25 @@ package scala.meta.internal.mtags
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 
 import scala.meta.AbsolutePath
-import scala.meta.Classpath
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.mtags.Semanticdbs.FoundSemanticDbPath
+import scala.meta.io.Classpath
 import scala.meta.io.RelativePath
 
 final case class SemanticdbClasspath(
     sourceroot: AbsolutePath,
     classpath: Classpath = Classpath(Nil),
+    semanticdbTargets: List[Path] = Nil,
     charset: Charset = StandardCharsets.UTF_8,
     fingerprints: Md5Fingerprints = Md5Fingerprints.empty
 ) extends Semanticdbs {
   val loader = new OpenClassLoader()
   loader.addClasspath(classpath.entries.map(_.toNIO))
+  loader.addClasspath(semanticdbTargets)
 
   def getSemanticdbPath(scalaOrJavaPath: AbsolutePath): AbsolutePath = {
     semanticdbPath(scalaOrJavaPath).getOrElse(

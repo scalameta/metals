@@ -77,9 +77,9 @@ Most of the time development in Metals looks like:
 - write tests which check if your changes work
 - publish Metals server locally and test changes manually
 
-When diving into part of the code without any prior knowledge it might be hard to comprehend what's going on
-and what part of the code is responsible for specific behavior. There are several ways to debug Metals,
-but most popular are:
+When diving into part of the code without any prior knowledge it might be hard
+to comprehend what's going on and what part of the code is responsible for
+specific behavior. There are several ways to debug Metals, but most popular are:
 
 - debugging through logging (recommended option)
 - classic debugging with breakpoints
@@ -200,7 +200,7 @@ sbt
 > test
 ```
 
-### Manually testing a `LspSuite`
+### Manually testing an `LspSuite`
 
 Every test suite that extends `LspSuite` generates a workspace directory under
 `tests/unit/target/e2e/<suitename>/<testname>`. To debug why a `LspSuite` might be
@@ -218,7 +218,7 @@ possible to investigate why test is failing manually.
 ## Cross tests
 
 These tests check common features such as hover, completions or signatures for
-different scala version.
+different Scala version.
 
 ```sh
 sbt
@@ -238,9 +238,18 @@ editor in a small demo build.
 
 It's important to note that `sbt publishLocal` will create artifacts only for
 the Scala version currently used in Metals and trying to use the snapshot
-version with any other Scala version will not work. In that case you need to run
-a full cross publish with `sbt +publishLocal`, however this will take quite some
-time, so you may want to target a specific version to publish like `++3.1.1 mtags/publishLocal`.
+version with any other Scala version will not work. This may be fine if you're
+working on a generic feature that isn't using the presentation compiler
+(anything in mtags),  if not then you need to publish the specific version of
+mtags that you're trying to test
+
+```
+`publishLocal; ++3.1.1 mtags/publishLocal`
+```
+
+You can also do a full cross publish with `sbt +publishLocal`, however this will
+take quite some time, so it's often better to only target the version you need.
+
 
 ### Visual Studio Code
 
@@ -249,13 +258,14 @@ Install the Metals extension from the Marketplace by searching for "Metals".
 [Click here to install the Metals VS Code plugin](vscode:extension/scalameta.metals)
 
 Next, update the "Server version" setting under preferences to point to the
-version you published locally via `sbt publishLocal`.
+version you published locally via `sbt publishLocal`. You'll notice that version has the format
+`<version>-SNAPSHOT`.
 
 ![Metals server version setting](https://i.imgur.com/ogVWI1t.png)
 
 When you make changes in the Metals Scala codebase
 
-- run `sbt publishLocal`
+- publish metals binary as described above.
 - execute the "Metals: Restart server" command in Visual Studio Code (via
   command palette)
 
@@ -269,7 +279,7 @@ take a look at the example configuration
 [here](https://github.com/scalameta/nvim-metals/discussions/39) if you haven't
 already set everything up.
 
-- run `sbt publishLocal`
+- publish the metals binary as described above.
 - set the `serverVersion` in your `settings` table that you pass in to your
   metals config.
 - Open your workspace and trigger a `:MetalsUpdate` followed by a

@@ -327,7 +327,7 @@ class ScalaVersionsSuite extends BaseSuite {
     val deprecatedScalaVersions = Seq.empty[String]
     val supportedScalaBinaryVersions =
       Seq("2.13", "2.12", "2.11", "3")
-    val scala212: String = "2.12.17"
+    val scala212: String = "2.12.18"
     val scala213: String = "2.13.10"
     val scala3: String = "3.2.1"
     new ScalaVersions(
@@ -341,7 +341,7 @@ class ScalaVersionsSuite extends BaseSuite {
   }
 
   test("newer-RC") {
-    val sv = scalaVersions("2.13.10", "2.12.17", "3.2.2-RC2", "3.2.1")
+    val sv = scalaVersions("2.13.10", "2.12.18", "3.2.2-RC2", "3.2.1")
     assertEquals(sv.recommendedVersion("3.2.2-RC1"), "3.2.2-RC2")
     assert(!sv.isFutureVersion("3.2.2-RC1"))
   }

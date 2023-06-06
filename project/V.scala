@@ -3,7 +3,7 @@ import sbt._
 object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.17"
+  val scala212 = "2.12.18"
   val scala213 = "2.13.10"
   val scala3 = "3.3.0"
   val scala3RC: Option[String] = Some("3.3.1-RC1")
@@ -31,19 +31,18 @@ object V {
   val mill = "0.10.12"
   val mdoc = "2.3.7"
   val munit = "1.0.0-M7"
-  val organizeImportRule = "0.6.0"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
   val scalaCli = "0.2.1"
-  val scalafix = "0.10.4"
-  val scalafmt = "3.7.3"
-  val scalameta = "4.7.7"
+  val scalafix = "0.11.0"
+  val scalafmt = "3.7.4"
+  val scalameta = "4.7.8"
   val scribe = "3.11.5"
   val semanticdb = scalameta
   val qdox = "2.0.3"
 
-  val guava = "com.google.guava" % "guava" % "31.1-jre"
+  val guava = "com.google.guava" % "guava" % "32.0.0-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 
@@ -66,10 +65,10 @@ object V {
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala2Versions = Seq(
     scala211,
-    "2.12.10",
     "2.12.11",
     "2.12.12",
     "2.12.13",
+    "2.12.14",
     "2.13.3",
     "2.13.4",
     "2.13.5",
@@ -79,9 +78,9 @@ object V {
   def nonDeprecatedScala2Versions = Seq(
     scala213,
     scala212,
+    "2.12.17",
     "2.12.16",
     "2.12.15",
-    "2.12.14",
     "2.13.7",
     "2.13.8",
     "2.13.9",
@@ -89,12 +88,12 @@ object V {
 
   def minimumSupportedSbtVersion = {
     // Update when deprecating a Scala version together with sbt version
-    val sbtScalaVersion = "2.12.14"
+    val sbtScalaVersion = "2.12.15"
     if (!nonDeprecatedScala2Versions.contains(sbtScalaVersion))
       throw new RuntimeException(
         "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"
       )
-    "1.5.3"
+    "1.6.0"
   }
 
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions

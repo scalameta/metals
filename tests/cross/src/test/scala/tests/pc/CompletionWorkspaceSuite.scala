@@ -897,4 +897,67 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
            |""".stripMargin
     ),
   )
+
+  checkEdit(
+    "directly-in-pkg".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    """|package a:
+       |  object Y:
+       |    val bar = 123
+       |  val fooBar = 123
+       |
+       |package b:
+       |  def main() = fooB@@
+       |""".stripMargin,
+    """|import a.fooBar
+       |package a:
+       |  object Y:
+       |    val bar = 123
+       |  val fooBar = 123
+       |
+       |package b:
+       |  def main() = fooBar
+       |""".stripMargin,
+  )
+
+  check(
+    "nested-pkg".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    """|package a:
+       |  package c: // some comment
+       |    def increment2 = 2
+       |  def increment = 1
+       |
+       |package d:
+       |  val increment3 = 3
+       |
+       |
+       |package b:
+       |  def main: Unit = incre@@
+       |""".stripMargin,
+    """|increment3: Int
+       |increment: Int
+       |increment2: Int
+       |""".stripMargin,
+  )
+
+  check(
+    "indent-method".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    """|package a:
+       |  val y = 123
+       |  given intGiven: Int = 123
+       |  type Alpha = String
+       |  class Foo(x: Int)
+       |  object X:
+       |    val x = 123
+       |  def fooBar(x: Int) = x + 1
+       |  package b:
+       |    def fooBar(x: String) = x.length
+       |
+       |package c:
+       |  def main() = foo@@
+       |""".stripMargin,
+    """|fooBar(x: Int): Int
+       |fooBar(x: String): Int
+       |""".stripMargin,
+  )
+
 }

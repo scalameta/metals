@@ -130,4 +130,69 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  // NOTE: In 3.1.3, package object name includes the whole path to file
+  // eg. in 3.2.2 we get `A$package`, but in 3.1.3 `/some/path/to/file/A$package`
+  check(
+    "directly-in-pkg1".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    """|
+       |package example:
+       |  extension (num: Int)
+       |    def incr: Int = num + 1
+       |
+       |package example2: 
+       |  def main = 100.inc@@
+       |""".stripMargin,
+    """|incr: Int (extension)
+       |""".stripMargin,
+  )
+
+  check(
+    "directly-in-pkg2".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    """|package example:
+       |  object X:
+       |    def fooBar(num: Int) = num + 1
+       |  extension (num: Int) def incr: Int = num + 1
+       |
+       |package example2: 
+       |  def main = 100.inc@@
+       |""".stripMargin,
+    """|incr: Int (extension)
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "directly-in-pkg3".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    """|package example:
+       |  extension (num: Int) def incr: Int = num + 1
+       |
+       |package example2: 
+       |  def main = 100.inc@@
+       |""".stripMargin,
+    """|import example.incr
+       |package example:
+       |  extension (num: Int) def incr: Int = num + 1
+       |
+       |package example2: 
+       |  def main = 100.incr
+       |""".stripMargin,
+  )
+
+  check(
+    "nested-pkg".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    """|package a:  // some comment
+       |  package c: 
+       |    extension (num: Int)
+       |        def increment2 = num + 2
+       |  extension (num: Int)
+       |    def increment = num + 1
+       |
+       |
+       |package b:
+       |  def main: Unit = 123.incre@@
+       |""".stripMargin,
+    """|increment: Int (extension)
+       |increment2: Int (extension)
+       |""".stripMargin,
+  )
+
 }

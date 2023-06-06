@@ -75,6 +75,21 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
   )
 
   check(
+    "docstring",
+    """|<<object>>/*keyword*/ <<A>>/*class*/ {
+       |  <</**>>/*comment*/
+       |<<    * Some example Scaladoc>>/*comment*/
+       |<<    * >>/*comment*/<<@param>>/*keyword*/<< >>/*comment*/<<xs>>/*variable,readonly*/<< is [[>>/*comment*/<<scala.collection.immutable.List>>/*string*/<<]]>>/*comment*/
+       |<<    * >>/*comment*/<<@throws>>/*keyword*/<< >>/*comment*/<<java.util.Exception>>/*class*/<< is [[>>/*comment*/<<scala.collection.immutable.List>>/*string*/<<]]>>/*comment*/
+       |<<    * >>/*comment*/<<@return>>/*keyword*/<< the same list>>/*comment*/
+       |<<    * >>/*comment*/<<@note>>/*keyword*/<< This is a note>>/*comment*/
+       |<<    */>>/*comment*/
+       |  <<def>>/*keyword*/ <<m>>/*method,definition*/(<<xs>>/*parameter,declaration,readonly*/: <<List>>/*type*/[<<Int>>/*class,abstract*/]): <<List>>/*type*/[<<Int>>/*class,abstract*/] = <<xs>>/*parameter,readonly*/
+       |}
+       |""".stripMargin,
+  )
+
+  check(
     "using-directive",
     """|<<//>>>/*comment*/ <<using>>/*keyword*/ <<lib>>/*variable,readonly*/ <<"abc::abc:123">>/*string*/
        |<<//>>>/*comment*/ <<using>>/*keyword*/ <<scala>>/*variable,readonly*/ <<"3.1.1">>/*string*/

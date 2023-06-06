@@ -24,7 +24,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       compat: Map[String, List[String]] = Map.empty,
   ): Unit = {
     test(name) {
-      val (code, offset) = params(original)
+      val (code, offset) = params(original, "SelectionRange.scala")
       val offsetParams: ju.List[OffsetParams] = List[OffsetParams](
         CompilerOffsetParams(
           Paths.get("SelectionRange.scala").toUri(),

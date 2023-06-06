@@ -46,7 +46,6 @@ inThisBuild(
     },
     scalaVersion := V.scala213,
     crossScalaVersions := List(V.scala213),
-    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % V.organizeImportRule,
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -99,6 +98,7 @@ def configureMtagsScalaVersionDynamically(
   val scalaVersionSettings =
     List(
       mtest / scalaVersion := scalaV,
+      mtagsShared / scalaVersion := scalaV,
       mtags / scalaVersion := scalaV,
       cross / scalaVersion := scalaV,
     )
@@ -204,9 +204,9 @@ val sharedScalacOptions = List(
             isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
         List("-target:jvm-1.8", "-Yrangepos", "-Xexperimental")
       case partialVersion if isScala3(partialVersion) =>
-        List("-release", "8", "-language:implicitConversions", "-Xsemanticdb")
+        List("-Xtarget:8", "-language:implicitConversions", "-Xsemanticdb")
       case _ =>
-        List("-release", "8", "-Yrangepos")
+        List("-target:jvm-1.8", "-Yrangepos")
     }
   }
 )
@@ -258,7 +258,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.23.1",
+      "com.google.protobuf" % "protobuf-java" % "3.23.2",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -482,7 +482,6 @@ lazy val metals = project
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
       "scalaCliVersion" -> V.scalaCli,
-      "organizeImportVersion" -> V.organizeImportRule,
       "millVersion" -> V.mill,
       "debugAdapterVersion" -> V.debugAdapter,
       "sbtJdiToolsVersion" -> V.sbtJdiTools,
@@ -532,7 +531,7 @@ lazy val input = project
     ),
     scalacOptions ++= Seq("-P:semanticdb:synthetics:on", "-Ymacro-annotations"),
     scalacOptions ~= { options =>
-      options.filter(_ != "-Wunused")
+      options.filter(!_.contains("-Wunused"))
     },
   )
   .disablePlugins(ScalafixPlugin)
@@ -550,6 +549,9 @@ lazy val input3 = project
     ),
     scalaVersion := V.scala3,
     publish / skip := true,
+    scalacOptions ~= { options =>
+      options.filter(!_.contains("-Wunused"))
+    },
   )
   .disablePlugins(ScalafixPlugin)
 

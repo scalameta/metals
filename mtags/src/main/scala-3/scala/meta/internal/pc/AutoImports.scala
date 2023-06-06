@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.*
 
-import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
 import scala.meta.pc.PresentationCompilerConfig
@@ -349,9 +348,12 @@ object AutoImports:
                 ScriptFirstImportPosition.ammoniteScStartOffset(text)
               else ScriptFirstImportPosition.scalaCliScStartOffset(text)
 
-            scriptOffset.getOrElse(
-              pos.source.lineToOffset(tmpl.self.srcPos.line)
-            )
+            scriptOffset.getOrElse {
+              val tmplPoint = tmpl.self.srcPos.span.point
+              if tmplPoint >= 0 && tmplPoint < pos.source.length
+              then pos.source.lineToOffset(tmpl.self.srcPos.line)
+              else 0
+            }
         new AutoImportPosition(offset, text, false)
       }
     end forScript

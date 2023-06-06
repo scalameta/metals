@@ -128,6 +128,11 @@ object Messages {
     "Reloading your project failed, no functionality will work. See the log for more details",
   )
 
+  val ResetWorkspaceFailed = new MessageParams(
+    MessageType.Error,
+    "Failed to reset the workspace. See the log for more details.",
+  )
+
   def bloopInstallProgress(buildToolExecName: String) =
     new MetalsSlowTaskParams(s"$buildToolExecName bloopInstall")
 

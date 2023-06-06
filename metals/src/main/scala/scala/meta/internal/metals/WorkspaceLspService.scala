@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.file.ProviderMismatchException
 import java.util.concurrent.CompletableFuture
 import java.{util => ju}
@@ -25,6 +26,7 @@ import scala.meta.internal.metals.debug.BuildTargetNotFoundException
 import scala.meta.internal.metals.debug.BuildTargetUndefinedException
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
+import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.parsing.ClassFinderGranularity
@@ -48,6 +50,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
+import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
@@ -106,6 +109,7 @@ class WorkspaceLspService(
   implicit val ex: ExecutionContextExecutorService = ec
   implicit val rc: ReportContext = LoggerReportContext
   private val cancelables = new MutableCancelable()
+  var httpServer: Option[MetalsHttpServer] = None
 
   private val clientConfig =
     ClientConfiguration(
@@ -141,6 +145,14 @@ class WorkspaceLspService(
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
 
+  val doctor: HeadDoctor =
+    new HeadDoctor(
+      () => folderServices.map(_.doctor),
+      () => httpServer,
+      clientConfig,
+      languageClient,
+    )
+
   def createService(folder: Folder): MetalsLspService =
     folder match {
       case Folder(uri, name) =>
@@ -159,6 +171,7 @@ class WorkspaceLspService(
           initTreeView,
           uri,
           name,
+          doctor,
         )
     }
 
@@ -166,7 +179,7 @@ class WorkspaceLspService(
     new WorkspaceFolders(
       folders,
       createService,
-      _.initialized(this),
+      _.initialized(),
       () => shutdown().asScala,
       redirectSystemOut,
     )
@@ -497,8 +510,7 @@ class WorkspaceLspService(
           .iterator
           .toList
           .map(event => {
-            val uri = event.getUri()
-            (uri.toAbsolutePath, getServiceFor(uri))
+            (event, getServiceFor(event.getUri()))
           })
           .groupBy(_._2)
           .map { case (service, paths) =>
@@ -565,20 +577,12 @@ class WorkspaceLspService(
   ): CompletableFuture[ju.List[Location]] =
     collectSeq(_.findTextInDependencyJars(params))(_.flatten.asJava).asJava
 
-  override def doctorVisibilityDidChange(
+  def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
-  ): CompletableFuture[Unit] = {
-    focusedDocument
-      .flatMap(getServiceForOpt)
-      .map(_.doctorVisibilityDidChange(params))
-      .getOrElse(
-        /* If we can't find the focused document, we still want to notify all the services.
-         * If a doctor is not visible this will have no effect.
-         */
-        Future.sequence(folderServices.map(_.doctorVisibilityDidChange(params)))
-      )
-      .asJavaUnit
-  }
+  ): CompletableFuture[Unit] =
+    Future {
+      doctor.onVisibilityDidChange(params.visible)
+    }.asJava
 
   override def didFocus(
       params: AnyRef
@@ -678,6 +682,8 @@ class WorkspaceLspService(
         getServiceFor(unresolvedParams.path)
           .discoverMainClasses(unresolvedParams)
           .asJavaObject
+      case ServerCommands.ResetWorkspace() =>
+        foreachSeq(_.resetWorkspace())
       case ServerCommands.RunScalafix(params) =>
         val uri = params.getTextDocument().getUri()
         getServiceFor(uri).runScalafix(uri).asJavaObject
@@ -693,7 +699,9 @@ class WorkspaceLspService(
           else ClassFinderGranularity.Tasty
         getServiceFor(uri).chooseClass(uri, searchGranularity).asJavaObject
       case ServerCommands.RunDoctor() =>
-        onCurrentFolder(_.runDoctor(), "run doctor").asJavaObject
+        Future {
+          doctor.executeRunDoctor()
+        }.asJavaObject
       case ServerCommands.ZipReports() =>
         Future {
           val zip =
@@ -1094,10 +1102,49 @@ class WorkspaceLspService(
       service.connectTables()
     }
     syncUserconfiguration().flatMap { _ =>
-      Future // TODO:: change to single http server (https://github.com/scalameta/metals/issues/5129)
-        //                       and remove this ---v
-        .sequence(folderServices.map(_.initialized(this)))
+      Future
+        .sequence(folderServices.map(_.initialized()))
+        .flatMap(_ => Future(startHttpServer()))
         .ignoreValue
+    }
+  }
+
+  private def startHttpServer(): Unit = {
+    if (clientConfig.isHttpEnabled) {
+      val host = "localhost"
+      val port = 5031
+      var url = s"http://$host:$port"
+      var render: () => String = () => ""
+      var completeCommand: HttpServerExchange => Unit = (_) => ()
+      def getTestyForURI(uri: URI) =
+        getServiceFor(uri.toAbsolutePath).getTastyForURI(uri)
+      val server = register(
+        MetalsHttpServer(
+          host,
+          port,
+          () => render(),
+          e => completeCommand(e),
+          () => doctor.problemsHtmlPage(url),
+          getTestyForURI,
+          this,
+        )
+      )
+      httpServer = Some(server)
+      val newClient = new MetalsHttpClient(
+        folders.map(_.path),
+        () => url,
+        languageClient.underlying,
+        () => server.reload(),
+        clientConfig.icons,
+        time,
+        sh,
+        clientConfig,
+      )
+      render = () => newClient.renderHtml
+      completeCommand = e => newClient.completeCommand(e)
+      languageClient.underlying = newClient
+      server.start()
+      url = server.address
     }
   }
 
