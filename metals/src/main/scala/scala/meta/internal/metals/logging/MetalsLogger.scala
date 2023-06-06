@@ -5,6 +5,9 @@ import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
+import scala.util.control.NonFatal
+
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
@@ -113,9 +116,32 @@ object MetalsLogger {
       redirectSystemStreams: Boolean,
   ): Unit = {
     val newLogFiles = folders.map(_.resolve(workspaceLogPath))
+    newLogFiles.foreach(truncateLogFile)
     scribe.info(s"logging to files ${newLogFiles.mkString(",")}")
     if (redirectSystemStreams) {
       redirectSystemOut(newLogFiles)
+    }
+  }
+
+  private def truncateLogFile(path: AbsolutePath) = {
+    val MaxLines = 10000
+    if (Files.exists(path.toNIO)) {
+      try {
+        def linesWithIndices =
+          Files.newBufferedReader(path.toNIO).lines().asScala.zipWithIndex
+        if (linesWithIndices.exists { case (_, i) => i > MaxLines }) {
+          val lastLines = Array.fill(MaxLines)("")
+          linesWithIndices.foreach { case (line, i) =>
+            lastLines.update(i % MaxLines, line)
+          }
+          path.writeText(lastLines.mkString("\n"))
+        }
+      } catch {
+        case NonFatal(t) =>
+          scribe.warn(s"""|error while truncating log file: $path
+                          |$t
+                          |""".stripMargin)
+      }
     }
   }
 
