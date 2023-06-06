@@ -217,7 +217,7 @@ private[debug] final class DebugProxy(
 
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
-      val msgWithoutColorCodes = filerANSIColorCodes(raw)
+      val msgWithoutColorCodes = filterANSIColorCodes(raw)
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
       client.consume(message)

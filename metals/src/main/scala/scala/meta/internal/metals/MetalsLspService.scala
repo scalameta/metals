@@ -27,6 +27,7 @@ import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ScalaCliBspScope
+import scala.meta.internal.builds.BSPErrorHandler
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool

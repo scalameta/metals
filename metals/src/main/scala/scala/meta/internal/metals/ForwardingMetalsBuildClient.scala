@@ -8,7 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.BSPErrorHandler
+import scala.meta.internal.builds.BSPErrorHandler
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClientConfiguration
