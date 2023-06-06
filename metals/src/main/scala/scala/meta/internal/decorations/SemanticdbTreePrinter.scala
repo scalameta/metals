@@ -221,7 +221,7 @@ class SemanticdbTreePrinter(
          *  hello<<[String]>>("")
          */
         case tree @ s.TypeApplyTree(_: s.OriginalTree | _: s.SelectTree, _)
-            if !ignoreTypesTrees && userConfig.showInferredType =>
+            if !ignoreTypesTrees && userConfig.showInferredType.nonEmpty =>
           gatherSynthetics(tree)
         /**
          *  implicit def implicitFun(object: T): R = ???
