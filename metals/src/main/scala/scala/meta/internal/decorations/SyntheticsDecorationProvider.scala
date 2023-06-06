@@ -445,7 +445,7 @@ final class SyntheticsDecorationProvider(
       } yield decorationOptions(lspRange, decoration)
 
       val typDecorations =
-        if (userConfig().showInferredType.nonEmpty)
+        if (userConfig().showInferredType.isEmpty)
           typeDecorations(path, textDocument, decorationPrinter)
         else Nil
       decorations ++ typDecorations
