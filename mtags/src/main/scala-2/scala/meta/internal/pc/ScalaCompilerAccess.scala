@@ -7,6 +7,7 @@ import scala.tools.nsc.interactive.ShutdownReq
 import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.PresentationCompilerConfig
 
 class ScalaCompilerWrapper(global: MetalsGlobal)
@@ -43,7 +44,7 @@ class ScalaCompilerAccess(
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => ScalaCompilerWrapper
-)(implicit ec: ExecutionContextExecutor)
+)(implicit ec: ExecutionContextExecutor, rc: ReportContext)
     extends CompilerAccess[StoreReporter, MetalsGlobal](
       config,
       sh,

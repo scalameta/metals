@@ -10,6 +10,8 @@ import java.util.logging.Logger
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig
 
@@ -25,7 +27,7 @@ abstract class CompilerAccess[Reporter, Compiler](
     sh: Option[ScheduledExecutorService],
     newCompiler: () => CompilerWrapper[Reporter, Compiler],
     shouldResetJobQueue: Boolean
-)(implicit ec: ExecutionContextExecutor) {
+)(implicit ec: ExecutionContextExecutor, rc: ReportContext) {
   private val logger: Logger =
     Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
 
@@ -77,6 +79,9 @@ abstract class CompilerAccess[Reporter, Compiler](
    * Asynchronously execute a function on the compiler thread with `Thread.interrupt()` cancellation.
    */
   def withInterruptableCompiler[T](
+      actionName: String,
+      actionInfo: () => String
+  )(
       default: T,
       token: CancelToken
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
@@ -85,7 +90,7 @@ abstract class CompilerAccess[Reporter, Compiler](
     val result = onCompilerJobQueue(
       () => {
         queueThread = Some(Thread.currentThread())
-        try withSharedCompiler(default)(thunk)
+        try withSharedCompiler(actionName, actionInfo)(default)(thunk)
         finally isFinished.set(true)
       },
       token
@@ -119,10 +124,16 @@ abstract class CompilerAccess[Reporter, Compiler](
    * Note that the function is still cancellable.
    */
   def withNonInterruptableCompiler[T](
+      actionName: String,
+      actionInfo: () => String
+  )(
       default: T,
       token: CancelToken
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
-    onCompilerJobQueue(() => withSharedCompiler(default)(thunk), token)
+    onCompilerJobQueue(
+      () => withSharedCompiler(actionName, actionInfo)(default)(thunk),
+      token
+    )
   }
 
   /**
@@ -130,7 +141,7 @@ abstract class CompilerAccess[Reporter, Compiler](
    *
    * May potentially run in parallel with other requests, use carefully.
    */
-  def withSharedCompiler[T](
+  def withSharedCompiler[T](actionName: String, actionInfo: () => String)(
       default: T
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): T = {
     try {
@@ -141,14 +152,14 @@ abstract class CompilerAccess[Reporter, Compiler](
       case other: Throwable =>
         handleSharedCompilerException(other)
           .map { message =>
-            retryWithCleanCompiler(
+            retryWithCleanCompiler(actionName, actionInfo)(
               thunk,
               default,
               message
             )
           }
           .getOrElse {
-            handleError(other)
+            handleError(other, actionName, actionInfo)
             default
           }
     }
@@ -159,6 +170,9 @@ abstract class CompilerAccess[Reporter, Compiler](
   protected def ignoreException(t: Throwable): Boolean
 
   private def retryWithCleanCompiler[T](
+      actionName: String,
+      actionInfo: () => String
+  )(
       thunk: CompilerWrapper[Reporter, Compiler] => T,
       default: T,
       cause: String
@@ -173,14 +187,40 @@ abstract class CompilerAccess[Reporter, Compiler](
       case InterruptException() =>
         default
       case NonFatal(e) =>
-        handleError(e)
+        handleError(e, actionName, actionInfo)
         default
     }
   }
 
-  private def handleError(e: Throwable): Unit = {
-    CompilerThrowable.trimStackTrace(e)
-    logger.log(Level.SEVERE, e.getMessage, e)
+  private def handleError(
+      e: Throwable,
+      actionName: String,
+      actionInfo: () => String
+  ): Unit = {
+    val error = CompilerThrowable.trimStackTrace(e)
+    rc.incognito.create(
+      Report("compiler-error", actionName, error = Some(error))
+    )
+    val pathToFull =
+      rc.unsanitized.create(
+        Report(
+          "compiler-error",
+          s"""|An error occurred in the presentation compiler:
+              |$actionName with the following params:
+              |${actionInfo()}
+              |""".stripMargin,
+          error = Some(error)
+        )
+      )
+    pathToFull match {
+      case Some(path) =>
+        logger.log(
+          Level.SEVERE,
+          s"A severe compiler error occurred, full details of the error can be found in the error report $path"
+        )
+      case _ =>
+        logger.log(Level.SEVERE, e.getMessage, e)
+    }
     shutdownCurrentCompiler()
   }
 

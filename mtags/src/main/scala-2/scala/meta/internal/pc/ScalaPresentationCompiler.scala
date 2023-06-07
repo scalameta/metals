@@ -103,7 +103,8 @@ case class ScalaPresentationCompiler(
       sh,
       () => new ScalaCompilerWrapper(newCompiler())
     )(
-      ec
+      ec,
+      reportContex
     )
 
   override def shutdown(): Unit = {
@@ -142,6 +143,11 @@ case class ScalaPresentationCompiler(
 
     val empty: ju.List[Node] = new ju.ArrayList[Node]()
     compilerAccess.withInterruptableCompiler(
+      "Semantic tokens",
+      () => s"""|for file:
+                |${params.text()}
+                |""".stripMargin
+    )(
       empty,
       params.token
     ) { pc =>
@@ -156,6 +162,9 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
     compilerAccess.withInterruptableCompiler(
+      "Code completion",
+      () => params.info
+    )(
       EmptyCompletionList(),
       params.token
     ) { pc =>
@@ -166,7 +175,12 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+    compilerAccess.withInterruptableCompiler(
+      "Implement abstract members",
+      () => s"""|for ${params.offset()} for file:
+                |${params.text()}
+                |""".stripMargin
+    )(empty, params.token) { pc =>
       new CompletionProvider(pc.compiler(), params).implementAll()
     }
   }
@@ -175,7 +189,10 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+    compilerAccess.withInterruptableCompiler(
+      "Insert inferred type",
+      () => params.info
+    )(empty, params.token) { pc =>
       new InferredTypeProvider(pc.compiler(), params).inferredTypeEdits().asJava
     }
   }
@@ -185,7 +202,12 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: Either[String, List[TextEdit]] = Right(List())
     (compilerAccess
-      .withInterruptableCompiler(empty, params.token) { pc =>
+      .withInterruptableCompiler(
+        "Inline value",
+        () => s"""|for ${params.offset()} for file:
+                  |${params.text()}
+                  |""".stripMargin
+      )(empty, params.token) { pc =>
         new PcInlineValueProviderImpl(pc.compiler(), params).getInlineTextEdits
       })
       .thenApply {
@@ -199,7 +221,14 @@ case class ScalaPresentationCompiler(
       extractionPos: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, range.token) { pc =>
+    compilerAccess.withInterruptableCompiler(
+      "Extract methods",
+      () => s"""|range from ${range.offset()} to ${range.endOffset()}
+                |extract position: ${extractionPos.offset()}
+                |file:
+                |${range.text()}
+                |""".stripMargin
+    )(empty, range.token) { pc =>
       new ExtractMethodProvider(
         pc.compiler(),
         range,
@@ -214,7 +243,13 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: Either[String, List[TextEdit]] = Right(List())
     (compilerAccess
-      .withInterruptableCompiler(empty, params.token) { pc =>
+      .withInterruptableCompiler(
+        "Convert to named arguments",
+        () =>
+          s"""|argIndices: ${argIndices.asScala.toList.map(_.toString).mkString(",")} in file:
+              |${params.info}
+              |""".stripMargin
+      )(empty, params.token) { pc =>
         new ConvertToNamedArgumentsProvider(
           pc.compiler(),
           params,
@@ -233,6 +268,12 @@ case class ScalaPresentationCompiler(
       isExtension: java.lang.Boolean // ignore, because Scala2 doesn't support extension method
   ): CompletableFuture[ju.List[AutoImportsResult]] =
     compilerAccess.withInterruptableCompiler(
+      "Auto imports",
+      () => s"""|for $name
+                |${params.info}
+                |${params.text()}
+                |""".stripMargin
+    )(
       List.empty[AutoImportsResult].asJava,
       params.token
     ) { pc =>
@@ -254,7 +295,12 @@ case class ScalaPresentationCompiler(
       symbol: String
   ): CompletableFuture[CompletionItem] =
     CompletableFuture.completedFuture {
-      compilerAccess.withSharedCompiler(item) { pc =>
+      compilerAccess.withSharedCompiler(
+        "Completion item resolve",
+        () => s"""|for item label: ${item.getLabel()}
+                  |and symbol: ${symbol}
+                  |""".stripMargin
+      )(item) { pc =>
         new CompletionItemResolver(pc.compiler()).resolve(item, symbol)
       }
     }
@@ -263,6 +309,9 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[SignatureHelp] =
     compilerAccess.withNonInterruptableCompiler(
+      "Signature help",
+      () => params.info
+    )(
       new SignatureHelp(),
       params.token
     ) { pc => new SignatureHelpProvider(pc.compiler()).signatureHelp(params) }
@@ -271,6 +320,9 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[ju.Optional[Range]] =
     compilerAccess.withNonInterruptableCompiler(
+      "Prepare rename",
+      () => params.info
+    )(
       Optional.empty[Range](),
       params.token
     ) { pc =>
@@ -282,6 +334,10 @@ case class ScalaPresentationCompiler(
       name: String
   ): CompletableFuture[ju.List[TextEdit]] =
     compilerAccess.withNonInterruptableCompiler(
+      "Rename",
+      () => s"""|name: $name
+                |${params.info}""".stripMargin
+    )(
       List[TextEdit]().asJava,
       params.token
     ) { pc =>
@@ -291,7 +347,7 @@ case class ScalaPresentationCompiler(
   override def hover(
       params: OffsetParams
   ): CompletableFuture[Optional[HoverSignature]] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler("Hover", () => params.info)(
       Optional.empty[HoverSignature](),
       params.token
     ) { pc =>
@@ -302,6 +358,9 @@ case class ScalaPresentationCompiler(
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
     compilerAccess.withNonInterruptableCompiler(
+      "Definition",
+      () => params.info
+    )(
       DefinitionResultImpl.empty,
       params.token
     ) { pc => new PcDefinitionProvider(pc.compiler(), params).definition() }
@@ -311,6 +370,9 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] = {
     compilerAccess.withNonInterruptableCompiler(
+      "Type definition",
+      () => params.info
+    )(
       DefinitionResultImpl.empty,
       params.token
     ) { pc => new PcDefinitionProvider(pc.compiler(), params).typeDefinition() }
@@ -320,6 +382,9 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
     compilerAccess.withInterruptableCompiler(
+      "Document highlight",
+      () => params.info
+    )(
       List.empty[DocumentHighlight].asJava,
       params.token()
     ) { pc =>
@@ -331,6 +396,12 @@ case class ScalaPresentationCompiler(
       code: String
   ): CompletableFuture[Array[Byte]] = {
     compilerAccess.withInterruptableCompiler(
+      "SemanticDB text document",
+      () => s"""|filename: $uri
+                |code:
+                |$code
+                |""".stripMargin
+    )(
       Array.emptyByteArray,
       EmptyCancelToken
     ) { pc =>
@@ -347,11 +418,20 @@ case class ScalaPresentationCompiler(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[SelectionRange]] = {
     CompletableFuture.completedFuture {
-      compilerAccess.withSharedCompiler(List.empty[SelectionRange].asJava) {
-        pc =>
-          new SelectionRangeProvider(pc.compiler(), params)
-            .selectionRange()
-            .asJava
+      compilerAccess.withSharedCompiler(
+        "Selection range",
+        () =>
+          s"""|positions: ${params.asScala.toList.map(_.offset().toString()).mkString(", ")}
+              |file:
+              |${params.asScala.headOption match {
+               case Some(param) => param.text()
+               case _ => "NO PARAMS"
+             }}
+              |""".stripMargin
+      )(List.empty[SelectionRange].asJava) { pc =>
+        new SelectionRangeProvider(pc.compiler(), params)
+          .selectionRange()
+          .asJava
       }
     }
   }
