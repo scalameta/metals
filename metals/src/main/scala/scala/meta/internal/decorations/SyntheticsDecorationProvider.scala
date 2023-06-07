@@ -201,7 +201,8 @@ final class SyntheticsDecorationProvider(
   }
 
   private def areSyntheticsEnabled: Boolean = {
-    userConfig().showImplicitArguments || userConfig().showInferredType.nonEmpty || userConfig().showImplicitConversionsAndClasses
+    val showInferredType = !userConfig().showInferredType.contains("false")
+    userConfig().showImplicitArguments || showInferredType || userConfig().showImplicitConversionsAndClasses
   }
 
   private def createHoverAtPoint(
@@ -445,7 +446,7 @@ final class SyntheticsDecorationProvider(
       } yield decorationOptions(lspRange, decoration)
 
       val typDecorations =
-        if (userConfig().showInferredType.isEmpty)
+        if (userConfig().showInferredType.contains("true"))
           typeDecorations(path, textDocument, decorationPrinter)
         else Nil
       decorations ++ typDecorations
