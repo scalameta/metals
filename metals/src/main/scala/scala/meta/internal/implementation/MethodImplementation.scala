@@ -1,8 +1,11 @@
 package scala.meta.internal.implementation
 
+import scala.annotation.nowarn
+
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.SymbolInformation
 
+@nowarn("msg=parameter methodSymbolInfo in anonymous function is never used")
 object MethodImplementation {
 
   def findParentSymbol(

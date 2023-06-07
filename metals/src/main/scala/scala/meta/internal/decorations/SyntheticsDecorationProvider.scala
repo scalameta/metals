@@ -3,6 +3,7 @@ package scala.meta.internal.decorations
 import java.nio.charset.Charset
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -83,6 +84,7 @@ final class SyntheticsDecorationProvider(
   override def onDelete(path: SemanticdbPath): Unit = ()
   override def reset(): Unit = ()
 
+  @nowarn("msg=parameter focused in anonymous function is never used")
   override def onChange(
       textDocument: TextDocuments,
       path: AbsolutePath,

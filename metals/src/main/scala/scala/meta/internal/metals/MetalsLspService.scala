@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.annotation.nowarn
 import scala.collection.immutable.Nil
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -850,6 +851,9 @@ class MetalsLspService(
       token: CancelToken,
   ): Future[Unit] = codeActionProvider.executeCommands(params, token)
 
+  @nowarn(
+    "msg=parameter didChangeWatchedFiles in anonymous function is never used"
+  )
   def registerNiceToHaveFilePatterns(): Unit = {
     for {
       params <- Option(initializeParams)

@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.util.PriorityQueue
 
+import scala.annotation.nowarn
+
 import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionJavaPriorityQueue
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -54,6 +56,7 @@ class ClasspathSearch(
     searchResult
   }
 
+  @nowarn("msg=parameter pkg in anonymous function is never used")
   private def search(
       query: WorkspaceSymbolQuery,
       shouldVisitPackage: String => Boolean,

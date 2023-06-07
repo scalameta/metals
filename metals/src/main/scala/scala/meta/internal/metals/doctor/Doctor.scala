@@ -406,7 +406,7 @@ final class Doctor(
       else
         (
           DoctorStatus.alert,
-          problemResolver.recommendation(javaTarget, scalaTarget = None),
+          problemResolver.recommendation(javaTarget),
         )
 
     val canRun = javaTarget.info.getCapabilities().getCanRun()
@@ -451,9 +451,7 @@ final class Doctor(
     val recommendedFix = problemResolver
       .recommendation(scalaTarget)
       .orElse {
-        javaTarget.flatMap(target =>
-          problemResolver.recommendation(target, Some(scalaTarget))
-        )
+        javaTarget.flatMap(target => problemResolver.recommendation(target))
       }
     val (targetType, diagnosticsStatus) =
       scalaTarget.sbtVersion match {
@@ -471,7 +469,7 @@ final class Doctor(
       case Some(target) =>
         (
           DoctorStatus.alert,
-          problemResolver.recommendation(target, Some(scalaTarget)),
+          problemResolver.recommendation(target),
         )
       case None if scalaTarget.isAmmonite => (DoctorStatus.info, None)
       case None => (DoctorStatus.alert, None)

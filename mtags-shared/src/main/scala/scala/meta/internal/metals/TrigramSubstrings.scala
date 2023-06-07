@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.annotation.nowarn
 import scala.collection.mutable.ArrayBuffer
 
 object TrigramSubstrings {
@@ -63,6 +64,7 @@ object TrigramSubstrings {
    *                 with basic validation through benchmarks in akka/akka. The query "abcdefghijklmnopqrstabcdefghijkl",
    *                 which returns 0 results, takes 215ms in akka/akka with 250 combinations and 420ms with 500 combinations.
    */
+  @nowarn("msg=parameter ")
   def uppercased(
       query: String,
       maxCount: Int = DefaultMaxTrigrams

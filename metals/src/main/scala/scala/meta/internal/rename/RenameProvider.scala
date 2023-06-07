@@ -2,6 +2,7 @@ package scala.meta.internal.rename
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -107,6 +108,7 @@ final class RenameProvider(
       }
   }
 
+  @nowarn("msg=parameter defSemanticdb in anonymous function is never used")
   def rename(
       params: RenameParams,
       token: CancelToken,
@@ -313,6 +315,7 @@ final class RenameProvider(
    * @param symbolOccurrence occurence of the symbol we are at together with semanticdb
    * @return all locations that were renamed
    */
+  @nowarn("msg=parameter realName in anonymous function is never used")
   private def renamedImportOccurrences(
       source: AbsolutePath,
       symbolOccurrence: Option[(SymbolOccurrence, TextDocument)],

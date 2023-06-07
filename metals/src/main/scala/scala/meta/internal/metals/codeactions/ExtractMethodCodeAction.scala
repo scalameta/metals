@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.codeactions
 
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -56,6 +57,7 @@ class ExtractMethodCodeAction(
     } yield ()
   }
 
+  @nowarn("msg=parameter head in anonymous function is never used")
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {

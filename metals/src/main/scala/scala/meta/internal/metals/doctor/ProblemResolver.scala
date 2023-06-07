@@ -38,11 +38,8 @@ class ProblemResolver(
     }
   }
 
-  def recommendation(
-      java: JavaTarget,
-      scalaTarget: Option[ScalaTarget],
-  ): Option[String] = {
-    findProblem(java, scalaTarget).map(_.message)
+  def recommendation(java: JavaTarget): Option[String] = {
+    findProblem(java).map(_.message)
   }
 
   def recommendation(scala: ScalaTarget): Option[String] = {
@@ -86,10 +83,7 @@ class ProblemResolver(
     }
     for {
       target <- javaTargets
-      issue <- findProblem(
-        target,
-        scalaTargets.find(_.info.getId() == target.info.getId()),
-      )
+      issue <- findProblem(target)
     } yield {
       issue match {
         case _: JavaSemanticDBDisabled => misconfiguredProjects += 1
@@ -313,10 +307,7 @@ class ProblemResolver(
       .orElse(outdatedJunitInterface)
   }
 
-  private def findProblem(
-      javaTarget: JavaTarget,
-      scalaTarget: Option[ScalaTarget],
-  ): Option[JavaProblem] = {
+  private def findProblem(javaTarget: JavaTarget): Option[JavaProblem] = {
     if (!javaTarget.isSemanticdbEnabled)
       Some(
         JavaSemanticDBDisabled(
@@ -332,19 +323,15 @@ class ProblemResolver(
           "-Xplugin:semanticdb -targetroot:javac-classes-directory"
         )
       )
-    else isWrongJavaRelease(javaTarget, scalaTarget)
+    else isWrongJavaRelease(javaTarget)
   }
 
   private def isWrongJavaRelease(
-      javaTarget: JavaTarget,
-      scalaTarget: Option[ScalaTarget],
+      javaTarget: JavaTarget
   ): Option[JavaProblem] = {
     def buildJavaVersion =
       for {
-        target <- scalaTarget
-        javaHome <- target.jvmHome
-        version <-
-          maybeJDKVersion
+        version <- maybeJDKVersion
       } yield version
 
     val releaseVersion = javaTarget.releaseVersion.flatMap(JdkVersion.parse)

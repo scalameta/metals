@@ -5,6 +5,8 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
+import scala.annotation.nowarn
+
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.jdk.CollectionConverters._
@@ -74,9 +76,13 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
       snippetAutoIndent = false
     )
 
+  @nowarn(
+    "msg=parameter scalaVersion in method extraDependencies is never used"
+  )
   protected def extraDependencies(scalaVersion: String): Seq[Dependency] =
     Seq.empty
 
+  @nowarn("msg=parameter classpath in method scalacOptions is never used")
   protected def scalacOptions(classpath: Seq[Path]): Seq[String] = Seq.empty
 
   protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = None

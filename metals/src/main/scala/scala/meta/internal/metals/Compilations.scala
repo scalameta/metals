@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.annotation.nowarn
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -129,6 +130,7 @@ final class Compilations(
   def recompileAll(): Future[Unit] = {
     cancel()
 
+    @nowarn("msg=parameter cleanResult in anonymous function is never used")
     def clean(
         connectionOpt: Option[BuildServerConnection],
         targetIds: Seq[BuildTargetIdentifier],
@@ -148,7 +150,7 @@ final class Compilations(
       for {
         cleanResult <- cleaned
         if cleanResult.getCleaned() == true
-        compiled <- compile(targetIds).future
+        _ <- compile(targetIds).future
       } yield ()
     }
 

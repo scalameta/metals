@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -24,6 +25,7 @@ class PopupChoiceReset(
 ) {
   import PopupChoiceReset._
 
+  @nowarn("msg=parameter didChange in anonymous function is never used")
   def reset(value: String)(implicit ec: ExecutionContext): Future[Unit] = {
     val result = if (value == BuildTool) {
       scribe.info("Resetting build tool selection.")

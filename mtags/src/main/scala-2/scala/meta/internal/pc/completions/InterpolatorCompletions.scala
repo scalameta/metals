@@ -2,6 +2,7 @@ package scala.meta.internal.pc.completions
 
 import java.lang.StringBuilder
 
+import scala.annotation.nowarn
 import scala.collection.immutable.Nil
 
 import scala.meta.internal.pc.CompletionFuzzy
@@ -157,6 +158,7 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     }
   }
 
+  @nowarn("msg=parameter query in anonymous function is never used")
   def isPossibleInterpolatorMember(
       lit: Literal,
       parent: Tree,

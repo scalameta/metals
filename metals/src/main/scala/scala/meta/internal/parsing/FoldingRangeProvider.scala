@@ -3,6 +3,8 @@ package scala.meta.internal.parsing
 import java.util
 import java.util.Collections
 
+import scala.annotation.nowarn
+
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
@@ -18,6 +20,7 @@ final class FoldingRangeProvider(
     foldOnlyLines: Boolean,
 ) {
 
+  @nowarn("msg=parameter code in anonymous function is never used")
   def getRangedForScala(
       filePath: AbsolutePath
   ): util.List[FoldingRange] = {
@@ -36,6 +39,7 @@ final class FoldingRangeProvider(
     result.getOrElse(util.Collections.emptyList())
   }
 
+  @nowarn("msg=parameter code in anonymous function is never used")
   def getRangedForJava(
       filePath: AbsolutePath
   ): util.List[FoldingRange] = {

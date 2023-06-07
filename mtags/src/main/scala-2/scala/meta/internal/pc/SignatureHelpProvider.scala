@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.annotation.nowarn
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
@@ -179,6 +181,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       sym.name == termNames.apply &&
         definitions.isTupleSymbol(sym.owner.companion)
 
+    @nowarn("msg=parameter info in anonymous function is never used")
     def unapply(tree: Tree): Option[MethodCall] = {
       tree match {
         case AppliedTypeTree(qual, targs) =>

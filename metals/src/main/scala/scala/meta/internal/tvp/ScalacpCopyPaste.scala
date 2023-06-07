@@ -23,7 +23,7 @@ import scala.meta.internal.{semanticdb => s}
  * If the `Scalacp` class was not final then we could avoid this copy-pasting. Changes are
  * documented with "// scalacp deviation" comments.
  */
-@nowarn("msg=parameter value node")
+@nowarn("msg=parameter node in class ScalacpCopyPaste is never used")
 class ScalacpCopyPaste(node: ScalaSigNode) {
   lazy val symbolCache = new ju.HashMap[Symbol, String]
   implicit class XtensionSymbolSSymbol(sym: Symbol) {

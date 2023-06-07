@@ -3,6 +3,8 @@ package scala.meta.internal.mtags
 import java.io.StringReader
 import java.util.Comparator
 
+import scala.annotation.nowarn
+
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.jdk.CollectionConverters._
@@ -120,6 +122,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
       }
     }
 
+  @nowarn("msg=parameter ctor in method visitConstructor is never used")
   def visitConstructor(
       ctor: JavaConstructor,
       disambiguator: String,
@@ -145,6 +148,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
       }
   }
 
+  @nowarn("msg=parameter method in method visitMethod is never used")
   def visitMethod(
       method: JavaMethod,
       name: String,
