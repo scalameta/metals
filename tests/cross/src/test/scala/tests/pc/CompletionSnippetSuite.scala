@@ -394,7 +394,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         """|Try
            |Try($0)
-           |TryMethods
            |""".stripMargin
     ),
   )

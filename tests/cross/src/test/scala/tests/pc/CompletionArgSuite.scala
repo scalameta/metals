@@ -653,14 +653,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|foo = : Int
        |foo = a : Int
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|foo = : Int
-           |foo = a : Int
-           |foo: Int
-           |fooBar: Int
-           |""".stripMargin
-    ),
   )
 
   check(
@@ -680,14 +672,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|fooBar = : Int
        |fooBar = a : Int
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|fooBar = : Int
-           |fooBar = a : Int
-           |foo: Int
-           |fooBar: Int
-           |""".stripMargin
-    ),
   )
 
   check(
