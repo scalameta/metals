@@ -107,8 +107,19 @@ class JavaInteractiveSemanticdb(
       s.TextDocument()
     }
 
+    val documentSource = scala.util
+      .Try(workspace.toNIO.relativize(source.toNIO))
+      .toOption
+      .map { relativeUri =>
+        val relativeString =
+          if (Properties.isWin) relativeUri.toString().replace("\\", "/")
+          else relativeUri.toString()
+        relativeString
+      }
+      .getOrElse(source.toString())
+
     val out = doc.copy(
-      uri = source.toURI.toString(),
+      uri = documentSource,
       text = text,
       md5 = MD5.compute(text),
     )
