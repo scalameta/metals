@@ -960,4 +960,29 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  check(
+    "case_class_param",
+    """|case class Foo(fooBar: Int, gooBar: Int)
+       |class Bar(val fooBaz: Int, val fooBal: Int) {
+       |  val fooBar: Option[Int] = Some(1)
+       |}
+       |object A {
+       |  val fooBar: List[Int] = List(1)
+       |}
+       |
+       |object Main {
+       |  val fooBar = "Abc"
+       |  val x = fooBa@@
+       |}
+       |""".stripMargin,
+    """|fooBar: String
+       |fooBar: List[Int]
+       |""".stripMargin,
+    compat = Map(
+      "2" -> """|fooBar: String
+                |fooBar - case_class_param.A: List[Int]
+                |""".stripMargin
+    ),
+  )
+
 }
