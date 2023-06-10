@@ -1245,6 +1245,14 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  val pre331: String =
+    """|dynamics scala.languageFeature
+       |existentials scala.languageFeature
+       |experimental scala.languageFeature
+       |higherKinds scala.languageFeature
+       |implicitConversions scala.languageFeature
+       |""".stripMargin
+
   check(
     "ordering-1",
     s"""|object Main {
@@ -1265,7 +1273,18 @@ class CompletionSuite extends BaseCompletionSuite {
            |experimental scala.languageFeature
            |implicitConversions scala.languageFeature
            |postfixOps scala.languageFeature
-           |""".stripMargin
+           |""".stripMargin,
+      "3.2" -> pre331,
+      "3.1" -> pre331,
+      "3.3.0" -> pre331,
+      "3.3.1" -> pre331,
+      "3" ->
+        """|dynamics languageFeature
+           |existentials languageFeature
+           |experimental languageFeature
+           |higherKinds languageFeature
+           |implicitConversions languageFeature
+           |""".stripMargin,
     ),
   )
 

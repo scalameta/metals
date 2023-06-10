@@ -61,11 +61,21 @@ object DotcPrinter:
      */
     private def printPrefix(tp: Type): Text = homogenize(tp) match
       case NoPrefix => ""
-      case tp: SingletonType => toTextRef(tp) ~ "."
+      case tp: SingletonType =>
+        toTextRef(tp) ~ "."
       case tp => trimPrefix(toTextLocal(tp)) ~ "#"
 
     def fullName(sym: Symbol): String =
       fullNameString(sym)
+
+    override def toTextRef(tp: SingletonType): Text = controlled {
+      tp match
+        case tp: TermRef if !printDebug && tp.symbol.is(Package) =>
+          toTextPrefix(tp.prefix) ~
+            tp.symbol.name.stripModuleClassSuffix.toString()
+        case _ =>
+          super.toTextRef(tp)
+    }
 
     override def toText(tp: Type): Text =
       // Override the behavior for `AppliedType` because
