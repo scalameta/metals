@@ -65,9 +65,9 @@ class ShortenedNames(
               true
             else false
           case founds =>
-            founds.exists(s =>
+            founds.exists { s =>
               s == short.symbol || s.typeRef.metalsDealias.typeSymbol == short.symbol
-            )
+            }
         if isOk then
           history(short.name) = short
           true
