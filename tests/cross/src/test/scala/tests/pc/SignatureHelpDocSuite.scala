@@ -1,7 +1,6 @@
 package tests.pc
 
 import tests.BaseSignatureHelpSuite
-import scala.meta.internal.mtags.BuildInfo
 
 class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
 
@@ -134,7 +133,12 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     ),
   )
 
-  val addedSpace = if (BuildInfo.scalaCompilerVersion == "2.13.11") "" else " "
+  val addedSpace =
+    if (
+      scalaVersion == "2.13.11" ||
+      (scalaVersion.startsWith("3.3") && !(scalaVersion.startsWith("3.3.0")))
+    ) ""
+    else " "
   checkDoc(
     "curry3",
     """
@@ -200,30 +204,30 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
             |  @param op (Int, Int) => Int
             |""".stripMargin,
       "3" ->
-        """|Applies a binary operator to a start value and all elements of this collection,
-           | going left to right.
-           |
-           | Note: will not terminate for infinite-sized collections.
-           | Note: might return different results for different runs, unless the
-           |underlying collection type is ordered or the operator is associative
-           |and commutative.
-           |
-           |
-           |**Type Parameters**
-           |- `B`: the result type of the binary operator.
-           |
-           |**Parameters**
-           |- `z`: the start value.
-           |- `op`: the binary operator.
-           |
-           |**Returns:** the result of inserting `op` between consecutive elements of this collection,
-           |          going left to right with the start value `z` on the left:
-           |          `op(...op(z, x), x, ..., x)` where `x, ..., x`
-           |           are the elements of this collection.
-           |          Returns `z` if this collection is empty.
-           |foldLeft[B](z: B)(op: (B, Int) => B): B
-           |                  ^^^^^^^^^^^^^^^^^
-           |""".stripMargin,
+        s"""|Applies a binary operator to a start value and all elements of this collection,
+            | going left to right.
+            |
+            | Note: will not terminate for infinite-sized collections.
+            | Note: might return different results for different runs, unless the
+            |underlying collection type is ordered or the operator is associative
+            |and commutative.
+            |
+            |
+            |**Type Parameters**
+            |- `B`: the result type of the binary operator.
+            |
+            |**Parameters**
+            |- `z`: the start value.
+            |- `op`: the binary operator.
+            |
+            |**Returns:** the result of inserting `op` between consecutive elements of this collection,
+            |          going left to right with the start value `z` on the left:
+            |          `op(...op(z, x), x, ..., x)` where `x, ..., x`
+            |          ${addedSpace}are the elements of this collection.
+            |          Returns `z` if this collection is empty.
+            |foldLeft[B](z: B)(op: (B, Int) => B): B
+            |                  ^^^^^^^^^^^^^^^^^
+            |""".stripMargin,
     ),
   )
 

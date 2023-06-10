@@ -512,8 +512,27 @@ class CompletionDocSuite extends BaseCompletionSuite {
             |Try[T](r: => T): Try[T]""".stripMargin
     ),
   )
+
+  val oldDocs =
+    """|> A builder for mutable sequence of characters.  This class provides an API
+       |mostly compatible with `java.lang.StringBuilder`, except where there are
+       |conflicts with the Scala collections API (such as the `reverse` method.)
+       |
+       |$multipleResults
+       |
+       |
+       |**See**
+       |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
+       |section on `StringBuilders` for more information.
+       |StringBuilder scala.collection.mutable
+       |StringBuilder(): StringBuilder
+       |StringBuilder(str: String): StringBuilder
+       |StringBuilder(underlying: StringBuilder): StringBuilder
+       |StringBuilder(capacity: Int): StringBuilder
+       |StringBuilder(initCapacity: Int, initValue: String): StringBuilder
+       |""".stripMargin
   check(
-    "scala7",
+    "scala7".tag(IgnoreScalaVersion(ver => ver.contains("NIGHTLY"))),
     """
       |object A {
       |  scala.collection.mutable.StringBuilder@@
@@ -544,24 +563,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
                    |StringBuilder scala.collection.mutable
                    |""".stripMargin,
       "3" ->
-        """|> A builder for mutable sequence of characters.  This class provides an API
-           |mostly compatible with `java.lang.StringBuilder`, except where there are
-           |conflicts with the Scala collections API (such as the `reverse` method.)
-           |
-           |$multipleResults
-           |
-           |
-           |**See**
-           |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
-           |section on `StringBuilders` for more information.
-           |StringBuilder scala.collection.mutable
-           |StringBuilder(): StringBuilder
-           |StringBuilder(str: String): StringBuilder
-           |StringBuilder(underlying: StringBuilder): StringBuilder
-           |StringBuilder(capacity: Int): StringBuilder
-           |StringBuilder(initCapacity: Int, initValue: String): StringBuilder
-           |""".stripMargin,
-      "2.13.11" ->
         """|> A builder of `String` which is also a mutable sequence of characters.
            |
            | This class provides an API mostly compatible with `java.lang.StringBuilder`,
@@ -585,6 +586,11 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections-2.13/concrete-mutable-collection-classes.html#stringbuilders)
            | section on `StringBuilders` for more information.
            |StringBuilder scala.collection.mutable
+           |StringBuilder(): StringBuilder
+           |StringBuilder(str: String): StringBuilder
+           |StringBuilder(underlying: StringBuilder): StringBuilder
+           |StringBuilder(capacity: Int): StringBuilder
+           |StringBuilder(initCapacity: Int, initValue: String): StringBuilder
            |""".stripMargin,
     ),
   )
