@@ -7,13 +7,14 @@ object MemberOrdering {
   val IsInherited: Int = 1 << 27
   val IsNotLocalByBlock: Int = 1 << 26
   val IsNotDefinedInFile: Int = 1 << 25
-  val IsNotGetter: Int = 1 << 24
-  val IsPackage: Int = 1 << 23
-  val IsNotCaseAccessor: Int = 1 << 22
-  val IsNotPublic: Int = 1 << 21
-  val IsSynthetic: Int = 1 << 20
-  val IsDeprecated: Int = 1 << 19
-  val IsEvilMethod: Int = 1 << 18 // example: clone() and finalize()
+  val IsNotTypeInTypePos: Int = 1 << 24
+  val IsNotGetter: Int = 1 << 23
+  val IsPackage: Int = 1 << 22
+  val IsNotCaseAccessor: Int = 1 << 21
+  val IsNotPublic: Int = 1 << 20
+  val IsSynthetic: Int = 1 << 19
+  val IsDeprecated: Int = 1 << 18
+  val IsEvilMethod: Int = 1 << 17 // example: clone() and finalize()
 
   // OverrideDefMember
   val IsNotAbstract: Int = 1 << 30
@@ -26,6 +27,7 @@ object MemberOrdering {
       (IsInherited, "inherited"),
       (IsNotLocalByBlock, "notLocalByBlock"),
       (IsNotDefinedInFile, "notDefinedInFile"),
+      (IsNotTypeInTypePos, "notTypeInTypePosition"),
       (IsNotGetter, "notGetter"),
       (IsPackage, "package"),
       (IsNotCaseAccessor, "notCaseAccessor"),

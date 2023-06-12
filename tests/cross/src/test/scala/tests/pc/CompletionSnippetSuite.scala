@@ -136,6 +136,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         """|IndexedSeq[$0]
+           |IndexedSeq
            |""".stripMargin
     ),
   )
@@ -182,6 +183,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|ArrayDeque[$0]
            |ArrayDeque[$0]
            |ArrayDequeOps[$0]
+           |ArrayDeque
+           |ArrayDeque
+           |ArrayDequeOps
            |""".stripMargin,
     ),
   )
@@ -194,6 +198,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|SimpleFileVisitor[$0]
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|SimpleFileVisitor[$0]
+           |SimpleFileVisitor
+           |""".stripMargin
+    ),
   )
 
   checkSnippet(
@@ -214,6 +224,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         """|Iterable[$0] {}
            |IterableOnce[$0] {}
+           |Iterable
            |""".stripMargin,
     ),
   )
@@ -236,6 +247,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         """|Iterable[$0]
            |IterableOnce[$0]
+           |Iterable
            |""".stripMargin,
     ),
   )
@@ -258,6 +270,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "3" ->
         """|Iterable[$0]
            |IterableOnce[$0]
+           |Iterable
            |""".stripMargin,
     ),
   )

@@ -320,6 +320,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |ProcessBuilder - scala.sys.process
        |CertPathBuilder - java.security.cert
        |CertPathBuilderSpi - java.security.cert
+       |ProcessBuilderImpl - scala.sys.process
        |CertPathBuilderResult - java.security.cert
        |PKIXBuilderParameters - java.security.cert
        |PooledConnectionBuilder - javax.sql
@@ -904,6 +905,12 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|ListBuffer[T] - scala.collection.mutable
+           |ListBuffer - scala.collection.mutable
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -914,6 +921,12 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|ListBuffer[T] - scala.collection.mutable
+           |ListBuffer - scala.collection.mutable
+           |""".stripMargin
+    ),
   )
 
   check(
