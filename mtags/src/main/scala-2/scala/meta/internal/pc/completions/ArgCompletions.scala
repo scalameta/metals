@@ -15,41 +15,42 @@ trait ArgCompletions { this: MetalsGlobal =>
       pos: Position,
       text: String,
       completions: CompletionResult
-  ) extends CompletionPosition {
+  ) extends CompletionPosition { self =>
     val editRange: l.Range =
       pos.withStart(ident.pos.start).withEnd(pos.start).toLsp
     val funPos = apply.fun.pos
     val method: Tree = typedTreeAt(funPos)
     val methodSym = method.symbol
-    lazy val baseParamss: List[List[Symbol]] = {
+    lazy val methodsParams: List[MethodParams] = {
       if (methodSym.isModule) getParamsFromObject(methodSym)
       else if (
         methodSym.isMethod && methodSym.decodedName == "apply" && methodSym.owner.isModuleClass
       ) getParamsFromObject(methodSym.owner)
-      else if (methodSym.isClass) List(methodSym.constrParamAccessors)
+      else if (methodSym.isClass)
+        List(MethodParams(methodSym.constrParamAccessors))
       else if (method.tpe == null)
         method match {
           case Ident(name) =>
             metalsScopeMembers(funPos)
-              .map {
+              .flatMap {
                 case m: Member
-                    if m.symNameDropLocal == name && m.sym != NoSymbol && m.sym.paramss.nonEmpty && checkIfArgsMatch(
-                      m.sym.paramss.head
-                    ) =>
-                  m.sym.paramss.head
-                case _ => Nil
+                    if m.symNameDropLocal == name && m.sym != NoSymbol =>
+                  for {
+                    params <- m.sym.paramss.headOption
+                    if checkIfArgsMatch(params)
+                  } yield MethodParams(params)
+                case _ => None
               }
           case _ => Nil
         }
       else {
         method.tpe match {
           case OverloadedType(_, alts) =>
-            alts.flatMap(_.info.paramss.headOption)
+            alts.flatMap(_.info.paramss.headOption).map(MethodParams(_))
           case _ =>
-            List(
-              method.tpe.paramss.headOption
-                .getOrElse(methodSym.paramss.flatten)
-            )
+            val params =
+              method.tpe.paramss.headOption.getOrElse(methodSym.paramss.flatten)
+            List(MethodParams(params))
         }
       }
     }
@@ -67,29 +68,9 @@ trait ArgCompletions { this: MetalsGlobal =>
           rhs.tpe != null && !(rhs.tpe <:< possibleMatch(i).tpe)
       }
     }
-    lazy val baseParamssWithisNamed: List[(List[Symbol], Set[Name])] =
-      baseParamss.map { baseParams =>
-        val isNamed =
-          apply.args.iterator
-            .filterNot(_ == ident)
-            .zip(baseParams.iterator)
-            .map {
-              case (AssignOrNamedArg(Ident(name), _), _) =>
-                name
-              case (_, param) =>
-                param.name
-            }
-            .toSet
-        (baseParams, isNamed)
-      }
+
     val prefix: String = ident.name.toString.stripSuffix(CURSOR)
-    lazy val allParams: List[Symbol] = baseParamssWithisNamed.flatMap {
-      case (baseParams, isNamed) =>
-        baseParams.iterator.filterNot { param =>
-          isNamed(param.name) ||
-          param.isSynthetic
-        }.toList
-    }
+    lazy val allParams: List[Symbol] = methodsParams.flatMap(_.allParams)
     lazy val params: List[Symbol] =
       allParams
         .filter(param => param.name.startsWith(prefix))
@@ -165,7 +146,7 @@ trait ArgCompletions { this: MetalsGlobal =>
       val isExplicitlyCalled = suffix.startsWith(prefix)
       val hasParamsToFill = allParams.count(!_.hasDefault) > 1
       if (
-        baseParamss.length == 1 && (shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets
+        methodsParams.length == 1 && (shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets
       ) {
         val editText = allParams.zipWithIndex
           .collect {
@@ -206,13 +187,14 @@ trait ArgCompletions { this: MetalsGlobal =>
       }
     }
 
-    private def getParamsFromObject(objectSym: Symbol): List[List[Symbol]] = {
-      objectSym.info.members.collect {
-        case m
-            if m.decodedName == "apply" && m.paramss.nonEmpty && checkIfArgsMatch(
-              m.paramss.head
-            ) =>
-          m.paramss.head
+    private def getParamsFromObject(objectSym: Symbol): List[MethodParams] = {
+      objectSym.info.members.flatMap {
+        case m if m.decodedName == "apply" =>
+          for {
+            params <- m.paramss.headOption
+            if (checkIfArgsMatch(params))
+          } yield MethodParams(params)
+        case _ => None
       }.toList
     }
 
@@ -220,6 +202,26 @@ trait ArgCompletions { this: MetalsGlobal =>
       params.distinct.map(param =>
         new NamedArgMember(param)
       ) ::: findPossibleDefaults() ::: fillAllFields()
+    }
+
+    case class MethodParams(params: List[Symbol], isNamed: Set[Name]) {
+      def allParams: List[Symbol] =
+        params.filterNot(param => isNamed(param.name) || param.isSynthetic)
+    }
+
+    object MethodParams {
+      def apply(baseParams: List[Symbol]): MethodParams = {
+        val isNamed =
+          self.apply.args.iterator
+            .filterNot(_ == ident)
+            .zip(baseParams.iterator)
+            .map {
+              case (AssignOrNamedArg(Ident(name), _), _) => name
+              case (_, param) => param.name
+            }
+            .toSet
+        MethodParams(baseParams, isNamed)
+      }
     }
   }
 }
