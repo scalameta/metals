@@ -21,7 +21,7 @@ object V {
   val coursierInterfaces = "1.0.16"
   val debugAdapter = "3.1.3"
   val genyVersion = "0.7.1"
-  val gradleBloop = "1.6.0"
+  val gradleBloop = "1.6.1"
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.8.18"
   val jsoup = "1.16.1"
