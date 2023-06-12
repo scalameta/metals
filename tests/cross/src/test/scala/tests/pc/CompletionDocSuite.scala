@@ -703,9 +703,10 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |- `fin`: Finally logic which if defined will be invoked after catch logic
            |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
            |- `pf`: Partial function used when applying catch logic to determine result value
-           |Catch - scala.util.control.Exception
+           |Catch[T] - scala.util.control.Exception
            |""".stripMargin,
     ),
+    topLines = Some(1), // for Scala3, result contains `Catch[$0]` and `Catch`
   )
 
   check(

@@ -114,7 +114,9 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: scala.concurrent.Future[$0]
        |)
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent",
+    filter = elem =>
+      if (scalaVersion.startsWith("3")) elem == "Future[T] - scala.concurrent"
+      else elem == "Future - scala.concurrent",
     compat = Map(
       "2" ->
         """|package `import-conflict3`
@@ -140,7 +142,9 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: scala.concurrent.Future[$0]
        |)
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent",
+    filter = elem =>
+      if (scalaVersion.startsWith("3")) elem == "Future[T] - scala.concurrent"
+      else elem == "Future - scala.concurrent",
     compat = Map(
       "2" ->
         """|package `import-conflict4`
@@ -167,7 +171,9 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  name: Future[$0]
        |)
        |""".stripMargin,
-    filter = _ == "Future - scala.concurrent",
+    filter = elem =>
+      if (scalaVersion.startsWith("3")) elem == "Future[T] - scala.concurrent"
+      else elem == "Future - scala.concurrent",
     compat = Map(
       "2" ->
         """|package `import-no-conflict`
@@ -216,6 +222,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
           |object Main extends CompletableFuture
           |""".stripMargin
     ),
+    assertSingleItem = false,
   )
 
   checkEdit(
@@ -236,6 +243,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
           |object Main extends CompletableFuture
           |""".stripMargin
     ),
+    assertSingleItem = false,
   )
 
   checkEdit(
@@ -378,6 +386,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
            |}
            |""".stripMargin
     ),
+    assertSingleItem = false,
   )
 
   checkEdit(
@@ -511,28 +520,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |
        |object Main {
        |  @noinline
-       |  def foo: ArrayBuffer[$0] [Int] = ???
+       |  def foo: ArrayBuffer [Int] = ???
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable",
-    compat = Map(
-      "2" ->
-        """|import scala.collection.mutable.ArrayBuffer
-           |
-           |object Main {
-           |  @noinline
-           |  def foo: ArrayBuffer [Int] = ???
-           |}
-           |""".stripMargin,
-      ">=3.2.1" ->
-        """|import scala.collection.mutable.ArrayBuffer
-           |
-           |object Main {
-           |  @noinline
-           |  def foo: ArrayBuffer [Int] = ???
-           |}
-           |""".stripMargin,
-    ),
   )
 
   checkEdit(
@@ -548,30 +539,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |import scala.collection.mutable.ArrayBuffer
        |object Main {
        |  @deprecated("", "")
-       |  class Foo extends ArrayBuffer[$0][Int]
+       |  class Foo extends ArrayBuffer[Int]
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable",
-    compat = Map(
-      "2" ->
-        """|package annotationclass
-           |
-           |import scala.collection.mutable.ArrayBuffer
-           |object Main {
-           |  @deprecated("", "")
-           |  class Foo extends ArrayBuffer[Int]
-           |}
-           |""".stripMargin,
-      ">=3.2.1" ->
-        """|package annotationclass
-           |
-           |import scala.collection.mutable.ArrayBuffer
-           |object Main {
-           |  @deprecated("", "")
-           |  class Foo extends ArrayBuffer[Int]
-           |}
-           |""".stripMargin,
-    ),
   )
 
   checkEdit(
@@ -587,30 +558,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |import scala.collection.mutable.ArrayBuffer
        |object Main {
        |  @deprecated("", "")
-       |  trait Foo extends ArrayBuffer[$0][Int]
+       |  trait Foo extends ArrayBuffer[Int]
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable",
-    compat = Map(
-      "2" ->
-        """|package annotationtrait
-           |
-           |import scala.collection.mutable.ArrayBuffer
-           |object Main {
-           |  @deprecated("", "")
-           |  trait Foo extends ArrayBuffer[Int]
-           |}
-           |""".stripMargin,
-      ">=3.2.1" ->
-        """|package annotationtrait
-           |
-           |import scala.collection.mutable.ArrayBuffer
-           |object Main {
-           |  @deprecated("", "")
-           |  trait Foo extends ArrayBuffer[Int]
-           |}
-           |""".stripMargin,
-    ),
   )
 
   checkEdit(
@@ -624,28 +575,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |
        |import scala.concurrent.Future
        |case class Foo(
-       |  name: Future[$0][String]
+       |  name: Future[String]
        |)
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent",
-    compat = Map(
-      "2" ->
-        """|package classparam
-           |
-           |import scala.concurrent.Future
-           |case class Foo(
-           |  name: Future[String]
-           |)
-           |""".stripMargin,
-      ">=3.2.1" ->
-        """|package classparam
-           |
-           |import scala.concurrent.Future
-           |case class Foo(
-           |  name: Future[String]
-           |)
-           |""".stripMargin,
-    ),
   )
 
   checkEdit(
@@ -819,8 +752,21 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Future scala.concurrent
        |Future - java.util.concurrent
+       |FutureTask - java.util.concurrent
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(3),
+    compat = Map(
+      "2.13" ->
+        """|Future scala.concurrent
+           |Future - java.util.concurrent
+           |FutureOps - scala.jdk.FutureConverters
+           |""".stripMargin,
+      "3" ->
+        """|Future[T] scala.concurrent
+           |Future scala.concurrent
+           |Future[T] - java.util.concurrent
+           |""".stripMargin,
+    ),
   )
 
   check(
@@ -834,8 +780,21 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Future java.util.concurrent
        |Future - scala.concurrent
+       |FutureTask - java.util.concurrent
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(3),
+    compat = Map(
+      "2.13" ->
+        """|Future java.util.concurrent
+           |Future - scala.concurrent
+           |FutureOps - scala.jdk.FutureConverters
+           |""".stripMargin,
+      "3" ->
+        """|Future[T] java.util.concurrent
+           |Future java.util.concurrent
+           |Future[T] - scala.concurrent
+           |""".stripMargin,
+    ),
   )
 
   checkEdit(
