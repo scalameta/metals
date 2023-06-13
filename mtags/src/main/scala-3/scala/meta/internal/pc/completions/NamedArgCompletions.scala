@@ -339,18 +339,19 @@ class FuzzyArgMatcher(tparams: List[Symbols.Symbol])(using Context):
         case arg: TermRef => arg.underlying
         case e => e
 
-  private val substituteTypeParams: Type => Type =
-    case e if tparams.exists(_ == e.typeSymbol) =>
-      val matchingParam = tparams.find(_ == e.typeSymbol).get
-      matchingParam.info match
-        case b @ TypeBounds(_, _) => WildcardType(b)
-        case _ => WildcardType
-    case o @ OrType(e1, e2) =>
-      OrType(substituteTypeParams(e1), substituteTypeParams(e2), o.isSoft)
-    case AndType(e1, e2) =>
-      AndType(substituteTypeParams(e1), substituteTypeParams(e2))
-    case AppliedType(et, eparams) =>
-      AppliedType(et, eparams.map(substituteTypeParams))
-    case t => t
+  private def substituteTypeParams(t: Type): Type =
+    t match
+      case e if tparams.exists(_ == e.typeSymbol) =>
+        val matchingParam = tparams.find(_ == e.typeSymbol).get
+        matchingParam.info match
+          case b @ TypeBounds(_, _) => WildcardType(b)
+          case _ => WildcardType
+      case o @ OrType(e1, e2) =>
+        OrType(substituteTypeParams(e1), substituteTypeParams(e2), o.isSoft)
+      case AndType(e1, e2) =>
+        AndType(substituteTypeParams(e1), substituteTypeParams(e2))
+      case AppliedType(et, eparams) =>
+        AppliedType(et, eparams.map(substituteTypeParams))
+      case _ => t
 
 end FuzzyArgMatcher
