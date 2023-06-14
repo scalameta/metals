@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.io.IOException
+import java.lang.reflect.Type
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
@@ -46,6 +47,12 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -667,6 +674,40 @@ object MetalsEnrichments
     }
     def asTextEdit: Option[l.TextEdit] = {
       decodeJson(d.getData, classOf[l.TextEdit])
+    }
+
+    /**
+     * Useful for decoded the diagnostic data since there are overlapping
+     * unrequired keys in the structure that causes issues when we try to
+     * deserialize the old top level text edit vs the newly nested actions.
+     */
+    object DiagnosticDataDeserializer
+        extends JsonDeserializer[Either[l.TextEdit, b.ScalaDiagnostic]] {
+      override def deserialize(
+          json: JsonElement,
+          typeOfT: Type,
+          context: JsonDeserializationContext,
+      ): Either[l.TextEdit, b.ScalaDiagnostic] = {
+        json match {
+          case o: JsonObject if o.has("actions") =>
+            Right(new Gson().fromJson(o, classOf[b.ScalaDiagnostic]))
+          case o => Left(new Gson().fromJson(o, classOf[l.TextEdit]))
+        }
+      }
+    }
+
+    def asScalaDiagnostic: Option[Either[l.TextEdit, b.ScalaDiagnostic]] = {
+      val gson = new GsonBuilder()
+        .registerTypeAdapter(
+          classOf[Either[l.TextEdit, b.ScalaDiagnostic]],
+          DiagnosticDataDeserializer,
+        )
+        .create()
+      decodeJson(
+        d.getData(),
+        classOf[Either[l.TextEdit, b.ScalaDiagnostic]],
+        Some(gson),
+      )
     }
   }
 
