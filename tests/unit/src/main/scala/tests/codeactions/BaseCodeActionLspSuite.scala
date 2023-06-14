@@ -131,7 +131,10 @@ abstract class BaseCodeActionLspSuite(
             case None => Future {}
           }
         }
-        _ <- server.didChange(path)(txt => changeFile(txt))
+        _ <- server.didChange(
+          path,
+          changeFile(input).replace("<<", "").replace(">>", ""),
+        )
         codeActions <-
           server
             .assertCodeAction(

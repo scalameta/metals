@@ -40,6 +40,32 @@ class ScalaCliActionsSuite
     expectNoDiagnostics = false,
   )
 
+  checkScalaCLI(
+    "actionable-diagnostic-didchange",
+    s"""|//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    s"""Apply suggestion: "os-lib is outdated, update to $newestOsLib"""",
+    s"""|// commentary
+        |//> using lib "com.lihaoyi::os-lib:$newestOsLib"
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    changeFile = f =>
+      f.replace(
+        s"""//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}""",
+        s"""|// commentary
+            |//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}""".stripMargin,
+      ).stripMargin,
+    scalaCliOptions = List("--actions", "-S", scalaVersion),
+    expectNoDiagnostics = false,
+  )
+
   checkNoActionScalaCLI(
     "actionable-diagnostic-out-of-range",
     s"""|//> <<>>using lib "com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
