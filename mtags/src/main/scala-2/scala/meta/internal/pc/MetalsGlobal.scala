@@ -934,9 +934,11 @@ class MetalsGlobal(
         case t => t
       }
     val pre = stabilizedType(qual(tree))
-    val memberType = pre.memberType(symbol)
-    if (memberType.isErroneous) symbol.info
-    else memberType
+    if (pre != null) {
+      val memberType = pre.memberType(symbol)
+      if (memberType.isErroneous) symbol.info
+      else memberType
+    } else NoType
   }
 
   /**
