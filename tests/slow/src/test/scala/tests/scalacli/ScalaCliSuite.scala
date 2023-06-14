@@ -47,6 +47,26 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         "utest/framework/Tree.scala",
       )
 
+      completion <- server.completion(
+        "MyTests.scala",
+        "//> using lib \"com.lihao@@yi::utest",
+      )
+
+      _ = assertNoDiff(completion, "com.lihaoyi")
+
+      completion <- server.completion(
+        "MyTests.scala",
+        "//> using lib com.lihaoyi::pprin@@t",
+      )
+
+      _ = assertNoDiff(
+        completion,
+        """|pprint
+           |pprint_native0.4
+           |pprint_sjs1
+           |""".stripMargin,
+      )
+
     } yield ()
 
   private def simpleScriptTest(useBsp: Boolean): Future[Unit] =
@@ -56,7 +76,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
            |#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
            |//> using scala "$scalaVersion"
            |//> using lib "com.lihaoyi::utest::0.7.10"
-           |//> using lib "com.lihaoyi::pprint::0.6.6"
+           |//> using lib com.lihaoyi::pprint::0.6.6
            |
            |import foo.Foo
            |import utest._
@@ -122,13 +142,33 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         s"Expected no scalameta errors, got: $parserDiagnostics",
       )
 
+      completion <- server.completion(
+        "MyTests.sc",
+        "//> using lib \"com.lihao@@yi::utest",
+      )
+
+      _ = assertNoDiff(completion, "com.lihaoyi")
+
+      completion <- server.completion(
+        "MyTests.sc",
+        "//> using lib com.lihaoyi::pprin@@t",
+      )
+
+      _ = assertNoDiff(
+        completion,
+        """|pprint
+           |pprint_native0.4
+           |pprint_sjs1
+           |""".stripMargin,
+      )
+
     } yield ()
 
   private val simpleFileLayout =
     s"""|/MyTests.scala
         |//> using scala "$scalaVersion"
         |//> using lib "com.lihaoyi::utest::0.7.10"
-        |//> using lib "com.lihaoyi::pprint::0.6.6"
+        |//> using lib com.lihaoyi::pprint::0.6.6
         |
         |import foo.Foo
         |import utest._
@@ -206,7 +246,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         s"""/scripts/MyTests.scala
            |//> using scala "$scalaVersion"
            |//> using lib "com.lihaoyi::utest::0.7.10"
-           |//> using lib "com.lihaoyi::pprint::0.6.6"
+           |//> using lib com.lihaoyi::pprint::0.6.6
            |
            |import foo.Foo
            |import utest._
