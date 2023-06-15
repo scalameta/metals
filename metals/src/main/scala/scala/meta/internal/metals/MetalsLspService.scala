@@ -31,6 +31,7 @@ import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceReload
@@ -1583,9 +1584,45 @@ class MetalsLspService(
     indexer.indexWorkspaceSources(buildTargets.allWritableData)
   }
 
-  def shutDownBloop(): Boolean = bloopServers.shutdownServer()
+  def restartBspServer(): Future[Boolean] = {
+    def emitMessage(msg: String) = {
+      languageClient.showMessage(new MessageParams(MessageType.Warning, msg))
+    }
+    // This is for `bloop` and `sbt`, for which `build/shutdown` doesn't shutdown the server.
+    val shutdownBsp =
+      bspSession match {
+        case Some(session) if session.main.isBloop =>
+          Future.successful(bloopServers.shutdownServer())
+        case Some(session) if session.main.isSbt =>
+          for {
+            currentBuildTool <- supportedBuildTool
+            res <- currentBuildTool match {
+              case Some(sbt: SbtBuildTool) =>
+                for {
+                  _ <- disconnectOldBuildServer()
+                  code <- sbt.shutdownBspServer(shellRunner, folder)
+                } yield code == 0
+              case _ => Future.successful(false)
+            }
+          } yield res
+        case s => Future.successful(s.nonEmpty)
+      }
 
-  def isBloop(): Boolean = bspSession.exists(_.main.isBloop)
+    for {
+      didShutdown <- shutdownBsp
+      _ = if (!didShutdown) {
+        bspSession match {
+          case Some(session) =>
+            emitMessage(
+              s"Could not shutdown ${session.main.name} server. Will try to reconnect."
+            )
+          case None =>
+            emitMessage("No build server connected. Will try to connect.")
+        }
+      }
+      _ <- autoConnectToBuildServer()
+    } yield didShutdown
+  }
 
   def decodeFile(uri: String): Future[DecoderResponse] =
     fileDecoderProvider.decodedFileContents(uri)
@@ -2530,7 +2567,7 @@ class MetalsLspService(
 
   def resetWorkspace(): Future[Unit] = {
     if (buildTools.isBloop) {
-      shutDownBloop()
+      bloopServers.shutdownServer()
     }
     disconnectOldBuildServer()
       .map { _ =>

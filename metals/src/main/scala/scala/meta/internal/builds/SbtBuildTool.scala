@@ -4,6 +4,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
 
+import scala.concurrent.Future
+
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -59,6 +61,21 @@ case class SbtBuildTool(
     )
     val bspDir = workspace.resolve(".bsp").toNIO
     composeArgs(bspConfigArgs, workspace, bspDir)
+  }
+
+  def shutdownBspServer(
+      shellRunner: ShellRunner,
+      workspace: AbsolutePath,
+  ): Future[Int] = {
+    val shutdownArgs =
+      composeArgs(List("--client", "shutdown"), workspace, workspace.toNIO)
+    scribe.info(s"running ${shutdownArgs.mkString(" ")}")
+    shellRunner.run(
+      "Shutting down sbt server",
+      shutdownArgs,
+      workspace,
+      true,
+    )
   }
 
   private def composeArgs(

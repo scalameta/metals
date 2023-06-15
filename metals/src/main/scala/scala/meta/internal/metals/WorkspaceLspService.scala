@@ -639,8 +639,10 @@ class WorkspaceLspService(
       case ServerCommands.ScanWorkspaceSources() =>
         foreachSeq(_.indexSources(), ignoreValue = true)
       case ServerCommands.RestartBuildServer() =>
-        folderServices.find(_.isBloop()).foreach(_.shutDownBloop())
-        foreachSeq(_.autoConnectToBuildServer())
+        onCurrentFolder(
+          _.restartBspServer().ignoreValue,
+          "restart BSP server",
+        ).asJavaObject
       case ServerCommands.GenerateBspConfig() =>
         onCurrentFolder(
           _.generateBspConfig(),

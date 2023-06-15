@@ -15,6 +15,11 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import scribe.LogRecord
+import scribe.Logger
+import scribe.output.LogOutput
+import scribe.output.format.OutputFormat
+import scribe.writer.Writer
 import tests.BaseImportSuite
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
@@ -228,6 +233,40 @@ class SbtServerSuite
            |""".stripMargin,
       )
     } yield ()
+  }
+
+  test("restart-server") {
+    val buffer = new StringBuilder()
+    val initHandlers = Logger.root.handlers
+    val writer = new Writer {
+      def write(
+          record: LogRecord,
+          output: LogOutput,
+          outputFormat: OutputFormat,
+      ): Unit = buffer.append(output.plainText)
+    }
+    Logger.root.withHandler(writer = writer).replace()
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/build.sbt
+            |${SbtBuildLayout.commonSbtSettings}
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ = buffer.clear()
+      _ <- server.server.restartBspServer()
+    } yield {
+      val logs = buffer.result()
+      assert(logs.contains("sbt server started"))
+      initHandlers
+        .foldLeft(Logger.root.clearHandlers())((logger, handler) =>
+          logger.withHandler(handler)
+        )
+        .replace()
+    }
   }
 
   test("debug") {
