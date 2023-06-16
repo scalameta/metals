@@ -39,11 +39,6 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
   }
 
   implicit class XtensionOffsetParams(params: OffsetParams) {
-    def info: String =
-      s"""|offset: ${params.offset()}
-          |file content:
-          |${params.text()}
-          |""".stripMargin
     def isDelimiter: Boolean = {
       params.offset() < 0 ||
       params.offset() >= params.text().length ||

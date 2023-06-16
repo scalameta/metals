@@ -13,7 +13,9 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.CancelToken
+import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.VirtualFileParams
 
 /**
  * Manages the lifecycle and multi-threaded access to the presentation compiler.
@@ -78,10 +80,7 @@ abstract class CompilerAccess[Reporter, Compiler](
   /**
    * Asynchronously execute a function on the compiler thread with `Thread.interrupt()` cancellation.
    */
-  def withInterruptableCompiler[T](
-      actionName: String,
-      actionInfo: () => String
-  )(
+  def withInterruptableCompiler[T](params: Option[VirtualFileParams])(
       default: T,
       token: CancelToken
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
@@ -90,7 +89,7 @@ abstract class CompilerAccess[Reporter, Compiler](
     val result = onCompilerJobQueue(
       () => {
         queueThread = Some(Thread.currentThread())
-        try withSharedCompiler(actionName, actionInfo)(default)(thunk)
+        try withSharedCompiler(params)(default)(thunk)
         finally isFinished.set(true)
       },
       token
@@ -124,14 +123,13 @@ abstract class CompilerAccess[Reporter, Compiler](
    * Note that the function is still cancellable.
    */
   def withNonInterruptableCompiler[T](
-      actionName: String,
-      actionInfo: () => String
+      params: Option[VirtualFileParams]
   )(
       default: T,
       token: CancelToken
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
     onCompilerJobQueue(
-      () => withSharedCompiler(actionName, actionInfo)(default)(thunk),
+      () => withSharedCompiler(params)(default)(thunk),
       token
     )
   }
@@ -141,7 +139,7 @@ abstract class CompilerAccess[Reporter, Compiler](
    *
    * May potentially run in parallel with other requests, use carefully.
    */
-  def withSharedCompiler[T](actionName: String, actionInfo: () => String)(
+  def withSharedCompiler[T](params: Option[VirtualFileParams])(
       default: T
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): T = {
     try {
@@ -152,14 +150,14 @@ abstract class CompilerAccess[Reporter, Compiler](
       case other: Throwable =>
         handleSharedCompilerException(other)
           .map { message =>
-            retryWithCleanCompiler(actionName, actionInfo)(
+            retryWithCleanCompiler(params)(
               thunk,
               default,
               message
             )
           }
           .getOrElse {
-            handleError(other, actionName, actionInfo)
+            handleError(other, params)
             default
           }
     }
@@ -170,8 +168,7 @@ abstract class CompilerAccess[Reporter, Compiler](
   protected def ignoreException(t: Throwable): Boolean
 
   private def retryWithCleanCompiler[T](
-      actionName: String,
-      actionInfo: () => String
+      params: Option[VirtualFileParams]
   )(
       thunk: CompilerWrapper[Reporter, Compiler] => T,
       default: T,
@@ -187,27 +184,44 @@ abstract class CompilerAccess[Reporter, Compiler](
       case InterruptException() =>
         default
       case NonFatal(e) =>
-        handleError(e, actionName, actionInfo)
+        handleError(e, params)
         default
     }
   }
 
   private def handleError(
       e: Throwable,
-      actionName: String,
-      actionInfo: () => String
+      params: Option[VirtualFileParams]
   ): Unit = {
+    def virtualFileParamsToString(v: VirtualFileParams) =
+      s"""|file uri: ${v.uri()}
+          |file text:
+          |${v.text()}
+          |""".stripMargin
+    val stacktrace = Thread.currentThread().getStackTrace().mkString("\n")
     val error = CompilerThrowable.trimStackTrace(e)
-    rc.incognito.create(
-      Report("compiler-error", actionName, error = Some(error))
-    )
+    val paramsText =
+      params match {
+        case None => ""
+        case Some(r: RangeOffset) =>
+          s"""|range ${r.start} - ${r.end}
+              |${virtualFileParamsToString(r)}
+              |""".stripMargin
+        case Some(o: OffsetParams) =>
+          s"""|offset ${o.offset()}
+              |${virtualFileParamsToString(o)}
+              |""".stripMargin
+        case Some(v) => virtualFileParamsToString(v)
+      }
     val pathToFull =
       rc.unsanitized.create(
         Report(
           "compiler-error",
           s"""|An error occurred in the presentation compiler:
-              |$actionName with the following params:
-              |${actionInfo()}
+              |context stacktrace:
+              |${stacktrace}
+              |action params:
+              |$paramsText
               |""".stripMargin,
           error = Some(error)
         )
