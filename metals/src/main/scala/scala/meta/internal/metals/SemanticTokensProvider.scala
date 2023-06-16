@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.{util => ju}
 
 import scala.annotation.switch
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
@@ -313,32 +314,39 @@ object SemanticTokensProvider {
       comm: Token.Comment,
       initialDelta: Line,
   ): (List[Integer], Line) = {
-
     val directive = comm.toString()
-    val buffer = ListBuffer.empty[Integer]
     val parts = directive.split("[,\\s]+").toList.zipWithIndex
-    var delta = initialDelta
-    var text = directive
-    parts.foreach { case (part, partIdx) =>
-      val tokenType = getUsingTokenType(part, partIdx)
-      val tokenMod =
-        if (tokenType == getTypeId(SemanticTokenTypes.Variable))
-          1 << getModifierId(SemanticTokenModifiers.Readonly)
-        else 0
-      val idx = text.indexOf(part)
-      delta = delta.moveOffset(idx)
-      val (toAdd, delta0) = convertTokensToIntList(
-        part,
-        delta,
-        tokenType,
-        tokenMod,
-      )
-      buffer.addAll(toAdd)
-      delta = delta0
-      text = text.substring(idx + part.length)
+
+    @tailrec
+    def loop(
+        parts: List[(String, Int)],
+        delta: Line,
+        text: String,
+        tokens: List[Integer],
+    ): (List[Integer], Line) = {
+      parts match {
+        case Nil => (tokens, delta)
+        case (part, partIdx) :: next =>
+          val tokenType = getUsingTokenType(part, partIdx)
+          val tokenMod =
+            if (tokenType == getTypeId(SemanticTokenTypes.Variable))
+              1 << getModifierId(SemanticTokenModifiers.Readonly)
+            else 0
+          val idx = text.indexOf(part)
+          val afterWhitespace = delta.moveOffset(idx)
+          val (toAdd, newDelta) = convertTokensToIntList(
+            part,
+            afterWhitespace,
+            tokenType,
+            tokenMod,
+          )
+          val newText = text.substring(idx + part.length)
+          loop(next, newDelta, newText, tokens ++ toAdd)
+      }
     }
-    (buffer.toList, delta)
+    loop(parts, initialDelta, directive, List.empty)
   }
+
   private def getUsingTokenType(part: String, idx: Int): Int = {
     idx match {
       case 0 =>
