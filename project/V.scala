@@ -16,7 +16,7 @@ object V {
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.6"
   val bloopConfig = "1.5.5"
-  val bsp = "2.1.0-M4"
+  val bsp = "2.1.0-M5"
   val coursier = "2.1.4"
   val coursierInterfaces = "1.0.16"
   val debugAdapter = "3.1.3"
