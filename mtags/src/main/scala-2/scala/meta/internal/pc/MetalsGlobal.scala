@@ -50,6 +50,7 @@ class MetalsGlobal(
     with completions.ScaladocCompletions
     with completions.TypeCompletions
     with completions.OverrideCompletions
+    with completions.DependencyCompletions
     with completions.ScalaCliCompletions
     with completions.MillIvyCompletions
     with completions.SbtLibCompletions
