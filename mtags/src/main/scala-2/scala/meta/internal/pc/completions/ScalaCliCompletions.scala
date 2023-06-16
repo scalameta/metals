@@ -2,9 +2,6 @@ package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.pc.MetalsGlobal
-import scala.meta.internal.semver.SemVer.Version
-
-import org.eclipse.{lsp4j => l}
 
 trait ScalaCliCompletions {
   this: MetalsGlobal =>
@@ -33,18 +30,7 @@ trait ScalaCliCompletions {
       pos: Position,
       text: String,
       dependency: String
-  ) extends CompletionPosition {
-
-    override def compare(o1: Member, o2: Member): Int =
-      (o1, o2) match {
-        case (c1: TextEditMember, c2: TextEditMember) =>
-          val (comp1, comp2) = (c1.edit.getNewText(), c2.edit.getNewText())
-          // For version completions, we want to show the latest version first
-          if (comp1.headOption.exists(_.isDigit))
-            Version.fromString(comp2).compare(Version.fromString(comp1))
-          else super.compare(o1, o2)
-        case _ => super.compare(o1, o2)
-      }
+  ) extends DependencyCompletion {
 
     override def contribute: List[Member] = {
       val completions =
@@ -52,15 +38,7 @@ trait ScalaCliCompletions {
       val (editStart, editEnd) =
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
-      completions
-        .map(insertText =>
-          new TextEditMember(
-            filterText = insertText,
-            edit = new l.TextEdit(editRange, insertText),
-            sym = completionsSymbol(insertText),
-            label = Some(insertText.stripPrefix(":"))
-          )
-        )
+      makeMembers(completions, editRange)
     }
   }
 }

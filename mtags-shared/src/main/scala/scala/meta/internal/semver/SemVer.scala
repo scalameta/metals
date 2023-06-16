@@ -12,16 +12,6 @@ object SemVer {
       milestone: Option[Int] = None,
       nightlyDate: Option[Int] = None
   ) extends Ordered[Version] {
-    override def >(that: Version): Boolean = {
-      val diff = toList
-        .zip(that.toList)
-        .collectFirst {
-          case (a, b) if a - b != 0 => a - b
-        }
-        .getOrElse(0)
-      diff > 0
-    }
-
     private def toList: List[Int] = {
       val rcMilestonePart =
         releaseCandidate
@@ -33,10 +23,17 @@ object SemVer {
         List(nightlyDate.getOrElse(Int.MaxValue))
     }
 
-    def compare(that: Version): Int =
-      if (this > that) 1
-      else if (that > this) -1
-      else 0
+    def compare(that: Version): Int = {
+      val diff: Int = toList
+        .zip(that.toList)
+        .collectFirst {
+          case (a, b) if a - b != 0 => a - b
+        }
+        .getOrElse(0)
+      if (diff == 0) 0
+      else if (diff > 0) 1
+      else -1
+    }
 
     override def toString: String =
       List(

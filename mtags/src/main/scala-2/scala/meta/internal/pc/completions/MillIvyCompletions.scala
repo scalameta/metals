@@ -4,8 +4,6 @@ import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.MetalsGlobal
 
-import org.eclipse.{lsp4j => l}
-
 trait MillIvyCompletions {
   this: MetalsGlobal =>
   object MillIvyExtractor {
@@ -30,7 +28,7 @@ trait MillIvyCompletions {
       pos: Position,
       text: String,
       dependency: String
-  ) extends CompletionPosition {
+  ) extends DependencyCompletion {
     override def contribute: List[Member] = {
       val completions =
         coursierComplete.complete(dependency.replace(CURSOR, ""))
@@ -38,15 +36,8 @@ trait MillIvyCompletions {
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
 
-      completions
-        .map(insertText =>
-          new TextEditMember(
-            filterText = insertText,
-            edit = new l.TextEdit(editRange, insertText),
-            sym = completionsSymbol(insertText),
-            label = Some(insertText.stripPrefix(":"))
-          )
-        )
+      makeMembers(completions, editRange)
+
     }
   }
 }
