@@ -581,7 +581,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "private-member".tag(IgnoreScala2),
+    "private-member".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
     """
       |package example
       |import scala.collection.immutable.Vector
@@ -591,7 +591,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    ca@@  
       |  }
       |}""".stripMargin,
-    ""
+    """|case
+       |""".stripMargin
   )
 
   check(
@@ -777,6 +778,19 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "case (Int, Int) => scala"
+  )
+
+  check(
+    "keyword-only".tag(IgnoreForScala3CompilerPC),
+    """
+      |sealed trait Alpha
+      |object A {
+      |  List.empty[Alpha].groupBy{
+      |    ca@@
+      |  }
+      |}""".stripMargin,
+    """|case
+       |""".stripMargin
   )
 
 }

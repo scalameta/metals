@@ -181,7 +181,10 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
           }
         }
         val members = result.result()
-        val edits = members.map(_._2)
+        val edits = {
+          if (members.isEmpty) completionGenerator.caseKeywordOnly
+          else members.map(_._2)
+        }
         // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
         // which works like exhaustive match, so we need to collect only members from this step
         includeExhaustive match {
@@ -461,6 +464,22 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         additionalTextEdits = autoImports
       )
     }
+
+    def caseKeywordOnly: List[TextEditMember] =
+      if (patternOnly.isEmpty) {
+        val label = "case"
+        val suffix =
+          if (clientSupportsSnippets) " $0 =>"
+          else " "
+        List(
+          new TextEditMember(
+            label,
+            new l.TextEdit(editRange, label + suffix),
+            NoSymbol.newErrorSymbol(TermName("case")).setInfo(NoType),
+            label = Some(label)
+          )
+        )
+      } else Nil
 
     private def tryInfixPattern(sym: Symbol): Option[String] = {
       sym.primaryConstructor.paramss match {
