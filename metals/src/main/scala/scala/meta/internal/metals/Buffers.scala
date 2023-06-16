@@ -23,7 +23,7 @@ case class Buffers(
   def tokenEditDistance(
       source: AbsolutePath,
       snapshot: String,
-      trees: Trees
+      trees: Trees,
   ): TokenEditDistance = {
     val bufferInput = source.toInputFromBuffers(this)
     val snapshotInput = Input.VirtualFile(bufferInput.path, snapshot)

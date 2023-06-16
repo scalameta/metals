@@ -13,7 +13,7 @@ public interface SymbolSearch {
     /**
      * Returns the documentation of this symbol, if any.
      */
-    Optional<SymbolDocumentation> documentation(String symbol);
+    Optional<SymbolDocumentation> documentation(String symbol, ParentSymbols parents);
 
     /**
      * Returns the definition of this symbol, if any.
@@ -41,6 +41,9 @@ public interface SymbolSearch {
      * like "StreamHandler" may produce more search results.
      */
     Result search(String query,
+                  String buildTargetIdentifier,
+                  SymbolSearchVisitor visitor);
+    Result searchMethods(String query,
                   String buildTargetIdentifier,
                   SymbolSearchVisitor visitor);
     enum Result {

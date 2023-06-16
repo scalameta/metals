@@ -14,6 +14,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.gson.Gson
+import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.MessageActionItem
 
 sealed trait BuildServerInitializer {
@@ -21,9 +22,9 @@ sealed trait BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
-      expectError: Boolean
-  )(implicit ec: ExecutionContext): Future[Unit]
+      expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
+  )(implicit ec: ExecutionContext): Future[InitializeResult]
 }
 
 /**
@@ -36,17 +37,21 @@ object QuickBuildInitializer extends BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
-      expectError: Boolean
-  )(implicit ec: ExecutionContext): Future[Unit] = {
-    QuickBuild.bloopInstall(workspace)
+      expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
+  )(implicit ec: ExecutionContext): Future[InitializeResult] = {
+    val foldersToInit =
+      if (workspaceFolders.nonEmpty) workspaceFolders.map(workspace.resolve)
+      else List(workspace)
+    foldersToInit.foreach(QuickBuild.bloopInstall)
     for {
-      _ <- server.initialize()
+      initializeResult <- server.initialize(workspaceFolders)
       _ <- server.initialized()
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()
       }
+      initializeResult
     }
   }
 }
@@ -61,11 +66,11 @@ object BloopImportInitializer extends BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
-      expectError: Boolean
-  )(implicit ec: ExecutionContext): Future[Unit] = {
+      expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
+  )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
-      _ <- server.initialize()
+      initializeResult <- server.initialize()
       // Import build using Bloop
       _ = client.importBuild = ImportBuild.yes
       _ <- server.initialized()
@@ -73,6 +78,7 @@ object BloopImportInitializer extends BuildServerInitializer {
       if (!expectError) {
         server.assertBuildServerConnection()
       }
+      initializeResult
     }
   }
 }
@@ -88,30 +94,31 @@ object SbtServerInitializer extends BuildServerInitializer {
       workspace: AbsolutePath,
       server: TestingServer,
       client: TestingClient,
-      layout: String,
-      expectError: Boolean
-  )(implicit ec: ExecutionContext): Future[Unit] = {
+      expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
+  )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     val sbtVersion =
       SbtBuildTool
         .loadVersion(workspace)
         .getOrElse(V.sbtVersion)
     generateBspConfig(workspace, sbtVersion)
     for {
-      _ <- server.initialize()
+      initializeResult <- server.initialize()
       _ <- server.initialized()
       // choose sbt as the Bsp Server
       _ = client.selectBspServer = { _ => new MessageActionItem("sbt") }
-      _ <- server.executeCommand(ServerCommands.BspSwitch.id)
+      _ <- server.executeCommand(ServerCommands.BspSwitch)
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()
       }
+      initializeResult
     }
   }
 
   private def generateBspConfig(
       workspace: AbsolutePath,
-      sbtVersion: String
+      sbtVersion: String,
   ): Unit = {
     val bspFolder = workspace.resolve(".bsp")
     val sbtJson = bspFolder.resolve("sbt.json")
@@ -128,17 +135,41 @@ object SbtServerInitializer extends BuildServerInitializer {
         sbtLaunchJar.toString,
         "xsbt.boot.Boot",
         "-bsp",
-        s"--sbt-launch-jar=$sbtLaunchJar"
+        s"--sbt-launch-jar=$sbtLaunchJar",
       )
       val connectionDetails = new BspConnectionDetails(
         "sbt",
         argv.asJava,
         sbtVersion,
         "2.0.0-M5",
-        List("scala").asJava
+        List("scala").asJava,
       )
       val gson = new Gson()
       sbtJson.writeText(gson.toJson(connectionDetails))
+    }
+  }
+}
+
+object MillServerInitializer extends BuildServerInitializer {
+  this: BaseLspSuite =>
+  override def initialize(
+      workspace: AbsolutePath,
+      server: TestingServer,
+      client: TestingClient,
+      expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
+  )(implicit ec: ExecutionContext): Future[InitializeResult] = {
+    for {
+      initializeResult <- server.initialize()
+      _ <- server.initialized()
+      // choose mill-bsp as the Bsp Server
+      _ = client.selectBspServer = { _ => new MessageActionItem("mill-bsp") }
+      _ <- server.executeCommand(ServerCommands.BspSwitch)
+    } yield {
+      if (!expectError) {
+        server.assertBuildServerConnection()
+      }
+      initializeResult
     }
   }
 }

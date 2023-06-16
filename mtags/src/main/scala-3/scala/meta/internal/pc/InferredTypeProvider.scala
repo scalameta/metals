@@ -1,20 +1,23 @@
 package scala.meta.internal.pc
 
-import java.net.URI
 import java.nio.file.Paths
 
 import scala.annotation.tailrec
 import scala.meta as m
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
+import scala.meta.internal.pc.printer.MetalsPrinter
+import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.tokens.{Token as T}
+import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.NameOps.*
+import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Interactive
@@ -22,7 +25,9 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
+import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j as l
 
 /**
  * Tries to calculate edits needed to insert the inferred type annotation
@@ -44,13 +49,25 @@ import org.eclipse.lsp4j.TextEdit
 final class InferredTypeProvider(
     params: OffsetParams,
     driver: InteractiveDriver,
-    config: PresentationCompilerConfig
-):
+    config: PresentationCompilerConfig,
+    symbolSearch: SymbolSearch,
+)(using ReportContext):
 
-  def inferredTypeEdits(): List[TextEdit] =
+  case class AdjustTypeOpts(
+      text: String,
+      adjustedEndPos: l.Position,
+  )
+
+  def inferredTypeEdits(
+      adjustOpt: Option[AdjustTypeOpts] = None
+  ): List[TextEdit] =
+    val retryType = adjustOpt.isEmpty
     val uri = params.uri
     val filePath = Paths.get(uri)
-    val source = SourceFile.virtual(filePath.toString, params.text)
+
+    val sourceText = adjustOpt.map(_.text).getOrElse(params.text)
+    val source =
+      SourceFile.virtual(filePath.toString, sourceText)
     driver.run(uri, source)
     val unit = driver.currentCtx.run.units.head
     val pos = driver.sourcePosition(params)
@@ -64,50 +81,39 @@ final class InferredTypeProvider(
       params.text,
       unit.tpdTree,
       indexedCtx,
-      config
+      config,
     )
     val shortenedNames = new ShortenedNames(indexedCtx)
+
+    def removeType(nameEnd: Int, tptEnd: Int) =
+      sourceText.substring(0, nameEnd) +
+        sourceText.substring(tptEnd + 1, sourceText.length())
 
     def imports: List[TextEdit] =
       shortenedNames.imports(autoImportsGen)
 
-    def printType(tpe: Type): String =
-      val short = shortType(tpe, shortenedNames)
-      val printer = ScopeAwareTypePrinter(indexedCtx)
-      printer.typeString(short)
+    def optDealias(tpe: Type): Type =
+      def isInScope(tpe: Type): Boolean =
+        tpe match
+          case tref: TypeRef =>
+            indexedCtx.lookupSym(
+              tref.currentSymbol
+            ) == IndexedContext.Result.InScope
+          case AppliedType(tycon, args) =>
+            isInScope(tycon) && args.forall(isInScope)
+          case _ => true
+      if isInScope(tpe)
+      then tpe
+      else tpe.metalsDealias
 
-    /*
-     * Get the exact position in ValDef pattern for val (a, b) = (1, 2)
-     * Suprisingly, val ((a, c), b) = ((1, 3), 2) will be covered by Bind
-     * https://github.com/lampepfl/dotty/issues/12627
-     */
-    def editForTupleUnapply(
-        applied: AppliedType,
-        metaPattern: m.Pat,
-        valdefOffset: Int
-    )(using ctx: Context) =
-      import scala.meta.*
-      metaPattern match
-        case tpl: m.Pat.Tuple =>
-          val newOffset = params.offset - valdefOffset + 4
-          val tupleIndex = tpl.args.indexWhere { p =>
-            p.pos.start <= newOffset && p.pos.end >= newOffset
-          }
-          if tupleIndex >= 0 then
-            val tuplePartTpe = applied.args(tupleIndex)
-            val typeEndPos = tpl.args(tupleIndex).pos.end
-            val namePos = typeEndPos + valdefOffset - 4
-            val lspPos = driver.sourcePosition(params.uri, namePos).toLSP
-            val typeNameEdit =
-              new TextEdit(
-                lspPos,
-                ": " + printType(tuplePartTpe)
-              )
-            typeNameEdit :: imports
-          else Nil
-        case _ => Nil
-      end match
-    end editForTupleUnapply
+    def printType(tpe: Type): String =
+      val printer = MetalsPrinter.forInferredType(
+        shortenedNames,
+        indexedCtx,
+        symbolSearch,
+        includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
+      )
+      printer.tpe(tpe)
 
     path.headOption match
       /* `val a = 1` or `var b = 2`
@@ -118,32 +124,38 @@ final class InferredTypeProvider(
        *     turns into
        * `.map((a: Int) => a + a)`
        */
-      case Some(vl @ ValDef(sym, tpt, _)) =>
-        val isParam = path.tail.headOption.exists(_.symbol.isAnonymousFunction)
-        def baseEdit(withParens: Boolean) =
-          val nameEnd =
-            if isParam then vl.endPos
-            else tpt.endPos
+      case Some(vl @ ValDef(sym, tpt, rhs)) =>
+        val isParam = path match
+          case head :: next :: _ if next.symbol.isAnonymousFunction => true
+          case head :: (b @ Block(stats, expr)) :: next :: _
+              if next.symbol.isAnonymousFunction =>
+            true
+          case _ => false
+        def baseEdit(withParens: Boolean): TextEdit =
+          val keywordOffset = if isParam then 0 else 4
+          val endPos =
+            findNamePos(params.text, vl, keywordOffset).endPos.toLsp
+          adjustOpt.foreach(adjust => endPos.setEnd(adjust.adjustedEndPos))
           new TextEdit(
-            nameEnd.toLSP,
-            ": " + printType(tpt.tpe) + {
+            endPos,
+            ": " + printType(optDealias(tpt.tpe)) + {
               if withParens then ")" else ""
-            }
+            },
           )
 
         def checkForParensAndEdit(
             applyEndingPos: Int,
             toCheckFor: Char,
-            blockStartPos: SourcePosition
+            blockStartPos: SourcePosition,
         ) =
-          val text = params.text.toString()
+          val text = params.text
           val isParensFunction: Boolean = text(applyEndingPos) == toCheckFor
 
           val alreadyHasParens =
             text(blockStartPos.start) == '('
 
           if isParensFunction && !alreadyHasParens then
-            new TextEdit(blockStartPos.toLSP, "(") :: baseEdit(withParens =
+            new TextEdit(blockStartPos.toLsp, "(") :: baseEdit(withParens =
               true
             ) :: Nil
           else baseEdit(withParens = false) :: Nil
@@ -169,36 +181,58 @@ final class InferredTypeProvider(
         def simpleType =
           typeNameEdit ::: imports
 
-        def tupleType(applied: AppliedType) =
-          import scala.meta.*
-          val pattern =
-            params.text.substring(vl.startPos.start, tpt.startPos.start)
-
-          dialects.Scala3("val " + pattern + "???").parse[Source] match
-            case Parsed.Success(Source(List(valDef: m.Defn.Val))) =>
-              editForTupleUnapply(
-                applied,
-                valDef.pats.head,
-                vl.startPos.start
+        rhs match
+          case t: Tree[?]
+              if t.typeOpt.isErroneous && retryType && !tpt.sourcePos.span.isZeroExtent =>
+            inferredTypeEdits(
+              Some(
+                AdjustTypeOpts(
+                  removeType(vl.namePos.end, tpt.sourcePos.end - 1),
+                  tpt.sourcePos.toLsp.getEnd(),
+                )
               )
-            case _ => simpleType
-        tpt.tpe match
-          case applied: AppliedType =>
-            tupleType(applied)
-          case _ =>
-            simpleType
-
+            )
+          case _ => simpleType
+        end match
       /* `def a[T](param : Int) = param`
        *     turns into
        * `def a[T](param : Int): Int = param`
        */
-      case Some(DefDef(name, _, tpt, rhs)) =>
-        val typeNameEdit =
+      case Some(df @ DefDef(name, _, tpt, rhs)) =>
+        def typeNameEdit =
+          /* NOTE: In Scala 3.1.3, `List((1,2)).map((<<a>>,b) => ...)`
+           * turns into `List((1,2)).map((:Inta,b) => ...)`,
+           * because `tpt.SourcePos == df.namePos.startPos`, so we use `df.namePos.endPos` instead
+           * After dropping support for 3.1.3 this can be removed
+           */
+          val end =
+            if tpt.endPos.end > df.namePos.end then tpt.endPos.toLsp
+            else df.namePos.endPos.toLsp
+
+          adjustOpt.foreach(adjust => end.setEnd(adjust.adjustedEndPos))
           new TextEdit(
-            tpt.endPos.toLSP,
-            ": " + printType(tpt.tpe)
+            end,
+            ": " + printType(optDealias(tpt.tpe)),
           )
-        typeNameEdit :: imports
+        end typeNameEdit
+
+        def lastColon =
+          var i = tpt.startPos.start
+          while i >= 0 && sourceText(i) != ':' do i -= 1
+          i
+        rhs match
+          case t: Tree[?]
+              if t.typeOpt.isErroneous && retryType && !tpt.sourcePos.span.isZeroExtent =>
+            inferredTypeEdits(
+              Some(
+                AdjustTypeOpts(
+                  removeType(lastColon, tpt.sourcePos.end - 1),
+                  tpt.sourcePos.toLsp.getEnd(),
+                )
+              )
+            )
+          case _ =>
+            typeNameEdit :: imports
 
       /* `case t =>`
        *  turns into
@@ -207,10 +241,10 @@ final class InferredTypeProvider(
       case Some(bind @ Bind(name, body)) =>
         def baseEdit(withParens: Boolean) =
           new TextEdit(
-            bind.endPos.toLSP,
-            ": " + printType(body.tpe) + {
+            bind.endPos.toLsp,
+            ": " + printType(optDealias(body.tpe)) + {
               if withParens then ")" else ""
-            }
+            },
           )
         val typeNameEdit = path match
           /* In case it's an infix pattern match
@@ -219,17 +253,14 @@ final class InferredTypeProvider(
            */
           case _ :: (unappl @ UnApply(_, _, patterns)) :: _
               if patterns.size > 1 =>
-            import scala.meta.*
             val firstEnd = patterns(0).endPos.end
             val secondStart = patterns(1).startPos.start
             val hasDot = params
               .text()
               .substring(firstEnd, secondStart)
-              .tokenize
-              .toOption
-              .exists(_.tokens.exists(_.is[T.Comma]))
+              .exists(_ == ',')
             if !hasDot then
-              val leftParen = new TextEdit(body.startPos.toLSP, "(")
+              val leftParen = new TextEdit(body.startPos.toLsp, "(")
               leftParen :: baseEdit(withParens = true) :: Nil
             else baseEdit(withParens = false) :: Nil
 
@@ -243,8 +274,8 @@ final class InferredTypeProvider(
        */
       case Some(i @ Ident(name)) =>
         val typeNameEdit = new TextEdit(
-          i.endPos.toLSP,
-          ": " + printType(i.tpe.widen)
+          i.endPos.toLsp,
+          ": " + printType(optDealias(i.tpe.widen)),
         )
         typeNameEdit :: imports
 
@@ -252,5 +283,47 @@ final class InferredTypeProvider(
         Nil
     end match
   end inferredTypeEdits
+
+  private def findNamePos(
+      text: String,
+      tree: untpd.NamedDefTree,
+      kewordOffset: Int,
+  )(using
+      Context
+  ): SourcePosition =
+    val realName = tree.name.stripModuleClassSuffix.toString.toList
+
+    // `NamedDefTree.namePos` is incorrect for bacticked names
+    @tailrec
+    def lookup(
+        idx: Int,
+        start: Option[(Int, List[Char])],
+        withBacktick: Boolean,
+    ): Option[SourcePosition] =
+      start match
+        case Some((start, nextMatch :: left)) =>
+          if text.charAt(idx) == nextMatch then
+            lookup(idx + 1, Some((start, left)), withBacktick)
+          else lookup(idx + 1, None, withBacktick = false)
+        case Some((start, Nil)) =>
+          val end = if withBacktick then idx + 1 else idx
+          val pos = tree.source.atSpan(Span(start, end, start))
+          Some(pos)
+        case None if idx < text.length =>
+          val ch = text.charAt(idx)
+          if ch == realName.head then
+            lookup(idx + 1, Some((idx, realName.tail)), withBacktick)
+          else if ch == '`' then lookup(idx + 1, None, withBacktick = true)
+          else lookup(idx + 1, None, withBacktick = false)
+        case _ =>
+          None
+
+    val matchedByText =
+      if realName.nonEmpty then
+        lookup(tree.sourcePos.start + kewordOffset, None, false)
+      else None
+
+    matchedByText.getOrElse(tree.namePos)
+  end findNamePos
 
 end InferredTypeProvider

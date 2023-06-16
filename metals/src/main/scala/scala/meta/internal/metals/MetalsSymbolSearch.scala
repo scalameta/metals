@@ -9,6 +9,7 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -22,8 +23,9 @@ import org.eclipse.lsp4j.Location
 class MetalsSymbolSearch(
     docs: Docstrings,
     wsp: WorkspaceSymbolProvider,
-    defn: DefinitionProvider
-) extends SymbolSearch {
+    defn: DefinitionProvider,
+)(implicit rc: ReportContext)
+    extends SymbolSearch {
   // A cache for definitionSourceToplevels.
   // The key is an absolute path to the dependency source file, and
   // the value is the list of symbols that the file contains.
@@ -34,8 +36,11 @@ class MetalsSymbolSearch(
     dependencySourceCache.clear()
   }
 
-  override def documentation(symbol: String): Optional[SymbolDocumentation] =
-    docs.documentation(symbol)
+  override def documentation(
+      symbol: String,
+      parents: ParentSymbols,
+  ): Optional[SymbolDocumentation] =
+    docs.documentation(symbol, parents)
 
   def definition(symbol: String, source: URI): ju.List[Location] = {
     val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
@@ -48,7 +53,7 @@ class MetalsSymbolSearch(
    */
   override def definitionSourceToplevels(
       symbol: String,
-      source: URI
+      source: URI,
   ): ju.List[String] = {
     val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
     defn
@@ -65,7 +70,7 @@ class MetalsSymbolSearch(
                 .sortBy(sym =>
                   (
                     sym.range.getStart().getLine(),
-                    sym.range.getStart().getCharacter()
+                    sym.range.getStart().getCharacter(),
                   )
                 )
                 .map(_.symbol)
@@ -77,7 +82,7 @@ class MetalsSymbolSearch(
         } else {
           dependencySourceCache.getOrElseUpdate(
             path,
-            Mtags.toplevels(input).asJava
+            Mtags.toplevels(input).asJava,
           )
         }
       })
@@ -87,12 +92,24 @@ class MetalsSymbolSearch(
   override def search(
       query: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor
+      visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
     wsp.search(
       WorkspaceSymbolQuery.exact(query),
       visitor,
-      Some(new BuildTargetIdentifier(buildTargetIdentifier))
+      Some(new BuildTargetIdentifier(buildTargetIdentifier)),
+    )
+  }
+
+  override def searchMethods(
+      query: String,
+      buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result = {
+    wsp.searchMethods(
+      query,
+      visitor,
+      Some(new BuildTargetIdentifier(buildTargetIdentifier)),
     )
   }
 }

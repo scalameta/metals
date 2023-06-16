@@ -4,17 +4,18 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions
 
-class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
+class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
 
   checkWorksheetDeps(
     "imports-inside",
-    "a/src/main/scala/foo/Main.worksheet.sc"
+    "a/src/main/scala/foo/Main.worksheet.sc",
   )
 
   checkWorksheetDeps("imports-outside", "Main.worksheet.sc")
 
   def checkWorksheetDeps(opts: TestOptions, path: String): Unit = {
     test(opts) {
+      cleanWorkspace()
       for {
         _ <- initialize(
           s"""
@@ -37,7 +38,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
         _ <- server.didSave(path)(identity)
         identity <- server.completion(
           path,
-          "htmlFile.render@@"
+          "htmlFile.render@@",
         )
         _ = assertNoDiff(
           server.workspaceDefinitions,
@@ -50,7 +51,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
               |  )
               |)
               |htmlFile/*L2*/.render/*Text.scala*/
-              |""".stripMargin
+              |""".stripMargin,
         )
         _ <- server.didOpen("scalatags/Text.scala")
         _ = assertNoDiff(identity, "render: String")
@@ -63,15 +64,16 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
              |  body(
              |    p("This is a big paragraph of text")
              |  )
-             |) // : scalatags.Text.TypedTag[String] = TypedTag("html",List(WrappedArray(TypedTag("body",List(WrappedArray(TypedTag("p",Li…
+             |) // : scalatags.Text.TypedTag[String] = TypedTag(tag = "html",modifiers = List(ArraySeq(TypedTag(tag = "body",modifiers = L…
              |htmlFile.render // : String = "<html><body><p>This is a big paragraph of text</p></body></html>"
-             |""".stripMargin
+             |""".stripMargin,
         )
       } yield ()
     }
   }
 
   test("bad-dep") {
+    cleanWorkspace()
     val path = "hi.worksheet.sc"
     for {
       _ <- initialize(
@@ -87,7 +89,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
       _ <- server.didOpen(path)
       _ = assertNoDiff(
         client.workspaceErrorShowMessages,
-        "Error downloading com.lihaoyi:scalatags_2.12:0.999.0"
+        "Error downloading com.lihaoyi:scalatags_2.13:0.999.0",
       )
     } yield ()
   }
@@ -95,6 +97,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
   // classloader including things like the java.sql module.
   // https://github.com/scalameta/metals/issues/2187
   test("classloader") {
+    cleanWorkspace()
     val path = "hi.worksheet.sc"
     for {
       _ <- initialize(
@@ -110,12 +113,13 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
       _ <- server.didOpen(path)
       _ = assertNoDiff(
         client.workspaceDecorations,
-        "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01"
+        "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01",
       )
     } yield ()
   }
 
   test("akka") {
+    cleanWorkspace()
     val path = "hi.worksheet.sc"
     for {
       _ <- initialize(
@@ -162,8 +166,24 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
            |val source: Source[Int, NotUsed] = Source(1 to 2) // : Source[Int, NotUsed] = Source(SourceShape(StatefulMapConcat.out(...
            |val future = source.runWith(Sink.foreach(_ => ())) // : concurrent.Future[akka.Done] = Future(Success(Done))
            |Await.result(future, 3.seconds) // : akka.Done = Done
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("literals") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "${V.scala213}"}}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |val literal: 42 = 42
            |""".stripMargin
       )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      _ = assertNoDiagnostics()
     } yield ()
   }
 }

@@ -6,9 +6,12 @@
       "editors/vim",
       "editors/sublime",
       "editors/emacs",
-      "editors/eclipse",
       "editors/online-ides",
       "editors/user-configuration"
+    ],
+    "Features": [
+      "features/codeactions",
+      "features/scripts"
     ],
     "Build Tools": [
       "build-tools/overview",
@@ -28,6 +31,7 @@
       "integrations/remote-language-server",
       "integrations/new-build-tool",
       "integrations/new-editor",
+      "integrations/test-explorer",
       "integrations/tree-view-protocol",
       "integrations/decoration-protocol",
       "integrations/debug-adapter-protocol"

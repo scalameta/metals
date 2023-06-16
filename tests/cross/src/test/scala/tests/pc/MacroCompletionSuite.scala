@@ -2,8 +2,6 @@ package tests.pc
 
 import java.nio.file.Path
 
-import scala.collection.Seq
-
 import coursierapi.Dependency
 import tests.BaseCompletionSuite
 import tests.BuildInfoVersions
@@ -26,21 +24,29 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     } else {
       Seq(
         Dependency
-          .of("com.olegpy", s"better-monadic-for_$scalaBinaryVersion", "0.3.1"),
+          .of(
+            "com.olegpy",
+            s"better-monadic-for_$scalaBinaryVersion",
+            BuildInfoVersions.betterMonadicFor,
+          ),
         Dependency
-          .of("org.typelevel", s"kind-projector_$scalaBinaryVersion", "0.10.3"),
+          .of(
+            "org.typelevel",
+            s"kind-projector_$scalaVersion",
+            BuildInfoVersions.kindProjector,
+          ),
         Dependency
           .of("org.typelevel", s"simulacrum_$scalaBinaryVersion", "1.0.0"),
         Dependency
           .of("com.lihaoyi", s"sourcecode_$scalaBinaryVersion", "0.1.9"),
-        Dependency.of("com.chuusai", s"shapeless_$scalaBinaryVersion", "2.3.3")
+        Dependency.of("com.chuusai", s"shapeless_$scalaBinaryVersion", "2.3.3"),
       ) ++ macrosDependencies
     }
   }
 
   // @tgodzik macros will not work in Dotty
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   override def scalacOptions(classpath: Seq[Path]): Seq[String] =
     classpath
@@ -52,6 +58,10 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       .map(plugin => s"-Xplugin:$plugin")
 
   override def beforeAll(): Unit = ()
+
+  // compiler plugins are not published for nightlies
+  override def munitIgnore: Boolean =
+    scalaVersion.contains("-bin-") || super.munitIgnore
 
   check(
     "generic",
@@ -65,11 +75,6 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|from(r: String :: Int :: HNil): Person
        |""".stripMargin,
-    compat = Map(
-      "2.11" ->
-        """|from(r: ::[String,::[Int,HNil]]): Person
-           |""".stripMargin
-    )
   )
 
   check(
@@ -90,12 +95,9 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     """|fold[C](fa: Int => C, fb: String => C): C
        |""".stripMargin,
     compat = Map(
-      "2.11" ->
-        """|fold[X](fa: Int => X, fb: String => X): X
-           |""".stripMargin,
       // NOTE(olafur): the presentation compiler returns empty results here in 2.13.0
       "2.13" -> ""
-    )
+    ),
   )
 
   check(
@@ -106,7 +108,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: String
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   def simulacrum(name: String, completion: String, expected: String): Unit =
@@ -127,19 +129,19 @@ class MacroCompletionSuite extends BaseCompletionSuite {
          |  $completion
          |}
          |""".stripMargin,
-      expected
+      expected,
     )
   simulacrum(
     "import",
     """|import Semigroup.op@@
        |""".stripMargin,
-    ""
+    "",
   )
   simulacrum(
     "object",
     """|Semigroup.apply@@
        |""".stripMargin,
-    ""
+    "",
   )
 
   check(
@@ -147,16 +149,11 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     """
       |object a {
       |  def baz[F[_], A]: F[A] = ???
-      |  baz[Either[Int, ?], String].fold@@
+      |  baz[Either[Int, *], String].fold@@
       |}
     """.stripMargin,
     """|fold[C](fa: Int => C, fb: String => C): C
        |""".stripMargin,
-    compat = Map(
-      "2.11" ->
-        """|fold[X](fa: Int => X, fb: String => X): X
-           |""".stripMargin
-    )
   )
 
   check(
@@ -168,7 +165,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|toCharArray(): Array[Char]
-       |""".stripMargin
+       |""".stripMargin,
   )
 
 }

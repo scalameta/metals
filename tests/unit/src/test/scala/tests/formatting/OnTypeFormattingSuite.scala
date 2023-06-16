@@ -24,7 +24,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""|
         |
         |object Main {}
-        |""".stripMargin
+        |""".stripMargin,
   )
 
   check(
@@ -41,7 +41,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  |
        |  |word
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -58,7 +58,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |               |'''.stripMargin
        |  val other = '''|
        |                 |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -75,7 +75,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |               |'''.stripMargin
        |  val other = '''|
        |                 |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -96,7 +96,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  |
        |  |word
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -125,7 +125,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  |
        |  |word
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -140,7 +140,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
       |  val x = List(1)
       |  val y = s'''|abc 
       |              |${x.mkString(s"\n")}''''.stripMargin
-      |}""".stripMargin
+      |}""".stripMargin,
   )
 
   check(
@@ -155,7 +155,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val number = 102
        |  val str = s"|" +
        |    s"$$number".stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -170,7 +170,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val number = 102
        |  val str = s"|$$number" + "2" +
        |    "3$escapedNewline".stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -185,7 +185,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val number = 102
        |  val str = s"|$$number" + s"2" +
        |    s"\\3".stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -200,7 +200,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val number = 102
        |  val str = s"|$$number" + s"2" +
        |    s"$escapedQuote".stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -217,7 +217,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  |
        |  |word
        |  ''' stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -238,7 +238,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  | string
        |  '''.stripMargin
        |$indent
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -257,7 +257,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  word
        |  '''.stripMargin
        |  abc.toInt
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -272,7 +272,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val str = '''|
        |               |
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   // this can be caused by the client if scala syntax is recognized inside a string
@@ -291,7 +291,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  |
        |  '''.stripMargin
        |}""".stripMargin,
-    " " * 4
+    " " * 4,
   )
 
   check(
@@ -308,7 +308,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  |word
        |  '''.stripMargin
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -325,7 +325,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |               |word'''.stripMargin
        |$indent
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -343,7 +343,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  |sign
        |  '''.stripMargin
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -356,7 +356,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = "test1" +
        |    " test2"
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -371,11 +371,11 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val str = "test1" +
        |    "test" +
        |    "2"
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
-    "4-quotes",
+    "3-quotes",
     s"""
        |object Main {
        |  val str = '''@@
@@ -384,10 +384,10 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = ''''''
        |}""".stripMargin,
-    triggerCharacter = "\""
+    triggerCharacter = "\"",
   )
   check(
-    "4-quotes-interpolation",
+    "3-quotes-interpolation",
     s"""
        |object Main {
        |  val str = s'''@@
@@ -396,7 +396,53 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = s''''''
        |}""".stripMargin,
-    triggerCharacter = "\""
+    triggerCharacter = "\"",
+  )
+
+  check(
+    "3-quotes-trigger-newLine",
+    s"""
+       |object Main {
+       |  val str = '''@@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  '''
+       |}""".stripMargin,
+    triggerCharacter = "\n",
+  )
+
+  check(
+    "3-quotes-sql-interpolat",
+    s"""
+       |object Main {
+       |  val str = sql'''@@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = sql'''
+       |  '''
+       |}""".stripMargin,
+    triggerCharacter = "\n",
+  )
+
+  check(
+    "multiple-3-quotes-sql",
+    s"""
+       |object Main {
+       |  val str = sql'''SELECT 1
+       |  FROM
+       |  ''' + sql''' mytable @@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = sql'''SELECT 1
+       |  FROM
+       |  ''' + sql''' mytable 
+       |  '''
+       |}""".stripMargin,
+    triggerCharacter = "\n",
   )
 
   check(
@@ -409,7 +455,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = '''|
        |               |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -422,7 +468,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = s'''|
        |                |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -436,7 +482,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val str = '''|
        |               |'''
        |}""".stripMargin,
-    stripMarginEnabled = false
+    stripMarginEnabled = false,
   )
 
   check(
@@ -458,7 +504,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
           |}
           |""".stripMargin
       )
-    }
+    },
   )
 
   // tests prefixed with "vscode" mimic vscode behavior when typing newline
@@ -475,7 +521,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val str = '''|{
        |               |
        |               |}'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -491,7 +537,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val str = '''|{
        |               |
        |               |}'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -510,7 +556,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |               |
        |               |}
        |               |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -529,7 +575,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |                |
        |                |}
        |                |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -548,7 +594,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |               |
        |               |])}
        |               |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -563,7 +609,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  val str = '''|
        |               |
        |               |'''
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   def check(
@@ -573,7 +619,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
       autoIndent: String = indent,
       triggerCharacter: String = "\n",
       stripMarginEnabled: Boolean = true,
-      additionalRequests: TestingServer => Future[Unit] = server => Future {}
+      additionalRequests: TestingServer => Future[Unit] = _ => Future.unit,
   )(implicit loc: Location): Unit = {
     val quote = """\u0022"""
     def unmangle(string: String): String =
@@ -606,7 +652,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
           testCode,
           expected,
           autoIndent,
-          triggerCharacter
+          triggerCharacter,
         )
       } yield ()
     }

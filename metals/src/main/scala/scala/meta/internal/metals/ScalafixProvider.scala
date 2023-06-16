@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Collections
+import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
@@ -15,10 +15,15 @@ import scala.util.Try
 
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
+import com.typesafe.config.ConfigFactory
+import coursierapi.Dependency
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
@@ -30,49 +35,89 @@ case class ScalafixProvider(
     buffers: Buffers,
     userConfig: () => UserConfiguration,
     workspace: AbsolutePath,
-    embedded: Embedded,
     statusBar: StatusBar,
     compilations: Compilations,
-    icons: Icons,
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
     buildClient: MetalsBuildClient,
-    interactive: InteractiveSemanticdbs
+    interactive: InteractiveSemanticdbs,
 )(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
-  private val organizeImportRuleCache =
-    TrieMap.empty[ScalaBinaryVersion, URLClassLoader]
+  private val rulesClassloaderCache =
+    TrieMap.empty[ScalafixRulesClasspathKey, URLClassLoader]
 
   // Warms up the Scalafix instance so that the first organize imports request responds faster.
   def load(): Unit = {
     if (!Testing.isEnabled) {
+      val tmp = workspace
+        .resolve(Directories.tmp)
+        .resolve(s"Main${Random.nextLong()}.scala")
       try {
-        val targets = buildTargets.all.toList.groupBy(_.scalaVersion).flatMap {
-          case (_, targets) => targets.headOption
-        }
-        val tmp = workspace
-          .resolve(Directories.tmp)
-          .resolve(s"Main${Random.nextLong()}.scala")
+        val targets =
+          buildTargets.allScala.toList.groupBy(_.scalaVersion).flatMap {
+            case (_, targets) => targets.headOption
+          }
         val contents = "object Main{}\n"
         tmp.writeText(contents)
-        for (target <- targets)
-          scalafixEvaluate(tmp, target, contents, produceSemanticdb = true)
-
-        tmp.delete()
+        val testEvaluation =
+          for (target <- targets)
+            yield scalafixEvaluate(
+              tmp,
+              target,
+              contents,
+              produceSemanticdb = true,
+              List(organizeImportRuleName),
+            )
+        val evaluatedCorrectly = testEvaluation.forall {
+          case Success(evaluation) => evaluation.isSuccessful()
+          case _ => false
+        }
+        if (!evaluatedCorrectly) scribe.debug("Could not warm up Scalafix")
       } catch {
         case e: Throwable =>
           scribe.debug(
-            s"Scalafix issue while warming up due to issue: ${e.getMessage()}"
+            s"Scalafix issue while warming up due to issue: ${e.getMessage()}",
+            e,
           )
+      } finally {
+        if (tmp.exists) tmp.delete()
       }
     }
+  }
+
+  def runAllRules(file: AbsolutePath): Future[List[l.TextEdit]] = {
+    val definedRules = rulesFromScalafixConf()
+    runRules(file, definedRules.toList)
+  }
+
+  def runRulesOrPrompt(
+      file: AbsolutePath,
+      rules: List[String],
+  ): Future[List[l.TextEdit]] = {
+    val definedRules = rulesFromScalafixConf()
+    val rulesFut =
+      if (rules.isEmpty) askForRule(definedRules).map(_.toList)
+      else Future.successful(rules)
+    rulesFut.flatMap(runRules(file, _))
   }
 
   def organizeImports(
       file: AbsolutePath,
       scalaTarget: ScalaTarget,
-      retried: Boolean = false
+  ): Future[List[l.TextEdit]] = {
+    runScalafixRules(
+      file,
+      scalaTarget,
+      List(organizeImportRuleName),
+    )
+  }
+
+  def runScalafixRules(
+      file: AbsolutePath,
+      scalaTarget: ScalaTarget,
+      rules: List[String],
+      retried: Boolean = false,
   ): Future[List[l.TextEdit]] = {
     val fromDisk = file.toInput
     val inBuffers = file.toInputFromBuffers(buffers)
@@ -83,14 +128,15 @@ case class ScalafixProvider(
           file,
           scalaTarget,
           inBuffers.value,
-          retried || isUnsaved(inBuffers.text, fromDisk.text)
+          retried || isUnsaved(inBuffers.text, fromDisk.text),
+          rules,
         )
 
       scalafixEvaluation match {
         case Failure(exception) =>
           reportScalafixError(
             "Unable to run scalafix, please check logs for more info.",
-            exception
+            exception,
           )
           Future.failed(exception)
         case Success(results)
@@ -105,16 +151,24 @@ case class ScalafixProvider(
           )
           languageClient.showMessage(
             MessageType.Warning,
-            msg
+            msg,
           )
           Future.successful(Nil)
         case Success(results) if !scalafixSucceded(results) =>
           val scalafixError = getMessageErrorFromScalafix(results)
           val exception = ScalafixRunException(scalafixError)
+          if (
+            scalafixError.startsWith("Unknown rule") ||
+            scalafixError.startsWith("Class not found")
+          ) {
+            languageClient
+              .showMessage(Messages.unknownScalafixRules(scalafixError))
+          }
+
           scribe.error(scalafixError, exception)
           if (!retried && hasStaleSemanticdb(results)) {
             // Retry, since the semanticdb might be stale
-            organizeImports(file, scalaTarget, retried = true)
+            runScalafixRules(file, scalaTarget, rules, retried = true)
           } else {
             Future.failed(exception)
           }
@@ -133,7 +187,7 @@ case class ScalafixProvider(
 
   private def createTemporarySemanticdb(
       file: AbsolutePath,
-      contents: String
+      contents: String,
   ) = {
     interactive
       .textDocument(file, Some(contents))
@@ -151,7 +205,8 @@ case class ScalafixProvider(
             semanticdb
         val dir = workspace.resolve(Directories.tmp)
         file.toRelativeInside(workspace).flatMap { relativePath =>
-          val writeTo = dir.resolve(SemanticdbClasspath.fromScala(relativePath))
+          val writeTo =
+            dir.resolve(SemanticdbClasspath.fromScalaOrJava(relativePath))
           writeTo.parent.createDirectories()
           val docs = TextDocuments(Seq(toSave))
           Files.write(writeTo.toNIO, docs.toByteArray)
@@ -202,26 +257,59 @@ case class ScalafixProvider(
       .getOrElse("Unexpected error while running Scalafix.")
   }
 
-  private def scalafixConf: Option[Path] = {
+  private lazy val scala3DefaultConfig = {
+    val path = Files.createTempFile(".scalafix", ".conf")
+    AbsolutePath(path).writeText(
+      s"""|rules = [
+          |  OrganizeImports
+          |]
+          |OrganizeImports.removeUnused = false
+          |
+          |""".stripMargin
+    )
+    path.toFile().deleteOnExit()
+    path
+  }
+
+  private def scalafixConf(isScala3: Boolean): Option[Path] = {
     val defaultLocation = workspace.resolve(".scalafix.conf")
+    val defaultConfig = if (isScala3) Some(scala3DefaultConfig) else None
     userConfig().scalafixConfigPath match {
       case Some(path) if !path.isFile && defaultLocation.isFile =>
         languageClient.showMessage(
           MessageType.Warning,
-          s"No configuration at $path, using default at $defaultLocation."
+          s"No configuration at $path, using default at $defaultLocation.",
         )
         Some(defaultLocation.toNIO)
       case Some(path) if !path.isFile =>
         languageClient.showMessage(
           MessageType.Warning,
-          s"No configuration at $path, using Scalafix defaults."
+          s"No configuration at $path, using Scalafix defaults.",
         )
-        None
+        defaultConfig
       case Some(path) => Some(path.toNIO)
       case None if defaultLocation.isFile =>
         Some(defaultLocation.toNIO)
-      case _ => None
+      case _ => defaultConfig
     }
+  }
+
+  private def rulesFromScalafixConf(): Set[String] = {
+    scalafixConf(isScala3 = false) match {
+      case None => Set.empty
+      case Some(configPath) =>
+        val conf = ConfigFactory.parseFile(configPath.toFile)
+        if (conf.hasPath("rules"))
+          conf
+            .getList("rules")
+            .map { item =>
+              item.unwrapped().toString()
+            }
+            .asScala
+            .toSet
+        else Set.empty
+    }
+
   }
 
   /**
@@ -239,19 +327,16 @@ case class ScalafixProvider(
       file: AbsolutePath,
       scalaTarget: ScalaTarget,
       inBuffers: String,
-      produceSemanticdb: Boolean
+      produceSemanticdb: Boolean,
+      rules: List[String],
   ): Try[ScalafixEvaluation] = {
-    val defaultScalaVersion = scalaTarget.scalaBinaryVersion
+    val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
     val scalaBinaryVersion =
-      if (defaultScalaVersion.startsWith("3")) "2.13" else defaultScalaVersion
-
+      if (isScala3) "2.13" else scalaTarget.scalaBinaryVersion
     val targetRoot =
       if (produceSemanticdb) createTemporarySemanticdb(file, inBuffers)
       else
-        buildTargets.scalacOptions(scalaTarget.info.getId()).map {
-          scalacOptions =>
-            scalacOptions.targetroot(scalaTarget.scalaVersion).toNIO
-        }
+        Some(scalaTarget.targetroot.toNIO)
 
     val sourceroot =
       if (produceSemanticdb)
@@ -272,6 +357,13 @@ case class ScalafixProvider(
     }
 
     val scalaVersion = scalaTarget.scalaVersion
+    val scalafixRulesKey =
+      ScalafixRulesClasspathKey(
+        scalaBinaryVersion,
+        scalaVersion,
+        userConfig(),
+        rules,
+      )
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
     val classpath =
@@ -280,24 +372,34 @@ case class ScalafixProvider(
     for {
       api <- getScalafix(scalaBinaryVersion)
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
-        scalaBinaryVersion,
-        api.getClass.getClassLoader
+        scalafixRulesKey,
+        api.getClass.getClassLoader,
       )
     } yield {
-      val scalacOption =
-        if (scalaBinaryVersion == "2.13") "-Wunused:imports"
-        else "-Ywarn-unused-import"
+      val scalacOptions = {
+        val list = new ju.ArrayList[String](3)
+
+        if (scalaBinaryVersion == "2.13") list.add("-Wunused:imports")
+        else list.add("-Ywarn-unused-import")
+
+        if (!isScala3 && scalaTarget.scalac.getOptions().contains("-Xsource:3"))
+          list.add("-Xsource:3")
+
+        // We always compile with synthetics:on but scalafix will fail if we don't set it here
+        list.add("-P:semanticdb:synthetics:on")
+        list
+      }
 
       val evaluated = api
         .newArguments()
         .withScalaVersion(scalaVersion)
         .withClasspath(classpath)
         .withToolClasspath(urlClassLoaderWithExternalRule)
-        .withConfig(scalafixConf.asJava)
-        .withRules(List(organizeImportRuleName).asJava)
+        .withConfig(scalafixConf(isScala3).asJava)
+        .withRules(rules.asJava)
         .withPaths(List(diskFilePath.toNIO).asJava)
         .withSourceroot(sourceroot.toNIO)
-        .withScalacOptions(Collections.singletonList(scalacOption))
+        .withScalacOptions(scalacOptions)
         .evaluate()
 
       if (produceSemanticdb)
@@ -308,7 +410,7 @@ case class ScalafixProvider(
 
   private def reportScalafixError(
       message: String,
-      exception: Throwable
+      exception: Throwable,
   ): Unit = {
     val params = new MessageParams(MessageType.Error, message)
     scribe.error(message, exception)
@@ -317,9 +419,9 @@ case class ScalafixProvider(
 
   private def textEditsFrom(
       newFileContent: String,
-      input: Input
+      input: Input,
   ): List[l.TextEdit] = {
-    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
+    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLsp
     if (newFileContent != input.text) {
       List(new l.TextEdit(fullDocumentRange, newFileContent))
     } else {
@@ -344,20 +446,25 @@ case class ScalafixProvider(
   }
 
   private def getRuleClassLoader(
-      scalaBinaryVersion: ScalaBinaryVersion,
-      scalafixClassLoader: ClassLoader
+      scalfixRulesKey: ScalafixRulesClasspathKey,
+      scalafixClassLoader: ClassLoader,
   ): Try[URLClassLoader] = {
-    organizeImportRuleCache.get(scalaBinaryVersion) match {
+    rulesClassloaderCache.get(scalfixRulesKey) match {
       case Some(value) => Success(value)
       case None =>
-        statusBar.trackBlockingTask("Downloading organize import rule") {
+        statusBar.trackBlockingTask(
+          "Downloading scalafix rules' dependencies"
+        ) {
+          val rulesDependencies = scalfixRulesKey.usedRulesWithClasspath
           val organizeImportRule =
-            Try(Embedded.organizeImportRule(scalaBinaryVersion)).map { paths =>
+            Try(
+              Embedded.rulesClasspath(rulesDependencies.toList)
+            ).map { paths =>
               val classloader = Embedded.toClassLoader(
                 Classpath(paths.map(AbsolutePath(_))),
-                scalafixClassLoader
+                scalafixClassLoader,
               )
-              organizeImportRuleCache.update(scalaBinaryVersion, classloader)
+              rulesClassloaderCache.update(scalfixRulesKey, classloader)
               classloader
             }
           organizeImportRule
@@ -374,14 +481,167 @@ case class ScalafixProvider(
       }
   }
 
+  private def askForRule(rules: Set[String]): Future[Option[String]] =
+    languageClient
+      .metalsQuickPick(
+        MetalsQuickPickParams(
+          items = rules.toList.map(r => MetalsQuickPickItem(r, r)).asJava,
+          placeHolder = "Rule",
+        )
+      )
+      .asScala
+      .map(resultOpt => resultOpt.map(_.itemId))
+
+  private def runRules(
+      file: AbsolutePath,
+      rules: List[String],
+  ): Future[List[l.TextEdit]] = {
+    val result = for {
+      buildId <- buildTargets.inverseSources(file)
+      target <- buildTargets.scalaTarget(buildId)
+    } yield {
+      runScalafixRules(
+        file,
+        target,
+        rules,
+      )
+    }
+    result.getOrElse(Future.successful(Nil))
+  }
 }
 
 object ScalafixProvider {
+
   type ScalaBinaryVersion = String
   type ScalaVersion = String
 
+  case class ScalafixRulesClasspathKey(
+      scalaBinaryVersion: ScalaBinaryVersion,
+      usedRulesWithClasspath: Set[Dependency],
+  )
+
+  object ScalafixRulesClasspathKey {
+    def apply(
+        scalaBinaryVersion: String,
+        scalaVersion: String,
+        userConfig: UserConfiguration,
+        rules: List[String],
+    ): ScalafixRulesClasspathKey = {
+      val rulesClasspath =
+        rulesDependencies(scalaVersion, scalaBinaryVersion, userConfig, rules)
+      ScalafixRulesClasspathKey(scalaBinaryVersion, rulesClasspath)
+    }
+  }
   case class ScalafixRunException(msg: String) extends Exception(msg)
 
   val organizeImportRuleName = "OrganizeImports"
+
+  def rulesDependencies(
+      scalaVersion: String,
+      scalaBinaryVersion: String,
+      userConfig: UserConfiguration,
+      rules: List[String],
+  ): Set[Dependency] = {
+    val fromSettings = userConfig.scalafixRulesDependencies.flatMap {
+      dependencyString =>
+        Try {
+          Dependency.parse(
+            dependencyString,
+            coursierapi.ScalaVersion.of(scalaVersion),
+          )
+        } match {
+          case Failure(exception) =>
+            scribe.warn(s"Could not download `${dependencyString}`", exception)
+            None
+          case Success(dep) =>
+            Some(dep)
+        }
+    }
+    val builtInRuleDeps = builtInRules(scalaBinaryVersion)
+
+    val allDeps = fromSettings ++ rules.flatMap(builtInRuleDeps.get)
+    // only get newest versions for each dependency
+    allDeps
+      .sortBy(_.getVersion())
+      .reverse
+      .distinctBy(dep => dep.getModule())
+      .toSet
+  }
+
+  // Hygiene rules from https://scalacenter.github.io/scalafix/docs/rules/community-rules.html
+  private def builtInRules(binaryVersion: String) = {
+    val scaluzziDep = Dependency.of(
+      "com.github.vovapolu",
+      s"scaluzzi_$binaryVersion",
+      "latest.release",
+    )
+
+    val scalafixUnifiedDep = Dependency.of(
+      "com.github.xuwei-k",
+      s"scalafix-rules_$binaryVersion",
+      "latest.release",
+    )
+
+    val scalafixPixivRule = Dependency.of(
+      "net.pixiv",
+      s"scalafix-pixiv-rule_$binaryVersion",
+      "latest.release",
+    )
+
+    val depsList = List(
+      "EmptyCollectionsUnified" -> Dependency.of(
+        "io.github.ghostbuster91.scalafix-unified",
+        s"unified_$binaryVersion",
+        "latest.release",
+      ),
+      "UseNamedParameters" -> Dependency.of(
+        "com.github.jatcwang",
+        s"scalafix-named-params_$binaryVersion",
+        "latest.release",
+      ),
+      "MissingFinal" -> scaluzziDep,
+      "Disable" -> scaluzziDep,
+      "AddExplicitImplicitTypes" -> scalafixUnifiedDep,
+      "AddLambdaParamParentheses" -> scalafixUnifiedDep,
+      "CirceCodec" -> scalafixUnifiedDep,
+      "DirectoryAndPackageName" -> scalafixUnifiedDep,
+      "DuplicateWildcardImport" -> scalafixUnifiedDep,
+      "ExplicitImplicitTypes" -> scalafixUnifiedDep,
+      "FileNameConsistent" -> scalafixUnifiedDep,
+      "ImplicitValueClass" -> scalafixUnifiedDep,
+      "KindProjector" -> scalafixUnifiedDep,
+      "LambdaParamParentheses" -> scalafixUnifiedDep,
+      "NoElse" -> scalafixUnifiedDep,
+      "ObjectSelfType" -> scalafixUnifiedDep,
+      "RemoveEmptyObject" -> scalafixUnifiedDep,
+      "RemovePureEff" -> scalafixUnifiedDep,
+      "RemoveSamePackageImport" -> scalafixUnifiedDep,
+      "ReplaceSymbolLiterals" -> scalafixUnifiedDep,
+      "Scala3ImportRewrite" -> scalafixUnifiedDep,
+      "Scala3ImportWarn" -> scalafixUnifiedDep,
+      "Scala3Placeholder" -> scalafixUnifiedDep,
+      "ScalaApp" -> scalafixUnifiedDep,
+      "ScalazEitherInfix" -> scalafixUnifiedDep,
+      "SimplifyForYield" -> scalafixUnifiedDep,
+      "ThrowableToNonFatal" -> scalafixUnifiedDep,
+      "UnnecessaryCase" -> scalafixUnifiedDep,
+      "UnnecessaryMatch" -> scalafixUnifiedDep,
+      "UnnecessarySort" -> scalafixUnifiedDep,
+      "UnnecessarySortRewriteConfig" -> scalafixUnifiedDep,
+      "UnnecessarySortRewrite" -> scalafixUnifiedDep,
+      "UnusedConstructorParams" -> scalafixUnifiedDep,
+      "UnusedTypeParams" -> scalafixUnifiedDep,
+      "UnnecessarySemicolon" -> scalafixPixivRule,
+      "ZeroIndexToHead" -> scalafixPixivRule,
+      "CheckIsEmpty" -> scalafixPixivRule,
+      "NonCaseException" -> scalafixPixivRule,
+      "UnifyEmptyList" -> scalafixPixivRule,
+      "SingleConditionMatch" -> scalafixPixivRule,
+    )
+    val depsMaps = depsList.toMap
+    // make sure there are no duplicate rules
+    assert(depsMaps.size == depsList.size, "Found duplicate scalafix rules")
+    depsMaps
+  }
 
 }

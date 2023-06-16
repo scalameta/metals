@@ -2,11 +2,11 @@ package scala.meta.internal.parsing
 
 import java.util
 import java.util.Collections
-import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
 
@@ -14,28 +14,40 @@ import org.eclipse.lsp4j.FoldingRange
 
 final class FoldingRangeProvider(
     val trees: Trees,
-    buffers: Buffers
+    buffers: Buffers,
+    foldOnlyLines: Boolean,
 ) {
 
-  private val foldOnlyLines = new AtomicBoolean(false)
-
-  def setFoldOnlyLines(value: Boolean): Unit = {
-    foldOnlyLines.set(value)
-  }
-
-  def getRangedFor(
+  def getRangedForScala(
       filePath: AbsolutePath
   ): util.List[FoldingRange] = {
     val result = for {
       code <- buffers.get(filePath)
+      if filePath.isScala
       tree <- trees.get(filePath)
     } yield {
-      val revised = Input.VirtualFile(filePath.toString(), code)
-      val fromTree = Input.VirtualFile(filePath.toString(), tree.pos.input.text)
+      val revised = Input.VirtualFile(filePath.toURI.toString(), code)
+      val fromTree =
+        Input.VirtualFile(filePath.toURI.toString(), tree.pos.input.text)
       val distance = TokenEditDistance(fromTree, revised, trees)
-      val extractor = new FoldingRangeExtractor(distance, foldOnlyLines.get())
+      val extractor = new FoldingRangeExtractor(distance, foldOnlyLines)
       extractor.extract(tree)
     }
+    result.getOrElse(util.Collections.emptyList())
+  }
+
+  def getRangedForJava(
+      filePath: AbsolutePath
+  ): util.List[FoldingRange] = {
+    val result = for {
+      code <- buffers.get(filePath)
+      if filePath.isJava
+    } yield {
+      val extractor =
+        new JavaFoldingRangeExtractor(code, foldOnlyLines)
+      extractor.extract().asJava
+    }
+
     result.getOrElse(util.Collections.emptyList())
   }
 }
@@ -57,6 +69,11 @@ final class FoldingRanges(foldOnlyLines: Boolean) {
   def add(kind: String, range: FoldingRange): Unit = {
     range.setKind(kind)
     add(range, adjust = true)
+  }
+
+  def add(kind: String, range: FoldingRange, adjust: Boolean): Unit = {
+    range.setKind(kind)
+    add(range, adjust)
   }
 
   def addAsIs(kind: String, range: FoldingRange): Unit = {

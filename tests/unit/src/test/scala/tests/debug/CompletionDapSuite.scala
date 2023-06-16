@@ -13,7 +13,7 @@ class CompletionDapSuite
     extends BaseDapSuite(
       "debug-completion",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     ) {
 
   assertCompletion(
@@ -27,7 +27,7 @@ class CompletionDapSuite
                              |toRadians: Double
                              |toString(): String
                              |""".stripMargin,
-    expectedEdit = "1.toShort"
+    expectedEdit = "1.toShort",
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -48,11 +48,11 @@ class CompletionDapSuite
     expression = "Preceding(@@)",
     expectedCompletions = """|num = 
                              |args: Array[String]
+                             |Main a
                              |main(args: Array[String]): Unit
-                             |Preceding a.Main
                              |""".stripMargin,
     expectedEdit = "Preceding(num = )",
-    topLines = Some(4)
+    topLines = Some(4),
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -78,7 +78,7 @@ class CompletionDapSuite
          |until(end: Int, step: Int): Range
          |""".stripMargin,
     expectedEdit = "1.until(@@)",
-    topLines = Some(4)
+    topLines = Some(4),
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -94,20 +94,133 @@ class CompletionDapSuite
        |""".stripMargin
   )
 
+  assertCompletion(
+    "issue",
+    expression = ".@@",
+    expectedCompletions = "",
+    expectedEdit = "",
+    topLines = Some(4),
+    noResults = true,
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  case class Preceding(num: Int)
+       |
+       |  def main(args: Array[String]): Unit = {
+       |    val x = 3
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  assertCompletion(
+    "multiline",
+    expression = """|val a = 123
+                    |a.toStri@@""".stripMargin,
+    expectedCompletions = """|toBinaryString: String
+                             |toHexString: String
+                             |toOctalString: String
+                             |toString(): String
+                             |""".stripMargin,
+    expectedEdit = """|val a = 123
+                      |a.toBinaryString""".stripMargin,
+    topLines = Some(4),
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  case class Preceding(num: Int)
+       |
+       |  def main(args: Array[String]): Unit = {
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  assertCompletion(
+    "multiline-longer",
+    expression = """|val a = 123
+                    |val b = 111
+                    |val c = 111
+                    |val d = 111
+                    |a.toStri@@
+                    |1 + 234""".stripMargin,
+    expectedCompletions = """|toBinaryString: String
+                             |toHexString: String
+                             |toOctalString: String
+                             |toString(): String
+                             |""".stripMargin,
+    expectedEdit = """|val a = 123
+                      |val b = 111
+                      |val c = 111
+                      |val d = 111
+                      |a.toBinaryString
+                      |1 + 234
+                      |""".stripMargin,
+    topLines = Some(4),
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  case class Preceding(num: Int)
+       |
+       |  def main(args: Array[String]): Unit = {
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  assertCompletion(
+    "single-dot",
+    expression = "Main.@@",
+    expectedCompletions = """|name: Option[String]
+                             |args: Array[String]
+                             |executionStart: Long
+                             |main(args: Array[String]): Unit
+                             |""".stripMargin,
+    expectedEdit = "Main.name",
+    topLines = Some(4),
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main extends App{
+       |
+       |  val name: Option[String] = Option("Tom")
+       |>>println(name)
+       |
+       |
+       |  System.exit(0)
+       |}
+       |
+       |""".stripMargin
+  )
+
   def assertCompletion(
       name: TestOptions,
       expression: String,
       expectedCompletions: String,
       expectedEdit: String,
       main: Option[String] = None,
-      topLines: Option[Int] = None
+      topLines: Option[Int] = None,
+      noResults: Boolean = false,
   )(
       source: String
   )(implicit loc: Location): Unit = {
     test(name) {
       cleanWorkspace()
 
-      val debugLayout = DebugWorkspaceLayout(source)
+      val debugLayout = DebugWorkspaceLayout(source, workspace)
       val workspaceLayout = QuickBuildLayout(debugLayout.toString, scalaVersion)
       val completer = new Completer(expression)
 
@@ -130,27 +243,31 @@ class CompletionDapSuite
           .take(topLines.getOrElse(targets.size))
           .mkString("\n")
         assertNoDiff(completionItems, expectedCompletions)
-        val firstItem = completer.response.getTargets().head
-        val start = firstItem.getStart()
-        val originalExpression =
-          expression
-            .replace("@@", "")
-        val fullResult = originalExpression.substring(0, start) +
-          firstItem.getText() +
-          originalExpression.substring(start + firstItem.getLength())
+        completer.response.getTargets().headOption match {
+          case Some(firstItem) =>
+            val start = firstItem.getStart()
+            val originalExpression =
+              expression
+                .replace("@@", "")
+            val fullResult = originalExpression.substring(0, start) +
+              firstItem.getText() +
+              originalExpression.substring(start + firstItem.getLength())
 
-        val selection = Option(firstItem.getSelectionStart())
+            val selection = Option(firstItem.getSelectionStart())
 
-        selection match {
-          case Some(selectionStart) =>
-            val cursorPosition = selectionStart + firstItem.getStart()
-            val resultWithCursor =
-              fullResult.substring(0, cursorPosition) +
-                "@@" +
-                fullResult.substring(cursorPosition)
-            assertNoDiff(resultWithCursor, expectedEdit)
-          case None =>
-            assertNoDiff(fullResult, expectedEdit)
+            selection match {
+              case Some(selectionStart) =>
+                val cursorPosition = selectionStart + firstItem.getStart()
+                val resultWithCursor =
+                  fullResult.substring(0, cursorPosition) +
+                    "@@" +
+                    fullResult.substring(cursorPosition)
+                assertNoDiff(resultWithCursor, expectedEdit)
+              case None =>
+                assertNoDiff(fullResult, expectedEdit)
+            }
+          case _ =>
+            assert(noResults, "There were no completions returned")
         }
       }
     }

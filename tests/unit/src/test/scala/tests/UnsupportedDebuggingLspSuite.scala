@@ -13,7 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
 
-  override val initializationOptions: Some[InitializationOptions] =
+  override protected def initializationOptions: Some[InitializationOptions] =
     Some(
       // NOTE: Default is fine here since they default to off
       InitializationOptions.Default
@@ -33,7 +33,7 @@ class UnsupportedDebuggingLspSuite
       )
       codeLenses <-
         server
-          .codeLenses("a/src/main/scala/Main.scala")(maxRetries = 3)
+          .codeLensesText("a/src/main/scala/Main.scala")(maxRetries = 3)
           .withTimeout(5, TimeUnit.SECONDS)
           .transform(Success(_))
     } yield {

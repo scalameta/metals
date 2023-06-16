@@ -35,12 +35,12 @@ class BillLspSuite extends BaseLspSuite("bill") {
           | required: Int
           |  val x: Int = ""
           |               ^^
-        """.stripMargin
+        """.stripMargin,
       )
       _ <- server.didSave("src/com/App.scala")(_ => "object App")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        ""
+        "",
       )
     } yield ()
   }
@@ -65,11 +65,11 @@ class BillLspSuite extends BaseLspSuite("bill") {
           |true
         """.stripMargin
       )
-      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer.id)
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = {
         val logs = workspace
-          .resolve(Directories.log)
+          .resolve(Bill.logName)
           .readText
           .linesIterator
           .filter(_.startsWith("trace:"))
@@ -81,7 +81,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
           """|trace: initialize
              |trace: shutdown
              |trace: initialize
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
     } yield ()
@@ -101,11 +101,11 @@ class BillLspSuite extends BaseLspSuite("bill") {
           |true
         """.stripMargin
       )
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = {
         val logs = workspace
-          .resolve(Directories.log)
+          .resolve(Bill.logName)
           .readText
           .linesIterator
           .filter(_.startsWith("trace:"))
@@ -121,7 +121,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
              |trace: initialize
              |trace: shutdown
              |trace: initialize
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
     } yield ()
@@ -153,12 +153,12 @@ class BillLspSuite extends BaseLspSuite("bill") {
           | required: Int
           |  val x: Int = ""
           |               ^^
-        """.stripMargin
+        """.stripMargin,
       )
       _ <- server.didSave("src/com/App.scala")(_ => "object App")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        ""
+        "",
       )
       _ = {
         val logs = workspace
@@ -173,7 +173,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
           // response from the build server before sending "initialize".
           """|trace: initialize
              |trace: initialize
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
     } yield ()
@@ -201,9 +201,9 @@ class BillLspSuite extends BaseLspSuite("bill") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          Messages.SelectBspServer.message,
-          Messages.CheckDoctor.allProjectsMisconfigured
-        ).mkString("\n")
+          Messages.BspSwitch.message,
+          Messages.CheckDoctor.allProjectsMisconfigured,
+        ).mkString("\n"),
       )
     } yield ()
   }

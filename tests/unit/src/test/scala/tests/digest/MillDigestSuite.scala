@@ -17,16 +17,16 @@ class MillDigestSuite extends BaseDigestSuite {
        |/build.sc
        |import mill._, scalalib._
        |object foo extends ScalaModule {
-       |  def scalaVersion = "${V.scala212}"
+       |  def scalaVersion = "${V.scala213}"
        |}
     """.stripMargin,
     s"""
        |/build.sc
        |import mill._, scalalib._
        |object foo extends ScalaModule {
-       |  def scalaVersion = "${V.scala212}"
+       |  def scalaVersion = "${V.scala213}"
        |}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -35,7 +35,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |/build.sc
        |import mill._, scalalib._
        |object foo extends ScalaModule {
-       |  def scalaVersion = "${V.scala212}"
+       |  def scalaVersion = "${V.scala213}"
        |}
     """.stripMargin,
     s"""
@@ -44,9 +44,9 @@ class MillDigestSuite extends BaseDigestSuite {
        | /* This is a multi
        | line comment */
        |object foo extends ScalaModule {
-       |  def scalaVersion = "${V.scala212}"
+       |  def scalaVersion = "${V.scala213}"
        |}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -55,7 +55,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |/build.sc
        |import mill._, scalalib._
        |object foo extends ScalaModule {
-       |  def scalaVersion = "${V.scala212}"
+       |  def scalaVersion = "${V.scala213}"
        |}
     """.stripMargin,
     s"""
@@ -63,9 +63,9 @@ class MillDigestSuite extends BaseDigestSuite {
        |import mill._, scalalib._
        | // this is a comment
        |object foo extends ScalaModule {
-       |  def scalaVersion = "${V.scala212}"
+       |  def scalaVersion = "${V.scala213}"
        |}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -74,7 +74,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |/build.sc
        |import mill._, scalalib._
        |object foo extends ScalaModule {
-       |  def scalaVersion = "${V.scala212}"
+       |  def scalaVersion = "${V.scala213}"
        |}
     """.stripMargin,
     s"""
@@ -83,9 +83,9 @@ class MillDigestSuite extends BaseDigestSuite {
        |
        |object foo extends ScalaModule {
        |
-       | def scalaVersion =    "${V.scala212}"
+       | def scalaVersion =    "${V.scala213}"
        |}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -94,7 +94,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |/build.sc
        |import mill._, scalalib._
        |object foo extends ScalaModule {
-       |  def scalaVersion = "${V.scala212}"
+       |  def scalaVersion = "${V.scala213}"
        |}
     """.stripMargin,
     """
@@ -103,14 +103,14 @@ class MillDigestSuite extends BaseDigestSuite {
       |object foo extends ScalaModule {
       |  def scalaVersion = "2.12.7"
       |}
-    """.stripMargin
+    """.stripMargin,
   )
 
   def project(name: String): String =
     s"""
        |import mill._, scalalib._
        |object $name extends ScalaModule {
-       | def scalaVersion = "${V.scala212}"
+       | def scalaVersion = "${V.scala213}"
        |}
       """.stripMargin
 
@@ -129,7 +129,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |${project("foo")}
        |/sub/other.sc
        |${project("renamed")}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -147,7 +147,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |${project("foo")}
        |/sub/other.sc
        |${project("renamed")}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -165,7 +165,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |${project("foo")}
        |/sub/other.sc
        |${project("renamed")}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -189,7 +189,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |${project("bar")}
        |/sub/sub/other.sc
        |${project("tender")}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -213,7 +213,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |${project("bar")}
        |/sub/sub/other.sc
        |${project("tender")}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -237,7 +237,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |${project("bar")}
        |/sub1/sub2/other.sc
        |${project("tender")}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -259,7 +259,7 @@ class MillDigestSuite extends BaseDigestSuite {
        |${project("bar")}
        |/sub2/other.sc
        |${project("tender")}
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -281,6 +281,6 @@ class MillDigestSuite extends BaseDigestSuite {
        |${project("bar")}
        |/sub1/sub2/other.sc
        |${project("tender")}
-    """.stripMargin
+    """.stripMargin,
   )
 }

@@ -14,23 +14,26 @@ import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
 
 import munit.Ignore
 import munit.Location
+import munit.TestOptions
+import org.eclipse.lsp4j.InitializeResult
 
 /**
  * Full end to end integration tests against a full metals language server.
  */
 abstract class BaseLspSuite(
     suiteName: String,
-    initializer: BuildServerInitializer = QuickBuildInitializer
+    protected val initializer: BuildServerInitializer = QuickBuildInitializer,
 ) extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default
@@ -45,32 +48,94 @@ abstract class BaseLspSuite(
   var server: TestingServer = _
   var client: TestingClient = _
   var workspace: AbsolutePath = _
+  var onStartCompilation: () => Unit = () => ()
 
   protected def initializationOptions: Option[InitializationOptions] = None
 
+  private var useVirtualDocs = false
+  protected val changeSpacesToDash = true
+
+  protected def useVirtualDocuments = useVirtualDocs
+
+  protected def mtagsResolver: MtagsResolver =
+    new TestMtagsResolver
+
   override def afterAll(): Unit = {
     if (server != null) {
-      server.server.cancelAll()
+      server.languageServer.cancelAll()
     }
-    ex.shutdown()
-    sh.shutdown()
   }
 
   def writeLayout(layout: String): Unit = {
     FileLayout.fromString(layout, workspace)
   }
 
-  def initialize(layout: String, expectError: Boolean = false): Future[Unit] = {
+  def writeLayout(layout: String, folderName: String): Unit = {
+    FileLayout.fromString(layout, workspace.resolve(folderName))
+  }
+
+  def initialize(
+      layout: String,
+      expectError: Boolean = false,
+  ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
-    initializer.initialize(workspace, server, client, layout, expectError)
+    initializer.initialize(workspace, server, client, expectError)
+  }
+
+  def initialize(
+      layout: Map[String, String],
+      expectError: Boolean,
+  ): Future[InitializeResult] = {
+    Debug.printEnclosing()
+    layout.foreach { case (folderName, layout) =>
+      writeLayout(layout, folderName)
+    }
+    initializer.initialize(
+      workspace,
+      server,
+      client,
+      expectError,
+      layout.keys.toList,
+    )
   }
 
   def assertConnectedToBuildServer(
       expectedName: String
   )(implicit loc: Location): Unit = {
-    val obtained = server.server.bspSession.get.mainConnection.name
+    val obtained =
+      server.server.bspSession.get.mainConnection.name
     assertNoDiff(obtained, expectedName)
+  }
+
+  def test(
+      testOpts: TestOptions,
+      withoutVirtualDocs: Boolean,
+      maxRetry: Int = 0,
+  )(
+      fn: => Future[Unit]
+  )(implicit loc: Location): Unit = {
+    def functionRetry(retry: Int): Future[Unit] = {
+      fn.recoverWith {
+        case _ if retry > 0 =>
+          cancelServer()
+          newServer(testOpts.name)
+          functionRetry(retry - 1)
+        case e => Future.failed(e)
+      }
+    }
+    if (withoutVirtualDocs) {
+      test(testOpts.withName(s"${testOpts.name}-readonly")) {
+        functionRetry(maxRetry)
+      }
+      test(
+        testOpts
+          .withName(s"${testOpts.name}-virtualdoc")
+          .withTags(Set(TestingServer.virtualDocTag))
+      ) { functionRetry(maxRetry) }
+    } else {
+      test(testOpts)(functionRetry(maxRetry))
+    }
   }
 
   def newServer(workspaceName: String): Unit = {
@@ -78,41 +143,57 @@ abstract class BaseLspSuite(
     val buffers = Buffers()
     val config = serverConfig.copy(
       executeClientCommand = ExecuteClientCommandConfig.on,
-      icons = this.icons
+      icons = this.icons,
     )
+
+    val initOptions = initializationOptions
+      .getOrElse(TestingServer.TestDefault)
+      .copy(isVirtualDocumentSupported = Some(useVirtualDocs))
 
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(
-      workspace,
-      client,
-      buffers,
-      config,
-      bspGlobalDirectories,
-      sh,
-      time,
-      initializationOptions
-    )(ex)
-    server.server.userConfig = this.userConfig
+      workspace = workspace,
+      client = client,
+      buffers = buffers,
+      config = config,
+      initialUserConfig = this.userConfig,
+      bspGlobalDirectories = bspGlobalDirectories,
+      sh = sh,
+      time = time,
+      initializationOptions = initOptions,
+      mtagsResolver = mtagsResolver,
+      onStartCompilation = onStartCompilation,
+    )(
+      ex
+    )
   }
 
+  /**
+   * Cancel the server without cancelling its thread pools.
+   */
   def cancelServer(): Unit = {
     if (server != null) {
-      server.server.cancel()
+      server.languageServer.cancel()
     }
   }
 
   override def beforeEach(context: BeforeEach): Unit = {
     cancelServer()
     if (context.test.tags.contains(Ignore)) return
+    useVirtualDocs = context.test.tags.contains(TestingServer.virtualDocTag)
     newServer(context.test.name)
   }
 
   protected def createWorkspace(name: String): AbsolutePath = {
-    val path = PathIO.workingDirectory
+    val pathToSuite = PathIO.workingDirectory
       .resolve("target")
       .resolve("e2e")
       .resolve(suiteName)
-      .resolve(name.replace(' ', '-'))
+
+    val path =
+      if (changeSpacesToDash)
+        pathToSuite.resolve(name.replace(' ', '-'))
+      else pathToSuite.resolve(name)
 
     Files.createDirectories(path.toNIO)
     path

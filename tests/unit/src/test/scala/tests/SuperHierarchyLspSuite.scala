@@ -2,9 +2,14 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.InitializationOptions
+
 import org.eclipse.lsp4j.Position
 
 class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
 
   test("simple") {
     val code =
@@ -19,8 +24,8 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
       code,
       Map(
         3 -> List("a.A#xxx"),
-        4 -> List("a.C#xxx", "a.A#xxx")
-      )
+        4 -> List("a.C#xxx", "a.A#xxx"),
+      ),
     )
   }
 
@@ -68,12 +73,12 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
         10 -> List("a.C2#xxx", "a.D1#xxx", "a.A#xxx"),
         11 -> List("a.D1#xxx", "a.A#xxx"),
         12 -> List("a.C2#xxx", "a.B3#xxx", "a.A#xxx"),
-        13 -> List("a.B3#xxx", "a.A#xxx")
-      )
+        13 -> List("a.B3#xxx", "a.A#xxx"),
+      ),
     )
   }
 
-  test("with external dep") {
+  test("with external dep", withoutVirtualDocs = true) {
     val code =
       """
         |package a
@@ -92,14 +97,14 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
       code,
       Map(
         1 -> List("io.circe.Decoder#apply"),
-        2 -> List("a.CustomDecoder#apply", "io.circe.Decoder#apply")
-      )
+        2 -> List("a.CustomDecoder#apply", "io.circe.Decoder#apply"),
+      ),
     )
   }
 
   private def checkHierarchy(
       code: String,
-      expectations: Map[Int, List[String]]
+      expectations: Map[Int, List[String]],
   ): Future[Unit] = {
     val header = """
                    |/metals.json
@@ -124,7 +129,7 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
       result <- server.assertSuperMethodHierarchy(
         path,
         expectations.toList,
-        context
+        context,
       )
     } yield result
   }

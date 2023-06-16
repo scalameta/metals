@@ -8,9 +8,9 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsLanguageServer
-import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.MetalsLanguageServer
 
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
@@ -55,7 +55,7 @@ class ServerInitializeBench {
     val client = new TestingClient(path, buffers)
     MetalsLogger.updateDefaultFormat()
     val ec = ExecutionContext.fromExecutorService(ex)
-    val server = new MetalsLanguageServer(ec, sh = sh)
+    val server = new MetalsLanguageServer(ec, sh)
     server.connectToLanguageClient(client)
     val initialize = new InitializeParams
     initialize.setRootUri(path.toURI.toString)

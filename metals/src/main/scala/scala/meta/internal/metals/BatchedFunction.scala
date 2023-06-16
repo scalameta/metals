@@ -22,6 +22,7 @@ final class BatchedFunction[A, B](
     fn: Seq[A] => CancelableFuture[B]
 )(implicit ec: ExecutionContext)
     extends (Seq[A] => Future[B])
+    with Function2[Seq[A], () => Unit, Future[B]]
     with Pauseable {
 
   /**
@@ -34,22 +35,33 @@ final class BatchedFunction[A, B](
    * @return the response from calling the batched function with potentially
    *         previously and/or subsequently batched arguments.
    */
-  def apply(arguments: Seq[A]): Future[B] = {
+  def apply(
+      arguments: Seq[A],
+      callback: () => Unit,
+  ): Future[B] = {
     val promise = Promise[B]()
-    queue.add(Request(arguments, promise))
+    queue.add(Request(arguments, promise, callback))
     runAcquire()
     promise.future
   }
 
-  def apply(argument: A): Future[B] = apply(List(argument))
+  def apply(arguments: Seq[A]): Future[B] = {
+    apply(arguments, () => ())
+  }
+
+  def apply(
+      argument: A
+  ): Future[B] = apply(List(argument), () => ())
 
   override def doUnpause(): Unit = {
     unlock()
   }
 
-  def cancelCurrentRequest(): Unit = {
-    current.get().cancelable.cancel()
+  def cancelAll(): Unit = {
+    queue.clear()
+    unlock()
   }
+
   def currentFuture(): Future[B] = {
     current.get().future
   }
@@ -57,12 +69,16 @@ final class BatchedFunction[A, B](
   private val current = new AtomicReference(
     CancelableFuture[B](
       Future.failed(new NoSuchElementException("BatchedFunction")),
-      Cancelable.empty
+      Cancelable.empty,
     )
   )
 
   private val queue = new ConcurrentLinkedQueue[Request]()
-  private case class Request(arguments: Seq[A], result: Promise[B])
+  private case class Request(
+      arguments: Seq[A],
+      result: Promise[B],
+      callback: () => Unit,
+  )
 
   private val lock = new AtomicBoolean()
   private def unlock(): Unit = {
@@ -90,9 +106,16 @@ final class BatchedFunction[A, B](
     try {
       if (requests.nonEmpty) {
         val args = requests.flatMap(_.arguments)
+        val callbacks = requests.map(_.callback)
         val result = fn(args)
         this.current.set(result)
-        result.future.onComplete { response =>
+        val resultF = for {
+          result <- result.future
+          _ <- Future {
+            callbacks.foreach(cb => cb())
+          }
+        } yield result
+        resultF.onComplete { response =>
           unlock()
           requests.foreach(_.result.complete(response))
         }
@@ -111,7 +134,7 @@ final class BatchedFunction[A, B](
 object BatchedFunction {
   def fromFuture[A, B](fn: Seq[A] => Future[B])(implicit
       ec: ExecutionContext,
-      dummy: DummyImplicit
+      dummy: DummyImplicit,
   ): BatchedFunction[A, B] =
     new BatchedFunction(fn.andThen(CancelableFuture(_)))
 }

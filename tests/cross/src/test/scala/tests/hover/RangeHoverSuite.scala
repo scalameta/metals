@@ -23,9 +23,6 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
-    compat = Map(
-      "3" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
-    )
   )
 
   check(
@@ -42,11 +39,13 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|T
        |override def head: T""".stripMargin.hoverRange,
     compat = Map(
-      "3" -> "def head: T".hoverRange,
+      "3" ->
+        """|T
+           |def head: T""".stripMargin.hoverRange,
       "2.13" ->
         """|T
-           |def head: T""".stripMargin.hoverRange
-    )
+           |def head: T""".stripMargin.hoverRange,
+    ),
   )
 
   check(
@@ -68,9 +67,6 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
-    compat = Map(
-      "3" -> "val l: List[Int]".hoverRange
-    )
   )
 
   check(
@@ -90,14 +86,13 @@ class RangeHoverSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|immutable.IndexedSeq[Int]
-       |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hoverRange,
+    """|IndexedSeq[Int]
+       |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange,
     compat = Map(
-      "2.13" ->
-        """|IndexedSeq[Int]
-           |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange,
-      "3" -> "x: Int".hoverRange
-    )
+      "2.12" ->
+        """|immutable.IndexedSeq[Int]
+           |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hoverRange
+    ),
   )
 
   check(
@@ -123,8 +118,10 @@ class RangeHoverSuite extends BaseHoverSuite {
       "2.13" ->
         """|List[Int]
            |def apply[A](elems: A*): List[A]""".stripMargin.hoverRange,
-      "3" -> "def apply[A](elems: A*): Int".hoverRange
-    )
+      "3" ->
+        """|List[Int]
+           |def apply[A](elems: A*): List[A]""".stripMargin.hoverRange,
+    ),
   )
 
   check(
@@ -146,9 +143,6 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|List[Int]
        |val l: List[Int]""".stripMargin.hoverRange,
-    compat = Map(
-      "3" -> "val l: List[Int]".hoverRange
-    )
   )
 
   check(
@@ -172,8 +166,9 @@ class RangeHoverSuite extends BaseHoverSuite {
        |Int
        |```""".stripMargin.hoverRange,
     compat = Map(
-      "3" -> "def +(x: Int): Int".hoverRange
-    )
+      "3" -> """|Int
+                |def +(x: Int): Int""".stripMargin.hoverRange
+    ),
   )
 
   check(
@@ -191,9 +186,6 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|Int
        |val x: Int""".stripMargin.hoverRange,
-    compat = Map(
-      "3" -> "val x: Int".hoverRange
-    )
   )
 
   check(
@@ -211,9 +203,6 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|Int
        |b: Int""".stripMargin.hoverRange,
-    compat = Map(
-      "3" -> "b: Int".hoverRange
-    )
   )
 
   check(
@@ -235,9 +224,6 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
-    compat = Map(
-      "3" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
-    )
   )
 
   check(
@@ -259,8 +245,38 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
-    compat = Map(
-      "3" -> "def xd: Int".hoverRange
-    )
+  )
+
+  check(
+    "transparent".tag(IgnoreScala2),
+    """|trait Foo
+       |class Bar extends Foo
+       |
+       |transparent inline def foo(i: Int): Foo = new Bar
+       |val bar = <<%<%foo(1)%>%>>
+       |""".stripMargin,
+    """|Bar
+       |inline transparent def foo(i: Int): Foo""".stripMargin.hoverRange,
+  )
+
+  check(
+    "dep-types".tag(IgnoreScala2),
+    """|trait A
+       |object A1 extends A
+       |
+       |trait Foo:
+       |  type Out
+       |  def out: Out
+       |
+       |def fooOut(f: Foo): f.Out = f.out
+       |
+       |object FooA1 extends Foo:
+       |  type Out = A1.type
+       |  def out = A1
+       |
+       |val x = <<%<%fooOut(FooA1)%>%>>
+       |""".stripMargin,
+    """|A1.type
+       |def fooOut(f: Foo): f.Out""".stripMargin.hoverRange,
   )
 }

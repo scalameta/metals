@@ -4,8 +4,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Term
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -19,7 +20,7 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
   private def convert(
       block: Term.Block,
       patternMatch: Term.Match,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Seq[l.CodeAction] = patternMatch match {
     case Term.Match(Term.Placeholder(), head :: _) =>
       val lines = block.pos.input.text.split("\n")
@@ -38,7 +39,7 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
       val previousIndent = " " * previousIndentSize
       val baseIndentSize = caseIndentSize - previousIndentSize
 
-      val range = patternMatch.pos.toLSP
+      val range = patternMatch.pos.toLsp
       // if pattern match is in different line than map block overwrite indent
       if (!patternMatchStartAtBlockLine)
         range.getStart.setCharacter(0)
@@ -68,14 +69,14 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
         }
 
       val edits = List(new l.TextEdit(range, text))
-      val codeAction = new l.CodeAction()
-      codeAction.setTitle(PatternMatchRefactor.convertPatternMatch)
-      codeAction.setKind(this.kind)
-      codeAction.setEdit(
-        new l.WorkspaceEdit(
-          Map(path.toURI.toString -> edits.asJava).asJava
+
+      val codeAction =
+        CodeActionBuilder.build(
+          title = PatternMatchRefactor.convertPatternMatch,
+          kind = this.kind,
+          changes = List(path -> edits),
         )
-      )
+
       Seq(codeAction)
     case _ => Seq.empty
   }
@@ -87,20 +88,24 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val blockWithOnlyMatch: Term.Block => Boolean = {
-      case Term.Block(Term.Match(_) :: Nil) => true
+    val isAnonymousFunctionWithMatch: Term.AnonymousFunction => Boolean = {
+      case Term.AnonymousFunction(Term.Match(_)) => true
       case _ => false
     }
 
     val codeAction = trees
-      .findLastEnclosingAt[Term.Block](
+      .findLastEnclosingAt[Term.AnonymousFunction](
         path,
         range.getStart(),
-        blockWithOnlyMatch
+        isAnonymousFunctionWithMatch,
       )
       .map {
-        case block @ Term.Block((head: Term.Match) :: Nil) =>
-          convert(block, head, path)
+        case func @ Term.AnonymousFunction(head: Term.Match) =>
+          func.parent match {
+            case Some(block: Term.Block) =>
+              convert(block, head, path)
+            case _ => Nil
+          }
         case _ => Nil
       }
       .getOrElse(Nil)

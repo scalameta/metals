@@ -59,13 +59,20 @@ object MetalsTestEnrichments {
       } {
         val input = source.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        SemanticdbDefinition.foreach(input, dialect) {
+        val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+        val includeMembers =
+          wsp.workspace.extension != "zip" && wsp.workspace.extension != "jar"
+        SemanticdbDefinition.foreach(input, dialect, includeMembers) {
           case defn @ SemanticdbDefinition(info, _, _) =>
-            if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-              symbols += defn.toCached
+            if (info.isExtension) {
+              methodSymbols += defn.toCached
+            } else {
+              if (info.kind.isRelevantKind) {
+                symbols += defn.toCached
+              }
             }
-        }
-        wsp.didChange(source, symbols)
+        }(m.internal.metals.EmptyReportContext)
+        wsp.didChange(source, symbols.toSeq, methodSymbols.toSeq)
       }
     }
     def indexLibraries(libraries: Seq[Library]): Unit = {
@@ -84,36 +91,39 @@ object MetalsTestEnrichments {
         Nil.asJava,
         Nil.asJava,
         Nil.asJava,
-        new BuildTargetCapabilities(true, true, true)
+        new BuildTargetCapabilities(true, true, true),
       )
       val scalaTarget = new ScalaBuildTarget(
         "org.scala-lang",
         BuildInfo.scalaVersion,
         BuildInfo.scalaVersion.split('.').take(2).mkString("."),
         ScalaPlatform.JVM,
-        Nil.asJava
+        Nil.asJava,
       )
       val gson = new Gson
       val data = gson.toJsonTree(scalaTarget)
       buildTarget.setData(data)
       val result = new WorkspaceBuildTargetsResult(List(buildTarget).asJava)
-      wsp.buildTargets.addWorkspaceBuildTargets(result)
+      val data0 = new m.internal.metals.TargetData
+      data0.addWorkspaceBuildTargets(result)
       val item = new ScalacOptionsItem(
         bti,
         Nil.asJava,
         libraries.flatMap(_.classpath.entries).map(_.toURI.toString).asJava,
-        ""
+        "",
       )
-      wsp.buildTargets.addScalacOptions(
-        new ScalacOptionsResult(List(item).asJava)
+      data0.addScalacOptions(
+        new ScalacOptionsResult(List(item).asJava),
+        None,
       )
+      wsp.buildTargets.addData(data0)
     }
   }
   implicit class XtensionTestLspRange(range: l.Range) {
     def formatMessage(
         severity: String,
         message: String,
-        input: m.Input
+        input: m.Input,
     ): String = {
       try {
         val start = range.getStart
@@ -123,7 +133,7 @@ object MetalsTestEnrichments {
           start.getLine,
           start.getCharacter,
           end.getLine,
-          end.getCharacter
+          end.getCharacter,
         )
         pos.formatMessage(severity, message)
       } catch {
@@ -141,7 +151,7 @@ object MetalsTestEnrichments {
       diag.getRange.formatMessage(
         diag.getSeverity.toString.toLowerCase(),
         diag.getMessage,
-        input
+        input,
       )
     }
   }
@@ -154,7 +164,7 @@ object MetalsTestEnrichments {
     def toPositionParams(
         identifier: TextDocumentIdentifier
     ): TextDocumentPositionParams = {
-      val range = token.pos.toLSP
+      val range = token.pos.toLsp
       val start = range.getStart
       new TextDocumentPositionParams(identifier, start)
     }
@@ -172,13 +182,13 @@ object MetalsTestEnrichments {
             startRange.getLine,
             startRange.getCharacter,
             startRange.getLine,
-            startRange.getCharacter
+            startRange.getCharacter,
           )
         ),
         // include end line for testing purposes
         symbol =
           s"${info.getContainerName}${info.getName}(${info.getKind}):${endRange.getLine + 1}",
-        role = s.SymbolOccurrence.Role.DEFINITION
+        role = s.SymbolOccurrence.Role.DEFINITION,
       )
     }
   }

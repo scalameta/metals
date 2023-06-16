@@ -34,7 +34,7 @@ class ClasspathIndexingBench {
   def run(): Unit = {
     ClasspathSearch.fromClasspath(
       classpath,
-      new ExcludedPackagesHandler(None).isExcludedPackage
+      ExcludedPackagesHandler.default,
     )
   }
 

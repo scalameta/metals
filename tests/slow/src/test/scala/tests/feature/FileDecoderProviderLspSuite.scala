@@ -1,12 +1,21 @@
 package tests.feature
 
+import java.net.URLEncoder
+import java.nio.file.Path
+
+import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions
 import tests.BaseLspSuite
+import tests.QuickBuildLayout
+import tests.SbtBuildLayout
+import tests.SbtServerInitializer
 
-class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
+class FileDecoderProviderLspSuite
+    extends BaseLspSuite("fileDecoderProvider")
+    with FileDecoderProviderLspSpec {
 
   check(
     "tasty-single",
@@ -23,7 +32,56 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/scala/Main.scala",
     None,
     "tasty-decoded",
-    Right(FileDecoderProviderLspSuite.tastySingle)
+    Right(FileDecoderProviderLspSuite.tastySingle),
+  )
+
+  check(
+    "tasty-single-not-for-scala2",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala213}"
+        |  }
+        |}
+        |/app/src/main/scala/Main.scala
+        |package foo.bar.example
+        |object Main
+        |""".stripMargin,
+    "app/src/main/scala/Main.scala",
+    None,
+    "tasty-decoded",
+    Left("Decoding tasty is only supported in Scala 3 for now."),
+  )
+
+  check(
+    "decode-jar",
+    s"""
+       |/metals.json
+       |{
+       |  "a": {
+       |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala213}",
+       |    "libraryDependencies": [
+       |      "ch.epfl.scala:com-microsoft-java-debug-core:0.21.0+1-7f1080f1"
+       |    ]
+       |  }
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |package a
+       |import com.microsoft.java.debug.core.LoggerFactory
+       |
+       |object Main {
+       |  val a : LoggerFactory = null
+       |  println(a)
+       |}
+       |""".stripMargin,
+    "a/src/main/scala/a/Main.scala",
+    None,
+    "file-decode",
+    Right(FileDecoderProviderLspSuite.LoggerFactoryJarFile),
+    customUri = Some(
+      // uri is encoded because coursier encodes it - this is not Metals/BSP encoding it.
+      s"jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/ch/epfl/scala/com-microsoft-java-debug-core/0.21.0%2B1-7f1080f1/com-microsoft-java-debug-core-0.21.0%2B1-7f1080f1-sources.jar!/com/microsoft/java/debug/core/LoggerFactory.java"
+    ),
   )
 
   check(
@@ -42,7 +100,7 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Foo.tasty"),
     "tasty-decoded",
-    Right(FileDecoderProviderLspSuite.tastyMultiple)
+    Right(FileDecoderProviderLspSuite.tastyMultiple),
   )
 
   check(
@@ -61,11 +119,11 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Main$package.tasty"),
     "tasty-decoded",
-    Right(FileDecoderProviderLspSuite.tastyToplevel)
+    Right(FileDecoderProviderLspSuite.tastyToplevel),
   )
 
   check(
-    "javap",
+    "cfr",
     s"""|/metals.json
         |{
         |  "app": {
@@ -79,8 +137,146 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
         |""".stripMargin,
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Foo.class"),
+    "cfr",
+    Right(FileDecoderProviderLspSuite.cfr),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION.",
+        ),
+  )
+
+  check(
+    "cfr-java",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/java/foo/bar/example/Main.java
+        |package foo.bar.example;
+        |class Main {}
+        |""".stripMargin,
+    "app/src/main/java/foo/bar/example/Main.java",
+    None,
+    "cfr",
+    Right(FileDecoderProviderLspSuite.cfrJava),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION.",
+        ),
+  )
+
+  check(
+    "cfr-missing",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/java/foo/bar/example/Main.java
+        |package foo.bar.example.not.here;
+        |class Main {}
+        |""".stripMargin,
+    "app/src/main/java/foo/bar/example/Main.java",
+    None,
+    "cfr",
+    Left(FileDecoderProviderLspSuite.cfrMissing),
+    str =>
+      str
+        .replace("\\", "/")
+        .replaceAll(
+          "[\\s\\S]*(Can't load the class specified:)[\\s]*(org.benf.cfr.reader.util.CannotLoadClassException:.*foo\\/bar\\/example\\/Main\\.class)[\\s\\S]*",
+          "$1$2",
+        ),
+  )
+
+  check(
+    "cfr-toplevel",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/scala/Main.scala
+        |package foo.bar.example
+        |class Foo
+        |class Bar
+        |def foo(): Unit = ()
+        |""".stripMargin,
+    "app/src/main/scala/Main.scala",
+    Some("foo/bar/example/Main$package.class"),
+    "cfr",
+    Right(FileDecoderProviderLspSuite.cfrToplevel),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION.",
+        ),
+  )
+
+  check(
+    "javap-java",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/java/foo/bar/example/Main.java
+        |package foo.bar.example;
+        |class Main {}
+        |""".stripMargin,
+    "app/src/main/java/foo/bar/example/Main.java",
+    None,
     "javap",
-    Right(FileDecoderProviderLspSuite.javap)
+    Right(FileDecoderProviderLspSuite.javapJava),
+  )
+
+  check(
+    "javap-missing",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/java/foo/bar/example/Main.java
+        |package foo.bar.example.not.here;
+        |class Main {}
+        |""".stripMargin,
+    "app/src/main/java/foo/bar/example/Main.java",
+    None,
+    "javap",
+    Left(FileDecoderProviderLspSuite.javapMissing),
+  )
+
+  check(
+    "javap",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/scala/Main.scala
+        |package foo.bar.example
+        |class Foo {
+        |  private final def foo: Int = 42
+        |}
+        |class Bar
+        |""".stripMargin,
+    "app/src/main/scala/Main.scala",
+    Some("foo/bar/example/Foo.class"),
+    "javap",
+    Right(FileDecoderProviderLspSuite.javap),
   )
 
   check(
@@ -100,7 +296,7 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Main$package.class"),
     "javap",
-    Right(FileDecoderProviderLspSuite.javapToplevel)
+    Right(FileDecoderProviderLspSuite.javapToplevel),
   )
 
   check(
@@ -113,14 +309,46 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
         |}
         |/app/src/main/scala/Main.scala
         |package foo.bar.example
-        |class Foo
+        |class Foo {
+        |  private final def foo: Int = 42
+        |}
         |class Bar
         |""".stripMargin,
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Foo.class"),
     "javap-verbose",
     Right(FileDecoderProviderLspSuite.javapVerbose),
-    str => str.substring(str.indexOf("Compiled from"), str.length())
+    str => str.substring(str.indexOf("Compiled from"), str.length()),
+  )
+
+  check(
+    "semanticdb-jar-compact",
+    s"""
+       |/metals.json
+       |{
+       |  "a": {
+       |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala213}",
+       |    "libraryDependencies": ["org.scalameta::munit:0.7.29"]
+       |  }
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |package a
+       |import munit.Printable
+       |
+       |object Main {
+       |  val a : Printable = null
+       |  println(a)
+       |}
+       |""".stripMargin,
+    "a/src/main/scala/a/Main.scala",
+    None,
+    "decode",
+    Right(
+      FileDecoderProviderLspSuite.PrintableSemanticDBFile(coursierCacheDir)
+    ),
+    customUri = Some(
+      s"metalsDecode:jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29-sources.jar!/munit/Printable.scala.semanticdb-compact"
+    ),
   )
 
   check(
@@ -139,7 +367,7 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/scala/Main.scala",
     None,
     "semanticdb-compact",
-    Right(FileDecoderProviderLspSuite.semanticdbCompact)
+    Right(FileDecoderProviderLspSuite.semanticdbCompact),
   )
 
   check(
@@ -160,8 +388,108 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/scala/Main.scala",
     None,
     "semanticdb-detailed",
-    Right(FileDecoderProviderLspSuite.semanticdbDetailed)
+    Right(FileDecoderProviderLspSuite.semanticdbDetailed),
   )
+
+  checkBuildTarget(
+    "buildtarget",
+    QuickBuildLayout(
+      s"""|/metals.json
+          |{
+          |  "a[2.13.8]": {
+          |    "scalaVersion": "${V.scala3}"
+          |  },
+          |  "b": {
+          |    "scalaVersion": "${V.scala3}"
+          |  }
+          |}
+          |/a[2.13.8]/src/main/scala/Main.scala
+          |package a
+          |class A {
+          |  def foo(): Unit = ()
+          |}
+          |/b/src/main/scala/Main.scala
+          |package b
+          |class B {
+          |  def foo(): Unit = ()
+          |}
+          |""".stripMargin,
+      V.scala3,
+    ),
+    "a[2.13.8]", // buildTarget, see: SbtBuildLayout
+    Right(FileDecoderProviderLspSuite.buildTargetResponse),
+    result =>
+      FileDecoderProviderLspSuite.filterSections(
+        result,
+        Set("Target", "Scala Version", "Base Directory"),
+      ),
+  )
+
+}
+
+class FileDecoderProviderSbtLspSuite
+    extends BaseLspSuite("sbtFileDecoderProvider", SbtServerInitializer)
+    with FileDecoderProviderLspSpec {
+
+  checkBuildTarget(
+    "sbt-buildtarget",
+    SbtBuildLayout(
+      s"""|/a/src/main/scala/Main.scala
+          |package a
+          |class A {
+          |  def foo(): Unit = ()
+          |}
+          |/b/src/main/scala/Main.scala
+          |package b
+          |class B {
+          |  def foo(): Unit = ()
+          |}
+          |""".stripMargin,
+      V.scala3,
+    ),
+    "a", // buildTarget, see: SbtBuildLayout
+    Right(FileDecoderProviderLspSuite.sbtBuildTargetResponse),
+    result =>
+      FileDecoderProviderLspSuite.filterSections(
+        result,
+        Set("Target", "Scala Version", "Base Directory", "Source Directories"),
+      ),
+  )
+}
+
+trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
+
+  /**
+   * @param expected - we can use "@workspace" to represent the workspace directory
+   *                  (can't receive it via params because it will be set at "initialize" request)
+   */
+  def checkBuildTarget(
+      testName: TestOptions,
+      input: String,
+      buildTarget: String,
+      expected: Either[String, String],
+      transformResult: String => String = identity,
+  ): Unit = {
+    test(testName) {
+      for {
+        _ <- initialize(input)
+        result <- server.executeDecodeFileCommand(
+          FileDecoderProvider
+            .createBuildTargetURI(workspace, buildTarget)
+            .toString
+        )
+      } yield {
+        assertEquals(
+          if (result.value != null) Right(transformResult(result.value))
+          else Left(transformResult(result.error)),
+          expected.fold(
+            e => Left(e),
+            v => Right(v.replaceAll("@workspace", workspace.toString)),
+          ),
+        )
+      }
+    }
+  }
 
   def check(
       testName: TestOptions,
@@ -170,7 +498,8 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
       picked: Option[String],
       extension: String,
       expected: Either[String, String],
-      transformResult: String => String = identity
+      transformResult: String => String = identity,
+      customUri: Option[String] = None,
   ): Unit = {
     test(testName) {
       picked.foreach { pickedItem =>
@@ -182,21 +511,36 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
         _ <- initialize(input)
         _ <- server.didOpen(filePath)
         result <- server.executeDecodeFileCommand(
-          s"metalsDecode:file://$workspace/$filePath.$extension"
+          customUri.getOrElse(
+            s"metalsDecode:file://$workspace/$filePath.$extension"
+          )
         )
       } yield {
         assertEquals(
           if (result.value != null) Right(transformResult(result.value))
-          else Left(result.error),
-          expected
+          else Left(transformResult(result.error)),
+          expected,
         )
       }
     }
   }
-
 }
 
 object FileDecoderProviderLspSuite {
+  def filterSections(
+      buildTargetResult: String,
+      sections: Set[String],
+  ): String = {
+    val sep = System.lineSeparator()
+    buildTargetResult
+      .split(s"$sep$sep")
+      .filter { section =>
+        val title = section.split(sep).head
+        sections.contains(title)
+      }
+      .mkString(s"$sep$sep")
+  }
+
   private val tastySingle =
     s"""|Names:
         |   0: ASTs
@@ -301,7 +645,7 @@ object FileDecoderProviderLspSuite {
         |    99:         STRINGconst 39 [app/src/main/scala/Main.scala]
         |   101:
         |
-        | 38 position bytes:
+        | 44 position bytes:
         |   lines: 3
         |   line sizes: 23, 11, 0
         |   positions:
@@ -318,6 +662,9 @@ object FileDecoderProviderLspSuite {
         |        61: 31 .. 31
         |        71: 31 .. 31
         |        77: 31 .. 31
+        |        89: 24 .. 35
+        |        95: 24 .. 24
+        |        99: 24 .. 24
         |
         | source paths:
         |         0: app/src/main/scala/Main.scala
@@ -387,7 +734,7 @@ object FileDecoderProviderLspSuite {
         |    46:         STRINGconst 25 [app/src/main/scala/Main.scala]
         |    48:
         |
-        | 23 position bytes:
+        | 29 position bytes:
         |   lines: 4
         |   line sizes: 23, 9, 9, 0
         |   positions:
@@ -397,6 +744,9 @@ object FileDecoderProviderLspSuite {
         |        15: 30 .. 30
         |        21: 24 .. 24
         |        25: 24 .. 24
+        |        36: 24 .. 33
+        |        42: 24 .. 24
+        |        46: 24 .. 24
         |
         | source paths:
         |         0: app/src/main/scala/Main.scala
@@ -517,7 +867,7 @@ object FileDecoderProviderLspSuite {
         |   112:         STRINGconst 39 [app/src/main/scala/Main.scala]
         |   114:
         |
-        | 43 position bytes:
+        | 50 position bytes:
         |   lines: 4
         |   line sizes: 23, 11, 20, 0
         |   positions:
@@ -537,6 +887,9 @@ object FileDecoderProviderLspSuite {
         |        83: 36 .. 56
         |        87: 47 .. 51
         |        93: 54 .. 56
+        |       102: 36 .. 56
+        |       108: 36 .. 36
+        |       112: 36 .. 36
         |
         | source paths:
         |         0: app/src/main/scala/Main.scala
@@ -545,10 +898,62 @@ object FileDecoderProviderLspSuite {
         | 0 comment bytes:
         |""".stripMargin
 
+  private val cfr =
+    s"""|/*
+        | * Decompiled with CFR VERSION.
+        | */
+        |package foo.bar.example;
+        |
+        |public class Foo {
+        |}
+        |""".stripMargin
+
+  private val cfrJava =
+    s"""|/*
+        | * Decompiled with CFR VERSION.
+        | */
+        |package foo.bar.example;
+        |
+        |class Main {
+        |    Main() {
+        |    }
+        |}
+        |""".stripMargin
+
+  private val cfrMissing =
+    "Can't load the class specified:org.benf.cfr.reader.util.CannotLoadClassException: foo/bar/example/Main.class - java.io.IOException: No such file foo/bar/example/Main.class"
+
+  private val cfrToplevel =
+    s"""|/*
+        | * Decompiled with CFR VERSION.
+        | */
+        |package foo.bar.example;
+        |
+        |import foo.bar.example.Main$$package$$;
+        |
+        |public final class Main$$package {
+        |    public static void foo() {
+        |        Main$$package$$.MODULE$$.foo();
+        |    }
+        |}
+        |""".stripMargin
+
+  private val javapMissing =
+    s"""|Error: class not found: Main.class
+        |""".stripMargin
+
+  private val javapJava =
+    s"""|Compiled from "Main.java"
+        |class foo.bar.example.Main {
+        |  foo.bar.example.Main();
+        |}
+        |""".stripMargin
+
   private val javap =
     s"""|Compiled from "Main.scala"
         |public class foo.bar.example.Foo {
         |  public foo.bar.example.Foo();
+        |  private final int foo();
         |}
         |""".stripMargin
 
@@ -567,7 +972,7 @@ object FileDecoderProviderLspSuite {
         |  flags: (0x0021) ACC_PUBLIC, ACC_SUPER
         |  this_class: #2                          // foo/bar/example/Foo
         |  super_class: #4                         // java/lang/Object
-        |  interfaces: 0, fields: 0, methods: 1, attributes: 3
+        |  interfaces: 0, fields: 0, methods: 2, attributes: 3
         |Constant pool:
         |   #1 = Utf8               foo/bar/example/Foo
         |   #2 = Class              #1             // foo/bar/example/Foo
@@ -580,12 +985,15 @@ object FileDecoderProviderLspSuite {
         |   #9 = Methodref          #4.#8          // java/lang/Object."<init>":()V
         |  #10 = Utf8               this
         |  #11 = Utf8               Lfoo/bar/example/Foo;
-        |  #12 = Utf8               Code
-        |  #13 = Utf8               LineNumberTable
-        |  #14 = Utf8               LocalVariableTable
-        |  #15 = Utf8               SourceFile
-        |  #16 = Utf8               TASTY
-        |  #17 = Utf8               Scala
+        |  #12 = Utf8               foo
+        |  #13 = Utf8               ()I
+        |  #14 = Utf8               Code
+        |  #15 = Utf8               LineNumberTable
+        |  #16 = Utf8               LocalVariableTable
+        |  #17 = Utf8               Signature
+        |  #18 = Utf8               SourceFile
+        |  #19 = Utf8               TASTY
+        |  #20 = Utf8               Scala
         |{
         |  public foo.bar.example.Foo();
         |    descriptor: ()V
@@ -600,10 +1008,24 @@ object FileDecoderProviderLspSuite {
         |      LocalVariableTable:
         |        Start  Length  Slot  Name   Signature
         |            0       5     0  this   Lfoo/bar/example/Foo;
+        |
+        |  private final int foo();
+        |    descriptor: ()I
+        |    flags: (0x0012) ACC_PRIVATE, ACC_FINAL
+        |    Code:
+        |      stack=1, locals=1, args_size=1
+        |         0: bipush        42
+        |         2: ireturn
+        |      LineNumberTable:
+        |        line 3: 0
+        |      LocalVariableTable:
+        |        Start  Length  Slot  Name   Signature
+        |            0       3     0  this   Lfoo/bar/example/Foo;
+        |    Signature: #13                          // ()I
         |}
         |SourceFile: "Main.scala"
         |  TASTY: length = 0x10 (unknown attribute)
-        |   00 70 0D B0 E8 F1 16 00 00 FE 21 61 A1 EB 79 00
+        |   00 81 B7 4A 08 F8 25 E9 00 05 17 CC AA BB 27 80
         |
         |  Scala: length = 0x0 (unknown attribute)
         |
@@ -671,4 +1093,84 @@ object FileDecoderProviderLspSuite {
         |[3:13..3:17) => scala/Unit#
         |""".stripMargin
 
+  val LoggerFactoryJarFile: String =
+    """|/*******************************************************************************
+       | * Copyright (c) 2017 Microsoft Corporation and others.
+       | * All rights reserved. This program and the accompanying materials
+       | * are made available under the terms of the Eclipse Public License v1.0
+       | * which accompanies this distribution, and is available at
+       | * http://www.eclipse.org/legal/epl-v10.html
+       | *
+       | * Contributors:
+       | *     Microsoft Corporation - initial API and implementation
+       | *******************************************************************************/
+       |
+       |package com.microsoft.java.debug.core;
+       |
+       |import java.util.logging.Logger;
+       |
+       |@FunctionalInterface
+       |public interface LoggerFactory {
+       |    Logger create(String name);
+       |}
+       |""".stripMargin
+
+  def PrintableSemanticDBFile(coursierCacheDir: Path): String = {
+    val jarURI = URLEncoder.encode(
+      s"jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29-sources.jar!/munit/Printable.scala"
+    )
+    s"""|$jarURI
+        |${"-" * jarURI.length}
+        |
+        |Summary:
+        |Schema => SemanticDB v4
+        |Uri => $jarURI
+        |Text => non-empty
+        |Language => Scala
+        |Symbols => 4 entries
+        |Occurrences => 8 entries
+        |
+        |Symbols:
+        |munit/Printable# => trait Printable extends AnyRef { +1 decls }
+        |munit/Printable#print(). => abstract method print(out: StringBuilder, indent: Int): Unit
+        |munit/Printable#print().(indent) => param indent: Int
+        |munit/Printable#print().(out) => param out: StringBuilder
+        |
+        |Occurrences:
+        |[0:8..0:13): munit <= munit/
+        |[5:6..5:15): Printable <= munit/Printable#
+        |[6:6..6:11): print <= munit/Printable#print().
+        |[6:12..6:15): out <= munit/Printable#print().(out)
+        |[6:17..6:30): StringBuilder => scala/package.StringBuilder#
+        |[6:32..6:38): indent <= munit/Printable#print().(indent)
+        |[6:40..6:43): Int => scala/Int#
+        |[6:46..6:50): Unit => scala/Unit#
+        |""".stripMargin
+  }
+
+  def buildTargetResponse: String =
+    s"""|Target
+        |  a[2.13.8]
+        |
+        |Scala Version
+        |  ${V.scala3}
+        |
+        |Base Directory
+        |  file://@workspace/a[2.13.8]/""".stripMargin
+
+  def sbtBuildTargetResponse: String =
+    s"""|Target
+        |  a
+        |
+        |Scala Version
+        |  ${V.scala3}
+        |
+        |Base Directory
+        |  file:@workspace/a/
+        |
+        |Source Directories
+        |  @workspace/a/src/main/java
+        |  @workspace/a/src/main/scala
+        |  @workspace/a/src/main/scala-3
+        |  @workspace/a/target/scala-${V.scala3}/src_managed/main (generated)""".stripMargin
 }

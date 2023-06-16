@@ -7,7 +7,7 @@ import org.eclipse.{lsp4j => l}
 object CodeLensesTextEdits {
   def apply(
       lenses: Seq[l.CodeLens],
-      printCommand: Boolean
+      printCommand: Boolean,
   ): Iterable[l.TextEdit] = {
     def convert(line: Int, lenses: Seq[l.CodeLens]): l.TextEdit = {
       val pos = new l.Position(line, 0)

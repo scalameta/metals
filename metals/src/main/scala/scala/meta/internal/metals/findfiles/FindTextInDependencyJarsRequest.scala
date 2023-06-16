@@ -5,7 +5,7 @@ import javax.annotation.Nullable
 case class FindTextInDependencyJarsRequest(
     @Nullable
     options: FindTextInFilesOptions,
-    query: TextSearchQuery
+    query: TextSearchQuery,
 )
 
 case class TextSearchQuery(
@@ -15,12 +15,12 @@ case class TextSearchQuery(
     @Nullable
     isCaseSensitive: java.lang.Boolean,
     @Nullable
-    isWordMatch: java.lang.Boolean
+    isWordMatch: java.lang.Boolean,
 )
 
 case class FindTextInFilesOptions(
     @Nullable
     include: String,
     @Nullable
-    exclude: String
+    exclude: String,
 )

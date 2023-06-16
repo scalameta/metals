@@ -13,7 +13,7 @@ object FileLayout {
     if (!layout.trim.isEmpty) {
       val lines = layout.replace("\r\n", "\n")
       lines
-        .split("(?=\n/)")
+        .split("(?=\n/[^/])")
         .map { row =>
           row.stripPrefix("\n").split("\n", 2).toList match {
             case path :: contents :: Nil =>
@@ -33,7 +33,7 @@ object FileLayout {
   def fromString(
       layout: String,
       root: AbsolutePath = AbsolutePath(Files.createTempDirectory("scalameta")),
-      charset: Charset = StandardCharsets.UTF_8
+      charset: Charset = StandardCharsets.UTF_8,
   ): AbsolutePath = {
     if (!layout.trim.isEmpty) {
       mapFromString(layout).foreach { case (path, contents) =>
@@ -48,7 +48,7 @@ object FileLayout {
           file.toNIO,
           contents.getBytes(charset),
           StandardOpenOption.WRITE,
-          StandardOpenOption.CREATE
+          StandardOpenOption.CREATE,
         )
       }
     }

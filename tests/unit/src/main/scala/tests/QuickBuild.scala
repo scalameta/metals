@@ -70,12 +70,12 @@ case class QuickBuild(
     dependsOn: Array[String],
     additionalSources: Array[String],
     sbtVersion: String,
-    sbtAutoImports: Array[String]
+    sbtAutoImports: Array[String],
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
       id,
-      if (scalaVersion == null) V.scala212
+      if (scalaVersion == null) V.scala213
       else scalaVersion,
       orEmpty(libraryDependencies),
       orEmpty(compilerPlugins),
@@ -83,17 +83,26 @@ case class QuickBuild(
       orEmpty(dependsOn),
       orEmpty(additionalSources),
       sbtVersion,
-      orEmpty(sbtAutoImports)
+      orEmpty(sbtAutoImports),
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
   def scalaBinaryVersion: String =
     ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
   def toBloop(workspace: AbsolutePath): C.Project = {
+    val testFrameworks = {
+      val frameworks = libraryDependencies
+        .map(lib => lib.take(lib.lastIndexOf(":")))
+        .flatMap(QuickBuild.supportedTestFrameworks.get)
+        .toList
+
+      if (frameworks.isEmpty) None
+      else Some(Config.Test(frameworks, Config.TestOptions.empty))
+    }
     val baseDirectory: Path = workspace.resolve(id).toNIO
     val binaryVersion: String = scalaBinaryVersion
     val out: Path = workspace.resolve(".bloop").resolve(id).toNIO
-    val isTest = id.endsWith("-test")
+    val isTest = testFrameworks.nonEmpty
     val classDirectory: Path = {
       val testPrefix = if (isTest) "test-" else ""
       out
@@ -106,34 +115,33 @@ case class QuickBuild(
       "src/main/java",
       "src/main/scala",
       s"src/main/scala-$binaryVersion",
-      s"src/main/scala-$binaryVersion"
+      s"src/main/scala-$binaryVersion",
     ).map(relpath => baseDirectory.resolve(relpath))
     val scalaDependencies =
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         Array(
           s"org.scala-lang:scala-library:2.13.1",
-          s"org.scala-lang:scala3-library_$binaryVersion:$scalaVersion"
+          s"org.scala-lang:scala3-library_$binaryVersion:$scalaVersion",
         )
       } else {
         Array(
           s"org.scala-lang:scala-library:$scalaVersion",
-          s"org.scala-lang:scala-reflect:$scalaVersion"
+          s"org.scala-lang:scala-reflect:$scalaVersion",
         )
       }
-
     val allDependencies = scalaDependencies ++ libraryDependencies
     val allJars = QuickBuild.fetch(
       allDependencies,
       scalaVersion,
       binaryVersion,
-      sources = true
+      sources = true,
     )
     def isSourceJar(jarFile: Path): Boolean = {
       jarFile.getFileName.toString.endsWith("-sources.jar")
     }
     val classpath = classDirectory :: allJars.filterNot(isSourceJar)
     val allPlugins =
-      if (ScalaVersions.isSupportedScalaVersion(scalaVersion))
+      if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion))
         s"org.scalameta:::semanticdb-scalac:${V.semanticdbVersion}" :: compilerPlugins.toList
       else compilerPlugins.toList
     val pluginDependencies = allPlugins.map(plugin =>
@@ -148,7 +156,7 @@ case class QuickBuild(
         val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
         val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
         val cache =
-          if (scalaVersion == V.scala212)
+          if (scalaVersion == V.scala213)
             List("-Ycache-plugin-class-loader:last-modified")
           else List()
         List(
@@ -158,11 +166,11 @@ case class QuickBuild(
             s"-P:semanticdb:failures:warning",
             s"-P:semanticdb:synthetics:on",
             s"-P:semanticdb:sourceroot:$workspace",
-            s"-P:semanticdb:targetroot:$classDirectory"
+            s"-P:semanticdb:targetroot:$classDirectory",
           ),
           plugins,
           cache,
-          scalacOptions.toList
+          scalacOptions.toList,
         ).flatten
       }
     def artifactName(jarFile: Path): String = {
@@ -177,7 +185,7 @@ case class QuickBuild(
             name,
             classifier,
             checksum = None,
-            jar
+            jar,
           )
         }
         C.Module(
@@ -185,21 +193,10 @@ case class QuickBuild(
           name,
           version = "",
           configurations = None,
-          artifacts
+          artifacts,
         )
       }
     val javaHome = Option(Properties.jdkHome).map(Paths.get(_))
-
-    val testFrameworks = {
-      val frameworks = libraryDependencies
-        .map(lib => lib.take(lib.lastIndexOf(":")))
-        .flatMap(QuickBuild.supportedTestFrameworks.get)
-        .toList
-
-      if (frameworks.isEmpty) None
-      else Some(Config.Test(frameworks, Config.TestOptions.empty))
-    }
-
     val tags = if (isTest) Tag.Test :: Nil else Nil
 
     val scalaCompiler =
@@ -236,10 +233,10 @@ case class QuickBuild(
           QuickBuild.fetch(
             Array(
               scalaCompiler,
-              "jline:jline:2.14.6"
+              "jline:jline:2.14.6",
             ),
             scalaVersion,
-            binaryVersion
+            binaryVersion,
           ),
           None,
           setup = Some(
@@ -249,9 +246,9 @@ case class QuickBuild(
               addCompilerToClasspath = false,
               addExtraJarsToClasspath = false,
               manageBootClasspath = true,
-              filterLibraryFromClasspath = true
+              filterLibraryFromClasspath = true,
             )
-          )
+          ),
         )
       ),
       java = Some(C.Java(Nil)),
@@ -262,7 +259,8 @@ case class QuickBuild(
       ),
       resolution = Some(C.Resolution(resolution.toList)),
       resources = None,
-      tags = Some(tags)
+      tags = Some(tags),
+      sourceGenerators = None,
     )
   }
 }
@@ -270,7 +268,11 @@ case class QuickBuild(
 object QuickBuild {
   val supportedTestFrameworks: Map[String, C.TestFramework] = Map(
     "org.scalatest::scalatest" -> Config.TestFramework.ScalaTest,
-    "com.lihaoyi::utest" -> Config.TestFramework(List("utest.runner.Framework"))
+    "com.lihaoyi::utest" -> Config.TestFramework(
+      List("utest.runner.Framework")
+    ),
+    "org.scalameta::munit" -> Config.TestFramework.munit,
+    "junit:junit" -> Config.TestFramework.JUnit,
   )
 
   /**
@@ -281,7 +283,7 @@ object QuickBuild {
   def toDependency(
       module: String,
       scalaVersion: String,
-      scalaBinaryVersion: String
+      scalaBinaryVersion: String,
   ): Dependency =
     module match {
       case Full(org, name, version) =>
@@ -297,17 +299,17 @@ object QuickBuild {
       dependencies: Array[String],
       scalaVersion: String,
       scalaBinaryVersion: String,
-      sources: Boolean = false
+      sources: Boolean = false,
   ): List[Path] =
     fetchDependencies(
       dependencies.iterator
         .map(d => toDependency(d, scalaVersion, scalaBinaryVersion))
         .toList,
-      sources
+      sources,
     )
   def fetchDependencies(
       dependencies: List[Dependency],
-      sources: Boolean = false
+      sources: Boolean = false,
   ): List[Path] = {
     val classifiers =
       if (sources) Set("sources")
@@ -320,12 +322,12 @@ object QuickBuild {
           Repository.ivy2Local(),
           MavenRepository.of(
             "https://oss.sonatype.org/content/repositories/public"
-          )
+          ),
         )
 
     Fetch
       .create()
-      .withRepositories(repositories: _*)
+      .withRepositories(repositories.toSeq: _*)
       .withDependencies(dependencies: _*)
       .withClassifiers(classifiers.asJava)
       .withMainArtifacts()
@@ -339,10 +341,11 @@ object QuickBuild {
   val Half: Regex = "(.+)::(.+):(.+)".r
   val Java: Regex = "(.+):(.+):(.+)".r
   def parseJson(text: String): JsonObject = {
-    new JsonParser().parse(text).getAsJsonObject
+    JsonParser.parseString(text).getAsJsonObject()
   }
 
   def newDigest(workspace: AbsolutePath): Option[(AbsolutePath, String)] = {
+
     val digestFile =
       workspace.resolve(".metals").resolve("quick-build.md5")
     val oldDigest =
@@ -351,7 +354,7 @@ object QuickBuild {
     val newDigest = {
       val digest = MessageDigest.getInstance("MD5")
       digest.update(version.getBytes(StandardCharsets.UTF_8))
-      digest.update(V.scala212.getBytes(StandardCharsets.UTF_8))
+      digest.update(V.scala213.getBytes(StandardCharsets.UTF_8))
       def update(file: AbsolutePath): Unit = {
         if (file.isFile) {
           digest.update(file.readAllBytes)

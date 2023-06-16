@@ -8,8 +8,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.pc.InterruptException
-import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.CancelToken
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -22,20 +22,22 @@ import org.eclipse.{lsp4j => l}
  */
 final class WorkspaceSymbolProvider(
     val workspace: AbsolutePath,
-    statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
     val index: GlobalSymbolIndex,
-    isExcludedPackage: String => Boolean,
-    bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
-) {
+    saveClassFileToDisk: Boolean,
+    excludedPackageHandler: () => ExcludedPackagesHandler,
+    bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
+    classpathSearchIndexer: ClasspathSearch.Indexer =
+      ClasspathSearch.Indexer.default,
+)(implicit rc: ReportContext) {
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
+
+  // symbols for extension methods
+  val inWorkspaceMethods: TrieMap[Path, Seq[WorkspaceSymbolInformation]] =
+    TrieMap.empty[Path, Seq[WorkspaceSymbolInformation]]
   var inDependencies: ClasspathSearch =
-    ClasspathSearch.fromClasspath(
-      Nil,
-      isExcludedPackage,
-      bucketSize
-    )
+    ClasspathSearch.empty
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -51,13 +53,41 @@ final class WorkspaceSymbolProvider(
     }
   }
 
+  def searchExactFrom(
+      queryString: String,
+      path: AbsolutePath,
+      token: CancelToken,
+  ): Seq[l.SymbolInformation] = {
+    val query = WorkspaceSymbolQuery.exact(queryString)
+    val visistor =
+      new WorkspaceSearchVisitor(
+        workspace,
+        query,
+        token,
+        index,
+        saveClassFileToDisk,
+      )
+    val targetId = buildTargets.inverseSources(path)
+    search(query, visistor, targetId)
+    visistor.allResults().filter(_.getName() == queryString)
+  }
+
   def search(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
-      target: Option[BuildTargetIdentifier]
+      target: Option[BuildTargetIdentifier],
   ): SymbolSearch.Result = {
     workspaceSearch(query, visitor, target)
     inDependencies.search(query, visitor)
+  }
+
+  def searchMethods(
+      query: String,
+      visitor: SymbolSearchVisitor,
+      target: Option[BuildTargetIdentifier],
+  ): SymbolSearch.Result = {
+    workspaceMethodSearch(query, visitor, target)
+    SymbolSearch.Result.COMPLETE
   }
 
   def indexClasspath(): Unit = {
@@ -75,10 +105,22 @@ final class WorkspaceSymbolProvider(
 
   def didChange(
       source: AbsolutePath,
-      symbols: Seq[WorkspaceSymbolInformation]
+      symbols: Seq[WorkspaceSymbolInformation],
+      methodSymbols: Seq[WorkspaceSymbolInformation],
   ): Unit = {
     val bloom = Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
+
+    // methodSymbols will be searched when we type `qual.x@@`
+    // where we want to match by prefix-match query.
+    // Do not index by bloom filter for (extension) method symbols here because
+    // - currently, we don't index each prefix of the name to bloom filter, so we can't find `incr` by `i`
+    //   if we index it by bloom filter and lookup against it.
+    // - symbol search will take O(N), if we don't use bloom filter, but
+    //   inWorkspaceMethods stores extension methods only, and the number of symbols (N) are quite limited.
+    //   Therefore, we can expect symbol lookup for extension methods could be fast enough without bloom-filter.
+    if (methodSymbols.nonEmpty)
+      inWorkspaceMethods(source.toNIO) = methodSymbols
   }
 
   def buildTargetSymbols(
@@ -92,24 +134,47 @@ final class WorkspaceSymbolProvider(
   }
 
   private def indexClasspathUnsafe(): Unit = {
-    val packages = new PackageIndex()
-    packages.visitBootClasspath(isExcludedPackage)
-    for {
-      classpathEntry <- buildTargets.allWorkspaceJars
-    } {
-      packages.visit(classpathEntry)
-    }
-    inDependencies = ClasspathSearch.fromPackages(
-      packages,
-      isExcludedPackage,
-      bucketSize
+    val jars = buildTargets.allWorkspaceJars
+    inDependencies = classpathSearchIndexer.index(
+      jars.map(_.toNIO).toSeq,
+      excludedPackageHandler(),
+      bucketSize,
     )
+  }
+
+  private def workspaceMethodSearch(
+      query: String,
+      visitor: SymbolSearchVisitor,
+      id: Option[BuildTargetIdentifier],
+  ): Unit = {
+    for {
+      (path, symbols) <- id match {
+        case None =>
+          inWorkspaceMethods.iterator
+        case Some(target) =>
+          for {
+            source <- buildTargets.buildTargetTransitiveSources(target)
+            symbols <- inWorkspaceMethods.get(source.toNIO)
+          } yield (source.toNIO, symbols)
+      }
+      isDeleted = !Files.isRegularFile(path)
+      _ = if (isDeleted) inWorkspaceMethods.remove(path)
+      if !isDeleted
+      symbol <- symbols
+      if Fuzzy.matches(query, symbol.symbol)
+    }
+      visitor.visitWorkspaceSymbol(
+        path,
+        symbol.symbol,
+        symbol.kind,
+        symbol.range,
+      )
   }
 
   private def workspaceSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
-      id: Option[BuildTargetIdentifier]
+      id: Option[BuildTargetIdentifier],
   ): Unit = {
     for {
       (path, index) <- id match {
@@ -132,24 +197,25 @@ final class WorkspaceSymbolProvider(
         path,
         symbol.symbol,
         symbol.kind,
-        symbol.range
+        symbol.range,
       )
     }
   }
 
   private def searchUnsafe(
       textQuery: String,
-      token: CancelChecker
+      token: CancelChecker,
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     val visitor =
-      new WorkspaceSearchVisitor(workspace, query, token, index)
+      new WorkspaceSearchVisitor(
+        workspace,
+        query,
+        token,
+        index,
+        saveClassFileToDisk,
+      )
     search(query, visitor, None)
     visitor.allResults()
   }
-}
-
-object WorkspaceSymbolProvider {
-  def isRelevantKind(kind: Kind): Boolean =
-    WorkspaceSymbolQuery.isRelevantKind(kind)
 }

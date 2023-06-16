@@ -33,7 +33,7 @@ object NewFileTemplate {
     val cursorMarkersCount = cursorMarker.r.findAllMatchIn(template).length
     require(
       cursorMarkersCount == 1,
-      s"File templates must contain exactly one cursor marker '$cursorMarker'. Found $cursorMarkersCount"
+      s"File templates must contain exactly one cursor marker '$cursorMarker'. Found $cursorMarkersCount",
     )
     new NewFileTemplate(template)
   }

@@ -11,7 +11,50 @@ import org.eclipse.lsp4j.Location
 
 class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
-  def definition(): DefinitionResult = {
+
+  def definition(): DefinitionResult =
+    definition(findTypeDef = false)
+
+  def typeDefinition(): DefinitionResult =
+    definition(findTypeDef = true)
+
+  private def typeSymbol(tree: Tree, pos: Position) = {
+    val expanded = expandRangeToEnclosingApply(pos)
+    if (!tree.isEmpty && expanded.symbol != null) {
+      val tpe =
+        if (expanded.tpe != NoType && expanded.tpe != null) {
+          namedParamSymbol(expanded, pos).map(_.tpe).getOrElse(expanded.tpe)
+        } else expanded.symbol.tpe
+      // typeSymbol also dealiases, which we don't want to do
+      val tpeSym = tpe.widen.finalResultType.typeSymbolDirect
+      if (tpeSym.isTypeParameter)
+        seenFromType(expanded, tpeSym).typeSymbol
+      else if (tpeSym != NoSymbol) tpeSym
+      else tree.symbol
+    } else
+      expanded match {
+        case _: Literal => expanded.tpe.widen.typeSymbol
+        case _ => tree.symbol
+      }
+
+  }
+
+  /**
+   * Handle named parameters, which are lost in typed trees.
+   */
+  private def namedParamSymbol(tree: Tree, pos: Position): Option[Symbol] = {
+    tree match {
+      case TreeApply(fun, _) if !fun.pos.includes(pos) =>
+        locateUntyped(pos) match {
+          case Ident(name) =>
+            tree.symbol.tpe.params.find(_.name == name)
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+
+  private def definition(findTypeDef: Boolean): DefinitionResult = {
     if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
       DefinitionResultImpl.empty
     } else {
@@ -23,32 +66,35 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       typeCheck(unit)
       val pos = unit.position(params.offset())
       val tree = definitionTypedTreeAt(pos)
+      val symbol =
+        if (findTypeDef) typeSymbol(tree, pos)
+        else namedParamSymbol(tree, pos).getOrElse(tree.symbol)
+
       if (
-        tree.symbol == null ||
-        tree.symbol == NoSymbol ||
-        tree.symbol.isErroneous ||
-        tree.symbol.isSynthetic
+        symbol == null ||
+        symbol == NoSymbol ||
+        symbol.isErroneous
       ) {
         DefinitionResultImpl.empty
-      } else if (tree.symbol.hasPackageFlag) {
+      } else if (symbol.hasPackageFlag) {
         DefinitionResultImpl(
-          semanticdbSymbol(tree.symbol),
+          semanticdbSymbol(symbol),
           ju.Collections.emptyList()
         )
       } else if (
-        tree.symbol.pos != null &&
-        tree.symbol.pos.isDefined &&
-        tree.symbol.pos.source.eq(unit.source)
+        symbol.pos != null &&
+        symbol.pos.isDefined &&
+        symbol.pos.source.eq(unit.source)
       ) {
         DefinitionResultImpl(
-          semanticdbSymbol(tree.symbol),
+          semanticdbSymbol(symbol),
           ju.Collections.singletonList(
-            new Location(params.uri().toString(), tree.symbol.pos.toLSP)
+            new Location(params.uri().toString(), symbol.pos.focus.toLsp)
           )
         )
       } else {
         val res = new ju.ArrayList[Location]()
-        tree.symbol.alternatives
+        symbol.alternatives
           .map(semanticdbSymbol)
           .sorted
           .foreach { sym =>

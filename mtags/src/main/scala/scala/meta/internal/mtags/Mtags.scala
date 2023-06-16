@@ -3,12 +3,14 @@ package scala.meta.internal.mtags
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 
-final class Mtags {
+final class Mtags(implicit rc: ReportContext) {
   def totalLinesOfCode: Long = javaLines + scalaLines
   def totalLinesOfScala: Long = scalaLines
   def totalLinesOfJava: Long = javaLines
@@ -17,18 +19,19 @@ final class Mtags {
       dialect: Dialect = dialects.Scala213
   ): List[String] = {
     val language = input.toLanguage
-    if (language.isJava) {
-      // NOTE(olafur): this is incorrect in the following cases:
-      // - the source file has multiple top-level classes, in which case we
-      //   don't index the package private classes.
-      // - if the path is not relative to the source directory, in which case
-      //   the produced symbol is incorrect.
-      val toplevelClass = input.path.stripPrefix("/").stripSuffix(".java") + "#"
-      List(toplevelClass)
-    } else if (language.isScala) {
-      addLines(language, input.text)
+
+    if (language.isJava || language.isScala) {
       val mtags =
-        new ScalaToplevelMtags(input, includeInnerClasses = false, dialect)
+        if (language.isJava)
+          new JavaToplevelMtags(input)
+        else
+          new ScalaToplevelMtags(
+            input,
+            includeInnerClasses = false,
+            includeMembers = false,
+            dialect
+          )
+      addLines(language, input.text)
       mtags
         .index()
         .occurrences
@@ -49,7 +52,9 @@ final class Mtags {
     addLines(language, input.text)
     val result =
       if (language.isJava) {
-        JavaMtags.index(input).index()
+        JavaMtags
+          .index(input, includeMembers = true)
+          .index()
       } else if (language.isScala) {
         ScalaMtags.index(input, dialect).index()
       } else {
@@ -70,7 +75,9 @@ final class Mtags {
   }
 }
 object Mtags {
-  def index(input: Input.VirtualFile, dialect: Dialect): TextDocument = {
+  def index(input: Input.VirtualFile, dialect: Dialect)(implicit
+      rc: ReportContext = EmptyReportContext
+  ): TextDocument = {
     new Mtags().index(input.toLanguage, input, dialect)
   }
 
@@ -87,12 +94,13 @@ object Mtags {
   def allToplevels(
       input: Input.VirtualFile,
       dialect: Dialect
-  ): TextDocument = {
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
     input.toLanguage match {
       case Language.JAVA =>
-        new JavaMtags(input).index()
+        new JavaMtags(input, includeMembers = true).index()
       case Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(input, true, dialect)
+        val mtags =
+          new ScalaToplevelMtags(input, true, includeMembers = true, dialect)
         mtags.index()
       case _ =>
         TextDocument()
@@ -101,7 +109,7 @@ object Mtags {
   def toplevels(
       input: Input.VirtualFile,
       dialect: Dialect = dialects.Scala213
-  ): List[String] = {
+  )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
     new Mtags().toplevels(input, dialect)
   }
 

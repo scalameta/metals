@@ -25,7 +25,7 @@ final class BuildTools(
     workspace: AbsolutePath,
     bspGlobalDirectories: List[AbsolutePath],
     userConfig: () => UserConfiguration,
-    explicitChoiceMade: () => Boolean
+    explicitChoiceMade: () => Boolean,
 ) {
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicity chosen
@@ -36,7 +36,7 @@ final class BuildTools(
   // Bloop since Metals thinks it's in state that's auto-connectable before the
   // user is even prompted.
   def isAutoConnectable: Boolean = {
-    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || isBazel
+    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || (isBsp && isBazel)
   }
   def isBloop: Boolean = {
     hasJsonFile(workspace.resolve(".bloop"))
@@ -63,10 +63,15 @@ final class BuildTools(
     }
   }
   def isMill: Boolean = workspace.resolve("build.sc").isFile
-  def isGradle: Boolean =
-    workspace.resolve("build.gradle").isFile || workspace
-      .resolve("build.gradle.kts")
-      .isFile
+  def isGradle: Boolean = {
+    val defaultGradlePaths = List(
+      "settings.gradle",
+      "settings.gradle.kts",
+      "build.gradle",
+      "build.gradle.kts",
+    )
+    defaultGradlePaths.exists(workspace.resolve(_).isFile)
+  }
   def isMaven: Boolean = workspace.resolve("pom.xml").isFile
   def isPants: Boolean = workspace.resolve("pants.ini").isFile
   def isBazel: Boolean = workspace.resolve("WORKSPACE").isFile
@@ -76,7 +81,7 @@ final class BuildTools(
       SbtBuildTool(workspaceVersion = None, userConfig),
       GradleBuildTool(userConfig),
       MavenBuildTool(userConfig),
-      MillBuildTool(userConfig)
+      MillBuildTool(userConfig),
     )
   }
 
@@ -118,7 +123,7 @@ final class BuildTools(
     if (isSbt) SbtBuildTool.isSbtRelatedPath(workspace, path)
     else if (isGradle) GradleBuildTool.isGradleRelatedPath(workspace, path)
     else if (isMaven) MavenBuildTool.isMavenRelatedPath(workspace, path)
-    else if (isMill) MillBuildTool.isMillRelatedPath(workspace, path)
+    else if (isMill) MillBuildTool.isMillRelatedPath(path)
     else false
   }
 }
@@ -129,6 +134,6 @@ object BuildTools {
       workspace,
       Nil,
       () => UserConfiguration(),
-      explicitChoiceMade = () => false
+      explicitChoiceMade = () => false,
     )
 }

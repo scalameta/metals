@@ -10,7 +10,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 final class DependencySources(conn: () => Connection) {
   def setBuildTarget(
       dependencySource: AbsolutePath,
-      buildTarget: BuildTargetIdentifier
+      buildTarget: BuildTargetIdentifier,
   ): Int = {
     conn().update(
       "merge into dependency_source key(text_document_uri) values (?, ?);"
@@ -28,4 +28,9 @@ final class DependencySources(conn: () => Connection) {
       new BuildTargetIdentifier(rs.getString(1))
     }
   }.headOption
+
+  def clearAll(): Unit = {
+    val statement = conn().prepareStatement("truncate table dependency_source")
+    statement.execute()
+  }
 }

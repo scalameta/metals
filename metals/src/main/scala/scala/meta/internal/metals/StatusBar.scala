@@ -14,7 +14,9 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.config.StatusBarState
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -33,10 +35,10 @@ import org.eclipse.lsp4j.MessageType
  *   as long as the attached `Future[_]` is not completed.
  */
 final class StatusBar(
-    client: () => MetalsLanguageClient,
+    client: MetalsLanguageClient,
     time: Time,
     progressTicks: ProgressTicks = ProgressTicks.braille,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext)
     extends Cancelable {
   def trackBlockingTask[T](message: String)(thunk: => T): T = {
@@ -50,10 +52,10 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (clientConfig.statusBarState == StatusBarState.Off)
+    if (!clientConfig.slowTaskIsOn)
       trackBlockingTask(message)(thunk)
     else {
-      val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
       try {
         thunk
       } catch {
@@ -66,11 +68,18 @@ final class StatusBar(
     }
   }
 
-  def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
-    if (clientConfig.statusBarState == StatusBarState.Off)
+  def trackSlowFuture[T](
+      message: String,
+      thunk: Future[T],
+      onCancel: () => Unit = () => (),
+  ): Future[T] = {
+    if (!clientConfig.slowTaskIsOn)
       trackFuture(message, thunk)
     else {
-      val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
+      task.thenApply { response =>
+        if (response.cancel) onCancel()
+      }
       thunk.onComplete {
         case Failure(exception) =>
           slowTaskFailed(message, exception)
@@ -78,15 +87,16 @@ final class StatusBar(
         case Success(_) =>
           task.cancel(true)
       }
+      thunk
     }
   }
 
   private def slowTaskFailed(message: String, e: Throwable): Unit = {
     scribe.error(s"failed: $message", e)
-    client().logMessage(
+    client.logMessage(
       new MessageParams(
         MessageType.Error,
-        s"$message failed, see metals.log for more details."
+        s"$message failed, see metals.log for more details.",
       )
     )
   }
@@ -95,7 +105,7 @@ final class StatusBar(
       message: String,
       value: Future[T],
       showTimer: Boolean = false,
-      progress: Option[TaskProgress] = None
+      progress: Option[TaskProgress] = None,
   ): Future[T] = {
     items.add(Progress(message, value, showTimer, progress))
     tickIfHidden()
@@ -115,7 +125,7 @@ final class StatusBar(
       sh: ScheduledExecutorService,
       initialDelay: Long,
       period: Long,
-      unit: TimeUnit
+      unit: TimeUnit,
   ): Unit = {
     cancel()
     scheduledFuture =
@@ -148,12 +158,12 @@ final class StatusBar(
               MetalsStatusParams(value.formattedMessage, show = show)
           }
           value.show()
-          client().metalsStatus(params)
+          client.metalsStatus(params)
           isHidden = false
         }
       case None =>
         if (!isHidden && !isActiveMessage) {
-          client().metalsStatus(MetalsStatusParams("", hide = true))
+          client.metalsStatus(MetalsStatusParams("", hide = true))
           isHidden = true
           activeItem = None
         }
@@ -211,7 +221,7 @@ final class StatusBar(
       message: String,
       job: Future[_],
       showTimer: Boolean,
-      taskProgress: Option[TaskProgress]
+      taskProgress: Option[TaskProgress],
   ) extends Item
 
   private var isHidden: Boolean = true

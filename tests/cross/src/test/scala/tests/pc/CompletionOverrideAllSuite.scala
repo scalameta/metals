@@ -1,13 +1,11 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionOverrideAllSuite extends BaseCompletionSuite {
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
-
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
   override def requiresJdkSources: Boolean = true
 
   check(
@@ -26,7 +24,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (2 total)
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   checkEdit(
@@ -58,7 +56,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   check(
@@ -78,7 +76,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (3 total)
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   checkEdit(
@@ -115,7 +113,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   check(
@@ -136,7 +134,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (2 total)
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   checkEdit(
@@ -172,7 +170,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   check(
@@ -189,7 +187,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "",
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   check(
@@ -209,7 +207,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (2 total)
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   checkEdit(
@@ -243,7 +241,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   check(
@@ -263,7 +261,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (3 total)
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   checkEdit(
@@ -299,7 +297,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   check(
@@ -325,7 +323,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (3 total)
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
   )
 
   checkEdit(
@@ -373,6 +371,32 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement")
+    filter = _.contains("Implement"),
+  )
+
+  checkEdit(
+    "java",
+    """|package example
+       |
+       |import java.io.Externalizable
+       |
+       |object Main extends Externalizable {
+       |  def@@ 
+       |}
+       |""".stripMargin,
+    """|package example
+       |
+       |import java.io.Externalizable
+       |import java.io.ObjectOutput
+       |import java.io.ObjectInput
+       |
+       |object Main extends Externalizable {
+       |  def writeExternal(out: ObjectOutput): Unit = ${0:???}
+       |
+       |  def readExternal(in: ObjectInput): Unit = ${0:???}
+       | 
+       |}
+       |""".stripMargin,
+    filter = _.contains("Implement"),
   )
 }

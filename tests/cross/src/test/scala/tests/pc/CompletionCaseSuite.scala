@@ -4,12 +4,8 @@ import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionCaseSuite extends BaseCompletionSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   def paramHint: Option[String] = Some("param-hint")
 
@@ -17,15 +13,6 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     PresentationCompilerConfigImpl().copy(
       _parameterHintsCommand = paramHint
     )
-
-  override val compatProcess: Map[String, String => String] = Map(
-    "2.11" -> { (s: String) =>
-      // The standard library renamed fields of Some/Left/Right for 2.12.0.
-      s.replace("Some(value)", "Some(x)")
-        .replace("Left(value)", "Left(a)")
-        .replace("Right(value)", "Right(b)")
-    }
-  )
 
   check(
     "empty",
@@ -37,7 +24,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -58,7 +45,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    @@
       |  }
       |}""".stripMargin,
-    """|case Bird(name) => pkg
+    """|case _: Animal => pkg
+       |case Bird(name) => pkg
        |case _: Cat => pkg
        |case _: Dog => pkg
        |case Elephant => pkg
@@ -66,7 +54,19 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case _: HasMouth[_] => pkg
        |case HasWings(e) => pkg
        |case Seal => pkg
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|case _: Animal => pkg
+                |case Bird(name) => pkg
+                |case _: Cat => pkg
+                |case _: Dog => pkg
+                |case Elephant => pkg
+                |case _: HasFeet[?, ?] => pkg
+                |case _: HasMouth[?] => pkg
+                |case HasWings(e) => pkg
+                |case Seal => pkg
+                |""".stripMargin
+    ),
   )
 
   check(
@@ -79,7 +79,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -93,7 +93,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -107,7 +107,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -120,7 +120,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case Left(value) => scala.util
        |case Right(value) => scala.util
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -134,7 +134,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case Failure(exception) => scala.util
        |case Success(value) => scala.util
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -155,11 +155,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     """|case Cls(a, b) => `sealed-two`.Outer
        |""".stripMargin,
     compat = Map(
-      // known-direct subclasses doesn't work well in 2.11 apparently.
-      "2.11" -> ""
-    )
+      "3" -> "case Cls(a, b) => sealed-two.Outer"
+    ),
   )
 
+  // TODO: `Left` has conflicting name in Scope, we should fix it so the result is the same as for scala 2
+  // Issue: https://github.com/scalameta/metals/issues/4368
   check(
     "sealed-conflict",
     """
@@ -172,7 +173,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case scala.util.Left(value) =>
        |case Right(value) => scala.util
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -193,7 +194,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    case Failure(exception) => $0
       |  }
       |}""".stripMargin,
-    filter = _.contains("Failure")
+    filter = _.contains("Failure"),
   )
 
   checkEdit(
@@ -219,7 +220,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    case Failure(exception) => $0
       |  }
       |}""".stripMargin,
-    filter = _.contains("Failure")
+    filter = _.contains("Failure"),
   )
 
   check(
@@ -233,7 +234,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -247,7 +248,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -260,7 +261,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |  }
       |}""".stripMargin,
     """|case (Int, Int) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -273,7 +274,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |case (exhaustive) Option[A] (2 cases)
+       |""".stripMargin,
+    compat = Map("3" -> """|case None => scala
+                           |case Some(value) => scala
+                           |case (exhaustive) Option (2 cases)
+                           |""".stripMargin),
   )
 
   check(
@@ -287,7 +293,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -301,7 +307,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -314,7 +320,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |case (exhaustive) Option[A] (2 cases)
+       |""".stripMargin,
+    compat = Map("3" -> """|case None => scala
+                           |case Some(value) => scala
+                           |case (exhaustive) Option (2 cases)
+                           |""".stripMargin),
   )
 
   check(
@@ -327,7 +338,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |case (exhaustive) Option[A] (2 cases)
+       |""".stripMargin,
+    compat = Map("3" -> """|case None => scala
+                           |case Some(value) => scala
+                           |case (exhaustive) Option (2 cases)
+                           |""".stripMargin),
   )
 
   check(
@@ -341,7 +357,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -355,7 +371,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -366,15 +382,15 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    cas@@
       |  }
       |}""".stripMargin,
-    """|case head :: tl => scala.collection.immutable
+    """|case head :: next => scala.collection.immutable
        |case Nil => scala.collection.immutable
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|case head :: next => scala.collection.immutable
+      "2.12" ->
+        """|case head :: tl => scala.collection.immutable
            |case Nil => scala.collection.immutable
            |""".stripMargin
-    )
+    ),
   )
 
   checkEditLine(
@@ -387,7 +403,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     "List(1 -> 2).map { c@@ }",
     "List(1 -> 2).map { case ($0) => }",
     assertSingleItem = false,
-    command = paramHint
+    command = paramHint,
   )
 
   check(
@@ -399,7 +415,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|case (Int, Int) => scala
        |""".stripMargin,
-    topLines = Some(1)
+    topLines = Some(1),
   )
 
   check(
@@ -410,7 +426,10 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "f = : ((Int, Int)) => B",
-    topLines = Some(1)
+    topLines = Some(1),
+    compat = Map(
+      "3" -> "f = : A => B"
+    ),
   )
 
   checkEditLine(
@@ -423,7 +442,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     "List(1).foldLeft(0) { cas@@ }",
     "List(1).foldLeft(0) { case ($0) => }",
     assertSingleItem = false,
-    command = paramHint
+    command = paramHint,
   )
 
   // Apparently, known-direct subclasses does not work so well in 2.11.
@@ -443,7 +462,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "cas@@",
-    "case a :+: b => $0"
+    "case a :+: b => $0",
   )
 
   checkEditLine(
@@ -462,7 +481,216 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "cas@@",
     // Assert we don't use infix syntax because `::` resolves to conflicting symbol in scope.
-    "case Outer.::(a, b) => $0"
+    "case Outer.::(a, b) => $0",
+  )
+
+  check(
+    "scala-enum".tag(IgnoreScala2),
+    """
+      |package example
+      |enum Color:
+      |  case Red, Blue, Green
+      |
+      |object Main {
+      |  val x: Color = ???
+      |  x match
+      |    case@@
+      |}""".stripMargin,
+    """|case Color.Blue =>
+       |case Color.Green =>
+       |case Color.Red =>
+       |""".stripMargin,
+  )
+
+  check(
+    "scala-enum2".tag(IgnoreScala2),
+    """
+      |package example
+      |enum Color:
+      |  case Red, Blue, Green
+      |
+      |object Main {
+      |  val colors = List(Color.Red, Color.Green).map{
+      |    case C@@
+      |  }
+      |}""".stripMargin,
+    """|Color.Blue
+       |Color.Green
+       |Color.Red
+       |""".stripMargin,
+    topLines = Some(3),
+  )
+
+  checkEdit(
+    "scala-enum-with-param".tag(IgnoreScala2),
+    """
+      |package withenum {
+      |enum Foo:
+      |  case Bla, Bar
+      |  case Buzz(arg1: Int, arg2: Int)
+      |}
+      |package example
+      |object Main {
+      |  val x: withenum.Foo = ???
+      |  x match
+      |    case@@
+      |}""".stripMargin,
+    """
+      |import withenum.Foo
+      |
+      |package withenum {
+      |enum Foo:
+      |  case Bla, Bar
+      |  case Buzz(arg1: Int, arg2: Int)
+      |}
+      |package example
+      |object Main {
+      |  val x: withenum.Foo = ???
+      |  x match
+      |    case Foo.Buzz(arg1, arg2) => $0
+      |}""".stripMargin,
+    filter = _.contains("Buzz"),
+  )
+
+  check(
+    "single-case-class".tag(IgnoreScala2),
+    """
+      |package example
+      |case class Foo(a: Int, b: Int)
+      |
+      |object A {
+      |  
+      |  List(Foo(1,2)).map{ cas@@ }
+      |}""".stripMargin,
+    """|case Foo(a, b) => example
+       |""".stripMargin,
+  )
+
+  check(
+    "private-member".tag(IgnoreScala2),
+    """
+      |package example
+      |import scala.collection.immutable.Vector
+      |object A {
+      |  val x: Vector = ???
+      |  x match {
+      |    ca@@  
+      |  }
+      |}""".stripMargin,
+    "",
+  )
+
+  check(
+    "private-member-2".tag(IgnoreScala2),
+    """
+      |package example
+      |object A {
+      |  private enum A:
+      |    case B, C
+      |  def testMe(a: A) = 
+      |    a match
+      |      cas@@
+      |}""".stripMargin,
+    """|case A.B =>
+       |case A.C =>""".stripMargin,
+  )
+
+  check(
+    "same-line",
+    """
+      |object A {
+      |  Option(1) match {
+      |    case Some(a) => cas@@
+      |  }
+      |}""".stripMargin,
+    "",
+  )
+
+  check(
+    "exhaustive-enum-tags".tag(IgnoreScala2),
+    s"""|object Tags:
+        |  trait Hobby
+        |  trait Chore
+        |  trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Activity & (Physical | Chore)): Double = 
+        |  act match
+        |    cas@@
+        |
+        |""".stripMargin,
+    """|case Cleaning =>Activity & Physical & Chore
+       |case DishWashing(amount) => exhaustive-enum-tags.Activity
+       |case Sports(time, intensity) => exhaustive-enum-tags.Activity""".stripMargin,
+  )
+
+  check(
+    "exhaustive-enum-tags2".tag(IgnoreScala2),
+    s"""|object Tags:
+        |  trait Hobby
+        |  trait Chore
+        |  trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Activity & Physical): Double = 
+        |  act match
+        |    cas@@
+        |
+        |""".stripMargin,
+    """|case Cleaning =>Activity & Physical & Chore
+       |case Sports(time, intensity) => exhaustive-enum-tags2.Activity""".stripMargin,
+  )
+
+  check(
+    "exhaustive-enum-tags3".tag(IgnoreScala2),
+    s"""|object Tags:
+        |  sealed trait Hobby
+        |  sealed trait Chore
+        |  sealed trait Physical
+        |
+        |
+        |import Tags.*
+        |
+        |enum Activity:
+        |  case Reading(book: String, author: String) extends Activity, Hobby
+        |  case Sports(time: Long, intensity: Double) extends Activity, Physical, Hobby
+        |  case Cleaning                              extends Activity, Physical, Chore
+        |  case Singing(song: String)                 extends Activity, Hobby
+        |  case DishWashing(amount: Int)              extends Activity, Chore
+        |
+        |import Activity.*
+        |
+        |def energySpend(act: Hobby | Physical): Double =
+        |  act match
+        |    cas@@
+        |
+        |""".stripMargin,
+    """|case Cleaning =>Activity & Physical & Chore
+       |case Reading(book, author) => exhaustive-enum-tags3.Activity
+       |case Singing(song) => exhaustive-enum-tags3.Activity
+       |case Sports(time, intensity) => exhaustive-enum-tags3.Activity""".stripMargin,
   )
 
 }

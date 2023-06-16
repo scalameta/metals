@@ -11,6 +11,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearch.Result
@@ -23,18 +24,21 @@ class StandaloneSymbolSearch(
     classpath: Seq[AbsolutePath],
     sources: Seq[AbsolutePath],
     buffers: Buffers,
-    isExcludedPackage: String => Boolean,
+    excludedPackages: () => ExcludedPackagesHandler,
     trees: Trees,
     buildTargets: BuildTargets,
-    workspaceFallback: Option[SymbolSearch] = None
-) extends SymbolSearch {
+    saveSymbolFileToDisk: Boolean,
+    sourceMapper: SourceMapper,
+    workspaceFallback: Option[SymbolSearch] = None,
+)(implicit rc: ReportContext)
+    extends SymbolSearch {
 
   private val dependencySourceCache =
     new TrieMap[AbsolutePath, ju.List[String]]()
   private val classpathSearch =
     ClasspathSearch.fromClasspath(
-      classpath.toList.map(_.toNIO),
-      isExcludedPackage
+      classpath.map(_.toNIO),
+      excludedPackages(),
     )
 
   private val index = OnDemandSymbolIndex.empty()
@@ -52,21 +56,27 @@ class StandaloneSymbolSearch(
       workspace,
       semanticdbsFallback = None,
       trees,
-      buildTargets
+      buildTargets,
+      saveSymbolFileToDisk,
+      sourceMapper,
     )
 
-  def documentation(symbol: String): ju.Optional[SymbolDocumentation] =
+  def documentation(
+      symbol: String,
+      parents: ParentSymbols,
+  ): ju.Optional[SymbolDocumentation] =
     docs
-      .documentation(symbol)
+      .documentation(symbol, parents)
       .asScala
-      .orElse(workspaceFallback.flatMap(_.documentation(symbol).asScala))
+      .orElse(
+        workspaceFallback.flatMap(_.documentation(symbol, parents).asScala)
+      )
       .asJava
 
   override def definition(x: String, source: URI): ju.List[Location] = {
     val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
     destinationProvider
       .fromSymbol(x, sourcePath)
-      .flatMap(_.toResult)
       .map(_.locations)
       .orElse(workspaceFallback.map(_.definition(x, source)))
       .getOrElse(ju.Collections.emptyList())
@@ -80,7 +90,7 @@ class StandaloneSymbolSearch(
         val input = symDef.path.toInput
         dependencySourceCache.getOrElseUpdate(
           symDef.path,
-          mtags.toplevels(input).asJava
+          mtags.toplevels(input).asJava,
         )
       }
       .orElse(workspaceFallback.map(_.definitionSourceToplevels(sym, source)))
@@ -90,12 +100,22 @@ class StandaloneSymbolSearch(
   def search(
       query: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor
+      visitor: SymbolSearchVisitor,
   ): Result = {
     val res = classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
     workspaceFallback
       .map(_.search(query, buildTargetIdentifier, visitor))
       .getOrElse(res)
+  }
+
+  def searchMethods(
+      query: String,
+      buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor,
+  ): Result = {
+    workspaceFallback
+      .map(_.searchMethods(query, buildTargetIdentifier, visitor))
+      .getOrElse(Result.COMPLETE)
   }
 }
 
@@ -106,17 +126,19 @@ object StandaloneSymbolSearch {
       buffers: Buffers,
       sources: Seq[Path],
       classpath: Seq[Path],
-      isExcludedPackage: String => Boolean,
+      excludedPackages: () => ExcludedPackagesHandler,
       userConfig: () => UserConfiguration,
       trees: Trees,
-      buildTargets: BuildTargets
-  ): StandaloneSymbolSearch = {
+      buildTargets: BuildTargets,
+      saveSymbolFileToDisk: Boolean,
+      sourceMapper: SourceMapper,
+  )(implicit rc: ReportContext): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
         scalaVersion,
         sources.map(AbsolutePath(_)),
         classpath.map(AbsolutePath(_)),
-        userConfig().javaHome
+        userConfig().javaHome,
       )
 
     new StandaloneSymbolSearch(
@@ -124,20 +146,24 @@ object StandaloneSymbolSearch {
       classpathWithExtras,
       sourcesWithExtras,
       buffers,
-      isExcludedPackage,
+      excludedPackages,
       trees,
-      buildTargets
+      buildTargets,
+      saveSymbolFileToDisk,
+      sourceMapper,
     )
   }
   def apply(
       scalaVersion: String,
       workspace: AbsolutePath,
       buffers: Buffers,
-      isExcludedPackage: String => Boolean,
+      excludedPackages: () => ExcludedPackagesHandler,
       userConfig: () => UserConfiguration,
       trees: Trees,
-      buildTargets: BuildTargets
-  ): StandaloneSymbolSearch = {
+      buildTargets: BuildTargets,
+      saveSymbolFileToDisk: Boolean,
+      sourceMapper: SourceMapper,
+  )(implicit rc: ReportContext): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
 
@@ -146,9 +172,11 @@ object StandaloneSymbolSearch {
       classpathWithExtras,
       sourcesWithExtras,
       buffers,
-      isExcludedPackage,
+      excludedPackages,
       trees,
-      buildTargets
+      buildTargets,
+      saveSymbolFileToDisk,
+      sourceMapper,
     )
   }
 
@@ -165,7 +193,7 @@ object StandaloneSymbolSearch {
       scalaVersion: String,
       sources: Seq[AbsolutePath],
       classpath: Seq[AbsolutePath],
-      javaHome: Option[String]
+      javaHome: Option[String],
   ): (Seq[AbsolutePath], Seq[AbsolutePath]) = {
     val missingScala: Boolean = {
       val libraryName =
@@ -177,17 +205,17 @@ object StandaloneSymbolSearch {
     }
 
     (missingScala, JdkSources(javaHome)) match {
-      case (true, None) =>
+      case (true, Left(_)) =>
         val (scalaSources, scalaClasspath) = getScala(scalaVersion)
         (sources ++ scalaSources, classpath ++ scalaClasspath)
-      case (true, Some(absPath)) =>
+      case (true, Right(absPath)) =>
         val (scalaSources, scalaClasspath) = getScala(scalaVersion)
         (
           (scalaSources :+ absPath) ++ sources,
-          classpath ++ scalaClasspath
+          classpath ++ scalaClasspath,
         )
-      case (false, None) => (sources, classpath)
-      case (false, Some(absPath)) =>
+      case (false, Left(_)) => (sources, classpath)
+      case (false, Right(absPath)) =>
         (sources :+ absPath, classpath)
     }
   }

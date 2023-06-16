@@ -1,7 +1,6 @@
 package scala.meta.internal.metals.debug
 
 import java.net.URI
-import java.nio.file.Paths
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTargets
@@ -13,13 +12,19 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 private[debug] final class SourcePathAdapter(
     workspace: AbsolutePath,
-    sources: Set[AbsolutePath],
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    supportVirtualDocuments: Boolean,
 ) {
+  // when virtual documents are supported there is no need to save jars on disk
+  private val saveJarFileToDisk = !supportVirtualDocuments
   private val dependencies = workspace.resolve(Directories.dependencies)
+
   def toDapURI(sourcePath: AbsolutePath): Option[URI] = {
-    if (sources.contains(sourcePath)) Some(sourcePath.toURI)
-    else {
+    if (
+      !supportVirtualDocuments && sourcePath.toNIO.startsWith(
+        dependencies.toNIO
+      )
+    ) {
       // if sourcePath is a dependency source file
       // we retrieve the original source jar and we build the uri innside the source jar filesystem
       for {
@@ -33,28 +38,36 @@ private[debug] final class SourcePathAdapter(
       } yield FileIO.withJarFileSystem(jarFile, create = false)(root =>
         root.resolve(relativePath.toString).toURI
       )
+    } else {
+      Some(sourcePath.toURI)
     }
   }
 
-  def toMetalsPath(sourcePath: String): Option[AbsolutePath] = {
-    val sourceUri = URI.create(sourcePath)
-    sourceUri.getScheme match {
-      case "jar" =>
-        Option(AbsolutePath(Paths.get(sourceUri)).toFileOnDisk(workspace))
-      case "file" => Some(sourcePath.toAbsolutePath)
-      case _ => None
-    }
+  def toMetalsPath(sourcePath: AbsolutePath): Option[AbsolutePath] = try {
+    Some(
+      if (sourcePath.isJarFileSystem)
+        if (saveJarFileToDisk) sourcePath.toFileOnDisk(workspace)
+        else sourcePath
+      else sourcePath
+    )
+  } catch {
+    case e: Throwable =>
+      scribe.error(s"Could not resolve $sourcePath", e)
+      None
   }
 }
 
 private[debug] object SourcePathAdapter {
   def apply(
       buildTargets: BuildTargets,
-      targets: Seq[BuildTargetIdentifier]
+      targets: Seq[BuildTargetIdentifier],
+      supportVirtualDocuments: Boolean,
   ): SourcePathAdapter = {
     val workspace = buildTargets.workspaceDirectory(targets.head).get
-    val sources =
-      targets.flatMap(buildTargets.buildTargetTransitiveSources).toSet
-    new SourcePathAdapter(workspace, sources, buildTargets)
+    new SourcePathAdapter(
+      workspace,
+      buildTargets,
+      supportVirtualDocuments,
+    )
   }
 }

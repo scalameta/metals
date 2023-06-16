@@ -1,12 +1,13 @@
 package docs
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {
-  lazy val snapshot: Snapshot = Snapshot.latest("snapshots")
-  lazy val release: Snapshot = Snapshot.latest("releases")
+  lazy val snapshot: Snapshot = Snapshot.latest("snapshots", "2.13")
+  lazy val release: Snapshot = Snapshot.latest("releases", "2.13")
   def releasesResolverTable: String = {
     <table>
       <thead>
@@ -54,7 +55,20 @@ object Docs {
 
   lazy val stableVersion: String = V.metalsVersion.replaceFirst("\\+.*", "")
   def main(args: Array[String]): Unit = {
-    val out = Paths.get("website", "target", "docs")
+    val target = Paths.get("website", "target")
+
+    val dataOut = target.resolve("data")
+    val docsOut = target.resolve("docs")
+
+    Files.createDirectories(dataOut)
+    Files.write(
+      dataOut.resolve("latests.json"),
+      s"""|{
+          |  "release": "${release.version}",
+          |  "snapshot": "${snapshot.version}"
+          |}""".stripMargin.getBytes(),
+    )
+
     val settings = mdoc
       .MainSettings()
       .withSiteVariables(
@@ -65,13 +79,14 @@ object Docs {
           "SNAPSHOT_DATE" -> snapshot.lastModified.toString,
           "LOCAL_VERSION" -> V.localSnapshotVersion,
           "BLOOP_VERSION" -> V.bloopVersion,
+          "BLOOP_MAVEN_VERSION" -> V.mavenBloopVersion,
           "SBT_BLOOP_VERSION" -> V.sbtBloopVersion,
           "SCALAMETA_VERSION" -> V.scalametaVersion,
           "SCALA211_VERSION" -> V.scala211,
-          "SCALA_VERSION" -> V.scala212
+          "SCALA_VERSION" -> V.scala213,
         )
       )
-      .withOut(out)
+      .withOut(docsOut)
       .withArgs(args.toList)
     val exitCode = mdoc.Main.process(settings)
     if (exitCode != 0) {

@@ -35,7 +35,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -68,7 +68,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -96,7 +96,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   // Test ScalacDiagnostic can capture the multiple lines of diagnostic message.
@@ -129,7 +129,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -153,7 +153,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -181,7 +181,7 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -217,6 +217,89 @@ class ImplementAbstractMembersLspSuite
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
+
+  check(
+    "java",
+    """|package example
+       |
+       |import java.io.Externalizable
+       |
+       |object <<A>> extends Externalizable {
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package example
+       |
+       |import java.io.Externalizable
+       |import java.io.ObjectOutput
+       |import java.io.ObjectInput
+       |
+       |object A extends Externalizable {
+       |
+       |  override def writeExternal(out: ObjectOutput): Unit = ???
+       |
+       |  override def readExternal(in: ObjectInput): Unit = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
+  test("string-type") {
+    val path = "a/src/main/scala/a/Impl.scala"
+    val fullInput =
+      s"""|/metals.json
+          |{ "a": {} }
+          |/a/src/main/scala/a/Service.scala
+          |package a
+          |
+          |trait Service {
+          |  def markdown(mode: "mode"): String
+          |}
+          |
+          |/$path
+          |package a
+          |
+          |object Impl
+          |""".stripMargin
+
+    cleanWorkspace()
+    for {
+      _ <- initialize(fullInput)
+      _ <- server.didOpen(path)
+      _ <- server.didSave(path)(_ => """|package a
+                                        |
+                                        |object Impl extends Service
+                                        |""".stripMargin)
+      codeActions <-
+        server
+          .assertCodeAction(
+            path,
+            """|package a
+               |
+               |object Impl extends <<Service>>
+               |""".stripMargin,
+            s"""|${ImplementAbstractMembers.title}
+                |""".stripMargin,
+            Nil,
+          )
+          .recover { case _: Throwable =>
+            Nil
+          }
+      _ <- client.applyCodeAction(0, codeActions, server)
+      _ = assertNoDiff(
+        server.bufferContents(path),
+        """|package a
+           |
+           |object Impl extends Service {
+           |
+           |  override def markdown(mode: "mode"): String = ???
+           |
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }

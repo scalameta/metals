@@ -14,7 +14,7 @@ class Scalalib {
         Short,
         Double,
         Float,
-        Char
+        Char,
     )
   ](null)
   lst.isInstanceOf[Any]

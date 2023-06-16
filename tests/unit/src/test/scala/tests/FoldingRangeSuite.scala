@@ -3,14 +3,10 @@ package tests
 import java.nio.file.Paths
 import java.util.UUID
 
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.parsing.FoldingRangeProvider
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
@@ -18,17 +14,12 @@ import tests.BuildInfo.testResourceDirectory
 
 abstract class FoldingRangeSuite(
     scalaVersion: String,
-    directory: String
+    directory: String,
+    lineFoldingOnly: Boolean,
 ) extends DirectoryExpectSuite(s"$directory/expect") {
-  private val buffers = Buffers()
-  private val buildTargets = new BuildTargets(_ => None)
-  private val selector =
-    new ScalaVersionSelector(
-      () => UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
-      buildTargets
-    )
-  private val trees = new Trees(buildTargets, buffers, selector)
-  private val foldingRangeProvider = new FoldingRangeProvider(trees, buffers)
+  private val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
+  private val foldingRangeProvider =
+    new FoldingRangeProvider(trees, buffers, lineFoldingOnly)
 
   override def testCases(): List[ExpectTestCase] = {
     val inputDirectory = AbsolutePath(testResourceDirectory)
@@ -47,22 +38,27 @@ abstract class FoldingRangeSuite(
   }
 
   private def obtainFrom(file: InputFile): String = {
-    val scalaSource = file.input.text
+    val source = file.input.text
 
-    val actualRanges = findFoldingRangesFor(scalaSource)
+    val actualRanges = findFoldingRangesFor(source, file.file.extension)
     val edits = RangesTextEdits.fromFoldingRanges(actualRanges)
-    TextEdits.applyEdits(scalaSource, edits)
+    TextEdits.applyEdits(source, edits)
   }
 
   private def findFoldingRangesFor(
-      source: String
+      source: String,
+      extension: String,
   ): java.util.List[l.FoldingRange] = {
-    val path = registerSource(source)
-    foldingRangeProvider.getRangedFor(path)
+    val path = registerSource(source, extension)
+    if (path.isScala) foldingRangeProvider.getRangedForScala(path)
+    else foldingRangeProvider.getRangedForJava(path)
   }
 
-  private def registerSource(source: String): AbsolutePath = {
-    val name = UUID.randomUUID().toString + ".scala"
+  private def registerSource(
+      source: String,
+      extension: String,
+  ): AbsolutePath = {
+    val name = UUID.randomUUID().toString + "." + extension
     val path = AbsolutePath(Paths.get(name))
     buffers.put(path, source)
     path
@@ -70,6 +66,21 @@ abstract class FoldingRangeSuite(
 }
 
 class FoldingRangeScala2Suite
-    extends FoldingRangeSuite(V.scala213, "foldingRange")
+    extends FoldingRangeSuite(
+      V.scala213,
+      "foldingRange",
+      lineFoldingOnly = false,
+    )
 class FoldingRangeScala3Suite
-    extends FoldingRangeSuite(V.scala3, "foldingRange-scala3")
+    extends FoldingRangeSuite(
+      V.scala3,
+      "foldingRange-scala3",
+      lineFoldingOnly = false,
+    )
+
+class FoldingRangeScala3LineFoldingOnlySuite
+    extends FoldingRangeSuite(
+      V.scala3,
+      "foldingRange-scala3-foldLineOnly",
+      lineFoldingOnly = true,
+    )

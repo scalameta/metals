@@ -1,12 +1,9 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionScaladocSuite extends BaseCompletionSuite {
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
   check(
     "methoddef-label",
     """
@@ -15,7 +12,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
       |  def test(x: Int, y: Int): Int = ???
       |}""".stripMargin,
     """|/** */Scaladoc Comment
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -26,7 +23,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
       |  case class(x: Int) {}
       |}""".stripMargin,
     """|/** */Scaladoc Comment
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   // see: https://github.com/scalameta/metals/issues/1941
@@ -37,7 +34,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
       |  /**@@
       |}""".stripMargin,
     """|/** */Scaladoc Comment
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -59,7 +56,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |  def test1(param1: Int, param2: Int): Int = ???
        |  def test2(param1: Int, param2: Int, param3: Int): Int = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -80,7 +77,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |  class Test1(param1: Int, param2: Int) {}
        |  class Test2(param1: Int, param2: Int, param3: Int) {}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -96,7 +93,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    */
        |  val x = 1
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -114,7 +111,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |  // do not calculate scaladoc based on the method
        |  def test(x: Int): Int = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -137,7 +134,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    def nest(y: Int) = ???
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -159,7 +156,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    case class C(y: Int) {}
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -181,7 +178,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    case class C(y: Int) {}
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -201,7 +198,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |  def test1: Int = ???
        |  def test2(param1: Int, param2: Int, param3: Int): Int = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -222,7 +219,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    */
        |  def test(param1: Int, param2: Int): Unit = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -243,7 +240,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    */
        |  def test(param1: Int, param2: Int) = {}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -265,7 +262,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    */
        |  def test[T: Ordering](x: T, y: T): T = if(x < y) x else y
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -284,7 +281,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    */
        |  case class Test[T: Ordering](x: T, y: T) {}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -304,7 +301,7 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    */
        |  case class Test(a: Int, b: String)(c: Long)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -317,6 +314,54 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    * $0
        |    */
        |}
-       |""".stripMargin
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "extension".tag(IgnoreScala2),
+    """|extension (str: String)
+       |  /**@@
+       |  def foo(param1: Int): Int = ???
+       |""".stripMargin,
+    """|extension (str: String)
+       |  /**
+       |    * $0
+       |    *
+       |    * @param param1
+       |    * @return
+       |    */
+       |  def foo(param1: Int): Int = ???
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "anonymous-given".tag(IgnoreScala2),
+    """|/**@@
+       |def foo(param1: Int)(using String): Int = ???
+       |""".stripMargin,
+    """|/**
+       |  * $0
+       |  *
+       |  * @param param1
+       |  * @return
+       |  */
+       |def foo(param1: Int)(using String): Int = ???
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "named-given".tag(IgnoreScala2),
+    """|/**@@
+       |def foo(param1: Int)(using s: String): Int = ???
+       |""".stripMargin,
+    """|/**
+       |  * $0
+       |  *
+       |  * @param param1
+       |  * @param s
+       |  * @return
+       |  */
+       |def foo(param1: Int)(using s: String): Int = ???
+       |""".stripMargin,
   )
 }

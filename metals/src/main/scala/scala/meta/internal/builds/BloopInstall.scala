@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -10,8 +11,8 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
@@ -28,34 +29,43 @@ final class BloopInstall(
     languageClient: MetalsLanguageClient,
     buildTools: BuildTools,
     tables: Tables,
-    shellRunner: ShellRunner
+    shellRunner: ShellRunner,
 )(implicit ec: ExecutionContext) {
 
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(
-      buildTool: BloopInstallProvider
+      buildTool: BloopInstallProvider,
+      isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] = {
-    buildTool.bloopInstall(
-      workspace,
-      languageClient,
-      args => {
-        scribe.info(s"running '${args.mkString(" ")}'")
-        val process = runArgumentsUnconditionally(buildTool, args)
-        process.foreach { e =>
-          if (e.isFailed) {
-            // Record the exact command that failed to help troubleshooting.
-            scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
+    if (isImportInProcess.compareAndSet(false, true)) {
+      buildTool.bloopInstall(
+        workspace,
+        args => {
+          scribe.info(s"running '${args.mkString(" ")}'")
+          val process = runArgumentsUnconditionally(buildTool, args)
+          process.foreach { e =>
+            if (e.isFailed) {
+              // Record the exact command that failed to help troubleshooting.
+              scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
+            }
           }
+          process.onComplete(_ => isImportInProcess.set(false))
+          process
+        },
+      )
+    } else {
+      Future
+        .successful {
+          languageClient.showMessage(ImportAlreadyRunning)
+          WorkspaceLoadedStatus.Dismissed
         }
-        process
-      }
-    )
+    }
   }
 
   private def runArgumentsUnconditionally(
       buildTool: BloopInstallProvider,
-      args: List[String]
+      args: List[String],
   ): Future[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
     val processFuture = shellRunner
@@ -66,9 +76,11 @@ final class BloopInstall(
         buildTool.redirectErrorOutput,
         Map(
           "COURSIER_PROGRESS" -> "disable",
+          // Envs below might be used to customize build/bloopInstall procedure.
+          // Example: you can disable `Xfatal-warnings` scalac option only for Metals.
           "METALS_ENABLED" -> "true",
-          "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion
-        )
+          "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion,
+        ) ++ sys.env,
       )
       .map {
         case ExitCodes.Success => WorkspaceLoadedStatus.Installed
@@ -105,24 +117,26 @@ final class BloopInstall(
   // twice whether to import the build.
   def runIfApproved(
       buildTool: BloopInstallProvider,
-      digest: String
+      digest: String,
+      isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] =
     synchronized {
       oldInstallResult(digest) match {
-        case Some(result) =>
+        case Some(result)
+            if result != WorkspaceLoadedStatus.Duplicate(Status.Requested) =>
           scribe.info(s"skipping build import with status '${result.name}'")
           Future.successful(result)
-        case None =>
+        case _ =>
           for {
             userResponse <- requestImport(
               buildTools,
               buildTool,
               languageClient,
-              digest
+              digest,
             )
             installResult <- {
               if (userResponse.isYes) {
-                runUnconditionally(buildTool)
+                runUnconditionally(buildTool, isImportInProcess)
               } else {
                 // Don't spam the user with requests during rapid build changes.
                 notification.dismiss(2, TimeUnit.MINUTES)
@@ -135,7 +149,7 @@ final class BloopInstall(
 
   private def persistChecksumStatus(
       status: Status,
-      buildTool: BloopInstallProvider
+      buildTool: BloopInstallProvider,
   ): Unit = {
     buildTool.digest(workspace).foreach { checksum =>
       tables.digests.setStatus(checksum, status)
@@ -146,7 +160,7 @@ final class BloopInstall(
       buildTools: BuildTools,
       buildTool: BloopInstallProvider,
       languageClient: MetalsLanguageClient,
-      digest: String
+      digest: String,
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
     tables.digests.setStatus(digest, Status.Requested)
     val (params, yes) =

@@ -1,14 +1,12 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionOverrideSuite extends BaseCompletionSuite {
 
   override def requiresJdkSources: Boolean = true
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def requiresScalaLibrarySources: Boolean = true
 
   checkEdit(
     "basic",
@@ -21,7 +19,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |object Main extends AutoCloseable {
       |  def close(): Unit = ${0:???}
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
@@ -45,7 +43,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |  override def foo(a: Int): Unit = ()
       |  override def foo(a: String): Unit = ${0:???}
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
@@ -64,7 +62,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    filter = _.contains("iterat")
+    filter = _.contains("iterat"),
   )
 
   checkEdit(
@@ -79,20 +77,20 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """
       |object Main {
       |  new scala.Traversable[Int] {
-      |    def foreach[U](f: Int => U): Unit = ${0:???}
+      |    override def foreach[U](f: Int => U): Unit = ${0:???}
       |  }
       |}
       |""".stripMargin,
     compat = Map(
-      "2.13" ->
+      "2.12" ->
         """
           |object Main {
           |  new scala.Traversable[Int] {
-          |    override def foreach[U](f: Int => U): Unit = ${0:???}
+          |    def foreach[U](f: Int => U): Unit = ${0:???}
           |  }
           |}
           |""".stripMargin
-    )
+    ),
   )
 
   checkEdit(
@@ -116,11 +114,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |    override def add[T: Ordering]: T = ${0:???}
       |  }
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   checkEdit(
-    "import",
+    "import", // import position is flaky
     """
       |object Main {
       |  new java.nio.file.SimpleFileVisitor[java.nio.file.Path] {
@@ -138,7 +136,20 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    assertSingleItem = false
+    assertSingleItem = false,
+    compat = Map(
+      "3" ->
+        """|import java.nio.file.attribute.BasicFileAttributes
+           |import java.nio.file.FileVisitResult
+           |import java.nio.file.Path
+           |
+           |object Main {
+           |  new java.nio.file.SimpleFileVisitor[java.nio.file.Path] {
+           |    override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = ${0:???}
+           |  }
+           |}
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -166,7 +177,16 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def clone(): Object
        |override def finalize(): Unit
        |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "3" ->
+        """|override def aaa: Int
+           |override def bbb: Int
+           |override def equals(x$0: Any): Boolean
+           |override def hashCode(): Int
+           |override def toString(): String
+           |""".stripMargin
+    ),
   )
 
   def implement(completion: String): String =
@@ -185,13 +205,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     "implement",
     // assert that `override` is not inserted.
     implement("def implement@@"),
-    implement("def implementMe: Int = ${0:???}")
+    implement("def implementMe: Int = ${0:???}"),
   )
   checkEdit(
     "implement-override",
     // assert that `override` is inserted.
     implement("override def implement@@"),
-    implement("override def implementMe: Int = ${0:???}")
+    implement("override def implementMe: Int = ${0:???}"),
   )
 
   checkEdit(
@@ -212,7 +232,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |  }
       |}
     """.stripMargin,
-    filter = _.contains("iterat")
+    filter = _.contains("iterat"),
   )
 
   check(
@@ -233,7 +253,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def a: Int
        |""".stripMargin,
     topLines = Some(2),
-    includeDetail = false
+    includeDetail = false,
   )
 
   checkEdit(
@@ -261,7 +281,23 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |    def self: b.Conflict = ${0:???}
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|package a.b
+           |
+           |import a.b
+           |abstract class Conflict {
+           |  def self: Conflict
+           |}
+           |object Main {
+           |  class Conflict
+           |  new a.b.Conflict {
+           |    def self: a.b.Conflict = ${0:???}
+           |  }
+           |}
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -286,7 +322,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |def selfPath: Inner
        |Implement all members
        |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "3" ->
+        """|def self: a.c.Conflict
+           |def selfArg: Option[a.c.Conflict]
+           |def selfPath: Inner
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -309,7 +352,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |    def foo: mutable.Set[Int] = ${0:???}
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEditLine(
@@ -325,7 +368,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "    def foo@@",
-    """    def foo: scala.collection.mutable.Set[Int] = ${0:???}"""
+    """    def foo: scala.collection.mutable.Set[Int] = ${0:???}""",
+    compat = Map(
+      "3" ->
+        """    def foo: collection.mutable.Set[Int] = ${0:???}"""
+    ),
   )
 
   checkEdit(
@@ -344,7 +391,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |class Main extends JUtil {
        |  def foo: ju.List[Int] = ${0:???}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -369,7 +416,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |  val java = 42
        |  def foo: ju.List[Int] = ${0:???}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEditLine(
@@ -385,7 +432,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "  def foo@@",
     // Can't use `import java.{util => ju}` because `val ju = 42` is in scope.
-    """  def foo: java.util.List[Int] = ${0:???}"""
+    """  def foo: java.util.List[Int] = ${0:???}""",
   )
 
   checkEdit(
@@ -404,7 +451,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |class Main extends Mutable {
        |  def foo: lang.StringBuilder = ${0:???}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEditLine(
@@ -419,7 +466,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    """  def foo: List[Int] = ${0:???}""".stripMargin
+    """  def foo: List[Int] = ${0:???}""".stripMargin,
   )
 
   checkEditLine(
@@ -437,7 +484,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     "  def foo@@",
     // NOTE(olafur) I am not sure this is desirable behavior, we might want to
     // consider not dealiasing here.
-    """  def foo: List[Int] = ${0:???}""".stripMargin
+    """  def foo: List[Int] = ${0:???}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """  def foo: Foobar = ${0:???}""".stripMargin
+    ),
   )
 
   checkEditLine(
@@ -452,7 +503,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    """  def foo: JBoolean = ${0:???}""".stripMargin
+    """  def foo: JBoolean = ${0:???}""".stripMargin,
   )
 
   checkEditLine(
@@ -468,7 +519,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    """  def foo: Out = ${0:???}""".stripMargin
+    """  def foo: Out = ${0:???}""".stripMargin,
   )
 
   checkEditLine(
@@ -485,7 +536,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    """  def foo: String = ${0:???}""".stripMargin
+    """  def foo: String = ${0:???}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """  def foo: Out = ${0:???}""".stripMargin
+    ),
   )
 
   checkEditLine(
@@ -505,7 +560,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "    def conflict@@",
-    """    def conflict: Main.this.Out = ${0:???}""".stripMargin
+    """    def conflict: Main.this.Out = ${0:???}""".stripMargin,
   )
 
   check(
@@ -521,7 +576,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """override def hello1: Int
       |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
   )
 
   check(
@@ -537,7 +592,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """def hello1: Int
       |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
   )
 
   checkEditLine(
@@ -551,7 +606,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def hello@@",
-    """def hello(arg: Int): Unit = ${0:???}""".stripMargin
+    """def hello(arg: Int): Unit = ${0:???}""".stripMargin,
   )
 
   checkEditLine(
@@ -565,7 +620,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def exist@@",
-    """def exist: Set[_] = ${0:???}""".stripMargin
+    """def exist: Set[_] = ${0:???}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """def exist: Set[?] = ${0:???}""".stripMargin
+    ),
   )
 
   checkEditLine(
@@ -580,7 +639,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin
+    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin,
   )
 
   checkEditLine(
@@ -597,7 +656,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin
+    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin,
   )
 
   checkEditLine(
@@ -612,7 +671,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Int): Tree = ${0:???}""".stripMargin
+    """override def Apply(tree: Int): Tree = ${0:???}""".stripMargin,
   )
 
   check(
@@ -626,7 +685,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |  def hello@@
        |}
        |""".stripMargin,
-    ""
+    "",
   )
 
   checkEditLine(
@@ -640,7 +699,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "val hello@@",
-    "override val hello1: Int = ${0:???}"
+    "override val hello1: Int = ${0:???}",
   )
 
   check(
@@ -655,7 +714,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     // NOTE(olafur) assert completion items are empty because it's not possible to
     // override concrete vars.
-    ""
+    "",
   )
 
   check(
@@ -670,7 +729,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     // NOTE(olafur) assert completion items are empty because it's not possible to
     // override concrete vars.
-    ""
+    "",
   )
 
   check(
@@ -681,11 +740,18 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |class Main extends Val {
        |  override var hello@@
-       }
+       |}
        |""".stripMargin,
     "var hello1: Int",
     includeDetail = false,
-    filterText = "override var hello1"
+    filterText =
+      if (scalaVersion.startsWith("3")) "override var hello1: Int"
+      else
+        "override var hello1",
+    compat = Map(
+      "3" ->
+        "override var hello1: Int"
+    ),
   )
 
   check(
@@ -706,7 +772,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |def hello3: Int
        |Implement all members
        |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "3" ->
+        """|override var hello1: Int
+           |override val hello2: Int
+           |override def hello3: Int
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -721,7 +794,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |  override def hello@@
        }
        |""".stripMargin,
-    "def hello3: Int"
+    "def hello3: Int",
+    compat = Map(
+      "3" ->
+        "override def hello3: Int"
+    ),
   )
 
   check(
@@ -734,7 +811,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |   override val hello@@
        |}
        |""".stripMargin,
-    ""
+    "",
   )
 
   check(
@@ -748,7 +825,10 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "override def hello: Int",
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "3" -> "override protected def hello: Int"
+    ),
   )
 
   check(
@@ -763,7 +843,10 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     "override def hello: Int",
     includeDetail = false,
-    filterText = "override def hello"
+    filterText =
+      if (scalaVersion.startsWith("3")) "override def hello: Int"
+      else
+        "override def hello",
   )
 
   checkEditLine(
@@ -777,7 +860,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "override val hel@@",
-    "override lazy val hello: Int = ${0:???}"
+    "override lazy val hello: Int = ${0:???}",
   )
 
   checkEditLine(
@@ -793,7 +876,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "val analyz@@",
-    "override lazy val analyzer: Object{val global: r.Main} = ${0:???}"
+    "override lazy val analyzer: Object{val global: r.Main} = ${0:???}",
+    compat = Map(
+      "3" ->
+        "override lazy val analyzer: Object = ${0:???}"
+    ),
   )
 
   checkEditLine(
@@ -807,7 +894,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "val hello@@",
-    "override val hello1: Int = ${0:???}"
+    "override val hello1: Int = ${0:???}",
   )
 
   check(
@@ -823,7 +910,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """|hello: Int
        |override def hello: Int
        |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
   )
 
   check(
@@ -845,7 +932,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |overTop: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|override def overTop: Int
+           |overTop: Int
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -862,11 +955,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def overTop: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(2)
+    topLines = Some(2),
   )
 
   checkEdit(
-    "fuzzy-abstract",
+    "fuzzy-abstract".tag(IgnoreScala3),
     """|package v
        |abstract class Val {
        |  def hello: Int
@@ -882,7 +975,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |class Main extends Val {
        |   override def hello: Int = ${0:???}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -900,7 +993,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override val hello2: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|override def hello1: Int
+           |override val hello2: Int
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -919,7 +1018,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def equals(obj: Any): Boolean
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(3)
+    topLines = Some(3),
+    compat = Map(
+      "3" ->
+        """|def hello1: Int
+           |override val hello2: Int
+           |override def equals(x$0: Any): Boolean
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -943,7 +1049,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |class Under extends Over {
        |  def inner: Outer.Inner = ${0:???}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -956,7 +1062,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |  override def close : Unit = {}
       |}
       |class C extends B{
-      |  clos@@
+      |  close@@
       |}
     """.stripMargin,
     """|trait A {
@@ -969,7 +1075,78 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |  override def close: Unit = ${0:???}
        |}
        |""".stripMargin,
-    filter = (str) => str.contains("def")
+    filter = (str) => str.contains("def"),
+  )
+
+  checkEdit(
+    "not-complete-ident",
+    """
+      |trait A {
+      |  def close: Unit
+      |}
+      |trait B extends A{
+      |  override def close : Unit = {}
+      |}
+      |class C extends B{
+      |  clos@@
+      |}
+      """.stripMargin,
+    """|trait A {
+       |  def close: Unit
+       |}
+       |trait B extends A{
+       |  override def close : Unit = {}
+       |}
+       |class C extends B{
+       |  override def close: Unit = ${0:???}
+       |}
+       |""".stripMargin,
+    filter = (str) => str.contains("def"),
+  )
+
+  checkEdit(
+    "extension-override".tag(IgnoreScala2),
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |
+       |class Concrete extends Base:
+       |  over@@
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |
+       |class Concrete extends Base:
+       |  extension (x: Int) override def foo: Int = ${0:???}
+       |""".stripMargin,
+    filter = (str) => str.contains("foo"),
+  )
+
+  checkEdit(
+    "extension".tag(IgnoreScala2),
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |
+       |class Concrete extends Base:
+       |  def fo@@
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |
+       |class Concrete extends Base:
+       |  extension (x: Int) def foo: Int = ${0:???}
+       |""".stripMargin,
   )
 
 }

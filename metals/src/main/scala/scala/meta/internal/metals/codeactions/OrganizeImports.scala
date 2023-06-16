@@ -4,14 +4,15 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -21,15 +22,13 @@ import org.eclipse.{lsp4j => l}
 sealed abstract class OrganizeImports(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
-    diagnostics: Diagnostics,
-    languageClient: MetalsLanguageClient
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
   protected def title: String
   protected def isCallAllowed(
       file: AbsolutePath,
-      params: CodeActionParams
+      params: CodeActionParams,
   ): Boolean
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
@@ -52,20 +51,18 @@ sealed abstract class OrganizeImports(
 
   private def organizeImportsEdits(
       path: AbsolutePath,
-      scalaVersion: ScalaTarget
+      scalaVersion: ScalaTarget,
   ): Future[Seq[l.CodeAction]] = {
     scalafixProvider
       .organizeImports(path, scalaVersion)
       .map { edits =>
-        val codeAction = new l.CodeAction()
-        codeAction.setTitle(this.title)
-        codeAction.setKind(this.kind)
-        codeAction.setEdit(
-          new l.WorkspaceEdit(
-            Map(path.toURI.toString -> edits.asJava).asJava
+        Seq(
+          CodeActionBuilder.build(
+            title = this.title,
+            kind = this.kind,
+            changes = List(path.toURI.toAbsolutePath -> edits),
           )
         )
-        Seq(codeAction)
       }
   }
 
@@ -79,13 +76,11 @@ class SourceOrganizeImports(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
     diagnostics: Diagnostics,
-    languageClient: MetalsLanguageClient
+    languageClient: MetalsLanguageClient,
 )(implicit ec: ExecutionContext)
     extends OrganizeImports(
       scalafixProvider,
       buildTargets,
-      diagnostics,
-      languageClient
     ) {
 
   override val kind: String = SourceOrganizeImports.kind
@@ -93,14 +88,14 @@ class SourceOrganizeImports(
 
   override protected def isCallAllowed(
       file: AbsolutePath,
-      params: CodeActionParams
+      params: CodeActionParams,
   ): Boolean = {
     val validCall = isScalaOrSbt(file) && isSourceOrganizeImportCalled(params)
     if (validCall) {
       if (diagnostics.hasDiagnosticError(file)) {
         languageClient.showMessage(
           l.MessageType.Warning,
-          s"Fix ${file.toNIO.getFileName} before trying to organize your imports"
+          s"Fix ${file.toNIO.getFileName} before trying to organize your imports",
         )
         scribe.info("Can not organize imports if file has error")
         false
@@ -129,20 +124,17 @@ class OrganizeImportsQuickFix(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
     diagnostics: Diagnostics,
-    languageClient: MetalsLanguageClient
 )(implicit ec: ExecutionContext)
     extends OrganizeImports(
       scalafixProvider,
       buildTargets,
-      diagnostics,
-      languageClient
     ) {
 
   override val kind: String = OrganizeImportsQuickFix.kind
   override protected val title: String = OrganizeImportsQuickFix.title
   override protected def isCallAllowed(
       file: AbsolutePath,
-      params: CodeActionParams
+      params: CodeActionParams,
   ): Boolean = {
     val hasUnused = params
       .getContext()

@@ -5,11 +5,10 @@ import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import scala.meta.internal.mtags.MD5
-import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.io.AbsolutePath
+import scala.util.Properties
 
-import dotty.tools.dotc.core.Contexts.Context
+import scala.meta.internal.mtags.MD5
+
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.semanticdb.ExtractSemanticDB
 import dotty.tools.dotc.semanticdb.Language
@@ -20,18 +19,18 @@ import dotty.tools.dotc.util.SourceFile
 
 class SemanticdbTextDocumentProvider(
     driver: InteractiveDriver,
-    workspace: Option[Path]
+    workspace: Option[Path],
 ) extends WorksheetSemanticdbProvider:
 
   def textDocument(
       uri: URI,
-      sourceCode: String
+      sourceCode: String,
   ): Array[Byte] =
     val filePath = Paths.get(uri)
-    val validCode = removeMagicImports(sourceCode, AbsolutePath(filePath))
+    val validCode = removeMagicImports(sourceCode, filePath)
     driver.run(
       uri,
-      SourceFile.virtual(filePath.toString, validCode)
+      SourceFile.virtual(filePath.toString, validCode),
     )
     val tree = driver.currentCtx.run.units.head.tpdTree
     val extract = ExtractSemanticDB()
@@ -42,7 +41,8 @@ class SemanticdbTextDocumentProvider(
         scala.util.Try(workspacePath.relativize(filePath)).toOption
       }
       .map { relativeUri =>
-        relativeUri.toString()
+        if Properties.isWin then relativeUri.toString().replace("\\", "/")
+        else relativeUri.toString()
       }
       .getOrElse(filePath.toString)
 
@@ -53,7 +53,7 @@ class SemanticdbTextDocumentProvider(
       text = sourceCode,
       md5 = MD5.compute(sourceCode),
       symbols = extractor.symbolInfos.toList,
-      occurrences = extractor.occurrences.toList
+      occurrences = extractor.occurrences.toList,
     )
     val byteStream = new ByteArrayOutputStream()
     val out = SemanticdbOutputStream.newInstance(byteStream)

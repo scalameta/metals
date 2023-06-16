@@ -7,16 +7,47 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: olafurpg/setup-scala@v13
-      - uses: olafurpg/setup-gpg@v3
-      - uses: coursier/cache-action@v6.3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
+          cache: 'sbt'
       - name: Publish
         run: |
-          sbt ci-release
-          sbt docs/docusaurusPublishGhpages
+          LOCKED=true
+          while [ $LOCKED = true ]; do
+            # if there are several release jobs at the same time
+            # allow to continue the one which id is less than others
+            FIRST_IN_PROGRESS=$(gh api /repos/scalameta/metals/actions/workflows/release.yml/runs -q ".workflow_runs[]|select(.status==\"in_progress\")|.id"  | sort | head -n 1)
+            if [ "$FIRST_IN_PROGRESS" == "$GITHUB_RUN_ID" ]; then
+              LOCKED=false
+            else
+              echo "Waiting the completion of other release job..."
+              sleep 20
+            fi
+          done
+
+          COMMAND="ci-release"
+          UPDATE_DOCS=true
+          if [[ $GITHUB_REF == "refs/tags"* ]] && [[ $GITHUB_REF_NAME == "mtags_v"* ]]; then
+            METALS_VERSION=$(echo $GITHUB_REF_NAME | cut -d "_" -f2 | cut -c2-)
+            SCALA_VERSION=$(echo $GITHUB_REF_NAME | cut -d "_" -f3)
+            if [ ! -z $METALS_VERSION ] && [ ! -z $SCALA_VERSION ]; then
+              export CI_RELEASE="++$SCALA_VERSION! mtags/publishSigned"
+              UPDATE_DOCS=false
+              COMMAND="; set ThisBuild/version :=\"$METALS_VERSION\"; $COMMAND"
+            else
+              echo 'Invalid tag name for mtags. Expected: mtags_v${existing-metals-release}_${scala-version}'
+              exit 1
+            fi
+          fi
+          sbt "$COMMAND"
+          if [ "$UPDATE_DOCS" = true ]; then
+            sbt docs/docusaurusPublishGhpages
+          fi
         env:
           GIT_USER: scalameta@scalameta.org
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
@@ -24,3 +55,5 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           GIT_DEPLOY_KEY: ${{ secrets.GIT_DEPLOY_KEY }}
+          GITHUB_TOKEN: ${{ secrets.PUSH_TAG_GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.PUSH_TAG_GH_TOKEN }}

@@ -5,7 +5,7 @@ title: Contributing to the website
 
 This website is built using [Docusaurus](https://docusaurus.io/).
 
-For simple changes to the documentation, click on the `Edit` button at the top
+For simple changes to the documentation, click on the `Edit` button at the bottom
 of each page and submit those changes directly on GitHub.
 
 ## Running the site locally
@@ -36,9 +36,13 @@ You can now build and launch the website using these commands:
 cd website
 yarn install # only the first time, to install the dependencies
 yarn start
+
+# To test search feature in local development
+yarn build
+yarn serve
 ```
 
-Now visit http://localhost:3000 and you should see a local version of the
+Now visit [localhost:3000](http://localhost:3000) and you should see a local version of the
 website. New changes should trigger a reload in the browser.
 
 ## Adding a new page

@@ -1,12 +1,11 @@
 package tests.hover
 
-import tests.BuildInfoVersions
 import tests.pc.BaseHoverSuite
 
 class HoverScala3TypeSuite extends BaseHoverSuite {
 
-  override protected def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala2Versions.toSet
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala2)
 
   check(
     "union",
@@ -20,7 +19,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|val name: Foo | Bar[Files]
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   check(
@@ -39,7 +38,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|arg: Resettable & Growable[Files]
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   // We should produce a shorter type but:
@@ -53,7 +52,12 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|case Red: Red
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      ">=3.1.3-RC1-bin-20220301-fae7c09-NIGHTLY" ->
+        """|case Red: Color
+           |""".stripMargin.hover
+    ),
   )
 
   check(
@@ -65,7 +69,22 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|enum Color: enums2.SimpleEnum
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "enums-outermost",
+    """|enum Color:
+       |  case Red
+       |  case <<Bl@@ue>>
+       |  case Cyan
+       |""".stripMargin,
+    "",
+    compat = Map(
+      ">=3.1.3-RC1-bin-20220301-fae7c09-NIGHTLY" ->
+        """|case Blue: Color
+           |""".stripMargin.hover
+    ),
   )
 
   check(
@@ -78,7 +97,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|enum Color: enums3.SimpleEnum
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   check(
@@ -93,7 +112,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|case Green: Color
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
   )
 
   check(
@@ -107,7 +126,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |    "".<<doub@@le2>>
        |end Foo
        |""".stripMargin,
-    "extension (s: String) def double2: String".hover
+    "extension (s: String) def double2: String".hover,
   )
 
   /* Currently there is no way to differentiate between
@@ -133,7 +152,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |    "".<<doub@@le(1)>>
        |end Foo
        |""".stripMargin,
-    "extension [T](using A)(s: T) def double(using B)[G](using C)(times: G): String".hover
+    "extension [T](using A)(s: T) def double(using B)[G](using C)(times: G): String".hover,
   )
 
   check(
@@ -152,7 +171,8 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |    "" <<%@@:>> 11
        |end Foo
        |""".stripMargin,
-    "extension [T](using A)(main: T) def %:[R](res: R)(using B)(using C): Int".hover
+    """|Int
+       |extension [T](using A)(main: T) def %:[R](res: R)(using B)(using C): R""".stripMargin.hover,
   )
 
   check(
@@ -164,7 +184,145 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |  <<ap@@ply("test")>>
       |}
       |""".stripMargin,
-    """|def apply[T](a: T)(using Int): T
-       |""".stripMargin.hover
+    """|String
+       |def apply[T](a: T)(using Int): T
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "toplevel-left",
+    """|def foo = <<L@@eft>>("")
+       |""".stripMargin,
+    """|Left[String, Nothing]
+       |def apply[A, B](value: A): Left[A, B]
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "selectable",
+    """|trait Sel extends Selectable:
+       |  def selectDynamic(name: String): Any = ???
+       |  def applyDynamic(name: String)(args: Any*): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { def foo2: Int}]
+       |val foo2 = sel.fo@@o2
+       |""".stripMargin,
+    """|def foo2: Int
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "selectable2",
+    """|trait Sel extends Selectable:
+       |  def selectDynamic(name: String): Any = ???
+       |  def applyDynamic(name: String)(args: Any*): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { def bar2(x: Int): Int }]
+       |val bar2 = sel.ba@@r2(3)
+       |""".stripMargin,
+    """|def bar2(x: Int): Int
+       |""".stripMargin.hover,
+  )
+  check(
+    "selectable-full",
+    """|trait Sel extends Selectable:
+       |  def foo1: Int = ???
+       |  def bar1(x: Int): Int = ???
+       |  def selectDynamic(name: String): Any = ???
+       |  def applyDynamic(name: String)(args: Any*): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { def foo2: Int; def bar2(x: Int): Int }]
+       |val bar2 = sel.fo@@o2
+       |""".stripMargin,
+    """|def foo2: Int
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "structural-types",
+    """|
+       |import reflect.Selectable.reflectiveSelectable
+       |
+       |object StructuralTypes:
+       |   type User = {
+       |   def name: String
+       |   def age: Int
+       |   }
+       |
+       |   val user = null.asInstanceOf[User]
+       |   user.name
+       |   user.ag@@e
+       |
+       |   val V: Object {
+       |   def scalameta: String
+       |   } = new:
+       |   def scalameta = "4.0"
+       |   V.scalameta
+       |end StructuralTypes
+       |""".stripMargin,
+    """|def age: Int
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "structural-types1",
+    """|
+       |import reflect.Selectable.reflectiveSelectable
+       |
+       |object StructuralTypes:
+       |   type User = {
+       |   def name: String
+       |   def age: Int
+       |   }
+       |
+       |   val user = null.asInstanceOf[User]
+       |   user.name
+       |   user.age
+       |
+       |   val V: Object {
+       |   def scalameta: String
+       |   } = new:
+       |   def scalameta = "4.0"
+       |   V.scala@@meta
+       |end StructuralTypes
+       |""".stripMargin,
+    """|def scalameta: String
+    """.stripMargin.hover,
+  )
+
+  check(
+    "macro",
+    """|
+       |import scala.quoted.*
+       |
+       |def myMacroImpl(using Quotes) =
+       |  import quotes.reflect.Ident
+       |  def foo = ??? match
+       |    case x: I@@dent => x
+       |
+       |  def bar: Ident = foo
+       |
+       |  ???
+       |
+       |""".stripMargin,
+    """|type Ident: Ident
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "macro2",
+    """|
+       |
+       |import scala.quoted.*
+       |
+       |def myMacroImpl(using Quotes) =
+       |  import quotes.reflect.Ident
+       |  def foo = ??? match
+       |    case x: Ident => x
+       |
+       |  def bar: Ide@@nt = foo
+       |
+       |  ???
+       |
+       |""".stripMargin,
+    """|type Ident: Ident
+       |""".stripMargin.hover,
   )
 }

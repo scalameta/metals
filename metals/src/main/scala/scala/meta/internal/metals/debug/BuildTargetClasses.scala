@@ -20,7 +20,9 @@ final class BuildTargetClasses(
     buildTargets: BuildTargets
 )(implicit val ec: ExecutionContext) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
-
+  val jvmRunEnvironment
+      : TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem] =
+    TrieMap.empty[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
   val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
     BatchedFunction.fromFuture(fetchClasses)
 
@@ -40,7 +42,11 @@ final class BuildTargetClasses(
   def findTestClassByName(
       name: String
   ): List[(String, b.BuildTargetIdentifier)] =
-    findClassesBy(_.testClasses.values.find(_ == name))
+    findClassesBy(
+      _.testClasses.values
+        .find(_.fullyQualifiedName == name)
+        .map(_.fullyQualifiedName)
+    )
 
   private def findClassesBy[A](
       f: Classes => Option[A]
@@ -56,8 +62,9 @@ final class BuildTargetClasses(
   private def fetchClasses(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {
+    val distinctTargets = targets.distinct
     Future
-      .traverse(targets.groupBy(buildTargets.buildServerOf)) {
+      .traverse(distinctTargets.groupBy(buildTargets.buildServerOf).toSeq) {
         case (None, _) =>
           Future.successful(())
         case (Some(connection), targets0) =>
@@ -73,9 +80,14 @@ final class BuildTargetClasses(
             .testClasses(new b.ScalaTestClassesParams(targetsList))
             .map(cacheTestClasses(classes, _))
 
+          val jvmRunEnvironment = connection
+            .jvmRunEnvironment(new b.JvmRunEnvironmentParams(targetsList))
+            .map(cacheJvmRunEnvironment)
+
           for {
             _ <- updateMainClasses
             _ <- updateTestClasses
+            _ <- jvmRunEnvironment
           } yield {
             classes.foreach { case (id, classes) =>
               index.put(id, classes)
@@ -85,9 +97,20 @@ final class BuildTargetClasses(
       .ignoreValue
   }
 
+  private def cacheJvmRunEnvironment(
+      result: b.JvmRunEnvironmentResult
+  ): Unit = {
+    for {
+      item <- result.getItems().asScala
+      target = item.getTarget
+    } {
+      jvmRunEnvironment.put(target, item)
+    }
+  }
+
   private def cacheMainClasses(
       classes: Map[b.BuildTargetIdentifier, Classes],
-      result: b.ScalaMainClassesResult
+      result: b.ScalaMainClassesResult,
   ): Unit = {
     for {
       item <- result.getItems.asScala
@@ -96,7 +119,7 @@ final class BuildTargetClasses(
       descriptors = descriptorsForMainClasses(target)
       symbol <- symbolFromClassName(
         aClass.getClassName,
-        descriptors
+        descriptors,
       )
     } {
       classes(target).mainClasses.put(symbol, aClass)
@@ -105,7 +128,7 @@ final class BuildTargetClasses(
 
   private def cacheTestClasses(
       classes: Map[b.BuildTargetIdentifier, Classes],
-      result: b.ScalaTestClassesResult
+      result: b.ScalaTestClassesResult,
   ): Unit = {
     for {
       item <- result.getItems.asScala
@@ -114,7 +137,10 @@ final class BuildTargetClasses(
       symbol <-
         symbolFromClassName(className, List(Descriptor.Term, Descriptor.Type))
     } {
-      classes(target).testClasses.put(symbol, className)
+      // item.getFramework() can return null!
+      val framework = TestFramework(Option(item.getFramework()))
+      val testInfo = BuildTargetClasses.TestSymbolInfo(className, framework)
+      classes(target).testClasses.put(symbol, testInfo)
     }
   }
 
@@ -131,7 +157,7 @@ final class BuildTargetClasses(
 
   def symbolFromClassName(
       className: String,
-      descriptors: List[String => Descriptor]
+      descriptors: List[String => Descriptor],
   ): List[String] = {
     import scala.reflect.NameTransformer
     val isEmptyPackage = !className.contains(".")
@@ -147,13 +173,33 @@ final class BuildTargetClasses(
   }
 }
 
+sealed abstract class TestFramework(val canResolveChildren: Boolean)
+object TestFramework {
+  def apply(framework: Option[String]): TestFramework = framework
+    .map {
+      case "JUnit" => JUnit4
+      case "munit" => MUnit
+      case "ScalaTest" => Scalatest
+      case _ => Unknown
+    }
+    .getOrElse(Unknown)
+}
+case object JUnit4 extends TestFramework(true)
+case object MUnit extends TestFramework(true)
+case object Scalatest extends TestFramework(true)
+case object Unknown extends TestFramework(false)
+
 object BuildTargetClasses {
   type Symbol = String
-  type ClassName = String
+  type FullyQualifiedClassName = String
 
+  final case class TestSymbolInfo(
+      fullyQualifiedName: FullyQualifiedClassName,
+      framework: TestFramework,
+  )
   final class Classes {
     val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
-    val testClasses = new TrieMap[Symbol, ClassName]()
+    val testClasses = new TrieMap[Symbol, TestSymbolInfo]()
 
     def isEmpty: Boolean = mainClasses.isEmpty && testClasses.isEmpty
   }

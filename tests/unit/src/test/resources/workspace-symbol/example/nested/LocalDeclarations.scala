@@ -1,15 +1,15 @@
 package example.nested
 
 trait LocalDeclarations/*example.nested.LocalDeclarations#*/ {
-  def foo(): Unit
+  def foo/*example.nested.LocalDeclarations#foo().*/(): Unit
 }
 
 trait Foo/*example.nested.Foo#*/ {
-  val y = 3
+  val y/*example.nested.Foo#y.*/ = 3
 }
 
 object LocalDeclarations/*example.nested.LocalDeclarations.*/ {
-  def create(): LocalDeclarations = {
+  def create/*example.nested.LocalDeclarations.create().*/(): LocalDeclarations = {
     def bar(): Unit = ()
 
     val x = new {

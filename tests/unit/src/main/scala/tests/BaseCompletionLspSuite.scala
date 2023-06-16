@@ -9,10 +9,16 @@ import org.eclipse.lsp4j.CompletionList
 
 abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
 
-  def withCompletion(query: String, project: Char = 'a')(
+  def withCompletion(
+      query: String,
+      project: Char = 'a',
+      testFilename: Option[String],
+  )(
       fn: CompletionList => Unit
   ): Future[Unit] = {
-    val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    val filename = testFilename.getOrElse(
+      s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    )
     val text = server
       .textContentsOnDisk(filename)
       .replace("// @@", query.replace("@@", ""))
@@ -29,9 +35,10 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       expected: String,
       project: Char = 'a',
       includeDetail: Boolean = true,
-      filter: String => Boolean = _ => true
+      filter: String => Boolean = _ => true,
+      filename: Option[String] = None,
   )(implicit loc: Location): Future[Unit] = {
-    withCompletion(query, project) { list =>
+    withCompletion(query, project, filename) { list =>
       val completion = server.formatCompletion(list, includeDetail, filter)
       assertNoDiff(completion, expected)
     }
@@ -40,7 +47,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   def withCompletionEdit(
       query: String,
       project: Char = 'a',
-      filter: String => Boolean = _ => true
+      filter: String => Boolean = _ => true,
   )(
       fn: String => Unit
   ): Future[Unit] = {
@@ -64,7 +71,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       query: String,
       expected: String,
       project: Char = 'a',
-      filter: String => Boolean = _ => true
+      filter: String => Boolean = _ => true,
   )(implicit loc: Location): Future[Unit] = {
     withCompletionEdit(query, project, filter) { obtained =>
       assertNoDiff(obtained, expected)
@@ -84,24 +91,20 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
            |object A {
            |  // @@
            |}
+           |/a/src/main/scala/a/inner/FooSample.scala
+           |package a.sample
+           |
+           |class FooSample
+           |object FooSample
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
       _ <- assertCompletion(
         "\"\".substrin@@",
-        getExpected(
-          """|substring(beginIndex: Int): String
-             |substring(beginIndex: Int, endIndex: Int): String
-             |""".stripMargin,
-          Map(
-            "3" ->
-              """|substring(x$0: Int): String
-                 |substring(x$0: Int, x$1: Int): String
-                 |""".stripMargin
-          ),
-          scalaVersion
-        )
+        """|substring(beginIndex: Int): String
+           |substring(beginIndex: Int, endIndex: Int): String
+           |""".stripMargin,
       )
       _ <- assertCompletion(
         "Stream@@",
@@ -150,10 +153,11 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |StreamResult - javax.xml.transform.stream
                  |StreamShape - scala.collection.convert.StreamExtensions
                  |StreamSource - javax.xml.transform.stream
-                 |""".stripMargin
+                 |Stream[A](elems: A*): CC[A]
+                 |""".stripMargin,
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
       _ <- assertCompletion(
         "TrieMap@@",
@@ -172,11 +176,12 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |""".stripMargin,
             "3" ->
               """|TrieMap - scala.collection.concurrent
-                 |TrieMapSerializationEnd - scala.collection.concurrent
-                 |""".stripMargin
+                 |TrieMap(k: K): V
+                 |TrieMap[K, V](elems: (K, V)*): CC[K, V]
+                 |""".stripMargin,
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
       _ <- assertCompletion(
         """
@@ -187,7 +192,14 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
           |}
           |""".stripMargin,
         """|myLocalVariable: Array[String]
-           |""".stripMargin
+           |""".stripMargin,
+      )
+      _ <- assertCompletion(
+        """
+          |val a: FooSa@@
+          |""".stripMargin,
+        """|FooSample - a.sample
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -229,7 +241,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
            |}
            |}
            |""".stripMargin,
-        filter = _.contains("exhaustive")
+        filter = _.contains("exhaustive"),
       )
       _ <- assertCompletionEdit(
         "null.asInstanceOf[Color] matc@@",
@@ -243,7 +255,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
            |}
            |}
            |""".stripMargin,
-        filter = _.contains("exhaustive")
+        filter = _.contains("exhaustive"),
       )
     } yield ()
   }

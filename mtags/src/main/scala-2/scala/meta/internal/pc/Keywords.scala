@@ -3,7 +3,8 @@ package scala.meta.internal.pc
 import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta._
-import scala.meta.tokens.Token
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.KeywordCompletionsUtils
 
 import org.eclipse.{lsp4j => l}
 
@@ -14,10 +15,22 @@ trait Keywords { this: MetalsGlobal =>
       editRange: l.Range,
       latestEnclosing: List[Tree],
       completion: CompletionPosition,
-      text: String
+      text: String,
+      isAmmoniteScript: Boolean
   ): List[Member] = {
 
-    lazy val notInComment = checkIfNotInComment(pos, text)
+    lazy val notInComment = checkIfNotInComment(pos, text, latestEnclosing)
+
+    lazy val reverseTokens: Array[Token] = {
+      // Try not to tokenize the whole file
+      // Maybe we should re-use the tokenize result with `notInComment`
+      val lineStart =
+        if (pos.line > 0) pos.source.lineToOffset(pos.line - 1) else 0
+      text.substring(lineStart, pos.start).tokenize.toOption match {
+        case Some(toks) => toks.tokens.reverse
+        case None => Array.empty[Token]
+      }
+    }
 
     getIdentifierName(latestEnclosing, pos) match {
       case None =>
@@ -42,6 +55,9 @@ trait Keywords { this: MetalsGlobal =>
         val isMethodBody = this.isMethodBody(latestEnclosing)
         val isTemplate = this.isTemplate(latestEnclosing)
         val isPackage = this.isPackage(latestEnclosing)
+        val isParam = this.isParam(latestEnclosing)
+        val isSelect = this.isSelect(latestEnclosing)
+        val isImport = this.isImport(latestEnclosing)
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -51,7 +67,16 @@ trait Keywords { this: MetalsGlobal =>
                 isDefinition = isDefinition,
                 isMethodBody = isMethodBody,
                 isTemplate = isTemplate,
-                isPackage = isPackage
+                isPackage = isPackage,
+                isParam = isParam,
+                isScala3 = false,
+                isSelect = isSelect,
+                isImport = isImport,
+                allowToplevel = isAmmoniteScript,
+                canBeExtended =
+                  KeywordCompletionsUtils.canBeExtended(reverseTokens),
+                canDerive = KeywordCompletionsUtils.canDerive(reverseTokens),
+                hasExtend = KeywordCompletionsUtils.hasExtend(reverseTokens)
               ) =>
             mkTextEditMember(kw, editRange)
         }
@@ -59,19 +84,16 @@ trait Keywords { this: MetalsGlobal =>
     }
   }
 
-  private def checkIfNotInComment(pos: Position, text: String): Boolean = {
-    val start = pos.start
-    val end = pos.end
-    val tokens = text.tokenize.toOption
-    tokens
-      .flatMap(t =>
-        t.find {
-          case t: Token.Comment if t.pos.start < start && t.pos.end >= end =>
-            true
-          case _ => false
-        }
-      )
-      .isEmpty
+  private def checkIfNotInComment(
+      pos: Position,
+      text: String,
+      enclosing: List[Tree]
+  ): Boolean = {
+    val (treeStart, treeEnd) = enclosing.headOption
+      .map(t => (t.pos.start, t.pos.end))
+      .getOrElse((0, text.size))
+    val offset = pos.start
+    text.mkString.checkIfNotInComment(treeStart, treeEnd, offset)
   }
 
   private def getIdentifierName(
@@ -110,6 +132,13 @@ trait Keywords { this: MetalsGlobal =>
   private def isPackage(enclosing: List[Tree]): Boolean =
     enclosing match {
       case PackageDef(_, _) :: _ => true
+      case Nil => true
+      case _ => false
+    }
+
+  private def isParam(enclosing: List[Tree]): Boolean =
+    enclosing match {
+      case (_: DefDef) :: _ => true
       case _ => false
     }
 
@@ -163,6 +192,19 @@ trait Keywords { this: MetalsGlobal =>
       case Ident(_) :: Template(_, _, _) :: _ => true
       case Ident(_) :: ValOrDefDef(_, _, _, _) :: _ => true
       case Ident(_) :: (_: TermTreeApi) :: _ => true
+      case _ => false
+    }
+
+  private def isSelect(enclosing: List[Tree]): Boolean =
+    enclosing match {
+      case (_: Ident) :: (_: Select) :: _ => true
+      case (_: Apply) :: (_: Select) :: _ => true
+      case _ => false
+    }
+
+  private def isImport(enclosing: List[Tree]): Boolean =
+    enclosing match {
+      case (_: Import) :: _ => true
       case _ => false
     }
 

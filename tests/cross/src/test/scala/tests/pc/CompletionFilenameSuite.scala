@@ -1,12 +1,8 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionFilenameSuite extends BaseCompletionSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "class",
@@ -14,7 +10,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |class M@@
        |""".stripMargin,
     "class Main",
-    filename = "Main.scala"
+    filename = "Main.scala",
   )
 
   check(
@@ -23,7 +19,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |class M@@
        |""".stripMargin,
     "class Main",
-    filename = "Main.scala"
+    filename = "Main.scala",
   )
 
   check(
@@ -32,7 +28,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |trait M@@
        |""".stripMargin,
     "trait Main",
-    filename = "Main.scala"
+    filename = "Main.scala",
   )
 
   check(
@@ -41,7 +37,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |object M@@
        |""".stripMargin,
     "object Main",
-    filename = "Main.scala"
+    filename = "Main.scala",
   )
 
   check(
@@ -50,7 +46,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |object M@@
        |""".stripMargin,
     "object Main",
-    filename = "Main.scala"
+    filename = "Main.scala",
   )
 
   check(
@@ -60,7 +56,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |class M@@
        |""".stripMargin,
     "",
-    filename = "Main.scala"
+    filename = "Main.scala",
   )
 
   check(
@@ -70,7 +66,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "",
-    filename = "Main.scala"
+    filename = "Main.scala",
   )
 
   check(
@@ -79,7 +75,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |class MDataSer@@
        |""".stripMargin,
     "class MyDatabaseService",
-    filename = "MyDatabaseService.scala"
+    filename = "MyDatabaseService.scala",
   )
 
   check(
@@ -88,7 +84,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |class Us@@
        |""".stripMargin,
     "class User",
-    filename = "foo/User.scala"
+    filename = "foo/User.scala",
   )
 
   check(
@@ -97,7 +93,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |object Us@@
        |""".stripMargin,
     "object User",
-    filename = "User.scala"
+    filename = "User.scala",
   )
 
   check(
@@ -106,7 +102,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |trait Us@@
        |""".stripMargin,
     "trait User",
-    filename = "User.scala"
+    filename = "User.scala",
   )
 
   check(
@@ -116,7 +112,7 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |trait Us@@
        |""".stripMargin,
     "",
-    filename = "User.scala"
+    filename = "User.scala",
   )
 
   check(
@@ -126,13 +122,13 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
        |object Us@@
        |""".stripMargin,
     "",
-    filename = "User.scala"
+    filename = "User.scala",
   )
 
   check(
     "end-of-file",
     "object Use@@",
     "object User",
-    filename = "User.scala"
+    filename = "User.scala",
   )
 }

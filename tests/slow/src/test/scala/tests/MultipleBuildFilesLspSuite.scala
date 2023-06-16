@@ -27,11 +27,11 @@ class MultipleBuildFilesLspSuite
     for {
       _ <- initialize(
         s"""|/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |/build.sc
             |import mill._, scalalib._
             |object foo extends ScalaModule {
-            |  def scalaVersion = "${V.scala212}"
+            |  def scalaVersion = "${V.scala213}"
             |}
             |""".stripMargin
       )
@@ -41,8 +41,8 @@ class MultipleBuildFilesLspSuite
           // Project has no .bloop directory so user is asked to "import via bloop"
           chooseBuildToolMessage,
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ = assertNoDiff(client.workspaceMessageRequests, "")
@@ -58,8 +58,8 @@ class MultipleBuildFilesLspSuite
           // Ensure that after a choice was made, the user doesn't get re-prompted
           // to choose their build tool again
           importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
     }
   }

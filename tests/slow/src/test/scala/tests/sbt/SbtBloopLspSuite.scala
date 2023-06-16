@@ -10,9 +10,9 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -20,13 +20,14 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
 import tests.ScriptsAssertions
+import tests.TestSemanticTokens
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
     with ScriptsAssertions {
 
   val sbtVersion = V.sbtVersion
-  val scalaVersion = V.scala212
+  val scalaVersion = V.scala213
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
 
   override def currentDigest(
@@ -40,7 +41,7 @@ class SbtBloopLspSuite
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -48,8 +49,8 @@ class SbtBloopLspSuite
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -70,8 +71,8 @@ class SbtBloopLspSuite
         List(
           // Project has .bloop directory so user is asked to "re-import project"
           importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
     }
   }
@@ -81,7 +82,7 @@ class SbtBloopLspSuite
     for {
       _ <- initialize(
         s"""|/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
@@ -97,7 +98,75 @@ class SbtBloopLspSuite
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.server.buildServerPromise.future
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          importBuildMessage,
+          progressMessage,
+        ).mkString("\n"),
+      )
+      _ = client.messageRequests.clear() // restart
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          progressMessage
+        ).mkString("\n"),
+      )
+    } yield ()
+  }
+
+  test("bloop-snapshot") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.server.buildServerPromise.future
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          importBuildMessage,
+          progressMessage,
+        ).mkString("\n"),
+      )
+      _ = client.messageRequests.clear() // restart
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "bloop-version": "1.5.6-134-46452098-SNAPSHOT"
+          |}
+          |""".stripMargin
+      )
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          BloopVersionChange.msg,
+          progressMessage,
+        ).mkString("\n"),
+      )
+      _ = assertStatus(_.isInstalled)
+    } yield ()
+  }
+
+  test("force-command-multiple") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -105,17 +174,26 @@ class SbtBloopLspSuite
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
-      _ <- server.executeCommand(ServerCommands.ImportBuild.id)
+      _ <- server
+        .executeCommand(ServerCommands.ImportBuild)
+        .zip(server.executeCommand(ServerCommands.ImportBuild))
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
           progressMessage
-        ).mkString("\n")
+        ).mkString("\n"),
       )
+      _ = assertNoDiff(
+        client.workspaceShowMessages,
+        List(
+          ImportAlreadyRunning.getMessage()
+        ).mkString("\n"),
+      )
+
     } yield ()
   }
 
@@ -126,7 +204,7 @@ class SbtBloopLspSuite
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |/src/main/scala/reload/Main.scala
             |package reload
             |object Main extends App {
@@ -169,9 +247,9 @@ class SbtBloopLspSuite
            |sbt.version=$sbtVersion
            |/build.sbt
            |version := "1.0"
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.slowTaskHandler = _ => None
@@ -193,30 +271,30 @@ class SbtBloopLspSuite
             |/build.sbt
             |, syntax error
             |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
-        ImportProjectFailed.getMessage
+        ImportProjectFailed.getMessage,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
       _ <- server.didSave("build.sbt") { _ =>
-        s"""scalaVersion := "${V.scala212}" """
+        s"""scalaVersion := "${V.scala213}" """
       }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+          progressMessage,
+        ).mkString("\n"),
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -230,7 +308,7 @@ class SbtBloopLspSuite
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |lazy val a = project.settings(scalaVersion := "2.12.4")
            |lazy val b = project.settings(scalaVersion := "2.12.3")
            |lazy val c = project.settings(scalaVersion := "2.11.11")
@@ -260,14 +338,14 @@ class SbtBloopLspSuite
            |package a
            |object A // ${V.scala213}
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
         UnsupportedScalaVersion.message(
           Set("2.12.4", "2.12.3", "2.11.8", "2.11.11", "2.10.7")
-        )
+        ),
       )
       sourceJars <- server.buildTargetSourceJars("a")
       _ = assert(sourceJars.nonEmpty) // source jars should not be empty
@@ -287,15 +365,18 @@ class SbtBloopLspSuite
       }
       _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sbt")(_ =>
-        s"""scalaVersion := "${V.scala212}" """
+        s"""scalaVersion := "${V.scala213}" """
       )
       _ = {
-        val expected = ClientCommands.ReloadDoctor.id :: Nil
+        val expected = ClientCommands.ReloadDoctor.id
         val actual = client.workspaceClientCommands
-        assert(actual.startsWith(expected))
+        assert(
+          actual.contains(expected),
+          "ReloadDoctor should have been invoked on the client",
+        )
         assertNoDiff(
           client.workspaceShowMessages,
-          CheckDoctor.problemsFixed.getMessage
+          CheckDoctor.problemsFixed.getMessage,
         )
       }
     } yield ()
@@ -309,7 +390,7 @@ class SbtBloopLspSuite
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |/.sbtopts
            |-J-Xlog:gc:gc_log
            |""".stripMargin
@@ -330,7 +411,7 @@ class SbtBloopLspSuite
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |/.jvmopts
            |-Xms1536M
            |-Xmx1536M
@@ -350,7 +431,7 @@ class SbtBloopLspSuite
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |scalacOptions ++= List(
            |  "-Xfatal-warnings",
            |  "-Ywarn-unused"
@@ -371,7 +452,7 @@ class SbtBloopLspSuite
           |src/main/scala/warning/Warning.scala:1:1: error: Unused import
           |import scala.concurrent.Future // unused
           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        """.stripMargin
+        """.stripMargin,
       )
       // we should still have references despite fatal warning
       _ = assertNoDiff(
@@ -379,7 +460,7 @@ class SbtBloopLspSuite
         """|_empty_/A.
            |_empty_/A.B.
            |_empty_/Warning.
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -391,7 +472,7 @@ class SbtBloopLspSuite
          |/project/build.properties
          |sbt.version=$sbtVersion
          |/build.sbt
-         |scalaVersion := "${V.scala212}"
+         |scalaVersion := "${V.scala213}"
          |""".stripMargin
     )
     for {
@@ -415,13 +496,13 @@ class SbtBloopLspSuite
         """|/project/build.properties
            |sbt.version=0.13.15
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
         IncompatibleBuildToolVersion
           .params(SbtBuildTool(Some("0.13.15"), () => userConfig))
-          .getMessage
+          .getMessage,
       )
     } yield ()
   }
@@ -455,7 +536,7 @@ class SbtBloopLspSuite
         "build.sbt",
         "sc@@alaVersion := \"2.12.11\"",
         "sbt/Keys.scala",
-        expectedLine = 190
+        expectedLine = 190,
       )
     } yield ()
   }
@@ -474,7 +555,7 @@ class SbtBloopLspSuite
       _ <- assertDefinitionAtLocation(
         "project/plugins.sbt",
         "addSbt@@Plugin(\"ch.epfl.scala\" % \"sbt-scalafix\" % \"0.9.19\")",
-        "sbt/Defaults.scala"
+        "sbt/Defaults.scala",
       )
     } yield ()
   }
@@ -496,7 +577,7 @@ class SbtBloopLspSuite
         "build.sbt",
         "val bye = hel@@lo",
         "build.sbt",
-        1
+        1,
       )
     } yield ()
   }
@@ -532,7 +613,7 @@ class SbtBloopLspSuite
             |import sbt._
             |import Keys._
             |object Deps {
-            |  val scalatest = "org.scalatest" %% "scalatest" % "3.0.5"
+            |  val scalatest = "org.scalatest" %% "scalatest" % "3.2.4"
             |}
          """.stripMargin
       )
@@ -542,7 +623,7 @@ class SbtBloopLspSuite
            |val scalatest: ModuleID
            |```
            |```range
-           |val scalatest = "org.scalatest" %% "scalatest" % "3.0.5"
+           |val scalatest = "org.scalatest" %% "scalatest" % "3.2.4"
            |```
            |""".stripMargin
       _ = assertNoDiff(hoverRes, expectedHoverRes)
@@ -587,7 +668,7 @@ class SbtBloopLspSuite
             |object MetaValues/*L1*/ {
             |  val scalaVersion/*L2*/ = "$scalaVersion"
             |}
-            |""".stripMargin
+            |""".stripMargin,
       )
     } yield ()
 
@@ -612,7 +693,7 @@ class SbtBloopLspSuite
         server.workspaceDefinitions,
         """|/build.sbt
            |scalaVersion/*Keys.scala*/ :=/*Structure.scala*/ MetaValues/*MetaValues.scala:1*/.scalaVersion/*MetaValues.scala:2*/
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -636,7 +717,7 @@ class SbtBloopLspSuite
            |build.sbt:2:21: info: reference
            |def bar(): String = foo() 
            |                    ^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -665,8 +746,59 @@ class SbtBloopLspSuite
           """.stripMargin
         ),
         Set("build.sbt"),
-        "foo2"
+        "foo2",
       )
     } yield ()
   }
+
+  test("semantic-highlight") {
+    val expected =
+      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,definition,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
+          |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
+          |  .<<settings>>/*method*/(
+          |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
+          |    <<inThisBuild>>/*method*/(
+          |      <<List>>/*class*/(
+          |        <<organization>>/*variable,readonly*/ <<:=>>/*method*/ <<"com.example">>/*string*/,
+          |        <<scalaVersion>>/*variable,readonly*/ <<:=>>/*method*/ <<"2.13.10">>/*string*/,
+          |        <<scalacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(<<"-Xsource:3">>/*string*/, <<"-Xlint:adapted-args">>/*string*/),
+          |        <<javacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(
+          |          <<"-Xlint:all">>/*string*/,
+          |          <<"-Xdoclint:accessibility,html,syntax">>/*string*/
+          |        )
+          |      )
+          |    ),
+          |    <<name>>/*variable,readonly*/ <<:=>>/*method*/ <<"bsp-tests-source-sets">>/*string*/
+          |  )
+          |
+          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*class*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
+          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalatest">>/*string*/ <<%%>>/*method*/ <<"scalatest">>/*string*/ <<%>>/*method*/ <<"3.2.9">>/*string*/ <<%>>/*method*/ <<Test>>/*variable,readonly*/
+          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalameta">>/*string*/ <<%%>>/*method*/ <<"scalameta">>/*string*/ <<%>>/*method*/ <<"4.6.0">>/*string*/
+          |
+         """.stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+    for {
+      _ <- initialize(
+        s"""|/build.sbt
+            |$fileContent
+         """.stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("build.sbt")
+      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.assertSemanticHighlight(
+        "build.sbt",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
+
 }

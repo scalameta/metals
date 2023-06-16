@@ -2,7 +2,7 @@ package example
 
 class Scalalib/*Scalalib.scala*/ {
   val nil/*Scalalib.scala*/ = List/*List.scala*/()
-  val lst/*Scalalib.scala*/ = List/*List.scala*/[
+  val lst/*Scalalib.scala*/ = List/*package.scala*/[
     (
         Nothing,
         Null,
@@ -14,7 +14,7 @@ class Scalalib/*Scalalib.scala*/ {
         Short/*Short.scala*/,
         Double/*Double.scala*/,
         Float/*Float.scala*/,
-        Char/*Char.scala*/
+        Char/*Char.scala*/,
     )
   ](null)
   lst/*Scalalib.scala*/.isInstanceOf[Any]

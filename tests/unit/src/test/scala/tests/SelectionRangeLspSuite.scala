@@ -38,7 +38,7 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
            |  @@  a * 2
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertSelectionRanges(
         "a/src/main/scala/a/Main.scala",
@@ -61,8 +61,8 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
              |    a * 2
              |  }
              |}<<region<<
-             |""".stripMargin
-        )
+             |""".stripMargin,
+        ),
       )
 
     } yield ()
@@ -92,7 +92,7 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
            |    * 2
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertSelectionRanges(
         "a/src/main/scala/a/Main.scala",
@@ -121,8 +121,8 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
              |    * 2
              |  }
              |}<<region<<
-             |""".stripMargin
-        )
+             |""".stripMargin,
+        ),
       )
     } yield ()
   }

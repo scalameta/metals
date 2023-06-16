@@ -12,7 +12,6 @@ import scala.concurrent.TimeoutException
 import scala.util.Failure
 import scala.util.Success
 
-import scala.meta.inputs.Position
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
@@ -20,12 +19,13 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import tests.DapTestEnrichments._
 
 final class TestDebugger(
     connect: RemoteServer.Listener => Debugger,
-    onStoppage: Stoppage.Handler
+    onStoppage: Stoppage.Handler,
 )(implicit ec: ExecutionContext)
     extends RemoteServer.Listener {
   @volatile private var debugger = connect(this)
@@ -57,10 +57,15 @@ final class TestDebugger(
 
   def setBreakpoints(
       path: AbsolutePath,
-      positions: List[Position]
+      positions: List[Int],
   ): Future[SetBreakpointsResponse] = {
     val source = path.toDAP
-    val breakpoints = positions.map(_.toBreakpoint).toArray
+    val breakpoints = positions.map { line =>
+      val breakpoint = new SourceBreakpoint
+      breakpoint.setLine(line + 1) // breakpoints are 1-based
+      breakpoint.setColumn(0)
+      breakpoint
+    }.toArray
     ifNotFailed(debugger.setBreakpoints(source, breakpoints))
       .map { response =>
         // the breakpoint notification we receive does not contain the source
@@ -98,9 +103,17 @@ final class TestDebugger(
   def shutdown: Future[Unit] = {
     Debug.printEnclosing()
     for {
-      _ <- terminated.future
+      _ <- terminated.future.withTimeout(60, TimeUnit.SECONDS).recoverWith {
+        case _: TimeoutException =>
+          terminated.trySuccess(())
+          scribe.warn("We never got the terminate message")
+          Future.unit
+      }
       _ = scribe.info("TestingDebugger terminated")
-      _ <- debugger.shutdown(60)
+      _ <- debugger.shutdown(60).recoverWith { case _: TimeoutException =>
+        scribe.warn("The debugger is most likely already shut down.")
+        Future.unit
+      }
       _ = scribe.info("Remote server shutdown")
       _ <- onStoppage.shutdown
     } yield ()
@@ -162,7 +175,7 @@ final class TestDebugger(
 
   private def findStoppageCause(
       event: StoppedEventArguments,
-      frame: StackFrame
+      frame: StackFrame,
   ): Future[Stoppage.Cause] = {
     import org.eclipse.lsp4j.debug.{StoppedEventArgumentsReason => Reason}
     event.getReason match {

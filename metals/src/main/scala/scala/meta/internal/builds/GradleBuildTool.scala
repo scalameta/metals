@@ -6,32 +6,38 @@ import java.nio.file.Path
 
 import scala.util.Properties
 
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
+
+import coursierapi.Credentials
+import coursierapi.IvyRepository
+import coursierapi.MavenRepository
+import coursierapi.Repository
 
 case class GradleBuildTool(userConfig: () => UserConfiguration)
     extends BuildTool
     with BloopInstallProvider {
 
   private val initScriptName = "init-script.gradle"
-  private def initScript(versionToUse: String) =
+  private val gradleBloopVersion = BuildInfo.gradleBloopVersion
+  private def initScript = {
     s"""
        |initscript {
-       |  repositories{
-       |    mavenCentral()
-       |  }
+       |${GradleBuildTool.toGradleRepositories(Repository.defaults.asScala.toList)}
        |  dependencies {
-       |    classpath 'ch.epfl.scala:gradle-bloop_2.12:$versionToUse'
+       |    classpath 'ch.epfl.scala:gradle-bloop_2.12:$gradleBloopVersion'
        |  }
        |}
        |allprojects {
        |  apply plugin: bloop.integrations.gradle.BloopPlugin
        |}
     """.stripMargin.getBytes()
+  }
 
   private lazy val initScriptPath: Path = {
-    val bloopVersion = userConfig().currentBloopVersion
-    Files.write(tempDir.resolve(initScriptName), initScript(bloopVersion))
+    Files.write(tempDir.resolve(initScriptName), initScript)
   }
 
   private lazy val gradleWrapper = {
@@ -75,7 +81,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
           "--console=plain",
           "--init-script",
           initScriptPath.toString,
-          "bloopInstall"
+          "bloopInstall",
         )
       }
     }
@@ -95,7 +101,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
   // @tgodzik This this is the wrapper version we specify it as such,
   // since it's hard to determine which version will be used as gradle
   // doesn't save it in any settings
-  override def version: String = "5.3.1"
+  override def version: String = "7.5.0"
 
   override def minimumVersion: String = "4.3.0"
 
@@ -109,12 +115,59 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
 object GradleBuildTool {
   def isGradleRelatedPath(
       workspace: AbsolutePath,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Boolean = {
     val buildSrc = workspace.toNIO.resolve("buildSrc")
     val filename = path.toNIO.getFileName.toString
     path.toNIO.startsWith(buildSrc) ||
     filename.endsWith(".gradle") ||
     filename.endsWith(".gradle.kts")
+  }
+
+  def toGradleRepositories(
+      repos: List[Repository]
+  ): String = {
+    def authString(cr: Credentials) =
+      if (cr == null) ""
+      else
+        s"""|
+            |      credentials {
+            |        username "${cr.getUser()}"
+            |        password "${cr.getPassword()}"
+            |      }""".stripMargin
+
+    repos.collect {
+      case mr: MavenRepository if mr != Repository.central =>
+        // filter central etc.
+        s"""|    maven {
+            |      url "${mr.getBase()}"${authString(mr.getCredentials())}
+            |    }""".stripMargin
+
+      case ir: IvyRepository =>
+        ir.getPattern().split("\\/\\[").toList match {
+          case url :: rest => {
+            val layout = "[" ++ rest.mkString("/[")
+            s"""|    ivy {
+                |      url "${url}"
+                |      patternLayout {
+                |        artifact "${layout}"
+                |      }${authString(ir.getCredentials())}
+                |    }""".stripMargin
+          }
+          case Nil => ""
+        }
+      case mr if mr == Repository.central => "    mavenCentral()"
+    } match {
+      case Nil =>
+        """|  repositories {
+           |    mavenCentral()
+           |  }
+           |""".stripMargin
+      case repos =>
+        s"""|  repositories {
+            |${repos.mkString("\n")}
+            |  }
+            |""".stripMargin
+    }
   }
 }

@@ -22,7 +22,7 @@ abstract class Icons {
       findsuper,
       folder,
       github,
-      error
+      error,
     )
 }
 object Icons {

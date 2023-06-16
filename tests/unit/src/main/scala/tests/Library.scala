@@ -15,15 +15,15 @@ import coursierapi.Fetch
 case class Library(
     name: String,
     classpath: Classpath,
-    sources: Classpath
+    sources: Classpath,
 )
 
 object Library {
   def jdk: Library =
     Library(
       "JDK",
-      Classpath(PackageIndex.bootClasspath),
-      Classpath(JdkSources().get :: Nil)
+      Classpath(PackageIndex.bootClasspath.map(AbsolutePath.apply)),
+      Classpath(JdkSources().right.get :: Nil),
     )
   def cats: Seq[AbsolutePath] =
     fetch("org.typelevel", "cats-core_2.12", "2.0.0-M4")
@@ -35,16 +35,29 @@ object Library {
       Dependency.of(
         "org.scala-lang",
         s"scala3-compiler_$binaryVersion",
-        BuildInfoVersions.scala3
+        BuildInfoVersions.scala3,
       ),
       Dependency.of(
         "org.scala-lang",
         s"scala3-library_$binaryVersion",
-        BuildInfoVersions.scala3
-      )
+        BuildInfoVersions.scala3,
+      ),
     )
     fetchSources("scala3-suite", dependencies)
   }
+
+  def xnio: Library =
+    fetchSources(
+      "xnio",
+      List(Dependency.of("org.jboss.xnio", "xnio-nio", "3.8.8.Final")),
+    )
+
+  def damlrxjavaSources: List[AbsolutePath] =
+    fetchSources(
+      "daml-rxjava",
+      List(Dependency.of("com.daml", "bindings-rxjava", "2.0.0")),
+    ).sources.entries
+      .filter(_.toString.endsWith("bindings-rxjava-2.0.0-sources.jar"))
 
   def allScala2: List[Library] = {
     import mtags.BuildInfo.scalaCompilerVersion
@@ -62,7 +75,7 @@ object Library {
       Dependency.of("org.apache.spark", "spark-sql_2.11", "2.2.1"),
       Dependency.of("org.eclipse.jetty", "jetty-servlet", "9.3.11.v20160721"),
       Dependency.of("org.scalameta", "scalameta_2.12", "4.1.4"),
-      Dependency.of("org.scala-lang", "scala-compiler", scalaCompilerVersion)
+      Dependency.of("org.scala-lang", "scala-compiler", scalaCompilerVersion),
     )
     List(fetchSources("scala2-suite", dependencies))
   }
@@ -85,7 +98,7 @@ object Library {
     Library(
       name,
       Classpath(classpath.map(AbsolutePath(_)).toList),
-      Classpath(sources.map(AbsolutePath(_)).toList)
+      Classpath(sources.map(AbsolutePath(_)).toList),
     )
   }
 
@@ -97,5 +110,6 @@ object Library {
       )
       .fetch()
       .asScala
+      .toSeq
       .map(f => AbsolutePath(f.toPath))
 }

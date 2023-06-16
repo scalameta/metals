@@ -10,14 +10,14 @@ class DigestsSuite extends BaseTablesSuite {
     assertDiffEqual(digests.setStatus("a", Requested), 1)
     assertDiffEqual(
       digests.last().get,
-      Digest("a", Requested, time.currentMillis())
+      Digest("a", Requested, time.currentMillis()),
     )
     time.elapseSeconds(1)
     assertDiffEqual(digests.getStatus("a").get, Requested)
     assertDiffEqual(digests.setStatus("a", Installed), 1)
     assertDiffEqual(
       digests.last().get,
-      Digest("a", Installed, time.currentMillis())
+      Digest("a", Installed, time.currentMillis()),
     )
     time.elapseSeconds(1)
     assertDiffEqual(digests.getStatus("a").get, Installed)

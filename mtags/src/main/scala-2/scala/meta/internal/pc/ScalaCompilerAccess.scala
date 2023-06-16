@@ -47,10 +47,11 @@ class ScalaCompilerAccess(
     extends CompilerAccess[StoreReporter, MetalsGlobal](
       config,
       sh,
-      newCompiler
+      newCompiler,
+      shouldResetJobQueue = false
     ) {
 
-  def newReporter() = new StoreReporter
+  def newReporter = new StoreReporter
 
   protected def handleSharedCompilerException(
       t: Throwable

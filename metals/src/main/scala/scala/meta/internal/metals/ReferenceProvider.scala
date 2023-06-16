@@ -4,10 +4,15 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.Importee
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.TokenEditDistance
@@ -35,32 +40,33 @@ final class ReferenceProvider(
     definition: DefinitionProvider,
     remote: RemoteLanguageServer,
     trees: Trees,
-    buildTargets: BuildTargets
-) {
+    buildTargets: BuildTargets,
+) extends SemanticdbFeatureProvider {
   private var referencedPackages: BloomFilter[CharSequence] =
     BloomFilters.create(10000)
 
   case class IndexEntry(
       id: BuildTargetIdentifier,
-      bloom: BloomFilter[CharSequence]
+      bloom: BloomFilter[CharSequence],
   )
   val index: TrieMap[Path, IndexEntry] = TrieMap.empty
 
-  def reset(): Unit = {
+  override def reset(): Unit = {
     index.clear()
   }
-  def onDelete(file: Path): Unit = {
-    index.remove(file)
+
+  override def onDelete(file: SemanticdbPath): Unit = {
+    index.remove(file.toNIO)
   }
 
-  def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
+  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
     buildTargets.inverseSources(file).map { id =>
       val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
       val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
       val bloom = BloomFilter.create(
         Funnels.stringFunnel(StandardCharsets.UTF_8),
         Integer.valueOf((count + syntheticsCount) * 2),
-        0.01
+        0.01,
       )
 
       val entry = IndexEntry(id, bloom)
@@ -83,34 +89,65 @@ final class ReferenceProvider(
     }
   }
 
+  def referencesForWildcardImport(
+      sym: String,
+      source: AbsolutePath,
+      directlyImportedSymbols: Set[String],
+  ): List[String] = {
+    semanticdbs.textDocument(source).documentIncludingStale match {
+      case Some(doc) =>
+        doc.occurrences
+          .map(_.symbol)
+          .distinct
+          .filter(s =>
+            s.ownerChain.contains(sym) && s != sym && !directlyImportedSymbols
+              .contains(s)
+          )
+          .toList
+      case None => List()
+    }
+  }
+
+  /**
+   * Find references for the given params.
+   *
+   * @return - All found list of references, it is a list of result because
+   *           in some cases, multiple symbols are attached to the given position.
+   *           (e.g. extension parameter). See: https://github.com/scalameta/scalameta/issues/2443
+   */
   def references(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
-      includeSynthetics: Synthetic => Boolean = _ => true
-  ): ReferencesResult = {
+      includeSynthetics: Synthetic => Boolean = _ => true,
+  ): List[ReferencesResult] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
-        val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
-          definition.positionOccurrence(source, params.getPosition, doc)
-        maybeOccurrence match {
-          case Some(occurrence) =>
-            val alternatives =
-              referenceAlternatives(occurrence.symbol, source, doc)
-            val locations = references(
-              source,
-              params,
-              doc,
-              distance,
-              occurrence,
-              alternatives,
-              params.getContext.isIncludeDeclaration,
-              findRealRange,
-              includeSynthetics
-            )
-            ReferencesResult(occurrence.symbol, locations)
-          case None =>
-            ReferencesResult.empty
+        val results: List[ResolvedSymbolOccurrence] = {
+          val posOccurrences =
+            definition.positionOccurrences(source, params.getPosition, doc)
+          if (posOccurrences.isEmpty)
+            // handling case `import a.{A as @@B}`
+            occerencesForRenamedImport(source, params, doc)
+          else posOccurrences
+        }
+        results.map { result =>
+          val occurrence = result.occurrence.get
+          val distance = result.distance
+          val alternatives =
+            referenceAlternatives(occurrence.symbol, source, doc)
+          val locations = references(
+            source,
+            params,
+            doc,
+            distance,
+            occurrence,
+            alternatives,
+            params.getContext.isIncludeDeclaration,
+            findRealRange,
+            includeSynthetics,
+          )
+          ReferencesResult(occurrence.symbol, locations)
         }
       case None =>
         // NOTE(olafur): we block here instead of returning a Future because it
@@ -118,18 +155,38 @@ final class ReferenceProvider(
         // its dependencies (including rename provider) asynchronous. The remote
         // language server returns `Future.successful(None)` when it's disabled
         // so this isn't even blocking for normal usage of Metals.
-        remote.referencesBlocking(params).getOrElse(ReferencesResult.empty)
+        List(
+          remote.referencesBlocking(params).getOrElse(ReferencesResult.empty)
+        )
     }
   }
+
+  // for `import package.{AA as B@@B}` we look for occurences at `import package.{@@AA as BB}`,
+  // since rename is not a position occurence in semanticDB
+  private def occerencesForRenamedImport(
+      source: AbsolutePath,
+      params: ReferenceParams,
+      document: TextDocument,
+  ): List[ResolvedSymbolOccurrence] =
+    (for {
+      rename <- trees.findLastEnclosingAt[Importee.Rename](
+        source,
+        params.getPosition(),
+      )
+    } yield definition.positionOccurrences(
+      source,
+      rename.name.pos.toLsp.getStart(),
+      document,
+    )).getOrElse(List())
 
   // Returns alternatives symbols for which "goto definition" resolves to the occurrence symbol.
   private def referenceAlternatives(
       symbol: String,
       fromSource: AbsolutePath,
-      referenceDoc: TextDocument
+      referenceDoc: TextDocument,
   ): Set[String] = {
     val definitionDoc = if (referenceDoc.symbols.exists(_.symbol == symbol)) {
-      Some(referenceDoc)
+      Some((fromSource, referenceDoc))
     } else {
       for {
         location <- definition
@@ -138,26 +195,32 @@ final class ReferenceProvider(
           .headOption
         source = location.getUri().toAbsolutePath
         definitionDoc <- semanticdbs.textDocument(source).documentIncludingStale
-      } yield definitionDoc
+      } yield (source, definitionDoc)
     }
 
     definitionDoc match {
-      case Some(definitionDoc) =>
+      case Some((defPath, definitionDoc)) =>
         val name = symbol.desc.name.value
         val alternatives = new SymbolAlternatives(symbol, name)
 
-        val candidates = for {
+        def candidates(check: SymbolInformation => Boolean) = for {
           info <- definitionDoc.symbols
           if info.symbol != name
-          if {
-            alternatives.isVarSetter(info) ||
-            alternatives.isCompanionObject(info) ||
-            alternatives.isCopyOrApplyParam(info) ||
-            alternatives.isContructorParam(info)
-          }
+          if check(info)
         } yield info.symbol
 
-        val isCandidate = candidates.toSet
+        val isCandidate =
+          if (defPath.isJava)
+            candidates { info =>
+              alternatives.isJavaConstructor(info)
+            }.toSet
+          else
+            candidates { info =>
+              alternatives.isVarSetter(info) ||
+              alternatives.isCompanionObject(info) ||
+              alternatives.isCopyOrApplyParam(info) ||
+              alternatives.isContructorParam(info)
+            }.toSet
 
         val nonSyntheticSymbols = for {
           occ <- definitionDoc.occurrences
@@ -176,7 +239,9 @@ final class ReferenceProvider(
           }
         } yield info.symbol
 
-        if (isSyntheticSymbol)
+        if (defPath.isJava)
+          isCandidate
+        else if (isSyntheticSymbol)
           isCandidate -- nonSyntheticSymbols ++ additionalAlternativesForSynthetic
         else
           isCandidate -- nonSyntheticSymbols
@@ -184,37 +249,51 @@ final class ReferenceProvider(
     }
   }
 
+  /**
+   * Return all paths to files which contain at least one symbol from isSymbol set.
+   */
+  private def pathsFor(
+      buildTarget: BuildTargetIdentifier,
+      isSymbol: Set[String],
+  ): Iterator[AbsolutePath] = {
+    val allowedBuildTargets = buildTargets.allInverseDependencies(buildTarget)
+    val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+    val result = for {
+      (path, entry) <- index.iterator
+      if allowedBuildTargets.contains(entry.id) &&
+        isSymbol.exists(entry.bloom.mightContain)
+      sourcePath = AbsolutePath(path)
+      if !visited(sourcePath)
+      _ = visited.add(sourcePath)
+      if sourcePath.exists
+    } yield sourcePath
+
+    result
+  }
+
   private def workspaceReferences(
       source: AbsolutePath,
       isSymbol: Set[String],
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
-      includeSynthetics: Synthetic => Boolean
+      includeSynthetics: Synthetic => Boolean,
   ): Seq[Location] = {
     buildTargets.inverseSources(source) match {
       case None => Seq.empty
       case Some(id) =>
-        val allowedBuildTargets = buildTargets.allInverseDependencies(id)
-        val visited = scala.collection.mutable.Set.empty[AbsolutePath]
         val result = for {
-          (path, entry) <- index.iterator
-          if allowedBuildTargets.contains(entry.id) &&
-            isSymbol.exists(entry.bloom.mightContain)
-          scalaPath = AbsolutePath(path)
-          if !visited(scalaPath)
-          _ = visited.add(scalaPath)
-          if scalaPath.exists
+          sourcePath <- pathsFor(id, isSymbol)
           semanticdb <-
             semanticdbs
-              .textDocument(scalaPath)
+              .textDocument(sourcePath)
               .documentIncludingStale
               .iterator
           semanticdbDistance = buffers.tokenEditDistance(
-            scalaPath,
+            sourcePath,
             semanticdb.text,
-            trees
+            trees,
           )
-          uri = scalaPath.toURI.toString
+          uri = sourcePath.toURI.toString
           reference <-
             try {
               referenceLocations(
@@ -224,17 +303,34 @@ final class ReferenceProvider(
                 uri,
                 isIncludeDeclaration,
                 findRealRange,
-                includeSynthetics
+                includeSynthetics,
+                sourcePath.isJava,
               )
             } catch {
               case NonFatal(e) =>
                 // Can happen for example if the SemanticDB text is empty for some reason.
-                scribe.error(s"reference: $scalaPath", e)
+                scribe.error(s"reference: $sourcePath", e)
                 Nil
             }
         } yield reference
         result.toSeq
     }
+  }
+
+  /**
+   * Return all paths to files which contain at least one symbol from isSymbol set.
+   */
+  private[metals] def allPathsFor(
+      source: AbsolutePath,
+      isSymbol: Set[String],
+  )(implicit ec: ExecutionContext): Future[Set[AbsolutePath]] = {
+    buildTargets
+      .inverseSourcesBsp(source)
+      .map {
+        case None => Set.empty
+        case Some(id) =>
+          pathsFor(id, isSymbol).toSet
+      }
   }
 
   private def references(
@@ -246,7 +342,7 @@ final class ReferenceProvider(
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
-      includeSynthetics: Synthetic => Boolean
+      includeSynthetics: Synthetic => Boolean,
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
     val isLocal = occ.symbol.isLocal
@@ -269,7 +365,8 @@ final class ReferenceProvider(
           params.getTextDocument.getUri,
           isIncludeDeclaration,
           findRealRange,
-          includeSynthetics
+          includeSynthetics,
+          source.isJava,
         )
       else Seq.empty
 
@@ -280,10 +377,11 @@ final class ReferenceProvider(
           isSymbol,
           isIncludeDeclaration,
           findRealRange,
-          includeSynthetics
+          includeSynthetics,
         )
       else
         Seq.empty
+
     workspaceRefs ++ local
   }
 
@@ -294,7 +392,8 @@ final class ReferenceProvider(
       uri: String,
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
-      includeSynthetics: Synthetic => Boolean
+      includeSynthetics: Synthetic => Boolean,
+      isJava: Boolean,
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -314,6 +413,9 @@ final class ReferenceProvider(
       range <- reference.range.toList
     } {
 
+      if (isJava) {
+        add(range)
+      }
       /* Find real range is used when renaming occurrences,
        * where we need to check if the symbol name matches exactly.
        * This was needed for some issues with macro annotations
@@ -321,7 +423,10 @@ final class ReferenceProvider(
        * In case of finding references, where false positives
        * are ok and speed is more important, we just use the default noAdjustRange.
        */
-      findRealRange(range, snapshot.text, reference.symbol).foreach(add)
+      else {
+        findRealRange(range, snapshot.text, reference.symbol).foreach(add)
+      }
+
     }
 
     for {
@@ -340,7 +445,7 @@ final class ReferenceProvider(
   }
 
   private val noAdjustRange: AdjustRange =
-    (range: s.Range, text: String, symbol: String) => Some(range)
+    (range: s.Range, _: String, _: String) => Some(range)
   type AdjustRange = (s.Range, String, String) => Option[s.Range]
 
   private def resizeReferencedPackages(): Unit = {
@@ -361,8 +466,19 @@ class SymbolAlternatives(symbol: String, name: String) {
       info.displayName == name &&
       symbol == Symbols.Global(
         info.symbol.owner,
-        Descriptor.Type(info.displayName)
+        Descriptor.Type(info.displayName),
       )
+
+  // Returns true if `info` is the java constructor matching the occurrence class symbol.
+  def isJavaConstructor(info: SymbolInformation): Boolean = {
+    info.isConstructor &&
+    (Symbol(info.symbol) match {
+      case GlobalSymbol(clsSymbol, Descriptor.Method("<init>", _)) =>
+        symbol == clsSymbol.value
+      case _ =>
+        false
+    })
+  }
 
   // Returns true if `info` is the companion class matching the occurrence object symbol.
   def isCompanionClass(info: SymbolInformation): Boolean = {
@@ -370,7 +486,7 @@ class SymbolAlternatives(symbol: String, name: String) {
     info.displayName == name &&
     symbol == Symbols.Global(
       info.symbol.owner,
-      Descriptor.Term(info.displayName)
+      Descriptor.Term(info.displayName),
     )
   }
 
@@ -382,7 +498,7 @@ class SymbolAlternatives(symbol: String, name: String) {
       case GlobalSymbol(
             // This means it's the primary constructor
             GlobalSymbol(owner, Descriptor.Method("<init>", "()")),
-            Descriptor.Parameter(_)
+            Descriptor.Parameter(_),
           ) =>
         Symbols.Global(owner.value, Descriptor.Term(name))
       case _ =>
@@ -399,7 +515,7 @@ class SymbolAlternatives(symbol: String, name: String) {
         Symbols.Global(
           // This means it's the primary constructor
           Symbols.Global(owner.value, Descriptor.Method("<init>", "()")),
-          Descriptor.Parameter(name)
+          Descriptor.Parameter(name),
         )
       case _ =>
         ""
@@ -414,24 +530,24 @@ class SymbolAlternatives(symbol: String, name: String) {
         case GlobalSymbol(
               GlobalSymbol(
                 GlobalSymbol(owner, Descriptor.Term(obj)),
-                Descriptor.Method("apply", _)
+                Descriptor.Method("apply", _),
               ),
-              _
+              _,
             ) =>
           Symbols.Global(
             Symbols.Global(owner.value, Descriptor.Type(obj)),
-            Descriptor.Term(name)
+            Descriptor.Term(name),
           )
         case GlobalSymbol(
               GlobalSymbol(
                 GlobalSymbol(owner, Descriptor.Type(obj)),
-                Descriptor.Method("copy", _)
+                Descriptor.Method("copy", _),
               ),
-              _
+              _,
             ) =>
           Symbols.Global(
             Symbols.Global(owner.value, Descriptor.Type(obj)),
-            Descriptor.Term(name)
+            Descriptor.Term(name),
           )
         case _ =>
           ""
@@ -445,7 +561,7 @@ class SymbolAlternatives(symbol: String, name: String) {
         case GlobalSymbol(owner, Descriptor.Method(setter, disambiguator)) =>
           Symbols.Global(
             owner.value,
-            Descriptor.Method(setter.stripSuffix("_="), disambiguator)
+            Descriptor.Method(setter.stripSuffix("_="), disambiguator),
           )
         case _ =>
           ""

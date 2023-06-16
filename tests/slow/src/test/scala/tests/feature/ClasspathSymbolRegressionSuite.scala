@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 import tests.BaseWorkspaceSymbolSuite
 import tests.Library
 
-class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
+abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   var tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
   override def libraries: List[Library] = Library.allScala2
   def workspace: AbsolutePath = tmp
@@ -28,7 +28,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.tools.nsc.backend.jvm.opt.LocalOptImpls.RemoveHandlersResult.NoneRemoved Object
        |scala.tools.nsc.settings.ScalaSettings#CachePolicy.None Object
        |scala.tools.nsc.transform.async.ExprBuilder#StateTransitionStyle.None Object
-       |""".stripMargin
+       |""".stripMargin,
   )
   check(
     "Map.Entry",
@@ -55,7 +55,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.commons.collections.ReferenceMap#Entry Class
        |org.apache.commons.collections.ReferenceMap#EntryIterator Class
        |org.apache.commons.lang.IntHashMap#Entry Class
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -73,7 +73,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.spark.sql.execution.streaming.FileStreamSinkLog Object
        |org.apache.spark.sql.execution.streaming.FileStreamSource Class
        |org.apache.spark.sql.execution.streaming.FileStreamSource Object
-       |""".stripMargin
+       |""".stripMargin,
   )
   check(
     "File",
@@ -104,7 +104,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.reflect.io.File Object
        |sourcecode.File Class
        |sourcecode.File Object
-       |""".stripMargin
+       |""".stripMargin,
   )
   check(
     "Files",
@@ -118,11 +118,11 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.ivy.ant.IvyCacheFileset Class
        |org.apache.parquet.Files Class
        |org.apache.spark.SparkFiles Object
-       |org.apache.spark.sql.execution.command.ListFilesCommand Class
        |org.apache.spark.sql.execution.streaming.FileStreamSource.SeenFilesMap Class
        |org.glassfish.jersey.server.internal.scanning.FilesScanner Class
+       |org.jline.builtins.Completers#FilesCompleter Class
        |scala.meta.internal.io.ListFiles Class
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -136,9 +136,9 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.spark.sql.LowPrioritySQLImplicits Interface
        |org.apache.spark.sql.SQLImplicits Class
        |org.json4s.Implicits Interface
-       |scala.collection.convert.ToJavaImplicits Interface
-       |scala.collection.convert.ToScalaImplicits Interface
        |scala.concurrent.ExecutionContext.Implicits Object
+       |scala.math.Equiv.ExtraImplicits Interface
+       |scala.math.Equiv.Implicits Object
        |scala.math.Fractional.ExtraImplicits Interface
        |scala.math.Fractional.Implicits Object
        |scala.math.Integral.ExtraImplicits Interface
@@ -154,7 +154,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
        |scala.tools.nsc.typechecker.Implicits Interface
        |scala.tools.nsc.typechecker.ImplicitsStats Interface
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -163,12 +163,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.collection.concurrent.TrieMap Object
        |scala.collection.concurrent.TrieMapIterator Class
        |scala.collection.concurrent.TrieMapSerializationEnd Object
-       |scala.collection.immutable.HashMap.HashTrieMap Class
-       |scala.collection.parallel.mutable.ParTrieMap Class
-       |scala.collection.parallel.mutable.ParTrieMap Object
-       |scala.collection.parallel.mutable.ParTrieMapCombiner Interface
-       |scala.collection.parallel.mutable.ParTrieMapSplitter Class
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -176,13 +171,13 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """|scala.meta.inputs.Position.None Object
        |scala.meta.inputs.Position.Range Class
        |scala.meta.inputs.Position.Range Object
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
     "Input.None",
     """|scala.meta.inputs.Input.None Object
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -191,7 +186,17 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.typesafe.config.ConfigException#IO Class
        |org.eclipse.jetty.util.IO Class
        |org.mortbay.util.IO Class
-       |""".stripMargin
+       |""".stripMargin,
   )
 
+}
+
+class VirtualDocsClasspathSymbolRegressionSuite
+    extends ClasspathSymbolRegressionSuite {
+  override def saveClassFileToDisk: Boolean = false
+}
+
+class SaveToDiskClasspathSymbolRegressionSuite
+    extends ClasspathSymbolRegressionSuite {
+  override def saveClassFileToDisk: Boolean = true
 }

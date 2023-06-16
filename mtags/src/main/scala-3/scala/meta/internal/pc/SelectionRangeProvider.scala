@@ -3,15 +3,20 @@ package scala.meta.internal.pc
 import java.nio.file.Paths
 import java.{util as ju}
 
-import scala.collection.JavaConverters.*
+import scala.jdk.CollectionConverters.*
 
+import scala.meta.inputs.Position
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.SelectionRangeProvider.*
 import scala.meta.pc.OffsetParams
+import scala.meta.tokens.Token
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
+import dotty.tools.dotc.util.SourcePosition
+import org.eclipse.lsp4j
 import org.eclipse.lsp4j.SelectionRange
 
 /**
@@ -22,7 +27,7 @@ import org.eclipse.lsp4j.SelectionRange
  */
 class SelectionRangeProvider(
     driver: InteractiveDriver,
-    params: ju.List[OffsetParams]
+    params: ju.List[OffsetParams],
 ):
 
   /**
@@ -46,11 +51,19 @@ class SelectionRangeProvider(
       val bareRanges = path
         .map { tree =>
           val selectionRange = new SelectionRange()
-          selectionRange.setRange(tree.sourcePos.toLSP)
+          selectionRange.setRange(tree.sourcePos.toLsp)
           selectionRange
         }
 
-      bareRanges.reduceRight(setParent)
+      // if cursor is in comment return range in comment4
+      val commentRanges = getCommentRanges(pos, path, param.text()).map { x =>
+        new SelectionRange():
+          setRange(x)
+      }.toList
+
+      (commentRanges ++ bareRanges)
+        .reduceRightOption(setParent)
+        .getOrElse(new SelectionRange())
     }
 
     selectionRanges
@@ -58,7 +71,7 @@ class SelectionRangeProvider(
 
   private def setParent(
       child: SelectionRange,
-      parent: SelectionRange
+      parent: SelectionRange,
   ): SelectionRange =
     // If the parent and the child have the same exact range we just skip it.
     // This happens in a lot of various places. For example:
@@ -67,7 +80,7 @@ class SelectionRangeProvider(
     //   a <- >>region>>Some(1)<<region<<
     // } yield a
     //
-    //Apply(
+    // Apply(
     //  Select(Apply(Ident(Some), List(Literal(Constant(1)))), flatMap), <-- This range
     //  List(
     //    Function(
@@ -78,10 +91,63 @@ class SelectionRangeProvider(
     //      )
     //    )
     //  )
-    //)
+    // )
     if child.getRange() == parent.getRange() then parent
     else
       child.setParent(parent)
       child
 
+end SelectionRangeProvider
+
+object SelectionRangeProvider:
+
+  import scala.meta.dialects.Scala3
+  import scala.meta.*
+  import scala.meta.Token.Comment
+  import dotty.tools.dotc.ast.tpd
+
+  def commentRangesFromTokens(
+      tokenList: List[Token],
+      cursorStart: SourcePosition,
+      offsetStart: Int,
+  ) =
+    val cursorStartShifted = cursorStart.start - offsetStart
+
+    tokenList
+      .collect { case x: Comment =>
+        (x.start, x.end, x.pos)
+      }
+      .collect {
+        case (commentStart, commentEnd, _)
+            if commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd =>
+          cursorStart
+            .withStart(commentStart + offsetStart)
+            .withEnd(commentEnd + offsetStart)
+            .toLsp
+
+      }
+  end commentRangesFromTokens
+
+  /** get comments under cursor */
+  def getCommentRanges(
+      cursor: SourcePosition,
+      path: List[tpd.Tree],
+      srcText: String,
+  )(using Context): List[lsp4j.Range] =
+    val (treeStart, treeEnd) = path.headOption
+      .map(t => (t.sourcePos.start, t.sourcePos.end))
+      .getOrElse((0, srcText.size))
+
+    // only parse comments from first range to reduce computation
+    val srcSliced = srcText.slice(treeStart, treeEnd)
+
+    val tokens = srcSliced.tokenize.toOption
+    if tokens.isEmpty then Nil
+    else
+      commentRangesFromTokens(
+        tokens.toList.flatten,
+        cursor,
+        treeStart,
+      )
+  end getCommentRanges
 end SelectionRangeProvider

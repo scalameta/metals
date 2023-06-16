@@ -17,7 +17,22 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|assertion = : Boolean
        |Main arg
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
+  )
+
+  check(
+    "arg-newline",
+    s"""|object Main {
+        |  def foo(banana: String, apple: String) = ???
+        |  foo(
+        |    @@
+        |  )
+        |}
+        |""".stripMargin,
+    """|apple = : String
+       |banana = : String
+       |""".stripMargin,
+    topLines = Option(2),
   )
 
   check(
@@ -29,7 +44,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|message = : => Any
        |Main arg1
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   checkEdit(
@@ -41,7 +56,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|object Main {
        |  assert(assertion = true, message = )
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -53,7 +68,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|message = : => Any
        |Main arg2
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   def user: String =
@@ -77,14 +92,14 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg3
        |User arg3
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(4),
   )
 
   // We should get NamedArg `address` from args in scala3, and remove `address` from completion, but it doesn't appear.
   // This might be good to fix in Dotty.
   // see: https://github.com/scalameta/metals/pull/2369
   check(
-    "arg4".tag(IgnoreScala3),
+    "arg4",
     s"""|
         |$user
         |object Main {
@@ -95,7 +110,19 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |followers = : Int
        |Main arg4
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "3.1.3" ->
+        """|age = : Int
+           |followers = : Int
+           |Main arg4
+           |""".stripMargin,
+      "3.1" ->
+        """|address = : String
+           |age = : Int
+           |followers = : Int
+           |""".stripMargin,
+    ),
   )
 
   check(
@@ -103,23 +130,15 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|
         |$user
         |object Main {
-        |  User("", @@ address = "")
+        |  User("", @@, address = "")
         |}
         |""".stripMargin,
-    """|address = : String
+    """|age = : Int
        |followers = : Int
        |Main arg5
        |User arg5
        |""".stripMargin,
     topLines = Option(4),
-    compat = Map(
-      "3" ->
-        """|age = : Int
-           |followers = : Int
-           |Main arg5
-           |User arg5
-           |""".stripMargin
-    )
   )
 
   check(
@@ -134,7 +153,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |age = : Int
        |followers = : Int
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
   )
 
   check(
@@ -153,7 +172,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         """|x = : A
            |Main arg7
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -166,7 +185,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|suffix = : String
        |Main arg8
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   // In scala3, we get NoSymbol for `until`, so we get no completions here.
@@ -185,7 +204,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|end = : Int
        |Main arg9
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
   )
 
   check(
@@ -197,7 +216,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|address = : String
        |""".stripMargin,
-    topLines = Option(1)
+    topLines = Option(1),
   )
 
   check(
@@ -208,7 +227,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|banana = : Int
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -218,7 +237,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  curry(bana@@)
         |}
         |""".stripMargin,
-    ""
+    "",
   )
 
   check(
@@ -228,7 +247,40 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     // assert that `evidence$1` is excluded.
-    ""
+    "",
+  )
+
+  checkSnippet( // see: https://github.com/scalameta/metals/issues/2400
+    "explicit-dollar",
+    """
+      |object Main {
+      |  def test($foo: Int, $bar: Int): Int = ???
+      |  test($f@@)
+      |}
+      |""".stripMargin,
+    """|$$foo = """.stripMargin,
+    topLines = Option(1),
+  )
+
+  // known issue: the second parameter with $ become | (returned from compiler)
+  // see: https://github.com/scalameta/metals/issues/3690
+  checkSnippet(
+    "explicit-dollar-autofill",
+    """
+      |object Main {
+      |  def test($foo: Int, $bar: Int): Int = ???
+      |  test($f@@)
+      |}
+      |""".stripMargin,
+    """|$$foo = 
+       |$$foo = ${1:???}, | = ${2:???}
+       |""".stripMargin,
+    topLines = Option(2),
+    compat = Map(
+      "3" -> """|$$foo = 
+                |$$foo = ${1:???}, $$bar = ${2:???}
+                |""".stripMargin
+    ),
   )
 
   check(
@@ -242,11 +294,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|isResourceFile = : Boolean
        |isResourceFile = isLargeBanana : Boolean
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|isResourceFile = : Boolean
-           |""".stripMargin
-    )
   )
 
   check(
@@ -262,12 +309,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = argument : Int
        |""".stripMargin,
     topLines = Some(3),
-    compat = Map(
-      "3" ->
-        """|argument: Int
-           |argument = : Int
-           |""".stripMargin
-    )
   )
 
   check(
@@ -275,7 +316,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|case class A(argument: Int)
         |object Main {
         |  def foo(argument: Int): A =
-        |    A(arg@@)
+        |    A(argu@@)
         |}
         |""".stripMargin,
     """|argument: Int
@@ -283,12 +324,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = argument : Int
        |""".stripMargin,
     topLines = Some(3),
-    compat = Map(
-      "3" ->
-        """|argument: Int
-           |argument = : Int
-           |""".stripMargin
-    )
   )
 
   check(
@@ -299,7 +334,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  val number2 = 2
         |  val number4 = 4
         |  val number8 = 8
-        |  foo(ar@@)
+        |  foo(argu@@)
         |}
         |""".stripMargin,
     """|argument = : Int
@@ -309,12 +344,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = number8 : Int
        |""".stripMargin,
     topLines = Some(5),
-    compat = Map(
-      "3" ->
-        """|argument = : Int
-           |Calendar - java.util
-           |""".stripMargin
-    )
   )
 
   check(
@@ -331,42 +360,37 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |`type` = number2 : Int
        |""".stripMargin,
     topLines = Some(5),
-    compat = Map(
-      "3" ->
-        """|`type` = : Int
-           |""".stripMargin
-    )
   )
 
   checkEditLine(
-    "auto-no-show".tag(IgnoreScala3),
+    "auto-no-show",
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
-        |  val hello = "" 
+        |  val hello = ""
         |  val relevant = 123
-        |  ___ 
+        |  ___
         |}
         |""".stripMargin,
     "foo(rele@@)",
-    "foo(relevant)"
+    "foo(relevant)",
   )
 
   checkEditLine(
-    "auto".tag(IgnoreScala3),
+    "auto",
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
-        |  val hello = "" 
-        |  ___ 
+        |  val hello = ""
+        |  ___
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1:number}, other = ${2:hello})"
+    "foo(argument = ${1:number}, other = ${2:hello})",
   )
 
   checkEditLine(
-    "auto-inheritance".tag(IgnoreScala3),
+    "auto-inheritance",
     s"""|object Main {
         |  trait Animal
         |  class Dog extends Animal
@@ -376,29 +400,29 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  def foo(animal: Animal, furniture: Furniture) : Int = 42
         |  val dog = new Dog()
         |  val chair = new Chair()
-        |  ___ 
-        |}
-        |""".stripMargin,
-    "foo(auto@@)",
-    "foo(animal = ${1:dog}, furniture = ${2:chair})"
-  )
-
-  checkEditLine(
-    "auto-multiple-type".tag(IgnoreScala3),
-    s"""|object Main {
-        |  def foo(argument : Int, other : String, last : String = "") : Int = argument
-        |  val number = 5
-        |  val argument = 123
-        |  val hello = "" 
         |  ___
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1|???,argument,number|}, other = ${2:hello})"
+    "foo(animal = ${1:dog}, furniture = ${2:chair})",
   )
 
   checkEditLine(
-    "auto-not-found".tag(IgnoreScala3),
+    "auto-multiple-type",
+    s"""|object Main {
+        |  def foo(argument : Int, other : String, last : String = "") : Int = argument
+        |  val number = 5
+        |  val argument = 123
+        |  val hello = ""
+        |  ___
+        |}
+        |""".stripMargin,
+    "foo(auto@@)",
+    "foo(argument = ${1|???,argument,number|}, other = ${2:hello})",
+  )
+
+  checkEditLine(
+    "auto-not-found",
     s"""|object Main {
         |  val number = 234
         |  val nothing = throw new Exception
@@ -408,11 +432,11 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1:number}, other = ${2:???}, isTrue = ${3:???}, opt = ${4:???})"
+    "foo(argument = ${1:number}, other = ${2:???}, isTrue = ${3:???}, opt = ${4:???})",
   )
 
   checkEditLine(
-    "auto-list".tag(IgnoreScala3),
+    "auto-list",
     s"""|object Main {
         |  def foo(argument : List[String], other : List[Int]) : Int = 0
         |  val list1 = List(1,2,3)
@@ -423,11 +447,14 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})"
+    "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})",
+    compat = Map(
+      "3" -> "foo(argument = ${1|???,list3,list4|}, other = ${2|???,list1,list2|})"
+    ),
   )
 
   checkEditLine(
-    "wrap-idents".tag(IgnoreScala3),
+    "wrap-idents",
     s"""|object Main {
         |  def f(a: String, b: String, `type`: String) = a + b + `type`
         |  val str = ""
@@ -436,7 +463,240 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "f(auto@@)",
-    "f(a = ${1|???,str1,str|}, b = ${2|???,str1,str|}, `type` = ${3|???,str1,str|})"
+    "f(a = ${1|???,str1,str|}, b = ${2|???,str1,str|}, `type` = ${3|???,str1,str|})",
+    compat = Map(
+      "3" -> "f(a = ${1|???,str,str1|}, b = ${2|???,str,str1|}, `type` = ${3|???,str,str1|})"
+    ),
   )
 
+  check(
+    "nested-apply",
+    s"""|object Main{
+        |  def foo(argument1: Int, argument2: Int): Int = argument1 + argument2
+        |  val x: Int = 3
+        |  foo(foo(@@), )
+        |}
+        |""".stripMargin,
+    """|argument1 = : Int
+       |argument2 = : Int
+       |argument1 = x : Int
+       |argument2 = x : Int
+       |""".stripMargin,
+    topLines = Some(4),
+    compat = Map(
+      /* Minor implementation detail between Scala 2 and Scala 3
+       * which shouldn't cause any issue and making it work the same
+       * would require non trivial code. `argument1 = x ` is not a
+       * NamedArgument in Scala 2 but a simple TextEditMember, which means
+       * `argument1 = ` will be prioritized.
+       */
+      "3" ->
+        """|argument1 = : Int
+           |argument1 = x : Int
+           |argument2 = : Int
+           |argument2 = x : Int
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "infix",
+    s"""|object Main{
+        |  val lst: List[Int] = List(1, 2, 3)
+        |  lst.map(x => x * x@@ )
+        |}
+        |""".stripMargin,
+    """|x: Int
+       |""".stripMargin,
+  )
+
+  check(
+    "contructor-param",
+    """|class Foo (xxx: Int)
+       |
+       |object Main {
+       |  val foo = new Foo(x@@)
+       |}
+       |""".stripMargin,
+    """|xxx = : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "contructor-param2",
+    """|class Foo ()
+       |
+       |object Foo {
+       |  def apply(xxx: Int): Foo = ???
+       |}
+       |object Main {
+       |  val foo = Foo(x@@)
+       |}
+       |""".stripMargin,
+    """|xxx = : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "context-function-as-param".tag(IgnoreScala2),
+    s"""|case class Context()
+        |
+        |def foo(arg1: (Context) ?=> Int, arg2: Int): String = ???
+        |val m = foo(ar@@)
+        |""".stripMargin,
+    """|arg1 = : (Context) ?=> Int
+       |arg2 = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "context-function-as-param2".tag(IgnoreScala2),
+    s"""|case class Context()
+        |
+        |def foo(arg1: Context ?=> Int, arg2: Context ?=> Int): String = ???
+        |val m = foo(arg1 = ???, a@@)
+        |""".stripMargin,
+    """|arg2 = : (Context) ?=> Int
+       |""".stripMargin,
+    topLines = Some(1),
+  )
+
+  check(
+    "context-function-as-param3".tag(IgnoreScala2),
+    s"""|case class Context()
+        |
+        |def foo(arg1: (Boolean, Context) ?=> Int ?=> String, arg2: (Boolean, Context) ?=> Int ?=> String): String = ???
+        |val m = foo(arg1 = ???, a@@)
+        |""".stripMargin,
+    """|arg2 = : (Boolean, Context) ?=> (Int) ?=> String
+       |""".stripMargin,
+    topLines = Some(1),
+  )
+
+  check(
+    "second-arg-first",
+    """|case class Test(
+       |    testA: String,
+       |    testB: Option[String],
+       |    testC: String,
+       |)
+       |object Main {
+       |  def test(x: Test) = {
+       |    x.copy(testB = ???, te@@)
+       |  }
+       |}
+       |""".stripMargin,
+    """|testA = : String
+       |testC = : String
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "case-class-apply",
+    """|object Main {
+       |  def m() = {
+       |    case class A(foo: Int, fooBar: Int)
+       |    println(A(foo@@))
+       |  }
+       |}
+       |""".stripMargin,
+    """|foo = : Int
+       |fooBar = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "case-class-apply1",
+    """|object Main {
+       |  def m() = {
+       |    case class A(foo: Int, fooBar: Int)
+       |    object A { def apply(foo: Int) = new A(foo, 3) }
+       |    println(A(foo@@))
+       |  }
+       |}
+       |""".stripMargin,
+    """|foo = : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class-apply2",
+    """|object Main {
+       |  def m() = {
+       |    case class A(foo: Int, fooBar: Int)
+       |    object A { def apply(foo: Int) = new A(foo, 3) }
+       |    println(A(foo = 1, foo@@))
+       |  }
+       |}
+       |""".stripMargin,
+    """|fooBar = : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class-apply3",
+    """|case class A(val foo: Int, val fooBar: Int)
+       |object A {
+       |  def apply(foo: Int): A = new A(foo, 3)
+       |}
+       |
+       |object Main {
+       |  for {
+       |      a <- List(1, 2, 3)
+       |      x = A(foo@@)
+       |   }
+       |}
+       |""".stripMargin,
+    """|foo = : Int
+       |foo = a : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class-apply4",
+    """|case class A(val foo: Int, val fooBar: Int)
+       |object A {
+       |  def apply(foo: Int): A = new A(foo, 3)
+       |}
+       |
+       |object Main {
+       |  for {
+       |      a <- List(1, 2, 3)
+       |      x = A(foo = 1, foo@@)
+       |   }
+       |}
+       |""".stripMargin,
+    """|fooBar = : Int
+       |fooBar = a : Int
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class-for-comp",
+    """|case class Abc(foo: Int, fooBar: Int)
+       |object Main {
+       |   for {
+       |      a <- List(1, 2, 3)
+       |      x = Abc(foo@@)
+       |   }
+       |}
+       |""".stripMargin,
+    """|foo = : Int
+       |fooBar = : Int
+       |foo = a : Int
+       |fooBar = a : Int
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|foo = : Int
+           |foo = a : Int
+           |fooBar = : Int
+           |fooBar = a : Int
+           |""".stripMargin
+    ),
+    topLines = Some(4),
+  )
 }

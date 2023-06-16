@@ -2,7 +2,6 @@ package tests
 
 import scala.meta.dialects
 import scala.meta.internal.inputs._
-import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
@@ -19,7 +18,7 @@ class WorkspaceSymbolExpectSuite
           val symtab0 = mtags0.symbols.map(i => i.symbol -> i).toMap
           val mtags = mtags0.copy(
             occurrences = mtags0.occurrences.filter { occ =>
-              WorkspaceSymbolProvider.isRelevantKind(symtab0(occ.symbol).kind)
+              symtab0(occ.symbol).kind.isRelevantKind
             }
           )
           val obtained = Semanticdbs.printTextDocument(mtags)
@@ -32,7 +31,7 @@ class WorkspaceSymbolExpectSuite
             fail(unknownSymbols.mkString("\n"))
           }
           obtained
-        }
+        },
       )
     }
   }

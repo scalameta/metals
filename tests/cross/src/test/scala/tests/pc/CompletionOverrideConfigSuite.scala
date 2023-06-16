@@ -5,20 +5,16 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionOverrideConfigSuite extends BaseCompletionSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(
       _symbolPrefixes = Map(
         "a/Weekday." -> "w",
-        "java/util/function/" -> "f"
+        "java/util/function/" -> "f",
       ),
-      overrideDefFormat = OverrideDefFormat.Unicode
+      overrideDefFormat = OverrideDefFormat.Unicode,
     )
 
   checkEdit(
@@ -46,7 +42,7 @@ class CompletionOverrideConfigSuite extends BaseCompletionSuite {
        |class Main extends Super {
        |  def weekday: w.Monday = ${0:???}
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -68,7 +64,20 @@ class CompletionOverrideConfigSuite extends BaseCompletionSuite {
        |class Main extends Package {
        |  def function: f.Function[Int,String] = ${0:???}
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> // space between Int, String
+        """|package b
+           |
+           |import java.util.{function => f}
+           |class Package {
+           |  def function: java.util.function.Function[Int, String]
+           |}
+           |class Main extends Package {
+           |  def function: f.Function[Int, String] = ${0:???}
+           |}
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -84,6 +93,12 @@ class CompletionOverrideConfigSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """🔼 numberAbstract: Intdef numberAbstract: Int
       |⏫ number: Intoverride def number: Int
-      |""".stripMargin
+      |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|🔼 def numberAbstract: Int
+           |⏫ override def number: Int
+           |""".stripMargin
+    ),
   )
 }

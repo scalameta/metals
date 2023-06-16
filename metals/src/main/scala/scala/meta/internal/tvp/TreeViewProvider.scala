@@ -1,10 +1,13 @@
 package scala.meta.internal.tvp
 
+import scala.annotation.nowarn
+
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.{lsp4j => l}
 
+@nowarn("msg=parameter value")
 trait TreeViewProvider {
   val Project = TreeViewProvider.Project
   val Build = TreeViewProvider.Build
@@ -17,7 +20,7 @@ trait TreeViewProvider {
   ): MetalsTreeViewChildrenResult = MetalsTreeViewChildrenResult(Array.empty)
   def reveal(
       path: AbsolutePath,
-      pos: l.Position
+      pos: l.Position,
   ): Option[TreeViewNodeRevealResult] = None
   def onCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams

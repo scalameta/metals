@@ -1,25 +1,42 @@
 package scala.meta.internal.pc
 
+import java.util.logging.Level
+import java.util.logging.Logger
+
+import scala.util.control.NonFatal
+
+import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.*
 
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.*
-import dotty.tools.dotc.core.SymDenotations.*
 import dotty.tools.dotc.core.Symbols.*
 
 class CompilerSearchVisitor(
-    query: String,
     visitSymbol: Symbol => Boolean
-)(using ctx: Context)
+)(using ctx: Context, reports: ReportContext)
     extends SymbolSearchVisitor:
 
-  private def isAccessible(sym: Symbol): Boolean =
+  val logger: Logger = Logger.getLogger(classOf[CompilerSearchVisitor].getName)
+
+  private def isAccessible(sym: Symbol): Boolean = try
     sym != NoSymbol && sym.isPublic
+  catch
+    case NonFatal(e) =>
+      reports.incognito.create(
+        Report(
+          "is_public",
+          s"""Symbol: $sym""".stripMargin,
+          e,
+        )
+      )
+      logger.log(Level.SEVERE, e.getMessage(), e)
+      false
 
   private def toSymbols(
       pkg: String,
-      parts: List[String]
+      parts: List[String],
   ): List[Symbol] =
     def loop(owners: List[Symbol], parts: List[String]): List[Symbol] =
       parts match
@@ -55,7 +72,7 @@ class CompilerSearchVisitor(
       path: java.nio.file.Path,
       symbol: String,
       kind: org.eclipse.lsp4j.SymbolKind,
-      range: org.eclipse.lsp4j.Range
+      range: org.eclipse.lsp4j.Range,
   ): Int =
     val gsym = SemanticdbSymbols.inverseSemanticdbSymbol(symbol).headOption
     gsym

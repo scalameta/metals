@@ -10,9 +10,11 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PathMatcher.Nio
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location
@@ -22,7 +24,8 @@ import org.eclipse.lsp4j.Range
 class FindTextInDependencyJars(
     buildTargets: BuildTargets,
     workspace: () => AbsolutePath,
-    languageClient: MetalsLanguageClient
+    languageClient: MetalsLanguageClient,
+    saveJarFileToDisk: Boolean,
 )(implicit ec: ExecutionContext) {
   import FindTextInDependencyJars._
 
@@ -63,7 +66,7 @@ class FindTextInDependencyJars(
                     include = includeMatcher,
                     exclude = excludeMatcher,
                     pattern = pattern,
-                    isSource = isSourceJar
+                    isSource = isSourceJar,
                   )
                 } else Nil
 
@@ -72,22 +75,22 @@ class FindTextInDependencyJars(
               case NonFatal(e) =>
                 scribe.error(
                   s"Failed to find text in dependency files for $classpathEntry",
-                  e
+                  e,
                 )
             }
           }
 
           allLocations.toList
         }
-        .flatten
         .toList
+        .flatten
     }
   }
 
   private def isSuitableFile(
       path: AbsolutePath,
       include: Nio,
-      exclude: Option[Nio]
+      exclude: Option[Nio],
   ): Boolean = {
     path.isFile &&
     include.matches(path) &&
@@ -99,7 +102,7 @@ class FindTextInDependencyJars(
       include: Nio,
       exclude: Option[Nio],
       pattern: String,
-      isSource: Boolean
+      isSource: Boolean,
   ): List[Location] = {
     FileIO
       .withJarFileSystem(path, create = false, close = !isSource) { root =>
@@ -109,7 +112,9 @@ class FindTextInDependencyJars(
           .flatMap { absPath =>
             val fileRanges: List[Range] = visitFileInsideJar(absPath, pattern)
             if (fileRanges.nonEmpty) {
-              val result = absPath.toFileOnDisk(workspace())
+              val result =
+                if (saveJarFileToDisk) absPath.toFileOnDisk(workspace())
+                else absPath
               fileRanges
                 .map(range => new Location(result.toURI.toString, range))
             } else Nil
@@ -120,7 +125,7 @@ class FindTextInDependencyJars(
 
   private def visitFileInsideJar(
       path: AbsolutePath,
-      pattern: String
+      pattern: String,
   ): List[Range] = {
     var reader: BufferedReader = null
     val positions = mutable.ArrayBuffer.empty[Int]
@@ -143,7 +148,7 @@ class FindTextInDependencyJars(
         positions.foreach { position =>
           results += new Range(
             new Position(lineNumber, position),
-            new Position(lineNumber, position + contentLength)
+            new Position(lineNumber, position + contentLength),
           )
         }
 
@@ -168,15 +173,11 @@ class FindTextInDependencyJars(
         languageClient
           .metalsInputBox(input)
           .asScala
-          .map(checkResult)
+          .flatMapOptionInside {
+            case name if name.value.nonEmpty => Some(name.value)
+            case _ => None
+          }
     }
-  }
-
-  private def checkResult(result: MetalsInputBoxResult) = result match {
-    case name if !name.cancelled && name.value.nonEmpty =>
-      Some(name.value)
-    case _ =>
-      None
   }
 }
 
@@ -188,7 +189,7 @@ object FindTextInDependencyJars {
       val options = Option(request.options).map { options =>
         Options(
           include = Option(options.include),
-          exclude = Option(options.exclude)
+          exclude = Option(options.exclude),
         )
       }
 
@@ -196,7 +197,7 @@ object FindTextInDependencyJars {
         pattern = request.query.pattern,
         isRegExp = Option(request.query.isRegExp),
         isCaseSensitive = Option(request.query.isCaseSensitive),
-        isWordMatch = Option(request.query.isWordMatch)
+        isWordMatch = Option(request.query.isWordMatch),
       )
 
       Request(options = options, query = query)
@@ -208,6 +209,6 @@ object FindTextInDependencyJars {
       pattern: String,
       isRegExp: Option[Boolean],
       isCaseSensitive: Option[Boolean],
-      isWordMatch: Option[Boolean]
+      isWordMatch: Option[Boolean],
   )
 }

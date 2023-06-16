@@ -23,7 +23,7 @@ case class ScalafmtConfig(
     runnerDialect: Option[ScalafmtDialect],
     fileOverrides: List[(PathMatcher, ScalafmtDialect)],
     includeFilters: List[PathMatcher],
-    excludeFilters: List[PathMatcher]
+    excludeFilters: List[PathMatcher],
 ) {
 
   def overrideFor(path: AbsolutePath): Option[ScalafmtDialect] = {
@@ -52,7 +52,7 @@ object ScalafmtConfig {
       configText: String,
       version: Option[String] = None,
       runnerDialect: Option[ScalafmtDialect] = None,
-      fileOverride: Map[String, ScalafmtDialect] = Map.empty
+      fileOverride: Map[String, ScalafmtDialect] = Map.empty,
   ): String = {
 
     def docFrom(s: String): ConfigDocument = {
@@ -93,7 +93,7 @@ object ScalafmtConfig {
 
     def withFileOverride(
         content: String,
-        overrides: Map[String, ScalafmtDialect]
+        overrides: Map[String, ScalafmtDialect],
     ): String = {
       if (overrides.isEmpty) content
       else {
@@ -115,7 +115,7 @@ object ScalafmtConfig {
     val combined = List(
       version.fold(doNothing)(v => withUpdatedVersion(_, v)),
       runnerDialect.fold(doNothing)(v => withUpdatedDialect(_, v)),
-      withFileOverride(_, fileOverride)
+      withFileOverride(_, fileOverride),
     ).reduceLeft(_ andThen _)
     combined(configText)
   }
@@ -171,7 +171,7 @@ object ScalafmtConfig {
       }
     }
 
-    def readMatchers(conf: Config, path: String)(
+    def readMatchers(path: String)(
         f: String => PathMatcher
     ): Try[List[PathMatcher]] = {
       Try {
@@ -188,25 +188,23 @@ object ScalafmtConfig {
     }
 
     def filters(
-        conf: Config,
         key: String
     ): Try[List[PathMatcher]] =
-      readMatchers(conf, s"project.$key")(v => PathMatcher.Regex(v))
+      readMatchers(s"project.$key")(v => PathMatcher.Regex(v))
 
     def paths(
-        conf: Config,
         key: String
     ): Try[List[PathMatcher]] =
-      readMatchers(conf, s"project.$key")(v => PathMatcher.Nio(v))
+      readMatchers(s"project.$key")(v => PathMatcher.Nio(v))
 
     for {
       version <- getVersion(config)
       runnerDialect <- getRunnerDialect(config)
       overrides <- getFileOverrides(config)
-      includeFilters <- filters(config, "includeFilters")
-      excludeFilters <- filters(config, "excludeFilters")
-      includePaths <- paths(config, "includePaths")
-      excludePaths <- paths(config, "excludePaths")
+      includeFilters <- filters("includeFilters")
+      excludeFilters <- filters("excludeFilters")
+      includePaths <- paths("includePaths")
+      excludePaths <- paths("excludePaths")
     } yield {
       val include = includePaths ++ includeFilters
       val exclude = excludeFilters ++ excludePaths

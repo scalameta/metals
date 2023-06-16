@@ -15,7 +15,7 @@ import org.eclipse.lsp4j.Position
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
 ) extends BuildTool
     with BloopInstallProvider
     with BuildServerProvider {
@@ -40,7 +40,7 @@ case class SbtBuildTool(
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val bloopInstallArgs = List[String](
       "-Dbloop.export-jar-classifiers=sources",
-      "bloopInstall"
+      "bloopInstall",
     )
     val allArgs = composeArgs(bloopInstallArgs, workspace, tempDir)
     removeLegacyGlobalPlugin()
@@ -64,7 +64,7 @@ case class SbtBuildTool(
   private def composeArgs(
       sbtArgs: List[String],
       workspace: AbsolutePath,
-      sbtLauncherOutDir: Path
+      sbtLauncherOutDir: Path,
   ): List[String] = {
     userConfig().sbtScript match {
       case Some(script) =>
@@ -74,11 +74,11 @@ case class SbtBuildTool(
           JavaBinary(userConfig().javaHome),
           "-Djline.terminal=jline.UnsupportedTerminal",
           "-Dsbt.log.noformat=true",
-          "-Dfile.encoding=UTF-8"
+          "-Dfile.encoding=UTF-8",
         )
         val jarArgs = List(
           "-jar",
-          embeddedSbtLauncher(sbtLauncherOutDir).toString()
+          embeddedSbtLauncher(sbtLauncherOutDir).toString(),
         )
         val sbtVersion =
           if (workspaceVersion.isEmpty) List(s"-Dsbt.version=$version") else Nil
@@ -88,7 +88,7 @@ case class SbtBuildTool(
           SbtOpts.fromWorkspace(workspace),
           JvmOpts.fromWorkspace(workspace),
           jarArgs,
-          sbtArgs
+          sbtArgs,
         ).flatten
     }
   }
@@ -98,9 +98,7 @@ case class SbtBuildTool(
       case Some(version) =>
         scribe.info(s"sbt ${version} found for workspace.")
         val valid = isCompatibleVersion(firstVersionWithBsp, version)
-        if (valid) {
-          writeSbtMetalsPlugins(workspace)
-        } else {
+        if (!valid) {
           scribe.warn(
             s"Unable to start sbt bsp server. Make sure you have sbt >= $firstVersionWithBsp defined in your build.properties file."
           )
@@ -136,7 +134,7 @@ case class SbtBuildTool(
 
     def sbtMetaDirs(
         meta: AbsolutePath,
-        acc: Set[AbsolutePath]
+        acc: Set[AbsolutePath],
     ): Set[AbsolutePath] = {
       if (meta.exists) {
         val files = meta.list.toList
@@ -184,11 +182,12 @@ object SbtBuildTool {
 
   /**
    * Write the sbt plugin in the sbt project directory
+   * Return true if the metals plugin file changed.
    */
   def writePlugins(
       projectDir: AbsolutePath,
       plugins: PluginDetails*
-  ): Unit = {
+  ): Boolean = {
     val content =
       s"""|// DO NOT EDIT! This file is auto-generated.
           |
@@ -203,40 +202,48 @@ object SbtBuildTool {
     if (pluginFileShouldChange) {
       Files.write(metalsPluginFile.toNIO, bytes)
     }
+    pluginFileShouldChange
   }
 
   /**
    * Write all the plugins used by Metals when connected to sbt server:
    * - the sbt-metals plugin in the project directory
    * - the sbt-jdi-tools plugin in the project/project directory
+   *
+   * Return true if any plugin file changed, meaning we should reload
    */
-  def writeSbtMetalsPlugins(workspace: AbsolutePath): Unit = {
+  def writeSbtMetalsPlugins(workspace: AbsolutePath): Boolean = {
     val mainMeta = workspace.resolve("project")
     val metaMeta = workspace.resolve("project").resolve("project")
-    writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
-    writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+    val writtenPlugin =
+      writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
+    val writtenMeta =
+      writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+    writtenPlugin || writtenMeta
   }
 
   private case class PluginDetails private (
       description: Seq[String],
       artifact: String,
-      resolver: Option[String]
+      resolver: Option[String],
   )
+
+  private def sonatypeResolver(version: String): Option[String] =
+    if (version.contains("SNAPSHOT"))
+      Some(
+        """resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
+      )
+    else None
 
   /**
    * Short description and artifact for the sbt-bloop plugin
    */
   private def bloopPluginDetails(version: String): PluginDetails = {
-    val resolver =
-      if (isSnapshotVersion(version))
-        Some("""Resolver.bintrayRepo("scalacenter", "releases")""")
-      else None
-
     PluginDetails(
       description =
         Seq("This file enables sbt-bloop to create bloop config files."),
       artifact = s""""ch.epfl.scala" % "sbt-bloop" % "$version"""",
-      resolver
+      sonatypeResolver(version),
     )
   }
 
@@ -244,20 +251,13 @@ object SbtBuildTool {
    * Short description and artifact for the sbt-metals plugin
    */
   private def metalsPluginDetails: PluginDetails = {
-    val resolver =
-      if (isSnapshotVersion(BuildInfo.metalsVersion))
-        Some(
-          """"Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
-        )
-      else None
-
     PluginDetails(
       Seq(
         "This plugin enables semantic information to be produced by sbt.",
-        "It also adds support for debugging using the Debug Adapter Protocol"
+        "It also adds support for debugging using the Debug Adapter Protocol",
       ),
       s""""org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"""",
-      resolver
+      sonatypeResolver(BuildInfo.metalsVersion),
     )
   }
 
@@ -271,7 +271,7 @@ object SbtBuildTool {
         "This plugin adds the BSP debug capability to sbt server."
       ),
       s""""ch.epfl.scala" % "sbt-debug-adapter" % "${BuildInfo.debugAdapterVersion}"""",
-      resolver = None
+      resolver = None,
     )
 
   /**
@@ -281,20 +281,17 @@ object SbtBuildTool {
     PluginDetails(
       Seq(
         "This plugin makes sure that the JDI tools are in the sbt classpath.",
-        "JDI tools are used by the debug adapter server."
+        "JDI tools are used by the debug adapter server.",
       ),
       s""""org.scala-debugger" % "sbt-jdi-tools" % "${BuildInfo.sbtJdiToolsVersion}"""",
-      resolver = None
+      resolver = None,
     )
-
-  private def isSnapshotVersion(version: String): Boolean =
-    version.contains("+")
 
   /**
    * Contents of metals.sbt file that is to be installed in the workspace.
    */
   private def sbtPlugin(plugin: PluginDetails): String = {
-    val resolvers = plugin.resolver.map(r => s"resolvers += $r").getOrElse("")
+    val resolvers = plugin.resolver.getOrElse("")
     val description = plugin.description.mkString("// ", "\n// ", "")
 
     s"""|$description
@@ -308,7 +305,7 @@ object SbtBuildTool {
     val isToplevel = Set(
       workspace.toNIO,
       project,
-      project.resolve("project")
+      project.resolve("project"),
     )
     isToplevel(path.toNIO.getParent) && {
       val filename = path.toNIO.getFileName.toString
@@ -320,7 +317,7 @@ object SbtBuildTool {
 
   def apply(
       workspace: AbsolutePath,
-      userConfig: () => UserConfiguration
+      userConfig: () => UserConfiguration,
   ): SbtBuildTool = {
     val version = loadVersion(workspace).map(_.toString())
     SbtBuildTool(version, userConfig)
@@ -343,9 +340,7 @@ object SbtBuildTool {
   def sbtInputPosAdjustment(
       originInput: Input.VirtualFile,
       autoImports: Seq[String],
-      uri: String,
-      position: Position
-  ): (Input.VirtualFile, Position, AdjustLspData) = {
+  ): (Input.VirtualFile, Position => Position, AdjustLspData) = {
 
     val appendLineSize = autoImports.size
 
@@ -353,17 +348,17 @@ object SbtBuildTool {
       originInput.copy(value =
         prependAutoImports(originInput.value, autoImports)
       )
-    val pos = new Position(
+    def adjustRequest(position: Position) = new Position(
       appendLineSize + position.getLine(),
-      position.getCharacter()
+      position.getCharacter(),
     )
     val adjustLspData = AdjustedLspData.create(
       pos => {
         new Position(pos.getLine() - appendLineSize, pos.getCharacter())
       },
-      filterOutLocations = { loc => !loc.getUri().isSbt }
+      filterOutLocations = { loc => !loc.getUri().isSbt },
     )
-    (modifiedInput, pos, adjustLspData)
+    (modifiedInput, adjustRequest, adjustLspData)
   }
 
   def prependAutoImports(text: String, autoImports: Seq[String]): String = {

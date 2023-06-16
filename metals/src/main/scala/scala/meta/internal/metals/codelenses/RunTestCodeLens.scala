@@ -11,14 +11,21 @@ import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.TestUserInterfaceKind
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
-import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.ExtendedScalaMainClass
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.MethodSignature
+import scala.meta.internal.semanticdb.Scope
+import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.semanticdb.ValueSignature
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
@@ -39,40 +46,124 @@ final class RunTestCodeLens(
     buffers: Buffers,
     buildTargets: BuildTargets,
     clientConfig: ClientConfiguration,
-    isBloopOrSbt: () => Boolean,
-    trees: Trees
+    userConfig: () => UserConfiguration,
+    trees: Trees,
+    workspace: AbsolutePath,
 ) extends CodeLens {
 
-  override def isEnabled: Boolean = clientConfig.isDebuggingProvider()
+  override def isEnabled: Boolean =
+    clientConfig.isDebuggingProvider() || clientConfig.isRunProvider()
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
   ): Seq[l.CodeLens] = {
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
-    if (path.isAmmoniteScript || path.isWorksheet) {
-      Seq.empty
-    } else {
-      val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
+    val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
+    val lenses = for {
+      buildTargetId <- buildTargets.inverseSources(path)
+      buildTarget <- buildTargets.info(buildTargetId)
+      // generate code lenses only for JVM based targets for Scala
+      if buildTarget.asScalaBuildTarget.forall(
+        _.getPlatform == b.ScalaPlatform.JVM
+      )
+      connection <- buildTargets.buildServerOf(buildTargetId)
+      // although hasDebug is already available in BSP capabilities
+      // see https://github.com/build-server-protocol/build-server-protocol/pull/161
+      // most of the bsp servers such as bloop and sbt might not support it.
+    } yield {
+      val classes = buildTargetClasses.classesOf(buildTargetId)
+      if (connection.isScalaCLI && path.isAmmoniteScript) {
+        scalaCliCodeLenses(textDocument, buildTargetId, classes, distance)
+      } else if (
+        buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt
+      ) {
+        codeLenses(
+          textDocument,
+          buildTargetId,
+          classes,
+          distance,
+          path,
+        )
+      } else { Nil }
 
-      val lenses = for {
-        buildTargetId <- buildTargets.inverseSources(path)
-        buildTarget <- buildTargets.info(buildTargetId)
-        if buildTarget.getCapabilities.getCanDebug || isBloopOrSbt(),
-      } yield {
-        val classes = buildTargetClasses.classesOf(buildTargetId)
-        codeLenses(textDocument, buildTargetId, classes, distance)
-      }
-
-      lenses.getOrElse(Seq.empty)
     }
+
+    lenses.getOrElse(Seq.empty)
+  }
+
+  /**
+   * Java main method: public static void main(String[] args)
+   */
+  private def isMainMethod(signature: Signature, textDocument: TextDocument) = {
+    signature match {
+      case MethodSignature(_, Seq(Scope(Seq(param), _)), returnType) =>
+        def isVoid = returnType match {
+          case TypeRef(_, symbol, _) => symbol == "scala/Unit#"
+          case _ => false
+        }
+
+        def isStringArray(sym: String) = {
+          textDocument.symbols.find(
+            _.symbol == sym
+          ) match {
+            case Some(info) =>
+              info.signature match {
+                case ValueSignature(
+                      TypeRef(
+                        _,
+                        "scala/Array#",
+                        Vector(TypeRef(_, "java/lang/String#", _)),
+                      )
+                    ) =>
+                  true
+                case _ => false
+              }
+            case None => false
+          }
+        }
+
+        isVoid && isStringArray(param)
+      case _ => false
+    }
+  }
+
+  private def javaLenses(
+      occurence: SymbolOccurrence,
+      textDocument: TextDocument,
+      target: BuildTargetIdentifier,
+  ): Seq[l.Command] = {
+    if (occurence.symbol.endsWith("#main().")) {
+      textDocument.symbols
+        .find(_.symbol == occurence.symbol)
+        .toSeq
+        .flatMap { a =>
+          val isMain =
+            a.isPublic && a.isStatic && isMainMethod(a.signature, textDocument)
+          if (isMain)
+            mainCommand(
+              target,
+              new b.ScalaMainClass(
+                occurence.symbol.stripSuffix("#main().").replace("/", "."),
+                Nil.asJava,
+                Nil.asJava,
+              ),
+            )
+          else
+            Nil
+        }
+    } else {
+      Nil
+    }
+
   }
 
   private def codeLenses(
       textDocument: TextDocument,
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
-      distance: TokenEditDistance
+      distance: TokenEditDistance,
+      path: AbsolutePath,
   ): Seq[l.CodeLens] = {
     for {
       occurrence <- textDocument.occurrences
@@ -83,85 +174,92 @@ final class RunTestCodeLens(
           .get(symbol)
           .map(mainCommand(target, _))
           .getOrElse(Nil)
-        val tests = classes.testClasses
-          .get(symbol)
-          .map(testCommand(target, _))
-          .getOrElse(Nil)
-        val fromAnnot = mainAnnot(occurrence, textDocument)
+        val tests =
+          // Currently tests can only be run via DAP
+          if (clientConfig.isDebuggingProvider())
+            testClasses(target, classes, symbol)
+          else Nil
+        val fromAnnot = DebugProvider
+          .mainFromAnnotation(occurrence, textDocument)
           .flatMap { symbol =>
             classes.mainClasses
               .get(symbol)
               .map(mainCommand(target, _))
           }
           .getOrElse(Nil)
-        main ++ tests ++ fromAnnot
+        val javaMains =
+          if (path.isJava) javaLenses(occurrence, textDocument, target) else Nil
+        main ++ tests ++ fromAnnot ++ javaMains
       }
       if commands.nonEmpty
-      range <-
-        occurrence.range
-          .flatMap(r => distance.toRevised(r.toLSP))
-          .toList
+      range <- occurrenceRange(occurrence, distance).toList
       command <- commands
     } yield new l.CodeLens(range, command, null)
   }
 
-  private def mainAnnot(
+  private def occurrenceRange(
       occurrence: SymbolOccurrence,
-      textDocument: TextDocument
-  ): Option[String] = {
-    if (occurrence.symbol == "scala/main#") {
-      occurrence.range match {
-        case Some(range) =>
-          val closestOccurence = textDocument.occurrences.minBy { occ =>
-            occ.range
-              .filter { rng =>
-                occ.symbol != "scala/main#" &&
-                rng.endLine - range.endLine >= 0 &&
-                rng.endCharacter - rng.startCharacter > 0
-              }
-              .map(rng =>
-                (
-                  rng.endLine - range.endLine,
-                  rng.endCharacter - range.endCharacter
-                )
-              )
-              .getOrElse((Int.MaxValue, Int.MaxValue))
-          }
-          dropSourceFromToplevelSymbol(closestOccurence.symbol)
+      distance: TokenEditDistance,
+  ): Option[l.Range] =
+    occurrence.range
+      .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
 
-        case None => None
+  private def scalaCliCodeLenses(
+      textDocument: TextDocument,
+      target: BuildTargetIdentifier,
+      classes: BuildTargetClasses.Classes,
+      distance: TokenEditDistance,
+  ): Seq[l.CodeLens] = {
+    val scriptFileName = textDocument.uri.stripSuffix(".sc")
+
+    val expectedMainClass =
+      if (scriptFileName.contains('/')) s"${scriptFileName}_sc."
+      else s"_empty_/${scriptFileName}_sc."
+    val main =
+      classes.mainClasses
+        .get(expectedMainClass)
+        .map(mainCommand(target, _))
+        .getOrElse(Nil)
+
+    val fromAnnotations = textDocument.occurrences.flatMap { occ =>
+      for {
+        sym <- DebugProvider.mainFromAnnotation(occ, textDocument)
+        cls <- classes.mainClasses.get(sym)
+        range <- occurrenceRange(occ, distance)
+      } yield mainCommand(target, cls).map { cmd =>
+        new l.CodeLens(range, cmd, null)
       }
-    } else {
-      None
-    }
-
+    }.flatten
+    fromAnnotations ++ main.map(command =>
+      new l.CodeLens(
+        new l.Range(new l.Position(0, 0), new l.Position(0, 2)),
+        command,
+        null,
+      )
+    )
   }
 
   /**
-   * Converts Scala3 sorceToplevelSymbol into a plain one that corresponds to class name.
-   * From `3.1.0` plain names were removed from occurrences because they are synthetic.
-   * Example:
-   *   `foo/Foo$package.mainMethod().` -> `foo/mainMethod#`
+   * Do not return test code lenses if user declared test explorer as a test interface.
    */
-  private def dropSourceFromToplevelSymbol(symbol: String): Option[String] = {
-    Symbol(symbol) match {
-      case GlobalSymbol(
-            GlobalSymbol(
-              owner,
-              Descriptor.Term(sourceOwner)
-            ),
-            Descriptor.Method(name, _)
-          ) if sourceOwner.endsWith("$package") =>
-        val converted = GlobalSymbol(owner, Descriptor.Term(name))
-        Some(converted.value)
-      case _ =>
-        None
-    }
-  }
+  private def testClasses(
+      target: BuildTargetIdentifier,
+      classes: BuildTargetClasses.Classes,
+      symbol: String,
+  ): List[l.Command] =
+    if (userConfig().testUserInterface == TestUserInterfaceKind.CodeLenses)
+      classes.testClasses
+        .get(symbol)
+        .toList
+        .flatMap(symbolInfo =>
+          testCommand(target, symbolInfo.fullyQualifiedName)
+        )
+    else
+      Nil
 
   private def testCommand(
       target: b.BuildTargetIdentifier,
-      className: String
+      className: String,
   ): List[l.Command] = {
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
@@ -171,30 +269,39 @@ final class RunTestCodeLens(
 
     List(
       command("test", StartRunSession, params),
-      command("debug test", StartDebugSession, params)
+      command("debug test", StartDebugSession, params),
     )
   }
 
   private def mainCommand(
       target: b.BuildTargetIdentifier,
-      main: b.ScalaMainClass
+      main: b.ScalaMainClass,
   ): List[l.Command] = {
+    val data = buildTargetClasses.jvmRunEnvironment
+      .get(target)
+      .zip(userConfig().usedJavaBinary) match {
+      case None =>
+        main.toJson
+      case Some((env, javaHome)) =>
+        ExtendedScalaMainClass(main, env, javaHome, workspace).toJson
+    }
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
-      val data = main.toJson
       sessionParams(target, dataKind, data)
     }
 
-    List(
-      command("run", StartRunSession, params),
-      command("debug", StartDebugSession, params)
-    )
+    if (clientConfig.isDebuggingProvider())
+      List(
+        command("run", StartRunSession, params),
+        command("debug", StartDebugSession, params),
+      )
+    else List(command("run", StartRunSession, params))
   }
 
   private def sessionParams(
       target: b.BuildTargetIdentifier,
       dataKind: String,
-      data: JsonElement
+      data: JsonElement,
   ): b.DebugSessionParams = {
     new b.DebugSessionParams(List(target).asJava, dataKind, data)
   }
@@ -202,7 +309,7 @@ final class RunTestCodeLens(
   private def command(
       name: String,
       command: BaseCommand,
-      params: b.DebugSessionParams
+      params: b.DebugSessionParams,
   ): l.Command = {
     new l.Command(name, command.id, singletonList(params))
   }

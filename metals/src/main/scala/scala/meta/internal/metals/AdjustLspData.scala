@@ -4,9 +4,11 @@ import java.{util => ju}
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.HoverSignature
 
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
@@ -15,18 +17,27 @@ import org.eclipse.lsp4j.{Range => LspRange}
 
 trait AdjustLspData {
 
-  def adjustPos(pos: Position): Position
+  def adjustPos(pos: Position, adjustToZero: Boolean = true): Position
 
   def adjustRange(range: LspRange): LspRange =
     new LspRange(
       adjustPos(range.getStart),
-      adjustPos(range.getEnd)
+      adjustPos(range.getEnd),
     )
 
   def adjustTextEdits(
       edits: ju.List[TextEdit]
   ): java.util.List[TextEdit] = {
     edits.asScala.map { loc =>
+      loc.setRange(adjustRange(loc.getRange()))
+      loc
+    }.asJava
+  }
+
+  def adjustDocumentHighlight(
+      highlights: ju.List[DocumentHighlight]
+  ): java.util.List[DocumentHighlight] = {
+    highlights.asScala.map { loc =>
       loc.setRange(adjustRange(loc.getRange()))
       loc
     }.asJava
@@ -54,6 +65,9 @@ trait AdjustLspData {
       newHover
     }
 
+  def adjustHoverResp(hover: HoverSignature): HoverSignature =
+    hover.getRange().map(rng => hover.withRange(adjustRange(rng))).orElse(hover)
+
   def adjustCompletionListInPlace(list: CompletionList): Unit = {
     for (item <- list.getItems.asScala) {
       for (textEdit <- item.getLeftTextEdit())
@@ -74,7 +88,7 @@ trait AdjustLspData {
 
 case class AdjustedLspData(
     adjustPosition: Position => Position,
-    filterOutLocations: Location => Boolean
+    filterOutLocations: Location => Boolean,
 ) extends AdjustLspData {
 
   override def adjustLocations(
@@ -86,13 +100,24 @@ case class AdjustedLspData(
         loc
     }.asJava
   }
-  override def adjustPos(pos: Position): Position = adjustPosition(pos)
+  override def adjustPos(
+      pos: Position,
+      adjustToZero: Boolean = true,
+  ): Position = {
+    val adjusted = adjustPosition(pos)
+    if (adjustToZero && adjusted.getCharacter() < 0) adjusted.setCharacter(0)
+    if (adjustToZero && adjusted.getLine() < 0) adjusted.setLine(0)
+    adjusted
+  }
 
 }
 
 object DefaultAdjustedData extends AdjustLspData {
 
-  override def adjustPos(pos: Position): Position = identity(pos)
+  override def adjustPos(
+      pos: Position,
+      adjustToZero: Boolean = true,
+  ): Position = identity(pos)
 
   override def adjustRange(range: LspRange): LspRange = identity(range)
 
@@ -121,16 +146,11 @@ object AdjustedLspData {
 
   def create(
       f: Position => Position,
-      filterOutLocations: Location => Boolean = _ => false
+      filterOutLocations: Location => Boolean = _ => false,
   ): AdjustLspData =
     AdjustedLspData(
-      pos => {
-        val newPos = f(pos)
-        if (newPos.getLine() < 0)
-          pos
-        else newPos
-      },
-      filterOutLocations
+      pos => f(pos),
+      filterOutLocations,
     )
 
   val default: AdjustLspData = DefaultAdjustedData

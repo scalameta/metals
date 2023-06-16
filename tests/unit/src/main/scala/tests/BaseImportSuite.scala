@@ -9,7 +9,7 @@ import munit.Location
 
 abstract class BaseImportSuite(
     suiteName: String,
-    initializer: BuildServerInitializer = BloopImportInitializer
+    initializer: BuildServerInitializer = BloopImportInitializer,
 ) extends BaseLspSuite(suiteName, initializer) {
 
   def buildTool: BuildTool
@@ -30,7 +30,8 @@ abstract class BaseImportSuite(
       fail("no checksum for workspace")
     }
   def assertNoStatus()(implicit loc: Location): Unit =
-    server.server.tables.digests.getStatus(currentChecksum()) match {
+    server.server.tables.digests
+      .getStatus(currentChecksum()) match {
       case Some(value) =>
         fail(s"expected no status. obtained $value")
       case None =>

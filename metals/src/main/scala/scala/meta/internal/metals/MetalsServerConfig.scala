@@ -23,8 +23,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                      dialogues that don't implement window/showMessageRequest yet.
  * @param isInputBoxEnabled whether the client supports the `metals/inputBox` extension.
  * @param isVerbose turn on verbose logging.
- * @param isAutoServer whether or not `AUTO_SERVER` should be set for h2.
- * `*                    http://www.h2database.com/html/features.html#auto_mixed_mode
  * @param remoteTimeout timeout period for retrieving references while using `RemoteLanguageServer`.
  * @param openFilesOnRenames whether or not file should be opened when a rename occurs
  *                           in an unopened file.
@@ -39,6 +37,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                                       be turned off. By default this is on, but Metals only
  *                                       supports a small subset of this, so it may be problematic
  *                                       for certain clients.
+ * @param macOsMaxWatchRoots The maximum number of root directories to watch on MacOS.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -48,52 +47,51 @@ final case class MetalsServerConfig(
       ExecuteClientCommandConfig.default,
     snippetAutoIndent: Boolean = MetalsServerConfig.binaryOption(
       "metals.snippet-auto-indent",
-      default = true
+      default = true,
     ),
     isExitOnShutdown: Boolean = MetalsServerConfig.binaryOption(
       "metals.exit-on-shutdown",
-      default = false
+      default = false,
     ),
     isHttpEnabled: Boolean = MetalsServerConfig.binaryOption(
       "metals.http",
-      default = false
-    ),
-    isCommandInHtmlSupported: Boolean = MetalsServerConfig.binaryOption(
-      "metals.commands-in-html",
-      default = false
+      default = false,
     ),
     isInputBoxEnabled: Boolean = MetalsServerConfig.binaryOption(
       "metals.input-box",
-      default = false
+      default = false,
     ),
     isVerbose: Boolean = MetalsServerConfig.binaryOption(
       "metals.verbose",
-      default = false
-    ),
-    isAutoServer: Boolean = MetalsServerConfig.binaryOption(
-      "metals.h2.auto-server",
-      default = true
+      default = false,
     ),
     remoteTimeout: String = System.getProperty(
       "metals.timeout",
-      "1 minute"
+      "1 minute",
     ),
     openFilesOnRenames: Boolean = false,
     renameFileThreshold: Int = 300,
     askToReconnect: Boolean = MetalsServerConfig.binaryOption(
       "metals.ask-to-reconnect",
-      default = false
+      default = false,
     ),
     icons: Icons = Icons.fromString(System.getProperty("metals.icons")),
     statistics: StatisticsConfig = StatisticsConfig.default,
     compilers: PresentationCompilerConfigImpl = CompilersConfig(),
     allowMultilineStringFormatting: Boolean = MetalsServerConfig.binaryOption(
       "metals.allow-multiline-string-formatting",
-      default = true
+      default = true,
     ),
     bloopPort: Option[Int] = Option(System.getProperty("metals.bloop-port"))
       .filter(_.forall(Character.isDigit(_)))
-      .map(_.toInt)
+      .map(_.toInt),
+    macOsMaxWatchRoots: Int =
+      Option(System.getProperty("metals.macos-max-watch-roots"))
+        .filter(_.forall(Character.isDigit(_)))
+        .map(_.toInt)
+        .getOrElse(32),
+    loglevel: String =
+      sys.props.get("metals.loglevel").map(_.toLowerCase()).getOrElse("info"),
 ) {
   override def toString: String =
     List[String](
@@ -109,7 +107,9 @@ final case class MetalsServerConfig(
       s"ask-to-reconnect=$askToReconnect",
       s"icons=$icons",
       s"statistics=$statistics",
-      s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}"
+      s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}",
+      s"macos-max-watch-roots=${macOsMaxWatchRoots}",
+      s"loglevel=${loglevel}",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
@@ -137,13 +137,12 @@ object MetalsServerConfig {
         base.copy(
           icons = Icons.vscode,
           globSyntax = GlobSyntaxConfig.vscode,
-          isCommandInHtmlSupported = true,
           compilers = base.compilers.copy(
             _parameterHintsCommand =
               Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
-            overrideDefFormat = OverrideDefFormat.Unicode
-          )
+            overrideDefFormat = OverrideDefFormat.Unicode,
+          ),
         )
       case "vim-lsc" =>
         base.copy(
@@ -153,7 +152,7 @@ object MetalsServerConfig {
           icons = Icons.unicode,
           compilers = base.compilers.copy(
             snippetAutoIndent = false
-          )
+          ),
         )
       case "coc.nvim" =>
         base.copy(
@@ -164,8 +163,8 @@ object MetalsServerConfig {
               Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
             overrideDefFormat = OverrideDefFormat.Unicode,
-            isCompletionItemResolve = false
-          )
+            isCompletionItemResolve = false,
+          ),
         )
       case "coc-metals" =>
         base.copy(
@@ -174,7 +173,7 @@ object MetalsServerConfig {
               Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
             overrideDefFormat = OverrideDefFormat.Unicode,
-            isCompletionItemResolve = false
+            isCompletionItemResolve = false,
           )
         )
       case "sublime" =>
@@ -186,14 +185,14 @@ object MetalsServerConfig {
           compilers = base.compilers.copy(
             // Avoid showing the method signature twice because it's already visible in the label.
             isCompletionItemDetailEnabled = false
-          )
+          ),
         )
       case "emacs" =>
         base.copy(
           executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
             snippetAutoIndent = false
-          )
+          ),
         )
       case _ =>
         base

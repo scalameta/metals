@@ -1,5 +1,7 @@
 package scala.meta.internal.worksheets
 
+import scala.meta.internal.metals.MetalsEnrichments
+
 import mdoc.interfaces.EvaluatedWorksheetStatement
 import mdoc.{interfaces => i}
 import org.eclipse.{lsp4j => l}
@@ -17,18 +19,18 @@ object MdocEnrichments {
         // Don't construct invalid positions with negative values
         new l.Range(
           new l.Position(0, 0),
-          new l.Position(0, 0)
+          new l.Position(0, 0),
         )
       } else {
         new l.Range(
           new l.Position(
             p.startLine(),
-            p.startColumn()
+            p.startColumn(),
           ),
           new l.Position(
             p.endLine(),
-            p.endColumn()
-          )
+            p.endColumn(),
+          ),
         )
       }
     }
@@ -45,7 +47,7 @@ object MdocEnrichments {
           case i.DiagnosticSeverity.Error => l.DiagnosticSeverity.Error
           case _ => l.DiagnosticSeverity.Error
         },
-        "mdoc"
+        "mdoc",
       )
     }
   }
@@ -57,8 +59,17 @@ object MdocEnrichments {
    * continuation
    */
   def truncatify(statement: EvaluatedWorksheetStatement): String = {
-    if (statement.isSummaryComplete()) statement.summary()
-    else statement.summary() + "…"
+    if (statement.isSummaryComplete()) statement.prettySummary()
+    else statement.prettySummary() + "…"
+  }
+
+  implicit class XtensionEvaluatedWorksheetStatement(
+      statement: EvaluatedWorksheetStatement
+  ) {
+    def prettyDetails(): String =
+      MetalsEnrichments.filerANSIColorCodes(statement.details())
+    def prettySummary(): String =
+      MetalsEnrichments.filerANSIColorCodes(statement.summary())
   }
 
 }

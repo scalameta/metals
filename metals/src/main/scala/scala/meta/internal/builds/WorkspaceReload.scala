@@ -8,8 +8,8 @@ import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.Messages.dontShowAgain
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 /**
@@ -18,7 +18,7 @@ import scala.meta.io.AbsolutePath
 final class WorkspaceReload(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
-    tables: Tables
+    tables: Tables,
 ) {
 
   private val notification = tables.dismissedNotifications.ImportChanges
@@ -36,7 +36,7 @@ final class WorkspaceReload(
 
   def persistChecksumStatus(
       status: Status,
-      buildTool: BuildTool
+      buildTool: BuildTool,
   ): Unit = {
     buildTool.digest(workspace).foreach { checksum =>
       tables.digests.setStatus(checksum, status)
@@ -45,7 +45,7 @@ final class WorkspaceReload(
 
   def requestReload(
       buildTool: BuildTool,
-      digest: String
+      digest: String,
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
     tables.digests.setStatus(digest, Status.Requested)
     val (params, yes) =

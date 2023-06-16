@@ -14,7 +14,7 @@ class AutoImportsIssueSuite extends BaseAutoImportsSuite {
       Dependency.of(
         "com.typesafe.akka",
         s"akka-actor-typed_$binaryVersion",
-        "2.6.13"
+        "2.6.13",
       )
     )
   }
@@ -33,7 +33,7 @@ class AutoImportsIssueSuite extends BaseAutoImportsSuite {
        |object Greeter {
        |  Address("http", "Test", "TestNodeHostName", 1234)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
 }

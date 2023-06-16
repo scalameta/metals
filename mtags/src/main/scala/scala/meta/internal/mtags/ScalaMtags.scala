@@ -3,7 +3,7 @@ package scala.meta.internal.mtags
 import scala.meta._
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
@@ -32,7 +32,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
   }
 
   private var _toplevelSourceRef: Option[(String, OverloadDisambiguator)] = None
-  private def topleveSourceData: (String, OverloadDisambiguator) = {
+  private def toplevelSourceData: (String, OverloadDisambiguator) = {
     _toplevelSourceRef match {
       case Some(v) => v
       case None =>
@@ -47,8 +47,8 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
         value
     }
   }
-  private def toplevelSourceOwner: String = topleveSourceData._1
-  private def toplevelOverloads: OverloadDisambiguator = topleveSourceData._2
+  private def toplevelSourceOwner: String = toplevelSourceData._1
+  private def toplevelOverloads: OverloadDisambiguator = toplevelSourceData._2
 
   def currentTree: Tree = myCurrentTree
   private var myCurrentTree: Tree = Source(Nil)
@@ -119,6 +119,53 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           enterTermParameters(paramss, isPrimaryCtor = false)
         }
         myCurrentTree = old
+      }
+      def enterGivenAlias(
+          name: String,
+          pos: Position,
+          tparams: List[Type.Param],
+          paramss: List[List[Term.Param]]
+      ): Unit = {
+        withFileOwner {
+          if (tparams.nonEmpty || paramss.nonEmpty) {
+            method(name, "()", pos, Property.IMPLICIT.value)
+            enterTypeParameters(tparams)
+            enterTermParameters(paramss, isPrimaryCtor = false)
+
+          } else {
+            term(name, pos, Kind.METHOD, Property.IMPLICIT.value)
+          }
+        }
+      }
+      def enterGiven(
+          name: String,
+          pos: Position,
+          tparams: List[Type.Param],
+          paramss: List[List[Term.Param]]
+      ): Unit = {
+        withFileOwner {
+          val ownerKind: String =
+            if (tparams.nonEmpty || paramss.nonEmpty) {
+              withOwner(owner)(
+                method(name, "()", pos, Property.IMPLICIT.value)
+              )
+
+              "#"
+            } else {
+              withOwner(owner)(
+                term(name, pos, Kind.METHOD, Property.IMPLICIT.value)
+              )
+
+              "."
+            }
+
+          val nextOwner = s"${currentOwner}${name}${ownerKind}"
+          withOwner(nextOwner) {
+            enterTypeParameters(tparams)
+            enterTermParameters(paramss, isPrimaryCtor = false)
+            continue()
+          }
+        }
       }
       myCurrentTree = tree
       tree match {
@@ -236,32 +283,44 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
             }
           }
         case t: Defn.ExtensionGroup =>
-          // t.params are ignored - don't know which symbol/owner they should have
-          // need to wait for https://github.com/lampepfl/dotty/issues/11690
-          val (owner, overloads) =
+          // Register extension parameters for each extension methods (in addDeclDef and addDefnDef)
+          // For example, `s` has two symbols
+          // - ...package.asInt().(s) and
+          // - ...package.double().(s)
+          // ```
+          // package example
+          // extension (s: String) {
+          //   def asInt: Int = s.toInt
+          //   def double: String = s * 2
+          // end extension
+          // ```
+          // see: https://github.com/scalameta/scalameta/issues/2443
+          //      https://github.com/lampepfl/dotty/issues/11690
+          val extensionParamss = t.paramss
+          val overloads =
             if (isPackageOwner)
-              topleveSourceData
+              toplevelOverloads
             else
-              (currentOwner, new OverloadDisambiguator())
+              new OverloadDisambiguator()
 
           def addDefnDef(t: Defn.Def): Unit =
-            withOwner(owner) {
+            withOwner(fileOwner) {
               disambiguatedMethod(
                 t,
                 t.name,
                 Nil,
-                t.paramss,
+                t.paramss ++ extensionParamss,
                 Kind.CONSTRUCTOR,
                 overloads
               )
             }
           def addDeclDef(t: Decl.Def): Unit =
-            withOwner(owner) {
+            withOwner(fileOwner) {
               disambiguatedMethod(
                 t,
                 t.name,
                 Nil,
-                t.paramss,
+                t.paramss ++ extensionParamss,
                 Kind.CONSTRUCTOR,
                 overloads
               )
@@ -286,10 +345,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
               case _ => Some(t.name.value)
             }
           nameOpt.foreach { name =>
-            withFileOwner {
-              term(name, t.name.pos, Kind.METHOD, Property.IMPLICIT.value)
-              continue()
-            }
+            enterGivenAlias(name, t.name.pos, t.tparams, t.sparams)
           }
         case t: Defn.Given =>
           val namePos =
@@ -304,12 +360,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
             }
 
           namePos.foreach { case (name, pos) =>
-            withFileOwner {
-              withOwner(owner) {
-                term(name, pos, Kind.METHOD, Property.IMPLICIT.value)
-                continue()
-              }
-            }
+            enterGiven(name, pos, t.tparams, t.sparams)
           }
         case _ => stop()
       }
@@ -329,12 +380,22 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
   private def isPackageOwner: Boolean = currentOwner.endsWith("/")
 
   private def givenTpeName(t: Type): Option[String] = {
-    t match {
-      case t: Type.Name => Some(t.value)
-      case t: Type.Apply =>
-        val out = List(t.tpe, t.args.head).flatMap(givenTpeName).mkString("_")
-        Some(out)
-      case _ => None
+
+    def extract(t: Type, level: Int): Option[String] = {
+      if (level > 1) None
+      else {
+        t match {
+          case t: Type.Name => Some(t.value)
+          case t: Type.Apply =>
+            val out =
+              (t.tpe :: t.args)
+                .flatMap(extract(_, level + 1))
+                .mkString("_")
+            Some(out)
+          case _ => None
+        }
+      }
     }
+    extract(t, 0)
   }
 }

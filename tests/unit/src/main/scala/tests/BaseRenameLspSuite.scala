@@ -7,20 +7,20 @@ import scala.meta.internal.pc.Identifier
 import munit.Location
 import munit.TestOptions
 
-class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
+abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
   protected def compilerPlugins: List[String] = Nil
 
   def same(
       name: String,
-      input: String
+      input: String,
   )(implicit loc: Location): Unit =
     check(
       name,
       input,
       "SHOULD_NOT_BE_RENAMED",
-      notRenamed = true
+      notRenamed = true,
     )
 
   def renamed(
@@ -32,7 +32,7 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       fileRenames: Map[String, String] = Map.empty,
       scalaVersion: Option[String] = None,
       expectedError: Boolean = false,
-      metalsJson: Option[String] = None
+      metalsJson: Option[String] = None,
   )(implicit loc: Location): Unit = {
     check(
       name,
@@ -44,7 +44,7 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       fileRenames,
       scalaVersion,
       expectedError,
-      metalsJson = metalsJson
+      metalsJson = metalsJson,
     )
   }
 
@@ -58,7 +58,7 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       fileRenames: Map[String, String] = Map.empty,
       scalaVersion: Option[String] = None,
       expectedError: Boolean = false,
-      metalsJson: Option[String] = None
+      metalsJson: Option[String] = None,
   )(implicit loc: Location): Unit = {
     test(name) {
       cleanWorkspace()
@@ -115,7 +115,7 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
           edit.replaceAll("(<<|>>|##.*##)", ""),
           expectedFiles,
           files.keySet,
-          newName
+          newName,
         )
       } yield ()
     }
@@ -127,7 +127,8 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
         |  "a" : {
         |    "scalaVersion": "$actualScalaVersion",
         |    "compilerPlugins": ${toJsonArray(compilerPlugins)},
-        |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
+        |    "libraryDependencies": ${toJsonArray(libraryDependencies)},
+        |    "scalacOptions" : ["-Ymacro-annotations"]
         |  },
         |  "b" : {
         |    "scalaVersion": "$actualScalaVersion",

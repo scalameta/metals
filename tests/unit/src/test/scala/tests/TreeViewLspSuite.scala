@@ -2,6 +2,7 @@ package tests
 
 import scala.collection.SortedSet
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.tvp.TreeViewProvider
 
 /**
@@ -9,6 +10,9 @@ import scala.meta.internal.tvp.TreeViewProvider
  *       due to https://mail.openjdk.java.net/pipermail/jdk8u-dev/2020-July/012143.html
  */
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
 
   /**
    * The libraries we expect to find for tests in this file.
@@ -18,22 +22,18 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
    */
   val expectedLibraries: SortedSet[String] = {
     lazy val jdk8Libraries = SortedSet(
-      "charsets",
-      "jce",
-      "jsse",
-      "resources",
-      "rt"
+      "charsets", "jce", "jsse", "resources", "rt",
     )
 
     val otherLibraries = SortedSet(
-      "cats-core_2.12", "cats-kernel_2.12", "cats-macros_2.12", "checker-qual",
-      "circe-core_2.12", "circe-numbers_2.12", "error_prone_annotations",
-      "failureaccess", "gson", "guava", "j2objc-annotations", "jsr305",
-      "listenablefuture", "machinist_2.12", "org.eclipse.lsp4j",
-      "org.eclipse.lsp4j.generator", "org.eclipse.lsp4j.jsonrpc",
-      "org.eclipse.xtend.lib", "org.eclipse.xtend.lib.macro",
-      "org.eclipse.xtext.xbase.lib", "scala-library", "scala-reflect",
-      "sourcecode_2.12"
+      "cats-core_2.13", "cats-kernel_2.13", "checker-qual", "circe-core_2.13",
+      "circe-numbers_2.13", "error_prone_annotations", "failureaccess", "gson",
+      "guava", "j2objc-annotations", "jsr305", "listenablefuture",
+      "org.eclipse.lsp4j", "org.eclipse.lsp4j.generator",
+      "org.eclipse.lsp4j.jsonrpc", "org.eclipse.xtend.lib",
+      "org.eclipse.xtend.lib.macro", "org.eclipse.xtext.xbase.lib",
+      "scala-library", "scala-reflect", "semanticdb-javac",
+      "simulacrum-scalafix-annotations_2.13", "sourcecode_2.13",
     )
 
     if (scala.util.Properties.isJavaAtLeast(9.toString)) {
@@ -93,55 +93,56 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         s"""|${TreeViewProvider.Project} <root>
             |${TreeViewProvider.Build} <root>
             |${TreeViewProvider.Compile} <root>
-            |""".stripMargin
+            |""".stripMargin,
       )
+      folder = server.server.folder
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}",
-        ""
+        s"projects-$folder:${server.buildTarget("a")}",
+        "",
       )
       _ <- server.didOpen("a/src/main/scala/a/First.scala")
       _ <- server.didOpen("b/src/main/scala/b/Third.scala")
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}",
+        s"projects-$folder:${server.buildTarget("a")}",
         """|_empty_/ -
            |a/ -
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/_empty_/",
+        s"projects-$folder:${server.buildTarget("a")}!/_empty_/",
         """|Zero class +
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/_empty_/Zero#",
+        s"projects-$folder:${server.buildTarget("a")}!/_empty_/Zero#",
         """|a val
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/a/",
+        s"projects-$folder:${server.buildTarget("a")}!/a/",
         """|First class -
            |First object
            |Second class -
            |Second object
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/a/First#",
+        s"projects-$folder:${server.buildTarget("a")}!/a/First#",
         """|a() method
            |b val
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}!/a/Second#",
+        s"projects-$folder:${server.buildTarget("a")}!/a/Second#",
         """|a() method
            |b val
            |c var
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
 
-  test("libraries") {
+  test("libraries", withoutVirtualDocs = true) {
     for {
       _ <- initialize(
         """
@@ -149,7 +150,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
           |{
           |  "a": {
           |    "libraryDependencies": [
-          |      "io.circe::circe-core:0.11.1",
+          |      "io.circe::circe-core:0.14.0",
           |      "org.eclipse.lsp4j:org.eclipse.lsp4j:0.5.0",
           |      "com.lihaoyi::sourcecode:0.1.7"
           |    ]
@@ -157,25 +158,24 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
           |}
           |""".stripMargin
       )
+      folder = server.server.folder
       _ = {
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("sourcecode")}",
-          "sourcecode/ +"
+          s"libraries-$folder:${server.jar("sourcecode")}",
+          "sourcecode/ +",
         )
         server.assertTreeViewChildren(
-          s"libraries:",
-          expectedLibrariesString
+          s"libraries-$folder:",
+          expectedLibrariesString,
         )
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("scala-library")}!/scala/Some#",
+          s"libraries-$folder:${server.jar("scala-library")}!/scala/Some#",
           """|value val
-             |isEmpty() method
              |get() method
-             |x() method
-             |""".stripMargin
+             |""".stripMargin,
         )
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("lsp4j")}!/org/eclipse/lsp4j/FileChangeType#",
+          s"libraries-$folder:${server.jar("lsp4j")}!/org/eclipse/lsp4j/FileChangeType#",
           """|Created enum
              |Changed enum
              |Deleted enum
@@ -183,31 +183,31 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
              |valueOf() method
              |getValue() method
              |forValue() method
-             |""".stripMargin
+             |""".stripMargin,
         )
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("circe-core")}!/_root_/",
+          s"libraries-$folder:${server.jar("circe-core")}!/_root_/",
           """|io/ +
-             |""".stripMargin
+             |""".stripMargin,
         )
         server.assertTreeViewChildren(
-          s"libraries:${server.jar("cats-core")}!/cats/instances/symbol/",
+          s"libraries-$folder:${server.jar("cats-core")}!/cats/instances/symbol/",
           """|package object
-             |""".stripMargin
+             |""".stripMargin,
         )
         assertNoDiff(
           server.workspaceSymbol("sourcecode.File", includeKind = true),
           """|sourcecode.File Class
              |sourcecode.File Object
              |sourcecode.FileMacros Interface
-             |""".stripMargin
+             |""".stripMargin,
         )
         assertNoDiff(
           server.workspaceSymbol("lsp4j.LanguageClient", includeKind = true),
           """|org.eclipse.lsp4j.services.LanguageClient Interface
              |org.eclipse.lsp4j.services.LanguageClientAware Interface
              |org.eclipse.lsp4j.services.LanguageClientExtensions Interface
-             |""".stripMargin
+             |""".stripMargin,
         )
         assertNoDiff(
           server.treeViewReveal(
@@ -216,14 +216,14 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             isIgnored = { label =>
               label.endsWith(".jar") &&
               !label.contains("sourcecode")
-            }
+            },
           ),
           s"""|root
               |  Projects (0)
               |  Libraries (${expectedLibrariesCount})
               |  Libraries (${expectedLibrariesCount})
-              |    sourcecode_2.12-0.1.7.jar
-              |    sourcecode_2.12-0.1.7.jar
+              |    sourcecode_2.13-0.1.7.jar
+              |    sourcecode_2.13-0.1.7.jar
               |      sourcecode/
               |      sourcecode/
               |        Args class
@@ -260,7 +260,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |        Util object
               |        File class
               |          value val
-              |""".stripMargin
+              |""".stripMargin,
         )
         assertNoDiff(
           server.treeViewReveal(
@@ -269,7 +269,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             isIgnored = { label =>
               label.endsWith(".jar") &&
               !label.contains("lsp4j")
-            }
+            },
           ),
           s"""|root
               |  Projects (0)
@@ -471,7 +471,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |                workspaceFolders() method
               |                configuration() method
               |                semanticHighlighting() method
-              |""".stripMargin
+              |""".stripMargin,
         )
       }
     } yield ()
@@ -500,11 +500,12 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
           |}
           |""".stripMargin
       )
+      folder = server.server.folder
       // Trigger a compilation of Second.scala
       _ <- server.didOpen("b/src/main/scala/b/Second.scala")
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("b")}",
-        "b/ +"
+        s"projects-$folder:${server.buildTarget("b")}",
+        "b/ +",
       )
 
       // shutdown and restart a new LSP server
@@ -519,8 +520,8 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       // contains no `*.class` files yet. This is Bloop-specific behavior
       // and may be not an issue with other clients.
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("b")}",
-        ""
+        s"projects-$folder:${server.buildTarget("b")}",
+        "",
       )
 
       // Trigger a compilation in an unrelated project to ensure that the
@@ -531,8 +532,8 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       // background compilation of project "b" has completed, even if it was a
       // no-op.
       _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("b")}",
-        "b/ +"
+        s"projects-$folder:${server.buildTarget("b")}",
+        "b/ +",
       )
 
     } yield ()

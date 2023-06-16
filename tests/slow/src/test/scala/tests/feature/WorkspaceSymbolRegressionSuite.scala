@@ -5,7 +5,7 @@ import scala.meta.io.AbsolutePath
 import bench.Corpus
 import tests.BaseWorkspaceSymbolSuite
 
-class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
+abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   def workspace: AbsolutePath = Corpus.akka()
   check("Actor", "1009 results")
   check("Actor(", "")
@@ -14,7 +14,7 @@ class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """
       |akka.japi.pf.FSMStateFunctionBuilder Class
       |akka.persistence.fsm.japi.pf.FSMStateFunctionBuilder Class
-    """.stripMargin
+    """.stripMargin,
   )
   check(
     "fsmb",
@@ -27,12 +27,12 @@ class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |akka.persistence.fsm.japi.pf.FSMStateFunctionBuilder Class
        |akka.persistence.fsm.japi.pf.FSMStopBuilder Class
        |akka.persistence.serialization.MessageFormats#PersistentFSMSnapshotOrBuilder Interface
-       |""".stripMargin
+       |""".stripMargin,
   )
   // Making lowercase queries "more precise" doesn't help because it grows the search state.
   check(
     "fsmbuilder",
-    ""
+    "",
   )
   check(
     "FSM",
@@ -125,7 +125,17 @@ class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |jdocs.actor.fsm.FSMDocTest#DummyFSM Class
        |jdocs.actor.fsm.FSMDocTest#MyFSM Class
        |jdocs.akka.typed.FSMDocTest Class
-    """.stripMargin
+    """.stripMargin,
   )
 
+}
+
+class VirtualDocsWorkspaceSymbolRegressionSuite
+    extends WorkspaceSymbolRegressionSuite {
+  override def saveClassFileToDisk: Boolean = false
+}
+
+class SaveToDiskWorkspaceSymbolRegressionSuite
+    extends WorkspaceSymbolRegressionSuite {
+  override def saveClassFileToDisk: Boolean = true
 }

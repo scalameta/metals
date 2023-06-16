@@ -32,11 +32,9 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags
-import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
@@ -71,12 +69,23 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
  * - no incremental compilation, every compilation is a clean compile.
  */
 object Bill {
+
+  val logName = ".bill-metals.log"
+
   class Server() extends BuildServer with ScalaBuildServer {
+
     val languages: util.List[String] = Collections.singletonList("scala")
     var client: BuildClient = _
     override def onConnectWithClient(server: BuildClient): Unit =
       client = server
     var workspace: Path = Paths.get(".").toAbsolutePath.normalize()
+
+    def billLog: AbsolutePath = {
+      val logFile = AbsolutePath(workspace.resolve(logName))
+      logFile.touch()
+      logFile
+    }
+
     // Returns true if we're tracing shutdown requests, used for testing purposes.
     def isShutdownTrace(): Boolean = {
       Files.isRegularFile(workspace.resolve("shutdown-trace"))
@@ -115,7 +124,7 @@ object Bill {
         mtags.BuildInfo.scalaCompilerVersion,
         "2.12",
         ScalaPlatform.JVM,
-        scalaJars
+        scalaJars,
       )
       val id = new BuildTargetIdentifier("id")
       val capabilities = new BuildTargetCapabilities(true, false, false)
@@ -124,7 +133,7 @@ object Bill {
         Collections.singletonList("tag"),
         languages,
         Collections.emptyList(),
-        capabilities
+        capabilities,
       )
       result.setDisplayName("id")
       result.setData(scalaTarget)
@@ -147,9 +156,8 @@ object Bill {
     ): CompletableFuture[InitializeBuildResult] = {
       Future {
         workspace = Paths.get(URI.create(params.getRootUri))
-        MetalsLogger.setupLspLogger(AbsolutePath(workspace), true)
         if (isShutdownTrace()) {
-          println("trace: initialize")
+          billLog.appendText("trace: initialize\n")
         }
         val capabilities = new BuildServerCapabilities
         capabilities.setCompileProvider(new CompileProvider(languages))
@@ -174,7 +182,7 @@ object Bill {
         // waits for the shutdown request to respond before initializing a new build
         // server connection.
         Thread.sleep(1000)
-        println("trace: shutdown")
+        billLog.appendText("trace: shutdown\n")
       }
       CompletableFuture.completedFuture(null)
     }
@@ -200,9 +208,9 @@ object Bill {
                 new SourceItem(
                   src.toUri.toString,
                   SourceItemKind.DIRECTORY,
-                  false
+                  false,
                 )
-              ).asJava
+              ).asJava,
             )
           ).asJava
         )
@@ -211,13 +219,16 @@ object Bill {
     override def buildTargetInverseSources(
         params: InverseSourcesParams
     ): CompletableFuture[InverseSourcesResult] = ???
+    override def buildTargetOutputPaths(
+        params: OutputPathsParams
+    ): CompletableFuture[OutputPathsResult] = ???
     override def buildTargetDependencySources(
         params: DependencySourcesParams
     ): CompletableFuture[DependencySourcesResult] = {
       val scalaLib = Dependency.of(
         "org.scala-lang",
         "scala-library",
-        mtags.BuildInfo.scalaCompilerVersion
+        mtags.BuildInfo.scalaCompilerVersion,
       )
 
       CompletableFuture.completedFuture {
@@ -233,7 +244,7 @@ object Bill {
           List(
             new DependencySourcesItem(
               target.getId,
-              sources.map(_.toUri.toString).asJava
+              sources.map(_.toUri.toString).asJava,
             )
           ).asJava
         )
@@ -253,7 +264,7 @@ object Bill {
             new TextDocumentIdentifier(file.name),
             target.getId,
             List().asJava,
-            true
+            true,
           )
         )
       }
@@ -290,7 +301,7 @@ object Bill {
             new TextDocumentIdentifier(uri),
             target.getId,
             diagnostics.asJava,
-            true
+            true,
           )
         client.onBuildPublishDiagnostics(params)
         hasError += file
@@ -355,7 +366,7 @@ object Bill {
               target.getId,
               List().asJava,
               scalaJars,
-              out.toURI.toASCIIString
+              out.toURI.toASCIIString,
             )
           ).asJava
         )
@@ -372,14 +383,18 @@ object Bill {
         params: DependencyModulesParams
     ): CompletableFuture[DependencyModulesResult] = ???
 
+    override def debugSessionStart(
+        params: DebugSessionParams
+    ): CompletableFuture[DebugSessionAddress] = ???
+
   }
 
-  def myClassLoader: ClassLoader =
-    this.getClass.getClassLoader
   def myClasspath: Seq[Path] =
-    ClasspathLoader
-      .getURLs(myClassLoader)
-      .map(url => Paths.get(url.toURI))
+    System
+      .getProperty("java.class.path")
+      .split(java.io.File.pathSeparator)
+      .map(Paths.get(_))
+      .toSeq
 
   def cwd: Path = Paths.get(System.getProperty("user.dir"))
 
@@ -395,7 +410,7 @@ object Bill {
       Files.newOutputStream(
         log,
         StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING
+        StandardOpenOption.TRUNCATE_EXISTING,
       )
     )
     System.setOut(logStream)
@@ -406,7 +421,7 @@ object Bill {
         Files.newOutputStream(
           trace,
           StandardOpenOption.CREATE,
-          StandardOpenOption.TRUNCATE_EXISTING
+          StandardOpenOption.TRUNCATE_EXISTING,
         )
       )
       val launcher = new Launcher.Builder[BuildClient]()
@@ -443,7 +458,7 @@ object Bill {
    */
   def installWorkspace(
       directory: Path,
-      name: String = "Bill"
+      name: String = "Bill",
   ): Unit = {
     handleInstall(directory.resolve(".bsp"), name)
   }
@@ -453,7 +468,7 @@ object Bill {
    */
   def installGlobal(
       directory: Path,
-      name: String = "Bill"
+      name: String = "Bill",
   ): Unit = {
     handleInstall(directory.resolve("bsp"), name)
   }
@@ -469,11 +484,11 @@ object Bill {
         "-classpath",
         classpath,
         "bill.Bill",
-        "bsp"
+        "bsp",
       ).asJava,
       BuildInfo.metalsVersion,
       BuildInfo.bspVersion,
-      List("scala").asJava
+      List("scala").asJava,
     )
     val json = new GsonBuilder().setPrettyPrinting().create().toJson(details)
     val bspJson = directory.resolve(s"${name.toLowerCase()}.json")
@@ -498,12 +513,13 @@ object Bill {
         val path = params.getTextDocument.getUri.toAbsolutePath
         val input = path.toInput
         params.getDiagnostics.asScala.foreach { diag =>
-          val pos = diag.getRange.toMeta(input)
-          val message = pos.formatMessage(
-            diag.getSeverity.toString.toLowerCase(),
-            diag.getMessage
-          )
-          println(message)
+          diag.getRange.toMeta(input).foreach { pos =>
+            val message = pos.formatMessage(
+              diag.getSeverity.toString.toLowerCase(),
+              diag.getMessage,
+            )
+            println(message)
+          }
         }
       }
       override def onBuildTargetDidChange(params: DidChangeBuildTarget): Unit =
@@ -521,7 +537,7 @@ object Bill {
               wd.toUri.toString,
               new BuildClientCapabilities(
                 Collections.singletonList("scala")
-              )
+              ),
             )
           )
           .asScala

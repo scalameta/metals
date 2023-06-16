@@ -38,9 +38,8 @@ import org.eclipse.lsp4j.ExecuteCommandParams
  * Http server
  */
 final class MetalsHttpServer private (
-    languageServer: MetalsLanguageServer,
     server: Undertow,
-    openChannels: mutable.Set[WebSocketChannel]
+    openChannels: mutable.Set[WebSocketChannel],
 ) extends Cancelable {
   override def cancel(): Unit = stop()
   def address: String =
@@ -77,11 +76,11 @@ object MetalsHttpServer {
   def apply(
       host: String,
       preferredPort: Int,
-      languageServer: MetalsLanguageServer,
       render: () => String,
       complete: HttpServerExchange => Unit,
       doctor: () => String,
-      tasty: (URI) => Future[Either[String, String]]
+      tasty: (URI) => Future[Either[String, String]],
+      server: WorkspaceLspService,
   )(implicit ec: ExecutionContext): MetalsHttpServer = {
     val port = freePort(host, preferredPort)
     scribe.info(s"Selected port $port")
@@ -98,14 +97,14 @@ object MetalsHttpServer {
                 case NonFatal(e) =>
                   scribe.error(
                     s"http error: ${exchange.getRequestPath} ${exchange.getQueryString}",
-                    e
+                    e,
                   )
               }
               exchange.setStatusCode(StatusCodes.SEE_OTHER)
               exchange.getResponseHeaders.put(Headers.LOCATION, "/")
               exchange.endExchange()
             }
-          }
+          },
         )
         .addPrefixPath(
           "/execute-command",
@@ -115,25 +114,25 @@ object MetalsHttpServer {
                 params <- Option(exchange.getQueryParameters.get("command"))
                 command <- params.asScala.headOption
               } yield command
-              languageServer.executeCommand(
+              server.executeCommand(
                 new ExecuteCommandParams(
                   command.getOrElse("<unknown command>"),
-                  Collections.emptyList()
+                  Collections.emptyList(),
                 )
               )
               exchange.setStatusCode(StatusCodes.SEE_OTHER)
               exchange.getResponseHeaders.put(Headers.LOCATION, "/")
               exchange.endExchange()
             }
-          }
+          },
         )
         .addPrefixPath(
           "/livereload",
-          websocket(new LiveReloadConnectionCallback(openChannels))
+          websocket(new LiveReloadConnectionCallback(openChannels)),
         )
         .addPrefixPath(
           "/tasty",
-          tastyEndpointHandler(tasty)
+          tastyEndpointHandler(tasty),
         )
         .addExactPath("/", textHtmlHandler(render))
         .addExactPath("/doctor", textHtmlHandler(doctor))
@@ -141,7 +140,7 @@ object MetalsHttpServer {
       .addHttpListener(port, host)
       .setHandler(baseHandler)
       .build()
-    new MetalsHttpServer(languageServer, httpServer, openChannels)
+    new MetalsHttpServer(httpServer, openChannels)
   }
 
   def address(server: Undertow): String = {
@@ -157,7 +156,7 @@ object MetalsHttpServer {
     textHandler("text/html", _ => render())
   def textHandler(
       contentType: String,
-      render: HttpServerExchange => String
+      render: HttpServerExchange => String,
   ): HttpHandler =
     new BlockingHandler(new HttpHandler {
       override def handleRequest(exchange: HttpServerExchange): Unit = {
@@ -252,19 +251,19 @@ object MetalsHttpServer {
   ) extends WebSocketConnectionCallback {
     override def onConnect(
         exchange: WebSocketHttpExchange,
-        channel: WebSocketChannel
+        channel: WebSocketChannel,
     ): Unit = {
       channel.getReceiveSetter.set(new AbstractReceiveListener() {
         override def onClose(
             webSocketChannel: WebSocketChannel,
-            channel: StreamSourceFrameChannel
+            channel: StreamSourceFrameChannel,
         ): Unit = {
           openChannels.remove(webSocketChannel)
           super.onClose(webSocketChannel, channel)
         }
         override protected def onFullTextMessage(
             channel: WebSocketChannel,
-            message: BufferedTextMessage
+            message: BufferedTextMessage,
         ): Unit = {
           if (message.getData.contains("""command":"hello""")) {
             val hello =

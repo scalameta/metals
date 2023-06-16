@@ -9,6 +9,7 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.ScriptSourceFile
+import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
@@ -19,8 +20,10 @@ import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -36,7 +39,8 @@ class MetalsGlobal(
     val workspace: Option[Path]
 ) extends Global(settings, reporter)
     with completions.Completions
-    with completions.AmmoniteCompletions
+    with completions.AmmoniteFileCompletions
+    with completions.AmmoniteIvyCompletions
     with completions.ArgCompletions
     with completions.FilenameCompletions
     with completions.InterpolatorCompletions
@@ -46,6 +50,9 @@ class MetalsGlobal(
     with completions.ScaladocCompletions
     with completions.TypeCompletions
     with completions.OverrideCompletions
+    with completions.ScalaCliCompletions
+    with completions.MillIvyCompletions
+    with completions.SbtLibCompletions
     with Signatures
     with Compat
     with GlobalProxy
@@ -154,14 +161,85 @@ class MetalsGlobal(
     }
   }
 
-  def symbolDocumentation(symbol: Symbol): Option[SymbolDocumentation] = {
-    val sym = compiler.semanticdbSymbol(
-      if (!symbol.isJava && symbol.isPrimaryConstructor) symbol.owner
-      else symbol
+  def workspaceSymbolListMembers(
+      query: String,
+      pos: Position,
+      visit: Member => Boolean
+  ): SymbolSearch.Result = {
+
+    def isRelevantWorkspaceSymbol(sym: Symbol): Boolean =
+      sym.isStatic
+
+    lazy val isInStringInterpolation = {
+      lastVisitedParentTrees match {
+        case Apply(
+              Select(Apply(Ident(TermName("StringContext")), _), _),
+              _
+            ) :: _ =>
+          true
+        case _ => false
+      }
+    }
+
+    if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
+    else {
+      val context = doLocateContext(pos)
+      val visitor = new CompilerSearchVisitor(
+        context,
+        sym =>
+          if (isRelevantWorkspaceSymbol(sym))
+            visit {
+              if (isInStringInterpolation)
+                new WorkspaceInterpolationMember(
+                  sym,
+                  Nil,
+                  edit => s"{$edit}",
+                  None
+                )
+              else
+                new WorkspaceMember(sym)
+            }
+          else false
+      )
+      search.search(query, buildTargetIdentifier, visitor)
+    }
+  }
+
+  def workspaceSymbolListMembers(
+      query: String,
+      pos: Position
+  ): List[Member] = {
+    val buffer = mutable.ListBuffer.empty[Member]
+    workspaceSymbolListMembers(
+      query,
+      pos,
+      mem => {
+        buffer.append(mem)
+        true
+      }
     )
-    val documentation = search.documentation(sym)
-    if (documentation.isPresent) Some(documentation.get())
-    else None
+    buffer.toList
+  }
+
+  def symbolDocumentation(symbol: Symbol): Option[SymbolDocumentation] = {
+    def toSemanticdbSymbol(sym: Symbol) = compiler.semanticdbSymbol(
+      if (!sym.isJava && sym.isPrimaryConstructor) sym.owner
+      else sym
+    )
+    val sym = toSemanticdbSymbol(symbol)
+    val documentation = search.documentation(
+      sym,
+      new ParentSymbols {
+        def parents(): util.List[String] =
+          symbol.overrides.map(toSemanticdbSymbol).asJava
+      }
+    )
+
+    if (documentation.isPresent) {
+      Some(documentation.get())
+    } else {
+      None
+    }
   }
 
   /**
@@ -177,6 +255,17 @@ class MetalsGlobal(
     def this(string: String) =
       this(string + ".", string)
   }
+
+  private def backtickify(sym: Symbol) =
+    if (
+      Identifier.needsBacktick(sym.name.decoded)
+      && sym.owner != definitions.ScalaPackageClass
+      && !sym.isPackageObjectOrClass
+    ) {
+      val name0: sym.NameType = sym.rawname
+      val name: Name = name0.newName(Identifier.backtickWrap(name0))
+      sym.setName(name)
+    } else sym
 
   /**
    * Shortens fully qualified package prefixes to make type signatures easier to read.
@@ -195,8 +284,13 @@ class MetalsGlobal(
       isVisited += key
       val result = tpe match {
         case TypeRef(pre, sym, args) =>
+          def backtickifiedSymbol = backtickify(sym)
           if (history.isSymbolInScope(sym, pre)) {
-            TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+            TypeRef(
+              NoPrefix,
+              backtickifiedSymbol,
+              args.map(arg => loop(arg, None))
+            )
           } else {
             val ownerSymbol = pre.termSymbol
             def hasConflictingMembersInScope =
@@ -205,16 +299,23 @@ class MetalsGlobal(
                 case _ => false
               }
 
-            def shouldRenamePrefix =
-              !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
+            def canRename(rename: Name, ownerSym: Symbol): Boolean = {
+              val shouldRenamePrefix =
+                !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
+
+              if (shouldRenamePrefix) {
+                val existingRename = history.renames.get(ownerSym)
+                existingRename.isEmpty && history.tryShortenName(
+                  ShortName(rename, ownerSymbol)
+                )
+              } else false
+            }
+
             history.config.get(ownerSymbol) match {
-              case Some(rename)
-                  if shouldRenamePrefix && history.tryShortenName(
-                    ShortName(rename, ownerSymbol)
-                  ) =>
+              case Some(rename) if canRename(rename, ownerSymbol) =>
                 TypeRef(
                   new PrettyType(rename.toString),
-                  sym,
+                  backtickifiedSymbol,
                   args.map(arg => loop(arg, None))
                 )
               case _ =>
@@ -239,18 +340,22 @@ class MetalsGlobal(
                       loop(tpe.dealias, name)
                     } else if (history.owners(pre.typeSymbol)) {
                       if (history.nameResolvesToSymbol(sym.name, sym)) {
-                        TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+                        TypeRef(
+                          NoPrefix,
+                          backtickifiedSymbol,
+                          args.map(arg => loop(arg, None))
+                        )
                       } else {
                         TypeRef(
                           ThisType(pre.typeSymbol),
-                          sym,
+                          backtickifiedSymbol,
                           args.map(arg => loop(arg, None))
                         )
                       }
                     } else {
                       TypeRef(
                         loop(pre, Some(ShortName(sym))),
-                        sym,
+                        backtickifiedSymbol,
                         args.map(arg => loop(arg, None))
                       )
                     }
@@ -258,6 +363,7 @@ class MetalsGlobal(
             }
           }
         case SingleType(pre, sym) =>
+          def backtickifiedSymbol = backtickify(sym)
           if (sym.hasPackageFlag || sym.isPackageObjectOrClass) {
             val dotSyntaxFriendlyName = name.map { name0 =>
               if (name0.symbol.isStatic) name0
@@ -274,15 +380,19 @@ class MetalsGlobal(
               }
             }
             if (history.tryShortenName(dotSyntaxFriendlyName)) NoPrefix
-            else tpe
+            else SingleType(pre, backtickifiedSymbol)
           } else {
-            if (history.isSymbolInScope(sym, pre)) SingleType(NoPrefix, sym)
+            if (history.isSymbolInScope(sym, pre))
+              SingleType(NoPrefix, backtickifiedSymbol)
             else {
               pre match {
                 case ThisType(psym) if history.isSymbolInScope(psym, pre) =>
-                  SingleType(NoPrefix, sym)
+                  SingleType(NoPrefix, backtickifiedSymbol)
                 case _ =>
-                  SingleType(loop(pre, Some(ShortName(sym))), sym)
+                  SingleType(
+                    loop(pre, Some(ShortName(sym))),
+                    backtickifiedSymbol
+                  )
               }
             }
           }
@@ -466,6 +576,14 @@ class MetalsGlobal(
     onUnitOf(pos.source) { unit => new MetalsLocator(pos).locateIn(unit.body) }
   }
 
+  def locateTree(
+      pos: Position,
+      tree: Tree,
+      acceptTransparent: Boolean
+  ): Tree = {
+    new MetalsLocator(pos, acceptTransparent).locateIn(tree)
+  }
+
   def locateUntyped(pos: Position): Tree = {
     onUnitOf(pos.source) { unit =>
       new MetalsLocator(pos).locateIn(parseTree(unit.source))
@@ -539,7 +657,7 @@ class MetalsGlobal(
       pos.point > other.point
     }
 
-    def toLSP: l.Range = {
+    def toLsp: l.Range = {
       if (pos.isRange) {
         new l.Range(toPos(pos.start), toPos(pos.end))
       } else {
@@ -581,12 +699,50 @@ class MetalsGlobal(
      * Returns the position of the name/identifier of this definition.
      */
     def namePos: Position = {
+      val name =
+        if (defn.symbol.isPackageObject) defn.symbol.enclosingPackageClass.name
+        else defn.name
       val start = defn.pos.point
-      val end = start + defn.name.length() - 1
+      val end = start + name.dropLocal.decoded.length()
       Position.range(defn.pos.source, start, start, end)
+    }
+  }
+
+  implicit class XtensionNameTreeMetals(sel: NameTreeApi) {
+
+    /**
+     * Returns the position of the name/identifier of this select.
+     */
+    def namePos: Position = {
+      val start = sel.pos.point
+      val end = start + sel.name.getterName.decoded.trim.length()
+      Position.range(sel.pos.source, start, start, end)
     }
 
   }
+
+  implicit class XtensionImportSelectorMetals(sel: ImportSelector) {
+
+    /**
+     * Returns the position of the name/identifier of this import selector.
+     */
+    def namePosition(source: SourceFile): Position = {
+      val start = sel.namePos
+      val end = start + sel.name.getterName.decoded.trim.length()
+      Position.range(source, start, start, end)
+    }
+
+    /**
+     * Returns the position of the rename of this import selector.
+     */
+    def renamePosition(source: SourceFile): Position = {
+      val start = sel.renamePos
+      val end = start + sel.rename.getterName.decoded.trim.length()
+      Position.range(source, start, start, end)
+    }
+
+  }
+
   implicit class XtensionSymbolMetals(sym: Symbol) {
     def foreachKnownDirectSubClass(fn: Symbol => Unit): Unit = {
       // NOTE(olafur) The logic in this method is fairly involved because `knownDirectSubClasses`
@@ -601,6 +757,7 @@ class MetalsGlobal(
             isVisited += unique
             if (child.name.containsName(CURSOR)) ()
             else if (child.isStale) ()
+            else if (child.name == tpnme.LOCAL_CHILD) ()
             else if (child.isSealed && (child.isAbstract || child.isTrait)) {
               loop(child)
             } else {
@@ -740,6 +897,32 @@ class MetalsGlobal(
     def dealiased: Symbol =
       if (sym.isAliasType) sym.info.dealias.typeSymbol
       else sym.dealiasedSingleType
+
+    /**
+     * For classes defined in methods it's not possible to find
+     * companion via methods in symbol.
+     *
+     * @param pos position for locating context
+     * @return companion if it exists
+     */
+    def localCompanion(pos: Position): Option[Symbol] =
+      if (!sym.owner.isMethod) Some(sym.companion)
+      else {
+        val nameToLookFor =
+          if (sym.isModuleClass) sym.name.companionName.companionName
+          else sym.name.companionName
+        locateContext(pos).flatMap(
+          _.lookupSymbol(
+            nameToLookFor,
+            s => s.owner == sym.owner
+          ) match {
+            case LookupSucceeded(_, symbol) =>
+              Some(symbol)
+            case _ => None
+          }
+        )
+      }
+
   }
 
   def metalsSeenFromType(tree: Tree, symbol: Symbol): Type = {
@@ -751,9 +934,67 @@ class MetalsGlobal(
         case t => t
       }
     val pre = stabilizedType(qual(tree))
-    val memberType = pre.memberType(symbol)
-    if (memberType.isErroneous) symbol.info
-    else memberType
+    if (pre != null) {
+      val memberType = pre.memberType(symbol)
+      if (memberType.isErroneous) symbol.info
+      else memberType
+    } else NoType
+  }
+
+  /**
+   * Traverses up the parent tree nodes to the largest enclosing application node.
+   *
+   * Example: {{{
+   *   original = println(List(1).map(_.toString))
+   *   pos      = List(1).map
+   *   expanded = List(1).map(_.toString)
+   * }}}
+   */
+  def expandRangeToEnclosingApply(pos: Position): Tree = {
+    def tryTail(enclosing: List[Tree]): Option[Tree] =
+      enclosing match {
+        case Nil => None
+        case head :: tail =>
+          head match {
+            case TreeApply(qual, _) if qual.pos.includes(pos) =>
+              tryTail(tail).orElse(Some(head))
+            case New(_) =>
+              tail match {
+                case Nil => None
+                case Select(_, _) :: next =>
+                  tryTail(next)
+                case _ =>
+                  None
+              }
+            case _ =>
+              None
+          }
+      }
+    lastVisitedParentTrees match {
+      case head :: tail =>
+        tryTail(tail).getOrElse(head)
+      case _ =>
+        EmptyTree
+    }
+  }
+
+  def seenFromType(tree0: Tree, symbol: Symbol): Type = {
+    def qual(t: Tree): Tree =
+      t match {
+        case TreeApply(q, _) => qual(q)
+        case Select(q, _) => q
+        case Import(q, _) => q
+        case t => t
+      }
+    try {
+      val tree = qual(tree0)
+      val pre = stabilizedType(tree)
+      val memberType = pre.memberType(symbol)
+      if (memberType.isErroneous) symbol.info
+      else memberType
+    } catch {
+      case NonFatal(_) => symbol.info
+    }
   }
 
   // Extractor for both term and type applications like `foo(1)` and foo[T]`

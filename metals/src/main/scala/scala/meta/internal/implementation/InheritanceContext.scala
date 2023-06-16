@@ -8,7 +8,7 @@ import scala.meta.internal.semanticdb.SymbolInformation
 
 case class InheritanceContext(
     findSymbol: String => Option[SymbolInformation],
-    private val inheritance: Map[String, Set[ClassLocation]]
+    private val inheritance: Map[String, Set[ClassLocation]],
 ) {
 
   def allClassSymbols = inheritance.keySet
@@ -36,7 +36,7 @@ object InheritanceContext {
 
   def fromDefinitions(
       findSymbol: String => Option[SymbolInformation],
-      localDefinitions: Map[Path, Map[String, Set[ClassLocation]]]
+      localDefinitions: Map[Path, Map[String, Set[ClassLocation]]],
   ): InheritanceContext = {
     val inheritance = mutable.Map
       .empty[String, Set[ClassLocation]]

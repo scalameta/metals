@@ -5,8 +5,9 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 import scala.meta.Term
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -45,7 +46,7 @@ class RewriteBracesParensCodeAction(
           .findLastEnclosingAt[Term.Apply](
             path,
             range.getStart(),
-            applyWithSingleFunction
+            applyWithSingleFunction,
           )
       else None
 
@@ -66,7 +67,7 @@ class RewriteBracesParensCodeAction(
 
   private def switchFrom[L: ClassTag, R: ClassTag](
       path: AbsolutePath,
-      appl: Term.Apply
+      appl: Term.Apply,
   ): Seq[l.CodeAction] = {
     val select = appl.fun
     val term = appl.args.head match {
@@ -82,20 +83,24 @@ class RewriteBracesParensCodeAction(
               val isParens = leftParen.text == "("
               val newLeft = if (isParens) "{" else "("
               val newRight = if (isParens) "}" else ")"
-              val start = new l.TextEdit(leftParen.pos.toLSP, newLeft)
-              val end = new l.TextEdit(rightParen.pos.toLSP, newRight)
-              val codeAction = new l.CodeAction()
-              if (isParens)
-                codeAction.setTitle(RewriteBracesParensCodeAction.toBraces)
-              else
-                codeAction.setTitle(RewriteBracesParensCodeAction.toParens)
-              codeAction.setKind(this.kind)
-              codeAction.setEdit(
-                new l.WorkspaceEdit(
-                  Map(path.toURI.toString -> List(start, end).asJava).asJava
-                )
+              val start = new l.TextEdit(leftParen.pos.toLsp, newLeft)
+              val end = new l.TextEdit(rightParen.pos.toLsp, newRight)
+
+              val name = appl.fun match {
+                case Term.Name(value) => value
+                case Term.Select(_, Term.Name(value)) => value
+                case _ => ""
+              }
+
+              val title =
+                if (isParens) RewriteBracesParensCodeAction.toBraces(name)
+                else RewriteBracesParensCodeAction.toParens(name)
+
+              CodeActionBuilder.build(
+                title = title,
+                kind = this.kind,
+                changes = List(path -> List(start, end)),
               )
-              codeAction
           }
       }
       .flatten
@@ -106,7 +111,7 @@ class RewriteBracesParensCodeAction(
     // exclude case when body has more than one line (is a Block) because it cannot be rewritten to parens
     case Term.Apply(
           _,
-          List(Term.Block(List(Term.Function(_, _: Term.Block))))
+          List(Term.Block(List(Term.Function(_, _: Term.Block)))),
         ) =>
       false
     case Term.Apply(_, List(_: Term)) => true
@@ -116,6 +121,12 @@ class RewriteBracesParensCodeAction(
 }
 
 object RewriteBracesParensCodeAction {
-  val toParens = "Rewrite to parenthesis"
-  val toBraces = "Rewrite to braces"
+  def toParens(name: String): String =
+    s"Rewrite ${addSpaceSuffixIfNonempty(name)}to parenthesis"
+  def toBraces(name: String): String =
+    s"Rewrite ${addSpaceSuffixIfNonempty(name)}to braces"
+
+  private def addSpaceSuffixIfNonempty(str: String): String =
+    if (str.nonEmpty) s"$str "
+    else str
 }

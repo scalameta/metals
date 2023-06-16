@@ -2,10 +2,9 @@ package tests
 
 import java.nio.file.Files
 
-import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
 
 abstract class BaseTablesSuite extends BaseSuite {
@@ -19,7 +18,6 @@ abstract class BaseTablesSuite extends BaseSuite {
     tables = new Tables(
       workspace,
       time,
-      ClientConfiguration.Default()
     )
     tables.connect()
   }

@@ -2,6 +2,7 @@ package tests
 
 import scala.meta._
 import scala.meta.internal.inputs._
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
@@ -29,23 +30,23 @@ abstract class DefinitionSuiteBase(
     inputProps: InputProperties,
     directory: String,
     dialect: Dialect,
-    badFileNames: List[String] = List.empty
+    badFileNames: List[String] = List.empty,
 ) extends DirectoryExpectSuite(directory) {
 
   override lazy val input: InputProperties = inputProps
 
   override def testCases(): List[ExpectTestCase] = {
-    val index = OnDemandSymbolIndex.empty()
+    val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
       index.addSourceFile(source.file, Some(source.sourceDirectory), dialect)
     }
     // Step 2. Index dependency sources
-    index.addSourceJar(JdkSources().get, dialect)
+    index.addSourceJar(JdkSources().right.get, dialect)
     input.dependencySources.entries.foreach { jar =>
       index.addSourceJar(
         jar,
-        ScalaVersions.dialectForDependencyJar(jar.filename)
+        ScalaVersions.dialectForDependencyJar(jar.filename),
       )
     }
 
@@ -73,9 +74,16 @@ abstract class DefinitionSuiteBase(
             def symbol(path: AbsolutePath, range: s.Range): Option[Symbol] = {
               for {
                 document <- Semanticdbs.loadTextDocuments(path).documents
-                occ <- document.occurrences.find(
-                  _.range.contains(range)
-                )
+                occ <- document.occurrences.find { occ =>
+                  // zero ranges will not be used by definition
+                  def nonZeroRanges = occ.range.exists(r =>
+                    r.startCharacter != r.endCharacter
+                  ) && range.startCharacter != range.endCharacter
+                  nonZeroRanges && (
+                    occ.range.exists(range.encloses) ||
+                      occ.range.exists(_.encloses(range))
+                  )
+                }
               } yield Symbol(occ.symbol)
             }.headOption
             val obtained = symbol(semanticdbPath, token.pos.toRange)
@@ -116,7 +124,7 @@ abstract class DefinitionSuiteBase(
                               scribe.error(
                                 token.pos.formatMessage(
                                   "error",
-                                  s"missing definition for $symbol"
+                                  s"missing definition for $symbol",
                                 )
                               )
                             }
@@ -142,7 +150,7 @@ abstract class DefinitionSuiteBase(
           })
           val obtained = sb.toString()
           obtained
-        }
+        },
       )
     }
   }
@@ -174,7 +182,7 @@ class DefinitionScala2Suite
       dialect = dialects.Scala213,
       badFileNames = List(
         "ForComprehensions.scala" // local symbols in large for comprehensions cause problems
-      )
+      ),
     )
 
 class DefinitionScala3Suite
@@ -184,5 +192,5 @@ class DefinitionScala3Suite
       dialect = dialects.Scala3,
       badFileNames = List(
         "Extension.scala"
-      )
+      ),
     )

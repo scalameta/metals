@@ -2,9 +2,14 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.InitializationOptions
+
 import org.eclipse.lsp4j.Position
 
 class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
 
   test("simple") {
     val code =
@@ -204,11 +209,11 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
     checkSuperMethodMulti(
       codeA,
-      codeB
+      codeB,
     )
   }
 
-  test("jump-to-external-dependency") {
+  test("jump-to-external-dependency", withoutVirtualDocs = true) {
     val code =
       """
         |package a
@@ -225,7 +230,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
   def checkSuperMethodMulti(
       codeA: String,
-      codeB: String
+      codeB: String,
   ): Future[Unit] = {
     val header = s"""
                     |/metals.json
@@ -251,7 +256,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       (contextB, assertsB) = parseWithUri(codeB, pathB)
       result <- server.assertGotoSuperMethod(
         assertsA ++ assertsB,
-        contextA ++ contextB
+        contextA ++ contextB,
       )
 
     } yield result
@@ -284,8 +289,8 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       externalDep = Map(
         50 -> (new Position(
           60,
-          6
-        ), workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.12-0.12.0-sources.jar/io/circe/Decoder.scala")
+          6,
+        ), workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.13-0.12.0-sources.jar/io/circe/Decoder.scala")
       )
 
       (context, assertions) = parseWithUri(code, path)
@@ -299,10 +304,10 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
   private def parseWithUri(
       code: String,
-      uri: String
+      uri: String,
   ): (Map[Int, (Position, String)], Map[Int, Option[Int]]) = {
     val (mapping, asserts) = parse(code)
-    (mapping.mapValues((_, uri)), asserts)
+    (mapping.mapValues((_, uri)).toMap, asserts)
   }
 
   private def parse(

@@ -9,10 +9,10 @@ public enum JavaEnum/*example.JavaEnum#*/ {
         this.d = d;
     }
 
-    public static void a() {
+    public static void a/*example.JavaEnum#a().*/() {
     }
 
-    public int b() {
+    public int b/*example.JavaEnum#b().*/() {
         return 1;
     }
 
@@ -21,7 +21,7 @@ public enum JavaEnum/*example.JavaEnum#*/ {
     public int d = 2;
 
     public class C/*example.JavaEnum#C#*/ {
-        public int b() {
+        public int b/*example.JavaEnum#C#b().*/() {
             return 1;
         }
 
@@ -30,10 +30,10 @@ public enum JavaEnum/*example.JavaEnum#*/ {
     }
 
     public static class F/*example.JavaEnum#F#*/ {
-        public static void a() {
+        public static void a/*example.JavaEnum#F#a().*/() {
         }
 
-        public int b() {
+        public int b/*example.JavaEnum#F#b().*/() {
             return 1;
         }
 

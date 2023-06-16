@@ -7,14 +7,20 @@ import scala.meta.io.AbsolutePath
 
 class ScalaVersionSelector(
     userConfig: () => UserConfiguration,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
 ) {
+
+  def scalaVersionForPath(path: AbsolutePath): String = {
+    buildTargets
+      .scalaVersion(path)
+      .getOrElse(fallbackScalaVersion(path.isAmmoniteScript))
+  }
 
   def fallbackScalaVersion(isAmmonite: Boolean): String = {
     val selected = userConfig().fallbackScalaVersion match {
       case Some(v) => v
       case None =>
-        buildTargets.all.toList
+        buildTargets.allScala.toList
           .map(_.scalaInfo.getScalaVersion)
           .sorted
           .lastOption
@@ -22,24 +28,23 @@ class ScalaVersionSelector(
     }
 
     val binary = ScalaVersions.scalaBinaryVersionFromFullVersion(selected)
-    // ammonite doesn't support Scala3 yet
     if (isAmmonite && ScalaVersions.isScala3Version(selected))
-      BuildInfo.scala213
+      BuildInfo.ammonite3
     else if (
       isAmmonite && binary == "2.12" && SemVer.isLaterVersion(
         BuildInfo.ammonite212,
-        selected
+        selected,
       )
     )
       BuildInfo.ammonite212
     else if (
       isAmmonite && binary == "2.13" && SemVer.isLaterVersion(
         BuildInfo.ammonite213,
-        selected
+        selected,
       )
     )
       BuildInfo.ammonite213
-    else if (ScalaVersions.isSupportedScalaVersion(selected))
+    else if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(selected))
       selected
     else
       ScalaVersions.recommendedVersion(selected)
@@ -48,7 +53,7 @@ class ScalaVersionSelector(
   def fallbackDialect(isAmmonite: Boolean): Dialect = {
     ScalaVersions.dialectForScalaVersion(
       fallbackScalaVersion(isAmmonite),
-      includeSource3 = true
+      includeSource3 = true,
     )
   }
 
@@ -71,7 +76,8 @@ class ScalaVersionSelector(
           fallbackDialect(isAmmonite = path.isAmmoniteScript)
         )
         dialect
-          .copy(allowToplevelTerms = true, toplevelSeparator = "")
+          .withAllowToplevelTerms(true)
+          .withToplevelSeparator("")
       case _ => fallbackDialect(isAmmonite = false)
     }
   }

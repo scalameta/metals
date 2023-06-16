@@ -12,18 +12,20 @@ import munit.TestOptions
 
 trait BaseAutoImportsSuite extends BaseCodeActionSuite {
 
+  val isExtensionMethods: Boolean = false
+
   def check(
       name: String,
       original: String,
       expected: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit =
     test(name) {
       val imports = getAutoImports(original, "A.scala")
       val obtained = imports.map(_.packageName()).mkString("\n")
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion)
+        getExpected(expected, compat, scalaVersion),
       )
     }
 
@@ -31,28 +33,39 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       name: TestOptions,
       original: String,
       expected: String,
-      selection: Int = 0
+      selection: Int = 0,
+      filename: String = "A.scala",
+      compat: Map[String, String] = Map.empty,
   )(implicit
       loc: Location
   ): Unit =
-    checkEditSelection(name, "A.scala", original, expected, selection)
+    checkEditSelection(name, filename, original, expected, selection, compat)
 
   def checkAmmoniteEdit(
       name: TestOptions,
       original: String,
       expected: String,
-      selection: Int = 0
+      selection: Int = 0,
+      compat: Map[String, String] = Map.empty,
   )(implicit
       loc: Location
   ): Unit =
-    checkEditSelection(name, "script.sc.scala", original, expected, selection)
+    checkEditSelection(
+      name,
+      "script.amm.sc.scala",
+      original,
+      expected,
+      selection,
+      compat,
+    )
 
   def checkEditSelection(
       name: TestOptions,
       filename: String,
       original: String,
       expected: String,
-      selection: Int
+      selection: Int,
+      compat: Map[String, String] = Map.empty,
   )(implicit
       loc: Location
   ): Unit =
@@ -62,12 +75,12 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       val edits = imports(selection).edits().asScala.toList
       val (code, _, _) = params(original)
       val obtained = TextEdits.applyEdits(code, edits)
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
 
   def getAutoImports(
       original: String,
-      filename: String
+      filename: String,
   ): List[AutoImportsResult] = {
     val (code, symbol, offset) = params(original)
     val result = presentationCompiler
@@ -77,8 +90,9 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
           Paths.get(filename).toUri(),
           code,
           offset,
-          cancelToken
-        )
+          cancelToken,
+        ),
+        isExtensionMethods,
       )
       .get()
     result.asScala.toList

@@ -1,0 +1,12 @@
+
+# https://github.com/scalameta/metals/pull/4050
+# add 'trailingCommas = multiple' in scalafmt
+66a82f6279a3258842eb21472272f8d6f2df974d
+
+
+
+# Scala Steward: Reformat with scalafmt 3.5.9
+9b5fdfa91ba454f6311a50a9db8a773bb74c2c20
+
+# Scala Steward: Reformat with scalafmt 3.7.2
+cb3a4275b4536030d133d19be4fd1d4b1aa9135b

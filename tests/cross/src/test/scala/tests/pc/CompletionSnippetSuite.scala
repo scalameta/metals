@@ -1,12 +1,8 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionSnippetSuite extends BaseCompletionSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   checkSnippet(
     "member",
@@ -24,8 +20,11 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|apply($0)
            |unapplySeq($0)
            |apply($0)
-           |""".stripMargin
-    )
+           |""".stripMargin,
+      "3" ->
+        """|apply($0)
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -38,7 +37,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|println()
        |println($0)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -50,7 +49,22 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|head
        |headOption
-       |""".stripMargin
+       |""".stripMargin,
+  )
+
+  checkSnippet(
+    "nilary",
+    s"""|class Hello{
+        |  def now() = 25
+        |}
+        |object Main {
+        |  val h = new Hello()
+        |  h.no@@
+        |}
+        |""".stripMargin,
+    """|now()
+       |""".stripMargin,
+    topLines = Some(1),
   )
 
   checkSnippet(
@@ -67,11 +81,21 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     // even if `Foo.toString` is nullary, it overrides `Object.toString()`
     // which is a Java non-nullary method with an empty parameter list.
     """|toString()
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      // it's not easy or efficient to figure out is parent is nullary
+      // for Scala 2 it showed correctly even for children method
+      "3" ->
+        """|toString
+           |""".stripMargin
+    ),
   )
 
   checkSnippet(
-    "type-empty",
+    // Dotty does not currently support fuzzy completions. Please take a look at
+    // https://github.com/lampepfl/dotty-feature-requests/issues/314
+    "type-empty"
+      .tag(IgnoreScala3),
     """
       |object Main {
       |  type MyType = List[Int]
@@ -79,11 +103,14 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|MyType
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
-    "type-new-empty",
+    // Dotty does not currently support fuzzy completions. Please take a look at
+    // https://github.com/lampepfl/dotty-feature-requests/issues/314
+    "type-new-empty"
+      .tag(IgnoreScala3),
     """
       |object Main {
       |  class Gen[T]
@@ -92,7 +119,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|MyType
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -105,18 +132,36 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     // expand snipppet) and one for `type IndexedSeq[T]`.
     """|IndexedSeq
        |IndexedSeq[$0]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|IndexedSeq[$0]
+           |""".stripMargin
+    ),
   )
 
   checkSnippet(
-    "type2",
+    "empty-params-with-implicit",
+    s"""|object Main {
+        |  def doSomething()(implicit x: Int) = x
+        |  val bar = doSomethi@@
+        |}
+        |""".stripMargin,
+    "doSomething($0)",
+  )
+
+  checkSnippet(
+    // handling this in Scala 3 requires covering CompletionKind.Member in enrichWithSymbols
+    // and filtering out the non-member items.
+    "type2"
+      .tag(IgnoreScala3),
     s"""|object Main {
         |  new scala.IndexedSeq@@
         |}
         |""".stripMargin,
     """|IndexedSeq
        |IndexedSeq[$0] {}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -132,8 +177,13 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|ArrayDeque[$0]
            |ArrayDeque
            |ArrayDequeOps
-           |""".stripMargin
-    )
+           |""".stripMargin,
+      "3" -> // ArrayDeque upper is for java, the lower for scala
+        """|ArrayDeque[$0]
+           |ArrayDeque[$0]
+           |ArrayDequeOps[$0]
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -143,7 +193,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|SimpleFileVisitor[$0]
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSnippet(
@@ -160,8 +210,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0] {}
            |IterableOnce[$0] {}
-           |""".stripMargin
-    )
+           |""".stripMargin,
+      "3" ->
+        """|Iterable[$0] {}
+           |IterableOnce[$0] {}
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -178,8 +232,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0]
            |IterableOnce[$0]
-           |""".stripMargin
-    )
+           |""".stripMargin,
+      "3" ->
+        """|Iterable[$0]
+           |IterableOnce[$0]
+           |""".stripMargin,
+    ),
   )
 
   checkSnippet(
@@ -196,8 +254,27 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0]
            |IterableOnce[$0]
-           |""".stripMargin
-    )
+           |""".stripMargin,
+      "3" ->
+        """|Iterable[$0]
+           |IterableOnce[$0]
+           |""".stripMargin,
+    ),
+  )
+
+  checkSnippet(
+    "type8",
+    s"""|
+        |class Base {
+        |  class Inner
+        |}
+        |object Upper extends Base
+        |object Main {
+        |  def foo(param: Uppe@@)
+        |}
+        |""".stripMargin,
+    """|Upper
+       |""".stripMargin,
   )
 
   checkEditLine(
@@ -208,7 +285,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@()",
-    "trailing()"
+    "trailing()",
   )
 
   checkEditLine(
@@ -219,7 +296,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@ { }",
-    "trailing { }"
+    "trailing { }",
   )
 
   checkEditLine(
@@ -230,18 +307,19 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@{ }",
-    "trailing{ }"
+    "trailing{ }",
   )
 
   checkEditLine(
-    "trailing-eta",
+    // only works if we have the full function name typed
+    "trailing-eta".tag(IgnoreScala3),
     s"""|object Main {
         |  def trailing(a: Int) = ()
         |  ___
         |}
         |""".stripMargin,
     "trailing@@ _",
-    "trailing _"
+    "trailing _",
   )
 
   checkEditLine(
@@ -251,17 +329,74 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "List(1).flatte@@",
-    "List(1).flatten"
+    "List(1).flatten",
   )
 
   checkEditLine(
-    "bug1",
+    // no completions are suggested if we already have full type
+    "bug1".tag(IgnoreScala3),
     s"""|object Main {
         |  ___
         |}
         |""".stripMargin,
     "scala.util.Try@@(1)",
-    "scala.util.Try(1)"
+    "scala.util.Try(1)",
+  )
+
+  checkEditLine(
+    "case-class",
+    s"""|object Main {
+        |  ___
+        |}
+        |""".stripMargin,
+    "scala.util.Tr@@(1)",
+    "scala.util.Try(1)",
+    filter = str => str.contains("Try"),
+  )
+
+  checkSnippet(
+    "case-class2",
+    s"""|object Main {
+        |  scala.util.Tr@@
+        |}
+        |""".stripMargin,
+    """|Try
+       |Either
+       |control
+       |""".stripMargin,
+    // additional completion when apply method is present
+    compat = Map(
+      "3" ->
+        """|Try
+           |Try($0)
+           |""".stripMargin,
+      "2.12" ->
+        """|Try
+           |PropertiesTrait
+           |Either
+           |control
+           |""".stripMargin,
+    ),
+  )
+
+  checkSnippet(
+    "case-class3",
+    s"""|object Main {
+        |  Try@@
+        |}
+        |""".stripMargin,
+    """|Try
+       |""".stripMargin,
+    // additional completion when apply method is present
+    compat = Map(
+      // Note: the class and trait items in here are invalid. So
+      // they are filtered out.
+      "3" ->
+        """|Try
+           |Try($0)
+           |TryMethods
+           |""".stripMargin
+    ),
   )
 
   checkEditLine(
@@ -273,7 +408,104 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "out.+@@=('a')",
     "out.++==('a')",
-    filter = _.contains("++=(s: String)")
+    filter = _.contains("++=(s: String)"),
+  )
+
+  checkSnippet(
+    "multiple-apply",
+    s"""|package example
+        |
+        |case class Widget(name: String, age: Int)
+        |object Widget{
+        |  def apply(name: String): Widget = Widget(name, 0)
+        |  def apply(age: Int): Widget = Widget("name", age)
+        |}
+        |object Main {
+        |  Wi@@
+        |}
+        |""".stripMargin,
+    "Widget -  example",
+    compat = Map(
+      "3" ->
+        """|Widget -  example
+           |Widget($0) - (name: String): Widget
+           |Widget($0) - (age: Int): Widget
+           |Widget($0) - (name: String, age: Int): Widget
+           |""".stripMargin
+    ),
+    includeDetail = true,
+  )
+
+  checkSnippet(
+    "no-apply",
+    s"""|package example
+        |
+        |object Widget{}
+        |object Main {
+        |  Wi@@
+        |}
+        |""".stripMargin,
+    "Widget -  example",
+    compat = Map(
+      "3" ->
+        """|Widget -  example
+           |""".stripMargin
+    ),
+    includeDetail = true,
+  )
+
+  // https://github.com/scalameta/metals/issues/4004
+  checkEdit(
+    "extension-param1".tag(IgnoreScala2),
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def bar = 0
+        |  val bar = "abc".ba@@
+    """.stripMargin,
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def bar = 0
+        |  val bar = "abc".bar
+    """.stripMargin,
+  )
+
+  // https://github.com/scalameta/metals/issues/4004
+  checkEdit(
+    "extension-param2".tag(IgnoreScala2),
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def bar() = 0
+        |  val bar = "abc".ba@@
+    """.stripMargin,
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def bar() = 0
+        |  val bar = "abc".bar()
+    """.stripMargin,
+  )
+
+  checkEdit(
+    "package-object-backticks".tag(IgnoreScala3),
+    s"""|package a
+        |package object `x-x` {
+        |  type AAA = Int
+        |}
+        |object O {
+        |  val f : `x-x`.A@@
+        |}
+        |""".stripMargin,
+    s"""|package a
+        |package object `x-x` {
+        |  type AAA = Int
+        |}
+        |object O {
+        |  val f : `x-x`.AAA
+        |}
+        |""".stripMargin,
   )
 
 }

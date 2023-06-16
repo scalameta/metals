@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
@@ -19,33 +20,36 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
     AbsolutePath(out)
   }
 
+  private lazy val bloopMavenPluginVersion = BuildInfo.mavenBloopVersion
+
   def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
-    def command(versionToUse: String) =
+    val command =
       List(
         "generate-sources",
-        s"ch.epfl.scala:maven-bloop_2.13:$versionToUse:bloopInstall",
-        "-DdownloadSources=true"
+        s"ch.epfl.scala:bloop-maven-plugin:$bloopMavenPluginVersion:bloopInstall",
+        "-DdownloadSources=true",
       )
     userConfig().mavenScript match {
       case Some(script) =>
-        script :: command(userConfig().currentBloopVersion)
+        script :: command
       case None =>
         writeProperties()
         val javaArgs = List[String](
           JavaBinary(userConfig().javaHome),
           "-Dfile.encoding=UTF-8",
           s"-Dmaven.multiModuleProjectDirectory=$workspace",
-          s"-Dmaven.home=$tempDir"
+          s"-Dmaven.home=$tempDir",
         )
 
         val jarArgs = List(
-          "-jar",
-          embeddedMavenLauncher.toString()
+          "-cp",
+          embeddedMavenLauncher.toString(),
+          "org.apache.maven.wrapper.MavenWrapperMain",
         )
         List(
           javaArgs,
           jarArgs,
-          command(userConfig().currentBloopVersion)
+          command,
         ).flatten
     }
   }
@@ -58,7 +62,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
 
   override def recommendedVersion: String = version
 
-  override def version: String = "3.6.1"
+  override def version: String = "3.8.6"
 
   override def toString(): String = "Maven"
 
@@ -68,7 +72,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
 object MavenBuildTool {
   def isMavenRelatedPath(
       workspace: AbsolutePath,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Boolean = {
     path.toNIO.startsWith(workspace.toNIO) && path.filename == "pom.xml"
   }

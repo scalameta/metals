@@ -2,189 +2,169 @@ package scala.meta.internal.metals
 
 import java.lang.{Iterable => JIterable}
 import java.net.URLClassLoader
-import java.util
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.nio.file.Path
 import java.{util => ju}
 
 import scala.annotation.tailrec
-import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
-import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
+import ch.epfl.scala.bsp4j.InverseSourcesParams
+import ch.epfl.scala.bsp4j.TextDocumentIdentifier
 
 /**
  * In-memory cache for looking up build server metadata.
  */
-final class BuildTargets(
-    ammoniteBuildServer: BuildTargetIdentifier => Option[BuildServerConnection]
+final class BuildTargets private (
+    workspace: AbsolutePath,
+    tables: Option[Tables],
 ) {
-  private var workspace = PathIO.workingDirectory
-  def setWorkspaceDirectory(newWorkspace: AbsolutePath): Unit = {
-    workspace = newWorkspace
-  }
-  private var tables: Option[Tables] = None
-  private val sourceItemsToBuildTarget =
-    TrieMap.empty[AbsolutePath, ConcurrentLinkedQueue[BuildTargetIdentifier]]
-  private val buildTargetInfo =
-    TrieMap.empty[BuildTargetIdentifier, BuildTarget]
-  private val scalacTargetInfo =
-    TrieMap.empty[BuildTargetIdentifier, ScalacOptionsItem]
-  private val inverseDependencies =
-    TrieMap.empty[BuildTargetIdentifier, ListBuffer[BuildTargetIdentifier]]
-  private val buildTargetSources =
-    TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
-  private val inverseDependencySources =
-    TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
-  private val sourceJarNameToJarFile = TrieMap.empty[String, AbsolutePath]
-  private val isSourceRoot =
-    ConcurrentHashSet.empty[AbsolutePath]
-  // if workspace contains symlinks, original source items are kept here and source items dealiased
-  private val originalSourceItems = ConcurrentHashSet.empty[AbsolutePath]
-
-  private val targetToConnection =
-    new mutable.HashMap[BuildTargetIdentifier, BuildServerConnection]
+  private val dataLock = new Object
+  private var data: BuildTargets.DataSeq =
+    BuildTargets.DataSeq((new TargetData) :: Nil)
+  def allWritableData = data.list
 
   val buildTargetsOrder: BuildTargetIdentifier => Int = {
     (t: BuildTargetIdentifier) =>
       var score = 1
 
-      val isSupportedScalaVersion = scalaInfo(t).exists(t =>
-        ScalaVersions.isSupportedScalaVersion(t.getScalaVersion())
+      val isSupportedScalaVersion = scalaTarget(t).exists(t =>
+        ScalaVersions.isSupportedAtReleaseMomentScalaVersion(
+          t.scalaVersion
+        )
       )
       if (isSupportedScalaVersion) score <<= 2
 
-      val isJVM = scalacOptions(t).exists(_.isJVM)
-      if (isJVM) score <<= 1
+      val usesJavac = javaTarget(t).nonEmpty
+      val isJVM = scalaTarget(t).exists(_.scalac.isJVM)
+      if (usesJavac) score <<= 1
+      else if (isJVM) score <<= 1
 
       // note(@tgodzik) once the support for Scala 3 is on par with Scala 2 this can be removed
-      val isScala2 = scalaInfo(t).exists(info =>
-        !ScalaVersions.isScala3Version(info.getScalaVersion())
+      val isScala2 = scalaTarget(t).exists(info =>
+        !ScalaVersions.isScala3Version(info.scalaVersion)
       )
       if (isScala2) score <<= 1
+
+      val isScala213Version =
+        scalaTarget(t).exists(info => info.scalaBinaryVersion == "2.13")
+      if (isScala213Version) score <<= 1
 
       score
   }
 
-  def setTables(newTables: Tables): Unit = {
-    tables = Some(newTables)
-  }
-
-  def reset(): Unit = {
-    sourceItemsToBuildTarget.values.foreach(_.clear())
-    sourceItemsToBuildTarget.clear()
-    buildTargetInfo.clear()
-    scalacTargetInfo.clear()
-    inverseDependencies.clear()
-    buildTargetSources.clear()
-    inverseDependencySources.clear()
-    sourceJarNameToJarFile.clear()
-    isSourceRoot.clear()
-  }
   def sourceItems: Iterable[AbsolutePath] =
-    sourceItemsToBuildTarget.keys
+    data.iterable.flatMap(_.sourceItemsToBuildTarget.keys)
   def sourceItemsToBuildTargets
       : Iterator[(AbsolutePath, JIterable[BuildTargetIdentifier])] =
-    sourceItemsToBuildTarget.iterator
-  def scalacOptions: Iterable[ScalacOptionsItem] =
-    scalacTargetInfo.values
+    data.fromIterators(_.sourceItemsToBuildTarget.iterator)
+  private def allBuildTargetIdsInternal
+      : Iterator[(TargetData, BuildTargetIdentifier)] =
+    data.fromIterators(d => d.allBuildTargetIds.iterator.map((d, _)))
+  def mappedTo(path: AbsolutePath): Option[TargetData.MappedSource] =
+    data.fromOptions(_.actualSources.get(path))
+  def mappedFrom(path: AbsolutePath): Option[AbsolutePath] =
+    data.fromOptions(_.actualSources.collectFirst {
+      case (source, mapped) if mapped.path == path => source
+    })
+  private def findMappedSource(
+      mappedPath: AbsolutePath
+  ): Option[TargetData.MappedSource] = {
+    data
+      .fromOptions(_.actualSources.collectFirst {
+        case (_, mapped) if mapped.path == mappedPath => mapped
+      })
+  }
+  def mappedLineForServer(mappedPath: AbsolutePath, line: Int): Option[Int] =
+    findMappedSource(mappedPath).flatMap(_.lineForServer(line))
+  def mappedLineForClient(mappedPath: AbsolutePath, line: Int): Option[Int] =
+    findMappedSource(mappedPath).flatMap(_.lineForClient(line))
 
   def allBuildTargetIds: Seq[BuildTargetIdentifier] =
-    all.toSeq.map(_.info.getId())
-  def all: Iterator[ScalaTarget] =
-    for {
-      (_, target) <- buildTargetInfo.iterator
-      scalaTarget <- toScalaTarget(target)
-    } yield scalaTarget
+    allBuildTargetIdsInternal.map(_._2).toVector
+
+  def allTargetRoots: Iterator[AbsolutePath] =
+    data.fromIterators(_.allTargetRoots)
+
+  def all: Iterator[BuildTarget] =
+    data.fromIterators(_.all)
+
+  def allScala: Iterator[ScalaTarget] =
+    data.fromIterators(_.allScala)
+
+  def allJava: Iterator[JavaTarget] =
+    data.fromIterators(_.allJava)
+
+  def info(id: BuildTargetIdentifier): Option[BuildTarget] =
+    data.fromOptions(_.info(id))
+
+  def targetData(id: BuildTargetIdentifier): Option[TargetData] =
+    data.fromOptions(data0 => if (data0.info(id).isEmpty) None else Some(data0))
 
   def scalaTarget(id: BuildTargetIdentifier): Option[ScalaTarget] =
-    for {
-      target <- buildTargetInfo.get(id)
-      scalaTarget <- toScalaTarget(target)
-    } yield scalaTarget
+    data.fromOptions(_.scalaTarget(id))
 
-  private def toScalaTarget(target: BuildTarget): Option[ScalaTarget] = {
-    for {
-      scalac <- scalacTargetInfo.get(target.getId)
-      scalaTarget <- target.asScalaBuildTarget
-    } yield {
-      val autoImports = target.asSbtBuildTarget.map(_.getAutoImports.asScala)
-      ScalaTarget(
-        target,
-        scalaTarget,
-        scalac,
-        autoImports,
-        target.getDataKind() == "sbt"
-      )
-    }
-  }
+  def javaTarget(id: BuildTargetIdentifier): Option[JavaTarget] =
+    data.fromOptions(_.javaTarget(id))
+
+  def targetJarClasspath(
+      id: BuildTargetIdentifier
+  ): Option[List[AbsolutePath]] =
+    data.fromOptions(_.targetJarClasspath(id))
+
+  def targetClasspath(
+      id: BuildTargetIdentifier
+  ): Option[List[String]] =
+    data.fromOptions(_.targetClasspath(id))
+
+  def targetClassDirectories(
+      id: BuildTargetIdentifier
+  ): List[String] =
+    data.fromIterators(_.targetClassDirectories(id).iterator).toList
 
   def allWorkspaceJars: Iterator[AbsolutePath] = {
-    val isVisited = new ju.HashSet[AbsolutePath]()
-    Iterator(
-      for {
-        target <- all
-        classpathEntry <- target.scalac.classpath
-        if classpathEntry.isJar
-        if isVisited.add(classpathEntry)
-      } yield classpathEntry,
-      PackageIndex.bootClasspath.iterator
-    ).flatten
-  }
-
-  def allSourceJars: Iterator[AbsolutePath] =
-    inverseDependencySources.keysIterator
-
-  def addSourceItem(
-      sourceItem: AbsolutePath,
-      buildTarget: BuildTargetIdentifier
-  ): Unit = {
-    val dealiased = sourceItem.dealias
-    if (dealiased != sourceItem)
-      originalSourceItems.add(sourceItem)
-
-    val queue = sourceItemsToBuildTarget.getOrElseUpdate(
-      dealiased,
-      new ConcurrentLinkedQueue()
-    )
-    queue.add(buildTarget)
+    val isVisited = new ju.HashSet[AbsolutePath]
+    data.fromIterators(_.allWorkspaceJars).filter { p =>
+      isVisited.add(p)
+    }
   }
 
   def onCreate(source: AbsolutePath): Unit = {
     for {
-      buildTarget <- sourceBuildTargets(source)
+      buildTargetIds <- sourceBuildTargets(source)
+      buildTargetId <- buildTargetIds
+      targetData <- targetData(buildTargetId)
     } {
-      linkSourceFile(buildTarget, source)
+      targetData.onCreate(source)
     }
   }
 
+  def allSourceJars: Iterator[AbsolutePath] =
+    data.fromIterators(_.inverseDependencySources.keysIterator)
+
   def buildTargetSources(
       id: BuildTargetIdentifier
-  ): Iterable[AbsolutePath] = {
-    this.buildTargetSources.get(id) match {
-      case None => Nil
-      case Some(value) => value.asScala
-    }
-  }
+  ): Iterable[AbsolutePath] =
+    data
+      .fromOptions(_.buildTargetSources.get(id))
+      .map(_.asScala)
+      .getOrElse(Nil)
 
   def buildTargetTransitiveSources(
       id: BuildTargetIdentifier
   ): Iterator[AbsolutePath] = {
     for {
       dependency <- buildTargetTransitiveDependencies(id).iterator
-      sources <- buildTargetSources.get(dependency).iterator
+      sources <- data.fromOptions(_.buildTargetSources.get(dependency)).iterator
       source <- sources.asScala.iterator
     } yield source
   }
@@ -210,46 +190,37 @@ final class BuildTargets(
     isVisited
   }
 
-  def linkSourceFile(id: BuildTargetIdentifier, source: AbsolutePath): Unit = {
-    val set = buildTargetSources.getOrElseUpdate(id, ConcurrentHashSet.empty)
-    set.add(source)
+  def targetRoots(
+      buildTarget: BuildTargetIdentifier
+  ): List[AbsolutePath] = {
+    val javaRoot = javaTargetRoot(buildTarget).toList
+    val scalaRoot = scalaTargetRoot(buildTarget).toList
+    (javaRoot ++ scalaRoot).distinct
   }
 
-  def addWorkspaceBuildTargets(result: WorkspaceBuildTargetsResult): Unit = {
-    result.getTargets.asScala.foreach { target =>
-      buildTargetInfo(target.getId) = target
-      target.getDependencies.asScala.foreach { dependency =>
-        val buf =
-          inverseDependencies.getOrElseUpdate(dependency, ListBuffer.empty)
-        buf += target.getId
-      }
-    }
-  }
-
-  def addScalacOptions(result: ScalacOptionsResult): Unit = {
-    result.getItems.asScala.foreach { item =>
-      scalacTargetInfo(item.getTarget) = item
-    }
-  }
-
-  def info(
+  def javaTargetRoot(
       buildTarget: BuildTargetIdentifier
-  ): Option[BuildTarget] =
-    buildTargetInfo.get(buildTarget)
-  def scalaInfo(
-      buildTarget: BuildTargetIdentifier
-  ): Option[ScalaBuildTarget] =
-    info(buildTarget).flatMap(_.asScalaBuildTarget)
+  ): Option[AbsolutePath] =
+    data.fromOptions(_.javaTargetRoot(buildTarget))
 
-  def scalacOptions(
+  def scalaTargetRoot(
       buildTarget: BuildTargetIdentifier
-  ): Option[ScalacOptionsItem] =
-    scalacTargetInfo.get(buildTarget)
+  ): Option[AbsolutePath] =
+    data.fromOptions(_.scalaTargetRoot(buildTarget))
 
   def workspaceDirectory(
       buildTarget: BuildTargetIdentifier
   ): Option[AbsolutePath] =
     buildServerOf(buildTarget).map(_.workspaceDirectory)
+
+  def canCompile(id: BuildTargetIdentifier): Boolean = {
+    targetData(id).exists { data =>
+      data.buildTargetInfo
+        .get(id)
+        .map[Boolean](_.getCapabilities().getCanCompile())
+        .getOrElse(true)
+    }
+  }
 
   /**
    * Returns the first build target containing this source file.
@@ -259,8 +230,7 @@ final class BuildTargets(
   ): Option[BuildTargetIdentifier] = {
     val buildTargets = sourceBuildTargets(source)
     val orSbtBuildTarget =
-      if (buildTargets.isEmpty) sbtBuildScalaTarget(source).toIterable
-      else buildTargets
+      buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable)
     if (orSbtBuildTarget.isEmpty) {
       tables
         .flatMap(_.dependencySources.getBuildTarget(source))
@@ -268,6 +238,42 @@ final class BuildTargets(
     } else {
       Some(orSbtBuildTarget.maxBy(buildTargetsOrder))
     }
+  }
+
+  def inverseSourcesBsp(
+      source: AbsolutePath
+  )(implicit ec: ExecutionContext): Future[Option[BuildTargetIdentifier]] = {
+    inverseSources(source) match {
+      case None =>
+        val identifier = new TextDocumentIdentifier(
+          source.toTextDocumentIdentifier.getUri()
+        )
+        val params = new InverseSourcesParams(identifier)
+        val connections =
+          data.fromIterators(_.targetToConnection.values.toIterator).distinct
+        val queries = connections.map { connection =>
+          connection
+            .buildTargetInverseSources(params)
+            .map(_.getTargets.asScala.toList)
+        }
+        Future.sequence(queries).map { results =>
+          val target = results.flatten.maxByOption(buildTargetsOrder)
+          for {
+            tgt <- target
+            data <- targetData(tgt)
+          } data.addSourceItem(source, tgt)
+          target
+        }
+      case some =>
+        Future.successful(some)
+    }
+  }
+
+  def scalaVersion(source: AbsolutePath): Option[String] = {
+    for {
+      id <- inverseSources(source)
+      target <- scalaTarget(id)
+    } yield target.scalaVersion
   }
 
   /**
@@ -303,34 +309,44 @@ final class BuildTargets(
   def inferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    val readonly = workspace.resolve(Directories.readonly)
-    source.toRelativeInside(readonly) match {
-      case Some(rel) =>
-        val names = rel.toNIO.iterator().asScala.toList.map(_.filename)
-        names match {
-          case Directories.dependenciesName :: jarName :: _ =>
-            // match build target by source jar name
-            sourceJarFile(jarName)
-              .flatMap(inverseDependencySource(_).headOption)
-          case _ =>
-            None
-        }
-      case None =>
-        // else it can be a source file inside a jar
-        val fromJar = jarPath(source)
-          .flatMap { jar =>
-            all.find { scalaTarget =>
-              scalaTarget.jarClasspath.contains(jar)
-            }
+    if (source.isJarFileSystem) {
+      for {
+        jarName <- source.jarPath.map(_.filename)
+        sourceJarFile <- sourceJarFile(jarName)
+        buildTargetId <- inverseDependencySource(sourceJarFile).headOption
+      } yield buildTargetId
+    } else {
+      val readonly = workspace.resolve(Directories.readonly)
+      source.toRelativeInside(readonly) match {
+        case Some(rel) =>
+          val names = rel.toNIO.iterator().asScala.toList.map(_.filename)
+          names match {
+            case Directories.dependenciesName :: jarName :: _ =>
+              // match build target by source jar name
+              sourceJarFile(jarName)
+                .flatMap(inverseDependencySource(_).headOption)
+            case _ => None
           }
-          .map(_.id)
-        fromJar.foreach(addSourceItem(source, _))
-        fromJar
+        case None =>
+          // else it can be a source file inside a jar
+          val fromJar = jarPath(source)
+            .flatMap { jar =>
+              allBuildTargetIdsInternal.find { case (_, id) =>
+                targetJarClasspath(id).exists(_.contains(jar))
+              }
+            }
+          fromJar.map { case (data0, id) =>
+            data0.addSourceItem(source, id)
+            id
+          }
+      }
     }
   }
 
   def findByDisplayName(name: String): Option[BuildTarget] = {
-    buildTargetInfo.values.find(_.getDisplayName() == name)
+    data
+      .fromIterators(_.buildTargetInfo.valuesIterator)
+      .find(_.getDisplayName() == name)
   }
 
   private def jarPath(source: AbsolutePath): Option[AbsolutePath] = {
@@ -351,9 +367,10 @@ final class BuildTargets(
   ): Option[BuildTargetIdentifier] = {
     val targetMetaBuildDir =
       if (file.isSbt) file.parent.resolve("project") else file.parent
-    buildTargetInfo.values
+    data
+      .fromIterators(_.buildTargetInfo.valuesIterator)
       .find { target =>
-        val isMetaBuild = target.getDataKind == "sbt"
+        val isMetaBuild = target.isSbtBuild
         if (isMetaBuild) {
           workspaceDirectory(target.getId)
             .map(_ == targetMetaBuildDir)
@@ -368,17 +385,23 @@ final class BuildTargets(
   case class InferredBuildTarget(
       jar: AbsolutePath,
       symbol: String,
-      id: BuildTargetIdentifier
+      id: BuildTargetIdentifier,
   )
   def inferBuildTarget(
       toplevels: Iterable[Symbol]
   ): Option[InferredBuildTarget] = {
     val classloader = new URLClassLoader(
       allWorkspaceJars.map(_.toNIO.toUri().toURL()).toArray,
-      null
+      null,
     )
-    lazy val classpaths =
-      all.map(i => i.id -> i.scalac.classpath.toSeq).toSeq
+    lazy val classpaths: Seq[(BuildTargetIdentifier, Iterator[AbsolutePath])] =
+      allBuildTargetIdsInternal.toVector.map { case (data, id) =>
+        id -> data
+          .targetClasspath(id)
+          .map(_.toAbsoluteClasspath)
+          .getOrElse(Iterator.empty)
+      }
+
     try {
       toplevels.foldLeft(Option.empty[InferredBuildTarget]) {
         case (Some(x), _) => Some(x)
@@ -406,30 +429,26 @@ final class BuildTargets(
 
   def sourceBuildTargets(
       sourceItem: AbsolutePath
-  ): Iterable[BuildTargetIdentifier] = {
-    sourceItemsToBuildTarget
-      .collectFirst {
-        case (source, buildTargets)
-            if sourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
-              sourceItem.toNIO.startsWith(source.toNIO) =>
-          buildTargets.asScala
-      }
-      .getOrElse(Iterable.empty)
-  }
+  ): Option[Iterable[BuildTargetIdentifier]] =
+    data.fromOptions(_.sourceBuildTargets(sourceItem))
 
   def inverseSourceItem(source: AbsolutePath): Option[AbsolutePath] =
     sourceItems.find(item => source.toNIO.startsWith(item.toNIO))
 
   def originalInverseSourceItem(source: AbsolutePath): Option[AbsolutePath] =
-    originalSourceItems.asScala.find(item =>
-      source.toNIO.startsWith(item.dealias.toNIO)
-    )
+    data
+      .fromIterators(_.originalSourceItems.asScala.iterator)
+      .find(item => source.toNIO.startsWith(item.dealias.toNIO))
 
   def isInverseDependency(
       query: BuildTargetIdentifier,
-      roots: List[BuildTargetIdentifier]
+      roots: List[BuildTargetIdentifier],
   ): Boolean = {
-    BuildTargets.isInverseDependency(query, roots, inverseDependencies.get)
+    BuildTargets.isInverseDependency(
+      query,
+      roots,
+      id => data.fromOptions(_.inverseDependencies.get(id)),
+    )
   }
   def inverseDependencyLeaves(
       target: BuildTargetIdentifier
@@ -444,72 +463,72 @@ final class BuildTargets(
   private def computeInverseDependencies(
       target: BuildTargetIdentifier
   ): BuildTargets.InverseDependencies = {
-    BuildTargets.inverseDependencies(List(target), inverseDependencies.get)
+    BuildTargets.inverseDependencies(
+      List(target),
+      id => data.fromOptions(_.inverseDependencies.get(id)),
+    )
   }
 
-  def addDependencySource(
-      sourcesJar: AbsolutePath,
-      target: BuildTargetIdentifier
-  ): Unit = {
-    sourceJarNameToJarFile(sourcesJar.filename) = sourcesJar
-    val acc = inverseDependencySources.getOrElse(sourcesJar, Set.empty)
-    inverseDependencySources(sourcesJar) = acc + target
-  }
-
-  def sourceJarFile(sourceJarName: String): Option[AbsolutePath] = {
-    sourceJarNameToJarFile.get(sourceJarName)
-  }
+  def sourceJarFile(sourceJarName: String): Option[AbsolutePath] =
+    data.fromOptions(_.sourceJarNameToJarFile.get(sourceJarName))
 
   def inverseDependencySource(
       sourceJar: AbsolutePath
   ): collection.Set[BuildTargetIdentifier] = {
-    inverseDependencySources.get(sourceJar).getOrElse(Set.empty)
+    data
+      .fromOptions(_.inverseDependencySources.get(sourceJar))
+      .getOrElse(Set.empty)
   }
 
-  def addSourceRoot(root: AbsolutePath): Unit = {
-    isSourceRoot.add(root)
-  }
   def sourceRoots: Iterable[AbsolutePath] = {
-    isSourceRoot.asScala
+    data.iterable.flatMap(_.isSourceRoot.asScala)
   }
 
   def isInsideSourceRoot(path: AbsolutePath): Boolean = {
-    !isSourceRoot.contains(path) &&
-    isSourceRoot.asScala.exists { root => path.toNIO.startsWith(root.toNIO) }
+    data.iterator.exists(_.isSourceRoot.contains(path)) &&
+    data.fromIterators(_.isSourceRoot.asScala.iterator).exists { root =>
+      path.toNIO.startsWith(root.toNIO)
+    }
   }
 
-  def resetConnections(
-      idToConn: List[(BuildTargetIdentifier, BuildServerConnection)]
-  ): Unit = {
-    targetToConnection.clear()
-    idToConn.foreach { case (id, conn) => targetToConnection.put(id, conn) }
-  }
+  def isSourceFile(source: AbsolutePath): Boolean =
+    data.iterator.exists(_.isSourceFile(source))
+
+  def checkIfGeneratedSource(source: Path): Boolean =
+    data.iterator.exists(_.checkIfGeneratedSource(source))
+  def checkIfGeneratedDir(path: AbsolutePath): Boolean =
+    data.iterator.exists(_.checkIfGeneratedDir(path))
 
   def buildServerOf(
       id: BuildTargetIdentifier
-  ): Option[BuildServerConnection] = {
-    ammoniteBuildServer(id).orElse(targetToConnection.get(id))
-  }
+  ): Option[BuildServerConnection] =
+    data.fromOptions(_.targetToConnection.get(id))
+
+  def addData(data: TargetData): Unit =
+    dataLock.synchronized {
+      this.data = BuildTargets.DataSeq(data :: this.data.list)
+    }
 }
 
 object BuildTargets {
-
-  def withAmmonite(ammonite: () => Ammonite): BuildTargets = {
-    val ammoniteBuildServerF =
-      (id: BuildTargetIdentifier) =>
-        if (Ammonite.isAmmBuildTarget(id)) ammonite().buildServer
-        else None
-
-    new BuildTargets(ammoniteBuildServerF)
+  def from(
+      workspace: AbsolutePath,
+      data: TargetData,
+      tables: Tables,
+  ): BuildTargets = {
+    val targets = new BuildTargets(workspace, Some(tables))
+    targets.addData(data)
+    targets
   }
 
-  def withoutAmmonite: BuildTargets =
-    new BuildTargets(_ => None)
+  def empty: BuildTargets = new BuildTargets(PathIO.workingDirectory, None)
 
   def isInverseDependency(
       query: BuildTargetIdentifier,
       roots: List[BuildTargetIdentifier],
-      inverseDeps: BuildTargetIdentifier => Option[Seq[BuildTargetIdentifier]]
+      inverseDeps: BuildTargetIdentifier => Option[
+        collection.Seq[BuildTargetIdentifier]
+      ],
   ): Boolean = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     @tailrec
@@ -547,7 +566,9 @@ object BuildTargets {
    */
   def inverseDependencies(
       root: List[BuildTargetIdentifier],
-      inverseDeps: BuildTargetIdentifier => Option[Seq[BuildTargetIdentifier]]
+      inverseDeps: BuildTargetIdentifier => Option[
+        collection.Seq[BuildTargetIdentifier]
+      ],
   ): InverseDependencies = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     val leaves = mutable.Set.empty[BuildTargetIdentifier]
@@ -566,8 +587,8 @@ object BuildTargets {
                 // in Bloop to compile only `B` than `A+B`.
                 leaves += head
             }
-            loop(tail)
           }
+          loop(tail)
       }
     loop(root)
     InverseDependencies(isVisited, leaves)
@@ -575,7 +596,18 @@ object BuildTargets {
 
   case class InverseDependencies(
       visited: collection.Set[BuildTargetIdentifier],
-      leaves: collection.Set[BuildTargetIdentifier]
+      leaves: collection.Set[BuildTargetIdentifier],
   )
+
+  final case class DataSeq(list: List[TargetData]) {
+    def iterator: Iterator[TargetData] = list.iterator
+    def writableDataIterator: Iterator[TargetData] = list.iterator
+    def iterable: Iterable[TargetData] = list.toIterable
+
+    def fromIterators[T](f: TargetData => Iterator[T]): Iterator[T] =
+      iterator.flatMap(f)
+    def fromOptions[T](f: TargetData => Option[T]): Option[T] =
+      fromIterators(f(_).iterator).find(_ => true)
+  }
 
 }

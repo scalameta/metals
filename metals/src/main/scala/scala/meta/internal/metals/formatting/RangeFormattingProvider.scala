@@ -18,7 +18,7 @@ case class RangeFormatterParams(
     formattingOptions: FormattingOptions,
     startPos: meta.Position,
     endPos: meta.Position,
-    tokens: Option[Tokens]
+    tokens: Option[Tokens],
 ) extends FormatterParams {
   lazy val splitLines: Array[String] = sourceText.split("\\r?\\n")
 }
@@ -26,17 +26,17 @@ case class RangeFormatterParams(
 trait RangeFormatter {
   def contribute(
       rangeFormatterParams: RangeFormatterParams
-  ): Option[List[TextEdit]] = None
+  ): Option[List[TextEdit]]
 }
 
 class RangeFormattingProvider(
     buffers: Buffers,
     trees: Trees,
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
 ) {
   val formatters: List[RangeFormatter] = List(
     MultilineString(userConfig),
-    IndentOnPaste(userConfig)
+    IndentOnPaste(userConfig),
   )
 
   def format(
@@ -45,26 +45,27 @@ class RangeFormattingProvider(
     val path = params.getTextDocument.getUri.toAbsolutePath
     val range = params.getRange
     val formattingOptions = params.getOptions
-    buffers
-      .get(path)
-      .map { sourceText =>
-        val virtualFile = Input.VirtualFile(path.toString(), sourceText)
-        val startPos = range.getStart.toMeta(virtualFile)
-        val endPos = range.getEnd.toMeta(virtualFile)
-        val tokensOpt = trees.tokenized(virtualFile).toOption
-        val rangeFormatterParams =
-          RangeFormatterParams(
-            sourceText,
-            range,
-            formattingOptions,
-            startPos,
-            endPos,
-            tokensOpt
-          )
-        formatters.acceptFirst(formater =>
-          formater.contribute(rangeFormatterParams)
+    val edits = for {
+      sourceText <- buffers.get(path)
+      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
+      startPos <- range.getStart.toMeta(virtualFile)
+      endPos <- range.getEnd.toMeta(virtualFile)
+    } yield {
+      val tokensOpt = trees.tokenized(virtualFile).toOption
+      val rangeFormatterParams =
+        RangeFormatterParams(
+          sourceText,
+          range,
+          formattingOptions,
+          startPos,
+          endPos,
+          tokensOpt,
         )
-      }
-      .getOrElse(Nil)
+      formatters.acceptFirst(formater =>
+        formater.contribute(rangeFormatterParams)
+      )
+    }
+
+    edits.getOrElse(Nil)
   }
 }

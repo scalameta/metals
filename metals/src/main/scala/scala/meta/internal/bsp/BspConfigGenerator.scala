@@ -5,12 +5,10 @@ import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
-import scala.meta.internal.builds.BuildTool
-import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageActionItem
@@ -21,19 +19,18 @@ import org.eclipse.lsp4j.MessageActionItem
 final class BspConfigGenerator(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
-    buildTools: BuildTools,
-    shellRunner: ShellRunner
+    shellRunner: ShellRunner,
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(
-      buildTool: BuildTool,
-      args: List[String]
+      buildTool: BuildServerProvider,
+      args: List[String],
   ): Future[BspConfigGenerationStatus] =
     shellRunner
       .run(
-        s"${buildTool.executableName} bspConfig",
+        s"${buildTool.getBuildServerName} bspConfig",
         args,
         workspace,
-        buildTool.redirectErrorOutput
+        buildTool.redirectErrorOutput,
       )
       .map(BspConfigGenerationStatus.fromExitCode)
 
@@ -42,27 +39,26 @@ final class BspConfigGenerator(
    * choose the desired build server and then connect to it.
    */
   def chooseAndGenerate(
-      buildTools: List[BuildTool with BuildServerProvider]
-  ): Future[(BuildTool, BspConfigGenerationStatus)] = {
+      buildTools: List[BuildServerProvider]
+  ): Future[(BuildServerProvider, BspConfigGenerationStatus)] = {
     for {
       Some(buildTool) <- chooseBuildServerProvider(buildTools)
       status <- buildTool.generateBspConfig(
         workspace,
-        languageClient,
-        args => runUnconditionally(buildTool, args)
+        args => runUnconditionally(buildTool, args),
       )
     } yield (buildTool, status)
   }
 
   private def chooseBuildServerProvider(
-      buildTools: List[BuildTool with BuildServerProvider]
-  ): Future[Option[BuildTool with BuildServerProvider]] = {
+      buildTools: List[BuildServerProvider]
+  ): Future[Option[BuildServerProvider]] = {
     languageClient
       .showMessageRequest(BspProvider.params(buildTools))
       .asScala
       .map { choice =>
         buildTools.find(buildTool =>
-          new MessageActionItem(buildTool.executableName) == choice
+          new MessageActionItem(buildTool.getBuildServerName) == choice
         )
       }
   }

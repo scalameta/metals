@@ -23,7 +23,7 @@ object RangesTextEdits {
     val end = new l.Position(range.getEndLine, range.getEndCharacter)
     List(
       new TextEdit(new l.Range(start, start), s">>${range.getKind}>>"),
-      new TextEdit(new l.Range(end, end), s"<<${range.getKind}<<")
+      new TextEdit(new l.Range(end, end), s"<<${range.getKind}<<"),
     )
   }
 
@@ -33,7 +33,7 @@ object RangesTextEdits {
     val end = range.getEnd()
     List(
       new TextEdit(new l.Range(start, start), s">>region>>"),
-      new TextEdit(new l.Range(end, end), s"<<region<<")
+      new TextEdit(new l.Range(end, end), s"<<region<<"),
     )
   }
 }

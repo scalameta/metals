@@ -9,6 +9,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.FileSystemWatcher
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 object Configs {
 
@@ -24,14 +25,18 @@ object Configs {
         else workspace.toURI.toString.stripSuffix("/")
       new DidChangeWatchedFilesRegistrationOptions(
         List(
-          new FileSystemWatcher(s"$root/*.sbt"),
-          new FileSystemWatcher(s"$root/pom.xml"),
-          new FileSystemWatcher(s"$root/*.sc"),
-          new FileSystemWatcher(s"$root/*?.gradle"),
-          new FileSystemWatcher(s"$root/*.gradle.kts"),
-          new FileSystemWatcher(s"$root/project/*.{scala,sbt}"),
-          new FileSystemWatcher(s"$root/project/project/*.{scala,sbt}"),
-          new FileSystemWatcher(s"$root/project/build.properties")
+          new FileSystemWatcher(Either.forLeft(s"$root/*.sbt")),
+          new FileSystemWatcher(Either.forLeft(s"$root/pom.xml")),
+          new FileSystemWatcher(Either.forLeft(s"$root/*.sc")),
+          new FileSystemWatcher(Either.forLeft(s"$root/*?.gradle")),
+          new FileSystemWatcher(Either.forLeft(s"$root/*.gradle.kts")),
+          new FileSystemWatcher(Either.forLeft(s"$root/project/*.{scala,sbt}")),
+          new FileSystemWatcher(
+            Either.forLeft(s"$root/project/project/*.{scala,sbt}")
+          ),
+          new FileSystemWatcher(
+            Either.forLeft(s"$root/project/build.properties")
+          ),
         ).asJava
       )
     }
@@ -71,28 +76,28 @@ object Configs {
           },
         isCompletionItemDetailEnabled = MetalsServerConfig.binaryOption(
           "metals.completion-item.detail",
-          default = true
+          default = true,
         ),
         isCompletionItemDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.completion-item.documentation",
-          default = true
+          default = true,
         ),
         isHoverDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.hover.documentation",
-          default = true
+          default = true,
         ),
         snippetAutoIndent = MetalsServerConfig.binaryOption(
           "metals.snippet-auto-indent",
-          default = true
+          default = true,
         ),
         isSignatureHelpDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.signature-help.documentation",
-          default = true
+          default = true,
         ),
         isCompletionItemResolve = MetalsServerConfig.binaryOption(
           "metals.completion-item.resolve",
-          default = true
-        )
+          default = true,
+        ),
       )
     }
   }

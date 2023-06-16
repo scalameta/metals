@@ -3,8 +3,6 @@ package scala.meta.internal.pc
 import java.nio.file.Paths
 import java.util.ArrayList
 
-import scala.annotation.tailrec
-import scala.concurrent.Future
 import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -12,26 +10,14 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 
-import dotty.tools.dotc.ast.tpd
+import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Denotations
-import dotty.tools.dotc.core.Denotations.Denotation
-import dotty.tools.dotc.core.Denotations.MultiPreDenotation
-import dotty.tools.dotc.core.Denotations.PreDenotation
-import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.NameOps.*
-import dotty.tools.dotc.core.Names
-import dotty.tools.dotc.core.Names.*
-import dotty.tools.dotc.core.StdNames
+import dotty.tools.dotc.core.Flags.ModuleClass
 import dotty.tools.dotc.core.Symbols.*
-import dotty.tools.dotc.core.Types.NamedType
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.interactive.SourceTree
-import dotty.tools.dotc.transform.SymUtils.*
-import dotty.tools.dotc.util.NoSourcePosition
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Location
@@ -39,36 +25,97 @@ import org.eclipse.lsp4j.Location
 class PcDefinitionProvider(
     driver: InteractiveDriver,
     params: OffsetParams,
-    search: SymbolSearch
+    search: SymbolSearch,
 ):
 
   def definitions(): DefinitionResult =
+    definitions(findTypeDef = false)
+
+  def typeDefinitions(): DefinitionResult =
+    definitions(findTypeDef = true)
+
+  private def definitions(findTypeDef: Boolean): DefinitionResult =
     val uri = params.uri
     val filePath = Paths.get(uri)
-    val diagnostics = driver.run(
+    driver.run(
       uri,
-      SourceFile.virtual(filePath.toString, params.text)
+      SourceFile.virtual(filePath.toString, params.text),
     )
-    val unit = driver.currentCtx.run.units.head
-    val tree = unit.tpdTree
 
     val pos = driver.sourcePosition(params)
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
+
     given ctx: Context = driver.localContext(params)
     val indexedContext = IndexedContext(ctx)
-    findDefinitions(tree, path, pos, driver, indexedContext)
+    val result =
+      if findTypeDef then findTypeDefinitions(path, pos, indexedContext)
+      else findDefinitions(path, pos, indexedContext)
+
+    if result.locations().isEmpty() then fallbackToUntyped(pos)(using ctx)
+    else result
   end definitions
 
+  /**
+   * Some nodes might disapear from the typed tree, since they are mostly
+   * used as syntactic sugar. In those cases we check the untyped tree
+   * and try to get the symbol from there, which might actually be there,
+   * because these are the same nodes that go through the typer.
+   *
+   * This will happen for:
+   * - `.. derives Show`
+   * @param unit compilation unit of the file
+   * @param pos cursor position
+   * @return definition result
+   */
+  private def fallbackToUntyped(pos: SourcePosition)(using Context) =
+    lazy val untpdPath = NavigateAST
+      .untypedPath(pos.span)
+      .collect { case t: untpd.Tree => t }
+
+    definitionsForSymbol(untpdPath.headOption.map(_.symbol).toList, pos)
+  end fallbackToUntyped
+
   private def findDefinitions(
-      tree: Tree,
       path: List[Tree],
       pos: SourcePosition,
-      driver: InteractiveDriver,
-      indexed: IndexedContext
+      indexed: IndexedContext,
   ): DefinitionResult =
     import indexed.ctx
-    enclosingSymbols(path, pos, indexed) match
+    definitionsForSymbol(
+      MetalsInteractive.enclosingSymbols(path, pos, indexed),
+      pos,
+    )
+  end findDefinitions
+
+  private def findTypeDefinitions(
+      path: List[Tree],
+      pos: SourcePosition,
+      indexed: IndexedContext,
+  ): DefinitionResult =
+    import indexed.ctx
+    val enclosing = path.expandRangeToEnclosingApply(pos)
+    val typeSymbols = MetalsInteractive
+      .enclosingSymbolsWithExpressionType(enclosing, pos, indexed)
+      .map { case (_, tpe) =>
+        tpe.typeSymbol
+      }
+    typeSymbols match
+      case Nil =>
+        path.headOption match
+          case Some(value: Literal) =>
+            definitionsForSymbol(List(value.tpe.widen.typeSymbol), pos)
+          case _ => DefinitionResultImpl.empty
+      case _ =>
+        definitionsForSymbol(typeSymbols, pos)
+
+  end findTypeDefinitions
+
+  private def definitionsForSymbol(
+      symbols: List[Symbol],
+      pos: SourcePosition,
+  )(using ctx: Context): DefinitionResult =
+    symbols match
       case symbols @ (sym :: other) =>
         val isLocal = sym.source == pos.source
         if isLocal then
@@ -82,7 +129,7 @@ class PcDefinitionProvider(
                 case Some(loc) =>
                   DefinitionResultImpl(
                     SemanticdbSymbols.symbolName(sym),
-                    List(loc).asJava
+                    List(loc).asJava,
                   )
             case None =>
               DefinitionResultImpl.empty
@@ -94,81 +141,12 @@ class PcDefinitionProvider(
             }
           DefinitionResultImpl(
             SemanticdbSymbols.symbolName(sym),
-            res
+            res,
           )
         end if
       case Nil => DefinitionResultImpl.empty
     end match
-  end findDefinitions
-
-  @tailrec
-  private def enclosingSymbols(
-      path: List[Tree],
-      pos: SourcePosition,
-      indexed: IndexedContext
-  ): List[Symbol] =
-    import indexed.ctx
-    path match
-      // For a named arg, find the target `DefDef` and jump to the param
-      case NamedArg(name, _) :: Apply(fn, _) :: _ =>
-        val funSym = fn.symbol
-        if funSym.is(Synthetic) && funSym.owner.is(CaseClass) then
-          List(funSym.owner.info.member(name).symbol)
-        else
-          val classTree = funSym.topLevelClass.asClass.rootTree
-          val paramSymbol =
-            for
-              DefDef(_, paramss, _, _) <- tpd
-                .defPath(funSym, classTree)
-                .lastOption
-              param <- paramss.flatten.find(_.name == name)
-            yield param.symbol
-          List(paramSymbol.getOrElse(fn.symbol))
-      case (_: untpd.ImportSelector) :: (imp: Import) :: _ =>
-        importedSymbols(imp, _.span.contains(pos.span))
-
-      case (imp: Import) :: _ =>
-        importedSymbols(imp, _.span.contains(pos.span))
-
-      // For constructor calls, return the `<init>` that was selected
-      case _ :: (_: New) :: (select: Select) :: _ =>
-        List(select.symbol)
-
-      // wildcard param
-      case head :: _ if (head.symbol.is(Param) && head.symbol.is(Synthetic)) =>
-        Nil
-
-      case head :: tl =>
-        if head.symbol.is(Synthetic) then enclosingSymbols(tl, pos, indexed)
-        else if head.symbol != NoSymbol then List(head.symbol)
-        else
-          val recovered = recoverError(head, indexed)
-          if recovered.isEmpty then enclosingSymbols(tl, pos, indexed)
-          else recovered
-      case Nil => Nil
-    end match
-  end enclosingSymbols
-
-  private def recoverError(
-      tree: Tree,
-      indexed: IndexedContext
-  ): List[Symbol] =
-    import indexed.ctx
-
-    def extractSymbols(d: PreDenotation): List[Symbol] =
-      d match
-        case multi: MultiPreDenotation =>
-          extractSymbols(multi.denot1) ++ extractSymbols(multi.denot2)
-        case d: Denotation => List(d.symbol)
-        case _ => List.empty
-
-    tree match
-      case select: Select =>
-        extractSymbols(select.qualifier.typeOpt.member(select.name))
-          .filter(_ != NoSymbol)
-      case ident: Ident => indexed.findSymbol(ident.name).toList.flatten
-      case _ => Nil
-  end recoverError
+  end definitionsForSymbol
 
   def semanticSymbolsSorted(
       syms: List[Symbol]

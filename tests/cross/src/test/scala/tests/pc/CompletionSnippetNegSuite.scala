@@ -4,7 +4,6 @@ import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionSnippetNegSuite extends BaseCompletionSuite {
 
@@ -30,8 +29,8 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
            |unapplySeq
            |apply
            |""".stripMargin,
-      "3" -> "apply"
-    )
+      "3" -> "apply",
+    ),
   )
 
   checkSnippet(
@@ -45,12 +44,6 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
     """|println()
        |println
        |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|println
-           |println
-           |""".stripMargin
-    )
   )
 
   checkSnippet(
@@ -70,11 +63,11 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" -> "toString"
-    )
+    ),
   )
 
   checkSnippet(
-    "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "type".tag(IgnoreScala3),
     s"""|object Main {
         |  val x: scala.IndexedSe@@
         |}
@@ -82,7 +75,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
     // It's expected to have two separate results, one for `object IndexedSeq` and one for `type IndexedSeq[T]`.
     """|IndexedSeq
        |IndexedSeq
-       |""".stripMargin
+       |""".stripMargin,
   )
 
 }

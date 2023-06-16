@@ -46,7 +46,7 @@ class CompletionCrossLspSuite
            |Serializable a
            |Serializable - java.io
            |SerializablePermission - java.io
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -57,4 +57,100 @@ class CompletionCrossLspSuite
   test("match-213".flaky) {
     matchKeywordTest(V.scala213)
   }
+
+  test("extension") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { "scalaVersion": "${V.scala3}" }
+           |}
+           |/a/src/main/scala/a/B.scala
+           |package b
+           |extension (num: Int)
+           |  def plus(other: Int) = num + other
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |
+           |object A {
+           |  // @@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/B.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletionEdit(
+        "1.p@@",
+        """|package a
+           |
+           |import b.plus
+           |
+           |object A {
+           |  1.plus($0)
+           |}
+           |""".stripMargin,
+        filter = _.contains("plus"),
+      )
+      _ <- assertCompletion(
+        "1.pl@@",
+        """|plus(other: Int): Int (extension)
+           |""".stripMargin,
+        filter = _.contains("plus"),
+      )
+      _ <- assertCompletion(
+        "\"plus is not available for string\".plu@@",
+        "",
+        filter = _.contains("plus"),
+      )
+    } yield ()
+  }
+
+  test("basic-scala3") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { "scalaVersion": "${V.scala3}" }
+           |}
+           |/a/src/main/scala/Main.scala
+           |import scala.concurrent.Future
+           |
+           |@main
+           |def hello: Unit =
+           |  println("Hello world!")
+           |  println(msg)
+           |  // @@
+           |
+           |def msg = "I was compiled by Scala 3. :)"
+           |
+           |
+           |/a/src/main/scala/foo/MyClass.scala
+           |package foo
+           |
+           |class MyClass1:
+           |  def myMethod = 1
+           |
+           |case class MyClass2(name: String):
+           |  def myMethod = 1
+           |
+           |object MyClass3:
+           |  def apply(name: String) = ???
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "MyC@@",
+        """|MyClass1(): MyClass1
+           |MyClass2(name: String): MyClass2
+           |MyClass3 - foo
+           |MyClass3(name: String): Nothing
+           |""".stripMargin,
+        filename = Some("a/src/main/scala/Main.scala"),
+      )
+    } yield ()
+  }
+
 }

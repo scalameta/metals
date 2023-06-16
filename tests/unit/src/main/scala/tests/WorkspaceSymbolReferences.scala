@@ -4,7 +4,7 @@ import munit.internal.difflib.Diffs
 
 case class WorkspaceSymbolReferences(
     references: Seq[SymbolReference],
-    definition: Seq[SymbolReference]
+    definition: Seq[SymbolReference],
 ) {
   def format(locations: Seq[SymbolReference]): String =
     locations
@@ -18,7 +18,7 @@ case class WorkspaceSymbolReferences(
         Seq(
           header,
           "= " + symbol,
-          header
+          header,
         ) ++ refs
           .sortBy(l => (l.pos.input.syntax, l.pos.start))
           .map(_.format)

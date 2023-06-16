@@ -17,12 +17,12 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
         client.messageRequests.clear()
         assertConnectedToBuildServer("Bill")
       }
-      _ <- server.executeCommand(ServerCommands.BspSwitch.id)
+      _ <- server.executeCommand(ServerCommands.BspSwitch)
       _ = {
         assertConnectedToBuildServer("Bill")
         assertNoDiff(
           client.workspaceShowMessages,
-          BspSwitch.onlyOneServer("Bill").getMessage()
+          BspSwitch.onlyOneServer("Bill").getMessage(),
         )
       }
       _ = {
@@ -30,12 +30,12 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
         assertConnectedToBuildServer("Bill")
         Bill.installWorkspace(workspace.toNIO, "Bob")
       }
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = {
         assertConnectedToBuildServer("Bob")
         assertNoDiff(
           client.workspaceMessageRequests,
-          SelectBspServer.message
+          BspSwitch.message,
         )
         assertNoDiff(client.workspaceShowMessages, "")
 
@@ -44,7 +44,7 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
           params.getActions.asScala.find(_.getTitle == "Bill")
         }
       }
-      _ <- server.executeCommand(ServerCommands.BspSwitch.id)
+      _ <- server.executeCommand(ServerCommands.BspSwitch)
       _ = {
         assertNoDiff(client.workspaceShowMessages, "")
         assertConnectedToBuildServer("Bill")

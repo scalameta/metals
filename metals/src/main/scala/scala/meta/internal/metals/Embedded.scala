@@ -26,9 +26,7 @@ import mdoc.interfaces.Mdoc
  * - mdoc
  */
 final class Embedded(
-    icons: Icons,
-    statusBar: StatusBar,
-    userConfig: () => UserConfiguration
+    statusBar: StatusBar
 ) extends Cancelable {
 
   private val mdocs: TrieMap[String, URLClassLoader] =
@@ -41,41 +39,45 @@ final class Embedded(
     mdocs.clear()
   }
 
-  def mdoc(scalaVersion: String, scalaBinaryVersion: String): Mdoc = {
+  def mdoc(scalaVersion: String): Mdoc = {
+    val isScala3 = ScalaVersions.isScala3Version(scalaVersion)
+    val scalaBinaryVersion =
+      ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+    val scalaVersionKey = if (isScala3) scalaVersion else scalaBinaryVersion
+    val resolveSpecificVersionCompiler =
+      if (isScala3) Some(scalaVersion) else None
     val classloader = mdocs.getOrElseUpdate(
-      scalaBinaryVersion,
+      scalaVersionKey,
       statusBar.trackSlowTask("Preparing worksheets") {
-        Embedded.newMdocClassLoader(scalaVersion, scalaBinaryVersion)
-      }
+        newMdocClassLoader(scalaBinaryVersion, resolveSpecificVersionCompiler)
+      },
     )
     serviceLoader(
       classOf[Mdoc],
       "mdoc.internal.worksheets.Mdoc",
-      classloader
+      classloader,
     )
   }
 
   def presentationCompiler(
-      scalaVersion: String,
-      classpath: Seq[Path]
+      mtags: MtagsBinaries.Artifacts,
+      classpath: Seq[Path],
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
-      ScalaVersions.dropVendorSuffix(scalaVersion),
-      statusBar.trackSlowTask("Preparing presentation compiler") {
-        Embedded.newPresentationCompilerClassLoader(scalaVersion, classpath)
-      }
+      ScalaVersions.dropVendorSuffix(mtags.scalaVersion),
+      newPresentationCompilerClassLoader(mtags, classpath),
     )
     serviceLoader(
       classOf[PresentationCompiler],
       classOf[ScalaPresentationCompiler].getName(),
-      classloader
+      classloader,
     )
   }
 
   private def serviceLoader[T](
       cls: Class[T],
       className: String,
-      classloader: URLClassLoader
+      classloader: URLClassLoader,
   ): T = {
     val services = ServiceLoader.load(cls, classloader).iterator()
     if (services.hasNext) services.next()
@@ -90,25 +92,9 @@ final class Embedded(
     }
   }
 
-}
-
-object Embedded {
-  lazy val repositories: List[Repository] =
-    Repository.defaults().asScala.toList ++
-      List(
-        Repository.central(),
-        Repository.ivy2Local(),
-        MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/public/"
-        ),
-        MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/snapshots/"
-        )
-      )
-
-  def newMdocClassLoader(
-      scalaVersion: String,
-      scalaBinaryVersion: String
+  private def newMdocClassLoader(
+      scalaBinaryVersion: String,
+      scalaVersion: Option[String],
   ): URLClassLoader = {
     val resolutionParams = ResolutionParams
       .create()
@@ -117,7 +103,34 @@ object Embedded {
      * load coursierapi.Logger and instead will use the already loaded one
      */
     resolutionParams.addExclusion("io.get-coursier", "interface")
-    val jars = downloadMdoc(scalaVersion, scalaBinaryVersion, resolutionParams)
+
+    /**
+     * For scala 3 the code is backwards compatible, but mdoc itself depends on
+     * specific Scala version, which is the earliest we need to support.
+     * This trick makes sure that we are able to run worksheets on later versions
+     * by forcing mdoc to use that specific compiler version.
+     *
+     * This should work as long as the compiler interfaces we are using do not change.
+     *
+     * It would probably be best to use stable interfaces from the compiler.
+     */
+    val fullResolution = scalaVersion match {
+      case None => resolutionParams
+      case Some(version) =>
+        resolutionParams.forceVersions(
+          List(
+            Dependency.of("org.scala-lang", "scala3-library_3", version),
+            Dependency.of("org.scala-lang", "scala3-compiler_3", version),
+            Dependency.of("org.scala-lang", "tasty-core_3", version),
+          ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+        )
+    }
+    val jars =
+      Embedded.downloadMdoc(
+        scalaBinaryVersion,
+        scalaVersion,
+        Some(fullResolution),
+      )
 
     val parent = new MdocClassLoader(this.getClass.getClassLoader)
 
@@ -138,22 +151,53 @@ object Embedded {
     new URLClassLoader(urls, parent)
   }
 
+  private def newPresentationCompilerClassLoader(
+      mtags: MtagsBinaries.Artifacts,
+      classpath: Seq[Path],
+  ): URLClassLoader = {
+    val allJars = Iterator(mtags.jars, classpath).flatten
+    val allURLs = allJars.map(_.toUri.toURL).toArray
+    // Share classloader for a subset of types.
+    val parent =
+      new PresentationCompilerClassLoader(this.getClass.getClassLoader)
+    new URLClassLoader(allURLs, parent)
+  }
+
+}
+
+object Embedded {
+
+  lazy val repositories: List[Repository] =
+    Repository.defaults().asScala.toList ++
+      List(
+        Repository.central(),
+        Repository.ivy2Local(),
+        MavenRepository.of(
+          "https://oss.sonatype.org/content/repositories/public/"
+        ),
+        MavenRepository.of(
+          "https://oss.sonatype.org/content/repositories/snapshots/"
+        ),
+      )
+
   def fetchSettings(
       dep: Dependency,
-      scalaVersion: String
+      scalaVersion: Option[String],
+      resolution: Option[ResolutionParams] = None,
   ): Fetch = {
 
-    val resolutionParams = ResolutionParams
-      .create()
+    val resolutionParams = resolution.getOrElse(ResolutionParams.create())
 
-    if (!ScalaVersions.isScala3Version(scalaVersion))
-      resolutionParams.forceVersions(
-        List(
-          Dependency.of("org.scala-lang", "scala-library", scalaVersion),
-          Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
-          Dependency.of("org.scala-lang", "scala-reflect", scalaVersion)
-        ).map(d => (d.getModule, d.getVersion)).toMap.asJava
-      )
+    scalaVersion.foreach { scalaVersion =>
+      if (!ScalaVersions.isScala3Version(scalaVersion))
+        resolutionParams.forceVersions(
+          List(
+            Dependency.of("org.scala-lang", "scala-library", scalaVersion),
+            Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
+            Dependency.of("org.scala-lang", "scala-reflect", scalaVersion),
+          ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+        )
+    }
 
     Fetch
       .create()
@@ -172,32 +216,38 @@ object Embedded {
       Dependency.of(
         "org.scala-lang",
         s"scala3-library_$binaryVersion",
-        scalaVersion
+        scalaVersion,
       )
     } else {
       Dependency.of(
         "ch.epfl.lamp",
         s"dotty-library_$binaryVersion",
-        scalaVersion
+        scalaVersion,
       )
     }
   }
 
-  private def mtagsDependency(scalaVersion: String): Dependency =
+  private def mtagsDependency(
+      scalaVersion: String,
+      metalsVersion: String,
+  ): Dependency =
     Dependency.of(
       "org.scalameta",
       s"mtags_$scalaVersion",
-      BuildInfo.metalsVersion
+      metalsVersion,
     )
 
   private def mdocDependency(
-      scalaVersion: String,
-      scalaBinaryVersion: String
+      scalaBinaryVersion: String,
+      scalaVersion: Option[String],
   ): Dependency = {
     Dependency.of(
       "org.scalameta",
       s"mdoc_${scalaBinaryVersion}",
-      BuildInfo.mdocVersion
+      if (scalaBinaryVersion == "2.11") "2.2.24"
+      // from 2.2.24 mdoc is compiled with 3.1.x which is incompatible with 3.0.x
+      else if (scalaVersion.exists(_.startsWith("3.0"))) "2.2.23"
+      else BuildInfo.mdocVersion,
     )
   }
 
@@ -205,84 +255,81 @@ object Embedded {
     Dependency.of(
       "org.scalameta",
       s"semanticdb-scalac_$scalaVersion",
-      BuildInfo.scalametaVersion
+      BuildInfo.scalametaVersion,
     )
 
-  private def downloadDependency(
+  def downloadDependency(
       dep: Dependency,
-      scalaVersion: String,
+      scalaVersion: Option[String],
       classfiers: Seq[String] = Seq.empty,
-      resolution: ResolutionParams = ResolutionParams.create()
-  ): List[Path] =
-    fetchSettings(dep, scalaVersion)
+      resolution: Option[ResolutionParams] = None,
+  ): List[Path] = {
+    fetchSettings(dep, scalaVersion, resolution)
       .addClassifiers(classfiers: _*)
-      .withResolutionParams(resolution)
       .fetch()
       .asScala
       .toList
       .map(_.toPath())
+  }
 
   def downloadScalaSources(scalaVersion: String): List[Path] =
     downloadDependency(
       scalaDependency(scalaVersion),
-      scalaVersion,
-      classfiers = Seq("sources")
+      Some(scalaVersion),
+      classfiers = Seq("sources"),
     )
 
   def downloadScala3Sources(scalaVersion: String): List[Path] =
     downloadDependency(
       scala3Dependency(scalaVersion),
-      scalaVersion,
-      classfiers = Seq("sources")
+      Some(scalaVersion),
+      classfiers = Seq("sources"),
     )
 
   def downloadSemanticdbScalac(scalaVersion: String): List[Path] =
-    downloadDependency(semanticdbScalacDependency(scalaVersion), scalaVersion)
-  def downloadMtags(scalaVersion: String): List[Path] =
-    downloadDependency(mtagsDependency(scalaVersion), scalaVersion)
-
-  def downloadMdoc(
-      scalaVersion: String,
-      scalaBinaryVersion: String,
-      resolutionParams: ResolutionParams = ResolutionParams.create()
-  ): List[Path] =
     downloadDependency(
-      mdocDependency(scalaVersion, scalaBinaryVersion),
-      scalaVersion,
-      resolution = resolutionParams
+      semanticdbScalacDependency(scalaVersion),
+      Some(scalaVersion),
     )
 
-  def organizeImportRule(scalaBinaryVersion: String): List[Path] = {
-    val dep = Dependency.of(
-      "com.github.liancheng",
-      s"organize-imports_$scalaBinaryVersion",
-      BuildInfo.organizeImportVersion
+  def downloadSemanticdbJavac: List[Path] = {
+    downloadDependency(
+      Dependency.of(
+        "com.sourcegraph",
+        "semanticdb-javac",
+        BuildInfo.javaSemanticdbVersion,
+      ),
+      None,
     )
-    downloadDependency(dep, scalaBinaryVersion)
   }
 
-  def newPresentationCompilerClassLoader(
-      fullScalaVersion: String,
-      classpath: Seq[Path]
-  ): URLClassLoader = {
-    val scalaVersion = ScalaVersions
-      .dropVendorSuffix(fullScalaVersion)
-    val dep = mtagsDependency(scalaVersion)
-    val jars = fetchSettings(dep, fullScalaVersion)
-      .fetch()
-      .asScala
-      .map(_.toPath)
-    val allJars = Iterator(jars, classpath).flatten
-    val allURLs = allJars.map(_.toUri.toURL).toArray
-    // Share classloader for a subset of types.
-    val parent =
-      new PresentationCompilerClassLoader(this.getClass.getClassLoader)
-    new URLClassLoader(allURLs, parent)
+  def downloadMtags(scalaVersion: String, metalsVersion: String): List[Path] =
+    downloadDependency(
+      mtagsDependency(scalaVersion, metalsVersion),
+      Some(scalaVersion),
+    )
+
+  def downloadMdoc(
+      scalaBinaryVersion: String,
+      scalaVersion: Option[String],
+      resolutionParams: Option[ResolutionParams] = None,
+  ): List[Path] =
+    downloadDependency(
+      mdocDependency(scalaBinaryVersion, scalaVersion),
+      scalaVersion = None,
+      resolution = resolutionParams,
+    )
+
+  def rulesClasspath(dependencies: List[Dependency]): List[Path] = {
+    for {
+      dep <- dependencies
+      path <- downloadDependency(dep, scalaVersion = None)
+    } yield path
   }
 
   def toClassLoader(
       classpath: Classpath,
-      classLoader: ClassLoader
+      classLoader: ClassLoader,
   ): URLClassLoader = {
     val urls = classpath.entries.map(_.toNIO.toUri.toURL).toArray
     new URLClassLoader(urls, classLoader)
@@ -297,7 +344,7 @@ object Embedded {
         scala3Dependency(scalaVersion)
       else
         scalaDependency(scalaVersion)
-    downloadDependency(dependency, scalaVersion)
+    downloadDependency(dependency, Some(scalaVersion))
   }
 
 }

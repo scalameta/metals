@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.security.MessageDigest
 
 import scala.util.control.NonFatal
+import scala.xml.Comment
 import scala.xml.Node
 
 import scala.meta.internal.builds.Digest.Status
@@ -17,7 +18,7 @@ import scala.meta.io.AbsolutePath
 case class Digest(
     md5: String,
     status: Status,
-    millis: Long
+    millis: Long,
 )
 
 object Digest {
@@ -53,13 +54,13 @@ object Digest {
         Rejected,
         Failed,
         Installed,
-        Cancelled
+        Cancelled,
       )
   }
 
   def digestDirectory(
       path: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     if (!path.isDirectory) true
     else {
@@ -69,7 +70,7 @@ object Digest {
 
   def digestFileBytes(
       path: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     if (path.isFile) {
       digest.update(path.readAllBytes)
@@ -79,12 +80,12 @@ object Digest {
 
   def digestFile(
       path: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     val ext = PathIO.extension(path.toNIO)
     val isScala = Set("sbt", "scala", "sc")(ext)
     // we can have both gradle and gradle.kts and build plugins can be written in any of three languages
-    val isGradle =
+    val isGeneralJVM =
       Set("gradle", "groovy", "gradle.kts", "java", "kts").exists(
         path.toString().endsWith(_)
       )
@@ -92,7 +93,7 @@ object Digest {
 
     if (isScala && path.isFile) {
       digestScala(path, digest)
-    } else if (isGradle && path.isFile) {
+    } else if (isGeneralJVM && path.isFile) {
       digestGeneralJvm(path, digest)
     } else if (isXml) {
       digestXml(path, digest)
@@ -105,21 +106,23 @@ object Digest {
 
   def digestXml(
       file: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
+
     import scala.xml.XML
     def digestElement(node: Node): Boolean = {
-      digest.update(node.label.getBytes())
-      for {
-        attr <- node.attributes
-        _ = digest.update(attr.key.getBytes())
-        value <- attr.value
-      } digest.update(value.toString().getBytes())
+      node match {
+        // ignore comments, see MavenDigestSuite for example
+        case _: Comment => true
+        case _ =>
+          for {
+            attr <- node.attributes
+            _ = digest.update(attr.key.getBytes())
+            value <- attr.value
+          } digest.update(value.toString().getBytes())
 
-      val chldrenSuccessful: Seq[Boolean] = for {
-        child <- node.child
-      } yield digestElement(child)
-      chldrenSuccessful.forall(p => p)
+          node.child.forall(digestElement)
+      }
     }
     try {
       val xml = XML.loadFile(file.toNIO.toFile)
@@ -134,7 +137,7 @@ object Digest {
 
   def digestGeneralJvm(
       file: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     try {
       Files
@@ -153,7 +156,7 @@ object Digest {
 
   def digestScala(
       file: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     try {
       val input = file.toInput
@@ -193,6 +196,6 @@ trait Digestable {
 
   protected def digestWorkspace(
       absolutePath: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean
 }

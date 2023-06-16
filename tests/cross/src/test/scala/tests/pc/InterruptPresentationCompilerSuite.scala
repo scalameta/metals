@@ -15,7 +15,6 @@ import scala.meta.pc.PresentationCompiler
 
 import munit.Location
 import tests.BasePCSuite
-import tests.BuildInfoVersions
 import tests.DelegatingGlobalSymbolIndex
 
 class InterruptPresentationCompilerSuite extends BasePCSuite {
@@ -34,8 +33,8 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
   }
 
   // @tgodzik currently not handled for Dotty
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   override def beforeEach(context: BeforeEach): Unit = {
     index.asInstanceOf[InterruptSymbolIndex].reset()
@@ -50,10 +49,10 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
   def check(
       name: String,
       original: String,
-      act: (PresentationCompiler, OffsetParams) => CompletableFuture[_]
+      act: (PresentationCompiler, OffsetParams) => CompletableFuture[_],
   )(implicit loc: Location): Unit = {
     test(name) {
-      val (code, offset) = this.params(original)
+      val (code, offset) = this.params(original, "A.scala")
       val interrupt = index.asInstanceOf[InterruptSymbolIndex]
       try {
         val result = act(
@@ -62,8 +61,8 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
             URI.create("file:///A.scala"),
             code,
             offset,
-            interrupt.token.get()
-          )
+            interrupt.token.get(),
+          ),
         ).get()
         fail(s"Expected cancellation exception. Obtained $result")
       } catch {
@@ -72,7 +71,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       val isInterrupted = interrupt.isInterrupted.get()
       Predef.assert(
         !isInterrupted,
-        "thread was interrupted, expected no interruption."
+        "thread was interrupted, expected no interruption.",
       )
     }
   }
@@ -86,7 +85,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       |""".stripMargin,
     (pc, params) => {
       pc.hover(params)
-    }
+    },
   )
 
   check(
@@ -98,7 +97,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       |""".stripMargin,
     (pc, params) => {
       pc.signatureHelp(params)
-    }
+    },
   )
 
 }

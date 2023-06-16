@@ -1,8 +1,5 @@
 package scala.meta.internal.metals.codelenses
 
-import java.util.Collections.singletonList
-
-import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.SuperMethodProvider
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
@@ -20,11 +17,10 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.{lsp4j => l}
 
 final class SuperMethodCodeLens(
-    implementationProvider: ImplementationProvider,
     buffers: Buffers,
     userConfig: () => UserConfiguration,
     clientConfig: ClientConfiguration,
-    trees: Trees
+    trees: Trees,
 ) extends CodeLens {
 
   override def isEnabled: Boolean = userConfig().superMethodLensesEnabled
@@ -47,11 +43,11 @@ final class SuperMethodCodeLens(
         symbol,
         search,
         textDocument,
-        path
+        path,
       ).toIterable
       range <-
         occurrence.range
-          .flatMap(r => distance.toRevised(r.toLSP))
+          .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
           .toList
     } yield new l.CodeLens(range, gotoSuperMethod, null)
   }
@@ -60,7 +56,7 @@ final class SuperMethodCodeLens(
       symbol: String,
       findSymbol: String => Option[SymbolInformation],
       textDocument: TextDocument,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Option[l.Command] = {
     for {
       symbolInformation <- findSymbol(symbol)
@@ -71,7 +67,7 @@ final class SuperMethodCodeLens(
         gotoParentSymbol,
         symbolInformation.displayName,
         textDocument,
-        path
+        path,
       )
     } yield command
   }
@@ -80,28 +76,25 @@ final class SuperMethodCodeLens(
       symbol: String,
       name: String,
       textDocument: TextDocument,
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Option[l.Command] = {
     if (symbol.isLocal)
       textDocument.occurrences.collectFirst {
         case SymbolOccurrence(
               Some(range),
               `symbol`,
-              SymbolOccurrence.Role.DEFINITION
+              SymbolOccurrence.Role.DEFINITION,
             ) =>
-          new l.Command(
-            s"${clientConfig.icons.findsuper} ${name}",
-            ServerCommands.GotoPosition.id,
-            singletonList(new l.Location(path.toURI.toString(), range.toLSP))
-          )
+          val location = new l.Location(path.toURI.toString(), range.toLsp)
+          val command = ServerCommands.GotoPosition.toLsp(location)
+          command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
+          command
       }
     else
       Some {
-        new l.Command(
-          s"${clientConfig.icons.findsuper} ${name}",
-          ServerCommands.GotoSymbol.id,
-          singletonList(symbol)
-        )
+        val command = ServerCommands.GotoSymbol.toLsp(symbol)
+        command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
+        command
       }
   }
 

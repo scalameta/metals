@@ -84,7 +84,7 @@ class DotEnvFileParserSuite extends BaseSuite {
   test("allow # and spaces in unquoted values") {
     assertDiffEqual(
       parse("KEY=v a l u e # not a comment"),
-      Map("KEY" -> "v a l u e # not a comment")
+      Map("KEY" -> "v a l u e # not a comment"),
     )
   }
 
@@ -105,7 +105,7 @@ class DotEnvFileParserSuite extends BaseSuite {
                     |line2'""".stripMargin
     assertDiffEqual(
       parse(content),
-      Map("KEY" -> s"line1${System.lineSeparator}line2")
+      Map("KEY" -> s"line1${System.lineSeparator}line2"),
     )
   }
 
@@ -114,7 +114,7 @@ class DotEnvFileParserSuite extends BaseSuite {
                     |line2"""".stripMargin
     assertDiffEqual(
       parse(content),
-      Map("KEY" -> s"line1${System.lineSeparator}line2")
+      Map("KEY" -> s"line1${System.lineSeparator}line2"),
     )
   }
 
@@ -130,7 +130,7 @@ class DotEnvFileParserSuite extends BaseSuite {
                     |KEY3="value3"""".stripMargin
     assertDiffEqual(
       parse(content),
-      Map("KEY" -> "value", "KEY2" -> "value2", "KEY3" -> "value3")
+      Map("KEY" -> "value", "KEY2" -> "value2", "KEY3" -> "value3"),
     )
   }
 
@@ -146,8 +146,8 @@ class DotEnvFileParserSuite extends BaseSuite {
       Map(
         "KEY" -> "value",
         "KEY2" -> s"value2 line1${System.lineSeparator}value2 line2",
-        "KEY3" -> s"value3 line1${System.lineSeparator}value3 line2"
-      )
+        "KEY3" -> s"value3 line1${System.lineSeparator}value3 line2",
+      ),
     )
   }
 
@@ -162,7 +162,7 @@ class DotEnvFileParserSuite extends BaseSuite {
   test("retain the original line separators") {
     assertDiffEqual(
       parse("KEY=\"line1\r\nline2\""),
-      Map("KEY" -> "line1\r\nline2")
+      Map("KEY" -> "line1\r\nline2"),
     )
   }
 }

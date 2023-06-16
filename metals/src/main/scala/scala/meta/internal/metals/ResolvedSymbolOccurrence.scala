@@ -8,5 +8,5 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
  */
 case class ResolvedSymbolOccurrence(
     distance: TokenEditDistance,
-    occurrence: Option[SymbolOccurrence]
+    occurrence: Option[SymbolOccurrence],
 )

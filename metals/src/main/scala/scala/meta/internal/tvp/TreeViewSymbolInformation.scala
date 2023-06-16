@@ -4,12 +4,11 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
-import scala.meta.internal.semanticdb._
 
 case class TreeViewSymbolInformation(
     symbol: String,
     kind: SymbolInformation.Kind,
-    properties: Int = 0
+    properties: Int = 0,
 ) {
   def isVal: Boolean = kind.isMethod && properties.isVal
   def isVar: Boolean = kind.isMethod && properties.isVar
@@ -24,7 +23,7 @@ case class TreeViewSymbolInformation(
           else if (s.isType) k.CLASS
           else if (s.isTypeParameter) k.TYPE_PARAMETER
           else k.UNKNOWN_KIND,
-          0
+          0,
         )
         info :: loop(s.owner)
       }

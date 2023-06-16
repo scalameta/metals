@@ -89,16 +89,23 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         case tpe => tpe
       }
     }
+    val isUnapplyMethod: Boolean = tree match {
+      case _: UnApply => true
+      // in some case we will get an Apply tree, but in that case position indicates unapply
+      case _ =>
+        symbol.name == termNames.unapply && (symbol.pos == NoPosition || !symbol.pos.isRange)
+    }
     val qualTpe: Type = symbol.name match {
       case termNames.unapply =>
         symbol.paramLists match {
           case (head :: Nil) :: Nil =>
-            symbol.info.finalResultType match {
-              case TypeRef(
+            qual.tpe.finalResultType match {
+              case tp @ TypeRef(
                     _,
-                    definitions.OptionClass,
+                    cls,
                     tpe @ TypeRef(_, _, args) :: Nil
-                  ) =>
+                  )
+                  if cls == definitions.OptionClass || cls == definitions.SomeClass =>
                 val ctor = head.tpe.typeSymbol.primaryConstructor
                 val params = ctor.paramLists.headOption.getOrElse(Nil)
                 val toZip = args match {
@@ -108,15 +115,15 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
                 val isAlignedTypes = toZip.lengthCompare(params.length) == 0 &&
                   toZip.zip(params).forall { case (a, b) =>
                     a == b.tpe ||
-                      b.tpe.typeSymbol.isTypeParameter
+                    b.tpe.typeSymbol.isTypeParameter
                   }
-                if (isAlignedTypes) {
-                  ctor.info
+                if (isAlignedTypes && ctor.owner.isCaseClass) {
+                  tp.memberType(ctor)
                 } else {
-                  symbol.info
+                  qual.tpe
                 }
               case _ =>
-                symbol.info
+                qual.tpe
             }
           case _ =>
             symbol.info
@@ -154,7 +161,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       else nonOverload.typeParams :: nonOverload.paramLists
     }
     def all: List[List[Tree]] =
-      if (qualTpe.typeParams.isEmpty) argss
+      if (qualTpe.typeParams.isEmpty || tparams.isEmpty) argss
       else tparams :: argss
     def paramTree(i: Int, j: Int): List[Tree] =
       all.lift(i).flatMap(_.lift(j)).toList
@@ -319,7 +326,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             if (realPos.isRange) {
               val end =
                 if (lastArgument.contains(arg)) tree.pos.end
-                else arg.pos.end
+                else realPos.end
               val extraEndOffset = unit.source.content(pos.point - 1) match {
                 case ')' | ']' => 0
                 case _ =>
@@ -431,10 +438,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           else method.info
         val paramss: List[List[Symbol]] =
           if (!isActiveSignature) {
-            mparamss(tpe)
+            mparamss(tpe, t.call.isUnapplyMethod)
           } else {
             activeSignature = i
-            val paramss = this.mparamss(tpe)
+            val paramss = this.mparamss(tpe, t.call.isUnapplyMethod)
             val gparamss = for {
               (params, i) <- paramss.zipWithIndex
               (param, j) <- params.zipWithIndex
@@ -454,18 +461,51 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         toSignatureInformation(
           t,
           method,
-          tpe,
+          if (!t.call.isUnapplyMethod) tpe else method.info,
           paramss,
           isActiveSignature,
           shortenedNames
         )
     }
-    new SignatureHelp(infos.asJava, activeSignature, activeParameter)
+    val mainSignature = infos(activeSignature)
+    val deduplicated = infos
+      .filter { sig =>
+        sig != mainSignature && sig.getLabel() != mainSignature.getLabel()
+      }
+      .distinctBy(_.getLabel())
+
+    new SignatureHelp(
+      (mainSignature :: deduplicated).asJava,
+      0,
+      activeParameter
+    )
   }
 
-  def mparamss(method: Type): List[List[compiler.Symbol]] = {
-    if (method.typeParams.isEmpty) method.paramLists
-    else method.typeParams :: method.paramLists
+  def mparamss(
+      method: Type,
+      isUnapplyMethod: Boolean
+  ): List[List[compiler.Symbol]] = {
+    method.finalResultType match {
+      case TypeRef(
+            _,
+            cls,
+            TypeRef(_, symbol, args) :: Nil
+          )
+          if isUnapplyMethod &&
+            (cls == definitions.OptionClass || cls == definitions.SomeClass) =>
+        // tuple unapply results
+        if (definitions.isTupleSymbol(symbol))
+          List(args.map(_.typeSymbol))
+        // otherwise it's a single unapply result
+        else
+          List(List(symbol))
+      case _ if isUnapplyMethod =>
+        method.paramLists.map(_.map(_.tpe.typeSymbol))
+      case _ =>
+        if (method.typeParams.isEmpty) method.paramLists
+        else method.typeParams :: method.paramLists
+
+    }
   }
 
   def toSignatureInformation(
@@ -495,12 +535,36 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         } else {
           Map.empty[Name, Int]
         }
-      def byNamedArgumentPosition(symbol: Symbol): Int = {
-        byName.getOrElse(symbol.name, Int.MaxValue)
+      // if no by name are present then we don't want to change the order
+      val firstByName = if (byName.isEmpty) Int.MaxValue else byName.values.min
+
+      /**
+       * We try to adjust the ordering when by name params are present.
+       * For example:
+       * ```
+       *   def hello(a: Int, b: Int, c: Int, d: Int, e: Int) = ???
+       *   hello(1, 2, d = 5, @@)
+       * ```
+       * 1 and 2 correspond to a and b, so signature help should show
+       * them at the correct place at the start.
+       *
+       * d = 5 is a by name parameter so we want to show it next in
+       * the signature.
+       *
+       * Since we already have by name parameter we want to show
+       * `c` and `e` at the end of the signature help.
+       */
+      def byNamedArgumentPosition(symbol: Symbol, pos: Int): Int = {
+        if (pos >= firstByName)
+          // if we are past byname means we can only write by names
+          byName.getOrElse(symbol.name, Int.MaxValue)
+        else
+          // anything that is not by name needs to go at the start
+          byName.getOrElse(symbol.name, Int.MinValue)
       }
       val sortedByName = params.zipWithIndex
         .sortBy { case (sym, pos) =>
-          (byNamedArgumentPosition(sym), pos)
+          (byNamedArgumentPosition(sym, pos), pos)
         }
         .map { case (sym, _) =>
           sym
@@ -512,10 +576,18 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         if (param.name.startsWith(termNames.EVIDENCE_PARAM_PREFIX)) {
           Nil
         } else {
-          val index = k
+          // if byName is empty the indexes are correct, otherwise we should recalculate them
+          val paramIndex = if (byName.isEmpty) Some(k) else None
           k += 1
-          val label = printer.paramLabel(param, index)
-          val docstring = printer.paramDocstring(index)
+          val label =
+            /* For unapply methods we translate return value, which contains only types
+             * and not parameters.
+             */
+            if (param.isParameter)
+              printer.paramLabel(param, paramIndex)
+            else
+              printer.printType(param.tpe)
+          val docstring = printer.paramDocstring(param, paramIndex)
           val byNameLabel =
             if (isByNamedOrdered) s"<$label>"
             else label
@@ -551,7 +623,8 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         paramLabels.iterator.map(_.iterator.collect {
           case i if i.getLabel() != null && i.getLabel().isLeft() =>
             i.getLabel().getLeft()
-        })
+        }),
+        printUnapply = !t.call.isUnapplyMethod
       )
     )
     if (metalsConfig.isSignatureHelpDocumentationEnabled) {

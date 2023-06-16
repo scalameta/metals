@@ -29,7 +29,7 @@ class MavenDigestSuite extends BaseDigestSuite {
       |  <artifactId>my-app</artifactId>
       |  <version>1</version>
       |</project>
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -52,7 +52,7 @@ class MavenDigestSuite extends BaseDigestSuite {
       |  <artifactId>my-app</artifactId>
       |  <version>1</version>
       |</project>
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -76,7 +76,7 @@ class MavenDigestSuite extends BaseDigestSuite {
       |           1
       |  </version>
       |</project>
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -98,7 +98,7 @@ class MavenDigestSuite extends BaseDigestSuite {
       |  <artifactId>my-app-id</artifactId>
       |  <version>112</version>
       |</project>
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -120,7 +120,7 @@ class MavenDigestSuite extends BaseDigestSuite {
       |  <artifactId>my-app-id</artifactId>
       |  <version>1</version>
       |</project>
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -142,7 +142,7 @@ class MavenDigestSuite extends BaseDigestSuite {
       |  <artifactId>my-app-id</artifactId>
       |  <version>1</version>
       |</project>
-    """.stripMargin
+    """.stripMargin,
   )
 
   def projectString: String =
@@ -166,7 +166,7 @@ class MavenDigestSuite extends BaseDigestSuite {
        |$projectString
        |/a/pom.xml
        |$projectString
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -180,6 +180,6 @@ class MavenDigestSuite extends BaseDigestSuite {
        |$projectString
        |/a/b/pom.xml
        |$projectString
-    """.stripMargin
+    """.stripMargin,
   )
 }

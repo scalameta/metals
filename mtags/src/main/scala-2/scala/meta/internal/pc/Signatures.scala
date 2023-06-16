@@ -72,7 +72,7 @@ trait Signatures { compiler: MetalsGlobal =>
         val startPos = pos.withPoint(importPosition.offset).focus
         val indent = " " * importPosition.indent
         val edit = new l.TextEdit(
-          startPos.toLSP,
+          startPos.toLsp,
           s"${indent}import ${sym.fullNameSyntax}\n"
         )
         (Identifier(sym.name), edit :: Nil)
@@ -251,7 +251,7 @@ trait Signatures { compiler: MetalsGlobal =>
           }
           .mkString(topPadding, "\n", "\n")
         val startPos = pos.withPoint(lineStart).focus
-        new l.TextEdit(startPos.toLSP, formatted) :: Nil
+        new l.TextEdit(startPos.toLsp, formatted) :: Nil
       } else {
         Nil
       }
@@ -290,9 +290,16 @@ trait Signatures { compiler: MetalsGlobal =>
     private val returnType =
       printType(shortType(gtpe.finalResultType, shortenedNames))
 
-    def printType(tpe: Type): String =
-      if (printLongType) tpe.toLongString
-      else tpe.toString()
+    def printType(tpe: Type): String = {
+      val tpeToPrint = tpe match {
+        case c: ConstantType =>
+          constantType(c)
+        case _ => tpe
+      }
+      if (printLongType) tpeToPrint.toLongString
+      else tpeToPrint.toString()
+    }
+
     def methodDocstring: String = {
       if (isDocs) info.fold("")(_.docstring())
       else ""
@@ -337,7 +344,7 @@ trait Signatures { compiler: MetalsGlobal =>
           if (implicitEvidenceTermParams.contains(param)) {
             Nil
           } else {
-            val result = paramLabel(param, i)
+            val result = paramLabel(param, Some(i))
             i += 1
             result :: Nil
           }
@@ -350,21 +357,27 @@ trait Signatures { compiler: MetalsGlobal =>
 
     def methodSignature(
         paramLabels: Iterator[Iterator[String]],
-        name: String = gsym.nameString
+        name: String = gsym.nameString,
+        printUnapply: Boolean = true
     ): String = {
-      paramLabels
+      val params = paramLabels
         .zip(mparamss.iterator)
         .map { case (params, syms) =>
           paramsKind(syms) match {
-            case Params.TypeParameterKind =>
+            // for unapply we don't ever need []
+            case Params.TypeParameterKind if printUnapply =>
               params.mkString("[", ", ", "]")
-            case Params.NormalKind =>
-              params.mkString("(", ", ", ")")
             case Params.ImplicitKind =>
               params.mkString("(implicit ", ", ", ")")
+            case _ =>
+              params.mkString("(", ", ", ")")
           }
         }
-        .mkString(name, "", s": ${returnType}")
+
+      if (printUnapply)
+        params.mkString(name, "", s": ${returnType}")
+      else
+        params.mkString
     }
     def paramsKind(syms: List[Symbol]): Params.Kind = {
       syms match {
@@ -375,13 +388,17 @@ trait Signatures { compiler: MetalsGlobal =>
         case Nil => Params.NormalKind
       }
     }
-    def paramDocstring(paramIndex: Int): String = {
-      if (isDocs) infoParams(paramIndex).fold("")(_.docstring())
+    def indexOfParam(param: Symbol): Int =
+      infoParamsA.indexWhere(_.displayName() == param.name.toString())
+    def paramDocstring(param: Symbol, paramIndex: Option[Int]): String = {
+      val indexInSignature = paramIndex.getOrElse(indexOfParam(param))
+      if (isDocs) infoParams(indexInSignature).fold("")(_.docstring())
       else ""
     }
-    def paramLabel(param: Symbol, index: Int): String = {
+    def paramLabel(param: Symbol, paramIndex: Option[Int]): String = {
+      val indexInSignature = paramIndex.getOrElse(indexOfParam(param))
       val paramTypeString = printType(shortType(param.info, shortenedNames))
-      val name = infoParams(index) match {
+      val name = infoParams(indexInSignature) match {
         case Some(value) if param.name.startsWith("x$") =>
           value.displayName()
         case _ => param.nameString
@@ -397,10 +414,11 @@ trait Signatures { compiler: MetalsGlobal =>
       } else {
         val default =
           if (includeDefaultParam && param.isParamWithDefault) {
-            val defaultValue = infoParams(index).map(_.defaultValue()) match {
-              case Some(value) if !value.isEmpty => value
-              case _ => "{}"
-            }
+            val defaultValue =
+              infoParams(indexInSignature).map(_.defaultValue()) match {
+                case Some(value) if !value.isEmpty => value
+                case _ => "..."
+              }
             s" = $defaultValue"
           } else {
             ""

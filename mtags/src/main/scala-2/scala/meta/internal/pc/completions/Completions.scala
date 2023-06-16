@@ -8,8 +8,11 @@ import scala.collection.mutable
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IdentifierComparator
+import scala.meta.internal.pc.InterpolationSplice
 import scala.meta.internal.pc.MemberOrdering
 import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.internal.semanticdb.Scala._
@@ -24,12 +27,26 @@ trait Completions { this: MetalsGlobal =>
 
   val clientSupportsSnippets: Boolean =
     metalsConfig.isCompletionSnippetsEnabled()
+  val coursierComplete = new CoursierComplete(BuildInfo.scalaCompilerVersion)
 
   /**
    * A member for symbols on the classpath that are not in scope, produced via workspace/symbol.
    */
   class WorkspaceMember(sym: Symbol)
-      extends ScopeMember(sym, NoType, true, EmptyTree)
+      extends ScopeMember(sym, NoType, true, EmptyTree) {
+    def additionalTextEdits: List[l.TextEdit] = Nil
+
+    def wrap: String => String = identity
+
+    def editRange: Option[l.Range] = None
+  }
+
+  class WorkspaceInterpolationMember(
+      sym: Symbol,
+      override val additionalTextEdits: List[l.TextEdit],
+      override val wrap: String => String,
+      override val editRange: Option[l.Range]
+  ) extends WorkspaceMember(sym)
 
   class NamedArgMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
@@ -71,11 +88,11 @@ trait Completions { this: MetalsGlobal =>
    */
   def relevancePenalty(m: Member): Int =
     m match {
-      case TypeMember(sym, _, true, isInherited, _) =>
+      case tm: TypeMember if tm.accessible =>
         computeRelevancePenalty(
-          sym,
+          tm.sym,
           m.implicitlyAdded,
-          isInherited
+          tm.inherited
         )
       case w: WorkspaceMember =>
         MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
@@ -87,9 +104,9 @@ trait Completions { this: MetalsGlobal =>
         ) >>> 15
         if (!w.sym.isAbstract) penalty |= MemberOrdering.IsNotAbstract
         penalty
-      case ScopeMember(sym, _, true, _) =>
+      case sm: ScopeMember if sm.accessible =>
         computeRelevancePenalty(
-          sym,
+          sm.sym,
           m.implicitlyAdded,
           isInherited = false
         )
@@ -398,14 +415,15 @@ trait Completions { this: MetalsGlobal =>
     // the implementation of completionPositionUnsafe does a lot of `typedTreeAt(pos).tpe`
     // which often causes null pointer exceptions, it's easier to catch the error here than
     // enforce discipline in the code.
-    try completionPositionUnsafe(
-      pos,
-      source,
-      text,
-      editRange,
-      completions,
-      latestEnclosing
-    )
+    try
+      completionPositionUnsafe(
+        pos,
+        source,
+        text,
+        editRange,
+        completions,
+        latestEnclosing
+      )
     catch {
       case NonFatal(e) =>
         logger.log(Level.SEVERE, e.getMessage(), e)
@@ -420,14 +438,25 @@ trait Completions { this: MetalsGlobal =>
       completions: CompletionResult,
       latestEnclosingArg: List[Tree]
   ): CompletionPosition = {
-    val PatternMatch = new PatternMatch(pos)
+    val ScalaCliExtractor = new ScalaCliExtractor(pos)
     def fromIdentApply(
         ident: Ident,
         apply: Apply
     ): CompletionPosition = {
       if (hasLeadingBrace(ident, text)) {
         if (isCasePrefix(ident.name)) {
-          CaseKeywordCompletion(EmptyTree, editRange, pos, text, apply)
+          val moveToNewLine = ident.pos.line == apply.pos.line
+          val addNewLineAfter = apply.pos.focusEnd.line == ident.pos.line
+          CaseKeywordCompletion(
+            EmptyTree,
+            editRange,
+            pos,
+            text,
+            source,
+            apply,
+            includeExhaustive =
+              Some(NewLineOptions(moveToNewLine, addNewLineAfter))
+          )
         } else {
           NoneCompletion
         }
@@ -437,6 +466,12 @@ trait Completions { this: MetalsGlobal =>
     }
 
     latestEnclosingArg match {
+      case MillIvyExtractor(dep) =>
+        MillIvyCompletion(coursierComplete, pos, text, dep)
+      case SbtLibExtractor(pos, dep) if pos.source.path.isSbt =>
+        SbtLibCompletion(coursierComplete, pos, dep)
+      case ScalaCliExtractor(dep) =>
+        ScalaCliCompletion(coursierComplete, pos, text, dep)
       case _ if isScaladocCompletion(pos, text) =>
         val associatedDef = onUnitOf(pos.source) { unit =>
           new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)
@@ -450,65 +485,71 @@ trait Completions { this: MetalsGlobal =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
-      case Ident(_) :: PatternMatch(c, m) =>
-        CasePatternCompletion(isTyped = false, c, m)
-      case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
-        CasePatternCompletion(isTyped = true, c, m)
       case (lit @ Literal(Constant(_: String))) :: head :: _ =>
-        isPossibleInterpolatorSplice(pos, text) match {
+        InterpolationSplice(pos.point, pos.source.content, text) match {
           case Some(i) =>
             InterpolatorScopeCompletion(lit, pos, i, text)
           case _ =>
             isPossibleInterpolatorMember(lit, head, text, pos)
               .getOrElse(NoneCompletion)
         }
-      case (_: Ident) ::
-          Select(Ident(TermName("scala")), TypeName("Unit")) ::
-          (defdef: DefDef) ::
-          (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
-        OverrideCompletion(
-          defdef.name,
-          t,
+      case CaseExtractors.CaseExtractor(selector, parent) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
           pos,
           text,
-          defdef.pos.start,
-          !_.isGetter
+          source,
+          parent
         )
-      case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
-          (t: Template) :: _ if name.endsWith(CURSOR) =>
-        OverrideCompletion(
-          name,
-          t,
+      case CaseExtractors.CasePatternExtractor(selector, parent, name) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
           pos,
           text,
-          valdef.pos.start,
-          _ => true
+          source,
+          parent,
+          patternOnly = Some(name.stripSuffix("_CURSOR_"))
         )
-      case (m @ Match(_, Nil)) :: parent :: _ =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
-      case Ident(name) :: (_: CaseDef) :: (m: Match) :: parent :: _
-          if isCasePrefix(name) =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
-      case (ident @ Ident(name)) :: Block(
-            _,
-            expr
-          ) :: (_: CaseDef) :: (m: Match) :: parent :: _
-          if ident == expr && isCasePrefix(name) =>
-        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
+      case CaseExtractors.TypedCasePatternExtractor(selector, parent, name) =>
+        CaseKeywordCompletion(
+          selector,
+          editRange,
+          pos,
+          text,
+          source,
+          parent,
+          patternOnly = Some(name.stripSuffix("_CURSOR_")),
+          hasBind = true
+        )
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
         FilenameCompletion(c, p, pos, editRange)
-      case (ident: Ident) :: (t: Template) :: _ =>
+      case OverrideExtractor(name, template, start, isCandidate) =>
         OverrideCompletion(
-          ident.name,
-          t,
+          name,
+          template,
           pos,
           text,
-          ident.pos.start,
-          _ => true
+          start,
+          isCandidate
         )
       case (imp @ Import(select, selector)) :: _
           if isAmmoniteFileCompletionPosition(imp, pos) =>
-        AmmoniteFileCompletions(select, selector, pos, editRange)
+        AmmoniteFileCompletion(select, selector, pos, editRange)
+      case (imp @ Import(select, selector)) :: _
+          if isAmmoniteIvyCompletionPosition(
+            imp,
+            pos
+          ) || isWorksheetIvyCompletionPosition(imp, pos) =>
+        AmmoniteIvyCompletion(
+          coursierComplete,
+          select,
+          selector,
+          pos,
+          editRange,
+          text
+        )
       case _ =>
         inferCompletionPosition(
           pos,
@@ -521,15 +562,34 @@ trait Completions { this: MetalsGlobal =>
     }
   }
 
-  def isAmmoniteFileCompletionPosition(tree: Tree, pos: Position): Boolean = {
+  private def isAmmoniteCompletionPosition(
+      magicImport: String,
+      tree: Tree,
+      pos: Position
+  ): Boolean = {
     tree match {
       case Import(select, _) =>
         pos.source.file.name.isAmmoniteGeneratedFile && select
           .toString()
-          .startsWith("$file")
+          .startsWith(magicImport)
       case _ => false
     }
   }
+
+  def isAmmoniteFileCompletionPosition(tree: Tree, pos: Position): Boolean =
+    isAmmoniteCompletionPosition("$file", tree, pos)
+
+  def isAmmoniteIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
+    isAmmoniteCompletionPosition("$ivy", tree, pos)
+
+  def isWorksheetIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
+    tree match {
+      case Import(select, _) =>
+        pos.source.file.name.isWorksheet &&
+        (select.toString().startsWith("<$ivy: error>") ||
+          select.toString().startsWith("<$dep: error>"))
+      case _ => false
+    }
 
   private def inferCompletionPosition(
       pos: Position,
@@ -602,17 +662,8 @@ trait Completions { this: MetalsGlobal =>
 
   }
 
-  class PatternMatch(pos: Position) {
-    def unapply(enclosing: List[Tree]): Option[(CaseDef, Match)] =
-      enclosing match {
-        case (c: CaseDef) :: (m: Match) :: _ if c.pat.pos.includes(pos) =>
-          Some((c, m))
-        case _ =>
-          None
-      }
-  }
-
-  class MetalsLocator(pos: Position) extends Traverser {
+  class MetalsLocator(pos: Position, acceptTransparent: Boolean = false)
+      extends Traverser {
     def locateIn(root: Tree): Tree = {
       lastVisitedParentTrees = Nil
       traverse(root)
@@ -636,10 +687,13 @@ trait Completions { this: MetalsGlobal =>
     }
 
     protected def isEligible(t: Tree): Boolean = {
-      !t.pos.isTransparent || {
+      !t.pos.isTransparent || acceptTransparent || {
         t match {
           // new User(age = 42, name = "") becomes transparent, which doesn't happen with normal methods
           case Apply(Select(_: New, _), _) => true
+          // for named args apply becomes transparent but fun doesn't
+          case Apply(fun, args) =>
+            !fun.pos.isTransparent && args.forall(_.pos.isOffset)
           case _ => false
         }
       }
@@ -747,12 +801,22 @@ trait Completions { this: MetalsGlobal =>
   // class Main {
   //   def foo<COMPLETE> // inferred indent is 2 spaces.
   // }
-  def inferIndent(lineStart: Int, text: String): Int = {
+  def inferIndent(lineStart: Int, text: String): (Int, Boolean) = {
     var i = 0
-    while (lineStart + i < text.length && text.charAt(lineStart + i) == ' ') {
+    var tabIndented = false
+    while (
+      lineStart + i < text.length && {
+        val char = text.charAt(lineStart + i)
+        if (char == '\t') {
+          tabIndented = true
+          true
+        } else
+          char == ' '
+      }
+    ) {
       i += 1
     }
-    i
+    (i, tabIndented)
   }
 
   // Returns the symbols that have been renamed in this scope.
@@ -782,13 +846,14 @@ trait Completions { this: MetalsGlobal =>
     result
   }
 
-  /**
-   * Returns the start offset of the identifier starting as the given offset position.
-   */
-  def inferIdentStart(pos: Position, text: String): Int = {
+  def inferStart(
+      pos: Position,
+      text: String,
+      charPred: Char => Boolean
+  ): Int = {
     def fallback: Int = {
       var i = pos.point - 1
-      while (i >= 0 && Chars.isIdentifierPart(text.charAt(i))) {
+      while (i >= 0 && charPred(text.charAt(i))) {
         i -= 1
       }
       i + 1
@@ -810,6 +875,12 @@ trait Completions { this: MetalsGlobal =>
       }
     loop(lastVisitedParentTrees)
   }
+
+  /**
+   * Returns the start offset of the identifier starting as the given offset position.
+   */
+  def inferIdentStart(pos: Position, text: String): Int =
+    inferStart(pos, text, Chars.isIdentifierPart)
 
   /**
    * Returns the end offset of the identifier starting as the given offset position.

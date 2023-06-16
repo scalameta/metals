@@ -62,7 +62,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       }
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        exampleDiagnostics + mainDiagnostics
+        exampleDiagnostics + mainDiagnostics,
       )
       _ <- server.didOpen("b/src/main/scala/a/MainSuite.scala")
       testDiagnostics = {
@@ -76,7 +76,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       }
       _ = assertNoDiff(
         client.pathDiagnostics("b/src/main/scala/a/MainSuite.scala"),
-        testDiagnostics
+        testDiagnostics,
       )
       // This seems to be currently broken on CI - diagnostics not being refreshed
       // _ <- server.didSave("b/src/main/scala/a/MainSuite.scala")(
@@ -119,7 +119,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |a/src/main/scala/Main.scala:3:7: error: a  is already defined as value a
            |  val a = 2
            |      ^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/Main.scala")(
         _.replace("val a = 1\n  ", "")
@@ -149,10 +149,13 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen("a/src/main/scala/a/Post.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Post.scala:5:1: error: object creation impossible, since method post in trait Post of type => Int is not defined
+        """|a/src/main/scala/a/Post.scala:5:1: error: object creation impossible.
+           |Missing implementation for member of trait Post:
+           |  def post: Int = ???
+           |
            |object Post extends Post
            |^^^^^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -169,17 +172,17 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
             |/a/src/main/scala/a/Deprecation.scala
             |package a
             |object Deprecation {
-            | val x = readInt()
+            |  val stream = Stream.empty
             |}
             |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Deprecation.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Deprecation.scala:3:10: error: method readInt in trait DeprecatedPredef is deprecated (since 2.11.0): use the method in `scala.io.StdIn`
-           | val x = readInt()
-           |         ^^^^^^^
-           |""".stripMargin
+        """|a/src/main/scala/a/Deprecation.scala:3:16: error: value Stream in package scala is deprecated (since 2.13.0): Use LazyList instead of Stream
+           |  val stream = Stream.empty
+           |               ^^^^^^
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -215,7 +218,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
         """
           |a/src/main/scala/a/Expo1.scala: 2
           |a/src/main/scala/a/Expo2.scala: 2
-          |""".stripMargin
+          |""".stripMargin,
       )
     } yield ()
   }
@@ -250,16 +253,16 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            | required: String
            |  val x: String = 42
            |                  ^^
-           |""".stripMargin
+           |""".stripMargin,
       )
-      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer)
       _ = assertNoDiagnostics()
       _ <- server.didSave("a/src/main/scala/a/B.scala")(
         _.replace("String", "Int")
       )
       _ <- server.didClose("a/src/main/scala/a/B.scala")
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = assertNoDiagnostics()
     } yield ()
   }
@@ -289,7 +292,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            | required: String
            |  val a: String = 2
            |                  ^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = Files.delete(server.toPath("a/src/main/scala/a/B.scala").toNIO)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
@@ -322,7 +325,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            | required: Int
            |  val n: Int = ""
            |               ^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

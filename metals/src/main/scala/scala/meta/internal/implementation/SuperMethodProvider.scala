@@ -22,6 +22,6 @@ object SuperMethodProvider {
 
   private final val stopSymbols: Set[String] = Set(
     "scala/AnyRef#", "scala/Serializable#", "java/io/Serializable#",
-    "java/lang/Object#", "scala/AnyVal#", "scala/Any#"
+    "java/lang/Object#", "scala/AnyVal#", "scala/Any#",
   )
 }

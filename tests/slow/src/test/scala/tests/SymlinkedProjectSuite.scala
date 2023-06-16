@@ -15,7 +15,7 @@ class SymlinkedProjectSuite
             |sbt.version=${V.sbtVersion}
             |
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |
             |/src/main/scala/Foo.scala
             |class Foo
@@ -38,7 +38,7 @@ class SymlinkedProjectSuite
       "a",
       "Bar.scala",
       """|class Bar {}
-         |""".stripMargin
+         |""".stripMargin,
     )
     createSymlinked(
       "b",
@@ -46,7 +46,7 @@ class SymlinkedProjectSuite
       """|class Foo {
          |  val bar = new Bar()
          |}
-         |""".stripMargin
+         |""".stripMargin,
     )
     for {
       _ <- initialize(
@@ -54,7 +54,7 @@ class SymlinkedProjectSuite
             |sbt.version=${V.sbtVersion}
             |
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |
             |lazy val a = (project in file("a"))
             |lazy val b = (project in file("b")).dependsOn(a)
@@ -71,7 +71,7 @@ class SymlinkedProjectSuite
   def createSymlinked(
       dirname: String,
       filename: String,
-      content: String
+      content: String,
   ): String = {
     val projectDir = workspace.resolve(dirname)
     projectDir.createDirectories()

@@ -9,7 +9,7 @@ sealed trait BuildToolLayout {
 object QuickBuildLayout extends BuildToolLayout {
   override def apply(
       sourceLayout: String,
-      scalaVersion: String
+      scalaVersion: String,
   ): String = {
     s"""|/metals.json
         |{ 
@@ -17,6 +17,20 @@ object QuickBuildLayout extends BuildToolLayout {
         |}
         |$sourceLayout
         |""".stripMargin
+  }
+}
+
+object ScalaCliBuildLayout extends BuildToolLayout {
+  override def apply(
+      sourceLayout: String,
+      scalaVersion: String,
+  ): String = {
+    s"""/.bsp/scala-cli.json
+       |${BaseScalaCliSuite.scalaCliBspJsonContent(List("-S", scalaVersion))}
+       |/.scala-build/ide-inputs.json
+       |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+       |$sourceLayout
+       |""".stripMargin
   }
 }
 
@@ -28,7 +42,7 @@ object SbtBuildLayout extends BuildToolLayout {
 
   override def apply(
       sourceLayout: String,
-      scalaVersion: String
+      scalaVersion: String,
   ): String = {
     s"""|/project/build.properties
         |sbt.version=${V.sbtVersion}
@@ -40,4 +54,26 @@ object SbtBuildLayout extends BuildToolLayout {
         |$sourceLayout
         |""".stripMargin
   }
+}
+
+object MillBuildLayout extends BuildToolLayout {
+  override def apply(sourceLayout: String, scalaVersion: String): String =
+    s"""|/build.sc
+        |import mill._, scalalib._
+        |
+        |object MillMinimal extends ScalaModule {
+        |  def scalaVersion = "${scalaVersion}"
+        |}
+        |$sourceLayout
+        |""".stripMargin
+
+  def apply(
+      sourceLayout: String,
+      scalaVersion: String,
+      millVersion: String,
+  ): String =
+    s"""|/.mill-version
+        |$millVersion
+        |${apply(sourceLayout, scalaVersion)}
+        |""".stripMargin
 }

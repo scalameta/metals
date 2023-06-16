@@ -19,7 +19,7 @@ class GradleDigestSuite extends BaseDigestSuite {
     """
       |/build.gradle
       |def x = 2
-    """.stripMargin
+    """.stripMargin,
   )
 
   /**
@@ -36,7 +36,7 @@ class GradleDigestSuite extends BaseDigestSuite {
     """
       |/build.gradle
       |def x = 2
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -49,7 +49,7 @@ class GradleDigestSuite extends BaseDigestSuite {
       |/build.gradle
       |def x =
       | 2 // this is two
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkSame(
@@ -62,7 +62,7 @@ class GradleDigestSuite extends BaseDigestSuite {
       |/build.gradle
       |def x =
       | 2 // this is two
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -75,7 +75,7 @@ class GradleDigestSuite extends BaseDigestSuite {
       |/build.gradle
       |def x = 2
       |def y = 3
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -90,7 +90,7 @@ class GradleDigestSuite extends BaseDigestSuite {
       |/buildSrc/Plugin.kts
       |package a.b
       |class A
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -104,7 +104,7 @@ class GradleDigestSuite extends BaseDigestSuite {
       |def x = 2
       |/a/build.gradle
       |def y = 1
-    """.stripMargin
+    """.stripMargin,
   )
 
   checkDiff(
@@ -118,6 +118,6 @@ class GradleDigestSuite extends BaseDigestSuite {
       |def x = 2
       |/a/b/c/build.gradle
       |def y = 1
-    """.stripMargin
+    """.stripMargin,
   )
 }

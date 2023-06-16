@@ -19,9 +19,41 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val AmmoniteImportAuto = new Notification(9)
   val ReconnectAmmonite = new Notification(10)
   val UpdateScalafmtConf = new Notification(11)
+  val UpdateBloopJson = new Notification(12)
+  val ReconnectScalaCli = new Notification(13)
+  val ScalaCliImportAuto = new Notification(14)
+
+  val all: List[Notification] = List(
+    Only212Navigation,
+    IncompatibleSbt,
+    ImportChanges,
+    DoctorWarning,
+    IncompatibleBloop,
+    ReconnectBsp,
+    CreateScalafmtFile,
+    ChangeScalafmtVersion,
+    AmmoniteImportAuto,
+    ReconnectAmmonite,
+    UpdateScalafmtConf,
+    UpdateBloopJson,
+    ReconnectScalaCli,
+    ScalaCliImportAuto,
+  )
+
+  def resetAll(): Unit = {
+    all.foreach { notification =>
+      if (notification.isDismissed) {
+        scribe.info(
+          s"Resetting notifications for notification '${notification.notificationName}'"
+        )
+        notification.reset()
+      }
+    }
+  }
 
   class Notification(val id: Int)(implicit name: sourcecode.Name) {
     override def toString: String = s"Notification(${name.value}, $id)"
+    def notificationName: String = name.value
     def isDismissed: Boolean = {
       val now = new Timestamp(time.currentMillis())
       conn().query {

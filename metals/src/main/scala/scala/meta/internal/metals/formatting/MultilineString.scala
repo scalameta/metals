@@ -16,7 +16,7 @@ private case class StringLiteralExpr(
     input: meta.Input,
     startPos: meta.Position,
     endPos: meta.Position,
-    hasStripMargin: Boolean
+    hasStripMargin: Boolean,
 )
 
 case class MultilineString(userConfig: () => UserConfiguration)
@@ -30,7 +30,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
 
   private def hasStripMarginSuffix(
       stringTokenIndex: Int,
-      tokens: Tokens
+      tokens: Tokens,
   ): Boolean = {
     var methodIndex = stringTokenIndex + 1
     while (
@@ -53,7 +53,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
 
   private def determineDefaultIndent(
       lines: Array[String],
-      lineNumberToCheck: Int
+      lineNumberToCheck: Int,
   ): String = {
     val lineToCheck = lines(lineNumberToCheck)
     val index =
@@ -65,7 +65,8 @@ case class MultilineString(userConfig: () => UserConfiguration)
     space * index
   }
 
-  private def getIndexOfLastQuote(line: String): Option[(Int, Boolean)] = {
+  private def getIndexOfLastOpenQuote(line: String): Option[(Int, Boolean)] = {
+
     var lastQuote = -1
     var escaped = false
     var quoteClosed = true
@@ -87,10 +88,35 @@ case class MultilineString(userConfig: () => UserConfiguration)
     if (lastQuote != -1) Some((lastQuote, quoteClosed)) else None
   }
 
+  private def getIndexOfLastOpenTripleQuote(
+      closedFromPreviousLines: Boolean,
+      line: String,
+  ): Option[(Int, Boolean)] = {
+    var lastTripleQuote = -1
+    var tripleQuoteClosed = closedFromPreviousLines
+    var quoteNum = 0
+    for (i <- 0 until line.size) {
+      val char = line(i)
+      if (char == '"') {
+        quoteNum = quoteNum + 1
+        if (quoteNum == 3) {
+          lastTripleQuote = i
+          tripleQuoteClosed = !tripleQuoteClosed
+          quoteNum = 0
+        }
+      } else {
+        quoteNum = 0
+      }
+    }
+    if (lastTripleQuote != -1) Some((lastTripleQuote, tripleQuoteClosed))
+    else None
+  }
+
   private def onlyFourQuotes(
       splitLines: Array[String],
-      position: Position
+      position: Position,
   ): Boolean = {
+
     val currentLine = splitLines(position.getLine)
     val pos = position.getCharacter
     val onlyFour = 4
@@ -101,13 +127,13 @@ case class MultilineString(userConfig: () => UserConfiguration)
 
   private def hasNQuotes(start: Int, text: String, n: Int): Boolean =
     (start until start + n).forall(i =>
-      if (i < 0 || i > text.length) false else text(i) == quote
+      if (i < 0 || i >= text.length) false else text(i) == quote
     )
 
   private def indentWhenNoStripMargin(
       expr: StringLiteralExpr,
       splitLines: Array[String],
-      position: Position
+      position: Position,
   ): List[TextEdit] = {
     val nextLineIdx = position.getLine + 1
     val enableStripMargin = userConfig().enableStripMarginOnTypeFormatting
@@ -123,10 +149,10 @@ case class MultilineString(userConfig: () => UserConfiguration)
         new scala.meta.inputs.Position.Range(
           expr.input,
           expr.endPos.end,
-          expr.endPos.end
+          expr.endPos.end,
         )
       indent(splitLines, position, expr) ++ List(
-        new TextEdit(newPos.toLSP, ".stripMargin")
+        new TextEdit(newPos.toLsp, ".stripMargin")
       )
     } else indent(splitLines, position, expr)
   }
@@ -134,7 +160,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
   private def indent(
       splitLines: Array[String],
       position: Position,
-      expr: StringLiteralExpr
+      expr: StringLiteralExpr,
   ): List[TextEdit] = {
     // position line -1 since we are checking the line before when doing onType
     val defaultIndent = determineDefaultIndent(splitLines, position.getLine - 1)
@@ -158,12 +184,12 @@ case class MultilineString(userConfig: () => UserConfiguration)
         val startPos = new Position(nextLineIdx, 0)
         val endPos = new Position(
           nextLineIdx,
-          nextLine.size
+          nextLine.size,
         )
         List(
           new TextEdit(
             new Range(startPos, endPos),
-            defaultIndent + "|" + nextLineContent
+            defaultIndent + "|" + nextLineContent,
           )
         )
       } else Nil
@@ -174,7 +200,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
   private def indent(
       splitLines: Array[String],
       startPosition: meta.Position,
-      range: Range
+      range: Range,
   ): List[TextEdit] = {
     // position.startLine since we want to check current line on rangeFormatting
     val defaultIndent =
@@ -190,7 +216,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
       startPos: meta.Position,
       endPos: meta.Position,
       startTokenPos: meta.Position,
-      endTokenPos: meta.Position
+      endTokenPos: meta.Position,
   ): Boolean =
     startPos.startLine >= startTokenPos.startLine && endPos.endLine <= endTokenPos.endLine
 
@@ -198,12 +224,12 @@ case class MultilineString(userConfig: () => UserConfiguration)
       startPos: meta.Position,
       endPos: meta.Position,
       text: String,
-      newlineAdded: Boolean
+      newlineAdded: Boolean,
   ): Boolean = {
     val indexOfLastBackToLine = text.lastIndexBetween(
       '\n',
       0,
-      upperBound = startPos.start - 1
+      upperBound = startPos.start - 1,
     )
     val lastBackToLine =
       if (!newlineAdded) indexOfLastBackToLine
@@ -212,29 +238,48 @@ case class MultilineString(userConfig: () => UserConfiguration)
     val pipeBetweenLastLineAndPos = text.lastIndexBetween(
       '|',
       lastBackToLine,
-      startPos.start - 1
+      startPos.start - 1,
     )
     val pipeBetweenSelection = text.lastIndexBetween(
       '|',
       startPos.start - 1,
-      endPos.end - 1
+      endPos.end - 1,
     )
     pipeBetweenLastLineAndPos != -1 || pipeBetweenSelection != -1
   }
 
   private def doubleQuoteNotClosed(
       splitLines: Array[String],
-      position: Position
+      position: Position,
   ): Boolean = {
     val lineBefore = splitLines(position.getLine - 1)
-    getIndexOfLastQuote(lineBefore).exists { case (_, quoteClosed) =>
+    getIndexOfLastOpenQuote(lineBefore).exists { case (_, quoteClosed) =>
       !quoteClosed
     }
   }
 
+  private def wasTripleQuoted(
+      splitLines: Array[String],
+      position: Position,
+  ): Boolean = {
+    var closedFromPreviousLines = true
+    var existed = false
+    for (i <- 0 until position.getLine()) {
+      val currentLine = splitLines(i)
+      getIndexOfLastOpenTripleQuote(closedFromPreviousLines, currentLine)
+        .foreach { case (_, quoteClosed) =>
+          closedFromPreviousLines = quoteClosed
+          existed = true
+        }
+    }
+    if (existed)
+      !closedFromPreviousLines
+    else false
+  }
+
   private def fixStringNewline(
       position: Position,
-      splitLines: Array[String]
+      splitLines: Array[String],
   ): List[TextEdit] = {
     val previousLineNumber = position.getLine - 1
     val previousLine = splitLines(previousLineNumber)
@@ -242,7 +287,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
       new Position(previousLineNumber, previousLine.length)
     val textEditPrecedentLine = new TextEdit(
       new Range(previousLinePosition, previousLinePosition),
-      "\"" + " " + "+"
+      "\"" + " " + "+",
     )
     val defaultIndent = previousLine.prefixLength(_ == ' ')
     val indent =
@@ -254,7 +299,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
       )
         defaultIndent + 2
       else defaultIndent
-    val interpolationString = getIndexOfLastQuote(previousLine)
+    val interpolationString = getIndexOfLastOpenQuote(previousLine)
       .map { case (lastQuoteIndex, _) =>
         if (lastQuoteIndex > 0 && previousLine(lastQuoteIndex - 1) == 's') "s"
         else ""
@@ -265,7 +310,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
     val textEditcurrentLine =
       new TextEdit(
         new Range(zeroPos, position),
-        " " * indent + interpolationString + "\""
+        " " * indent + interpolationString + "\"",
       )
     List(textEditPrecedentLine, textEditcurrentLine)
   }
@@ -276,10 +321,15 @@ case class MultilineString(userConfig: () => UserConfiguration)
     List(new TextEdit(new Range(pos1, pos2), "\"\"\"\"\"\""))
   }
 
+  private def addTripleQuote(pos: Position): List[TextEdit] = {
+    val endPos = new Position(pos.getLine, pos.getCharacter + 1)
+    List(new TextEdit(new Range(pos, endPos), "\"\"\""))
+  }
+
   private def formatPipeLine(
       line: Int,
       lines: Array[String],
-      defaultIndent: String
+      defaultIndent: String,
   ): Option[TextEdit] = {
     val zeroPos = new Position(line, 0)
     val lineText = lines(line)
@@ -342,7 +392,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
   private def getStringLiterals(
       tokens: Tokens,
       params: FormatterParams,
-      newlineAdded: Boolean
+      newlineAdded: Boolean,
   ): Iterator[StringLiteralExpr] = {
     val startPos = params.startPos
     val endPos = params.endPos
@@ -355,7 +405,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
           startPos,
           endPos,
           sourceText,
-          newlineAdded
+          newlineAdded,
         )
       }
   }
@@ -376,14 +426,21 @@ case class MultilineString(userConfig: () => UserConfiguration)
               indentWhenNoStripMargin(
                 expr,
                 splitLines,
-                position
+                position,
               )
           }
           .find(_.nonEmpty)
       case (None, "\"") if onlyFourQuotes(splitLines, position) =>
         Some(replaceWithSixQuotes(position))
+      case (None, "\n")
+          if wasTripleQuoted(
+            splitLines,
+            position,
+          ) =>
+        Some(addTripleQuote(position))
       case (None, "\n") if doubleQuoteNotClosed(splitLines, position) =>
         Some(fixStringNewline(position, splitLines))
+
       case _ => None
     }
   }
@@ -396,7 +453,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
     params.tokens.flatMap { tokens =>
       getStringLiterals(tokens, params, false)
         .filter(_.hasStripMargin)
-        .map { expr =>
+        .map { _ =>
           val range = params.range
           val splitLines = params.splitLines
           indent(splitLines, startPos, range)

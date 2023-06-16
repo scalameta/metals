@@ -8,5 +8,5 @@ class SbtStackFrameDapSuite
     extends BaseStackFrameDapSuite(
       "sbt-debug-stack-frame",
       SbtServerInitializer,
-      SbtBuildLayout
+      SbtBuildLayout,
     )

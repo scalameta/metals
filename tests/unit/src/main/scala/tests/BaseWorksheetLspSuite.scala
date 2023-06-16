@@ -3,15 +3,24 @@ package tests
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsSlowTaskResult
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
+import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.{BuildInfo => V}
 
-abstract class BaseWorksheetLspSuite(scalaVersion: String)
-    extends BaseLspSuite("worksheet") {
-  override def initializationOptions: Option[InitializationOptions] =
-    Some(InitializationOptions.Default.copy(decorationProvider = Some(true)))
+abstract class BaseWorksheetLspSuite(
+    scalaVersion: String
+) extends BaseLspSuite(s"worksheet") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        decorationProvider = Some(true)
+      )
+    )
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
@@ -19,10 +28,16 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   def versionSpecificCodeToValidate: String = ""
 
+  /**
+   * These options when provided should not break worksheets.
+   */
+  def versionSpecificScalacOptionsToValidate: List[String] = Nil
+
   // sourcecode is not yet published for Scala 3
   if (!ScalaVersions.isScala3Version(scalaVersion))
     test("completion") {
       assume(!isWindows, "This test is flaky on Windows")
+      cleanWorkspace()
       for {
         _ <- initialize(
           s"""
@@ -42,20 +57,20 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
         identity <- server.completion(
           "a/src/main/scala/foo/Main.worksheet.sc",
-          "identity@@"
+          "identity@@",
         )
         _ = assertNoDiff(identity, "identity[A](x: A): A")
         generate <- server.completion(
           "a/src/main/scala/foo/Main.worksheet.sc",
-          "generate@@"
+          "generate@@",
         )
         _ = assertNoDiff(
           generate,
           getExpected(
             "generate: Name",
-            Map(V.scala3 -> "generate=> sourcecode.Name"),
-            scalaVersion
-          )
+            Map("3" -> "generate=> sourcecode.Name"),
+            scalaVersion,
+          ),
         )
         _ = assertNoDiagnostics()
         _ = assertNoDiff(
@@ -65,18 +80,40 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                |val name = sourcecode.Name.generate.value // : String = "name"
                |""".stripMargin,
             Map(
-              V.scala3 ->
+              "3" ->
                 """|identity(42) // : Int = 42
                    |val name = sourcecode.Name.generate.value // : String = name
                    |""".stripMargin
             ),
-            scalaVersion
-          )
+            scalaVersion,
+          ),
         )
       } yield ()
     }
 
+  test("ANSI") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/Main.worksheet.sc
+           |pprint.pprintln("Hello, world!")
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/Main.worksheet.sc")
+      // check that ANSI colors were stripped
+      _ = assertNotContains(client.workspaceDecorations, "\u001b")
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|pprint.pprintln("Hello, world!") // "Hello, world!"
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("outside-target") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -104,7 +141,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|import java.nio.file.Files
                  |val name = "Susan" // : String = Susan
                  |val greeting = s"Hello $name" // : String = Hello Susan
@@ -114,13 +151,14 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |given str: String = ""
                  |""".stripMargin
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
     } yield ()
   }
 
   test("render") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -148,7 +186,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|import java.nio.file.Files
                  |val name = "Susan" // : String = Susan
                  |val greeting = s"Hello $name" // : String = Hello Susan
@@ -157,8 +195,8 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
                  |""".stripMargin
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
       _ = assertNoDiff(
         client.workspaceDecorationHoverMessage,
@@ -188,7 +226,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |```
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|import java.nio.file.Files
                  |val name = "Susan"
                  |```scala
@@ -214,13 +252,14 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |```
                  |""".stripMargin
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
     } yield ()
   }
 
   test("cancel") {
+    cleanWorkspace()
     val cancelled = Promise[Unit]()
     client.slowTaskHandler = { _ =>
       cancelled.trySuccess(())
@@ -250,12 +289,13 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         """|
            |println(43) // 43
            |// Stream.from(10).last
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
 
   test("crash") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -272,35 +312,36 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         """|
            |val x = 42 // : Int = 42
            |throw new RuntimeException("boom")
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         getExpected(
           """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
-             |	at repl.MdocSession$App.<init>(Main.worksheet.sc:11)
+             |	at repl.MdocSession$MdocApp.<init>(Main.worksheet.sc:11)
              |	at repl.MdocSession$.app(Main.worksheet.sc:3)
              |
              |throw new RuntimeException("boom")
              |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
-                 |	at repl.MdocSession$App.<init>(Main.worksheet.sc:12)
+                 |	at repl.MdocSession$MdocApp.<init>(Main.worksheet.sc:12)
                  |	at repl.MdocSession$.app(Main.worksheet.sc:3)
                  |
                  |throw new RuntimeException("boom")
                  |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                  |""".stripMargin
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
     } yield ()
   }
 
   test("dependsOn") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -328,12 +369,13 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         client.workspaceDecorations,
         """|println(core.Lib) // Lib
            |println(core.Lib2) // Lib2
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
 
   test("no-worksheet".flaky) {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""|/metals.json
@@ -347,7 +389,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiagnostics()
       identity <- server.completion(
         "a/src/main/scala/Main.sc",
-        "identity@@"
+        "identity@@",
       )
       // completions work despite error
       _ = assertNoDiff(identity, "identity[A](x: A): A")
@@ -357,6 +399,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("update-classpath") {
+    cleanWorkspace()
     client.slowTaskHandler = _ => None
     for {
       _ <- initialize(
@@ -379,7 +422,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         client.workspaceDecorations,
         """
           |a.Util.increase(1) // : Int = 2
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/a/Util.scala")(
         _.replace("n + 1", "n + 2")
@@ -389,12 +432,13 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         client.workspaceDecorations,
         """
           |a.Util.increase(1) // : Int = 3
-          |""".stripMargin
+          |""".stripMargin,
       )
     } yield ()
   }
 
   test("syntax-error") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""|/metals.json
@@ -414,7 +458,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |             ^^
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|a/src/main/scala/a/Main.worksheet.sc:1:14: error:
                  |Found:    ("" : String)
                  |Required: Int
@@ -422,9 +466,15 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |             ^^
                  |""".stripMargin
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
+      _ <- server.didClose("a/src/main/scala/a/Main.worksheet.sc")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        "",
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
       _ <- server.didChange("a/src/main/scala/a/Main.worksheet.sc")(
         _.replace("val x", "def y = \nval x")
       )
@@ -441,7 +491,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |             ^^
              |""".stripMargin,
           Map(
-            V.scala3 ->
+            "3" ->
               """|a/src/main/scala/a/Main.worksheet.sc:2:1: error: illegal start of simple expression
                  |val x: Int = ""
                  |^^^
@@ -452,18 +502,19 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |             ^^
                  |""".stripMargin
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
     } yield ()
   }
 
-  test("definition") {
+  test("definition", withoutVirtualDocs = false) {
     // NOTE(olafur) this test fails unpredicatly on Windows with
     //      """|/a/src/main/scala/Main.worksheet.sc
     //         |val message/*<no symbol>*/ = "Hello World!"
     //         |println/*<no symbol>*/(message/*<no symbol>*/)
     assume(!isWindows, "This test fails unpredictably on Window")
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -480,14 +531,14 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         """|/a/src/main/scala/Main.worksheet.sc
            |val message/*L0*/ = "Hello World!"
            |println/*Predef.scala*/(message/*L0*/)
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
 
   test("root-outside-definition") {
     assume(!isWindows, "This test fails unpredictably on Window")
-
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -518,21 +569,22 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                   |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
                   |val y/*L3*/ = List/*package.scala*/.fill/*Factory.scala*/(2)(2)
                   |""".stripMargin,
-            V.scala3 ->
+            "3" ->
               """|/Main.worksheet.sc
                  |import java.time.Instant/*Instant.java*/
                  |
                  |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
                  |val y/*L3*/ = List/*package.scala*/.fill/*Factory.scala*/(2)(2)
-                 |""".stripMargin
+                 |""".stripMargin,
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
     } yield ()
   }
 
   test("no-position") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -562,19 +614,27 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |""".stripMargin,
             V.scala3 ->
               """|a/src/main/scala/Main.worksheet.sc:5:1: error:
-                 |Found:    App.this.Structural
+                 |Found:    MdocApp.this.Structural
                  |Required: Selectable
                  |new Foo().asInstanceOf[Structural].foo()
                  |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                 |""".stripMargin
+                 |""".stripMargin,
+            "3" ->
+              """|a/src/main/scala/Main.worksheet.sc:5:1: error:
+                 |Found:    MdocApp.this.Structural
+                 |Required: Selectable | Dynamic
+                 |new Foo().asInstanceOf[Structural].foo()
+                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                 |""".stripMargin,
           ),
-          scalaVersion
-        )
+          scalaVersion,
+        ),
       )
     } yield ()
   }
 
   test("fatal-exception") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -596,35 +656,40 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/IncompatibleClassChangeError.worksheet.sc:1:1: error: java.lang.IncompatibleClassChangeError
-           |	at repl.MdocSession$App.<init>(IncompatibleClassChangeError.worksheet.sc:8)
+           |	at repl.MdocSession$MdocApp.<init>(IncompatibleClassChangeError.worksheet.sc:8)
            |	at repl.MdocSession$.app(IncompatibleClassChangeError.worksheet.sc:3)
            |
            |throw new IncompatibleClassChangeError()
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |a/src/main/scala/NoSuchMethodError.worksheet.sc:1:1: error: java.lang.NoSuchMethodError
-           |	at repl.MdocSession$App.<init>(NoSuchMethodError.worksheet.sc:8)
+           |	at repl.MdocSession$MdocApp.<init>(NoSuchMethodError.worksheet.sc:8)
            |	at repl.MdocSession$.app(NoSuchMethodError.worksheet.sc:3)
            |
            |throw new NoSuchMethodError()
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |a/src/main/scala/StackOverflowError.worksheet.sc:1:1: error: java.lang.StackOverflowError
-           |	at repl.MdocSession$App.<init>(StackOverflowError.worksheet.sc:8)
+           |	at repl.MdocSession$MdocApp.<init>(StackOverflowError.worksheet.sc:8)
            |	at repl.MdocSession$.app(StackOverflowError.worksheet.sc:3)
            |
            |throw new StackOverflowError()
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
 
   test("export") {
     assume(!isWindows, "This test is flaky on Windows")
+    cleanWorkspace()
+
+    val opts = versionSpecificScalacOptionsToValidate
+      .map(opt => s"\"$opt\"")
+      .mkString(",")
     for {
       _ <- initialize(
         s"""
            |/metals.json
-           |{"a": {"scalaVersion": "${scalaVersion}"}}
+           |{"a": {"scalaVersion": "${scalaVersion}", "scalacOptions": [$opts]}}
            |/a/src/main/scala/foo/Main.worksheet.sc
            |case class Hi(a: Int, b: Int, c: Int)
            |val hi1 =
@@ -664,25 +729,25 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                                |
                                |val hellos = List(hi1, hi2)
                                |// hellos: List[Hi] = List(Hi(a = 1, b = 2, c = 3), Hi(a = 4, b = 5, c = 6))""".stripMargin,
-              V.scala3 -> """|
-                             |case class Hi(a: Int, b: Int, c: Int)
-                             |val hi1 =
-                             |  Hi(1, 2, 3)
-                             |// hi1: Hi = Hi(1,2,3)
-                             |val hi2 = Hi(4, 5, 6)
-                             |// hi2: Hi = Hi(4,5,6)
-                             |
-                             |val hellos = List(hi1, hi2)
-                             |// hellos: List[Hi] = List(Hi(1,2,3), Hi(4,5,6))""".stripMargin
+              "3" -> """|
+                        |case class Hi(a: Int, b: Int, c: Int)
+                        |val hi1 =
+                        |  Hi(1, 2, 3)
+                        |// hi1: Hi = Hi(1,2,3)
+                        |val hi2 = Hi(4, 5, 6)
+                        |// hi2: Hi = Hi(4,5,6)
+                        |
+                        |val hellos = List(hi1, hi2)
+                        |// hellos: List[Hi] = List(Hi(1,2,3), Hi(4,5,6))""".stripMargin,
             ),
-            scalaVersion
+            scalaVersion,
           )
-        )
+        ),
       )
       _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(
         _.replace(
           "Hi(1, 2, 3)",
-          "Hi(7, 8, 9)"
+          "Hi(7, 8, 9)",
         )
       )
       export = server.exportEvaluation(
@@ -713,22 +778,185 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                                |
                                |val hellos = List(hi1, hi2)
                                |// hellos: List[Hi] = List(Hi(a = 7, b = 8, c = 9), Hi(a = 4, b = 5, c = 6))""".stripMargin,
-              V.scala3 -> """|
-                             |case class Hi(a: Int, b: Int, c: Int)
-                             |val hi1 =
-                             |  Hi(7, 8, 9)
-                             |// hi1: Hi = Hi(7,8,9)
-                             |val hi2 = Hi(4, 5, 6)
-                             |// hi2: Hi = Hi(4,5,6)
-                             |
-                             |val hellos = List(hi1, hi2)
-                             |// hellos: List[Hi] = List(Hi(7,8,9), Hi(4,5,6))""".stripMargin
+              "3" -> """|
+                        |case class Hi(a: Int, b: Int, c: Int)
+                        |val hi1 =
+                        |  Hi(7, 8, 9)
+                        |// hi1: Hi = Hi(7,8,9)
+                        |val hi2 = Hi(4, 5, 6)
+                        |// hi2: Hi = Hi(4,5,6)
+                        |
+                        |val hellos = List(hi1, hi2)
+                        |// hellos: List[Hi] = List(Hi(7,8,9), Hi(4,5,6))""".stripMargin,
             ),
-            scalaVersion
+            scalaVersion,
           )
-        )
+        ),
       )
     } yield ()
 
+  }
+
+  test("ivy-completion") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${scalaVersion}"
+           |  }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |import $$ivy.`io.cir`
+           |import $$dep.`io.circe::circe-ref`
+           |import $$dep.`com.lihaoyi::upickle:1.4`
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      groupExpectedCompletionList = "io.circe"
+      groupCompletionList <- server.completion(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "import $ivy.`io.cir@@`",
+      )
+      _ = assertNoDiff(groupCompletionList, groupExpectedCompletionList)
+
+      artefactExpectedCompletionList = getExpected(
+        """|circe-refined
+           |circe-refined_native0.4
+           |circe-refined_sjs0.6
+           |circe-refined_sjs1
+           |""".stripMargin,
+        Map(
+          "3" -> """|circe-refined
+                    |circe-refined_native0.4
+                    |circe-refined_sjs1
+                    |""".stripMargin
+        ),
+        scalaVersion,
+      )
+      artefactCompletionList <- server.completion(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "import $dep.`io.circe::circe-ref@@`",
+      )
+      _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
+
+      versionExpectedCompletionList =
+        List("1.4.4", "1.4.3", "1.4.2", "1.4.1", "1.4.0")
+      response <- server.completionList(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "import $dep.`com.lihaoyi::upickle:1.4@@`",
+      )
+      versionCompletionList = response
+        .getItems()
+        .asScala
+        .map(_.getLabel())
+        .toList
+      _ = assertEquals(versionCompletionList, versionExpectedCompletionList)
+      noCompletions <- server.completion(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "import $dep.`com.lihaoyi::upickle:1.4`@@",
+      )
+      _ = assertNoDiff(noCompletions, "")
+    } yield ()
+  }
+  if (ScalaVersions.isScala3Version(scalaVersion))
+    test("import-missing-symbol") {
+      cleanWorkspace()
+      val path = "a/src/main/scala/foo/Main.worksheet.sc"
+      val expectedActions =
+        s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+            |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+            |${CreateNewSymbol.title("Future")}
+            |""".stripMargin
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{"a": {"scalaVersion": "${scalaVersion}"}}
+             |/$path
+             |object A {
+             |  val f = Future.successful(42)
+             |}
+             |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+        _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+        codeActions <-
+          server
+            .assertCodeAction(
+              path,
+              """|object A {
+                 |  val f = <<Future>>.successful(42)
+                 |}
+                 |""".stripMargin,
+              expectedActions,
+              Nil,
+            )
+        _ <- client.applyCodeAction(0, codeActions, server)
+        _ <- server.didSave(path) { _ =>
+          server.bufferContents(path)
+        }
+        // Assert if indentation is correct. See `AutoImports.renderImport`
+        _ = assertNoDiff(
+          server.bufferContents(path),
+          """|import scala.concurrent.Future
+             |object A {
+             |  val f = Future.successful(42)
+             |}
+             |""".stripMargin,
+        )
+      } yield ()
+    }
+
+  test("semantic-highlighting") {
+
+    val expected =
+      if (scalaVersion == V.scala212)
+        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+           |<<val>>/*keyword*/ <<hi1>>/*variable,definition,readonly*/ =
+           |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
+           |<<val>>/*keyword*/ <<hi2>>/*variable,definition,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
+           |
+           |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+           |""".stripMargin
+      else
+        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+           |<<val>>/*keyword*/ <<hi1>>/*variable,definition,readonly*/ =
+           |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
+           |<<val>>/*keyword*/ <<hi2>>/*variable,definition,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
+           |
+           |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+           |""".stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |$fileContent
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      _ <- server.assertSemanticHighlight(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        expected,
+        fileContent,
+      )
+    } yield ()
   }
 }

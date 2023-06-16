@@ -160,7 +160,7 @@ interface TreeViewParentResult {
 ### `metals/treeViewDidChange`
 
 The tree view did change notification is sent from the server to the client to
-notify that the the metadata about a given tree view node has changed.
+notify that the metadata about a given tree view node has changed.
 
 _Notification_:
 

@@ -1,9 +1,15 @@
 package tests
 
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 
-class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
+import ch.epfl.scala.bsp4j.DebugSessionParams
+import com.google.gson.JsonObject
+import org.eclipse.lsp4j.Command
 
+class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
+  override protected val changeSpacesToDash = false
   override def userConfig: UserConfiguration =
     super.userConfig.copy(superMethodLensesEnabled = true)
 
@@ -40,11 +46,29 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  check("test-suite-class", library = Some("org.scalatest::scalatest:3.0.5"))(
+  check("test-suite-class", library = Some("org.scalatest::scalatest:3.2.4"))(
     """|package foo.bar
        |<<test>><<debug test>>
-       |class Foo extends org.scalatest.FunSuite {
-       |  test("foo") {}
+       |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+       |}
+       |""".stripMargin
+  )
+
+  checkTestCases(
+    "test-suite-with-tests",
+    library = Some("org.scalatest::scalatest:3.2.4"),
+  )(
+    """|package foo.bar
+       |<<test>><<debug test>>
+       |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+       |<<test case>><<debug test case>>
+       |  test("foo") {
+       |    assert(1 == 1)
+       |  }
+       |<<test case>><<debug test case>>
+       |  test("bar") {
+       |    assert(1 == 1)
+       |  }
        |}
        |""".stripMargin
   )
@@ -91,7 +115,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
            |object Foo {
            |  def main(args: Array[String]): Unit = {}
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- assertCodeLenses(
         "a/src/main/scala/Bar.scala",
@@ -100,7 +124,89 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
            |object Bar {
            |  def main(args: Array[String]): Unit = {}
            |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+  test("run-java") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": { }
+           |}
+           |
+           |/a/src/main/java/Main.java
+           |package foo.bar;
+           |
+           |public class Main {
+           |  public static void main(String[] args){
+           |    System.out.println("Hello from Java!");
+           |  }
+           |}
            |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/java/Main.java"
+      ) // compile `a` to populate its cache
+      _ <- assertCodeLenses(
+        "a/src/main/java/Main.java",
+        """|package foo.bar;
+           |
+           |public class Main {
+           |<<run>><<debug>>
+           |  public static void main(String[] args){
+           |    System.out.println("Hello from Java!");
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  private val scalaCliScriptPath = "a/src/main/scala/a/main.sc"
+  test("run-script") {
+    cleanWorkspace()
+    for {
+
+      _ <- initialize(
+        s"""/.bsp/scala-cli.json
+           |${BaseScalaCliSuite.scalaCliBspJsonContent()}
+           |/.scala-build/ide-inputs.json
+           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+           |/$scalaCliScriptPath
+           |print("oranges are nice")""".stripMargin
+      )
+      _ <- server.didOpen(scalaCliScriptPath)
+      _ <- assertCodeLenses(
+        scalaCliScriptPath,
+        """|<<run>><<debug>>
+           |print("oranges are nice")
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  private val scalaCliScriptPathTop = "main.sc"
+  test("run-script-top") {
+    cleanWorkspace()
+    for {
+
+      _ <- initialize(
+        s"""/.bsp/scala-cli.json
+           |${BaseScalaCliSuite.scalaCliBspJsonContent()}
+           |/.scala-build/ide-inputs.json
+           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+           |/$scalaCliScriptPathTop
+           |print("oranges are nice")""".stripMargin
+      )
+      _ <- server.didOpen(scalaCliScriptPathTop)
+      _ <- assertCodeLenses(
+        scalaCliScriptPathTop,
+        """|<<run>><<debug>>
+           |print("oranges are nice")
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -149,7 +255,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
           |object Main {
           |  def main(args: Array[String]): Unit = {}
           |}
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/Main.scala")(text =>
         text.replace("object Main", "class Main")
@@ -178,7 +284,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
           |object Main {
           |  def main(args: Array[String]): Unit = ???
           |}
-          |""".stripMargin
+          |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/Main.scala")(text =>
         text.replace("}", "")
@@ -189,7 +295,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
           |object Main {
           |  def main(args: Array[String]): Unit = ???
           |
-          |""".stripMargin
+          |""".stripMargin,
       )
     } yield ()
   }
@@ -203,34 +309,34 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
       |}
       |
       |trait Tywin extends Lannister{
-      |<< payTheirDebts goto[gameofthrones/Lannister#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Lannister#payTheirDebts()."]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Jamie extends Tywin {
-      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Tywin#payTheirDebts()."]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Tyrion extends Tywin {
-      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Tywin#payTheirDebts()."]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Cersei extends Tywin {
-      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Tywin#payTheirDebts()."]>>
       |override def payTheirDebts = false
-      |<< trueLannister goto[gameofthrones/Lannister#trueLannister().]>>
+      |<< trueLannister goto["gameofthrones/Lannister#trueLannister()."]>>
       |override def trueLannister = false
       |}
       |
       |class Joffrey extends Lannister with Jamie with Cersei {
-      |<< payTheirDebts goto[gameofthrones/Cersei#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Cersei#payTheirDebts()."]>>
       |override def payTheirDebts = false
       |}
       |
       |class Tommen extends Lannister with Cersei with Jamie {
-      |<< payTheirDebts goto[gameofthrones/Jamie#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Jamie#payTheirDebts()."]>>
       |override def payTheirDebts = true
       |}
       |""".stripMargin
@@ -243,7 +349,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         |  def main = {
         |    class A { def afx(): Unit = ??? } 
         |    val t = new A {
-        |<< afx goto-position[${workspace.toURI}a/src/main/scala/a/Foo.scala:4:18]>>
+        |<< afx goto-position[{"uri":"${workspace.toURI}a/src/main/scala/a/Foo.scala","range":{"start":{"line":4,"character":18},"end":{"line":4,"character":21}}}]>>
         |    override def afx(): Unit = ???
         |    }
         |  }
@@ -251,4 +357,146 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         |""".stripMargin
   )
 
+  private def runFromCommand(cmd: Command) = {
+    cmd.getArguments().asScala.toList match {
+      case (params: DebugSessionParams) :: _ =>
+        params.getData() match {
+          case obj: JsonObject =>
+            val cmd = obj
+              .get("shellCommand")
+              .getAsString()
+              // need to remove all escapes since ShellRunner does escaping itself
+              // for windows
+              .replace("\\\"", "")
+              .replace("\"\\", "\\")
+              // for linux
+              .replace("/\"", "/")
+              .replace("\"/", "/")
+              // when testing on Windows Program Files is problematic when splitting into list
+              .replace("Program Files", "ProgramFiles")
+              .replace("run shell command", "runshellcommand")
+              .split("\\s+")
+              .map(
+                // remove from escaped classpath
+                _.stripPrefix("\"")
+                  .stripSuffix("\"")
+                  // Add back spaces
+                  .replace("ProgramFiles", "Program Files")
+                  .replace("runshellcommand", "run shell command")
+              )
+            ShellRunner
+              .runSync(cmd.toList, workspace, redirectErrorOutput = false)
+              .map(_.trim())
+              .orElse {
+                scribe.error(
+                  "Couldn't run command specified in shellCommand."
+                )
+                scribe.error("The command run was:\n" + cmd.mkString(" "))
+                None
+              }
+          case _ => None
+        }
+
+      case _ => None
+    }
+  }
+
+  def testRunShellCommand(name: String): Unit =
+    test(name) {
+      cleanWorkspace()
+      for {
+        _ <- initialize(
+          s"""|/metals.json
+              |{
+              |  "a": {}
+              |}
+              |/a/src/main/scala/a/Main.scala
+              |package foo
+              |
+              |object Main {
+              |  def main(args: Array[String]): Unit = {
+              |     println("Hello java!")
+              |  }
+              |}
+              |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+        lenses <- server.codeLenses("a/src/main/scala/a/Main.scala")
+        _ = assert(lenses.size > 0, "No lenses were generated!")
+        command = lenses.head.getCommand()
+        _ = assertEquals(runFromCommand(command), Some("Hello java!"))
+      } yield ()
+    }
+
+  testRunShellCommand("run-shell-command")
+  testRunShellCommand("run shell command")
+
+  test("no-stale-supermethod-lenses") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/a/src/main/scala/a/A.scala
+            |package a
+            |trait X {
+            |  def foo: Int
+            |}
+            |case class Y(foo: Int) extends X
+            |
+            |trait Z {
+            |  def bar: Int
+            |}
+            |case class W(bar: Int) extends Z
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- assertCodeLenses(
+        "a/src/main/scala/a/A.scala",
+        """|package a
+           |trait X {
+           |  def foo: Int
+           |}
+           |<< foo>>
+           |case class Y(foo: Int) extends X
+           |
+           |trait Z {
+           |  def bar: Int
+           |}
+           |<< bar>>
+           |case class W(bar: Int) extends Z
+           |""".stripMargin,
+      )
+      _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
+        s"""|package a
+            |trait X {
+            |  def foo: Int
+            |}
+            |//case class Y(foo: Int) extends X
+            |
+            |trait Z {
+            |  def bar: Int
+            |}
+            |case class W(bar: Int) extends Z
+            |""".stripMargin
+      }
+      _ <- assertCodeLenses(
+        "a/src/main/scala/a/A.scala",
+        """|package a
+           |trait X {
+           |  def foo: Int
+           |}
+           |//case class Y(foo: Int) extends X
+           |
+           |trait Z {
+           |  def bar: Int
+           |}
+           |<< bar>>
+           |case class W(bar: Int) extends Z
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }

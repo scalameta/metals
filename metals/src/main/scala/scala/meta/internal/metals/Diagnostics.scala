@@ -21,6 +21,11 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.{lsp4j => l}
 
+private final case class CompilationStatus(
+    code: bsp4j.StatusCode,
+    errors: Int,
+)
+
 /**
  * Converts diagnostics from the build server and Scalameta parser into LSP diagnostics.
  *
@@ -38,9 +43,8 @@ final class Diagnostics(
     buffers: Buffers,
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
-    config: () => UserConfiguration,
     workspace: Option[AbsolutePath],
-    trees: Trees
+    trees: Trees,
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -54,12 +58,20 @@ final class Diagnostics(
     new ConcurrentLinkedQueue[AbsolutePath]()
   private val compileTimer =
     TrieMap.empty[BuildTargetIdentifier, Timer]
+  private val compilationStatus =
+    TrieMap.empty[BuildTargetIdentifier, CompilationStatus]
 
   def reset(): Unit = {
     val keys = diagnostics.keys
     diagnostics.clear()
     keys.foreach { key => publishDiagnostics(key) }
   }
+
+  def reset(paths: Seq[AbsolutePath]): Unit =
+    for (path <- paths if diagnostics.contains(path)) {
+      diagnostics.remove(path)
+      publishDiagnostics(path)
+    }
 
   def resetAmmoniteScripts(): Unit =
     for (key <- diagnostics.keys if key.isAmmoniteScript) {
@@ -73,9 +85,17 @@ final class Diagnostics(
     }
   }
 
-  def onFinishCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
+  def onFinishCompileBuildTarget(
+      report: bsp4j.CompileReport,
+      statusCode: bsp4j.StatusCode,
+  ): Unit = {
     publishDiagnosticsBuffer()
+
+    val target = report.getTarget()
     compileTimer.remove(target)
+
+    val status = CompilationStatus(statusCode, report.getErrors())
+    compilationStatus.update(target, status)
   }
 
   def onSyntaxError(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
@@ -84,16 +104,20 @@ final class Diagnostics(
         syntaxError(path) = diagnostic
         publishDiagnostics(path)
       case _ =>
-        onNoSyntaxError(path)
+        onClose(path)
     }
   }
 
-  def onNoSyntaxError(path: AbsolutePath): Unit = {
-    syntaxError.remove(path) match {
-      case Some(_) =>
+  def onClose(path: AbsolutePath): Unit = {
+    val diags = if (path.isWorksheet) {
+      diagnostics.remove(path).toList.flatMap(_.asScala) ++
+        syntaxError.remove(path)
+    } else syntaxError.remove(path).toList
+    diags match {
+      case Nil =>
+        () // Do nothing, there was no previous error.
+      case _ =>
         publishDiagnostics(path) // Remove old syntax error.
-      case None =>
-        () // Do nothing, there was no previous syntax error.
     }
   }
 
@@ -103,7 +127,7 @@ final class Diagnostics(
     languageClient.publishDiagnostics(
       new PublishDiagnosticsParams(
         path.toURI.toString(),
-        ju.Collections.emptyList()
+        ju.Collections.emptyList(),
       )
     )
   }
@@ -118,21 +142,21 @@ final class Diagnostics(
     val path = params.getTextDocument.getUri.toAbsolutePath
     onPublishDiagnostics(
       path,
-      params.getDiagnostics().asScala.map(_.toLSP),
-      params.getReset()
+      params.getDiagnostics().asScala.map(_.toLsp).toSeq,
+      params.getReset(),
     )
   }
 
   def onPublishDiagnostics(
       path: AbsolutePath,
       diagnostics: Seq[Diagnostic],
-      isReset: Boolean
+      isReset: Boolean,
   ): Unit = {
     val isSamePathAsLastDiagnostic = path == lastPublished.get()
     lastPublished.set(path)
     val queue = this.diagnostics.getOrElseUpdate(
       path,
-      new ConcurrentLinkedQueue[Diagnostic]()
+      new ConcurrentLinkedQueue[Diagnostic](),
     )
     if (isReset) {
       queue.clear()
@@ -161,8 +185,15 @@ final class Diagnostics(
   private def publishDiagnostics(path: AbsolutePath): Unit = {
     publishDiagnostics(
       path,
-      diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]())
+      diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]()),
     )
+  }
+
+  def hasCompilationErrors(buildTarget: BuildTargetIdentifier): Boolean = {
+    compilationStatus
+      .get(buildTarget)
+      .map(status => status.code.isError || status.errors > 0)
+      .getOrElse(false)
   }
 
   def hasSyntaxError(path: AbsolutePath): Boolean =
@@ -183,7 +214,7 @@ final class Diagnostics(
 
   private def publishDiagnostics(
       path: AbsolutePath,
-      queue: ju.Queue[Diagnostic]
+      queue: ju.Queue[Diagnostic],
   ): Unit = {
     if (!path.isFile) return didDelete(path)
     val current = path.toInputFromBuffers(buffers)
@@ -192,13 +223,13 @@ final class Diagnostics(
       snapshot,
       current,
       trees,
-      doNothingWhenUnchanged = false
+      doNothingWhenUnchanged = false,
     )
     val uri = path.toURI.toString
     val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
     for {
       diagnostic <- queue.asScala
-      freshDiagnostic <- toFreshDiagnostic(edit, uri, diagnostic, snapshot)
+      freshDiagnostic <- toFreshDiagnostic(edit, diagnostic, snapshot)
     } {
       all.add(freshDiagnostic)
     }
@@ -226,25 +257,36 @@ final class Diagnostics(
   // Only needed when merging syntax errors with type errors.
   private def toFreshDiagnostic(
       edit: TokenEditDistance,
-      uri: String,
       d: Diagnostic,
-      snapshot: Input
+      snapshot: Input,
   ): Option[Diagnostic] = {
     val result = edit.toRevised(d.getRange).map { range =>
-      new l.Diagnostic(
+      val ld = new l.Diagnostic(
         range,
         d.getMessage,
         d.getSeverity,
-        d.getSource
+        d.getSource,
       )
+      // Scala 3 sets the diagnostic code to -1 for NoExplanation Messages. Ideally
+      // this will change and we won't need this check in the future, but for now
+      // let's not forward them.
+      if (
+        d.getCode() != null && d
+          .getCode()
+          .isLeft() && d.getCode().getLeft() != "-1"
+      )
+        ld.setCode(d.getCode())
+      ld.setData(d.getData)
+      ld
     }
     if (result.isEmpty) {
-      val pos = d.getRange.toMeta(snapshot)
-      val message = pos.formatMessage(
-        s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
-        d.getMessage
-      )
-      scribe.info(message)
+      d.getRange.toMeta(snapshot).foreach { pos =>
+        val message = pos.formatMessage(
+          s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
+          d.getMessage,
+        )
+        scribe.info(message)
+      }
     }
     result
   }

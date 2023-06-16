@@ -12,7 +12,7 @@ import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsBspException
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.debug.WorkspaceErrorsException
+import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -23,14 +23,14 @@ class DebugProtocolSuite
     extends BaseDapSuite(
       "debug-protocol",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     ) {
 
   test("start") {
     val mainClass = new ScalaMainClass(
       "a.Main",
       List("Bar").asJava,
-      List("-Dproperty=Foo").asJava
+      List("-Dproperty=Foo").asJava,
     )
     mainClass.setEnvironmentVariables(List("HELLO=Foo").asJava)
     for {
@@ -56,7 +56,7 @@ class DebugProtocolSuite
       debugger <- server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        mainClass
+        mainClass,
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -72,7 +72,7 @@ class DebugProtocolSuite
       server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        new ScalaMainClass("a.Main", Nil.asJava, Nil.asJava)
+        new ScalaMainClass("a.Main", Nil.asJava, Nil.asJava),
       )
     for {
       _ <- initialize(
@@ -124,7 +124,7 @@ class DebugProtocolSuite
       debugger <- server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        new ScalaMainClass("a.Main", emptyList(), emptyList())
+        new ScalaMainClass("a.Main", emptyList(), emptyList()),
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -156,7 +156,7 @@ class DebugProtocolSuite
       debugger <- server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        new ScalaMainClass("a.Main", emptyList(), emptyList())
+        new ScalaMainClass("a.Main", emptyList(), emptyList()),
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -184,7 +184,7 @@ class DebugProtocolSuite
         workspace
           .resolve(Random.alphanumeric.take(10).mkString.toLowerCase + ".env")
           .toNIO,
-        "MIDDLE_NAME=Emily\n#comment\nLAST_NAME=Morris".getBytes()
+        "MIDDLE_NAME=Emily\n#comment\nLAST_NAME=Morris".getBytes(),
       )
 
     for {
@@ -215,7 +215,7 @@ class DebugProtocolSuite
           singletonList("Arkansas"),
           singletonList("-Dname=Megan"),
           Map("GREETING" -> "Welcome", "MIDDLE_NAME" -> "Olivia").asJava,
-          envFile.getFileName.toString
+          envFile.getFileName.toString,
         ).toJson
       )
       _ <- debugger.initialize
@@ -262,7 +262,7 @@ class DebugProtocolSuite
           singletonList("Arkansas"),
           singletonList("-Dname=Megan"),
           Map("GREETING" -> "Welcome").asJava,
-          envFile.toString
+          envFile.toString,
         ).toJson
       )
       _ <- debugger.initialize
@@ -271,6 +271,60 @@ class DebugProtocolSuite
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "Welcome Megan Emily Morris from Arkansas")
+  }
+
+  test("test-unresolved-params-absolute-envfile") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    val tmpPath = Files.createTempFile("", ".env")
+    tmpPath.toFile.deleteOnExit()
+    val envFile: Path =
+      Files.write(tmpPath, "MIDDLE_NAME=Emily\nLAST_NAME=Morris".getBytes())
+
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Foo.scala
+           |package a
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("foo") {
+           |    val name = sys.props.getOrElse("name", "")
+           |    val greeting = sys.env("GREETING")
+           |    val middleName = sys.env("MIDDLE_NAME")
+           |    val lastName = sys.env("LAST_NAME")
+           |    print(s"$$greeting $$name $$middleName $$lastName")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedTestClassParams(
+          "a.Foo",
+          "a",
+          singletonList("-Dname=Megan"),
+          Map("GREETING" -> "Welcome").asJava,
+          envFile.toString,
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertContains(
+      output,
+      """|1 tests, 1 passed
+         |All tests in a.Foo passed
+         |
+         |Welcome Megan Emily Morris
+         |""".stripMargin,
+    )
   }
 
   test("run-unrelated-error") {
@@ -304,7 +358,7 @@ class DebugProtocolSuite
         new DebugUnresolvedMainClassParams(
           "a.Main",
           "a",
-          singletonList("Foo")
+          singletonList("Foo"),
         ).toJson
       )
       _ <- debugger.initialize
@@ -353,7 +407,7 @@ class DebugProtocolSuite
             new DebugUnresolvedMainClassParams(
               "a.Main",
               "a",
-              singletonList("Foo")
+              singletonList("Foo"),
             ).toJson
           )
           .recover { case WorkspaceErrorsException =>
@@ -361,7 +415,7 @@ class DebugProtocolSuite
           }
     } yield assertDiffEqual(
       result.toString(),
-      WorkspaceErrorsException.toString()
+      WorkspaceErrorsException.toString(),
     )
   }
 
@@ -373,12 +427,12 @@ class DebugProtocolSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/a/src/main/scala/a/Foo.scala
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
@@ -404,12 +458,12 @@ class DebugProtocolSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/a/src/main/scala/a/Foo.scala
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
@@ -417,7 +471,7 @@ class DebugProtocolSuite
       _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
       _ <- server.didSave("a/src/main/scala/a/Foo.scala") { _ =>
         """|package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {
            |    val a : Int = ""
            |  }
@@ -435,7 +489,7 @@ class DebugProtocolSuite
           }
     } yield assertContains(
       result.toString(),
-      WorkspaceErrorsException.toString()
+      WorkspaceErrorsException.toString(),
     )
   }
 }

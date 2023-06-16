@@ -1,20 +1,29 @@
 package tests.troubleshoot
 
 import java.nio.file.Files
+import java.nio.file.Paths
 
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.JdkVersion
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.troubleshoot.DeprecatedSbtVersion
-import scala.meta.internal.troubleshoot.DeprecatedScalaVersion
-import scala.meta.internal.troubleshoot.FutureSbtVersion
-import scala.meta.internal.troubleshoot.FutureScalaVersion
-import scala.meta.internal.troubleshoot.MissingSourceRoot
-import scala.meta.internal.troubleshoot.ProblemResolver
-import scala.meta.internal.troubleshoot.SemanticDBDisabled
-import scala.meta.internal.troubleshoot.UnsupportedSbtVersion
-import scala.meta.internal.troubleshoot.UnsupportedScalaVersion
+import scala.meta.internal.metals.doctor.DeprecatedRemovedSbtVersion
+import scala.meta.internal.metals.doctor.DeprecatedRemovedScalaVersion
+import scala.meta.internal.metals.doctor.DeprecatedSbtVersion
+import scala.meta.internal.metals.doctor.DeprecatedScalaVersion
+import scala.meta.internal.metals.doctor.FutureSbtVersion
+import scala.meta.internal.metals.doctor.FutureScalaVersion
+import scala.meta.internal.metals.doctor.MissingJdkSources
+import scala.meta.internal.metals.doctor.MissingSourceRoot
+import scala.meta.internal.metals.doctor.OutdatedJunitInterfaceVersion
+import scala.meta.internal.metals.doctor.OutdatedMunitInterfaceVersion
+import scala.meta.internal.metals.doctor.ProblemResolver
+import scala.meta.internal.metals.doctor.SemanticDBDisabled
+import scala.meta.internal.metals.doctor.UnsupportedSbtVersion
+import scala.meta.internal.metals.doctor.UnsupportedScalaVersion
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
@@ -24,60 +33,77 @@ import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import munit.FunSuite
+import munit.Location
 import munit.TestOptions
+import tests.TestMtagsResolver
 
 class ProblemResolverSuite extends FunSuite {
+
+  implicit val ctx: ExecutionContext = this.munitExecutionContext
 
   checkRecommendation(
     "unsupported-scala-version",
     scalaVersion = "2.12.7",
-    UnsupportedScalaVersion("2.12.7").message
+    UnsupportedScalaVersion("2.12.7").message,
   )
 
   checkRecommendation(
     "deprecated-scala-version",
-    scalaVersion = "2.12.8",
-    DeprecatedScalaVersion("2.12.8").message
+    scalaVersion = "2.12.11",
+    DeprecatedScalaVersion("2.12.11").message,
+  )
+
+  checkRecommendation(
+    "deprecated-removed-scala-version",
+    scalaVersion = "2.12.9",
+    DeprecatedRemovedScalaVersion("2.12.9").message,
   )
 
   checkRecommendation(
     "future-scala-version",
     scalaVersion = "2.12.50",
-    FutureScalaVersion("2.12.50").message
+    FutureScalaVersion("2.12.50").message,
   )
 
   checkRecommendation(
     "ok-scala-version",
     scalaVersion = BuildInfo.scala212,
-    ""
+    "",
   )
 
   checkRecommendation(
     "unsupported-sbt-version",
     scalaVersion = "2.12.7",
     UnsupportedSbtVersion.message,
-    isSbt = true
+    sbtVersion = Some("1.2.0"),
   )
 
   checkRecommendation(
     "deprecated-sbt-version",
-    scalaVersion = "2.12.8",
-    DeprecatedSbtVersion.message,
-    isSbt = true
+    scalaVersion = "2.12.11",
+    DeprecatedSbtVersion("1.3.0", "2.12.11").message,
+    sbtVersion = Some("1.3.0"),
+  )
+
+  checkRecommendation(
+    "deprecated-removed-sbt-version",
+    scalaVersion = "2.12.9",
+    DeprecatedRemovedSbtVersion("1.3.0", "2.12.9").message,
+    sbtVersion = Some("1.3.0"),
   )
 
   checkRecommendation(
     "future-sbt-version",
     scalaVersion = "2.12.51",
     FutureSbtVersion.message,
-    isSbt = true
+    sbtVersion = Some("1.6.0"),
   )
 
   checkRecommendation(
     "ok-sbt-version",
     scalaVersion = BuildInfo.scala212,
     "",
-    isSbt = true
+    sbtVersion = Some("1.6.0"),
   )
 
   checkRecommendation(
@@ -86,16 +112,113 @@ class ProblemResolverSuite extends FunSuite {
     SemanticDBDisabled(
       BuildInfo.scala212,
       BuildInfo.bloopVersion,
-      false
+      false,
     ).message,
-    scalacOpts = Nil
+    scalacOpts = Nil,
   )
 
   checkRecommendation(
     "missing-sourceroot",
     scalaVersion = BuildInfo.scala212,
     MissingSourceRoot("\"-P:semanticdb:sourceroot:$workspace\"").message,
-    scalacOpts = List("-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar")
+    scalacOpts = List("-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar"),
+  )
+
+  checkRecommendation(
+    "missing-jdk-sources",
+    scalaVersion = BuildInfo.scala212,
+    MissingJdkSources(
+      List(
+        "/some/invalid/src.zip",
+        "/some/invalid/lib/src.zip",
+        "/some/invalid/path/src.zip",
+        "/some/invalid/path/lib/src.zip",
+      ).map(path => AbsolutePath(Paths.get(path)))
+    ).message,
+    sbtVersion = Some("1.6.0"),
+    invalidJavaHome = true,
+  )
+
+  checkRecommendation(
+    "novocode-junit-interface",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedJunitInterfaceVersion.message,
+    classpath = List("/com/novocode/junit-interface/0.11/"),
+  )
+
+  checkRecommendation(
+    "github-junit-interface",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedJunitInterfaceVersion.message,
+    classpath = List("/com/github/sbt/junit-interface/0.13.2/"),
+  )
+
+  checkRecommendation(
+    "github-junit-interface-valid",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpath = List("/com/github/sbt/junit-interface/0.13.3/"),
+  )
+
+  checkRecommendation(
+    "no-test-explorer-provider",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpath = List("/com/github/sbt/junit-interface/0.13.2/"),
+    isTestExplorerProvider = false,
+  )
+
+  checkRecommendation(
+    "no-test-explorer-for-sbt",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpath = List(
+      "org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29.jar",
+      "/com/github/sbt/junit-interface/0.13.2/",
+    ),
+    sbtVersion = Some(BuildInfo.sbtVersion),
+  )
+
+  checkRecommendation(
+    "munit_2.13-0.x",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedMunitInterfaceVersion.message,
+    classpath = List("org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29.jar"),
+  )
+
+  checkRecommendation(
+    "munit_3-0.x",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedMunitInterfaceVersion.message,
+    classpath = List("org/scalameta/munit_3/0.7.29/munit_3-0.7.29.jar"),
+  )
+
+  checkRecommendation(
+    "munit-1.0.0-M2",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedMunitInterfaceVersion.message,
+    classpath = List("org/scalameta/munit_2.13/1.0.0-M2/"),
+  )
+
+  checkRecommendation(
+    "munit-valid",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpath = List("org/scalameta/munit_2.13/1.0.0-M3/"),
+  )
+
+  checkRecommendation(
+    "munit-valid-2",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpath = List("org/scalameta/munit_2.13/1.0.1/"),
+  )
+
+  checkRecommendation(
+    "main.sc",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpath = List("org/scalameta/munit_2.13/1.0.1/"),
   )
 
   def checkRecommendation(
@@ -104,25 +227,40 @@ class ProblemResolverSuite extends FunSuite {
       expected: String,
       scalacOpts: List[String] = List(
         "-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar",
-        "-P:semanticdb:sourceroot:/tmp/metals"
+        "-P:semanticdb:sourceroot:/tmp/metals",
       ),
-      isSbt: Boolean = false
-  ): Unit = {
+      sbtVersion: Option[String] = None,
+      invalidJavaHome: Boolean = false,
+      classpath: List[String] = Nil,
+      isTestExplorerProvider: Boolean = true,
+  )(implicit loc: Location): Unit = {
     test(name) {
       val workspace = Files.createTempDirectory("metals")
       workspace.toFile().deleteOnExit()
+      val javaHome =
+        if (invalidJavaHome)
+          Some("/some/invalid/path")
+        else
+          None // JdkSources will fallback to default java home path
+
       val problemResolver = new ProblemResolver(
         AbsolutePath(workspace),
+        new TestMtagsResolver,
         () => None,
-        isClientCommandSupported = true
+        () => javaHome,
+        () => isTestExplorerProvider,
+        JdkVersion.maybeJdkVersionFromJavaHome(
+          Some(AbsolutePath(System.getProperty("java.home")))
+        ),
       )
 
-      val target = scalaTarget(name.name, scalaVersion, scalacOpts, isSbt)
-      val message = problemResolver.recommendation(target)
+      val target =
+        scalaTarget(name.name, scalaVersion, scalacOpts, sbtVersion, classpath)
+      val message = problemResolver.recommendation(target).getOrElse("")
 
       assertNoDiff(
         message,
-        expected.replace("$workspace", workspace.toString())
+        expected.replace("$workspace", workspace.toString()),
       )
     }
   }
@@ -131,7 +269,8 @@ class ProblemResolverSuite extends FunSuite {
       id: String,
       scalaVersion: String,
       scalacOptions: List[String],
-      isSbt: Boolean = false
+      sbtVersion: Option[String] = None,
+      classpatch: List[String] = Nil,
   ): ScalaTarget = {
     val scalaBinaryVersion =
       ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
@@ -142,21 +281,22 @@ class ProblemResolverSuite extends FunSuite {
         /* tags = */ Nil.asJava,
         /* languageIds = */ Nil.asJava,
         /* dependencies = */ Nil.asJava,
-        /* capabilities = */ new BuildTargetCapabilities(true, true, true)
+        /* capabilities = */ new BuildTargetCapabilities(true, true, true),
       )
+    buildTarget.setDisplayName(id)
     val scalaBuildTarget = new ScalaBuildTarget(
       "org.scala-lang",
       scalaVersion,
       scalaBinaryVersion,
       ScalaPlatform.JVM,
-      /* jars = */ Nil.asJava
+      /* jars = */ Nil.asJava,
     )
 
     val scalacOptionsItem = new ScalacOptionsItem(
       buildId,
       scalacOptions.asJava,
-      /* classpath = */ Nil.asJava,
-      ""
+      classpatch.asJava,
+      "",
     )
 
     ScalaTarget(
@@ -164,7 +304,8 @@ class ProblemResolverSuite extends FunSuite {
       scalaBuildTarget,
       scalacOptionsItem,
       autoImports = None,
-      isSbt = isSbt
+      sbtVersion,
+      None,
     )
   }
 }

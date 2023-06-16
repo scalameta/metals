@@ -2,105 +2,49 @@ package scala.meta.internal.pc
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.pc.SymbolDocumentation
 
 import org.eclipse.lsp4j.CompletionItem
 
 class CompletionItemResolver(
     val compiler: MetalsGlobal
-) {
+) extends ItemResolver {
   import compiler._
   def resolve(item: CompletionItem, msym: String): CompletionItem = {
+
+    val data = item.data.getOrElse(CompletionItemData.empty)
+
+    if (
+      data.kind == CompletionItemData.ImplementAllKind &&
+      !data.additionalSymbols.isEmpty()
+    ) {
+      data.additionalSymbols.asScala.foldLeft(item) { case (item, sym) =>
+        handleSymbol(item, sym)
+      }
+    } else {
+      handleSymbol(item, msym)
+    }
+  }
+
+  private def handleSymbol(item: CompletionItem, msym: String) = {
     val gsym = inverseSemanticdbSymbol(msym)
     if (gsym != NoSymbol) {
       symbolDocumentation(gsym).orElse(
         symbolDocumentation(gsym.companion)
       ) match {
         case Some(info) if item.getDetail != null =>
-          if (isJavaSymbol(gsym)) {
-            val data = item.data.getOrElse(CompletionItemData.empty)
-            item.setLabel(replaceJavaParameters(info, item.getLabel))
-            if (metalsConfig.isCompletionItemDetailEnabled) {
-              item.setDetail(replaceJavaParameters(info, item.getDetail))
-            }
-            if (
-              item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind
-            ) {
-              item.getTextEdit().asScala match {
-                case Left(textEdit) =>
-                  val newText =
-                    replaceJavaParameters(info, textEdit.getNewText())
-                  textEdit.setNewText(newText)
-                // Right[InsertReplaceEdit] is currently not used in Metals
-                case _ =>
-              }
-              item.setLabel(replaceJavaParameters(info, item.getLabel))
-            }
-          } else {
-            val defaults = info
-              .parameters()
-              .asScala
-              .iterator
-              .map(_.defaultValue())
-              .filterNot(_.isEmpty)
-              .toSeq
-            item.setLabel(replaceScalaDefaultParams(item.getLabel, defaults))
-            if (
-              metalsConfig.isCompletionItemDetailEnabled && !item
-                .getDetail()
-                .isEmpty()
-            ) {
-              item.setDetail(
-                replaceScalaDefaultParams(item.getDetail, defaults)
-              )
-            }
-          }
-          if (metalsConfig.isCompletionItemDocumentationEnabled) {
-            val docstring = fullDocstring(gsym)
-            item.setDocumentation(docstring.toMarkupContent)
-          }
+          enrichDocs(
+            item,
+            info,
+            metalsConfig,
+            fullDocstring(gsym),
+            isJavaSymbol(gsym)
+          )
         case _ =>
+          item
       }
-      item
     } else {
       item
     }
-  }
-
-  def replaceScalaDefaultParams(base: String, defaults: Seq[String]): String = {
-    val matcher = "= \\{\\}".r.pattern.matcher(base)
-    val out = new StringBuffer()
-    val it = defaults.iterator
-    while (matcher.find()) {
-      if (it.hasNext) {
-        matcher.appendReplacement(out, s"= ${it.next()}")
-      }
-    }
-    matcher.appendTail(out)
-    out.toString
-  }
-
-  // NOTE(olafur): it's hacky to use `String.replace("x$1", paramName)`, ideally we would use the
-  // signature printer to pretty-print the signature from scratch with parameter names. However, that approach
-  // is tricky because it would require us to JSON serialize/deserialize Scala compiler types. The reason
-  // we don't print Java parameter names in `textDocument/completions` is because that requires parsing the
-  // library dependency sources which is slow and `Thread.interrupt` cancellation triggers the `*-sources.jar`
-  // to close causing other problems.
-  private def replaceJavaParameters(
-      info: SymbolDocumentation,
-      detail: String
-  ): String = {
-    info
-      .parameters()
-      .asScala
-      .iterator
-      .zipWithIndex
-      .foldLeft(detail) { case (accum, (param, i)) =>
-        accum.replace(
-          s"x$$${i + 1}",
-          param.displayName()
-        )
-      }
   }
 
   def fullDocstring(gsym: Symbol): String = {

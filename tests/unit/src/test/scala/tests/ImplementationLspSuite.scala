@@ -11,7 +11,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |abstract class <<Animal>> extends LivingBeing
        |class <<Dog>> extends Animal
        |class <<Cat>> extends Animal
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -31,7 +31,12 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |/a/src/main/scala/a/Cat.scala
        |package a
        |class <<Cat>> extends Animal
-       |""".stripMargin
+       |/a/src/main/scala/a/Human.scala
+       |package a
+       |object Human {
+       |  val person = new <<>>LivingBeing {}
+       |}
+       |""".stripMargin,
   )
 
   check(
@@ -47,7 +52,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |    class Unrelated extends LivingBeing
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -67,7 +72,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |    object InnerImpl extends Inner
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -80,7 +85,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |object WeirdMath extends Math{
        |  val <<zero>> = -1.0
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -93,7 +98,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |object WeirdMath extends Math{
        |  var <<zero>> = -1.0
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -112,7 +117,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |    }
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -131,7 +136,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  override def <<sound>> = "woof"
        |  def another(str : Long) = 123
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -153,7 +158,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  override def <<sound>>(times : Int) = 1
        |  override def sound = 1
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -175,7 +180,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  val animal : Animal = new Dog()
        |  animal.sou@@nd
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -190,7 +195,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  override def zero(a : Long, b : Option[String])(c : Long, d: Double): Double = 0.6
        |  override def <<zero>>(a : Int, b : Option[String])(c : Long, d: Double): Double = 0.5
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -203,7 +208,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |object Cat extends Animal {
        |  override def <<sound>>[O](t: O): O = t
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -215,7 +220,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |object IntegerMath extends Math[Int] {
        |  override def <<zero>>(t: Int): Int = 0
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -230,7 +235,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  def <<zero>>(t: P): P = 0
        |  def zero(t: T): T = 0
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -247,7 +252,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |class C extends B[Long] {
        |  override def <<method>>(s: Int, r: Long, t: Double): Double = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -257,7 +262,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |class <<MyException>> extends Exce@@ption
        |class <<NewException>> extends RuntimeException
        |class <<NewException2>> extends RuntimeException
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -270,7 +275,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  type Tasty = Eatable
        |  class <<Pizza>> extends Tasty
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -285,7 +290,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |    def length: Int = ???
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -298,7 +303,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |class B extends A {
        |  override def <<method>>(ex: Exception): Int = 1
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -314,7 +319,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |    def length: Int = ???
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -332,7 +337,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  val b: B = new C
        |  b.st@@r
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -355,7 +360,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |package a
        |class <<Responsible>> extends B.Old
        |class <<Other>> extends Parent
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -378,7 +383,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |class Father extends Parent {
        |  override def <<method>>(a : Names.Basic) = "<father>"
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -394,7 +399,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |    def <<ab>>(a: String) = ""
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -409,7 +414,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |class HigherList extends Higher[List] {
        |  def <<func>>(a: List[_]): Unit = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -424,7 +429,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  def method(a: String): Unit = ???
        |  def <<method>>(a: String*): Unit = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -437,7 +442,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |class B extends A {
        |  def <<method>>(a: String with Int): Unit = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -450,7 +455,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |class B extends A {
        |  def <<method>>(a: => String ): Unit = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -464,22 +469,22 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  def <<method>>(param: a.C.type): Unit = ???
        |}
        |object C
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
     "libraries",
     """|/a/src/main/scala/a/A.scala
        |package a
-       |import org.scalatest.FunSuite
-       |import org.scalatest.WordSpecLike
-       |import org.scalatest.Matchers
-       |import org.scalatest.BeforeAndAfterAll
        |
-       |class <<ZigZagTest>> extends WordSpecLike with Matchers with Before@@AndAfterAll {}
-       |class <<ZigZagTest2>> extends WordSpecLike with Matchers with BeforeAndAfterAll {}
-       |class <<ZigZagTest3>> extends WordSpecLike with Matchers with BeforeAndAfterAll {}
-       |""".stripMargin
+       |import org.scalatest.BeforeAndAfterAll
+       |import org.scalatest.matchers.should.Matchers
+       |import org.scalatest.wordspec.AnyWordSpec
+       |
+       |class <<ZigZagTest>> extends AnyWordSpec with Matchers with Before@@AndAfterAll {}
+       |class <<ZigZagTest2>> extends AnyWordSpec with Matchers with BeforeAndAfterAll {}
+       |class <<ZigZagTest3>> extends AnyWordSpec with Matchers with BeforeAndAfterAll {}
+       |""".stripMargin,
   )
 
   check(
@@ -490,7 +495,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |object Main{
        |  val animal = new <<>>Animal{ def field(d : String) : Int = 123 }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -501,7 +506,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |object Main{
        |  val animal = new Animal{ def <<sound>> = "|unknown|" }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -515,7 +520,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  case object <<Dog>> extends Animal
        |  case object <<Cat>> extends Animal
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -529,26 +534,57 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |    class <<D>> extends C
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+  )
+
+  check(
+    "java-implementation",
+    """|/a/src/main/scala/a/Main.java
+       |package a;
+       |public class Main {
+       |  abstract class A {
+       |      abstract void he@@llo();
+       |  }
+       |  abstract class B extends A{
+       |      @Override void <<hello>>(){
+       |          System.out.println("Hello!");
+       |      }
+       |  }
+       |  class C extends B{
+       |      @Override void <<hello>>(){
+       |          System.out.println("Bye!");
+       |      }
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "java-scala-implementation",
+    """|/a/src/main/scala/a/Test.scala
+       |package a
+       |class <<Test>> extends TestJava with TestScala {}
+       |trait TestScala {}
+       |/a/src/main/java/a/TestJava.java
+       |package a;
+       |public interface TestJ@@ava {}
+       |""".stripMargin,
   )
 
   override protected def libraryDependencies: List[String] =
-    List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
-
-  override protected def compilerPlugins: List[String] =
-    List("org.scalamacros:::paradise:2.1.1")
+    List("org.scalatest::scalatest:3.2.4", "io.circe::circe-generic:0.12.0")
 
   override def assertCheck(
       filename: String,
       edit: String,
       expected: Map[String, String],
-      base: Map[String, String]
+      base: Map[String, String],
   ): Future[Unit] = {
     server.assertImplementation(
       filename,
       edit,
       expected.toMap,
-      base.toMap
+      base.toMap,
     )
   }
 }

@@ -7,5 +7,5 @@ class CrossDebugSuite
     extends BaseCrossDebugSuite(
       "cross-debug",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     )

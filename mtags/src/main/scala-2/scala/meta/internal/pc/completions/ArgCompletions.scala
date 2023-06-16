@@ -17,15 +17,31 @@ trait ArgCompletions { this: MetalsGlobal =>
       completions: CompletionResult
   ) extends CompletionPosition {
     val editRange: l.Range =
-      pos.withStart(ident.pos.start).withEnd(pos.start).toLSP
-    val method: Tree = typedTreeAt(apply.fun.pos)
+      pos.withStart(ident.pos.start).withEnd(pos.start).toLsp
+    val funPos = apply.fun.pos
+    val method: Tree = typedTreeAt(funPos)
     val methodSym = method.symbol
     lazy val baseParams: List[Symbol] =
-      if (method.tpe == null) Nil
+      if (methodSym.isModule)
+        getParamsFromObject()
+      else if (methodSym.isClass) methodSym.constrParamAccessors
+      else if (method.tpe == null)
+        method match {
+          case Ident(name) =>
+            metalsScopeMembers(funPos)
+              .collectFirst {
+                case m: Member
+                    if m.symNameDropLocal == name && m.sym != NoSymbol && m.sym.paramss.nonEmpty =>
+                  m.sym.paramss.head
+              }
+              .getOrElse(Nil)
+          case _ => Nil
+        }
       else {
         method.tpe.paramss.headOption
           .getOrElse(methodSym.paramss.flatten)
       }
+
     lazy val isNamed: Set[Name] = apply.args.iterator
       .filterNot(_ == ident)
       .zip(baseParams.iterator)
@@ -40,7 +56,7 @@ trait ArgCompletions { this: MetalsGlobal =>
     lazy val allParams: List[Symbol] = {
       baseParams.iterator.filterNot { param =>
         isNamed(param.name) ||
-        param.name.containsChar('$') // exclude synthetic parameters
+        param.isSynthetic
       }.toList
     }
     lazy val params: List[Symbol] =
@@ -50,8 +66,6 @@ trait ArgCompletions { this: MetalsGlobal =>
       .filterNot(isNamed)
       .map(_.toString().trim())
       .toSet
-
-    override def isCandidate(member: Member): Boolean = true
 
     def isName(m: Member): Boolean =
       isParamName(m.sym.nameString.trim())
@@ -119,8 +133,9 @@ trait ArgCompletions { this: MetalsGlobal =>
       ) {
         val editText = allParams.zipWithIndex
           .collect {
-            case (param, index) if !param.hasDefault =>
-              s"${Identifier.backtickWrap(param.name)} = $${${index + 1}${findDefaultValue(param)}}"
+            case (param, index) if !param.hasDefault => {
+              s"${Identifier.backtickWrap(param.name).replace("$", "$$")} = $${${index + 1}${findDefaultValue(param)}}"
+            }
           }
           .mkString(", ")
         val edit = new l.TextEdit(editRange, editText)
@@ -153,6 +168,18 @@ trait ArgCompletions { this: MetalsGlobal =>
           )
         }
       }
+    }
+
+    private def getParamsFromObject(): List[Symbol] = {
+      methodSym.info.members
+        .collect {
+          case m
+              if m.decodedName == "apply" &&
+                m.paramss.flatten.length >= apply.args.length =>
+            m.paramss.flatten
+        }
+        .lastOption // for case classes, apply in companion object is after the default one
+        .getOrElse(Nil)
     }
 
     override def contribute: List[Member] = {

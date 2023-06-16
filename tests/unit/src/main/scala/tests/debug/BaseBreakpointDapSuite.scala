@@ -1,6 +1,7 @@
 package tests.debug
 
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
+import scala.meta.internal.metals.debug.LibraryBreakpoints
 import scala.meta.internal.metals.debug.Stoppage
 
 import tests.BaseDapSuite
@@ -12,7 +13,7 @@ import tests.BuildToolLayout
 abstract class BaseBreakpointDapSuite(
     suiteName: String,
     initializer: BuildServerInitializer,
-    buildToolLayout: BuildToolLayout
+    buildToolLayout: BuildToolLayout,
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
 
   assertBreakpoints("preceding-class")(
@@ -115,6 +116,7 @@ abstract class BaseBreakpointDapSuite(
                 |  def main(args: Array[String]): Unit = {
                 |    this match {
                 |      case Bar() =>
+                |      case _ =>
                 |    }
                 |    System.exit(0)
                 |  }
@@ -678,7 +680,8 @@ abstract class BaseBreakpointDapSuite(
          |    System.exit(0)
          |  }
          |}
-         |""".stripMargin
+         |""".stripMargin,
+      workspace,
     )
     val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
 
@@ -695,6 +698,42 @@ abstract class BaseBreakpointDapSuite(
     } yield assertNoDiff(output, "1\n2\n3\n")
   }
 
+  test("library-breakpoints", withoutVirtualDocs = true) {
+    def debugLayout = new DebugWorkspaceLayout(
+      List(
+        LibraryBreakpoints(
+          server
+            .toPathFromSymbol("scala.Predef", "scala/Predef.scala"),
+          List(404),
+        )
+      )
+    )
+
+    val workspaceLayout = buildToolLayout(
+      """|/a/src/main/scala/a/Main.scala
+         |package a
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |    println(0)
+         |    System.exit(0)
+         |  }
+         |}
+         |""".stripMargin,
+      scalaVersion,
+    )
+
+    for {
+      _ <- initialize(workspaceLayout)
+      debugger <- debugMain("a", "a.Main", Stoppage.Handler.Fail)
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- setBreakpoints(debugger, debugLayout)
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "0\n")
+  }
+
   test("remove-some-breakpoints") {
     val firstBreakpoints = DebugWorkspaceLayout(
       """|/a/src/main/scala/a/Main.scala
@@ -707,7 +746,8 @@ abstract class BaseBreakpointDapSuite(
          |    System.exit(0)
          |  }
          |}
-         |""".stripMargin
+         |""".stripMargin,
+      workspace,
     )
 
     val modifiedBreakpoints = DebugWorkspaceLayout(
@@ -721,7 +761,8 @@ abstract class BaseBreakpointDapSuite(
          |    System.exit(0)
          |  }
          |}
-         |""".stripMargin
+         |""".stripMargin,
+      workspace,
     )
     val workspaceLayout =
       buildToolLayout(firstBreakpoints.toString, scalaVersion)
@@ -752,7 +793,8 @@ abstract class BaseBreakpointDapSuite(
          |    System.exit(0)
          |  }
          |}
-         |""".stripMargin
+         |""".stripMargin,
+      workspace,
     )
     val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
 

@@ -7,29 +7,36 @@ import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuic
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.MetalsQuickPickItem
-import scala.meta.internal.metals.MetalsQuickPickParams
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
-    implementationProvider: ImplementationProvider
+    implementationProvider: ImplementationProvider,
 )(implicit
-    ec: ExecutionContext
+    ec: ExecutionContext,
+    reports: ReportContext,
 ) {
 
   def getGoToSuperMethodCommand(
       commandParams: TextDocumentPositionParams
   ): Option[ExecuteCommandParams] = {
     getGoToSuperMethodLocation(commandParams)
-      .map(makeCommandParams)
+      .map(location =>
+        ClientCommands.GotoLocation.toExecuteCommandParams(
+          ClientCommands.WindowLocation(location.getUri(), location.getRange())
+        )
+      )
   }
 
   def jumpToSelectedSuperMethod(
@@ -37,12 +44,17 @@ class Supermethods(
   ): Future[Unit] = {
     def execute(
         methodSymbols: List[String],
-        path: AbsolutePath
+        path: AbsolutePath,
     ): Future[Unit] = {
       askUserToSelectSuperMethod(methodSymbols)
         .map(
           _.flatMap(findDefinitionLocation(_, path))
-            .map(makeCommandParams)
+            .map(location =>
+              ClientCommands.GotoLocation.toExecuteCommandParams(
+                ClientCommands
+                  .WindowLocation(location.getUri(), location.getRange())
+              )
+            )
             .foreach(client.metalsExecuteClientCommand)
         )
     }
@@ -62,11 +74,11 @@ class Supermethods(
       filePath <- params.getTextDocument.getUri.toAbsolutePathSafe
       (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
         filePath,
-        params.getPosition()
+        params.getPosition(),
       )
       findSymbol = implementationProvider.defaultSymbolSearch(
         filePath,
-        textDocument
+        textDocument,
       )
       symbolInformation <- findSymbol(symbolOcc.symbol)
       gotoSymbol <- {
@@ -90,32 +102,38 @@ class Supermethods(
             .map(symbol =>
               MetalsQuickPickItem(
                 symbol,
-                formatMethodSymbolForQuickPick(symbol)
+                formatMethodSymbolForQuickPick(symbol),
               )
             )
             .asJava,
-          placeHolder = "Select super method to jump to"
+          placeHolder = "Select super method to jump to",
         )
       )
       .asScala
-      .map {
-        case pickResult if !pickResult.cancelled => Some(pickResult.itemId)
-        case _ => None
-      }
+      .mapOptionInside(_.itemId)
   }
 
   def getSuperMethodHierarchySymbols(
       params: TextDocumentPositionParams
+  ): Option[List[String]] =
+    getSuperMethodHierarchySymbols(
+      params.getTextDocument.getUri,
+      params.getPosition,
+    )
+
+  def getSuperMethodHierarchySymbols(
+      path: String,
+      position: Position,
   ): Option[List[String]] = {
     for {
-      filePath <- params.getTextDocument.getUri.toAbsolutePathSafe
+      filePath <- path.toAbsolutePathSafe
       (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
         filePath,
-        params.getPosition()
+        position,
       )
       findSymbol = implementationProvider.defaultSymbolSearch(
         filePath,
-        textDocument
+        textDocument,
       )
       symbolInformation <- findSymbol(symbolOcc.symbol)
       docText = TextDocumentWithPath(textDocument, filePath)
@@ -134,17 +152,11 @@ class Supermethods(
 
   private def findDefinitionLocation(
       symbol: String,
-      source: AbsolutePath
+      source: AbsolutePath,
   ): Option[Location] = {
     definitionProvider.fromSymbol(symbol, Some(source)).asScala.headOption
   }
 
-  private def makeCommandParams(location: Location): ExecuteCommandParams = {
-    new ExecuteCommandParams(
-      ClientCommands.GotoLocation.id,
-      List[Object](location).asJava
-    )
-  }
 }
 
 object Supermethods {

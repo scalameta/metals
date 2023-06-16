@@ -1,5 +1,6 @@
 package scala.meta.internal.tvp
 
+import scala.meta.internal.metals.Folder
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
@@ -17,24 +18,29 @@ import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 class ClasspathTreeView[Value, Key](
     definitionIndex: GlobalSymbolIndex,
     viewId: String,
-    scheme: String,
+    schemeId: String,
     title: String,
+    folder: Folder,
     id: Value => Key,
     encode: Key => String,
     decode: String => Key,
     valueTitle: Value => String,
     valueTooltip: Value => String,
     toplevels: () => Iterator[Value],
-    loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation]
+    loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation],
 ) {
+  val scheme: String = s"$schemeId-${folder.path.toString()}"
   val rootUri: String = scheme + ":"
-  def root: TreeViewNode =
+
+  def root(showFolderName: Boolean): TreeViewNode = {
+    val folderPart = if (showFolderName) s" (${folder.nameOrUri})" else ""
     TreeViewNode(
       viewId,
       rootUri,
-      title + s" (${toplevels().size})",
-      collapseState = MetalsTreeItemCollapseState.collapsed
+      title + folderPart + s" (${toplevels().size})",
+      collapseState = MetalsTreeItemCollapseState.collapsed,
     )
+  }
 
   def matches(uri: String): Boolean = uri.startsWith(rootUri)
 
@@ -52,6 +58,7 @@ class ClasspathTreeView[Value, Key](
         .filter(i => node.isDescendent(i.symbol))
         .flatMap(i => i :: i.parents)
         .distinctBy(_.symbol)
+        .toSeq
 
       val directChildren = transitiveChildren.filter { s =>
         s.symbol.owner == node.symbol && {
@@ -116,7 +123,7 @@ class ClasspathTreeView[Value, Key](
           tooltip = child.symbol,
           collapseState = collapseState,
           command = command,
-          icon = icon
+          icon = icon,
         )
       }.toArray
 
@@ -127,9 +134,9 @@ class ClasspathTreeView[Value, Key](
             // Sort package objects at the top.
             -java.lang.Boolean.compare(
               a.label == "package",
-              b.label == "package"
+              b.label == "package",
             )
-          }
+          },
         )
       } else {
         // Don't sort type members such as def/val/var in order to preserve
@@ -141,7 +148,7 @@ class ClasspathTreeView[Value, Key](
 
   def toUri(
       jar: Key,
-      symbol: String = Symbols.RootPackage
+      symbol: String = Symbols.RootPackage,
   ): NodeUri =
     NodeUri(jar, symbol)
 
@@ -164,7 +171,7 @@ class ClasspathTreeView[Value, Key](
       uri,
       valueTitle(value),
       tooltip = valueTooltip(value),
-      collapseState = MetalsTreeItemCollapseState.collapsed
+      collapseState = MetalsTreeItemCollapseState.collapsed,
     )
   }
 
@@ -173,7 +180,7 @@ class ClasspathTreeView[Value, Key](
    */
   case class NodeUri(
       key: Key,
-      symbol: String = Symbols.RootPackage
+      symbol: String = Symbols.RootPackage,
   ) {
     override def toString(): String = toUri
     def withSymbol(newSymbol: String): NodeUri =

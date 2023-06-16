@@ -1,10 +1,7 @@
 package tests
 
-import scala.collection.mutable
-
-import org.eclipse.{lsp4j => l}
-
-class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
+class AnalyzeStacktraceLspSuite
+    extends BaseAnalyzeStacktraceSuite("analyzestacktrace") {
 
   check(
     "simple",
@@ -15,7 +12,7 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
        |	at a.b.ClassError.raise(Main.scala:12)
        |	at a.b.Main$.main(Main.scala:5)
        |	at a.b.Main.main(Main.scala)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -27,7 +24,7 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
        |[E] 	at a.b.ClassError.raise(Main.scala:12)
        |[E] 	at a.b.Main$.main(Main.scala:5)
        |[E] 	at a.b.Main.main(Main.scala)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /**
@@ -52,7 +49,7 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
        |[error]         at a.b.ClassError.raise(Main.scala:12)
        |[error]         at a.b.Main$.main(Main.scala:5)
        |[error]         at a.b.Main.main(Main.scala)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   /**
@@ -74,44 +71,20 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
        |[info]         at a.b.ClassError.raise(Main.scala:12)
        |[info]         at a.b.Main$.main(Main.scala:5)
        |[info]         at a.b.Main.main(Main.scala)
-       |""".stripMargin
+       |""".stripMargin,
   )
 
-  def check(
-      name: String,
-      code: String,
-      stacktrace: String
-  ): Unit = {
-    test(name) {
-      cleanWorkspace()
-      for {
-        _ <- initialize(
-          s"""
-             |/metals.json
-             |{"a":{}}
-             |/a/src/main/scala/a/Main.scala
-             |${prepare(code)}
-             |""".stripMargin
-        )
-        _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-        lenses = server.analyzeStacktrace(stacktrace)
-        output =
-          lenses
-            .map(cl =>
-              cl.getRange.getStart.getLine -> cl
-                .getCommand()
-                .getArguments()
-                .get(0)
-                .asInstanceOf[l.Location]
-                .getRange
-                .getStart
-                .getLine
-            )
-            .toMap
-        _ = assertEquals(output, getExpected(code))
-      } yield ()
-    }
-  }
+  check(
+    "cat-effect-stactraces",
+    catsEffectCode,
+    """|java.lang.Exception
+       |        at a.Main$.$anonfun$run$1(Stacktraces.scala:10)
+       |        at apply @ a.Main$.<clinit>(Stacktraces.scala:7)
+       |        at map @ a.Main$.run(Stacktraces.scala:9)
+       |        at run$ @ a.Main$.run(Stacktraces.scala:6)
+       |""".stripMargin,
+    dependency = "\"org.typelevel::cats-effect:3.3.11\"",
+  )
 
   private lazy val code: String =
     """|package a.b
@@ -143,20 +116,20 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
        |
        |""".stripMargin
 
-  private def getExpected(code: String): Map[Int, Int] = {
-    val result: mutable.Buffer[(Int, Int)] = mutable.Buffer()
-    for ((line, idx) <- code.split('\n').zipWithIndex) {
-      if (line.contains("<<") && line.contains(">>")) {
-        val marker = Integer.valueOf(
-          line.substring(line.indexOf("<<") + 2, line.indexOf(">>"))
-        )
-        result += ((marker, idx))
-      }
-    }
-    result.toList.toMap
-  }
+  private lazy val catsEffectCode =
+    """|package a
+       |
+       |import cats.effect.IOApp
+       |import cats.effect.IO
+       |
+       |<<4>>object Main extends IOApp.Simple {
+       |<<2>>  val io = IO(5)
+       |  override def run: IO[Unit] = io
+       |<<3>>      .map { _ => 
+       |<<1>>        throw new Exception
+       |        ()
+       |      }
+       |}
+       |""".stripMargin
 
-  private def prepare(code: String): String = {
-    code.replaceAll("<<.*>>", "")
-  }
 }

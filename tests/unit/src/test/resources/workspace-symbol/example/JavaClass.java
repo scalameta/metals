@@ -9,10 +9,10 @@ public class JavaClass/*example.JavaClass#*/ {
         this.d = d;
     }
 
-    public static void a() {
+    public static void a/*example.JavaClass#a().*/() {
     }
 
-    public int b() {
+    public int b/*example.JavaClass#b().*/() {
         return 1;
     }
 
@@ -20,7 +20,7 @@ public class JavaClass/*example.JavaClass#*/ {
     public int d = 2;
 
     public class InnerClass/*example.JavaClass#InnerClass#*/ {
-        public int b() {
+        public int b/*example.JavaClass#InnerClass#b().*/() {
             return 1;
         }
 
@@ -28,10 +28,10 @@ public class JavaClass/*example.JavaClass#*/ {
     }
 
     public static class InnerStaticClass/*example.JavaClass#InnerStaticClass#*/ {
-        public static void a() {
+        public static void a/*example.JavaClass#InnerStaticClass#a().*/() {
         }
 
-        public int b() {
+        public int b/*example.JavaClass#InnerStaticClass#b().*/() {
             return 1;
         }
 
@@ -40,20 +40,20 @@ public class JavaClass/*example.JavaClass#*/ {
     }
 
     public interface InnerInterface/*example.JavaClass#InnerInterface#*/ {
-        public static void a() {
+        public static void a/*example.JavaClass#InnerInterface#a().*/() {
         }
 
-        public int b();
+        public int b/*example.JavaClass#InnerInterface#b().*/();
     }
 
-    public String publicName() {
+    public String publicName/*example.JavaClass#publicName().*/() {
         return "name";
     }
 
     // Weird formatting
     @Override
     public String
-    toString() {
+    toString/*example.JavaClass#toString().*/() {
         return "";
     }
 }

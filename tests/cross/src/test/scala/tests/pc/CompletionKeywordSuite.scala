@@ -1,12 +1,8 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionKeywordSuite extends BaseCompletionSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "super-template",
@@ -24,7 +20,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """|superVisorStrategy: Int (commit: '')
        |super (commit: '')
        |""".stripMargin,
-    includeCommitCharacter = true
+    includeCommitCharacter = true,
   )
 
   check(
@@ -40,8 +36,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  // tr@@
       |}
       |""".stripMargin,
-    """|""".stripMargin,
-    includeCommitCharacter = true
+    "",
+    includeCommitCharacter = true,
   )
 
   check(
@@ -59,8 +55,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  **/
       |}
       |""".stripMargin,
-    """|""".stripMargin,
-    includeCommitCharacter = true
+    "",
+    includeCommitCharacter = true,
   )
 
   check(
@@ -80,7 +76,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|superVisorStrategy: Int
        |super
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -100,7 +96,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|superVisorStrategy: Int
        |super
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -120,7 +116,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|superVisorStrategy: Int
        |super
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -137,7 +133,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|super
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -165,8 +161,13 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
            |override def equals(x$1: Object): Boolean
            |override def hashCode(): Int
            |override def finalize(): Unit
-           |""".stripMargin
-    )
+           |""".stripMargin,
+      "3" ->
+        """|value: Int
+           |val
+           |var
+           |""".stripMargin,
+    ),
   )
 
   check(
@@ -182,7 +183,26 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|val
        |var
-       |""".stripMargin
+       |""".stripMargin,
+  )
+
+  check(
+    "given-def",
+    """
+      |package foo
+      |
+      |object A {
+      |  def someMethod = {
+      |    gi@@
+      |  }
+      |}
+      |""".stripMargin,
+    """|given (commit: '')
+       |""".stripMargin,
+    includeCommitCharacter = true,
+    compat = Map(
+      "2" -> ""
+    ),
   )
 
   check(
@@ -197,7 +217,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: Int
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1),
   )
 
   checkEditLine(
@@ -211,7 +232,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "  va@@",
     "  val ",
-    filter = _ == "val"
+    filter = _ == "val",
   )
 
   check(
@@ -224,7 +245,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|return
-       |""".stripMargin
+       |""".stripMargin,
+    // methods add in 3.2.1
+    filter = item => !item.contains("retains"),
   )
 
   check(
@@ -236,7 +259,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  val someVal = ret@@
       |}
       |""".stripMargin,
-    ""
+    "",
+    // methods add in 3.2.1
+    filter = item => !item.contains("retains"),
   )
 
   check(
@@ -250,7 +275,12 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """
       |override def toString(): String
-    """.stripMargin
+    """.stripMargin,
+    compat = Map(
+      "3" -> ""
+    ),
+    // methods add in 3.2.1
+    filter = item => !item.contains("retains"),
   )
 
   check(
@@ -260,7 +290,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |
       |ret@@
       |""".stripMargin,
-    ""
+    "",
+    // methods add in 3.2.1
+    filter = item => !item.contains("retains"),
   )
 
   check(
@@ -275,7 +307,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|import (commit: '')
        |""".stripMargin,
-    includeCommitCharacter = true
+    includeCommitCharacter = true,
   )
 
   check(
@@ -286,8 +318,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |class Foo {
       |}
       |""".stripMargin,
-    "", // you should not use the empty package
-    enablePackageWrap = false
+    """|import (commit: '')
+       |""".stripMargin,
+    includeCommitCharacter = true,
+    enablePackageWrap = false,
   )
 
   check(
@@ -298,7 +332,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |abstract cla@@
       |""".stripMargin,
     """|class
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -308,7 +342,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |
       |typ@@
     """.stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3" -> "type"
+    ),
   )
 
   check(
@@ -321,7 +358,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """type
-    """.stripMargin
+    """.stripMargin,
   )
 
   check(
@@ -338,7 +375,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     // NOTE(olafur) `type` is technically valid in blocks but they're not completed
     // to reduce noise (we do the same for class, object, trait).
-    ""
+    "",
   )
 
   check(
@@ -350,9 +387,13 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  val x: Map[Int, new@@]
       |}
     """.stripMargin,
-    ""
+    "",
+    // to avoid newMain annotation
+    filter = str => !str.contains("newMain"),
   )
-
+  // TODO: Should provide empty completions
+  // The issue is that the tree looks the same as for `case @@` (it doesn't see `new`)
+  // Issue: https://github.com/scalameta/metals/issues/4367
   check(
     "new-pattern",
     """
@@ -364,7 +405,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  }
       |}
     """.stripMargin,
-    ""
+    "",
+    // to avoid newMain annotation
+    filter = str => !str.contains("newMain"),
   )
 
   check(
@@ -379,7 +422,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|supervisorStrategy: Int
        |super
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -391,7 +434,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  protected de@@
       |}
     """.stripMargin,
-    "def"
+    "def",
   )
 
   check(
@@ -405,11 +448,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """val
       |var
-      |""".stripMargin
+      |""".stripMargin,
   )
 
   check(
-    "topLevel".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "topLevel",
     "@@",
     """|abstract class
        |case class
@@ -424,6 +467,329 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
        |sealed class
        |sealed trait
        |trait
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|def
+                |val
+                |lazy val
+                |inline
+                |var
+                |given
+                |extension
+                |type
+                |class
+                |enum
+                |case class
+                |trait
+                |object
+                |package
+                |import
+                |final
+                |private
+                |protected
+                |abstract class
+                |sealed trait
+                |sealed abstract class
+                |sealed class
+                |implicit
+                |""".stripMargin
+    ),
   )
+
+  check(
+    "using",
+    """|object A{
+       |  def hello(u@@)
+       |}""".stripMargin,
+    """|using (commit: '')
+       |""".stripMargin,
+    includeCommitCharacter = true,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "not-using",
+    """|object A{
+       |  def hello(a: String, u@@)
+       |}""".stripMargin,
+    "",
+  )
+
+  check(
+    "extends-class",
+    """
+      |package foo
+      |
+      |class Foo ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-with-class",
+    """
+      |package foo
+      |
+      |class Foo extends Any wi@@
+    """.stripMargin,
+    """|with
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-class-nested",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  class Boo ext@@
+      |}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-class-nested-with-body",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  class Boo ext@@ {
+      |    def test: Int = ???
+      |  }
+      |}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-obj",
+    """
+      |package foo
+      |
+      |object Foo ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-trait",
+    """
+      |package foo
+      |
+      |trait Foo ext@@ {}
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-with-constructor",
+    """
+      |package foo
+      |
+      |class Foo(x: Int) ext@@
+    """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "extends-with-type-param",
+    """
+      |package foo
+      |
+      |class Foo[A] ext@@
+      """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "no-extends",
+    """
+      |package foo
+      |
+      |object Main {
+      |  def main = {
+      |    foo.ext@@
+      |  }
+      |}
+    """.stripMargin,
+    "",
+  )
+
+  check(
+    "no-extends-paren",
+    """
+      |package foo
+      |
+      |object Main {
+      |  def main = {
+      |    foo(i) ex@@
+      |  }
+      |}
+    """.stripMargin,
+    "",
+  )
+
+  check(
+    "extends-limitation",
+    """
+      |package foo
+      |
+      |// can't provide extends keyword completion if there's newline between class
+      |// because the completion engine tokenize only the line
+      |class Main
+      |  exten@@
+    """.stripMargin,
+    "",
+    compat =
+      Map( // it works in Scala3 because `completionPos.cursorPos` gives us a `class Main\n exten`
+        "3" ->
+          """|extends
+             |""".stripMargin
+      ),
+  )
+
+  check(
+    "extends-enum".tag(IgnoreScala2),
+    """
+      |package foo
+      |
+      |enum Foo(x: Int) ext@@
+        """.stripMargin,
+    """|extends
+       |""".stripMargin,
+  )
+
+  check(
+    "derives-object",
+    """
+      |package foo
+      |
+      |object Foo der@@
+      """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-constructor",
+    """
+      |package foo
+      |
+      |class Foo(x: Int) der@@
+      """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-comma-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |trait Baz {}
+      |
+      |class Foo(x: Int) extends Bar, Baz der@@
+        """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |class Foo(x: Int) extends Bar der@@
+          """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-extends-type-param",
+    """
+      |package foo
+      |
+      |trait Bar[B] {}
+      |class Foo(x: Int) extends Bar[Int] der@@
+            """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |trait Baz {}
+      |
+      |class Foo(x: Int) extends Bar with Baz der@@
+              """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "derives-with-constructor-extends",
+    """
+      |package foo
+      |
+      |trait Bar {}
+      |class Baz(b: Int) {}
+      |
+      |class Foo(x: Int) extends Bar with Baz(1) der@@
+                """.stripMargin,
+    """|derives
+       |""".stripMargin,
+    compat = Map(
+      "2" -> ""
+    ),
+  )
+
+  check(
+    "no-derives",
+    """
+      |package foo
+      |
+      |object Main {
+      |  def main = {
+      |    foo.der@@
+      |  }
+      |}
+      """.stripMargin,
+    "",
+  )
+
 }

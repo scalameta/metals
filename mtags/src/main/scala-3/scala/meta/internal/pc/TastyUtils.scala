@@ -1,27 +1,18 @@
 package scala.meta.internal.pc
 
 import java.net.URI
-import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-import java.util.Optional
 
-import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.HtmlBuilder
-import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.io.AbsolutePath
 
-import com.google.gson.JsonPrimitive
-import dotty.tools.dotc.core.tasty.TastyAnsiiPrinter
 import dotty.tools.dotc.core.tasty.TastyHTMLPrinter
 import dotty.tools.dotc.core.tasty.TastyPrinter
-import org.eclipse.{lsp4j as l}
 
 object TastyUtils:
   def getTasty(
       tastyURI: URI,
-      isHttpEnabled: Boolean
+      isHttpEnabled: Boolean,
   ): String =
     if isHttpEnabled then getStandaloneHtmlTasty(tastyURI)
     else normalTasty(tastyURI)
@@ -36,7 +27,7 @@ object TastyUtils:
   private def htmlTasty(
       tastyURI: URI,
       headElems: List[String] = Nil,
-      bodyAttributes: String = ""
+      bodyAttributes: String = "",
   ): String =
     val title = tastyHtmlPageTitle(tastyURI)
     val tastyBytes = AbsolutePath.fromAbsoluteUri(tastyURI).readAllBytes

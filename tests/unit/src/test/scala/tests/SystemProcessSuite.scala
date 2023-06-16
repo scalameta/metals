@@ -1,6 +1,7 @@
 package tests
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Properties
 
@@ -10,6 +11,8 @@ import scala.meta.io.AbsolutePath
 import munit.FunSuite
 
 class SystemProcessSuite extends FunSuite {
+
+  implicit val ctx: ExecutionContext = this.munitExecutionContext
 
   test("exit code") {
     val cmd =
@@ -22,9 +25,9 @@ class SystemProcessSuite extends FunSuite {
       cmd,
       AbsolutePath(sys.props.get("user.dir").get),
       redirectErrorOutput = false,
-      Map.empty
+      Map.empty,
     )
-    val exitCode = Await.result(ps.complete, 1 seconds)
+    val exitCode = Await.result(ps.complete, 1.seconds)
     assertEquals(exitCode, 22)
   }
 
@@ -38,10 +41,10 @@ class SystemProcessSuite extends FunSuite {
       cmd,
       AbsolutePath(sys.props.get("user.dir").get),
       redirectErrorOutput = false,
-      Map.empty
+      Map.empty,
     )
     ps.cancel
-    val exitCode = Await.result(ps.complete, 5 seconds)
+    val exitCode = Await.result(ps.complete, 5.seconds)
     assert(exitCode != 0)
   }
 
@@ -50,9 +53,9 @@ class SystemProcessSuite extends FunSuite {
       List("absurd", "process"),
       AbsolutePath(sys.props.get("user.dir").get),
       redirectErrorOutput = false,
-      Map.empty
+      Map.empty,
     )
-    val exitCode = Await.result(ps.complete, 1 seconds)
+    val exitCode = Await.result(ps.complete, 1.seconds)
     assertEquals(exitCode, 1)
   }
 }

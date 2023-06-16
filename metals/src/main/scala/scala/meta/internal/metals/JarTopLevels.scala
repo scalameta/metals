@@ -6,9 +6,11 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Statement
 import java.util.zip.ZipError
+import java.util.zip.ZipException
 
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -29,7 +31,14 @@ final class JarTopLevels(conn: () => Connection) {
       path: AbsolutePath
   ): Option[List[(String, AbsolutePath)]] =
     try {
-      val fs = PlatformFileIO.newJarFileSystem(path, create = false)
+      val fs = path.jarPath
+        .map(jarPath =>
+          PlatformFileIO.newFileSystem(
+            jarPath.toURI,
+            new java.util.HashMap[String, String](),
+          )
+        )
+        .getOrElse(PlatformFileIO.newJarFileSystem(path, create = false))
       val toplevels = List.newBuilder[(String, AbsolutePath)]
       conn()
         .query(
@@ -48,7 +57,7 @@ final class JarTopLevels(conn: () => Connection) {
         .headOption
         .map(_ => toplevels.result)
     } catch {
-      case _: ZipError =>
+      case _: ZipError | _: ZipException =>
         None
     }
 
@@ -61,7 +70,7 @@ final class JarTopLevels(conn: () => Connection) {
    */
   def putTopLevels(
       path: AbsolutePath,
-      toplevels: List[(String, AbsolutePath)]
+      toplevels: List[(String, AbsolutePath)],
   ): Int = {
     if (toplevels.isEmpty) 0
     else {
@@ -71,7 +80,7 @@ final class JarTopLevels(conn: () => Connection) {
         try {
           jarStmt = conn().prepareStatement(
             s"insert into indexed_jar (md5) values (?)",
-            Statement.RETURN_GENERATED_KEYS
+            Statement.RETURN_GENERATED_KEYS,
           )
           jarStmt.setString(1, getMD5Digest(path))
           jarStmt.executeUpdate()
@@ -124,5 +133,12 @@ final class JarTopLevels(conn: () => Connection) {
         .lastModifiedTime()
         .toMillis + ":" + attributes.size()
     )
+  }
+
+  def clearAll(): Unit = {
+    val statement1 = conn().prepareStatement("truncate table toplevel_symbol")
+    statement1.execute()
+    val statement2 = conn().prepareStatement("delete from indexed_jar")
+    statement2.execute()
   }
 }

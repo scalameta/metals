@@ -5,8 +5,8 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.Messages.ChooseBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
 import org.eclipse.lsp4j.MessageActionItem
 
@@ -16,7 +16,7 @@ import org.eclipse.lsp4j.MessageActionItem
  */
 final class BuildToolSelector(
     languageClient: MetalsLanguageClient,
-    tables: Tables
+    tables: Tables,
 )(implicit ec: ExecutionContext) {
   def checkForChosenBuildTool(
       buildTools: List[BuildTool]

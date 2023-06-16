@@ -7,5 +7,5 @@ class StepDapSuite
     extends BaseStepDapSuite(
       "debug-step",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     )

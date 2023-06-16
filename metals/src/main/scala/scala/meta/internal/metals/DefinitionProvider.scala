@@ -1,11 +1,12 @@
 package scala.meta.internal.metals
 
-import java.util.Collections
 import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Term
+import scala.meta.Type
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -16,15 +17,23 @@ import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.remotels.RemoteLanguageServer
+import scala.meta.internal.semanticdb
+import scala.meta.internal.semanticdb.IdTree
+import scala.meta.internal.semanticdb.OriginalTree
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.tokens.Token
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
@@ -53,8 +62,11 @@ final class DefinitionProvider(
     remote: RemoteLanguageServer,
     trees: Trees,
     buildTargets: BuildTargets,
-    scalaVersionSelector: ScalaVersionSelector
-)(implicit ec: ExecutionContext) {
+    scalaVersionSelector: ScalaVersionSelector,
+    saveDefFileToDisk: Boolean,
+    sourceMapper: SourceMapper,
+    workspaceSearch: WorkspaceSymbolProvider,
+)(implicit ec: ExecutionContext, rc: ReportContext) {
 
   val destinationProvider = new DestinationProvider(
     index,
@@ -63,13 +75,15 @@ final class DefinitionProvider(
     workspace,
     Some(semanticdbs),
     trees,
-    buildTargets
+    buildTargets,
+    saveDefFileToDisk,
+    sourceMapper,
   )
 
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
-      token: CancelToken
+      token: CancelToken,
   ): Future[DefinitionResult] = {
     val fromSemanticdb =
       semanticdbs.textDocument(path).documentIncludingStale
@@ -85,8 +99,8 @@ final class DefinitionProvider(
       } else {
         Future.successful(fromSnapshot)
       }
-    fromIndex.flatMap { result =>
-      if (result.isEmpty) {
+    val fromCompilerOrSemanticdb = fromIndex.flatMap { result =>
+      if (result.isEmpty && path.isScalaFilename) {
         compilers().definition(params, token)
       } else {
         if (fromSemanticdb.isEmpty) {
@@ -95,13 +109,92 @@ final class DefinitionProvider(
         Future.successful(result)
       }
     }
+
+    fromCompilerOrSemanticdb.map { definition =>
+      if (definition.isEmpty && !definition.symbol.endsWith("/")) {
+        fromSearch(path, params.getPosition(), token).getOrElse(definition)
+      } else {
+        definition
+      }
+    }
+  }
+
+  /**
+   *  Tries to find an identifier token at the current position
+   *  to use it for symbol search. This is the last possibility for
+   *  finding the definition.
+   *
+   * @param path path of the current file
+   * @param pos position we are searching for
+   * @return possible definition locations based on exact symbol search
+   */
+  def fromSearch(
+      path: AbsolutePath,
+      pos: Position,
+      token: CancelToken,
+  ): Option[DefinitionResult] = {
+
+    val defResult = for {
+      sourceText <- buffers.get(path)
+      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
+      metaPos <- pos.toMeta(virtualFile)
+      tokens <- trees.tokenized(virtualFile).toOption
+      ident <- tokens.collectFirst {
+        case id: Token.Ident if id.pos.encloses(metaPos) => id
+      }
+    } yield {
+      lazy val nameTree = trees.findLastEnclosingAt(path, pos)
+
+      // for sure is not a class/trait/enum if we access it via select
+      lazy val isInSelectPosition = nameTree.exists { name =>
+        name.parent.exists {
+          case Type.Select(qual, _) if nameTree.contains(qual) => true
+          case Term.Select(qual, _) if nameTree.contains(qual) => true
+          case _ => false
+        }
+      }
+
+      lazy val isInTypePosition = nameTree.exists(_.is[Type.Name])
+
+      def filterViaHeuristics(symbolInfo: SymbolInformation) = {
+        val kind = symbolInfo.getKind()
+        val isClassLike =
+          kind == SymbolKind.Class || kind == SymbolKind.Enum || kind == SymbolKind.Interface
+        if (isClassLike && isInSelectPosition) false
+        else if (kind == SymbolKind.Object && isInTypePosition) false
+        else true
+      }
+
+      val locs = workspaceSearch
+        .searchExactFrom(ident.value, path, token)
+
+      val reducedGuesses =
+        if (locs.size > 1)
+          locs.filter(filterViaHeuristics)
+        else
+          locs
+
+      if (reducedGuesses.nonEmpty) {
+        scribe.warn(s"Using indexes to guess the definition of ${ident.value}")
+        Some(
+          DefinitionResult(
+            reducedGuesses.map(_.getLocation()).asJava,
+            ident.value,
+            None,
+            None,
+          )
+        )
+      } else None
+
+    }
+    defResult.flatten
   }
 
   def fromSymbol(
       sym: String,
-      source: Option[AbsolutePath]
+      source: Option[AbsolutePath],
   ): ju.List[Location] = {
-    destinationProvider.fromSymbol(sym, source).flatMap(_.toResult) match {
+    destinationProvider.fromSymbol(sym, source) match {
       case None => ju.Collections.emptyList()
       case Some(destination) => destination.locations
     }
@@ -109,13 +202,12 @@ final class DefinitionProvider(
 
   def fromSymbol(
       sym: String,
-      targets: List[BuildTargetIdentifier]
+      targets: List[BuildTargetIdentifier],
   ): ju.List[Location] = {
     destinationProvider
-      .fromSymbol(sym, targets.toSet)
-      .flatMap(_.toResult) match {
+      .fromSymbol(sym, targets.toSet) match {
       case None => ju.Collections.emptyList()
-      case Some(destination) => destination.locations
+      case Some(r) => r.locations
     }
   }
 
@@ -125,7 +217,7 @@ final class DefinitionProvider(
    */
   def definitionPathInputFromSymbol(
       sym: String,
-      source: Option[AbsolutePath]
+      source: Option[AbsolutePath],
   ): Option[Input.VirtualFile] =
     destinationProvider
       .definition(sym, source)
@@ -133,7 +225,7 @@ final class DefinitionProvider(
 
   def symbolOccurrence(
       source: AbsolutePath,
-      dirtyPosition: Position
+      dirtyPosition: Position,
   ): Option[(SymbolOccurrence, TextDocument)] = {
     for {
       currentDocument <-
@@ -143,7 +235,7 @@ final class DefinitionProvider(
       posOcc = positionOccurrence(
         source,
         dirtyPosition,
-        currentDocument
+        currentDocument,
       )
       symbolOccurrence <- {
         def mtagsOccurrence =
@@ -153,21 +245,45 @@ final class DefinitionProvider(
     } yield (symbolOccurrence, currentDocument)
   }
 
-  def positionOccurrence(
+  /** Convert dirty buffer position to snapshot position in "source" */
+  private def positionOccurrenceQuery(
       source: AbsolutePath,
       dirtyPosition: Position,
-      snapshot: TextDocument
-  ): ResolvedSymbolOccurrence = {
-    // Convert dirty buffer position to snapshot position in "source"
+      snapshot: TextDocument,
+  ): (TokenEditDistance, Option[Position]) = {
     val sourceDistance = buffers.tokenEditDistance(source, snapshot.text, trees)
     val snapshotPosition = sourceDistance.toOriginal(
       dirtyPosition.getLine,
-      dirtyPosition.getCharacter
+      dirtyPosition.getCharacter,
     )
+    (sourceDistance, snapshotPosition.toPosition(dirtyPosition))
+  }
 
-    // Find matching symbol occurrence in SemanticDB snapshot
+  private def syntheticApplyOccurrence(
+      queryPositionOpt: Option[semanticdb.Range],
+      snapshot: TextDocument,
+  ) = {
+    snapshot.synthetics.collectFirst {
+      case Synthetic(
+            Some(range),
+            SelectTree(_: OriginalTree, Some(IdTree(symbol))),
+          )
+          if queryPositionOpt
+            .exists(queryPos => range == queryPos) =>
+        SymbolOccurrence(Some(range), symbol, SymbolOccurrence.Role.REFERENCE)
+    }
+  }
+
+  def positionOccurrence(
+      source: AbsolutePath,
+      dirtyPosition: Position,
+      snapshot: TextDocument,
+  ): ResolvedSymbolOccurrence = {
+    val (sourceDistance, queryPositionOpt) =
+      positionOccurrenceQuery(source, dirtyPosition, snapshot)
+
     val occurrence = for {
-      queryPosition <- snapshotPosition.toPosition(dirtyPosition)
+      queryPosition <- queryPositionOpt
       occurrence <-
         snapshot.occurrences
           .find(_.encloses(queryPosition, true))
@@ -178,16 +294,49 @@ final class DefinitionProvider(
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
   }
 
+  /**
+   * Find all SymbolOccurrences for the given position.
+   * Multiple symbols might be attached, for example
+   * extension parameter. see: https://github.com/scalameta/metals/issues/3133
+   */
+  def positionOccurrences(
+      source: AbsolutePath,
+      dirtyPosition: Position,
+      snapshot: TextDocument,
+  ): List[ResolvedSymbolOccurrence] = {
+    val (sourceDistance, queryPositionOpt) =
+      positionOccurrenceQuery(source, dirtyPosition, snapshot)
+    // Find matching symbol occurrences in SemanticDB snapshot
+    val occurrence = (for {
+      queryPosition <- queryPositionOpt
+    } yield {
+      val occs = snapshot.occurrences
+        .filter(_.encloses(queryPosition, true))
+      // In case of macros we might need to get the postion from the presentation compiler
+      if (occs.isEmpty)
+        fromMtags(source, queryPosition).toList
+      else occs
+    }).getOrElse(Nil)
+
+    occurrence.map { occ =>
+      ResolvedSymbolOccurrence(sourceDistance, Some(occ))
+    }.toList
+  }
+
   private def definitionFromSnapshot(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams,
-      snapshot: TextDocument
+      snapshot: TextDocument,
   ): DefinitionResult = {
     val ResolvedSymbolOccurrence(sourceDistance, occurrence) =
-      positionOccurrence(source, dirtyPosition.getPosition, snapshot)
+      positionOccurrence(
+        source,
+        dirtyPosition.getPosition,
+        snapshot,
+      )
 
     // Find symbol definition location.
-    val result: Option[DefinitionResult] = occurrence.flatMap { occ =>
+    def definitionResult(occ: SymbolOccurrence): Option[DefinitionResult] = {
       val isLocal = occ.symbol.isLocal || snapshot.definesSymbol(occ.symbol)
       if (isLocal) {
         // symbol is local so it is defined within the source.
@@ -196,17 +345,25 @@ final class DefinitionProvider(
           sourceDistance,
           occ.symbol,
           None,
-          dirtyPosition.getTextDocument.getUri
+          dirtyPosition.getTextDocument.getUri,
         ).toResult
       } else {
         // symbol is global so it is defined in an external destination buffer.
         destinationProvider
           .fromSymbol(occ.symbol, Some(source))
-          .flatMap(_.toResult)
       }
     }
 
-    result.getOrElse(DefinitionResult.empty(occurrence.fold("")(_.symbol)))
+    val apply =
+      occurrence.flatMap(occ => syntheticApplyOccurrence(occ.range, snapshot))
+    val result = occurrence.flatMap(definitionResult)
+    val applyResults = apply.flatMap(definitionResult)
+    val combined = result ++ applyResults
+
+    if (combined.isEmpty)
+      DefinitionResult.empty(occurrence.fold("")(_.symbol))
+    else
+      combined.reduce(_ ++ _)
   }
 
   private def fromMtags(source: AbsolutePath, dirtyPos: Position) = {
@@ -223,7 +380,7 @@ case class DefinitionDestination(
     distance: TokenEditDistance,
     symbol: String,
     path: Option[AbsolutePath],
-    uri: String
+    uri: String,
 ) {
 
   /**
@@ -231,22 +388,22 @@ case class DefinitionDestination(
    */
   def toResult: Option[DefinitionResult] =
     for {
-      location <- snapshot.definition(uri, symbol)
+      location <- snapshot.toLocation(uri, symbol)
       revisedPosition = distance.toRevised(
         location.getRange.getStart.getLine,
-        location.getRange.getStart.getCharacter
+        location.getRange.getStart.getCharacter,
       )
       result <- revisedPosition.toLocation(location)
     } yield {
       DefinitionResult(
-        Collections.singletonList(result),
+        ju.Collections.singletonList(result),
         symbol,
         path,
-        Some(snapshot)
+        Some(snapshot),
       )
     }
-}
 
+}
 class DestinationProvider(
     index: GlobalSymbolIndex,
     buffers: Buffers,
@@ -254,7 +411,9 @@ class DestinationProvider(
     workspace: AbsolutePath,
     semanticdbsFallback: Option[Semanticdbs],
     trees: Trees,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    saveSymbolFileToDisk: Boolean,
+    sourceMapper: SourceMapper,
 ) {
 
   private def bestTextDocument(
@@ -263,20 +422,27 @@ class DestinationProvider(
     val defnRevisedInput = symbolDefinition.path.toInput
     // Read text file from disk instead of editor buffers because the file
     // on disk is more likely to parse.
-    lazy val parsed =
+    lazy val parsed = {
       mtags.index(
         symbolDefinition.path.toLanguage,
         defnRevisedInput,
-        symbolDefinition.dialect
+        symbolDefinition.dialect,
       )
+    }
 
-    if (symbolDefinition.path.isAmmoniteScript || parsed.occurrences.isEmpty) {
+    val path = symbolDefinition.path
+    if (path.isAmmoniteScript || parsed.occurrences.isEmpty) {
       // Fall back to SemanticDB on disk, if any
-      semanticdbsFallback
-        .flatMap {
-          _.textDocument(symbolDefinition.path).documentIncludingStale
-        }
+
+      def fromSemanticdbs(p: AbsolutePath): Option[TextDocument] =
+        semanticdbsFallback.flatMap(_.textDocument(p).documentIncludingStale)
+
+      fromSemanticdbs(path)
+        .orElse(
+          sourceMapper.mappedTo(path).flatMap(fromSemanticdbs)
+        )
         .getOrElse(parsed)
+
     } else {
       parsed
     }
@@ -284,7 +450,7 @@ class DestinationProvider(
 
   def definition(
       symbol: String,
-      source: Option[AbsolutePath]
+      source: Option[AbsolutePath],
   ): Option[SymbolDefinition] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
     definition(symbol, targets)
@@ -292,7 +458,7 @@ class DestinationProvider(
 
   def definition(
       symbol: String,
-      allowedBuildTargets: Set[BuildTargetIdentifier]
+      allowedBuildTargets: Set[BuildTargetIdentifier],
   ): Option[SymbolDefinition] = {
     val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
     if (allowedBuildTargets.isEmpty)
@@ -314,7 +480,7 @@ class DestinationProvider(
       source: AbsolutePath
   ): List[BuildTargetIdentifier] = {
     def trivialSource: Option[List[BuildTargetIdentifier]] =
-      Option(buildTargets.sourceBuildTargets(source).toList).filter(_.nonEmpty)
+      buildTargets.sourceBuildTargets(source).map(_.toList).filter(_.nonEmpty)
 
     def dependencySource: Option[List[BuildTargetIdentifier]] = {
       source.jarPath
@@ -330,27 +496,48 @@ class DestinationProvider(
 
   def fromSymbol(
       symbol: String,
-      allowedBuildTargets: Set[BuildTargetIdentifier]
-  ): Option[DefinitionDestination] = {
-    definition(symbol, allowedBuildTargets).map { defn =>
-      val destinationDoc = bestTextDocument(defn)
-      val destinationPath = defn.path.toFileOnDisk(workspace)
-      val destinationDistance =
-        buffers.tokenEditDistance(destinationPath, destinationDoc.text, trees)
-      DefinitionDestination(
-        destinationDoc,
-        destinationDistance,
-        defn.definitionSymbol.value,
-        Some(destinationPath),
-        destinationPath.toURI.toString
-      )
+      allowedBuildTargets: Set[BuildTargetIdentifier],
+  ): Option[DefinitionResult] = {
+    definition(symbol, allowedBuildTargets).flatMap { defn =>
+      val destinationPath =
+        if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
+        else defn.path
+      val uri = destinationPath.toURI.toString
+
+      defn.range match {
+        // read only source - no need to adjust positions
+        case Some(range) if defn.path.isJarFileSystem =>
+          Some(
+            DefinitionResult(
+              ju.Collections.singletonList(range.toLocation(uri)),
+              symbol,
+              Some(defn.path),
+              None,
+            )
+          )
+        case _ =>
+          val destinationDoc = bestTextDocument(defn)
+          val destinationDistance =
+            buffers.tokenEditDistance(
+              destinationPath,
+              destinationDoc.text,
+              trees,
+            )
+          DefinitionDestination(
+            destinationDoc,
+            destinationDistance,
+            defn.definitionSymbol.value,
+            Some(destinationPath),
+            uri,
+          ).toResult
+      }
     }
   }
 
   def fromSymbol(
       symbol: String,
-      source: Option[AbsolutePath]
-  ): Option[DefinitionDestination] = {
+      source: Option[AbsolutePath],
+  ): Option[DefinitionResult] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
     fromSymbol(symbol, targets)
   }

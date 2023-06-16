@@ -6,10 +6,13 @@ import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.inputs._
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
@@ -40,20 +43,21 @@ final class Identifier(val name: String, val pos: Position) {
 class ScalaToplevelMtags(
     val input: Input.VirtualFile,
     includeInnerClasses: Boolean,
+    includeMembers: Boolean,
     dialect: Dialect
-) extends MtagsIndexer {
+)(implicit rc: ReportContext)
+    extends MtagsIndexer {
 
   import ScalaToplevelMtags._
 
   override def language: Language = Language.SCALA
 
-  override def indexRoot(): Unit = loop(0, true, Region.RootRegion, None)
+  override def indexRoot(): Unit =
+    loop(0, true, new Region.RootRegion, None)
 
   private val scanner = new LegacyScanner(input, dialect)
   scanner.reader.nextChar()
   def isDone: Boolean = scanner.curr.token == EOF
-
-  private var sourceTopLevelAdded = false
 
   private def resetRegion(region: Region): Region = {
     currentOwner = region.owner
@@ -72,80 +76,213 @@ class ScalaToplevelMtags(
       indent: Int,
       isAfterNewline: Boolean,
       region: Region,
-      expectTemplate: Option[ExpectTemplate]
+      expectTemplate: Option[ExpectTemplate],
+      prevWasDot: Boolean = false
   ): Unit = {
     def newExpectTemplate: Some[ExpectTemplate] =
-      Some(ExpectTemplate(indent, currentOwner, false))
+      Some(ExpectTemplate(indent, currentOwner, false, false))
+    def newExpectCaseClassTemplate: Some[ExpectTemplate] =
+      Some(
+        ExpectTemplate(
+          indent,
+          currentOwner,
+          false,
+          false,
+          isCaseClassConstructor = true
+        )
+      )
     def newExpectPkgTemplate: Some[ExpectTemplate] =
-      Some(ExpectTemplate(indent, currentOwner, true))
+      Some(ExpectTemplate(indent, currentOwner, true, false))
+    def newExpectExtensionTemplate(owner: String): Some[ExpectTemplate] =
+      Some(ExpectTemplate(indent, owner, false, true))
+    def newExpectIgnoreBody: Some[ExpectTemplate] =
+      Some(
+        ExpectTemplate(
+          indent = indent,
+          owner = currentOwner,
+          isPackageBody = false,
+          isExtension = false,
+          ignoreBody = true
+        )
+      )
+
     def needEmitFileOwner(region: Region): Boolean =
-      !sourceTopLevelAdded && region.produceSourceToplevel
+      region.produceSourceToplevel
     def needToParseBody(expect: ExpectTemplate): Boolean =
-      includeInnerClasses || expect.isPackageBody
+      (includeInnerClasses || expect.isPackageBody) && !expect.ignoreBody
+    def needToParseExtension(expect: ExpectTemplate): Boolean =
+      includeInnerClasses && expect.isExtension && !expect.ignoreBody
+
     def nextIsNL: Boolean = {
       scanner.nextToken()
-      isNewline
+      scanner.curr.token match {
+        case WHITESPACE if isNewline => true
+        case WHITESPACE =>
+          nextIsNL
+        case COMMENT =>
+          scanner.skipComment()
+          nextIsNL
+        case _ => false
+      }
     }
 
     def needEmitMember(region: Region): Boolean =
       includeInnerClasses || region.acceptMembers
 
+    def needEmitTermMember(): Boolean =
+      includeMembers && !prevWasDot
+
     if (!isDone) {
       val data = scanner.curr
-
       val currRegion =
         if (dialect.allowSignificantIndentation) {
           data.token match {
             case WHITESPACE | COMMENT => region
-            case _ => exitIndented(region, indent)
+            case _ =>
+              resetRegion(exitIndented(region, indent))
           }
         } else region
-
       data.token match {
         case PACKAGE =>
           val isNotPackageObject = emitPackage(currRegion.owner)
           if (isNotPackageObject) {
-            val nextRegion = Region.Package(currentOwner, currRegion)
-            loop(
-              indent,
-              false,
-              nextRegion,
-              newExpectPkgTemplate
-            )
+            val nextRegion = new Region.Package(currentOwner, currRegion)
+            loop(indent, false, nextRegion, newExpectPkgTemplate)
           } else
             loop(indent, false, currRegion, newExpectTemplate)
+        case IDENTIFIER
+            if dialect.allowExtensionMethods && data.name == "extension" =>
+          val nextOwner =
+            if (
+              dialect.allowToplevelStatements &&
+              currRegion.produceSourceToplevel
+            ) {
+              val srcName = input.filename.stripSuffix(".scala")
+              val name = s"$srcName$$package"
+              val owner = withOwner(currRegion.owner) {
+                symbol(Descriptor.Term(name))
+              }
+
+              if (needEmitFileOwner(currRegion)) {
+                val pos = newPosition
+                withOwner(currRegion.owner) {
+                  term(name, pos, Kind.OBJECT, 0)
+                }
+              }
+              owner
+            } else currRegion.termOwner
+          scanner.nextToken()
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion.withTermOwner(nextOwner),
+            newExpectExtensionTemplate(nextOwner)
+          )
         case CLASS | TRAIT | OBJECT | ENUM if needEmitMember(currRegion) =>
           emitMember(false, currRegion.owner)
-          loop(indent, isAfterNewline = false, currRegion, newExpectTemplate)
+          val template = expectTemplate match {
+            case Some(expect) if expect.isCaseClassConstructor =>
+              newExpectCaseClassTemplate
+            case _ => newExpectTemplate
+          }
+          loop(indent, isAfterNewline = false, currRegion, template)
         // also covers extension methods because of `def` inside
+        case DEF
+            // extension group
+            if (dialect.allowExtensionMethods && currRegion.isExtension) =>
+          acceptTrivia()
+          newIdentifier.foreach { name =>
+            withOwner(currRegion.owner) {
+              term(name.name, name.pos, Kind.METHOD, EXTENSION)
+            }
+          }
+          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
+        // inline extension method `extension (...) def foo = ...`
+        case DEF if expectTemplate.map(needToParseExtension).getOrElse(false) =>
+          expectTemplate match {
+            case None =>
+              reportError(
+                "failed while reading 'def' in 'extension (...) def ...', expectTemplate should be set by reading 'extension'."
+              )
+            case Some(expect) =>
+              acceptTrivia()
+              newIdentifier.foreach { name =>
+                withOwner(expect.owner) {
+                  term(name.name, name.pos, Kind.METHOD, EXTENSION)
+                }
+              }
+              loop(indent, isAfterNewline = false, currRegion, None)
+          }
         case DEF | VAL | VAR | GIVEN | TYPE
             if dialect.allowToplevelStatements &&
               needEmitFileOwner(currRegion) =>
-          sourceTopLevelAdded = true
           val pos = newPosition
           val srcName = input.filename.stripSuffix(".scala")
           val name = s"$srcName$$package"
-          withOwner(currRegion.owner) {
+          val owner = withOwner(currRegion.owner) {
             term(name, pos, Kind.OBJECT, 0)
           }
-          loop(indent, isAfterNewline = false, region, expectTemplate)
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion.withTermOwner(owner),
+            expectTemplate
+          )
+        case DEF | VAL | VAR | GIVEN | TYPE
+            if needEmitTermMember() && expectTemplate
+              .map(!_.isExtension)
+              .getOrElse(true) =>
+          withOwner(currRegion.termOwner) {
+            emitTerm(currRegion)
+          }
+          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         case IMPORT =>
           // skip imports becase they might have `given` kw
           acceptToStatSep()
-          loop(indent, isAfterNewline = false, region, expectTemplate)
+          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case COMMENT =>
           // skip comment becase they might break indentation
           scanner.nextToken()
-          loop(indent, isAfterNewline = false, region, expectTemplate)
+          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case WHITESPACE if dialect.allowSignificantIndentation =>
           if (isNewline) {
-            scanner.nextToken()
-            loop(0, isAfterNewline = true, region, expectTemplate)
+            expectTemplate match {
+              // extension (x: Int)|
+              //   def foo() = ...
+              case Some(expect) if needToParseExtension(expect) =>
+                val next =
+                  expect.startIndentedRegion(currRegion, expect.isExtension)
+                resetRegion(next)
+                scanner.nextToken()
+                loop(0, isAfterNewline = true, next, None)
+              // basically for braceless def
+              case Some(expect) if expect.ignoreBody =>
+                val nextIndent = acceptWhileIndented(expect.indent)
+                loop(
+                  nextIndent,
+                  isAfterNewline = false,
+                  currRegion,
+                  None
+                )
+              case _ =>
+                scanner.nextToken()
+                loop(
+                  0,
+                  isAfterNewline = true,
+                  currRegion,
+                  expectTemplate
+                )
+            }
           } else {
             val nextIndentLevel =
               if (isAfterNewline) indent + 1 else indent
             scanner.nextToken()
-            loop(nextIndentLevel, isAfterNewline, region, expectTemplate)
+            loop(
+              nextIndentLevel,
+              isAfterNewline,
+              currRegion,
+              expectTemplate
+            )
           }
         case COLON if dialect.allowSignificantIndentation =>
           (expectTemplate, nextIsNL) match {
@@ -156,15 +293,27 @@ class ScalaToplevelMtags(
               loop(0, isAfterNewline = true, next, None)
             case (Some(expect), true) =>
               val nextIndent = acceptWhileIndented(expect.indent)
-              loop(nextIndent, isAfterNewline = false, currRegion, None)
+              loop(
+                nextIndent,
+                isAfterNewline = false,
+                currRegion,
+                None
+              )
             case _ =>
               scanner.nextToken()
-              loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+              loop(
+                indent,
+                isAfterNewline = false,
+                currRegion,
+                expectTemplate
+              )
           }
         case LBRACE =>
           expectTemplate match {
-            case Some(expect) if needToParseBody(expect) =>
-              val next = expect.startInBraceRegion(currRegion)
+            case Some(expect)
+                if needToParseBody(expect) || needToParseExtension(expect) =>
+              val next =
+                expect.startInBraceRegion(currRegion, expect.isExtension)
               resetRegion(next)
               scanner.nextToken()
               loop(indent, isAfterNewline = false, next, None)
@@ -175,7 +324,7 @@ class ScalaToplevelMtags(
           }
         case RBRACE =>
           val nextRegion = currRegion match {
-            case Region.InBrace(_, prev) => resetRegion(prev)
+            case Region.InBrace(_, prev, _, _) => resetRegion(prev)
             case r => r
           }
           scanner.nextToken()
@@ -185,13 +334,75 @@ class ScalaToplevelMtags(
           scanner.nextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case LPAREN =>
-          acceptBalancedDelimeters(LPAREN, RPAREN)
+          expectTemplate match {
+            case Some(expect)
+                if expect.isCaseClassConstructor && includeInnerClasses => {
+              scanner.nextToken()
+              loop(
+                indent,
+                isAfterNewline = false,
+                expect.startInParenRegion(currRegion),
+                None
+              )
+            }
+            case _ => {
+              acceptBalancedDelimeters(LPAREN, RPAREN)
+              scanner.nextToken()
+              loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+            }
+          }
+        case RPAREN if currRegion.changeCaseClassState(true).emitIdentifier =>
           scanner.nextToken()
-          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
-        case _ =>
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion.prev,
+            newExpectTemplate
+          )
+        case COMMA =>
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           scanner.nextToken()
-          loop(indent, isAfterNewline = false, currRegion, nextExpectTemplate)
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion.changeCaseClassState(true),
+            nextExpectTemplate
+          )
+        case IDENTIFIER if currRegion.emitIdentifier && includeMembers =>
+          withOwner(currRegion.owner) {
+            term(
+              scanner.curr.name,
+              newPosition,
+              Kind.METHOD,
+              SymbolInformation.Property.VAL.value
+            )
+          }
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion.changeCaseClassState(false),
+            expectTemplate
+          )
+        case CASE =>
+          val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
+          acceptTrivia()
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion,
+            if (scanner.curr.token == CLASS) newExpectCaseClassTemplate
+            else nextExpectTemplate
+          )
+        case t =>
+          val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
+          scanner.nextToken()
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion,
+            nextExpectTemplate,
+            t == DOT
+          )
       }
     } else ()
   }
@@ -204,7 +415,7 @@ class ScalaToplevelMtags(
     currentOwner = owner
     acceptTrivia()
     scanner.curr.token match {
-      case IDENTIFIER | BACKQUOTED_IDENT =>
+      case IDENTIFIER =>
         val paths = parsePath()
         paths.foreach { path => pkg(path.name, path.pos) }
         true
@@ -223,7 +434,7 @@ class ScalaToplevelMtags(
   def parsePath(): List[Identifier] = {
     val buf = List.newBuilder[Identifier]
     def loop(): Unit = {
-      buf += newIdentifier
+      newIdentifier.foreach(buf += _)
       acceptTrivia()
       scanner.curr.token match {
         case DOT =>
@@ -242,26 +453,81 @@ class ScalaToplevelMtags(
   def emitMember(isPackageObject: Boolean, owner: String): Unit = {
     val kind = scanner.curr.token
     acceptTrivia()
-    val name = newIdentifier
+    val maybeName = newIdentifier
     currentOwner = owner
-    kind match {
-      case CLASS =>
-        tpe(name.name, name.pos, Kind.CLASS, 0)
-      case TRAIT =>
-        tpe(name.name, name.pos, Kind.TRAIT, 0)
-      case ENUM =>
-        withOwner(owner) {
+    maybeName.foreach { name =>
+      kind match {
+        case CLASS =>
           tpe(name.name, name.pos, Kind.CLASS, 0)
-        }
-      case OBJECT =>
-        if (isPackageObject) {
-          currentOwner = symbol(Scala.Descriptor.Package(name.name))
-          term("package", name.pos, Kind.OBJECT, 0)
-        } else {
-          term(name.name, name.pos, Kind.OBJECT, 0)
-        }
+        case TRAIT =>
+          tpe(name.name, name.pos, Kind.TRAIT, 0)
+        case ENUM =>
+          withOwner(owner) {
+            tpe(name.name, name.pos, Kind.CLASS, 0)
+          }
+        case OBJECT =>
+          if (isPackageObject) {
+            currentOwner = symbol(Scala.Descriptor.Package(name.name))
+            term("package", name.pos, Kind.OBJECT, 0)
+          } else {
+            term(name.name, name.pos, Kind.OBJECT, 0)
+          }
+      }
     }
     scanner.nextToken()
+  }
+
+  /**
+   * Enters a global element (def/val/var/type)
+   */
+  def emitTerm(region: Region): Unit = {
+    val kind = scanner.curr.token
+    acceptTrivia()
+    kind match {
+      case VAL =>
+        valIdentifiers.foreach(name => {
+          term(
+            name.name,
+            name.pos,
+            Kind.METHOD,
+            SymbolInformation.Property.VAL.value
+          )
+          resetRegion(region)
+        })
+      case VAR =>
+        valIdentifiers.foreach(name => {
+          method(
+            name.name,
+            "()",
+            name.pos,
+            SymbolInformation.Property.VAR.value
+          )
+          resetRegion(region)
+        })
+      case TYPE =>
+        newIdentifier.foreach { name =>
+          tpe(name.name, name.pos, Kind.TYPE, 0)
+        }
+      case DEF =>
+        methodIdentifier.foreach(name =>
+          method(
+            name.name,
+            region.overloads.disambiguator(name.name),
+            name.pos,
+            0
+          )
+        )
+      case GIVEN =>
+        newGivenIdentifier.foreach { name =>
+          method(
+            name.name,
+            region.overloads.disambiguator(name.name),
+            name.pos,
+            SymbolInformation.Property.GIVEN.value
+          )
+        }
+    }
+
   }
 
   /**
@@ -337,14 +603,80 @@ class ScalaToplevelMtags(
   /**
    * Returns a name and position for the current identifier token
    */
-  def newIdentifier: Identifier = {
+  def newIdentifier: Option[Identifier] = {
     scanner.curr.token match {
-      case IDENTIFIER | BACKQUOTED_IDENT => // OK
-      case _ => fail("identifier")
+      case IDENTIFIER =>
+        val pos = newPosition
+        val name = scanner.curr.name
+        Some(new Identifier(name, pos))
+      case _ =>
+        reportError("identifier")
+        None
     }
-    val pos = newPosition
-    val name = scanner.curr.name
-    new Identifier(name, pos)
+
+  }
+
+  /**
+   * Returns a name and position for the current identifier token
+   */
+  def methodIdentifier: Option[Identifier] = {
+    scanner.curr.token match {
+      case IDENTIFIER =>
+        Some(new Identifier(scanner.curr.name, newPosition))
+      case THIS =>
+        None
+      case _ =>
+        reportError("identifier")
+        None
+    }
+  }
+
+  def newGivenIdentifier: Option[Identifier] = {
+    @tailrec
+    def consumeParams(): Unit = {
+      acceptTrivia()
+      scanner.curr.token match {
+        case LPAREN =>
+          acceptBalancedDelimeters(LPAREN, RPAREN)
+          consumeParams()
+        case LBRACKET =>
+          acceptBalancedDelimeters(LBRACKET, RBRACKET)
+          consumeParams()
+        case _ =>
+      }
+    }
+
+    scanner.curr.token match {
+      case IDENTIFIER =>
+        val identifier = newIdentifier
+        consumeParams()
+        scanner.curr.token match {
+          case COLON => identifier
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+
+  def valIdentifiers: List[Identifier] = {
+    var resultList: List[Identifier] = Nil
+    var isUnapply = false
+    while (
+      scanner.curr.token != EQUALS && scanner.curr.token != COLON && scanner.curr.token != EOF
+    ) {
+      scanner.curr.token match {
+        case IDENTIFIER => {
+          val pos = newPosition
+          val name = scanner.curr.name
+          resultList = new Identifier(name, pos) :: resultList
+        }
+        case WHITESPACE | COMMA => {}
+        case _ => { isUnapply = true }
+      }
+      scanner.nextToken()
+    }
+    if (isUnapply) resultList.filterNot(_.name.charAt(0).isUpper)
+    else resultList
   }
 
   private def isNewline: Boolean =
@@ -354,8 +686,14 @@ class ScalaToplevelMtags(
         case _ => false
       })
 
-  def fail(expected: String): Nothing = {
-    throw new TokenizeException(newPosition, failMessage(expected))
+  def reportError(expected: String): Unit = {
+    rc.incognito.create(
+      Report(
+        "scala-toplevel-mtags",
+        failMessage(expected),
+        s"""${input.path}:${newPosition}"""
+      )
+    )
   }
 
   def failMessage(expected: String): String = {
@@ -386,10 +724,19 @@ class ScalaToplevelMtags(
 
 object ScalaToplevelMtags {
 
+  final case class CaseClassState(state: Int, openParen: Int = 0) {
+    def openParenthesis(): CaseClassState = CaseClassState(state, openParen + 1)
+    def closeParenthesis(): CaseClassState =
+      CaseClassState(state, openParen - 1)
+  }
+
   final case class ExpectTemplate(
       indent: Int,
       owner: String,
-      isPackageBody: Boolean
+      isPackageBody: Boolean,
+      isExtension: Boolean = false,
+      ignoreBody: Boolean = false,
+      isCaseClassConstructor: Boolean = false
   ) {
 
     /**
@@ -402,11 +749,14 @@ object ScalaToplevelMtags {
     private def adjustRegion(r: Region): Region =
       if (isPackageBody) r.prev else r
 
-    def startInBraceRegion(prev: Region): Region =
-      Region.InBrace(owner, adjustRegion(prev))
+    def startInBraceRegion(prev: Region, extension: Boolean = false): Region =
+      new Region.InBrace(owner, adjustRegion(prev), extension)
 
-    def startIndentedRegion(prev: Region): Region =
-      Region.Indented(owner, indent, adjustRegion(prev))
+    def startInParenRegion(prev: Region): Region =
+      Region.InParen(owner, adjustRegion(prev), true)
+
+    def startIndentedRegion(prev: Region, extension: Boolean = false): Region =
+      new Region.Indented(owner, indent, adjustRegion(prev), extension)
 
   }
 
@@ -414,33 +764,87 @@ object ScalaToplevelMtags {
     def prev: Region
     def owner: String
     def acceptMembers: Boolean
-    def produceSourceToplevel: Boolean
+    def produceSourceToplevel: Boolean = termOwner.isPackage
+    def isExtension: Boolean = false
+    val overloads: OverloadDisambiguator = new OverloadDisambiguator()
+    def termOwner: String =
+      owner // toplevel terms are wrapped into an artificial Object
+    val withTermOwner: String => Region = _ => this
+    def emitIdentifier: Boolean = false
+    val changeCaseClassState: Boolean => Region = _ => this
   }
 
   object Region {
 
-    case object RootRegion extends Region { self =>
+    final case class RootRegion(override val termOwner: String) extends Region {
+      self =>
+      def this() = this(Symbols.EmptyPackage)
       val owner: String = Symbols.EmptyPackage
       val prev: Region = self
       val acceptMembers: Boolean = true
-      val produceSourceToplevel: Boolean = true
+      override val withTermOwner: String => RootRegion = termOwner =>
+        RootRegion(termOwner)
     }
 
-    final case class Package(owner: String, prev: Region) extends Region {
+    final case class Package(
+        owner: String,
+        prev: Region,
+        override val termOwner: String
+    ) extends Region {
+      def this(owner: String, prev: Region) = this(owner, prev, owner)
       val acceptMembers: Boolean = true
-      val produceSourceToplevel: Boolean = true
+      override val withTermOwner: String => Package = termOwner =>
+        Package(owner, prev, termOwner)
     }
 
-    final case class InBrace(owner: String, prev: Region) extends Region {
+    final case class InBrace(
+        owner: String,
+        prev: Region,
+        extension: Boolean = false,
+        override val termOwner: String
+    ) extends Region {
+      def this(
+          owner: String,
+          prev: Region,
+          extension: Boolean
+      ) = this(owner, prev, extension, owner)
       def acceptMembers: Boolean =
         owner.endsWith("/")
-      val produceSourceToplevel: Boolean = false
+
+      override def isExtension = extension
+
+      override val withTermOwner: String => InBrace = termOwner =>
+        InBrace(owner, prev, extension, termOwner)
     }
-    final case class Indented(owner: String, exitIndent: Int, prev: Region)
-        extends Region {
+    final case class Indented(
+        owner: String,
+        exitIndent: Int,
+        prev: Region,
+        extension: Boolean = false,
+        override val termOwner: String
+    ) extends Region {
+      def this(
+          owner: String,
+          exitIndent: Int,
+          prev: Region,
+          extension: Boolean
+      ) = this(owner, exitIndent, prev, extension, owner)
       def acceptMembers: Boolean =
         owner.endsWith("/")
-      val produceSourceToplevel: Boolean = false
+      override def isExtension = extension
+      override val withTermOwner: String => Indented = termOwner =>
+        Indented(owner, exitIndent, prev, extension, termOwner)
+    }
+
+    final case class InParen(
+        owner: String,
+        prev: Region,
+        override val emitIdentifier: Boolean
+    ) extends Region {
+      def acceptMembers: Boolean = false
+      override val produceSourceToplevel: Boolean = false
+      override val changeCaseClassState: Boolean => Region = ei =>
+        this.copy(emitIdentifier = ei)
     }
   }
 }

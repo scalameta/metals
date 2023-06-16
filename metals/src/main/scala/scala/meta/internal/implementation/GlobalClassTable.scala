@@ -25,7 +25,7 @@ final class GlobalClassTable(
 
   def globalContextFor(
       source: AbsolutePath,
-      implementationsInPath: ImplementationCache
+      implementationsInPath: ImplementationCache,
   ): Option[InheritanceContext] = {
     for {
       symtab <- globalSymbolTableFor(source)
@@ -40,23 +40,23 @@ final class GlobalClassTable(
     synchronized {
       for {
         buildTargetId <- buildTargets.inverseSources(source)
-        scalaTarget <- buildTargets.scalaTarget(buildTargetId)
-        classpath = new Classpath(scalaTarget.jarClasspath)
+        jarClasspath <- buildTargets.targetJarClasspath(buildTargetId)
+        classpath = new Classpath(jarClasspath)
       } yield {
         buildTargetsIndexes.getOrElseUpdate(
           buildTargetId,
-          GlobalSymbolTable(classpath, includeJdk = true)
+          GlobalSymbolTable(classpath, includeJdk = true),
         )
       }
     }
 
   private def calculateIndex(
       symTab: GlobalSymbolTable,
-      implementationsInPath: ImplementationCache
+      implementationsInPath: ImplementationCache,
   ): InheritanceContext = {
     val context = InheritanceContext.fromDefinitions(
       symTab.safeInfo,
-      implementationsInPath.toMap
+      implementationsInPath.toMap,
     )
     val symbolsInformation = for {
       classSymbol <- context.allClassSymbols
@@ -70,7 +70,7 @@ final class GlobalClassTable(
   private def calculateInheritance(
       classpathClassInfos: Set[SymbolInformation],
       context: InheritanceContext,
-      symTab: GlobalSymbolTable
+      symTab: GlobalSymbolTable,
   ): InheritanceContext = {
     val results = new mutable.ListBuffer[(String, ClassLocation)]
     val calculated = mutable.Set.empty[String]
@@ -83,7 +83,7 @@ final class GlobalClassTable(
         ImplementationProvider.parentsFromSignature(
           info.symbol,
           info.signature,
-          None
+          None,
         )
       }
       results ++= allParents

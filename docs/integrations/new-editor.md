@@ -15,20 +15,8 @@ client over [JSON-RPC](https://www.jsonrpc.org/specification).
 Use [Coursier](https://github.com/coursier/coursier) to obtain the JVM classpath
 of Metals:
 
-```sh
-coursier bootstrap org.scalameta:metals_2.12:@VERSION@ -o metals -f
-```
+```scala mdoc:bootstrap
 
-(optional) It's recommended to enable JVM string de-duplication and provide a
-generous stack size and memory options.
-
-```sh
-coursier bootstrap \
-  --java-opt -XX:+UseG1GC \
-  --java-opt -XX:+UseStringDeduplication  \
-  --java-opt -Xss4m \
-  --java-opt -Xms100m \
-  org.scalameta:metals_2.12:@VERSION@ -o metals -f
 ```
 
 See [Metals server properties](#metals-server-properties) for additional system
@@ -71,13 +59,13 @@ during the
 process. While Metals will still work being fully configured by server
 properties, we strongly recommend that instead you rely on the
 `InitializationOptions` which are thoroughly covered below in the
-[`initialize`](#initialize] section.
+[`initialize`](#initialize) section.
 
 ## Language Server Protocol
 
 Consult the
 [LSP specification](https://microsoft.github.io/language-server-protocol/specification)
-to learn more more how LSP works. Metals uses the following endpoints from the
+to learn more about how LSP works. Metals uses the following endpoints from the
 specification.
 
 ### `initialize`
@@ -99,45 +87,48 @@ about below, and others used to be server properties that have been migrated to
 
 The currently available settings for `InitializationOptions` are listed below.
 
-```js
-    "InitializationOptions": {
-      "compilerOptions":{
-        "completionCommand": string,
-        "isCompletionItemDetailEnabled": boolean,
-        "isCompletionItemDocumentationEnabled": boolean,
-        "isCompletionItemResolve": boolean,
-        "isHoverDocumentationEnabled": boolean,
-        "isSignatureHelpDocumentationEnabled": boolean,
-        "overrideDefFormat": "ascii" | "unicode",
-        "parameterHintsCommand": string,
-        "snippetAutoIndent": boolean,
+```typescript
+    interface InitializationOptions: {
+      compilerOptions: {
+        completionCommand?: string;
+        isCompletionItemDetailEnabled?: boolean;
+        isCompletionItemDocumentationEnabled?: boolean;
+        isCompletionItemResolve?: boolean;
+        isHoverDocumentationEnabled?: boolean;
+        isSignatureHelpDocumentationEnabled?: boolean;
+        overrideDefFormat?: "ascii" | "unicode";
+        parameterHintsCommand?: string;
+        snippetAutoIndent?: boolean;
       }
-      "copyWorksheetOutputProvider": boolean,
-      "debuggingProvider": boolean,
-      "decorationProvider": boolean,
-      "didFocusProvider": boolean,
-      "disableColorOutput" boolean,
-      "doctorProvider": "json" | "html",
-      "executeClientCommandProvider": boolean,
-      "globSyntax": "vscode" | "uri"
-      "icons": "octicons" | "vscode" | "unicode",
-      "inlineDecorationProvider": boolean,
-      "inputBoxProvider": boolean,
-      "isExitOnShutdown" : boolean,
-      "isHttpEnabled": boolean,
-      "openFilesOnRenameProvider": boolean,
-      "openNewWindowProvider": boolean,
-      "quickPickProvider": boolean,
-      "renameFileThreshold": number,
-      "slowTaskProvider": boolean,
-      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
-      "treeViewProvider": boolean
+      debuggingProvider?: boolean;
+      decorationProvider?: boolean;
+      inlineDecorationProvider?: boolean;
+      didFocusProvider?: boolean;
+      doctorProvider?: "json" | "html";
+      executeClientCommandProvider?: boolean;
+      globSyntax?: "vscode" | "uri";
+      icons?: "vscode" | "octicons" | "atom" | "unicode";
+      inputBoxProvider?: boolean;
+      isVirtualDocumentSupported?: boolean;
+      isExitOnShutdown?: boolean;
+      isHttpEnabled?: boolean;
+      openFilesOnRenameProvider?: boolean;
+      quickPickProvider?: boolean;
+      renameFileThreshold?: number;
+      slowTaskProvider?: boolean;
+      statusBarProvider?: "on" | "off" | "log-message" | "show-message";
+      treeViewProvider?: boolean;
+      testExplorerProvider?: boolean;
+      openNewWindowProvider?: boolean;
+      copyWorksheetOutputProvider?: boolean;
+      commandInHtmlFormat?: "vscode" | "sublime";
+      doctorVisibilityProvider?: boolean;
     }
 ```
 
 You can also always check these in the
 [`InitializationOptions.scala`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/InitializationOptions.scala)
-file where you'll find all of the options and descriptions.
+file where you'll find all of the options and descriptions. Alternatively you can check out the typescript equivalent - [`MetalsInitializationOptions.ts`](https://github.com/scalameta/metals-languageclient/blob/main/src/interfaces/MetalsInitializationOptions.ts)
 
 ##### `compilerOptions.completionCommand`
 
@@ -228,7 +219,7 @@ Possible values:
 ##### `copyWorksheetOutputProvider`
 
 Boolean value signifying whether or not the client supports running
-CopyWorksheetOutput server command and copying it's results into the local
+CopyWorksheetOutput server command and copying its results into the local
 buffer.
 
 Default value: `false`
@@ -270,7 +261,8 @@ Possible values:
 
 - `html`: (default): Metals will return html that can be rendered directly in
   the browser or web view
-- `json`: json representation of the information returned by Doctor
+- `json`: json representation of the information returned by Doctor. See the
+    json format [here](#run-doctor).
 
 ##### `executeClientCommandProvider`
 
@@ -320,7 +312,7 @@ Possible values:
 Possible values:
 
 - `off` (default): the `metals/inputBox` request is not supported. In this case,
-  Metals tries to fallback to `window/showMessageRequest` when possible.
+  Metals tries to fall back to `window/showMessageRequest` when possible.
 - `on`: the `metals/inputBox` request is fully supported.
 
 ##### `isExitOnShutdown`
@@ -380,8 +372,6 @@ Possible values:
 
 - `off` (default): the `metals/slowTask` request is not supported.
 - `on`: the `metals/slowTask` request is fully supported.
-- `status-bar`: the `metals/slowTask` request is not supported, but send updates
-  about slow tasks via `metals/status`.
 
 ##### `statusBarProvider`
 
@@ -401,6 +391,16 @@ Boolean value signifying whether or not the client supports the
 [Tree View Protocol](../integrations/tree-view-protocol.md).
 
 Default value: `false`
+
+##### `testExplorerProvider`
+
+Boolean value to signify whether or not the client implements the Test Explorer.
+
+##### `doctorVisibilityProvider`
+
+Boolean value to signify whether or not the client implements the `"metals/doctorVisibilityDidChange"`.
+This JSON notification is used to keep track of doctor state. If client implements this provider then Metals server
+will send updates to the doctor view.
 
 #### Experimental Capabilities
 
@@ -504,6 +504,22 @@ that is declared in `.scalafmt.conf`.
   a message in the status bar via `metals/status` and detailed download progress
   information is logged to `.metals/metals.log`.
 
+### `textDocument/hover`
+
+Returns `Hover` for specified text document and position - [lsp spec](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover).
+
+Metals also support an extended version of this method that supports hover for selection range.
+The extended stucture of request params is the following:
+
+```ts
+interface HoverExtParams {
+  textDocument: TextDocumentIdentifier;
+  /** Either `position` or `range` should be specified */
+  position?: Position;
+  range?: Range;
+}
+```
+
 ### `workspace/didChangeWatchedFiles`
 
 Optional. Metals uses a built-in file watcher for critical functionality such as
@@ -572,7 +588,7 @@ Possible values:
 ### `-Dmetals.statistics`
 
 By default, Metals logs only the most relevant metrics like time it takes to run
-sbt and import a workspace. The enable further metrics, update this property
+sbt and import a workspace. To enable further metrics, update this property
 with a comma separated list of the following supported values:
 
 - `memory`: print memory usage of the navigation index after build import.
@@ -592,7 +608,7 @@ Possible values:
   running Metals servers via TCP through a free port. In case of failure to
   establish a `AUTO_SERVER=TRUE` connection, Metals falls back to
   `AUTO_SERVER=FALSE`.
-- `off`: do not use use `AUTO_SERVER=TRUE`. By disabling this option, it's not
+- `off`: do not use `AUTO_SERVER=TRUE`. By disabling this option, it's not
   possible to run concurrent Metals servers in the same workspace directory. For
   example, it's not possible to have both VS Code and Vim installed with Metals
   running in the same directory. In case there are multiple Metals servers
@@ -618,7 +634,7 @@ preferable to set these there:
 ### `-Dmetals.bloop-port`
 
 Port number of the Bloop server to connect to. Should only be used if Bloop
-server was setup in a custom way. Default value is `8212`.
+server was set up in a custom way. Default value is `8212`.
 
 Possible values are any allowed port number that the Bloop server is able to run
 on.
@@ -968,8 +984,8 @@ interface WindowStateDidChangeParams( {
 
 The `metals/openWindow` params are used with the New Scala Project
 functionality. After the new project has been created, if the editor has the
-ability to open the project in a new window then these params are used with the
-the `metals-open-folder` command.
+ability to open the project in a new window then these params are used with the 
+`metals-open-folder` command.
 
 ```ts
 interface MetalsOpenWindowParams {
@@ -977,5 +993,77 @@ interface MetalsOpenWindowParams {
   uri: string;
   /** Whether or not to open the project in a new window. */
   openNewWindow: boolean;
+}
+```
+
+### `metals/findTextInDependencyJars`
+
+The `FindTextInDependencyJars` request is sent from the client to the server to perform a search though files in the classpath
+including binary and sources jars. In response it returns a standard list of `Location` from the [LSP spec](https://microsoft.github.io/language-server-protocol/specification#location).
+
+In case if this endpoint was called with empty `query.pattern` or empty `options.include` server sends [`metals/inputBox`](https://scalameta.org/metals/docs/integrations/new-editor#metalsinputbox)
+request to the client to obtain these values.
+
+_Request_:
+
+- method: `metals/findTextInDependecyJars`
+- params: `FindTextInDependencyJarsRequest` defined as follows.
+
+```ts
+/**
+ * Currenly, only `pattern` field is used for search.
+ * See: https://github.com/scalameta/metals/issues/3234
+ */
+interface TextSearchQuery {
+    /**
+		 * The text pattern to search for.
+		 */
+    pattern?: string;
+    /**
+		 * Whether or not `pattern` should be interpreted as a regular expression.
+		 */
+    isRegExp?: boolean;
+    /**
+		 * Whether or not the search should be case-sensitive.
+		 */
+    isCaseSensitive?: boolean;
+    /**
+		 * Whether or not to search for whole word matches only.
+		 */
+    isWordMatch?: boolean;
+}
+
+interface FindTextInFilesOptions {
+    /** Include file filter. Example: `*.conf` */
+    include?: string;
+    /** Exclude file filter. Example: `*.conf` */
+    exclude?: string;
+}
+
+interface FindTextInDependencyJarsRequest(
+    options?: FindTextInFilesOptions;
+    query: TextSearchQuery
+)
+```
+
+_Response_:
+
+- result: `Location[]`
+
+### `metals/doctorVisibilityDidChange`
+
+When the client opens the doctor view, it will send in `visible: true` to the
+server and then `visible: false` when the doctor view is closed. This will
+ensure that the doctor checks aren't calculated on the server side when they
+aren't needed to since they won't be seen by the client anyways.
+
+_Notification_:
+
+- method: `metals/doctorVisibilityDidChange`
+- params: `DoctorVisibilityDidChangeParams`
+
+```ts
+interface DoctorVisibilityDidChangeParams {
+  visible: boolean;
 }
 ```

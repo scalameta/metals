@@ -10,8 +10,8 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   override def munitIgnore: Boolean = isWindows
 
-  test("basic-212") {
-    basicTest(V.scala212)
+  test("basic-213") {
+    basicTest(V.scala213)
   }
 
   test("workspace".flaky) {
@@ -50,7 +50,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         "DefinedIn@@",
         """|DefinedInA - a.Outer
            |DefinedInC - c
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -58,7 +58,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   def checkPlugin(
       name: String,
       compilerPlugins: String,
-      extra: => Future[Unit] = Future.successful(())
+      extra: => Future[Unit] = Future.successful(()),
   )(implicit loc: Location): Unit =
     test(name) {
       for {
@@ -91,8 +91,8 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
             |  val y = 1
             |}
             |""".stripMargin,
-          """|DelayedLazyVal scala.concurrent
-             |""".stripMargin
+          """|DelayedLazyVal - scala.concurrent
+             |""".stripMargin,
         )
         _ <- extra
       } yield ()
@@ -100,12 +100,17 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   checkPlugin(
     "empty",
-    ""
+    "",
   )
 
   // FIXME(gabro): the tests don't pass with 2.12.10, although the plugins seem to work fine when
   // tested manually
-  if (BuildInfo.scalaVersion != "2.12.10") {
+  // It's also not published for 2.13
+  if (
+    BuildInfo.scalaVersion != "2.12.10" && !BuildInfo.scalaVersion.startsWith(
+      "2.13"
+    )
+  ) {
     checkPlugin(
       "kind-projector",
       """
@@ -116,15 +121,15 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           """|def baz[F[_], A]: F[A] = ???
              |baz[Either[Int, ?], String].fold@@
              |""".stripMargin,
-          "fold[C](fa: Int => C, fb: String => C): C"
+          "fold[C](fa: Int => C, fb: String => C): C",
         )
-      } yield ()
+      } yield (),
     )
 
     checkPlugin(
       "better-monadic-for",
       """|
-         |"com.olegpy::better-monadic-for:0.3.0-M4"
+         |"com.olegpy::better-monadic-for:0.3.0"
          |""".stripMargin,
       for {
         _ <- assertCompletion(
@@ -132,9 +137,9 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
              |    implicitly[String].toCharArr@@
              |""".stripMargin,
           """|toCharArray(): Array[Char]
-             |""".stripMargin
+             |""".stripMargin,
         )
-      } yield ()
+      } yield (),
     )
   }
 
@@ -163,19 +168,19 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         "override def set@@",
         """|def set: mutable.Set[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- assertCompletion(
         "override def list@@",
         """|def list: ju.List[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- assertCompletion(
         "override def failure@@",
         """|def failure: Failure[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- server.didChangeConfiguration(
         """{
@@ -190,20 +195,20 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         "override def failure@@",
         """|def failure: u.Failure[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       // The default settings are no longer enabled.
       _ <- assertCompletion(
         "override def set@@",
         """|def set: mutable.Set[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
       _ <- assertCompletion(
         "override def list@@",
         """|def list: java.util.List[Int]
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
     } yield ()
   }
@@ -217,7 +222,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |  // @@
            |}
            |""".stripMargin,
-        expectError = true
+        expectError = true,
       )
       _ <- assertCompletion(
         "Properties@@",
@@ -225,7 +230,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         """|Properties - java.util
            |Properties - scala.util
            |""".stripMargin,
-        filter = _.startsWith("Properties -")
+        filter = _.startsWith("Properties -"),
       )
     } yield ()
   }
@@ -251,7 +256,6 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         """|Duration - java.time
            |Duration - javax.xml.datatype
            |Duration - scala.concurrent.duration
-           |DurationConversions - scala.concurrent.duration
            |DurationDouble - scala.concurrent.duration.package
            |DurationDouble - scala.concurrent.duration.package
            |DurationInt - scala.concurrent.duration.package
@@ -260,8 +264,11 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |DurationLong - scala.concurrent.duration.package
            |DurationLong - scala.concurrent.duration.package
            |FiniteDuration - scala.concurrent.duration
-           |FiniteDurationIsOrdered - scala.concurrent.duration.FiniteDuration""".stripMargin,
-        includeDetail = false
+           |JavaDurationOps - scala.jdk.DurationConverters
+           |JavaDurationOps - scala.jdk.DurationConverters
+           |ScalaDurationOps - scala.jdk.DurationConverters
+           |ScalaDurationOps - scala.jdk.DurationConverters""".stripMargin,
+        includeDetail = false,
       )
       _ <- server.didChangeConfiguration(
         """{
@@ -276,8 +283,14 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         "Duration@@",
         """|Duration - java.time
            |Duration - javax.xml.datatype
+           |DurationConverters - scala.jdk
+           |DurationConverters - scala.jdk.javaapi
+           |JavaDurationOps - scala.jdk.DurationConverters
+           |JavaDurationOps - scala.jdk.DurationConverters
+           |ScalaDurationOps - scala.jdk.DurationConverters
+           |ScalaDurationOps - scala.jdk.DurationConverters
            |""".stripMargin,
-        includeDetail = false
+        includeDetail = false,
       )
     } yield ()
   }

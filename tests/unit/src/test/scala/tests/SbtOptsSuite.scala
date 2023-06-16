@@ -32,7 +32,7 @@ class SbtOptsSuite extends BaseSuite {
       |-Dsbt.global.base=/some/where/else/sbt
       |-Dsbt.ivy.home=/some/where/ivy
       |-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=4711
-    """.stripMargin
+    """.stripMargin,
   )
 
   check(
@@ -45,7 +45,7 @@ class SbtOptsSuite extends BaseSuite {
     """
       |-Xmx2G
       |-Dhoodlump=bloom
-    """.stripMargin
+    """.stripMargin,
   )
 
 }

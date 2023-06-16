@@ -137,6 +137,18 @@ class ScalaVersionsSuite extends BaseSuite {
     )
   }
 
+  test("0.9.10-not-compatible-with-0.10.0-M4") {
+    assert(
+      !SemVer.isCompatibleVersion("0.10.0-M4", "0.9.10")
+    )
+  }
+
+  test("0.9.10-not-compatible-with-0.10.0-RC2") {
+    assert(
+      !SemVer.isCompatibleVersion("0.10.0-RC2", "0.9.10")
+    )
+  }
+
   test("recommended-3") {
     assert(
       ScalaVersions.recommendedVersion("3.0.0-M1") ==
@@ -232,7 +244,7 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       SemVer.isCompatibleVersion(
         "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY"
+        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
       )
     )
   }
@@ -241,7 +253,7 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       !SemVer.isCompatibleVersion(
         "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY"
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
       )
     )
   }
@@ -250,7 +262,7 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       SemVer.isLaterVersion(
         "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY"
+        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
       )
     )
   }
@@ -259,7 +271,16 @@ class ScalaVersionsSuite extends BaseSuite {
     assert(
       !SemVer.isLaterVersion(
         "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
-        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY"
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
+      )
+    )
+  }
+
+  test("compare-NIGTLY") {
+    assert(
+      SemVer.isLaterVersion(
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
+        "3.0.0-RC1-bin-20201126-1c3538a-NIGHTLY",
       )
     )
   }
@@ -278,7 +299,7 @@ class ScalaVersionsSuite extends BaseSuite {
 
   test("not-future-RC") {
     assert(
-      !ScalaVersions.isFutureVersion(V.nextScala3RC)
+      !ScalaVersions.isFutureVersion("3.1.1-RC2")
     )
   }
 
@@ -288,18 +309,41 @@ class ScalaVersionsSuite extends BaseSuite {
         ("smth-library_2.13-21.2.0-sources.jar", "2.13"),
         (
           "scala3-compiler_3-3.0.1-RC2-bin-20210310-4af1386-NIGHTLY-sources.jar",
-          "3"
+          "3",
         ),
         ("scala3-library_3-3.1.0-RC1.jar", "3"),
         ("scala-library-2.13.1.jar", "2.13"),
         ("cool4.4_2.13-3.0.jar", "2.13"),
         ("scala3-library_3-3.0.0-sources.jar", "3"),
-        ("munit_3-0.7.29-sources.jar", "3")
+        ("munit_3-0.7.29-sources.jar", "3"),
       )
     expected.foreach { case (jar, version) =>
       val out = ScalaVersions.scalaBinaryVersionFromJarName(jar)
       assertEquals(out, version, jar)
     }
+  }
+
+  def scalaVersions(supportedScalaVersions: String*): ScalaVersions = {
+    val deprecatedScalaVersions = Seq.empty[String]
+    val supportedScalaBinaryVersions =
+      Seq("2.13", "2.12", "2.11", "3")
+    val scala212: String = "2.12.18"
+    val scala213: String = "2.13.10"
+    val scala3: String = "3.2.1"
+    new ScalaVersions(
+      deprecatedScalaVersions,
+      supportedScalaVersions,
+      supportedScalaBinaryVersions,
+      scala212,
+      scala213,
+      scala3,
+    )
+  }
+
+  test("newer-RC") {
+    val sv = scalaVersions("2.13.10", "2.12.18", "3.2.2-RC2", "3.2.1")
+    assertEquals(sv.recommendedVersion("3.2.2-RC1"), "3.2.2-RC2")
+    assert(!sv.isFutureVersion("3.2.2-RC1"))
   }
 
 }

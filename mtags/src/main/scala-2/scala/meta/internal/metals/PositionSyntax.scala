@@ -4,14 +4,19 @@ import scala.meta.Position
 
 object PositionSyntax {
 
-  def formatMessage(pos: Position, severity: String, message: String): String =
+  def formatMessage(
+      pos: Position,
+      severity: String,
+      message: String,
+      noPos: Boolean = false
+  ): String =
     pos match {
       case Position.None =>
         s"$severity: $message"
       case _ =>
-        new java.lang.StringBuilder()
-          .append(pos.lineInput)
-          .append(if (severity.isEmpty) "" else " ")
+        val sb = new java.lang.StringBuilder()
+        if (noPos) sb.append(pos.input.syntax) else sb.append(pos.lineInput)
+        sb.append(if (severity.isEmpty) "" else " ")
           .append(severity)
           .append(
             if (message.isEmpty) ""
@@ -32,8 +37,12 @@ object PositionSyntax {
       pos.end >= other.end
     }
 
-    def formatMessage(severity: String, message: String): String =
-      PositionSyntax.formatMessage(pos, severity, message)
+    def formatMessage(
+        severity: String,
+        message: String,
+        noPos: Boolean = false
+    ): String =
+      PositionSyntax.formatMessage(pos, severity, message, noPos)
 
     /**
      * Returns a formatted string of this position including filename/line/caret.

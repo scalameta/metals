@@ -3,7 +3,7 @@ id: sublime
 title: Sublime Text
 ---
 
-Metals works with Sublime Text 3 thanks to the
+Metals works with Sublime Text (build 4000 or later) thanks to the
 [sublimelsp/LSP](https://github.com/sublimelsp/LSP) and [scalameta/metals-sublime](https://github.com/scalameta/metals-sublime) plugins.
 
 ![Sublime Text demo](https://i.imgur.com/vJKP0T3.gif)
@@ -58,7 +58,7 @@ For more detailed information about what is happening behind the scenes during
 ![Server logs](https://i.imgur.com/PilER2E.png)
 
 Once the import step completes, compilation starts for your open `*.scala`
-files. Once the sources have compiled successfully, you can navigate the the
+files. Once the sources have compiled successfully, you can navigate the
 sources with "Goto definition" by pressing `F12`.
 
 ## Find symbol references
@@ -114,9 +114,9 @@ set following setting in the "Preferences > Preferences: LSP Settings":
 
 You can set a few optional key mappings for enable useful action shortcuts and perform some tweaks for the completion popup.
 
-#### Keymaping for formatting document via scalafmt
+#### Keymapping for formatting document via scalafmt
 
-Open "Preferences > Key Binding" and register `ctrl+alt+l` to trigger formating document.
+Open "Preferences > Key Binding" and register `ctrl+alt+l` to trigger formatting document.
 definition.
 
 ```json
@@ -179,4 +179,8 @@ features by accessing `Preferences > Package Settings > LSP > Servers > LSP-meta
 ```
 
 ```scala mdoc:worksheet
+```
+
+```scala mdoc:scalafix
+
 ```

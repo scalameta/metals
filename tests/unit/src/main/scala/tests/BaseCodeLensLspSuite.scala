@@ -5,13 +5,15 @@ import scala.concurrent.Future
 import munit.Location
 import munit.TestOptions
 
-class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
+abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
 
   def check(
       name: TestOptions,
       library: Option[String] = None,
       scalaVersion: Option[String] = None,
-      printCommand: Boolean = false
+      printCommand: Boolean = false,
+      extraInitialization: (TestingServer, String) => Future[Unit] = (_, _) =>
+        Future.unit,
   )(
       expected: => String
   )(implicit loc: Location): Unit = {
@@ -45,19 +47,36 @@ class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
               |$original
               |""".stripMargin
         )
+        _ <- extraInitialization(server, sourceFile)
         _ <- assertCodeLenses(sourceFile, expected, printCommand = printCommand)
       } yield ()
     }
   }
 
+  def checkTestCases(
+      name: TestOptions,
+      library: Option[String] = None,
+      scalaVersion: Option[String] = None,
+      printCommand: Boolean = false,
+  )(
+      expected: => String
+  )(implicit loc: Location): Unit = check(
+    name,
+    library,
+    scalaVersion,
+    printCommand,
+    (server, sourceFile) =>
+      server.discoverTestSuites(List(sourceFile)).map(_ => ()),
+  )(expected)
+
   protected def assertCodeLenses(
       relativeFile: String,
       expected: String,
       maxRetries: Int = 4,
-      printCommand: Boolean = false
+      printCommand: Boolean = false,
   )(implicit loc: Location): Future[Unit] = {
     val obtained =
-      server.codeLenses(relativeFile, printCommand)(maxRetries).recover {
+      server.codeLensesText(relativeFile, printCommand)(maxRetries).recover {
         case _: NoSuchElementException =>
           server.textContents(relativeFile)
       }
@@ -67,9 +86,9 @@ class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
 
   protected def assertNoCodeLenses(
       relativeFile: String,
-      maxRetries: Int = 4
+      maxRetries: Int = 4,
   ): Future[Unit] = {
-    server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
+    server.codeLensesText(relativeFile)(maxRetries).failed.flatMap {
       case _: NoSuchElementException => Future.unit
       case e => Future.failed(e)
     }

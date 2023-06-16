@@ -60,11 +60,11 @@ class CompletionProvider(
     val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
     val oldText = params.text().substring(start, end)
-    val stripSuffix = pos.withStart(start).withEnd(end).toLSP
+    val stripSuffix = pos.withStart(start).withEnd(end).toLsp
 
-    def textEdit(newText: String) = {
+    def textEdit(newText: String, range: l.Range = editRange): l.TextEdit = {
       if (newText == oldText) new l.TextEdit(stripSuffix, newText)
-      else new l.TextEdit(editRange, newText)
+      else new l.TextEdit(range, newText)
     }
 
     val history = new ShortenedNames()
@@ -82,21 +82,24 @@ class CompletionProvider(
         case t: TextEditMember if t.detail.isDefined => t.detail.get
         case _ => detailString(member, history)
       }
+
+      def labelWithSig =
+        if (member.sym.isMethod || member.sym.isValue) {
+          ident + detail
+        } else {
+          ident
+        }
       val label = member match {
         case _: NamedArgMember =>
-          s"$ident = "
+          val escaped = if (isSnippet) ident.replace("$", "$$") else ident
+          s"$escaped = "
         case o: OverrideDefMember =>
           o.label
         case o: TextEditMember =>
-          o.label.getOrElse(ident)
+          o.label.getOrElse(labelWithSig)
         case o: WorkspaceMember =>
           s"$ident - ${o.sym.owner.fullName}"
-        case _ =>
-          if (member.sym.isMethod || member.sym.isValue) {
-            ident + detail
-          } else {
-            ident
-          }
+        case _ => labelWithSig
       }
       val item = new CompletionItem(label)
       if (metalsConfig.isCompletionItemDetailEnabled && !detail.isEmpty()) {
@@ -144,10 +147,16 @@ class CompletionProvider(
           item.setTextEdit(i.edit)
           item.setAdditionalTextEdits(i.autoImports.asJava)
         case w: WorkspaceMember =>
+          def createTextEdit(identifier: String) =
+            textEdit(w.wrap(identifier), w.editRange.getOrElse(editRange))
+
           importPosition match {
             case None =>
+              if (w.additionalTextEdits.nonEmpty) {
+                item.setAdditionalTextEdits(w.additionalTextEdits.asJava)
+              }
               // No import position, fully qualify the name in-place.
-              item.setTextEdit(textEdit(w.sym.fullNameSyntax + suffix))
+              item.setTextEdit(createTextEdit(w.sym.fullNameSyntax + suffix))
             case Some(value) =>
               val (short, edits) = ShortenedNames.synthesize(
                 TypeRef(
@@ -159,8 +168,10 @@ class CompletionProvider(
                 context,
                 value
               )
-              item.setAdditionalTextEdits(edits.asJava)
-              item.setTextEdit(textEdit(short + suffix))
+              item.setAdditionalTextEdits(
+                (edits ++ w.additionalTextEdits).asJava
+              )
+              item.setTextEdit(createTextEdit(short + suffix))
           }
         case _
             if isImportPosition(
@@ -210,8 +221,17 @@ class CompletionProvider(
       }
 
       val completionItemDataKind = member match {
+        case _: ImplementAllMember =>
+          CompletionItemData.ImplementAllKind
         case o: OverrideDefMember if o.sym.isJavaDefined =>
           CompletionItemData.OverrideKind
+        case _ =>
+          CompletionItemData.None
+      }
+
+      val additionalSymbols = member match {
+        case oam: ImplementAllMember =>
+          oam.additionalSymbols.map(semanticdbSymbol).asJava
         case _ =>
           null
       }
@@ -220,7 +240,8 @@ class CompletionProvider(
         CompletionItemData(
           semanticdbSymbol(member.sym),
           buildTargetIdentifier,
-          kind = completionItemDataKind
+          kind = completionItemDataKind,
+          additionalSymbols
         ).toJson
       )
       item.setKind(completionItemKind(member))
@@ -307,7 +328,9 @@ class CompletionProvider(
         !isFileAmmoniteCompletion() &&
         completion.isCandidate(head) &&
         !head.sym.name.containsName(CURSOR) &&
-        isNotLocalForwardReference
+        isNotLocalForwardReference &&
+        !isAliasCompletion(head) &&
+        !head.sym.isPackageObjectOrClass
       ) {
         isSeen += id
         buf += head
@@ -318,9 +341,16 @@ class CompletionProvider(
         false
       }
     }
-    completions.foreach(visit)
     completion.contribute.foreach(visit)
-    buf ++= keywords(pos, editRange, latestParentTrees, completion, text)
+    completions.foreach(visit)
+    buf ++= keywords(
+      pos,
+      editRange,
+      latestParentTrees,
+      completion,
+      text,
+      isAmmoniteScript
+    )
     val searchResults =
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
@@ -375,7 +405,7 @@ class CompletionProvider(
     lazy val editRange = pos
       .withStart(inferIdentStart(pos, params.text()))
       .withEnd(pos.point)
-      .toLSP
+      .toLsp
     val noQuery = "$a"
     def expected(e: Throwable) = {
       completionPosition(
@@ -423,29 +453,8 @@ class CompletionProvider(
       val isTypeMember = kind == CompletionListKind.Type
       params.checkCanceled()
       val matchingResults = completions.matchingResults { entered => name =>
-        val decoded = entered.decoded
-
-        /**
-         * NOTE(tgodzik): presentation compiler bug https://github.com/scala/scala/pull/8193
-         *  should be removed once we drop support for 2.12.8 and 2.13.0
-         *  in case we have a comment presentation compiler will see it as the name
-         *  CompletionIssueSuite.issue-813 for more details
-         */
-        val realEntered =
-          if (decoded.startsWith("//") || decoded.startsWith("/*")) { // start of a comment
-            // we reverse the situation and look for the word from start of complition to either '.' or ' '
-            val reversedString = decoded.reverse
-            val lastSpace = reversedString.indexOfSlice(" ")
-            val lastDot = reversedString.indexOfSlice(".")
-            val startOfWord =
-              if (lastSpace < lastDot && lastSpace >= 0) lastSpace else lastDot
-            reversedString.slice(0, startOfWord).reverse
-          } else {
-            entered.toString
-          }
-        if (isTypeMember)
-          CompletionFuzzy.matchesSubCharacters(realEntered, name)
-        else CompletionFuzzy.matches(realEntered, name)
+        if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
+        else CompletionFuzzy.matches(entered, name)
       }
 
       val latestParentTrees = getLastVisitedParentTrees(pos)
@@ -481,23 +490,6 @@ class CompletionProvider(
         expected(e)
       case e: StringIndexOutOfBoundsException =>
         expected(e)
-    }
-  }
-
-  private def workspaceSymbolListMembers(
-      query: String,
-      pos: Position,
-      visit: Member => Boolean
-  ): SymbolSearch.Result = {
-    if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
-    else {
-      val context = doLocateContext(pos)
-      val visitor = new CompilerSearchVisitor(
-        query,
-        context,
-        sym => visit(new WorkspaceMember(sym))
-      )
-      search.search(query, buildTargetIdentifier, visitor)
     }
   }
 

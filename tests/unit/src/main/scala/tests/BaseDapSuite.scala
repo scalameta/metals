@@ -6,8 +6,8 @@ import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
 
-import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.debug.DebugProtocol
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
@@ -25,13 +25,11 @@ import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 abstract class BaseDapSuite(
     suiteName: String,
     initializer: BuildServerInitializer,
-    buildToolLayout: BuildToolLayout
+    buildToolLayout: BuildToolLayout,
 ) extends BaseLspSuite(suiteName, initializer) {
 
-  private val dapClient =
-    GlobalTrace.protocolTracePath(DebugProtocol.clientName)
-  private val dapServer =
-    GlobalTrace.protocolTracePath(DebugProtocol.serverName)
+  private val dapClient = Trace.protocolTracePath(DebugProtocol.clientName)
+  private val dapServer = Trace.protocolTracePath(DebugProtocol.serverName)
 
   override def beforeEach(context: GenericBeforeEach[Future[Any]]): Unit = {
     super.beforeEach(context)
@@ -62,13 +60,13 @@ abstract class BaseDapSuite(
                 case Success(value) => value
               }(munitExecutionContext)
           )
-        }
+        },
       )
 
   def debugMain(
       buildTarget: String,
       main: String,
-      stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue
+      stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue,
   ): Future[TestDebugger] = {
     val kind = DebugSessionParamsDataKind.SCALA_MAIN_CLASS
     val mainClass = new ScalaMainClass(main, emptyList(), emptyList())
@@ -77,28 +75,26 @@ abstract class BaseDapSuite(
 
   def setBreakpoints(
       debugger: TestDebugger,
-      workspace: DebugWorkspaceLayout
+      workspace: DebugWorkspaceLayout,
   ): Future[List[SetBreakpointsResponse]] = {
     Future.sequence {
-      workspace.files
+      workspace.filesBreakpoints
         .filter(_.breakpoints.nonEmpty)
         .map { file =>
-          val path = server.toPath(file.relativePath)
-          debugger.setBreakpoints(path, file.breakpoints)
+          debugger.setBreakpoints(file.path, file.breakpoints)
         }
     }
   }
 
   def removeBreakpoints(
       debugger: TestDebugger,
-      workspace: DebugWorkspaceLayout
+      workspace: DebugWorkspaceLayout,
   ): Future[List[SetBreakpointsResponse]] = {
     Future.sequence {
-      workspace.files
+      workspace.filesBreakpoints
         .filter(_.breakpoints.nonEmpty)
         .map { file =>
-          val path = server.toPath(file.relativePath)
-          debugger.setBreakpoints(path, Nil)
+          debugger.setBreakpoints(file.path, Nil)
         }
     }
   }
@@ -107,43 +103,60 @@ abstract class BaseDapSuite(
 
   def assertBreakpoints(
       name: TestOptions,
-      main: Option[String] = None
+      main: Option[String] = None,
+      buildTarget: Option[String] = None,
+  )(
+      source: String
+  )(implicit loc: Location): Unit = {
+    assertBreakpoints(
+      name,
+      navigator =>
+        debugMain(
+          buildTarget.getOrElse("a"),
+          main.getOrElse("a.Main"),
+          navigator,
+        ),
+    )(source)
+  }
+
+  def assertBreakpoints(
+      name: TestOptions,
+      createDebugger: StepNavigator => Future[TestDebugger],
   )(
       source: String
   )(implicit loc: Location): Unit = {
     test(name) {
-
       cleanWorkspace()
-      val debugLayout = DebugWorkspaceLayout(source)
+      val debugLayout = DebugWorkspaceLayout(source, workspace)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
       val navigator = navigateExpectedBreakpoints(debugLayout)
 
       for {
         _ <- initialize(workspaceLayout)
         _ = assertNoDiagnostics()
-        debugger <- debugMain("a", main.getOrElse("a.Main"), navigator)
+        debugger <- createDebugger(navigator)
         _ <- debugger.initialize
-        _ <- debugger.launch
+        _ <- debugger.launch(debug = true)
         _ <- setBreakpoints(debugger, debugLayout)
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
       } yield ()
     }
   }
-
   def navigateExpectedBreakpoints(
       workspaceLayout: DebugWorkspaceLayout
   ): StepNavigator = {
 
-    val expectedBreakpoints = workspaceLayout.files.flatMap { file =>
-      file.breakpoints.map(b => Breakpoint(file.relativePath, b.startLine))
+    val expectedBreakpoints = workspaceLayout.filesBreakpoints.flatMap { file =>
+      file.breakpoints.map(line => Breakpoint(file.path.toString(), line))
     }
 
     expectedBreakpoints.foldLeft(StepNavigator(workspace)) {
       (navigator, breakpoint) =>
-        navigator.at(breakpoint.relativePath, breakpoint.line + 1)(Continue)
+        navigator.at(breakpoint.path, breakpoint.line + 1)(Continue)
     }
   }
 
-  private final case class Breakpoint(relativePath: String, line: Int)
 }
+
+private final case class Breakpoint(path: String, line: Int)

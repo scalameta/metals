@@ -1,0 +1,22 @@
+name: "Check Scala nightly release"
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: 0 5 * * *
+jobs:
+  test_and_release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+      - name: "Query maven-central"
+        run: |
+          sbt 'save-non-published-nightlies versions'
+          while IFS= read -r version; do
+            gh workflow run mtags-auto-release.yml -f scala_version=$version
+          done <versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

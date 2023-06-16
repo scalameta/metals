@@ -58,4 +58,8 @@ final class Digests(conn: () => Connection, time: Time) {
     else Some(all.maxBy(_.millis).status)
   }
 
+  def clearAll(): Unit = {
+    val statement = conn().prepareStatement("truncate table sbt_digest")
+    statement.execute()
+  }
 }

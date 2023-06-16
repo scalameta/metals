@@ -1,33 +1,42 @@
 package tests.pc
 
+import coursierapi.Dependency
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionIssueSuite extends BaseCompletionSuite {
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override protected def extraDependencies(
+      scalaVersion: String
+  ): Seq[Dependency] = {
+    Seq(
+      Dependency.of("org.eclipse.lsp4j", "org.eclipse.lsp4j", "0.16.0"),
+      if (scalaVersion.startsWith("2.12"))
+        Dependency.of("org.scalameta", "scalameta_2.12", "4.6.0")
+      else
+        Dependency.of("org.scalameta", "scalameta_2.13", "4.6.0"),
+    )
+  }
 
   check(
-    "mutate",
+    "mutate".tag(IgnoreScala3),
     """package a
       |class Foo@@
       |""".stripMargin,
-    ""
+    "",
   )
 
   check(
-    "issue-569",
+    "issue-569".tag(IgnoreScala3),
     """package a
       |class Main {
       |  new Foo@@
       |}
     """.stripMargin,
-    ""
+    "",
   )
 
   check(
-    "issue-749",
+    "issue-749".tag(IgnoreScala3),
     """package a
       |trait Observable[+A] {
       |  type Self[+T] <: Observable[T]
@@ -41,7 +50,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "Self[+T] = Main.this.stream.Self",
-    topLines = Some(1)
+    topLines = Some(1),
   )
 
   checkEdit(
@@ -65,7 +74,21 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |object B {
        |  A.Nested.NestedLeaf
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|package a
+                |
+                |import a.A.Nested.NestedLeaf
+                |object A {
+                |  object Nested{
+                |    object NestedLeaf
+                |  }
+                |}
+                |object B {
+                |  NestedLeaf
+                |}
+                |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -107,7 +130,30 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |object B {
        |  val allCountries = Sweden + France + USA + World.Countries.Norway
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|package all
+           |import all.World.Countries.{
+           |  Sweden,
+           |  USA
+           |}
+           |import all.World.Countries.Norway
+           |
+           |object World {
+           |  object Countries{
+           |    object Sweden
+           |    object Norway
+           |    object France
+           |    object USA
+           |  }
+           |}
+           |import all.World.Countries.France
+           |object B {
+           |  val allCountries = Sweden + France + USA + Norway
+           |}
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -129,7 +175,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
         """|++[B >: Int, That](that: GenTraversableOnce[B])(implicit bf: CanBuildFrom[List[Int],B,That]): That
            |+:[B >: Int, That](elem: B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
            |""".stripMargin
-    )
+    ),
   )
 
   check(
@@ -145,7 +191,13 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """|filter(p: Int => Boolean): Array[Int]
        |filterNot(p: Int => Boolean): Array[Int]
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|filter(p: A => Boolean): Array[A]
+           |filter(pred: A => Boolean): C
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -161,7 +213,13 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """|filter(p: Int => Boolean): Array[Int]
        |filterNot(p: Int => Boolean): Array[Int]
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|filter(p: A => Boolean): Array[A]
+           |filter(pred: A => Boolean): C
+           |""".stripMargin
+    ),
   )
 
   check(
@@ -177,7 +235,13 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """|filter(p: Int => Boolean): Array[Int]
        |filterNot(p: Int => Boolean): Array[Int]
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|filter(p: A => Boolean): Array[A]
+           |filter(pred: A => Boolean): C
+           |""".stripMargin
+    ),
   )
 
   checkEdit(
@@ -190,14 +254,59 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """object obj {
       |  def method(arg: String): Unit = ()
       |}
-      |import obj.method""".stripMargin
+      |import obj.method""".stripMargin,
+  )
+
+  // We shouldn't get exhaustive completions for AbsolutePath
+  // related to https://github.com/scala/scala/commit/14fa7bef120cbb996d042daba6095530167c49ed
+  check(
+    "absolute-path",
+    """|
+       |import scala.meta.io.AbsolutePath
+       |object obj {
+       |  val path: AbsolutePath = ???
+       |  path match@@
+       |}
+       |""".stripMargin,
+    "match",
+  )
+
+  // The tests shows `x$1` but it's because the dependency is not indexed
+  checkEdit(
+    "default-java-override",
+    """|import org.eclipse.lsp4j.services.LanguageClient
+       |
+       |trait Client extends LanguageClient{
+       |  over@@
+       |}
+    """.stripMargin,
+    """|import org.eclipse.lsp4j.services.LanguageClient
+       |import java.util.concurrent.CompletableFuture
+       |import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+       |
+       |trait Client extends LanguageClient{
+       |  override def createProgress(x$1: WorkDoneProgressCreateParams): CompletableFuture[Void] = ${0:???}
+       |}
+       |""".stripMargin,
+    filter = (str) => str.contains("createProgress"),
+    compat = Map(
+      "3" ->
+        """|import org.eclipse.lsp4j.services.LanguageClient
+           |import java.util.concurrent.CompletableFuture
+           |import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+           |
+           |trait Client extends LanguageClient{
+           |  override def createProgress(x$0: WorkDoneProgressCreateParams): CompletableFuture[Void] = ${0:???}
+           |}
+           |""".stripMargin
+    ),
   )
 
   override val compatProcess: Map[String, String => String] = Map(
     "2.13" -> { s =>
       s.replace(
         "::[B >: Int](x: B): List[B]",
-        "::[B >: Int](elem: B): List[B]"
+        "::[B >: Int](elem: B): List[B]",
       )
     }
   )

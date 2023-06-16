@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util
@@ -17,8 +16,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
-import scala.collection.convert.DecorateAsJava
-import scala.collection.convert.DecorateAsScala
+import scala.collection.convert.AsJavaExtensions
+import scala.collection.convert.AsScalaExtensions
 import scala.collection.mutable
 import scala.compat.java8.FutureConverters
 import scala.concurrent.Await
@@ -31,6 +30,9 @@ import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
+import scala.meta.Template
+import scala.meta.Term
+import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
@@ -38,11 +40,13 @@ import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.trees.Origin
+import scala.meta.internal.trees.Origin.Parsed
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 import ch.epfl.scala.{bsp4j => b}
+import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
@@ -67,29 +71,30 @@ import org.eclipse.{lsp4j => l}
  * remember only one import.
  */
 object MetalsEnrichments
-    extends DecorateAsJava
-    with DecorateAsScala
+    extends AsJavaExtensions
+    with AsScalaExtensions
     with MtagsEnrichments {
 
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
 
-    def isSbtBuild: Boolean =
-      buildTarget.getDataKind == "sbt"
+    def isSbtBuild: Boolean = dataKind == "sbt"
+
+    def baseDirectory: String =
+      Option(buildTarget.getBaseDirectory()).getOrElse("")
+
+    def dataKind: String = Option(buildTarget.getDataKind()).getOrElse("")
 
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
-      if (isSbtBuild) {
-        decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
-          .map(_.getScalaBuildTarget)
-      } else {
-        decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
-      }
+      asSbtBuildTarget
+        .map(_.getScalaBuildTarget)
+        .orElse(decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget]))
     }
 
     def asSbtBuildTarget: Option[b.SbtBuildTarget] = {
-      buildTarget.getDataKind match {
-        case "sbt" => decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
-        case _ => None
-      }
+      if (isSbtBuild)
+        decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
+      else
+        None
     }
   }
 
@@ -105,9 +110,14 @@ object MetalsEnrichments
     }
   }
 
+  implicit class XtensionStatusCode(code: b.StatusCode) {
+    def isOK: Boolean = code == b.StatusCode.OK
+    def isError: Boolean = code == b.StatusCode.ERROR
+  }
+
   implicit class XtensionCompileResult(result: b.CompileResult) {
-    def isOK: Boolean = result.getStatusCode == b.StatusCode.OK
-    def isError: Boolean = result.getStatusCode == b.StatusCode.ERROR
+    def isOK: Boolean = result.getStatusCode.isOK
+    def isError: Boolean = result.getStatusCode.isError
   }
 
   implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {
@@ -116,8 +126,9 @@ object MetalsEnrichments
         onPosition =
           pos => Some(new l.Position(pos.startLine, pos.startColumn)),
         onUnchanged = () => Some(dirty),
-        onNoMatch = () => None
+        onNoMatch = () => None,
       )
+
     def toLocation(dirty: l.Location): Option[l.Location] =
       foldResult(
         pos => {
@@ -126,18 +137,19 @@ object MetalsEnrichments
               dirty.getUri,
               new l.Range(
                 new l.Position(pos.startLine, pos.startColumn),
-                new l.Position(pos.endLine, pos.endColumn)
-              )
+                new l.Position(pos.endLine, pos.endColumn),
+              ),
             )
           )
         },
         () => Some(dirty),
-        () => None
+        () => None,
       )
+
     def foldResult[B](
         onPosition: m.Position => B,
         onUnchanged: () => B,
-        onNoMatch: () => B
+        onNoMatch: () => B,
     ): B =
       result match {
         case Right(pos) => onPosition(pos)
@@ -153,15 +165,19 @@ object MetalsEnrichments
   implicit class XtensionScalaFuture[A](future: Future[A]) {
     def asCancelable: CancelableFuture[A] =
       CancelableFuture(future)
+
     def asJava: CompletableFuture[A] =
       FutureConverters.toJava(future).toCompletableFuture
+
     def asJavaObject: CompletableFuture[Object] =
       future.asJava.asInstanceOf[CompletableFuture[Object]]
+
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
 
     def ignoreValue(implicit ec: ExecutionContext): Future[Unit] =
       future.map(_ => ())
+
     def withObjectValue: Future[Object] =
       future.asInstanceOf[Future[Object]]
 
@@ -172,6 +188,7 @@ object MetalsEnrichments
         scribe.error(s"Unexpected error while $doingWhat", e)
       }
     }
+
     def logError(
         doingWhat: String
     )(implicit ec: ExecutionContext): Future[A] = {
@@ -229,6 +246,7 @@ object MetalsEnrichments
           case Nil => Nil
         }
       }
+
       loop(lst)
     }
   }
@@ -237,12 +255,13 @@ object MetalsEnrichments
 
     def toSymbolInformation(uri: String): List[l.SymbolInformation] = {
       val buf = List.newBuilder[l.SymbolInformation]
+
       def loop(s: l.DocumentSymbol, owner: String): Unit = {
         buf += new l.SymbolInformation(
           s.getName,
           s.getKind,
           new l.Location(uri, s.getRange),
-          if (owner == Symbols.RootPackage) "" else owner
+          if (owner == Symbols.RootPackage) "" else owner,
         )
         val newOwner: String = s.getKind match {
           case l.SymbolKind.Package =>
@@ -256,6 +275,7 @@ object MetalsEnrichments
         }
         s.getChildren.forEach { child => loop(child, newOwner) }
       }
+
       symbol.foreach { s => loop(s, Symbols.RootPackage) }
       buf.result()
     }
@@ -263,16 +283,21 @@ object MetalsEnrichments
 
   implicit class XtensionPath(path: Path) {
     def toUriInput: Input.VirtualFile = {
-      val uri = path.toUri.toString
+      val uri = path.toAbsolutePath.toUri.toString
       val text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
       Input.VirtualFile(uri, text)
     }
+
     def isSemanticdb: Boolean =
       path.getFileName.toString.endsWith(".semanticdb")
   }
+
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
-    def sourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
+    def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
+
+    def javaSourcerootOption: String =
+      s""""-Xplugin:semanticdb -sourceroot:$path""""
 
     /**
      * Resolve each path segment individually to prevent FileSystem mismatch errors.
@@ -282,9 +307,11 @@ object MetalsEnrichments
         accum.resolve(filename.toString)
       }
     }
-    def isDependencySource(workspace: AbsolutePath): Boolean =
-      isLocalFileSystem(workspace) &&
-        isInReadonlyDirectory(workspace)
+
+    def isDependencySource(workspace: AbsolutePath): Boolean = {
+      (isLocalFileSystem(workspace) &&
+        isInReadonlyDirectory(workspace)) || isJarFileSystem
+    }
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
       isLocalFileSystem(workspace) &&
@@ -294,32 +321,27 @@ object MetalsEnrichments
     def isLocalFileSystem(workspace: AbsolutePath): Boolean =
       workspace.toNIO.getFileSystem == path.toNIO.getFileSystem
 
+    def isJarFileSystem: Boolean =
+      path.toNIO.getFileSystem().provider().getScheme().equals("jar")
+
     def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
       )
 
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
-      val relative = path.toRelative(prefix)
-      if (relative.toNIO.getName(0).filename != "..") Some(relative)
-      else None
+      // windows throws an exception on toRelative when on different drives
+      if (path.toNIO.getRoot() != prefix.toNIO.getRoot())
+        None
+      else {
+        val relative = path.toRelative(prefix)
+        if (relative.toNIO.getName(0).filename != "..") Some(relative)
+        else None
+      }
     }
 
     def isInside(prefix: AbsolutePath): Boolean =
       toRelativeInside(prefix).isDefined
-
-    def jarPath: Option[AbsolutePath] = {
-      val filesystem = path.toNIO.getFileSystem()
-      if (filesystem.provider().getScheme().equals("jar")) {
-        Some(
-          AbsolutePath(
-            Paths.get(filesystem.toString)
-          )
-        )
-      } else {
-        None
-      }
-    }
 
     /**
      * Writes zip file contents to disk under $workspace/.metals/readonly.
@@ -331,7 +353,7 @@ object MetalsEnrichments
 
     private def toFileOnDisk0(
         workspace: AbsolutePath,
-        retryCount: Int
+        retryCount: Int,
     ): AbsolutePath = {
       def toJarMeta(jar: AbsolutePath): String = {
         val time = Files.getLastModifiedTime(jar.toNIO).toMillis()
@@ -387,7 +409,7 @@ object MetalsEnrichments
         AbsolutePath(out)
       }
 
-      // prevent inifinity loop
+      // prevent infinity loop
       if (retryCount > 5) {
         throw new Exception(s"Unable to save $path in workspace")
       } else if (path.toNIO.getFileSystem == workspace.toNIO.getFileSystem) {
@@ -439,12 +461,16 @@ object MetalsEnrichments
       filename.endsWith(".zip")
     }
 
+    def canWrite: Boolean = {
+      path.toNIO.toFile().canWrite()
+    }
+
     /**
      * Reads file contents from editor buffer with fallback to disk.
      */
     def toInputFromBuffers(buffers: Buffers): m.Input.VirtualFile = {
       buffers.get(path) match {
-        case Some(text) => Input.VirtualFile(path.toString(), text)
+        case Some(text) => Input.VirtualFile(path.toURI.toString(), text)
         case None => path.toInput
       }
     }
@@ -462,19 +488,17 @@ object MetalsEnrichments
       else Files.move(path.toNIO, newPath.toNIO)
     }
 
-    def createDirectories(): AbsolutePath =
-      AbsolutePath(Files.createDirectories(path.dealias.toNIO))
-
     def createAndGetDirectories(): Seq[AbsolutePath] = {
       def createDirectoriesRec(
           absolutePath: AbsolutePath,
-          toCreate: Seq[AbsolutePath]
+          toCreate: Seq[AbsolutePath],
       ): Seq[AbsolutePath] = {
         if (absolutePath.exists)
           toCreate.map(path => AbsolutePath(Files.createDirectory(path.toNIO)))
         else
           createDirectoriesRec(absolutePath.parent, absolutePath +: toCreate)
       }
+
       createDirectoriesRec(path, Nil)
     }
 
@@ -483,32 +507,7 @@ object MetalsEnrichments
     }
 
     def deleteRecursively(): Unit = {
-      path.listRecursive.toList.reverse.foreach(_.delete())
-    }
-
-    def writeText(text: String): Unit = {
-      path.parent.createDirectories()
-      val tmp = Files.createTempFile("metals", path.filename)
-      // Write contents first to a temporary file and then try to
-      // atomically move the file to the destination. The atomic move
-      // reduces the risk that another tool will concurrently read the
-      // file contents during a half-complete file write.
-      Files.write(
-        tmp,
-        text.getBytes(StandardCharsets.UTF_8),
-        StandardOpenOption.TRUNCATE_EXISTING
-      )
-      try {
-        Files.move(
-          tmp,
-          path.toNIO,
-          StandardCopyOption.REPLACE_EXISTING,
-          StandardCopyOption.ATOMIC_MOVE
-        )
-      } catch {
-        case NonFatal(_) =>
-          Files.move(tmp, path.toNIO, StandardCopyOption.REPLACE_EXISTING)
-      }
+      path.listRecursive.toList.reverse.foreach(f => if (f.exists) f.delete())
     }
 
     def appendText(text: String): Unit = {
@@ -516,7 +515,7 @@ object MetalsEnrichments
       Files.write(
         path.toNIO,
         text.getBytes(StandardCharsets.UTF_8),
-        StandardOpenOption.APPEND
+        StandardOpenOption.APPEND,
       )
     }
 
@@ -544,7 +543,7 @@ object MetalsEnrichments
     def lastIndexBetween(
         char: Char,
         lowerBound: Int,
-        upperBound: Int
+        upperBound: Int,
     ): Int = {
       val safeLowerBound = Math.max(0, lowerBound)
       var index = upperBound
@@ -574,18 +573,28 @@ object MetalsEnrichments
         case _ => None
       }
 
-    def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
+    def toAbsolutePathSafe(implicit
+        reports: ReportContext = LoggerReportContext
+    ): Option[AbsolutePath] =
+      try {
+        Some(toAbsolutePath)
+      } catch {
+        case NonFatal(e) =>
+          reports.incognito.create(
+            Report(
+              "absolute-path",
+              s"""|Uri: $value
+                  |""".stripMargin,
+              e,
+            )
+          )
+          None
+      }
 
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
-    def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
-      val path = AbsolutePath(
-        Paths.get(URI.create(value.stripPrefix("metals:")))
-      )
-      if (followSymlink)
-        path.dealias
-      else
-        path
-    }
+
+    def toAbsolutePath(followSymlink: Boolean): AbsolutePath =
+      MtagsEnrichments.XtensionStringMtags(value).toAbsolutePath(followSymlink)
 
     def indexToLspPosition(index: Int): l.Position = {
       var i = 0
@@ -626,6 +635,7 @@ object MetalsEnrichments
 
     def lineAtIndex(index: Int): Int =
       indexToLspPosition(index).getLine
+
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
@@ -639,7 +649,11 @@ object MetalsEnrichments
         localOccurrence.symbol == symbol
       }
     }
-    def definition(uri: String, symbol: String): Option[l.Location] = {
+
+    def toLocation(uri: URI, symbol: String): Option[l.Location] =
+      toLocation(uri.toString, symbol)
+
+    def toLocation(uri: String, symbol: String): Option[l.Location] = {
       textDocument.occurrences
         .find(o => o.role.isDefinition && o.symbol == symbol)
         .map { occ => occ.toLocation(uri) }
@@ -651,78 +665,181 @@ object MetalsEnrichments
       val severity = d.getSeverity.toString.toLowerCase()
       s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
     }
+    def asTextEdit: Option[l.TextEdit] = {
+      decodeJson(d.getData, classOf[l.TextEdit])
+    }
   }
+
   implicit class XtensionSeverityBsp(sev: b.DiagnosticSeverity) {
-    def toLSP: l.DiagnosticSeverity =
+    def toLsp: l.DiagnosticSeverity =
       l.DiagnosticSeverity.forValue(sev.getValue)
   }
 
   implicit class XtensionPositionBSp(pos: b.Position) {
-    def toLSP: l.Position =
+    def toLsp: l.Position =
       new l.Position(pos.getLine, pos.getCharacter)
   }
 
   implicit class XtensionPositionRange(range: s.Range) {
-    def inString(text: String): String = {
+    def inString(text: String): Option[String] = {
       var i = 0
       var max = 0
+      def isNewline = text.charAt(i) == '\n'
       while (max < range.startLine) {
-        if (text.charAt(i) == '\n') max += 1
+        if (isNewline) max += 1
         i += 1
       }
       val start = i + range.startCharacter
+      while (max < range.endLine) {
+        if (isNewline) max += 1
+        i += 1
+      }
       val end = i + range.endCharacter
-      text.substring(start, end)
+      if (start < text.size && end <= text.size)
+        Some(text.substring(start, end))
+      else
+        None
     }
+
+    def toMeta(input: m.Input): Option[m.Position] =
+      Try(
+        m.Position.Range(
+          input,
+          range.startLine,
+          range.startCharacter,
+          range.endLine,
+          range.endCharacter,
+        )
+      ).toOption
   }
 
   implicit class XtensionRangeBsp(range: b.Range) {
-    def toMeta(input: m.Input): m.Position =
-      m.Position.Range(
-        input,
-        range.getStart.getLine,
-        range.getStart.getCharacter,
-        range.getEnd.getLine,
-        range.getEnd.getCharacter
-      )
-    def toLSP: l.Range =
-      new l.Range(range.getStart.toLSP, range.getEnd.toLSP)
+    def toMeta(input: m.Input): Option[m.Position] =
+      Try(
+        m.Position.Range(
+          input,
+          range.getStart.getLine,
+          range.getStart.getCharacter,
+          range.getEnd.getLine,
+          range.getEnd.getCharacter,
+        )
+      ).toOption
+
+    def toLsp: l.Range =
+      new l.Range(range.getStart.toLsp, range.getEnd.toLsp)
   }
 
   implicit class XtensionSymbolOccurrenceProtocol(occ: s.SymbolOccurrence) {
     def toLocation(uri: String): l.Location = {
       occ.range.getOrElse(s.Range(0, 0, 0, 0)).toLocation(uri)
     }
+
     def encloses(
         pos: l.Position,
-        includeLastCharacter: Boolean = false
+        includeLastCharacter: Boolean = false,
     ): Boolean =
       occ.range.isDefined &&
         occ.range.get.encloses(pos, includeLastCharacter)
   }
 
   implicit class XtensionDiagnosticBsp(diag: b.Diagnostic) {
-    def toLSP: l.Diagnostic =
-      new l.Diagnostic(
-        diag.getRange.toLSP,
-        fansi.Str(diag.getMessage).plainText,
-        diag.getSeverity.toLSP,
-        if (diag.getSource == null) "scalac" else diag.getSource
-        // We omit diag.getCode since Bloop's BSP implementation uses 'code' with different semantics
-        // than LSP. See https://github.com/scalacenter/bloop/issues/1134 for details
+    def toLsp: l.Diagnostic = {
+      val ld = new l.Diagnostic(
+        diag.getRange.toLsp,
+        fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
+        diag.getSeverity.toLsp,
+        if (diag.getSource == null) "scalac" else diag.getSource,
       )
+      if (diag.getCode() != null) {
+        ld.setCode(diag.getCode())
+      }
+      ld.setData(diag.getData)
+      ld
+    }
   }
 
   implicit class XtensionHttpExchange(exchange: HttpServerExchange) {
     def getQuery(key: String): Option[String] =
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
-  implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
-    def classpath: Iterator[AbsolutePath] = {
-      item.getClasspath.asScala.iterator
-        .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
+
+  implicit class XtensionClasspath(classpath: List[String]) {
+    def toAbsoluteClasspath: Iterator[AbsolutePath] = {
+      classpath.iterator
+        .map(_.toAbsolutePath)
         .filter(p => Files.exists(p.toNIO))
     }
+  }
+
+  implicit class XtensionJavacOptions(item: b.JavacOptionsItem) {
+    def targetroot: AbsolutePath = {
+      item.getOptions.asScala
+        .find(_.startsWith("-Xplugin:semanticdb"))
+        .map(arg => {
+          val targetRootOpt = "-targetroot:"
+          val sourceRootOpt = "-sourceroot:"
+          val targetRootPos = arg.indexOf(targetRootOpt)
+          val sourceRootPos = arg.indexOf(sourceRootOpt)
+          if (targetRootPos > sourceRootPos)
+            arg.substring(targetRootPos + targetRootOpt.size).trim()
+          else
+            arg
+              .substring(sourceRootPos + sourceRootOpt.size, targetRootPos - 1)
+              .trim()
+        })
+        .filter(_ != "javac-classes-directory")
+        .map(AbsolutePath(_))
+        .getOrElse(item.getClassDirectory.toAbsolutePath)
+    }
+
+    def isSemanticdbEnabled: Boolean = {
+      item.getOptions.asScala.exists { opt =>
+        opt.startsWith("-Xplugin:semanticdb")
+      }
+    }
+
+    def isSourcerootDeclared: Boolean = {
+      item.getOptions.asScala
+        .find(_.startsWith("-Xplugin:semanticdb"))
+        .map(_.contains("-sourceroot:"))
+        .getOrElse(false)
+    }
+
+    def isTargetrootDeclared: Boolean = {
+      item.getOptions.asScala
+        .find(_.startsWith("-Xplugin:semanticdb"))
+        .map(_.contains("-targetroot:"))
+        .getOrElse(false)
+    }
+
+    def classpath: List[String] =
+      item.getClasspath.asScala.toList
+
+    def jarClasspath: List[AbsolutePath] =
+      classpath
+        .filter(_.endsWith(".jar"))
+        .map(_.toAbsolutePath)
+
+    def releaseVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(_ != "--release")
+        .drop(1)
+        .headOption
+
+    def sourceVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(f => f != "--source" && f != "-source" && f != "--release")
+        .drop(1)
+        .headOption
+
+    def targetVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(f => f != "--target" && f != "-target" && f != "--release")
+        .drop(1)
+        .headOption
+  }
+
+  implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
     def targetroot(scalaVersion: String): AbsolutePath = {
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         val options = item.getOptions.asScala
@@ -762,6 +879,7 @@ object MetalsEnrichments
         option.startsWith(soughtOption)
       }
     }
+
     def isJVM: Boolean = {
       // FIXME: https://github.com/scalacenter/bloop/issues/700
       !item.getOptions.asScala.exists(_.isNonJVMPlatformOption)
@@ -777,14 +895,28 @@ object MetalsEnrichments
         .map(_.stripPrefix(flag))
     }
 
+    def classpath: List[String] =
+      item.getClasspath.asScala.toList
+
+    def jarClasspath: List[AbsolutePath] =
+      classpath
+        .filter(_.endsWith(".jar"))
+        .map(_.toAbsolutePath)
+  }
+
+  implicit class XtensionChar(ch: Char) {
+    def stringRepeat(n: Int): String = {
+      if (n > 0)
+        ch.toString * n
+      else ""
+    }
   }
 
   implicit class XtensionClientCapabilities(
-      initializeParams: Option[l.InitializeParams]
+      params: l.InitializeParams
   ) {
     def supportsHierarchicalDocumentSymbols: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         documentSymbol <- Option(textDocument.getDocumentSymbol)
@@ -795,7 +927,6 @@ object MetalsEnrichments
 
     def supportsCompletionSnippets: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         completion <- Option(textDocument.getCompletion)
@@ -805,7 +936,6 @@ object MetalsEnrichments
 
     def foldOnlyLines: Boolean = {
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         settings <- Option(textDocument.getFoldingRange)
@@ -815,7 +945,6 @@ object MetalsEnrichments
 
     def supportsCodeActionLiterals: Boolean =
       (for {
-        params <- initializeParams
         capabilities <- Option(params.getCapabilities)
         textDocument <- Option(capabilities.getTextDocument)
         codeAction <- Option(textDocument.getCodeAction)
@@ -845,13 +974,18 @@ object MetalsEnrichments
     def mapOptionInside[B](
         f: A => B
     )(implicit ec: ExecutionContext): Future[Option[B]] =
-      state.map(
-        _.map(f)
-      )
+      state.map(_.map(f))
+
+    def flatMapOptionInside[B](
+        f: A => Option[B]
+    )(implicit ec: ExecutionContext): Future[Option[B]] =
+      state.map(_.flatMap(f))
   }
 
   implicit class XtensionTreeTokenStream(tree: m.Tree) {
+
     import scala.meta._
+
     def leadingTokens: Iterator[m.Token] =
       tree.origin match {
         case Origin.Parsed(input, dialect, pos) =>
@@ -875,12 +1009,77 @@ object MetalsEnrichments
       trailingTokens.find(predicate)
   }
 
+  implicit class XtensionTreeBraceHandler(stat: Tree) {
+
+    /**
+     * Check if it's possible to use braceless syntax and whether
+     * it's the preferred style in the file.
+     */
+    def canUseBracelessSyntax(source: String): Boolean = {
+
+      def allowBracelessSyntax(tree: Tree) = tree.origin match {
+        case p: Parsed => p.dialect.allowSignificantIndentation
+        case _ => false
+      }
+
+      def isNotInBraces(t: Tree): Boolean = {
+        t match {
+          case _: Template | _: Term.Block if t.pos.start < source.length =>
+            source(t.pos.start) != '{'
+          case _ => false
+        }
+      }
+
+      // Let's try to use the style of any existing parent.
+      @tailrec
+      def existsBracelessParent(tree: Tree): Boolean = {
+        tree.parent match {
+          case Some(t) =>
+            if (isNotInBraces(t)) true
+            else existsBracelessParent(t)
+          case None => existsBracelessChild(tree)
+        }
+      }
+
+      // If we are at the top, let's check also the siblings
+      def existsBracelessChild(tree: Tree): Boolean = {
+        tree.children.exists { t =>
+          if (isNotInBraces(t)) true
+          else existsBracelessChild(t)
+        }
+      }
+
+      allowBracelessSyntax(stat) && existsBracelessParent(stat)
+    }
+  }
+
   implicit class XtensionSourceBreakpoint(
       breakpoint: l.debug.SourceBreakpoint
   ) {
 
     // LSP Position is 0-based, while breakpoints are 1-based
-    def toLSP = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
+    def toLsp = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
   }
+
+  implicit class XtensionWorkspaceEdits(edits: Seq[l.WorkspaceEdit]) {
+    def mergeChanges: l.WorkspaceEdit = {
+      val changes = edits.view
+        .flatMap(e => Option(e.getChanges()).map(_.asScala))
+        .flatten
+        .groupMapReduce(_._1)(_._2.asScala) { _ ++ _ }
+        .mapValues(_.distinct.asJava) // deduplicate same changes
+        .toMap
+        .asJava
+      new l.WorkspaceEdit(changes)
+    }
+  }
+
+  /**
+   * Strips ANSI colors.
+   * As long as the color codes are valid this should correctly strip
+   * anything that is ESC (U+001B) plus [
+   */
+  def filerANSIColorCodes(str: String): String =
+    str.replaceAll("\u001B\\[[;\\d]*m", "")
 
 }

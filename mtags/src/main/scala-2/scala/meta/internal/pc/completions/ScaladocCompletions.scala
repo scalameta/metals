@@ -202,8 +202,8 @@ trait ScaladocCompletions { this: MetalsGlobal =>
       val isEligible = associatedDef match {
         case Some(cur) =>
           t.pos.isDefined &&
-            cur.pos.isDefined &&
-            t.pos.point <= cur.pos.point
+          cur.pos.isDefined &&
+          t.pos.point <= cur.pos.point
         case None =>
           true
       }

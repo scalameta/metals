@@ -7,7 +7,7 @@ import org.eclipse.{lsp4j => l}
 
 /**
  * While all these values can be set here, they are here only for
- * compatablity with clients that were setting them this way. From
+ * compatibility with clients that were setting them this way. From
  * a client perspective it's preferable and recommended to use
  * InitializationOptions instead. From a development perspective
  * don't add something here unless it's truly a more "experimental"
@@ -20,12 +20,11 @@ final case class ClientExperimentalCapabilities(
     doctorProvider: Option[String],
     executeClientCommandProvider: Option[Boolean],
     inputBoxProvider: Option[Boolean],
-    isCommandInHtmlSupported: Option[Boolean],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
     slowTaskProvider: Option[Boolean],
     statusBarProvider: Option[String],
-    treeViewProvider: Option[Boolean]
+    treeViewProvider: Option[Boolean],
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -48,7 +47,6 @@ object ClientExperimentalCapabilities {
     None,
     None,
     None,
-    None
   )
 
   def from(
@@ -79,14 +77,12 @@ object ClientExperimentalCapabilities {
       executeClientCommandProvider =
         jsonObj.getBooleanOption("executeClientCommandProvider"),
       inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
-      isCommandInHtmlSupported =
-        jsonObj.getBooleanOption("isCommandInHtmlSupported"),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
       slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider"),
       statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
-      treeViewProvider = jsonObj.getBooleanOption("treeViewProvider")
+      treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
     )
   }
 }

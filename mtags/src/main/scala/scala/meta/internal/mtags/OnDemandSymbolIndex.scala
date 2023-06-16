@@ -1,11 +1,15 @@
 package scala.meta.internal.mtags
 
 import java.util.zip.ZipError
+import java.util.zip.ZipException
 
 import scala.collection.concurrent.TrieMap
+import scala.util.control.NonFatal
 
 import scala.meta.Dialect
+import scala.meta.dialects
 import scala.meta.internal.io.{ListFiles => _}
+import scala.meta.internal.metals.ReportContext
 import scala.meta.io.AbsolutePath
 
 /**
@@ -24,35 +28,46 @@ import scala.meta.io.AbsolutePath
 final class OnDemandSymbolIndex(
     dialectBuckets: TrieMap[Dialect, SymbolIndexBucket],
     onError: PartialFunction[Throwable, Unit],
-    toIndexSource: AbsolutePath => Option[AbsolutePath]
-) extends GlobalSymbolIndex {
+    toIndexSource: AbsolutePath => AbsolutePath
+)(implicit rc: ReportContext)
+    extends GlobalSymbolIndex {
   val mtags = new Mtags
   var indexedSources = 0L
   def close(): Unit = {
     dialectBuckets.values.foreach(_.close())
   }
   private val onErrorOption = onError.andThen(_ => None)
-  private def getOrCreateBucket(dialect: Dialect): SymbolIndexBucket = {
+
+  private def getOrCreateBucket(dialect: Dialect): SymbolIndexBucket =
     dialectBuckets.getOrElseUpdate(
       dialect,
       SymbolIndexBucket.empty(dialect, mtags, toIndexSource)
     )
-  }
 
   override def definition(symbol: Symbol): Option[SymbolDefinition] = {
     try findSymbolDefinition(symbol).headOption
-    catch onErrorOption
+    catch {
+      case NonFatal(e) =>
+        onErrorOption(
+          new IndexingExceptions.InvalidSymbolException(symbol.value, e)
+        )
+    }
   }
 
   override def definitions(symbol: Symbol): List[SymbolDefinition] =
     try findSymbolDefinition(symbol)
-    catch onError.andThen(_ => List.empty)
+    catch {
+      case NonFatal(e) =>
+        onError(new IndexingExceptions.InvalidSymbolException(symbol.value, e))
+        List.empty
+    }
 
   override def addSourceDirectory(
       dir: AbsolutePath,
       dialect: Dialect
   ): List[(String, AbsolutePath)] =
     tryRun(
+      dir,
       List.empty,
       getOrCreateBucket(dialect).addSourceDirectory(dir)
     )
@@ -64,12 +79,16 @@ final class OnDemandSymbolIndex(
       dialect: Dialect
   ): List[(String, AbsolutePath)] =
     tryRun(
+      jar,
       List.empty, {
         try {
           getOrCreateBucket(dialect).addSourceJar(jar)
         } catch {
           case e: ZipError =>
-            onError(InvalidJarException(jar, e))
+            onError(new IndexingExceptions.InvalidJarException(jar, e))
+            List.empty
+          case e: ZipException =>
+            onError(new IndexingExceptions.InvalidJarException(jar, e))
             List.empty
         }
       }
@@ -92,6 +111,7 @@ final class OnDemandSymbolIndex(
       dialect: Dialect
   ): List[String] =
     tryRun(
+      source,
       List.empty, {
         indexedSources += 1
         getOrCreateBucket(dialect).addSourceFile(source, sourceDirectory)
@@ -106,22 +126,34 @@ final class OnDemandSymbolIndex(
   ): Unit =
     getOrCreateBucket(dialect).addToplevelSymbol(path, source, toplevel)
 
-  private def tryRun[A](fallback: => A, thunk: => A): A =
+  private def tryRun[A](path: AbsolutePath, fallback: => A, thunk: => A): A =
     try thunk
-    catch onError.andThen(_ => fallback)
+    catch {
+      case NonFatal(e) =>
+        onError(new IndexingExceptions.PathIndexingException(path, e))
+        fallback
+    }
 
   private def findSymbolDefinition(
       querySymbol: Symbol
   ): List[SymbolDefinition] = {
-    dialectBuckets.values.toList.flatMap(_.query(querySymbol))
+    dialectBuckets.values.toList
+      .flatMap(_.query(querySymbol))
+      // prioritize defs where found symbols is exact and comes from scala3
+      .sortBy(d => (!d.isExact, d.dialect != dialects.Scala3))
   }
 
 }
 
 object OnDemandSymbolIndex {
+
   def empty(
-      onError: PartialFunction[Throwable, Unit] = PartialFunction.empty,
-      toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
-  ): OnDemandSymbolIndex =
+      onError: PartialFunction[Throwable, Unit] = { case NonFatal(e) =>
+        throw e
+      },
+      toIndexSource: AbsolutePath => AbsolutePath = identity
+  )(implicit rc: ReportContext): OnDemandSymbolIndex = {
     new OnDemandSymbolIndex(TrieMap.empty, onError, toIndexSource)
+  }
+
 }

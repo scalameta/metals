@@ -11,6 +11,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.TextDocumentLookup
@@ -39,7 +40,8 @@ final class InteractiveSemanticdbs(
     statusBar: StatusBar,
     compilers: () => Compilers,
     clientConfig: ClientConfiguration,
-    semanticdbIndexer: () => SemanticdbIndexer
+    semanticdbIndexer: () => SemanticdbIndexer,
+    javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb],
 ) extends Cancelable
     with Semanticdbs {
 
@@ -62,7 +64,7 @@ final class InteractiveSemanticdbs(
 
   def textDocument(
       source: AbsolutePath,
-      unsavedContents: Option[String]
+      unsavedContents: Option[String],
   ): TextDocumentLookup = {
 
     def doesNotBelongToBuildTarget = buildTargets.inverseSources(source).isEmpty
@@ -73,11 +75,11 @@ final class InteractiveSemanticdbs(
           source.isSbt || // sbt files
           source.isWorksheet || // worksheets
           doesNotBelongToBuildTarget // standalone files
-      )
+      ) || source.isJarFileSystem // dependencies
     }
 
-    // anything aside from `*.scala`, `*.sbt` and `*.sc` file
-    def isExcludedFile = !source.isScalaFilename
+    // anything aside from `*.scala`, `*.sbt`, `*.sc`, `*.java` file
+    def isExcludedFile = !source.isScalaFilename && !source.isJavaFilename
 
     if (isExcludedFile || !shouldTryCalculateInteractiveSemanticdb) {
       TextDocumentLookup.NotFound(source)
@@ -97,7 +99,7 @@ final class InteractiveSemanticdbs(
             }
           } else
             existingDoc
-        }
+        },
       )
       TextDocumentLookup.fromOption(source, Option(result))
     }
@@ -144,7 +146,7 @@ final class InteractiveSemanticdbs(
           // Use INFO instead of ERROR severity because these diagnostics are published for readonly
           // files of external dependencies so the user cannot fix them.
           val severity = DiagnosticSeverity.Information
-          new l.Diagnostic(range.toLSP, diag.message, severity, "scala")
+          new l.Diagnostic(range.toLsp, diag.message, severity, "scala")
         }
         if (diagnostics.nonEmpty) {
           statusBar.addMessage(partialNavigation(clientConfig.icons))
@@ -159,6 +161,17 @@ final class InteractiveSemanticdbs(
   }
 
   private def compile(source: AbsolutePath, text: String): s.TextDocument = {
+    if (source.isJavaFilename)
+      javaInteractiveSemanticdb.fold(s.TextDocument())(
+        _.textDocument(source, text)
+      )
+    else scalaCompile(source, text)
+  }
+
+  private def scalaCompile(
+      source: AbsolutePath,
+      text: String,
+  ): s.TextDocument = {
     def worksheetCompiler =
       if (source.isWorksheet) compilers().loadWorksheetCompiler(source)
       else None
@@ -175,7 +188,7 @@ final class InteractiveSemanticdbs(
           .getWorksheet(source)
           .flatMap(compilers().loadWorksheetCompiler)
       }
-      .getOrElse(compilers().fallbackCompiler)
+      .getOrElse(compilers().fallbackCompiler(source))
 
     val (prependedLinesSize, modifiedText) =
       buildTargets
@@ -191,7 +204,7 @@ final class InteractiveSemanticdbs(
       .semanticdbTextDocument(source.toURI, modifiedText)
       .get(
         clientConfig.initialConfig.compilers.timeoutDelay,
-        clientConfig.initialConfig.compilers.timeoutUnit
+        clientConfig.initialConfig.compilers.timeoutUnit,
       )
     val textDocument = {
       val doc = s.TextDocument.parseFrom(bytes)
@@ -206,7 +219,7 @@ final class InteractiveSemanticdbs(
   private def cleanupAutoImports(
       document: s.TextDocument,
       originalText: String,
-      linesSize: Int
+      linesSize: Int,
   ): s.TextDocument = {
 
     def adjustRange(range: s.Range): Option[s.Range] = {
@@ -215,7 +228,7 @@ final class InteractiveSemanticdbs(
       if (nextEndLine >= 0) {
         val nextRange = range.copy(
           startLine = nextStartLine,
-          endLine = nextEndLine
+          endLine = nextEndLine,
         )
         Some(nextRange)
       } else None
@@ -251,7 +264,7 @@ final class InteractiveSemanticdbs(
       symbols = document.symbols,
       occurrences = adjustedOccurences,
       diagnostics = adjustedDiagnostic,
-      synthetics = adjustedSynthetic
+      synthetics = adjustedSynthetic,
     )
   }
 

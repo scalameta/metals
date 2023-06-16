@@ -1,20 +1,25 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.clients.language
 
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
-import scala.util.Failure
-import scala.util.Success
+import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.ConcurrentHashSet
+import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ammonite.Ammonite
-import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.TaskProgress
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
 import scala.meta.internal.tvp._
-import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
@@ -30,24 +35,20 @@ final class ForwardingMetalsBuildClient(
     languageClient: MetalsLanguageClient,
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
-    buildTargetClasses: BuildTargetClasses,
     clientConfig: ClientConfiguration,
     statusBar: StatusBar,
     time: Time,
     didCompile: CompileReport => Unit,
-    onBuildChanged: Seq[b.BuildTargetEvent] => Unit,
-    treeViewProvider: () => TreeViewProvider,
-    worksheetProvider: () => WorksheetProvider,
-    ammonite: () => Ammonite
-)(implicit ec: ExecutionContext)
-    extends MetalsBuildClient
+    onBuildTargetDidCompile: BuildTargetIdentifier => Unit,
+    onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
+) extends MetalsBuildClient
     with Cancelable {
 
   private case class Compilation(
       timer: Timer,
       promise: Promise[CompileReport],
       isNoOp: Boolean,
-      progress: TaskProgress = TaskProgress.empty
+      progress: TaskProgress = TaskProgress.empty,
   ) extends TreeViewCompilation {
     def progressPercentage = progress.percentage
   }
@@ -110,19 +111,7 @@ final class ForwardingMetalsBuildClient(
   }
 
   def onBuildTargetDidChange(params: b.DidChangeBuildTarget): Unit = {
-
-    val (ammoniteChanges, otherChanges) =
-      params.getChanges.asScala.partition(_.getTarget.getUri.isAmmoniteScript)
-
-    if (ammoniteChanges.nonEmpty)
-      ammonite().importBuild().onComplete {
-        case Success(()) =>
-        case Failure(exception) =>
-          scribe.error("Error re-importing Ammonite build", exception)
-      }
-
-    if (otherChanges.nonEmpty)
-      onBuildChanged(otherChanges)
+    onBuildTargetDidChangeFunc(params)
   }
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}
@@ -131,7 +120,9 @@ final class ForwardingMetalsBuildClient(
   def buildTaskStart(params: TaskStartParams): Unit = {
     params.getDataKind match {
       case TaskDataKind.COMPILE_TASK =>
-        if (params.getMessage.startsWith("Compiling")) {
+        if (
+          params.getMessage != null && params.getMessage.startsWith("Compiling")
+        ) {
           scribe.info(params.getMessage.toLowerCase())
         }
         for {
@@ -145,7 +136,10 @@ final class ForwardingMetalsBuildClient(
 
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
-          val isNoOp = params.getMessage.startsWith("Start no-op compilation")
+          val isNoOp =
+            params.getMessage != null && params.getMessage.startsWith(
+              "Start no-op compilation"
+            )
           val compilation = Compilation(new Timer(time), promise, isNoOp)
           compilations(task.getTarget) = compilation
 
@@ -153,7 +147,7 @@ final class ForwardingMetalsBuildClient(
             s"Compiling $name",
             promise.future,
             showTimer = true,
-            progress = Some(compilation.progress)
+            progress = Some(compilation.progress),
           )
         }
       case _ =>
@@ -168,8 +162,13 @@ final class ForwardingMetalsBuildClient(
           report <- params.asCompileReport
           compilation <- compilations.remove(report.getTarget)
         } {
-          diagnostics.onFinishCompileBuildTarget(report.getTarget)
-          didCompile(report)
+          diagnostics.onFinishCompileBuildTarget(report, params.getStatus())
+          try {
+            didCompile(report)
+          } catch {
+            case NonFatal(e) =>
+              scribe.error(s"failed to process compile report", e)
+          }
           val target = report.getTarget
           compilation.promise.trySuccess(report)
           val name = buildTargets.info(report.getTarget) match {
@@ -196,16 +195,14 @@ final class ForwardingMetalsBuildClient(
               // that target to fix
               // https://github.com/scalameta/metals/issues/846.
               updatedTreeViews.add(target)
-              treeViewProvider().onBuildTargetDidCompile(target)
-              worksheetProvider().onBuildTargetDidCompile(target)
+              onBuildTargetDidCompile(target)
             }
             hasReportedError.remove(target)
           } else {
             hasReportedError.add(target)
             statusBar.addMessage(
               MetalsStatusParams(
-                message,
-                command = ClientCommands.FocusDiagnostics.id
+                message
               )
             )
           }

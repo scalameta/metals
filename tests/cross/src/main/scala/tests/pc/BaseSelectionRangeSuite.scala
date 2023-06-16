@@ -7,7 +7,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.pc.OffsetParams
 
 import munit.TestOptions
@@ -21,16 +21,16 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       name: TestOptions,
       original: String,
       expectedRanges: List[String],
-      compat: Map[String, List[String]] = Map.empty
+      compat: Map[String, List[String]] = Map.empty,
   ): Unit = {
     test(name) {
-      val (code, offset) = params(original)
+      val (code, offset) = params(original, "SelectionRange.scala")
       val offsetParams: ju.List[OffsetParams] = List[OffsetParams](
         CompilerOffsetParams(
           Paths.get("SelectionRange.scala").toUri(),
           code,
           offset,
-          EmptyCancelToken
+          EmptyCancelToken,
         )
       ).asJava
 
@@ -52,7 +52,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       assertSelectionRanges(
         selectionRanges.headOption,
         compatOrDefault(expectedRanges, compat, scalaVersion),
-        code
+        code,
       )
     }
   }
@@ -60,7 +60,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
   private def assertSelectionRanges(
       range: Option[l.SelectionRange],
       expected: List[String],
-      original: String
+      original: String,
   ): Unit = {
     assert(range.nonEmpty)
     expected.headOption.foreach { expectedRange =>
@@ -72,11 +72,18 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
 
   private def applyRanges(
       text: String,
-      selectionRange: l.SelectionRange
+      selectionRange: l.SelectionRange,
   ): String = {
     val input = Input.String(text)
 
-    val pos = selectionRange.getRange().toMeta(input)
+    val pos = selectionRange
+      .getRange()
+      .toMeta(input)
+      .getOrElse(
+        throw new RuntimeException(
+          s"Range ${selectionRange.getRange()} not contained in:\n$text"
+        )
+      )
     val out = new java.lang.StringBuilder()
     out.append(text, 0, pos.start)
     out.append(">>region>>")

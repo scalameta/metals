@@ -13,13 +13,13 @@ object DebugStep {
       expression: String,
       frameId: Int,
       callback: EvaluateResponse => Unit,
-      nextStep: DebugStep
+      nextStep: DebugStep,
   ) extends DebugStep
   case class Complete(
       expression: String,
       frameId: Int,
       callback: CompletionsResponse => Unit,
       line: Int,
-      character: Int
+      character: Int,
   ) extends DebugStep
 }

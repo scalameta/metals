@@ -6,6 +6,7 @@ import scala.collection.immutable.Nil
 
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.Identifier
+import scala.meta.internal.pc.InterpolationSplice
 import scala.meta.internal.pc.MetalsGlobal
 
 import org.eclipse.{lsp4j => l}
@@ -37,7 +38,7 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       cursor: Position,
       text: String
   ) extends CompletionPosition {
-    val pos: l.Range = ident.pos.withEnd(cursor.point).toLSP
+    val pos: l.Range = ident.pos.withEnd(cursor.point).toLsp
     def newText(sym: Symbol): String = {
       new StringBuilder()
         .append('{')
@@ -53,7 +54,8 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       metalsTypeMembers(ident.pos).collect {
         case m if CompletionFuzzy.matches(query, m.sym.name) =>
           val edit = new l.TextEdit(pos, newText(m.sym))
-          val filterText = m.sym.getterName.decoded
+          // for VS Code we need to include the entire `ident.member`
+          val filterText = ident.name.decoded + "." + m.sym.getterName.decoded
           new TextEditMember(filterText, edit, m.sym)
       }
     }
@@ -89,7 +91,7 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       if (lit.pos.focusEnd.line == pos.line) CURSOR.length else 0
     val nameStart: Position =
       pos.withStart(pos.start - interpolator.name.size)
-    val nameRange = nameStart.toLSP
+    val nameRange = nameStart.toLsp
     val hasClosingBrace: Boolean = text.charAt(pos.point) == '}'
     val hasOpeningBrace: Boolean = text.charAt(
       pos.start - interpolator.name.size - 1
@@ -98,23 +100,23 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     def additionalEdits(): List[l.TextEdit] = {
       val interpolatorEdit =
         if (text.charAt(lit.pos.start - 1) != 's')
-          List(new l.TextEdit(lit.pos.withEnd(lit.pos.start).toLSP, "s"))
+          List(new l.TextEdit(lit.pos.withEnd(lit.pos.start).toLsp, "s"))
         else Nil
       val dollarEdits = for {
         i <- lit.pos.start to (lit.pos.end - CURSOR.length())
         if text.charAt(i) == '$' && i != interpolator.dollar
-      } yield new l.TextEdit(pos.source.position(i).withEnd(i).toLSP, "$")
+      } yield new l.TextEdit(pos.source.position(i).withEnd(i).toLsp, "$")
       interpolatorEdit ++ dollarEdits
     }
 
-    def newText(sym: Symbol): String = {
+    def newText(sym: Symbol, identifier: String): String = {
       val out = new StringBuilder()
-      val symbolName = sym.getterName.decoded
-      val identifier = Identifier.backtickWrap(symbolName)
       val symbolNeedsBraces =
         interpolator.needsBraces ||
           identifier.startsWith("`") ||
-          sym.isNonNullaryMethod
+          sym.isNonNullaryMethod ||
+          // if we need to add prefix
+          identifier.contains(".")
       if (symbolNeedsBraces && !hasOpeningBrace) {
         out.append('{')
       }
@@ -127,17 +129,30 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     }
 
     override def contribute: List[Member] = {
-      metalsScopeMembers(pos).collect {
+      (workspaceSymbolListMembers(interpolator.name, pos) ++
+        metalsScopeMembers(pos)).collect {
         case s: ScopeMember
             if CompletionFuzzy.matches(interpolator.name, s.sym.name) =>
-          val edit = new l.TextEdit(nameRange, newText(s.sym))
           val filterText = s.sym.getterName.decoded
-          new TextEditMember(
-            filterText,
-            edit,
-            s.sym,
-            additionalTextEdits = additionalEdits()
-          )
+          s match {
+            case _: WorkspaceMember =>
+              new WorkspaceInterpolationMember(
+                s.sym,
+                additionalEdits(),
+                newText(s.sym, _),
+                Some(nameRange)
+              )
+            case _ =>
+              val symbolName = s.sym.getterName.decoded
+              val identifier = Identifier.backtickWrap(symbolName)
+              val edit = new l.TextEdit(nameRange, newText(s.sym, identifier))
+              new TextEditMember(
+                filterText,
+                edit,
+                s.sym,
+                additionalTextEdits = additionalEdits()
+              )
+          }
       }
     }
   }
@@ -160,58 +175,6 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
         cursor,
         text
       )
-    }
-  }
-
-  case class InterpolationSplice(
-      dollar: Int,
-      name: String,
-      needsBraces: Boolean
-  )
-
-  def isPossibleInterpolatorSplice(
-      pos: Position,
-      text: String
-  ): Option[InterpolationSplice] = {
-    val offset = pos.point
-    val chars = pos.source.content
-    var i = offset
-    while (
-      i > 0 && (chars(i) match { case '$' | '\n' => false; case _ => true })
-    ) {
-      i -= 1
-    }
-    val isCandidate = i > 0 &&
-      chars(i) == '$' && {
-        val start = chars(i + 1) match {
-          case '{' => i + 2
-          case _ => i + 1
-        }
-        start == offset || {
-          chars(start).isUnicodeIdentifierStart &&
-          (start + 1)
-            .until(offset)
-            .forall(j => chars(j).isUnicodeIdentifierPart)
-        }
-      }
-    if (isCandidate) {
-      val name = chars(i + 1) match {
-        case '{' => text.substring(i + 2, offset)
-        case _ => text.substring(i + 1, offset)
-      }
-      Some(
-        InterpolationSplice(
-          i,
-          name,
-          needsBraces = text.charAt(i + 1) == '{' ||
-            (text.charAt(offset) match {
-              case '"' => false // end of string literal
-              case ch => ch.isUnicodeIdentifierPart
-            })
-        )
-      )
-    } else {
-      None
     }
   }
 

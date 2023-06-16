@@ -31,7 +31,7 @@ class RemoteLanguageServerLspSuite extends tests.BaseLspSuite("remotels") {
            |object Foo/*L0*/ {
            |  val x/*L1*/ = 42
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

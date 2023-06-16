@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
+import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IndexedContext.Result
@@ -16,7 +17,7 @@ sealed trait IndexedContext:
   given ctx: Context
   def scopeSymbols: List[Symbol]
   def names: IndexedContext.Names
-  def rename(name: SimpleName): Option[String]
+  def rename(sym: Symbol): Option[String]
   def outer: IndexedContext
 
   def findSymbol(name: String): Option[List[Symbol]]
@@ -28,13 +29,34 @@ sealed trait IndexedContext:
     findSymbol(sym.decodedName) match
       case Some(symbols) if symbols.exists(_ == sym) =>
         Result.InScope
+      case Some(symbols)
+          if symbols
+            .exists(s => isTypeAliasOf(s, sym) || isTermAliasOf(s, sym)) =>
+        Result.InScope
+      // when all the conflicting symbols came from an old version of the file
+      case Some(symbols) if symbols.nonEmpty && symbols.forall(_.isStale) =>
+        Result.Missing
       case Some(_) => Result.Conflict
       case None => Result.Missing
+  end lookupSym
 
   final def hasRename(sym: Symbol, as: String): Boolean =
-    rename(sym.name.toSimpleName) match
+    rename(sym) match
       case Some(v) => v == as
       case None => false
+
+  // detects import scope aliases like
+  // object Predef:
+  //   val Nil = scala.collection.immutable.Nil
+  private def isTermAliasOf(termAlias: Symbol, sym: Symbol): Boolean =
+    termAlias.isTerm && (
+      sym.info match
+        case clz: ClassInfo => clz.appliedRef =:= termAlias.info.resultType
+        case _ => false
+    )
+
+  private def isTypeAliasOf(alias: Symbol, sym: Symbol): Boolean =
+    alias.isAliasType && alias.info.metalsDealias.typeSymbol == sym
 
   final def isEmpty: Boolean = this match
     case IndexedContext.Empty => true
@@ -69,7 +91,7 @@ object IndexedContext:
     def findSymbol(name: String): Option[List[Symbol]] = None
     def scopeSymbols: List[Symbol] = List.empty
     val names: Names = Names(Map.empty, Map.empty)
-    def rename(name: SimpleName): Option[String] = None
+    def rename(sym: Symbol): Option[String] = None
     def outer: IndexedContext = this
 
   class LazyWrapper(using val ctx: Context) extends IndexedContext:
@@ -83,16 +105,16 @@ object IndexedContext:
         .orElse(outer.findSymbol(name))
 
     def scopeSymbols: List[Symbol] =
-      val acc = List.newBuilder[Symbol]
+      val acc = Set.newBuilder[Symbol]
       (this :: outers).foreach { ref =>
         acc ++= ref.names.symbols.values.flatten
       }
-      acc.result
+      acc.result.toList
 
-    def rename(name: SimpleName): Option[String] =
+    def rename(sym: Symbol): Option[String] =
       names.renames
-        .get(name)
-        .orElse(outer.rename(name))
+        .get(sym)
+        .orElse(outer.rename(sym))
 
     private def outers: List[IndexedContext] =
       val builder = List.newBuilder[IndexedContext]
@@ -111,29 +133,36 @@ object IndexedContext:
 
   case class Names(
       symbols: Map[String, List[Symbol]],
-      renames: Map[SimpleName, String]
+      renames: Map[Symbol, String],
   )
 
   private def extractNames(ctx: Context): Names =
 
+    def isAccessibleFromSafe(sym: Symbol, site: Type): Boolean =
+      try sym.isAccessibleFrom(site, superAccess = false)
+      catch
+        case NonFatal(e) =>
+          false
+
     def accessibleSymbols(site: Type, tpe: Type)(using
         Context
     ): List[Symbol] =
-      tpe.decls.toList.filter(sym =>
-        sym.isAccessibleFrom(site, superAccess = false)
-      )
+      tpe.decls.toList.filter(sym => isAccessibleFromSafe(sym, site))
 
     def accesibleMembers(site: Type)(using Context): List[Symbol] =
       site.allMembers
         .filter(denot =>
-          denot.symbol.isAccessibleFrom(site, superAccess = false)
+          try isAccessibleFromSafe(denot.symbol, site)
+          catch
+            case NonFatal(e) =>
+              false
         )
         .map(_.symbol)
         .toList
 
     def allAccessibleSymbols(
         tpe: Type,
-        filter: Symbol => Boolean = _ => true
+        filter: Symbol => Boolean = _ => true,
     )(using Context): List[Symbol] =
       val initial = accessibleSymbols(tpe, tpe).filter(filter)
       val fromPackageObjects =
@@ -155,7 +184,7 @@ object IndexedContext:
       if imp.isWildcardImport then
         allAccessibleSymbols(
           imp.site,
-          sym => !excludedNames.contains(sym.name.decoded)
+          sym => !excludedNames.contains(sym.name.decoded),
         ).map((_, None))
       else
         imp.forwardMapping.toList.flatMap { (name, rename) =>
@@ -174,9 +203,7 @@ object IndexedContext:
       if ctx.isImportContext then
         val (syms, renames) =
           fromImportInfo(ctx.importInfo)
-            .map((sym, rename) =>
-              (sym, rename.map(r => sym.name.toSimpleName -> r.decoded))
-            )
+            .map((sym, rename) => (sym, rename.map(r => sym -> r.decoded)))
             .unzip
         (syms, renames.flatten.toMap)
       else if ctx.owner.isClass then

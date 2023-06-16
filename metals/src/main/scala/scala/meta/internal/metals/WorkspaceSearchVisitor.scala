@@ -30,8 +30,10 @@ class WorkspaceSearchVisitor(
     workspace: AbsolutePath,
     query: WorkspaceSymbolQuery,
     token: CancelChecker,
-    index: GlobalSymbolIndex
-) extends SymbolSearchVisitor {
+    index: GlobalSymbolIndex,
+    saveClassFileToDisk: Boolean,
+)(implicit rc: ReportContext)
+    extends SymbolSearchVisitor {
   private val fromWorkspace = new ju.ArrayList[l.SymbolInformation]()
   private val fromClasspath = new ju.ArrayList[l.SymbolInformation]()
   private val bufferedClasspath = new ju.ArrayList[(String, String)]()
@@ -65,12 +67,12 @@ class WorkspaceSearchVisitor(
           SymbolKind.Event,
           new l.Location(
             dependencies.toURI.toString(),
-            new l.Range(new l.Position(0, 0), new l.Position(0, 0))
-          )
+            new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
+          ),
         )
       )
     }
-    result.asScala
+    result.asScala.toSeq
   }
   private val byNameLength = new ju.Comparator[l.SymbolInformation] {
     def compare(x: l.SymbolInformation, y: l.SymbolInformation): Int = {
@@ -82,7 +84,7 @@ class WorkspaceSearchVisitor(
   private def definition(
       pkg: String,
       filename: String,
-      index: GlobalSymbolIndex
+      index: GlobalSymbolIndex,
   ): Option[SymbolDefinition] = {
     val nme = Classfile.name(filename)
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))
@@ -100,7 +102,7 @@ class WorkspaceSearchVisitor(
       path: Path,
       symbol: String,
       kind: SymbolKind,
-      range: l.Range
+      range: l.Range,
   ): Int = {
     val (desc, owner) = DescriptorParser(symbol)
     fromWorkspace.add(
@@ -108,7 +110,7 @@ class WorkspaceSearchVisitor(
         desc.name.value,
         kind,
         new l.Location(path.toUri.toString, range),
-        owner.replace('/', '.')
+        owner.replace('/', '.'),
       )
     )
     1
@@ -130,10 +132,17 @@ class WorkspaceSearchVisitor(
     } {
       isVisited += defn.path
       val input = defn.path.toInput
-      SemanticdbDefinition.foreach(input, defn.dialect) { semanticDefn =>
+      SemanticdbDefinition.foreach(
+        input,
+        defn.dialect,
+        includeMembers = false,
+      ) { semanticDefn =>
         if (query.matches(semanticDefn.info)) {
-          val uri = defn.path.toFileOnDisk(workspace).toURI.toString
-          fromClasspath.add(semanticDefn.toLSP(uri))
+          val path =
+            if (saveClassFileToDisk) defn.path.toFileOnDisk(workspace)
+            else defn.path
+          val uri = path.toURI.toString
+          fromClasspath.add(semanticDefn.toLsp(uri))
           isHit = true
         }
       }

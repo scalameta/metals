@@ -10,7 +10,7 @@ import org.eclipse.{lsp4j => l}
 final class CodeLensProvider(
     codeLensProviders: List[CodeLens],
     semanticdbs: Semanticdbs,
-    stacktraceAnalyzer: StacktraceAnalyzer
+    stacktraceAnalyzer: StacktraceAnalyzer,
 ) {
   // code lenses will be refreshed after compilation or when workspace gets indexed
   def findLenses(path: AbsolutePath): Seq[l.CodeLens] = {

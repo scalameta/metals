@@ -43,7 +43,7 @@ class MessageIdAdapterSuite extends BaseSuite {
       realMessage(),
       syntheticMessage(),
       realMessage(),
-      syntheticMessage()
+      syntheticMessage(),
     )
 
     messages.foreach(adapter.consume)

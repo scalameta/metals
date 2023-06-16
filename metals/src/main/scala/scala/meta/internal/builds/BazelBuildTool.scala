@@ -38,16 +38,13 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
 
 object BazelBuildTool {
   private val coursierArgs = List(
-    "cs",
-    "launch",
-    "org.jetbrains.bsp:bazel-bsp:1.0.1",
-    "-M",
-    "org.jetbrains.bsp.bazel.install.Install"
+    "cs", "launch", "org.jetbrains.bsp:bazel-bsp:1.0.1", "-M",
+    "org.jetbrains.bsp.bazel.install.Install",
   )
 
   def writeBazelConfig(
       shellRunner: ShellRunner,
-      projectDirectory: AbsolutePath
+      projectDirectory: AbsolutePath,
   )(implicit ec: ExecutionContext): Future[Unit] = {
     def run() =
       shellRunner.run("Bazel-BSP config", coursierArgs, projectDirectory, false)

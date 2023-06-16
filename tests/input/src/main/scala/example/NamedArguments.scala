@@ -7,7 +7,7 @@ case class User(
     }
 )
 object NamedArguments {
-  val susan = "Susan"
+  final val susan = "Susan"
   val user1 =
     User
       .apply(
@@ -23,12 +23,12 @@ object NamedArguments {
   // anonymous classes
   @deprecated(
     message = "a",
-    since = susan
+    since = susan,
   ) def b = 1
 
   // vararg
   List(
-    xs = 2
+    elems = 2
   )
 
 }

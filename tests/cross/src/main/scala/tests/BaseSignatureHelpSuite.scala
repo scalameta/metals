@@ -11,10 +11,10 @@ import munit.TestOptions
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
   def checkDoc(
-      name: String,
+      name: TestOptions,
       code: String,
       expected: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit = {
     check(name, code, expected, includeDocs = true, compat = compat)
   }
@@ -24,11 +24,11 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       expected: String,
       includeDocs: Boolean = false,
       compat: Map[String, String] = Map.empty,
-      stableOrder: Boolean = true
+      stableOrder: Boolean = true,
   )(implicit loc: Location): Unit = {
     test(name) {
       val pkg = scala.meta.Term.Name(name.name).syntax
-      val (code, offset) = params(s"package $pkg\n" + original)
+      val (code, offset) = params(s"package $pkg\n" + original, "A.scala")
       val result =
         presentationCompiler
           .signatureHelp(
@@ -53,7 +53,19 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
                 .size() > 0
             ) {
               val param = signature.getParameters.get(result.getActiveParameter)
-              val column = signature.getLabel.indexOf(param.getLabel.getLeft())
+              val label = param.getLabel.getLeft()
+              /* We need to find the label of the active parameter and show ^ at that spot
+                 if we have multiple same labels we need to find the exact one.
+               */
+              val sameLabelsBeforeActive = signature.getParameters.asScala
+                .take(result.getActiveParameter + 1)
+                .count(_.getLabel().getLeft() == label) - 1
+              def seekColumn(atIndex: Int, labels: Int): Int = {
+                val ch = signature.getLabel.indexOf(label, atIndex)
+                if (labels == 0) ch
+                else seekColumn(ch + 1, labels - 1)
+              }
+              val column = seekColumn(0, sameLabelsBeforeActive)
               if (column < 0) {
                 fail(s"""invalid parameter label
                         |  param.label    : ${param.getLabel}
@@ -86,8 +98,8 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
         sortLines(stableOrder, out.toString()),
         sortLines(
           stableOrder,
-          getExpected(expected, compat, scalaVersion)
-        )
+          getExpected(expected, compat, scalaVersion),
+        ),
       )
     }
   }

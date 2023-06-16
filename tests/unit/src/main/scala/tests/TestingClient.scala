@@ -9,30 +9,32 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsInputBoxParams
-import scala.meta.internal.metals.MetalsInputBoxResult
-import scala.meta.internal.metals.MetalsSlowTaskParams
-import scala.meta.internal.metals.MetalsSlowTaskResult
-import scala.meta.internal.metals.MetalsStatusParams
-import scala.meta.internal.metals.NoopLanguageClient
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
+import scala.meta.internal.metals.clients.language.NoopLanguageClient
+import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
+import scala.meta.internal.metals.clients.language.RawMetalsQuickPickResult
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import scala.meta.io.AbsolutePath
 
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.CodeAction
-import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -88,22 +90,33 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
   val logMessages = new ConcurrentLinkedQueue[MessageParams]()
   val treeViewChanges = new ConcurrentLinkedQueue[TreeViewDidChangeParams]()
+
+  /** Stores commands executed by the client */
   val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
   val decorations =
-    new ConcurrentHashMap[AbsolutePath, Array[DecorationOptions]]()
+    new ConcurrentHashMap[AbsolutePath, Set[PublishDecorationsParams]]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
     _: MetalsSlowTaskParams => None
+  }
+  var showMessageHandler: MessageParams => Unit = { _: MessageParams =>
+    ()
   }
   var showMessageRequestHandler
       : ShowMessageRequestParams => Option[MessageActionItem] = {
     _: ShowMessageRequestParams => None
   }
-  var inputBoxHandler: MetalsInputBoxParams => Option[MetalsInputBoxResult] = {
-    _: MetalsInputBoxParams => None
+  var inputBoxHandler: MetalsInputBoxParams => RawMetalsInputBoxResult = {
+    _: MetalsInputBoxParams => RawMetalsInputBoxResult(cancelled = true)
+  }
+  var quickPickHandler: MetalsQuickPickParams => RawMetalsQuickPickResult = {
+    _: MetalsQuickPickParams => RawMetalsQuickPickResult(cancelled = true)
   }
 
   private val refreshCount = new AtomicInteger
   var refreshModelHandler: Int => Unit = (_) => ()
+
+  val testExplorerUpdates: Promise[List[JsonObject]] =
+    Promise[List[JsonObject]]()
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
@@ -112,6 +125,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     params.getCommand match {
       case ClientCommands.RefreshModel.id =>
         refreshModelHandler(refreshCount.getAndIncrement())
+      case ClientCommands.UpdateTestExplorer.id =>
+        testExplorerUpdates.trySuccess(
+          params.getArguments().asScala.toList.asInstanceOf[List[JsonObject]]
+        )
       case _ =>
     }
   }
@@ -146,7 +163,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   private def applyEdits(
       uri: String,
-      textEdits: java.util.List[TextEdit]
+      textEdits: java.util.List[TextEdit],
   ): Unit = {
     val path = AbsolutePath.fromAbsoluteUri(URI.create(uri))
     val content = buffers.get(path).getOrElse("")
@@ -187,7 +204,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       .mkString("\n")
   }
   private def toPath(filename: String): AbsolutePath =
-    TestingServer.toPath(workspace, filename)
+    TestingServer.toPath(workspace, filename, TrieMap.empty)
   def workspaceMessageRequests: String = {
     messageRequests.asScala.mkString("\n")
   }
@@ -198,7 +215,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     val isDeleted = !path.isFile
     val diags = diagnostics.getOrElse(path, Nil).sortBy(_.getRange)
     val relpath =
-      path.toRelative(workspace).toURI(isDirectory = false).toString
+      if (path.isJarFileSystem)
+        path.toString.stripPrefix("/")
+      else
+        path.toRelative(workspace).toURI(isDirectory = false).toString
     val input =
       if (isDeleted) {
         Input.VirtualFile(relpath + " (deleted)", "\n <deleted>" * 1000)
@@ -249,12 +269,13 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   override def telemetryEvent(`object`: Any): Unit = ()
   override def publishDiagnostics(params: PublishDiagnosticsParams): Unit = {
     val path = params.getUri.toAbsolutePath
-    diagnostics(path) = params.getDiagnostics.asScala
+    diagnostics(path) = params.getDiagnostics.asScala.toSeq
     diagnosticsCount
       .getOrElseUpdate(path, new AtomicInteger())
       .incrementAndGet()
   }
   override def showMessage(params: MessageParams): Unit = {
+    showMessageHandler(params)
     showMessages.add(params)
   }
   override def showMessageRequest(
@@ -295,14 +316,14 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           restartBloop
         } else if (CheckDoctor.isDoctor(params)) {
           getDoctorInformation
-        } else if (SelectBspServer.isSelectBspServer(params)) {
-          selectBspServer(params.getActions.asScala)
+        } else if (BspSwitch.isSelectBspServer(params)) {
+          selectBspServer(params.getActions.asScala.toSeq)
         } else if (isSameMessageFromList(ChooseBuildTool.params)) {
-          chooseBuildTool(params.getActions.asScala)
+          chooseBuildTool(params.getActions.asScala.toSeq)
         } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
           createScalaFmtConf
         } else if (params.getMessage() == MainClass.message) {
-          chooseMainClass(params.getActions.asScala)
+          chooseMainClass(params.getActions.asScala.toSeq)
         } else {
           throw new IllegalArgumentException(params.toString)
         }
@@ -331,15 +352,21 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   }
 
-  override def metalsInputBox(
+  override def rawMetalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[MetalsInputBoxResult] = {
+  ): CompletableFuture[RawMetalsInputBoxResult] = {
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.prompt)
-      inputBoxHandler(params) match {
-        case Some(result) => result
-        case None => MetalsInputBoxResult(cancelled = true)
-      }
+      inputBoxHandler(params)
+    }
+  }
+
+  override def rawMetalsQuickPick(
+      params: MetalsQuickPickParams
+  ): CompletableFuture[RawMetalsQuickPickResult] = {
+    CompletableFuture.completedFuture {
+      messageRequests.addLast(params.placeHolder)
+      quickPickHandler(params)
     }
   }
 
@@ -353,7 +380,18 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       params: PublishDecorationsParams
   ): Unit = {
     val path = params.uri.toAbsolutePath
-    decorations.put(path, params.options)
+    decorations.compute(
+      path,
+      {
+        case (_, decorationTypes) => {
+          if (decorationTypes == null) {
+            Set(params)
+          } else {
+            decorationTypes.filter(p => p.isInline != params.isInline) + params
+          }
+        }
+      },
+    )
   }
 
   def workspaceDecorations: String = {
@@ -377,9 +415,25 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       }
       val input = path.toInputFromBuffers(buffers)
       input.text.linesIterator.zipWithIndex.foreach { case (line, i) =>
-        val lineDecorations = decorations
-          .filter(_.range.getEnd().getLine() == i)
-          .sortBy(_.range.getEnd().getCharacter())
+        val lineDecorations = decorations.toList
+          .flatMap(params =>
+            params.options.map(o =>
+              (
+                o,
+                Option(params.isInline).getOrElse(
+                  false.asInstanceOf[java.lang.Boolean]
+                ),
+              )
+            )
+          )
+          .filter { case (deco, _) => deco.range.getEnd().getLine() == i }
+          /* Need to sort them by the type of decoration, inline needs to be first.
+           * This mirrors the VS Code behaviour, the first declared type is
+           * shown first if the end is the same */
+          .sortBy { case (deco, isInline) =>
+            (deco.range.getEnd().getCharacter(), !isInline)
+          }
+          .map(_._1)
         if (isHover) {
           out.append(line)
           lineDecorations.collect {
@@ -418,20 +472,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       .mkString("----\n")
   }
 
-  private def executeServerCommand(
-      command: Command,
-      server: TestingServer
-  ): Future[Any] = {
-    server.executeCommand(
-      command.getCommand(),
-      command.getArguments().asScala: _*
-    )
-  }
-
   def applyCodeAction(
       selectedActionIndex: Int,
       codeActions: List[CodeAction],
-      server: TestingServer
+      server: TestingServer,
   ): Future[Any] = {
     if (codeActions.nonEmpty) {
       if (selectedActionIndex >= codeActions.length) {
@@ -446,7 +490,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         applyWorkspaceEdit(edit)
       }
       if (command != null) {
-        executeServerCommand(command, server)
+        server.executeCommandUnsafe(
+          command.getCommand(),
+          command.getArguments().asScala.toSeq,
+        )
       } else Future.unit
 
     } else Future.unit

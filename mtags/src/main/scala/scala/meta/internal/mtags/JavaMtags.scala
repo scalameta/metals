@@ -6,7 +6,7 @@ import java.util.Comparator
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
@@ -21,10 +21,14 @@ import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
 
 object JavaMtags {
-  def index(input: Input.VirtualFile): MtagsIndexer =
-    new JavaMtags(input)
+  def index(
+      input: Input.VirtualFile,
+      includeMembers: Boolean
+  ): MtagsIndexer =
+    new JavaMtags(input, includeMembers)
 }
-class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
+class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
+    extends MtagsIndexer { self =>
   val builder = new JavaProjectBuilder()
   override def language: Language = Language.JAVA
 
@@ -88,10 +92,8 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
 
   def visitClass(
       cls: JavaClass,
-      name: String,
       pos: Position,
-      kind: Kind,
-      properties: Int
+      kind: Kind
   ): Unit = {
     tpe(
       cls.getName,
@@ -107,15 +109,15 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       val pos = toRangePosition(cls.lineNumber, cls.getName)
       visitClass(
         cls,
-        cls.getName,
         pos,
-        kind,
-        if (cls.isEnum) Property.ENUM.value else 0
+        kind
       )
       visitClasses(cls.getNestedClasses)
-      visitMethods(cls)
-      visitConstructors(cls)
-      visitMembers(cls.getFields)
+      if (includeMembers) {
+        visitMethods(cls)
+        visitConstructors(cls)
+        visitMembers(cls.getFields)
+      }
     }
 
   def visitConstructor(
@@ -124,7 +126,7 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       pos: Position,
       properties: Int
   ): Unit = {
-    super.ctor(disambiguator, pos, 0)
+    super.ctor(disambiguator, pos, properties)
   }
 
   def visitConstructors(cls: JavaClass): Unit = {

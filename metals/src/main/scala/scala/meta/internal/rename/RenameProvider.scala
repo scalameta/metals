@@ -12,11 +12,12 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.semanticdb.Scala._
@@ -54,183 +55,255 @@ final class RenameProvider(
     client: MetalsLanguageClient,
     buffers: Buffers,
     compilations: Compilations,
+    compilers: Compilers,
     clientConfig: ClientConfiguration,
-    trees: Trees
+    trees: Trees,
 )(implicit executionContext: ExecutionContext) {
 
-  private val awaitingSave = new ConcurrentLinkedQueue[() => Unit]
+  private val awaitingSave = new ConcurrentLinkedQueue[() => Future[Unit]]
 
   def prepareRename(
       params: TextDocumentPositionParams,
-      token: CancelToken
+      token: CancelToken,
   ): Future[Option[LSPRange]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    compilations.compilationFinished(source).flatMap { _ =>
-      definitionProvider.definition(source, params, token).map { definition =>
-        val symbolOccurrence =
-          definitionProvider
-            .symbolOccurrence(source, params.getPosition)
-            .orElse(
-              findRenamedImportOccurrenceAtPosition(
-                source,
-                params.getPosition()
-              )
-            )
-        for {
-          (occurence, _) <- symbolOccurrence
-          definitionLocation <- definition.locations.asScala.headOption
-          definitionPath = definitionLocation.getUri().toAbsolutePath
-          if canRenameSymbol(occurence.symbol, None) &&
-            (isWorkspaceSymbol(occurence.symbol, definitionPath) ||
-              findRenamedImportForSymbol(source, occurence.symbol).isDefined)
-          range <- occurence.range
-        } yield range.toLSP
+    val localPrepareRename =
+      compilers.prepareRename(params, token).map(_.asScala)
+    localPrepareRename
+      .filter(_.nonEmpty)
+      .recoverWith { case _ =>
+        compilations
+          .compilationFinished(source)
+          .flatMap { _ =>
+            definitionProvider.definition(source, params, token).map {
+              definition =>
+                val symbolOccurrence: Option[(SymbolOccurrence, TextDocument)] =
+                  definitionProvider
+                    .symbolOccurrence(source, params.getPosition)
+                    .orElse(
+                      findRenamedImportOccurrenceAtPosition(
+                        source,
+                        params.getPosition(),
+                      )
+                    )
+                for {
+                  (occurence, _) <- symbolOccurrence
+                  soughtSymbols = Set(occurence.symbol) ++ companion(
+                    occurence.symbol
+                  )
+                  definitionLocation <- definition.locations.asScala.headOption
+                  definitionPath = definitionLocation.getUri().toAbsolutePath
+                  if canRenameSymbol(occurence.symbol, None) &&
+                    (isWorkspaceSymbol(occurence.symbol, definitionPath) ||
+                      findRenamedImportForSymbol(
+                        source,
+                        soughtSymbols,
+                        occurence.symbol.desc.name.value,
+                      ).isDefined)
+                  range <- occurence.range
+                } yield range.toLsp
+            }
+          }
       }
-    }
   }
 
   def rename(
       params: RenameParams,
-      token: CancelToken
+      token: CancelToken,
   ): Future[WorkspaceEdit] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    compilations.compilationFinished(source).flatMap { _ =>
-      definitionProvider.definition(source, params, token).map { definition =>
-        val textParams = new TextDocumentPositionParams(
-          params.getTextDocument(),
-          params.getPosition()
+    val localRename = compilers
+      .rename(params, token)
+      .map(_.asScala.toList)
+
+    localRename
+      .filter(_.nonEmpty)
+      .map(edits =>
+        new WorkspaceEdit(
+          documentEdits(Map(source -> edits)).asJava
         )
-
-        val symbolOccurrence =
-          definitionProvider
-            .symbolOccurrence(source, textParams.getPosition)
-            .orElse(
-              findRenamedImportOccurrenceAtPosition(
-                source,
-                params.getPosition()
+      )
+      .recoverWith { case _ =>
+        compilations.compilationFinished(source).flatMap { _ =>
+          val defininionFuture = definitionProvider
+            .definition(source, params, token)
+          defininionFuture
+            .flatMap { definition =>
+              val textParams = new TextDocumentPositionParams(
+                params.getTextDocument(),
+                params.getPosition(),
               )
-            )
 
-        val suggestedName = params.getNewName()
-        val withoutBackticks =
-          if (suggestedName.isBackticked)
-            suggestedName.stripBackticks
-          else suggestedName
-        val newName = Identifier.backtickWrap(withoutBackticks)
+              lazy val definitionTextParams =
+                definition.locations.asScala.map { l =>
+                  new TextDocumentPositionParams(
+                    new TextDocumentIdentifier(l.getUri()),
+                    l.getRange().getStart(),
+                  )
+                }
 
-        def isNotRenamedSymbol(
-            textDocument: TextDocument,
-            occ: SymbolOccurrence
-        ): Boolean = {
-          def realName = occ.symbol.desc.name.value
-          def foundName =
-            occ.range.map(rng => rng.inString(textDocument.text).stripBackticks)
-          occ.symbol.isLocal || foundName.contains(realName)
-        }
+              val symbolOccurrence =
+                definitionProvider
+                  .symbolOccurrence(source, textParams.getPosition)
+                  .orElse(
+                    findRenamedImportOccurrenceAtPosition(
+                      source,
+                      params.getPosition(),
+                    )
+                  )
 
-        def shouldCheckImplementation(
-            symbol: String,
-            path: AbsolutePath,
-            textDocument: TextDocument
-        ) =
-          !symbol.desc.isType && !(symbol.isLocal && implementationProvider
-            .defaultSymbolSearch(path, textDocument)(symbol)
-            .exists(info => info.isTrait || info.isClass))
+              val suggestedName = params.getNewName()
+              val withoutBackticks =
+                if (suggestedName.isBackticked)
+                  suggestedName.stripBackticks
+                else suggestedName
+              val newName = Identifier.backtickWrap(withoutBackticks)
 
-        val allReferences = for {
-          (occurence, semanticDb) <- symbolOccurrence.toIterable
-          definitionLoc <- definition.locations.asScala.headOption.toIterable
-          definitionPath = definitionLoc.getUri().toAbsolutePath
-          if canRenameSymbol(occurence.symbol, Option(newName)) &&
-            isWorkspaceSymbol(occurence.symbol, definitionPath) &&
-            isNotRenamedSymbol(semanticDb, occurence)
-          parentSymbols =
-            implementationProvider
-              .topMethodParents(occurence.symbol, semanticDb)
-          txtParams <- {
-            if (parentSymbols.isEmpty) List(textParams)
-            else parentSymbols.map(toTextParams)
-          }
-          isLocal = occurence.symbol.isLocal
-          currentReferences =
-            referenceProvider
-              .references(
-                // we can't get definition by name for local symbols
-                toReferenceParams(txtParams, includeDeclaration = isLocal),
-                findRealRange = findRealRange(newName),
-                includeSynthetic
-              )
-              .locations
-          definitionLocation = {
-            if (parentSymbols.isEmpty)
-              definition.locations.asScala
-                .filter(_.getUri().isScalaFilename)
-            else parentSymbols
-          }
-          companionRefs = companionReferences(occurence.symbol, source, newName)
-          implReferences = implementations(
-            txtParams,
-            shouldCheckImplementation(
-              occurence.symbol,
-              source,
-              semanticDb
-            ),
-            newName
-          )
-          loc <-
-            currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
-        } yield loc
+              def isNotRenamedSymbol(
+                  textDocument: TextDocument,
+                  occ: SymbolOccurrence,
+              ): Boolean = {
+                def realName = occ.symbol.desc.name.value
+                def foundName =
+                  occ.range
+                    .flatMap(rng => rng.inString(textDocument.text))
+                    .map(_.stripBackticks)
+                occ.symbol.isLocal ||
+                foundName.contains(realName)
+              }
 
-        def isOccurrence(fn: String => Boolean): Boolean = {
-          symbolOccurrence.exists { case (occ, _) =>
-            fn(occ.symbol)
-          }
-        }
+              def shouldCheckImplementation(
+                  symbol: String,
+                  path: AbsolutePath,
+                  textDocument: TextDocument,
+              ) =
+                !symbol.desc.isType && !(symbol.isLocal && implementationProvider
+                  .defaultSymbolSearch(path, textDocument)(symbol)
+                  .exists(info => info.isTrait || info.isClass))
 
-        // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
-        val fallbackOccurences =
-          if (allReferences.isEmpty)
-            renamedImportOccurrences(source, symbolOccurrence)
-          else allReferences
-
-        val allChanges = for {
-          (path, locs) <- fallbackOccurences.toList.distinct
-            .groupBy(_.getUri().toAbsolutePath)
-        } yield {
-          val textEdits = for (loc <- locs) yield {
-            textEdit(isOccurrence, loc, newName)
-          }
-          Seq(path -> textEdits.toList)
-        }
-        val fileChanges = allChanges.flatten.toMap
-        val shouldRenameInBackground =
-          !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.renameFileThreshold
-        val (openedEdits, closedEdits) =
-          if (shouldRenameInBackground) {
-            if (clientConfig.isOpenFilesOnRenameProvider) {
-              client.showMessage(fileThreshold(fileChanges.keySet.size))
+              val allReferences =
+                for {
+                  (occurence, semanticDb) <- symbolOccurrence.toIterable
+                  definitionLoc <-
+                    definition.locations.asScala.headOption.toIterable
+                  definitionPath = definitionLoc.getUri().toAbsolutePath
+                  defSemanticdb <- definition.semanticdb.toIterable
+                  if canRenameSymbol(occurence.symbol, Option(newName)) &&
+                    isWorkspaceSymbol(occurence.symbol, definitionPath) &&
+                    isNotRenamedSymbol(semanticDb, occurence)
+                  parentSymbols =
+                    implementationProvider
+                      .topMethodParents(occurence.symbol, defSemanticdb)
+                  txtParams <- {
+                    if (parentSymbols.nonEmpty) parentSymbols.map(toTextParams)
+                    else if (definitionTextParams.nonEmpty) definitionTextParams
+                    else List(textParams)
+                  }
+                  isJava = definitionPath.isJava
+                  currentReferences =
+                    referenceProvider
+                      .references(
+                        /**
+                         * isJava - in Java we can include declarations safely and we
+                         * also need to include contructors.
+                         */
+                        toReferenceParams(
+                          txtParams,
+                          includeDeclaration = isJava,
+                        ),
+                        findRealRange = findRealRange(newName),
+                        includeSynthetic,
+                      )
+                      .flatMap(_.locations)
+                  definitionLocation = {
+                    if (parentSymbols.isEmpty)
+                      definition.locations.asScala
+                        .filter(_.getUri().isScalaOrJavaFilename)
+                    else parentSymbols
+                  }
+                  companionRefs = companionReferences(
+                    occurence.symbol,
+                    source,
+                    newName,
+                  )
+                  implReferences = implementations(
+                    txtParams,
+                    shouldCheckImplementation(
+                      occurence.symbol,
+                      source,
+                      semanticDb,
+                    ),
+                    newName,
+                  )
+                } yield implReferences.map(implLocs =>
+                  currentReferences ++ implLocs ++ companionRefs ++ definitionLocation
+                )
+              Future
+                .sequence(allReferences)
+                .map(locs =>
+                  (locs.flatten, symbolOccurrence, definition, newName)
+                )
             }
-            fileChanges.partition { case (path, _) =>
-              buffers.contains(path)
+            .map {
+              case (allReferences, symbolOccurrence, definition, newName) =>
+                def isOccurrence(fn: String => Boolean): Boolean = {
+                  symbolOccurrence.exists { case (occ, _) =>
+                    fn(occ.symbol)
+                  }
+                }
+
+                // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
+                val fallbackOccurences =
+                  if (allReferences.isEmpty)
+                    renamedImportOccurrences(source, symbolOccurrence)
+                  else allReferences
+
+                if (fallbackOccurences.isEmpty) {
+                  scribe.debug(s"Symbol occurence was $symbolOccurrence")
+                  scribe.debug(s"The definition found was $definition")
+                }
+
+                val allChanges = for {
+                  (path, locs) <- fallbackOccurences.toList.distinct
+                    .groupBy(_.getUri().toAbsolutePath)
+                } yield {
+                  val textEdits = for (loc <- locs) yield {
+                    textEdit(isOccurrence, loc, newName)
+                  }
+                  Seq(path -> textEdits.toList)
+                }
+                val fileChanges = allChanges.flatten.toMap
+                val shouldRenameInBackground =
+                  !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.renameFileThreshold
+                val (openedEdits, closedEdits) =
+                  if (shouldRenameInBackground) {
+                    if (clientConfig.isOpenFilesOnRenameProvider) {
+                      client.showMessage(fileThreshold(fileChanges.keySet.size))
+                    }
+                    fileChanges.partition { case (path, _) =>
+                      buffers.contains(path)
+                    }
+                  } else {
+                    (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+                  }
+
+                awaitingSave.add(() => changeClosedFiles(closedEdits))
+
+                val edits = documentEdits(openedEdits)
+                val renames =
+                  fileRenames(isOccurrence, fileChanges.keySet, newName)
+                new WorkspaceEdit((edits ++ renames).asJava)
             }
-          } else {
-            (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
-          }
-
-        awaitingSave.add(() => changeClosedFiles(closedEdits))
-
-        val edits = documentEdits(openedEdits)
-        val renames =
-          fileRenames(isOccurrence, fileChanges.keySet, newName)
-        new WorkspaceEdit((edits ++ renames).asJava)
+        }
       }
-    }
   }
 
-  def runSave(): Unit =
-    synchronized {
-      ConcurrentQueue.pollAll(awaitingSave).foreach(waiting => waiting())
+  def runSave(): Future[Unit] = {
+    val all = synchronized {
+      ConcurrentQueue.pollAll(awaitingSave)
     }
+    Future.sequence(all.map(waiting => waiting())).ignoreValue
+  }
 
   /**
    * In case of import renames, we can only rename the symbol in file.
@@ -242,7 +315,7 @@ final class RenameProvider(
    */
   private def renamedImportOccurrences(
       source: AbsolutePath,
-      symbolOccurrence: Option[(SymbolOccurrence, TextDocument)]
+      symbolOccurrence: Option[(SymbolOccurrence, TextDocument)],
   ): Seq[Location] = {
     lazy val uri = source.toURI.toString()
 
@@ -250,24 +323,32 @@ final class RenameProvider(
     def occurrences(
         semanticDb: TextDocument,
         occurence: SymbolOccurrence,
-        renameName: String
-    ) = for {
-      occ <- semanticDb.occurrences
-      rng <- occ.range
-      realName = rng.inString(semanticDb.text)
-      if occ.symbol == occurence.symbol &&
-        withoutBacktick(realName) == withoutBacktick(renameName)
-    } yield new Location(uri, rng.toLSP)
-
+        renameName: String,
+        isSymbol: String => Boolean,
+    ) = {
+      for {
+        occ <- semanticDb.occurrences
+        rng <- occ.range
+        realName <- rng.inString(semanticDb.text)
+        if isSymbol(occurence.symbol) &&
+          withoutBacktick(realName) == withoutBacktick(renameName)
+      } yield new Location(uri, rng.toLsp)
+    }
     val result = for {
       (occurence, semanticDb) <- symbolOccurrence
-      rename <- findRenamedImportForSymbol(source, occurence.symbol)
+      soughtSymbols = Set(occurence.symbol) ++ companion(occurence.symbol)
+      rename <- findRenamedImportForSymbol(
+        source,
+        soughtSymbols,
+        occurence.symbol.desc.name.value,
+      )
       renamedOccurences = occurrences(
         semanticDb,
         occurence,
-        rename.rename.value
+        rename.rename.value,
+        soughtSymbols,
       )
-    } yield renamedOccurences :+ new Location(uri, rename.rename.pos.toLSP)
+    } yield renamedOccurences :+ new Location(uri, rename.rename.pos.toLsp)
     result.getOrElse(Nil)
   }
 
@@ -285,7 +366,7 @@ final class RenameProvider(
   private def fileRenames(
       isOccurrence: (String => Boolean) => Boolean,
       fileChanges: Set[AbsolutePath],
-      newName: String
+      newName: String,
   ): Option[LSPEither[TextDocumentEdit, ResourceOperation]] = {
     fileChanges
       .find { file =>
@@ -308,7 +389,7 @@ final class RenameProvider(
   private def companionReferences(
       sym: String,
       source: AbsolutePath,
-      newName: String
+      newName: String,
   ): Seq[Location] = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
@@ -316,14 +397,15 @@ final class RenameProvider(
         definitionProvider
           .fromSymbol(companionSymbol, Some(source))
           .asScala
+      // no companion objects in Java files
       if loc.getUri().isScalaFilename
       companionLocs <-
         referenceProvider
           .references(
             toReferenceParams(loc, includeDeclaration = false),
-            findRealRange = findRealRange(newName)
+            findRealRange = findRealRange(newName),
           )
-          .locations :+ loc
+          .flatMap(_.locations) :+ loc
     } yield companionLocs
     results.toList
   }
@@ -341,47 +423,55 @@ final class RenameProvider(
     termOrType.map(name =>
       Symbols.Global(
         sym.owner,
-        name
+        name,
       )
     )
   }
 
   private def changeClosedFiles(
       fileEdits: Map[AbsolutePath, List[TextEdit]]
-  ) = {
-    fileEdits.toArray.par.foreach { case (file, changes) =>
-      val text = file.readText
-      val newText = TextEdits.applyEdits(text, changes)
-      file.writeText(newText)
-    }
+  ): Future[Unit] = {
+    Future
+      .sequence(fileEdits.toList.map { case (file, changes) =>
+        Future {
+          val text = file.readText
+          val newText = TextEdits.applyEdits(text, changes)
+          file.writeText(newText)
+        }
+      })
+      .ignoreValue
   }
 
   private def implementations(
       textParams: TextDocumentPositionParams,
       shouldCheckImplementation: Boolean,
-      newName: String
-  ): Seq[Location] = {
+      newName: String,
+  ): Future[Seq[Location]] = {
     if (shouldCheckImplementation) {
       for {
-        implLoc <- implementationProvider.implementations(textParams)
-        locParams = toReferenceParams(implLoc, includeDeclaration = true)
-        loc <-
-          referenceProvider
-            .references(
-              locParams,
-              findRealRange = findRealRange(newName),
-              includeSynthetic
-            )
-            .locations
-      } yield loc
+        implLocs <- implementationProvider.implementations(textParams)
+      } yield {
+        for {
+          implLoc <- implLocs
+          locParams = toReferenceParams(implLoc, includeDeclaration = true)
+          loc <-
+            referenceProvider
+              .references(
+                locParams,
+                findRealRange = findRealRange(newName),
+                includeSynthetic,
+              )
+              .flatMap(_.locations)
+        } yield loc
+      }
     } else {
-      Nil
+      Future.successful(Nil)
     }
   }
 
   private def canRenameSymbol(
       symbol: String,
-      newName: Option[String]
+      newName: Option[String],
   ) = {
     val forbiddenMethods = Set("equals", "hashCode", "unapply", "unary_!", "!")
     val desc = symbol.desc
@@ -394,12 +484,15 @@ final class RenameProvider(
     if (colonNotAllowed) {
       client.showMessage(forbiddenColonRename(name, newName))
     }
-    (!desc.isMethod || (!colonNotAllowed && !isForbidden))
+    val canRename = (!desc.isMethod || (!colonNotAllowed && !isForbidden))
+    if (!canRename)
+      scribe.debug(s"Cannot rename $symbol with new name $newName")
+    canRename
   }
 
   private def findRenamedImportOccurrenceAtPosition(
       source: AbsolutePath,
-      pos: Position
+      pos: Position,
   ): Option[(SymbolOccurrence, TextDocument)] = {
     val renameOpt = trees.findLastEnclosingAt[Importee.Rename](source, pos)
 
@@ -407,7 +500,7 @@ final class RenameProvider(
       rename <- renameOpt
       (occ, doc) <- definitionProvider.symbolOccurrence(
         source,
-        rename.name.pos.toLSP.getStart()
+        rename.name.pos.toLsp.getStart(),
       )
 
     } yield (occ.copy(range = Some(rename.rename.pos.toSemanticdb)), doc)
@@ -415,14 +508,14 @@ final class RenameProvider(
 
   private def findRenamedImportForSymbol(
       source: AbsolutePath,
-      symbol: String
+      isSymbol: String => Boolean,
+      displayName: => String,
   ): Option[Importee.Rename] = {
-    lazy val displayName = symbol.desc.name.value
     // make sure it's not just a rename with the same base name
     def isCorrectSymbolOcccurrence(rename: Importee.Rename) = {
       definitionProvider
-        .symbolOccurrence(source, rename.name.pos.toLSP.getStart())
-        .exists { case (occ, _) => occ.symbol == symbol }
+        .symbolOccurrence(source, rename.name.pos.toLsp.getStart())
+        .exists { case (occ, _) => isSymbol(occ.symbol) }
     }
     def findRename(tree: Tree): Option[Importee.Rename] = {
       tree match {
@@ -446,15 +539,11 @@ final class RenameProvider(
 
   private def isWorkspaceSymbol(
       symbol: String,
-      definitionPath: AbsolutePath
+      definitionPath: AbsolutePath,
   ): Boolean = {
 
     def isFromWorkspace = {
-      val isInWorkspace = definitionPath.isWorkspaceSource(workspace)
-      if (isInWorkspace && definitionPath.isJava) {
-        client.showMessage(javaSymbol(symbol.desc.name.value))
-      }
-      isInWorkspace
+      definitionPath.isWorkspaceSource(workspace)
     }
 
     symbol.isLocal || isFromWorkspace
@@ -471,28 +560,42 @@ final class RenameProvider(
   private def findRealRange(newName: String)(
       range: s.Range,
       text: String,
-      symbol: String
+      symbol: String,
   ): Option[s.Range] = {
     val name = range.inString(text)
-    val isBackticked = name.isBackticked
+    val nameString = symbol.desc.name.toString()
+    val isExplicitVarSetter =
+      name.exists(nm => nm.endsWith("_=") || nm.endsWith("_=`"))
+    val isBackticked = name.exists(_.isBackticked)
+
+    val symbolName =
+      if (!isExplicitVarSetter) nameString.stripSuffix("_=")
+      else nameString
     val realName =
       if (isBackticked)
-        name.stripBackticks
+        name.map(_.stripBackticks)
       else name
-    if (symbol.isLocal || symbol.desc.name.toString == realName) {
+
+    if (symbol.isLocal || realName.contains(symbolName)) {
       /* We don't want to remove anything that is backticked, as we don't
        * know whether it's actuall needed (could be a pattern match). Here
        * we make sure that the backticks are not added twice.
        */
-      val realRange = if (isBackticked && !newName.isBackticked) {
+      val withoutBacktick = if (isBackticked && !newName.isBackticked) {
         range
           .withStartCharacter(range.startCharacter + 1)
           .withEndCharacter(range.endCharacter - 1)
       } else {
         range
       }
+
+      val realRange =
+        if (isExplicitVarSetter && !newName.endsWith("_="))
+          withoutBacktick.withEndCharacter(withoutBacktick.endCharacter - 2)
+        else withoutBacktick
       Some(realRange)
     } else {
+      scribe.warn(s"Name doesn't match for $symbolName at $range")
       None
     }
   }
@@ -500,12 +603,12 @@ final class RenameProvider(
   private def textEdit(
       isOccurrence: (String => Boolean) => Boolean,
       loc: Location,
-      newName: String
+      newName: String,
   ): TextEdit = {
     val isApply = isOccurrence(str => str.desc.name.value == "apply")
     lazy val default = new TextEdit(
       loc.getRange(),
-      newName
+      newName,
     )
     if (isApply) {
       val locSource = loc.getUri.toAbsolutePath
@@ -520,7 +623,7 @@ final class RenameProvider(
         range.setStart(range.getEnd())
         new TextEdit(
           range,
-          "." + newName
+          "." + newName,
         )
       } else {
         default
@@ -533,7 +636,7 @@ final class RenameProvider(
   private def toReferenceParams(
       textDoc: TextDocumentIdentifier,
       pos: Position,
-      includeDeclaration: Boolean
+      includeDeclaration: Boolean,
   ): ReferenceParams = {
     val referenceParams = new ReferenceParams()
     referenceParams.setPosition(pos)
@@ -546,32 +649,32 @@ final class RenameProvider(
 
   private def toReferenceParams(
       location: Location,
-      includeDeclaration: Boolean
+      includeDeclaration: Boolean,
   ): ReferenceParams = {
     val textDoc = new TextDocumentIdentifier()
     textDoc.setUri(location.getUri())
     toReferenceParams(
       textDoc,
       location.getRange().getStart(),
-      includeDeclaration
+      includeDeclaration,
     )
   }
 
   private def toReferenceParams(
       params: TextDocumentPositionParams,
-      includeDeclaration: Boolean
+      includeDeclaration: Boolean,
   ): ReferenceParams = {
     toReferenceParams(
       params.getTextDocument(),
       params.getPosition(),
-      includeDeclaration
+      includeDeclaration,
     )
   }
 
   private def toTextParams(location: Location): TextDocumentPositionParams = {
     new TextDocumentPositionParams(
       new TextDocumentIdentifier(location.getUri()),
-      location.getRange().getStart()
+      location.getRange().getStart(),
     )
   }
 
@@ -585,18 +688,9 @@ final class RenameProvider(
     new MessageParams(MessageType.Warning, message)
   }
 
-  private def javaSymbol(
-      old: String
-  ): MessageParams = {
-    val message =
-      s"""|Definition of $old is contained in a java file.
-          |Rename will only work inside of Scala files.""".stripMargin
-    new MessageParams(MessageType.Warning, message)
-  }
-
   private def forbiddenRename(
       old: String,
-      name: Option[String]
+      name: Option[String],
   ): MessageParams = {
     val renamed = name.map(n => s"to $n").getOrElse("")
     val message =
@@ -607,7 +701,7 @@ final class RenameProvider(
 
   private def forbiddenColonRename(
       old: String,
-      name: Option[String]
+      name: Option[String],
   ): MessageParams = {
     val renamed = name.map(n => s"to $n").getOrElse("")
     val message =

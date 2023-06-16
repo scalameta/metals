@@ -3,23 +3,19 @@ package tests.codeactions
 import java.nio.file.Paths
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
-import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionMetaPosition
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
+import tests.TreeUtils
 
 class ExtractRenameMemberLspSuite
     extends BaseCodeActionLspSuite("extractClass") {
@@ -36,7 +32,7 @@ class ExtractRenameMemberLspSuite
        |case class <<B>>() extends MyTrait
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -50,7 +46,7 @@ class ExtractRenameMemberLspSuite
        |case class <<B>>() extends MyTrait with MySealedTrait
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -67,7 +63,7 @@ class ExtractRenameMemberLspSuite
        |case class <<B>>() extends MyTrait with MyObject.MySealedTrait
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -80,7 +76,7 @@ class ExtractRenameMemberLspSuite
        |case class <<B>>() extends MyTrait
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -94,7 +90,7 @@ class ExtractRenameMemberLspSuite
        |case class <<B>>() extends MySealedTrait with MyTrait
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -106,7 +102,7 @@ class ExtractRenameMemberLspSuite
        |sealed trait <<MySealedTrait>>
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -120,7 +116,7 @@ class ExtractRenameMemberLspSuite
        |object <<MySealedClass>> {}
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -130,7 +126,7 @@ class ExtractRenameMemberLspSuite
        |case <<cl>>ass A()
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -142,7 +138,7 @@ class ExtractRenameMemberLspSuite
        |}
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -152,7 +148,7 @@ class ExtractRenameMemberLspSuite
        |sealed case class <<A>>()
        |
        |""".stripMargin,
-    codeActionExpected = false
+    codeActionExpected = false,
   )
 
   checkActionProduced(
@@ -161,7 +157,7 @@ class ExtractRenameMemberLspSuite
        |
        |abstract class A()
        |class <<B>>() extends A
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkActionProduced(
@@ -173,7 +169,7 @@ class ExtractRenameMemberLspSuite
        |package b {
        |  case class <<B>>()
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkActionProduced(
@@ -188,7 +184,7 @@ class ExtractRenameMemberLspSuite
        |    case class C()
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkActionProduced(
@@ -203,7 +199,7 @@ class ExtractRenameMemberLspSuite
        |    case class <<C>>()
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
   checkActionProduced(
     "extract-object-inner-package",
@@ -218,7 +214,7 @@ class ExtractRenameMemberLspSuite
        |package c {
        |  case class C()
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkActionProduced(
@@ -234,7 +230,7 @@ class ExtractRenameMemberLspSuite
        |package c {
        |  case class C()
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkActionProduced(
@@ -246,7 +242,7 @@ class ExtractRenameMemberLspSuite
        |case class <<B>>() {
        |  val s = Source.fromFile("A.scala")
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNoAction(
@@ -254,7 +250,7 @@ class ExtractRenameMemberLspSuite
     """|package a
        |
        |case class <<A>>()
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   val renameCodeActionTitle: String = ExtractRenameMember
@@ -270,7 +266,7 @@ class ExtractRenameMemberLspSuite
        |
        |""".stripMargin,
     renameCodeActionTitle,
-    newFileName = "MyClass.scala"
+    newFileName = "MyClass.scala",
   )
 
   checkFileRenamed(
@@ -282,7 +278,7 @@ class ExtractRenameMemberLspSuite
        |
        |""".stripMargin,
     renameCodeActionTitle,
-    newFileName = "MyClass.scala"
+    newFileName = "MyClass.scala",
   )
 
   checkExtractedMember(
@@ -303,8 +299,8 @@ class ExtractRenameMemberLspSuite
       s"""|package a
           |
           |class B()
-          |""".stripMargin
-    )
+          |""".stripMargin,
+    ),
   )
 
   checkExtractedMember(
@@ -337,8 +333,8 @@ class ExtractRenameMemberLspSuite
           |case class B() {
           |  val s = Source.fromFile("A.scala")
           |}
-          |""".stripMargin
-    )
+          |""".stripMargin,
+    ),
   )
 
   checkExtractedMember(
@@ -379,8 +375,8 @@ class ExtractRenameMemberLspSuite
           |import scala.io.Codec
           |
           |case class C()
-          |""".stripMargin
-    )
+          |""".stripMargin,
+    ),
   )
 
   def checkExtractedMember(
@@ -390,7 +386,7 @@ class ExtractRenameMemberLspSuite
       expectedCode: String,
       newFile: (String, String),
       selectedActionIndex: Int = 0,
-      fileName: String = "A.scala"
+      fileName: String = "A.scala",
   )(implicit loc: Location): Unit = {
     check(
       name,
@@ -403,11 +399,11 @@ class ExtractRenameMemberLspSuite
         val absolutePath = workspace.resolve(testedFilePath(fileName))
         assert(
           absolutePath.exists,
-          s"File $absolutePath should have been created"
+          s"File $absolutePath should have been created",
         )
         assertNoDiff(absolutePath.readText, content)
       },
-      fileName = fileName
+      fileName = fileName,
     )
   }
 
@@ -416,7 +412,7 @@ class ExtractRenameMemberLspSuite
       input: String,
       expectedActions: String,
       newFileName: String,
-      selectedActionIndex: Int = 0
+      selectedActionIndex: Int = 0,
   )(implicit loc: Location): Unit = {
     val renamedPath = testedFilePath(newFileName)
     check(
@@ -430,9 +426,9 @@ class ExtractRenameMemberLspSuite
         val oldAbsolutePath = workspace.resolve("a/src/main/scala/a/A.scala")
         assert(
           !oldAbsolutePath.exists,
-          s"File $oldAbsolutePath should have been renamed"
+          s"File $oldAbsolutePath should have been renamed",
         )
-      }
+      },
     )
 
   }
@@ -442,16 +438,10 @@ class ExtractRenameMemberLspSuite
       original: String,
       codeActionExpected: Boolean = true,
       scalaVersion: String = V.scala213,
-      fileName: String = "A.scala"
+      fileName: String = "A.scala",
   ): Unit =
     test(name) {
-      val buffers = Buffers()
-      val buildTargets = new BuildTargets(_ => None)
-      val selector = new ScalaVersionSelector(
-        () => UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
-        buildTargets
-      )
-      val trees = new Trees(buildTargets, buffers, selector)
+      val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
       val filename = fileName
       val path = AbsolutePath(Paths.get(filename))
       val startOffset = original.indexOf("<<")
@@ -463,14 +453,14 @@ class ExtractRenameMemberLspSuite
       val input = Input.VirtualFile(filename, sourceText)
       val pos = scala.meta.Position
         .Range(input, startOffset, endOffset - "<<".length())
-        .toLSP
-      val extractRenameMember = new ExtractRenameMember(buffers, trees)
+        .toLsp
+      val extractRenameMember = new ExtractRenameMember(trees, client)
       buffers.put(path, sourceText)
       val textDocumentIdentifier = path.toTextDocumentIdentifier
       val codeActionParams = new CodeActionParams(
         textDocumentIdentifier,
         pos,
-        new CodeActionContext()
+        new CodeActionContext(),
       )
       val cancelToken = EmptyCancelToken
 

@@ -5,10 +5,11 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
+import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.DebugProvider.SemanticDbNotFoundException
+import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
 import scala.meta.internal.metals.debug.NoTestsFoundException
-import scala.meta.internal.metals.debug.SemanticDbNotFoundException
-import scala.meta.internal.metals.debug.WorkspaceErrorsException
 import scala.meta.io.AbsolutePath
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
@@ -17,11 +18,13 @@ class DebugDiscoverySuite
     extends BaseDapSuite(
       "debug-discovery",
       QuickBuildInitializer,
-      QuickBuildLayout
+      QuickBuildLayout,
     ) {
   private val mainPath = "a/src/main/scala/a/Main.scala"
   private val fooPath = "a/src/main/scala/a/Foo.scala"
   private val barPath = "a/src/main/scala/a/Bar.scala"
+  private val altTargetPath = "b/src/main/scala/b/Main.scala"
+  private val scalaCliScriptPath = "a/src/main/scala/a/main.sc"
 
   test("run") {
     for {
@@ -45,7 +48,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(mainPath).toURI.toString,
-          "run"
+          "run",
         ).toJson
       )
       _ <- debugger.initialize
@@ -54,6 +57,129 @@ class DebugDiscoverySuite
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "oranges are nice")
+  }
+
+  test("run-file-main") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${mainPath}
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    print("oranges are nice")
+           |    System.exit(0)
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(mainPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(mainPath).toURI.toString,
+          "runOrTestFile",
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "oranges are nice")
+  }
+
+  test("run-scala-cli-script") {
+    for {
+      _ <- initialize(
+        s"""/.bsp/scala-cli.json
+           |${BaseScalaCliSuite.scalaCliBspJsonContent()}
+           |/.scala-build/ide-inputs.json
+           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+           |/$scalaCliScriptPath
+           |print("oranges are nice")""".stripMargin
+      )
+      _ <- server.didOpen(scalaCliScriptPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        DebugDiscoveryParams(
+          server.toPath(scalaCliScriptPath).toURI.toString,
+          "run",
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "oranges are nice")
+  }
+
+  test("run-file-test") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("foo") {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)(identity)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runOrTestFile",
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(output.contains("All tests in a.Foo passed"))
+  }
+
+  test("no-run-or-test") {
+    val notATestPath = "a/src/main/scala/a/NotATest.scala"
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${notATestPath}
+           |package a
+           |class NotATest {
+           |    print("I'm not a test!")
+           |    System.exit(0)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(notATestPath)
+      result <- server
+        .startDebuggingUnresolved(
+          new DebugDiscoveryParams(
+            server.toPath(notATestPath).toURI.toString,
+            "runOrTestFile",
+          ).toJson
+        )
+        .recover { case e @ DebugProvider.NoRunOptionException => e }
+    } yield assertNoDiff(
+      result.toString(),
+      DebugProvider.NoRunOptionException.toString(),
+    )
   }
 
   test("run-multiple") {
@@ -82,7 +208,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(mainPath).toURI.toString,
-          "run"
+          "run",
         ).toJson
       )
       _ <- debugger.initialize
@@ -113,7 +239,7 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(mainPath).toURI.toString,
-            "run"
+            "run",
           ).toJson
         )
         .recover { case e: BuildTargetContainsNoMainException =>
@@ -121,7 +247,7 @@ class DebugDiscoverySuite
         }
     } yield assertNoDiff(
       result.toString,
-      BuildTargetContainsNoMainException("a").toString()
+      BuildTargetContainsNoMainException("a").toString(),
     )
   }
 
@@ -145,7 +271,7 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(mainPath).toURI.toString,
-            "run"
+            "run",
           ).toJson
         )
         .recover { case WorkspaceErrorsException =>
@@ -153,8 +279,48 @@ class DebugDiscoverySuite
         }
     } yield assertNoDiff(
       result.toString,
-      WorkspaceErrorsException.toString()
+      WorkspaceErrorsException.toString(),
     )
+  }
+
+  test("other-target-error") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {},
+           |  "b": {}
+           |}
+           |/${mainPath}
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    print("oranges are nice")
+           |    System.exit(0)
+           |  }
+           |}
+           |/${altTargetPath}
+           |package b
+           |object Stuff {
+           |  val stuff = "fail :(
+           |  System.exit(0)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(mainPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(mainPath).toURI.toString,
+          "run",
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "oranges are nice")
   }
 
   test("invalid-env") {
@@ -182,13 +348,13 @@ class DebugDiscoverySuite
           new DebugDiscoveryParams(
             path = server.toPath(mainPath).toURI.toString,
             runType = "run",
-            envFile = fakePath
+            envFile = fakePath,
           ).toJson
         )
         .recover { case e: InvalidEnvFileException => e }
     } yield assertNoDiff(
       result.toString,
-      InvalidEnvFileException(AbsolutePath(fakePath)).toString()
+      InvalidEnvFileException(AbsolutePath(fakePath)).toString(),
     )
   }
 
@@ -198,12 +364,12 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/${fooPath}
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
@@ -214,7 +380,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(fooPath).toURI.toString,
-          "testFile"
+          "testFile",
         ).toJson
       )
       _ <- debugger.initialize
@@ -231,17 +397,17 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/${fooPath}
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |/${barPath}
            |package a
-           |class Bar extends org.scalatest.FunSuite {
+           |class Bar extends org.scalatest.funsuite.AnyFunSuite {
            |  test("bart") {}
            |}
            |""".stripMargin
@@ -252,7 +418,7 @@ class DebugDiscoverySuite
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
           server.toPath(barPath).toURI.toString,
-          "testTarget"
+          "testTarget",
         ).toJson
       )
       _ <- debugger.initialize
@@ -284,13 +450,13 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(notATestPath).toURI.toString,
-            "testTarget"
+            "testTarget",
           ).toJson
         )
         .recover { case e: NoTestsFoundException => e }
     } yield assertNoDiff(
       result.toString(),
-      NoTestsFoundException("build target", "a").toString()
+      NoTestsFoundException("build target", "a").toString(),
     )
   }
 
@@ -300,12 +466,12 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/${fooPath}
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
@@ -318,7 +484,7 @@ class DebugDiscoverySuite
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
             server.toPath(fooPath).toURI.toString,
-            "testFile"
+            "testFile",
           ).toJson
         )
         .recover { case SemanticDbNotFoundException =>
@@ -326,7 +492,7 @@ class DebugDiscoverySuite
         }
     } yield assertNoDiff(
       result.toString,
-      SemanticDbNotFoundException.toString()
+      SemanticDbNotFoundException.toString(),
     )
   }
 }

@@ -7,7 +7,7 @@ class OrganizeImportsLspSuite
     extends BaseCodeActionLspSuite("OrganizeImports") {
   val sourceKind: String = SourceOrganizeImports.kind
   val quickFixKind: String = OrganizeImportsQuickFix.kind
-  val scalacOption: List[String] = List("-Ywarn-unused-import")
+  val scalacOption: List[String] = List("-Wunused")
   def scalafixConf(path: String = "/.scalafix.conf"): String =
     s"""|$path
         |rules = [
@@ -56,7 +56,7 @@ class OrganizeImportsLspSuite
       |}
       |""".stripMargin,
     kind = List(sourceKind),
-    scalacOptions = scalacOption
+    scalacOptions = scalacOption,
   )
 
   check(
@@ -90,9 +90,9 @@ class OrganizeImportsLspSuite
         """|import scala.concurrent.ExecutionContext.global""".stripMargin,
         """|import scala.concurrent.ExecutionContext.global
            |import java.nio.file.Path
-           |// comment""".stripMargin
+           |// comment""".stripMargin,
       )
-    }
+    },
   )
 
   check(
@@ -128,11 +128,11 @@ class OrganizeImportsLspSuite
         """|import scala.concurrent.ExecutionContext.global""".stripMargin,
         """|import scala.concurrent.ExecutionContext.global
            |import java.nio.file.ClassDoNotExist
-           |// comment""".stripMargin
+           |// comment""".stripMargin,
       )
     },
     expectError = true,
-    expectNoDiagnostics = false
+    expectNoDiagnostics = false,
   )
 
   check(
@@ -173,7 +173,7 @@ class OrganizeImportsLspSuite
       s"""|{
           |  "scalafixConfigPath": "$configPath"
           |}""".stripMargin
-    }
+    },
   )
 
   check(
@@ -202,7 +202,35 @@ class OrganizeImportsLspSuite
       |""".stripMargin,
     kind = List(sourceKind),
     scalafixConf = scalafixConf(),
-    scalacOptions = scalacOption
+    scalacOptions = scalacOption,
+  )
+
+  check(
+    "basic-source-3",
+    """
+      |package a
+      |import scala.concurrent.duration.*
+      |import scala.concurrent.{Future<<>> as ScalaFuture}
+      |import scala.concurrent.ExecutionContext.global
+      |
+      |object A {
+      |  val d = Duration(10, MICROSECONDS)
+      |  val k = ScalaFuture.successful(1)
+      |}
+      |""".stripMargin,
+    s"${SourceOrganizeImports.title}",
+    """
+      |package a
+      |import scala.concurrent.duration.*
+      |import scala.concurrent.{Future as ScalaFuture}
+      |
+      |object A {
+      |  val d = Duration(10, MICROSECONDS)
+      |  val k = ScalaFuture.successful(1)
+      |}
+      |""".stripMargin,
+    kind = List(sourceKind),
+    scalacOptions = scalacOption ++ List("-Xsource:3"),
   )
 
   check(
@@ -226,7 +254,7 @@ class OrganizeImportsLspSuite
        |""".stripMargin,
     kind = List(quickFixKind),
     scalafixConf = scalafixConf(),
-    scalacOptions = scalacOption
+    scalacOptions = scalacOption,
   )
 
   checkNoAction(
@@ -241,7 +269,7 @@ class OrganizeImportsLspSuite
        |}
        |""".stripMargin,
     scalafixConf = scalafixConf(),
-    scalacOptions = scalacOption
+    scalacOptions = scalacOption,
   )
 
   check(
@@ -266,7 +294,7 @@ class OrganizeImportsLspSuite
     kind = List(sourceKind),
     scalafixConf = scalafixConf(),
     scalacOptions = scalacOption,
-    expectNoDiagnostics = false
+    expectNoDiagnostics = false,
   )
 
   checkNoAction(
@@ -276,6 +304,6 @@ class OrganizeImportsLspSuite
       |object A {
       |  val action = "quick fix should not be available"
       |}
-      |""".stripMargin
+      |""".stripMargin,
   )
 }

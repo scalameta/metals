@@ -2,41 +2,51 @@ package scala.meta.internal.mtags
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 
 import scala.meta.AbsolutePath
-import scala.meta.Classpath
 import scala.meta.internal.mtags
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.mtags.Semanticdbs.FoundSemanticDbPath
+import scala.meta.io.Classpath
 import scala.meta.io.RelativePath
 
 final case class SemanticdbClasspath(
     sourceroot: AbsolutePath,
     classpath: Classpath = Classpath(Nil),
+    semanticdbTargets: List[Path] = Nil,
     charset: Charset = StandardCharsets.UTF_8,
     fingerprints: Md5Fingerprints = Md5Fingerprints.empty
 ) extends Semanticdbs {
-  val loader = new ClasspathLoader()
-  loader.addClasspath(classpath)
+  val loader = new OpenClassLoader()
+  loader.addClasspath(classpath.entries.map(_.toNIO))
+  loader.addClasspath(semanticdbTargets)
 
-  def getSemanticdbPath(scalaPath: AbsolutePath): AbsolutePath = {
-    semanticdbPath(scalaPath).getOrElse(
-      throw new NoSuchElementException(scalaPath.toString())
+  def getSemanticdbPath(scalaOrJavaPath: AbsolutePath): AbsolutePath = {
+    semanticdbPath(scalaOrJavaPath).getOrElse(
+      throw new NoSuchElementException(scalaOrJavaPath.toString())
     )
   }
-  def resourcePath(scalaPath: AbsolutePath): RelativePath = {
-    mtags.SemanticdbClasspath.fromScala(scalaPath.toRelative(sourceroot))
+  def resourcePath(scalaOrJavaPath: AbsolutePath): RelativePath = {
+    mtags.SemanticdbClasspath.fromScalaOrJava(
+      scalaOrJavaPath.toRelative(sourceroot)
+    )
   }
-  def semanticdbPath(scalaPath: AbsolutePath): Option[AbsolutePath] = {
-    loader.load(resourcePath(scalaPath))
+  def semanticdbPath(scalaOrJavaPath: AbsolutePath): Option[AbsolutePath] = {
+    loader.resolve(resourcePath(scalaOrJavaPath).toNIO).map(AbsolutePath.apply)
   }
-  def textDocument(scalaPath: AbsolutePath): TextDocumentLookup = {
+
+  def textDocument(scalaOrJavaPath: AbsolutePath): TextDocumentLookup = {
     Semanticdbs.loadTextDocument(
-      scalaPath,
+      scalaOrJavaPath,
       sourceroot,
       charset,
       fingerprints,
-      path => loader.load(path).map(FoundSemanticDbPath(_, None))
+      path =>
+        loader
+          .resolve(path.toNIO)
+          .map(AbsolutePath(_))
+          .map(FoundSemanticDbPath(_, None))
     )
   }
 }
@@ -44,24 +54,21 @@ final case class SemanticdbClasspath(
 object SemanticdbClasspath {
   def toScala(
       workspace: AbsolutePath,
-      semanticdb: AbsolutePath
+      semanticdb: SemanticdbPath
   ): Option[AbsolutePath] = {
-    require(
-      semanticdb.toNIO.getFileName.toString.endsWith(".semanticdb"),
-      semanticdb
-    )
     semanticdb.toNIO.semanticdbRoot.map { root =>
       workspace
         .resolve(
-          semanticdb
+          semanticdb.absolutePath
             .resolveSibling(_.stripSuffix(".semanticdb"))
             .toRelative(AbsolutePath(root))
         )
         .dealias
     }
   }
-  def fromScala(path: RelativePath): RelativePath = {
-    require(path.isScalaFilename, path.toString)
+
+  def fromScalaOrJava(path: RelativePath): RelativePath = {
+    require(path.isScalaOrJavaFilename, path.toString)
     val semanticdbSibling = path.resolveSibling(_ + ".semanticdb")
     val semanticdbPrefix = RelativePath("META-INF").resolve("semanticdb")
     semanticdbPrefix.resolve(semanticdbSibling)

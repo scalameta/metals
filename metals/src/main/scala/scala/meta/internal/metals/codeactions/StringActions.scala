@@ -4,21 +4,22 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
 
 import org.eclipse.{lsp4j => l}
 
-class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
+class StringActions(buffers: Buffers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.Refactor
 
   override def contribute(
       params: l.CodeActionParams,
-      token: CancelToken
+      token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     val uri = params.getTextDocument.getUri
@@ -40,28 +41,28 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
               )
               .collect {
                 case token: Token.Constant.String
-                    if (token.pos.toLSP.overlapsWith(range)
+                    if (token.pos.toLsp.encloses(range)
                       && isNotTripleQuote(token)) =>
                   token
                 case start: Token.Interpolation.Start
-                    if (start.pos.toLSP.getStart.getCharacter <= range.getStart.getCharacter
+                    if (start.pos.toLsp.getStart.getCharacter <= range.getStart.getCharacter
                       && isNotTripleQuote(start)) =>
                   start
                 case end: Token.Interpolation.End
-                    if (end.pos.toLSP.getEnd.getCharacter >= range.getEnd.getCharacter
+                    if (end.pos.toLsp.getEnd.getCharacter >= range.getEnd.getCharacter
                       && isNotTripleQuote(end)) =>
                   end
               }
               .toList match {
               case (t: Token.Constant.String) :: _ =>
-                List(stripMarginAction(uri, t.pos.toLSP))
+                List(stripMarginAction(uri, t.pos.toLsp))
               case _ :: (t: Token.Constant.String) :: _ =>
-                List(stripMarginAction(uri, t.pos.toLSP))
+                List(stripMarginAction(uri, t.pos.toLsp))
               case (s: Token.Interpolation.Start) :: (e: Token.Interpolation.End) :: _ =>
                 List(
                   stripMarginAction(
                     uri,
-                    new l.Range(s.pos.toLSP.getStart, e.pos.toLSP.getEnd)
+                    new l.Range(s.pos.toLsp.getStart, e.pos.toLsp.getEnd),
                   )
                 )
               case _ =>
@@ -70,7 +71,7 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
 
             val interpolationActions = tokens.collect {
               case token: Token.Constant.String
-                  if token.pos.toLSP.overlapsWith(range) =>
+                  if token.pos.toLsp.encloses(range) =>
                 interpolateAction(uri, token)
             }.toList
 
@@ -79,12 +80,21 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
                 case (start: Token.Interpolation.Start, i: Int)
                     if (i + 2 < tokens.length
                       && tokens(i + 2).is[Token.Interpolation.End]) =>
-                  def overlaps = List(start, tokens(i + 1), tokens(i + 2))
-                    .exists(_.pos.toLSP.overlapsWith(range))
-                  if (overlaps) {
-                    val lspRange = start.pos.toLSP
+                  val idLength = tokens.lift(i - 1) match {
+                    case Some(Token.Interpolation.Id(name)) => name.length()
+                    case _ => 1
+                  }
+                  def encloses = List(start, tokens(i + 1), tokens(i + 2))
+                    .exists(_.pos.toLsp.encloses(range))
+                  if (encloses) {
+                    val lspRange = start.pos.toLsp
+
                     val editRange =
                       new l.Range(lspRange.getStart, lspRange.getEnd)
+
+                    val startChar = editRange.getStart.getCharacter
+                    editRange.getStart.setCharacter(startChar - idLength)
+                    editRange.getEnd.setCharacter(startChar)
                     Some(removeInterpolationAction(uri, editRange))
                   } else {
                     None
@@ -102,7 +112,7 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
 
   def stripMarginAction(
       uri: String,
-      range: l.Range
+      range: l.Range,
   ): l.CodeAction = {
     range.getStart.setCharacter(range.getStart.getCharacter + 1)
     val startRange = new l.Range(range.getStart, range.getStart)
@@ -111,7 +121,7 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
 
     val edits = List(
       new l.TextEdit(startRange, quotify("''|")),
-      new l.TextEdit(endRange, quotify("''.stripMargin"))
+      new l.TextEdit(endRange, quotify("''.stripMargin")),
     )
 
     codeRefactorAction(StringActions.multilineTitle, uri, edits)
@@ -119,9 +129,9 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
 
   def interpolateAction(
       uri: String,
-      token: Token.Constant.String
+      token: Token.Constant.String,
   ): l.CodeAction = {
-    val range = token.pos.toLSP
+    val range = token.pos.toLsp
     val start = range.getStart()
     val dollarIndexes = token.value.indicesOf("$")
     lazy val newlineIndexes = token.value.indicesOf("\n")
@@ -133,7 +143,7 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
       val dollarPos =
         new l.Position(
           start.getLine() + newlinesBeforeDolar.size,
-          updatedCharacter
+          updatedCharacter,
         )
       val dollarRange = new l.Range(dollarPos, dollarPos)
       new l.TextEdit(dollarRange, "$")
@@ -148,11 +158,8 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
 
   def removeInterpolationAction(
       uri: String,
-      range: l.Range
+      range: l.Range,
   ): l.CodeAction = {
-    range.getStart.setCharacter(range.getStart.getCharacter - 1)
-    range.getEnd.setCharacter(range.getStart.getCharacter + 1)
-
     val edits = List(
       new l.TextEdit(range, "")
     )
@@ -168,16 +175,13 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
   def codeRefactorAction(
       title: String,
       uri: String,
-      edits: List[l.TextEdit]
+      edits: List[l.TextEdit],
   ): l.CodeAction = {
-    val codeAction = new l.CodeAction()
-    codeAction.setTitle(title)
-    codeAction.setKind(l.CodeActionKind.Refactor)
-    codeAction.setEdit(
-      new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
+    CodeActionBuilder.build(
+      title = title,
+      kind = l.CodeActionKind.RefactorRewrite,
+      changes = List(uri.toAbsolutePath -> edits),
     )
-
-    codeAction
   }
 }
 

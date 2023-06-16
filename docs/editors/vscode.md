@@ -13,9 +13,9 @@ title: Visual Studio Code
 ## Installation
 
 Install the Metals extension from the
-[Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals).
+[Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals) by clicking on this badge [![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals) or via the VS Code editor:
 
-[![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals)
+![install stable version](https://imgur.com/Qew0fNH.png)
 
 > Make sure to disable the extensions
 > [Scala Language Server](https://marketplace.visualstudio.com/items?itemName=dragos.scala-lsp)
@@ -32,6 +32,12 @@ Next, open a directory containing your Scala code. The extension activates when
 the main directory contains `build.sbt` or `build.sc` file, a Scala file is
 opened, which includes `*.sbt`, `*.scala` and `*.sc` file, or a standard Scala
 directory structure `src/main/scala` is detected.
+
+It is also possible to opt in to install the pre-release version and try out the latest cutting edge features from Metals server. 
+Apart from new features, pre-release versions also include many bugfixes. It's encouraged to use them with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release versions may result in less stable experience and it is not indented for beginners.
+Pre-release versions follow `major.minor.PATCH` versioning.
+
+![Install the pre-release extension](https://imgur.com/CzOTleE.png)
 
 ```scala mdoc:editor:vscode
 Update the "Sbt Script" setting to use a custom `sbt` script instead of the
@@ -94,7 +100,7 @@ following locations:
 - "Server Properties" setting for the Metals VS Code extension, which can be
   configured per-workspace or per-user.
 
-## Using latest Metals SNAPSHOT
+##  Using latest Metals <a name="SNAPSHOT">SNAPSHOT</a>
 
 Update the "Server Version" setting to try out the latest pending Metals
 features.
@@ -194,6 +200,19 @@ guide them. In the end users should end up with something like this:
       "name": "Launch Test",
       // full name of the class to run
       "testClass": "com.example.Test"
+    },
+    // Attach debugger when running via:
+    // `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=localhost:5005`
+    {
+      "type": "scala",
+      "request": "attach",
+      "name": "Attach debugger",
+      // name of the module that is being debugging
+      "buildTarget": "root",
+      // Host of the jvm to connect to
+      "hostName": "localhost",
+      // Port to connect to
+      "port": 5005
     }
   ]
 }
@@ -227,7 +246,7 @@ You can also use commands that can be easily bound to shortcuts:
 
 To assign shortcuts just go to the Keyboard Shortcuts page (`File` ->
 `Preferences` -> `Keyboard Shortcuts`) and search for a command, click on it and
-use you preffered shortcut.
+use your preferred shortcut.
 
 ## On type formatting for multiline string formatting
 
@@ -256,11 +275,15 @@ paste in Visual Studio Code you can check the `Editor: Format On Paste` setting:
 
 ```
 
+```scala mdoc:scalafix:vscode
+
+```
+
 ## Searching a symbol in the workspace
 Metals provides an alternative command to the native "Go to symbol in workspace..." command, in order to work around some VS Code limitations (see [this issue](https://github.com/microsoft/vscode/issues/98125) for more context) and provide richer search capabilities.
 
 You can invoke this command from the command palette (look for "Metals: Search symbol in workspace").
-Optionally you can also bind this command to a shorcut. For example, if you want to replace the native command with the Metals one you can configure this shortcut:
+Optionally you can also bind this command to a shortcut. For example, if you want to replace the native command with the Metals one you can configure this shortcut:
 
 ```js
   {
@@ -269,6 +292,22 @@ Optionally you can also bind this command to a shorcut. For example, if you want
     "when": "editorLangId == scala"
   }
 ```
+
+## Test Explorer
+Metals 0.11.0 implements Visual Studio Code's [Testing API](https://code.visualstudio.com/api/extension-guides/testing).  
+
+Test Explorer UI is a new default way to run/debug test suites and replaces Code
+Lenses. The new UI adds a testing view, which shows all test suites declared in
+project's modules. From this panel it's possible to
+- view all discovered test suites grouped by build targets (modules) and filter them
+- run/debug test
+- navigate to test's definition.
+
+![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
+
+```scala mdoc:test-frameworks
+```
+If you encounter an error, create an [issue](https://github.com/scalameta/metals/issues).
 
 ## Coming from IntelliJ
 

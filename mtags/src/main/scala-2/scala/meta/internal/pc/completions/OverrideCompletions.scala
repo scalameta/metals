@@ -2,6 +2,7 @@ package scala.meta.internal.pc.completions
 
 import scala.collection.immutable.Nil
 import scala.collection.mutable
+import scala.reflect.internal.Flags
 
 import scala.meta.internal.pc.AutoImportPosition
 import scala.meta.internal.pc.CompletionFuzzy
@@ -13,7 +14,8 @@ import org.eclipse.{lsp4j => l}
 
 trait OverrideCompletions { this: MetalsGlobal =>
 
-  private val DefaultIndent = 2
+  private def defaultIndent(tabIndent: Boolean) =
+    if (tabIndent) 1 else 2
 
   class OverrideDefMember(
       val label: String,
@@ -23,6 +25,21 @@ trait OverrideCompletions { this: MetalsGlobal =>
       val autoImports: List[l.TextEdit],
       val detail: String
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
+
+  class ImplementAllMember(
+      filterText: String,
+      edit: l.TextEdit,
+      detail: String,
+      additionalTextEdits: List[l.TextEdit],
+      val additionalSymbols: List[Symbol]
+  ) extends OverrideDefMember(
+        label = "Implement all members",
+        edit,
+        filterText,
+        sym = completionsSymbol("implement"),
+        additionalTextEdits,
+        detail
+      )
 
   /**
    * An `override def` completion to implement methods from the supertype.
@@ -44,7 +61,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
   ) extends CompletionPosition {
     val prefix: String = name.toString.stripSuffix(CURSOR)
     val typed: Tree = typedTreeAt(t.pos)
-    val range: l.Range = pos.withStart(start).withEnd(pos.point).toLSP
+    val range: l.Range = pos.withStart(start).withEnd(pos.point).toLsp
     val lineStart: RunId = pos.source.lineToOffset(pos.line - 1)
 
     override def contribute: List[Member] = {
@@ -58,7 +75,8 @@ trait OverrideCompletions { this: MetalsGlobal =>
           text,
           text.startsWith("o", start),
           true,
-          isCandidate
+          isCandidate,
+          resolveNames = false
         )
 
         val overrideDefMembers: List[OverrideDefMember] =
@@ -84,7 +102,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
             " " * amount
           }
 
-          val implementAll: TextEditMember = new TextEditMember(
+          val implementAll = new ImplementAllMember(
             prefix,
             new l.TextEdit(
               range,
@@ -92,10 +110,9 @@ trait OverrideCompletions { this: MetalsGlobal =>
                 .map(_.getNewText)
                 .mkString("", s"\n\n${necessaryIndent}", "\n")
             ),
-            completionsSymbol("implement"),
-            label = Some("Implement all members"),
-            detail = Some(s" (${allAbstractEdits.length} total)"),
-            additionalTextEdits = allAbstractImports.toList
+            detail = s" (${allAbstractEdits.length} total)",
+            additionalTextEdits = allAbstractImports.toList,
+            additionalSymbols = allAbstractMembers.map(_.sym)
           )
 
           implementAll :: overrideDefMembers
@@ -113,7 +130,8 @@ trait OverrideCompletions { this: MetalsGlobal =>
       text: String,
       shouldAddOverrideKwd: Boolean,
       shouldMoveCursor: Boolean,
-      isCandidate: Symbol => Boolean
+      isCandidate: Symbol => Boolean,
+      resolveNames: Boolean
   ): List[OverrideDefMember] = {
 
     // Returns all the symbols of all transitive supertypes in the enclosing scope.
@@ -148,7 +166,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
     val autoImport: AutoImportPosition = baseAutoImport.getOrElse(
       AutoImportPosition(
         lineStart,
-        inferIndent(lineStart, text),
+        inferIndent(lineStart, text)._1,
         padTop = false
       )
     )
@@ -201,7 +219,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
         sym,
         history,
         info,
-        includeDocs = false,
+        includeDocs = resolveNames,
         includeDefaultParam = false,
         printLongType = false
       )
@@ -218,11 +236,15 @@ trait OverrideCompletions { this: MetalsGlobal =>
         if (sym.isLazy) "lazy "
         else ""
 
+      // don't show <defaultmethod>
+      val mask = sym.flagMask & ~Flags.JAVA_DEFAULTMETHOD
       val _modifs =
-        sym.flagString.replace(
-          sym.privateWithin.toString(),
-          sym.privateWithin.name.toString()
-        )
+        sym
+          .flagString(mask)
+          .replace(
+            sym.privateWithin.toString(),
+            sym.privateWithin.name.toString()
+          )
 
       val modifs =
         if (_modifs.isEmpty) ""
@@ -315,7 +337,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
       val typed = typedTreeAt(t.pos)
       implementAll(
         typed,
-        inferEditPosition(text, t).toLSP,
+        inferEditPosition(text, t).toLsp,
         t,
         text,
         _ => true
@@ -366,7 +388,8 @@ trait OverrideCompletions { this: MetalsGlobal =>
       text,
       true,
       false,
-      isCandidate
+      isCandidate,
+      resolveNames = true
     )
 
     val allAbstractMembers = overrideMembers
@@ -382,12 +405,12 @@ trait OverrideCompletions { this: MetalsGlobal =>
       // |    class Foo extends Bar {} // inferred to 4
       // |}
       val lineStart = t.pos.source.lineToOffset(t.pos.line - 1)
-      val necessaryIndent = inferIndent(lineStart, text)
+      val (necessaryIndent, tabIndented) = inferIndent(lineStart, text)
 
       // infer indent for implementations
       // if there's declaration in the class/object, follow its indent.
       // otherwise the indent default to 2
-      val indent = typed.tpe.decls
+      val (numIndent, shouldTabIndent) = typed.tpe.decls
         .filter(sym =>
           !sym.isSynthetic &&
             !sym.isPrimaryConstructor &&
@@ -395,14 +418,17 @@ trait OverrideCompletions { this: MetalsGlobal =>
         )
         .headOption
         .map(existing => {
-          " " * inferIndent(
+          inferIndent(
             t.pos.source.lineToOffset(existing.pos.line - 1),
             text
           )
         })
         .getOrElse {
-          " " * (necessaryIndent + DefaultIndent)
+          val default = defaultIndent(tabIndented)
+          (necessaryIndent + default, tabIndented)
         }
+      val indentChar = if (shouldTabIndent) "\t" else " "
+      val indent = indentChar * numIndent
 
       val shouldCompleteBraces = hasBody(text, t).isEmpty
 
@@ -426,7 +452,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
           t.pos.source.offsetToLine(t.pos.start) ==
             t.pos.source.offsetToLine(t.pos.end) || shouldCompleteBraces
         )
-          "\n" + " " * necessaryIndent
+          "\n" + indentChar * necessaryIndent
         else ""
 
       // Add opening/closing braces
@@ -483,8 +509,46 @@ trait OverrideCompletions { this: MetalsGlobal =>
    */
   private def hasBody(text: String, t: Template): Option[Int] = {
     val start = t.pos.start
-    val offset = text.indexOf('{', start)
+    val offset =
+      if (t.self.tpt.isEmpty)
+        text.indexOf('{', start)
+      else text.indexOf("=>", start) + 1
     if (offset > 0 && offset < t.pos.end) Some(offset)
     else None
+  }
+
+  object OverrideExtractor {
+    def unapply(
+        path: List[Tree]
+    ): Option[(Name, Template, Int, Symbol => Boolean)] = {
+      path match {
+        case (_: Ident) ::
+            Select(Ident(TermName("scala")), TypeName("Unit")) ::
+            (defdef: DefDef) ::
+            (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
+          Some(
+            defdef.name,
+            t,
+            defdef.pos.start,
+            !_.isGetter
+          )
+        case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
+            (t: Template) :: _ if name.endsWith(CURSOR) =>
+          Some(
+            name,
+            t,
+            valdef.pos.start,
+            _ => true
+          )
+        case (ident: Ident) :: (t: Template) :: _ =>
+          Some(
+            ident.name,
+            t,
+            ident.pos.start,
+            _ => true
+          )
+        case _ => None
+      }
+    }
   }
 }

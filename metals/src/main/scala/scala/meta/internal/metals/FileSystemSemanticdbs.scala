@@ -18,12 +18,12 @@ final class FileSystemSemanticdbs(
     buildTargets: BuildTargets,
     charset: Charset,
     mainWorkspace: AbsolutePath,
-    fingerprints: Md5Fingerprints
+    fingerprints: Md5Fingerprints,
 ) extends Semanticdbs {
 
   override def textDocument(file: AbsolutePath): TextDocumentLookup = {
     if (
-      !file.toLanguage.isScala ||
+      (!file.toLanguage.isScala && !file.toLanguage.isJava) ||
       file.toNIO.getFileSystem != mainWorkspace.toNIO.getFileSystem
     ) {
       TextDocumentLookup.NotFound(file)
@@ -31,11 +31,16 @@ final class FileSystemSemanticdbs(
 
       val paths = for {
         buildTarget <- buildTargets.inverseSources(file)
-        scalaInfo <- buildTargets.scalaInfo(buildTarget)
         workspace <- buildTargets.workspaceDirectory(buildTarget)
-        scalacOptions <- buildTargets.scalacOptions(buildTarget)
+        targetroot <- {
+          val javaRoot =
+            if (file.toLanguage.isJava)
+              buildTargets.javaTargetRoot(buildTarget)
+            else None
+          javaRoot orElse buildTargets.scalaTargetRoot(buildTarget)
+        }
       } yield {
-        (workspace, scalacOptions.targetroot(scalaInfo.getScalaVersion))
+        (workspace, targetroot)
       }
 
       paths match {
@@ -46,7 +51,8 @@ final class FileSystemSemanticdbs(
             charset,
             fingerprints,
             semanticdbRelativePath =>
-              findSemanticDb(semanticdbRelativePath, targetroot, file, ws)
+              findSemanticDb(semanticdbRelativePath, targetroot, file, ws),
+            (warn: String) => scribe.warn(warn),
           )
         case None =>
           TextDocumentLookup.NotFound(file)
@@ -58,7 +64,7 @@ final class FileSystemSemanticdbs(
       semanticdbRelativePath: RelativePath,
       targetroot: AbsolutePath,
       file: AbsolutePath,
-      workspace: AbsolutePath
+      workspace: AbsolutePath,
   ): Option[FoundSemanticDbPath] = {
     val semanticdbpath = targetroot.resolve(semanticdbRelativePath)
     if (semanticdbpath.isFile) Some(FoundSemanticDbPath(semanticdbpath, None))
@@ -69,7 +75,7 @@ final class FileSystemSemanticdbs(
         relativeSourceRoot = sourceRoot.toRelative(workspace)
         relativeFile = file.toRelative(sourceRoot.dealias)
         fullRelativePath = relativeSourceRoot.resolve(relativeFile)
-        alternativeRelativePath = SemanticdbClasspath.fromScala(
+        alternativeRelativePath = SemanticdbClasspath.fromScalaOrJava(
           fullRelativePath
         )
         alternativeSemanticdbPath = targetroot.resolve(
@@ -78,7 +84,7 @@ final class FileSystemSemanticdbs(
         if alternativeSemanticdbPath.isFile
       } yield FoundSemanticDbPath(
         alternativeSemanticdbPath,
-        Some(fullRelativePath)
+        Some(fullRelativePath),
       )
     }
 

@@ -1,0 +1,10 @@
+@startuml "test-explorer-client-queries"
+skinparam backgroundColor #F0F0F0
+
+"language-client" --> Metals : [Trigger] Fetch test suites per whole workspace \n workspace/executeCommand (metals.discover-tests, {}) 
+Metals -> "language-client": workspace/executeClientCommand \n(metals.update-test-explorer, BuildTargetUpdate[]) 
+|||
+"language-client" --> Metals : [Trigger] Fetch test cases for given file (uri)\n workspace/executeCommand (metals.discover-tests, {uri}) 
+Metals -> "language-client": Return founded testcases for uri\nworkspace/executeClientCommand \n(metals.update-test-explorer, BuildTargetUpdate[]) 
+
+@enduml

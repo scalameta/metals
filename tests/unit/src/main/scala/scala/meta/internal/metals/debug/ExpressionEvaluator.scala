@@ -15,5 +15,5 @@ final class ExpressionEvaluator(expression: String) extends Stoppage.Handler {
     Evaluate(expression, frameId, response = _, Continue)
   }
 
-  override def shutdown: Future[Unit] = Future.successful()
+  override def shutdown: Future[Unit] = Future.successful(())
 }

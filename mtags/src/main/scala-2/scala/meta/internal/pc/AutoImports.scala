@@ -10,9 +10,10 @@ trait AutoImports { this: MetalsGlobal =>
       pos: Position,
       autoImport: Option[AutoImportPosition] = None
   ): Context = {
-    try doLocateContext(
-      autoImport.fold(pos)(i => pos.focus.withPoint(i.offset))
-    )
+    try
+      doLocateContext(
+        autoImport.fold(pos)(i => pos.focus.withPoint(i.offset))
+      )
     catch {
       case _: FatalError =>
         (for {
@@ -58,11 +59,30 @@ trait AutoImports { this: MetalsGlobal =>
             )
           }
 
-        def forAmmoniteScript =
-          for {
-            obj <- lastVisitedParentTrees.collectFirst { case mod: ModuleDef =>
-              mod
+        def forScript(isAmmonite: Boolean) = {
+          val startScriptOffest = {
+            if (isAmmonite)
+              ScriptFirstImportPosition.ammoniteScStartOffset(text)
+            else ScriptFirstImportPosition.scalaCliScStartOffset(text)
+          }
+
+          val scriptModuleDefAndPos =
+            startScriptOffest.flatMap { offset =>
+              val startPos = pos.withStart(offset).withEnd(offset)
+              lastVisitedParentTrees
+                .collectFirst {
+                  case mod: ModuleDef if mod.pos.overlaps(startPos) => mod
+                }
+                .map(mod => (mod, offset))
             }
+
+          val moduleDefAndPos = scriptModuleDefAndPos.orElse(
+            lastVisitedParentTrees
+              .collectFirst { case mod: ModuleDef => mod }
+              .map(mod => (mod, 0))
+          )
+          for {
+            (obj, firstImportOffset) <- moduleDefAndPos
           } yield {
             val lastImportOpt = obj.impl.body.iterator
               .dropWhile {
@@ -71,19 +91,33 @@ trait AutoImports { this: MetalsGlobal =>
               }
               .takeWhile(_.isInstanceOf[Import])
               .lastOption
-            val lastImportLine = lastImportOpt
+
+            val offset = lastImportOpt
               .map(_.pos.focusEnd.line)
-              .getOrElse(0) // if no previous import, add the new one at the top
+              .map(pos.source.lineToOffset)
+              .getOrElse(firstImportOffset)
             new AutoImportPosition(
-              pos.source.lineToOffset(lastImportLine),
+              offset,
               text,
               padTop = false
             )
           }
+        }
 
-        def fileStart = AutoImportPosition(0, 0, padTop = false)
+        def fileStart =
+          AutoImportPosition(
+            ScriptFirstImportPosition.skipUsingDirectivesOffset(text),
+            0,
+            padTop = false
+          )
 
-        (if (pos.source.path.endsWith(".sc.scala")) forAmmoniteScript else None)
+        val path = pos.source.path
+        val scriptPos =
+          if (path.isAmmoniteGeneratedFile) forScript(isAmmonite = true)
+          else if (path.isScalaCLIGeneratedFile) forScript(isAmmonite = false)
+          else None
+
+        scriptPos
           .orElse(forScalaSource)
           .orElse(Some(fileStart))
     }

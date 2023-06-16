@@ -8,5 +8,5 @@ class SbtEvaluationDapSuite
     extends BaseEvaluationDapSuite(
       "sbt-debug-evaluation",
       SbtServerInitializer,
-      SbtBuildLayout
+      SbtBuildLayout,
     )

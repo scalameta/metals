@@ -6,8 +6,9 @@ import scala.tools.nsc.interactive.Global
 
 import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
@@ -31,7 +32,12 @@ class MetalsBench {
 
   MetalsLogger.updateDefaultFormat()
   val inputs: InputProperties = InputProperties.scala2()
-  val classpath = new SemanticdbClasspath(inputs.sourceroot, inputs.classpath)
+  val classpath =
+    new SemanticdbClasspath(
+      inputs.sourceroot,
+      inputs.classpath,
+      inputs.semanticdbTargets,
+    )
   val documents: List[(AbsolutePath, TextDocument)] =
     inputs.scalaFiles.map { input =>
       (input.file, classpath.textDocument(input.file).get)
@@ -45,7 +51,7 @@ class MetalsBench {
       )
     }
 
-  val jdk: Classpath = Classpath(JdkSources().toList)
+  val jdk: Classpath = Classpath(JdkSources().right.get)
   val fullClasspath: Classpath = jdk ++ inputs.dependencySources
 
   val inflated: Inflated = Inflated.jars(fullClasspath)
@@ -148,10 +154,18 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def indexSources(): Unit = {
-    val index = OnDemandSymbolIndex.empty()
+    val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
     fullClasspath.entries.foreach(entry =>
       index.addSourceJar(entry, dialects.Scala213)
     )
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def alltoplevelsScalaIndex(): Unit = {
+    scalaDependencySources.inputs.foreach { input =>
+      Mtags.allToplevels(input, dialects.Scala3)
+    }
   }
 
 }

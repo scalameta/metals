@@ -1,0 +1,16 @@
+name: Auto approve patch updates
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: hmarr/auto-approve-action@v3
+        if: contains(github.event.pull_request.labels.*.name, 'semver-spec-patch') && github.actor == 'scalameta-bot'
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}

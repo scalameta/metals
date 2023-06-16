@@ -15,7 +15,7 @@ class FileWatcherModifier extends StringModifier {
   override def process(
       info: String,
       code: Input,
-      reporter: Reporter
+      reporter: Reporter,
   ): String = {
     val workspace = PathIO.workingDirectory.toNIO.getRoot
       .resolve("to")

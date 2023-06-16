@@ -3,15 +3,13 @@ package scala.meta.internal.metals.debug
 import scala.collection.mutable
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.StepNavigator._
 import scala.meta.io.AbsolutePath
 
 final class StepNavigator(
     root: AbsolutePath,
-    dependencies: AbsolutePath,
-    steps: Seq[(Location, DebugStep)]
+    steps: Seq[(Location, DebugStep)],
 ) extends Stoppage.Handler {
   private val expectedSteps = mutable.Queue(steps: _*)
 
@@ -23,12 +21,12 @@ final class StepNavigator(
       val info = stoppage.frame.info
       val (actualPath, actualLine) =
         if (info.getSource == null) (null, info.getLine)
-        else (info.getSource.getPath.toAbsolutePath, info.getLine)
+        else (info.getSource.getPath, info.getLine)
 
       val (expected, nextStep) = expectedSteps.dequeue()
 
-      if (actualLine == expected.line && actualPath == expected.file) {
-        if (expected.file.exists) {
+      if (actualLine == expected.line && expected.pathEquals(actualPath)) {
+        if (expected.exists) {
           nextStep
         } else {
           throw new Exception(s"${expected.file} does not exist")
@@ -42,20 +40,21 @@ final class StepNavigator(
   }
 
   def at(path: String, line: Int)(nextStep: DebugStep): StepNavigator = {
-    at(root.resolve(path), line)(nextStep)
+    val location = WorkspaceLocation(root, path, line)
+    at(location)(nextStep)
   }
 
-  private def at(path: AbsolutePath, line: Int)(
+  def atDependency(path: AbsolutePath, line: Int)(
       nextStep: DebugStep
   ): StepNavigator = {
-    val location = Location(path, line)
-    new StepNavigator(root, dependencies, steps :+ (location -> nextStep))
+    val location = DependencyLocation(path, line)
+    at(location)(nextStep)
   }
 
-  def atDependency(path: String, line: Int)(
+  private def at(location: Location)(
       nextStep: DebugStep
   ): StepNavigator = {
-    at(dependencies.resolve(path), line)(nextStep)
+    new StepNavigator(root, steps :+ (location -> nextStep))
   }
 
   override def shutdown: Future[Unit] = {
@@ -70,11 +69,37 @@ final class StepNavigator(
 }
 
 object StepNavigator {
-  def apply(root: AbsolutePath): StepNavigator =
-    new StepNavigator(root, root.resolve(Directories.dependencies), Nil)
+  def apply(root: AbsolutePath): StepNavigator = new StepNavigator(root, Nil)
 
-  case class Location(file: AbsolutePath, line: Long) {
-    override def toString: String = s"$file:$line"
+  sealed trait Location {
+    def pathEquals(actual: String): Boolean
+    def file: String
+    def line: Long
+    def exists: Boolean
   }
+  case class WorkspaceLocation(
+      root: AbsolutePath,
+      relativePath: String,
+      lineNum: Long,
+  ) extends Location {
 
+    override def pathEquals(actual: String): Boolean =
+      actual == file
+
+    override def exists: Boolean = root.resolve(relativePath).exists
+    override def file: String = root.resolve(relativePath).toString
+    override def line: Long = lineNum
+    override def toString: String = s"$root$file:$line"
+  }
+  case class DependencyLocation(
+      path: AbsolutePath,
+      lineNum: Long,
+  ) extends Location {
+
+    override def pathEquals(actual: String): Boolean =
+      actual.endsWith(path.toNIO.toString)
+    override def file: String = path.toURI.toString()
+    override def line: Long = lineNum
+    override def exists: Boolean = path.exists
+  }
 }

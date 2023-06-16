@@ -1,16 +1,11 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.pc.CompilerWrapper
-import scala.meta.internal.pc.ReporterAccess
-
-import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
 
-class Scala3CompilerWrapper(driver: InteractiveDriver)
-    extends CompilerWrapper[StoreReporter, InteractiveDriver]:
+class Scala3CompilerWrapper(driver: MetalsDriver)
+    extends CompilerWrapper[StoreReporter, MetalsDriver]:
 
-  override def compiler(): InteractiveDriver = driver
+  override def compiler(): MetalsDriver = driver
 
   override def resetReporter(): Unit =
     val ctx = driver.currentCtx
@@ -20,7 +15,7 @@ class Scala3CompilerWrapper(driver: InteractiveDriver)
     new ReporterAccess[StoreReporter]:
       def reporter = driver.currentCtx.reporter.asInstanceOf[StoreReporter]
 
-  override def askShutdown(): Unit = {}
+  override def askShutdown(): Unit = ()
 
   override def isAlive(): Boolean = false
 

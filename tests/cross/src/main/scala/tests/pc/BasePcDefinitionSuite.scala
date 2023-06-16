@@ -2,10 +2,10 @@ package tests.pc
 
 import java.net.URI
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
+import scala.meta.pc.OffsetParams
 
 import munit.Location
 import munit.TestOptions
@@ -16,10 +16,12 @@ import tests.pc.CrossTestEnrichments._
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
 
+  def definitions(offsetParams: OffsetParams): List[l.Location]
+
   def check(
       options: TestOptions,
       original: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit = {
     test(options) {
       val filename = "A.scala"
@@ -32,27 +34,26 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       import scala.meta.inputs.Position
       import scala.meta.inputs.Input
       val offsetRange =
-        Position.Range(Input.String(cleanedCode), offset, offset).toLSP
-      val defn = presentationCompiler
-        .definition(CompilerOffsetParams(URI.create(uri), cleanedCode, offset))
-        .get()
-      val edits = defn.locations().asScala.toList.flatMap { location =>
+        Position.Range(Input.String(cleanedCode), offset, offset).toLsp
+      val locs =
+        definitions(CompilerOffsetParams(URI.create(uri), cleanedCode, offset))
+      val edits = locs.flatMap { location =>
         if (location.getUri() == uri) {
           List(
             new TextEdit(
               new l.Range(
                 location.getRange().getStart(),
-                location.getRange().getStart()
+                location.getRange().getStart(),
               ),
-              "<<"
+              "<<",
             ),
             new TextEdit(
               new l.Range(
                 location.getRange().getEnd(),
-                location.getRange().getEnd()
+                location.getRange().getEnd(),
               ),
-              ">>"
-            )
+              ">>",
+            ),
           )
         } else {
           val filename = location.getUri()
@@ -64,7 +65,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       val expected = getExpected(original, compat, scalaVersion).removePos
       assertNoDiff(
         obtained,
-        expected
+        expected,
       )
     }
   }

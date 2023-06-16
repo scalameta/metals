@@ -13,7 +13,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
     /** tabSize: */
     2,
     /** insertSpaces */
-    true
+    true,
   )
 
   override def userConfig: UserConfiguration =
@@ -37,7 +37,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  |second line
        |  | different indent
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -58,7 +58,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  |second line
        |  | different indent
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -75,7 +75,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  val str = '''
        |  |first line
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -98,7 +98,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  val other = '''
        |                |
        |                |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -121,7 +121,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  val other = '''
        |                |  some text
        |                |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -148,7 +148,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  val other = '''
        |                |
        |                |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -175,7 +175,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |                |some other text
        |                |
        |                |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -192,7 +192,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  val str = '''| hi first line
        |               |
        |               '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -209,7 +209,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  val str = ''' hi first line
        |              |
        |              '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -230,7 +230,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |second line
        | different indent
        |  '''
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -249,7 +249,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  |single line
        |  |
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -270,7 +270,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  |second line
        |  | different indent
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
   check(
     "with-wrong-indentation",
@@ -292,7 +292,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |      |
        |      |second line
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -313,7 +313,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  |
        |  |second line
        |  '''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
@@ -336,14 +336,14 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  val other = '''
        |              |  some text
        |              |'''.stripMargin
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   def check(
       name: TestOptions,
       testCase: String,
       paste: String,
-      expectedCase: String
+      expectedCase: String,
   )(implicit loc: Location): Unit = {
     val tripleQuote = """\u0022\u0022\u0022"""
     def unmangle(string: String): String =
@@ -367,7 +367,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
           expected,
           unmangle(paste),
           workspace,
-          Some(formattingOptions)
+          Some(formattingOptions),
         )
       } yield ()
     }

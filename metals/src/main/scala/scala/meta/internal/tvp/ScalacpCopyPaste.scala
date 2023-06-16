@@ -2,12 +2,12 @@ package scala.meta.internal.tvp
 
 import java.{util => ju}
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.reflect.NameTransformer
 import scala.tools.scalap.scalax.rules.scalasig._
 
 import scala.meta.internal.scalacp._
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scala.{Descriptor => d}
 import scala.meta.internal.semanticdb.Scala.{DisplayNames => dn}
@@ -23,6 +23,7 @@ import scala.meta.internal.{semanticdb => s}
  * If the `Scalacp` class was not final then we could avoid this copy-pasting. Changes are
  * documented with "// scalacp deviation" comments.
  */
+@nowarn("msg=parameter value node")
 class ScalacpCopyPaste(node: ScalaSigNode) {
   lazy val symbolCache = new ju.HashMap[Symbol, String]
   implicit class XtensionSymbolSSymbol(sym: Symbol) {
@@ -491,7 +492,7 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
         displayName = displayName,
         signature = sig(linkMode),
         annotations = annotations,
-        access = access
+        access = access,
       )
     }
   }

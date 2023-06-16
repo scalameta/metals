@@ -1,11 +1,11 @@
 package scala.meta.internal.parsing
 
-import scala.meta.Token
-
 /**
  * A pair of tokens that align with each other across two different files
  */
-class MatchingToken(val original: Token, val revised: Token) {
-  override def toString: String =
-    s"${original.structure} <-> ${revised.structure}"
+class MatchingToken[A](val original: A, val revised: A) {
+  def show(implicit ops: TokenOps[A]): String = {
+    s"${ops.show(original)} <-> ${ops.show(revised)}"
+  }
+
 }

@@ -3,9 +3,10 @@ package scala.meta.internal.worksheets
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.HoverMarkup
+import scala.meta.internal.worksheets.MdocEnrichments._
 import scala.meta.internal.worksheets.MdocEnrichments.truncatify
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher._
 import scala.meta.io.AbsolutePath
@@ -29,7 +30,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
   override def publish(
       languageClient: MetalsLanguageClient,
       path: AbsolutePath,
-      worksheet: EvaluatedWorksheet
+      worksheet: EvaluatedWorksheet,
   ): Unit = {
     val rendered = render(path, worksheet)
     publish(languageClient, path, rendered)
@@ -41,7 +42,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
       distance = buffers.tokenEditDistance(
         path,
         messages.textSnapshot,
-        trees
+        trees,
       )
       snapshotPosition <-
         distance
@@ -51,14 +52,14 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
     } yield new Hover(
       new MarkupContent(
         MarkupKind.MARKDOWN,
-        HoverMarkup(message)
+        HoverMarkup(message),
       )
     )
   }
 
   private def render(
       path: AbsolutePath,
-      worksheet: EvaluatedWorksheet
+      worksheet: EvaluatedWorksheet,
   ): RenderResult = {
     val source = path.toInputFromBuffers(buffers)
     val editsWithDetails =
@@ -73,10 +74,10 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
           .copy(
             endCharacter = ed.range.getStart.getCharacter + ed.text.length
           ),
-        ed.details
+        ed.details,
       )
     )
-    val hoverMap = HoverMap(updateWithEdits(source.text, edits), hovers)
+    val hoverMap = HoverMap(updateWithEdits(source.text, edits), hovers.toSeq)
 
     RenderResult(edits, hoverMap)
   }
@@ -84,7 +85,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
   private def publish(
       languageClient: MetalsLanguageClient,
       path: AbsolutePath,
-      rendered: RenderResult
+      rendered: RenderResult,
   ): Unit = {
     hoverMessages = hoverMessages.updated(path, rendered.hovers)
 
@@ -98,7 +99,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
 
   private def renderEdit(
       statement: EvaluatedWorksheetStatement,
-      source: Input
+      source: Input,
   ): RenderEditResult = {
     val startPosition =
       new Position(statement.position.endLine, statement.position.endColumn)
@@ -108,7 +109,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
     RenderEditResult(
       new Range(startPosition, endPosition),
       renderMessage(statement),
-      statement.details()
+      statement.prettyDetails(),
     )
   }
 
@@ -122,7 +123,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
 
   private def locatePreviousEdit(
       statement: EvaluatedWorksheetStatement,
-      source: Input
+      source: Input,
   ): Option[Position] = {
     val editPattern = """\A\s*/\*>.*?\*/""".r
     val offset =
@@ -140,7 +141,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
 
   private def getHoverMessage(
       position: Position,
-      hovers: Seq[HoverMessage]
+      hovers: Seq[HoverMessage],
   ): Option[String] = {
     hovers.find(_.range.encloses(position)).map(_.message)
   }

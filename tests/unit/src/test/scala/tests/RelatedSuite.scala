@@ -19,7 +19,7 @@ class RelatedSuite extends BaseSuite {
   def checkRelated(
       relpath: String,
       isRelated: (AbsolutePath, AbsolutePath) => Boolean,
-      isTrue: Boolean = true
+      isTrue: Boolean = true,
   )(implicit loc: Location): Unit = {
     val workspace = PathIO.workingDirectory
     val path = workspace.resolve(relpath)
@@ -101,7 +101,11 @@ class RelatedSuite extends BaseSuite {
       loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}MillRelated - $relpath") {
-      checkRelated(relpath, MillBuildTool.isMillRelatedPath, isTrue)
+      checkRelated(
+        relpath,
+        (_, path) => MillBuildTool.isMillRelatedPath(path),
+        isTrue,
+      )
     }
   }
   checkIsMillRelated("build.sc")

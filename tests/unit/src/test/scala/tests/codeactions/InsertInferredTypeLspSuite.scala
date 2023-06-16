@@ -1,10 +1,18 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.InsertInferredType
-import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
+
+import org.eclipse.lsp4j.CodeAction
 
 class InsertInferredTypeLspSuite
-    extends BaseCodeActionLspSuite("insertInferredType") {
+    extends BaseCodeActionLspSuite(
+      "insertInferredType"
+    ) {
+
+  val filterAction: CodeAction => Boolean = { act: CodeAction =>
+    act.getTitle() == InsertInferredType.insertType || act
+      .getTitle() == InsertInferredType.insertTypeToPattern
+  }
 
   check(
     "val",
@@ -21,7 +29,43 @@ class InsertInferredTypeLspSuite
        |object A {
        |  val alpha: Int = 123
        |}
-       |""".stripMargin
+       |""".stripMargin,
+  )
+
+  check(
+    "wrong-type",
+    """|package a
+       |
+       |object A {
+       |  val alpha:String= 1<<>>23
+       |}
+       |""".stripMargin,
+    s"""|${InsertInferredType.adjustType("Int(123)")}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val alpha: Int= 123
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "wrong-type2",
+    """|package a
+       |
+       |object A {
+       |  def alpha:String= 1<<>>23
+       |}
+       |""".stripMargin,
+    s"""|${InsertInferredType.adjustType("Int(123)")}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  def alpha: Int= 123
+       |}
+       |""".stripMargin,
   )
 
   check(
@@ -39,7 +83,7 @@ class InsertInferredTypeLspSuite
        |object A {
        |  def alpha(): Int = 123
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -58,7 +102,7 @@ class InsertInferredTypeLspSuite
        |    second <- 1 to 11
        |  } yield (first, second)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -77,7 +121,7 @@ class InsertInferredTypeLspSuite
        |    second: Int = first
        |  } yield (first, second)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNoAction(
@@ -87,35 +131,35 @@ class InsertInferredTypeLspSuite
        |    fir<<>>st: Int <- 1 to 10
        |    second <- 1 to 11
        |  } yield (first, second)
-       |}""".stripMargin
+       |}""".stripMargin,
   )
 
   check(
     "lambda",
     """|object A{
-       |  val list = "123".map(c<<>>h => ch.toInt)
+       |  val list = "123".foreach(c<<>>h => ch.toInt)
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
-        |${RewriteBracesParensCodeAction.toBraces}
         |""".stripMargin,
     """|object A{
-       |  val list = "123".map((ch: Char) => ch.toInt)
+       |  val list = "123".foreach((ch: Char) => ch.toInt)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(
     "lambda-brace",
     """|object A{
-       |  val list = "123".map{c<<>>h => ch.toInt}
+       |  val list = "123".foreach{c<<>>h => ch.toInt}
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
-        |${RewriteBracesParensCodeAction.toParens}
         |""".stripMargin,
     """|object A{
-       |  val list = "123".map{ch: Char => ch.toInt}
+       |  val list = "123".foreach{ch: Char => ch.toInt}
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    filterAction = filterAction,
   )
 
   check(
@@ -128,7 +172,7 @@ class InsertInferredTypeLspSuite
     """|object A{
        |  val (first: List[Int], second) = (List(1), List(""))
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -147,7 +191,7 @@ class InsertInferredTypeLspSuite
        |    case (first, second: List[String]) =>
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -166,7 +210,7 @@ class InsertInferredTypeLspSuite
        |    case None =>
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkNoAction(
@@ -176,7 +220,16 @@ class InsertInferredTypeLspSuite
        |    case <<num>> @ (first, _) => "Two!"
        |    case otherDigit => "Not two!"
        |  }
-       |}""".stripMargin
+       |}""".stripMargin,
+  )
+
+  checkNoAction(
+    "match-bind-true",
+    """|object A{
+       |  (1, 2) match {
+       |    case num @ <<first>> => "Two!"
+       |  }
+       |}""".stripMargin,
   )
 
   checkNoAction(
@@ -186,7 +239,7 @@ class InsertInferredTypeLspSuite
        |object A {
        |  val al<<>>pha: Int = 123
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   check(
@@ -206,7 +259,7 @@ class InsertInferredTypeLspSuite
        |object A {
        |  var alpha: Buffer[Int] = List(123).toBuffer
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
 }

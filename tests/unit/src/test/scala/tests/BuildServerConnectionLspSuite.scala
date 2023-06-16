@@ -25,7 +25,7 @@ class BuildServerConnectionLspSuite
       _ = assertNoDiagnostics()
       _ = server.server.bspSession.get.cancel()
       _ = assertNoDiagnostics()
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(
         _.replace("val n = 42", "val n: String = 42")
       )
@@ -36,7 +36,7 @@ class BuildServerConnectionLspSuite
            | required: String
            |  val n: String = 42
            |                  ^^
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }
@@ -73,7 +73,7 @@ class BuildServerConnectionLspSuite
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(Messages.BloopVersionChange.params().getMessage()).mkString("\n")
+        List(Messages.BloopVersionChange.params().getMessage()).mkString("\n"),
       )
     }
   }

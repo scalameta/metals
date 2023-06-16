@@ -1,0 +1,29 @@
+pull_request_rules:
+  - name: Automatic merge on approval
+    conditions:
+      - "#approved-reviews-by>=1"
+      - author=scalameta-bot
+      - label=semver-spec-patch
+      - label=library-update
+      - check-success=windows-latest jdk-17 unit tests 1 / 2
+      - check-success=windows-latest jdk-17 unit tests 2 / 2
+      - check-success=macOS-latest jdk-17 unit tests 1 / 2
+      - check-success=macOS-latest jdk-17 unit tests 2 / 2
+      - check-success=ubuntu-latest jdk-17 unit tests 1 / 2
+      - check-success=ubuntu-latest jdk-17 unit tests 2 / 2
+      - check-success=ubuntu-latest jdk-8 unit tests 1 / 2
+      - check-success=ubuntu-latest jdk-8 unit tests 2 / 2
+      - check-success=Gradle MacOS integration
+      - check-success=Gradle integration
+      - check-success=Sbt integration
+      - check-success=Maven integration
+      - check-success=Scalafix and docs
+      - check-success=Formatting
+      - check-success=Scala cross tests
+      - check-success=Scala3 latest NIGHTLY cross test
+      - check-success=Sbt-metals/scripted jdk8
+      - check-success=LSP integration tests
+      - check-success=Mill integration
+    actions:
+      merge:
+        method: squash

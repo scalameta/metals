@@ -8,19 +8,18 @@ import munit.TestOptions
 abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
-  protected def compilerPlugins: List[String] = Nil
 
   def assertCheck(
       filename: String,
       edit: String,
       expected: Map[String, String],
-      base: Map[String, String]
+      base: Map[String, String],
   ): Future[Unit]
 
   def check(
       name: TestOptions,
       input: String,
-      scalaVersion: Option[String] = None
+      scalaVersion: Option[String] = None,
   )(implicit
       loc: Location
   ): Unit = {
@@ -52,17 +51,17 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
              |{"a":
              |  {
              |    "scalaVersion" : "$actualScalaVersion",
-             |    "compilerPlugins": ${toJsonArray(compilerPlugins)},
              |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
              |  }
              |}
              |${input
-            .replaceAll("(<<|>>|@@)", "")}""".stripMargin
+              .replaceAll("(<<|>>|@@)", "")}""".stripMargin
         )
         _ <- Future.sequence(
           files.map(file => server.didOpen(s"${file._1}"))
         )
         _ <- assertCheck(filename, edit, expected, base)
+        _ <- server.shutdown()
       } yield ()
     }
   }

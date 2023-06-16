@@ -3,12 +3,14 @@ package scala.meta.internal.metals.config
 object RunType {
   sealed trait RunType
   case object Run extends RunType
+  case object RunOrTestFile extends RunType
   case object TestFile extends RunType
   case object TestTarget extends RunType
 
   def fromString(string: String): Option[RunType] = {
     string match {
       case "run" => Some(Run)
+      case "runOrTestFile" => Some(RunOrTestFile)
       case "testFile" => Some(TestFile)
       case "testTarget" => Some(TestTarget)
       case _ => None

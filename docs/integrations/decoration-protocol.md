@@ -109,11 +109,22 @@ export interface PublishDecorationsParams {
    * Use empty list to clear all decorations.
    */
   options: DecorationOptions[];
+
+  /**
+   * Used to distinguish if inline decorations from the
+   * line ones as otherwise they will get replaced. This
+   * parameter along with specific inline decorations will 
+   * not be sent if the client doesn't support inline 
+   * decorations.
+   */
+  inline: boolean;
 }
 ```
 
 ## Changelog
 
 - v0.1.0: First release with basic support for worksheets.
-- v0.2.0: `MarkedString` in `DecorationOptions` changed to `MarkupContent` to align
-    with LSP 3.15
+- v0.2.0: `MarkedString` in `DecorationOptions` changed to `MarkupContent` to
+  align with LSP 3.15
+- v0.2.1: added `isInline` to `PublishDecorationsParams` to be able to
+  distinguish between worksheet evaluation and inline decorations.

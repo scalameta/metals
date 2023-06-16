@@ -12,7 +12,7 @@ class UserConfigurationModifier extends StringModifier {
   override def process(
       info: String,
       code: Input,
-      reporter: Reporter
+      reporter: Reporter,
   ): String = {
     UserConfiguration.options
       .map { option =>

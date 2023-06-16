@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageActionItem
@@ -16,10 +17,10 @@ class PopupChoiceReset(
     workspace: AbsolutePath,
     tables: Tables,
     languageClient: MetalsLanguageClient,
-    doctor: Doctor,
+    executeRefreshDoctor: () => Unit,
     slowConnect: () => Future[BuildChange],
     bspConnector: BspConnector,
-    quickConnect: () => Future[BuildChange]
+    quickConnect: () => Future[BuildChange],
 ) {
   import PopupChoiceReset._
 
@@ -36,14 +37,14 @@ class PopupChoiceReset(
       (for {
         didChange <- bspConnector.switchBuildServer(
           workspace,
-          slowConnect
+          slowConnect,
         )
         if didChange
       } yield quickConnect()).ignoreValue
     } else {
       Future.successful(())
     }
-    result.foreach(_ => doctor.executeRefreshDoctor())
+    result.foreach(_ => executeRefreshDoctor())
     result
   }
 
@@ -58,7 +59,7 @@ class PopupChoiceReset(
         List(
           new MessageActionItem(PopupChoiceReset.BuildTool),
           new MessageActionItem(PopupChoiceReset.BuildImport),
-          new MessageActionItem(PopupChoiceReset.BuildServer)
+          new MessageActionItem(PopupChoiceReset.BuildServer),
         ).asJava
       )
       params

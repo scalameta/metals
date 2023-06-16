@@ -1,16 +1,13 @@
 #!/bin/bash
 
 function bloop_version {
-  grep "val bloop" build.sbt | sed -n 's/.*"\(.*\)".*/\1/p'
+  grep "val bloop" project/V.scala | sed -n 's/.*"\(.*\)".*/\1/p'
 }
 
 mkdir -p ~/.bloop
-touch ~/.bloop/.jvmopts
-echo "-Xss16m" >> ~/.bloop/.jvmopts 
-echo "-Xmx1G"  >> ~/.bloop/.jvmopts 
-
+cp bin/bloop.json ~/.bloop/bloop.json
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier
-./coursier launch ch.epfl.scala:bloopgun-core_2.12:$(bloop_version) -- about
+./coursier launch ch.epfl.scala:bloopgun-core_2.13:$(bloop_version) -- about
 
 rm .jvmopts
 touch .jvmopts

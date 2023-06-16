@@ -1,6 +1,11 @@
 package tests
 
-class RenameLspSuite extends BaseRenameLspSuite("rename") {
+import scala.meta.internal.metals.InitializationOptions
+
+class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
 
   renamed(
     "basic",
@@ -15,7 +20,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val toRename = Main.<<toR@@ename>>
        |}
        |""".stripMargin,
-    newName = "otherRename"
+    newName = "otherRename",
   )
 
   renamed(
@@ -39,7 +44,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val toRename: JList[Int] = ???
        |}
        |""".stripMargin,
-    newName = "Java-List"
+    newName = "Java-List",
   )
 
   renamed(
@@ -59,7 +64,22 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val toRename = ""
        |}
        |""".stripMargin,
-    newName = "OtherM"
+    newName = "OtherM",
+  )
+
+  renamed(
+    "renamed-import-object",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |import scala.util.{Try => <<StdLibTry>>}
+       |
+       |object Renaming {
+       |  def foo(n: Int): <<StdLib@@Try>>[Int] = 
+       |    <<StdLibTry>>(n)
+       |}
+       |""".stripMargin,
+    newName = "OtherM",
   )
 
   renamed(
@@ -73,7 +93,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  user.copy(name = "")
        |}
        |""".stripMargin,
-    newName = "Login"
+    newName = "Login",
   )
 
   renamed(
@@ -87,7 +107,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
       |trait T4[I, J] extends T3[J, I] { override def <<torename>>(p: J): String = super.<<torename>>(p) }
       |trait T5[U] extends T4[U, U] { override def <<tore@@name>>(p: U): String = super.<<torename>>(p) }
       |""".stripMargin,
-    newName = "newname"
+    newName = "newname",
   )
 
   renamed(
@@ -100,7 +120,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
       |trait B extends A { override def <<tore@@name>>(a: String): PP = ??? }
       |
       |""".stripMargin,
-    newName = "newname"
+    newName = "newname",
   )
 
   renamed(
@@ -117,7 +137,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val toRename = Main.<<toR@@ename>>
        |}
        |""".stripMargin,
-    newName = "otherRename"
+    newName = "otherRename",
   )
 
   renamed(
@@ -133,7 +153,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "Bar"
+    newName = "Bar",
   )
 
   renamed(
@@ -149,7 +169,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "str"
+    newName = "str",
   )
 
   renamed(
@@ -163,7 +183,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "otherRename"
+    newName = "otherRename",
   )
 
   renamed(
@@ -176,7 +196,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  if(<<method>>("")) println("Is true!")
        |}
        |""".stripMargin,
-    newName = "truth"
+    newName = "truth",
   )
 
   renamed(
@@ -191,7 +211,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val a = new Alphabet with <<ABC>>
        |}
        |""".stripMargin,
-    newName = "Animal"
+    newName = "Animal",
   )
 
   renamed(
@@ -206,7 +226,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  def <<met@@hod>>(abc : String) = true
        |}
        |""".stripMargin,
-    newName = "truth"
+    newName = "truth",
   )
 
   renamed(
@@ -225,7 +245,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  def <<meth@@od>>(abc : String) : Boolean = false
        |}
        |""".stripMargin,
-    newName = "truth"
+    newName = "truth",
   )
 
   renamed(
@@ -244,7 +264,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  override def <<meth@@od>>(abc : String) : Boolean = false
        |}
        |""".stripMargin,
-    newName = "truth"
+    newName = "truth",
   )
 
   renamed(
@@ -259,7 +279,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val toRename = User##.##<<>>("abc")
        |}
        |""".stripMargin,
-    newName = "name"
+    newName = "name",
   )
 
   same(
@@ -273,7 +293,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val user = new User()
        |  "" <<::>> user
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   renamed(
@@ -288,7 +308,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  "" <<::>> user
        |}
        |""".stripMargin,
-    newName = "+++:"
+    newName = "+++:",
   )
 
   same(
@@ -302,7 +322,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val user = new User()
        |  <<@@!>>user
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   same(
@@ -316,7 +336,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val user = new User()
        |  <<!>>user
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   same(
@@ -326,7 +346,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |class MyException extends Exce@@ption
        |class NewException extends RuntimeException
        |class NewException2 extends RuntimeException
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   renamed(
@@ -337,7 +357,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |class Dog extends <<Animal>>
        |class Cat extends <<Animal>>
        |""".stripMargin,
-    newName = "Tree"
+    newName = "Tree",
   )
 
   renamed(
@@ -349,7 +369,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |""".stripMargin,
     newName = "Tree",
     fileRenames =
-      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala"),
   )
 
   renamed(
@@ -361,7 +381,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |""".stripMargin,
     newName = "Tree",
     fileRenames =
-      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala"),
   )
 
   renamed(
@@ -373,7 +393,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |""".stripMargin,
     newName = "Tree",
     fileRenames =
-      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala"),
   )
 
   renamed(
@@ -384,7 +404,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |object <<The@@Main>>
        |""".stripMargin,
     newName = "Tree",
-    fileRenames = Map.empty
+    fileRenames = Map.empty,
   )
 
   renamed(
@@ -419,8 +439,8 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
     nonOpened = Set(
       "a/src/main/scala/a/C.scala",
       "a/src/main/scala/a/D.scala",
-      "a/src/main/scala/a/E.scala"
-    )
+      "a/src/main/scala/a/E.scala",
+    ),
   )
 
   renamed(
@@ -440,15 +460,19 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "renamed"
+    newName = "renamed",
   )
 
   renamed(
-    "java-unchanged",
+    "java-changed",
     """|/a/src/main/java/a/Other.java
        |package a;
-       |public class Other{
+       |public class <<Other>>{
        |
+       |  <<Other>> other;
+       |  public <<Other>>(){
+       |     
+       |  }
        |}
        |/a/src/main/scala/a/Main.scala
        |package a
@@ -456,7 +480,27 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val other = new <<Oth@@er>>()
        |}
        |""".stripMargin,
-    newName = "Renamed"
+    newName = "Renamed",
+  )
+
+  renamed(
+    "java-only",
+    """|/a/src/main/java/a/Other.java
+       |package a;
+       |public class <<Other>>{
+       |
+       |  <<Ot@@her>> other;
+       |  public <<Other>>(){
+       |     
+       |  }
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val other = new <<Oth@@er>>()
+       |}
+       |""".stripMargin,
+    newName = "Renamed",
   )
 
   renamed(
@@ -474,7 +518,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |""".stripMargin,
     newName = "otherRename",
     breakingChange = (str: String) => str.replaceAll("Int", "String"),
-    expectedError = true
+    expectedError = true,
   )
 
   renamed(
@@ -489,11 +533,11 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  case object Cat extends <<Animal>>
        |}
        |""".stripMargin,
-    "Tree"
+    "Tree",
   )
 
   renamed(
-    "macro2",
+    "macro1",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
@@ -504,22 +548,22 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  case object Cat extends Animal
        |}
        |""".stripMargin,
-    "Tree"
+    "Tree",
   )
 
   renamed(
-    "macro1",
+    "macro2",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
        |@JsonCodec
        |final case class <<Ma@@in2>>(name: String)
        |""".stripMargin,
-    "Tree"
+    "Tree",
   )
 
   renamed(
-    "macro2",
+    "macro3",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
@@ -535,7 +579,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val dog : <<An@@imal>> = <<Animal>>.Dog
        |}
        |""".stripMargin,
-    "Tree"
+    "Tree",
   )
 
   renamed(
@@ -547,7 +591,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  def m[A](implicit a: A): A = a
        |  m[Int]
        |}""".stripMargin,
-    newName = "anotherName"
+    newName = "anotherName",
   )
 
   renamed(
@@ -559,7 +603,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |}
        |""".stripMargin,
     newName = "Child",
-    fileRenames = Map.empty
+    fileRenames = Map.empty,
   )
 
   renamed(
@@ -575,7 +619,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val toRename = Main.<<toR@@ename>>
        |}
        |""".stripMargin,
-    newName = "other-rename"
+    newName = "other-rename",
   )
 
   renamed(
@@ -589,7 +633,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val toRename = Main.<<`to-R@@ename`>>
        |}
        |""".stripMargin,
-    newName = "`other-rename`"
+    newName = "`other-rename`",
   )
 
   renamed(
@@ -603,7 +647,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "other"
+    newName = "other",
   )
 
   renamed(
@@ -617,7 +661,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "greeting-!"
+    newName = "greeting-!",
   )
 
   renamed(
@@ -631,7 +675,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "other"
+    newName = "other",
   )
 
   renamed(
@@ -647,7 +691,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "other"
+    newName = "other",
   )
 
   // If renaming in VS Code, backticks are taken as part of the name
@@ -664,7 +708,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "`greeting`"
+    newName = "`greeting`",
   )
 
   renamed(
@@ -680,7 +724,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val name2 = Name(<<value>> = "44")
        |}
        |""".stripMargin,
-    newName = "name"
+    newName = "name",
   )
 
   renamed(
@@ -692,7 +736,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val name2 = new Name(<<value>> = "44")
        |}
        |""".stripMargin,
-    newName = "name"
+    newName = "name",
   )
 
   renamed(
@@ -706,7 +750,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val b = new CBD[<<ABC>>]
        |}
        |""".stripMargin,
-    newName = "Animal"
+    newName = "Animal",
   )
 
   renamed(
@@ -721,7 +765,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  val x = bar
        |}
        |""".stripMargin,
-    newName = "foo2"
+    newName = "foo2",
   )
 
   renamed(
@@ -745,7 +789,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
           |  }
           |}""".stripMargin
     ),
-    newName = "C"
+    newName = "C",
   )
 
   renamed(
@@ -763,7 +807,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "NewSymbol"
+    newName = "NewSymbol",
   )
 
   renamed(
@@ -781,11 +825,76 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  }
        |}
        |""".stripMargin,
-    newName = "NewSymbol"
+    newName = "NewSymbol",
   )
-  override protected def libraryDependencies: List[String] =
-    List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
 
-  override protected def compilerPlugins: List[String] =
-    List("org.scalamacros:::paradise:2.1.1")
+  renamed(
+    "variable",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  var <<v@@5>> = false
+       |
+       |  def f5: Boolean = {
+       |    <<v5>> = true
+       |    <<v5>> == true
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
+
+  renamed(
+    "variable-explicit1",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  var <<v@@5>> = false
+       |
+       |  def f5: Boolean = {
+       |    <<v5>>_=(true)
+       |    <<v5>> == true
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
+
+  renamed(
+    "variable-explicit2",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  var <<v5>> = false
+       |
+       |  def f5: Boolean = {
+       |    `<<v@@5>>_=`(true)
+       |    <<v5>> == true
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+  )
+
+  // NON COMPILING TESTS
+
+  renamed(
+    "not-compiling",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  def method() = {
+       |    List(1) + 2
+       |    val <<abc>>: Option[Int] = ???
+       |    <<ab@@c>>.map(_ + 1)
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+    expectedError = true,
+  )
+
+  override protected def libraryDependencies: List[String] =
+    List("org.scalatest::scalatest:3.2.12", "io.circe::circe-generic:0.14.1")
+
 }

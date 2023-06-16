@@ -1,0 +1,14 @@
+@startuml "test-explorer-server-notifications"
+skinparam maxMessageSize 400
+skinparam backgroundColor #F0F0F0
+
+Metals --> Metals : [Trigger] Build is imported and initial compilation has ended.
+Metals -> "language-client" :  workspace/executeClientCommand (metals.update-test-explorer, BuildTargetUpdate[]) 
+|||
+Metals --> Metals : [Trigger] File which contains tests was updated.
+Metals -> "language-client" :  workspace/executeClientCommand (metals.update-test-explorer, BuildTargetUpdate[]) 
+|||
+Metals --> Metals : [Trigger] File which contains tests was opened. \nTry to find test cases
+Metals -> "language-client" :  workspace/executeClientCommand (metals.update-test-explorer, BuildTargetUpdate[]) 
+
+@enduml

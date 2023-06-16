@@ -1,26 +1,18 @@
 package scala.meta.internal.pc
 
-import java.lang.Character.isJavaIdentifierPart
-import java.lang.Character.isJavaIdentifierStart
-
-import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
-import dotty.tools.dotc.transform.SymUtils.*
 
 object SemanticdbSymbols:
 
   def inverseSemanticdbSymbol(sym: String)(using ctx: Context): List[Symbol] =
     import scala.meta.internal.semanticdb.Scala.*
-
     val defns = ctx.definitions
     import defns.*
-
     def loop(s: String): List[Symbol] =
       if s.isNone || s.isRootPackage then RootPackage :: Nil
       else if s.isEmptyPackage then EmptyPackageVal :: Nil
@@ -42,31 +34,36 @@ object SemanticdbSymbols:
                 case Descriptor.None =>
                   Nil
                 case Descriptor.Type(value) =>
-                  val member = owner.info.decl(typeName(value)).symbol :: Nil
-                  if sym.is(JavaDefined) then
-                    owner.info.decl(termName(value)).symbol :: member
-                  else member
+                  val typeSym = owner.info.decl(typeName(value)).symbol
+                  // Semanticdb describes java static members as a reference from type
+                  //   while scalac puts static members into synthetic companion class - term
+                  // To avoid issues with resolving static members return type and term in case of Java type
+                  // Example:
+                  //   `java/nio/file/Files#exists()` - `exists` is a member of type `Files#`
+                  //   however in scalac this method is defined only in `module Files`
+                  if typeSym.is(JavaDefined) then
+                    typeSym :: owner.info.decl(termName(value)).symbol :: Nil
+                  else typeSym :: Nil
                 case Descriptor.Term(value) =>
                   owner.info.decl(termName(value)).symbol :: Nil
                 case Descriptor.Package(value) =>
                   owner.info.decl(termName(value)).symbol :: Nil
                 case Descriptor.Parameter(value) =>
                   // TODO - need to check how to implement this properly
-                  //owner.paramSymss.flatten.filter(_.name.containsName(value))
+                  // owner.paramSymss.flatten.filter(_.name.containsName(value))
                   Nil
                 case Descriptor.TypeParameter(value) =>
                   // TODO - need to check how to implement this properly
-                  //owner.typeParams.filter(_.name.containsName(value))
+                  // owner.typeParams.filter(_.name.containsName(value))
                   Nil
                 case Descriptor.Method(value, _) =>
-                  // TODO - need to check how to implement this properly
-                  // owner.info
-                  //   .decl(termName(value))
-                  //   .alternatives
-                  //   .iterator
-                  //   .filter(sym => semanticdbSymbol(sym) == s)
-                  //   .toList
-                  Nil
+                  owner.info
+                    .decl(termName(value))
+                    .alternatives
+                    .iterator
+                    .map(_.symbol)
+                    .filter(sym => symbolName(sym) == s)
+                    .toList
 
         parentSymbol.flatMap(tryMember)
     try loop(sym).filterNot(_ == NoSymbol)
@@ -89,7 +86,7 @@ object SemanticdbSymbols:
 
     def addName(name: Name) =
       val str = name.toString.unescapeUnicode
-      if str.isJavaIdent then b append str
+      if str.nonEmpty && str.isJavaIdent then b append str
       else b append '`' append str append '`'
 
     def addOwner(owner: Symbol): Unit =
@@ -102,11 +99,15 @@ object SemanticdbSymbols:
           decls0 ++ sym.owner.companionClass.info.decls.lookupAll(sym.name)
         else decls0
       end decls
-      val alts = decls.filter(_.isOneOf(Method | Mutable)).toList.reverse
+      // private java constructors do not have a symbol created
+      val alts = decls
+        .filter(d => d.isOneOf(Method | Mutable) && !d.is(Private))
+        .toList
+        .reverse
       def find(filter: Symbol => Boolean) = alts match
         case notSym :: rest if !filter(notSym) =>
-          val idx = rest.indexWhere(filter).ensuring(_ >= 0)
-          b.append('+').append(idx + 1)
+          val idx = rest.indexWhere(filter)
+          if idx >= 0 then b.append('+').append(idx + 1)
         case _ =>
       end find
       val sig = sym.signature
@@ -121,7 +122,7 @@ object SemanticdbSymbols:
         b.append('('); addName(sym.name); b.append(')')
       else if sym.isRoot then b.append(Symbols.RootPackage)
       else if sym.isEmptyPackage then b.append(Symbols.EmptyPackage)
-      else if (sym.isScala2PackageObject) then
+      else if sym.isScala2PackageObject then
         b.append(Symbols.PackageObjectDescriptor)
       else
         addName(sym.name)
@@ -133,7 +134,7 @@ object SemanticdbSymbols:
           b.append('('); addOverloadIdx(sym); b.append(").")
         else b.append('.')
 
-    if !sym.isRoot then addOwner(sym.owner)
+    if !sym.isRoot && sym != NoSymbol then addOwner(sym.owner)
     addDescriptor(sym)
   end addSymName
 

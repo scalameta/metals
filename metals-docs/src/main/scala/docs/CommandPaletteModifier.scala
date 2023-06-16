@@ -10,7 +10,7 @@ class CommandPaletteModifier extends StringModifier {
   override def process(
       editor: String,
       input: Input,
-      reporter: Reporter
+      reporter: Reporter,
   ): String = {
     s"""
        |### Manually trigger build import

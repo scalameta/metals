@@ -11,18 +11,23 @@ import scala.{meta => m}
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SemanticdbFeatureProvider
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.mtags.Md5Fingerprints
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.HoverMarkup
 import scala.meta.internal.semanticdb.MethodSignature
+import scala.meta.internal.semanticdb.Scala.Descriptor.Method
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
@@ -41,13 +46,12 @@ final class SyntheticsDecorationProvider(
     client: DecorationClient,
     fingerprints: Md5Fingerprints,
     charset: Charset,
-    diagnostics: Diagnostics,
     focusedDocument: () => Option[AbsolutePath],
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
-    trees: Trees
-)(implicit ec: ExecutionContext) {
-
+    trees: Trees,
+)(implicit ec: ExecutionContext)
+    extends SemanticdbFeatureProvider {
   private object Document {
     /* We update it with each compilation in order not read the same file on
      * each change. When typing documents stay the same most of the time.
@@ -59,88 +63,92 @@ final class SyntheticsDecorationProvider(
     def set(doc: TextDocument): Unit = document.set(doc)
   }
 
-  def publishSynthetics(path: AbsolutePath): Future[Unit] = {
-
-    // If focused document is not supported we can't be sure what is currently open
-    def isFocusedDocument =
-      focusedDocument().contains(path) || !clientConfig.isDidFocusProvider()
-
-    /**
-     * Worksheets currently do not use semanticdb, which is why this will not work.
-     * If at any time worksheets will support it, we need to make sure that the
-     * evaluation will not be replaced with implicit decorations.
-     */
-    if (!path.isWorksheet && isFocusedDocument) {
-      val textDocument = currentDocument(path)
-      textDocument match {
-        case Some(doc) =>
-          Future(publishSyntheticDecorations(path, doc))
-        case _ =>
-          Future.successful(())
-      }
-
-    } else
-      Future.successful(())
-  }
-
-  def onChange(textDocument: TextDocuments, path: AbsolutePath): Unit = {
-    for {
-      focused <- focusedDocument()
-      if path == focused || !clientConfig.isDidFocusProvider()
-      textDoc <- enrichWithText(textDocument.documents.headOption, path)
-    } {
-      publishSyntheticDecorations(path, textDoc)
+  /**
+   * Publish synthetic decorations for path.
+   * @param path path of the file to publish synthetic decorations for
+   * @param isRefresh we don't want to send anything if all flags are disabled unless
+   * it's a refresh, in which case we might want to remove decorations.
+   */
+  def publishSynthetics(
+      path: AbsolutePath,
+      isRefresh: Boolean = false,
+  ): Future[Unit] = Future {
+    if (isRefresh && !areSyntheticsEnabled) publish(path, Nil)
+    else if (areSyntheticsEnabled) {
+      val decorations = syntheticDecorations(path)
+      publish(path, decorations)
     }
   }
 
-  def refresh(): Unit = {
-    focusedDocument().foreach(publishSynthetics)
+  override def onDelete(path: SemanticdbPath): Unit = ()
+  override def reset(): Unit = ()
+
+  override def onChange(
+      textDocument: TextDocuments,
+      path: AbsolutePath,
+  ): Unit = {
+    for {
+      focused <- focusedDocument()
+      if path == focused || !clientConfig.isDidFocusProvider()
+      if areSyntheticsEnabled
+      textDoc <- enrichWithText(textDocument.documents.headOption, path)
+    } {
+      publish(path, decorations(path, textDoc))
+    }
+  }
+
+  def refresh(): Future[Unit] = {
+    focusedDocument() match {
+      case Some(doc) => publishSynthetics(doc, isRefresh = true)
+      case None => Future.unit
+    }
   }
 
   def addSyntheticsHover(
       params: HoverExtParams,
-      pcHover: Option[l.Hover]
+      pcHover: Option[l.Hover],
   ): Option[l.Hover] =
-    if (isSyntheticsEnabled) {
+    if (areSyntheticsEnabled) {
       val path = params.textDocument.getUri().toAbsolutePath
-      val line = params.getPosition.getLine()
+      val position = params.getPosition
+      val line = position.getLine()
+      val isInlineDecorationProvider = clientConfig.isInlineDecorationProvider()
       val newHover = currentDocument(path) match {
         case Some(textDocument) =>
           val edit = buffer.tokenEditDistance(path, textDocument.text, trees)
           val printer = new SemanticdbTreePrinter(
             isHover = true,
-            toHoverString(textDocument),
+            toHoverString(textDocument, params.textDocument.getUri()),
             PrinterSymtab.fromTextDocument(textDocument),
             clientConfig.icons().rightArrow,
-            clientConfig.icons().ellipsis
           )
           val syntheticsAtLine = for {
             synthetic <- textDocument.synthetics
             range <- synthetic.range.toIterable
             currentRange <- edit.toRevisedStrict(range).toIterable
-            lspRange = currentRange.toLSP
-            if lspRange.getEnd.getLine == line
-
+            lspRange = currentRange.toLsp
+            if range.encloses(position, includeLastCharacter = true) ||
+              !isInlineDecorationProvider // in this case we want to always show the full line
             (fullSnippet, range) <- printer
               .printSyntheticInfo(
                 textDocument,
                 synthetic,
                 userConfig(),
-                isInlineProvider = clientConfig.isInlineDecorationProvider()
+                isInlineProvider = clientConfig.isInlineDecorationProvider(),
               )
               .toIterable
+            if range.endLine == line
             realRange <- edit.toRevisedStrict(range).toIterable
-            lspRealRange = realRange.toLSP
+            lspRealRange = realRange.toLsp
             if lspRealRange.getEnd.getLine == line
           } yield (lspRealRange, fullSnippet)
 
           if (syntheticsAtLine.size > 0) {
-            if (clientConfig.isInlineDecorationProvider()) {
+            if (isInlineDecorationProvider) {
               createHoverAtPoint(
-                path,
                 syntheticsAtLine,
                 pcHover,
-                params.getPosition
+                params.getPosition,
               )
             } else {
               createHoverAtLine(path, syntheticsAtLine, pcHover).orElse(
@@ -157,15 +165,49 @@ final class SyntheticsDecorationProvider(
       pcHover
     }
 
-  private def isSyntheticsEnabled: Boolean = {
+  private def syntheticDecorations(
+      path: AbsolutePath
+  ): Seq[DecorationOptions] = {
+
+    // If focused document is not supported we can't be sure what is currently open
+    def isFocusedDocument =
+      focusedDocument().contains(path) || !clientConfig.isDidFocusProvider()
+
+    /**
+     * Worksheets currently do not use semanticdb, which is why this will not work.
+     * If at any time worksheets will support it, we need to make sure that the
+     * evaluation will not be replaced with implicit decorations.
+     */
+    currentDocument(path) match {
+      case Some(doc) if isFocusedDocument =>
+        decorations(path, doc)
+      case _ =>
+        Nil
+    }
+  }
+
+  private def publish(
+      path: AbsolutePath,
+      decorations: Seq[DecorationOptions],
+  ): Unit = {
+    val params =
+      new PublishDecorationsParams(
+        path.toURI.toString(),
+        decorations.toArray,
+        if (clientConfig.isInlineDecorationProvider()) true else null,
+      )
+
+    client.metalsPublishDecorations(params)
+  }
+
+  private def areSyntheticsEnabled: Boolean = {
     userConfig().showImplicitArguments || userConfig().showInferredType || userConfig().showImplicitConversionsAndClasses
   }
 
   private def createHoverAtPoint(
-      path: AbsolutePath,
       syntheticsAtLine: Seq[(l.Range, String)],
       pcHover: Option[l.Hover],
-      position: l.Position
+      position: l.Position,
   ): Option[l.Hover] = {
     val interestingSynthetics = syntheticsAtLine.collect {
       case (range, text)
@@ -176,11 +218,8 @@ final class SyntheticsDecorationProvider(
     if (interestingSynthetics.nonEmpty)
       addToHover(
         pcHover,
-        "**Synthetics**:\n"
-          +
-            HoverMarkup(
-              interestingSynthetics.mkString("\n")
-            )
+        "**Synthetics**:\n\n"
+          + interestingSynthetics.mkString("\n"),
       )
     else None
   }
@@ -188,7 +227,7 @@ final class SyntheticsDecorationProvider(
   private def createHoverAtLine(
       path: AbsolutePath,
       syntheticsAtLine: Seq[(l.Range, String)],
-      pcHover: Option[l.Hover]
+      pcHover: Option[l.Hover],
   ): Option[l.Hover] =
     Try {
       val line = syntheticsAtLine.head._1.getEnd().getLine()
@@ -202,7 +241,7 @@ final class SyntheticsDecorationProvider(
   private def createLine(
       syntheticsAtLine: Seq[(l.Range, String)],
       pcHover: Option[l.Hover],
-      lineText: String
+      lineText: String,
   ) = {
     val withEnd = syntheticsAtLine
       .map { case (range, str) =>
@@ -219,15 +258,13 @@ final class SyntheticsDecorationProvider(
     addToHover(
       pcHover,
       "**With synthetics added**:\n"
-        + HoverMarkup(
-          lineWithDecorations.trim()
-        )
+        + HoverMarkup(lineWithDecorations.trim()),
     )
   }
 
   private def addToHover(
       pcHover: Option[l.Hover],
-      text: String
+      text: String,
   ): Option[l.Hover] = {
     // Left is not handled currently, but we do not use it in Metals
     if (pcHover.exists(_.getContents().isLeft())) {
@@ -241,7 +278,7 @@ final class SyntheticsDecorationProvider(
         new l.Hover(
           new l.MarkupContent(
             l.MarkupKind.MARKDOWN,
-            previousContent + "\n" + text
+            previousContent + "\n" + text,
           )
         )
       )
@@ -261,7 +298,7 @@ final class SyntheticsDecorationProvider(
 
   private def enrichWithText(
       textDocument: Option[s.TextDocument],
-      path: AbsolutePath
+      path: AbsolutePath,
   ): Option[TextDocument] = {
     for {
       doc <- textDocument
@@ -271,39 +308,99 @@ final class SyntheticsDecorationProvider(
     } yield docWithText
   }
 
-  private def toSymbolName(symbol: String, textDoc: TextDocument): String = {
-    if (symbol.isLocal)
-      textDoc.symbols
-        .find(_.symbol == symbol)
-        .map(_.displayName)
-        .getOrElse(symbol)
-    else symbol
+  private def localSymbolName(symbol: String, textDoc: TextDocument): String = {
+    textDoc.symbols
+      .find(_.symbol == symbol)
+      .map(_.displayName)
+      .getOrElse(symbol)
   }
 
-  private def toHoverString(textDoc: TextDocument)(symbol: String): String = {
-    toSymbolName(symbol, textDoc)
-      .replace("/", ".")
-      .stripSuffix(".")
-      .stripSuffix("#")
-      .stripPrefix("_empty_.")
-      .replace("#", ".")
-      .replace("()", "")
+  private def fullyQualifiedName(
+      symbol: String,
+      textDoc: TextDocument,
+  ): String = {
+    if (symbol.isLocal) localSymbolName(symbol, textDoc)
+    else {
+      symbol
+        .replace("/", ".")
+        .stripSuffix(".")
+        .stripSuffix("#")
+        .stripPrefix("_empty_.")
+        .replace("#", ".")
+        .replaceAll(raw"\(\+?\d*\)", "")
+    }
+  }
+
+  private def toHoverString(textDoc: TextDocument, uri: String)(
+      symbol: String
+  ): String = {
+    val link =
+      clientConfig
+        .commandInHtmlFormat()
+        .flatMap(gotoLink(symbol, textDoc, uri, _))
+    link match {
+      case Some(link) =>
+        val simpleName =
+          if (symbol.isLocal) localSymbolName(symbol, textDoc)
+          else symbol.desc.name.value
+        s"[$simpleName]($link)"
+      case _ => fullyQualifiedName(symbol, textDoc)
+    }
+  }
+
+  private def gotoLink(
+      symbol: String,
+      textDocument: s.TextDocument,
+      uri: String,
+      format: CommandHTMLFormat,
+  ): Option[String] = {
+    if (symbol.isLocal) {
+      textDocument.occurrences.collectFirst {
+        case s.SymbolOccurrence(Some(range), `symbol`, role)
+            if role.isDefinition =>
+          gotoLocationUsingUri(uri, range, format)
+      }
+    } else {
+      Some(gotoSymbolUsingUri(symbol, format))
+    }
+  }
+
+  private def gotoLocationUsingUri(
+      uri: String,
+      range: s.Range,
+      format: CommandHTMLFormat,
+  ): String = {
+    val location = ClientCommands.WindowLocation(uri, range.toLsp)
+    ClientCommands.GotoLocation.toCommandLink(location, format)
+  }
+
+  private def gotoSymbolUsingUri(
+      symbol: String,
+      format: CommandHTMLFormat,
+  ): String = {
+    ServerCommands.GotoSymbol.toCommandLink(symbol, format)
   }
 
   private def toDecorationString(
       textDoc: TextDocument
-  )(symbol: String): String = {
+  )(symbol: String): String =
     if (symbol.isLocal)
       textDoc.symbols
         .find(_.symbol == symbol)
         .map(_.displayName)
-        .getOrElse(symbol)
-    else symbol.desc.name.value
-  }
+        .getOrElse("_")
+    else
+      symbol.desc match {
+        // for contructors we print the class name
+        case Method("<init>", disambiguator) =>
+          val classSymbol = symbol.stripSuffix("`<init>`" + disambiguator + ".")
+          "new " ++ classSymbol.desc.name.value
+        case symDesc => symDesc.name.value
+      }
 
   private def decorationOptions(
       lspRange: l.Range,
-      decorationText: String
+      decorationText: String,
   ) = {
     // We don't add hover due to https://github.com/microsoft/vscode/issues/105302
     new DecorationOptions(
@@ -313,16 +410,16 @@ final class SyntheticsDecorationProvider(
           decorationText,
           color = "grey",
           fontStyle = "italic",
-          opacity = 0.7
+          opacity = 0.7,
         )
-      )
+      ),
     )
   }
 
-  private def publishSyntheticDecorations(
+  private def decorations(
       path: AbsolutePath,
-      textDocument: TextDocument
-  ): Unit = {
+      textDocument: TextDocument,
+  ): Seq[DecorationOptions] = {
     if (clientConfig.isInlineDecorationProvider()) {
 
       lazy val edit = buffer.tokenEditDistance(path, textDocument.text, trees)
@@ -332,7 +429,6 @@ final class SyntheticsDecorationProvider(
         toDecorationString(textDocument),
         PrinterSymtab.fromTextDocument(textDocument),
         clientConfig.icons().rightArrow,
-        clientConfig.icons().ellipsis
       )
 
       val decorations = for {
@@ -341,31 +437,26 @@ final class SyntheticsDecorationProvider(
           .printSyntheticInfo(
             textDocument,
             synthetic,
-            userConfig()
+            userConfig(),
           )
           .toIterable
         currentRange <- edit.toRevisedStrict(range).toIterable
-        lspRange = currentRange.toLSP
+        lspRange = currentRange.toLsp
       } yield decorationOptions(lspRange, decoration)
 
       val typDecorations =
         if (userConfig().showInferredType)
           typeDecorations(path, textDocument, decorationPrinter)
         else Nil
-      val params =
-        new PublishDecorationsParams(
-          path.toURI.toString(),
-          (decorations ++ typDecorations).toArray
-        )
-
-      client.metalsPublishDecorations(params)
-    }
+      decorations ++ typDecorations
+    } else
+      Nil
   }
 
   private def typeDecorations(
       path: AbsolutePath,
       textDocument: TextDocument,
-      decorationPrinter: SemanticdbTreePrinter
+      decorationPrinter: SemanticdbTreePrinter,
   ) = {
 
     val methodPositions = mutable.Map.empty[s.Range, s.Range]
@@ -448,19 +539,20 @@ final class SyntheticsDecorationProvider(
     } yield pos
 
     val allMissingTypeRanges = declarationsWithoutTypes.toSet
+    val uri = path.toURI.toString
     val typeDecorations = for {
       tree <- trees.get(path).toIterable
-      textDocumentInput = Input.VirtualFile(textDocument.uri, textDocument.text)
-      treeInput = Input.VirtualFile(textDocument.uri, tree.pos.input.text)
+      textDocumentInput = Input.VirtualFile(uri, textDocument.text)
+      treeInput = Input.VirtualFile(uri, tree.pos.input.text)
       semanticDbToTreeEdit = TokenEditDistance(
         textDocumentInput,
         treeInput,
-        trees
+        trees,
       )
       treeToBufferEdit = buffer.tokenEditDistance(
         path,
         tree.pos.input.text,
-        trees
+        trees,
       )
       occ <- textDocument.occurrences
       range <- occ.range.toIterable
@@ -470,7 +562,7 @@ final class SyntheticsDecorationProvider(
       decorationPosition = methodPositions.getOrElse(treeRange, treeRange)
       realPosition <- treeToBufferEdit.toRevisedStrict(decorationPosition)
     } yield {
-      val lspRange = realPosition.toLSP
+      val lspRange = realPosition.toLsp
       signature.signature match {
         case m: MethodSignature =>
           val decoration = ": " + decorationPrinter.printType(m.returnType)

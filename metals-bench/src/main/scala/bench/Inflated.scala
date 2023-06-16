@@ -30,12 +30,12 @@ object Inflated {
     FileIO.withJarFileSystem(
       file,
       create = false,
-      close = true
+      close = true,
     ) { root =>
       var lines = 0L
       val buf = List.newBuilder[Input.VirtualFile]
       FileIO.listAllFilesRecursively(root).foreach { file =>
-        val path = file.toString()
+        val path = file.toURI.toString()
         val text = FileIO.slurp(file, StandardCharsets.UTF_8)
         lines += text.linesIterator.length
         buf += Input.VirtualFile(path, text)

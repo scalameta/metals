@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 object BazelDigest extends Digestable {
   override protected def digestWorkspace(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
   ): Boolean = {
     workspace.listRecursive.forall {
       case file if file.filename == "BUILD" || file.filename == "WORKSPACE" =>

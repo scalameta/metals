@@ -2,10 +2,21 @@ package tests
 
 import java.nio.file.Files
 
+import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.RecursivelyDelete
 
+import org.eclipse.lsp4j.DidChangeWatchedFilesParams
+import org.eclipse.lsp4j.FileChangeType
+import org.eclipse.lsp4j.FileEvent
+
 class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
-  test("basic") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
+
+  test("basic", withoutVirtualDocs = true, maxRetry = 3) {
     cleanCompileCache("a")
     cleanCompileCache("b")
     cleanCompileCache("c")
@@ -53,7 +64,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
            |package a
            |object A
            |object ScalaFileEvent
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = {
         // Should generate an event
@@ -62,7 +73,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
           s"""
              |package a;
              |public class JavaFileEvent {}
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
       _ = {
@@ -73,7 +84,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
              |package d
              |object D
              |object SingleFileEvent
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
       _ = {
@@ -86,7 +97,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
           s"""
              |#include <stdio.h>
              |void main(char **args) { printf("Hello World!\n"); }
-             |""".stripMargin
+             |""".stripMargin,
         )
       }
       _ <- server.didOpen("b/src/main/scala/B.scala")
@@ -104,7 +115,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
            |  println/*Predef.scala*/(new a.JavaFileEvent/*JavaFileEvent.java:2*/)
            |  println/*Predef.scala*/(d.SingleFileEvent/*D.scala:3*/)
            |}
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ = assertIsNotDirectory(workspace.resolve("a/src/main/scala-2.12"))
       _ = assertIsNotDirectory(workspace.resolve("b/src/main/scala-2.12"))
@@ -112,6 +123,53 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
       _ = assertIsNotDirectory(workspace.resolve("b/src/main/java"))
       _ = assertIsNotDirectory(workspace.resolve("c/src/main/java"))
       _ = assertIsNotDirectory(workspace.resolve("a/non/existent/one/e"))
+    } yield ()
+  }
+
+  test("didChangeWatchedFiles-notification") {
+    cleanWorkspace()
+    FileLayout.fromString(
+      """|/metals.json
+         |{
+         |  "a": { }
+         |}
+         |/a/src/main/scala/A.scala
+         |package a
+         |object A
+         |/buildd.sbt
+         |
+         |""".stripMargin,
+      workspace,
+    )
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = Files.delete(workspace.resolve("buildd.sbt").toNIO)
+      _ = FileLayout.fromString(
+        s"""|/build.sbt
+            |""".stripMargin,
+        workspace,
+      )
+      _ <- server.fullServer
+        .didChangeWatchedFiles(
+          new DidChangeWatchedFilesParams(
+            List(
+              new FileEvent(
+                workspace.resolve("buildd.sbt").toURI.toString(),
+                FileChangeType.Deleted,
+              ),
+              new FileEvent(
+                workspace.resolve("build.sbt").toURI.toString(),
+                FileChangeType.Created,
+              ),
+            ).asJava
+          )
+        )
+        .asScala
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.ImportBuild.params("sbt").getMessage(),
+      )
     } yield ()
   }
 }

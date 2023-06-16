@@ -1,4 +1,4 @@
-/*example(Package):19*/package example
+/*example(Package):25*/package example
 
 import io.circe.derivation.annotations.JsonCodec
 
@@ -10,10 +10,16 @@ case class MacroAnnotation(
   /*example.MacroAnnotation#method(Method):10*/def method = 42
 }
 
-/*example.MacroAnnotations(Module):19*/object MacroAnnotations {
+/*example.MacroAnnotations(Module):25*/object MacroAnnotations {
   import scala.meta._
   // IntelliJ has never managed to goto definition for the inner classes from Trees.scala
   // due to the macro annotations.
-  /*example.MacroAnnotations.x(Constant):17*/val x: Defn.Class = Defn.Class(null, null, null, null, null)
-  /*example.MacroAnnotations.y(Constant):18*/val y: Mod.Final = Mod.Final()
+  /*example.MacroAnnotations.x(Constant):23*/val x: Defn.Class = Defn.Class(
+    Nil,
+    Type.Name("test"),
+    Nil,
+    Ctor.Primary(Nil, Term.Name("this"), Nil),
+    Template(Nil, Nil, Self(Name.Anonymous(), None), Nil),
+  )
+  /*example.MacroAnnotations.y(Constant):24*/val y: Mod.Final = Mod.Final()
 }

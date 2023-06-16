@@ -43,7 +43,7 @@ class SelectionRangeProvider(
       val bareRanges = lastVisitedParentTrees
         .map { tree: Tree =>
           val selectionRange = new SelectionRange()
-          selectionRange.setRange(tree.pos.toLSP)
+          selectionRange.setRange(tree.pos.toLsp)
           selectionRange
         }
 
@@ -64,7 +64,7 @@ class SelectionRangeProvider(
     //   a <- >>region>>Some(1)<<region<<
     // } yield a
     //
-    //Apply(
+    // Apply(
     //  Select(Apply(Ident(Some), List(Literal(Constant(1)))), flatMap), <-- This range
     //  List(
     //    Function(
@@ -75,7 +75,7 @@ class SelectionRangeProvider(
     //      )
     //    )
     //  )
-    //)
+    // )
     if (child.getRange() == parent.getRange()) {
       parent
     } else {

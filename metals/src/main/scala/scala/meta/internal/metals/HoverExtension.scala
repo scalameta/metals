@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 case class HoverExtParams(
     textDocument: TextDocumentIdentifier,
     @Nullable position: Position = null,
-    @Nullable range: Range = null
+    @Nullable range: Range = null,
 ) {
   def getPosition: Position =
     if (position != null) position

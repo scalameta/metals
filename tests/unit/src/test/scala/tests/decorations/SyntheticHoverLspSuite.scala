@@ -28,7 +28,7 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
            |    hello()
            |  }
            |  
-           |  "foo".map(c => c.toUpper)
+           |  "foo".map(c => c.toDouble)
            |}
            |""".stripMargin
       )
@@ -49,16 +49,16 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
            |```scala
            |hello()(com.example.Main.andy, boston)
            |```
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/com/example/Main.scala",
-        "  \"foo\".map(c @@=> c.toUpper)",
+        "  \"foo\".map(c @@=> c.toDouble)",
         """|**With synthetics added**:
            |```scala
-           |scala.Predef.augmentString("foo").map[scala.Char, scala.Predef.String](c => scala.LowPriorityImplicits.charWrapper(c).toUpper)(scala.Predef.StringCanBuildFrom)
+           |scala.Predef.augmentString("foo").map[scala.Double](c => c.toDouble)
            |```
-           |""".stripMargin
+           |""".stripMargin,
       )
     } yield ()
   }

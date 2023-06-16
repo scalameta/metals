@@ -7,19 +7,23 @@ object SaveExpect {
       new DefinitionScala3Suite,
       new SemanticdbScala2Suite,
       new SemanticdbScala3Suite,
-      new MtagsSuite,
-      new ToplevelSuite,
+      new MtagsScala2Suite,
+      new MtagsScala3Suite,
+      new ToplevelsScala2Suite,
+      new ToplevelsScala3Suite,
       new DocumentSymbolScala2Suite,
       new DocumentSymbolScala3Suite,
       new FoldingRangeScala2Suite,
       new FoldingRangeScala3Suite,
-      new WorkspaceSymbolExpectSuite
+      new WorkspaceSymbolExpectSuite,
+      new SemanticTokensExpectSuite,
     ).foreach { suite =>
       val header = suite.suiteName.length + 2
       println("=" * header)
       println("= " + suite.suiteName)
       println("=" * header)
       suite.saveExpect()
+      suite.afterAll()
     }
   }
 }

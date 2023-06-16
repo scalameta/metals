@@ -8,6 +8,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.io.AbsolutePath
 
@@ -19,20 +20,23 @@ final class Compilations(
     classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
+    refreshTestSuites: () => Unit,
+    afterCompilation: () => Unit,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
-    compileWorksheets: Seq[AbsolutePath] => Future[Unit]
+    compileWorksheets: Seq[AbsolutePath] => Future[Unit],
+    onStartCompilation: () => Unit,
 )(implicit ec: ExecutionContext) {
 
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
   private val compileBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
-      Map[BuildTargetIdentifier, b.CompileResult]
+      Map[BuildTargetIdentifier, b.CompileResult],
     ](compile)
   private val cascadeBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
-      Map[BuildTargetIdentifier, b.CompileResult]
+      Map[BuildTargetIdentifier, b.CompileResult],
     ](compile)
   def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
@@ -56,7 +60,8 @@ final class Compilations(
 
   def compilationFinished(
       source: AbsolutePath
-  ): Future[Unit] = compilationFinished(expand(source).toSeq)
+  ): Future[Unit] =
+    expand(source).flatMap(targets => compilationFinished(targets.toSeq))
 
   def compileTarget(
       target: b.BuildTargetIdentifier
@@ -75,22 +80,21 @@ final class Compilations(
   def compileFile(path: AbsolutePath): Future[b.CompileResult] = {
     def empty = new b.CompileResult(b.StatusCode.CANCELLED)
     for {
-      result <- {
-        expand(path) match {
-          case None => Future.successful(empty)
-          case Some(target) =>
-            compileBatch(target)
-              .map(res => res.getOrElse(target, empty))
-        }
+      targetOpt <- expand(path)
+      result <- targetOpt match {
+        case None => Future.successful(empty)
+        case Some(target) =>
+          compileBatch(target)
+            .map(res => res.getOrElse(target, empty))
       }
       _ <- compileWorksheets(Seq(path))
     } yield result
   }
 
   def compileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
-    val targets = expand(paths)
     for {
-      result <- compileBatch(targets)
+      targets <- expand(paths)
+      _ <- compileBatch(targets)
       _ <- compileWorksheets(paths)
     } yield ()
   }
@@ -103,13 +107,23 @@ final class Compilations(
 
   def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[Unit] =
     for {
-      _ <- cascadeCompile(expand(paths))
+      targets <- expand(paths)
+      _ <- cascadeCompile(targets)
       _ <- compileWorksheets(paths)
     } yield ()
 
   def cancel(): Unit = {
-    compileBatch.cancelCurrentRequest()
-    cascadeBatch.cancelCurrentRequest()
+    cascadeBatch.cancelAll()
+    compileBatch.cancelAll()
+    buildTargets.all
+      .flatMap { target =>
+        buildTargets.buildServerOf(target.getId())
+      }
+      .distinct
+      .foreach { conn =>
+        conn.cancelCompilations()
+      }
+
   }
 
   def recompileAll(): Future[Unit] = {
@@ -117,7 +131,7 @@ final class Compilations(
 
     def clean(
         connectionOpt: Option[BuildServerConnection],
-        targetIds: Seq[BuildTargetIdentifier]
+        targetIds: Seq[BuildTargetIdentifier],
     ): Future[Unit] = {
       val cleaned = connectionOpt match {
         case None =>
@@ -140,6 +154,7 @@ final class Compilations(
 
     val groupedTargetIds = buildTargets.allBuildTargetIds
       .groupBy(buildTargets.buildServerOf(_))
+      .toSeq
     Future
       .traverse(groupedTargetIds) { case (connectionOpt, targetIds) =>
         clean(connectionOpt, targetIds)
@@ -147,25 +162,29 @@ final class Compilations(
       .ignoreValue
   }
 
-  private def expand(path: AbsolutePath): Option[b.BuildTargetIdentifier] = {
+  private def expand(
+      path: AbsolutePath
+  ): Future[Option[b.BuildTargetIdentifier]] = {
     val isCompilable =
       (path.isScalaOrJava || path.isSbt) &&
         !path.isDependencySource(workspace())
 
     if (isCompilable) {
-      val targetOpt = buildTargets.inverseSources(path)
-
-      if (targetOpt.isEmpty) {
-        scribe.warn(s"no build target for: $path")
+      val targetOpt = buildTargets.inverseSourcesBsp(path)
+      targetOpt.foreach {
+        case tgts if tgts.isEmpty => scribe.warn(s"no build target for: $path")
+        case _ =>
       }
 
       targetOpt
     } else
-      None
+      Future.successful(None)
   }
 
-  def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] =
-    paths.flatMap(expand(_)).distinct
+  def expand(paths: Seq[AbsolutePath]): Future[Seq[b.BuildTargetIdentifier]] = {
+    val expansions = paths.map(expand)
+    Future.sequence(expansions).map(_.flatten)
+  }
 
   private def compile(
       targets: Seq[b.BuildTargetIdentifier]
@@ -179,8 +198,9 @@ final class Compilations(
         buildServer
       }
       .map { case (buildServer, targets) =>
-        val targets0 = targets.map { case (_, target) =>
-          target
+        val targets0 = targets.collect {
+          case (_, target) if buildTargets.canCompile(target) =>
+            target
         }
         (buildServer, targets0)
       }
@@ -202,25 +222,31 @@ final class Compilations(
         CancelableFuture.sequence(futures).map(_.flatten.toMap)
     }
   }
-
   private def compile(
       connection: BuildServerConnection,
-      targets: Seq[b.BuildTargetIdentifier]
+      targets: Seq[b.BuildTargetIdentifier],
   ): CancelableFuture[b.CompileResult] = {
     val params = new b.CompileParams(targets.asJava)
     targets.foreach(target => isCompiling(target) = true)
     val compilation = connection.compile(params)
 
+    onStartCompilation()
+
     val result = compilation.asScala
       .andThen { case result =>
         updateCompiledTargetState(result)
+        afterCompilation()
 
         // See https://github.com/scalacenter/bloop/issues/1067
-        classes.rebuildIndex(targets).foreach { _ =>
-          if (targets.exists(isCurrentlyFocused)) {
-            languageClient.refreshModel()
-          }
-        }
+        classes.rebuildIndex(
+          targets,
+          () => {
+            refreshTestSuites()
+            if (targets.exists(isCurrentlyFocused)) {
+              languageClient.refreshModel()
+            }
+          },
+        )
       }
 
     CancelableFuture(result, Cancelable(() => compilation.cancel(false)))

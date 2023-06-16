@@ -3,10 +3,12 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.sql.Connection
 import java.sql.DriverManager
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.Digests
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 
@@ -16,8 +18,10 @@ import org.flywaydb.core.api.FlywayException
 final class Tables(
     workspace: AbsolutePath,
     time: Time,
-    clientConfig: ClientConfiguration
 ) extends Cancelable {
+
+  import Tables.ConnectionState
+
   val jarSymbols = new JarTopLevels(() => connection)
   val digests =
     new Digests(() => connection, time)
@@ -31,20 +35,43 @@ final class Tables(
     new ChosenBuildServers(() => connection, time)
   val buildTool =
     new ChosenBuildTool(() => connection)
+  val fingerprints =
+    new Fingerprints(() => connection)
 
-  def connect(): Unit = {
-    this._connection =
-      if (clientConfig.initialConfig.isAutoServer) tryAutoServer()
-      else tryAutoServer()
-  }
-  def cancel(): Unit = connection.close()
-  private var _connection: Connection = _
-  private def connection: Connection = {
-    if (_connection == null || _connection.isClosed) {
-      connect()
+  private val ref: AtomicReference[ConnectionState] =
+    new AtomicReference(ConnectionState.Empty)
+
+  def connect(): Connection = {
+    ref.get() match {
+      case empty @ ConnectionState.Empty =>
+        if (ref.compareAndSet(empty, ConnectionState.InProgress)) {
+          val conn = tryAutoServer()
+          ref.set(ConnectionState.Connected(conn))
+          conn
+        } else
+          connect()
+      case Tables.ConnectionState.InProgress =>
+        Thread.sleep(100)
+        connect()
+      case Tables.ConnectionState.Connected(conn) =>
+        conn
     }
-    _connection
   }
+
+  def cancel(): Unit = {
+    ref.get() match {
+      case v @ ConnectionState.Connected(conn) =>
+        if (ref.compareAndSet(v, ConnectionState.Empty)) {
+          conn.close()
+        }
+      case ConnectionState.InProgress =>
+        Thread.sleep(100)
+        cancel()
+      case _ =>
+    }
+  }
+
+  private def connection: Connection = connect()
 
   // The try/catch dodge-ball court in these methods is not glamorous, I'm sure it can be refactored for more
   // readability and extensibility but it seems to get the job done for now. The most important goals are:
@@ -76,7 +103,7 @@ final class Tables(
             s"This means you may be redundantly asked to execute 'Import build', even if it's not needed. " +
             s"Also, code navigation will not work for existing files in the .metals/readonly/ directory. " +
             s"To fix this problem, make sure you only have one running Metals server in the directory '$workspace'.",
-          e
+          e,
         )
 
         RecursivelyDelete(workspace.resolve(Directories.readonly))
@@ -96,12 +123,18 @@ final class Tables(
       if (isAutoServer) ";AUTO_SERVER=TRUE"
       else ""
     val dbfile = workspace.resolve(".metals").resolve("metals")
+    // from "h2" % "2.0.206" the only option is the MVStore, which uses `metals.mv.db` file
+    val oldDbfile = workspace.resolve(".metals").resolve("metals.h2.db")
+    if (oldDbfile.exists) {
+      scribe.info(s"Deleting old database format $oldDbfile")
+      oldDbfile.delete()
+    }
     Files.createDirectories(dbfile.toNIO.getParent)
     System.setProperty(
       "h2.bindAddress",
-      System.getProperty("h2.bindAddress", "127.0.0.1")
+      System.getProperty("h2.bindAddress", "127.0.0.1"),
     )
-    val url = s"jdbc:h2:file:$dbfile;MV_STORE=false$autoServer"
+    val url = s"jdbc:h2:file:$dbfile$autoServer"
     tryUrl(url)
   }
 
@@ -125,4 +158,27 @@ final class Tables(
     }
   }
 
+  def cleanAll(): Unit = {
+    try {
+      jarSymbols.clearAll()
+      digests.clearAll()
+      dependencySources.clearAll()
+      worksheetSources.clearAll()
+      fingerprints.clearAll()
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"failed to clean database: $databasePath", e)
+    }
+  }
+
+}
+
+object Tables {
+
+  sealed trait ConnectionState
+  object ConnectionState {
+    case object Empty extends ConnectionState
+    case object InProgress extends ConnectionState
+    final case class Connected(conn: Connection) extends ConnectionState
+  }
 }

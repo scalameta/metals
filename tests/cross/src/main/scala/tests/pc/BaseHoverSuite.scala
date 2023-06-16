@@ -24,7 +24,7 @@ abstract class BaseHoverSuite
       expected: String,
       includeRange: Boolean = false,
       automaticPackage: Boolean = true,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
   )(implicit loc: Location): Unit = {
     test(testOpt) {
       val filename = "Hover.scala"
@@ -45,13 +45,15 @@ abstract class BaseHoverSuite
       val hover = presentationCompiler
         .hover(pcParams)
         .get()
-      val obtained: String = renderAsString(code, hover.asScala, includeRange)
+        .asScala
+        .map(_.toLsp())
+      val obtained: String = renderAsString(code, hover, includeRange)
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion)
+        getExpected(expected, compat, scalaVersion),
       )
       for {
-        h <- hover.asScala
+        h <- hover
         range <- Option(h.getRange)
       } {
         val base =
@@ -63,7 +65,7 @@ abstract class BaseHoverSuite
             .replace("@@", "")
             .replace("%<%", "")
             .replace("%>%", ""),
-          "Invalid range"
+          "Invalid range",
         )
       }
     }
@@ -73,7 +75,7 @@ abstract class BaseHoverSuite
     "2.13" -> { s =>
       s.replace(
         "def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That",
-        "def map[B](f: Int => B): List[B]"
+        "def map[B](f: Int => B): List[B]",
       )
     }
   )

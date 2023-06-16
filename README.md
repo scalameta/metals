@@ -1,7 +1,7 @@
 # Metals
 
-<a href="https://gitter.im/scalameta/metals">
-<img alt="Join the chat on Gitter" src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&color=F71263" />
+<a href="https://discord.gg/FaVDrJegEh">
+<img alt="Chat with us on discord" src="https://img.shields.io/discord/632642981228314653">
 </a>
 <a href="https://twitter.com/scalameta">
 <img alt="Follow scalameta on Twitter" src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&color=blue" />
@@ -19,22 +19,30 @@ See the website: https://scalameta.org/metals/
 See the contributing guide:
 https://scalameta.org/metals/docs/contributors/getting-started.html
 
+To learn more about how Metals works, see [./architecture.md](./architecture.md). It explains the high-level layout of the source code. Do skim through that document.
+
 ### Team
 
 The current maintainers (people who can merge pull requests) are:
 
 - Adrien Piquerez - [`@adpi2`](https://github.com/adpi2)
-- Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
+- Arthur McGibbon - [`@Arthurm1`](https://github.com/Arthurm1)
 - Chris Kipp - [`@ckipp01`](https://github.com/ckipp01)
+- Kamil Podsiadło - [`@kpodsiad`](https://github.com/kpodsiad)
+- Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
+- Rikito Taniguchi - [`@tanishiking`](https://github.com/tanishiking)
+- Tomasz Godzik - [`@tgodzik`](https://github.com/tgodzik)
+- Vadim Chelyshov - [`@dos65`](https://github.com/dos65)
+
+Past maintainers:
+
+- Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
 - Gabriele Petronella - [`@gabro`](https://github.com/gabro)
 - Johan Mudsam - [`@mudsam`](https://github.com/mudsam)
 - Krzysztof Bochenek - [`@kpbochenek`](https://github.com/kpbochenek)
 - Jorge Vicente Cantero - [`@jvican`](https://github.com/jvican)
 - Marek Żarnowski - [`@marek1840`](https://github.com/marek1840)
-- Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
 - Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
-- Tomasz Godzik - [`@tgodzik`](https://github.com/tgodzik)
-- Vadim Chelyshov- [`@dos65`](https://github.com/dos65)
 
 ## Acknowledgement
 

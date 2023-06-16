@@ -29,7 +29,6 @@ object InverseLegacyToken {
      * identifiers
      */
     IDENTIFIER -> "IDENTIFIER",
-    BACKQUOTED_IDENT -> "BACKQUOTED_IDENT",
     /**
      * keywords
      */

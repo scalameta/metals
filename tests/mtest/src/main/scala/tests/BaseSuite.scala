@@ -1,5 +1,8 @@
 package tests
 
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import scala.concurrent.duration.Duration
 import scala.util.Properties
 
@@ -9,7 +12,7 @@ import scala.meta.internal.semver.SemVer
 import munit.Flaky
 import munit.Tag
 
-class BaseSuite extends munit.FunSuite with Assertions {
+abstract class BaseSuite extends munit.FunSuite with Assertions {
 
   /**
    * Tests that are only flaky on Windows
@@ -27,10 +30,20 @@ class BaseSuite extends munit.FunSuite with Assertions {
   def isWindows: Boolean =
     Properties.isWin
 
+  def isMacOS: Boolean =
+    Properties.isMac
+
+  def userHome: Path = Paths.get(System.getProperty("user.home"))
+
+  def coursierCacheDir: Path =
+    if (isWindows) userHome.resolve("AppData/Local/Coursier/Cache")
+    else if (isMacOS) userHome.resolve("Library/Caches/Coursier")
+    else userHome.resolve(".cache/coursier")
+
   def isValidScalaVersionForEnv(scalaVersion: String): Boolean =
     this.isJava8 || SemVer.isCompatibleVersion(
       BaseSuite.minScalaVersionForJDK9OrHigher,
-      scalaVersion
+      scalaVersion,
     ) || scalaVersion.startsWith("3.")
 
   override def munitTimeout: Duration = Duration("10min")
@@ -44,9 +57,9 @@ class BaseSuite extends munit.FunSuite with Assertions {
         "FlakyWindows",
         test =>
           if (test.tags(FlakyWindows) && Properties.isWin) test.tag(Flaky)
-          else test
+          else test,
       ),
-      munitFlakyTransform
+      munitFlakyTransform,
     )
 
   val compatProcess: Map[String, String => String] =
@@ -55,7 +68,7 @@ class BaseSuite extends munit.FunSuite with Assertions {
   def getExpected(
       default: String,
       compat: Map[String, String],
-      scalaVersion: String
+      scalaVersion: String,
   ): String = {
     val postProcess = compatProcess
       .collectFirst {
@@ -71,13 +84,10 @@ class BaseSuite extends munit.FunSuite with Assertions {
   def compatOrDefault[A](
       default: A,
       compat: Map[String, A],
-      scalaVersion: String
+      scalaVersion: String,
   ): A =
-    compat
-      .collect {
-        case (ver, compatCode) if scalaVersion.startsWith(ver) => compatCode
-      }
-      .headOption
+    Compat
+      .forScalaVersion(scalaVersion, compat)
       .getOrElse(default)
 
   protected def toJsonArray(list: List[String]): String = {

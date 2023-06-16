@@ -6,6 +6,7 @@ import java.nio.file.Paths
 import scala.util.Properties
 
 import scala.meta.dialects
+import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
 import scala.meta.internal.{semanticdb => s}
@@ -48,7 +49,9 @@ class SemanticdbTextDocumentProvider(
     } else {
       None
     }
-    val document = unit.toTextDocument(explicitDialect)
+    // we recalculate md5, since there seems to be issue with newlines sometimes
+    val document =
+      unit.toTextDocument(explicitDialect).withMd5(MD5.compute(code))
     compiler.workspace
       .flatMap { workspacePath =>
         scala.util.Try(workspacePath.relativize(filePath.toNIO)).toOption

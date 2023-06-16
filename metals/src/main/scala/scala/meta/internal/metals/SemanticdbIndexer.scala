@@ -6,50 +6,70 @@ import java.nio.file.Path
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.decorations.SyntheticsDecorationProvider
-import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import com.google.protobuf.InvalidProtocolBufferException
 
+trait SemanticdbFeatureProvider {
+  def onChange(docs: TextDocuments, path: AbsolutePath): Unit
+  def onDelete(path: SemanticdbPath): Unit
+  def reset(): Unit
+}
+
 class SemanticdbIndexer(
-    referenceProvider: ReferenceProvider,
-    implementationProvider: ImplementationProvider,
-    implicitDecorator: SyntheticsDecorationProvider,
+    providers: List[SemanticdbFeatureProvider],
     buildTargets: BuildTargets,
-    workspace: AbsolutePath
+    workspace: AbsolutePath,
 ) {
 
-  def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
+  def onTargetRoots(): Unit = {
     for {
-      item <- scalacOptions.getItems.asScala
-      scalaInfo <- buildTargets.scalaInfo(item.getTarget)
+      targetRoot <- buildTargets.allTargetRoots
     } {
-      val targetroot = item.targetroot(scalaInfo.getScalaVersion)
-      onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
+      onChangeDirectory(targetRoot.resolve(Directories.semanticdb).toNIO)
     }
   }
 
   def reset(): Unit = {
-    referenceProvider.reset()
-    implementationProvider.clear()
+    providers.foreach(_.reset())
   }
 
-  def onDelete(file: Path): Unit = {
-    referenceProvider.onDelete(file)
-    implementationProvider.onDelete(file)
+  def onDelete(semanticdbFile: SemanticdbPath): Unit = {
+    providers.foreach(_.onDelete(semanticdbFile))
+  }
+
+  /**
+   * Handle EventType.OVERFLOW
+   *
+   * The overflow events comes either with a non-null or null path.
+   *
+   * In case the path is not null, we walk up the file tree to the parent `META-INF/semanticdb`
+   * parent directory and re-index all of its `*.semanticdb` children.
+   *
+   * In case of a null path, we re-index `META-INF/semanticdb` for all targets
+   */
+  def onOverflow(path: SemanticdbPath): Unit = {
+    if (path == null) {
+      onTargetRoots()
+    } else {
+      path.semanticdbRoot.foreach(onChangeDirectory(_))
+    }
   }
 
   private def onChangeDirectory(dir: Path): Unit = {
     if (Files.isDirectory(dir)) {
       val stream = Files.walk(dir)
       try {
-        stream.forEach(onChange(_))
+        stream.forEach {
+          case path if path.isSemanticdb =>
+            onChange(SemanticdbPath(AbsolutePath(path)))
+          case _ => ()
+        }
       } finally {
         stream.close()
       }
@@ -58,37 +78,31 @@ class SemanticdbIndexer(
 
   def onChange(path: AbsolutePath, textDocument: TextDocument): Unit = {
     val docs = TextDocuments(Seq(textDocument))
-    referenceProvider.onChange(docs, path)
-    implementationProvider.onChange(docs, path)
-    implicitDecorator.onChange(docs, path)
+    onChange(path, docs)
   }
 
-  def onChange(file: Path): Unit = {
-    if (!Files.isDirectory(file)) {
-      if (file.isSemanticdb) {
-        try {
-          val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
-          SemanticdbClasspath.toScala(workspace, AbsolutePath(file)).foreach {
-            scalaSourceFile =>
-              referenceProvider.onChange(doc, scalaSourceFile)
-              implementationProvider.onChange(doc, scalaSourceFile)
-              implicitDecorator.onChange(doc, scalaSourceFile)
-          }
-        } catch {
-          /* @note in some cases file might be created or modified, but not actually finished
-           * being written. In that case, exception here is expected and a new event will
-           * follow after it was finished.
-           */
-          case e: InvalidProtocolBufferException =>
-            scribe.debug(s"$file is not yet ready", e)
-          /* @note FileSystemException is thrown on Windows instead of InvalidProtocolBufferException */
-          case e: FileSystemException =>
-            scribe.debug(s"$file is not yet ready", e)
-          case NonFatal(e) =>
-            scribe.warn(s"unexpected error processing the file $file", e)
+  private def onChange(path: AbsolutePath, docs: TextDocuments): Unit =
+    providers.foreach(_.onChange(docs, path))
+
+  def onChange(file: SemanticdbPath): Unit = {
+    if (!Files.isDirectory(file.toNIO)) {
+      try {
+        val docs = TextDocuments.parseFrom(Files.readAllBytes(file.toNIO))
+        SemanticdbClasspath.toScala(workspace, file).foreach { sourceFile =>
+          onChange(sourceFile, docs)
         }
-      } else {
-        scribe.warn(s"not a semanticdb file: $file")
+      } catch {
+        /* @note in some cases file might be created or modified, but not actually finished
+         * being written. In that case, exception here is expected and a new event will
+         * follow after it was finished.
+         */
+        case e: InvalidProtocolBufferException =>
+          scribe.debug(s"$file is not yet ready", e)
+        /* @note FileSystemException is thrown on Windows instead of InvalidProtocolBufferException */
+        case e: FileSystemException =>
+          scribe.debug(s"$file is not yet ready", e)
+        case NonFatal(e) =>
+          scribe.warn(s"unexpected error processing the file $file", e)
       }
     }
   }

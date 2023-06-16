@@ -1,19 +1,23 @@
 package scala.meta.internal.builds
 
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
@@ -24,12 +28,13 @@ class ShellRunner(
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
     time: Time,
-    statusBar: StatusBar
+    statusBar: StatusBar,
 )(implicit
     executionContext: scala.concurrent.ExecutionContext
 ) extends Cancelable {
 
   private val cancelables = new MutableCancelable()
+
   override def cancel(): Unit = {
     cancelables.cancel()
   }
@@ -38,7 +43,11 @@ class ShellRunner(
       dependency: Dependency,
       main: String,
       dir: AbsolutePath,
-      arguments: List[String]
+      arguments: List[String],
+      redirectErrorOutput: Boolean = false,
+      processOut: String => Unit = scribe.info(_),
+      processErr: String => Unit = scribe.error(_),
+      propagateError: Boolean = false,
   ): Future[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
@@ -53,9 +62,17 @@ class ShellRunner(
       JavaBinary(userConfig().javaHome),
       "-classpath",
       classpath,
-      main
+      main,
     ) ::: arguments
-    run(main, cmd, dir, redirectErrorOutput = false)
+    run(
+      main,
+      cmd,
+      dir,
+      redirectErrorOutput,
+      processOut = processOut,
+      processErr = processErr,
+      propagateError = propagateError,
+    )
   }
 
   def run(
@@ -67,7 +84,7 @@ class ShellRunner(
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
-      logInfo: Boolean = true
+      logInfo: Boolean = true,
   ): Future[Int] = {
     val elapsed = new Timer(time)
 
@@ -77,9 +94,9 @@ class ShellRunner(
       directory,
       redirectErrorOutput,
       env,
-      processOut,
-      processErr,
-      propagateError
+      Some(processOut),
+      Some(processErr),
+      propagateError,
     )
     // NOTE(olafur): older versions of VS Code don't respect cancellation of
     // window/showMessageRequest, meaning the "cancel build import" button
@@ -99,14 +116,14 @@ class ShellRunner(
         ps.cancel
       }
     }
-    cancelables
-      .add(() => ps.cancel)
-      .add(() => taskResponse.cancel(false))
+    val newCancelables: List[Cancelable] =
+      List(() => ps.cancel, () => taskResponse.cancel(false))
+    newCancelables.foreach(cancelables.add)
 
     val processFuture = ps.complete
     statusBar.trackFuture(
       s"Running '$commandRun'",
-      processFuture
+      processFuture,
     )
     processFuture.map { code =>
       taskResponse.cancel(false)
@@ -114,7 +131,43 @@ class ShellRunner(
         scribe.info(s"time: ran '$commandRun' in $elapsed")
       result.trySuccess(code)
     }
+    result.future.onComplete(_ => newCancelables.foreach(cancelables.remove))
     result.future
   }
 
+}
+
+object ShellRunner {
+
+  def runSync(
+      args: List[String],
+      directory: AbsolutePath,
+      redirectErrorOutput: Boolean,
+      additionalEnv: Map[String, String] = Map.empty,
+      processErr: String => Unit = scribe.error(_),
+      propagateError: Boolean = false,
+      maybeJavaHome: Option[String] = None,
+  )(implicit ec: ExecutionContext): Option[String] = {
+
+    val sbOut = new StringBuilder()
+    val env = additionalEnv ++ maybeJavaHome.map("JAVA_HOME" -> _).toMap
+    val ps = SystemProcess.run(
+      args,
+      directory,
+      redirectErrorOutput,
+      env,
+      Some(s => {
+        sbOut.append(s)
+        sbOut.append(Properties.lineSeparator)
+      }),
+      Some(processErr),
+      propagateError,
+    )
+
+    val exit = Await.result(ps.complete, 10 second)
+
+    if (exit == 0) {
+      Some(sbOut.toString())
+    } else None
+  }
 }

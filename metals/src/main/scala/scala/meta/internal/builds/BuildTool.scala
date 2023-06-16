@@ -32,7 +32,7 @@ object BuildTool {
   def copyFromResource(
       tempDir: Path,
       filePath: String,
-      destination: Option[String] = None
+      destination: Option[String] = None,
   ): Path = {
     val embeddedFile =
       this.getClass.getResourceAsStream(s"/$filePath")

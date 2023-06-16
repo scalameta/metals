@@ -1,5 +1,6 @@
 package tests.pc
 
+import munit.Location
 import tests.BaseAutoImportsSuite
 
 class AutoImportsSuite extends BaseAutoImportsSuite {
@@ -13,13 +14,6 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
     """|scala.concurrent
        |java.util.concurrent
        |""".stripMargin,
-    compat = Map(
-      "2.11" ->
-        """|scala.concurrent
-           |scala.concurrent.impl
-           |java.util.concurrent
-           |""".stripMargin
-    )
   )
 
   checkEdit(
@@ -37,7 +31,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  Future.successful(2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -58,7 +52,49 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  Future.successful(2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "basic-edit-directive",
+    """|// using scala 35
+       |// using something else
+       |
+       |object A {
+       |  <<Future>>.successful(2)
+       |}
+       |""".stripMargin,
+    """|// using scala 35
+       |// using something else
+       |import scala.concurrent.Future
+       |
+       |object A {
+       |  Future.successful(2)
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "scala-cli-sc-using-directives",
+    """|object main {
+       |/*<script>*///> using scala "3.1.3"
+       |
+       |object x {
+       |  <<Try>>("1".toString)
+       |}
+       |}
+       |
+       |""".stripMargin,
+    """|object main {
+       |/*<script>*///> using scala "3.1.3"
+       |import scala.util.Try
+       |
+       |object x {
+       |  Try("1".toString)
+       |}
+       |}
+       |""".stripMargin,
+    filename = "A.sc.scala",
   )
 
   checkEdit(
@@ -76,7 +112,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val uuid = UUID.randomUUID()
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -94,7 +130,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val uuid = UUID.randomUUID()
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -112,7 +148,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val l : ju.Map[String, Int] = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -131,7 +167,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |  val l = s"${mutable.Seq(2)}"
        |}
        |""".stripMargin,
-    selection = 1
+    selection = 1,
   )
 
   checkEdit(
@@ -149,7 +185,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val l = s"${mutable.Seq(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -170,7 +206,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object Main{
        | val obj = ABC
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -188,7 +224,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |package object b {
        |  val l = s"${ListBuffer(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -210,7 +246,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val l = s"${ListBuffer(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -235,28 +271,42 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |object A {
        |  val l = s"${ListBuffer(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "import-in-import",
+    """|package inimport
+       |
+       |object A {
+       |  import <<ExecutionContext>>.global
+       |}
+       |""".stripMargin,
+    """|package inimport
+       |
+       |object A {
+       |  import scala.concurrent.ExecutionContext.global
+       |}
+       |""".stripMargin,
   )
 
   checkAmmoniteEdit(
-    "first-auto-import-amm-script".tag(IgnoreScala3),
+    "first-auto-import-amm-script",
     ammoniteWrapper(
-      """val p: <<Path>> = ???
-        |""".stripMargin
+      """|
+         |val p: <<Path>> = ???
+         |""".stripMargin
     ),
-    // Import added *before* the wrapper here…
-    // This *seems* wrong, but the logic converting the scala file
-    // edits to sc file edits will simply add it at the beginning of
-    // the sc file, as expected.
-    "import java.nio.file.Path\n" +
-      ammoniteWrapper(
-        """val p: Path = ???
-          |""".stripMargin
-      )
+    ammoniteWrapper(
+      """|import java.nio.file.Path
+         |
+         |val p: Path = ???
+         |""".stripMargin
+    ),
   )
 
   checkAmmoniteEdit(
-    "second-auto-import-amm-script".tag(IgnoreScala3),
+    "second-auto-import-amm-script",
     ammoniteWrapper(
       """import java.nio.file.Files
         |val p: <<Path>> = ???
@@ -267,7 +317,47 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
         |import java.nio.file.Path
         |val p: Path = ???
         |""".stripMargin
-    )
+    ),
+  )
+
+  checkAmmoniteEdit(
+    "amm-objects",
+    ammoniteWrapper(
+      """|
+         |object a {
+         |  object b {
+         |    val p: <<Path>> = ???
+         |  }
+         |}
+         |""".stripMargin
+    ),
+    ammoniteWrapper(
+      """|import java.nio.file.Path
+         |
+         |object a {
+         |  object b {
+         |    val p: Path = ???
+         |  }
+         |}
+         |""".stripMargin
+    ),
+  )
+
+  checkAmmoniteEdit(
+    "first-auto-import-amm-script-with-header",
+    ammoniteWrapper(
+      """|// scala 2.13.1
+         |
+         |val p: <<Path>> = ???
+         |""".stripMargin
+    ),
+    ammoniteWrapper(
+      """|// scala 2.13.1
+         |import java.nio.file.Path
+         |
+         |val p: Path = ???
+         |""".stripMargin
+    ),
   )
 
   private def ammoniteWrapper(code: String): String =
@@ -282,8 +372,27 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
         |}
         |
         |object test{
+        |/*<start>*/
         |$code
         |}
         |""".stripMargin
+
+  // https://dotty.epfl.ch/docs/internals/syntax.html#soft-keywords
+  List("infix", "inline", "opaque", "open", "transparent", "as", "derives",
+    "end", "extension", "throws", "using").foreach(softKeywordCheck)
+
+  private def softKeywordCheck(keyword: String)(implicit loc: Location) =
+    checkEdit(
+      s"'$keyword'-named-object".tag(IgnoreScala2),
+      s"""|
+          |object $keyword{ object ABC }
+          |object Main{ val obj = <<ABC>> }
+          |""".stripMargin,
+      s"""|import $keyword.ABC
+          |
+          |object $keyword{ object ABC }
+          |object Main{ val obj = ABC }
+          |""".stripMargin,
+    )
 
 }
