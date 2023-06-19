@@ -1,11 +1,10 @@
-package tests.debug
+package tests.scalacli
 
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.JsonParser._
 
 import tests.BaseDapSuite
 import tests.QuickBuildInitializer
-import tests.ScalaCliBuildLayout
 
 class BreakpointScalaCliDapSuite
     extends BaseDapSuite(

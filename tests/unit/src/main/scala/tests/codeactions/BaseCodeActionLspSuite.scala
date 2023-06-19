@@ -9,7 +9,6 @@ import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.CodeAction
 import tests.BaseLspSuite
-import tests.BaseScalaCliSuite
 import tests.FileLayout
 
 abstract class BaseCodeActionLspSuite(
@@ -39,6 +38,8 @@ abstract class BaseCodeActionLspSuite(
     )
   }
 
+  protected def toPath(fileName: String): String =
+    s"a/src/main/scala/a/$fileName"
   def check(
       name: TestOptions,
       input: String,
@@ -49,7 +50,6 @@ abstract class BaseCodeActionLspSuite(
       kind: List[String] = Nil,
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil,
-      scalaCliOptions: List[String] = Nil,
       configuration: => Option[String] = None,
       scalaVersion: String = scalaVersion,
       renamePath: Option[String] = None,
@@ -58,28 +58,20 @@ abstract class BaseCodeActionLspSuite(
       changeFile: String => String = identity,
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
-      scalaCliLayout: Boolean = false,
+      overrideLayout: Option[String] = None,
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
         s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"],"""
       else ""
-    val path = s"a/src/main/scala/a/$fileName"
+    val path = toPath(fileName)
 
-    val layout = {
-      if (scalaCliLayout)
-        s"""/.bsp/scala-cli.json
-           |${BaseScalaCliSuite.scalaCliBspJsonContent(scalaCliOptions)}
-           |/.scala-build/ide-inputs.json
-           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
-           |/$path
-           |$input""".stripMargin
-      else
-        s"""/metals.json
-           |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
-           |$scalafixConf
-           |/$path
-           |$input""".stripMargin
+    val layout = overrideLayout.getOrElse {
+      s"""/metals.json
+         |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
+         |$scalafixConf
+         |/$path
+         |$input""".stripMargin
     }
 
     checkEdit(
