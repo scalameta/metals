@@ -20,7 +20,7 @@ class ScalaCliActionsSuite
 
   checkScalaCLI(
     "actionable-diagnostic-update",
-    s"""|//> <<>>using lib "com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
+    s"""|//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
         |
         |object Hello extends App {
         |  println("Hello")
@@ -28,6 +28,18 @@ class ScalaCliActionsSuite
         |""".stripMargin,
     s"""Apply suggestion: "os-lib is outdated, update to $newestOsLib"""",
     s"""|//> using lib "com.lihaoyi::os-lib:$newestOsLib"
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    scalaCliOptions = List("--actions", "-S", scalaVersion),
+    expectNoDiagnostics = false,
+  )
+
+  checkNoActionScalaCLI(
+    "actionable-diagnostic-out-of-range",
+    s"""|//> <<>>using lib "com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
         |
         |object Hello extends App {
         |  println("Hello")

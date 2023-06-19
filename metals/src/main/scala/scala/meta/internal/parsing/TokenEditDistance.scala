@@ -27,8 +27,15 @@ sealed trait TokenEditDistance {
    * - it should only return `None` in the case when the sources don't tokenize.
    *   When the original token is removed in the revised document, we find instead the
    *   nearest token in the original document instead.
+   *
+   * If `adjustWithinToken` is true and the original and revised range are both contained within
+   * a single (matching) token, then adjust the returned range to match the start/end offsets of
+   * the input range with respect to the token.
    */
-  def toRevised(range: l.Range): Option[l.Range]
+  def toRevised(
+      range: l.Range,
+      adjustWithinToken: Boolean = false,
+  ): Option[l.Range]
   def toRevised(originalOffset: Int): Either[EmptyResult, Position]
   def toRevised(
       originalLine: Int,
@@ -94,7 +101,10 @@ sealed trait TokenEditDistance {
 object TokenEditDistance {
 
   case object Unchanged extends TokenEditDistance {
-    def toRevised(range: l.Range): Option[l.Range] = Some(range)
+    def toRevised(
+        range: l.Range,
+        adjustWithinToken: Boolean = false,
+    ): Option[l.Range] = Some(range)
     def toRevised(originalOffset: Int): Either[EmptyResult, Position] =
       EmptyResult.unchanged
     def toRevised(
@@ -116,7 +126,10 @@ object TokenEditDistance {
   }
 
   case object NoMatch extends TokenEditDistance {
-    def toRevised(range: l.Range): Option[l.Range] = None
+    def toRevised(
+        range: l.Range,
+        adjustWithinToken: Boolean = false,
+    ): Option[l.Range] = None
     def toRevised(originalOffset: Int): Either[EmptyResult, Position] =
       EmptyResult.noMatch
     def toRevised(
@@ -145,7 +158,10 @@ object TokenEditDistance {
       extends TokenEditDistance {
 
     private val logger: Logger = Logger.getLogger(this.getClass.getName)
-    def toRevised(range: l.Range): Option[l.Range] = {
+    def toRevised(
+        range: l.Range,
+        adjustWithinToken: Boolean = false,
+    ): Option[l.Range] = {
       range.toMeta(originalInput).flatMap { pos =>
         val matchingTokens = matching.lift
 
@@ -216,7 +232,10 @@ object TokenEditDistance {
                 val offset = end.revised.start
                 Position.Range(revisedInput, offset - 1, offset)
               } else if (start.revised == end.revised) {
-                start.revised.pos
+                // new range spans one token
+                if (adjustWithinToken)
+                  computeAdjustmentWithinToken(range, start)
+                else start.revised.pos
               } else {
                 val endOffset = end.revised match {
                   case t if t.isLF => t.start
@@ -270,6 +289,28 @@ object TokenEditDistance {
       if (pos.contains(offset)) BinarySearch.Equal
       else if (pos.end <= offset) BinarySearch.Smaller
       else BinarySearch.Greater
+
+    private def computeAdjustmentWithinToken(
+        original: l.Range,
+        matching: MatchingToken[A],
+    ): Position.Range = {
+      val originalStartPositionOpt: Option[Position] =
+        original.getStart().toMeta(originalInput)
+      val originalEndPositionOpt: Option[Position] =
+        original.getEnd().toMeta(originalInput)
+
+      // Original start range - start of the found token
+      val startCorrection =
+        originalStartPositionOpt.fold(0)(_.start - matching.original.start)
+      val endCorrection =
+        originalEndPositionOpt.fold(0)(matching.original.end - _.end)
+
+      Position.Range(
+        revisedInput,
+        matching.revised.start + startCorrection,
+        matching.revised.end - endCorrection,
+      )
+    }
 
     override def toString(): String = s"Diff(${matching.length} tokens)"
   }
