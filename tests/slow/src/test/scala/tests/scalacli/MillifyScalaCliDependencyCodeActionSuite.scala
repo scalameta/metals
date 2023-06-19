@@ -1,16 +1,16 @@
-package tests.codeactions
+package tests.scalacli
 
 import scala.meta.internal.metals.BuildInfo
 
 class MillifyScalaCliDependencyCodeActionSuite
-    extends BaseCodeActionLspSuite("millifyScalaCliDependency") {
+    extends BaseScalaCLIActionSuite("millifyScalaCliDependency") {
   val sbtStyleDependency =
     """"org.scalameta" %% "munit" % "0.7.26""""
 
   val convertedDependency = """"org.scalameta::munit:0.7.26""""
   val convertTo: String = s"""//> using lib $convertedDependency"""
 
-  check(
+  checkScalaCLI(
     "convert-dependency",
     s"""|//> <<>>using lib $sbtStyleDependency
         |
@@ -27,13 +27,12 @@ class MillifyScalaCliDependencyCodeActionSuite
         |""".stripMargin,
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
-    scalaCliLayout = true,
   )
 
   val sbtStyleDependencyMultiSpace =
     """    "org.scalameta"     %% "munit"   % "0.7.26""""
 
-  check(
+  checkScalaCLI(
     "convert-dependency-multiple-whitespace",
     s"""|//> <<>>using lib $sbtStyleDependencyMultiSpace
         |
@@ -48,12 +47,10 @@ class MillifyScalaCliDependencyCodeActionSuite
         |  println("Hello")
         |}
         |""".stripMargin,
-    scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
-    scalaCliLayout = true,
   )
 
-  check(
+  checkScalaCLI(
     "convert-dependency-multiple",
     s"""|//> using scala "${BuildInfo.scala213}"
         |//> <<>>using lib $sbtStyleDependencyMultiSpace
@@ -70,9 +67,7 @@ class MillifyScalaCliDependencyCodeActionSuite
         |  println("Hello")
         |}
         |""".stripMargin,
-    scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
-    scalaCliLayout = true,
   )
 
 }
