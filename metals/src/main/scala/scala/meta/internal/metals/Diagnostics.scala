@@ -260,25 +260,30 @@ final class Diagnostics(
       d: Diagnostic,
       snapshot: Input,
   ): Option[Diagnostic] = {
-    val result = edit.toRevised(d.getRange).map { range =>
-      val ld = new l.Diagnostic(
-        range,
-        d.getMessage,
-        d.getSeverity,
-        d.getSource,
+    val result = edit
+      .toRevised(
+        range = d.getRange,
+        adjustWithinToken = d.getSource() == "scala-cli",
       )
-      // Scala 3 sets the diagnostic code to -1 for NoExplanation Messages. Ideally
-      // this will change and we won't need this check in the future, but for now
-      // let's not forward them.
-      if (
-        d.getCode() != null && d
-          .getCode()
-          .isLeft() && d.getCode().getLeft() != "-1"
-      )
-        ld.setCode(d.getCode())
-      ld.setData(d.getData)
-      ld
-    }
+      .map { range =>
+        val ld = new l.Diagnostic(
+          range,
+          d.getMessage,
+          d.getSeverity,
+          d.getSource,
+        )
+        // Scala 3 sets the diagnostic code to -1 for NoExplanation Messages. Ideally
+        // this will change and we won't need this check in the future, but for now
+        // let's not forward them.
+        if (
+          d.getCode() != null && d
+            .getCode()
+            .isLeft() && d.getCode().getLeft() != "-1"
+        )
+          ld.setCode(d.getCode())
+        ld.setData(d.getData)
+        ld
+      }
     if (result.isEmpty) {
       d.getRange.toMeta(snapshot).foreach { pos =>
         val message = pos.formatMessage(
