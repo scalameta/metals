@@ -25,6 +25,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.common.collect.ImmutableList
 import org.eclipse.lsp4j.services.LanguageClient
+import scala.meta.internal.builds.BloopInstallProvider
 
 class BspConnector(
     bloopServers: BloopServers,
@@ -45,9 +46,16 @@ class BspConnector(
    */
   def resolve(): BspResolvedResult = {
     resolveExplicit().getOrElse {
-      if (buildTools.loadSupported().nonEmpty || buildTools.isBloop)
-        ResolvedBloop
-      else bspServers.resolve()
+      val supportBloop = buildTools.loadSupported.collect {
+        case b: BloopInstallProvider => b
+      }.nonEmpty
+
+      val resolved = bspServers.resolve()
+      if (supportBloop || buildTools.isBloop)
+        ResolvedBazel
+      // WORKSPACE file is found && bsp connection file for Bazel is not yet generated
+      else if (buildTools.isBazel && resolved == ResolvedNone) ResolvedBazel
+      else resolved
     }
   }
 
@@ -96,10 +104,19 @@ class BspConnector(
           statusBar
             .trackFuture("Connecting to sbt", connectionF, showTimer = true)
             .map(Some(_))
-        case ResolvedBspOne(details) if details.getName == "bazelbsp" =>
+        case ResolvedBazel =>
           BazelBuildTool
-            .writeBazelConfig(shellRunner, workspace)
-            .flatMap(_ => bspServers.newServer(workspace, details).map(Some(_)))
+            .writeBazelConfig(shellRunner, workspace, bspServers)
+            .flatMap { result =>
+              result match {
+                case Right(details) =>
+                  bspServers.newServer(workspace, details).map(Some(_))
+                case Left(error) =>
+                  scribe.error(error.getMessage())
+                  Future.successful(None)
+              }
+
+            }
         case ResolvedBspOne(details) =>
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedMultiple(_, availableServers) =>

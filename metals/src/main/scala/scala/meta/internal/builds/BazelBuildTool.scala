@@ -6,6 +6,8 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
+import ch.epfl.scala.bsp4j.BspConnectionDetails
+import scala.meta.internal.bsp.BspServers
 
 case class BazelBuildTool(userConfig: () => UserConfiguration)
     extends BuildTool
@@ -29,7 +31,7 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
 
   override def recommendedVersion: String = version
 
-  override def version: String = "1.0.1"
+  override def version: String = "2.7.1"
 
   override def toString: String = "Bazel"
 
@@ -38,14 +40,17 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
 
 object BazelBuildTool {
   private val coursierArgs = List(
-    "cs", "launch", "org.jetbrains.bsp:bazel-bsp:1.0.1", "-M",
+    "cs", "launch", "org.jetbrains.bsp:bazel-bsp:2.7.1", "-M",
     "org.jetbrains.bsp.bazel.install.Install",
   )
 
   def writeBazelConfig(
       shellRunner: ShellRunner,
       projectDirectory: AbsolutePath,
-  )(implicit ec: ExecutionContext): Future[Unit] = {
+      bspServers: BspServers,
+  )(implicit
+      ec: ExecutionContext
+  ): Future[Either[Error, BspConnectionDetails]] = {
     def run() =
       shellRunner.run("Bazel-BSP config", coursierArgs, projectDirectory, false)
     run()
@@ -54,6 +59,16 @@ object BazelBuildTool {
         if (code != 0) run()
         else Future.successful(0)
       }
-      .map(_ => ())
+      .map { code =>
+        if (code != 0)
+          Left(new Error("Failed to write Bazel-BSP config to .bsp"))
+        else
+          bspServers
+            .findAvailableServers()
+            .collectFirst {
+              case details if details.getName == "bazelbsp" => details
+            }
+            .toRight(new Error("'.bsp/bazelbsp.json' not found."))
+      }
   }
 }

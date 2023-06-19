@@ -11,7 +11,12 @@ object BazelDigest extends Digestable {
       digest: MessageDigest,
   ): Boolean = {
     workspace.listRecursive.forall {
-      case file if file.filename == "BUILD" || file.filename == "WORKSPACE" =>
+      // TODO: *.bzl also should be detected
+      // https://github.com/scalameta/metals/issues/5144
+      case file
+          if file.filename == "BUILD" ||
+            file.filename == "WORKSPACE" ||
+            file.filename == "BUILD.bazel" =>
         Digest.digestFile(file, digest)
       case _ =>
         true
