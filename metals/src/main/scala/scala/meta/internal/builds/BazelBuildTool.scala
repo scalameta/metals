@@ -71,4 +71,14 @@ object BazelBuildTool {
             .toRight(new Error("'.bsp/bazelbsp.json' not found."))
       }
   }
+
+  def isBazelRelatedPath(
+      path: AbsolutePath
+  ): Boolean = {
+    val filename = path.toNIO.getFileName.toString
+    filename == "WORKSPACE" ||
+    filename == "BUILD" ||
+    filename == "BUILD.bazel" ||
+    filename.endsWith(".bzl")
+  }
 }

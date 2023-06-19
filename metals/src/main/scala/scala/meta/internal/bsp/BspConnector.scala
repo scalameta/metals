@@ -52,7 +52,7 @@ class BspConnector(
 
       val resolved = bspServers.resolve()
       if (supportBloop || buildTools.isBloop)
-        ResolvedBazel
+        ResolvedBloop
       // WORKSPACE file is found && bsp connection file for Bazel is not yet generated
       else if (buildTools.isBazel && resolved == ResolvedNone) ResolvedBazel
       else resolved

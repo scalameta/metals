@@ -16,7 +16,8 @@ object BazelDigest extends Digestable {
       case file
           if file.filename == "BUILD" ||
             file.filename == "WORKSPACE" ||
-            file.filename == "BUILD.bazel" =>
+            file.filename == "BUILD.bazel" ||
+            file.filename.endsWith(".bzl") =>
         Digest.digestFile(file, digest)
       case _ =>
         true
