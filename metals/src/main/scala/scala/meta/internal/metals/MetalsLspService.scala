@@ -1944,16 +1944,7 @@ class MetalsLspService(
               tables.buildServers.chooseServer(ScalaCliBuildTool.name)
               quickConnectToBuildServer()
             case Some(digest) if isBloopOrEmpty =>
-              for {
-                _ <-
-                  if (scalaCli.loaded(folder)) scalaCli.stop()
-                  else Future.successful(())
-                buildChange <- slowConnectToBloopServer(
-                  forceImport,
-                  buildTool,
-                  digest,
-                )
-              } yield buildChange
+              slowConnectToBloopServer(forceImport, buildTool, digest)
             case Some(digest) =>
               indexer.reloadWorkspaceAndIndex(
                 forceImport,
@@ -2083,6 +2074,8 @@ class MetalsLspService(
       case other => Future.successful(other)
     }
 
+    val scalaCliPath = scalaCli.path
+
     (for {
       _ <- disconnectOldBuildServer()
       maybeSession <- timerProvider.timed("Connected to build server", true) {
@@ -2101,6 +2094,12 @@ class MetalsLspService(
         case None =>
           Future.successful(BuildChange.None)
       }
+      _ <- scalaCliPath
+        .collectFirst {
+          case path if (!conflictsWithMainBsp(path.toNIO)) =>
+            scalaCli.start(path)
+        }
+        .getOrElse(Future.successful(()))
       _ = initTreeView()
     } yield result)
       .recover { case NonFatal(e) =>
@@ -2123,13 +2122,16 @@ class MetalsLspService(
       scribe.info(s"Disconnecting from ${connection.main.name} session...")
     )
 
-    bspSession match {
-      case None => Future.successful(())
-      case Some(session) =>
-        bspSession = None
-        mainBuildTargetsData.resetConnections(List.empty)
-        session.shutdown()
-    }
+    for {
+      _ <- scalaCli.stop()
+      _ <- bspSession match {
+        case None => Future.successful(())
+        case Some(session) =>
+          bspSession = None
+          mainBuildTargetsData.resetConnections(List.empty)
+          session.shutdown()
+      }
+    } yield ()
   }
 
   private def importBuild(session: BspSession) = {
@@ -2458,14 +2460,14 @@ class MetalsLspService(
   private def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = {
     val dir = path.parent
     val nioDir = dir.toNIO
-    val conflictsWithMainBsp =
-      buildTargets.sourceItems.filter(_.exists).exists { item =>
-        val nioItem = item.toNIO
-        nioDir.startsWith(nioItem) || nioItem.startsWith(nioDir)
-      }
-
-    if (conflictsWithMainBsp) path else dir
+    if (conflictsWithMainBsp(nioDir)) path else dir
   }
+
+  private def conflictsWithMainBsp(nioDir: Path) =
+    buildTargets.sourceItems.filter(_.exists).exists { item =>
+      val nioItem = item.toNIO
+      nioDir.startsWith(nioItem) || nioItem.startsWith(nioDir)
+    }
 
   def maybeImportScript(path: AbsolutePath): Option[Future[Unit]] = {
     val scalaCliPath = scalaCliDirOrFile(path)
