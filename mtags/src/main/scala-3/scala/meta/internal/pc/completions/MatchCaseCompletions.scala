@@ -86,8 +86,7 @@ object CaseKeywordCompletion:
           case _ =>
             new Parents(NoType, definitions)
       case sel =>
-        val selectorTpe = sel.tpe
-        new Parents(selectorTpe, definitions)
+        new Parents(sel.tpe, definitions)
 
     val selectorSym = parents.selector.widen.metalsDealias.typeSymbol
 
@@ -96,24 +95,19 @@ object CaseKeywordCompletion:
         selectorSym
       )
     then
-      val selectorTpe = parents.selector.show
-      val tpeLabel =
-        if !selectorTpe.contains("x$1") then selectorTpe
-        else selector.symbol.info.show
-      val label =
-        if patternOnly.isEmpty then s"case ${tpeLabel} =>"
-        else tpeLabel
-      if completionGenerator.fuzzyMatches(label) then
+      if patternOnly.isEmpty then
+        val selectorTpe = parents.selector.show
+        val tpeLabel =
+          if !selectorTpe.contains("x$1") then selectorTpe
+          else selector.symbol.info.show
+        val label = s"case ${tpeLabel} =>"
         List(
           CompletionValue.CaseKeyword(
             selectorSym,
             label,
             Some(
-              if patternOnly.isEmpty then
-                if config.isCompletionSnippetsEnabled() then "case ($0) =>"
-                else "case () =>"
-              else if config.isCompletionSnippetsEnabled() then "($0)"
-              else "()"
+              if config.isCompletionSnippetsEnabled() then "case ($0) =>"
+              else "case () =>"
             ),
             Nil,
             range = Some(completionPos.toEditRange),
@@ -121,7 +115,6 @@ object CaseKeywordCompletion:
           )
         )
       else Nil
-      end if
     else
       val result = ListBuffer.empty[SymbolImport]
       val isVisited = mutable.Set.empty[Symbol]
