@@ -195,8 +195,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
   ): Unit = {
     node.scalaSig match {
       case Some(scalaSig) =>
-        val ops = new ScalacpCopyPaste(scalaSig)
-        import ops._
+        import ScalacpCopyPaste._
         def infos(sym: SymbolInfoSymbol): List[SymbolInformation] = {
           if (sym.isSemanticdbLocal) return Nil
           if (sym.isUseless) return Nil
