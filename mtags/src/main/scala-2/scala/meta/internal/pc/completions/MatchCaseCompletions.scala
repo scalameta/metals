@@ -84,18 +84,20 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
 
       // Special handle case when selector is a tuple or `FunctionN`.
       if (definitions.isTupleType(parents.selector)) {
-        List(
-          new TextEditMember(
-            "case () =>",
-            new l.TextEdit(
-              editRange,
-              if (clientSupportsSnippets) "case ($0) =>" else "case () =>"
-            ),
-            selectorSym,
-            label = Some(s"case ${parents.selector} =>"),
-            command = metalsConfig.parameterHintsCommand().asScala
+        if (patternOnly.isEmpty)
+          List(
+            new TextEditMember(
+              "case () =>",
+              new l.TextEdit(
+                editRange,
+                if (clientSupportsSnippets) "case ($0) =>" else "case () =>"
+              ),
+              selectorSym,
+              label = Some(s"case ${parents.selector} =>"),
+              command = metalsConfig.parameterHintsCommand().asScala
+            )
           )
-        )
+        else Nil
       } else {
         val completionGenerator = new CompletionValueGenerator(
           editRange,

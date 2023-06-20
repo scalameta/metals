@@ -753,4 +753,16 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     "",
   )
 
+  check(
+    "lambda-case-tuple",
+    """|object A {
+       |  val a = List((1,2)).foreach {
+       |    case (a,b) => println(a)
+       |    case@@
+       |  }
+       |}
+       |""".stripMargin,
+    "case (Int, Int) => scala",
+  )
+
 }
