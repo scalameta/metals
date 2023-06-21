@@ -71,4 +71,21 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(1),
   )
+
+  checkEdit(
+    "trait-member",
+    """|trait Foo:
+       |  def foo: String
+       |
+       |object Bar extends Foo:
+       |  def@@
+       |""".stripMargin,
+    """|trait Foo:
+       |  def foo: String
+       |
+       |object Bar extends Foo:
+       |  def foo: String = ${0:???}
+       |""".stripMargin,
+    assertSingleItem = false,
+  )
 }
