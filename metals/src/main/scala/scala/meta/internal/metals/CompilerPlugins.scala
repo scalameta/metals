@@ -65,11 +65,14 @@ class CompilerPlugins {
       path.isJar && {
         try {
           FileIO.withJarFileSystem(path, create = false, close = true) { root =>
-            val xml = XML.load(
-              Files.newInputStream(root.resolve("scalac-plugin.xml").toNIO)
-            )
-            val name = (xml \ "name").text
-            isSupportedPlugin(name)
+            val scalacPluginXml = root.resolve("scalac-plugin.xml").toNIO
+            Files.exists(scalacPluginXml) && {
+              val xml = XML.load(
+                Files.newInputStream(scalacPluginXml)
+              )
+              val name = (xml \ "name").text
+              isSupportedPlugin(name)
+            }
           }
         } catch {
           case NonFatal(e) =>
