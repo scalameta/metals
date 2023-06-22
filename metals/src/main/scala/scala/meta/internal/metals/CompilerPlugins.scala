@@ -40,20 +40,17 @@ class CompilerPlugins {
   private val cache = TrieMap.empty[Seq[AbsolutePath], Boolean]
 
   def filterSupportedOptions(options: Seq[String]): Seq[String] = {
-    options.filter { option =>
-      if (option.startsWith("-Xplugin:")) {
-        val paths =
-          option.stripPrefix("-Xplugin:").split(",").map(AbsolutePath(_)).toSeq
+    options.filter {
+      case s"-Xplugin:$pathsString" =>
+        val paths = pathsString.split(",").map(AbsolutePath(_)).toSeq
         cache.getOrElseUpdate(paths, isSupportedPlugin(paths))
-      } else if (option.startsWith("-P:")) {
-        isSupportedPlugin.exists(plugin => option.startsWith(s"-P:$plugin:"))
-      } else {
-        true
-      }
+      case s"-P:$plugin:$_" =>
+        supportedPlugins.contains(plugin)
+      case _ => true
     }
   }
 
-  private val isSupportedPlugin = Set(
+  private val supportedPlugins = Set(
     "kind-projector", // https://github.com/non/kind-projector
     "bm4", // https://github.com/oleg-py/better-monadic-for
     // Intentionally not supported:
@@ -71,7 +68,7 @@ class CompilerPlugins {
                 Files.newInputStream(scalacPluginXml)
               )
               val name = (xml \ "name").text
-              isSupportedPlugin(name)
+              supportedPlugins.contains(name)
             }
           }
         } catch {
