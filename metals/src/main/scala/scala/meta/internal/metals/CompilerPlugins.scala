@@ -37,13 +37,14 @@ import scala.meta.io.AbsolutePath
  * - enabling the plugin does not break the presentation compiler in unexpected ways.
  */
 class CompilerPlugins {
-  private val cache = TrieMap.empty[AbsolutePath, Boolean]
+  private val cache = TrieMap.empty[Seq[AbsolutePath], Boolean]
 
   def filterSupportedOptions(options: Seq[String]): Seq[String] = {
     options.filter { option =>
       if (option.startsWith("-Xplugin:")) {
-        val path = AbsolutePath(option.stripPrefix("-Xplugin:"))
-        cache.getOrElseUpdate(path, isSupportedPlugin(path))
+        val paths =
+          option.stripPrefix("-Xplugin:").split(",").map(AbsolutePath(_)).toSeq
+        cache.getOrElseUpdate(paths, isSupportedPlugin(paths))
       } else if (option.startsWith("-P:")) {
         isSupportedPlugin.exists(plugin => option.startsWith(s"-P:$plugin:"))
       } else {
@@ -59,20 +60,22 @@ class CompilerPlugins {
     // "macro-paradise-plugin", see https://github.com/scalameta/metals/issues/622
   )
 
-  private def isSupportedPlugin(path: AbsolutePath): Boolean = {
-    path.isJar && {
-      try {
-        FileIO.withJarFileSystem(path, create = false, close = true) { root =>
-          val xml = XML.load(
-            Files.newInputStream(root.resolve("scalac-plugin.xml").toNIO)
-          )
-          val name = (xml \ "name").text
-          isSupportedPlugin(name)
+  private def isSupportedPlugin(paths: Seq[AbsolutePath]): Boolean = {
+    paths.exists { path =>
+      path.isJar && {
+        try {
+          FileIO.withJarFileSystem(path, create = false, close = true) { root =>
+            val xml = XML.load(
+              Files.newInputStream(root.resolve("scalac-plugin.xml").toNIO)
+            )
+            val name = (xml \ "name").text
+            isSupportedPlugin(name)
+          }
+        } catch {
+          case NonFatal(e) =>
+            scribe.error(path.toString(), e)
+            false
         }
-      } catch {
-        case NonFatal(e) =>
-          scribe.error(path.toString(), e)
-          false
       }
     }
   }
