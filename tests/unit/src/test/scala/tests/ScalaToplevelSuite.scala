@@ -37,19 +37,24 @@ class ScalaToplevelSuite extends BaseSuite {
        |  def foo: Int
        |  class Z
        |
-       |class B(val v: String):
+       |class B(val v: String, g: String):
        |  trait X
        |  def foo: Int
        |
-       |trait C
+       |trait C(p: String, val i: Int)
        |
-       |enum D:
-       |  case Da, Db""".stripMargin,
+       |enum D(val i : Int):
+       |  def getI = i
+       |  case Da extends D(1)
+       |  case Db extends D(2)
+       |""".stripMargin,
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
-      "_empty_/B#X#", "_empty_/B#foo().", "_empty_/C#", "_empty_/D#",
+      "_empty_/B#X#", "_empty_/B#foo().", "_empty_/B#v.", "_empty_/C#",
+      "_empty_/C#i.", "_empty_/D#", "_empty_/D#getI().", "_empty_/D#i.",
     ),
     all = true,
+    dialect = dialects.Scala3,
   )
 
   check(
