@@ -475,14 +475,10 @@ class ScalaToplevelMtags(
     currentOwner = owner
     maybeName.foreach { name =>
       kind match {
-        case CLASS =>
+        case CLASS | ENUM =>
           tpe(name.name, name.pos, Kind.CLASS, 0)
         case TRAIT =>
           tpe(name.name, name.pos, Kind.TRAIT, 0)
-        case ENUM =>
-          withOwner(owner) {
-            tpe(name.name, name.pos, Kind.CLASS, 0)
-          }
         case OBJECT =>
           if (isPackageObject) {
             currentOwner = symbol(Scala.Descriptor.Package(name.name))
