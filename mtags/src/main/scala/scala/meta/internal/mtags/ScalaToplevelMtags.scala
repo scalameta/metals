@@ -248,11 +248,11 @@ class ScalaToplevelMtags(
           }
           loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         case IMPORT =>
-          // skip imports becase they might have `given` kw
+          // skip imports because they might have `given` kw
           acceptToStatSep()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case COMMENT =>
-          // skip comment becase they might break indentation
+          // skip comment because they might break indentation
           scanner.nextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case WHITESPACE if dialect.allowSignificantIndentation =>
@@ -295,6 +295,14 @@ class ScalaToplevelMtags(
               expectTemplate
             )
           }
+        case MATCH if dialect.allowSignificantIndentation && nextIsNL =>
+          val nextIndent = acceptWhileIndented(indent)
+          loop(
+            nextIndent,
+            isAfterNewline = false,
+            currRegion,
+            None
+          )
         case COLON if dialect.allowSignificantIndentation =>
           (expectTemplate, nextIsNL) match {
             case (Some(expect), true) if needToParseBody(expect) =>
@@ -309,6 +317,14 @@ class ScalaToplevelMtags(
                 isAfterNewline = false,
                 currRegion,
                 None
+              )
+            case (_, true) =>
+              val nextIndent = acceptWhileIndented(indent)
+              loop(
+                nextIndent,
+                isAfterNewline = false,
+                currRegion,
+                expectTemplate
               )
             case _ =>
               scanner.nextToken()
@@ -404,6 +420,7 @@ class ScalaToplevelMtags(
         case CASE =>
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           acceptTrivia()
+          emitEnumCases(region)
           loop(
             indent,
             isAfterNewline = false,
@@ -542,6 +559,30 @@ class ScalaToplevelMtags(
         }
     }
 
+  }
+
+  @tailrec
+  private def emitEnumCases(region: Region): Unit = {
+    scanner.curr.token match {
+      case IDENTIFIER =>
+        val pos = newPosition
+        val name = scanner.curr.name
+        term(
+          name,
+          pos,
+          Kind.METHOD,
+          SymbolInformation.Property.VAL.value
+        )
+        resetRegion(region)
+        acceptTrivia()
+        scanner.curr.token match {
+          case COMMA =>
+            acceptTrivia()
+            emitEnumCases(region)
+          case _ =>
+        }
+      case _ =>
+    }
   }
 
   /**
