@@ -12,7 +12,10 @@ import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.PackageElement
 import javax.lang.model.element.TypeElement
+import javax.lang.model.element.TypeParameterElement
 import javax.lang.model.element.VariableElement
+import javax.lang.model.util.Elements
+import javax.lang.model.util.Types
 
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.CollectionHasAsScala
@@ -27,9 +30,6 @@ import scala.meta.pc.RangeParams
 
 import com.sun.source.util.JavacTask
 import com.sun.source.util.Trees
-import com.sun.tools.javac.code.Symbol
-import com.sun.tools.javac.code.Symbol._
-import com.sun.tools.javac.code.Type.ClassType
 
 class JavaHoverProvider(
     compiler: JavaMetalsGlobal,
@@ -51,6 +51,8 @@ class JavaHoverProvider(
   def hoverOffset(params: OffsetParams): Option[HoverSignature] = {
     val task: JavacTask = compiler.compilationTask(params.text(), params.uri())
     val scanner = compiler.scanner(task)
+    val types = task.getTypes()
+    val elements = task.getElements()
     val position = params match {
       case p: RangeParams =>
         CursorPosition(p.offset(), p.offset(), p.endOffset())
@@ -64,7 +66,7 @@ class JavaHoverProvider(
       element = Trees.instance(task).getElement(n)
       docs =
         if (compiler.metalsConfig.isHoverDocumentationEnabled)
-          documentation(element)
+          documentation(element, types, elements)
         else ""
       hover <- hoverType(element, docs)
     } yield hover
@@ -164,81 +166,114 @@ class JavaHoverProvider(
     s"$modifiers$variableType $name"
   }
 
-  private def documentation(element: Element): String = {
-    element match {
-      case symbol: Symbol =>
-        val sym = semanticdbSymbol(symbol)
-
-        compiler.search
-          .documentation(
-            sym,
-            new ParentSymbols {
-              override def parents(): util.List[String] = symbol.owner
-                .asType() match {
-                case cType: ClassType => overriddenSymbols(symbol, cType)
-                case _ => util.Collections.emptyList[String]
-              }
+  private def documentation(
+      element: Element,
+      types: Types,
+      elements: Elements
+  ): String = {
+    val sym = semanticdbSymbol(element)
+    compiler.search
+      .documentation(
+        sym,
+        new ParentSymbols {
+          override def parents(): util.List[String] = {
+            element match {
+              case executableElement: ExecutableElement =>
+                element.getEnclosingElement match {
+                  case enclosingElement: TypeElement =>
+                    overriddenSymbols(
+                      executableElement,
+                      enclosingElement,
+                      types,
+                      elements
+                    )
+                  case _ => util.Collections.emptyList[String]
+                }
+              case _ => util.Collections.emptyList[String]
             }
-          )
-          .toScala
-          .map(_.docstring())
-          .getOrElse("")
-      case _ => ""
-    }
+          }
+        }
+      )
+      .toScala
+      .map(_.docstring())
+      .getOrElse("")
   }
 
   private def overriddenSymbols(
-      symbol: Symbol,
-      cType: ClassType
+      executableElement: ExecutableElement,
+      enclosingElement: TypeElement,
+      types: Types,
+      elements: Elements
   ): util.List[String] = {
-    val types = baseSymbols(cType)
-
-    (for {
-      t <- types
-      s <- t.tsym.getEnclosedElements.asScala
-      if s.getSimpleName == symbol.getSimpleName
-    } yield semanticdbSymbol(s)).asJava
+    val overriddenSymbols = for {
+      // get superclasses
+      superType <- types.directSupertypes(enclosingElement.asType()).asScala
+      superElement = types.asElement(superType)
+      // get elements of superclass
+      enclosedElement <- superElement match {
+        case typeElement: TypeElement =>
+          typeElement.getEnclosedElements().asScala
+        case _ => Nil
+      }
+      // filter out non-methods
+      enclosedExecutableElement <- enclosedElement match {
+        case enclosedExecutableElement: ExecutableElement =>
+          Some(enclosedExecutableElement)
+        case _ => None
+      }
+      // check super method overrides original method
+      if (elements.overrides(
+        executableElement,
+        enclosedExecutableElement,
+        enclosingElement
+      ))
+      symbol = semanticdbSymbol(enclosedExecutableElement)
+    } yield symbol
+    overriddenSymbols.toList.asJava
   }
 
-  private def baseSymbols(cType: ClassType): List[ClassType] = {
-    val superType = Option(cType.supertype_field)
-    val inheritedTypes =
-      if (cType.interfaces_field == null) List()
-      else cType.interfaces_field.asScala
-
-    val baseTypes = (superType ++ inheritedTypes).collect { case c: ClassType =>
-      c
-    }
-
-    baseTypes.flatMap(c => c :: baseSymbols(c)).toList
-  }
-
-  private def semanticdbSymbol(symbol: Symbol): String = {
+  private def semanticdbSymbol(element: Element): String = {
 
     @tailrec
-    def descriptors(acc: List[Descriptor], symbol: Symbol): List[Descriptor] = {
-      if (symbol == null || symbol.name.toString == "") {
+    def descriptors(
+        acc: List[Descriptor],
+        element: Element
+    ): List[Descriptor] = {
+      if (element == null || element.getSimpleName.toString == "") {
         if (acc.isEmpty) Empty :: Nil
         else acc
       } else {
-        val desc = {
-          val name = symbol.name.toString
-
-          symbol match {
-            case _: PackageSymbol => Package(name)
-            case m: MethodSymbol => Method(name, disambiguator(m))
-            case _: ClassSymbol => Class(name)
-            case _: TypeVariableSymbol => TypeVariable(name)
-            case _: VarSymbol => Var(name)
-            case _ => Empty
+        val elements = {
+          element match {
+            case packageElement: PackageElement =>
+              packageElement.getQualifiedName.toString
+                .split('.')
+                .map(Package(_))
+                .toList
+            case executableElement: ExecutableElement =>
+              List(
+                Method(
+                  executableElement.getSimpleName().toString(),
+                  disambiguator(executableElement)
+                )
+              )
+            case typeElement: TypeElement =>
+              List(Class(typeElement.getSimpleName().toString()))
+            case typeParameterElement: TypeParameterElement =>
+              List(
+                TypeVariable(typeParameterElement.getSimpleName().toString())
+              )
+            case variableElement: VariableElement =>
+              List(Var(variableElement.getSimpleName().toString()))
+            case _ => List(Empty)
           }
         }
 
-        descriptors(desc :: acc, symbol.owner)
+        descriptors(elements ::: acc, element.getEnclosingElement())
       }
     }
 
-    val decs = descriptors(Nil, symbol).filter(_ != Empty)
+    val decs = descriptors(Nil, element).filter(_ != Empty)
 
     (decs match {
       case Nil => List.empty[Descriptor]
@@ -247,13 +282,17 @@ class JavaHoverProvider(
     }).mkString("")
   }
 
-  private def disambiguator(symbol: Symbol.MethodSymbol): String = {
-    val methods = symbol.owner.getEnclosedElements.asScala.collect {
-      case e: ExecutableElement if e.getSimpleName == symbol.name => e
-    }
+  private def disambiguator(executableElement: ExecutableElement): String = {
+    val methods =
+      executableElement.getEnclosingElement.getEnclosedElements.asScala
+        .collect {
+          case e: ExecutableElement
+              if e.getSimpleName == executableElement.getSimpleName =>
+            e
+        }
 
     val index = methods.zipWithIndex.collectFirst {
-      case (e, i) if e.equals(symbol) => i
+      case (e, i) if e.equals(executableElement) => i
     }
 
     index match {
