@@ -985,4 +985,36 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     ),
   )
 
+  check(
+    "type-apply".tag(IgnoreScala2),
+    """|package demo
+       |
+       |package other:
+       |  type MyType = Long
+       |
+       |  object MyType:
+       |    def apply(m: Long): MyType = m
+       |
+       |val j = MyTy@@
+       |""".stripMargin,
+    """|MyType(m: Long): MyType
+       |MyType - demo.other""".stripMargin,
+  )
+
+  check(
+    "type-apply2".tag(IgnoreScala2),
+    """|package demo
+       |
+       |package other:
+       |  object MyType:
+       |    def apply(m: Long): MyType = m
+       |
+       |  type MyType = Long
+       |
+       |val j = MyTy@@
+       |""".stripMargin,
+    """|MyType(m: Long): MyType
+       |MyType - demo.other""".stripMargin,
+  )
+
 }

@@ -132,11 +132,11 @@ class MetalsPrinter(
     val typeSymbol = info.typeSymbol
 
     if sym.is(Flags.Package) || sym.isClass then
-      " " + dotcPrinter.fullName(sym.owner)
+      " " + dotcPrinter.fullName(sym.effectiveOwner)
     else if sym.is(Flags.Module) || typeSymbol.is(Flags.Module) then
       if typeSymbol != NoSymbol then
-        " " + dotcPrinter.fullName(typeSymbol.owner)
-      else " " + dotcPrinter.fullName(sym.owner)
+        " " + dotcPrinter.fullName(typeSymbol.effectiveOwner)
+      else " " + dotcPrinter.fullName(sym.effectiveOwner)
     else if sym.is(Flags.Method) then
       defaultMethodSignature(sym, info, onlyMethodParams = true)
     else tpe(info)
