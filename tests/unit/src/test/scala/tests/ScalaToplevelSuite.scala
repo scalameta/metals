@@ -501,6 +501,27 @@ class ScalaToplevelSuite extends BaseSuite {
     all = true,
   )
 
+  check(
+    "companion-to-type",
+    """|package s
+       |type Cow = Long
+       |
+       |object Cow:
+       |  def apply(m: Long): Cow = m
+       |
+       |""".stripMargin,
+    // For `s/Cow.` and `s/Cow.apply().` the corresponding symbols created by the compiler
+    // will be respectively `s/Test$package/Cow.` and `s/Test$package/Cow.apply().`.
+    //
+    // It is easier to work around this inconstancy in `SemanticdbSymbols.inverseSemanticdbSymbol`
+    // than to change symbols emitted by `ScalaTopLevelMtags`,
+    // since the object could be placed before type definition.
+    List("s/", "s/Test$package.", "s/Test$package.Cow#", "s/Cow.",
+      "s/Cow.apply()."),
+    dialect = dialects.Scala3,
+    all = true,
+  )
+
   def check(
       options: TestOptions,
       code: String,
