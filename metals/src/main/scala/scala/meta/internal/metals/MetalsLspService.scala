@@ -32,6 +32,7 @@ import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
@@ -734,6 +735,7 @@ class MetalsLspService(
     () => userConfig().javaHome,
     maybeJdkVersion,
     getVisibleName,
+    buildTools,
   )
 
   val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
@@ -884,6 +886,7 @@ class MetalsLspService(
     Future
       .sequence(
         List[Future[Unit]](
+          Future(buildTools.initialize()),
           quickConnectToBuildServer().ignoreValue,
           slowConnectToBuildServer(forceImport = false).ignoreValue,
           Future(workspaceSymbols.indexClasspath()),
@@ -1253,6 +1256,7 @@ class MetalsLspService(
           Future(indexer.reindexWorkspaceSources(paths)),
           compilations.compileFiles(paths),
           onBuildChanged(paths).ignoreValue,
+          Future.sequence(paths.map(onBuildToolAdded)),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
@@ -1873,7 +1877,6 @@ class MetalsLspService(
         fileWatcher.start(Set(folder.resolve(".bsp")))
         Future(None)
       }
-      case buildTool :: Nil => Future(isCompatibleVersion(buildTool))
       case buildTools =>
         for {
           Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
@@ -1898,6 +1901,18 @@ class MetalsLspService(
             case None =>
               scribe.warn(s"Skipping build import, no checksum.")
               Future.successful(BuildChange.None)
+            case Some(digest)
+                if isBloopOrEmpty && buildTool
+                  .isInstanceOf[BloopInstallProvider] =>
+              slowConnectToBloopServer(
+                forceImport,
+                buildTool.asInstanceOf[BloopInstallProvider],
+                digest,
+              )
+            case Some(_)
+                if buildTool.executableName == ScalaCliBuildTool.name && chosenBuildServer.isEmpty =>
+              tables.buildServers.chooseServer(ScalaCliBuildTool.name)
+              quickConnectToBuildServer()
             case Some(digest)
                 if isBloopOrEmpty && buildTool
                   .isInstanceOf[BloopInstallProvider] =>
@@ -2223,12 +2238,38 @@ class MetalsLspService(
   private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {
-    val isBuildChange = paths.exists(buildTools.isBuildRelated(folder, _))
-    if (isBuildChange) {
-      slowConnectToBuildServer(forceImport = false)
-    } else {
-      Future.successful(BuildChange.None)
+    val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
+    val buildChange = for {
+      chosenBuildTool <- tables.buildTool.selectedBuildTool()
+      if (changedBuilds.contains(chosenBuildTool))
+    } yield slowConnectToBuildServer(forceImport = false)
+    buildChange.getOrElse(Future.successful(BuildChange.None))
+  }
+
+  private def onBuildToolAdded(
+      path: AbsolutePath
+  ): Future[BuildChange] = {
+    val supportedBuildTools = buildTools.loadSupported()
+    val maybeBuildChange = for {
+      currentBuildToolName <- tables.buildTool.selectedBuildTool()
+      currentBuildTool <- supportedBuildTools.find(
+        _.executableName == currentBuildToolName
+      )
+      addedBuildName <- buildTools.isBuildRelated(path)
+      if (buildTools.newBuildTool(addedBuildName))
+      if (addedBuildName != currentBuildToolName)
+      newBuildTool <- supportedBuildTools.find(
+        _.executableName == addedBuildName
+      )
+    } yield {
+      buildToolSelector
+        .onNewBuildToolAdded(newBuildTool, currentBuildTool)
+        .flatMap { switch =>
+          if (switch) slowConnectToBuildServer(forceImport = false)
+          else Future.successful(BuildChange.None)
+        }
     }
+    maybeBuildChange.getOrElse(Future.successful(BuildChange.None))
   }
 
   /**

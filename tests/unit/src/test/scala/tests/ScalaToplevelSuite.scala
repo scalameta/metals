@@ -37,19 +37,25 @@ class ScalaToplevelSuite extends BaseSuite {
        |  def foo: Int
        |  class Z
        |
-       |class B(val v: String):
+       |class B(val v: String, g: String):
        |  trait X
        |  def foo: Int
        |
-       |trait C
+       |trait C(p: String, val i: Int)
        |
-       |enum D:
-       |  case Da, Db""".stripMargin,
+       |enum D(val i : Int):
+       |  def getI = i
+       |  case Da extends D(1)
+       |  case Db extends D(2)
+       |""".stripMargin,
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
-      "_empty_/B#X#", "_empty_/B#foo().", "_empty_/C#", "_empty_/D#",
+      "_empty_/B#X#", "_empty_/B#foo().", "_empty_/B#v.", "_empty_/C#",
+      "_empty_/C#i.", "_empty_/D#", "_empty_/D#Da.", "_empty_/D#Db.",
+      "_empty_/D#getI().", "_empty_/D#i.",
     ),
     all = true,
+    dialect = dialects.Scala3,
   )
 
   check(
@@ -93,6 +99,7 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
       "_empty_/B#X#", "_empty_/B#foo().", "_empty_/C#", "_empty_/D#",
+      "_empty_/D#Da.", "_empty_/D#Db.",
     ),
     all = true,
   )
@@ -446,6 +453,50 @@ class ScalaToplevelSuite extends BaseSuite {
     List("a/", "a/Test$package.", "a/Test$package.`* *`().",
       "a/Test$package.given_Char().", "a/Test$package.given_Float().",
       "a/Test$package.intValue().", "a/Test$package.listOrd()."),
+    dialect = dialects.Scala3,
+    all = true,
+  )
+
+  check(
+    "cases-for-enum-broken-ident",
+    """|package a
+       |enum Planets(val num: Int){
+       |num match
+       |  case x => ???
+       |List(1, 2, 3).collect{case someNumber => ???}
+       |case Mercury extends Planets(1)
+       |case Venus extends Planets(2)
+       |case Earth extends Planets(3)
+       |}
+       |
+       |enum NotPlanets{ case Vase }
+       |""".stripMargin,
+    List("a/", "a/Planets#", "a/Planets#Earth.", "a/Planets#Mercury.",
+      "a/Planets#num.", "a/Planets#Venus.", "a/NotPlanets#",
+      "a/NotPlanets#Vase."),
+    dialect = dialects.Scala3,
+    all = true,
+  )
+
+  check(
+    "cases-for-enum-ident",
+    """|package a
+       |enum Planets(val num: Int):
+       |  num match
+       |    case 1 =>
+       |    case other =>
+       |  List(1, 2, 3).collect:
+       |    case someNumber =>
+       |  case Mercury extends Planets(1)
+       |  case Venus extends Planets(2)
+       |  case Earth extends Planets(3)
+       |
+       |enum NotPlanets:
+       |  case Vase
+       |""".stripMargin,
+    List("a/", "a/Planets#", "a/Planets#Earth.", "a/Planets#Mercury.",
+      "a/Planets#num.", "a/Planets#Venus.", "a/NotPlanets#",
+      "a/NotPlanets#Vase."),
     dialect = dialects.Scala3,
     all = true,
   )

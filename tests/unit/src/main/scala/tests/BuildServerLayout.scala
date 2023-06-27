@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.{BuildInfo => V}
 
-sealed trait BuildToolLayout {
+trait BuildToolLayout {
   def apply(sourceLayout: String, scalaVersion: String): String
 }
 
@@ -17,20 +17,6 @@ object QuickBuildLayout extends BuildToolLayout {
         |}
         |$sourceLayout
         |""".stripMargin
-  }
-}
-
-object ScalaCliBuildLayout extends BuildToolLayout {
-  override def apply(
-      sourceLayout: String,
-      scalaVersion: String,
-  ): String = {
-    s"""/.bsp/scala-cli.json
-       |${BaseScalaCliSuite.scalaCliBspJsonContent(List("-S", scalaVersion))}
-       |/.scala-build/ide-inputs.json
-       |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
-       |$sourceLayout
-       |""".stripMargin
   }
 }
 

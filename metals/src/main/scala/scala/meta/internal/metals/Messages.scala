@@ -203,6 +203,25 @@ object Messages {
     }
   }
 
+  object NewBuildToolDetected {
+    val switch = new MessageActionItem("yes")
+    val dontSwitch = new MessageActionItem("no")
+    def params(
+        newBuildTool: BuildTool,
+        currentBuildTool: BuildTool,
+    ): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"""|Would you like to switch from the current build tool (${currentBuildTool.executableName}) to newly detected ${newBuildTool.executableName}?
+            |This action will also reset build server choice.
+            |""".stripMargin
+      )
+      params.setType(MessageType.Info)
+      params.setActions(List(switch, dontSwitch).asJava)
+      params
+    }
+  }
+
   def partialNavigation(icons: Icons) =
     new MetalsStatusParams(
       s"${icons.info} Partial navigation",

@@ -52,6 +52,34 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
+    "named-arg",
+    """
+      |case class Foo(foo: Int, <<bar>>: Int)
+      |object Main {
+      |  val x = Foo(
+      |    foo = 123,
+      |    <<ba@@r>> = 456
+      |  ) 
+      |
+      |}""".stripMargin,
+  )
+
+  check(
+    "named-arg1",
+    """
+      |case class Foo(<<foo>>: Int, bar: Int)
+      |object Main {
+      |  val x = Foo(
+      |    <<fo@@o>> = 123,
+      |    bar = 456
+      |  )
+      |  val y = x.<<foo>>
+      |  
+      |
+      |}""".stripMargin,
+  )
+
+  check(
     "scopes",
     """
       |object Main {

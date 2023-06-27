@@ -1,4 +1,4 @@
-package tests.codeactions
+package tests.scalacli
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
@@ -9,7 +9,7 @@ import scala.meta.internal.mtags.CoursierComplete
 import coursier.version.Version
 
 class ScalaCliActionsSuite
-    extends BaseCodeActionLspSuite("actionableDiagnostic") {
+    extends BaseScalaCLIActionSuite("actionableDiagnostic") {
 
   val oldOsLibVersion: Version = Version("0.7.8")
   val coursierComplete = new CoursierComplete(scalaCompilerVersion)
@@ -18,9 +18,9 @@ class ScalaCliActionsSuite
     .headOption
     .getOrElse("0.8.1")
 
-  check(
+  checkScalaCLI(
     "actionable-diagnostic-update",
-    s"""|//> <<>>using lib "com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
+    s"""|//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
         |
         |object Hello extends App {
         |  println("Hello")
@@ -35,10 +35,21 @@ class ScalaCliActionsSuite
         |""".stripMargin,
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
-    scalaCliLayout = true,
   )
 
-  check(
+  checkNoActionScalaCLI(
+    "actionable-diagnostic-out-of-range",
+    s"""|//> <<>>using lib "com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    scalaCliOptions = List("--actions", "-S", scalaVersion),
+    expectNoDiagnostics = false,
+  )
+
+  checkScalaCLI(
     "auto-import",
     s"""|//> using scala "${BuildInfo.scala213}"
         |//> using lib "org.typelevel::cats-core:2.9.0"
@@ -61,7 +72,6 @@ class ScalaCliActionsSuite
         |""".stripMargin,
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
-    scalaCliLayout = true,
     fileName = "A.sc",
   )
 

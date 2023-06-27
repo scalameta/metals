@@ -28,6 +28,7 @@ class PopupChoiceReset(
     val result = if (value == BuildTool) {
       scribe.info("Resetting build tool selection.")
       tables.buildTool.reset()
+      tables.buildServers.reset()
       slowConnect().ignoreValue
     } else if (value == BuildImport) {
       tables.dismissedNotifications.ImportChanges.reset()

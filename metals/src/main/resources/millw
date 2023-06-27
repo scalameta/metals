@@ -5,7 +5,7 @@
 # If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 #
 # Project page: https://github.com/lefou/millw
-# Script Version: 0.4.5
+# Script Version: 0.4.7
 #
 # If you want to improve this script, please also contribute your changes back!
 #
@@ -14,7 +14,12 @@
 set -e
 
 if [ -z "${DEFAULT_MILL_VERSION}" ] ; then
-  DEFAULT_MILL_VERSION=0.10.9
+  DEFAULT_MILL_VERSION="0.11.0"
+fi
+
+
+if [ -z "${GITHUB_RELEASE_CDN}" ] ; then
+  GITHUB_RELEASE_CDN=""
 fi
 
 
@@ -50,10 +55,12 @@ if [ -z "${MILL_VERSION}" ] ; then
   fi
 fi
 
-if [ -n "${XDG_CACHE_HOME}" ] ; then
-  MILL_DOWNLOAD_PATH="${XDG_CACHE_HOME}/mill/download"
-else
-  MILL_DOWNLOAD_PATH="${HOME}/.cache/mill/download"
+if [ -z "${MILL_DOWNLOAD_PATH}" ] ; then
+  if [ -n "${XDG_CACHE_HOME}" ] ; then
+    MILL_DOWNLOAD_PATH="${XDG_CACHE_HOME}/mill/download"
+  else
+    MILL_DOWNLOAD_PATH="${HOME}/.cache/mill/download"
+  fi
 fi
 
 # If not already set, try to fetch newest from Github
@@ -140,22 +147,34 @@ if [ ! -s "${MILL}" ] ; then
   if [ -x "${OLD_MILL}" ] ; then
     MILL="${OLD_MILL}"
   else
-    VERSION_PREFIX="$(echo $MILL_VERSION | cut -b -4)"
-    case $VERSION_PREFIX in
-      0.0. | 0.1. | 0.2. | 0.3. | 0.4. )
+    case $MILL_VERSION in
+      0.0.* | 0.1.* | 0.2.* | 0.3.* | 0.4.* )
         DOWNLOAD_SUFFIX=""
+        DOWNLOAD_FROM_MAVEN=0
+        ;;
+      0.5.* | 0.6.* | 0.7.* | 0.8.* | 0.9.* | 0.10.* | 0.11.0-M* )
+        DOWNLOAD_SUFFIX="-assembly"
+        DOWNLOAD_FROM_MAVEN=0
         ;;
       *)
         DOWNLOAD_SUFFIX="-assembly"
+        DOWNLOAD_FROM_MAVEN=1
         ;;
     esac
-    unset VERSION_PREFIX
 
     DOWNLOAD_FILE=$(mktemp mill.XXXXXX)
+
+    if [ "$DOWNLOAD_FROM_MAVEN" = "1" ] ; then
+      DOWNLOAD_URL="https://repo1.maven.org/maven2/com/lihaoyi/mill-dist/${MILL_VERSION}/mill-dist-${MILL_VERSION}.jar"
+    else
+      MILL_VERSION_TAG=$(echo $MILL_VERSION | sed -E 's/([^-]+)(-M[0-9]+)?(-.*)?/\1\2/')
+      DOWNLOAD_URL="${GITHUB_RELEASE_CDN}${MILL_REPO_URL}/releases/download/${MILL_VERSION_TAG}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
+      unset MILL_VERSION_TAG
+    fi
+
     # TODO: handle command not found
-    echo "Downloading mill ${MILL_VERSION} from ${MILL_REPO_URL}/releases ..." 1>&2
-    MILL_VERSION_TAG=$(echo $MILL_VERSION | sed -E 's/([^-]+)(-M[0-9]+)?(-.*)?/\1\2/')
-    ${CURL_CMD} -f -L -o "${DOWNLOAD_FILE}" "${MILL_REPO_URL}/releases/download/${MILL_VERSION_TAG}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
+    echo "Downloading mill ${MILL_VERSION} from ${DOWNLOAD_URL} ..." 1>&2
+    ${CURL_CMD} -f -L -o "${DOWNLOAD_FILE}" "${DOWNLOAD_URL}"
     chmod +x "${DOWNLOAD_FILE}"
     mkdir -p "${MILL_DOWNLOAD_PATH}"
     mv "${DOWNLOAD_FILE}" "${MILL}"
@@ -180,7 +199,6 @@ unset MILL_DOWNLOAD_PATH
 unset MILL_OLD_DOWNLOAD_PATH
 unset OLD_MILL
 unset MILL_VERSION
-unset MILL_VERSION_TAG
 unset MILL_REPO_URL
 
 # We don't quote MILL_FIRST_ARG on purpose, so we can expand the empty value without quotes

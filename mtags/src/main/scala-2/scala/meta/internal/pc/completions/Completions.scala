@@ -51,6 +51,18 @@ trait Completions { this: MetalsGlobal =>
   class NamedArgMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
 
+  class DependecyMember(val dependency: String, val edit: l.TextEdit)
+      extends ScopeMember(
+        completionsSymbol(dependency),
+        NoType,
+        true,
+        EmptyTree
+      ) {
+    val label: String = dependency.stripPrefix(":")
+    def isVersion: Boolean =
+      label.takeWhile(_ != '-').forall(c => c.isDigit || c == '.')
+  }
+
   class TextEditMember(
       val filterText: String,
       val edit: l.TextEdit,

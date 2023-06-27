@@ -51,7 +51,11 @@ class BspConnector(
       }.nonEmpty
 
       val resolved = bspServers.resolve()
-      if (supportBloop || buildTools.isBloop)
+      if (
+        buildTools
+          .loadSupported()
+          .exists(_.isBloopDefaultBsp) || buildTools.isBloop
+      )
         ResolvedBloop
       // WORKSPACE file is found && bsp connection file for Bazel is not yet generated
       else if (buildTools.isBazel && resolved == ResolvedNone) ResolvedBazel
@@ -93,6 +97,7 @@ class BspConnector(
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
+          tables.buildServers.chooseServer(SbtBuildTool.name)
           val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(workspace)
           val connectionF =
             for {
@@ -118,6 +123,7 @@ class BspConnector(
 
             }
         case ResolvedBspOne(details) =>
+          tables.buildServers.chooseServer(details.getName())
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
@@ -149,6 +155,7 @@ class BspConnector(
                   distinctServers(query.mapping(item.getTitle))
                 )
               )
+            _ = tables.buildServers.chooseServer(item.getName())
             conn <- bspServers.newServer(workspace, item)
           } yield Some(conn)
       }

@@ -35,10 +35,11 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
 
   override def toString: String = "Bazel"
 
-  override def executableName = "bazel"
+  override def executableName = BazelBuildTool.name
 }
 
 object BazelBuildTool {
+  val name: String = "bazel"
   private val coursierArgs = List(
     "cs", "launch", "org.jetbrains.bsp:bazel-bsp:2.7.1", "-M",
     "org.jetbrains.bsp.bazel.install.Install",

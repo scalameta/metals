@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.{util => ju}
 
 import scala.annotation.switch
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
@@ -309,45 +310,55 @@ object SemanticTokensProvider {
       case _ => false
     }
 
-  def makeScalaCliTokens(
+  private def makeScalaCliTokens(
       comm: Token.Comment,
       initialDelta: Line,
   ): (List[Integer], Line) = {
-    val cliTokens = getTokens(false, comm.value)
-    val buffer = ListBuffer.empty[Integer]
-    var delta = initialDelta
-    cliTokens.foreach { tk =>
-      val (toAdd, delta0) = tk match {
-        case start: Token.Ident if start.value == ">" =>
-          convertTokensToIntList(
-            "//>",
-            delta,
-            getTypeId(SemanticTokenTypes.Comment),
+    val directive = comm.toString()
+    val parts = directive.split("[,\\s]+").toList.zipWithIndex
+
+    @tailrec
+    def loop(
+        parts: List[(String, Int)],
+        delta: Line,
+        text: String,
+        tokens: List[Integer],
+    ): (List[Integer], Line) = {
+      parts match {
+        case Nil => (tokens, delta)
+        case (part, partIdx) :: next =>
+          val tokenType = getUsingTokenType(part, partIdx)
+          val tokenMod =
+            if (tokenType == getTypeId(SemanticTokenTypes.Variable))
+              1 << getModifierId(SemanticTokenModifiers.Readonly)
+            else 0
+          val idx = text.indexOf(part)
+          val afterWhitespace = delta.moveOffset(idx)
+          val (toAdd, newDelta) = convertTokensToIntList(
+            part,
+            afterWhitespace,
+            tokenType,
+            tokenMod,
           )
-        case using: Token.Ident if using.value == "using" =>
-          convertTokensToIntList(
-            using.value,
-            delta,
-            getTypeId(SemanticTokenTypes.Keyword),
-          )
-        case tk =>
-          val (tpe, mod) = typeModOfNonIdentToken(tk, false)
-          convertTokensToIntList(
-            tk.text,
-            delta,
-            tpe,
-            mod,
-          )
+          val newText = text.substring(idx + part.length)
+          loop(next, newDelta, newText, tokens ++ toAdd)
       }
-      buffer.addAll(
-        toAdd
-      )
-      delta = delta0
     }
-    (buffer.toList, delta)
+    loop(parts, initialDelta, directive, List.empty)
   }
 
-  def makeDocStringTokens(
+  private def getUsingTokenType(part: String, idx: Int): Int = {
+    idx match {
+      case 0 =>
+        if (part == "//>") getTypeId(SemanticTokenTypes.Comment) else -1
+      case 1 =>
+        if (part == "using") getTypeId(SemanticTokenTypes.Keyword) else -1
+      case 2 => getTypeId(SemanticTokenTypes.Variable)
+      case _ => getTypeId(SemanticTokenTypes.String)
+    }
+  }
+
+  private def makeDocStringTokens(
       comm: Token.Comment,
       initialDelta: Line,
   ): (List[Integer], Line) = {

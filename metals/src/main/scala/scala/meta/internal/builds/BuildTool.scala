@@ -26,6 +26,8 @@ trait BuildTool {
 
   def executableName: String
 
+  def isBloopDefaultBsp = true
+
 }
 
 object BuildTool {
@@ -41,4 +43,5 @@ object BuildTool {
     Files.copy(embeddedFile, outFile, StandardCopyOption.REPLACE_EXISTING)
     outFile
   }
+
 }

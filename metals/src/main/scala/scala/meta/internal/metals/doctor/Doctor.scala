@@ -13,6 +13,7 @@ import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
 import scala.meta.internal.bsp.ResolvedMultiple
 import scala.meta.internal.bsp.ResolvedNone
+import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
@@ -52,6 +53,7 @@ final class Doctor(
     javaHome: () => Option[String],
     maybeJDKVersion: Option[JdkVersion],
     folderName: String,
+    buildTools: BuildTools,
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
@@ -114,9 +116,10 @@ final class Doctor(
   private def allTargetIds(): Seq[BuildTargetIdentifier] =
     buildTargets.allBuildTargetIds
 
-  private def selectedBuildToolMessage(): Option[String] = {
+  private def selectedBuildToolMessage(): Option[(String, Boolean)] = {
+    val isExplicitChoice = buildTools.loadSupported().length > 1
     tables.buildTool.selectedBuildTool().map { value =>
-      s"Build definition is coming from ${value}."
+      (s"Build definition is coming from ${value}.", isExplicitChoice)
     }
   }
 
@@ -172,7 +175,7 @@ final class Doctor(
 
   def buildTargetsJson(): DoctorFolderResults = {
     val targetIds = allTargetIds()
-    val buildToolHeading = selectedBuildToolMessage()
+    val buildToolHeading = selectedBuildToolMessage().map(_._1)
 
     val (buildServerHeading, _) = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
@@ -253,10 +256,10 @@ final class Doctor(
     if (includeWorkspaceFolderName) {
       html.element("h2")(_.text(folderName))
     }
-    selectedBuildToolMessage().foreach { msg =>
+    selectedBuildToolMessage().foreach { case (msg, explicitChoice) =>
       html.element("p")(
         _.text(msg)
-          .optionally(!clientConfig.isHttpEnabled)(
+          .optionally(!clientConfig.isHttpEnabled && explicitChoice)(
             _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildTool), "Reset")
               .text(")")
@@ -406,7 +409,7 @@ final class Doctor(
       else
         (
           DoctorStatus.alert,
-          problemResolver.recommendation(javaTarget, scalaTarget = None),
+          problemResolver.recommendation(javaTarget),
         )
 
     val canRun = javaTarget.info.getCapabilities().getCanRun()
@@ -451,9 +454,7 @@ final class Doctor(
     val recommendedFix = problemResolver
       .recommendation(scalaTarget)
       .orElse {
-        javaTarget.flatMap(target =>
-          problemResolver.recommendation(target, Some(scalaTarget))
-        )
+        javaTarget.flatMap(target => problemResolver.recommendation(target))
       }
     val (targetType, diagnosticsStatus) =
       scalaTarget.sbtVersion match {
@@ -471,7 +472,7 @@ final class Doctor(
       case Some(target) =>
         (
           DoctorStatus.alert,
-          problemResolver.recommendation(target, Some(scalaTarget)),
+          problemResolver.recommendation(target),
         )
       case None if scalaTarget.isAmmonite => (DoctorStatus.info, None)
       case None => (DoctorStatus.alert, None)

@@ -57,6 +57,7 @@ jobs:
             sbt,
             maven,
             gradle,
+            scalacli,
             mill,
             feature,
             cross,
@@ -88,6 +89,10 @@ jobs:
           - type: mill
             command: bin/test.sh 'slow/testOnly -- tests.mill.*'
             name: Mill integration
+            os: ubuntu-latest
+          - type: scalacli
+            command: bin/test.sh 'slow/testOnly -- tests.scalacli.*'
+            name: Scala CLI integration
             os: ubuntu-latest
           - type: feature
             command: bin/test.sh 'slow/testOnly -- tests.feature.*'

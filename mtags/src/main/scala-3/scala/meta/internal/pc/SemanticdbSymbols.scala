@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.mtags.MtagsEnrichments.stripBackticks
+
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.*
@@ -17,7 +19,9 @@ object SemanticdbSymbols:
       if s.isNone || s.isRootPackage then RootPackage :: Nil
       else if s.isEmptyPackage then EmptyPackageVal :: Nil
       else if s.isPackage then
-        try requiredPackage(s.stripSuffix("/").replace("/", ".")) :: Nil
+        try
+          val pkg = s.split('/').map(_.stripBackticks).mkString(".")
+          requiredPackage(pkg) :: Nil
         catch
           case NonFatal(_) =>
             Nil
@@ -66,7 +70,9 @@ object SemanticdbSymbols:
                     .toList
 
         parentSymbol.flatMap(tryMember)
-    try loop(sym).filterNot(_ == NoSymbol)
+    try
+      val res = loop(sym)
+      res.filterNot(_ == NoSymbol)
     catch case NonFatal(e) => Nil
   end inverseSemanticdbSymbol
 

@@ -3,8 +3,6 @@ package scala.meta.internal.pc.completions
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.pc.MetalsGlobal
 
-import org.eclipse.{lsp4j => l}
-
 trait ScalaCliCompletions {
   this: MetalsGlobal =>
   class ScalaCliExtractor(pos: Position) {
@@ -32,7 +30,7 @@ trait ScalaCliCompletions {
       pos: Position,
       text: String,
       dependency: String
-  ) extends CompletionPosition {
+  ) extends DependencyCompletion {
 
     override def contribute: List[Member] = {
       val completions =
@@ -40,15 +38,7 @@ trait ScalaCliCompletions {
       val (editStart, editEnd) =
         CoursierComplete.inferEditRange(pos.point, text)
       val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
-      completions
-        .map(insertText =>
-          new TextEditMember(
-            filterText = insertText,
-            edit = new l.TextEdit(editRange, insertText),
-            sym = completionsSymbol(insertText),
-            label = Some(insertText.stripPrefix(":"))
-          )
-        )
+      makeMembers(completions, editRange)
     }
   }
 }

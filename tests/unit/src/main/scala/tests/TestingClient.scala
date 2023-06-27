@@ -63,6 +63,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   // Customization of the window/showMessageRequest response
   var importBuildChanges: MessageActionItem = ImportBuildChanges.notNow
   var importBuild: MessageActionItem = ImportBuild.notNow
+  var switchBuildTool: MessageActionItem = NewBuildToolDetected.dontSwitch
   var restartBloop: MessageActionItem = BloopVersionChange.notNow
   var getDoctorInformation: MessageActionItem = CheckDoctor.moreInformation
   var selectBspServer: Seq[MessageActionItem] => MessageActionItem = { _ =>
@@ -305,6 +306,15 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       params == targetParams
     }
 
+    def isNewBuildToolDetectedMessage(): Boolean = {
+      val buildTools = BuildTools.default().allAvailable
+      buildTools.exists(newBuildTool =>
+        buildTools.exists(oldBuildTool =>
+          NewBuildToolDetected.params(newBuildTool, oldBuildTool) == params
+        )
+      )
+    }
+
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
       showMessageRequestHandler(params).getOrElse {
@@ -324,6 +334,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           createScalaFmtConf
         } else if (params.getMessage() == MainClass.message) {
           chooseMainClass(params.getActions.asScala.toSeq)
+        } else if (isNewBuildToolDetectedMessage()) {
+          switchBuildTool
         } else {
           throw new IllegalArgumentException(params.toString)
         }

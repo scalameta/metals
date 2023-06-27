@@ -95,6 +95,8 @@ class CompletionProvider(
           s"$escaped = "
         case o: OverrideDefMember =>
           o.label
+        case d: DependecyMember =>
+          d.label
         case o: TextEditMember =>
           o.label.getOrElse(labelWithSig)
         case o: WorkspaceMember =>
@@ -125,6 +127,8 @@ class CompletionProvider(
           item.setFilterText(i.filterText)
         case i: OverrideDefMember =>
           item.setFilterText(i.filterText)
+        case i: DependecyMember =>
+          item.setFilterText(i.dependency)
         case _ =>
           // Explicitly set filter text because the label has method signature and
           // fully qualified name.
@@ -146,6 +150,8 @@ class CompletionProvider(
         case i: OverrideDefMember =>
           item.setTextEdit(i.edit)
           item.setAdditionalTextEdits(i.autoImports.asJava)
+        case d: DependecyMember =>
+          item.setTextEdit(d.edit)
         case w: WorkspaceMember =>
           def createTextEdit(identifier: String) =
             textEdit(w.wrap(identifier), w.editRange.getOrElse(editRange))

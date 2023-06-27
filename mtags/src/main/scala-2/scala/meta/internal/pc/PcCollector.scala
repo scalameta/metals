@@ -149,6 +149,7 @@ abstract class PcCollector[T](
                   .filter(_.isConstructor)
                   .flatMap(_.paramss)
                   .flatten
+                  .filter(_.name == id.name)
                   .toSet
                 (
                   (constructorParams ++ Set(

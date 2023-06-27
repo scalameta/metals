@@ -159,28 +159,25 @@ commands ++= Seq(
 // https://github.com/scala/bug/issues/10448
 def lintingOptions(scalaVersion: String) = {
   val unused213 = "-Wunused"
-  // Can't use due to issues with Scala 3 https://github.com/lampepfl/dotty/issues/16650
   val unused3 = "-Wunused:all"
   val common = List(
     // desugaring of for yield caused pattern var to complain
     // https://github.com/scala/bug/issues/10287
-    "-Wconf:msg=parameter value .+ in anonymous function:silent",
-    // silence unused parameters in mtags
-    "-Wconf:src=*.ScaladocParser.scala&msg=parameter value (pos|message) in method reportError:silent",
-    "-Wconf:src=*.Completions.scala&msg=parameter value (member|m) in method (isCandidate|isPrioritized):silent",
-    "-Wconf:src=*.JavaMtags.scala&msg=parameter value (ctor|method) in method (visitConstructor|visitMethod):silent",
-    "-Wconf:src=*.MtagsIndexer.scala&msg=parameter value owner in method visitOccurrence:silent",
+    "-Wconf:msg=in anonymous function is never used:silent",
+    // silence unused parameters in mtags in abstract methods
+    "-Wconf:src=*.BasePCSuite.scala&msg=parameter (scalaVersion|classpath) in method (extraDependencies|scalacOptions):silent",
+    "-Wconf:src=*.CodeLens.scala&msg=parameter (textDocumentWithPath|path) in method codeLenses is never used:silent",
+    "-Wconf:src=*.Completions.scala&msg=parameter (member|m) in method (isCandidate|isPrioritized):silent",
+    "-Wconf:src=*.JavaMtags.scala&msg=parameter (ctor|method) in method (visitConstructor|visitMethod):silent",
+    "-Wconf:src=*.MtagsIndexer.scala&msg=parameter owner in method visitOccurrence:silent",
+    "-Wconf:src=*.ScaladocParser.scala&msg=parameter (pos|message) in method reportError:silent",
+    "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
-    "-Wconf:src=*.BasePCSuite.scala&msg=parameter value (scalaVersion|classpath) in method (extraDependencies|scalacOptions):silent",
   )
-  // -Wconf is available only from 2.13.2
-  val commonFiltered =
-    if (scalaVersion == "2.13.1") common.filterNot(_.startsWith("-Wconf"))
-    else common
   crossSetting(
     scalaVersion,
-    if213 = unused213 :: commonFiltered,
+    if213 = unused213 :: common,
     if3 = unused3 :: Nil,
     if211 = List("-Ywarn-unused-import"),
   )
@@ -258,7 +255,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.23.2",
+      "com.google.protobuf" % "protobuf-java" % "3.23.3",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -403,7 +400,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.9.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.19.4",
+      "org.flywaydb" % "flyway-core" % "9.20.0",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",

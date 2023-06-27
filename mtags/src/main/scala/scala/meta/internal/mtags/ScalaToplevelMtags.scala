@@ -88,7 +88,18 @@ class ScalaToplevelMtags(
           currentOwner,
           false,
           false,
+          isClassConstructor = true,
           isCaseClassConstructor = true
+        )
+      )
+    def newExpectClassTemplate: Some[ExpectTemplate] =
+      Some(
+        ExpectTemplate(
+          indent,
+          currentOwner,
+          false,
+          false,
+          isClassConstructor = true
         )
       )
     def newExpectPkgTemplate: Some[ExpectTemplate] =
@@ -183,7 +194,7 @@ class ScalaToplevelMtags(
           val template = expectTemplate match {
             case Some(expect) if expect.isCaseClassConstructor =>
               newExpectCaseClassTemplate
-            case _ => newExpectTemplate
+            case _ => newExpectClassTemplate
           }
           loop(indent, isAfterNewline = false, currRegion, template)
         // also covers extension methods because of `def` inside
@@ -237,11 +248,11 @@ class ScalaToplevelMtags(
           }
           loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         case IMPORT =>
-          // skip imports becase they might have `given` kw
+          // skip imports because they might have `given` kw
           acceptToStatSep()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case COMMENT =>
-          // skip comment becase they might break indentation
+          // skip comment because they might break indentation
           scanner.nextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case WHITESPACE if dialect.allowSignificantIndentation =>
@@ -284,6 +295,14 @@ class ScalaToplevelMtags(
               expectTemplate
             )
           }
+        case MATCH if dialect.allowSignificantIndentation && nextIsNL =>
+          val nextIndent = acceptWhileIndented(indent)
+          loop(
+            nextIndent,
+            isAfterNewline = false,
+            currRegion,
+            None
+          )
         case COLON if dialect.allowSignificantIndentation =>
           (expectTemplate, nextIsNL) match {
             case (Some(expect), true) if needToParseBody(expect) =>
@@ -298,6 +317,14 @@ class ScalaToplevelMtags(
                 isAfterNewline = false,
                 currRegion,
                 None
+              )
+            case (_, true) =>
+              val nextIndent = acceptWhileIndented(indent)
+              loop(
+                nextIndent,
+                isAfterNewline = false,
+                currRegion,
+                expectTemplate
               )
             case _ =>
               scanner.nextToken()
@@ -336,13 +363,16 @@ class ScalaToplevelMtags(
         case LPAREN =>
           expectTemplate match {
             case Some(expect)
-                if expect.isCaseClassConstructor && includeInnerClasses => {
+                if expect.isClassConstructor && includeInnerClasses => {
               scanner.nextToken()
               loop(
                 indent,
                 isAfterNewline = false,
-                expect.startInParenRegion(currRegion),
-                None
+                expect.startInParenRegion(
+                  currRegion,
+                  expect.isCaseClassConstructor
+                ),
+                expectTemplate
               )
             }
             case _ => {
@@ -351,7 +381,11 @@ class ScalaToplevelMtags(
               loop(indent, isAfterNewline = false, currRegion, expectTemplate)
             }
           }
-        case RPAREN if currRegion.changeCaseClassState(true).emitIdentifier =>
+        case RPAREN if (currRegion match {
+              case _: Region.InParenCaseClass => true
+              case _: Region.InParenClass => true
+              case _ => false
+            }) =>
           scanner.nextToken()
           loop(
             indent,
@@ -386,6 +420,7 @@ class ScalaToplevelMtags(
         case CASE =>
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           acceptTrivia()
+          emitEnumCases(region)
           loop(
             indent,
             isAfterNewline = false,
@@ -457,14 +492,10 @@ class ScalaToplevelMtags(
     currentOwner = owner
     maybeName.foreach { name =>
       kind match {
-        case CLASS =>
+        case CLASS | ENUM =>
           tpe(name.name, name.pos, Kind.CLASS, 0)
         case TRAIT =>
           tpe(name.name, name.pos, Kind.TRAIT, 0)
-        case ENUM =>
-          withOwner(owner) {
-            tpe(name.name, name.pos, Kind.CLASS, 0)
-          }
         case OBJECT =>
           if (isPackageObject) {
             currentOwner = symbol(Scala.Descriptor.Package(name.name))
@@ -528,6 +559,30 @@ class ScalaToplevelMtags(
         }
     }
 
+  }
+
+  @tailrec
+  private def emitEnumCases(region: Region): Unit = {
+    scanner.curr.token match {
+      case IDENTIFIER =>
+        val pos = newPosition
+        val name = scanner.curr.name
+        term(
+          name,
+          pos,
+          Kind.METHOD,
+          SymbolInformation.Property.VAL.value
+        )
+        resetRegion(region)
+        acceptTrivia()
+        scanner.curr.token match {
+          case COMMA =>
+            acceptTrivia()
+            emitEnumCases(region)
+          case _ =>
+        }
+      case _ =>
+    }
   }
 
   /**
@@ -736,7 +791,8 @@ object ScalaToplevelMtags {
       isPackageBody: Boolean,
       isExtension: Boolean = false,
       ignoreBody: Boolean = false,
-      isCaseClassConstructor: Boolean = false
+      isCaseClassConstructor: Boolean = false,
+      isClassConstructor: Boolean = false
   ) {
 
     /**
@@ -752,8 +808,9 @@ object ScalaToplevelMtags {
     def startInBraceRegion(prev: Region, extension: Boolean = false): Region =
       new Region.InBrace(owner, adjustRegion(prev), extension)
 
-    def startInParenRegion(prev: Region): Region =
-      Region.InParen(owner, adjustRegion(prev), true)
+    def startInParenRegion(prev: Region, isCaseClass: Boolean): Region =
+      if (isCaseClass) Region.InParenCaseClass(owner, adjustRegion(prev), true)
+      else Region.InParenClass(owner, adjustRegion(prev))
 
     def startIndentedRegion(prev: Region, extension: Boolean = false): Region =
       new Region.Indented(owner, indent, adjustRegion(prev), extension)
@@ -836,7 +893,16 @@ object ScalaToplevelMtags {
         Indented(owner, exitIndent, prev, extension, termOwner)
     }
 
-    final case class InParen(
+    final case class InParenClass(
+        owner: String,
+        prev: Region
+    ) extends Region {
+      def acceptMembers: Boolean = false
+      override val produceSourceToplevel: Boolean = false
+      override val emitIdentifier: Boolean = false
+    }
+
+    final case class InParenCaseClass(
         owner: String,
         prev: Region,
         override val emitIdentifier: Boolean

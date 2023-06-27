@@ -148,7 +148,7 @@ final class Compilations(
       for {
         cleanResult <- cleaned
         if cleanResult.getCleaned() == true
-        compiled <- compile(targetIds).future
+        _ <- compile(targetIds).future
       } yield ()
     }
 
