@@ -251,7 +251,7 @@ lazy val mtagsShared = project
     crossScalaVersions := {
       V.supportedScalaVersions ++ V.nightlyScala3Versions
     },
-    crossVersion := CrossVersion.binary,
+    crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
