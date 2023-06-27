@@ -985,4 +985,27 @@ object Messages {
     }
   }
 
+  object SbtServerJavaHomeUpdate {
+    val restart: MessageActionItem =
+      new MessageActionItem("Restart sbt server")
+
+    val notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Java home has been updated, do you want to restart the sbt BSP server? (the change will only be picked up after the restart)"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          restart,
+          notNow,
+        ).asJava
+      )
+      params
+    }
+  }
+
 }

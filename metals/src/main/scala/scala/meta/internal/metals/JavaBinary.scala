@@ -39,4 +39,15 @@ object JavaBinary {
         case path if path.exists => path
       }
   }
+
+  def allPossibleJavaBinaries(
+      javaHome: Option[String]
+  ): List[AbsolutePath] = {
+    JdkSources
+      .defaultJavaHome(javaHome)
+      .flatMap(home => List(home.resolve("bin"), home.resolve("bin/jre")))
+      .flatMap(bin => List("java", "java.exe").map(bin.resolve))
+      .withFilter(_.exists)
+      .flatMap(binary => List(binary.dealias, binary))
+  }
 }
