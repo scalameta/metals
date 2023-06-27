@@ -118,11 +118,7 @@ final class Embedded(
       case None => resolutionParams
       case Some(version) =>
         resolutionParams.forceVersions(
-          List(
-            Dependency.of("org.scala-lang", "scala3-library_3", version),
-            Dependency.of("org.scala-lang", "scala3-compiler_3", version),
-            Dependency.of("org.scala-lang", "tasty-core_3", version),
-          ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+          Embedded.scala3CompilerDependencies(version)
         )
     }
     val jars =
@@ -180,6 +176,12 @@ object Embedded {
         ),
       )
 
+  private[Embedded] def scala3CompilerDependencies(version: String) = List(
+    Dependency.of("org.scala-lang", "scala3-library_3", version),
+    Dependency.of("org.scala-lang", "scala3-compiler_3", version),
+    Dependency.of("org.scala-lang", "tasty-core_3", version),
+  ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+
   def fetchSettings(
       dep: Dependency,
       scalaVersion: Option[String],
@@ -196,6 +198,10 @@ object Embedded {
             Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
             Dependency.of("org.scala-lang", "scala-reflect", scalaVersion),
           ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+        )
+      else
+        resolutionParams.forceVersions(
+          scala3CompilerDependencies(scalaVersion)
         )
     }
 
