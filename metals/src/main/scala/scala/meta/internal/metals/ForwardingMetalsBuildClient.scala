@@ -43,6 +43,7 @@ final class ForwardingMetalsBuildClient(
     onBuildTargetDidCompile: BuildTargetIdentifier => Unit,
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
     bspErrorHandler: BSPErrorHandler,
+    isBloop: () => Boolean,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -99,7 +100,11 @@ final class ForwardingMetalsBuildClient(
   def onBuildLogMessage(params: l.MessageParams): Unit =
     params.getType match {
       case l.MessageType.Error =>
-        bspErrorHandler.onError(params.getMessage())
+        if (isBloop()) {
+          bspErrorHandler.onError(params.getMessage())
+        } else {
+          scribe.error(params.getMessage)
+        }
       case l.MessageType.Warning =>
         scribe.warn(params.getMessage)
       case l.MessageType.Info =>

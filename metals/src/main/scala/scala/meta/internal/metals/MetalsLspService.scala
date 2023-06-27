@@ -395,6 +395,10 @@ class MetalsLspService(
         maybeQuickConnectToBuildServer(params)
       },
       bspErrorHandler,
+      () =>
+        bspSession
+          .map(session => session.main.isBloop || session.main.isScalaCLI)
+          .getOrElse(false),
     )
 
   private val bloopServers: BloopServers = new BloopServers(

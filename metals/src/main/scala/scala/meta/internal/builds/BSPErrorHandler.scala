@@ -42,7 +42,7 @@ class BSPErrorHandler(
         val error = currentError.getAndUpdate(_.newError())
         error.error match {
           case Some(message) => showError(filterANSIColorCodes(message))
-          case None => Future.unit
+          case None =>
         }
       }
     }
