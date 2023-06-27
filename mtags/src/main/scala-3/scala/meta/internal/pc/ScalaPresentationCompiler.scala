@@ -13,6 +13,7 @@ import scala.collection.JavaConverters.*
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 
+import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ReportContext
@@ -86,7 +87,7 @@ case class ScalaPresentationCompiler(
   override def semanticTokens(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Node]] =
-    compilerAccess.withInterruptableCompiler(
+    compilerAccess.withInterruptableCompiler(Some(params))(
       new ju.ArrayList[Node](),
       params.token(),
     ) { access =>
@@ -103,7 +104,7 @@ case class ScalaPresentationCompiler(
     }
 
   def complete(params: OffsetParams): CompletableFuture[l.CompletionList] =
-    compilerAccess.withInterruptableCompiler(
+    compilerAccess.withInterruptableCompiler(Some(params))(
       EmptyCompletionList(),
       params.token,
     ) { access =>
@@ -120,7 +121,7 @@ case class ScalaPresentationCompiler(
     }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
       DefinitionResultImpl.empty,
       params.token,
     ) { access =>
@@ -131,7 +132,7 @@ case class ScalaPresentationCompiler(
   override def typeDefinition(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
       DefinitionResultImpl.empty,
       params.token,
     ) { access =>
@@ -142,7 +143,7 @@ case class ScalaPresentationCompiler(
   def documentHighlight(
       params: OffsetParams
   ): CompletableFuture[ju.List[DocumentHighlight]] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
       List.empty[DocumentHighlight].asJava,
       params.token,
     ) { access =>
@@ -163,7 +164,8 @@ case class ScalaPresentationCompiler(
       filename: URI,
       code: String,
   ): CompletableFuture[Array[Byte]] =
-    compilerAccess.withNonInterruptableCompiler(
+    val virtualFile = CompilerVirtualFileParams(filename, code)
+    compilerAccess.withNonInterruptableCompiler(Some(virtualFile))(
       Array.empty[Byte],
       EmptyCancelToken,
     ) { access =>
@@ -171,12 +173,13 @@ case class ScalaPresentationCompiler(
       val provider = SemanticdbTextDocumentProvider(driver, folderPath)
       provider.textDocument(filename, code)
     }
+  end semanticdbTextDocument
 
   def completionItemResolve(
       item: l.CompletionItem,
       symbol: String,
   ): CompletableFuture[l.CompletionItem] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(None)(
       item,
       EmptyCancelToken,
     ) { access =>
@@ -193,7 +196,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[
     ju.List[scala.meta.pc.AutoImportsResult]
   ] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
       List.empty[scala.meta.pc.AutoImportsResult].asJava,
       params.token,
     ) { access =>
@@ -214,7 +217,10 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[ju.List[l.TextEdit]] =
     val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+    compilerAccess.withInterruptableCompiler(Some(params))(
+      empty,
+      params.token,
+    ) { pc =>
       val driver = pc.compiler()
       OverrideCompletions.implementAllAt(
         params,
@@ -229,7 +235,10 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[ju.List[l.TextEdit]] =
     val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+    compilerAccess.withInterruptableCompiler(Some(params))(
+      empty,
+      params.token,
+    ) { pc =>
       new InferredTypeProvider(params, pc.compiler(), config, search)
         .inferredTypeEdits()
         .asJava
@@ -240,7 +249,10 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[l.TextEdit]] =
     val empty: Either[String, List[l.TextEdit]] = Right(List())
     (compilerAccess
-      .withInterruptableCompiler(empty, params.token) { pc =>
+      .withInterruptableCompiler(Some(params))(
+        empty,
+        params.token,
+      ) { pc =>
         new PcInlineValueProviderImpl(pc.compiler(), params)
           .getInlineTextEdits()
       })
@@ -255,16 +267,17 @@ case class ScalaPresentationCompiler(
       extractionPos: OffsetParams,
   ): CompletableFuture[ju.List[l.TextEdit]] =
     val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
-    compilerAccess.withInterruptableCompiler(empty, range.token) { pc =>
-      new ExtractMethodProvider(
-        range,
-        extractionPos,
-        pc.compiler(),
-        search,
-        options.contains("-no-indent"),
-      )
-        .extractMethod()
-        .asJava
+    compilerAccess.withInterruptableCompiler(Some(range))(empty, range.token) {
+      pc =>
+        new ExtractMethodProvider(
+          range,
+          extractionPos,
+          pc.compiler(),
+          search,
+          options.contains("-no-indent"),
+        )
+          .extractMethod()
+          .asJava
     }
   end extractMethod
 
@@ -274,7 +287,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[l.TextEdit]] =
     val empty: Either[String, List[l.TextEdit]] = Right(List())
     (compilerAccess
-      .withInterruptableCompiler(empty, params.token) { pc =>
+      .withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
         new ConvertToNamedArgumentsProvider(
           pc.compiler(),
           params,
@@ -290,12 +303,13 @@ case class ScalaPresentationCompiler(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[l.SelectionRange]] =
     CompletableFuture.completedFuture {
-      compilerAccess.withSharedCompiler(List.empty[l.SelectionRange].asJava) {
-        pc =>
-          new SelectionRangeProvider(
-            pc.compiler(),
-            params,
-          ).selectionRange().asJava
+      compilerAccess.withSharedCompiler(params.asScala.headOption)(
+        List.empty[l.SelectionRange].asJava
+      ) { pc =>
+        new SelectionRangeProvider(
+          pc.compiler(),
+          params,
+        ).selectionRange().asJava
       }
     }
   end selectionRange
@@ -303,7 +317,7 @@ case class ScalaPresentationCompiler(
   def hover(
       params: OffsetParams
   ): CompletableFuture[ju.Optional[HoverSignature]] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
       ju.Optional.empty[HoverSignature](),
       params.token,
     ) { access =>
@@ -315,7 +329,7 @@ case class ScalaPresentationCompiler(
   def prepareRename(
       params: OffsetParams
   ): CompletableFuture[ju.Optional[l.Range]] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
       Optional.empty[l.Range](),
       params.token,
     ) { access =>
@@ -329,7 +343,7 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       name: String,
   ): CompletableFuture[ju.List[l.TextEdit]] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
       List[l.TextEdit]().asJava,
       params.token,
     ) { access =>
@@ -349,7 +363,7 @@ case class ScalaPresentationCompiler(
     )
 
   def signatureHelp(params: OffsetParams): CompletableFuture[l.SignatureHelp] =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
       new l.SignatureHelp(),
       params.token,
     ) { access =>
@@ -363,7 +377,7 @@ case class ScalaPresentationCompiler(
     CompletableFuture.completedFuture(Nil.asJava)
 
   override def didClose(uri: URI): Unit =
-    compilerAccess.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(None)(
       (),
       EmptyCancelToken,
     ) { access => access.compiler().close(uri) }
