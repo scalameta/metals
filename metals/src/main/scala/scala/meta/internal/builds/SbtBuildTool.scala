@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.inputs.Input
@@ -14,6 +15,7 @@ import scala.meta.internal.semver.SemVer.isCompatibleVersion
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.services.LanguageClient
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
@@ -186,6 +188,24 @@ case class SbtBuildTool(
   override def toString: String = SbtBuildTool.name
 
   def executableName = SbtBuildTool.name
+
+  def ensureCorrectJavaVersion(
+      shellRunner: ShellRunner,
+      workspace: AbsolutePath,
+      languageClient: LanguageClient,
+  )(implicit ex: ExecutionContext): Future[Unit] =
+    if (checkCorrectJavaVersion(workspace, userConfig().javaHome)) {
+      Future.successful(())
+    } else {
+      languageClient
+        .showMessageRequest(Messages.SbtServerJavaHomeUpdate.params())
+        .asScala
+        .flatMap {
+          case Messages.SbtServerJavaHomeUpdate.restart =>
+            shutdownBspServer(shellRunner, workspace).ignoreValue
+          case _ => Future.successful(())
+        }
+    }
 }
 
 object SbtBuildTool {
@@ -381,5 +401,35 @@ object SbtBuildTool {
   def prependAutoImports(text: String, autoImports: Seq[String]): String = {
     val prepend = autoImports.mkString("", "\n", "\n")
     prepend + text
+  }
+
+  def checkCorrectJavaVersion(
+      workspace: AbsolutePath,
+      userJavaHome: Option[String],
+  ): Boolean = {
+    val bspConfigFile = workspace.resolve(".bsp").resolve("sbt.json")
+    if (bspConfigFile.isFile) {
+      val matchesSbtJavaHome =
+        for {
+          text <- bspConfigFile.readTextOpt
+          json = ujson.read(text)
+          args <- json("argv").arrOpt
+          firstArg <- args.headOption
+          javaArg <- firstArg.strOpt
+          if (javaArg.endsWith("java"))
+        } yield {
+          val possibleJavaBinaries =
+            JavaBinary.allPossibleJavaBinaries(userJavaHome)
+          val sbtJavaHomeIsCorrect =
+            possibleJavaBinaries.exists(_.toString == javaArg)
+          if (!sbtJavaHomeIsCorrect) {
+            scribe.debug(
+              s"Java binary used by sbt server $javaArg doesn't match the expected java home. Possible paths considered: $possibleJavaBinaries"
+            )
+          }
+          sbtJavaHomeIsCorrect
+        }
+      matchesSbtJavaHome.getOrElse(true)
+    } else true
   }
 }

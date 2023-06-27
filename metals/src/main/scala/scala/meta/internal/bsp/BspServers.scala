@@ -14,12 +14,14 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.URIEncoderDecoder
@@ -43,6 +45,7 @@ final class BspServers(
     tables: Tables,
     bspGlobalInstallDirectories: List[AbsolutePath],
     config: MetalsServerConfig,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContextExecutorService) {
 
   def resolve(): BspResolvedResult = {
@@ -92,7 +95,10 @@ final class BspServers(
         args,
         projectDirectory,
         redirectErrorOutput = false,
-        Map(),
+        JdkSources
+          .defaultJavaHome(userConfig().javaHome)
+          .map("JAVA_HOME" -> _.toString())
+          .toMap,
         processOut = None,
         processErr = Some(l => scribe.info("BSP server: " + l)),
         discardInput = false,
