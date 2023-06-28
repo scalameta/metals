@@ -52,8 +52,8 @@ public class Main >>region>>{
         void handleLineWithBlockAndCode() >>region>>{
             if (true) >>region>>{
                 // do something
-                // to pad lines
-            }<<region<< else >>region>>{
+             <<region<<   // to pad lines
+            } else >>region>>{
                 // do something
                 // to pad lines
             }<<region<<

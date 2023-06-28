@@ -1,223 +1,253 @@
 package scala.meta.internal.parsing
 
-import scala.annotation.tailrec
-import scala.collection.mutable
+import javax.tools.Diagnostic.NOPOS
 
-import org.eclipse.jdt.core.ToolFactory
-import org.eclipse.jdt.core.compiler.ITerminalSymbols
+import scala.annotation.tailrec
+
+import scala.meta.internal.pc.JavaMetalsGlobal
+import scala.meta.io.AbsolutePath
+
+import com.sun.source.tree.BlockTree
+import com.sun.source.tree.ClassTree
+import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.tree.ImportTree
+import com.sun.source.tree.LineMap
+import com.sun.source.tree.LiteralTree
+import com.sun.source.util.SourcePositions
+import com.sun.source.util.TreePathScanner
+import com.sun.source.util.Trees
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeKind
 
-final class JavaFoldingRangeExtractor(
-    text: String,
-    foldOnlyLines: Boolean,
-) {
+final object JavaFoldingRangeExtractor {
   private val spanThreshold = 2
 
-  private sealed trait Position
-  private case class LBrace(line: Int, ch: Int) extends Position
-  private case class RBrace(line: Int, ch: Int) extends Position
-
-  private trait Region extends Position {
-    def startLine: Int
-    def startCh: Int
-    def endLine: Int
-    def endCh: Int
-    def kind: String
-  }
-  private case class Comment(
-      startLine: Int,
-      startCh: Int,
-      endLine: Int,
-      endCh: Int,
-  ) extends Region {
-    def kind = FoldingRangeKind.Comment
-  }
-
-  private case class Imports(
-      startLine: Int,
-      startCh: Int,
-      endLine: Int,
-      endCh: Int,
-  ) extends Region {
-    def kind = FoldingRangeKind.Imports
-  }
-
-  def extract(): List[FoldingRange] = {
-    val scanner = ToolFactory.createScanner(true, true, false, true)
-    scanner.setSource(text.toCharArray())
-    @tailrec
-    def swallowUntilSemicolon(token: Int, line: Int): Int = {
-      if (token == ITerminalSymbols.TokenNameEOF) line
-      else {
-        val addLine = scanner.getCurrentTokenSource.count(_ == '\n')
-        if (token != ITerminalSymbols.TokenNameSEMICOLON) {
-          swallowUntilSemicolon(scanner.getNextToken(), line + addLine)
-        } else {
-          line + addLine
-        }
-      }
-    }
-
-    case class CurrentScannerStatus(
-        currentToken: Int,
-        currentLine: Int,
-        lastImportLine: Int,
-        lastImportCharacter: Int,
-    )
-    @tailrec
-    def gatherImportLines(
-        token: Int,
-        line: Int,
-        lastImportLine: Int,
-        hasCarriageReturn: Boolean = false,
-    ): CurrentScannerStatus = {
-      val addLine = scanner.getRawTokenSource().count(_ == '\n')
-      token match {
-        case ITerminalSymbols.TokenNameimport =>
-          val currentLine = swallowUntilSemicolon(token, line)
-          gatherImportLines(scanner.getNextToken(), currentLine, line)
-        case ITerminalSymbols.TokenNameWHITESPACE =>
-          gatherImportLines(
-            scanner.getNextToken(),
-            line + addLine,
-            lastImportLine,
-            hasCarriageReturn || scanner.getRawTokenSource().contains('\r'),
-          )
-        case _ =>
-          val endCharacter =
-            scanner.getLineEnd(lastImportLine) -
-              scanner.getLineStart(lastImportLine)
-          val adjustedEnd =
-            if (hasCarriageReturn) endCharacter - 1 else endCharacter
-          CurrentScannerStatus(token, line, lastImportLine, adjustedEnd)
-      }
-
-    }
-
-    @tailrec
-    def gather(token: Int, line: Int, acc: List[Position]): List[Position] = {
-      if (token != ITerminalSymbols.TokenNameEOF) {
-        val addLine = scanner.getRawTokenSource().count(_ == '\n')
-        def next = scanner.getNextToken()
-        def currentCharacterStart =
-          scanner.getCurrentTokenStartPosition() - scanner.getLineStart(line)
-        def currentCharacterEnd =
-          scanner.getCurrentTokenEndPosition() -
-            scanner.getLineStart(line + addLine)
-
-        token match {
-          case ITerminalSymbols.TokenNameLBRACE =>
-            val startCharacter =
-              if (foldOnlyLines) 0 else currentCharacterStart
-            gather(next, line, LBrace(line, startCharacter) :: acc)
-          case ITerminalSymbols.TokenNameRBRACE =>
-            val (endLine, endChracter) =
-              if (foldOnlyLines) (line - 1, 0)
-              else (line, currentCharacterEnd + 1)
-            gather(next, line, RBrace(endLine, endChracter) :: acc)
-
-          case ITerminalSymbols.TokenNameimport =>
-            val startCharacter =
-              if (foldOnlyLines) 0 else currentCharacterStart
-            val startLine = line
-            val CurrentScannerStatus(tk, currentLine, endLine, endCharacter) =
-              gatherImportLines(token, line, line)
-            val imports =
-              Imports(startLine, startCharacter, endLine, endCharacter)
-            gather(tk, currentLine, imports :: acc)
-
-          case ITerminalSymbols.TokenNameCOMMENT_BLOCK |
-              ITerminalSymbols.TokenNameCOMMENT_JAVADOC =>
-            val currentEndLine = line + addLine
-            val (startCh, endCh, endLine) =
-              if (foldOnlyLines)
-                (0, 0, currentEndLine - 1)
-              else
-                (
-                  currentCharacterStart,
-                  currentCharacterEnd + 1,
-                  currentEndLine,
-                )
-            val comment = Comment(line, startCh, endLine, endCh)
-            gather(next, line + addLine, comment :: acc)
-
-          case ITerminalSymbols.TokenNameWHITESPACE =>
-            val addLine = scanner.getRawTokenSource().count(_ == '\n')
-            gather(next, line + addLine, acc)
-          case _ =>
-            gather(next, line + addLine, acc)
-        }
-
-      } else {
-        acc.reverse
-      }
-
-    }
-    val startAndEnds = gather(scanner.getNextToken(), 1, Nil)
-    val stack = mutable.Stack.empty[LBrace]
-    @tailrec
-    def group(
-        remaining: List[Position],
-        acc: List[FoldingRange],
-    ): List[FoldingRange] = {
-      remaining match {
-        case (lBrace: LBrace) :: tail =>
-          stack.push(lBrace)
-          group(tail, acc)
-        case RBrace(endLine, endCharacter) :: tail if stack.nonEmpty =>
-          val lBrace = stack.pop()
-          createFoldingRange(
-            lBrace.line - 1,
-            lBrace.ch,
-            endLine - 1,
-            endCharacter,
-            FoldingRangeKind.Region,
-          ) match {
-            case Some(newFoldingRange) =>
-              group(tail, newFoldingRange :: acc)
-            case None =>
-              group(tail, acc)
-          }
-
-        case (region: Region) :: tail =>
-          createFoldingRange(
-            region.startLine - 1,
-            region.startCh,
-            region.endLine - 1,
-            region.endCh,
-            region.kind,
-          ) match {
-            case Some(newFoldingRange) =>
-              group(tail, newFoldingRange :: acc)
-            case None =>
-              group(tail, acc)
-          }
-
-        case _ =>
-          acc.reverse
-      }
-
-    }
-    group(startAndEnds, Nil)
-  }
-
-  private def createFoldingRange(
-      startLine: Int,
-      startCharacter: Int,
-      endLine: Int,
-      endCharacter: Int,
+  private case class Range(
+      startPos: Long,
+      endPos: Long,
       kind: String,
-  ): Option[FoldingRange] = {
-    if (endLine - startLine >= spanThreshold) {
-      val newFoldingRange = new FoldingRange(startLine, endLine)
-      newFoldingRange.setStartCharacter(startCharacter)
-      newFoldingRange.setEndCharacter(endCharacter)
-      newFoldingRange.setKind(kind)
-      Some(newFoldingRange)
-    } else {
-      None
+  ) {
+    def contains(idx: Long): Boolean = startPos <= idx && endPos >= idx
+
+    def toFoldingRange(lineMap: LineMap): FoldingRange = {
+      val startLine = lineMap.getLineNumber(startPos) - 1
+      val startCharacter = lineMap.getColumnNumber(startPos) - 1
+      val endLine = lineMap.getLineNumber(endPos) - 1
+      val endCharacter = lineMap.getColumnNumber(endPos) - 1
+      val foldingRange = new FoldingRange(startLine.intValue, endLine.intValue)
+      foldingRange.setStartCharacter(startCharacter.intValue)
+      foldingRange.setEndCharacter(endCharacter.intValue)
+      foldingRange.setKind(kind)
+      foldingRange
+    }
+  }
+  private class FoldScanner(
+      compUnit: CompilationUnitTree,
+      sourcePositions: SourcePositions,
+      text: String,
+  ) extends TreePathScanner[Unit, Unit] {
+
+    var imports: List[Range] = Nil
+    var regions: List[Range] = Nil
+    var strings: List[Range] = Nil
+
+    private def createRange(
+        kind: String,
+        moveStartTo: Option[Character],
+    ): Option[Range] = {
+      val treePath = getCurrentPath
+      val originalStartPos =
+        sourcePositions.getStartPosition(compUnit, treePath.getLeaf)
+      val endPos = sourcePositions.getEndPosition(compUnit, treePath.getLeaf)
+      if (NOPOS == originalStartPos || NOPOS == endPos)
+        None
+      else {
+        val startPos = moveStartTo match {
+          case Some(ch) =>
+            var startPos = originalStartPos
+            while (
+              startPos < text.length &&
+              startPos < endPos &&
+              text.charAt(startPos.intValue()) != ch
+            ) startPos = startPos + 1
+            startPos
+          case None => originalStartPos
+        }
+        Some(Range(startPos, endPos, kind))
+      }
+    }
+
+    override def visitLiteral(tree: LiteralTree, unused: Unit): Unit = {
+      // fold triple-quote Strings - needs jdk 15 to test so no test written
+      // also used to exclude ranges when searching for comments
+      tree.getValue() match {
+        case _: String =>
+          createRange(FoldingRangeKind.Region, None) match {
+            case Some(range) => strings ::= range
+            case None => //
+          }
+        case _ => //
+      }
+      super.visitLiteral(tree, unused)
+    }
+
+    override def visitImport(tree: ImportTree, unused: Unit): Unit = {
+      createRange(FoldingRangeKind.Imports, None) match {
+        case Some(range) => imports ::= range
+        case None => //
+      }
+      super.visitImport(tree, unused)
+    }
+
+    override def visitBlock(tree: BlockTree, unused: Unit): Unit = {
+      // `static` blocks don't start at `{` so pos is adjusted
+      createRange(FoldingRangeKind.Region, Some('{')) match {
+        case Some(range) => regions ::= range
+        case None => //
+      }
+      super.visitBlock(tree, unused)
+    }
+
+    override def visitClass(tree: ClassTree, unused: Unit): Unit = {
+      // class blocks don't start at `{` so pos is adjusted
+      createRange(FoldingRangeKind.Region, Some('{')) match {
+        case Some(range) => regions ::= range
+        case None => //
+      }
+      super.visitClass(tree, unused)
     }
   }
 
+  private def getTrees(
+      text: String,
+      path: AbsolutePath,
+  ): Option[(Trees, CompilationUnitTree)] = {
+    val javaGlobal = new JavaMetalsGlobal(null, null)
+    val javacTask = javaGlobal.compilationTask(text, path.toURI)
+    val elems = javacTask.parse()
+    javacTask.analyze()
+    val trees = Trees.instance(javacTask)
+    val iter = elems.iterator
+    // only one CompilationUnitTree for a single file
+    if (iter.hasNext) Some((trees, iter.next())) else None
+  }
+
+  // search for any comments in file that aren't defined within a String
+  private def findComments(
+      text: String,
+      exclusions: List[Range],
+  ): List[Range] = {
+    @tailrec
+    def findComments(comments: List[Range], idx: Int): List[Range] = {
+      val startIdx = text.indexOf("/*", idx)
+      if (startIdx == -1)
+        comments
+      else {
+        val (newComments, newIdx) =
+          if (exclusions.exists(range => range.contains(startIdx.longValue)))
+            (comments, startIdx + 2)
+          else {
+            val endIdx = text.indexOf("*/", startIdx + 2)
+            val range = Range(
+              startIdx.longValue,
+              endIdx.longValue + 2,
+              FoldingRangeKind.Comment,
+            )
+            (range :: comments, endIdx + 2)
+          }
+        findComments(newComments, newIdx)
+      }
+    }
+
+    findComments(Nil, 0)
+  }
+
+  def extract(
+      text: String,
+      path: AbsolutePath,
+      foldOnlyLines: Boolean,
+  ): List[FoldingRange] = {
+    getTrees(text, path) match {
+      case Some((trees, root)) =>
+        val sourcePositions = trees.getSourcePositions
+        val scanner = new FoldScanner(root, sourcePositions, text)
+        scanner.scan(root, {})
+        val lineMap = root.getLineMap
+        // imports are defined as a range per import but should be treated as one range encompassing all imports
+        val mergedImports = mergeRanges(
+          scanner.imports.map(range => range.toFoldingRange(lineMap))
+        ).toList
+        // comments are not returned by the scanner so search separately
+        val comments = findComments(text, scanner.strings)
+        val allRanges = mergedImports :::
+          scanner.regions.map(range => range.toFoldingRange(lineMap)) :::
+          scanner.strings.map(range => range.toFoldingRange(lineMap)) :::
+          comments.map(range => range.toFoldingRange(lineMap))
+        val thresholdedRanges = allRanges
+          .filter(range =>
+            range.getEndLine - range.getStartLine >= spanThreshold
+          )
+        if (foldOnlyLines)
+          adjustForOverlap(thresholdedRanges)
+        else
+          thresholdedRanges
+      case None => Nil
+    }
+  }
+
+  // Some clients can't cope with ranges overlapping on the same line e.g. `} else {` would be an end and start.
+  // Adjust these to end a line earlier
+  private def adjustForOverlap(
+      ranges: List[FoldingRange]
+  ): List[FoldingRange] = {
+    val startLines = ranges.map(_.getStartLine()).distinct.toSet
+    ranges.map(range =>
+      if (
+        startLines.contains(range.getEndLine) && range.getEndLine() > range
+          .getStartLine()
+      ) {
+        val adjustedRange =
+          new FoldingRange(range.getStartLine, range.getEndLine - 1)
+        adjustedRange.setStartCharacter(range.getStartCharacter)
+        val endChar =
+          if (
+            adjustedRange.getStartLine() == adjustedRange.getEndLine() &&
+            range.getStartCharacter() > range.getEndCharacter()
+          )
+            range.getStartCharacter()
+          else
+            range.getEndCharacter()
+        adjustedRange.setEndCharacter(endChar)
+        adjustedRange.setKind(range.getKind)
+        adjustedRange
+      } else range
+    )
+  }
+
+  private def mergeRanges(ranges: List[FoldingRange]): Option[FoldingRange] = {
+    def minStart(a: FoldingRange, b: FoldingRange): FoldingRange = {
+      if (
+        a.getStartLine < b.getStartLine || (a.getStartLine == b.getStartLine && a.getStartCharacter < b.getStartCharacter)
+      ) a
+      else b
+    }
+    def maxEnd(a: FoldingRange, b: FoldingRange): FoldingRange = {
+      if (
+        a.getEndLine > b.getEndLine || (a.getEndLine == b.getEndLine && a.getEndCharacter > b.getEndCharacter)
+      ) a
+      else b
+    }
+    if (ranges.isEmpty)
+      None
+    else {
+      val min = ranges.reduce(minStart)
+      val max = ranges.reduce(maxEnd)
+
+      val mergedRange = new FoldingRange(min.getStartLine, max.getEndLine)
+      mergedRange.setStartCharacter(min.getStartCharacter)
+      mergedRange.setEndCharacter(max.getEndCharacter)
+      mergedRange.setKind(min.getKind)
+      Some(mergedRange)
+    }
+  }
 }
