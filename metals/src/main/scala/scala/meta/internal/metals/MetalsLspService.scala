@@ -1937,17 +1937,23 @@ class MetalsLspService(
       )
       buildChange <- possibleBuildTool match {
         case Some(buildTool) =>
-          buildTool.digest(folder) match {
-            case None =>
+          (buildTool.digest(folder), buildTool) match {
+            case (None, _) =>
               scribe.warn(s"Skipping build import, no checksum.")
               Future.successful(BuildChange.None)
-            case Some(_)
-                if buildTool.executableName == ScalaCliBuildTool.name && chosenBuildServer.isEmpty =>
-              tables.buildServers.chooseServer(ScalaCliBuildTool.name)
-              quickConnectToBuildServer()
-            case Some(digest) if isBloopOrEmpty =>
+            case (Some(_), bt: ScalaCliBuildTool)
+                if chosenBuildServer.isEmpty =>
+              for {
+                _ <- bt.createBspConfigIfNone(
+                  folder,
+                  args => bspConfigGenerator.runUnconditionally(bt, args),
+                )
+                _ = tables.buildServers.chooseServer(ScalaCliBuildTool.name)
+                buildChange <- quickConnectToBuildServer()
+              } yield buildChange
+            case (Some(digest), _) if isBloopOrEmpty =>
               slowConnectToBloopServer(forceImport, buildTool, digest)
-            case Some(digest) =>
+            case (Some(digest), _) =>
               indexer.reloadWorkspaceAndIndex(
                 forceImport,
                 buildTool,

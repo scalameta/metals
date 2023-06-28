@@ -317,4 +317,49 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     } yield ()
   }
 
+  test("detect-when-project-scala-file") {
+    cleanWorkspace()
+    server.client.importBuild = Messages.ImportBuild.yes
+    for {
+      _ <- initialize(
+        s"""|/project.scala
+            |//> using scala "${V.scala3}"
+            |//> using lib "com.lihaoyi::utest::0.8.1"
+            |//> using lib "com.lihaoyi::pprint::0.8.1"
+            |
+            |/test/MyTests.scala
+            |
+            |import foo.Foo
+            |import utest._
+            |
+            |object MyTests extends TestSuite {
+            |  pprint.log(2)
+            |  val tests = Tests {
+            |    test("foo") {
+            |      assert(2 + 2 == 4)
+            |    }
+            |    test("nope") {
+            |      assert(2 + 2 == (new Foo).value)
+            |    }
+            |  }
+            |}
+            |
+            |/main/Foo.scala
+            |class Foo {
+            |  def value = 5
+            |}
+            |
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(server.server.bspSession.exists(_.main.isScalaCLI))
+      _ <- server.didOpen("test/MyTests.scala")
+      _ <- assertDefinitionAtLocation(
+        "test/MyTests.scala",
+        "val tests = Test@@s",
+        "utest/Tests.scala",
+      )
+    } yield ()
+  }
+
 }
