@@ -43,9 +43,7 @@ final class FoldingRangeProvider(
       code <- buffers.get(filePath)
       if filePath.isJava
     } yield {
-      val extractor =
-        new JavaFoldingRangeExtractor(code, foldOnlyLines)
-      extractor.extract().asJava
+      JavaFoldingRangeExtractor.extract(code, filePath, foldOnlyLines).asJava
     }
 
     result.getOrElse(util.Collections.emptyList())
