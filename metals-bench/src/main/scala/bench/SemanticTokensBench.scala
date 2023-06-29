@@ -3,7 +3,6 @@ package bench
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
-import java.{util => ju}
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.jdk.CollectionConverters._
@@ -71,7 +70,7 @@ class SemanticTokensBench extends PcBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def semanticHighlight(): ju.List[Integer] = {
+  def semanticHighlight(): List[Integer] = {
     val pc = presentationCompiler()
     val text = currentHighlight
     val vFile = CompilerVirtualFileParams(

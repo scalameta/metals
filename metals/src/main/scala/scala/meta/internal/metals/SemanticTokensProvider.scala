@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
-
 import scala.annotation.switch
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -80,11 +78,11 @@ object SemanticTokensProvider {
       nodes: List[Node],
       params: VirtualFileParams,
       isScala3: Boolean,
-  ): ju.List[Integer] = {
+  ): List[Integer] = {
     // no semantic data was available, we can revert to default highlighting
     if (nodes.isEmpty) {
       scribe.warn("Could not find semantic tokens for: " + params.uri())
-      List.empty[Integer].asJava
+      List.empty[Integer]
     } else {
       val tokens = getTokens(isScala3, params.text())
       val buffer = ListBuffer.empty[Integer]
@@ -100,7 +98,7 @@ object SemanticTokensProvider {
         )
         delta = delta0
       }
-      buffer.toList.asJava
+      buffer.toList
     }
   }
 
