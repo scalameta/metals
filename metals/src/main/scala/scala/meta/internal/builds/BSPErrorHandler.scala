@@ -112,7 +112,7 @@ object BSPErrorHandler {
     if (message.length() <= MESSAGE_MAX_LENGTH) {
       val messageParams = new l.MessageParams(
         l.MessageType.Error,
-        s"""|$errorHeader:
+        s"""|$errorHeader
             |$message""".stripMargin,
       )
       Right(messageParams)
@@ -180,7 +180,7 @@ class CurrentAndPreviousError(
       ): List[List[String]] =
         lines match {
           case Nil => collectedSplits
-          case `elem` :: tail => go(tail, Nil :: collectedSplits)
+          case `elem` :: tail => go(tail, List(elem) :: collectedSplits)
           case headLine :: tail =>
             collectedSplits match {
               case head :: rest => go(tail, (headLine :: head) :: rest)
