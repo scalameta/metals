@@ -70,7 +70,7 @@ class SemanticTokensScala3ExpectSuite(
 
           TestSemanticTokens.semanticString(
             file.code,
-            tokens.asScala.toList.map(_.toInt),
+            tokens.toList.map(_.toInt),
           )
         },
       )
