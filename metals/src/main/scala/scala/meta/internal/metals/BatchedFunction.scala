@@ -40,6 +40,7 @@ final class BatchedFunction[A, B](
       callback: () => Unit,
   ): Future[B] = {
     val promise = Promise[B]()
+    scribe.debug(queue.toArray().mkString(","))
     queue.add(Request(arguments, promise, callback))
     runAcquire()
     promise.future
