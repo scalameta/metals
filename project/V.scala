@@ -6,7 +6,7 @@ object V {
   val scala212 = "2.12.18"
   val scala213 = "2.13.11"
   val scala3 = "3.3.0"
-  val scala3RC: Option[String] = Some("3.3.1-RC1")
+  val scala3RC: Option[String] = Some("3.3.1-RC2")
   val sbtScala = "2.12.17"
   val ammonite212Version = "2.12.18"
   val ammonite213Version = "2.13.11"
