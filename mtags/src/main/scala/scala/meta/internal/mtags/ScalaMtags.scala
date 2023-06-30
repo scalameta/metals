@@ -172,7 +172,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
         case _: Source => continue()
         case t: Template =>
           val overloads = new OverloadDisambiguator()
-          overloads.disambiguator("") // primary constructor
+          overloads.disambiguator("this") // primary constructor
           t.stats.foreach {
             case t: Ctor.Secondary =>
               disambiguatedMethod(

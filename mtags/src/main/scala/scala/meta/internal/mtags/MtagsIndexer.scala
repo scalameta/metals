@@ -112,7 +112,7 @@ trait MtagsIndexer {
       properties: Int
   ): String = {
     val methodName = name match {
-      case Name.Anonymous() => Names.Constructor.value
+      case Name.This() => Names.Constructor.value
       case _ => name.value
     }
     addSignature(
