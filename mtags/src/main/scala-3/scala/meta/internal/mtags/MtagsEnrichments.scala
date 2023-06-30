@@ -32,7 +32,6 @@ import org.eclipse.{lsp4j as l}
 object MtagsEnrichments extends ScalametaCommonEnrichments:
 
   extension (driver: InteractiveDriver)
-
     def sourcePosition(
         params: OffsetParams
     ): SourcePosition =
@@ -51,22 +50,22 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
         case _ => Spans.Span(params.offset)
 
       new SourcePosition(source, span)
-    end sourcePosition
+  end sourcePosition
 
-    def localContext(params: OffsetParams): Context =
-      if driver.currentCtx.run.units.isEmpty then
-        throw new RuntimeException(
-          "No source files were passed to the Scala 3 presentation compiler"
-        )
-      val unit = driver.currentCtx.run.units.head
-      val pos = driver.sourcePosition(params)
-      val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
-      val tpdPath =
-        Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
-          newctx
-        )
-      MetalsInteractive.contextOfPath(tpdPath)(using newctx)
-    end localContext
+  def localContext(params: OffsetParams): Context =
+    if driver.currentCtx.run.units.isEmpty then
+      throw new RuntimeException(
+        "No source files were passed to the Scala 3 presentation compiler"
+      )
+    val unit = driver.currentCtx.run.units.head
+    val pos = driver.sourcePosition(params)
+    val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
+    val tpdPath =
+      Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
+        newctx
+      )
+    MetalsInteractive.contextOfPath(tpdPath)(using newctx)
+  end localContext
 
   end extension
 
