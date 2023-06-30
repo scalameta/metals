@@ -1,6 +1,8 @@
 package tests.mill
 
 import scala.concurrent.Promise
+import scala.util.Failure
+import scala.util.Success
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
@@ -24,13 +26,43 @@ class MillServerSuite
   val supportedBspVersion = V.millVersion
   val scalaVersion = V.scala213
   val buildTool: MillBuildTool = MillBuildTool(() => userConfig)
+  def bspTrace: AbsolutePath =
+    workspace.resolve(".metals").resolve("bsp.trace.json")
 
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = MillDigest.current(workspace)
 
-  test("too-old") {
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
     cleanWorkspace()
+    bspTrace.writeText("")
+  }
+
+  private def logBspTraces(): Option[Unit] =
+    bspTrace.readTextOpt.map(trace => scribe.warn(s"""|BSP trace:
+                                                      |$trace
+                                                      |""".stripMargin))
+
+  override def munitTestTransforms: List[TestTransform] =
+    super.munitTestTransforms :+
+      new TestTransform(
+        "Print BSP traces",
+        { test =>
+          test.withBody(() =>
+            test
+              .body()
+              .andThen {
+                case Failure(exception) =>
+                  logBspTraces()
+                  exception
+                case Success(value) => value
+              }(munitExecutionContext)
+          )
+        },
+      )
+
+  test("too-old") {
     writeLayout(MillBuildLayout("", V.scala213, preBspVersion))
     for {
       _ <- server.initialize()
@@ -59,7 +91,6 @@ class MillServerSuite
   private def testGenerationAndConnection(version: String) = {
     test(s"generate-and-connect-$version") {
       def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
-      cleanWorkspace()
       writeLayout(MillBuildLayout("", V.scala213, version))
       for {
         _ <- server.initialize()
