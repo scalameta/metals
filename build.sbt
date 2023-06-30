@@ -311,6 +311,8 @@ val mtagsSettings = List(
         .cross(CrossVersion.for3Use2_13)
         .exclude("org.scala-lang", "scala-reflect")
         .exclude("org.scala-lang", "scala-compiler")
+        // the correct one should be brought in by the scala 3 compiler
+        .exclude("org.scala-lang", "scala-library")
         .exclude(
           "com.lihaoyi",
           "geny_2.13",

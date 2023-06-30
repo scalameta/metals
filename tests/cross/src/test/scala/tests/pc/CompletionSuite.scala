@@ -1280,6 +1280,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
+      // higherKinds was deprecated
       "2.13.11" ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
