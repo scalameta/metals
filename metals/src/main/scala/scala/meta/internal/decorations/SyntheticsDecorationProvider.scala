@@ -201,7 +201,7 @@ final class SyntheticsDecorationProvider(
   }
 
   private def areSyntheticsEnabled: Boolean = {
-    val showInferredType = !userConfig().showInferredType.contains("false")
+    val showInferredType = !userConfig().showInferredType.contains("false") && userConfig().showInferredType.nonEmpty
     userConfig().showImplicitArguments || showInferredType || userConfig().showImplicitConversionsAndClasses
   }
 
