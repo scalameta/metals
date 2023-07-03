@@ -4,10 +4,12 @@ function bloop_version {
   grep "val bloop" project/V.scala | sed -n 's/.*"\(.*\)".*/\1/p'
 }
 
+export COURSIER_REPOSITORIES="central|sonatype:snapshots"
+
 mkdir -p ~/.bloop
 cp bin/bloop.json ~/.bloop/bloop.json
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier
-./coursier launch ch.epfl.scala:bloopgun-core_2.13:$(bloop_version) -- about
+./coursier launch -r sonatype:snapshots ch.epfl.scala:bloopgun-core_2.13:$(bloop_version) -- about
 
 rm .jvmopts
 touch .jvmopts
