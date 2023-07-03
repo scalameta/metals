@@ -3,6 +3,7 @@ package scala.meta.internal.metals.logging
 import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 
 import scala.util.control.NonFatal
@@ -115,34 +116,40 @@ object MetalsLogger {
       folders: List[AbsolutePath],
       redirectSystemStreams: Boolean,
   ): Unit = {
-    val newLogFiles = folders.map(_.resolve(workspaceLogPath))
-    newLogFiles.foreach(truncateLogFile)
+    val newLogFiles = folders.map(backUpOldLogFileIfTooBig)
     scribe.info(s"logging to files ${newLogFiles.mkString(",")}")
     if (redirectSystemStreams) {
       redirectSystemOut(newLogFiles)
     }
   }
 
-  private def truncateLogFile(path: AbsolutePath) = {
-    val MaxLines = 10000
-    if (Files.exists(path.toNIO)) {
+  private def backUpOldLogFileIfTooBig(
+      workspaceFolder: AbsolutePath
+  ): AbsolutePath = {
+    val logFilePath = workspaceFolder.resolve(workspaceLogPath)
+    val MAX_SIZE = 3 << 20
+    if (logFilePath.isFile && Files.size(logFilePath.toNIO) > MAX_SIZE) {
+      val backedUpLogFile = workspaceFolder
+        .resolve(".metals")
+        .resolve(".backup_logs")
+        .resolve(s"log_${System.currentTimeMillis()}")
+      backedUpLogFile.parent.createDirectories()
       try {
-        def linesWithIndices =
-          Files.newBufferedReader(path.toNIO).lines().asScala.zipWithIndex
-        if (linesWithIndices.exists { case (_, i) => i > MaxLines }) {
-          val lastLines = Array.fill(MaxLines)("")
-          linesWithIndices.foreach { case (line, i) =>
-            lastLines.update(i % MaxLines, line)
-          }
-          path.writeText(lastLines.mkString("\n"))
-        }
+        Files.move(
+          logFilePath.toNIO,
+          backedUpLogFile.toNIO,
+          StandardCopyOption.REPLACE_EXISTING,
+          StandardCopyOption.ATOMIC_MOVE,
+        )
       } catch {
         case NonFatal(t) =>
-          scribe.warn(s"""|error while truncating log file: $path
+          scribe.warn(s"""|error while moving file: $logFilePath
+                          |to: $backedUpLogFile
                           |$t
                           |""".stripMargin)
       }
     }
+    logFilePath
   }
 
   def newFileWriter(logfile: AbsolutePath): FileWriter =
