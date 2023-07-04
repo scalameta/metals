@@ -17,13 +17,21 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   private def getMillVersion(workspace: AbsolutePath): String = {
     import scala.meta.internal.jdk.CollectionConverters._
     val millVersionPath = workspace.resolve(".mill-version")
+    lazy val altMillVersionPath =
+      workspace.resolve(".config").resolve("mill-version")
     lazy val millPath = workspace.resolve("mill")
-    if (millVersionPath.isFile) {
+
+    def readMillVersion(path: AbsolutePath) =
       Files
-        .readAllLines(millVersionPath.toNIO)
+        .readAllLines(path.toNIO)
         .asScala
         .headOption
         .getOrElse(version)
+
+    if (millVersionPath.isFile) {
+      readMillVersion(millVersionPath)
+    } else if (altMillVersionPath.isFile) {
+      readMillVersion(altMillVersionPath)
     } else if (millPath.isFile) {
       Files
         .readAllLines(millPath.toNIO)

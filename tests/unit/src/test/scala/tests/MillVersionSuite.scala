@@ -25,6 +25,13 @@ class MillVersionSuite extends BaseSuite {
   )
 
   check(
+    """|.config/mill-version
+       |0.11.1
+       |""".stripMargin,
+    "0.11.1",
+  )
+
+  check(
     """|mill
        |#!/usr/bin/env sh
        |
