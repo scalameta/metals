@@ -1,10 +1,11 @@
 package scala.meta.internal.metals
 
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import scala.meta.internal.metals.utils.LimitedFilesManager
+import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 
 trait ReportContext {
@@ -23,8 +24,8 @@ trait Reporter {
   def create(report: => Report, ifVerbose: Boolean = false): Option[Path]
   def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
-  ): List[ReportFile]
-  def getReports(): List[ReportFile]
+  ): List[TimestampedFile]
+  def getReports(): List[TimestampedFile]
   def deleteAll(): Unit
 }
 
@@ -68,6 +69,12 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
     extends Reporter {
   private lazy val reportsDir =
     workspace.resolve(pathToReports).createDirectories()
+  private val limitedFilesManager =
+    new LimitedFilesManager(
+      reportsDir,
+      StdReportContext.MAX_NUMBER_OF_REPORTS,
+      "r_.*_"
+    )
 
   private lazy val userHome = Option(System.getProperty("user.home"))
 
@@ -119,25 +126,10 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
 
   override def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
-  ): List[ReportFile] = {
-    val reports = getReports()
-    if (reports.length > maxReportsNumber) {
-      val filesToDelete = reports
-        .sortBy(_.timestamp)
-        .slice(0, reports.length - maxReportsNumber)
-      filesToDelete.foreach { f => Files.delete(f.toPath) }
-      filesToDelete
-    } else List()
-  }
+  ): List[TimestampedFile] = limitedFilesManager.deleteOld(maxReportsNumber)
 
-  override def getReports(): List[ReportFile] = {
-    val reportsDir = workspace.resolve(pathToReports)
-    if (reportsDir.exists && Files.isDirectory(reportsDir)) {
-      reportsDir.toFile.listFiles().toList.map(ReportFile.fromFile(_)).collect {
-        case Some(l) => l
-      }
-    } else List()
-  }
+  override def getReports(): List[TimestampedFile] =
+    limitedFilesManager.getAllFiles()
 
   override def deleteAll(): Unit =
     getReports().foreach(r => Files.delete(r.toPath))
@@ -153,30 +145,15 @@ object StdReportContext {
   def reportsDir: Path = Paths.get(".metals").resolve(".reports")
 }
 
-case class ReportFile(file: File, timestamp: Long) {
-  def toPath: Path = file.toPath()
-  def name: String = file.getName()
-}
-
-object ReportFile {
-  def fromFile(file: File): Option[ReportFile] = {
-    val reportRegex = "r_.*_([-+]?[0-9]+)".r
-    file.getName() match {
-      case reportRegex(time) => Some(ReportFile(file, time.toLong))
-      case _: String => None
-    }
-  }
-}
-
 object EmptyReporter extends Reporter {
 
   override def create(report: => Report, ifVerbose: Boolean): Option[Path] =
     None
 
-  override def cleanUpOldReports(maxReportsNumber: Int): List[ReportFile] =
+  override def cleanUpOldReports(maxReportsNumber: Int): List[TimestampedFile] =
     List()
 
-  override def getReports(): List[ReportFile] = List()
+  override def getReports(): List[TimestampedFile] = List()
 
   override def deleteAll(): Unit = {}
 }

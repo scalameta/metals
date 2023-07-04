@@ -2,6 +2,8 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 
+import scala.meta.internal.metals.utils.TimestampedFile
+
 object LoggerReporter extends Reporter {
 
   override def create(report: => Report, ifVerbose: Boolean): Option[Path] = {
@@ -9,10 +11,10 @@ object LoggerReporter extends Reporter {
     None
   }
 
-  override def cleanUpOldReports(maxReportsNumber: Int): List[ReportFile] =
+  override def cleanUpOldReports(maxReportsNumber: Int): List[TimestampedFile] =
     List()
 
-  override def getReports(): List[ReportFile] = List()
+  override def getReports(): List[TimestampedFile] = List()
 
   override def deleteAll(): Unit = {}
 }

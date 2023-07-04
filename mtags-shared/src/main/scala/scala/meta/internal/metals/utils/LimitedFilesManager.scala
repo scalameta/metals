@@ -7,7 +7,7 @@ import java.nio.file.Path
 class LimitedFilesManager(
     directory: Path,
     fileLimit: Int,
-    prefixPattern: String,
+    prefixPattern: String
 ) {
   private val fileNameRegex = s"${prefixPattern}([-+]?[0-9]+)".r
 
@@ -17,12 +17,12 @@ class LimitedFilesManager(
     } else List()
   }
 
-  def deleteOld(): List[TimestampedFile] = {
+  def deleteOld(limit: Int = fileLimit): List[TimestampedFile] = {
     val files = getAllFiles()
-    if (files.length > fileLimit) {
+    if (files.length > limit) {
       val filesToDelete = files
         .sortBy(_.timestamp)
-        .slice(0, files.length - fileLimit)
+        .slice(0, files.length - limit)
       filesToDelete.foreach { f => Files.delete(f.toPath) }
       filesToDelete
     } else List()
@@ -38,4 +38,5 @@ class LimitedFilesManager(
 
 case class TimestampedFile(file: File, timestamp: Long) {
   def toPath: Path = file.toPath()
+  def name: String = file.getName()
 }
