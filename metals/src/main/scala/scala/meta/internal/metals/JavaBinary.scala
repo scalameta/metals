@@ -30,10 +30,10 @@ object JavaBinary {
       .flatMap(home =>
         List(binaryName, binaryName + ".exe").map(home.resolve("bin").resolve)
       )
-      .map { a =>
-        scribe.info(s"java binary path: $a ${a.exists}")
-        a
-
+      .map { path =>
+        scribe.debug(s"""java binary path: $path
+                        |path exists: ${path.exists}""".stripMargin)
+        path
       }
       .collectFirst {
         case path if path.exists => path
