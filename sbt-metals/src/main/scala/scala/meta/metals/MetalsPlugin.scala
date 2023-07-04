@@ -16,6 +16,7 @@ import sbt.Keys._
 import sbt._
 import sbt.internal.inc.ScalaInstance
 import sbt.plugins.SemanticdbPlugin
+import scala.concurrent.duration.FiniteDuration
 
 object MetalsPlugin extends AutoPlugin {
   override def requires = SemanticdbPlugin
@@ -28,6 +29,7 @@ object MetalsPlugin extends AutoPlugin {
   import autoImport._
 
   override lazy val projectSettings: Seq[Def.Setting[_]] = Def.settings(
+    serverIdleTimeout := Some(FiniteDuration(4, ju.concurrent.TimeUnit.HOURS)),
     Keys.semanticdbVersion := {
       if (requiresSemanticdb.value && !isScala3.value)
         BuildInfo.semanticdbVersion
