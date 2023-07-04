@@ -7,7 +7,6 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.FolderReportsZippper
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportFile
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.ZipReportsProvider
 import scala.meta.io.AbsolutePath
@@ -25,7 +24,7 @@ class ReportsSuite extends BaseSuite {
     )
 
   def exampleText(workspaceStr: String = workspace.toString()): String =
-    s"""|An error happend in the file:
+    s"""|An error occurred in the file:
         |${workspaceStr}/WrongFile.scala
         |""".stripMargin
 
@@ -40,7 +39,7 @@ class ReportsSuite extends BaseSuite {
     val obtained =
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(exampleText(StdReportContext.WORKSPACE_STR), obtained)
-    assert(ReportFile.fromFile(path.get.toFile).nonEmpty)
+    assert(reportsProvider.incognito.getReports().length == 1)
   }
 
   test("delete-old-reports") {
