@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
@@ -123,16 +124,18 @@ object MetalsLogger {
     }
   }
 
+  private def backupLogsDir(workspaceFolder: AbsolutePath) =
+    workspaceFolder.resolve(".metals").resolve(".backup_logs")
+
   private def backUpOldLogFileIfTooBig(
       workspaceFolder: AbsolutePath
   ): AbsolutePath = {
     val logFilePath = workspaceFolder.resolve(workspaceLogPath)
     val MAX_SIZE = 3 << 20
     if (logFilePath.isFile && Files.size(logFilePath.toNIO) > MAX_SIZE) {
-      val backedUpLogFile = workspaceFolder
-        .resolve(".metals")
-        .resolve(".backup_logs")
-        .resolve(s"log_${System.currentTimeMillis()}")
+      val backedUpLogFile = backupLogsDir(workspaceFolder).resolve(
+        s"log_${System.currentTimeMillis()}"
+      )
       backedUpLogFile.parent.createDirectories()
       try {
         Files.move(
@@ -141,6 +144,7 @@ object MetalsLogger {
           StandardCopyOption.REPLACE_EXISTING,
           StandardCopyOption.ATOMIC_MOVE,
         )
+        limitNumberOfKeptBackupLogs(workspaceFolder)
       } catch {
         case NonFatal(t) =>
           scribe.warn(s"""|error while moving file: $logFilePath
@@ -150,6 +154,11 @@ object MetalsLogger {
       }
     }
     logFilePath
+  }
+
+  private def limitNumberOfKeptBackupLogs(workspaceFolder: AbsolutePath) = {
+    val backupDir = backupLogsDir(workspaceFolder)
+    new LimitedFilesManager(backupDir.toNIO, fileLimit = 10, "log_").deleteOld()
   }
 
   def newFileWriter(logfile: AbsolutePath): FileWriter =
