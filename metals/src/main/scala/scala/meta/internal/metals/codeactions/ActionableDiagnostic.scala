@@ -7,6 +7,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.pc.CancelToken
 
+import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.{lsp4j => l}
 
 class ActionableDiagnostic() extends CodeAction {
@@ -19,35 +20,66 @@ class ActionableDiagnostic() extends CodeAction {
 
     def createActionableDiagnostic(
         diagnostic: l.Diagnostic,
-        textEdit: l.TextEdit,
+        action: Either[l.TextEdit, b.ScalaAction],
     ): l.CodeAction = {
-      val diagMessage = diagnostic.getMessage
-      val uri = params.getTextDocument().getUri()
+      action match {
+        case Left(textEdit) =>
+          val diagMessage = diagnostic.getMessage
+          val uri = params.getTextDocument().getUri()
 
-      CodeActionBuilder.build(
-        title =
-          s"Apply suggestion: ${diagMessage.linesIterator.headOption.getOrElse(diagMessage)}",
-        kind = l.CodeActionKind.QuickFix,
-        changes = List(uri.toAbsolutePath -> Seq(textEdit)),
-        diagnostics = List(diagnostic),
-      )
+          CodeActionBuilder.build(
+            title =
+              s"Apply suggestion: ${diagMessage.linesIterator.headOption.getOrElse(diagMessage)}",
+            kind = l.CodeActionKind.QuickFix,
+            changes = List(uri.toAbsolutePath -> Seq(textEdit)),
+            diagnostics = List(diagnostic),
+          )
+        case Right(scalaAction) =>
+          val uri = params.getTextDocument().getUri()
+          val edits = scalaAction
+            .getEdit()
+            .getChanges()
+            .asScala
+            .toSeq
+            .map(edit =>
+              new l.TextEdit(edit.getRange().toLsp, edit.getNewText())
+            )
+          CodeActionBuilder.build(
+            title = scalaAction.getTitle(),
+            kind = l.CodeActionKind.QuickFix,
+            changes = List(uri.toAbsolutePath -> edits),
+            diagnostics = List(diagnostic),
+          )
+      }
+
     }
 
     val codeActions = params
       .getContext()
       .getDiagnostics()
       .asScala
+      .toSeq
       .groupBy {
-        case ScalacDiagnostic.ScalaAction(textEdit) =>
-          Some(textEdit)
+        case ScalacDiagnostic.ScalaDiagnostic(action) =>
+          Some(action)
         case _ => None
       }
       .collect {
-        case (Some(textEdit), diags)
+        case (Some(Left(textEdit)), diags)
             if params.getRange().overlapsWith(diags.head.getRange()) =>
-          createActionableDiagnostic(diags.head, textEdit)
+          Seq(createActionableDiagnostic(diags.head, Left(textEdit)))
+        case (Some(Right(action)), diags)
+            if params.getRange().overlapsWith(diags.head.getRange()) =>
+          action
+            .getActions()
+            .asScala
+            .toSeq
+            .map(action =>
+              createActionableDiagnostic(diags.head, Right(action))
+            )
       }
-      .toList
+      .toSeq
+      .flatten
       .sorted
 
     Future.successful(codeActions)

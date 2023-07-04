@@ -35,16 +35,19 @@ trait CommonMtagsEnrichments {
   private def logger: Logger =
     Logger.getLogger(classOf[CommonMtagsEnrichments].getName)
 
-  protected def decodeJson[T](obj: AnyRef, cls: java.lang.Class[T]): Option[T] =
+  protected def decodeJson[T](
+      obj: AnyRef,
+      cls: java.lang.Class[T],
+      gson: Option[Gson] = None
+  ): Option[T] =
     for {
       data <- Option(obj)
       value <-
         try {
-          Some(
-            new Gson().fromJson[T](
-              data.asInstanceOf[JsonElement],
-              cls
-            )
+          Option(
+            gson
+              .getOrElse(new Gson())
+              .fromJson[T](data.asInstanceOf[JsonElement], cls)
           )
         } catch {
           case NonFatal(e) =>
