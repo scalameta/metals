@@ -41,7 +41,6 @@ object JdkSources {
           )
           None
         case Success(value) =>
-          logger.info(s"Found java home path $value")
           Some(value)
       }
     }
