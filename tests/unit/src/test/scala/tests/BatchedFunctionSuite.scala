@@ -11,13 +11,16 @@ class BatchedFunctionSuite extends BaseSuite {
     implicit val ec = ExecutionContext.global
 
     val lock = new Object
-    val mkString = BatchedFunction.fromFuture[String, String]({ numbers =>
-      Future {
-        lock.synchronized {
-          numbers.mkString
+    val mkString = BatchedFunction.fromFuture[String, String](
+      { numbers =>
+        Future {
+          lock.synchronized {
+            numbers.mkString
+          }
         }
-      }
-    })
+      },
+      "exaample",
+    )
     val results = lock.synchronized {
       List(
         // First request instantly acquires lock and runs solo
@@ -46,11 +49,14 @@ class BatchedFunctionSuite extends BaseSuite {
   }
 
   def batchedExample(): BatchedFunction[String, String] =
-    BatchedFunction.fromFuture[String, String] { numbers =>
-      Future.successful {
-        numbers.mkString
-      }
-    }
+    BatchedFunction.fromFuture[String, String](
+      { numbers =>
+        Future.successful {
+          numbers.mkString
+        }
+      },
+      "example",
+    )
 
   test("pause") {
 

@@ -24,7 +24,7 @@ final class BuildTargetClasses(
       : TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem] =
     TrieMap.empty[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
   val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
-    BatchedFunction.fromFuture(fetchClasses)
+    BatchedFunction.fromFuture(fetchClasses, "buildTargetClasses")
 
   def classesOf(target: b.BuildTargetIdentifier): Classes = {
     index.getOrElse(target, new Classes)

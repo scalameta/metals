@@ -32,12 +32,12 @@ final class Compilations(
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
-    ](compile)
+    ](compile, "compileBatch", shouldLogQueue = true)
   private val cascadeBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
-    ](compile)
+    ](compile, "cascadeBatch", shouldLogQueue = true)
   def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]

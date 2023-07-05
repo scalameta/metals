@@ -79,18 +79,24 @@ final class TestSuitesProvider(
   override def isEnabled: Boolean = isCodeLensEnabled
 
   val refreshTestSuites: BatchedFunction[Unit, Unit] =
-    BatchedFunction.fromFuture { _ =>
-      if (isSuiteRefreshEnabled) doRefreshTestSuites()
-      else Future.unit
-    }
+    BatchedFunction.fromFuture(
+      { _ =>
+        if (isSuiteRefreshEnabled) doRefreshTestSuites()
+        else Future.unit
+      },
+      "refreshTestSuites",
+    )
 
   private val updateTestCases
       : BatchedFunction[(AbsolutePath, TextDocument), Unit] =
-    BatchedFunction.fromFuture { args =>
-      Future
-        .traverse(args) { case (path, doc) => refreshTestCases(path, doc) }
-        .map(_ => ())
-    }
+    BatchedFunction.fromFuture(
+      { args =>
+        Future
+          .traverse(args) { case (path, doc) => refreshTestCases(path, doc) }
+          .map(_ => ())
+      },
+      "updateTestCases",
+    )
 
   override def onChange(docs: TextDocuments, file: AbsolutePath): Unit =
     docs.documents.headOption.foreach {
