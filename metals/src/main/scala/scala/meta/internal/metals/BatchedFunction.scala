@@ -19,7 +19,9 @@ import scala.meta.internal.async.ConcurrentQueue
  *           aggregated requests with the aggregated response.
  */
 final class BatchedFunction[A, B](
-    fn: Seq[A] => CancelableFuture[B]
+    fn: Seq[A] => CancelableFuture[B],
+    functionId: String,
+    shouldLogQueue: Boolean = false,
 )(implicit ec: ExecutionContext)
     extends (Seq[A] => Future[B])
     with Function2[Seq[A], () => Unit, Future[B]]
@@ -40,10 +42,24 @@ final class BatchedFunction[A, B](
       callback: () => Unit,
   ): Future[B] = {
     val promise = Promise[B]()
-    scribe.debug(queue.toArray().mkString(","))
+    logQueue()
     queue.add(Request(arguments, promise, callback))
     runAcquire()
     promise.future
+  }
+
+  def logQueue(): Unit = {
+    if (shouldLogQueue && !queue.isEmpty()) {
+      scribe.debug(
+        s"Current $functionId queue: \n" + queue.toArray
+          .map {
+            case Request(args, promise, _) =>
+              args.mkString(",") + s" -> isCompleted ${promise.isCompleted}"
+            case _ => ""
+          }
+          .mkString("\n")
+      )
+    }
   }
 
   def apply(arguments: Seq[A]): Future[B] = {
@@ -133,9 +149,16 @@ final class BatchedFunction[A, B](
 }
 
 object BatchedFunction {
-  def fromFuture[A, B](fn: Seq[A] => Future[B])(implicit
-      ec: ExecutionContext,
-      dummy: DummyImplicit,
+  def fromFuture[A, B](
+      fn: Seq[A] => Future[B],
+      functionId: String,
+      shouldLogQueue: Boolean = false,
+  )(implicit
+      ec: ExecutionContext
   ): BatchedFunction[A, B] =
-    new BatchedFunction(fn.andThen(CancelableFuture(_)))
+    new BatchedFunction(
+      fn.andThen(CancelableFuture(_)),
+      functionId,
+      shouldLogQueue,
+    )
 }

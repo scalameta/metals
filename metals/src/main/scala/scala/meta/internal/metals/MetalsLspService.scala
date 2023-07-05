@@ -256,18 +256,21 @@ class MetalsLspService(
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
-  val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
-    CancelableFuture(
-      buildServerPromise.future
-        .flatMap(_ => parseTreesAndPublishDiags(paths))
-        .ignoreValue,
-      Cancelable.empty,
-    )
+  val parseTrees = new BatchedFunction[AbsolutePath, Unit](
+    paths =>
+      CancelableFuture(
+        buildServerPromise.future
+          .flatMap(_ => parseTreesAndPublishDiags(paths))
+          .ignoreValue,
+        Cancelable.empty,
+      ),
+    "trees",
   )
 
   private val onBuildChanged =
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
-      onBuildChangedUnbatched
+      onBuildChangedUnbatched,
+      "onBuildChanged",
     )
 
   val pauseables: Pauseable = Pauseable.fromPausables(
