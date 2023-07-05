@@ -7,7 +7,7 @@ import scala.meta.internal.metals.Messages
 import scala.meta.io.AbsolutePath
 
 /**
- * Helper trait for build tools that also impliment bsp
+ * Helper trait for build tools that also implement bsp
  */
 trait BuildServerProvider extends BuildTool {
 
@@ -30,13 +30,13 @@ trait BuildServerProvider extends BuildTool {
   /**
    * Args necessary for build tool to generate the bsp config file.
    */
-  def createBspFileArgs(workspace: AbsolutePath): List[String]
+  protected def createBspFileArgs(workspace: AbsolutePath): List[String]
 
   /**
    * Whether or not the build tool workspace supports BSP. Many times this is
    * limited by the version of the build tool that introduces BSP support.
    */
-  def workspaceSupportsBsp(workspace: AbsolutePath): Boolean
+  protected def workspaceSupportsBsp(workspace: AbsolutePath): Boolean
 
   /**
    * Name of the build server if different than the actual build-tool that is

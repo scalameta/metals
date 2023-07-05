@@ -129,10 +129,6 @@ jobs:
           distribution: 'temurin'
           java-version: "17"
           cache: 'sbt'
-      - uses: coursier/cache-action@v6
-        if: matrix.type == 'scalacli'
-      - uses: VirtusLab/scala-cli-setup@main
-        if: matrix.type == 'scalacli'
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
         env:

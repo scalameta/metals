@@ -418,4 +418,25 @@ object ScalaCli {
           .map(p => Seq(p.toString))
       }
   }
+
+  val scalaCliBspVersion = "2.1.0-M4"
+
+  def scalaCliBspJsonContent(args: List[String] = Nil): String = {
+    val argv = List(
+      ScalaCli.javaCommand,
+      "-cp",
+      ScalaCli.scalaCliClassPath().mkString(File.pathSeparator),
+      ScalaCli.scalaCliMainClass,
+      "bsp",
+      ".",
+    ) ++ args
+    val bsjJson = ujson.Obj(
+      "name" -> "scala-cli",
+      "argv" -> argv,
+      "version" -> BuildInfo.scalaCliVersion,
+      "bspVersion" -> scalaCliBspVersion,
+      "languages" -> List("scala", "java"),
+    )
+    ujson.write(bsjJson)
+  }
 }

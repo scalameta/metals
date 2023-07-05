@@ -1939,12 +1939,12 @@ class MetalsLspService(
             case (None, _) =>
               scribe.warn(s"Skipping build import, no checksum.")
               Future.successful(BuildChange.None)
-            case (Some(_), bt: ScalaCliBuildTool)
+            case (Some(_), buildTool: ScalaCliBuildTool)
                 if chosenBuildServer.isEmpty =>
               for {
-                _ <- bt.createBspConfigIfNone(
+                _ <- buildTool.createBspConfigIfNone(
                   folder,
-                  args => bspConfigGenerator.runUnconditionally(bt, args),
+                  args => bspConfigGenerator.runUnconditionally(buildTool, args),
                 )
                 _ = tables.buildServers.chooseServer(ScalaCliBuildTool.name)
                 buildChange <- quickConnectToBuildServer()
