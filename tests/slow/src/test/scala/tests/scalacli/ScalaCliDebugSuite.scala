@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.scalacli.ScalaCli
 
 import tests.BaseDapSuite
 import tests.QuickBuildInitializer
@@ -20,7 +21,7 @@ class ScalaCliDebugSuite
     for {
       _ <- initialize(
         s"""/.bsp/scala-cli.json
-           |${BaseScalaCliSuite.scalaCliBspJsonContent()}
+           |${ScalaCli.scalaCliBspJsonContent()}
            |/.scala-build/ide-inputs.json
            |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
            |/$scalaCliScriptPath

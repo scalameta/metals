@@ -1,5 +1,7 @@
 package tests.scalacli
 
+import scala.meta.internal.metals.scalacli.ScalaCli
+
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.CodeAction
@@ -72,7 +74,7 @@ class BaseScalaCLIActionSuite(name: String)
     val path = toPath(fileName)
     val layout = Some(
       s"""/.bsp/scala-cli.json
-         |${BaseScalaCliSuite.scalaCliBspJsonContent(scalaCliOptions)}
+         |${ScalaCli.scalaCliBspJsonContent(scalaCliOptions)}
          |/.scala-build/ide-inputs.json
          |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
          |/$path

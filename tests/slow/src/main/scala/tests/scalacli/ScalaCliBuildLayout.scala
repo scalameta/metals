@@ -1,5 +1,7 @@
 package tests.scalacli
 
+import scala.meta.internal.metals.scalacli.ScalaCli
+
 import tests.BuildToolLayout
 
 object ScalaCliBuildLayout extends BuildToolLayout {
@@ -8,7 +10,7 @@ object ScalaCliBuildLayout extends BuildToolLayout {
       scalaVersion: String,
   ): String = {
     s"""/.bsp/scala-cli.json
-       |${BaseScalaCliSuite.scalaCliBspJsonContent(List("-S", scalaVersion))}
+       |${ScalaCli.scalaCliBspJsonContent(List("-S", scalaVersion))}
        |/.scala-build/ide-inputs.json
        |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
        |$sourceLayout
