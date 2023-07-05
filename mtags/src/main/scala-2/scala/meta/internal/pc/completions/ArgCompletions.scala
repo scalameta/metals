@@ -24,7 +24,7 @@ trait ArgCompletions { this: MetalsGlobal =>
     lazy val methodsParams: List[MethodParams] = {
       if (methodSym.isModule) getParamsFromObject(methodSym)
       else if (
-        methodSym.isMethod && methodSym.decodedName == "apply" && methodSym.owner.isModuleClass
+        methodSym.isMethod && methodSym.name == nme.apply && methodSym.owner.isModuleClass
       ) getParamsFromObject(methodSym.owner)
       else if (methodSym.isClass)
         List(MethodParams(methodSym.constrParamAccessors))
@@ -58,6 +58,9 @@ trait ArgCompletions { this: MetalsGlobal =>
     def checkIfArgsMatch(possibleMatch: List[Symbol]): Boolean = {
       apply.args.length <= possibleMatch.length &&
       !apply.args.zipWithIndex.exists {
+        // the identifier we want to generate completions for
+        //            v
+        // m(arg1 = 3, wri@@)
         case (Ident(name), _) if name.decodedName.endsWith(CURSOR) => false
         case (AssignOrNamedArg(Ident(name), rhs), _) =>
           !possibleMatch.exists { param =>
@@ -189,7 +192,7 @@ trait ArgCompletions { this: MetalsGlobal =>
 
     private def getParamsFromObject(objectSym: Symbol): List[MethodParams] = {
       objectSym.info.members.flatMap {
-        case m if m.decodedName == "apply" =>
+        case m if m.name == nme.apply =>
           for {
             params <- m.paramss.headOption
             if (checkIfArgsMatch(params))

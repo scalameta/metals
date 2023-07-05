@@ -501,8 +501,18 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|x: Int
+       |x = : Byte
+       |x = : Char
+       |x = : Double
+       |x = : Float
+       |x = : Int
+       |x = : Long
+       |x = : Short
+       |x = x : Int
        |""".stripMargin,
-    topLines = Some(1),
+    compat = Map(
+      "3" -> "x: Int"
+    ),
   )
 
   check(
@@ -874,6 +884,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(2),
   )
 
+  // In Scala 2 first argument list needs to disambiguate between overloaded methods.
   check(
     "overloaded-function-param".tag(IgnoreScala2),
     """|def m[T](i: Int)(inn: T => Int, abb: Option[Int]): Int = ???
@@ -904,17 +915,23 @@ class CompletionArgSuite extends BaseCompletionSuite {
 
   // doesn't filter properly for Scala 2, since the filtering heuristic for matching methods
   // isn't accurate enough (polymorphic args types are resolved to `null`)
+  // issue: https://github.com/scalameta/metals/issues/5406
   check(
-    "overloaded-function-param3".tag(IgnoreScala2),
-    """|object M {
-       |  def m[T](inn: Int => T, abb: Option[Int]): Int = ???
-       |  def m[T](inn: String => T, aaa: Int): Int = ???
-       |  def k = m(identity[Int], a@@)
+    "overloaded-applied-type".tag(IgnoreScala2),
+    """|trait MyCollection[+T]
+       |case class IntCollection() extends MyCollection[Int]
+       |object Main {
+       |  def m[T](inn: MyCollection[T], abb: Option[Int]): Int = ???
+       |  def m[T](inn: MyCollection[T], aaa: Int): Int = ???
+       |  def m[T](inn: List[T], acc: Int): Int = ???
+       |  def k = m(IntCollection(), a@@)
        |}
        |""".stripMargin,
-    """|abb = : Option[Int]
+    """|aaa = : Int
+       |abb = : Option[Int]
+       |assert(assertion: Boolean): Unit
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(3),
   )
 
   check(
@@ -922,11 +939,11 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|trait Planet
        |case class Moon()
        |object Main {
-       |  def m[M](inn: M, abb: Option[Int]): T = ???
-       |  def m[M](inn: M, acc: List[Int]): T = ???
-       |  def m[M <: Planet](inn: M, aaa: Int): T = ???
-       |  def k: T = m(Moon(), a@@)
-       |
+       |  def m[M](inn: M, abb: Option[Int]): M = ???
+       |  def m[M](inn: M, acc: List[Int]): M = ???
+       |  def m[M <: Planet](inn: M, aaa: Int): M = ???
+       |  def k = m(Moon(), a@@)
+       |}
        |""".stripMargin,
     """|abb = : Option[Int]
        |acc = : List[Int]
@@ -951,19 +968,17 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "overloaded-applied-type".tag(IgnoreScala2),
-    """|trait MyCollection[+T]
-       |class IntCollection() extends MyCollection[Int]
-       |def m[T](inn: MyCollection[T], abb: Option[Int]): Int = ???
-       |def m[T](inn: MyCollection[T], aaa: Int): Int = ???
-       |def k = m(IntCollection(), a@@)
+    "overloaded-function-param3".tag(IgnoreScala2),
+    """|def m[T](inn: Int => T, abb: Option[Int]): Int = ???
+       |def m[T](inn: String => T, aaa: Int): Int = ???
+       |def k = m(identity[Int], a@@)
        |""".stripMargin,
-    """|aaa = : Int
-       |abb = : Option[Int]
+    """|abb = : Option[Int]
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(1),
   )
 
+  // issue: https://github.com/scalameta/metals/issues/5407
   check(
     "overloaded-extension-methods".ignore,
     """|extension(i: Int)

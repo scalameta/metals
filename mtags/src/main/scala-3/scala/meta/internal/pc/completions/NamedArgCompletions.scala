@@ -142,7 +142,8 @@ object NamedArgCompletions:
           case m
               if m.is(Flags.Method) &&
                 m.vparamss.length >= argss.length &&
-                m.isAccessibleFrom(apply.symbol.info) &&
+                Try(m.isAccessibleFrom(apply.symbol.info)).toOption
+                  .getOrElse(false) &&
                 m.vparamss
                   .zip(argss)
                   .reverse
