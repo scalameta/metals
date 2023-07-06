@@ -401,6 +401,8 @@ class MetalsLspService(
     languageClient,
     tables,
     clientConfig.initialConfig,
+    sh,
+    () => workspace,
   )
 
   private val bspServers: BspServers = new BspServers(
@@ -2242,7 +2244,7 @@ class MetalsLspService(
   )
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
-    if (doctor.isUnsupportedBloopVersion()) {
+    if (false && doctor.isUnsupportedBloopVersion()) {
       val notification = tables.dismissedNotifications.IncompatibleBloop
       if (!notification.isDismissed) {
         val messageParams = IncompatibleBloopVersion.params(
