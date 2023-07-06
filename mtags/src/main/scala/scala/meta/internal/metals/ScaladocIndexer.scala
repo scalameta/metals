@@ -44,7 +44,7 @@ class ScaladocIndexer(
     // Register `@define` macros to use for expanding in later docstrings.
     defines ++= ScaladocParser.extractDefines(docstring)
     val comment = ScaladocParser.parseComment(docstring, defines)
-    val markdown = MarkdownGenerator.toMarkdown(comment)
+    val markdown = MarkdownGenerator.toMarkdown(comment, docstring)
     def param(name: String, default: String): SymbolDocumentation = {
       val paramDoc = comment.valueParams
         .get(name)

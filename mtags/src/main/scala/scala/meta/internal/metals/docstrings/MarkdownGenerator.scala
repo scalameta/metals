@@ -27,7 +27,7 @@ object MarkdownGenerator {
       docstring: String,
       defines: collection.Map[String, String]
   ): String = {
-    toMarkdown(ScaladocParser.parseComment(docstring, defines))
+    toMarkdown(ScaladocParser.parseComment(docstring, defines), docstring)
   }
 
   def toMarkdown(b: Body): String = {
@@ -36,7 +36,23 @@ object MarkdownGenerator {
       .mkString
   }
 
-  def toMarkdown(c: Comment): String = {
+  def toMarkdown(c: Comment, docstring: String): String = {
+    def sortInSection(
+        section: String,
+        items: Seq[(String, Body)]
+    ): Seq[(String, Body)] = {
+      val sectionIdx = docstring.indexOf("@" + section)
+      if (sectionIdx >= 0) {
+        val sectionString =
+          docstring.substring(sectionIdx).replaceAll("\\s+", " ")
+        items.sortBy { case (key, _) =>
+          sectionString.indexOf(s"@$section $key")
+        }
+      } else {
+        items
+      }
+    }
+
     Seq(
       toMarkdown(c.body),
       if (c.constructor.nonEmpty)
@@ -62,7 +78,7 @@ object MarkdownGenerator {
       else "",
       if (c.typeParams.nonEmpty)
         "\n**Type Parameters**\n" +
-          c.typeParams
+          sortInSection("tparam", c.typeParams.toSeq)
             .map(tuple =>
               s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
             )
@@ -70,7 +86,7 @@ object MarkdownGenerator {
       else
         "",
       if (c.valueParams.nonEmpty)
-        "\n**Parameters**\n" + c.valueParams
+        "\n**Parameters**\n" + sortInSection("param", c.valueParams.toSeq)
           .map(tuple =>
             s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
           )
@@ -83,7 +99,7 @@ object MarkdownGenerator {
           .mkString("\n")
       else "",
       if (c.throws.nonEmpty)
-        "\n**Throws**\n" + c.throws
+        "\n**Throws**\n" + sortInSection("throws", c.throws.toSeq)
           .map(tuple =>
             s"- `${tuple._1}`: " + tuple._2.summary
               .map(inlineToMarkdown)
