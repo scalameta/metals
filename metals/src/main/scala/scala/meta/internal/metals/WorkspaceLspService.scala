@@ -182,6 +182,7 @@ class WorkspaceLspService(
       _.initialized(),
       () => shutdown().asScala,
       redirectSystemOut,
+      serverInputs.initialServerConfig,
     )
 
   def folderServices = workspaceFolders.getFolderServices

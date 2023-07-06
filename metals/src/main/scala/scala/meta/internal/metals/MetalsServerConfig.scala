@@ -38,6 +38,8 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                                       supports a small subset of this, so it may be problematic
  *                                       for certain clients.
  * @param macOsMaxWatchRoots The maximum number of root directories to watch on MacOS.
+ * @param maxLogFileSize The maximum size of the log file before it gets backed up and truncated.
+ * @param maxLogBackups The maximum number of backup log files.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -92,6 +94,14 @@ final case class MetalsServerConfig(
         .getOrElse(32),
     loglevel: String =
       sys.props.get("metals.loglevel").map(_.toLowerCase()).getOrElse("info"),
+    maxLogFileSize: Long = Option(System.getProperty("metals.max-logfile-size"))
+      .withFilter(_.forall(Character.isDigit(_)))
+      .map(_.toLong)
+      .getOrElse(3 << 20),
+    maxLogBackups: Int = Option(System.getProperty("metals.max-log-backups"))
+      .withFilter(_.forall(Character.isDigit(_)))
+      .map(_.toInt)
+      .getOrElse(10),
 ) {
   override def toString: String =
     List[String](
@@ -110,6 +120,8 @@ final case class MetalsServerConfig(
       s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}",
       s"macos-max-watch-roots=${macOsMaxWatchRoots}",
       s"loglevel=${loglevel}",
+      s"max-logfile-size=${maxLogFileSize}",
+      s"max-log-backup=${maxLogBackups}",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

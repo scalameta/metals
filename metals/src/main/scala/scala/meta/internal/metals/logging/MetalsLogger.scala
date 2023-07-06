@@ -116,8 +116,9 @@ object MetalsLogger {
   def setupLspLogger(
       folders: List[AbsolutePath],
       redirectSystemStreams: Boolean,
+      config: MetalsServerConfig,
   ): Unit = {
-    val newLogFiles = folders.map(backUpOldLogFileIfTooBig)
+    val newLogFiles = folders.map(backUpOldLogFileIfTooBig(_, config))
     scribe.info(s"logging to files ${newLogFiles.mkString(",")}")
     if (redirectSystemStreams) {
       redirectSystemOut(newLogFiles)
@@ -127,38 +128,41 @@ object MetalsLogger {
   private def backupLogsDir(workspaceFolder: AbsolutePath) =
     workspaceFolder.resolve(".metals").resolve(".backup_logs")
 
-  private def backUpOldLogFileIfTooBig(
-      workspaceFolder: AbsolutePath
+  def backUpOldLogFileIfTooBig(
+      workspaceFolder: AbsolutePath,
+      config: MetalsServerConfig,
   ): AbsolutePath = {
     val logFilePath = workspaceFolder.resolve(workspaceLogPath)
-    val MAX_SIZE = 3 << 20
-    if (logFilePath.isFile && Files.size(logFilePath.toNIO) > MAX_SIZE) {
-      val backedUpLogFile = backupLogsDir(workspaceFolder).resolve(
-        s"log_${System.currentTimeMillis()}"
-      )
-      backedUpLogFile.parent.createDirectories()
-      try {
+    try {
+      if (
+        logFilePath.isFile && Files.size(
+          logFilePath.toNIO
+        ) > config.maxLogFileSize
+      ) {
+        val backedUpLogFile = backupLogsDir(workspaceFolder).resolve(
+          s"log_${System.currentTimeMillis()}"
+        )
+        backedUpLogFile.parent.createDirectories()
         Files.move(
           logFilePath.toNIO,
           backedUpLogFile.toNIO,
           StandardCopyOption.REPLACE_EXISTING,
           StandardCopyOption.ATOMIC_MOVE,
         )
-        limitNumberOfKeptBackupLogs(workspaceFolder)
-      } catch {
-        case NonFatal(t) =>
-          scribe.warn(s"""|error while moving file: $logFilePath
-                          |to: $backedUpLogFile
-                          |$t
-                          |""".stripMargin)
+        limitKeptBackupLogs(workspaceFolder, config.maxLogBackups)
       }
+    } catch {
+      case NonFatal(t) =>
+        scribe.warn(s"""|error while creating a backup for log file
+                        |$t
+                        |""".stripMargin)
     }
     logFilePath
   }
 
-  private def limitNumberOfKeptBackupLogs(workspaceFolder: AbsolutePath) = {
+  private def limitKeptBackupLogs(workspaceFolder: AbsolutePath, limit: Int) = {
     val backupDir = backupLogsDir(workspaceFolder)
-    new LimitedFilesManager(backupDir.toNIO, fileLimit = 10, "log_").deleteOld()
+    new LimitedFilesManager(backupDir.toNIO, limit, "log_").deleteOld()
   }
 
   def newFileWriter(logfile: AbsolutePath): FileWriter =

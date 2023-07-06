@@ -163,7 +163,11 @@ class MetalsLanguageServer(
           val folderPaths = folders.map(_.path)
 
           setupJna()
-          MetalsLogger.setupLspLogger(folderPaths, redirectSystemOut)
+          MetalsLogger.setupLspLogger(
+            folderPaths,
+            redirectSystemOut,
+            serverInputs.initialServerConfig,
+          )
 
           val clientInfo = Option(params.getClientInfo()).fold("") { info =>
             s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
