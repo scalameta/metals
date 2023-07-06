@@ -165,8 +165,8 @@ class JavadocSuite extends BaseSuite {
         |[#javadoc](#javadoc)
         |
         |**Parameters**
-        |- `name`: the location of the image, relative to the url argument
         |- `url`: an absolute URL giving the base location of the image
+        |- `name`: the location of the image, relative to the url argument
         |
         |**Returns:** the image at the specified URL
         |
@@ -175,6 +175,48 @@ class JavadocSuite extends BaseSuite {
         |
         |**See**
         |- [Image](Image)""".stripMargin,
+  )
+
+  check(
+    "method2",
+    s"""/**
+       | * Description of the method
+       |
+       | {@linkplain #javadoc}
+       |
+       | *
+       | * @param  param1  description of param1
+       | * @param  param2  description of param2
+       | * @param  param3  description of param3
+       | * @tparam T1 description of T1
+       | * @tparam T2 description of T2
+       | * @return      the image at the specified URL
+       | * @throws IOException when stuff hapend
+       | * @throws IllegalArgumentException when other stuff hapend
+       | * @see         Image
+       | */""".stripMargin,
+    """|Description of the method
+       |
+       |[#javadoc](#javadoc)
+       |
+       |**Type Parameters**
+       |- `T1`: description of T1
+       |- `T2`: description of T2
+       |
+       |**Parameters**
+       |- `param1`: description of param1
+       |- `param2`: description of param2
+       |- `param3`: description of param3
+       |
+       |**Returns:** the image at the specified URL
+       |
+       |**Throws**
+       |- `IOException`: 
+       |- `IllegalArgumentException`: 
+       |
+       |**See**
+       |- [Image](Image)
+       |""".stripMargin,
   )
 
   check(
