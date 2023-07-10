@@ -3,6 +3,7 @@ package tests
 class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
 
   test("parse-error") {
+    cleanWorkspace()
     for {
       // start with code that does not parse (notice the first char in Main.scala)
       _ <- initialize(
@@ -72,6 +73,33 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
         """|} // <- parse error
            |object Outer {
            |  class Inner
+           |}""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("scala-script") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.sc
+           |object Outer {
+           |  class Inner
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.sc")
+      symbols <- server.documentSymbols("a/src/main/scala/a/Main.sc")
+      _ = assertNoDiff(
+        symbols,
+        """|
+           |/*Outer(Module):3*/object Outer {
+           |  /*Outer.Inner(Class):2*/class Inner
            |}""".stripMargin,
       )
     } yield ()
