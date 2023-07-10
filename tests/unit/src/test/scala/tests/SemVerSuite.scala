@@ -53,5 +53,12 @@ class SemVerSuite extends FunSuite {
         ),
       "Scala nightlies should be earlier than the corresponding full release.",
     )
+    assert(
+      !SemVer.isCompatibleVersion(
+        "3.3.2-RC1-bin-20230706-3ae2dbf-NIGHTLY",
+        "3.3.1-RC1",
+      ),
+      "Scala nightlies should be later than the previous release candidade.",
+    )
   }
 }
