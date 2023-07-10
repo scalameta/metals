@@ -55,13 +55,14 @@ case class SbtBuildTool(
   override val minimumVersion: String = "0.13.17"
   override val recommendedVersion: String = BuildInfo.sbtVersion
 
-  override def createBspFileArgs(workspace: AbsolutePath): List[String] = {
-    val bspConfigArgs = List[String](
-      "bspConfig"
-    )
-    val bspDir = workspace.resolve(".bsp").toNIO
-    composeArgs(bspConfigArgs, workspace, bspDir)
-  }
+  override def createBspFileArgs(
+      workspace: AbsolutePath
+  ): Option[List[String]] =
+    Option.when(workspaceSupportsBsp(workspace)) {
+      val bspConfigArgs = List[String]("bspConfig")
+      val bspDir = workspace.resolve(".bsp").toNIO
+      composeArgs(bspConfigArgs, workspace, bspDir)
+    }
 
   def shutdownBspServer(
       shellRunner: ShellRunner,
