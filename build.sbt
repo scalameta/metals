@@ -451,7 +451,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "2.0.0",
+      "com.lihaoyi" %% "ujson" % "3.1.2",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.7.1",
       // for producing SemanticDB from Scala source files
