@@ -255,7 +255,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.23.3",
+      "com.google.protobuf" % "protobuf-java" % "3.23.4",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -405,7 +405,7 @@ lazy val metals = project
       "org.jboss.xnio" % "xnio-nio" % "3.8.9.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "9.20.0",
-      "com.h2database" % "h2" % "2.1.214",
+      "com.h2database" % "h2" % "2.2.220",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
