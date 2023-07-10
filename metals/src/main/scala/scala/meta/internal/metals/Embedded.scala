@@ -67,9 +67,17 @@ final class Embedded(
       ScalaVersions.dropVendorSuffix(mtags.scalaVersion),
       newPresentationCompilerClassLoader(mtags, classpath),
     )
+
+    val presentationCompilerClassname =
+      if (mtags.isScala3PresentationCompiler) {
+        "dotty.tools.pc.ScalaPresentationCompiler"
+      } else {
+        classOf[ScalaPresentationCompiler].getName()
+      }
+
     serviceLoader(
       classOf[PresentationCompiler],
-      classOf[ScalaPresentationCompiler].getName(),
+      presentationCompilerClassname,
       classloader,
     )
   }
@@ -233,6 +241,15 @@ object Embedded {
     }
   }
 
+  private def scala3PresentationCompilerDependency(
+      scalaVersion: String
+  ): Dependency =
+    Dependency.of(
+      "org.scala-lang",
+      s"scala3-presentation-compiler_3",
+      scalaVersion,
+    )
+
   private def mtagsDependency(
       scalaVersion: String,
       metalsVersion: String,
@@ -312,6 +329,12 @@ object Embedded {
   def downloadMtags(scalaVersion: String, metalsVersion: String): List[Path] =
     downloadDependency(
       mtagsDependency(scalaVersion, metalsVersion),
+      Some(scalaVersion),
+    )
+
+  def downloadScala3PresentationCompiler(scalaVersion: String): List[Path] =
+    downloadDependency(
+      scala3PresentationCompilerDependency(scalaVersion),
       Some(scalaVersion),
     )
 
