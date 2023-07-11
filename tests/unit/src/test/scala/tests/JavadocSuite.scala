@@ -171,7 +171,7 @@ class JavadocSuite extends BaseSuite {
         |**Returns:** the image at the specified URL
         |
         |**Throws**
-        |- `IOException`: 
+        |- `IOException`: when stuff hapend
         |
         |**See**
         |- [Image](Image)""".stripMargin,
@@ -211,8 +211,8 @@ class JavadocSuite extends BaseSuite {
        |**Returns:** the image at the specified URL
        |
        |**Throws**
-       |- `IOException`: 
-       |- `IllegalArgumentException`: 
+       |- `IOException`: when stuff hapend
+       |- `IllegalArgumentException`: when other stuff hapend
        |
        |**See**
        |- [Image](Image)

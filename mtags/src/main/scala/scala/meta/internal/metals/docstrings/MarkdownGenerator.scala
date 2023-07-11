@@ -1,6 +1,7 @@
 package scala.meta.internal.docstrings
 
 import scala.collection.Seq
+import scala.util.matching.Regex
 
 import scala.meta._
 import scala.meta.dialects.Scala213
@@ -37,19 +38,14 @@ object MarkdownGenerator {
   }
 
   def toMarkdown(c: Comment, docstring: String): String = {
+
     def sortInSection(
         section: String,
         items: Seq[(String, Body)]
     ): Seq[(String, Body)] = {
-      val sectionIdx = docstring.indexOf("@" + section)
-      if (sectionIdx >= 0) {
-        val sectionString =
-          docstring.substring(sectionIdx).replaceAll("\\s+", " ")
-        items.sortBy { case (key, _) =>
-          sectionString.indexOf(s"@$section $key")
-        }
-      } else {
-        items
+      items.sortBy { case (key, _) =>
+        val reg = new Regex(s"@$section\\s+$key")
+        reg.findFirstMatchIn(docstring).map(_.start).getOrElse(Int.MaxValue)
       }
     }
 
@@ -103,7 +99,7 @@ object MarkdownGenerator {
           .map(tuple =>
             s"- `${tuple._1}`: " + tuple._2.summary
               .map(inlineToMarkdown)
-              .getOrElse("") + blocksToMarkdown(tuple._2.blocks)
+              .getOrElse("")
           )
           .mkString("", "\n", "\n")
       else "",
