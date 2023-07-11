@@ -32,12 +32,12 @@ final class Compilations(
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
-    ](compile, "compileBatch", shouldLogQueue = true)
+    ](compile, "compileBatch", shouldLogQueue = true, Some(Map.empty))
   private val cascadeBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
-    ](compile, "cascadeBatch", shouldLogQueue = true)
+    ](compile, "cascadeBatch", shouldLogQueue = true, Some(Map.empty))
   def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
@@ -115,15 +115,6 @@ final class Compilations(
   def cancel(): Unit = {
     cascadeBatch.cancelAll()
     compileBatch.cancelAll()
-    buildTargets.all
-      .flatMap { target =>
-        buildTargets.buildServerOf(target.getId())
-      }
-      .distinct
-      .foreach { conn =>
-        conn.cancelCompilations()
-      }
-
   }
 
   def recompileAll(): Future[Unit] = {
