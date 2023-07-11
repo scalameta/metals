@@ -20,7 +20,7 @@ object V {
   val coursier = "2.1.5"
   val coursierInterfaces = "1.0.18"
   val debugAdapter = "3.1.3"
-  val genyVersion = "0.7.1"
+  val genyVersion = "1.0.0"
   val gradleBloop = "1.6.1"
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.8.22"
@@ -37,7 +37,7 @@ object V {
   val scalaCli = "1.0.1"
   val scalafix = "0.11.0"
   val scalafmt = "3.7.7"
-  val scalameta = "4.8.2"
+  val scalameta = "4.8.3"
   val scribe = "3.11.7"
   val semanticdb = scalameta
   val qdox = "2.0.3"
