@@ -46,8 +46,9 @@ object V {
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 
-  def isNightliesEnabled: Boolean =
-    sys.env.get("CI").isDefined || sys.env.get("NIGHTLIES").isDefined
+  // https://github.com/scalameta/metals/issues/5427
+  def isNightliesEnabled: Boolean = false
+  // sys.env.get("CI").isDefined || sys.env.get("NIGHTLIES").isDefined
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
