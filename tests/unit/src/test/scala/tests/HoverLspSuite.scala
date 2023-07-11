@@ -31,7 +31,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |**Returns:** the first element of this iterable collection.
            |
            |**Throws**
-           |- `NoSuchElementException`:
+           |- `NoSuchElementException`: if the iterable collection is empty.
            |""".stripMargin.hover,
       )
     } yield ()
@@ -64,7 +64,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |**Returns:** the first element of this iterable collection.
            |
            |**Throws**
-           |- `NoSuchElementException`:
+           |- `NoSuchElementException`: if the iterable collection is empty.
            |""".stripMargin.hover,
       )
     } yield ()
@@ -257,7 +257,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |**Returns:** the first element of this iterable collection.
            |
            |**Throws**
-           |- `NoSuchElementException`:
+           |- `NoSuchElementException`: if the iterable collection is empty.
            |""".stripMargin.hover,
         root = workspace.resolve(Directories.readonly),
       )

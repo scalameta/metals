@@ -321,9 +321,9 @@ class CompletionDocSuite extends BaseCompletionSuite {
         |> Base trait for companion objects of collections that require an implicit evidence.
         |
         |**Type Parameters**
+        |- `CC`: Collection type constructor (e.g. `ArraySeq`)
         |- `Ev`: Unary type constructor for the implicit evidence required for an element type
         |           (typically `Ordering` or `ClassTag`)
-        |- `CC`: Collection type constructor (e.g. `ArraySeq`)
         |EvidenceIterableFactory scala.collection
         |> This trait provides default implementations for the factory methods `fromSpecific` and
         |`newSpecificBuilder` that need to be refined when implementing a collection type that refines
@@ -648,22 +648,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
     ),
   )
 
-  val post212CatchDocs: String =
-    """|> A container class for catch/finally logic.
-       |
-       | Pass a different value for rethrow if you want to probably
-       | unwisely allow catching control exceptions and other throwables
-       | which the rest of the world may expect to get through.
-       |
-       |**Type Parameters**
-       |- `T`: result type of bodies used in try and catch blocks
-       |
-       |**Parameters**
-       |- `fin`: Finally logic which if defined will be invoked after catch logic
-       |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-       |- `pf`: Partial function used when applying catch logic to determine result value
-       |Catch - scala.util.control.Exception
-       |""".stripMargin
   check(
     "scala9",
     """
@@ -681,14 +665,13 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |- `T`: result type of bodies used in try and catch blocks
        |
        |**Parameters**
-       |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
        |- `pf`: Partial function used when applying catch logic to determine result value
        |- `fin`: Finally logic which if defined will be invoked after catch logic
+       |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
        |Catch - scala.util.control.Exception
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13" -> post212CatchDocs,
       "3" ->
         """|> A container class for catch/finally logic.
            |
@@ -700,11 +683,11 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |- `T`: result type of bodies used in try and catch blocks
            |
            |**Parameters**
+           |- `pf`: Partial function used when applying catch logic to determine result value
            |- `fin`: Finally logic which if defined will be invoked after catch logic
            |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |- `pf`: Partial function used when applying catch logic to determine result value
            |Catch[T] - scala.util.control.Exception
-           |""".stripMargin,
+           |""".stripMargin
     ),
     topLines = Some(1), // for Scala3, result contains `Catch[$0]` and `Catch`
   )
@@ -809,8 +792,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |- `V1`: type of the values of the new bindings, a supertype of `V`
        |
        |**Parameters**
-       |- `value`: the value to be associated with `key`
        |- `key`: the key to be inserted
+       |- `value`: the value to be associated with `key`
        |
        |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
        |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int,V1]
@@ -839,8 +822,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
                 |- `V1`: type of the values of the new bindings, a supertype of `V`
                 |
                 |**Parameters**
-                |- `value`: the value to be associated with `key`
                 |- `key`: the key to be inserted
+                |- `value`: the value to be associated with `key`
                 |
                 |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
                 |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int, V1]

@@ -585,25 +585,12 @@ object ScaladocParser {
                                         else pairs)
           }
 
-          def linkedExceptions: Map[String, Body] = {
-            val m = allSymsOneTag(SimpleTagKey("throws"), filterEmpty = false)
-
-            m.map { case (name, body) =>
-              val newBody = body match {
-                case Body(List(Paragraph(Chain(_)))) =>
-                  Body(List())
-                case _ => body
-              }
-              (name, newBody)
-            }
-          }
-
           createComment(
             body0 = Some(parseWikiAtSymbol(docBody.toString, pos)),
             authors0 = allTags(SimpleTagKey("author")),
             see0 = allTags(SimpleTagKey("see")),
             result0 = oneTag(SimpleTagKey("return")),
-            throws0 = linkedExceptions,
+            throws0 = allSymsOneTag(SimpleTagKey("throws")),
             valueParams0 = allSymsOneTag(SimpleTagKey("param")),
             typeParams0 = allSymsOneTag(SimpleTagKey("tparam")),
             version0 = oneTag(SimpleTagKey("version")),
