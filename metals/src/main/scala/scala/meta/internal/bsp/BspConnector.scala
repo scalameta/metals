@@ -296,7 +296,9 @@ class BspConnector(
               buildTool
                 .generateBspConfig(
                   workspace,
-                  args => bspConfigGenerator.runUnconditionally(buildTool, args),
+                  args =>
+                    bspConfigGenerator.runUnconditionally(buildTool, args),
+                  statusBar,
                 )
                 .map(status => handleGenerationStatus(buildTool, status))
             case Right(details) if details.getName == BloopServers.name =>
@@ -329,6 +331,7 @@ class BspConnector(
               .generateBspConfig(
                 workspace,
                 args => bspConfigGenerator.runUnconditionally(buildTool, args),
+                statusBar,
               )
               .map(status => handleGenerationStatus(buildTool, status))
           case Right(connectionDetails) =>

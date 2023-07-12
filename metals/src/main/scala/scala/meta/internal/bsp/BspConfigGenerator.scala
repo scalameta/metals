@@ -8,6 +8,7 @@ import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -20,6 +21,7 @@ final class BspConfigGenerator(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
     shellRunner: ShellRunner,
+    statusBar: StatusBar,
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(
       buildTool: BuildServerProvider,
@@ -46,6 +48,7 @@ final class BspConfigGenerator(
       status <- buildTool.generateBspConfig(
         workspace,
         args => runUnconditionally(buildTool, args),
+        statusBar,
       )
     } yield (buildTool, status)
   }

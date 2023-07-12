@@ -17,6 +17,7 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerLivenessMonitor
@@ -85,6 +86,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
   var buildServerNotResponding =
     ServerLivenessMonitor.ServerNotResponding.dismiss
+  var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -349,6 +351,15 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           params.getMessage == ServerLivenessTestData.serverNotRespondingMessage
         ) {
           buildServerNotResponding
+        } else if (
+          params
+            .getMessage()
+            .endsWith(
+              FileOutOfScalaCliBspScope
+                .askToRegenerateConfigAndRestartBspMsg("")
+            )
+        ) {
+          regenerateAndRestartScalaCliBuildSever
         } else {
           throw new IllegalArgumentException(params.toString)
         }

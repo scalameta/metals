@@ -115,7 +115,8 @@ final class BuildTools(
     if (isGradle) buf += GradleBuildTool(userConfig)
     if (isMaven) buf += MavenBuildTool(userConfig)
     if (isMill) buf += MillBuildTool(userConfig)
-    if (isScalaCli) buf += ScalaCliBuildTool(workspace, userConfig)
+    if (isScalaCli)
+      buf += ScalaCliBuildTool(workspace, userConfig)
 
     buf.result()
   }
