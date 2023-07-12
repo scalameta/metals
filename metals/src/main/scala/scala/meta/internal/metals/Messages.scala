@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Path
+
 import scala.collection.mutable
 
 import scala.meta.internal.builds.BuildTool
@@ -1008,4 +1010,25 @@ object Messages {
     }
   }
 
+}
+
+object FileOutOfScalaCliBspScope {
+  val regenerateAndRestart = new MessageActionItem("Yes")
+  val ignore = new MessageActionItem("No")
+  def askToRegenerateConfigAndRestartBspMsg(file: String): String =
+    s"""|$file is outside of scala-cli build server scope.
+        |Would you like to fix this by regenerating bsp configuration and restarting the build sever?""".stripMargin
+  def askToRegenerateConfigAndRestartBsp(
+      file: Path
+  ): ShowMessageRequestParams = {
+    val params = new ShowMessageRequestParams()
+    params.setMessage(
+      askToRegenerateConfigAndRestartBspMsg(
+        s"File: ${file.getFileName().toString()}"
+      )
+    )
+    params.setType(MessageType.Warning)
+    params.setActions(List(regenerateAndRestart, ignore).asJava)
+    params
+  }
 }

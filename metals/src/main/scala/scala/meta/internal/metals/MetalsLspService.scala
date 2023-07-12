@@ -26,6 +26,7 @@ import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
@@ -309,6 +310,7 @@ class MetalsLspService(
     folder,
     languageClient,
     shellRunner,
+    statusBar,
   )
 
   private val diagnostics: Diagnostics = new Diagnostics(
@@ -1043,7 +1045,10 @@ class MetalsLspService(
             )
             .ignoreValue
         }
-        maybeImportScript(path).getOrElse(load())
+        for {
+          _ <- maybeAmendScalaCliBspConfig(path)
+          _ <- maybeImportScript(path).getOrElse(load())
+        } yield ()
       }.asJava
     }
   }
@@ -1148,6 +1153,40 @@ class MetalsLspService(
       )
       .ignoreValue
       .asJava
+  }
+
+  private def maybeAmendScalaCliBspConfig(file: AbsolutePath): Future[Unit] = {
+    def isScalaCli = bspSession.exists(_.main.isScalaCLI)
+    def isScalaFile =
+      file.toString.isScala || file.isJava || file.isAmmoniteScript
+    if (
+      isScalaCli && isScalaFile &&
+      buildTargets.inverseSources(file).isEmpty &&
+      file.toNIO.startsWith(folder.toNIO) &&
+      !ScalaCliBspScope.inScope(folder, file)
+    ) {
+      languageClient
+        .showMessageRequest(
+          FileOutOfScalaCliBspScope.askToRegenerateConfigAndRestartBsp(
+            file.toNIO
+          )
+        )
+        .asScala
+        .flatMap {
+          case FileOutOfScalaCliBspScope.regenerateAndRestart =>
+            val buildTool =
+              ScalaCliBuildTool(folder, userConfig)
+            for {
+              _ <- buildTool.generateBspConfig(
+                folder,
+                bspConfigGenerator.runUnconditionally(buildTool, _),
+                statusBar,
+              )
+              _ <- quickConnectToBuildServer()
+            } yield ()
+          case _ => Future.successful(())
+        }
+    } else Future.successful(())
   }
 
   private def didCompileTarget(report: CompileReport): Unit = {
@@ -1879,6 +1918,7 @@ class MetalsLspService(
                 buildTool,
                 args,
               ),
+            statusBar,
           )
           .map(status => ensureAndConnect(buildTool, status))
       case buildTools =>
@@ -1949,7 +1989,9 @@ class MetalsLspService(
               for {
                 _ <- buildTool.createBspConfigIfNone(
                   folder,
-                  args => bspConfigGenerator.runUnconditionally(buildTool, args),
+                  args =>
+                    bspConfigGenerator.runUnconditionally(buildTool, args),
+                  statusBar,
                 )
                 _ = tables.buildServers.chooseServer(ScalaCliBuildTool.name)
                 buildChange <- quickConnectToBuildServer()
