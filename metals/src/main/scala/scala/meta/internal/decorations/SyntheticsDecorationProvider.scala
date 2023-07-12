@@ -201,7 +201,9 @@ final class SyntheticsDecorationProvider(
   }
 
   private def areSyntheticsEnabled: Boolean = {
-    val showInferredType = !userConfig().showInferredType.contains("false") && userConfig().showInferredType.nonEmpty
+    val showInferredType = !userConfig().showInferredType.contains(
+      "false"
+    ) && userConfig().showInferredType.nonEmpty
     userConfig().showImplicitArguments || showInferredType || userConfig().showImplicitConversionsAndClasses
   }
 
@@ -446,7 +448,10 @@ final class SyntheticsDecorationProvider(
       } yield decorationOptions(lspRange, decoration)
 
       val typDecorations =
-        if (userConfig().showInferredType.contains("true"))
+        if (
+          userConfig().showInferredType.contains("true") |
+            userConfig().showInferredType.contains("minimal")
+        )
           typeDecorations(path, textDocument, decorationPrinter)
         else Nil
       decorations ++ typDecorations
