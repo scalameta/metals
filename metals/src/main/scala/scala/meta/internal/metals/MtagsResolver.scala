@@ -185,7 +185,7 @@ object MtagsResolver {
               case ResolveType.Nightly =>
                 s"Resolved latest nightly mtags version: $scalaVersion"
             }
-            scribe.info(msg)
+            scribe.debug(msg)
             Some(v)
           // Fallback to Stable PC version
           case _: State.Failure
