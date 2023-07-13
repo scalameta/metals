@@ -2576,29 +2576,12 @@ class MetalsLspService(
   }
 
   private def clearBloopDir(): Unit = {
-    try {
-      val bloopDir = folder.resolve(".bloop")
-      bloopDir.list.foreach { f =>
-        if (f.exists && f.isDirectory) f.deleteRecursively()
-      }
-      val remainingDirs =
-        bloopDir.list.filter(f => f.exists && f.isDirectory).toList
-      if (remainingDirs.isEmpty) {
-        scribe.info(
-          "Deleted directories inside .bloop"
-        )
-      } else {
-        val str = remainingDirs.mkString(", ")
-        scribe.error(
-          s"Couldn't delete directories inside .bloop, remaining: $str"
-        )
-      }
-    } catch {
+    try BloopDir.clear(folder)
+    catch {
       case e: Throwable =>
         languageClient.showMessage(Messages.ResetWorkspaceFailed)
         scribe.error("Error while deleting directories inside .bloop", e)
     }
-
   }
 
   def resetWorkspace(): Future[Unit] = {
