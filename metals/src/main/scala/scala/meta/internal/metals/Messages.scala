@@ -888,6 +888,26 @@ object Messages {
     }
   }
 
+  object ResetWorkspace {
+    val message: String =
+      "Are you sure you want to clear all caches and compiled artifacts and reset workspace?"
+    val resetWorkspace: String = "Reset workspace"
+    val cancel: String = "Cancel"
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams(
+        List(
+          resetWorkspace,
+          cancel,
+        )
+          .map(new MessageActionItem(_))
+          .asJava
+      )
+      params.setMessage(message)
+      params.setType(MessageType.Warning)
+      params
+    }
+  }
+
   object NewScalaProject {
     def selectTheTemplate: String = "Select the template to use"
 
