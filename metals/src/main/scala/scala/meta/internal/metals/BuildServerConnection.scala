@@ -19,6 +19,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.reflect.ClassTag
+import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
@@ -29,6 +30,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
+import scala.meta.internal.metals.utils.FutureWithTimeout
+import scala.meta.internal.metals.utils.Timeout
+import scala.meta.internal.metals.utils.Timeouts
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -56,6 +60,8 @@ class BuildServerConnection private (
     supportsWrappedSources: Boolean,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
+
+  val timeouts: Timeouts = new Timeouts
 
   @volatile private var connection = Future.successful(initialConnection)
   initialConnection.setReconnect(() => reconnect().ignoreValue)
@@ -415,19 +421,33 @@ class BuildServerConnection private (
   private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
+      timeout: Timeout = Timeout.DefaultFlexTimeout,
   ): CompletableFuture[T] = {
     val localCancelable = new MutableCancelable()
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
     ): Future[T] = {
-      val resultFuture = action(launcherConnection.server)
+      val timeoutValue = timeouts.getTimeout(timeout)
+      lazy val resultFuture = action(launcherConnection.server)
       val cancelable = Cancelable { () =>
         Try(resultFuture.cancel(true))
       }
       ongoingRequests.add(cancelable)
       localCancelable.add(cancelable)
 
-      val result = resultFuture.asScala
+      val result = timeoutValue match {
+        case Some(timeoutValue) =>
+          FutureWithTimeout(timeoutValue)(resultFuture.asScala).transform {
+            case Success((res, time)) =>
+              timeouts.measured(timeout, time)
+              Success(res)
+            case Failure(e: TimeoutException) =>
+              timeouts.measured(timeout, timeoutValue)
+              Failure(e)
+            case Failure(e) => Failure(e)
+          }
+        case None => resultFuture.asScala
+      }
 
       result.onComplete { _ =>
         ongoingRequests.remove(cancelable)
