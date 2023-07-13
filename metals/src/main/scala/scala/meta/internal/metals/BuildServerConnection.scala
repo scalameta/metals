@@ -19,6 +19,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.reflect.ClassTag
+import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.builds.MillBuildTool
@@ -26,6 +27,9 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.scalacli.ScalaCli
+import scala.meta.internal.metals.utils.FutureWithTimeout
+import scala.meta.internal.metals.utils.Timeout
+import scala.meta.internal.metals.utils.Timeouts
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -52,6 +56,8 @@ class BuildServerConnection private (
     supportsWrappedSources: Boolean,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
+
+  val timeouts: Timeouts = new Timeouts
 
   @volatile private var connection = Future.successful(initialConnection)
   initialConnection.onConnectionFinished(reconnect)
@@ -338,12 +344,25 @@ class BuildServerConnection private (
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
       isCompile: Boolean = false,
+      timeout: Timeout = Timeout.DefaultFlexTimeout,
   ): CompletableFuture[T] = {
 
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
     ): Future[T] = {
-      val resultFuture = action(launcherConnection.server)
+      val timeoutValue = timeouts.getTimeout(timeout)
+      val resultFuture =
+        timeoutValue match {
+          case Some(timeoutValue) =>
+            val (resultFuture, timeFuture) =
+              FutureWithTimeout(timeoutValue)(action(launcherConnection.server))
+            timeFuture.onComplete {
+              case Success(time) => timeouts.measured(timeout, time)
+              case _ =>
+            }
+            resultFuture
+          case None => action(launcherConnection.server)
+        }
       val cancelable = Cancelable { () =>
         Try(resultFuture.cancel(true))
       }
