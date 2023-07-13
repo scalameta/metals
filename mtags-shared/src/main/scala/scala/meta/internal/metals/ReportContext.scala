@@ -182,9 +182,11 @@ case class Report(
   def fullText: String =
     error match {
       case Some(error) =>
-        s"""|$text
-            |Error message: ${error.getMessage()}
-            |Error: $error
+        s"""|$error
+            |$text
+            |
+            |error stacktrace:
+            |${error.getStackTrace().mkString("\n\t")}
             |""".stripMargin
       case None => text
     }

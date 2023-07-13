@@ -12,8 +12,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.pc.CancelToken
-import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.VirtualFileParams
 
@@ -193,47 +193,27 @@ abstract class CompilerAccess[Reporter, Compiler](
       e: Throwable,
       params: Option[VirtualFileParams]
   ): Unit = {
-    def virtualFileParamsToString(v: VirtualFileParams) =
-      s"""|file uri: ${v.uri()}
-          |file text:
-          |${v.text()}
-          |""".stripMargin
-    val stacktrace = Thread.currentThread().getStackTrace().mkString("\n")
     val error = CompilerThrowable.trimStackTrace(e)
-    val paramsText =
-      params match {
-        case None => ""
-        case Some(r: RangeOffset) =>
-          s"""|range ${r.start} - ${r.end}
-              |${virtualFileParamsToString(r)}
-              |""".stripMargin
-        case Some(o: OffsetParams) =>
-          s"""|offset ${o.offset()}
-              |${virtualFileParamsToString(o)}
-              |""".stripMargin
-        case Some(v) => virtualFileParamsToString(v)
-      }
-    val pathToFull =
-      rc.unsanitized.create(
-        Report(
-          "compiler-error",
-          s"""|An error occurred in the presentation compiler:
-              |context stacktrace:
-              |${stacktrace}
-              |action params:
-              |$paramsText
-              |""".stripMargin,
-          error = Some(error)
-        )
+    val report =
+      Report(
+        "compiler-error",
+        s"""|occurred in the presentation compiler.
+            |
+            |action parameters:
+            |${params.map(_.printed()).getOrElse("<NONE>")}
+            |""".stripMargin,
+        error
       )
-    pathToFull match {
+    val pathToReport =
+      rc.unsanitized.create(report)
+    pathToReport match {
       case Some(path) =>
         logger.log(
           Level.SEVERE,
           s"A severe compiler error occurred, full details of the error can be found in the error report $path"
         )
       case _ =>
-        logger.log(Level.SEVERE, e.getMessage, e)
+        logger.log(Level.SEVERE, error.getMessage, error)
     }
     shutdownCurrentCompiler()
   }
