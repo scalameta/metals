@@ -16,9 +16,14 @@ object CompilerThrowable {
     )
     @tailrec def loop(ex: Throwable): Unit = {
       isVisited.add(ex)
-      val stacktrace = ex.getStackTrace.takeWhile(
-        !_.getClassName.contains("ScalaPresentationCompiler")
-      )
+      val fullStacktrace = ex.getStackTrace
+      val stacktrace = {
+        val i = fullStacktrace.indexWhere(
+          _.getClassName.contains("ScalaPresentationCompiler")
+        )
+        val hi = if (i < 0) fullStacktrace.length else i + 1
+        fullStacktrace.slice(0, hi)
+      }
       ex.setStackTrace(stacktrace)
       // avoid infinite loop when traversing exceptions cyclic dependencies between causes.
       if (e.getCause != null && !isVisited.contains(e.getCause)) {
