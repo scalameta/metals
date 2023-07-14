@@ -116,7 +116,7 @@ final class InferredTypeProvider(
           new TextEdit(nameEndPos, ": " + prettyType(tpt.tpe))
         // if type is defined and erronous try to replace it with the right one
         if (tpt.pos.isRange && retryType)
-          adjustType(rhs, tpt, vl.namePos.end)
+          adjustType(rhs, tpt, vl.namePosition.end)
         else typeNameEdit :: additionalImports
 
       /* `.map(a => a + a)`
@@ -167,7 +167,7 @@ final class InferredTypeProvider(
        * `def a[T](param : Int): Int = param`
        */
       case df @ DefDef(_, name, _, _, tpt, rhs) =>
-        val nameEnd = findNameEnd(df.namePos.start, name)
+        val nameEnd = findNameEnd(df.namePosition.start, name)
 
         // search for `)` or `]` or defaut to name's end to insert type
         val lastParamOffset =

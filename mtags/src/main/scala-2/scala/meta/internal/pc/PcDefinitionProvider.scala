@@ -172,7 +172,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case sel @ Select(_, name) if sel.tpe == ErrorType =>
         val symbols = tree.tpe.member(name)
         typedTree.setSymbol(symbols)
-      case defn: DefTree if !defn.namePos.metalsIncludes(pos) =>
+      case defn: DefTree if !defn.namePosition.metalsIncludes(pos) =>
         EmptyTree
       case _: Template =>
         EmptyTree
