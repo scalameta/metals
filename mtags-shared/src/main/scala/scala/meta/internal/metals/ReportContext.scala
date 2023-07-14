@@ -107,8 +107,7 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       val sanitizedId = report.id.map(sanitize)
       if (sanitizedId.isDefined && reported.contains(sanitizedId.get)) None
       else {
-        val path =
-          reportsDir.resolve(s"r_${report.name}_${System.currentTimeMillis()}")
+        val path = reportPath(report.name)
         sanitizedId.foreach(reported += _)
         val idString = sanitizedId.map(id => s"$idPrefix$id\n").getOrElse("")
         path.writeText(s"$idString${sanitize(report.fullText)}")
@@ -122,6 +121,12 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
     userHome
       .map(textAfterWokspaceReplace.replace(_, StdReportContext.HOME_STR))
       .getOrElse(textAfterWokspaceReplace)
+  }
+
+  private def reportPath(name: String): Path = {
+    val now = TimeFormatter.getTime()
+    val filename = s"r_${name}_${now}"
+    reportsDir.resolve(filename)
   }
 
   override def cleanUpOldReports(

@@ -4,6 +4,8 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.meta.internal.metals.TimeFormatter
+
 class LimitedFilesManager(
     directory: Path,
     fileLimit: Int,
@@ -30,8 +32,21 @@ class LimitedFilesManager(
 
   private def timestampedFile(file: File): Option[TimestampedFile] = {
     file.getName() match {
+      case WithTimestamp(time) =>
+        Some(TimestampedFile(file, time.toLong))
       case fileNameRegex(time) => Some(TimestampedFile(file, time.toLong))
       case _: String => None
+    }
+  }
+
+  object WithTimestamp {
+    private val prefix = prefixPattern.r
+    def unapply(filename: String): Option[Long] = {
+      for {
+        prefixMatch <- prefix.findPrefixMatchOf(filename)
+        timestamp = prefixMatch.after.toString
+        millis <- TimeFormatter.parse(timestamp)
+      } yield millis
     }
   }
 }
