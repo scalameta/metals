@@ -699,7 +699,7 @@ class MetalsGlobal(
     /**
      * Returns the position of the name/identifier of this definition.
      */
-    def namePos: Position = {
+    def namePosition: Position = {
       val name =
         if (defn.symbol.isPackageObject) defn.symbol.enclosingPackageClass.name
         else defn.name
@@ -714,7 +714,7 @@ class MetalsGlobal(
     /**
      * Returns the position of the name/identifier of this select.
      */
-    def namePos: Position = {
+    def namePosition: Position = {
       val start = sel.pos.point
       val end = start + sel.name.getterName.decoded.trim.length()
       Position.range(sel.pos.source, start, start, end)
