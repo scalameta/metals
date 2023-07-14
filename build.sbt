@@ -399,7 +399,7 @@ lazy val metals = project
       "org.jboss.xnio" % "xnio-nio" % "3.8.9.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "9.20.1",
-      "com.h2database" % "h2" % "2.2.220",
+      "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
