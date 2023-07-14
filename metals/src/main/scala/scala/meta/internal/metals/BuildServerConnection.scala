@@ -18,10 +18,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.MillBuildTool
@@ -30,9 +28,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
-import scala.meta.internal.metals.utils.FutureWithTimeout
+import scala.meta.internal.metals.utils.RequestRegistry
 import scala.meta.internal.metals.utils.Timeout
-import scala.meta.internal.metals.utils.Timeouts
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -61,7 +58,7 @@ class BuildServerConnection private (
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
-  val timeouts: Timeouts = new Timeouts
+  private val defaultMinTimeout = Duration(3, TimeUnit.MINUTES)
 
   @volatile private var connection = Future.successful(initialConnection)
   initialConnection.setReconnect(() => reconnect().ignoreValue)
@@ -72,6 +69,9 @@ class BuildServerConnection private (
     setupConnection()
   }
 
+  val requestRegistry =
+    new RequestRegistry(defaultMinTimeout, initialConnection.cancelables)
+
   private val isShuttingDown = new AtomicBoolean(false)
   private val onReconnection =
     new AtomicReference[BuildServerConnection => Future[Unit]](_ =>
@@ -79,9 +79,6 @@ class BuildServerConnection private (
     )
 
   private val _version = new AtomicReference(initialConnection.version)
-
-  private val ongoingRequests =
-    new MutableCancelable().addAll(initialConnection.cancelables)
 
   def version: String = _version.get()
 
@@ -176,7 +173,10 @@ class BuildServerConnection private (
       }
     }
 
-  def compile(params: CompileParams): CompletableFuture[CompileResult] = {
+  def compile(
+      params: CompileParams,
+      timeout: Timeout,
+  ): CompletableFuture[CompileResult] = {
     register(
       server => server.buildTargetCompile(params),
       onFail = Some(
@@ -185,6 +185,7 @@ class BuildServerConnection private (
           s"Cancelling compilation on ${name} server",
         )
       ),
+      timeout = timeout,
     )
   }
 
@@ -368,7 +369,7 @@ class BuildServerConnection private (
 
   override def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
-      ongoingRequests.cancel()
+      requestRegistry.cancel()
     }
   }
 
@@ -404,7 +405,7 @@ class BuildServerConnection private (
           connection = askUser(original).map { conn =>
             // version can change when reconnecting
             _version.set(conn.version)
-            ongoingRequests.addAll(conn.cancelables)
+            requestRegistry.addOngoingRequest(conn.cancelables)
             conn.setReconnect(() => reconnect().ignoreValue)
             conn
           }
@@ -423,38 +424,14 @@ class BuildServerConnection private (
       onFail: => Option[(T, String)] = None,
       timeout: Timeout = Timeout.DefaultFlexTimeout,
   ): CompletableFuture[T] = {
-    val localCancelable = new MutableCancelable()
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
-    ): Future[T] = {
-      val timeoutValue = timeouts.getTimeout(timeout)
-      lazy val resultFuture = action(launcherConnection.server)
-      val cancelable = Cancelable { () =>
-        Try(resultFuture.cancel(true))
-      }
-      ongoingRequests.add(cancelable)
-      localCancelable.add(cancelable)
-
-      val result = timeoutValue match {
-        case Some(timeoutValue) =>
-          FutureWithTimeout(timeoutValue)(resultFuture.asScala).transform {
-            case Success((res, time)) =>
-              timeouts.measured(timeout, time)
-              Success(res)
-            case Failure(e: TimeoutException) =>
-              timeouts.measured(timeout, timeoutValue)
-              Failure(e)
-            case Failure(e) => Failure(e)
-          }
-        case None => resultFuture.asScala
-      }
-
-      result.onComplete { _ =>
-        ongoingRequests.remove(cancelable)
-        localCancelable.remove(cancelable)
-      }
-      result
-    }
+    ): Future[T] =
+      requestRegistry.register(
+        action = () => action(launcherConnection.server),
+        timeout = timeout,
+        isCompile = isCompile,
+      )
     val original = connection
     val actionFuture = original
       .flatMap { launcherConnection =>

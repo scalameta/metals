@@ -8,12 +8,13 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 object FutureWithTimeout {
-  def apply[T](timeout: Long)(
-      future: => Future[T]
-  )(implicit ex: ExecutionContext): Future[(T, Long)] = Future {
-    val timeBefore = System.currentTimeMillis()
-    val res = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
+  def apply[T](duration: Duration)(
+      future: Future[T],
+      timeBefore: Long = System.currentTimeMillis(),
+  )(implicit ex: ExecutionContext): Future[(T, Duration)] = Future {
+    val res = Await.result(future, duration)
     val timeAfter = System.currentTimeMillis()
-    (res, timeAfter - timeBefore)
+    val execTime = timeAfter - timeBefore
+    (res, Duration(execTime, TimeUnit.MILLISECONDS))
   }
 }
