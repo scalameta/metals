@@ -39,7 +39,7 @@ object V {
   val scalafix = "0.11.0"
   val scalafmt = "3.7.10"
   val scalameta = "4.8.3"
-  val scribe = "3.11.7"
+  val scribe = "3.11.8"
   val semanticdb = scalameta
   val qdox = "2.0.3"
 
