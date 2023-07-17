@@ -5,7 +5,7 @@ authorURL: https://github.com/kasiaMarek
 authorImageURL: https://github.com/kasiaMarek.png
 ---
 
-In the newest version of metals we have added support for [LSP workspace folders](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders). This feature allows you to load multiple Scala projects/modules into the same workspace without the need to switch between multiple windows.
+In the upcoming version of metals we will add support for [LSP workspace folders](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders). This feature allows you to load multiple Scala projects/modules into the same workspace without the need to switch between multiple windows.
 
 ## The new multi-root approach
 
