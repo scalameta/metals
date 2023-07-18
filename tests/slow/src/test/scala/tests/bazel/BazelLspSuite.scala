@@ -28,7 +28,9 @@ class BazelLspSuite
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- initialize(BazelBuildLayout(workspaceLayout, scalaVersion, bazelVersion))
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, scalaVersion, bazelVersion)
+      )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(

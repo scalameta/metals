@@ -94,17 +94,22 @@ final class ForwardingMetalsBuildClient(
   def onBuildShowMessage(params: l.MessageParams): Unit =
     languageClient.showMessage(params)
 
-  def onBuildLogMessage(params: l.MessageParams): Unit =
-    params.getType match {
-      case l.MessageType.Error =>
-        scribe.error(params.getMessage)
-      case l.MessageType.Warning =>
-        scribe.warn(params.getMessage)
-      case l.MessageType.Info =>
-        scribe.info(params.getMessage)
-      case l.MessageType.Log =>
-        scribe.info(params.getMessage)
+  def onBuildLogMessage(params: l.MessageParams): Unit = {
+    // NOTE: BazelBsp adds coloring to the log message after `workspaceBuildTargets` request
+    val noANSICodes = filterANSICodes(params.getMessage).trim()
+    if (noANSICodes.nonEmpty) {
+      params.getType match {
+        case l.MessageType.Error =>
+          scribe.error(noANSICodes)
+        case l.MessageType.Warning =>
+          scribe.warn(noANSICodes)
+        case l.MessageType.Info =>
+          scribe.info(noANSICodes)
+        case l.MessageType.Log =>
+          scribe.info(noANSICodes)
+      }
     }
+  }
 
   def onBuildPublishDiagnostics(params: b.PublishDiagnosticsParams): Unit = {
     diagnostics.onBuildPublishDiagnostics(params)

@@ -1082,4 +1082,7 @@ object MetalsEnrichments
   def filerANSIColorCodes(str: String): String =
     str.replaceAll("\u001B\\[[;\\d]*m", "")
 
+  def filterANSICodes(str: String): String =
+    str.replaceAll("\u001b\\[1A\u001b\\[K|\u001B\\[[;\\d]*m", "")
+
 }
