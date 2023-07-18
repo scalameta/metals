@@ -1,17 +1,19 @@
 package scala.meta.internal.builds
 
+import java.util.concurrent.TimeUnit
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.io.AbsolutePath
-import coursierapi.Dependency
-import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.Messages.ImportBuild
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.process.ExitCodes
-import java.util.concurrent.TimeUnit
+import scala.meta.io.AbsolutePath
+
+import coursierapi.Dependency
 import org.eclipse.lsp4j.services.LanguageClient
 
 case class BazelBuildTool(userConfig: () => UserConfiguration)
@@ -36,7 +38,7 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
 
   override def recommendedVersion: String = version
 
-  override def version: String = "2.7.1"
+  override def version: String = BazelBuildTool.version
 
   override def toString: String = "Bazel"
 
@@ -51,26 +53,30 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
+  val version: String = "2.7.1"
+
+  val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
   private val coursierArgs = List(
-    "cs", "launch", "org.jetbrains.bsp:bazel-bsp:2.7.1", "-M",
-    "org.jetbrains.bsp.bazel.install.Install",
+    "cs",
+    "launch",
+    s"org.jetbrains.bsp:bazel-bsp:$version",
+    "-M",
+    mainClass,
   )
 
   private val dependency = Dependency.of(
     "org.jetbrains.bsp",
     "bazel-bsp",
-    "2.7.1",
+    version,
   )
-
-  private val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
   def writeBazelConfig(
       shellRunner: ShellRunner,
       projectDirectory: AbsolutePath,
   )(implicit
       ec: ExecutionContext
-  ) = {
+  ): Future[WorkspaceLoadedStatus] = {
     def run() =
       shellRunner.runJava(dependency, mainClass, projectDirectory, Nil, false)
     run()
@@ -96,13 +102,13 @@ object BazelBuildTool {
       forceImport: Boolean = false,
   )(implicit
       ec: ExecutionContext
-  ) = {
+  ): Future[WorkspaceLoadedStatus] = {
     val notification = tables.dismissedNotifications.ImportChanges
     if (forceImport) {
       writeBazelConfig(shellRunner, projectDirectory)
     } else if (!notification.isDismissed) {
       languageClient
-        .showMessageRequest(ImportBuild.params(name))
+        .showMessageRequest(ImportBuild.params("Bazel"))
         .asScala
         .flatMap {
           case item if item == Messages.dontShowAgain =>

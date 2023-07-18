@@ -107,7 +107,7 @@ object Digest {
   def digestBazel(
       file: AbsolutePath,
       digest: MessageDigest,
-  ) = {
+  ): Boolean = {
     try {
       Files
         .readAllLines(file.toNIO)

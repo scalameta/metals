@@ -5,8 +5,8 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
@@ -118,7 +118,8 @@ class BspConnector(
                   bspServers
                     .findAvailableServers()
                     .collectFirst {
-                      case details if details.getName == BazelBuildTool.bspName =>
+                      case details
+                          if details.getName == BazelBuildTool.bspName =>
                         tables.buildServers.chooseServer(BazelBuildTool.bspName)
                         bspServers.newServer(workspace, details).map(Some(_))
                     }

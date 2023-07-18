@@ -90,6 +90,7 @@ final class BuildTools(
       MavenBuildTool(userConfig),
       MillBuildTool(userConfig),
       ScalaCliBuildTool(workspace),
+      BazelBuildTool(userConfig),
     )
   }
 

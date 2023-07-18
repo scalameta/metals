@@ -1913,15 +1913,15 @@ class MetalsLspService(
               )
             case Some(_)
                 if buildTool.executableName == BazelBuildTool.name && !buildTools.isBazelBsp =>
-              BazelBuildTool.maybeWriteBazelConfig(
-                shellRunner,
-                folder,
-                languageClient,
-                tables,
-                forceImport
-              ).flatMap(
-                _ => quickConnectToBuildServer()
-              )
+              BazelBuildTool
+                .maybeWriteBazelConfig(
+                  shellRunner,
+                  folder,
+                  languageClient,
+                  tables,
+                  forceImport,
+                )
+                .flatMap(_ => quickConnectToBuildServer())
             case Some(_)
                 if buildTool.executableName == ScalaCliBuildTool.name && chosenBuildServer.isEmpty =>
               tables.buildServers.chooseServer(ScalaCliBuildTool.name)
@@ -2120,7 +2120,9 @@ class MetalsLspService(
       possibleBuildTool <- supportedBuildTool()
       _ <- importBuild(session)
       _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
-      _ = possibleBuildTool.map(workspaceReload.persistChecksumStatus(Digest.Status.Installed, _))
+      _ = possibleBuildTool.map(
+        workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
+      )
       _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
