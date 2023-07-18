@@ -26,12 +26,14 @@ import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.Digest
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceReload
@@ -91,7 +93,6 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.builds.BazelBuildTool
 
 /**
  * Metals implementation of the Scala Language Service.
@@ -2116,8 +2117,10 @@ class MetalsLspService(
     cancelables.add(session)
     bspSession = Some(session)
     for {
+      possibleBuildTool <- supportedBuildTool()
       _ <- importBuild(session)
       _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
+      _ = possibleBuildTool.map(workspaceReload.persistChecksumStatus(Digest.Status.Installed, _))
       _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
