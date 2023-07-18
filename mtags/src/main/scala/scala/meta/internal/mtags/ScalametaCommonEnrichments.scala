@@ -310,8 +310,17 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         case None =>
           path.toURI.toString
       }
-    def isBuild: Boolean =
-      path.filename.startsWith("BUILD")
+
+    def isBazelRelatedPath: Boolean = {
+      val filename = path.toNIO.getFileName.toString
+      filename == "WORKSPACE" ||
+      filename == "BUILD" ||
+      filename == "BUILD.bazel" ||
+      filename.endsWith(".bzl")
+    }
+
+    def isInBazelBspDirectory(workspace: AbsolutePath): Boolean =
+      path.toNIO.startsWith(workspace.resolve(".bazelbsp").toNIO)
 
     def isInBspDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(workspace.resolve(".bsp").toNIO)

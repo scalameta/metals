@@ -37,6 +37,11 @@ object Configs {
           new FileSystemWatcher(
             Either.forLeft(s"$root/project/build.properties")
           ),
+          new FileSystemWatcher(Either.forLeft(s"$root/**/BUILD")),
+          new FileSystemWatcher(Either.forLeft(s"$root/**/BUILD.bazel")),
+          new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE")),
+          new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE.bazel")),
+          new FileSystemWatcher(Either.forLeft(s"$root/**/*.bzl")),
         ).asJava
       )
     }

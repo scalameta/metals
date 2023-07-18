@@ -91,6 +91,7 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.builds.BazelBuildTool
 
 /**
  * Metals implementation of the Scala Language Service.
@@ -1187,7 +1188,7 @@ class MetalsLspService(
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild ||
+    abs.isScalaOrJava || abs.isSemanticdb || abs.isBazelRelatedPath ||
     abs.isInBspDirectory(folder)
   }
 
@@ -1239,7 +1240,7 @@ class MetalsLspService(
             semanticDBIndexer.onOverflow(semanticdbPath)
         }
       }.asJava
-    } else if (path.isBuild) {
+    } else if (path.isBazelRelatedPath) {
       onBuildChanged(List(path)).ignoreValue.asJava
     } else {
       CompletableFuture.completedFuture(())
@@ -1910,17 +1911,20 @@ class MetalsLspService(
                 digest,
               )
             case Some(_)
+                if buildTool.executableName == BazelBuildTool.name && !buildTools.isBazelBsp =>
+              BazelBuildTool.maybeWriteBazelConfig(
+                shellRunner,
+                folder,
+                languageClient,
+                tables,
+                forceImport
+              ).flatMap(
+                _ => quickConnectToBuildServer()
+              )
+            case Some(_)
                 if buildTool.executableName == ScalaCliBuildTool.name && chosenBuildServer.isEmpty =>
               tables.buildServers.chooseServer(ScalaCliBuildTool.name)
               quickConnectToBuildServer()
-            case Some(digest)
-                if isBloopOrEmpty && buildTool
-                  .isInstanceOf[BloopInstallProvider] =>
-              slowConnectToBloopServer(
-                forceImport,
-                buildTool.asInstanceOf[BloopInstallProvider],
-                digest,
-              )
             case Some(digest) =>
               indexer.reloadWorkspaceAndIndex(
                 forceImport,

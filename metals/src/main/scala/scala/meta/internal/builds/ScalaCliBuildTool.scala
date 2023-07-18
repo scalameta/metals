@@ -2,8 +2,6 @@ package scala.meta.internal.builds
 
 import java.security.MessageDigest
 
-import scala.concurrent.Future
-
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -11,12 +9,6 @@ import scala.meta.io.AbsolutePath
 
 class ScalaCliBuildTool(val workspaceVersion: Option[String])
     extends BuildTool {
-
-  override def bloopInstall(
-      workspace: AbsolutePath,
-      systemProcess: List[String] => Future[WorkspaceLoadedStatus],
-  ): Future[WorkspaceLoadedStatus] =
-    Future.successful(WorkspaceLoadedStatus.Dismissed)
 
   override def digest(workspace: AbsolutePath): Option[String] =
     ScalaCliDigest.current(workspace)

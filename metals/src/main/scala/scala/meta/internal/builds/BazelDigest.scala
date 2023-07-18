@@ -14,10 +14,9 @@ object BazelDigest extends Digestable {
       // TODO: *.bzl also should be detected
       // https://github.com/scalameta/metals/issues/5144
       case file
-          if file.filename == "BUILD" ||
-            file.filename == "WORKSPACE" ||
-            file.filename == "BUILD.bazel" ||
-            file.filename.endsWith(".bzl") =>
+          if file.isBazelRelatedPath && !file.isInBazelBspDirectory(
+            workspace
+          ) =>
         Digest.digestFile(file, digest)
       case _ =>
         true

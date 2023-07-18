@@ -97,10 +97,29 @@ object Digest {
       digestGeneralJvm(path, digest)
     } else if (isXml) {
       digestXml(path, digest)
-    } else if (path.isBuild) {
-      digestFileBytes(path, digest)
+    } else if (path.isBazelRelatedPath) {
+      digestBazel(path, digest)
     } else {
       true
+    }
+  }
+
+  def digestBazel(
+      file: AbsolutePath,
+      digest: MessageDigest,
+  ) = {
+    try {
+      Files
+        .readAllLines(file.toNIO)
+        .asScala
+        .mkString("\n")
+        .replaceAll("""#.*""", "") // replace any inline comment
+        .split("\\s+")
+        .foreach { word => digest.update(word.getBytes()) }
+      true
+    } catch {
+      case NonFatal(_) =>
+        false
     }
   }
 

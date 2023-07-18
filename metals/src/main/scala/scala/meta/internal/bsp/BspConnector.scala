@@ -25,7 +25,6 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.common.collect.ImmutableList
 import org.eclipse.lsp4j.services.LanguageClient
-import scala.meta.internal.builds.BloopInstallProvider
 
 class BspConnector(
     bloopServers: BloopServers,
@@ -46,10 +45,6 @@ class BspConnector(
    */
   def resolve(): BspResolvedResult = {
     resolveExplicit().getOrElse {
-      val supportBloop = buildTools.loadSupported.collect {
-        case b: BloopInstallProvider => b
-      }.nonEmpty
-
       val resolved = bspServers.resolve()
       if (
         buildTools
@@ -109,16 +104,25 @@ class BspConnector(
           statusBar
             .trackFuture("Connecting to sbt", connectionF, showTimer = true)
             .map(Some(_))
+        // NOTE: (jkciesluk) This is a special case where .bazelbsp config is not yet generated.
+        // This case is most likely unreachable, so it can be removed in the future.
         case ResolvedBazel =>
           BazelBuildTool
-            .writeBazelConfig(shellRunner, workspace, bspServers)
+            .writeBazelConfig(
+              shellRunner,
+              workspace,
+            )
             .flatMap { result =>
               result match {
-                case Right(details) =>
-                  bspServers.newServer(workspace, details).map(Some(_))
-                case Left(error) =>
-                  scribe.error(error.getMessage())
-                  Future.successful(None)
+                case _ =>
+                  bspServers
+                    .findAvailableServers()
+                    .collectFirst {
+                      case details if details.getName == BazelBuildTool.bspName =>
+                        tables.buildServers.chooseServer(BazelBuildTool.bspName)
+                        bspServers.newServer(workspace, details).map(Some(_))
+                    }
+                    .getOrElse(Future.successful(None))
               }
 
             }
@@ -259,7 +263,12 @@ class BspConnector(
       BuildServerProvider,
       BspConnectionDetails,
     ]] = {
-      if (bloopPresent || buildTools.loadSupported().nonEmpty)
+      if (
+        bloopPresent ||
+        buildTools
+          .loadSupported()
+          .exists(_.isBloopDefaultBsp)
+      )
         new BspConnectionDetails(
           BloopServers.name,
           ImmutableList.of(),

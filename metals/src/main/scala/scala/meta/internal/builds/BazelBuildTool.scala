@@ -6,8 +6,13 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
-import ch.epfl.scala.bsp4j.BspConnectionDetails
-import scala.meta.internal.bsp.BspServers
+import coursierapi.Dependency
+import scala.meta.internal.metals.Messages.ImportBuild
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.Tables
+import scala.meta.internal.process.ExitCodes
+import java.util.concurrent.TimeUnit
+import org.eclipse.lsp4j.services.LanguageClient
 
 case class BazelBuildTool(userConfig: () => UserConfiguration)
     extends BuildTool
@@ -36,50 +41,89 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
   override def toString: String = "Bazel"
 
   override def executableName = BazelBuildTool.name
+
+  override def isBloopDefaultBsp = false
+
+  override val buildServerName: Option[String] = Some(BazelBuildTool.bspName)
+
 }
 
 object BazelBuildTool {
   val name: String = "bazel"
+  val bspName: String = "bazelbsp"
+
   private val coursierArgs = List(
     "cs", "launch", "org.jetbrains.bsp:bazel-bsp:2.7.1", "-M",
     "org.jetbrains.bsp.bazel.install.Install",
   )
 
+  private val dependency = Dependency.of(
+    "org.jetbrains.bsp",
+    "bazel-bsp",
+    "2.7.1",
+  )
+
+  private val mainClass = "org.jetbrains.bsp.bazel.install.Install"
+
   def writeBazelConfig(
       shellRunner: ShellRunner,
       projectDirectory: AbsolutePath,
-      bspServers: BspServers,
   )(implicit
       ec: ExecutionContext
-  ): Future[Either[Error, BspConnectionDetails]] = {
+  ) = {
     def run() =
-      shellRunner.run("Bazel-BSP config", coursierArgs, projectDirectory, false)
+      shellRunner.runJava(dependency, mainClass, projectDirectory, Nil, false)
     run()
       .flatMap { code =>
         scribe.info(s"Generate Bazel-BSP process returned code $code")
         if (code != 0) run()
         else Future.successful(0)
       }
-      .map { code =>
-        if (code != 0)
-          Left(new Error("Failed to write Bazel-BSP config to .bsp"))
-        else
-          bspServers
-            .findAvailableServers()
-            .collectFirst {
-              case details if details.getName == "bazelbsp" => details
-            }
-            .toRight(new Error("'.bsp/bazelbsp.json' not found."))
+      .map {
+        case ExitCodes.Success => WorkspaceLoadedStatus.Installed
+        case ExitCodes.Cancel => WorkspaceLoadedStatus.Cancelled
+        case result =>
+          scribe.error("Failed to write Bazel-BSP config to .bsp")
+          WorkspaceLoadedStatus.Failed(result)
       }
+  }
+
+  def maybeWriteBazelConfig(
+      shellRunner: ShellRunner,
+      projectDirectory: AbsolutePath,
+      languageClient: LanguageClient,
+      tables: Tables,
+      forceImport: Boolean = false,
+  )(implicit
+      ec: ExecutionContext
+  ) = {
+    val notification = tables.dismissedNotifications.ImportChanges
+    if (forceImport) {
+      writeBazelConfig(shellRunner, projectDirectory)
+    } else if (!notification.isDismissed) {
+      languageClient
+        .showMessageRequest(ImportBuild.params(name))
+        .asScala
+        .flatMap {
+          case item if item == Messages.dontShowAgain =>
+            notification.dismissForever()
+            Future.successful(WorkspaceLoadedStatus.Rejected)
+          case item if item == ImportBuild.yes =>
+            writeBazelConfig(shellRunner, projectDirectory)
+          case _ =>
+            notification.dismiss(2, TimeUnit.MINUTES)
+            Future.successful(WorkspaceLoadedStatus.Rejected)
+
+        }
+    } else {
+      scribe.info(
+        s"skipping build import with status ${WorkspaceLoadedStatus.Dismissed}"
+      )
+      Future.successful(WorkspaceLoadedStatus.Dismissed)
+    }
   }
 
   def isBazelRelatedPath(
       path: AbsolutePath
-  ): Boolean = {
-    val filename = path.toNIO.getFileName.toString
-    filename == "WORKSPACE" ||
-    filename == "BUILD" ||
-    filename == "BUILD.bazel" ||
-    filename.endsWith(".bzl")
-  }
+  ): Boolean = path.isBazelRelatedPath
 }

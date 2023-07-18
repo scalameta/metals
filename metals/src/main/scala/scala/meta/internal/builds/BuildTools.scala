@@ -38,7 +38,7 @@ final class BuildTools(
   // Bloop since Metals thinks it's in state that's auto-connectable before the
   // user is even prompted.
   def isAutoConnectable: Boolean = {
-    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || isBazel
+    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || isBazelBsp
   }
   def isBloop: Boolean = {
     hasJsonFile(workspace.resolve(".bloop"))
@@ -49,6 +49,9 @@ final class BuildTools(
   }
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
     dir.list.exists(_.extension == "json")
+  }
+  def isBazelBsp: Boolean = {
+    workspace.resolve(".bazelbsp").isDirectory
   }
   // Returns true if there's a build.sbt file or project/build.properties with sbt.version
   def isSbt: Boolean = {
