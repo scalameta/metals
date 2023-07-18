@@ -136,6 +136,7 @@ final case class DoctorFolderHeader(
     buildTool: Option[String],
     buildServer: String,
     importBuildStatus: Option[String],
+    isBuildServerResponsive: Option[Boolean],
 ) {
   def toJson: Obj = {
     val base =
@@ -145,6 +146,9 @@ final case class DoctorFolderHeader(
 
     buildTool.foreach { bt => base.update("buildTool", bt) }
     importBuildStatus.foreach { ibs => base.update("importBuildStatus", ibs) }
+    isBuildServerResponsive.foreach { ibsr =>
+      base.update("isBuildServerResponsive", ibsr)
+    }
     base
   }
 }

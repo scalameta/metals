@@ -116,6 +116,7 @@ class BuildServerConnection private (
         if (isShuttingDown.compareAndSet(false, true)) {
           conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
           conn.server.onBuildExit()
+          conn.livenessMonitor.shutdown()
           scribe.info("Shut down connection with build server.")
           // Cancel pending compilations on our side, this is not needed for Bloop.
           cancel()
@@ -394,6 +395,11 @@ class BuildServerConnection private (
     CancelTokens.future(_ => actionFuture)
   }
 
+  def isBuildServerResponsive: Future[Boolean] = {
+    val original = connection
+    original.map(_.livenessMonitor.isBuildServerResponsive)
+  }
+
 }
 
 object BuildServerConnection {
@@ -422,6 +428,7 @@ object BuildServerConnection {
     def setupServer(): Future[LauncherConnection] = {
       connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
         val tracePrinter = Trace.setupTracePrinter("BSP", workspace)
+        val requestMonitor = new RequestMonitor
         val launcher = new Launcher.Builder[MetalsBuildServer]()
           .traceMessages(tracePrinter.orNull)
           .setOutput(output)
@@ -429,6 +436,7 @@ object BuildServerConnection {
           .setLocalService(localClient)
           .setRemoteInterface(classOf[MetalsBuildServer])
           .setExecutorService(ec)
+          .wrapMessages(requestMonitor.wrapper(_))
           .create()
         val listening = launcher.startListening()
         val server = launcher.getRemoteProxy
@@ -451,6 +459,14 @@ object BuildServerConnection {
           stopListening,
           result.getVersion(),
           result.getCapabilities(),
+          new ServerLivenessMonitor(
+            requestMonitor,
+            server,
+            languageClient,
+            result.getDisplayName(),
+            config.metalsToIdleTime,
+            config.pingInterval,
+          ),
         )
       }
     }
@@ -541,6 +557,7 @@ object BuildServerConnection {
       cancelServer: Cancelable,
       version: String,
       capabilities: BuildServerCapabilities,
+      livenessMonitor: ServerLivenessMonitor,
   ) {
 
     def cancelables: List[Cancelable] =
