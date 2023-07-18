@@ -4,6 +4,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
 
+import scala.concurrent.Future
+
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -53,12 +55,28 @@ case class SbtBuildTool(
   override val minimumVersion: String = "0.13.17"
   override val recommendedVersion: String = BuildInfo.sbtVersion
 
-  override def createBspFileArgs(workspace: AbsolutePath): List[String] = {
-    val bspConfigArgs = List[String](
-      "bspConfig"
+  override def createBspFileArgs(
+      workspace: AbsolutePath
+  ): Option[List[String]] =
+    Option.when(workspaceSupportsBsp(workspace)) {
+      val bspConfigArgs = List[String]("bspConfig")
+      val bspDir = workspace.resolve(".bsp").toNIO
+      composeArgs(bspConfigArgs, workspace, bspDir)
+    }
+
+  def shutdownBspServer(
+      shellRunner: ShellRunner,
+      workspace: AbsolutePath,
+  ): Future[Int] = {
+    val shutdownArgs =
+      composeArgs(List("--client", "shutdown"), workspace, workspace.toNIO)
+    scribe.info(s"running ${shutdownArgs.mkString(" ")}")
+    shellRunner.run(
+      "Shutting down sbt server",
+      shutdownArgs,
+      workspace,
+      true,
     )
-    val bspDir = workspace.resolve(".bsp").toNIO
-    composeArgs(bspConfigArgs, workspace, bspDir)
   }
 
   private def composeArgs(

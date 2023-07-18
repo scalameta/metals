@@ -153,4 +153,54 @@ class CompletionCrossLspSuite
     } yield ()
   }
 
+  test("iskra-scala3") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { 
+           |    "scalaVersion": "${V.scala3}",
+           |    "libraryDependencies": [
+           |      "org.virtuslab::iskra:0.0.3"
+           |    ]
+           |  }
+           |}
+           |/a/src/main/scala/Main.scala
+           |
+           |import org.virtuslab.iskra.api.*
+           |import org.virtuslab.iskra.api.given
+           | 
+           |given spark: SparkSession = SparkSession
+           |  .builder()
+           |  .master("local")
+           |  .appName("my-spark-app")
+           |  .getOrCreate()
+           |
+           |object demo {
+           |
+           |  case class Foo(x: Int, y: Int)
+           |
+           |  val df = Seq(Foo(1, 420), Foo(2, 50)).toTypedDF
+           |  // @@
+           |  df.select {
+           |    val sum = ($$.x + $$.y).as("sum")
+           |    ($$.x, $$.y, sum)
+           |  }
+           |
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "df.sel@@",
+        """|select: Select[?]
+           |""".stripMargin,
+        filename = Some("a/src/main/scala/Main.scala"),
+      )
+    } yield ()
+  }
+
 }

@@ -147,12 +147,6 @@ commands ++= Seq(
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
   },
-  // this is one is needed for `.github/workflows/check_scala3_nightly`
-  Command.single("save-non-published-nightlies") { (s, path) =>
-    val versions = Scala3NightlyVersions.nonPublishedNightlyVersions
-    IO.write(file(path), versions.map(_.original).mkString("\n"))
-    s
-  },
 )
 
 // -Xlint is unusable because of
@@ -251,11 +245,11 @@ lazy val mtagsShared = project
     crossScalaVersions := {
       V.supportedScalaVersions ++ V.nightlyScala3Versions
     },
-    crossVersion := CrossVersion.binary,
+    crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.23.3",
+      "com.google.protobuf" % "protobuf-java" % "3.23.4",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -311,6 +305,8 @@ val mtagsSettings = List(
         .cross(CrossVersion.for3Use2_13)
         .exclude("org.scala-lang", "scala-reflect")
         .exclude("org.scala-lang", "scala-compiler")
+        // the correct one should be brought in by the scala 3 compiler
+        .exclude("org.scala-lang", "scala-library")
         .exclude(
           "com.lihaoyi",
           "geny_2.13",
@@ -355,6 +351,8 @@ lazy val mtags3 = project
     sharedSettings,
     mtagsSettings,
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
     moduleName := "mtags3",
     scalaVersion := V.scala3,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
@@ -363,7 +361,7 @@ lazy val mtags3 = project
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
   )
-  .dependsOn(mtagsShared)
+  .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags = project
@@ -400,12 +398,12 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.9.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.20.0",
+      "org.flywaydb" % "flyway-core" % "9.20.1",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
-      "ch.epfl.scala" %% "bloop-launcher" % V.bloop,
+      "ch.epfl.scala" %% "bloop-launcher-core" % V.bloop,
       // for LSP
       V.lsp4j,
       // for DAP
@@ -447,15 +445,15 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "2.0.0",
+      "com.lihaoyi" %% "ujson" % "3.1.2",
       // For remote language server
-      "com.lihaoyi" %% "requests" % "0.7.1",
+      "com.lihaoyi" %% "requests" % "0.8.0",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
-      "org.scala-lang.modules" %% "scala-xml" % "2.1.0",
+      "org.scala-lang.modules" %% "scala-xml" % "2.2.0",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),

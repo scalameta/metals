@@ -2,12 +2,20 @@ package scala.meta.internal.metals
 
 import scala.meta.internal.metals.MetalsEnrichments._
 
+import ch.epfl.scala.bsp4j
 import org.eclipse.{lsp4j => l}
 
 object ScalacDiagnostic {
 
-  object ScalaAction {
+  object LegacyScalaAction {
     def unapply(d: l.Diagnostic): Option[l.TextEdit] = d.asTextEdit
+  }
+
+  object ScalaDiagnostic {
+    def unapply(
+        d: l.Diagnostic
+    ): Option[Either[l.TextEdit, bsp4j.ScalaDiagnostic]] =
+      d.asScalaDiagnostic
   }
 
   object NotAMember {

@@ -1,15 +1,14 @@
 package tests.bazel
 
 import scala.meta.internal.builds.BazelBuildTool
-
+import scala.meta.internal.builds.BazelDigest
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 import tests.BaseImportSuite
-import scala.meta.internal.builds.BazelDigest
-import tests.BazelServerInitializer
 import tests.BazelBuildLayout
+import tests.BazelServerInitializer
 
 class BazelLspSuite
     extends BaseImportSuite("bazel-import", BazelServerInitializer) {

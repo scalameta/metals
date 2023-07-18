@@ -1,5 +1,7 @@
 package tests.scalacli
 
+import scala.meta.internal.metals.scalacli.ScalaCli
+
 import tests.BaseCodeLensLspSuite
 
 class ScalaCliCodeLensesSuite
@@ -12,7 +14,7 @@ class ScalaCliCodeLensesSuite
 
       _ <- initialize(
         s"""/.bsp/scala-cli.json
-           |${BaseScalaCliSuite.scalaCliBspJsonContent()}
+           |${ScalaCli.scalaCliBspJsonContent()}
            |/.scala-build/ide-inputs.json
            |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
            |/$scalaCliScriptPath
@@ -35,7 +37,7 @@ class ScalaCliCodeLensesSuite
 
       _ <- initialize(
         s"""/.bsp/scala-cli.json
-           |${BaseScalaCliSuite.scalaCliBspJsonContent()}
+           |${ScalaCli.scalaCliBspJsonContent()}
            |/.scala-build/ide-inputs.json
            |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
            |/$scalaCliScriptPathTop

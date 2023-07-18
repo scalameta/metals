@@ -1,6 +1,5 @@
 package tests.scalacli
 
-import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
@@ -9,7 +8,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.scalacli.ScalaCli
 
@@ -107,7 +105,7 @@ abstract class BaseScalaCliSuite(protected val scalaVersion: String)
 
   protected def bspLayout: String =
     s"""/.bsp/scala-cli.json
-       |${BaseScalaCliSuite.scalaCliBspJsonContent()}
+       |${ScalaCli.scalaCliBspJsonContent()}
        |
        |/.scala-build/ide-inputs.json
        |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
@@ -138,24 +136,6 @@ abstract class BaseScalaCliSuite(protected val scalaVersion: String)
 }
 
 object BaseScalaCliSuite {
-  def scalaCliBspJsonContent(args: List[String] = Nil): String = {
-    val argv = List(
-      ScalaCli.javaCommand,
-      "-cp",
-      ScalaCli.scalaCliClassPath().mkString(File.pathSeparator),
-      ScalaCli.scalaCliMainClass,
-      "bsp",
-      ".",
-    ) ++ args
-    val bsjJson = ujson.Obj(
-      "name" -> "scala-cli",
-      "argv" -> argv,
-      "version" -> BuildInfo.scalaCliVersion,
-      "bspVersion" -> "2.0.0",
-      "languages" -> List("scala", "java"),
-    )
-    ujson.write(bsjJson)
-  }
 
   def scalaCliIdeInputJson(args: String*): String = {
     val ideInputJson = ujson.Obj(

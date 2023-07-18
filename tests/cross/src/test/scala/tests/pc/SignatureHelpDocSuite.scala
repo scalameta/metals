@@ -56,44 +56,14 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     s"""$foldLatestDocs
        |**Parameters**
-       |- `f`: the function to apply if nonempty.
        |- `ifEmpty`: the expression to evaluate if empty.
+       |- `f`: the function to apply if nonempty.
        |fold[B](ifEmpty: => B)(f: Int => B): B
        |                       ^^^^^^^^^^^
        |  @param ifEmpty the expression to evaluate if empty.
        |  @param f the function to apply if nonempty.
         """.stripMargin,
-    compat = Map(
-      "2.12" ->
-        s"""$foldLatestDocs
-           |**Parameters**
-           |- `ifEmpty`: the expression to evaluate if empty.
-           |- `f`: the function to apply if nonempty.
-           |fold[B](ifEmpty: => B)(f: Int => B): B
-           |                       ^^^^^^^^^^^
-           |  @param ifEmpty the expression to evaluate if empty.
-           |  @param f the function to apply if nonempty.
-           |""".stripMargin
-    ),
   )
-
-  val foldOlderDocs2: String =
-    """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
-       | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
-       | expression `ifEmpty`.
-       |
-       |
-       |**Notes**
-       |- This is equivalent to `[scala.Option](scala.Option) map f getOrElse ifEmpty`.
-       |
-       |**Parameters**
-       |- `ifEmpty`: the expression to evaluate if empty.
-       |- `f`: the function to apply if nonempty.
-       |fold[B](ifEmpty: => B)(f: Int => B): B
-       |        ^^^^^^^^^^^^^
-       |  @param ifEmpty String the expression to evaluate if empty.
-       |  @param f the function to apply if nonempty.
-       |""".stripMargin
 
   checkDoc(
     "curry2",
@@ -112,26 +82,16 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
         |  @param f the function to apply if nonempty.
         |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        s"""|$foldLatestDocs
-            |**Parameters**
-            |- `f`: the function to apply if nonempty.
-            |- `ifEmpty`: the expression to evaluate if empty.
-            |fold[B](ifEmpty: => B)(f: Int => B): B
-            |        ^^^^^^^^^^^^^
-            |  @param ifEmpty String the expression to evaluate if empty.
-            |  @param f the function to apply if nonempty.
-            |""".stripMargin,
       "3" ->
         s"""|$foldLatestDocs
             |**Parameters**
-            |- `f`: the function to apply if nonempty.
             |- `ifEmpty`: the expression to evaluate if empty.
+            |- `f`: the function to apply if nonempty.
             |fold[B](ifEmpty: => B)(f: Int => B): B
             |        ^^^^^^^^^^^^^
             |  @param ifEmpty the expression to evaluate if empty.
             |  @param f the function to apply if nonempty.
-            |""".stripMargin,
+            |""".stripMargin
     ),
   )
 
@@ -159,8 +119,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |- `B`: the result type of the binary operator.
        |
        |**Parameters**
-       |- `op`: the binary operator.
        |- `z`: the start value.
+       |- `op`: the binary operator.
        |
        |**Returns:** the result of inserting `op` between consecutive elements of this collection or iterator,
        |          going left to right with the start value `z` on the left:
@@ -270,18 +230,18 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |
            |
            |**Type Parameters**
+           |- `B`: the element type of the returned collection.
            |- `That`: the class of the returned collection. Where possible, `That` is
            |the same class as the current collection class `Repr`, but this
            |depends on the element type `B` being admissible for that class,
            |which means that an implicit instance of type `CanBuildFrom[Repr, B, That]`
            |is found.
-           |- `B`: the element type of the returned collection.
            |
            |**Parameters**
+           |- `f`: the function to apply to each element.
            |- `bf`: an implicit value of class `CanBuildFrom` which determines
            |the result class `That` from the current representation type `Repr` and
            |the new element type `B`.
-           |- `f`: the function to apply to each element.
            |
            |**Returns:** a new general collection resulting from applying the given function
            |                 `f` to each element of this general collection and collecting the results.
@@ -381,9 +341,9 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |- `T`: result type of bodies used in try and catch blocks
        |
        |**Parameters**
-       |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
        |- `pf`: Partial function used when applying catch logic to determine result value
        |- `fin`: Finally logic which if defined will be invoked after catch logic
+       |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
        |<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = None, rethrow: Throwable => Boolean = shouldRethrow): Exception.Catch[T]
        |       ^^^^^^^^^^^^^^^^^^^^^^^^
        |  @param pf Partial function used when applying catch logic to determine result value
@@ -391,26 +351,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|A container class for catch/finally logic.
-           |
-           | Pass a different value for rethrow if you want to probably
-           | unwisely allow catching control exceptions and other throwables
-           | which the rest of the world may expect to get through.
-           |
-           |**Type Parameters**
-           |- `T`: result type of bodies used in try and catch blocks
-           |
-           |**Parameters**
-           |- `fin`: Finally logic which if defined will be invoked after catch logic
-           |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |- `pf`: Partial function used when applying catch logic to determine result value
-           |<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = None, rethrow: Throwable => Boolean = shouldRethrow): Exception.Catch[T]
-           |       ^^^^^^^^^^^^^^^^^^^^^^^^
-           |  @param pf Partial function used when applying catch logic to determine result value
-           |  @param fin Finally logic which if defined will be invoked after catch logic
-           |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |""".stripMargin,
       "3" ->
         """|A container class for catch/finally logic.
            |
@@ -422,15 +362,15 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |- `T`: result type of bodies used in try and catch blocks
            |
            |**Parameters**
+           |- `pf`: Partial function used when applying catch logic to determine result value
            |- `fin`: Finally logic which if defined will be invoked after catch logic
            |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |- `pf`: Partial function used when applying catch logic to determine result value
            |Catch[T](pf: scala.util.control.Exception.Catcher[T], fin: Option[scala.util.control.Exception.Finally], rethrow: Throwable => Boolean)
            |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |  @param pf Partial function used when applying catch logic to determine result value
            |  @param fin Finally logic which if defined will be invoked after catch logic
            |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |""".stripMargin,
+           |""".stripMargin
     ),
   )
 

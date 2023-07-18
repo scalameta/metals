@@ -11,8 +11,11 @@ object MtagsBinaries {
   case object BuildIn extends MtagsBinaries {
     val scalaVersion = mtags.BuildInfo.scalaCompilerVersion
   }
-  case class Artifacts(scalaVersion: String, jars: List[Path])
-      extends MtagsBinaries
+  case class Artifacts(
+      scalaVersion: String,
+      jars: List[Path],
+      isScala3PresentationCompiler: Boolean,
+  ) extends MtagsBinaries
 
   def isBuildIn(scalaVersion: String): Boolean =
     ScalaVersions.dropVendorSuffix(scalaVersion) == BuildIn.scalaVersion

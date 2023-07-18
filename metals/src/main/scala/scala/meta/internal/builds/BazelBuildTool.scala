@@ -24,8 +24,8 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
     BazelDigest.current(workspace)
   }
 
-  def createBspFileArgs(workspace: AbsolutePath): List[String] =
-    BazelBuildTool.coursierArgs
+  def createBspFileArgs(workspace: AbsolutePath): Option[List[String]] =
+    Option.when(workspaceSupportsBsp(workspace))(BazelBuildTool.coursierArgs)
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
     workspace.listRecursive.exists {

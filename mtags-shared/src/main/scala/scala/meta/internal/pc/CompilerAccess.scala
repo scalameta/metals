@@ -10,8 +10,12 @@ import java.util.logging.Logger
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.VirtualFileParams
 
 /**
  * Manages the lifecycle and multi-threaded access to the presentation compiler.
@@ -25,7 +29,7 @@ abstract class CompilerAccess[Reporter, Compiler](
     sh: Option[ScheduledExecutorService],
     newCompiler: () => CompilerWrapper[Reporter, Compiler],
     shouldResetJobQueue: Boolean
-)(implicit ec: ExecutionContextExecutor) {
+)(implicit ec: ExecutionContextExecutor, rc: ReportContext) {
   private val logger: Logger =
     Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
 
@@ -76,7 +80,7 @@ abstract class CompilerAccess[Reporter, Compiler](
   /**
    * Asynchronously execute a function on the compiler thread with `Thread.interrupt()` cancellation.
    */
-  def withInterruptableCompiler[T](
+  def withInterruptableCompiler[T](params: Option[VirtualFileParams])(
       default: T,
       token: CancelToken
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
@@ -85,7 +89,7 @@ abstract class CompilerAccess[Reporter, Compiler](
     val result = onCompilerJobQueue(
       () => {
         queueThread = Some(Thread.currentThread())
-        try withSharedCompiler(default)(thunk)
+        try withSharedCompiler(params)(default)(thunk)
         finally isFinished.set(true)
       },
       token
@@ -119,10 +123,15 @@ abstract class CompilerAccess[Reporter, Compiler](
    * Note that the function is still cancellable.
    */
   def withNonInterruptableCompiler[T](
+      params: Option[VirtualFileParams]
+  )(
       default: T,
       token: CancelToken
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
-    onCompilerJobQueue(() => withSharedCompiler(default)(thunk), token)
+    onCompilerJobQueue(
+      () => withSharedCompiler(params)(default)(thunk),
+      token
+    )
   }
 
   /**
@@ -130,7 +139,7 @@ abstract class CompilerAccess[Reporter, Compiler](
    *
    * May potentially run in parallel with other requests, use carefully.
    */
-  def withSharedCompiler[T](
+  def withSharedCompiler[T](params: Option[VirtualFileParams])(
       default: T
   )(thunk: CompilerWrapper[Reporter, Compiler] => T): T = {
     try {
@@ -141,14 +150,14 @@ abstract class CompilerAccess[Reporter, Compiler](
       case other: Throwable =>
         handleSharedCompilerException(other)
           .map { message =>
-            retryWithCleanCompiler(
+            retryWithCleanCompiler(params)(
               thunk,
               default,
               message
             )
           }
           .getOrElse {
-            handleError(other)
+            handleError(other, params)
             default
           }
     }
@@ -159,6 +168,8 @@ abstract class CompilerAccess[Reporter, Compiler](
   protected def ignoreException(t: Throwable): Boolean
 
   private def retryWithCleanCompiler[T](
+      params: Option[VirtualFileParams]
+  )(
       thunk: CompilerWrapper[Reporter, Compiler] => T,
       default: T,
       cause: String
@@ -173,14 +184,37 @@ abstract class CompilerAccess[Reporter, Compiler](
       case InterruptException() =>
         default
       case NonFatal(e) =>
-        handleError(e)
+        handleError(e, params)
         default
     }
   }
 
-  private def handleError(e: Throwable): Unit = {
-    CompilerThrowable.trimStackTrace(e)
-    logger.log(Level.SEVERE, e.getMessage, e)
+  private def handleError(
+      e: Throwable,
+      params: Option[VirtualFileParams]
+  ): Unit = {
+    val error = CompilerThrowable.trimStackTrace(e)
+    val report =
+      Report(
+        "compiler-error",
+        s"""|occurred in the presentation compiler.
+            |
+            |action parameters:
+            |${params.map(_.printed()).getOrElse("<NONE>")}
+            |""".stripMargin,
+        error
+      )
+    val pathToReport =
+      rc.unsanitized.create(report)
+    pathToReport match {
+      case Some(path) =>
+        logger.log(
+          Level.SEVERE,
+          s"A severe compiler error occurred, full details of the error can be found in the error report $path"
+        )
+      case _ =>
+        logger.log(Level.SEVERE, error.getMessage, error)
+    }
     shutdownCurrentCompiler()
   }
 

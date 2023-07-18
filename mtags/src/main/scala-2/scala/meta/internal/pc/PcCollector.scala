@@ -169,8 +169,8 @@ abstract class PcCollector[T](
      * class Fo@@o = ???
      * etc.
      */
-    case (df: DefTree) if df.namePos.includes(pos) =>
-      Some(symbolAlternatives(df.symbol), df.namePos)
+    case (df: DefTree) if df.namePosition.includes(pos) =>
+      Some(symbolAlternatives(df.symbol), df.namePosition)
     /* Import selectors:
      * import scala.util.Tr@@y
      */
@@ -179,8 +179,8 @@ abstract class PcCollector[T](
     /* simple selector:
      * object.val@@ue
      */
-    case (sel: NameTree) if sel.namePos.includes(pos) =>
-      Some(symbolAlternatives(sel.symbol), sel.namePos)
+    case (sel: NameTree) if sel.namePosition.includes(pos) =>
+      Some(symbolAlternatives(sel.symbol), sel.namePosition)
 
     // needed for classOf[AB@@C]`
     case lit @ Literal(Constant(TypeRef(_, sym, _))) if lit.pos.includes(pos) =>
@@ -323,7 +323,7 @@ abstract class PcCollector[T](
           traverse(
             acc + collect(
               sel,
-              sel.namePos
+              sel.namePosition
             ),
             sel.qualifier
           )
@@ -336,7 +336,7 @@ abstract class PcCollector[T](
           (annotationChildren(df) ++ df.children).foldLeft({
             val t = collect(
               df,
-              df.namePos
+              df.namePosition
             )
             if (acc(t)) acc else acc + t
           })(traverse(_, _))
@@ -373,7 +373,7 @@ abstract class PcCollector[T](
           bind.children.foldLeft(
             acc + collect(
               bind,
-              bind.namePos
+              bind.namePosition
             )
           )(traverse(_, _))
 
@@ -444,7 +444,7 @@ abstract class PcCollector[T](
           tree.children.foldLeft(
             acc + collect(
               name,
-              name.namePos
+              name.namePosition
             )
           )(traverse(_, _))
 
@@ -486,7 +486,7 @@ abstract class PcCollector[T](
   private def typePos(tpe: TypeTree) = {
     tpe.original match {
       case AppliedTypeTree(tpt, _) => tpt.pos
-      case sel: NameTree => sel.namePos
+      case sel: NameTree => sel.namePosition
       case _ => tpe.pos
     }
   }

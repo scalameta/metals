@@ -36,46 +36,52 @@ class Docstrings(index: GlobalSymbolIndex) {
       symbol: String,
       parents: ParentSymbols
   ): Optional[SymbolDocumentation] = {
-    cache.get(symbol) match {
+    val result = cache.get(symbol) match {
       case Some(value) =>
-        if (value == EmptySymbolDocumentation) Optional.empty()
-        else Optional.of(value)
+        if (value == EmptySymbolDocumentation) None
+        else Some(value)
       case None =>
         indexSymbol(symbol)
         val result = cache.get(symbol)
-        val resultWithDocs = result match {
-          case None =>
-            cache(symbol) = EmptySymbolDocumentation
-            result
-          /* Fall back to parent scaladocs if nothing is specified for the current symbol
-           * This way we also cache the result in order not to calculate parents again.
-           */
-          case Some(value: MetalsSymbolDocumentation)
-              if value.docstring.isEmpty() =>
-            parents
-              .parents()
-              .asScala
-              .flatMap { s =>
-                if (cache.contains(s)) cache.get(s)
-                else {
-                  indexSymbol(s)
-                  cache.get(s)
-                }
-              }
-              .find(_.docstring().nonEmpty)
-              .fold {
-                result
-              } { withDocs =>
-                val updated = value.copy(docstring = withDocs.docstring())
-                cache(symbol) = updated
-                Some(updated)
-              }
-          case _ =>
-            result
-
-        }
-        Optional.ofNullable(resultWithDocs.orNull)
+        if (result.isEmpty)
+          cache(symbol) = EmptySymbolDocumentation
+        result
     }
+    /* Fall back to parent javadocs/scaladocs if nothing is specified for the current symbol
+     * This way we also cache the result in order not to calculate parents again.
+     */
+    val resultWithParentDocs = result match {
+      case Some(value: MetalsSymbolDocumentation)
+          if value.docstring.isEmpty() =>
+        Some(parentDocumentation(symbol, value, parents))
+      case _ => result
+    }
+    Optional.ofNullable(resultWithParentDocs.orNull)
+  }
+
+  def parentDocumentation(
+      symbol: String,
+      docs: MetalsSymbolDocumentation,
+      parents: ParentSymbols
+  ): SymbolDocumentation = {
+    parents
+      .parents()
+      .asScala
+      .flatMap { s =>
+        if (cache.contains(s)) cache.get(s)
+        else {
+          indexSymbol(s)
+          cache.get(s)
+        }
+      }
+      .find(_.docstring().nonEmpty)
+      .fold {
+        docs
+      } { withDocs =>
+        val updated = docs.copy(docstring = withDocs.docstring())
+        cache(symbol) = updated
+        updated
+      }
   }
 
   /**

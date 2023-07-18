@@ -11,6 +11,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
@@ -474,14 +475,24 @@ class Compilers(
             .semanticTokens(vFile)
             .asScala
             .map { nodes =>
-              val plist = SemanticTokensProvider.provide(
-                nodes.asScala.toList,
-                vFile,
-                isScala3,
-              )
+              val plist =
+                try {
+                  SemanticTokensProvider.provide(
+                    nodes.asScala.toList,
+                    vFile,
+                    isScala3,
+                  )
+                } catch {
+                  case NonFatal(e) =>
+                    scribe.error(
+                      s"Failed to tokenize input for semantic tokens for $path",
+                      e,
+                    )
+                    Nil
+                }
 
               val tokens =
-                findCorrectStart(0, 0, plist.asScala.toList)
+                findCorrectStart(0, 0, plist.toList)
               if (isScala3 && path.isWorksheet) {
                 new SemanticTokens(adjustForScala3Worksheet(tokens).asJava)
               } else {

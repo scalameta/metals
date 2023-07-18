@@ -47,6 +47,26 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         "utest/framework/Tree.scala",
       )
 
+      completion <- server.completion(
+        "MyTests.scala",
+        "//> using lib \"com.lihao@@yi::utest",
+      )
+
+      _ = assertNoDiff(completion, "com.lihaoyi")
+
+      completion <- server.completion(
+        "MyTests.scala",
+        "//> using lib com.lihaoyi::pprin@@t",
+      )
+
+      _ = assertNoDiff(
+        completion,
+        """|pprint
+           |pprint_native0.4
+           |pprint_sjs1
+           |""".stripMargin,
+      )
+
     } yield ()
 
   private def simpleScriptTest(useBsp: Boolean): Future[Unit] =
@@ -56,7 +76,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
            |#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
            |//> using scala "$scalaVersion"
            |//> using lib "com.lihaoyi::utest::0.7.10"
-           |//> using lib "com.lihaoyi::pprint::0.6.6"
+           |//> using lib com.lihaoyi::pprint::0.6.6
            |
            |import foo.Foo
            |import utest._
@@ -122,13 +142,33 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         s"Expected no scalameta errors, got: $parserDiagnostics",
       )
 
+      completion <- server.completion(
+        "MyTests.sc",
+        "//> using lib \"com.lihao@@yi::utest",
+      )
+
+      _ = assertNoDiff(completion, "com.lihaoyi")
+
+      completion <- server.completion(
+        "MyTests.sc",
+        "//> using lib com.lihaoyi::pprin@@t",
+      )
+
+      _ = assertNoDiff(
+        completion,
+        """|pprint
+           |pprint_native0.4
+           |pprint_sjs1
+           |""".stripMargin,
+      )
+
     } yield ()
 
   private val simpleFileLayout =
     s"""|/MyTests.scala
         |//> using scala "$scalaVersion"
         |//> using lib "com.lihaoyi::utest::0.7.10"
-        |//> using lib "com.lihaoyi::pprint::0.6.6"
+        |//> using lib com.lihaoyi::pprint::0.6.6
         |
         |import foo.Foo
         |import utest._
@@ -184,13 +224,29 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     } yield ()
   }
 
+  test("connecting-scalacli-as-fallback") {
+    cleanWorkspace()
+    FileLayout.fromString(simpleFileLayout, workspace)
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("MyTests.scala")
+      _ <- assertDefinitionAtLocation(
+        "MyTests.scala",
+        "new Fo@@o",
+        "foo.sc",
+      )
+    } yield ()
+  }
+
   test("relative-semanticdb-root") {
     for {
       _ <- scalaCliInitialize(useBsp = false)(
         s"""/scripts/MyTests.scala
            |//> using scala "$scalaVersion"
            |//> using lib "com.lihaoyi::utest::0.7.10"
-           |//> using lib "com.lihaoyi::pprint::0.6.6"
+           |//> using lib com.lihaoyi::pprint::0.6.6
            |
            |import foo.Foo
            |import utest._
@@ -258,6 +314,51 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       )
       _ = assert(server.server.tables.buildServers.selectedServer().isEmpty)
       _ = assert(server.server.bspSession.exists(_.main.isBloop))
+    } yield ()
+  }
+
+  test("detect-when-project-scala-file") {
+    cleanWorkspace()
+    server.client.importBuild = Messages.ImportBuild.yes
+    for {
+      _ <- initialize(
+        s"""|/project.scala
+            |//> using scala "${V.scala3}"
+            |//> using lib "com.lihaoyi::utest::0.8.1"
+            |//> using lib "com.lihaoyi::pprint::0.8.1"
+            |
+            |/test/MyTests.scala
+            |
+            |import foo.Foo
+            |import utest._
+            |
+            |object MyTests extends TestSuite {
+            |  pprint.log(2)
+            |  val tests = Tests {
+            |    test("foo") {
+            |      assert(2 + 2 == 4)
+            |    }
+            |    test("nope") {
+            |      assert(2 + 2 == (new Foo).value)
+            |    }
+            |  }
+            |}
+            |
+            |/main/Foo.scala
+            |class Foo {
+            |  def value = 5
+            |}
+            |
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(server.server.bspSession.exists(_.main.isScalaCLI))
+      _ <- server.didOpen("test/MyTests.scala")
+      _ <- assertDefinitionAtLocation(
+        "test/MyTests.scala",
+        "val tests = Test@@s",
+        "utest/Tests.scala",
+      )
     } yield ()
   }
 

@@ -1,10 +1,13 @@
 package scala.meta.internal.metals
 
+import java.io.File
 import java.io.IOException
+import java.lang.reflect.Type
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -46,6 +49,12 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -294,6 +303,16 @@ object MetalsEnrichments
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
+    def hasScalaFiles: Boolean = {
+      def isScalaDir(file: File): Boolean = {
+        file.listFiles().exists { file =>
+          if (file.isDirectory()) isScalaDir(file)
+          else file.getName().endsWith(".scala")
+        }
+      }
+      path.isDirectory && isScalaDir(path.toFile)
+    }
+
     def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
 
     def javaSourcerootOption: String =
@@ -506,8 +525,23 @@ object MetalsEnrichments
       Files.delete(path.dealias.toNIO)
     }
 
+    // This method used to fail on both `.toList` and `delete`
+    // so we want to be extra careful and check if file exists on every step
     def deleteRecursively(): Unit = {
-      path.listRecursive.toList.reverse.foreach(f => if (f.exists) f.delete())
+      path.listRecursive
+        .filter(_.exists)
+        .toList
+        .reverse
+        .foreach(_.deleteIfExists())
+    }
+
+    def deleteIfExists(): Unit = {
+      if (path.exists) {
+        try path.delete()
+        catch {
+          case _: NoSuchFileException => ()
+        }
+      }
     }
 
     def appendText(text: String): Unit = {
@@ -667,6 +701,40 @@ object MetalsEnrichments
     }
     def asTextEdit: Option[l.TextEdit] = {
       decodeJson(d.getData, classOf[l.TextEdit])
+    }
+
+    /**
+     * Useful for decoded the diagnostic data since there are overlapping
+     * unrequired keys in the structure that causes issues when we try to
+     * deserialize the old top level text edit vs the newly nested actions.
+     */
+    object DiagnosticDataDeserializer
+        extends JsonDeserializer[Either[l.TextEdit, b.ScalaDiagnostic]] {
+      override def deserialize(
+          json: JsonElement,
+          typeOfT: Type,
+          context: JsonDeserializationContext,
+      ): Either[l.TextEdit, b.ScalaDiagnostic] = {
+        json match {
+          case o: JsonObject if o.has("actions") =>
+            Right(new Gson().fromJson(o, classOf[b.ScalaDiagnostic]))
+          case o => Left(new Gson().fromJson(o, classOf[l.TextEdit]))
+        }
+      }
+    }
+
+    def asScalaDiagnostic: Option[Either[l.TextEdit, b.ScalaDiagnostic]] = {
+      val gson = new GsonBuilder()
+        .registerTypeAdapter(
+          classOf[Either[l.TextEdit, b.ScalaDiagnostic]],
+          DiagnosticDataDeserializer,
+        )
+        .create()
+      decodeJson(
+        d.getData(),
+        classOf[Either[l.TextEdit, b.ScalaDiagnostic]],
+        Some(gson),
+      )
     }
   }
 

@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Paths
 import java.util.Properties
 
 import scala.collection.mutable.ListBuffer
@@ -60,13 +59,7 @@ case class UserConfiguration(
   def currentBloopVersion: String =
     bloopVersion.getOrElse(BuildInfo.bloopVersion)
 
-  def usedJavaBinary(): Option[AbsolutePath] = {
-    javaHome
-      .orElse(
-        JdkSources.defaultJavaHome
-      )
-      .map(home => AbsolutePath(Paths.get(home).resolve("bin/java")))
-  }
+  def usedJavaBinary(): Option[AbsolutePath] = JavaBinary.path(javaHome)
 }
 
 object UserConfiguration {

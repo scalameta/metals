@@ -1,6 +1,7 @@
 package scala.meta.internal.docstrings
 
 import scala.collection.Seq
+import scala.util.matching.Regex
 
 import scala.meta._
 import scala.meta.dialects.Scala213
@@ -27,7 +28,7 @@ object MarkdownGenerator {
       docstring: String,
       defines: collection.Map[String, String]
   ): String = {
-    toMarkdown(ScaladocParser.parseComment(docstring, defines))
+    toMarkdown(ScaladocParser.parseComment(docstring, defines), docstring)
   }
 
   def toMarkdown(b: Body): String = {
@@ -36,7 +37,18 @@ object MarkdownGenerator {
       .mkString
   }
 
-  def toMarkdown(c: Comment): String = {
+  def toMarkdown(c: Comment, docstring: String): String = {
+
+    def sortInSection(
+        section: String,
+        items: Seq[(String, Body)]
+    ): Seq[(String, Body)] = {
+      items.sortBy { case (key, _) =>
+        val reg = new Regex(s"@$section\\s+$key")
+        reg.findFirstMatchIn(docstring).map(_.start).getOrElse(Int.MaxValue)
+      }
+    }
+
     Seq(
       toMarkdown(c.body),
       if (c.constructor.nonEmpty)
@@ -62,7 +74,7 @@ object MarkdownGenerator {
       else "",
       if (c.typeParams.nonEmpty)
         "\n**Type Parameters**\n" +
-          c.typeParams
+          sortInSection("tparam", c.typeParams.toSeq)
             .map(tuple =>
               s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
             )
@@ -70,7 +82,7 @@ object MarkdownGenerator {
       else
         "",
       if (c.valueParams.nonEmpty)
-        "\n**Parameters**\n" + c.valueParams
+        "\n**Parameters**\n" + sortInSection("param", c.valueParams.toSeq)
           .map(tuple =>
             s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
           )
@@ -83,11 +95,11 @@ object MarkdownGenerator {
           .mkString("\n")
       else "",
       if (c.throws.nonEmpty)
-        "\n**Throws**\n" + c.throws
+        "\n**Throws**\n" + sortInSection("throws", c.throws.toSeq)
           .map(tuple =>
             s"- `${tuple._1}`: " + tuple._2.summary
               .map(inlineToMarkdown)
-              .getOrElse("") + blocksToMarkdown(tuple._2.blocks)
+              .getOrElse("")
           )
           .mkString("", "\n", "\n")
       else "",

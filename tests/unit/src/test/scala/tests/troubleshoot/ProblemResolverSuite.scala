@@ -1,7 +1,6 @@
 package tests.troubleshoot
 
 import java.nio.file.Files
-import java.nio.file.Paths
 
 import scala.concurrent.ExecutionContext
 
@@ -16,7 +15,6 @@ import scala.meta.internal.metals.doctor.DeprecatedSbtVersion
 import scala.meta.internal.metals.doctor.DeprecatedScalaVersion
 import scala.meta.internal.metals.doctor.FutureSbtVersion
 import scala.meta.internal.metals.doctor.FutureScalaVersion
-import scala.meta.internal.metals.doctor.MissingJdkSources
 import scala.meta.internal.metals.doctor.MissingSourceRoot
 import scala.meta.internal.metals.doctor.OutdatedJunitInterfaceVersion
 import scala.meta.internal.metals.doctor.OutdatedMunitInterfaceVersion
@@ -122,21 +120,6 @@ class ProblemResolverSuite extends FunSuite {
     scalaVersion = BuildInfo.scala212,
     MissingSourceRoot("\"-P:semanticdb:sourceroot:$workspace\"").message,
     scalacOpts = List("-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar"),
-  )
-
-  checkRecommendation(
-    "missing-jdk-sources",
-    scalaVersion = BuildInfo.scala212,
-    MissingJdkSources(
-      List(
-        "/some/invalid/src.zip",
-        "/some/invalid/lib/src.zip",
-        "/some/invalid/path/src.zip",
-        "/some/invalid/path/lib/src.zip",
-      ).map(path => AbsolutePath(Paths.get(path)))
-    ).message,
-    sbtVersion = Some("1.6.0"),
-    invalidJavaHome = true,
   )
 
   checkRecommendation(

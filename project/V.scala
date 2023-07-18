@@ -6,7 +6,8 @@ object V {
   val scala212 = "2.12.18"
   val scala213 = "2.13.11"
   val scala3 = "3.3.0"
-  val scala3RC: Option[String] = Some("3.3.1-RC1")
+  // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
+  val scala3RC: Option[String] = Some("3.3.1-RC4")
   val sbtScala = "2.12.17"
   val ammonite212Version = "2.12.18"
   val ammonite213Version = "2.13.11"
@@ -14,16 +15,16 @@ object V {
 
   val ammonite = "2.5.9"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.6"
+  val bloop = "1.5.8"
   val bloopConfig = "1.5.5"
-  val bsp = "2.1.0-M4"
+  val bsp = "2.1.0-M5"
   val coursier = "2.1.5"
   val coursierInterfaces = "1.0.18"
   val debugAdapter = "3.1.3"
-  val genyVersion = "0.7.1"
+  val genyVersion = "1.0.0"
   val gradleBloop = "1.6.1"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.8.21"
+  val javaSemanticdb = "0.8.24"
   val jsoup = "1.16.1"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.20.1"
@@ -34,20 +35,21 @@ object V {
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
-  val scalaCli = "1.0.1"
+  val scalaCli = "1.0.2"
   val scalafix = "0.11.0"
-  val scalafmt = "3.7.4"
-  val scalameta = "4.7.8"
-  val scribe = "3.11.5"
+  val scalafmt = "3.7.10"
+  val scalameta = "4.8.3"
+  val scribe = "3.11.8"
   val semanticdb = scalameta
   val qdox = "2.0.3"
 
-  val guava = "com.google.guava" % "guava" % "32.0.1-jre"
+  val guava = "com.google.guava" % "guava" % "32.1.1-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 
-  def isNightliesEnabled: Boolean =
-    sys.env.get("CI").isDefined || sys.env.get("NIGHTLIES").isDefined
+  // https://github.com/scalameta/metals/issues/5427
+  def isNightliesEnabled: Boolean = false
+  // sys.env.get("CI").isDefined || sys.env.get("NIGHTLIES").isDefined
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -103,8 +105,8 @@ object V {
     Seq(scala3, "3.2.2", "3.1.3") ++ scala3RC.toSeq
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =
-    Seq("3.3.0-RC6", "3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0", "3.0.2")
-  // NOTE if you hadd a new Scala Version make sure it's contained in quickPublishScalaVersions
+    Seq("3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0")
+  // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   lazy val nightlyScala3DottyVersions = {

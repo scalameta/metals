@@ -1,8 +1,13 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Paths
+import java.util.logging.Logger
 
-import scala.meta.internal.mtags.ScalametaCommonEnrichments._
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
@@ -14,6 +19,9 @@ object JdkSources {
   private val sources = RelativePath(Paths.get(zipFileName))
   private val libSources = RelativePath(Paths.get("lib")).resolve(sources)
 
+  private val logger: Logger =
+    Logger.getLogger(JdkSources.getClass().getName)
+
   def apply(
       userJavaHome: Option[String] = None
   ): Either[NoSourcesAvailable, AbsolutePath] = {
@@ -24,10 +32,24 @@ object JdkSources {
     }
   }
 
-  def defaultJavaHome: Option[String] = {
-    Option(System.getenv("JAVA_HOME")).orElse(
-      Option(System.getProperty("java.home"))
-    )
+  private def fromString(path: String): Option[AbsolutePath] = {
+    Option(path).flatMap { str =>
+      Try(AbsolutePath(str)) match {
+        case Failure(exception) =>
+          logger.warning(
+            s"Failed to parse java home path $str: ${exception.getMessage}"
+          )
+          None
+        case Success(value) =>
+          Some(value)
+      }
+    }
+  }
+
+  def defaultJavaHome(userJavaHome: Option[String]): List[AbsolutePath] = {
+    userJavaHome.flatMap(fromString).toList ++
+      fromString(System.getenv("JAVA_HOME")).toList ++
+      fromString(System.getProperty("java.home")).toList
   }
 
   private def candidates(userJavaHome: Option[String]): List[AbsolutePath] = {
@@ -41,8 +63,7 @@ object JdkSources {
     }
 
     for {
-      javaHomeString <- userJavaHome.orElse(defaultJavaHome).toList
-      javaHome = AbsolutePath(javaHomeString)
+      javaHome <- defaultJavaHome(userJavaHome)
       jdkHome = {
         if (isJdkCandidate(javaHome)) {
           Nil

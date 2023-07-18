@@ -46,6 +46,17 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     "0.14.1",
   )
 
+  // We don't to add `::` before version if `sjs1` is specified
+  checkEdit(
+    "version-edit",
+    """|//> using lib "io.circe::circe-core_sjs1:0.14.1@@"
+       |package A
+       |""".stripMargin,
+    """|//> using lib "io.circe::circe-core_sjs1:0.14.1"
+       |package A
+       |""".stripMargin,
+  )
+
   check(
     "multiple-libs",
     """|//> using lib "io.circe::circe-core:0.14.0", "io.circe::circe-core_na@@"
@@ -110,7 +121,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "co.fs2::fs2-core:@@"
        |package A
        |""".stripMargin,
-    """|//> using lib "co.fs2::fs2-core:3.4.0"
+    """|//> using lib "co.fs2::fs2-core::3.4.0"
        |package A
        |""".stripMargin,
     filter = _.startsWith("3.4"),
@@ -142,6 +153,49 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |0.7.1
        |0.7.0
        |""".stripMargin,
+  )
+
+  check(
+    "version-double-colon",
+    """|//> using lib "com.outr::scribe-cats::@@"
+       |package A
+       |""".stripMargin,
+    """|3.7.1
+       |3.7.0
+       |""".stripMargin,
+    filter = _.startsWith("3.7"),
+  )
+
+  checkEdit(
+    "version-double-colon-edit",
+    """|//> using lib "com.outr::scribe-cats::@@"
+       |package A
+       |""".stripMargin,
+    """|//> using lib "com.outr::scribe-cats::3.7.1"
+       |package A
+       |""".stripMargin,
+    filter = _.startsWith("3.7.1"),
+  )
+
+  check(
+    "version-double-colon2",
+    """|//> using lib "com.outr::scribe-cats::3.7@@"
+       |package A
+       |""".stripMargin,
+    """|3.7.1
+       |3.7.0
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "version-double-colon-edit2",
+    """|//> using lib "com.outr::scribe-cats::3.7@@"
+       |package A
+       |""".stripMargin,
+    """|//> using lib "com.outr::scribe-cats::3.7.1"
+       |package A
+       |""".stripMargin,
+    filter = _.startsWith("3.7.1"),
   )
 
   private def scriptWrapper(code: String, filename: String): String =

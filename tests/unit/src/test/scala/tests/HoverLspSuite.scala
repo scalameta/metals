@@ -31,7 +31,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |**Returns:** the first element of this iterable collection.
            |
            |**Throws**
-           |- `NoSuchElementException`:
+           |- `NoSuchElementException`: if the iterable collection is empty.
            |""".stripMargin.hover,
       )
     } yield ()
@@ -64,7 +64,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |**Returns:** the first element of this iterable collection.
            |
            |**Throws**
-           |- `NoSuchElementException`:
+           |- `NoSuchElementException`: if the iterable collection is empty.
            |""".stripMargin.hover,
       )
     } yield ()
@@ -150,6 +150,83 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
     } yield ()
   }
 
+  test("docstrings java parentdoc".tag(FlakyWindows)) {
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{"a":{}}
+          |/a/src/main/java/a/Foo.java
+          |package a;
+          |public class Foo {
+          |  public static class Def {
+          |    /**
+          |      * test docs
+          |      */
+          |    public void foo(int x) {}
+          |  }
+          |
+          |  public static class ChildDef extends Def {
+          |    @Override
+          |    public void foo(int x) {}
+          |  }
+          |  void test() {
+          |    new ChildDef().foo(1);
+          |  }
+          |}
+        """.stripMargin
+      )
+      _ <- server.assertHover(
+        "a/src/main/java/a/Foo.java",
+        """package a;
+          |public class Foo {
+          |  public static class Def {
+          |    /**
+          |      * test docs
+          |      */
+          |    public void foo(int x) {}
+          |  }
+          |
+          |  public static class ChildDef extends Def {
+          |    @Override
+          |    public void foo(int x) {}
+          |  }
+          |  void test() {
+          |    new Chil@@dDef().foo(1);
+          |  }
+          |}""".stripMargin,
+        """```java
+          |public ChildDef()
+          |```
+          |""".stripMargin.hover,
+      )
+      _ <- server.assertHover(
+        "a/src/main/java/a/Foo.java",
+        """package a;
+          |public class Foo {
+          |  public static class Def {
+          |    /**
+          |      * test docs
+          |      */
+          |    public void foo(int x) {}
+          |  }
+          |
+          |  public static class ChildDef extends Def {
+          |    @Override
+          |    public void foo(int x) {}
+          |  }
+          |  void test() {
+          |    new ChildDef().fo@@o(1);
+          |  }
+          |}""".stripMargin,
+        """```java
+          |public void foo(int x)
+          |```
+          |test docs
+          |""".stripMargin.hover,
+      )
+    } yield ()
+  }
+
   test("dependencies".tag(FlakyWindows), withoutVirtualDocs = true) {
     for {
       _ <- initialize(
@@ -180,7 +257,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |**Returns:** the first element of this iterable collection.
            |
            |**Throws**
-           |- `NoSuchElementException`:
+           |- `NoSuchElementException`: if the iterable collection is empty.
            |""".stripMargin.hover,
         root = workspace.resolve(Directories.readonly),
       )

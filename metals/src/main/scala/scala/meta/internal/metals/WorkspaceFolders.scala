@@ -13,6 +13,7 @@ class WorkspaceFolders(
     onInitialize: MetalsLspService => Future[Unit],
     shoutdownMetals: () => Future[Unit],
     redirectSystemOut: Boolean,
+    initialServerConfig: MetalsServerConfig,
 )(implicit ec: ExecutionContext) {
 
   private val folderServices: AtomicReference[List[MetalsLspService]] =
@@ -50,6 +51,7 @@ class WorkspaceFolders(
       MetalsLogger.setupLspLogger(
         folderServices.get().map(_.folder),
         redirectSystemOut,
+        initialServerConfig,
       )
       for {
         _ <- Future.sequence(

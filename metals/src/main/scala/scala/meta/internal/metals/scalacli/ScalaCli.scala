@@ -152,99 +152,57 @@ class ScalaCli(
     }
   }
 
-  private lazy val baseCommand = {
+  private lazy val localScalaCli: Option[Seq[String]] =
+    ScalaCli.localScalaCli(userConfig())
 
-    def endsWithCaseInsensitive(s: String, suffix: String): Boolean =
-      s.length >= suffix.length &&
-        s.regionMatches(
-          true,
-          s.length - suffix.length,
-          suffix,
-          0,
-          suffix.length,
-        )
-
-    def findInPath(app: String): Option[Path] = {
-      val asIs = Paths.get(app)
-      if (Paths.get(app).getNameCount >= 2) Some(asIs)
-      else {
-        def pathEntries =
-          Option(System.getenv("PATH")).iterator
-            .flatMap(_.split(File.pathSeparator).iterator)
-        def pathExts =
-          if (Properties.isWin)
-            Option(System.getenv("PATHEXT")).iterator
-              .flatMap(_.split(File.pathSeparator).iterator)
-          else Iterator("")
-        def matches = for {
-          dir <- pathEntries
-          ext <- pathExts
-          app0 = if (endsWithCaseInsensitive(app, ext)) app else app + ext
-          path = Paths.get(dir).resolve(app0)
-          if Files.isExecutable(path)
-        } yield path
-        matches.toStream.headOption
-      }
+  private lazy val cliCommand = {
+    localScalaCli.getOrElse {
+      scribe.warn(
+        s"scala-cli >= ${ScalaCli.minVersion} not found in PATH, fetching and starting a JVM-based Scala CLI"
+      )
+      jvmBased()
     }
+  }
 
-    def readFully(is: InputStream): Array[Byte] = {
-      val b = new ByteArrayOutputStream
-      val buf = Array.ofDim[Byte](64)
-      var read = -1
-      while ({
-        read = is.read(buf)
-        read >= 0
-      })
-        if (read > 0)
-          b.write(buf, 0, read)
-      b.toByteArray
-    }
-
-    def requireMinVersion(executable: Path, minVersion: String): Boolean = {
-      // "scala-cli version" simply prints its version
-      val process =
-        new ProcessBuilder(executable.toAbsolutePath.toString, "version")
-          .redirectError(ProcessBuilder.Redirect.INHERIT)
-          .redirectOutput(ProcessBuilder.Redirect.PIPE)
-          .redirectInput(ProcessBuilder.Redirect.PIPE)
-          .start()
-
-      val b = readFully(process.getInputStream())
-      val version = raw"\d+\.\d+\.\d+".r
-        .findFirstIn(new String(b, "UTF-8"))
-        .map(Version(_))
-      val minVersion0 = Version(minVersion)
-      version.exists(ver => minVersion0.compareTo(ver) <= 0)
-    }
-
-    val cliCommand = userConfig().scalaCliLauncher
-      .filter(_.trim.nonEmpty)
-      .map(Seq(_))
-      .orElse {
-        findInPath("scala-cli")
-          .orElse(findInPath("scala"))
-          .filter(requireMinVersion(_, ScalaCli.minVersion))
-          .map(p => Seq(p.toString))
-      }
-      .getOrElse {
-        scribe.warn(
-          s"scala-cli >= ${ScalaCli.minVersion} not found in PATH, fetching and starting a JVM-based Scala CLI"
-        )
-        val cp = ScalaCli.scalaCliClassPath()
-        Seq(
-          ScalaCli.javaCommand,
-          "-cp",
-          cp.mkString(File.pathSeparator),
-          ScalaCli.scalaCliMainClass,
-        )
-      }
-    cliCommand ++ Seq("bsp")
+  def jvmBased(): Seq[String] = {
+    val cp = ScalaCli.scalaCliClassPath()
+    Seq(
+      ScalaCli.javaCommand,
+      "-cp",
+      cp.mkString(File.pathSeparator),
+      ScalaCli.scalaCliMainClass,
+    )
   }
 
   def loaded(path: AbsolutePath): Boolean =
     ifConnectedOrElse(st =>
       st.path == path || path.toNIO.startsWith(st.path.toNIO)
     )(false)
+
+  def setupIDE(path: AbsolutePath): Future[Unit] = {
+    localScalaCli
+      .map { cliCommand =>
+        val command = cliCommand ++ Seq("setup-ide", path.toString())
+        scribe.info(s"Running $command")
+        val proc = SystemProcess.run(
+          command.toList,
+          path,
+          redirectErrorOutput = false,
+          env = Map(),
+          processOut = None,
+          processErr = Some(line => scribe.info("Scala CLI: " + line)),
+          discardInput = false,
+          threadNamePrefix = "scala-cli-setup-ide",
+        )
+        proc.complete.ignoreValue
+      }
+      .getOrElse {
+        start(path)
+      }
+  }
+
+  def path: Option[AbsolutePath] =
+    ifConnectedOrElse(st => Option(st.path))(None)
 
   def start(path: AbsolutePath): Future[Unit] = {
     disconnectOldBuildServer().onComplete {
@@ -253,7 +211,7 @@ class ScalaCli(
       case Success(()) =>
     }
 
-    val command = baseCommand :+ path.toString()
+    val command = cliCommand :+ "bsp" :+ path.toString()
 
     val connDir = if (path.isDirectory) path else path.parent
 
@@ -283,7 +241,7 @@ class ScalaCli(
           scribe.error("Error starting Scala CLI", ex)
           Success(())
         case Success(_) =>
-          scribe.info("Scala CLI started")
+          scribe.info(s"Scala CLI started for $path")
           Success(())
       }
     } else {
@@ -383,5 +341,102 @@ object ScalaCli {
         connection: BuildServerConnection,
         importedBuild: ImportedBuild,
     ) extends ConnectionState
+  }
+
+  def localScalaCli(userConfig: UserConfiguration): Option[Seq[String]] = {
+
+    def endsWithCaseInsensitive(s: String, suffix: String): Boolean =
+      s.length >= suffix.length &&
+        s.regionMatches(
+          true,
+          s.length - suffix.length,
+          suffix,
+          0,
+          suffix.length,
+        )
+
+    def findInPath(app: String): Option[Path] = {
+      val asIs = Paths.get(app)
+      if (Paths.get(app).getNameCount >= 2) Some(asIs)
+      else {
+        def pathEntries =
+          Option(System.getenv("PATH")).iterator
+            .flatMap(_.split(File.pathSeparator).iterator)
+        def pathExts =
+          if (Properties.isWin)
+            Option(System.getenv("PATHEXT")).iterator
+              .flatMap(_.split(File.pathSeparator).iterator)
+          else Iterator("")
+        def matches = for {
+          dir <- pathEntries
+          ext <- pathExts
+          app0 = if (endsWithCaseInsensitive(app, ext)) app else app + ext
+          path = Paths.get(dir).resolve(app0)
+          if Files.isExecutable(path)
+        } yield path
+        matches.toStream.headOption
+      }
+    }
+
+    def readFully(is: InputStream): Array[Byte] = {
+      val b = new ByteArrayOutputStream
+      val buf = Array.ofDim[Byte](64)
+      var read = -1
+      while ({
+        read = is.read(buf)
+        read >= 0
+      })
+        if (read > 0)
+          b.write(buf, 0, read)
+      b.toByteArray
+    }
+
+    def requireMinVersion(executable: Path, minVersion: String): Boolean = {
+      // "scala-cli version" simply prints its version
+      val process =
+        new ProcessBuilder(executable.toAbsolutePath.toString, "version")
+          .redirectError(ProcessBuilder.Redirect.INHERIT)
+          .redirectOutput(ProcessBuilder.Redirect.PIPE)
+          .redirectInput(ProcessBuilder.Redirect.PIPE)
+          .start()
+
+      val b = readFully(process.getInputStream())
+      val version = raw"\d+\.\d+\.\d+".r
+        .findFirstIn(new String(b, "UTF-8"))
+        .map(Version(_))
+      val minVersion0 = Version(minVersion)
+      version.exists(ver => minVersion0.compareTo(ver) <= 0)
+    }
+
+    userConfig.scalaCliLauncher
+      .filter(_.trim.nonEmpty)
+      .map(Seq(_))
+      .orElse {
+        findInPath("scala-cli")
+          .orElse(findInPath("scala"))
+          .filter(requireMinVersion(_, ScalaCli.minVersion))
+          .map(p => Seq(p.toString))
+      }
+  }
+
+  val scalaCliBspVersion = "2.1.0-M4"
+
+  def scalaCliBspJsonContent(args: List[String] = Nil): String = {
+    val argv = List(
+      ScalaCli.javaCommand,
+      "-cp",
+      ScalaCli.scalaCliClassPath().mkString(File.pathSeparator),
+      ScalaCli.scalaCliMainClass,
+      "bsp",
+      ".",
+    ) ++ args
+    val bsjJson = ujson.Obj(
+      "name" -> "scala-cli",
+      "argv" -> argv,
+      "version" -> BuildInfo.scalaCliVersion,
+      "bspVersion" -> scalaCliBspVersion,
+      "languages" -> List("scala", "java"),
+    )
+    ujson.write(bsjJson)
   }
 }

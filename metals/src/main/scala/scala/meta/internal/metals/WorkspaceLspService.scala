@@ -182,6 +182,7 @@ class WorkspaceLspService(
       _.initialized(),
       () => shutdown().asScala,
       redirectSystemOut,
+      serverInputs.initialServerConfig,
     )
 
   def folderServices = workspaceFolders.getFolderServices
@@ -639,8 +640,10 @@ class WorkspaceLspService(
       case ServerCommands.ScanWorkspaceSources() =>
         foreachSeq(_.indexSources(), ignoreValue = true)
       case ServerCommands.RestartBuildServer() =>
-        folderServices.find(_.isBloop()).foreach(_.shutDownBloop())
-        foreachSeq(_.autoConnectToBuildServer())
+        onCurrentFolder(
+          _.restartBspServer().ignoreValue,
+          "restart BSP server",
+        ).asJavaObject
       case ServerCommands.GenerateBspConfig() =>
         onCurrentFolder(
           _.generateBspConfig(),
@@ -683,7 +686,7 @@ class WorkspaceLspService(
           .discoverMainClasses(unresolvedParams)
           .asJavaObject
       case ServerCommands.ResetWorkspace() =>
-        foreachSeq(_.resetWorkspace())
+        maybeResetWorkspace().asJavaObject
       case ServerCommands.RunScalafix(params) =>
         val uri = params.getTextDocument().getUri()
         getServiceFor(uri).runScalafix(uri).asJavaObject
@@ -1223,6 +1226,28 @@ class WorkspaceLspService(
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] =
     folderServices.flatMap(_.workspaceSymbol(query))
+
+  private def maybeResetWorkspace(): Future[Unit] = {
+    languageClient
+      .showMessageRequest(Messages.ResetWorkspace.params())
+      .asScala
+      .flatMap { response =>
+        if (response != null)
+          response.getTitle match {
+            case Messages.ResetWorkspace.resetWorkspace =>
+              Future
+                .sequence(folderServices.map(_.resetWorkspace()))
+                .ignoreValue
+            case _ => Future.unit
+          }
+        else {
+          Future.unit
+        }
+      }
+      .recover { e =>
+        scribe.warn("Error requesting workspace reset", e)
+      }
+  }
 
 }
 

@@ -3,12 +3,14 @@ package scala.meta.internal.metals.logging
 import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
@@ -114,35 +116,53 @@ object MetalsLogger {
   def setupLspLogger(
       folders: List[AbsolutePath],
       redirectSystemStreams: Boolean,
+      config: MetalsServerConfig,
   ): Unit = {
-    val newLogFiles = folders.map(_.resolve(workspaceLogPath))
-    newLogFiles.foreach(truncateLogFile)
+    val newLogFiles = folders.map(backUpOldLogFileIfTooBig(_, config))
     scribe.info(s"logging to files ${newLogFiles.mkString(",")}")
     if (redirectSystemStreams) {
       redirectSystemOut(newLogFiles)
     }
   }
 
-  private def truncateLogFile(path: AbsolutePath) = {
-    val MaxLines = 10000
-    if (Files.exists(path.toNIO)) {
-      try {
-        def linesWithIndices =
-          Files.newBufferedReader(path.toNIO).lines().asScala.zipWithIndex
-        if (linesWithIndices.exists { case (_, i) => i > MaxLines }) {
-          val lastLines = Array.fill(MaxLines)("")
-          linesWithIndices.foreach { case (line, i) =>
-            lastLines.update(i % MaxLines, line)
-          }
-          path.writeText(lastLines.mkString("\n"))
-        }
-      } catch {
-        case NonFatal(t) =>
-          scribe.warn(s"""|error while truncating log file: $path
-                          |$t
-                          |""".stripMargin)
+  private def backupLogsDir(workspaceFolder: AbsolutePath) =
+    workspaceFolder.resolve(".metals").resolve(".backup_logs")
+
+  def backUpOldLogFileIfTooBig(
+      workspaceFolder: AbsolutePath,
+      config: MetalsServerConfig,
+  ): AbsolutePath = {
+    val logFilePath = workspaceFolder.resolve(workspaceLogPath)
+    try {
+      if (
+        logFilePath.isFile && Files.size(
+          logFilePath.toNIO
+        ) > config.maxLogFileSize
+      ) {
+        val backedUpLogFile = backupLogsDir(workspaceFolder).resolve(
+          s"log_${System.currentTimeMillis()}"
+        )
+        backedUpLogFile.parent.createDirectories()
+        Files.move(
+          logFilePath.toNIO,
+          backedUpLogFile.toNIO,
+          StandardCopyOption.REPLACE_EXISTING,
+          StandardCopyOption.ATOMIC_MOVE,
+        )
+        limitKeptBackupLogs(workspaceFolder, config.maxLogBackups)
       }
+    } catch {
+      case NonFatal(t) =>
+        scribe.warn(s"""|error while creating a backup for log file
+                        |$t
+                        |""".stripMargin)
     }
+    logFilePath
+  }
+
+  private def limitKeptBackupLogs(workspaceFolder: AbsolutePath, limit: Int) = {
+    val backupDir = backupLogsDir(workspaceFolder)
+    new LimitedFilesManager(backupDir.toNIO, limit, "log_").deleteOld()
   }
 
   def newFileWriter(logfile: AbsolutePath): FileWriter =

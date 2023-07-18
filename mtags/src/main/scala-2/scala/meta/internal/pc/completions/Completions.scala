@@ -535,7 +535,8 @@ trait Completions { this: MetalsGlobal =>
           patternOnly = Some(name.stripSuffix("_CURSOR_")),
           hasBind = true
         )
-      case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
+      case (c: DefTree) :: (p: PackageDef) :: _
+          if c.namePosition.includes(pos) =>
         FilenameCompletion(c, p, pos, editRange)
       case OverrideExtractor(name, template, start, isCandidate) =>
         OverrideCompletion(

@@ -69,7 +69,9 @@ final class BuildTools(
   }
   def isMill: Boolean = workspace.resolve("build.sc").isFile
   def isScalaCli: Boolean =
-    ScalaCliBuildTool.pathsToScalaCliBsp(workspace).exists(_.isFile)
+    ScalaCliBuildTool
+      .pathsToScalaCliBsp(workspace)
+      .exists(_.isFile) || workspace.resolve("project.scala").isFile
   def isGradle: Boolean = {
     val defaultGradlePaths = List(
       "settings.gradle",
@@ -89,7 +91,7 @@ final class BuildTools(
       GradleBuildTool(userConfig),
       MavenBuildTool(userConfig),
       MillBuildTool(userConfig),
-      ScalaCliBuildTool(workspace),
+      ScalaCliBuildTool(workspace, userConfig),
       BazelBuildTool(userConfig),
     )
   }
@@ -118,7 +120,7 @@ final class BuildTools(
     if (isMaven) buf += MavenBuildTool(userConfig)
     if (isMill) buf += MillBuildTool(userConfig)
     if (isBazel) buf += BazelBuildTool(userConfig)
-    if (isScalaCli) buf += ScalaCliBuildTool(workspace)
+    if (isScalaCli) buf += ScalaCliBuildTool(workspace, userConfig)
 
     buf.result()
   }

@@ -17,13 +17,21 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   private def getMillVersion(workspace: AbsolutePath): String = {
     import scala.meta.internal.jdk.CollectionConverters._
     val millVersionPath = workspace.resolve(".mill-version")
+    lazy val altMillVersionPath =
+      workspace.resolve(".config").resolve("mill-version")
     lazy val millPath = workspace.resolve("mill")
-    if (millVersionPath.isFile) {
+
+    def readMillVersion(path: AbsolutePath) =
       Files
-        .readAllLines(millVersionPath.toNIO)
+        .readAllLines(path.toNIO)
         .asScala
         .headOption
         .getOrElse(version)
+
+    if (millVersionPath.isFile) {
+      readMillVersion(millVersionPath)
+    } else if (altMillVersionPath.isFile) {
+      readMillVersion(altMillVersionPath)
     } else if (millPath.isFile) {
       Files
         .readAllLines(millPath.toNIO)
@@ -121,12 +129,15 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
     Files.write(tempDir.resolve(predefScriptName), predefScript)
   }
 
-  override def createBspFileArgs(workspace: AbsolutePath): List[String] = {
-    val cmd = "mill.bsp.BSP/install" :: Nil
-    putTogetherArgs(cmd, getMillVersion(workspace), workspace)
-  }
+  override def createBspFileArgs(
+      workspace: AbsolutePath
+  ): Option[List[String]] =
+    Option.when(workspaceSupportsBsp(workspace: AbsolutePath)) {
+      val cmd = "mill.bsp.BSP/install" :: Nil
+      putTogetherArgs(cmd, getMillVersion(workspace), workspace)
+    }
 
-  override def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
+  def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
     val minimumVersionForBsp = "0.10.0-M4"
     val millVersion = getMillVersion(workspace)
 

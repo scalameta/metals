@@ -6,23 +6,28 @@ import scala.meta.internal.pc.MetalsGlobal
 trait ScalaCliCompletions {
   this: MetalsGlobal =>
   class ScalaCliExtractor(pos: Position) {
-    def unapply(path: List[Tree]): Option[String] =
+    def unapply(path: List[Tree]): Option[String] = {
+      def scalaCliDep = CoursierComplete.isScalaCliDep(
+        pos.lineContent
+          .take(pos.column - 1)
+          .stripPrefix("/*<script>*/")
+      )
+
       path match {
         case Nil =>
           CoursierComplete.isScalaCliDep(
             pos.lineContent.replace(CURSOR, "").take(pos.column - 1)
           )
         // generated script file will end with .sc.scala
-        case (_: Template) :: (_: ModuleDef) :: _
+        case (_: Template) :: (_: ModuleDef) :: (_: PackageDef) :: Nil
             if pos.source.file.path.endsWith(".sc.scala") =>
-          CoursierComplete.isScalaCliDep(
-            pos.lineContent
-              .stripPrefix("/*<script>*/")
-              .replace(CURSOR, "")
-              .take(pos.column - 1)
-          )
+          scalaCliDep
+        case (_: Template) :: (_: ClassDef) :: (_: PackageDef) :: Nil
+            if pos.source.file.path.endsWith(".sc.scala") =>
+          scalaCliDep
         case _ => None
       }
+    }
   }
 
   case class ScalaCliCompletion(

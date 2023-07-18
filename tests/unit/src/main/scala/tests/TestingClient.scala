@@ -80,6 +80,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     actions =>
       actions.find(_.getTitle == "a.Main").get
   }
+  var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
+  var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -336,6 +338,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           chooseMainClass(params.getActions.asScala.toSeq)
         } else if (isNewBuildToolDetectedMessage()) {
           switchBuildTool
+        } else if (ImportScalaScript.params() == params) {
+          importScalaCliScript
+        } else if (ResetWorkspace.params() == params) {
+          resetWorkspace
         } else {
           throw new IllegalArgumentException(params.toString)
         }
