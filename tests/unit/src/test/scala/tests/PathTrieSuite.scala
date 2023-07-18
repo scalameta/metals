@@ -57,6 +57,6 @@ class PathTrieSuite extends BaseSuite {
   }
 
   private def rootsOf(paths: Set[Path], maxRoots: Int = 32): Set[Path] = {
-    PathTrie(paths).longestPrefixes(root, maxRoots).toSet
+    PathTrie(paths, root).longestPrefixes(root, maxRoots).toSet
   }
 }

@@ -152,7 +152,8 @@ object FileWatcher {
         // However, the events are then filtered to receive only relevant events
 
         val trie = PathTrie(
-          pathsToWatch.files ++ pathsToWatch.directories
+          pathsToWatch.files ++ pathsToWatch.directories,
+          workspace,
         )
         val isWatched = trie.containsPrefixOf _
 
