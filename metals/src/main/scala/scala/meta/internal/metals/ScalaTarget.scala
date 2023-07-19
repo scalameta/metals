@@ -89,8 +89,15 @@ case class ScalaTarget(
         path.toNIO
     }
 
-  def bestEffortPath: Option[Path] =
-    Option(scalac.getBestEffortDirectory()).map(_.toAbsolutePath.toNIO)
+  def bestEffortPath: Option[Path] = {
+    // Option(scalac.getBestEffortDirectory()).map(_.toAbsolutePath.toNIO)
+
+    val bestEffortDir = targetroot.resolve(Directories.bestEffort)
+    scribe.info("bestEffortDir " + bestEffortDir)
+    if (bestEffortDir.exists) {
+      Some(bestEffortDir.toNIO)
+    } else None
+  }
 
   def isBestEffort: Boolean = bestEffortPath.nonEmpty
 

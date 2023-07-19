@@ -280,7 +280,6 @@ class ProblemResolverSuite extends FunSuite {
       scalacOptions.asJava,
       classpatch.asJava,
       "",
-      null,
     )
 
     ScalaTarget(

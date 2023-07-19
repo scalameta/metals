@@ -369,7 +369,6 @@ object Bill {
               List().asJava,
               scalaJars,
               out.toURI.toASCIIString,
-              null,
             )
           ).asJava
         )
