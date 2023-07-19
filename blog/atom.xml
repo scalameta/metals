@@ -12,12 +12,12 @@
         <id>http://scalameta.org/metals/blog/2023/07/19/silver</id>
         <link href="http://scalameta.org/metals/blog/2023/07/19/silver"/>
         <updated>2023-07-19T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[We're extremely happy and proud to finally announce the release of Metals]]></summary>
-        <content type="html"><![CDATA[<p>We're extremely happy and proud to finally announce the release of Metals
-v1.0.0, which is long overdue. This release is a culmination of a lot of work
-from the community and the core Metals team. As it stands, Metals supports most
-of the important LSP features and beyond, which makes it equivalent to many
-IDEs, but in your favorite editor.</p><p>Bringing in version 1.0.0 doesn't mean that we don't have anything else to
+        <summary type="html"><![CDATA[We're happy to announce the release of of Metals v1.0.0, which was a long time]]></summary>
+        <content type="html"><![CDATA[<p>We're happy to announce the release of of Metals v1.0.0, which was a long time
+in the making. This release is a culmination of a lot of work from the community
+and the core Metals team. As it stands, Metals supports most of the important
+LSP features and beyond, which makes it equivalent to many IDEs, but in your
+favorite editor.</p><p>Bringing in version 1.0.0 doesn't mean that we don't have anything else to
 improve, but it means that we are confident that Metals is ready for production
 use in business and personal projects. We will continue to improve Metals and
 add new features, but we will also fully focus on making Metals the most
