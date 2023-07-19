@@ -23,7 +23,7 @@ abstract class BaseImportSuite(
   def progressMessage: String =
     bloopInstallProgress(buildTool.executableName).message
 
-  def allProjectsMisconfigured: String =
+  def allProjectsMisconfiguredMessage: String =
     CheckDoctor.allProjectsMisconfigured
 
   def currentDigest(workspace: AbsolutePath): Option[String]

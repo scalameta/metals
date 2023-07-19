@@ -1,9 +1,12 @@
 package tests.bazel
 
+import scala.concurrent.Promise
+
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.io.AbsolutePath
 
 import tests.BaseImportSuite
@@ -19,6 +22,8 @@ class BazelLspSuite
 
   val libPath = "src/main/scala/lib"
   val cmdPath = "src/main/scala/cmd"
+
+  def bazelBspConfig: AbsolutePath = workspace.resolve(".bsp/bazelbsp.json")
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -36,10 +41,10 @@ class BazelLspSuite
           importBuildMessage,
           // create .bazelbsp progress message
           BazelBuildTool.mainClass,
-          allProjectsMisconfigured,
+          allProjectsMisconfiguredMessage,
         ).mkString("\n"),
       )
-      _ = assert(workspace.resolve(".bsp/bazelbsp.json").exists)
+      _ = assert(bazelBspConfig.exists)
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
       _ <- server.didChange("WORKSPACE")(_ + "\n# comment")
@@ -59,6 +64,70 @@ class BazelLspSuite
           importBuildChangesMessage
         ).mkString("\n"),
       )
+      server.assertBuildServerConnection()
+    }
+  }
+
+  test("generate-bsp-config") {
+    cleanWorkspace()
+    writeLayout(BazelBuildLayout(workspaceLayout, scalaVersion, bazelVersion))
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(client.workspaceMessageRequests, importBuildMessage)
+      _ = client.messageRequests.clear()
+      // We dismissed the import request, so bsp should not be configured
+      _ = assert(!bazelBspConfig.exists)
+      _ <- server.didChange(s"$cmdPath/BUILD") { text =>
+        text.replace("runner", "runner1")
+      }
+      _ <- server.didSave(s"$cmdPath/BUILD")(identity)
+      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = server.server.buildServerPromise = Promise()
+      _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
+      // We need to wait a bit just to ensure the connection is made
+      _ <- server.server.buildServerPromise.future
+    } yield {
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          "bazelbsp bspConfig",
+          allProjectsMisconfiguredMessage,
+        ).mkString("\n"),
+      )
+      assert(bazelBspConfig.exists)
+      server.assertBuildServerConnection()
+    }
+  }
+
+  test("import-build") {
+    cleanWorkspace()
+    writeLayout(BazelBuildLayout(workspaceLayout, scalaVersion, bazelVersion))
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(client.workspaceMessageRequests, importBuildMessage)
+      _ = client.messageRequests.clear()
+      // We dismissed the import request, so bsp should not be configured
+      _ = assert(!bazelBspConfig.exists)
+      _ <- server.didChange(s"$cmdPath/BUILD") { text =>
+        text.replace("runner", "runner1")
+      }
+      _ <- server.didSave(s"$cmdPath/BUILD")(identity)
+      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = server.server.buildServerPromise = Promise()
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+      // We need to wait a bit just to ensure the connection is made
+      _ <- server.server.buildServerPromise.future
+    } yield {
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          BazelBuildTool.mainClass,
+          allProjectsMisconfiguredMessage,
+        ).mkString("\n"),
+      )
+      assert(bazelBspConfig.exists)
       server.assertBuildServerConnection()
     }
   }

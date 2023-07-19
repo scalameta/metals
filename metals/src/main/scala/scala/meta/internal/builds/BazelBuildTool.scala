@@ -4,7 +4,9 @@ import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Properties
 
+import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -14,6 +16,7 @@ import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
 import coursierapi.Dependency
+import coursierapi.Fetch
 import org.eclipse.lsp4j.services.LanguageClient
 
 case class BazelBuildTool(userConfig: () => UserConfiguration)
@@ -25,13 +28,29 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
   }
 
   def createBspFileArgs(workspace: AbsolutePath): Option[List[String]] =
-    Option.when(workspaceSupportsBsp(workspace))(BazelBuildTool.coursierArgs)
+    Option.when(workspaceSupportsBsp(workspace))(composeArgs())
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
     workspace.listRecursive.exists {
       case file if file.filename == "WORKSPACE" => true
       case _ => false
     }
+  }
+
+  private def composeArgs(): List[String] = {
+    val classpathSeparator = if (Properties.isWin) ";" else ":"
+    val classpath = Fetch
+      .create()
+      .withDependencies(BazelBuildTool.dependency)
+      .fetch()
+      .asScala
+      .mkString(classpathSeparator)
+    List(
+      JavaBinary(userConfig().javaHome),
+      "-classpath",
+      classpath,
+      BazelBuildTool.mainClass,
+    )
   }
 
   override def minimumVersion: String = "1.0.0"
@@ -56,14 +75,6 @@ object BazelBuildTool {
   val version: String = "2.7.1"
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
-
-  private val coursierArgs = List(
-    "cs",
-    "launch",
-    s"org.jetbrains.bsp:bazel-bsp:$version",
-    "-M",
-    mainClass,
-  )
 
   private val dependency = Dependency.of(
     "org.jetbrains.bsp",
