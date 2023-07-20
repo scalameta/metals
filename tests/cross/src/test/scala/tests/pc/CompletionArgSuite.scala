@@ -23,14 +23,14 @@ class CompletionArgSuite extends BaseCompletionSuite {
   check(
     "arg-newline",
     s"""|object Main {
-        |  def foo(banana: String, apple: String) = ???
+        |  def foo(banana: String, tomato: String) = ???
         |  foo(
         |    @@
         |  )
         |}
         |""".stripMargin,
-    """|apple = : String
-       |banana = : String
+    """|banana = : String
+       |tomato = : String
        |""".stripMargin,
     topLines = Option(2),
   )
@@ -695,6 +695,29 @@ class CompletionArgSuite extends BaseCompletionSuite {
            |foo = a : Int
            |fooBar = : Int
            |fooBar = a : Int
+           |""".stripMargin
+    ),
+    topLines = Some(4),
+  )
+
+  check(
+    "recursive",
+    """|
+       |object Main {
+       |   def foo(value: Int): Int = {
+       |     foo(valu@@)
+       |   }
+       |}
+       |""".stripMargin,
+    """|value: Int
+       |value = : Int
+       |value = value : Int
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|value = : Int
+           |value = value : Int
+           |value: Int
            |""".stripMargin
     ),
     topLines = Some(4),
