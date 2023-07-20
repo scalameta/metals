@@ -501,18 +501,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|x: Int
-       |x = : Byte
-       |x = : Char
-       |x = : Double
-       |x = : Float
-       |x = : Int
-       |x = : Long
-       |x = : Short
-       |x = x : Int
        |""".stripMargin,
-    compat = Map(
-      "3" -> "x: Int"
-    ),
   )
 
   check(
