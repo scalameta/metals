@@ -8,6 +8,7 @@ import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigSyntax
@@ -15,7 +16,7 @@ import com.typesafe.config.parser.ConfigDocument
 import com.typesafe.config.parser.ConfigDocumentFactory
 
 /**
- * A partial repersentation of scalafmt config format.
+ * A partial representation of scalafmt config format.
  * Includes only settings that affect dialect.
  */
 case class ScalafmtConfig(
@@ -150,24 +151,42 @@ object ScalafmtConfig {
 
     def getFileOverrides(
         conf: Config
-    ): Try[List[(PathMatcher, ScalafmtDialect)]] = {
+    ): Try[
+      (List[(PathMatcher, ScalafmtDialect)], Map[String, ScalafmtDialect])
+    ] = {
       Try {
         if (conf.hasPath("fileOverride")) {
           val obj = conf.getObject("fileOverride")
           val asConfig = obj.toConfig()
           val keys = obj.keySet().asScala
-          keys.toList
-            .map { key =>
-              val quotedKey = '"' + key + '"'
-              val innerCfg = asConfig.getConfig(quotedKey)
-              val dialect = getRunnerDialectRaw(innerCfg)
-              key -> dialect
+          val (langs, globs) =
+            keys.toList
+              .flatMap { key =>
+                val quotedKey = '"' + key + '"'
+                val dialect =
+                  try {
+                    val innerCfg = asConfig.getConfig(quotedKey)
+                    getRunnerDialectRaw(innerCfg)
+                  } catch {
+                    case _: ConfigException.WrongType =>
+                      val dialect = asConfig.getString(quotedKey)
+                      ScalafmtDialect.fromString(dialect)
+                  }
+                dialect.map(key -> _)
+              }
+              .partition(_._1.startsWith("lang:"))
+
+          val overrides =
+            globs.map { case (key, dialect) =>
+              val glob = if (key.startsWith(".")) s"glob:**$key" else key
+              PathMatcher.Nio(glob) -> dialect
             }
-            .collect { case (glob, Some(dialect)) =>
-              val matcher = PathMatcher.Nio(glob)
-              matcher -> dialect
-            }
-        } else List.empty
+          val langOverrides =
+            langs.map { case (lang, dialect) =>
+              lang.stripPrefix("lang:") -> dialect
+            }.toMap
+          (overrides, langOverrides)
+        } else (List.empty, Map.empty)
       }
     }
 
@@ -197,10 +216,25 @@ object ScalafmtConfig {
     ): Try[List[PathMatcher]] =
       readMatchers(s"project.$key")(v => PathMatcher.Nio(v))
 
+    def getLangOverrides(
+        config: Config,
+        langMap: Map[String, ScalafmtDialect],
+    ): Try[List[(PathMatcher, ScalafmtDialect)]] =
+      Try {
+        if (config.hasPath("project.layout")) {
+          config.getString("project.layout") match {
+            case "StandardConvention" =>
+              StandardConvention.langOverrides(langMap)
+            case _ => Nil
+          }
+        } else Nil
+      }
+
     for {
       version <- getVersion(config)
       runnerDialect <- getRunnerDialect(config)
-      overrides <- getFileOverrides(config)
+      (overrides, langOverrides) <- getFileOverrides(config)
+      langOverridesWithDefaults <- getLangOverrides(config, langOverrides)
       includeFilters <- filters("includeFilters")
       excludeFilters <- filters("excludeFilters")
       includePaths <- paths("includePaths")
@@ -208,7 +242,31 @@ object ScalafmtConfig {
     } yield {
       val include = includePaths ++ includeFilters
       val exclude = excludeFilters ++ excludePaths
-      ScalafmtConfig(version, runnerDialect, overrides, include, exclude)
+      val allOverrides = overrides ++ langOverridesWithDefaults
+      ScalafmtConfig(version, runnerDialect, allOverrides, include, exclude)
+    }
+  }
+}
+
+object StandardConvention {
+  def langOverrides(
+      langMap: Map[String, ScalafmtDialect]
+  ): List[(PathMatcher, ScalafmtDialect)] = {
+    val modules = List("main", "test", "it")
+    val defaults =
+      List(
+        ("scala-2.11", ScalafmtDialect.Scala211),
+        ("scala-2.12", ScalafmtDialect.Scala212),
+        ("scala-2.13", ScalafmtDialect.Scala213),
+        ("scala-3", ScalafmtDialect.Scala3),
+        ("scala-2", ScalafmtDialect.Scala3),
+      )
+
+    defaults.flatMap { case (language, default) =>
+      val dialect = langMap.get(language).getOrElse(default)
+      modules.map { module =>
+        (PathMatcher.Nio(s"glob:**/src/$module/$language/**"), dialect)
+      }
     }
   }
 }
