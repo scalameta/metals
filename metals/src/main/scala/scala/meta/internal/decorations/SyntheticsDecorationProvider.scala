@@ -201,7 +201,10 @@ final class SyntheticsDecorationProvider(
   }
 
   private def areSyntheticsEnabled: Boolean = {
-    userConfig().showImplicitArguments || userConfig().showInferredType || userConfig().showImplicitConversionsAndClasses
+    val showInferredType = !userConfig().showInferredType.contains(
+      "false"
+    ) && userConfig().showInferredType.nonEmpty
+    userConfig().showImplicitArguments || showInferredType || userConfig().showImplicitConversionsAndClasses
   }
 
   private def createHoverAtPoint(
@@ -445,7 +448,10 @@ final class SyntheticsDecorationProvider(
       } yield decorationOptions(lspRange, decoration)
 
       val typDecorations =
-        if (userConfig().showInferredType)
+        if (
+          userConfig().showInferredType.contains("true") |
+            userConfig().showInferredType.contains("minimal")
+        )
           typeDecorations(path, textDocument, decorationPrinter)
         else Nil
       decorations ++ typDecorations
@@ -488,7 +494,10 @@ final class SyntheticsDecorationProvider(
         case param: m.Term.Param =>
           if (param.decltpe.isEmpty) List(param.name.pos.toSemanticdb) else Nil
         case cs: m.Case =>
-          explorePatterns(List(cs.pat)) ++ visit(cs.body)
+          // if the case is too long then it'll be too messy
+          if (userConfig().showInferredType.contains("minimal"))
+            visit(cs.body) // don't show type hint for cases inside match
+          else explorePatterns(List(cs.pat)) ++ visit(cs.body)
         case vl: m.Defn.Val =>
           val values =
             if (vl.decltpe.isEmpty) explorePatterns(vl.pats) else Nil
