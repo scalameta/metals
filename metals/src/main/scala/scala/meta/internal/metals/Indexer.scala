@@ -362,7 +362,8 @@ final case class Indexer(
       sh.schedule(
         new Runnable {
           override def run(): Unit = {
-            tables.jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
+            if (tables.databaseExists())
+              tables.jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
           }
         },
         2,
