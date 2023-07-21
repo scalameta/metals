@@ -1,5 +1,5 @@
 //> using scala "3.2.2"
-//> using dep "org.kohsuke:github-api:1.314"
+//> using dep "org.kohsuke:github-api:1.315"
 //> using dep "com.lihaoyi::os-lib:0.9.1"
 //> using options "-Wunused:all", "-deprecation"
 
@@ -12,7 +12,7 @@ import org.kohsuke.github.GitHubBuilder
 import java.text.SimpleDateFormat
 import java.util.Date
 
-val codename = "Aluminium"
+val codename = "Silver"
 
 @main
 def main(
