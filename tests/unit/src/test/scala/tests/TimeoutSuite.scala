@@ -1,5 +1,6 @@
 package tests
 
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -7,9 +8,11 @@ import java.util.concurrent.TimeoutException
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.utils.FutureWithTimeout
 import scala.meta.internal.metals.utils.Timeout
 import scala.meta.internal.metals.utils.Timeouts
@@ -22,21 +25,27 @@ class TimeoutSuite extends FunSuite {
   val duration: FiniteDuration = Duration(1, TimeUnit.SECONDS)
 
   test("simple-timeout") {
-    val f = FutureWithTimeout(duration)(ExampleFutures.infinite)
+    val promise = Promise[Unit]()
+    val f = FutureWithTimeout(duration)(ExampleFutures.infinite(promise)).future
     assert(!f.isCompleted)
-    f.failed.map {
-      case _: TimeoutException =>
-      case _ =>
-        throw new RuntimeException("future should have thrown TimeoutException")
-    }
+
+    for {
+      _ <- f.failed.map {
+        case _: TimeoutException =>
+        case _ =>
+          throw new RuntimeException(
+            "future should have thrown TimeoutException"
+          )
+      }
+      _ <- promise.future
+    } yield ()
   }
 
   test("no-timeout") {
-    val timeBefore = System.currentTimeMillis()
-    val future = ExampleFutures.fast
-    FutureWithTimeout(duration)(future, timeBefore).map { case (res, time) =>
-      assert(time.toMillis >= ExampleFutures.timeStep)
-      assertEquals(res, 1)
+    FutureWithTimeout(duration)(ExampleFutures.fast).future.map {
+      case (res, time) =>
+        assert(time.toMillis >= ExampleFutures.timeStep)
+        assertEquals(res, 1)
     }
   }
 
@@ -61,12 +70,33 @@ class TimeoutSuite extends FunSuite {
 object ExampleFutures {
   val timeStep = 500 // 1/2 sec
 
-  def infinite(implicit ex: ExecutionContext): Future[Unit] = Future {
-    while (0 == 0) { Thread.sleep(timeStep) }
+  def infinite(
+      promise: Promise[Unit]
+  )(implicit ec: ExecutionContext): () => CompletableFuture[Void] = () => {
+    val future =
+      CompletableFuture.runAsync(
+        new Runnable {
+          def run() = while (!promise.isCompleted) {
+            Thread.sleep(timeStep)
+          }
+        }
+      )
+    future.asScala.onComplete(_ => promise.trySuccess(()))
+    future
   }
 
-  def fast(implicit ex: ExecutionContext): Future[Int] = Future {
-    Thread.sleep(timeStep)
-    1
-  }
+  def fast(implicit ex: ExecutionContext): () => CompletableFuture[Int] = () =>
+    Future {
+      Thread.sleep(timeStep)
+      1
+    }.asJava
+
+  def done: () => CompletableFuture[Int] = () =>
+    CompletableFuture.completedFuture(2)
+
+  def fromScala(implicit ex: ExecutionContext): () => CompletableFuture[Unit] =
+    () =>
+      Future {
+        Thread.sleep(1500)
+      }.asJava
 }

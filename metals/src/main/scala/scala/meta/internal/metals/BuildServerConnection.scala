@@ -20,6 +20,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
+import scala.util.Success
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.MillBuildTool
@@ -424,14 +425,19 @@ class BuildServerConnection private (
       onFail: => Option[(T, String)] = None,
       timeout: Timeout = Timeout.DefaultFlexTimeout,
   ): CompletableFuture[T] = {
+    val localCancelable = new MutableCancelable()
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
-    ): Future[T] =
-      requestRegistry.register(
+    ): Future[T] = {
+      val CancelableFuture(result, cancelable) = requestRegistry.register(
         action = () => action(launcherConnection.server),
         timeout = timeout,
-        isCompile = isCompile,
       )
+      localCancelable.add(cancelable)
+      result.onComplete(_ => localCancelable.remove(cancelable))
+      result
+    }
+
     val original = connection
     val actionFuture = original
       .flatMap { launcherConnection =>

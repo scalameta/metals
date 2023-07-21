@@ -4,13 +4,13 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 
@@ -23,25 +23,14 @@ class RequestRegistry(
   private val timeouts: Timeouts = new Timeouts(defaultMinTimeout)
   private val ongoingRequests =
     new MutableCancelable().addAll(initialCancellables)
-  private val ongoingCompilations = new MutableCancelable()
 
   def register[T](
       action: () => CompletableFuture[T],
       timeout: Timeout = Timeout.DefaultFlexTimeout,
-      isCompile: Boolean = false,
-  ): Future[T] = {
-    val timeBefore: Long = System.currentTimeMillis()
-    val resultFuture = action()
-    val cancelable = Cancelable { () =>
-      Try(resultFuture.cancel(true))
-    }
-
-    if (isCompile) ongoingCompilations.add(cancelable)
-    else ongoingRequests.add(cancelable)
-
-    val result = getTimeout(timeout) match {
+  ): CancelableFuture[T] = {
+    val CancelableFuture(result, cancelable) = getTimeout(timeout) match {
       case Some(timeoutValue) =>
-        FutureWithTimeout(timeoutValue)(resultFuture.asScala, timeBefore)
+        FutureWithTimeout(timeoutValue)(action)
           .transform {
             case Success((res, time)) =>
               timeouts.measured(timeout, time)
@@ -51,27 +40,25 @@ class RequestRegistry(
               Failure(e)
             case Failure(e) => Failure(e)
           }
-      case None => resultFuture.asScala
+      case None =>
+        val resultFuture = action()
+        val cancelable = Cancelable { () =>
+          Try(resultFuture.cancel(true))
+        }
+        CancelableFuture(resultFuture.asScala, cancelable)
     }
-    result.onComplete { _ =>
-      if (isCompile) ongoingCompilations.remove(cancelable)
-      else ongoingRequests.remove(cancelable)
-    }
-    result
+
+    ongoingRequests.add(cancelable)
+
+    result.onComplete { _ => ongoingRequests.remove(cancelable) }
+
+    CancelableFuture(result, cancelable)
   }
 
   def addOngoingRequest(values: Iterable[Cancelable]): MutableCancelable =
     ongoingRequests.addAll(values)
 
-  def addOngoingCompilations(values: Iterable[Cancelable]): MutableCancelable =
-    ongoingCompilations.addAll(values)
-
-  def cancelCompilations(): Unit = {
-    ongoingCompilations.cancel()
-  }
-
   def cancel(): Unit = {
-    ongoingCompilations.cancel()
     ongoingRequests.cancel()
   }
 

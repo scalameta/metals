@@ -1,12 +1,13 @@
 package tests
 
 import java.util.concurrent.CancellationException
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
 
@@ -16,7 +17,8 @@ import scala.meta.internal.metals.utils.Timeout
 import munit.FunSuite
 
 class RequestRegistrySuite extends FunSuite {
-  implicit val ex: ExecutionContextExecutor = ExecutionContext.global
+  implicit val ex: ExecutionContextExecutorService =
+    ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   val duration: FiniteDuration = Duration(1, TimeUnit.SECONDS)
   def createRegistry() = new RequestRegistry(duration, List())
 
@@ -24,21 +26,27 @@ class RequestRegistrySuite extends FunSuite {
     val requestRegistry = createRegistry()
     val doneTimeout = Timeout.FlexTimeout("done", duration)
     for {
-      _ <- requestRegistry.register(
-        Examples.done,
-        doneTimeout,
-      )
-      _ <- requestRegistry.register(
-        Examples.done,
-        doneTimeout,
-      )
-      _ <- requestRegistry.register(
-        Examples.done,
-        doneTimeout,
-      )
-      _ <- requestRegistry.register(Examples.fast)
-      _ <- requestRegistry.register(Examples.fast)
-      _ <- requestRegistry.register(Examples.fast)
+      _ <- requestRegistry
+        .register(
+          ExampleFutures.done,
+          doneTimeout,
+        )
+        .future
+      _ <- requestRegistry
+        .register(
+          ExampleFutures.done,
+          doneTimeout,
+        )
+        .future
+      _ <- requestRegistry
+        .register(
+          ExampleFutures.done,
+          doneTimeout,
+        )
+        .future
+      _ <- requestRegistry.register(ExampleFutures.fast).future
+      _ <- requestRegistry.register(ExampleFutures.fast).future
+      _ <- requestRegistry.register(ExampleFutures.fast).future
       _ = assert(
         requestRegistry.getTimeout(Timeout.DefaultFlexTimeout).get > duration
       )
@@ -52,42 +60,43 @@ class RequestRegistrySuite extends FunSuite {
   }
 
   test("timeout") {
+    val promise = Promise[Unit]()
     val requestRegistry = createRegistry()
     for {
       err <- requestRegistry
-        .register(Examples.infinite)
+        .register(ExampleFutures.infinite(promise))
+        .future
         .failed
       _ = assert(err.isInstanceOf[TimeoutException])
       _ = assertEquals(
         requestRegistry.getTimeout(Timeout.DefaultFlexTimeout).get,
         duration * 3,
       )
-      _ <- requestRegistry.register(Examples.fast)
+      _ <- requestRegistry.register(ExampleFutures.fast).future
+      _ <- promise.future
     } yield ()
   }
 
   test("cancel") {
+    val promise1 = Promise[Unit]()
+    val promise2 = Promise[Unit]()
     val requestRegistry = createRegistry()
-    val f1 = requestRegistry.register(Examples.fast, isCompile = true)
-    val f2 = requestRegistry.register(Examples.fast)
-    requestRegistry.cancelCompilations()
-    for {
-      err <- f1.failed
-      _ = assert(err.isInstanceOf[CancellationException])
-      _ <- f2
-    } yield ()
-  }
-
-  test("cancel-all") {
-    val requestRegistry = createRegistry()
-    val f1 = requestRegistry.register(Examples.fast, isCompile = true)
-    val f2 = requestRegistry.register(Examples.fast)
+    val f1 = requestRegistry.register(
+      ExampleFutures.infinite(promise1),
+      Timeout.NoTimeout,
+    )
+    val f2 = requestRegistry.register(
+      ExampleFutures.infinite(promise2),
+      Timeout.NoTimeout,
+    )
     requestRegistry.cancel()
     for {
-      err <- f1.failed
+      err <- f1.future.failed
       _ = assert(err.isInstanceOf[CancellationException])
-      err <- f2.failed
-      _ = assert(err.isInstanceOf[CancellationException])
+      err2 <- f2.future.failed
+      _ = assert(err2.isInstanceOf[CancellationException])
+      _ <- promise1.future
+      _ <- promise2.future
     } yield ()
   }
 
@@ -95,23 +104,4 @@ class RequestRegistrySuite extends FunSuite {
 
 object RequestType extends Enumeration {
   val Type1, Type2 = Value
-}
-
-object Examples {
-  def infinite: () => CompletableFuture[Void] = () =>
-    CompletableFuture.runAsync(
-      new Runnable {
-        def run() = while (0 == 0) { Thread.sleep(500) }
-      }
-    )
-
-  def fast: () => CompletableFuture[Void] = () =>
-    CompletableFuture.runAsync(
-      new Runnable {
-        def run() = Thread.sleep(500)
-      }
-    )
-
-  def done: () => CompletableFuture[Int] = () =>
-    CompletableFuture.completedFuture(2)
 }
