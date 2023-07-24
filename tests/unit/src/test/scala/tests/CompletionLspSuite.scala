@@ -294,4 +294,53 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("symbolic-name") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |abstract class Base {
+          |  /**
+          |    * Some documentation
+          |    */
+          |  type !![A, B] = A with B
+          |}
+          |object Main extends Base {
+          |  // @@
+          |}
+          |""".stripMargin
+      )
+      _ <- assertCompletionItemResolve(
+        "val x = List(1).:::@@",
+        expectedLabel = ":::[B >: Int](prefix: List[B]): List[B]",
+        expectedDoc = Some(
+          """|Adds the elements of a given list in front of this list.
+             |
+             |Example:
+             |
+             |```
+             |List(1, 2) ::: List(3, 4) = List(3, 4).:::(List(1, 2)) = List(1, 2, 3, 4)
+             |```
+             |**Parameters**
+             |- `prefix`: The list elements to prepend.
+             |
+             |**Returns:** a list resulting from the concatenation of the given
+             |   list `prefix` and this list.
+             |""".stripMargin
+        ),
+      )
+      _ <- assertCompletionItemResolve(
+        "val x: !!@@",
+        expectedLabel = "!!",
+        expectedDoc = Some("Some documentation"),
+      )
+    } yield ()
+  }
 }
