@@ -29,6 +29,18 @@ class BazelLspSuite
       workspace: AbsolutePath
   ): Option[String] = BazelDigest.current(workspace)
 
+  test("mock-test") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, scalaVersion, bazelVersion)
+      )
+    } yield {
+      assert(bazelBspConfig.exists)
+      assertStatus(_.isInstalled)
+    }
+  }
+
   test("basic") {
     cleanWorkspace()
     for {
