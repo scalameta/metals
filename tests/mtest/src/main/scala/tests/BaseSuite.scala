@@ -19,6 +19,9 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
    */
   val FlakyWindows = new Tag("FlakyWindows")
 
+  val scala3PresentationCompiler =
+    s">=${BuildInfoVersions.firstScala3PCVersion}"
+
   Testing.enable()
 
   def isJava8: Boolean =

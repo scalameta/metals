@@ -778,7 +778,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|incrementThisType(): A.this.type (with underlying type singleton.A)
        |""".stripMargin,
     compat = Map(
-      "3" -> "incrementThisType(): (A.this : singleton.A)"
+      scala3PresentationCompiler -> "incrementThisType(): A.this.type",
+      "3" -> "incrementThisType(): (A.this : singleton.A)",
     ),
   )
 
@@ -1287,18 +1288,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |experimental scala.languageFeature
            |implicitConversions scala.languageFeature
            |postfixOps scala.languageFeature
-           |""".stripMargin,
-      "3.2" -> pre331,
-      "3.1" -> pre331,
-      "3.3.0" -> pre331,
-      "3.3.1" -> pre331,
-      "3" ->
-        """|dynamics languageFeature
-           |existentials languageFeature
-           |experimental languageFeature
-           |higherKinds languageFeature
-           |implicitConversions languageFeature
-           |""".stripMargin,
+           |""".stripMargin
     ),
   )
 
@@ -1405,7 +1395,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |  def hello = {
        |    val name = Option("Bob")
        |    name.@@
-       |    println(msg) 
+       |    println(msg)
        |  }
        |}
        |""".stripMargin,

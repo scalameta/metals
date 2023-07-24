@@ -6,6 +6,7 @@ object V {
   val scala212 = "2.12.18"
   val scala213 = "2.13.11"
   val scala3 = "3.3.0"
+  val firstScala3PCVersion = "3.3.2-RC1-bin-20230721-492f777-NIGHTLY"
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val scala3RC: Option[String] = Some("3.3.1-RC4")
   val sbtScala = "2.12.17"
@@ -19,7 +20,9 @@ object V {
   val bloopConfig = "1.5.5"
   val bsp = "2.1.0-M5"
   val coursier = "2.1.5"
-  val coursierInterfaces = "1.0.18"
+  val coursierInterfaces =
+    "1.0.18" // changing coursier interfaces version may be not binary compatible.
+  // After each update of coursier interfaces, remember to bump the version in dotty repository.
   val debugAdapter = "3.1.3"
   val genyVersion = "1.0.0"
   val gradleBloop = "1.6.1"
@@ -47,9 +50,8 @@ object V {
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 
-  // https://github.com/scalameta/metals/issues/5427
-  def isNightliesEnabled: Boolean = false
-  // sys.env.get("CI").isDefined || sys.env.get("NIGHTLIES").isDefined
+  def isNightliesEnabled: Boolean =
+    sys.env.get("CI").isDefined || sys.env.get("NIGHTLIES").isDefined
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -100,25 +102,31 @@ object V {
 
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
+  def supportedScala3PresentationCompilerVersions = Seq(
+    "3.3.2-RC1-bin-20230721-492f777-NIGHTLY"
+  )
   // Scala 3
   def nonDeprecatedScala3Versions =
     Seq(scala3, "3.2.2", "3.1.3") ++ scala3RC.toSeq
+
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =
     Seq("3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0")
+
   // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   lazy val nightlyScala3DottyVersions = {
     if (isNightliesEnabled)
-      Scala3NightlyVersions.nightlyReleasesAfter(scala3)
+      Scala3NightlyVersions.nightlyReleasesAfter(firstScala3PCVersion)
     else
       Nil
   }
 
   def nightlyScala3Versions = nightlyScala3DottyVersions.map(_.toString)
 
-  def supportedScalaVersions = scala2Versions ++ scala3Versions
+  def supportedScalaVersions =
+    scala2Versions ++ scala3Versions ++ supportedScala3PresentationCompilerVersions
   def nonDeprecatedScalaVersions =
     nonDeprecatedScala2Versions ++ nonDeprecatedScala3Versions
   def deprecatedScalaVersions =
@@ -132,7 +140,6 @@ object V {
       ammonite212Version,
       scala213,
       ammonite213Version,
-      scala3,
-      ammonite3Version,
-    ).toList ++ scala3RC.toList
+      firstScala3PCVersion,
+    ).toList
 }
