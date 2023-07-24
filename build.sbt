@@ -403,7 +403,7 @@ lazy val mtagsDottyPresentationCompiler = project
     Compile / unmanagedSourceDirectories := Seq(),
     sharedSettings,
     mtagsSettings,
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-dotty-presentation-compiler",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala-dotty-presentation-compiler",
     moduleName := "mtagsDottyPresentationCompiler",
     scalaVersion := V.firstScala3PCVersion,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3presentationcompiler",

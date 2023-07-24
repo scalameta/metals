@@ -1259,14 +1259,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
-  val pre331: String =
-    """|dynamics scala.languageFeature
-       |existentials scala.languageFeature
-       |experimental scala.languageFeature
-       |higherKinds scala.languageFeature
-       |implicitConversions scala.languageFeature
-       |""".stripMargin
-
   check(
     "ordering-1",
     s"""|object Main {
@@ -1276,18 +1268,18 @@ class CompletionSuite extends BaseCompletionSuite {
     """|dynamics scala.languageFeature
        |existentials scala.languageFeature
        |experimental scala.languageFeature
-       |higherKinds scala.languageFeature
        |implicitConversions scala.languageFeature
+       |postfixOps scala.languageFeature
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
-      // higherKinds was deprecated
-      "2.13.11" ->
+      // higherKinds was deprecated in 2.13.11 but current dotty still depends on 2.13.10
+      scala3PresentationCompiler ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
            |experimental scala.languageFeature
+           |higherKinds scala.languageFeature
            |implicitConversions scala.languageFeature
-           |postfixOps scala.languageFeature
            |""".stripMargin
     ),
   )

@@ -140,6 +140,8 @@ object V {
       ammonite212Version,
       scala213,
       ammonite213Version,
+      scala3,
+      ammonite3Version,
       firstScala3PCVersion,
     ).toList
 }
