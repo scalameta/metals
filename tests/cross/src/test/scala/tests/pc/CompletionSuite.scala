@@ -1268,19 +1268,26 @@ class CompletionSuite extends BaseCompletionSuite {
     """|dynamics scala.languageFeature
        |existentials scala.languageFeature
        |experimental scala.languageFeature
+       |higherKinds scala.languageFeature
        |implicitConversions scala.languageFeature
-       |postfixOps scala.languageFeature
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
       // higherKinds was deprecated in 2.13.11 but current dotty still depends on 2.13.10
+      "2.13.11" ->
+        """|dynamics scala.languageFeature
+           |existentials scala.languageFeature
+           |experimental scala.languageFeature
+           |implicitConversions scala.languageFeature
+           |postfixOps scala.languageFeature
+           |""".stripMargin,
       scala3PresentationCompiler ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
            |experimental scala.languageFeature
            |higherKinds scala.languageFeature
            |implicitConversions scala.languageFeature
-           |""".stripMargin
+           |""".stripMargin,
     ),
   )
 
