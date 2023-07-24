@@ -1306,6 +1306,12 @@ final case class TestingServer(
     }
   }
 
+  def completionItemResolve(
+      item: l.CompletionItem
+  ): Future[l.CompletionItem] = {
+    fullServer.completionItemResolve(item).asScala
+  }
+
   def codeAction(
       filename: String,
       query: String,
