@@ -231,8 +231,17 @@ class MetalsGlobal(
     val documentation = search.documentation(
       sym,
       new ParentSymbols {
-        def parents(): util.List[String] =
-          symbol.overrides.map(toSemanticdbSymbol).asJava
+        def parents(): util.List[String] = {
+          val parentSymbols =
+            if (symbol.name == nme.apply && symbol.safeOwner.isModuleClass)
+              List(
+                symbol.safeOwner,
+                symbol.safeOwner.companion
+              ).filter(_ != NoSymbol) ++ symbol.overrides
+            else symbol.overrides
+
+          parentSymbols.map(toSemanticdbSymbol).asJava
+        }
       }
     )
 
