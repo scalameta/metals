@@ -160,9 +160,10 @@ object MetalsLogger {
   }
 
   private def backupLogPath(wokspaceFolder: AbsolutePath): AbsolutePath = {
-    val now = TimeFormatter.getTime()
-    val filename = s"log_${now}"
-    backupLogsDir(wokspaceFolder).resolve(filename)
+    val date = TimeFormatter.getDate()
+    val time = TimeFormatter.getTime()
+    val filename = s"log_${time}"
+    backupLogsDir(wokspaceFolder).resolve(date).resolve(filename)
   }
 
   private def limitKeptBackupLogs(workspaceFolder: AbsolutePath, limit: Int) = {
