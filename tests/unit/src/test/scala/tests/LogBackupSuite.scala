@@ -9,6 +9,7 @@ import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.TimeFormatter
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.io.AbsolutePath
@@ -44,6 +45,13 @@ class LogBackupSuite extends BaseSuite {
     assert(backupDir.exists)
     assert(limitedFilesManager.getAllFiles().size == 1)
     assert(!log.exists)
+    val dirsWithDate = backupDir.toFile.listFiles()
+    assert(dirsWithDate.length == 1)
+    assert(
+      dirsWithDate.forall(d =>
+        d.isDirectory() && TimeFormatter.hasDateName(d.getName())
+      )
+    )
   }
 
   test("backup-and-delete-overflow") {
