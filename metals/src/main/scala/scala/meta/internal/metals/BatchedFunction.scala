@@ -30,7 +30,6 @@ final class BatchedFunction[A, B](
     extends (Seq[A] => Future[B])
     with Function2[Seq[A], () => Unit, Future[B]]
     with Pauseable {
-  val rand = new scala.util.Random
 
   /**
    * Call the function with the given arguments.
