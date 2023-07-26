@@ -30,7 +30,6 @@ def crossSetting[A](
     if3: List[A] = Nil,
     if3PresentationCompiler: List[A] = Nil,
     if2: List[A] = Nil,
-    default: List[A] = Nil,
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
     case partialVersion if isScala211(partialVersion) => if211 ::: if2
