@@ -1,28 +1,30 @@
 package scala.meta.internal.pc
 
-import scala.meta.pc.PresentationCompiler
-import dotty.tools.pc.{ScalaPresentationCompiler as DottyPresentationCompiler}
-import scala.meta.pc.AutoImportsResult
-import scala.meta.pc.OffsetParams
-import org.eclipse.lsp4j.TextEdit
-import java.{util as ju}
-import org.eclipse.lsp4j.SelectionRange
-import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.CompletionItem
-import scala.meta.pc.RangeParams
-import scala.meta.pc.SymbolSearch
-import scala.meta.pc.PresentationCompilerConfig
-import org.eclipse.lsp4j.CompletionList
-import scala.meta.pc.DefinitionResult
-import org.eclipse.lsp4j.Diagnostic
-import scala.meta.pc.VirtualFileParams
 import java.net.URI
-import org.eclipse.lsp4j.SignatureHelp
-import scala.meta.pc.HoverSignature
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
+import java.{util as ju}
+
+import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.DefinitionResult
+import scala.meta.pc.HoverSignature
+import scala.meta.pc.OffsetParams
+import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.RangeParams
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.VirtualFileParams
+
+import dotty.tools.pc.{ScalaPresentationCompiler as DottyPresentationCompiler}
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionList
+import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DocumentHighlight
+import org.eclipse.lsp4j.SelectionRange
+import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.TextEdit
 
 /**
  * This is a wrapper around the DottyPresentationCompiler

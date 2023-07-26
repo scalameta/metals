@@ -636,7 +636,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
-  val defaultRefinedTypes =
+  val defaultRefinedTypes: String =
     """|object O{
        |  trait Foo {
        |    type T
@@ -674,7 +674,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
     ),
   )
 
-  val defaultRefinedTypes2 =
+  val defaultRefinedTypes2: String =
     """|object O{
        |  trait Foo {
        |    type T
@@ -709,7 +709,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
     ),
   )
 
-  val defaultRefinedTypes3 =
+  val defaultRefinedTypes3: String =
     """|object O{
        |  trait Foo {
        |    type T
@@ -744,7 +744,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
     ),
   )
 
-  val defaultRefinedTypes4 =
+  val defaultRefinedTypes4: String =
     """|trait Foo extends Selectable {
        |  type T
        |}

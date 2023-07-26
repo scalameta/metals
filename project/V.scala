@@ -143,5 +143,5 @@ object V {
       scala3,
       ammonite3Version,
       firstScala3PCVersion,
-    ).toList
+    ).toList ++ scala3RC.toList
 }
