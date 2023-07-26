@@ -105,7 +105,7 @@ def configureMtagsScalaVersionDynamically(
 ): State = {
   val mtagsSharedVersionUpdate = CrossVersion.partialVersion(scalaV) match {
     case partialVersion if isScala3(partialVersion) => Nil
-    case _ => List(mtagsShared / scalaVersion := V.scala3)
+    case _ => List(mtagsShared / scalaVersion := scalaV)
   }
 
   val scalaVersionSettings =
@@ -621,7 +621,7 @@ def runMtagsPublishLocal(
 ): State = {
   val mtagsSharedVersionUpdate = CrossVersion.partialVersion(scalaV) match {
     case partialVersion if isScala3(partialVersion) => Nil
-    case _ => List(mtagsShared / scalaVersion := V.scala3)
+    case _ => List(mtagsShared / scalaVersion := scalaV)
   }
 
   val newState = Project
