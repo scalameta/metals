@@ -68,5 +68,14 @@ object TestExplorerEvent {
 // Represents a single test within a test suite
 final case class TestCaseEntry(
     name: String,
+    displayName: String,
+    runName: String,
     location: l.Location,
 )
+
+object TestCaseEntry {
+  def apply(
+      name: String,
+      location: l.Location,
+  ): TestCaseEntry = TestCaseEntry(name, name, name, location)
+}
