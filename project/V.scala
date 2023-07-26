@@ -102,9 +102,6 @@ object V {
 
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
-  def supportedScala3PresentationCompilerVersions = Seq(
-    "3.3.2-RC1-bin-20230721-492f777-NIGHTLY"
-  )
   // Scala 3
   def nonDeprecatedScala3Versions =
     Seq(scala3, "3.2.2", "3.1.3") ++ scala3RC.toSeq
@@ -126,7 +123,7 @@ object V {
   def nightlyScala3Versions = nightlyScala3DottyVersions.map(_.toString)
 
   def supportedScalaVersions =
-    scala2Versions ++ scala3Versions ++ supportedScala3PresentationCompilerVersions
+    scala2Versions ++ scala3Versions
   def nonDeprecatedScalaVersions =
     nonDeprecatedScala2Versions ++ nonDeprecatedScala3Versions
   def deprecatedScalaVersions =
