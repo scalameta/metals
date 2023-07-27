@@ -105,8 +105,8 @@ def configureMtagsScalaVersionDynamically(
 ): State = {
   val scalaVersionSettings =
     List(
-      mtest / scalaVersion := scalaV,
       mtagsShared / scalaVersion := scalaV,
+      mtest / scalaVersion := scalaV,
       mtags / scalaVersion := scalaV,
       cross / scalaVersion := scalaV,
     )
@@ -297,6 +297,7 @@ val mtagsSettings = List(
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions
     "io.get-coursier" % "interface" % V.coursierInterfaces,
+    "org.lz4" % "lz4-java" % "1.8.0",
   ),
   libraryDependencies ++= {
     val scala3ScalametaDependency =
@@ -373,6 +374,8 @@ lazy val mtags3 = project
     sharedSettings,
     mtagsSettings,
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
     moduleName := "mtags3",
     scalaVersion := V.scala3,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
@@ -381,7 +384,7 @@ lazy val mtags3 = project
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
   )
-  .dependsOn(mtagsShared)
+  .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags3PresentationCompiler = project
