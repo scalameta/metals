@@ -112,7 +112,7 @@ object Digest {
       Files
         .readAllLines(file.toNIO)
         .asScala
-        .filterNot(_.stripLeading().startsWith("#"))
+        .filterNot(_.trim().startsWith("#"))
         .mkString("\n")
         .split("\\s+")
         .foreach { word => digest.update(word.getBytes()) }

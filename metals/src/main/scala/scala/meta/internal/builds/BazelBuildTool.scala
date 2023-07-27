@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Properties
 
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.Messages
@@ -38,7 +37,7 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
   }
 
   private def composeArgs(): List[String] = {
-    val classpathSeparator = if (Properties.isWin) ";" else ":"
+    val classpathSeparator = java.io.File.pathSeparator
     val classpath = Fetch
       .create()
       .withDependencies(BazelBuildTool.dependency)

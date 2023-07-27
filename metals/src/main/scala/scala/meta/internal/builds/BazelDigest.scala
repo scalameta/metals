@@ -11,8 +11,6 @@ object BazelDigest extends Digestable {
       digest: MessageDigest,
   ): Boolean = {
     workspace.listRecursive.forall {
-      // TODO: *.bzl also should be detected
-      // https://github.com/scalameta/metals/issues/5144
       case file
           if file.isBazelRelatedPath && !file.isInBazelBspDirectory(
             workspace

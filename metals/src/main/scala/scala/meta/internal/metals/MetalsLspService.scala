@@ -428,7 +428,6 @@ class MetalsLspService(
     tables,
     userConfig,
     statusBar,
-    shellRunner,
     bspConfigGenerator,
     () => bspSession.map(_.mainConnection),
   )
@@ -1956,6 +1955,8 @@ class MetalsLspService(
                 buildTool.asInstanceOf[BloopInstallProvider],
                 digest,
               )
+            // If there is no .bazelbsp present, we ask user to write bsp config
+            // After that, we should fall into the last case and index workspace
             case (Some(_), _)
                 if buildTool.executableName == BazelBuildTool.name && !buildTools.isBazelBsp =>
               BazelBuildTool

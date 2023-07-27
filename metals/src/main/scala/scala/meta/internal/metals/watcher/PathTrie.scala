@@ -81,6 +81,11 @@ object PathTrie {
       }
     }
 
+    /**
+     * NOTE(jkciesluk): If we don't have any paths, PathTrie would represent the entire file system.
+     * PathTrie was introduced as a optimization to not watch the whole workspace,
+     * so when the paths are empty we should just watch the workspace.
+     */
     if (paths.isEmpty)
       new PathTrie(
         construct(

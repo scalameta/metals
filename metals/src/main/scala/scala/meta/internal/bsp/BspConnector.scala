@@ -34,7 +34,6 @@ class BspConnector(
     tables: Tables,
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,
-    shellRunner: ShellRunner,
     bspConfigGenerator: BspConfigGenerator,
     currentConnection: () => Option[BuildServerConnection],
 )(implicit ec: ExecutionContext) {
@@ -108,7 +107,8 @@ class BspConnector(
             .trackFuture("Connecting to sbt", connectionF, showTimer = true)
             .map(Some(_))
         // NOTE: (jkciesluk) This is a special case where .bazelbsp config is not yet generated.
-        // This case is most likely unreachable, so it can be removed in the future.
+        // It can happen if `autoConnectToBuildServer` is called without check if build tool is auto-connectable
+        // eg. in ResetWorkspace or RestartBuildServer commands
         case ResolvedBazel =>
           BazelBuildTool
             .writeBazelConfig(
