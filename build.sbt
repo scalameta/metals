@@ -103,17 +103,13 @@ def configureMtagsScalaVersionDynamically(
     state: State,
     scalaV: String,
 ): State = {
-  val mtagsSharedVersionUpdate = CrossVersion.partialVersion(scalaV) match {
-    case partialVersion if isScala3(partialVersion) => Nil
-    case _ => List(mtagsShared / scalaVersion := scalaV)
-  }
-
   val scalaVersionSettings =
     List(
       mtest / scalaVersion := scalaV,
+      mtagsShared / scalaVersion := scalaV,
       mtags / scalaVersion := scalaV,
       cross / scalaVersion := scalaV,
-    ) ++ mtagsSharedVersionUpdate
+    )
 
   val extracted = Project.extract(state)
   extracted
@@ -256,8 +252,8 @@ lazy val mtagsShared = project
     moduleName := "mtags-shared",
     crossTarget := target.value / s"scala-${scalaVersion.value}",
     // Dotty depends on Scala 2.13 for compatibility guarantees for from-source compilation.
-    crossScalaVersions := V.scala211 :: V.scala212 :: V.scala213 :: Nil,
-    crossVersion := CrossVersion.for3Use2_13,
+    crossScalaVersions := V.supportedScalaVersions ++ V.nightlyScala3Versions,
+    crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
@@ -619,19 +615,15 @@ def runMtagsPublishLocal(
     scalaV: String,
     projectV: String,
 ): State = {
-  val mtagsSharedVersionUpdate = CrossVersion.partialVersion(scalaV) match {
-    case partialVersion if isScala3(partialVersion) => Nil
-    case _ => List(mtagsShared / scalaVersion := scalaV)
-  }
-
   val newState = Project
     .extract(state)
     .appendWithSession(
       List(
+        mtagsShared / scalaVersion := scalaV,
         mtags / scalaVersion := scalaV,
         ThisBuild / version := projectV,
         ThisBuild / useSuperShell := false,
-      ) ++ mtagsSharedVersionUpdate,
+      ),
       state,
     )
   val (s1, _) = Project
