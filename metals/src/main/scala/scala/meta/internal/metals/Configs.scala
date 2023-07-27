@@ -42,6 +42,7 @@ object Configs {
           new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE")),
           new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE.bazel")),
           new FileSystemWatcher(Either.forLeft(s"$root/**/*.bzl")),
+          new FileSystemWatcher(Either.forLeft(s"$root/.bsp/*.json")),
         ).asJava
       )
     }

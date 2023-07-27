@@ -1186,6 +1186,17 @@ class MetalsLspService(
         .toSeq
     val (deleteEvents, changeAndCreateEvents) =
       importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
+    changeAndCreateEvents.foreach { event =>
+      val path = event.getUri().toAbsolutePath
+      event.getType match {
+        case FileChangeType.Created
+            if path.isInBspDirectory(folder) && path.extension == "json" =>
+          scribe.info(s"Detected new build tool in $path")
+          quickConnectToBuildServer()
+        case _ =>
+      }
+    }
+
     deleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
     onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
   }
@@ -1215,13 +1226,6 @@ class MetalsLspService(
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
 
-    event.eventType match {
-      case EventType.CreateOrModify
-          if path.isInBspDirectory(folder) && path.extension == "json" =>
-        scribe.info(s"Detected new build tool in $path")
-        quickConnectToBuildServer()
-      case _ =>
-    }
     if (isScalaOrJava && event.eventType == EventType.Delete) {
       onDelete(path).asJava
     } else if (
@@ -1918,8 +1922,6 @@ class MetalsLspService(
         if (!buildTools.isAutoConnectable) {
           warnings.noBuildTool()
         }
-        // wait for a bsp file to show up
-        fileWatcher.start(Set(folder.resolve(".bsp")))
         Future(None)
       }
       case buildTools =>
