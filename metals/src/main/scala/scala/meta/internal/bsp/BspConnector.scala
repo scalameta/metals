@@ -45,7 +45,7 @@ class BspConnector(
    */
   def resolve(): BspResolvedResult = {
     resolveExplicit().getOrElse {
-      val resolved = bspServers.resolve()
+      lazy val resolved = bspServers.resolve()
       if (
         buildTools
           .loadSupported()

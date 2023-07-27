@@ -142,7 +142,7 @@ final class BuildTools(
       Some(MavenBuildTool.name)
     else if (isMill && MillBuildTool.isMillRelatedPath(path))
       Some(MillBuildTool.name)
-    else if (isBazel && BazelBuildTool.isBazelRelatedPath(path))
+    else if (isBazel && path.isBazelRelatedPath)
       Some(BazelBuildTool.name)
     else None
   }

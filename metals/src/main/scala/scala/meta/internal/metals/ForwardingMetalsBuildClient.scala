@@ -96,7 +96,7 @@ final class ForwardingMetalsBuildClient(
 
   def onBuildLogMessage(params: l.MessageParams): Unit = {
     // NOTE: BazelBsp adds coloring to the log message after `workspaceBuildTargets` request
-    val noANSICodes = filterANSICodes(params.getMessage).trim()
+    val noANSICodes = filterANSIColorCodes(params.getMessage).trim()
     if (noANSICodes.nonEmpty) {
       params.getType match {
         case l.MessageType.Error =>

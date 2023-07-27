@@ -112,8 +112,8 @@ object Digest {
       Files
         .readAllLines(file.toNIO)
         .asScala
+        .filterNot(_.stripLeading().startsWith("#"))
         .mkString("\n")
-        .replaceAll("""#.*""", "") // replace any inline comment
         .split("\\s+")
         .foreach { word => digest.update(word.getBytes()) }
       true

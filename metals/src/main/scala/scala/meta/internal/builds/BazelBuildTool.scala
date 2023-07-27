@@ -31,7 +31,7 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
     Option.when(workspaceSupportsBsp(workspace))(composeArgs())
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
-    workspace.listRecursive.exists {
+    workspace.list.exists {
       case file if file.filename == "WORKSPACE" => true
       case _ => false
     }
@@ -72,7 +72,7 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "2.7.1"
+  val version: String = "2.7.2"
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
@@ -139,8 +139,4 @@ object BazelBuildTool {
       Future.successful(WorkspaceLoadedStatus.Dismissed)
     }
   }
-
-  def isBazelRelatedPath(
-      path: AbsolutePath
-  ): Boolean = path.isBazelRelatedPath
 }

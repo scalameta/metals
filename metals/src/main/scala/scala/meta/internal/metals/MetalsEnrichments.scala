@@ -1147,10 +1147,7 @@ object MetalsEnrichments
    * As long as the color codes are valid this should correctly strip
    * anything that is ESC (U+001B) plus [
    */
-  def filerANSIColorCodes(str: String): String =
-    str.replaceAll("\u001B\\[[;\\d]*m", "")
-
-  def filterANSICodes(str: String): String =
+  def filterANSIColorCodes(str: String): String =
     str.replaceAll("\u001b\\[1A\u001b\\[K|\u001B\\[[;\\d]*m", "")
 
 }
