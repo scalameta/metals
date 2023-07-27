@@ -79,6 +79,7 @@ class BspConnector(
   def connect(
       workspace: AbsolutePath,
       userConfiguration: UserConfiguration,
+      shellRunner: ShellRunner,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     def connect(
         workspace: AbsolutePath
@@ -96,6 +97,8 @@ class BspConnector(
           val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(workspace)
           val connectionF =
             for {
+              _ <- SbtBuildTool(workspace, () => userConfiguration)
+                .ensureCorrectJavaVersion(shellRunner, workspace, client)
               connection <- bspServers.newServer(workspace, details)
               _ <-
                 if (shouldReload) connection.workspaceReload()

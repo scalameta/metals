@@ -7,9 +7,11 @@ import scala.meta.internal.metals.PathMatcher
 import scala.meta.internal.metals.ScalafmtConfig
 import scala.meta.internal.metals.ScalafmtDialect
 import scala.meta.internal.semver.SemVer
+import scala.meta.io.AbsolutePath
 
 import com.typesafe.config.ConfigFactory
 import munit.TestOptions
+import munit.internal.io.PlatformIO
 
 class ScalafmtConfigSuite extends BaseSuite {
 
@@ -132,6 +134,34 @@ class ScalafmtConfigSuite extends BaseSuite {
       "glob:module/src/main/scala/*" -> ScalafmtDialect.Scala3,
     ),
   )
+
+  test("v3.2.0") {
+    val cfg = ConfigFactory.parseString(
+      s"""|version = "3.2.0"
+          |runner.dialect = scala3
+          |project.layout = StandardConvention
+          |fileOverride {
+          | "lang:scala-2" = scala211
+          |}
+          |""".stripMargin
+    )
+    val config = ScalafmtConfig.parse(cfg).get
+    val root = AbsolutePath(PlatformIO.Paths.get("."))
+
+    def assertDialectFor(path: String, dialect: ScalafmtDialect) =
+      assertEquals(
+        config.overrideFor(root.resolve(path)).orElse(config.runnerDialect),
+        Some(dialect),
+      )
+
+    assertDialectFor("src/main/scala-2.12/Main.scala", ScalafmtDialect.Scala212)
+    assertDialectFor("src/test/scala-3/SomeTest.scala", ScalafmtDialect.Scala3)
+    assertDialectFor(
+      "src/main/scala-2/src/Main.scala",
+      ScalafmtDialect.Scala211,
+    )
+    assertDialectFor("src/main/scala/dir/Main.scala", ScalafmtDialect.Scala3)
+  }
 
   def checkUpdate(
       options: TestOptions,

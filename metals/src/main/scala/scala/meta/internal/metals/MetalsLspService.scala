@@ -417,6 +417,7 @@ class MetalsLspService(
     tables,
     bspGlobalDirectories,
     clientConfig.initialConfig,
+    userConfig,
   )
 
   private val bspConnector: BspConnector = new BspConnector(
@@ -2108,7 +2109,7 @@ class MetalsLspService(
     (for {
       _ <- disconnectOldBuildServer()
       maybeSession <- timerProvider.timed("Connected to build server", true) {
-        bspConnector.connect(folder, userConfig())
+        bspConnector.connect(folder, userConfig(), shellRunner)
       }
       result <- maybeSession match {
         case Some(session) =>
