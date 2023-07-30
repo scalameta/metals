@@ -58,6 +58,7 @@ final class CodeActionProvider(
     new FlatMapToForComprehensionCodeAction(trees, buffers),
     new MillifyDependencyCodeAction(buffers),
     new MillifyScalaCliDependencyCodeAction(buffers),
+    new AddMissingMatchCase(trees, compilers, buildTargets),
   )
 
   def codeActions(

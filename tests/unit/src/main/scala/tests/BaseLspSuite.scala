@@ -202,7 +202,11 @@ abstract class BaseLspSuite(
   def assertNoDiagnostics()(implicit
       loc: Location
   ): Unit = {
-    assertNoDiff(client.workspaceDiagnostics, "")
+    assertNoDiff(
+      client.workspaceDiagnostics,
+      "",
+      clue = "Unexpected diagnostics received",
+    )
   }
 
   def cleanCompileCache(project: String): Unit = {

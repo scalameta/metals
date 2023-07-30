@@ -99,4 +99,19 @@ object ScalacDiagnostic {
         case _ => None
       }
   }
+
+  object MatchMightNotBeExhaustive {
+    private val regexStart = """match may not be exhaustive.""".r
+    private val regexEnd = """It would fail on the following input: (.*)""".r
+    private val singleCaseRegex = """((?:\w+\.)*\w+\([^)]*\))""".r
+
+    def unapply(d: l.Diagnostic): Option[List[String]] =
+      d.getMessage().split("\n").map(_.trim()).filter(_.nonEmpty) match {
+        case Array(regexStart(), regexEnd(inputs)) =>
+          Some(
+            singleCaseRegex.findAllMatchIn(inputs).map(_.group(1)).toList
+          )
+        case _ => None
+      }
+  }
 }
