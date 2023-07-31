@@ -46,6 +46,10 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.metalsStatus(params)
   }
 
+  override def refreshInlayHints(): CompletableFuture[Void] = {
+    underlying.refreshInlayHints()
+  }
+
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {

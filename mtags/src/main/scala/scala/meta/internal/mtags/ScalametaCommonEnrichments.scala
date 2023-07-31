@@ -67,6 +67,27 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
 
       isBefore && isAfter
     }
+
+    def overlaps(other: l.Range): Boolean = {
+      val start = other.getStart()
+      val end = other.getEnd()
+      val isBefore =
+        pos.startLine < start.getLine ||
+          (pos.startLine == start.getLine && pos.startColumn <= start
+            .getCharacter())
+      
+      val isAfter = pos.endLine > end.getLine() ||
+        (pos.endLine >= end.getLine() && pos.endColumn >= end.getCharacter())
+
+      val isAfterStart = pos.startLine > start.getLine ||
+        (pos.startLine == start.getLine && pos.startColumn >= start
+          .getCharacter())
+
+      val isBeforeEnd = pos.endLine < end.getLine ||
+        (pos.endLine <= end.getLine && pos.endColumn <= end.getCharacter())
+      
+      (isBefore && isAfterStart) || (isAfter && isBeforeEnd)
+    }
   }
 
   implicit class XtensionSemanticdbRange(range: s.Range) {

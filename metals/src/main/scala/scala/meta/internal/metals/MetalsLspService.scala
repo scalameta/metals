@@ -35,6 +35,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceReload
+import scala.meta.internal.decorations.InlayHintsProvider
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
@@ -551,11 +552,26 @@ class MetalsLspService(
       trees,
     )
 
+  private val inlayHintsProvider =
+    new InlayHintsProvider(
+      folder,
+      semanticdbs,
+      buffers,
+      languageClient,
+      fingerprints,
+      charset,
+      focusedDocument,
+      clientConfig,
+      userConfig,
+      trees,
+    )
+
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
       syntheticsDecorator,
+      inlayHintsProvider,
       testProvider,
     ),
     buildTargets,
@@ -936,6 +952,7 @@ class MetalsLspService(
       ) {
         buildServerPromise.future.flatMap { _ =>
           syntheticsDecorator.refresh()
+          inlayHintsProvider.refresh()
         }
       } else {
         Future.successful(())
@@ -1115,7 +1132,9 @@ class MetalsLspService(
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
         parseTrees(path)
-          .flatMap { _ => syntheticsDecorator.publishSynthetics(path) }
+          .flatMap { _ =>
+            syntheticsDecorator.publishSynthetics(path)
+          }
           .ignoreValue
           .asJava
     }
@@ -1366,6 +1385,14 @@ class MetalsLspService(
         onTypeFormattingProvider.format(params).asJava
     }
 
+  def inlayHints(
+      params: InlayHintParams
+  ): CompletableFuture[util.List[InlayHint]] = {
+    CancelTokens.future { _ =>
+      inlayHintsProvider.inlayHints(params).map(_.asJava)
+      // Future{List.empty[InlayHint].asJava}
+    }
+  }
   override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =

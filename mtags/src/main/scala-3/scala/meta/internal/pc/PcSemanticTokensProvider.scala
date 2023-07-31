@@ -62,6 +62,9 @@ final class PcSemanticTokensProvider(
         parent: Option[Tree]
     )(tree: Tree, pos: SourcePosition, symbol: Option[Symbol]): Option[Node] =
       val sym = symbol.fold(tree.symbol)(identity)
+      if (sym.is(Flags.Synthetic)) pprint.log((sym, pos, sym.owner))
+      if (sym.is(Flags.Given) || sym.is(Flags.Implicit)) pprint.log((sym, pos))
+      if (sym.is(Flags.Given) && sym.is(Flags.Method))pprint.log((sym, pos))
       if !pos.exists || sym == null || sym == NoSymbol then None
       else
         Some(
@@ -93,9 +96,9 @@ final class PcSemanticTokensProvider(
       isDeclaration: Boolean,
   ): Node =
 
-    var mod: Int = 0
+    var mod = 0
     def addPwrToMod(tokenID: String) =
-      val place: Int = getModifierId(tokenID)
+      val place = getModifierId(tokenID)
       if place != -1 then mod += (1 << place)
     // get Type
     val typ =

@@ -147,4 +147,9 @@ trait TextDocumentService {
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens]
 
+  @JsonRequest("textDocument/inlayHint")
+  def inlayHints(
+      params: InlayHintParams
+  ): CompletableFuture[util.List[InlayHint]]
+
 }

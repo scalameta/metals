@@ -356,6 +356,11 @@ class WorkspaceLspService(
   override def hover(params: HoverExtParams): CompletableFuture[Hover] =
     getServiceFor(params.textDocument.getUri()).hover(params)
 
+  override def inlayHints(
+      params: lsp4j.InlayHintParams
+  ): CompletableFuture[java.util.List[lsp4j.InlayHint]] =
+    getServiceFor(params.getTextDocument.getUri()).inlayHints(params)
+
   override def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[ju.List[DocumentHighlight]] =
@@ -1039,6 +1044,7 @@ class WorkspaceLspService(
         capabilities.setWorkspaceSymbolProvider(true)
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
+
         if (initializeParams.supportsCodeActionLiterals) {
           capabilities.setCodeActionProvider(
             new lsp4j.CodeActionOptions(
@@ -1053,6 +1059,7 @@ class WorkspaceLspService(
           capabilities.setCodeActionProvider(true)
         }
 
+        capabilities.setInlayHintProvider(true)
         val textDocumentSyncOptions = new lsp4j.TextDocumentSyncOptions
         textDocumentSyncOptions.setChange(lsp4j.TextDocumentSyncKind.Full)
         textDocumentSyncOptions.setSave(new lsp4j.SaveOptions(true))
