@@ -325,4 +325,43 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
     """|type Ident: Ident
        |""".stripMargin.hover,
   )
+
+  check(
+    "nested-selectable",
+    """|trait Sel extends Selectable:
+       |  def selectDynamic(name: String): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { val foo: Sel { def bar: Int } }]
+       |val bar = sel.foo.ba@@r
+       |""".stripMargin,
+    """|def bar: Int
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "nested-selectable2",
+    """|class SimpleSelectable(key : String, value: Any) extends Selectable:
+       |  def selectDynamic(name: String): Any =
+       |    if(name == key) value else ???
+       |
+       |type Node[T] = SimpleSelectable { val child: T }
+       |
+       |val leaf = SimpleSelectable("child", ()).asInstanceOf[Node[Unit]]
+       |val node = SimpleSelectable("child", leaf).asInstanceOf[Node[Node[Unit]]]
+       |
+       |val k = node.child.ch@@ild
+       |""".stripMargin,
+    """|val child: Unit
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "very-nested-selectable",
+    """|trait Sel extends Selectable:
+       |  def selectDynamic(name: String): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { val foo: Sel { val bar: Sel { val ddd: Int } } }]
+       |val bar = sel.foo.bar.dd@@d
+       |""".stripMargin,
+    """|val ddd: Int
+       |""".stripMargin.hover,
+  )
 }
