@@ -22,7 +22,7 @@ class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
           |  "b": {
           |    "scalacOptions": [ "-Wunused" ],
           |    "libraryDependencies": [
-          |      "org.scalatest::scalatest:3.2.4"
+          |      "org.scalatest::scalatest:3.2.16"
           |    ],
           |    "dependsOn": [ "a" ]
           |  }

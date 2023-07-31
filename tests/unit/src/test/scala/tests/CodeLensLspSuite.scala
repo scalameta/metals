@@ -46,7 +46,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  check("test-suite-class", library = Some("org.scalatest::scalatest:3.2.4"))(
+  check("test-suite-class", library = Some("org.scalatest::scalatest:3.2.16"))(
     """|package foo.bar
        |<<test>><<debug test>>
        |class Foo extends org.scalatest.funsuite.AnyFunSuite {
@@ -56,7 +56,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
 
   checkTestCases(
     "test-suite-with-tests",
-    library = Some("org.scalatest::scalatest:3.2.4"),
+    library = Some("org.scalatest::scalatest:3.2.16"),
   )(
     """|package foo.bar
        |<<test>><<debug test>>
