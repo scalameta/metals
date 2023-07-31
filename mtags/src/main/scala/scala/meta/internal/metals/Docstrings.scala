@@ -54,6 +54,14 @@ class Docstrings(index: GlobalSymbolIndex) {
       case Some(value: MetalsSymbolDocumentation)
           if value.docstring.isEmpty() =>
         Some(parentDocumentation(symbol, value, parents))
+      case None =>
+        Some(
+          parentDocumentation(
+            symbol,
+            MetalsSymbolDocumentation.empty(symbol),
+            parents
+          )
+        )
       case _ => result
     }
     Optional.ofNullable(resultWithParentDocs.orNull)

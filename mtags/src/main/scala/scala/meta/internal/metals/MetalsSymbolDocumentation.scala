@@ -13,3 +13,8 @@ case class MetalsSymbolDocumentation(
     typeParameters: util.List[SymbolDocumentation] = Nil.asJava,
     parameters: util.List[SymbolDocumentation] = Nil.asJava
 ) extends SymbolDocumentation
+
+object MetalsSymbolDocumentation {
+  def empty(symbol: String): MetalsSymbolDocumentation =
+    MetalsSymbolDocumentation(symbol, "", "")
+}

@@ -81,7 +81,8 @@ object SemanticTokensProvider {
   ): List[Integer] = {
     // no semantic data was available, we can revert to default highlighting
     if (nodes.isEmpty) {
-      scribe.warn("Could not find semantic tokens for: " + params.uri())
+      if (params.uri().toString().isScalaFilename)
+        scribe.warn("Could not find semantic tokens for: " + params.uri())
       List.empty[Integer]
     } else {
       val tokens = getTokens(isScala3, params.text())

@@ -7,6 +7,7 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -524,8 +525,23 @@ object MetalsEnrichments
       Files.delete(path.dealias.toNIO)
     }
 
+    // This method used to fail on both `.toList` and `delete`
+    // so we want to be extra careful and check if file exists on every step
     def deleteRecursively(): Unit = {
-      path.listRecursive.toList.reverse.foreach(f => if (f.exists) f.delete())
+      path.listRecursive
+        .filter(_.exists)
+        .toList
+        .reverse
+        .foreach(_.deleteIfExists())
+    }
+
+    def deleteIfExists(): Unit = {
+      if (path.exists) {
+        try path.delete()
+        catch {
+          case _: NoSuchFileException => ()
+        }
+      }
     }
 
     def appendText(text: String): Unit = {

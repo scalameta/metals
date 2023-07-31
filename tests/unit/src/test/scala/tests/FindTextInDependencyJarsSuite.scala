@@ -67,7 +67,8 @@ class FindTextInDependencyJarsSuite
       assertLocations(
         jdkLocations, {
           val line =
-            if (isJavaAtLeast17) 1445
+            if (isJavaAtLeast17 && isWindows) 1449
+            else if (isJavaAtLeast17) 1445
             else if (isJavaAtLeast9) 626
             else 578
 

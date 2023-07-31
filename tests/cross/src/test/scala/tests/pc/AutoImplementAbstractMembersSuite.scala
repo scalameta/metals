@@ -1201,6 +1201,76 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "end-marker".tag(IgnoreScala2),
+    """|package a
+       |
+       |object A {
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |
+       |  class <<Concrete>> extends Base:
+       |
+       |  end Concrete
+       |
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |
+       |  class Concrete extends Base:
+       |
+       |    override def foo(x: Int): Int = ???
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |
+       |  end Concrete
+       |
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "end-marker2".tag(IgnoreScala2),
+    """|package a
+       |
+       |object A {
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |
+       |  class <<Concrete>>(x: Int, y: String) extends Base:
+       |
+       |  end Concrete
+       |
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |
+       |  class Concrete(x: Int, y: String) extends Base:
+       |
+       |    override def foo(x: Int): Int = ???
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |
+       |  end Concrete
+       |
+       |}
+       |""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

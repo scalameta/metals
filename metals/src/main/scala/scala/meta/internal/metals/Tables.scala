@@ -71,6 +71,9 @@ final class Tables(
     }
   }
 
+  def databaseExists(): Boolean =
+    databasePath.exists
+
   private def connection: Connection = connect()
 
   // The try/catch dodge-ball court in these methods is not glamorous, I'm sure it can be refactored for more

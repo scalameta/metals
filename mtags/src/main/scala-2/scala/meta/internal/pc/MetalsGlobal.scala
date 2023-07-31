@@ -231,8 +231,17 @@ class MetalsGlobal(
     val documentation = search.documentation(
       sym,
       new ParentSymbols {
-        def parents(): util.List[String] =
-          symbol.overrides.map(toSemanticdbSymbol).asJava
+        def parents(): util.List[String] = {
+          val parentSymbols =
+            if (symbol.name == nme.apply && symbol.safeOwner.isModuleClass)
+              List(
+                symbol.safeOwner,
+                symbol.safeOwner.companion
+              ).filter(_ != NoSymbol) ++ symbol.overrides
+            else symbol.overrides
+
+          parentSymbols.map(toSemanticdbSymbol).asJava
+        }
       }
     )
 
@@ -699,7 +708,7 @@ class MetalsGlobal(
     /**
      * Returns the position of the name/identifier of this definition.
      */
-    def namePos: Position = {
+    def namePosition: Position = {
       val name =
         if (defn.symbol.isPackageObject) defn.symbol.enclosingPackageClass.name
         else defn.name
@@ -714,7 +723,7 @@ class MetalsGlobal(
     /**
      * Returns the position of the name/identifier of this select.
      */
-    def namePos: Position = {
+    def namePosition: Position = {
       val start = sel.pos.point
       val end = start + sel.name.getterName.decoded.trim.length()
       Position.range(sel.pos.source, start, start, end)

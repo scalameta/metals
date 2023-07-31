@@ -24,7 +24,7 @@ object V {
   val genyVersion = "1.0.0"
   val gradleBloop = "1.6.1"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.8.22"
+  val javaSemanticdb = "0.8.26"
   val jsoup = "1.16.1"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.20.1"
@@ -35,11 +35,11 @@ object V {
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
-  val scalaCli = "1.0.1"
+  val scalaCli = "1.0.2"
   val scalafix = "0.11.0"
-  val scalafmt = "3.7.7"
+  val scalafmt = "3.7.11"
   val scalameta = "4.8.3"
-  val scribe = "3.11.7"
+  val scribe = "3.11.8"
   val semanticdb = scalameta
   val qdox = "2.0.3"
 

@@ -51,6 +51,44 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |}
            |""".stripMargin
       )
+      // minimal style for show-inferred-type : don't show types for match case
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions-and-classes": true,
+          |  "show-inferred-type": minimal
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff( // foo[t]() to foo()
+        client.workspaceDecorations,
+        """|import scala.concurrent.Future
+           |case class Location(city: String)
+           |object Main{
+           |  def hello()(implicit name: String, from: Location): Unit = {
+           |    println(s"Hello $name from ${from.city}")
+           |  }
+           |  implicit val andy : String = "Andy"
+           |
+           |  def greeting(): Unit = {
+           |    implicit val boston: Location = Location("Boston")
+           |    hello()(andy, boston)
+           |    hello()(andy, boston);    hello()(andy, boston)
+           |  }
+           |  
+           |  val ordered: String = augmentString("acb").sorted(Char)
+           |  augmentString("foo").map(c: Char => c.toInt)
+           |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+           |  Future{
+           |    println("")
+           |  }(ec)
+           |}
+           |""".stripMargin,
+      )
+      // full style for show-inferred-type
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": true,

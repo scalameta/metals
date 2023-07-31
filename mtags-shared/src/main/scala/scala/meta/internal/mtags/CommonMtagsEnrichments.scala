@@ -19,8 +19,10 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
+import scala.meta.internal.pc.RangeOffset
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
+import scala.meta.pc.VirtualFileParams
 
 import com.google.gson.Gson
 import com.google.gson.JsonElement
@@ -337,5 +339,36 @@ trait CommonMtagsEnrichments {
         override def next(): A = q.poll()
       }
 
+  }
+
+  implicit class XtensionVirtualFileParams(params: VirtualFileParams) {
+    def printed(marker: String = "@@"): String = {
+      def textWithPosMarker(markerPos: Int, text: String) =
+        if (markerPos < 0) marker ++ text
+        else if (markerPos >= text.length()) text ++ marker
+        else {
+          val (head, tail) = text.splitAt(markerPos)
+          head ++ marker ++ tail
+        }
+      params match {
+        case r: RangeOffset =>
+          val withStartMarker = textWithPosMarker(r.start, r.text())
+          val withMarkers =
+            textWithPosMarker(r.end + marker.length(), withStartMarker)
+          s"""|range: ${r.start} - ${r.end}
+              |uri: ${r.uri()}
+              |text:
+              |$withMarkers""".stripMargin
+        case o: OffsetParams =>
+          s"""|offset: ${o.offset()}
+              |uri: ${o.uri()}
+              |text:
+              |${textWithPosMarker(o.offset(), o.text())}""".stripMargin
+        case v =>
+          s"""|uri: ${v.uri()}
+              |text:
+              |${v.text()}""".stripMargin
+      }
+    }
   }
 }

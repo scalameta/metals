@@ -9,6 +9,7 @@ import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Messages
@@ -73,6 +74,7 @@ class BspConnector(
   def connect(
       workspace: AbsolutePath,
       userConfiguration: UserConfiguration,
+      shellRunner: ShellRunner,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     def connect(
         workspace: AbsolutePath
@@ -90,6 +92,8 @@ class BspConnector(
           val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(workspace)
           val connectionF =
             for {
+              _ <- SbtBuildTool(workspace, () => userConfiguration)
+                .ensureCorrectJavaVersion(shellRunner, workspace, client)
               connection <- bspServers.newServer(workspace, details)
               _ <-
                 if (shouldReload) connection.workspaceReload()

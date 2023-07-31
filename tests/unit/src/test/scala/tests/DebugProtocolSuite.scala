@@ -286,7 +286,7 @@ class DebugProtocolSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
            |/a/src/main/scala/a/Foo.scala
@@ -427,7 +427,7 @@ class DebugProtocolSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
            |/a/src/main/scala/a/Foo.scala
@@ -458,7 +458,7 @@ class DebugProtocolSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
            |/a/src/main/scala/a/Foo.scala

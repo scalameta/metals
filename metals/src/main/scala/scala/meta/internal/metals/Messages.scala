@@ -888,6 +888,26 @@ object Messages {
     }
   }
 
+  object ResetWorkspace {
+    val message: String =
+      "Are you sure you want to clear all caches and compiled artifacts and reset workspace?"
+    val resetWorkspace: String = "Reset workspace"
+    val cancel: String = "Cancel"
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams(
+        List(
+          resetWorkspace,
+          cancel,
+        )
+          .map(new MessageActionItem(_))
+          .asJava
+      )
+      params.setMessage(message)
+      params.setType(MessageType.Warning)
+      params
+    }
+  }
+
   object NewScalaProject {
     def selectTheTemplate: String = "Select the template to use"
 
@@ -959,6 +979,29 @@ object Messages {
           inCurrent,
           newWindow,
           dismiss,
+        ).asJava
+      )
+      params
+    }
+  }
+
+  object SbtServerJavaHomeUpdate {
+    val restart: MessageActionItem =
+      new MessageActionItem("Restart sbt server")
+
+    val notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Java home has been updated, do you want to restart the sbt BSP server? (the change will only be picked up after the restart)"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          restart,
+          notNow,
         ).asJava
       )
       params

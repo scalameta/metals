@@ -41,7 +41,7 @@ case class UserConfiguration(
     bloopJvmProperties: Option[List[String]] = None,
     ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
-    showInferredType: Boolean = false,
+    showInferredType: Option[String] = None,
     showImplicitArguments: Boolean = false,
     showImplicitConversionsAndClasses: Boolean = false,
     remoteLanguageServer: Option[String] = None,
@@ -484,7 +484,7 @@ object UserConfiguration {
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
     val showInferredType =
-      getBooleanKey("show-inferred-type").getOrElse(false)
+      getStringKey("show-inferred-type")
     val showImplicitArguments =
       getBooleanKey("show-implicit-arguments").getOrElse(false)
     val showImplicitConversionsAndClasses =

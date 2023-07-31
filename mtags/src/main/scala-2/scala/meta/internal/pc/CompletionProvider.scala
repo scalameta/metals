@@ -297,10 +297,13 @@ class CompletionProvider(
           head match {
             case o: OverrideDefMember =>
               o.label
+            case named: NamedArgMember =>
+              s"named-${semanticdbSymbol(named.sym)}"
             case _ =>
               semanticdbSymbol(head.sym)
           }
         }
+
       def isIgnoredWorkspace: Boolean =
         head.isInstanceOf[WorkspaceMember] &&
           (isIgnored(head.sym) || isIgnored(head.sym.companion))
