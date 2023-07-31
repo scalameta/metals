@@ -272,7 +272,16 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|apply[T1, T2, T3](_1: T1, _2: T2, _3: T3): (T1, T2, T3)
+        """|A tuple of 3 elements; the canonical representation of a [scala.Product3](scala.Product3).
+           |
+           |
+           |**Constructor:** Create a new tuple with 3 elements. Note that it is more idiomatic to create a Tuple3 via `(t1, t2, t3)`
+           |
+           |**Parameters**
+           |- `_1`: Element 1 of this Tuple3
+           |- `_2`: Element 2 of this Tuple3
+           |- `_3`: Element 3 of this Tuple3
+           |apply[T1, T2, T3](_1: T1, _2: T2, _3: T3): (T1, T2, T3)
            |                                  ^^^^^^
            |""".stripMargin,
       ">=3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY" ->

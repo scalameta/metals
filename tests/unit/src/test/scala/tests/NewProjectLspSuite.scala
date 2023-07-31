@@ -40,7 +40,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         |    name := "scalatest-example"
         |  )
         |
-        |libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.4" % Test
+        |libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.16" % Test
         |
         |
         |/$name/project/build.properties
