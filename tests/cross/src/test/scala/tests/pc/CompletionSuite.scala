@@ -908,7 +908,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|ListBuffer[T] - scala.collection.mutable
+        """|ListBuffer[A] - scala.collection.mutable
            |ListBuffer - scala.collection.mutable
            |""".stripMargin
     ),
@@ -924,7 +924,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|ListBuffer[T] - scala.collection.mutable
+        """|ListBuffer[A] - scala.collection.mutable
            |ListBuffer - scala.collection.mutable
            |""".stripMargin
     ),
@@ -1636,6 +1636,57 @@ class CompletionSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "abcCURSORde: Unit",
+  )
+
+  check(
+    "type-with-params",
+    s"""|object O {
+        | type TTT[A <: Int] = List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[A] = O.TTT",
+    compat = Map(
+      "3" -> "TTT[A <: Int] = List[A]"
+    ),
+  )
+
+  check(
+    "type-lambda".tag(IgnoreScala2),
+    s"""|object O {
+        | type TTT = [A <: Int] =>> List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[A <: Int] = List[A]",
+  )
+
+  check(
+    "type-lambda2".tag(IgnoreScala2),
+    s"""|object O {
+        | type TTT[K <: Int] = [V] =>> Map[K, V]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[K <: Int] = [V] =>> Map[K, V]",
+  )
+
+  check(
+    "class-with-params",
+    s"""|object O {
+        | class AClass[A <: Int]
+        | object AClass
+        | val v: ACla@@
+        |}
+        |""".stripMargin,
+    "AClass `class-with-params`.O",
+    compat = Map(
+      "3" ->
+        """|AClass[A <: Int] class-with-params.O
+           |AClass class-with-params.O
+           |AbstractTypeClassManifest - scala.reflect.ClassManifestFactory
+           |""".stripMargin
+    ),
   )
 
 }

@@ -140,6 +140,8 @@ class MetalsPrinter(
     else if sym.is(Flags.Method) then
       defaultMethodSignature(sym, info, onlyMethodParams = true)
     else tpe(info)
+    end if
+  end completionSymbol
 
   /**
    * Compute method signature for the given (method) symbol.
