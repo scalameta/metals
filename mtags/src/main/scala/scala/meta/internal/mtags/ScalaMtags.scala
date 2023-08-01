@@ -252,7 +252,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
           continue()
         case t: Defn.Enum =>
-          tpe(t.name, Kind.CLASS, 0)
+          tpe(t.name, Kind.CLASS, Property.ENUM.value)
           enterTypeParameters(t.tparams)
           enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
           continue()
@@ -261,7 +261,15 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
             withOwner(ownerCompanion)(term(c, Kind.OBJECT, 0))
           )
         case t: Defn.EnumCase =>
-          withOwner(ownerCompanion)(term(t.name, Kind.OBJECT, 0))
+          t.ctor match {
+            case Ctor.Primary(_, _, _ :: _) =>
+              withOwner(ownerCompanion) {
+                tpe(t.name, Kind.CLASS, 0)
+                enterTypeParameters(t.tparams)
+                enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
+              }
+            case _ => withOwner(ownerCompanion)(term(t.name, Kind.OBJECT, 0))
+          }
         case t: Defn.Trait =>
           tpe(t.name, Kind.TRAIT, 0); continue()
           enterTypeParameters(t.tparams)
