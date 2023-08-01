@@ -201,9 +201,7 @@ final class SyntheticsDecorationProvider(
   }
 
   private def areSyntheticsEnabled: Boolean = {
-    val showInferredType = !userConfig().showInferredType.contains(
-      "false"
-    ) && userConfig().showInferredType.nonEmpty
+    val showInferredType = !userConfig().showInferredType.showAll
     userConfig().showImplicitArguments || showInferredType || userConfig().showImplicitConversionsAndClasses
   }
 
@@ -448,10 +446,7 @@ final class SyntheticsDecorationProvider(
       } yield decorationOptions(lspRange, decoration)
 
       val typDecorations =
-        if (
-          userConfig().showInferredType.contains("true") |
-            userConfig().showInferredType.contains("minimal")
-        )
+        if (userConfig().showInferredType.isNotDisabled)
           typeDecorations(path, textDocument, decorationPrinter)
         else Nil
       decorations ++ typDecorations
@@ -495,7 +490,7 @@ final class SyntheticsDecorationProvider(
           if (param.decltpe.isEmpty) List(param.name.pos.toSemanticdb) else Nil
         case cs: m.Case =>
           // if the case is too long then it'll be too messy
-          if (userConfig().showInferredType.contains("minimal"))
+          if (userConfig().showInferredType.showCases)
             visit(cs.body) // don't show type hint for cases inside match
           else explorePatterns(List(cs.pat)) ++ visit(cs.body)
         case vl: m.Defn.Val =>

@@ -41,7 +41,7 @@ case class UserConfiguration(
     bloopJvmProperties: Option[List[String]] = None,
     ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
-    showInferredType: Option[String] = None,
+    showInferredType: ShowInferredType = ShowInferredType.Off,
     showImplicitArguments: Boolean = false,
     showImplicitConversionsAndClasses: Boolean = false,
     remoteLanguageServer: Option[String] = None,
@@ -375,21 +375,26 @@ object UserConfiguration {
         },
       )
 
-    def getBooleanKey(key: String): Option[Boolean] =
+    def getBooleanKey(
+        key: String,
+        addErrors: Boolean = false,
+    ): Option[Boolean] =
       getKey(
         key,
         json,
         { value =>
-          Try(value.getAsBoolean())
-            .fold(
-              _ => {
+          Try(value.getAsBoolean()) match {
+            case Failure(_) =>
+              if (addErrors) {
                 errors += s"json error: key '$key' should have value of type boolean but obtained $value"
-                None
-              },
-              Some(_),
-            )
+              }
+              None
+            case Success(value) =>
+              Some(value)
+          }
         },
       )
+
     def getIntKey(key: String): Option[Int] =
       getStringKey(key).flatMap { value =>
         Try(value.toInt) match {
@@ -484,7 +489,15 @@ object UserConfiguration {
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
     val showInferredType =
-      getStringKey("show-inferred-type")
+      // boolean support is for old configuration
+      getBooleanKey("show-inferred-type", addErrors = false)
+        .map(ShowInferredType.fromBoolean)
+        .orElse(
+          getStringKey("show-inferred-type")
+            .flatMap(ShowInferredType.fromString)
+        )
+        .getOrElse(ShowInferredType.Off)
+
     val showImplicitArguments =
       getBooleanKey("show-implicit-arguments").getOrElse(false)
     val showImplicitConversionsAndClasses =
@@ -512,6 +525,7 @@ object UserConfiguration {
           TestUserInterfaceKind.CodeLenses
       }
     }
+
     val javaFormatConfig =
       getSubKey("java-format").flatMap(subKey =>
         getStringKeyOnObj("eclipse-config-path", subKey).map(f =>
@@ -573,4 +587,30 @@ sealed trait TestUserInterfaceKind
 object TestUserInterfaceKind {
   object CodeLenses extends TestUserInterfaceKind
   object TestExplorer extends TestUserInterfaceKind
+}
+
+sealed trait ShowInferredType {
+  def showAll: Boolean = this == ShowInferredType.On
+  def isDisabled: Boolean = this == ShowInferredType.Off
+  def showCases: Boolean = this == ShowInferredType.Minimal
+  def isNotDisabled: Boolean = !isDisabled
+}
+
+object ShowInferredType {
+  case object Off extends ShowInferredType
+  case object Minimal extends ShowInferredType
+  case object On extends ShowInferredType
+
+  def fromString(value: String): Option[ShowInferredType] = {
+    value match {
+      case "off" | "false" => Some(Off)
+      case "minimal" => Some(Minimal)
+      case "on" | "true" => Some(On)
+      case _ => None
+    }
+  }
+
+  def fromBoolean(value: Boolean): ShowInferredType = {
+    if (value) On else Off
+  }
 }
