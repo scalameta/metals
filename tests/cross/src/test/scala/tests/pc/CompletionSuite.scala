@@ -778,7 +778,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|incrementThisType(): A.this.type (with underlying type singleton.A)
        |""".stripMargin,
     compat = Map(
-      scala3PresentationCompiler -> "incrementThisType(): A.this.type",
+      scala3PresentationCompilerVersion -> "incrementThisType(): A.this.type",
       "3" -> "incrementThisType(): (A.this : singleton.A)",
     ),
   )
@@ -1281,7 +1281,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |implicitConversions scala.languageFeature
            |postfixOps scala.languageFeature
            |""".stripMargin,
-      scala3PresentationCompiler ->
+      scala3PresentationCompilerVersion ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
            |experimental scala.languageFeature

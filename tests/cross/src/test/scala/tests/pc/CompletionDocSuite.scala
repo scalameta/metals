@@ -29,7 +29,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |join(delimiter: CharSequence, elements: Iterable[_ <: CharSequence]): String
        |""".stripMargin,
     compat = Map(
-      scala3PresentationCompiler ->
+      scala3PresentationCompilerVersion ->
         """|join(delimiter: CharSequence, elements: CharSequence*): String
            |join(delimiter: CharSequence, elements: java.lang.Iterable[? <: CharSequence]): String
            |""".stripMargin,
@@ -572,7 +572,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
                    | section on `StringBuilders` for more information.
                    |StringBuilder scala.collection.mutable
                    |""".stripMargin,
-      scala3PresentationCompiler ->
+      scala3PresentationCompilerVersion ->
         s"""$scala213Docs
            |StringBuilder scala.collection.mutable
            |StringBuilder(): StringBuilder

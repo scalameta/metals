@@ -19,7 +19,7 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
    */
   val FlakyWindows = new Tag("FlakyWindows")
 
-  val scala3PresentationCompiler: String =
+  val scala3PresentationCompilerVersion: String =
     s">=${BuildInfoVersions.firstScala3PCVersion}"
 
   Testing.enable()

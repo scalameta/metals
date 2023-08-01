@@ -660,7 +660,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     defaultRefinedTypes,
     compat = Map(
-      scala3PresentationCompiler -> defaultRefinedTypes,
+      scala3PresentationCompilerVersion -> defaultRefinedTypes,
       "3" ->
         """|object O{
            |  trait Foo {
@@ -696,7 +696,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     defaultRefinedTypes2,
     compat = Map(
-      scala3PresentationCompiler -> defaultRefinedTypes2,
+      scala3PresentationCompilerVersion -> defaultRefinedTypes2,
       "3" ->
         """|object O{
            |  trait Foo {
@@ -731,7 +731,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     defaultRefinedTypes3,
     compat = Map(
-      scala3PresentationCompiler -> defaultRefinedTypes3,
+      scala3PresentationCompilerVersion -> defaultRefinedTypes3,
       "3" ->
         """|object O{
            |  trait Foo {
@@ -772,7 +772,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     defaultRefinedTypes4,
     compat = Map(
-      scala3PresentationCompiler -> defaultRefinedTypes4,
+      scala3PresentationCompilerVersion -> defaultRefinedTypes4,
       "3" ->
         """|trait Foo extends Selectable {
            |  type T

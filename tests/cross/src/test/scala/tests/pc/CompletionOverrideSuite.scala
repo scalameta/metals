@@ -283,7 +283,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      scala3PresentationCompiler ->
+      scala3PresentationCompilerVersion ->
         """|package a.b
            |abstract class Conflict {
            |  def self: Conflict
@@ -382,7 +382,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     "    def foo@@",
     """    def foo: scala.collection.mutable.Set[Int] = ${0:???}""",
     compat = Map(
-      scala3PresentationCompiler ->
+      scala3PresentationCompilerVersion ->
         """    def foo: scala.collection.mutable.Set[Int] = ${0:???}""",
       "3" ->
         """    def foo: collection.mutable.Set[Int] = ${0:???}""",
@@ -467,7 +467,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      scala3PresentationCompiler ->
+      scala3PresentationCompilerVersion ->
         """|abstract class Mutable {
            |  def foo: java.lang.StringBuilder
            |}
