@@ -418,9 +418,11 @@ class ScalaToplevelMtags(
             expectTemplate
           )
         case CASE =>
-          val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           acceptTrivia()
-          emitEnumCases(region)
+          val shouldCreateClassTemplate = emitEnumCases(region)
+          val nextExpectTemplate =
+            if (shouldCreateClassTemplate) newExpectClassTemplate
+            else expectTemplate.filter(!_.isPackageBody)
           loop(
             indent,
             isAfterNewline = false,
@@ -562,26 +564,46 @@ class ScalaToplevelMtags(
   }
 
   @tailrec
-  private def emitEnumCases(region: Region): Unit = {
+  private def emitEnumCases(region: Region): Boolean = {
+    def ownerCompanionObject =
+      if (currentOwner.endsWith("#"))
+        s"${currentOwner.stripSuffix("#")}."
+      else currentOwner
     scanner.curr.token match {
       case IDENTIFIER =>
         val pos = newPosition
         val name = scanner.curr.name
-        term(
-          name,
-          pos,
-          Kind.METHOD,
-          SymbolInformation.Property.VAL.value
-        )
-        resetRegion(region)
+        def emitEnumCaseObject() = {
+          withOwner(ownerCompanionObject) {
+            term(
+              name,
+              pos,
+              Kind.METHOD,
+              SymbolInformation.Property.VAL.value
+            )
+          }
+        }
         acceptTrivia()
         scanner.curr.token match {
           case COMMA =>
+            emitEnumCaseObject()
+            resetRegion(region)
             acceptTrivia()
             emitEnumCases(region)
+          case LPAREN | LBRACKET =>
+            currentOwner = ownerCompanionObject
+            tpe(
+              name,
+              pos,
+              Kind.CLASS,
+              SymbolInformation.Property.VAL.value
+            )
+            true
           case _ =>
+            emitEnumCaseObject()
+            false
         }
-      case _ =>
+      case _ => false
     }
   }
 
