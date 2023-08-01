@@ -15,55 +15,75 @@ trait ArgCompletions { this: MetalsGlobal =>
       pos: Position,
       text: String,
       completions: CompletionResult
-  ) extends CompletionPosition {
+  ) extends CompletionPosition { self =>
     val editRange: l.Range =
       pos.withStart(ident.pos.start).withEnd(pos.start).toLsp
     val funPos = apply.fun.pos
     val method: Tree = typedTreeAt(funPos)
     val methodSym = method.symbol
-    lazy val baseParams: List[Symbol] =
-      if (methodSym.isModule)
-        getParamsFromObject()
-      else if (methodSym.isClass) methodSym.constrParamAccessors
+    lazy val methodsParams: List[MethodParams] = {
+      if (methodSym.isModule) getParamsFromObject(methodSym)
+      else if (
+        methodSym.isMethod && methodSym.name == nme.apply && methodSym.owner.isModuleClass
+      ) getParamsFromObject(methodSym.owner)
+      else if (methodSym.isClass)
+        List(MethodParams(methodSym.constrParamAccessors))
       else if (method.tpe == null)
         method match {
           case Ident(name) =>
             metalsScopeMembers(funPos)
-              .collectFirst {
+              .flatMap {
                 case m: Member
-                    if m.symNameDropLocal == name && m.sym != NoSymbol && m.sym.paramss.nonEmpty =>
-                  m.sym.paramss.head
+                    if m.symNameDropLocal == name && m.sym != NoSymbol =>
+                  for {
+                    params <- m.sym.paramss.headOption
+                    if checkIfArgsMatch(params)
+                  } yield MethodParams(params)
+                case _ => None
               }
-              .getOrElse(Nil)
           case _ => Nil
         }
       else {
-        method.tpe.paramss.headOption
-          .getOrElse(methodSym.paramss.flatten)
+        method.tpe match {
+          case OverloadedType(_, alts) =>
+            alts.flatMap(_.info.paramss.headOption).map(MethodParams(_))
+          case _ =>
+            val params =
+              method.tpe.paramss.headOption.getOrElse(methodSym.paramss.flatten)
+            List(MethodParams(params))
+        }
       }
-
-    lazy val isNamed: Set[Name] = apply.args.iterator
-      .filterNot(_ == ident)
-      .zip(baseParams.iterator)
-      .map {
-        case (AssignOrNamedArg(Ident(name), _), _) =>
-          name
-        case (_, param) =>
-          param.name
-      }
-      .toSet
-    val prefix: String = ident.name.toString.stripSuffix(CURSOR)
-    lazy val allParams: List[Symbol] = {
-      baseParams.iterator.filterNot { param =>
-        isNamed(param.name) ||
-        param.isSynthetic
-      }.toList
     }
+
+    def checkIfArgsMatch(possibleMatch: List[Symbol]): Boolean = {
+      apply.args.length <= possibleMatch.length &&
+      !apply.args.zipWithIndex.exists {
+        // the identifier we want to generate completions for
+        //            v
+        // m(arg1 = 3, wri@@)
+        case (Ident(name), _) if name.decodedName.endsWith(CURSOR) => false
+        case (AssignOrNamedArg(Ident(name), rhs), _) =>
+          !possibleMatch.exists { param =>
+            name.decodedName == param.name.decodedName &&
+            (rhs.tpe == null || rhs.tpe <:< param.tpe)
+          }
+        case (rhs, i) =>
+          rhs.tpe != null && !(rhs.tpe <:< possibleMatch(i).tpe)
+      }
+    }
+
+    val prefix: String = ident.name.toString.stripSuffix(CURSOR)
+    lazy val allParams: List[Symbol] = methodsParams.flatMap(_.allParams)
     lazy val params: List[Symbol] =
-      allParams.filter(param => param.name.startsWith(prefix))
+      allParams
+        .filter(param => param.name.startsWith(prefix))
+        .foldLeft(List.empty[Symbol])((acc, curr) =>
+          if (acc.exists(el => el.name == curr.name && el.tpe == curr.tpe)) acc
+          else curr :: acc
+        )
+        .reverse
     lazy val isParamName: Set[String] = params.iterator
       .map(_.name)
-      .filterNot(isNamed)
       .map(_.toString().trim())
       .toSet
 
@@ -129,7 +149,7 @@ trait ArgCompletions { this: MetalsGlobal =>
       val isExplicitlyCalled = suffix.startsWith(prefix)
       val hasParamsToFill = allParams.count(!_.hasDefault) > 1
       if (
-        (shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets
+        methodsParams.length == 1 && (shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets
       ) {
         val editText = allParams.zipWithIndex
           .collect {
@@ -170,22 +190,41 @@ trait ArgCompletions { this: MetalsGlobal =>
       }
     }
 
-    private def getParamsFromObject(): List[Symbol] = {
-      methodSym.info.members
-        .collect {
-          case m
-              if m.decodedName == "apply" &&
-                m.paramss.flatten.length >= apply.args.length =>
-            m.paramss.flatten
-        }
-        .lastOption // for case classes, apply in companion object is after the default one
-        .getOrElse(Nil)
+    private def getParamsFromObject(objectSym: Symbol): List[MethodParams] = {
+      objectSym.info.members.flatMap {
+        case m if m.name == nme.apply =>
+          for {
+            params <- m.paramss.headOption
+            if (checkIfArgsMatch(params))
+          } yield MethodParams(params)
+        case _ => None
+      }.toList
     }
 
     override def contribute: List[Member] = {
-      params.map(param =>
+      params.distinct.map(param =>
         new NamedArgMember(param)
       ) ::: findPossibleDefaults() ::: fillAllFields()
+    }
+
+    case class MethodParams(params: List[Symbol], isNamed: Set[Name]) {
+      def allParams: List[Symbol] =
+        params.filterNot(param => isNamed(param.name) || param.isSynthetic)
+    }
+
+    object MethodParams {
+      def apply(baseParams: List[Symbol]): MethodParams = {
+        val isNamed =
+          self.apply.args.iterator
+            .filterNot(_ == ident)
+            .zip(baseParams.iterator)
+            .map {
+              case (AssignOrNamedArg(Ident(name), _), _) => name
+              case (_, param) => param.name
+            }
+            .toSet
+        MethodParams(baseParams, isNamed)
+      }
     }
   }
 }
