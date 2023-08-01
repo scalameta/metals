@@ -165,6 +165,11 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
 	/**
+	 * 
+	 */
+	public abstract CompletableFuture<List<SyntheticDecoration>> syntheticDecorations(VirtualFileParams params);
+
+	/**
 	 * File was closed.
 	 */
 	public abstract void didClose(URI uri);

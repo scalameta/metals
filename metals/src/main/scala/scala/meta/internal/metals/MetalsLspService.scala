@@ -35,8 +35,6 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceReload
-import scala.meta.internal.decorations.InlayHintsProvider
-import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -538,40 +536,11 @@ class MetalsLspService(
     buildTargets,
   )
 
-  private val syntheticsDecorator: SyntheticsDecorationProvider =
-    new SyntheticsDecorationProvider(
-      folder,
-      semanticdbs,
-      buffers,
-      languageClient,
-      fingerprints,
-      charset,
-      focusedDocument,
-      clientConfig,
-      userConfig,
-      trees,
-    )
-
-  private val inlayHintsProvider =
-    new InlayHintsProvider(
-      folder,
-      semanticdbs,
-      buffers,
-      languageClient,
-      fingerprints,
-      charset,
-      focusedDocument,
-      clientConfig,
-      userConfig,
-      trees,
-    )
 
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
-      syntheticsDecorator,
-      inlayHintsProvider,
       testProvider,
     ),
     buildTargets,
@@ -951,8 +920,7 @@ class MetalsLspService(
         userConfig().showInferredType != old.showInferredType
       ) {
         buildServerPromise.future.flatMap { _ =>
-          syntheticsDecorator.refresh()
-          inlayHintsProvider.refresh()
+          publishSynthetics()
         }
       } else {
         Future.successful(())
@@ -1021,19 +989,20 @@ class MetalsLspService(
      * sources and standalone files, but wait for build tool information, so
      * that we don't try to generate it for project files
      */
-    val interactive = buildServerPromise.future.map { _ =>
-      interactiveSemanticdbs.textDocument(path)
-    }
-    // We need both parser and semanticdb for synthetic decorations
-    val publishSynthetics = for {
-      _ <- Future.sequence(List(parseTrees(path), interactive))
-      _ <- Future.sequence(
-        List(
-          syntheticsDecorator.publishSynthetics(path),
-          testProvider.didOpen(path),
-        )
-      )
-    } yield ()
+    // val interactive = buildServerPromise.future.map { _ =>
+    //   interactiveSemanticdbs.textDocument(path)
+    // }
+
+    // TODO: Publish only if not using inlay hints
+    // val publishSynthetics = for {
+    //   _ <- Future.sequence(List(parseTrees(path), interactive))
+    //   _ <- Future.sequence(
+    //     List(
+    //       syntheticsDecorator.publishSynthetics(path),
+    //       testProvider.didOpen(path),
+    //     )
+    //   )
+    // } yield ()
 
     if (path.isDependencySource(folder)) {
       CancelTokens { _ =>
@@ -1055,7 +1024,7 @@ class MetalsLspService(
             .sequence(
               List(
                 compileAndLoad,
-                publishSynthetics,
+                publishSynthetics(),
               )
             )
             .ignoreValue
@@ -1063,6 +1032,13 @@ class MetalsLspService(
         maybeImportScript(path).getOrElse(load())
       }.asJava
     }
+  }
+
+  def publishSynthetics(): Future[Unit] = {
+    if (!clientConfig.isInlayHintsEnabled()) Future.successful(())
+    else 
+      //TODO: Publish via DecorationProvider
+      Future.successful(())
   }
 
   def didFocus(
@@ -1077,12 +1053,12 @@ class MetalsLspService(
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
-      syntheticsDecorator.publishSynthetics(path)
+      publishSynthetics()
       CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
     } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
-      syntheticsDecorator.publishSynthetics(path)
+      publishSynthetics()
       worksheetProvider.onDidFocus(path)
       buildTargets.inverseSources(path) match {
         case Some(target) =>
@@ -1133,7 +1109,7 @@ class MetalsLspService(
         diagnostics.didChange(path)
         parseTrees(path)
           .flatMap { _ =>
-            syntheticsDecorator.publishSynthetics(path)
+            publishSynthetics()
           }
           .ignoreValue
           .asJava
@@ -1326,9 +1302,11 @@ class MetalsLspService(
     CancelTokens.future { token =>
       compilers
         .hover(params, token)
-        .map { hover =>
-          syntheticsDecorator.addSyntheticsHover(params, hover.map(_.toLsp()))
-        }
+        // TODO: Add synthtetic hover for decoration Provider
+        // .map { hover =>
+        //  syntheticsDecorator.addSyntheticsHover(params, hover.map(_.toLsp()))
+        // }
+        .map(_.map(_.toLsp()))
         .map(
           _.orElse {
             val path = params.textDocument.getUri.toAbsolutePath
@@ -1388,8 +1366,9 @@ class MetalsLspService(
   def inlayHints(
       params: InlayHintParams
   ): CompletableFuture[util.List[InlayHint]] = {
-    CancelTokens.future { _ =>
-      inlayHintsProvider.inlayHints(params).map(_.asJava)
+    CancelTokens.future { token =>
+      // inlayHintsProvider.inlayHints(params).map(_.asJava)
+      compilers.inlayHints(params, token)
       // Future{List.empty[InlayHint].asJava}
     }
   }

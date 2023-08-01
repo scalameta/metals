@@ -55,6 +55,10 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
+import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.WorkDoneProgressParams
+import scala.meta.pc.VirtualFileParams
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -533,6 +537,27 @@ class Compilers(
 
   }
 
+  def inlayHints(
+      params: InlayHintParams,
+      token: CancelToken,
+  ): Future[ju.List[InlayHint]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      // val rangeParams =
+      //   CompilerRangeParamsUtils.fromPos(pos, token)
+      val path = params.getTextDocument().getUri().toAbsolutePath
+      val vFile =
+        CompilerVirtualFileParams(path.toNIO.toUri(), pos.text, token)
+      pc.syntheticDecorations(vFile).asScala.map { decorations =>
+        new SyntheticDecorationsProvider(
+          vFile,
+          trees,
+          userConfig,
+        ).provide(decorations.asScala.toList).asJava
+      }
+
+    }.getOrElse(Future.successful(Nil.asJava))
+  }
+
   def completions(
       params: CompletionParams,
       token: CancelToken,
@@ -963,6 +988,20 @@ class Compilers(
   }
 
   private def withPCAndAdjustLsp[T](
+      params: InlayHintParams
+  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    loadCompiler(path).flatMap { compiler =>
+      val (input, pos, adjust) =
+        sourceAdjustments(
+          params,
+          compiler.scalaVersion(),
+        )
+      pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
+    }
+  }
+
+  private def withPCAndAdjustLsp[T](
       uri: String,
       range: LspRange,
       extractionPos: LspPosition,
@@ -1040,6 +1079,20 @@ class Compilers(
     )
     val start = params.range.getStart()
     val end = params.range.getEnd()
+    val newRange = new LspRange(adjustRequest(start), adjustRequest(end))
+    (input, newRange, adjustResponse)
+  }
+
+  private def sourceAdjustments(
+      params: InlayHintParams,
+      scalaVersion: String,
+  ): (Input.VirtualFile, LspRange, AdjustLspData) = {
+    val (input, adjustRequest, adjustResponse) = sourceAdjustments(
+      params.getTextDocument.getUri(),
+      scalaVersion,
+    )
+    val start = params.getRange.getStart()
+    val end = params.getRange.getEnd()
     val newRange = new LspRange(adjustRequest(start), adjustRequest(end))
     (input, newRange, adjustResponse)
   }

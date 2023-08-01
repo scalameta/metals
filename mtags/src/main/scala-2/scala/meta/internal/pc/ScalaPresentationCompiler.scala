@@ -47,6 +47,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import scala.meta.pc.SyntheticDecoration
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -152,6 +153,21 @@ case class ScalaPresentationCompiler(
       ).provide().asJava
     }
   }
+
+  override def syntheticDecorations(
+        params: VirtualFileParams
+    ): CompletableFuture[ju.List[SyntheticDecoration]] = {
+      val empty: ju.List[SyntheticDecoration] = new ju.ArrayList[SyntheticDecoration]()
+      compilerAccess.withInterruptableCompiler(Some(params))(
+        empty,
+        params.token
+      ) { pc =>
+        new PcSyntheticDecorationsProvider(
+          pc.compiler(),
+          params
+        ).provide().asJava
+      }
+    }
 
   override def complete(
       params: OffsetParams

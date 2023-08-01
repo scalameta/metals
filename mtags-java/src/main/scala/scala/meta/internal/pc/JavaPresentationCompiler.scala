@@ -32,6 +32,7 @@ import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import scala.meta.pc.SyntheticDecoration
 
 case class JavaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -130,6 +131,11 @@ case class JavaPresentationCompiler(
       argIndices: util.List[Integer]
   ): CompletableFuture[util.List[TextEdit]] =
     CompletableFuture.completedFuture(Nil.asJava)
+
+  override def syntheticDecorations(
+        params: VirtualFileParams,
+    ): CompletableFuture[util.List[SyntheticDecoration]] =
+      CompletableFuture.completedFuture(Nil.asJava)
 
   override def didChange(
       params: VirtualFileParams

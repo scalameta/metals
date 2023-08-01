@@ -62,9 +62,6 @@ final class PcSemanticTokensProvider(
         parent: Option[Tree]
     )(tree: Tree, pos: SourcePosition, symbol: Option[Symbol]): Option[Node] =
       val sym = symbol.fold(tree.symbol)(identity)
-      if (sym.is(Flags.Synthetic)) pprint.log((sym, pos, sym.owner))
-      if (sym.is(Flags.Given) || sym.is(Flags.Implicit)) pprint.log((sym, pos))
-      if (sym.is(Flags.Given) && sym.is(Flags.Method))pprint.log((sym, pos))
       if !pos.exists || sym == null || sym == NoSymbol then None
       else
         Some(
