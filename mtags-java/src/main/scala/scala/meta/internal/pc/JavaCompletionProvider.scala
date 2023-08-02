@@ -101,6 +101,7 @@ class JavaCompletionProvider(
       case dt: DeclaredType => completeDeclaredType(task, dt)
       case _: ArrayType => completeArrayType()
       case tv: TypeVariable => completeTypeVariable(task, tv)
+      case _ => new CompletionList()
     }
   }
 
