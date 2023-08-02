@@ -1645,6 +1645,20 @@ class CompletionSuite extends BaseCompletionSuite {
         | val t: TT@@
         |}
         |""".stripMargin,
+    "TTT",
+    compat = Map(
+      "3" -> "TTT[A <: Int]"
+    ),
+    includeDetail = false,
+  )
+
+  check(
+    "type-with-params-with-detail",
+    s"""|object O {
+        | type TTT[A <: Int] = List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
     "TTT[A] = O.TTT",
     compat = Map(
       "3" -> "TTT[A <: Int] = List[A]"
@@ -1658,7 +1672,8 @@ class CompletionSuite extends BaseCompletionSuite {
         | val t: TT@@
         |}
         |""".stripMargin,
-    "TTT[A <: Int] = List[A]",
+    "TTT[A <: Int]",
+    includeDetail = false,
   )
 
   check(
@@ -1668,7 +1683,31 @@ class CompletionSuite extends BaseCompletionSuite {
         | val t: TT@@
         |}
         |""".stripMargin,
+    "TTT[K <: Int]",
+    includeDetail = false,
+  )
+
+  check(
+    "type-lambda2-with-detail".tag(IgnoreScala2),
+    s"""|object O {
+        | type TTT[K <: Int] = [V] =>> Map[K, V]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
     "TTT[K <: Int] = [V] =>> Map[K, V]",
+  )
+
+  check(
+    "type-bound",
+    s"""|trait O {
+        | type TTT <: Int
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT<: O.TTT",
+    compat = Map(
+      "3" -> "TTT <: Int"
+    ),
   )
 
   check(

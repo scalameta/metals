@@ -81,7 +81,7 @@ object CompletionValue:
         if isFromWorkspace then
           s"${labelWithSuffix(printer)} -${description(printer)}"
         else s"${labelWithSuffix(printer)}${description(printer)}"
-      else if symbol.isType then s"$label${description(printer)}"
+      else if symbol.isType then labelWithSuffix(printer)
       else s"$label: ${description(printer)}"
 
     private def labelWithSuffix(printer: MetalsPrinter)(using Context): String =
