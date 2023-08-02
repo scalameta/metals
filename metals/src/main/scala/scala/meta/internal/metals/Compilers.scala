@@ -340,10 +340,12 @@ class Compilers(
             // insert expression at the start of breakpoint's line and move the lines one down
             val modified = s"$prev;$expressionText\n$indentation$succ"
 
+            val rangeEnd =
+              lineStart + expressionOffset(expressionText, indentation) + 1
             val offsetParams = CompilerOffsetParams(
               path.toURI,
               modified,
-              lineStart + expressionOffset(expressionText, indentation) + 1,
+              rangeEnd,
               token,
             )
 
@@ -373,6 +375,12 @@ class Compilers(
                     toDebugCompletionItem(
                       _,
                       adjustStart,
+                      Position.Range(
+                        input.copy(value = modified),
+                        // account for the added ;
+                        lineStart + 1,
+                        rangeEnd,
+                      ),
                     )
                   )
               )
@@ -1132,14 +1140,24 @@ class Compilers(
   private def toDebugCompletionItem(
       item: CompletionItem,
       adjustStart: Int,
+      insertTextPosition: Position,
   ): d.CompletionItem = {
     val debugItem = new d.CompletionItem()
     debugItem.setLabel(item.getLabel())
-    val (newText, range) = item.getTextEdit().asScala match {
-      case Left(textEdit) =>
+    val (newText, range) = Option(item.getTextEdit()).map(_.asScala) match {
+      case Some(Left(textEdit)) =>
         (textEdit.getNewText, textEdit.getRange)
-      case Right(insertReplace) =>
+      case Some(Right(insertReplace)) =>
         (insertReplace.getNewText, insertReplace.getReplace)
+      case None =>
+        Option(item.getInsertText()).orElse(Option(item.getLabel())) match {
+          case Some(text) =>
+            (text, insertTextPosition.toLsp)
+          case None =>
+            throw new RuntimeException(
+              "Completion item does not contain expected data"
+            )
+        }
     }
     val start = range.getStart().getCharacter + adjustStart
 
