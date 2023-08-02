@@ -12,8 +12,7 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import dotty.tools.dotc.core.Types.*
 import scala.meta.internal.metals.ReportContext
-import dotty.tools.dotc.core.Flags
-import dotty.tools.dotc.core.Symbols.NoSymbol
+import dotty.tools.dotc.ast.Trees.*
 
 class PcSyntheticDecorationsProvider(
     driver: InteractiveDriver,
@@ -23,12 +22,10 @@ class PcSyntheticDecorationsProvider(
 
   def provide(): List[SyntheticDecoration] =
     Collector
-      .result()
+      .resultAllOccurences(includeSynthetics = true)
+      .toList
       .flatten
-      .sortWith((n1, n2) =>
-        if n1.start() == n2.start() then n1.end() < n2.end()
-        else n1.start() < n2.start()
-      )
+      .sortWith((n1, n2) => n1.range().lt(n2.range()))
 
   object Collector
       extends PcCollector[Option[SyntheticDecoration]](driver, params):
@@ -51,9 +48,10 @@ class PcSyntheticDecorationsProvider(
           case AppliedType(tycon, args) =>
             isInScope(tycon) && args.forall(isInScope)
           case _ => true
-      if isInScope(tpe)
-      then tpe
-      else tpe.metalsDealias
+      if isInScope(tpe.finalResultType)
+      then tpe.finalResultType
+      else tpe.finalResultType.metalsDealias
+    end optDealias
 
     def printType(tpe: Type) =
       printer.tpe(optDealias(tpe))
@@ -64,15 +62,41 @@ class PcSyntheticDecorationsProvider(
         symbol: Option[Symbol],
     ): Option[SyntheticDecoration] =
       val sym = symbol.fold(tree.symbol)(identity)
-      if sym == NoSymbol then None
-      else
-        val tpe = printType(sym.info)
-        val kind = inlayHintKind(sym)
-        Some(Decoration(pos.start, pos.end, tpe, kind))
+      parent
+        .zip(Some(tree))
+        .collectFirst {
+          case (Apply(fun, args), _)
+              if fun.span == pos.span && pos.span.isSynthetic =>
+            val lastArgPos =
+              args.lastOption.map(_.sourcePos).getOrElse(pos).toLsp
+            lastArgPos.setStart(pos.toLsp.getStart())
+            Decoration(
+              lastArgPos,
+              sym.decodedName,
+              DecorationKind.ImplicitConversion,
+            )
+          case (Apply(_, args), _)
+              if args.exists(_.span == pos.span) && pos.span.isSynthetic =>
+            Decoration(
+              pos.toLsp,
+              sym.decodedName,
+              DecorationKind.ImplicitParameter,
+            )
+          case (TypeApply(_, _), TypeTree()) =>
+            Decoration(
+              pos.endPos.toLsp,
+              printType(tree.tpe),
+              DecorationKind.TypeParameter,
+            )
 
-    def inlayHintKind(sym: Symbol): Int =
-      if sym.is(Flags.Given) || sym.is(Flags.Implicit) then 2
-      else 1
+        }
+        .orElse {
+          val tpe = printType(sym.info)
+          val kind = DecorationKind.InferredType // inferred type
+          Some(Decoration(pos.toLsp, tpe, kind))
+        }
+    end collect
+
   end Collector
 
 end PcSyntheticDecorationsProvider

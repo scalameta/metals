@@ -1,8 +1,9 @@
 package scala.meta.pc;
 
+import org.eclipse.lsp4j.Range;
+
 public interface SyntheticDecoration{
-  int start();
-  int end();
+  Range range();
   String text();
   int kind();
 }

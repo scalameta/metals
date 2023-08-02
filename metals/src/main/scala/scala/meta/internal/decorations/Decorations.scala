@@ -49,8 +49,7 @@ abstract class Decorations[T](
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
     trees: Trees,
-)
-    extends SemanticdbFeatureProvider {
+) extends SemanticdbFeatureProvider {
   private object Document {
     /* We update it with each compilation in order not read the same file on
      * each change. When typing documents stay the same most of the time.
@@ -98,7 +97,7 @@ abstract class Decorations[T](
   def addSyntheticsHover(
       params: HoverExtParams,
       pcHover: Option[l.Hover],
-  ): Option[l.Hover] = 
+  ): Option[l.Hover] =
     if (areSyntheticsEnabled) {
       val path = params.textDocument.getUri().toAbsolutePath
       val position = params.getPosition
@@ -407,10 +406,8 @@ abstract class Decorations[T](
         PrinterSymtab.fromTextDocument(textDocument),
         clientConfig.icons().rightArrow,
       )
-      // pprint.log(inludeRange)
       val decorations = for {
         synthetic <- textDocument.synthetics
-        // _ = pprint.log(synthetic)
         range <- synthetic.range.toIterable
         currentRange <- edit.toRevisedStrict(range).toIterable
         if inludeRange.forall(_.encloses(currentRange.toLsp))
@@ -421,19 +418,18 @@ abstract class Decorations[T](
             userConfig(),
           )
           .toIterable
-          // _ = pprint.log((decoration, range))
         currentRange <- edit.toRevisedStrict(range).toIterable
         lspRange = currentRange.toLsp
       } yield toDecoration(lspRange, decoration)
 
       val typDecorations =
-        // if (
-        //   userConfig().showInferredType.contains("true") |
-        //     userConfig().showInferredType.contains("minimal")
-        // )
-        //   typeDecorations(path, textDocument, decorationPrinter)
-        // else Nil
-        Nil
+        if (
+          userConfig().showInferredType.contains("true") |
+            userConfig().showInferredType.contains("minimal")
+        )
+          typeDecorations(path, textDocument, decorationPrinter)
+        else Nil
+      // Nil
       decorations ++ typDecorations
     } else
       Nil
@@ -467,65 +463,65 @@ abstract class Decorations[T](
 
     def visit(tree: m.Tree): List[s.Range] = {
       // if (inludeRange.forall(tree.pos.overlaps)) {
-        tree match {
-          case enumerator: m.Enumerator.Generator =>
-            explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
-          case enumerator: m.Enumerator.CaseGenerator =>
-            explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
-          case enumerator: m.Enumerator.Val =>
-            explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
-          case param: m.Term.Param =>
-            if (param.decltpe.isEmpty) List(param.name.pos.toSemanticdb)
-            else Nil
-          case cs: m.Case =>
-            // if the case is too long then it'll be too messy
-            if (userConfig().showInferredType.contains("minimal"))
-              visit(cs.body) // don't show type hint for cases inside match
-            else explorePatterns(List(cs.pat)) ++ visit(cs.body)
-          case vl: m.Defn.Val =>
-            val values =
-              if (vl.decltpe.isEmpty) explorePatterns(vl.pats) else Nil
-            values ++ visit(vl.rhs)
-          case vr: m.Defn.Var =>
-            val values =
-              if (vr.decltpe.isEmpty) explorePatterns(vr.pats) else Nil
-            values ++ vr.rhs.toList.flatMap(visit)
-          case df: m.Defn.Def =>
-            val namePos = df.name.pos.toSemanticdb
+      tree match {
+        case enumerator: m.Enumerator.Generator =>
+          explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
+        case enumerator: m.Enumerator.CaseGenerator =>
+          explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
+        case enumerator: m.Enumerator.Val =>
+          explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
+        case param: m.Term.Param =>
+          if (param.decltpe.isEmpty) List(param.name.pos.toSemanticdb)
+          else Nil
+        case cs: m.Case =>
+          // if the case is too long then it'll be too messy
+          if (userConfig().showInferredType.contains("minimal"))
+            visit(cs.body) // don't show type hint for cases inside match
+          else explorePatterns(List(cs.pat)) ++ visit(cs.body)
+        case vl: m.Defn.Val =>
+          val values =
+            if (vl.decltpe.isEmpty) explorePatterns(vl.pats) else Nil
+          values ++ visit(vl.rhs)
+        case vr: m.Defn.Var =>
+          val values =
+            if (vr.decltpe.isEmpty) explorePatterns(vr.pats) else Nil
+          values ++ vr.rhs.toList.flatMap(visit)
+        case df: m.Defn.Def =>
+          val namePos = df.name.pos.toSemanticdb
 
-            def lastParamPos = for {
-              group <- df.paramss.lastOption
-              param <- group.lastOption
-              token <- param.findFirstTrailing(_.is[T.RightParen])
-            } yield token.pos.toSemanticdb
+          def lastParamPos = for {
+            group <- df.paramss.lastOption
+            param <- group.lastOption
+            token <- param.findFirstTrailing(_.is[T.RightParen])
+          } yield token.pos.toSemanticdb
 
-            def lastTypeParamPos = for {
-              typ <- df.tparams.lastOption
-              token <- typ.findFirstTrailing(_.is[T.RightBracket])
-            } yield token.pos.toSemanticdb
+          def lastTypeParamPos = for {
+            typ <- df.tparams.lastOption
+            token <- typ.findFirstTrailing(_.is[T.RightBracket])
+          } yield token.pos.toSemanticdb
 
-            def lastParen = if (df.paramss.nonEmpty)
-              df.name
-                .findFirstTrailing(_.is[RightParen])
-                .map(_.pos.toSemanticdb)
-            else None
+          def lastParen = if (df.paramss.nonEmpty)
+            df.name
+              .findFirstTrailing(_.is[RightParen])
+              .map(_.pos.toSemanticdb)
+          else None
 
-            val values =
-              if (df.decltpe.isEmpty) {
-                val destination =
-                  lastParamPos
-                    .orElse(lastParen)
-                    .orElse(lastTypeParamPos)
-                    .getOrElse(namePos)
-                methodPositions += namePos -> destination
-                List(namePos)
-              } else {
-                Nil
-              }
-            values ++ visit(df.body)
-          case other =>
-            other.children.flatMap(visit)
-        }
+          val values =
+            if (df.decltpe.isEmpty) {
+              val destination =
+                lastParamPos
+                  .orElse(lastParen)
+                  .orElse(lastTypeParamPos)
+                  .getOrElse(namePos)
+              methodPositions += namePos -> destination
+              List(namePos)
+            } else {
+              Nil
+            }
+          values ++ visit(df.body)
+        case other =>
+          other.children.flatMap(visit)
+      }
       // } else Nil
     }
 

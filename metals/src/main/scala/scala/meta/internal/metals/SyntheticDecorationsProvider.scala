@@ -5,11 +5,11 @@ import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.VirtualFileParams
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
 import scala.collection.mutable
 import scala.{meta => m}
 import scala.meta.tokens.{Token => T}
 import scala.meta.inputs.Position
+import scala.meta.internal.pc.DecorationKind
 
 class SyntheticDecorationsProvider(
     params: VirtualFileParams,
@@ -22,14 +22,16 @@ class SyntheticDecorationsProvider(
       synthteticDecorations: List[SyntheticDecoration]
   ): List[l.InlayHint] = {
     val (withoutTypes, methodPositions) = declarationsWithoutTypes()
-
     val declarations = withoutTypes.sortWith((a, b) =>
       if (a.start == b.start) a.end < b.end else a.start < b.start
     )
 
+    val (inferredTypeDecorations, otherDecorations) =
+      synthteticDecorations.partition(_.kind == 1)
+
     val result: mutable.ListBuffer[l.InlayHint] = mutable.ListBuffer.empty
 
-    var decorationsIterator = synthteticDecorations
+    var decorationsIterator = inferredTypeDecorations
     for (pos <- declarations) {
       val (decoration, remainingDecorations) =
         findDecoration(pos, decorationsIterator)
@@ -42,7 +44,9 @@ class SyntheticDecorationsProvider(
           result += inlayHint
       }
     }
-    result.toList
+
+    val missingTypeDecorations = result.toList
+    missingTypeDecorations ++ makeSynthethicDecorations(otherDecorations)
 
   }
 
@@ -58,22 +62,73 @@ class SyntheticDecorationsProvider(
     hint
   }
 
+  def makeInlayHint(
+      pos: l.Position,
+      text: String,
+      kind: l.InlayHintKind,
+  ) = {
+    val hint = new l.InlayHint()
+    hint.setPosition(pos)
+    hint.setLabel(text)
+    hint.setKind(kind)
+    hint
+  }
+
   def findDecoration(
       pos: Position,
       decorations: List[SyntheticDecoration],
   ): (Option[SyntheticDecoration], List[SyntheticDecoration]) = {
+    val lspPos = pos.toLsp
     def isTarget(dec: SyntheticDecoration): Boolean =
-      dec.start == pos.start &&
-        dec.end == pos.end
+      dec.range().sameAs(lspPos)
 
-    val candidates = decorations.dropWhile(_.start < pos.start)
+    val candidates = decorations.dropWhile(_.range().lt(lspPos))
     val decoration = candidates
-      .takeWhile(_.start == pos.start)
+      .takeWhile(_.range.getStart.sameAs(lspPos.getStart()))
       .filter(isTarget)
       .headOption
 
     (decoration, candidates)
 
+  }
+
+  private def makeSynthethicDecorations(
+      decorations: List[SyntheticDecoration]
+  ) = {
+    val result = mutable.ListBuffer.empty[l.InlayHint]
+    decorations.foreach { decoration =>
+      decoration.kind() match {
+        case DecorationKind.ImplicitParameter
+            if userConfig().showImplicitArguments =>
+          result += makeInlayHint(
+            decoration.range().getStart(),
+            "(" + decoration.text() + ")",
+            l.InlayHintKind.Parameter,
+          )
+        case DecorationKind.ImplicitConversion
+            if userConfig().showImplicitConversionsAndClasses =>
+          result += makeInlayHint(
+            decoration.range().getStart(),
+            decoration.text() + "(",
+            l.InlayHintKind.Parameter,
+          )
+          result += makeInlayHint(
+            decoration.range().getEnd(),
+            ")",
+            l.InlayHintKind.Parameter,
+          )
+
+        case DecorationKind.TypeParameter
+            if userConfig().showInferredType.contains("true") =>
+          result += makeInlayHint(
+            decoration.range().getStart(),
+            "[" + decoration.text() + "]",
+            l.InlayHintKind.Type,
+          )
+        case _ =>
+      }
+    }
+    result.toList
   }
 
   private def declarationsWithoutTypes() = {
@@ -82,7 +137,6 @@ class SyntheticDecorationsProvider(
 
     def explorePatterns(pats: List[m.Pat]): List[Position] = {
       pats.flatMap {
-        // TODO: m.Pos can enclose l.Range
         case m.Pat.Var(nm @ m.Term.Name(_)) =>
           List(nm.pos)
         case m.Pat.Extract((_, pats)) =>

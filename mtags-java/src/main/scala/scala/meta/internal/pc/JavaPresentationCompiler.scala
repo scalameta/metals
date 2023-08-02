@@ -133,9 +133,9 @@ case class JavaPresentationCompiler(
     CompletableFuture.completedFuture(Nil.asJava)
 
   override def syntheticDecorations(
-        params: VirtualFileParams,
-    ): CompletableFuture[util.List[SyntheticDecoration]] =
-      CompletableFuture.completedFuture(Nil.asJava)
+      params: VirtualFileParams
+  ): CompletableFuture[util.List[SyntheticDecoration]] =
+    CompletableFuture.completedFuture(Nil.asJava)
 
   override def didChange(
       params: VirtualFileParams

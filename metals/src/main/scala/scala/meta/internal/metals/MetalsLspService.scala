@@ -536,7 +536,6 @@ class MetalsLspService(
     buildTargets,
   )
 
-
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
@@ -1036,8 +1035,8 @@ class MetalsLspService(
 
   def publishSynthetics(): Future[Unit] = {
     if (!clientConfig.isInlayHintsEnabled()) Future.successful(())
-    else 
-      //TODO: Publish via DecorationProvider
+    else
+      // TODO: Publish via DecorationProvider
       Future.successful(())
   }
 

@@ -42,7 +42,7 @@ final class SyntheticsDecorationProvider(
     ) {
 
   override protected def areSyntheticsEnabled: Boolean =
-    // !clientConfig.isInlayHintsEnabled() && 
+    // !clientConfig.isInlayHintsEnabled() &&
     super.areSyntheticsEnabled
 
   override protected def toDecoration(

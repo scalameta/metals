@@ -75,7 +75,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         pos.startLine < start.getLine ||
           (pos.startLine == start.getLine && pos.startColumn <= start
             .getCharacter())
-      
+
       val isAfter = pos.endLine > end.getLine() ||
         (pos.endLine >= end.getLine() && pos.endColumn >= end.getCharacter())
 
@@ -85,7 +85,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
 
       val isBeforeEnd = pos.endLine < end.getLine ||
         (pos.endLine <= end.getLine && pos.endColumn <= end.getCharacter())
-      
+
       (isBefore && isAfterStart) || (isAfter && isBeforeEnd)
     }
   }

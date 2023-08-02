@@ -2,20 +2,18 @@ package scala.meta.internal.pc
 
 import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.VirtualFileParams
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 final class PcSyntheticDecorationsProvider(
     protected val cp: MetalsGlobal, // compiler
     val params: VirtualFileParams
 ) {
 
-  def provide(): List[SyntheticDecoration] = 
+  def provide(): List[SyntheticDecoration] =
     Collector
       .result()
       .flatten
-      .sortWith((n1, n2) =>
-        if (n1.start() == n2.start()) n1.end() < n2.end()
-        else n1.start() < n2.start()
-      )
+      .sortWith((n1, n2) => n1.range().lt(n2.range()))
 
   // Initialize Tree
   object Collector
@@ -48,7 +46,7 @@ final class PcSyntheticDecorationsProvider(
         val tpe = printType(sym.tpe)
         val kind = inlayHintKind(sym)
         Some(
-          Decoration(pos.start, pos.end, tpe, kind)
+          Decoration(pos.toLsp, tpe, kind)
         )
       }
     }

@@ -320,11 +320,11 @@ abstract class PcCollector[T](
       case _: OffsetParams => resultWithSought()
       case _ => resultAllOccurences().toList
 
-  def resultAllOccurences(): Set[T] =
+  def resultAllOccurences(includeSynthetics: Boolean = false): Set[T] =
     def noTreeFilter = (_: Tree) => true
     def noSoughtFilter = (_: Symbol => Boolean) => true
 
-    traverseSought(noTreeFilter, noSoughtFilter)
+    traverseSought(noTreeFilter, noSoughtFilter, includeSynthetics)
 
   def resultWithSought(): List[T] =
     soughtSymbols(path) match
@@ -378,7 +378,11 @@ abstract class PcCollector[T](
   def traverseSought(
       filter: Tree => Boolean,
       soughtFilter: (Symbol => Boolean) => Boolean,
+      includeSynthetics: Boolean = false,
   ): Set[T] =
+    def syntheticFilter(tree: Tree) = includeSynthetics &&
+      tree.span.isSynthetic &&
+      tree.symbol.isOneOf(Flags.GivenOrImplicit)
     def collectNamesWithParent(
         occurences: Set[T],
         tree: Tree,
@@ -395,7 +399,9 @@ abstract class PcCollector[T](
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident if ident.span.isCorrect && filter(ident) =>
+        case ident: Ident
+            if ident.span.isCorrect && filter(ident) ||
+              syntheticFilter(ident) =>
           // symbols will differ for params in different ext methods, but source pos will be the same
           if soughtFilter(_.sourcePos == ident.symbol.sourcePos)
           then
@@ -412,6 +418,13 @@ abstract class PcCollector[T](
           occurences + collect(
             sel,
             pos.withSpan(selectNameSpan(sel)),
+          )
+
+        case Select(id: Ident, name)
+            if syntheticFilter(id) && name == nme.apply =>
+          occurences + collect(
+            id,
+            id.sourcePos,
           )
         /* all definitions:
          * def <<foo>> = ???
@@ -519,6 +532,12 @@ abstract class PcCollector[T](
             }
             .flatten
             .toSet ++ occurences
+        case tt: TypeTree if includeSynthetics && parent.exists(isTypeApply) =>
+          val x = collect(
+            tt,
+            tt.sourcePos,
+          )
+          occurences + x
         case inl: Inlined =>
           val traverser =
             new PcCollector.DeepFolderWithParent[Set[T]](
@@ -559,6 +578,12 @@ abstract class PcCollector[T](
         Span(span.start, span.start + realName.length, point)
       else Span(point, span.end, point)
     else span
+
+  private def isTypeApply(t: Tree): Boolean =
+    t match
+      case _: TypeApply => true
+      case _ => false
+
 end PcCollector
 
 object PcCollector:

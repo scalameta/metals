@@ -155,19 +155,20 @@ case class ScalaPresentationCompiler(
   }
 
   override def syntheticDecorations(
-        params: VirtualFileParams
-    ): CompletableFuture[ju.List[SyntheticDecoration]] = {
-      val empty: ju.List[SyntheticDecoration] = new ju.ArrayList[SyntheticDecoration]()
-      compilerAccess.withInterruptableCompiler(Some(params))(
-        empty,
-        params.token
-      ) { pc =>
-        new PcSyntheticDecorationsProvider(
-          pc.compiler(),
-          params
-        ).provide().asJava
-      }
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[SyntheticDecoration]] = {
+    val empty: ju.List[SyntheticDecoration] =
+      new ju.ArrayList[SyntheticDecoration]()
+    compilerAccess.withInterruptableCompiler(Some(params))(
+      empty,
+      params.token
+    ) { pc =>
+      new PcSyntheticDecorationsProvider(
+        pc.compiler(),
+        params
+      ).provide().asJava
     }
+  }
 
   override def complete(
       params: OffsetParams
