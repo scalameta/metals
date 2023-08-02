@@ -69,7 +69,6 @@ object TestExplorerEvent {
 final case class TestCaseEntry(
     name: String,
     displayName: String,
-    runName: String,
     location: l.Location,
 )
 
@@ -77,5 +76,5 @@ object TestCaseEntry {
   def apply(
       name: String,
       location: l.Location,
-  ): TestCaseEntry = TestCaseEntry(name, name, name, location)
+  ): TestCaseEntry = TestCaseEntry(name, name, location)
 }

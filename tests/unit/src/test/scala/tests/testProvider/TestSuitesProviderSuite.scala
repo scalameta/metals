@@ -574,7 +574,6 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                 TestCaseEntry(
                   "test$minusbacktick",
                   "test-backtick",
-                  "test\\$minusbacktick",
                   QuickLocation(classUriFor(file), (3, 6, 3, 21)).toLsp,
                 )
               ).asJava,

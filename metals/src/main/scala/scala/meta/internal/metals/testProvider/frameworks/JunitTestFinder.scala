@@ -44,7 +44,6 @@ class JunitTestFinder {
               TestCaseEntry(
                 encodedName,
                 symbol.displayName,
-                encodedName.replace("$", "\\$"),
                 location,
               )
             }

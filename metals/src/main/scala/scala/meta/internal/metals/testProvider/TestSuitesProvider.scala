@@ -24,6 +24,7 @@ import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.JUnit4
 import scala.meta.internal.metals.debug.MUnit
 import scala.meta.internal.metals.debug.Scalatest
+import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.debug.Unknown
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
@@ -534,5 +535,16 @@ final class TestSuitesProvider(
       folderUri,
       events,
     )
+
+  def getFramework(
+      target: BuildTarget,
+      selection: ScalaTestSuiteSelection,
+  ): TestFramework = {
+    val framework =
+      for {
+        testEntry <- index.get(target, FullyQualifiedName(selection.className))
+      } yield testEntry.suiteDetails.framework
+    framework.getOrElse(Unknown)
+  }
 
 }
