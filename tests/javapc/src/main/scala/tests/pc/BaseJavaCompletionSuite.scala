@@ -20,7 +20,6 @@ class BaseJavaCompletionSuite extends BaseJavaPCSuite {
   ): Unit = {
     test(name) {
       val items = getItems(original, filename)
-
       val out = new StringBuilder()
 
       items.foreach { item =>

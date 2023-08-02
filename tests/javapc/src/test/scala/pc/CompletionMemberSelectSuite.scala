@@ -48,4 +48,73 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |NUMBER
       |""".stripMargin,
   )
+
+  check(
+    "after-statement",
+    """
+      |class Perfect {
+      |  
+      |  void println() {
+      |    String name = "Tom";
+      |    name.sub@@
+      |    System.out.println("Perfect " + name);
+      |  }
+      |}
+      |""".stripMargin,
+    """|substring(int arg0)
+       |substring(int arg0, int arg1)
+       |subSequence(int arg0, int arg1)
+       |""".stripMargin,
+  )
+
+  check(
+    "same-line",
+    """
+      |class Perfect {
+      |  
+      |  void println() {
+      |    String name = "Tom";
+      |    name.sub@@  System.out.println("Perfect " + name);
+      |  }
+      |}
+      |""".stripMargin,
+    """|substring(int arg0)
+       |substring(int arg0, int arg1)
+       |subSequence(int arg0, int arg1)
+       |""".stripMargin,
+  )
+
+  check(
+    "inside-parens-no-space",
+    """
+      |class Perfect {
+      |  
+      |  void println() {
+      |    String name = "Tom";
+      |    System.out.println(name.sub@@);
+      |  }
+      |}
+      |""".stripMargin,
+    """|substring(int arg0)
+       |substring(int arg0, int arg1)
+       |subSequence(int arg0, int arg1)
+       |""".stripMargin,
+  )
+
+  check(
+    "inside-word",
+    """
+      |class Perfect {
+      |  
+      |  void println() {
+      |    String name = "Tom";
+      |    System.out.println(name.sub@@S );
+      |  }
+      |}
+      |""".stripMargin,
+    """|substring(int arg0)
+       |substring(int arg0, int arg1)
+       |subSequence(int arg0, int arg1)
+       |""".stripMargin,
+  )
 }

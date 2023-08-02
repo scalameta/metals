@@ -25,6 +25,7 @@ import com.sun.source.util.Trees
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
+import org.eclipse.lsp4j.InsertTextFormat
 
 class JavaCompletionProvider(
     compiler: JavaMetalsGlobal,
@@ -33,7 +34,16 @@ class JavaCompletionProvider(
 ) {
 
   def completions(): CompletionList = {
-    val task: JavacTask = compiler.compilationTask(params.text(), params.uri())
+    val nextIsWhitespace =
+      params.text().charAt(params.offset()).isWhitespace
+    val textWithSemicolon =
+      if (nextIsWhitespace)
+        params.text().substring(0, params.offset()) +
+          ";" +
+          params.text().substring(params.offset())
+      else params.text()
+    val task: JavacTask =
+      compiler.compilationTask(textWithSemicolon, params.uri())
     val scanner = compiler.scanner(task)
     val position =
       CursorPosition(params.offset(), params.offset(), params.offset())
@@ -89,7 +99,7 @@ class JavaCompletionProvider(
 
     memberType match {
       case dt: DeclaredType => completeDeclaredType(task, dt)
-      case at: ArrayType => completeArrayType(task, at)
+      case _: ArrayType => completeArrayType()
       case tv: TypeVariable => completeTypeVariable(task, tv)
     }
   }
@@ -179,10 +189,7 @@ class JavaCompletionProvider(
     }
   }
 
-  private def completeArrayType(
-      task: JavacTask,
-      arrayType: ArrayType
-  ): CompletionList = {
+  private def completeArrayType(): CompletionList = {
     val identifier = extractIdentifier
     if (CompletionFuzzy.matches(identifier, "length")) {
       val item = new CompletionItem("length")
@@ -230,6 +237,10 @@ class JavaCompletionProvider(
     }
 
     val item = new CompletionItem(label)
+
+    if (isCompletionSnippetsEnabled)
+      item.setInsertTextFormat(InsertTextFormat.Snippet)
+
     item.setInsertText(insertText)
 
     val kind = completionKind(element.getKind)
