@@ -54,7 +54,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "_empty_/C#i.", "_empty_/D#", "_empty_/D.Da.", "_empty_/D.Db.",
       "_empty_/D#getI().", "_empty_/D#i.",
     ),
-    all = true,
+    mode = All,
     dialect = dialects.Scala3,
   )
 
@@ -101,7 +101,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "_empty_/B#X#", "_empty_/B#foo().", "_empty_/C#", "_empty_/D#",
       "_empty_/D.Da.", "_empty_/D.Db.",
     ),
-    all = true,
+    mode = All,
   )
 
   check(
@@ -125,7 +125,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "z/Test$package.abc().",
       "z/Test$package.foo().",
     ),
-    all = true,
+    mode = All,
   )
 
   check(
@@ -159,7 +159,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "z/Test$package.",
       "z/Test$package.X#",
     ),
-    all = true,
+    mode = All,
   )
 
   check(
@@ -187,7 +187,7 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "pkg/", "pkg/A#", "pkg/A#Z#", "pkg/B.", "pkg/B.Y#", "pkg/B.Y#L#", "pkg/C#",
     ),
-    all = true,
+    mode = All,
   )
 
   check(
@@ -206,7 +206,7 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "pkg/", "pkg/A#", "pkg/A#Z#", "pkg/B.", "pkg/B.Y#", "pkg/B.Y#L#",
     ),
-    all = true,
+    mode = All,
   )
 
   check(
@@ -325,7 +325,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/", "a/A.", "a/A.B1.", "a/A.B1.C1#", "a/A.B1.C1#a.", "a/A.B2.",
       "a/A.B2.C2#", "a/A.B2.C2#a.",
     ),
-    all = true,
+    mode = All,
     dialect = dialects.Scala213,
   )
 
@@ -347,7 +347,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/A.bar.",
       "a/A.foo.",
     ),
-    all = true,
+    mode = All,
     dialect = dialects.Scala3,
   )
 
@@ -368,7 +368,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/Test$package.bar.",
       "a/Test$package.foo.",
     ),
-    all = true,
+    mode = All,
     dialect = dialects.Scala3,
   )
 
@@ -385,7 +385,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/", "a/Test$package.", "a/Test$package.foo.", "a/Test$package.bar.",
       "a/Test$package.baz.",
     ),
-    all = true,
+    mode = All,
     dialect = dialects.Scala3,
   )
 
@@ -406,7 +406,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/", "a/O.", "a/O.s1.", "a/O.s2.", "a/O.s3().", "a/O.s4().", "a/O.extr.",
       "a/O.extr1.", "a/O.extr2.", "a/O.r.", "a/O.p.",
     ),
-    all = true,
+    mode = All,
   )
 
   check(
@@ -418,7 +418,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |}
        |""".stripMargin,
     List("p/", "p/B#"),
-    all = true,
+    mode = All,
   )
 
   check(
@@ -432,7 +432,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |}
        |""".stripMargin,
     List("p/", "p/A#", "p/A#name.", "p/A#isH.", "p/A#V."),
-    all = true,
+    mode = All,
   )
 
   check(
@@ -454,7 +454,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/Test$package.given_Char().", "a/Test$package.given_Float().",
       "a/Test$package.intValue().", "a/Test$package.listOrd()."),
     dialect = dialects.Scala3,
-    all = true,
+    mode = All,
   )
 
   check(
@@ -475,7 +475,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/Planets#num.", "a/Planets.Venus.", "a/NotPlanets#",
       "a/NotPlanets.Vase."),
     dialect = dialects.Scala3,
-    all = true,
+    mode = All,
   )
 
   check(
@@ -498,7 +498,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/Planets#num.", "a/Planets.Venus.", "a/NotPlanets#",
       "a/NotPlanets.Vase."),
     dialect = dialects.Scala3,
-    all = true,
+    mode = All,
   )
 
   check(
@@ -517,7 +517,63 @@ class ScalaToplevelSuite extends BaseSuite {
       "a/Planets.Earth#v.", "a/Planets.Mercury#", "a/Planets#num.",
       "a/Planets.Venus#", "a/NotPlanets#", "a/NotPlanets.Vase."),
     dialect = dialects.Scala3,
-    all = true,
+    mode = All,
+  )
+
+  check(
+    "i5500",
+    """|package a
+       |abstract class TypeProxy extends Type {
+       |  def superType(using Context): Type = underlying match {
+       |    case TypeBounds(_, hi) => hi
+       |    case st => st
+       |  }
+       |}
+       |""".stripMargin,
+    List("a/", "a/TypeProxy#"),
+    dialect = dialects.Scala3,
+    mode = ToplevelWithInner,
+  )
+
+  check(
+    "class-in-def",
+    """|package a
+       |def ee =
+       |  class AClass
+       |  1
+       |""".stripMargin,
+    List("a/", "a/Test$package."),
+    dialect = dialects.Scala3,
+    mode = ToplevelWithInner,
+  )
+
+  check(
+    "if-in-class",
+    """|class A(i : Int):
+       |  if i > 0
+       |  then
+       |    def a(j: Int) = j
+       |    a(i)
+       |  else ???
+       |""".stripMargin,
+    List("_empty_/A#"),
+    mode = All,
+    dialect = dialects.Scala3,
+  )
+
+  check(
+    "for-loop",
+    """|class A:
+       |  for
+       |    _ <- Some(1)
+       |    _ <- 
+       |      def a(i: Int) = if i > 0 then Some(i) else None
+       |      a(3)
+       |  yield ()
+       |""".stripMargin,
+    List("_empty_/A#"),
+    mode = All,
+    dialect = dialects.Scala3,
   )
 
   check(
@@ -538,27 +594,28 @@ class ScalaToplevelSuite extends BaseSuite {
     List("s/", "s/Test$package.", "s/Test$package.Cow#", "s/Cow.",
       "s/Cow.apply()."),
     dialect = dialects.Scala3,
-    all = true,
+    mode = All,
   )
 
   def check(
       options: TestOptions,
       code: String,
       expected: List[String],
-      all: Boolean = false,
+      mode: Mode = Toplevel,
       dialect: Dialect = dialects.Scala3,
   )(implicit location: munit.Location): Unit = {
     test(options) {
       val input = Input.VirtualFile("Test.scala", code)
       val obtained =
-        if (all) {
-          Mtags
-            .allToplevels(input, dialect)
-            .occurrences
-            .map(_.symbol)
-            .toList
-        } else {
-          Mtags.toplevels(input, dialect)
+        mode match {
+          case All | ToplevelWithInner =>
+            val includeMembers = mode == All
+            Mtags
+              .allToplevels(input, dialect, includeMembers)
+              .occurrences
+              .map(_.symbol)
+              .toList
+          case Toplevel => Mtags.toplevels(input, dialect)
         }
       assertNoDiff(
         obtained.sorted.mkString("\n"),
@@ -573,5 +630,16 @@ class ScalaToplevelSuite extends BaseSuite {
   ): Unit = {
     assertNoDiff(obtained.sorted.mkString("\n"), expected.sorted.mkString("\n"))
   }
+
+  sealed trait Mode
+  // includeInnerClasses = false
+  // includeMembers = false
+  case object Toplevel extends Mode
+  // includeInnerClasses = true
+  // includeMembers = false
+  case object ToplevelWithInner extends Mode
+  // includeInnerClasses = true
+  // includeMembers = true
+  case object All extends Mode
 
 }
