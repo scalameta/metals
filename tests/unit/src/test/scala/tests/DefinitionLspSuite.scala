@@ -26,7 +26,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |  "a": { },
            |  "b": {
            |    "libraryDependencies": [
-           |      "org.scalatest::scalatest:3.2.4"
+           |      "org.scalatest::scalatest:3.2.16"
            |    ],
            |    "dependsOn": [ "a" ]
            |  }

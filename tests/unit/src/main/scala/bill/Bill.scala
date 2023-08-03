@@ -69,11 +69,10 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
  * - no incremental compilation, every compilation is a clean compile.
  */
 object Bill {
-
   val logName = ".bill-metals.log"
 
   class Server() extends BuildServer with ScalaBuildServer {
-
+    private var sleepBeforePingResponse: Option[Duration] = None
     val languages: util.List[String] = Collections.singletonList("scala")
     var client: BuildClient = _
     override def onConnectWithClient(server: BuildClient): Unit =
@@ -191,6 +190,9 @@ object Bill {
     }
     override def workspaceBuildTargets()
         : CompletableFuture[WorkspaceBuildTargetsResult] = {
+      sleepBeforePingResponse.foreach(duration =>
+        Thread.sleep(duration.toMillis)
+      )
       CompletableFuture.completedFuture {
         new WorkspaceBuildTargetsResult(Collections.singletonList(target))
       }
@@ -374,10 +376,18 @@ object Bill {
     }
     override def buildTargetScalaTestClasses(
         params: ScalaTestClassesParams
-    ): CompletableFuture[ScalaTestClassesResult] = ???
+    ): CompletableFuture[ScalaTestClassesResult] =
+      Future.successful(new ScalaTestClassesResult(List.empty.asJava)).asJava
     override def buildTargetScalaMainClasses(
         params: ScalaMainClassesParams
-    ): CompletableFuture[ScalaMainClassesResult] = ???
+    ): CompletableFuture[ScalaMainClassesResult] = {
+      params.getTargets().asScala.toList match {
+        case List(break, time) if break.getUri == "break" =>
+          sleepBeforePingResponse = Try(Duration(time.getUri)).toOption
+        case _ =>
+      }
+      Future.successful(new ScalaMainClassesResult(List.empty.asJava)).asJava
+    }
 
     override def buildTargetDependencyModules(
         params: DependencyModulesParams

@@ -19,6 +19,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerLivenessMonitor
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -82,6 +83,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
   var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
+  var buildServerNotResponding =
+    ServerLivenessMonitor.ServerNotResponding.dismiss
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -342,6 +345,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           importScalaCliScript
         } else if (ResetWorkspace.params() == params) {
           resetWorkspace
+        } else if (
+          params.getMessage == ServerLivenessTestData.serverNotRespondingMessage
+        ) {
+          buildServerNotResponding
         } else {
           throw new IllegalArgumentException(params.toString)
         }

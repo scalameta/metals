@@ -10,14 +10,12 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.newScalaFile.NewFileTemplate
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
+import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.ReferenceContext
-import org.eclipse.lsp4j.ReferenceParams
-import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 
@@ -29,12 +27,6 @@ class PackageProvider(
     defProvider: DefinitionProvider,
 ) {
   import PackageProvider._
-  def willMovePath(
-      oldPath: AbsolutePath,
-      newPath: AbsolutePath,
-  )(implicit ec: ExecutionContext): Future[WorkspaceEdit] =
-    if (oldPath.isDirectory) willMoveDir(oldPath, newPath)
-    else willMoveFile(oldPath, newPath)
 
   def workspaceEdit(path: AbsolutePath): Option[WorkspaceEdit] =
     packageStatement(path).map(template =>
@@ -44,7 +36,7 @@ class PackageProvider(
   def packageStatement(path: AbsolutePath): Option[NewFileTemplate] = {
 
     def packageObjectStatement(
-        packageParts: Vector[String]
+        packageParts: List[String]
     ): Option[NewFileTemplate] = {
       val packageDeclaration =
         if (packageParts.size > 1)
@@ -66,7 +58,7 @@ class PackageProvider(
       packageParts <- Option.when(
         path.isScalaOrJava && !path.isJarFileSystem &&
           !path.isScalaScript && path.toFile.length() == 0
-      )(deducePkgParts(path))
+      )(deducePackageParts(path))
       if packageParts.size > 0
       newFileTemplate <-
         if (path.filename == "package.scala")
@@ -81,229 +73,378 @@ class PackageProvider(
     } yield newFileTemplate
   }
 
-  private def willMoveDir(
-      oldDirPath: AbsolutePath,
-      newDirPath: AbsolutePath,
+  def willMovePath(
+      oldPath: AbsolutePath,
+      newPath: AbsolutePath,
   )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = {
-    val oldPkg = calcPathToSourceRoot(oldDirPath)
-    val newPkg = calcPathToSourceRoot(newDirPath)
+    val edit = AbsoluteDir.from(oldPath) match {
+      case Some(oldDir) =>
+        Some(willMoveDir(oldDir, AbsoluteDir(newPath)))
+      case None =>
+        AbsoluteFile
+          .from(oldPath)
+          .map(willMoveFile(_, AbsoluteFile.from(newPath, oldPath.filename)))
+    }
+    edit.getOrElse(Future.successful(new WorkspaceEdit()))
+  }
 
-    val files = oldDirPath.listRecursive
+  private def willMoveDir(
+      oldDirPath: AbsoluteDir,
+      newDirPath: AbsoluteDir,
+  )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = {
+    val filesWithTrees = oldDirPath.listRecursive
       .filter(_.isScalaFilename)
-      .map(oldFilePath =>
-        oldFilePath -> newDirPath.resolve(oldFilePath.toRelative(oldDirPath))
+      .flatMap(oldFilePath =>
+        AbsoluteFile.from(oldFilePath).map { oldFile =>
+          oldFile -> AbsoluteFile(newDirPath.resolve(oldFile, oldDirPath))
+        }
       )
+      .flatMap { case rename @ (oldPath, _) =>
+        trees.get(oldPath.value).map((rename, _))
+      }
       .toList
 
-    Future
-      .traverse(files) { case (oldFilePath, newFilePath) =>
-        willMoveFile(
-          oldFilePath,
-          newFilePath,
-          Some(DirChange(oldPkg, newPkg)),
-        )
+    val changesInMovedFiles = Future
+      .traverse(filesWithTrees) { case ((oldFilePath, newFilePath), tree) =>
+        Future {
+          calcMovedFileEdits(
+            tree,
+            oldFilePath,
+            deducePackageParts(oldFilePath.value),
+            deducePackageParts(newFilePath.value),
+          ).getOrElse(new WorkspaceEdit())
+        }
       }
+      .map(_.mergeChanges)
+    val chagesInReferences =
+      calcRefsEditsForDirMove(
+        oldDirPath,
+        newDirPath,
+        filesWithTrees.map { case ((oldPath, _), _) => oldPath },
+      )
+    Future
+      .sequence(List(changesInMovedFiles, chagesInReferences))
       .map(_.mergeChanges)
   }
 
-  private def willMoveFile(
-      oldPath: AbsolutePath,
-      newPath: AbsolutePath,
-      optDirChange: Option[DirChange] = None,
+  private def calcRefsEditsForDirMove(
+      oldDirPath: AbsoluteDir,
+      newDirPath: AbsoluteDir,
+      files: List[AbsoluteFile],
   )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = Future {
+    val oldPackageParts = calcPathToSourceRoot(oldDirPath.value)
+    val newPackageParts = calcPathToSourceRoot(newDirPath.value)
+    def isOneOfMovedFiles(uri: String) =
+      files.exists(_.value.toURI.toString() == uri)
+    val references =
+      files.flatMap { path =>
+        for {
+          decl <- findTopLevelDecls(path, oldPackageParts)
+          reference <- findReferences(decl, path)
+        } yield reference
+      }
+    calcRefsEdits(
+      oldPackageParts,
+      newPackageParts,
+      references,
+      !isOneOfMovedFiles(_),
+    )
+  }
+
+  private def willMoveFile(oldPath: AbsoluteFile, newPath: AbsoluteFile)(
+      implicit ec: ExecutionContext
+  ): Future[WorkspaceEdit] = Future {
     val edit =
       for {
-        tree <- trees.get(oldPath)
-        oldPkgParts = deducePkgParts(oldPath)
-        newPkgParts = deducePkgParts(newPath)
+        tree <- trees.get(oldPath.value)
+        oldPackageParts = deducePackageParts(oldPath.value)
+        newPackageParts = deducePackageParts(newPath.value)
         fileEdits <- calcMovedFileEdits(
           tree,
           oldPath,
-          oldPkgParts.toList,
-          newPkgParts.toList,
+          oldPackageParts.toList,
+          newPackageParts.toList,
         )
-        refsEdits = calcRefsEdits(
-          tree,
-          oldPath,
-          oldPkgParts,
-          newPkgParts,
-          optDirChange,
-        )
-      } yield List(fileEdits, refsEdits).mergeChanges
-
+      } yield {
+        val oldUri = oldPath.stringUri
+        val references =
+          findTopLevelDecls(oldPath, oldPackageParts).flatMap(
+            findReferences(_, oldPath)
+          )
+        val refsEdits =
+          calcRefsEdits(
+            oldPackageParts,
+            newPackageParts,
+            references,
+            _ != oldUri,
+          )
+        List(fileEdits, refsEdits).mergeChanges
+      }
     edit.getOrElse(new WorkspaceEdit())
   }
 
   private def calcMovedFileEdits(
       tree: Tree,
-      oldPath: AbsolutePath,
-      expectedOldPkgParts: List[String],
-      newPkgParts: List[String],
+      oldPath: AbsoluteFile,
+      expectedOldPackageParts: List[String],
+      newPackageParts: List[String],
   ): Option[WorkspaceEdit] = {
-    val pkgStructure @ PkgsStructure(pkgs, optObj) = findPkgs(tree)
-    val oldPkgsParts = pkgStructure.allParts()
+    val pkgStructure @ PackagesStructure(pkgs, optObj) = findPackages(tree)
+    val oldPackagesParts = pkgStructure.allParts()
 
-    def oldPkgsMatchOldPath = oldPkgsParts == expectedOldPkgParts
-    def oldPkgsMatchNewPath = oldPkgsParts == newPkgParts
-    def oldPkgsWithoutObjectMatchOldPath =
-      oldPkgsParts.dropRight(1) == expectedOldPkgParts
+    def oldPackagesMatchOldPath = oldPackagesParts == expectedOldPackageParts
+    def oldPackagesMatchNewPath = oldPackagesParts == newPackageParts
+    def oldPackagesWithoutObjectMatchOldPath =
+      oldPackagesParts.dropRight(1) == expectedOldPackageParts
 
     optObj match {
-      case None if (oldPkgsMatchOldPath) =>
-        calcPkgEdit(pkgs, newPkgParts, oldPath)
-      case Some(obj) if (oldPkgsMatchOldPath) =>
+      case None if oldPackagesMatchOldPath =>
+        calcPackageEdit(pkgs, newPackageParts, oldPath)
+      case Some(obj) if oldPackagesMatchOldPath =>
         for {
-          lastPart <- newPkgParts.lastOption
-          edits <- calcPkgEdit(pkgs, newPkgParts.dropRight(1), oldPath)
+          lastPart <- newPackageParts.lastOption
+          edits <- calcPackageEdit(pkgs, newPackageParts.dropRight(1), oldPath)
           objectEdit = workspaceEdit(
-            oldPath,
+            oldPath.value,
             lastPart,
             obj.name.pos.toLsp,
           )
         } yield List(edits, objectEdit).mergeChanges
       case Some(_)
-          if !oldPkgsMatchNewPath && oldPkgsWithoutObjectMatchOldPath =>
-        calcPkgEdit(pkgs, newPkgParts, oldPath)
+          if !oldPackagesMatchNewPath && oldPackagesWithoutObjectMatchOldPath =>
+        calcPackageEdit(pkgs, newPackageParts, oldPath)
       case _ => None
     }
   }
 
   private def calcRefsEdits(
-      movedTree: Tree,
-      oldPath: AbsolutePath,
-      oldPkgParts: Vector[String],
-      newPkgParts: Vector[String],
-      optDirChange: Option[DirChange],
+      oldPackageParts: List[String],
+      newPackageParts: List[String],
+      references: List[Reference],
+      fileFilter: String => Boolean,
+  ): WorkspaceEdit =
+    references
+      .groupBy(_.uri)
+      .collect {
+        case (uri, references) if fileFilter(uri) =>
+          calcRefsEditsForFile(
+            oldPackageParts,
+            newPackageParts,
+            references,
+            uri,
+          )
+      }
+      .toSeq
+      .mergeChanges
+
+  private def calcRefsEditsForFile(
+      oldPackageParts: List[String],
+      newPackageParts: List[String],
+      references: List[Reference],
+      fileUri: String,
   ): WorkspaceEdit = {
-    val newPkgName = newPkgParts.mkString(".")
-    val decls = findTopLevelDecls(movedTree)
-    val oldUri = oldPath.toURI.toString
-    val edits = decls.view
-      .flatMap(decl => findRefs(decl, oldUri).map((decl, _)))
-      .view
-      .groupMap { case (_, (_, location)) =>
-        location.getUri()
-      } { case (decl, (s, _)) =>
-        (decl, s)
-      }
-      .map { case (fileUri, refs) =>
-        val filePath = fileUri.toAbsolutePath
-        val refPkgParts = deducePkgParts(fileUri.toAbsolutePath)
-        val optTree = trees.get(filePath)
-        val refsNames = refs.map(_._1.value).toSet
-        val referencesSymbols = refs.map(_._2).toSet
+    val filePath = fileUri.toAbsolutePath
+    val optTree = trees.get(filePath)
 
-        val importersAndParts = optTree
-          .fold(Vector.empty[Importer])(findImporters)
-          .map(i => (i, extractNames(i.ref)))
+    val importersAndParts = optTree
+      .fold(Vector.empty[Importer])(findImporters)
+      .map(i => (i, extractNames(i.ref)))
 
-        val changes = optDirChange match {
-          case Some(DirChange(oldPkg, newPkg)) =>
-            val refsInImportsEdits = importersAndParts.flatMap {
-              case (importer, importParts) =>
-                calcImportEditsForDirMove(importer, importParts, oldPkg, newPkg)
-            }
-            val shouldAddImports = fileUri != oldUri &&
-              !refPkgParts.startsWith(oldPkg) && refsInImportsEdits.isEmpty
-            val newImports = Option.when(shouldAddImports)(
-              calcNewImports(optTree, refsNames, newPkgName)
-            )
-            newImports ++ refsInImportsEdits
-          case None =>
-            val ImportEdits(imported, refsInImportsEdits) =
-              calcAllImportsEditsForFileMove(
-                importersAndParts,
-                oldPkgParts,
-                refsNames,
-                referencesSymbols,
-                newPkgName,
-                filePath,
-              )
-            lazy val toImport = refsNames -- imported
-            val shouldAddImports = fileUri != oldUri && toImport.nonEmpty
-            val newImports = Option.when(shouldAddImports) {
-              calcNewImports(
-                optTree,
-                toImport,
-                newPkgName,
-              )
-            }
-            refsInImportsEdits ++ newImports
-        }
-        new WorkspaceEdit(
-          Map(filePath.toURI.toString -> changes.toList.asJava).asJava
-        )
-      }
-    edits.toSeq.mergeChanges
-  }
+    val baseRename = PackagePartsRenamer(oldPackageParts, newPackageParts)
+    val packagesRenames = optTree
+      .map(collectPackageRenames(baseRename, _))
+      .getOrElse(List(baseRename))
+    val shortestRename = packagesRenames.last.newPackageParts.mkString(".")
 
-  private def calcImportEditsForDirMove(
-      importer: Importer,
-      importParts: Vector[String],
-      oldPkgPrefix: Vector[String],
-      newPkgPrefix: Vector[String],
-  ): List[TextEdit] = if (importParts.startsWith(oldPkgPrefix)) {
-    val newImport = newPkgPrefix ++ importParts.drop(oldPkgPrefix.size)
-    List(new TextEdit(importer.ref.pos.toLsp, newImport.mkString(".")))
-  } else List.empty
+    val importerRenamer =
+      new ImporterRenamer(references.toList, packagesRenames)
 
-  private def calcNewImports(
-      optTree: Option[Tree],
-      refsNames: Set[String],
-      newPkgName: String,
-  ): TextEdit = {
-    val importees = mkImportees(refsNames.toList)
-    val importString = s"import $newPkgName.$importees\n"
+    val ImportEdits(handledByFullyQualified, fullyQuilifiedChanges) =
+      calcFullyQuilifiedEdits(references.toList, filePath, packagesRenames)
 
-    val optLastPkg = for {
-      tree <- optTree
-      lastPkg <- findPkgs(tree).pkgs.lastOption
-    } yield lastPkg.pkg
+    val ImportEdits(imported, refsInImportsEdits) =
+      calcAllImportsEditsForFileMove(
+        importersAndParts,
+        filePath,
+        importerRenamer,
+      )
+    val toImport = (references.toSet -- handledByFullyQualified)
+      .map(_.definition)
+      .toSet -- imported
 
-    val optLastImport = for {
-      lastPkg <- optLastPkg
-      lastImport <- lastPkg.stats.collect { case i: Import => i }.lastOption
-    } yield lastImport
-
-    val optNewImportRange = optLastImport
-      .map(_.pos)
-      .orElse(optLastPkg.map(_.ref.pos))
-      .map(posNextToEndOf(_))
-
-    val range = optNewImportRange.getOrElse(
-      new Range(new Position(0, 0), new Position(0, 0))
+    val newImports = Option.when(toImport.nonEmpty) {
+      calcNewImports(optTree, toImport, shortestRename)
+    }
+    val changes =
+      refsInImportsEdits ++ newImports ++ fullyQuilifiedChanges
+    new WorkspaceEdit(
+      Map(filePath.toURI.toString -> changes.toList.asJava).asJava
     )
-    new TextEdit(range, importString)
   }
 
-  private def calcAllImportsEditsForFileMove(
-      importersAndParts: Vector[(Importer, Vector[String])],
-      oldPkgParts: Vector[String],
-      referencesNames: Set[String],
-      referencesSymbols: Set[String],
-      newPkgName: String,
+  private def collectPackageRenames(
+      rename: PackagePartsRenamer,
+      fileTree: Tree,
+  ): List[PackagePartsRenamer] = {
+    def collectPackageRenames(
+        lastRename: PackagePartsRenamer,
+        filePackageParts: List[List[String]],
+        acc: List[PackagePartsRenamer] = List.empty,
+        adjustNew: Boolean = true,
+    ): List[PackagePartsRenamer] =
+      filePackageParts match {
+        case currentParts :: rest
+            if (lastRename.oldPackageParts.startsWith(currentParts)) =>
+          if (adjustNew && lastRename.newPackageParts.startsWith(currentParts))
+            collectPackageRenames(
+              lastRename.dropFromBoth(currentParts.length),
+              rest,
+              lastRename :: acc,
+            )
+          else
+            collectPackageRenames(
+              lastRename.dropFromOld(currentParts.length),
+              rest,
+              lastRename :: acc,
+              adjustNew = false,
+            )
+        case _ => lastRename :: acc
+      }
+
+    val filePackages = findPackages(fileTree)
+    val isNewPackageTheSameAsFilePackage =
+      filePackages.allParts() == rename.newPackageParts
+    val baseRename =
+      if (isNewPackageTheSameAsFilePackage)
+        rename.copy(newPackageParts = List.empty)
+      else rename
+    collectPackageRenames(
+      baseRename,
+      filePackages.allPackagesParts(),
+      adjustNew = !isNewPackageTheSameAsFilePackage,
+    ).reverse
+  }
+
+  /**
+   * Calculates edits for selects (fully and partially quilified).
+   * E.g
+   * Moved file:
+   * file://root/a/b/c/d/File.scala
+   * ```
+   * package a.b.c.d
+   * object A {
+   *   case class C()
+   * }
+   * case class B()
+   * ```
+   * Calculates edits for the following imports:
+   * ```
+   * package a.b
+   *
+   * import c.d.A  //NO
+   * import a.b.c.d.{A, B => BB} //NO
+   * import a.b.c.d._ //NO
+   * import c.d.A.C //YES
+   * import c //NO this is not handled at all
+   *
+   * c.d.B //YES
+   * c.B //PARTIALLY will rename to B (will be imported later as c.d.B)
+   * ```
+   * @return
+   *   - edits for handled imports
+   *   - references that are imported after changes
+   */
+  private def calcFullyQuilifiedEdits(
+      refs: List[Reference],
       source: AbsolutePath,
-  ): ImportEdits = {
-    val directlyImportedNames =
+      pkgRenames: List[PackagePartsRenamer],
+  ): ImportEdits[Reference] = {
+    def collectPartsFromSelect(select: m.Term.Select): Option[List[String]] =
+      select match {
+        case Term.Select(s: Term.Select, name) =>
+          collectPartsFromSelect(s).map(_ :+ name.value)
+        case Term.Select(s: Term.Name, name) => Some(List(s.value, name.value))
+        case _ => None
+      }
+
+    def findPackageRename(ref: Reference, parts: List[String]): Option[String] =
+      pkgRenames.collectFirst {
+        case PackagePartsRenamer(oldPackageParts, newPackageParts)
+            if parts.startsWith(ref.allParts(oldPackageParts)) =>
+          (newPackageParts ++ parts.drop(oldPackageParts.length)).mkString(".")
+      }
+
+    def existsPackagePart(ref: Reference, parts: List[String]): Boolean =
+      pkgRenames.exists { case PackagePartsRenamer(oldPackageParts, _) =>
+        val allParts = ref.allParts(oldPackageParts)
+        allParts.tails.toList.dropRight(2).exists(parts.startsWith(_))
+      }
+
+    val refsWithEdits = for {
+      ref <- refs
+      select <- trees
+        .findLastEnclosingAt[m.Term.Select](source, ref.pos.getStart())
+        .toList
+      selectParts <- collectPartsFromSelect(select).toList
+    } yield findPackageRename(ref, selectParts)
+      .map(newFullyQulifiedSymbol =>
+        (List(ref), new TextEdit(select.pos.toLsp, newFullyQulifiedSymbol))
+      )
+      .orElse {
+        if (existsPackagePart(ref, selectParts))
+          Some((List(), new TextEdit(select.pos.toLsp, ref.fullName)))
+        else None
+      }
+    val (handled, edits) = refsWithEdits.flatten.unzip
+    ImportEdits(handled.flatten, edits)
+  }
+
+  /**
+   * Calculates edits for import statemants that select elements from files old package.
+   * E.g
+   * Moved file:
+   * file://root/a/b/c/d/File.scala
+   * ```
+   * package a.b.c.d
+   * object A {
+   *   case class C()
+   * }
+   * case class B()
+   * ```
+   * Calculates edits for the following imports:
+   * ```
+   * package a.b
+   *
+   * import c.d.A  //YES
+   * import a.b.c.d.{A, B => BB} //YES
+   * import a.b.c.d._ //PARTIALLY if possible will delete this import (all elements imported by _ will be added explicitly)
+   * import c.d.A.C //NO
+   * ```
+   * @return
+   *   - edits for handled imports
+   *   - references that are imported after changes
+   */
+  private def calcAllImportsEditsForFileMove(
+      importersAndParts: Vector[(Importer, List[String])],
+      source: AbsolutePath,
+      importerRenamer: ImporterRenamer,
+  ): ImportEdits[TopLevelDeclaration] = {
+    lazy val directlyImportedSymbols =
       importersAndParts
-        .withFilter(_._2 == oldPkgParts)
+        .withFilter { case (_, parts) =>
+          importerRenamer.renames.exists(_.oldPackageParts == parts)
+        }
         .flatMap(_._1.importees)
         .collect {
           case Importee.Name(name) => name
           case Importee.Rename(from, _) => from
           case Importee.Unimport(name) => name
         }
-    val refsImportedViaWildCard =
-      referencesNames -- directlyImportedNames
-        .withFilter(n => referencesNames.contains(n.value))
-        .map(_.value)
-    lazy val directlyImportedSymbols =
-      directlyImportedNames
         .flatMap(name =>
           defProvider
             .symbolOccurrence(source, name.pos.toLsp.getStart())
+            .map(_._1.symbol)
         )
-        .map(_._1.symbol)
         .toSet
 
     val importEdits =
@@ -311,13 +452,9 @@ class PackageProvider(
         calcImportEditsForFileMove(
           importer,
           importParts,
-          oldPkgParts,
-          referencesNames,
-          referencesSymbols,
-          newPkgName,
-          refsImportedViaWildCard,
-          () => directlyImportedSymbols,
           source,
+          () => directlyImportedSymbols,
+          importerRenamer,
         )
       }
     ImportEdits(
@@ -328,111 +465,134 @@ class PackageProvider(
 
   private def calcImportEditsForFileMove(
       importer: Importer,
-      importParts: Vector[String],
-      oldPkgParts: Vector[String],
-      referencesNames: Set[String],
-      referencesSymbols: Set[String],
-      newPkgName: String,
-      refsImportedViaWildCard: Set[String],
-      directlyImportedSymbols: () => Set[String],
+      importParts: List[String],
       source: AbsolutePath,
-  ): ImportEdits = {
-    def wildcardImportsOnlyRefs() = {
-      val importedSymbols = defProvider
-        .symbolOccurrence(source, importer.ref.pos.toLsp.getEnd())
-        .map { case (so, _) => so.symbol }
-        .toList
-        .flatMap(
-          refProvider
-            .referencesForWildcardImport(_, source, directlyImportedSymbols())
-        )
-      importedSymbols.forall(referencesSymbols.contains(_))
-    }
-    if (importParts == oldPkgParts) {
-      val importees = importer.importees
-      def isReferenced(importee: Importee) = importee match {
-        case Importee.Name(name) => referencesNames.contains(name.value)
-        case Importee.Rename(from, _) => referencesNames.contains(from.value)
-        case Importee.Unimport(name) => referencesNames.contains(name.value)
-        case Importee.Wildcard() if wildcardImportsOnlyRefs => true
-        case _ => false
-      }
-      val (refsImportees, refsIndices) = importees.zipWithIndex.filter {
-        case (i, _) =>
-          isReferenced(i)
-      }.unzip
-      if (refsImportees.length == 0) {
-        ImportEdits.empty
-      } else {
-        def rep2(str: String) = (str, str)
-        val (handledRefs, importeeStrings) = refsImportees.flatMap {
-          case Importee.Name(name) => List(rep2(name.value))
-          case Importee.Rename(from, to) =>
-            List((from.value, s"${from.value} => ${to.value}"))
-          case Importee.Unimport(name) => List((name.value, ""))
-          case Importee.Wildcard() =>
-            refsImportedViaWildCard.map(rep2(_)).toList
-          case _ => List.empty
-        }.unzip
-        val newImportStr = {
-          val filteredImporteeStrings = importeeStrings.filter(_ != "")
-          def bracedImporteeStr = refsImportees match {
-            case List(Importee.Rename(_, _)) =>
-              s"{${mkImportees(filteredImporteeStrings)}}"
-            case _ => mkImportees(filteredImporteeStrings)
+      directlyImportedSymbols: () => Set[String],
+      importerRenamer: ImporterRenamer,
+  ): ImportEdits[TopLevelDeclaration] = {
+    importerRenamer
+      .renameFor(importParts)
+      .map { case (newPackageName, referencesNames) =>
+        lazy val wildcardImportsOnlyFromMovedFiles = {
+          val symbolsImportedByWildcard = defProvider
+            .symbolOccurrence(source, importer.ref.pos.toLsp.getEnd())
+            .map { case (so, _) => so.symbol }
+            .toList
+            .flatMap(symbol =>
+              refProvider
+                .referencesForWildcardImport(
+                  symbol,
+                  source,
+                  directlyImportedSymbols(),
+                )
+            )
+          symbolsImportedByWildcard.forall(symbol =>
+            referencesNames.exists(_.symbols.contains(symbol))
+          )
+        }
+        lazy val importedImplicits =
+          referencesNames.filter(_.isGivenOrExtension).toList
+        val importees = importer.importees
+        def findReferenceByName(
+            name: String
+        ): Option[List[TopLevelDeclaration]] =
+          referencesNames.find(_.name == name).map(List(_))
+        def findReference(
+            importee: Importee
+        ): Option[List[TopLevelDeclaration]] =
+          importee match {
+            case Importee.Name(name) => findReferenceByName(name.value)
+            case Importee.Rename(from, _) => findReferenceByName(from.value)
+            case Importee.Unimport(name) => findReferenceByName(name.value)
+            case Importee.Wildcard() if wildcardImportsOnlyFromMovedFiles =>
+              Some(List.empty)
+            case Importee.GivenAll() if wildcardImportsOnlyFromMovedFiles =>
+              Some(importedImplicits.toList)
+            case _ => None
           }
-          if (filteredImporteeStrings.nonEmpty)
-            s"$newPkgName.$bracedImporteeStr"
-          else s""
-        }
-        if (refsImportees.length == importer.importees.length) {
-          val importChange =
-            if (newImportStr == "")
-              // we delete the import
-              importer.parent
-                .map(line => new TextEdit(line.pos.toLsp, ""))
-                .toList
-            else List(new TextEdit(importer.pos.toLsp, newImportStr))
-          ImportEdits(handledRefs, importChange)
+        val (handledRefs0, refsImportees, refsIndices) =
+          importees.zipWithIndex.flatMap { case (imp, indx) =>
+            findReference(imp).map((_, imp, indx))
+          }.unzip3
+        val handledRefs = handledRefs0.flatten
+        if (refsImportees.length == 0) {
+          ImportEdits.empty
         } else {
-          // In this branch some importees should be removed from the import, but not all.
-          // Trying to remove them with commas
-          val indSet = refsIndices.toSet
-          val oldImportEdits =
-            importees.zip(importees.drop(1)).zipWithIndex.flatMap {
-              case ((i1, i2), ind) =>
-                val pos =
-                  if (indSet.contains(ind))
-                    Some(
-                      i1.pos.toLsp.copy(
-                        endLine = i2.pos.startLine,
-                        endCharacter = i2.pos.startColumn,
-                      )
-                    )
-                  else if (
-                    indSet.contains(ind + 1) && importees.length == ind + 2
-                  ) // cases like "import foo.{A, B, C}" when C is moved
-                    Some(
-                      i2.pos.toLsp.copy(
-                        startLine = i1.pos.endLine,
-                        startCharacter = i1.pos.endColumn,
-                      )
-                    )
-                  else None
-                pos.map(new TextEdit(_, ""))
+          val importeeStrings = refsImportees.flatMap {
+            case Importee.Name(name) => Some(name.value)
+            case Importee.Rename(from, to) =>
+              Some(s"${from.value} => ${to.value}")
+            case Importee.GivenAll() => Some("given")
+            case _ => None
+          }
+          val newImportStr = {
+            def bracedImporteeStr = refsImportees.filter {
+              case _: Importee.Wildcard => false
+              case _: Importee.Unimport => false
+              case _ => true
+            } match {
+              case List(Importee.Rename(_, _)) =>
+                s"{${mkImportees(importeeStrings)}}"
+              case _ => mkImportees(importeeStrings)
             }
-          val newImportPos = posNextToEndOf(importer.pos)
-          val importChages =
-            if (newImportStr == "") oldImportEdits
-            else {
-              val newImportEdit =
-                new TextEdit(newImportPos, s"import $newImportStr\n")
-              newImportEdit :: oldImportEdits
-            }
-          ImportEdits(handledRefs, importChages)
+            if (importeeStrings.nonEmpty && newPackageName.nonEmpty)
+              s"${newPackageName.mkString(".")}.$bracedImporteeStr"
+            else ""
+          }
+          if (refsImportees.length == importer.importees.length) {
+            val importChange =
+              if (newImportStr == "")
+                // we delete the import
+                importer.parent
+                  .map(line =>
+                    new TextEdit(
+                      extendPositionToIncludeNewLine(line.pos).toLsp,
+                      "",
+                    )
+                  )
+                  .toList
+              else List(new TextEdit(importer.pos.toLsp, newImportStr))
+            ImportEdits(handledRefs, importChange)
+          } else {
+            // In this branch some importees should be removed from the import, but not all.
+            // Trying to remove them with commas
+            val indSet = refsIndices.toSet
+            val oldImportEdits =
+              importees.zip(importees.drop(1)).zipWithIndex.flatMap {
+                case ((i1, i2), ind) =>
+                  val pos =
+                    if (indSet.contains(ind))
+                      Some(
+                        i1.pos.toLsp.copy(
+                          endLine = i2.pos.startLine,
+                          endCharacter = i2.pos.startColumn,
+                        )
+                      )
+                    else if (
+                      indSet.contains(ind + 1) && importees.length == ind + 2
+                    ) // cases like "import foo.{A, B, C}" when C is moved
+                      Some(
+                        i2.pos.toLsp.copy(
+                          startLine = i1.pos.endLine,
+                          startCharacter = i1.pos.endColumn,
+                        )
+                      )
+                    else None
+                  pos.map(new TextEdit(_, ""))
+              }
+            val newImportPos = posNextToEndOf(importer.pos)
+            val importChages =
+              if (newImportStr == "") oldImportEdits
+              else {
+                val newImportEdit =
+                  new TextEdit(newImportPos, s"import $newImportStr\n")
+                newImportEdit :: oldImportEdits
+              }
+            ImportEdits(handledRefs, importChages)
+          }
         }
       }
-    } else ImportEdits.empty
+      .getOrElse(ImportEdits.empty)
   }
 
   private def findImporters(tree: Tree): Vector[Importer] = {
@@ -443,41 +603,173 @@ class PackageProvider(
     go(tree).toVector
   }
 
-  private def findTopLevelDecls(tree: Tree): List[Name] = {
-    def go(tree: Tree): LazyList[Name] = tree match {
-      case d: Defn with Member => LazyList(d.name)
-      case t => LazyList.from(t.children).flatMap(go)
+  private def calcNewImports(
+      optTree: Option[Tree],
+      referencesNames: Set[TopLevelDeclaration],
+      newPackageName: String,
+  ): TextEdit = {
+    def importString = {
+      val toImport =
+        if (newPackageName.isEmpty)
+          referencesNames.filter(_.innerPackageParts.isEmpty)
+        else referencesNames
+      val (toImportGivens, toImportNotGivens) =
+        toImport.partition(_.isGivenOrExtension)
+      val allToImport =
+        (toImportNotGivens.map(decl =>
+          (decl.innerPackageParts, decl.name)
+        ) ++ toImportGivens.map(decl => (decl.innerPackageParts, "given")))
+          .groupMap(_._1)(_._2)
+          .map { case (innerPackageParts, names) =>
+            (innerPackageParts :+ mkImportees(names.toList)).mkString(".")
+          }
+
+      if (newPackageName.isEmpty)
+        allToImport.map(sym => s"import $sym\n").mkString
+      else allToImport.map(sym => s"import $newPackageName.$sym\n").mkString
     }
-    go(tree).toList
-  }
 
-  private def findRefs(
-      name: Name,
-      uri: String,
-  ): List[(String, Location)] = {
-    val params = new ReferenceParams(
-      new TextDocumentIdentifier(uri),
-      new Position(name.pos.startLine, name.pos.startColumn),
-      new ReferenceContext(false), // do not include declaration
+    val optLastPackage = for {
+      tree <- optTree
+      lastPackage <- findPackages(tree).pkgs.lastOption
+    } yield lastPackage.pkg
+
+    val optLastImport = for {
+      lastPackage <- optLastPackage
+      lastImport <- lastPackage.stats.collect { case i: Import => i }.lastOption
+    } yield lastImport
+
+    val optNewImportRange = optLastImport
+      .map(_.pos)
+      .orElse(optLastPackage.map(_.ref.pos))
+      .map(posNextToEndOf(_))
+
+    val range = optNewImportRange.getOrElse(
+      new Range(new Position(0, 0), new Position(0, 0))
     )
-    refProvider.references(params).flatMap(s => s.locations.map((s.symbol, _)))
+    new TextEdit(range, importString)
   }
 
-  private def findPkgs(tree: Tree): PkgsStructure = {
+  private def findTopLevelDecls(
+      path: AbsoluteFile,
+      topLevelPackageParts: List[String],
+  ): List[TopLevelDeclaration] = {
+    val filename = path.filename
+    val filenamePart = filename.stripSuffix(".scala").stripSuffix(".sc")
+    val result = for {
+      content <- path.content()
+    } yield {
+      val input = Input.VirtualFile(filename, content)
+
+      def isPackageObjectLike(symbol: String) =
+        Set("package", filenamePart ++ "$package").contains(symbol)
+      def isTopLevelPackageOrPackageObject(symbol: String): Boolean =
+        symbol.isPackage || {
+          val (desc, owner) = DescriptorParser(symbol)
+          (isPackageObjectLike(desc.name.value)
+          && isTopLevelPackageOrPackageObject(owner))
+        }
+
+      def alternatives(si: s.SymbolInformation): Set[String] =
+        if (si.isCase) Set(s"${si.symbol.dropRight(1)}.") else Set.empty
+
+      val dialect = {
+        val optDialect =
+          for {
+            buidTargetId <- buildTargets.inverseSources(path.value)
+            scalaTarget <- buildTargets.scalaTarget(buidTargetId)
+          } yield ScalaVersions.dialectForScalaVersion(
+            scalaTarget.scalaVersion,
+            includeSource3 = true,
+          )
+        optDialect.getOrElse(dialects.Scala213)
+      }
+      m.internal.mtags.Mtags
+        .index(input, dialect)
+        .symbols
+        .flatMap { si =>
+          if (si.symbol.isPackage)
+            None
+          else {
+            val (desc, owner) = DescriptorParser(si.symbol)
+            val descName = desc.name.value
+            if (
+              isTopLevelPackageOrPackageObject(owner) && !isPackageObjectLike(
+                descName
+              )
+            ) {
+              val packageParts =
+                owner
+                  .split('/')
+                  .filter {
+                    case "" => false
+                    case ObjectSymbol(obj) => !isPackageObjectLike(obj)
+                    case _ => true
+                  }
+                  .drop(topLevelPackageParts.length)
+                  .toList
+              Some(
+                TopLevelDeclaration(
+                  descName,
+                  packageParts,
+                  si.isGiven || si.isExtension,
+                  alternatives(si) + si.symbol,
+                )
+              )
+            } else None
+          }
+        }
+        .groupBy(decl => (decl.name, decl.innerPackageParts))
+        .collect { case ((name, innerPackageParts), otherDecl) =>
+          TopLevelDeclaration(
+            name,
+            innerPackageParts,
+            otherDecl.map(_.isGivenOrExtension).reduce(_ || _),
+            otherDecl.flatMap(_.symbols).toSet,
+          )
+        }
+        .toList
+    }
+    result.getOrElse(List.empty)
+  }
+
+  private def extendPositionToIncludeNewLine(pos: inputs.Position) = {
+    if (pos.start > 0 && pos.input.chars(pos.start - 1) == '\n')
+      inputs.Position.Range(pos.input, pos.start - 1, pos.end)
+    else pos
+  }
+
+  private def findReferences(
+      decl: TopLevelDeclaration,
+      path: AbsoluteFile,
+  ): List[Reference] = {
+    refProvider
+      .workspaceReferences(
+        path.value,
+        decl.symbols,
+        isIncludeDeclaration = false,
+      )
+      .map { loc =>
+        Reference(decl, loc.getRange(), loc.getUri())
+      }
+      .toList
+  }
+
+  private def findPackages(tree: Tree): PackagesStructure = {
     @tailrec
-    def extractOuterPkg(
+    def extractOuterPackage(
         tree: Tree,
-        acc: PkgsStructure = PkgsStructure.empty,
-    ): PkgsStructure =
+        acc: PackagesStructure = PackagesStructure.empty,
+    ): PackagesStructure =
       tree match {
-        case p @ Pkg(_, Nil) => acc.addPkg(p)
-        case p @ Pkg(_, st :: _) => extractOuterPkg(st, acc.addPkg(p))
+        case p @ Pkg(_, Nil) => acc.addPackage(p)
+        case p @ Pkg(_, st :: _) => extractOuterPackage(st, acc.addPackage(p))
         case p: Pkg.Object => acc.withObject(p)
         case _ => acc
       }
     tree match {
-      case Source(List(pk: Pkg)) => extractOuterPkg(pk).reverse
-      case _ => PkgsStructure.empty
+      case Source(List(pk: Pkg)) => extractOuterPackage(pk).reverse
+      case _ => PackagesStructure.empty
     }
   }
 
@@ -494,28 +786,28 @@ class PackageProvider(
     new WorkspaceEdit(changes)
   }
 
-  private def deducePkgParts(path: AbsolutePath): Vector[String] =
+  private def deducePackageParts(path: AbsolutePath): List[String] =
     calcPathToSourceRoot(path).dropRight(1)
 
   private def calcPathToSourceRoot(
       path: AbsolutePath
-  ): Vector[String] =
+  ): List[String] =
     buildTargets
       .inverseSourceItem(path)
       .map(path.toRelative(_).toNIO)
-      .map { _.iterator().asScala.map(p => wrap(p.toString())).toVector }
-      .getOrElse(Vector.empty)
+      .map { _.iterator().asScala.map(p => wrap(p.toString())).toList }
+      .getOrElse(List.empty)
 
-  private def calcPkgEdit(
-      oldPackages: List[PkgWithName],
-      newPkgs: List[String],
-      oldPath: AbsolutePath,
+  private def calcPackageEdit(
+      oldPackages: List[PackageWithName],
+      newPackages: List[String],
+      oldPath: AbsoluteFile,
   ): Option[WorkspaceEdit] = {
-    val edits = findPkgEdits(newPkgs, oldPackages)
+    val edits = findPackageEdits(newPackages, oldPackages)
     if (edits.isEmpty) None
     else
       for {
-        source <- buffers.get(oldPath).orElse(oldPath.readTextOpt)
+        source <- buffers.get(oldPath.value).orElse(oldPath.content())
       } yield pkgEditsToWorkspaceEdit(edits, source.toCharArray(), oldPath)
   }
 
@@ -523,28 +815,31 @@ class PackageProvider(
    * Splits package declaration into statements
    * Desired property - not to break old visibility regions
    */
-  private def findPkgEdits(
-      newPkgs: List[String],
-      oldPkg: List[PkgWithName],
-  ): List[PkgEdit] =
-    oldPkg match {
+  private def findPackageEdits(
+      newPackages: List[String],
+      oldPackage: List[PackageWithName],
+  ): List[PackageEdit] =
+    oldPackage match {
       case Nil => Nil
-      case PkgWithName(oldPkg, _) :: Nil => List(PkgEdit(oldPkg, newPkgs))
-      case PkgWithName(oldPkg, oldPkgName) :: nextOld =>
-        newPkgs.zipWithIndex
+      case PackageWithName(oldPackage, _) :: Nil =>
+        List(PackageEdit(oldPackage, newPackages))
+      case PackageWithName(oldPackage, oldPackageName) :: nextOld =>
+        newPackages.zipWithIndex
           .filter { case (s, _) =>
-            oldPkgName.lastOption.contains(s)
+            oldPackageName.lastOption.contains(s)
           }
-          .minByOption { case (_, i) => (i - oldPkgName.length).abs } match {
+          .minByOption { case (_, i) =>
+            (i - oldPackageName.length).abs
+          } match {
           case None =>
-            PkgEdit(oldPkg, List()) :: findPkgEdits(
-              newPkgs,
+            PackageEdit(oldPackage, List()) :: findPackageEdits(
+              newPackages,
               nextOld,
             )
           case Some((_, i)) =>
-            val (currParts, nextNew) = newPkgs.splitAt(i + 1)
-            PkgEdit(oldPkg, currParts) ::
-              findPkgEdits(
+            val (currParts, nextNew) = newPackages.splitAt(i + 1)
+            PackageEdit(oldPackage, currParts) ::
+              findPackageEdits(
                 nextNew,
                 nextOld,
               )
@@ -552,15 +847,15 @@ class PackageProvider(
     }
 
   private def pkgEditsToWorkspaceEdit(
-      edits: List[PkgEdit],
+      edits: List[PackageEdit],
       source: Array[Char],
-      oldPath: AbsolutePath,
+      oldPath: AbsoluteFile,
   ): WorkspaceEdit = {
     val extend: (Int, Int) => (Int, Int) =
       extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(source, List(':'))
     edits.flatMap {
       // delete package declaration
-      case PkgEdit(pkg, Nil) =>
+      case PackageEdit(pkg, Nil) =>
         val topEditRange @ (rangeStart, rangeEnd) =
           extend(pkg.pos.start, pkg.ref.pos.end)
         val editRanges =
@@ -572,15 +867,19 @@ class PackageProvider(
           } else List(topEditRange)
         editRanges.map { case (startOffset, endOffset) =>
           workspaceEdit(
-            oldPath,
+            oldPath.value,
             "",
             new m.Position.Range(pkg.pos.input, startOffset, endOffset).toLsp,
           )
         }
       // rename package
-      case PkgEdit(pkg, newParts) =>
+      case PackageEdit(pkg, newParts) =>
         val edit =
-          workspaceEdit(oldPath, newParts.mkString("."), pkg.ref.pos.toLsp)
+          workspaceEdit(
+            oldPath.value,
+            newParts.mkString("."),
+            pkg.ref.pos.toLsp,
+          )
         List(edit)
     }.mergeChanges
   }
@@ -592,53 +891,219 @@ class PackageProvider(
     }
 
   private def posNextToEndOf(pos: m.Position): Range = {
-    val start = pos.end + 1
+    var start = pos.end
+    while (
+      start > 0 && start < pos.input.chars.length && pos.input.chars(
+        start
+      ) != '\n'
+    ) {
+      start += 1
+    }
+    if (start < pos.input.chars.length) start += 1
     m.Position.Range(pos.input, start, start).toLsp
   }
 
 }
 
 object PackageProvider {
-  final case class DirChange(oldPkg: Vector[String], newPkg: Vector[String])
+  final case class DirChange(oldPackage: List[String], newPackage: List[String])
 
   @tailrec
   private def extractNames(
       t: Term,
-      acc: Vector[String] = Vector.empty,
-  ): Vector[String] = {
+      acc: List[String] = List.empty,
+  ): List[String] = {
     t match {
       case n: Term.Name => n.value +: acc
       case s: Term.Select => extractNames(s.qual, s.name.value +: acc)
     }
   }
 
-  case class PkgWithName(pkg: Pkg, name: Vector[String])
+  case class PackageWithName(pkg: Pkg, name: List[String])
 
-  case class PkgsStructure(
-      pkgs: List[PkgWithName],
+  case class PackagesStructure(
+      pkgs: List[PackageWithName],
       pkgObject: Option[Pkg.Object] = None,
   ) {
-    def withObject(pkgObject: Pkg.Object): PkgsStructure =
-      PkgsStructure(pkgs, Some(pkgObject))
-    def addPkg(pkg: Pkg): PkgsStructure =
-      PkgsStructure(PkgWithName(pkg, extractNames(pkg.ref)) :: pkgs, pkgObject)
-    def reverse(): PkgsStructure = PkgsStructure(pkgs.reverse, pkgObject)
-    def allParts(): List[String] =
-      pkgs.flatMap(_.name) ++ pkgObject.map(_.name.value).toList
+    def withObject(pkgObject: Pkg.Object): PackagesStructure =
+      PackagesStructure(pkgs, Some(pkgObject))
+    def addPackage(pkg: Pkg): PackagesStructure =
+      PackagesStructure(
+        PackageWithName(pkg, extractNames(pkg.ref)) :: pkgs,
+        pkgObject,
+      )
+    def reverse(): PackagesStructure =
+      PackagesStructure(pkgs.reverse, pkgObject)
+    def allPackagesParts(): List[List[String]] =
+      pkgs.map(_.name) ++ pkgObject.map(obj => List(obj.name.value)).toList
+    def allParts(): List[String] = allPackagesParts.flatten
   }
 
-  object PkgsStructure {
-    def empty: PkgsStructure = PkgsStructure(List(), None)
+  object PackagesStructure {
+    def empty: PackagesStructure = PackagesStructure(List(), None)
   }
 
-  case class PkgEdit(
+  case class PackageEdit(
       pkg: Pkg,
       renameToParts: List[String], // empty list means delete
   )
 }
 
-case class ImportEdits(handledRefs: List[String], edits: List[TextEdit])
+case class ImportEdits[+R](handledRefs: List[R], edits: List[TextEdit])
 
 object ImportEdits {
-  def empty: ImportEdits = ImportEdits(List.empty, List.empty)
+  def empty[R]: ImportEdits[R] = ImportEdits(List.empty, List.empty)
+}
+
+/**
+ * Top level declaration.
+ *
+ * @param name
+ *   short name of the declaration
+ * @param innerPackageParts
+ *   inner packages as list of parts
+ * @param isGivenOrExtension
+ *    if the declaration is an extension or given
+ * @param symbols
+ *    all the symbols that are represented by `basePackage.innerPackageParts.name`
+ *
+ * E.g.
+ * file://root/a/b/c/File.scala
+ * package a.b
+ * package c {
+ *   package d {
+ *     case class O { }
+ *   }
+ * }
+ *
+ * TopLevelDeclaration("O", List("d"), false, List("a.b.c.d.O#", "a.b.c.d.O."))
+ */
+case class TopLevelDeclaration(
+    name: String,
+    innerPackageParts: List[String],
+    isGivenOrExtension: Boolean,
+    symbols: Set[String],
+) {
+  def allParts: List[String] = innerPackageParts :+ name
+  def nameWithInnerPackages: String = allParts.mkString(".")
+  def dropPackageParts(i: Int): TopLevelDeclaration =
+    TopLevelDeclaration(
+      name,
+      innerPackageParts.drop(i),
+      isGivenOrExtension,
+      symbols,
+    )
+}
+
+case class Reference(
+    definition: TopLevelDeclaration,
+    pos: Range,
+    uri: String,
+) {
+  def fullName: String = definition.nameWithInnerPackages
+  def allParts(prefix: List[String]): List[String] =
+    prefix ++ definition.allParts
+}
+
+/**
+ * Rename for an importer.
+ *
+ * E.g.
+ * file://root/a/b/d/e/File.scala
+ * ```
+ * package a.b
+ * package d.e
+ *
+ * object SomeObject { }
+ * ```
+ * Gets moved to file://root/a/b/c/File.scala.
+ * In file with reference:
+ * ```
+ * package a.b
+ * import a.b.d.e.SomeObject
+ *
+ * val m = d.e.SomeObject
+ * ```
+ * We will rename:
+ * - a.b.d.e.SomeObject -> a.b.c.SomeObject
+ *     which corresponds to
+ *     PackagePartsRenamer(List("a", "b", "d", "e"), List("a", "b", "c"))
+ * - d.e.SomeObject -> c.SomeObject
+ *     which corresponds to
+ *     PackagePartsRenamer(List("d", "e"), List("c"))
+ */
+case class PackagePartsRenamer(
+    oldPackageParts: List[String],
+    newPackageParts: List[String],
+) {
+  def dropFromOld(i: Int): PackagePartsRenamer =
+    PackagePartsRenamer(oldPackageParts.drop(i), newPackageParts)
+  def dropFromBoth(i: Int): PackagePartsRenamer =
+    PackagePartsRenamer(oldPackageParts.drop(i), newPackageParts.drop(i))
+}
+
+class ImporterRenamer(
+    references: List[Reference],
+    val renames: List[PackagePartsRenamer],
+) {
+  lazy val referencesNamesByPackage
+      : Map[List[String], Set[TopLevelDeclaration]] =
+    references
+      .groupMap(_.definition.innerPackageParts)(_.definition)
+      .map { case (key, v) =>
+        (key, v.toSet)
+      }
+
+  def renameFor(
+      importParts: List[String]
+  ): Option[(List[String], Set[TopLevelDeclaration])] = renames.collectFirst {
+    case PackagePartsRenamer(oldParts, newParts)
+        if (importParts.startsWith(oldParts) && referencesNamesByPackage
+          .get(importParts.drop(oldParts.length))
+          .isDefined) =>
+      val otherParts = importParts.drop(oldParts.length)
+      (newParts ++ otherParts, referencesNamesByPackage.get(otherParts).get)
+  }
+}
+
+object ObjectSymbol {
+  def unapply(symbol: String): Option[String] =
+    if (symbol.nonEmpty && symbol.last == '.') Some(symbol.dropRight(1))
+    else None
+}
+
+class PackageObject(filenamePart: String) {
+  val packageObjectLike: Set[String] =
+    Set("package", filenamePart ++ "$package")
+  def isPackageObjectLike(name: String): Boolean =
+    packageObjectLike.contains(name)
+  def symbols(owner: String): Set[String] = if (owner.isEmpty())
+    packageObjectLike
+  else packageObjectLike.map(owner ++ _)
+}
+
+case class AbsoluteDir(val value: AbsolutePath) extends AnyVal {
+  def listRecursive = value.listRecursive
+  def resolve(file: AbsoluteFile, relativeTo: AbsoluteDir): AbsolutePath =
+    value.resolve(file.value.toRelative(relativeTo.value))
+}
+object AbsoluteDir {
+  def from(path: AbsolutePath): Option[AbsoluteDir] =
+    if (path.isDirectory) Some(new AbsoluteDir(path))
+    else None
+}
+case class AbsoluteFile(val value: AbsolutePath) extends AnyVal {
+  def filename = value.filename
+  def content() = value.readTextOpt
+  def stringUri: String = value.toURI.toString()
+}
+
+object AbsoluteFile {
+  def from(path: AbsolutePath, fileName: String): AbsoluteFile =
+    if (path.isDirectory) new AbsoluteFile(path.resolve(fileName))
+    else new AbsoluteFile(path)
+
+  def from(path: AbsolutePath): Option[AbsoluteFile] =
+    if (path.isFile) Some(new AbsoluteFile(path))
+    else None
 }

@@ -5,7 +5,10 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import scala.util.Try
 
 import scala.meta.internal.bsp.BspResolvedResult
 import scala.meta.internal.bsp.BspSession
@@ -184,6 +187,7 @@ final class Doctor(
         buildToolHeading,
         buildServerHeading,
         importBuildHeading,
+        isServerResponsive,
       )
     if (targetIds.isEmpty) {
       DoctorFolderResults(
@@ -276,6 +280,10 @@ final class Doctor(
               .text(")")
           )
       )
+    }
+
+    isServerResponsive.withFilter(!_).foreach { _ =>
+      html.element("p")(_.text(buildServerNotResponsive))
     }
 
     val (message, explicitChoice) = selectedBuildServerMessage()
@@ -434,6 +442,12 @@ final class Doctor(
     )
   }
 
+  private def isServerResponsive: Option[Boolean] =
+    currentBuildServer().flatMap { conn =>
+      val isResponsiveFuture = conn.main.isBuildServerResponsive
+      Try(Await.result(isResponsiveFuture, Duration("1s"))).toOption
+    }
+
   private def extractScalaTargetInfo(
       scalaTarget: ScalaTarget,
       javaTarget: Option[JavaTarget],
@@ -513,6 +527,8 @@ final class Doctor(
     s"Make sure the workspace directory '$workspace' matches the root of your build."
   private val noBuildTargetRecTwo =
     "Try removing the directories .metals/ and .bloop/, then restart metals And import the build again."
+  private val buildServerNotResponsive =
+    "Build server is not responding."
 }
 
 case class DoctorVisibilityDidChangeParams(

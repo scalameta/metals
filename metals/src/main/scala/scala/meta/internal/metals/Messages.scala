@@ -238,7 +238,7 @@ object Messages {
       )
 
     def moreInfo: String =
-      " Select 'More information' to learn how to fix this problem.."
+      " Select 'More information' to learn how to fix this problem."
 
     def allProjectsMisconfigured: String =
       "Navigation will not work for this build due to mis-configuration." + moreInfo
