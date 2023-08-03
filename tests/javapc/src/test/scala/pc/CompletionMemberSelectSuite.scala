@@ -129,7 +129,8 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|getClass()
+    """|println()
+       |getClass()
        |hashCode()
        |equals(java.lang.Object arg0)
        |clone()
@@ -140,7 +141,6 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
        |wait(long arg0)
        |wait(long arg0, int arg1)
        |finalize()
-       |println()
        |""".stripMargin,
   )
 
@@ -157,8 +157,8 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|clone()
-       |cleanStack()
+    """|cleanStack()
+       |clone()
        |""".stripMargin,
     // let's make sure we don't get any <clinit> method
     filterText = Some("cl"),

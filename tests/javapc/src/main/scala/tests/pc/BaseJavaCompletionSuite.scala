@@ -8,6 +8,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.pc.CancelToken
 
+import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.CompletionItem
 
@@ -18,7 +19,7 @@ class BaseJavaCompletionSuite extends BaseJavaPCSuite {
       expected: String,
       filename: String = "A.java",
       filterText: Option[String] = None,
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val items = getItems(original, filename)
       val filtered = filterText match {
