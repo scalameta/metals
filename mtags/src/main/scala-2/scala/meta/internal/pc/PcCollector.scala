@@ -269,17 +269,21 @@ abstract class PcCollector[T](
     }
   }
 
-  def resultAllOccurences(): Set[T] = {
+  def resultAllOccurences(includeSynthetics: Boolean = false): Set[T] = {
     def noTreeFilter = (_: Tree) => true
     def noSoughtFilter = (_: (Symbol => Boolean)) => true
 
-    traverseSought(noTreeFilter, noSoughtFilter)
+    traverseSought(noTreeFilter, noSoughtFilter, includeSynthetics)
   }
 
   def traverseSought(
       filter: Tree => Boolean,
-      soughtFilter: (Symbol => Boolean) => Boolean
+      soughtFilter: (Symbol => Boolean) => Boolean,
+      includeSynthetics: Boolean = false
   ): Set[T] = {
+    def syntheticFilter(tree: Tree) = includeSynthetics &&
+      tree.pos.isOffset &&
+      tree.symbol.isImplicit
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     def traverseWithParent(parent: Option[Tree])(
         acc: Set[T],
@@ -296,7 +300,9 @@ abstract class PcCollector[T](
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident if ident.pos.isRange && filter(ident) =>
+        case ident: Ident
+            if ident.pos.isRange && filter(ident) ||
+              syntheticFilter(ident) =>
           if (ident.symbol == NoSymbol)
             acc + collect(ident, ident.pos, fallbackSymbol(ident.name, pos))
           else
@@ -324,6 +330,14 @@ abstract class PcCollector[T](
             acc + collect(
               sel,
               sel.namePosition
+            ),
+            sel.qualifier
+          )
+        case sel: Select if syntheticFilter(sel) =>
+          traverse(
+            acc + collect(
+              sel,
+              sel.pos
             ),
             sel.qualifier
           )
@@ -383,6 +397,17 @@ abstract class PcCollector[T](
          */
         case tpe: TypeTree if tpe.original != null =>
           tpe.original.children.foldLeft(acc)(traverse(_, _))
+
+        /**
+         * For collecting synthetic type parameters:
+         * def hello[T](t: T) = t
+         * val x = hello<<[List[Int]]>>(List<<Int>>(1))
+         */
+        case tpe: TypeTree if includeSynthetics && tpe.pos.isOffset =>
+          acc + collect(
+            tpe,
+            tpe.pos
+          )
         /**
          * Some type trees don't have symbols attached such as:
          * type A = List[_ <: <<Iterable>>[Int]]

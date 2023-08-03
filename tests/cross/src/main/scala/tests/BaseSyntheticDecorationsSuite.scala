@@ -23,10 +23,9 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
       kind: Option[Int] = None,
   )(implicit location: Location): Unit =
     test(name) {
-      def pkgWrap(text: String) = 
+      def pkgWrap(text: String) =
         if (text.contains("package")) text
         else s"package ${scala.meta.Term.Name(name.name)}\n$text"
-
 
       val withPkg = pkgWrap(base)
       val allDecorations = presentationCompiler
@@ -44,7 +43,6 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
         case Some(k) => allDecorations.filter(_.kind == k)
         case None => allDecorations
       }
-
 
       val obtained = TextEdits.applyEdits(withPkg, decorations.flatMap(edits))
 

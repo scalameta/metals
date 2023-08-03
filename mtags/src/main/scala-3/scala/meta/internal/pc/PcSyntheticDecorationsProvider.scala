@@ -31,6 +31,7 @@ class PcSyntheticDecorationsProvider(
       extends PcCollector[Option[SyntheticDecoration]](driver, params):
     val indexedCtx = IndexedContext(ctx)
     val shortenedNames = new ShortenedNames(indexedCtx)
+    val definitions = indexedCtx.ctx.definitions
     val printer = MetalsPrinter.forInferredType(
       shortenedNames,
       indexedCtx,
@@ -82,7 +83,8 @@ class PcSyntheticDecorationsProvider(
               sym.decodedName,
               DecorationKind.ImplicitParameter,
             )
-          case (TypeApply(_, _), TypeTree()) =>
+          case (TypeApply(fun, _), TypeTree())
+              if !definitions.isTupleNType(fun.symbol.info.finalResultType) =>
             Decoration(
               pos.endPos.toLsp,
               printType(tree.tpe),

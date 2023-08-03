@@ -11,8 +11,9 @@ final class PcSyntheticDecorationsProvider(
 
   def provide(): List[SyntheticDecoration] =
     Collector
-      .result()
+      .resultAllOccurences(includeSynthetics = true)
       .flatten
+      .toList
       .sortWith((n1, n2) => n1.range().lt(n2.range()))
 
   // Initialize Tree
@@ -40,20 +41,38 @@ final class PcSyntheticDecorationsProvider(
         symbol: Option[compiler.Symbol]
     ): Option[SyntheticDecoration] = {
       val sym = symbol.fold(tree.symbol)(identity)
-      if (sym == null || sym == compiler.NoSymbol) {
-        None
-      } else {
-        val tpe = printType(sym.tpe)
-        val kind = inlayHintKind(sym)
-        Some(
-          Decoration(pos.toLsp, tpe, kind)
-        )
-      }
-    }
-
-    def inlayHintKind(sym: compiler.Symbol): Int = {
-      if (sym.isImplicit) 2
-      else 1
+      parent
+        .collectFirst {
+          case Apply(fun, args) if fun.pos == pos && pos.isOffset =>
+            val lastArgPos = args.lastOption.fold(pos)(_.pos)
+            Decoration(
+              lastArgPos.toLsp,
+              sym.decodedName,
+              DecorationKind.ImplicitConversion
+            )
+          case ap @ Apply(_, args)
+              if args.exists(_.pos == pos) && pos.isOffset =>
+            Decoration(
+              ap.pos.focusEnd.toLsp,
+              sym.decodedName,
+              DecorationKind.ImplicitParameter
+            )
+          case TypeApply(fun, args)
+              if args.exists(_.pos == pos) && pos.isOffset &&
+                !compiler.definitions.isTupleType(fun.tpe.finalResultType) =>
+            Decoration(
+              fun.pos.focusEnd.toLsp,
+              printType(tree.tpe),
+              DecorationKind.TypeParameter
+            )
+        }
+        .orElse {
+          val tpe = printType(sym.tpe)
+          val kind = DecorationKind.InferredType
+          Some(
+            Decoration(pos.toLsp, tpe, kind)
+          )
+        }
     }
   }
 }

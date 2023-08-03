@@ -1,12 +1,9 @@
 package tests.decorations
 
 import tests.BaseSyntheticDecorationsSuite
+import scala.meta.internal.pc.DecorationKind
 
 class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
-
-  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
-    IgnoreScala2
-  )
 
   check(
     "type-params",
@@ -20,6 +17,30 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
        |  val x = hello[List[Int]](List[Int](1))
        |}
        |""".stripMargin,
+    kind = Some(DecorationKind.TypeParameter),
+  )
+
+  check(
+    "type-params2",
+    """|object Main {
+       |  def hello[T](t: T) = t
+       |  val x = hello(Map((1,"abc")))
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def hello[T](t: T) = t
+       |  val x = hello[Map[Int,String]](Map[String][Int]((1,"abc")))
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  def hello[T](t: T) = t
+           |  val x = hello[Map[Int, String]](Map[String][Int]((1,"abc")))
+           |}
+           |""".stripMargin
+    ),
+    kind = Some(DecorationKind.TypeParameter),
   )
 
   check(
@@ -38,6 +59,7 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
        |  val x = addOne(1)(imp)
        |}
        |""".stripMargin,
+    kind = Some(DecorationKind.ImplicitParameter),
   )
 
   check(
@@ -54,10 +76,11 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
        |  val y: User = intToUser(1)
        |}
        |""".stripMargin,
+    kind = Some(DecorationKind.ImplicitConversion),
   )
 
   check(
-    "using-param",
+    "using-param".tag(IgnoreScala2),
     """|case class User(name: String)
        |object Main {
        |  implicit val imp: Int = 2
@@ -72,10 +95,11 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
        |  val x = addOne(1)(imp)
        |}
        |""".stripMargin,
+    kind = Some(DecorationKind.ImplicitParameter),
   )
 
   check(
-    "given-conversion",
+    "given-conversion".tag(IgnoreScala2),
     """|case class User(name: String)
        |object Main {
        |  given intToUser: Conversion[Int, User] = User(_.toString)
@@ -88,5 +112,6 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
        |  val y: User = intToUser(1)
        |}
        |""".stripMargin,
+    kind = Some(DecorationKind.ImplicitConversion),
   )
 }

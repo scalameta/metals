@@ -419,7 +419,11 @@ abstract class PcCollector[T](
             sel,
             pos.withSpan(selectNameSpan(sel)),
           )
-
+        /**
+         * for synthetic decorations in:
+         * given Conversion[Int, String] = _.toString
+         * val x: String = <<>>123
+         */
         case Select(id: Ident, name)
             if syntheticFilter(id) && name == nme.apply =>
           occurences + collect(
