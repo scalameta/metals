@@ -51,20 +51,15 @@ class JavaCompletionProvider(
 
     node match {
       case Some(n) =>
-        val list =
-          n.getLeaf.getKind match {
-            case MEMBER_SELECT => completeMemberSelect(task, n)
-            case IDENTIFIER => completeIdentifier(task, n)
-            case _ => new CompletionList()
-          }
-
-        val keywordsCompletion = keywords(n)
-        val resultList =
-          (list.getItems.asScala ++ keywordsCompletion.getItems.asScala).distinct
-            .sorted(ordering)
-            .asJava
-
-        new CompletionList(resultList)
+        val items = n.getLeaf.getKind match {
+          case MEMBER_SELECT => completeMemberSelect(task, n)
+          case IDENTIFIER =>
+            val scopeItems = completeIdentifier(task, n)
+            val keywordItems = keywords(n)
+            (scopeItems ++ keywordItems).distinct.sorted(ordering)
+          case _ => keywords(n)
+        }
+        new CompletionList(items.asJava)
       case None => new CompletionList()
     }
   }
@@ -91,7 +86,7 @@ class JavaCompletionProvider(
   private def completeMemberSelect(
       task: JavacTask,
       path: TreePath
-  ): CompletionList = {
+  ): List[CompletionItem] = {
     val typeAnalyzer = new JavaTypeAnalyzer(task)
     val select = path.getLeaf.asInstanceOf[MemberSelectTree]
     val newPath = new TreePath(path, select.getExpression)
@@ -107,8 +102,8 @@ class JavaCompletionProvider(
   private def completeIdentifier(
       task: JavacTask,
       path: TreePath
-  ): CompletionList =
-    new CompletionList(completeFromScope(task, path).asJava)
+  ): List[CompletionItem] =
+    completeFromScope(task, path)
 
   private def completeFromScope(
       task: JavacTask,
@@ -128,10 +123,12 @@ class JavaCompletionProvider(
   private def completeDeclaredType(
       task: JavacTask,
       declaredType: DeclaredType
-  ): CompletionList = {
+  ): List[CompletionItem] = {
     val members = task.getElements
       .getAllMembers(declaredType.asElement().asInstanceOf[TypeElement])
       .asScala
+      // constructors cannot be invoked as members
+      .filterNot(member => member.getKind() == ElementKind.CONSTRUCTOR)
       .toList
 
     val identifier = extractIdentifier
@@ -142,7 +139,7 @@ class JavaCompletionProvider(
       )
       .map(completionItem)
 
-    new CompletionList(completionItems.asJava)
+    completionItems
   }
 
   private def extractIdentifier: String = {
@@ -152,28 +149,25 @@ class JavaCompletionProvider(
     params.text().substring(start, end)
   }
 
-  private def keywords(path: TreePath): CompletionList = {
+  private def keywords(path: TreePath): List[CompletionItem] = {
     val identifier = extractIdentifier
     val level = keywordLevel(path)
 
-    val completionItems =
-      JavaKeyword.all
-        .collect {
-          case keyword
-              if keyword.level == level && CompletionFuzzy.matches(
-                identifier,
-                keyword.name
-              ) =>
-            keyword.name
-        }
-        .map { keyword =>
-          val item = new CompletionItem(keyword)
-          item.setKind(CompletionItemKind.Keyword)
+    JavaKeyword.all
+      .collect {
+        case keyword
+            if keyword.level == level && CompletionFuzzy.matches(
+              identifier,
+              keyword.name
+            ) =>
+          keyword.name
+      }
+      .map { keyword =>
+        val item = new CompletionItem(keyword)
+        item.setKind(CompletionItemKind.Keyword)
+        item
+      }
 
-          item
-        }
-
-    new CompletionList(completionItems.asJava)
   }
 
   @tailrec
@@ -189,17 +183,14 @@ class JavaCompletionProvider(
     }
   }
 
-  private def completeArrayType(): CompletionList = {
+  private def completeArrayType(): List[CompletionItem] = {
     val identifier = extractIdentifier
     if (CompletionFuzzy.matches(identifier, "length")) {
       val item = new CompletionItem("length")
       item.setKind(CompletionItemKind.Keyword)
-
-      new CompletionList(
-        List(item).asJava
-      )
+      List(item)
     } else {
-      new CompletionList()
+      Nil
     }
 
   }
@@ -208,11 +199,11 @@ class JavaCompletionProvider(
   private def completeTypeVariable(
       task: JavacTask,
       typeVariable: TypeVariable
-  ): CompletionList = {
+  ): List[CompletionItem] = {
     typeVariable.getUpperBound match {
       case dt: DeclaredType => completeDeclaredType(task, dt)
       case tv: TypeVariable => completeTypeVariable(task, tv)
-      case _ => new CompletionList()
+      case _ => Nil
     }
   }
 
