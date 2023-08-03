@@ -117,4 +117,30 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
        |subSequence(int arg0, int arg1)
        |""".stripMargin,
   )
+
+  check(
+    "empty-select",
+    """
+      |class Perfect {
+      |  
+      |  void println() {
+      |    Perfect perfect = new Perfect();
+      |    perfect.@@
+      |  }
+      |}
+      |""".stripMargin,
+    """|getClass()
+       |hashCode()
+       |equals(java.lang.Object arg0)
+       |clone()
+       |toString()
+       |notify()
+       |notifyAll()
+       |wait()
+       |wait(long arg0)
+       |wait(long arg0, int arg1)
+       |finalize()
+       |println()
+       |""".stripMargin,
+  )
 }
