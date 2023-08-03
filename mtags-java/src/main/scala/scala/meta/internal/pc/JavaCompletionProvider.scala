@@ -53,13 +53,10 @@ class JavaCompletionProvider(
       case Some(n) =>
         val items = n.getLeaf.getKind match {
           case MEMBER_SELECT => completeMemberSelect(task, n)
-          case IDENTIFIER =>
-            val scopeItems = completeIdentifier(task, n)
-            val keywordItems = keywords(n)
-            (scopeItems ++ keywordItems).distinct.sorted(ordering)
+          case IDENTIFIER => completeIdentifier(task, n) ++ keywords(n)
           case _ => keywords(n)
         }
-        new CompletionList(items.asJava)
+        new CompletionList(items.distinct.sorted(ordering).asJava)
       case None => new CompletionList()
     }
   }
@@ -124,11 +121,16 @@ class JavaCompletionProvider(
       task: JavacTask,
       declaredType: DeclaredType
   ): List[CompletionItem] = {
+    val bannedKinds = Set(
+      ElementKind.CONSTRUCTOR,
+      ElementKind.STATIC_INIT,
+      ElementKind.INSTANCE_INIT
+    )
     val members = task.getElements
       .getAllMembers(declaredType.asElement().asInstanceOf[TypeElement])
       .asScala
       // constructors cannot be invoked as members
-      .filterNot(member => member.getKind() == ElementKind.CONSTRUCTOR)
+      .filterNot(member => bannedKinds(member.getKind()))
       .toList
 
     val identifier = extractIdentifier

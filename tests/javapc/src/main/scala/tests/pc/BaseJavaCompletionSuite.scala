@@ -17,12 +17,17 @@ class BaseJavaCompletionSuite extends BaseJavaPCSuite {
       original: String,
       expected: String,
       filename: String = "A.java",
+      filterText: Option[String] = None,
   ): Unit = {
     test(name) {
       val items = getItems(original, filename)
+      val filtered = filterText match {
+        case None => items
+        case Some(text) => items.filter(_.getLabel().contains(text))
+      }
       val out = new StringBuilder()
 
-      items.foreach { item =>
+      filtered.foreach { item =>
         out.append(item.getLabel)
         out.append("\n")
       }
