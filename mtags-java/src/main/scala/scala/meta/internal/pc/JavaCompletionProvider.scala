@@ -33,6 +33,7 @@ class JavaCompletionProvider(
     isCompletionSnippetsEnabled: Boolean
 ) {
 
+  lazy val identifier = extractIdentifier.toLowerCase
   def completions(): CompletionList = {
     val nextIsWhitespace =
       params.text().charAt(params.offset()).isWhitespace
@@ -52,32 +53,27 @@ class JavaCompletionProvider(
     node match {
       case Some(n) =>
         val items = n.getLeaf.getKind match {
-          case MEMBER_SELECT => completeMemberSelect(task, n)
-          case IDENTIFIER => completeIdentifier(task, n) ++ keywords(n)
+          case MEMBER_SELECT => completeMemberSelect(task, n).distinct
+          case IDENTIFIER => completeIdentifier(task, n).distinct ++ keywords(n)
           case _ => keywords(n)
         }
-        new CompletionList(items.distinct.sorted(ordering).asJava)
+        new CompletionList(items.asJava)
       case None => new CompletionList()
     }
   }
 
-  private def ordering: Ordering[CompletionItem] = {
-    val identifier = extractIdentifier.toLowerCase
+  private def identifierScore(element: Element): Int = {
+    val name = element.getSimpleName().toString().toLowerCase()
+    if (name.startsWith(identifier)) 0
+    else if (name.contains(identifier)) 1
+    else 2
+  }
 
-    new Ordering[CompletionItem] {
-      def score(item: CompletionItem): Int = {
-        val name = item.getLabel.toLowerCase
-
-        if (name.startsWith(identifier)) 0
-        else if (name.contains(identifier)) 1
-        else 2
-      }
-
-      override def compare(i1: CompletionItem, i2: CompletionItem): Int = {
-        java.lang.Integer.compare(score(i1), score(i2))
-      }
-    }
-
+  private def memberScore(element: Element, containingElement: Element): Int = {
+    val idScore = identifierScore(element)
+    val memberScore =
+      if (element.getEnclosingElement() == containingElement) 0 else 1
+    idScore << 1 | memberScore
   }
 
   private def completeMemberSelect(
@@ -114,6 +110,7 @@ class JavaCompletionProvider(
     val identifier = extractIdentifier
 
     scopeCompletion
+      .sortBy(el => identifierScore(el))
       .map(completionItem)
       .filter(item => CompletionFuzzy.matches(identifier, item.getLabel))
   }
@@ -122,24 +119,30 @@ class JavaCompletionProvider(
       task: JavacTask,
       declaredType: DeclaredType
   ): List[CompletionItem] = {
+    // constructors cannot be invoked as members
     val bannedKinds = Set(
       ElementKind.CONSTRUCTOR,
       ElementKind.STATIC_INIT,
       ElementKind.INSTANCE_INIT
     )
+    val declaredElement = declaredType.asElement()
     val members = task.getElements
-      .getAllMembers(declaredType.asElement().asInstanceOf[TypeElement])
+      .getAllMembers(declaredElement.asInstanceOf[TypeElement])
       .asScala
-      // constructors cannot be invoked as members
-      .filterNot(member => bannedKinds(member.getKind()))
       .toList
 
     val identifier = extractIdentifier
 
     val completionItems = members
       .filter(member =>
-        CompletionFuzzy.matches(identifier, member.getSimpleName.toString)
+        CompletionFuzzy.matches(
+          identifier,
+          member.getSimpleName.toString
+        ) && !bannedKinds(member.getKind())
       )
+      .sortBy { element =>
+        memberScore(element, declaredElement)
+      }
       .map(completionItem)
 
     completionItems
