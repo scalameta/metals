@@ -143,4 +143,24 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
        |println()
        |""".stripMargin,
   )
+
+  check(
+    "completable-future-select",
+    """
+      |
+      |import java.util.concurrent.CompletableFuture;
+      |
+      |class Perfect {
+      |  
+      |  void println() {
+      |    CompletableFuture.@@
+      |  }
+      |}
+      |""".stripMargin,
+    """|clone()
+       |cleanStack()
+       |""".stripMargin,
+    // let's make sure we don't get any <clinit> method
+    filterText = Some("cl"),
+  )
 }
