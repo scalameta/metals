@@ -64,9 +64,11 @@ class JavaCompletionProvider(
 
   private def identifierScore(element: Element): Int = {
     val name = element.getSimpleName().toString().toLowerCase()
-    if (name.startsWith(identifier)) 0
-    else if (name.contains(identifier)) 1
-    else 2
+    name.indexOf(identifier) match {
+      case 0 => 0
+      case -1 => 2
+      case _ => 1
+    }
   }
 
   private def memberScore(element: Element, containingElement: Element): Int = {
