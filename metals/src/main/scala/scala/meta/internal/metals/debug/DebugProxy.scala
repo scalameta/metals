@@ -135,6 +135,7 @@ private[debug] final class DebugProxy(
           new Position(frame.getLine() - 1, 0),
           EmptyCancelToken,
           args,
+          isZeroBased = !clientAdapter.linesStartAt1,
         )
       }
       completions

@@ -288,11 +288,22 @@ class Compilers(
       Nil
     }
 
+  /**
+   * Calculates completions for a expression evaluator at breakpointPosition
+   *
+   * @param path path to file containing ht ebreakpoint
+   * @param breakpointPosition actual breakpoint position
+   * @param token cancel token for the compiler
+   * @param expression expression that is currently being types
+   * @param isZeroBased whether the client supports starting at 0 or 1 index
+   * @return
+   */
   def debugCompletions(
       path: AbsolutePath,
       breakpointPosition: LspPosition,
       token: CancelToken,
       expression: d.CompletionsArguments,
+      isZeroBased: Boolean,
   ): Future[Seq[d.CompletionItem]] = {
 
     /**
@@ -342,6 +353,16 @@ class Compilers(
 
             val rangeEnd =
               lineStart + expressionOffset(expressionText, indentation) + 1
+
+            /**
+             * Calculate the start if insertText is used for item, which does not declare an exact start.
+             */
+            def insertStart = {
+              var i = rangeEnd - 1
+              while (modified.charAt(i).isLetterOrDigit) i -= 1
+              if (isZeroBased) i else i + 1
+            }
+
             val offsetParams = CompilerOffsetParams(
               path.toURI,
               modified,
@@ -377,8 +398,7 @@ class Compilers(
                       adjustStart,
                       Position.Range(
                         input.copy(value = modified),
-                        // account for the added ;
-                        lineStart + 1,
+                        insertStart,
                         rangeEnd,
                       ),
                     )
@@ -1140,7 +1160,7 @@ class Compilers(
   private def toDebugCompletionItem(
       item: CompletionItem,
       adjustStart: Int,
-      insertTextPosition: Position,
+      insertTextPosition: Position.Range,
   ): d.CompletionItem = {
     val debugItem = new d.CompletionItem()
     debugItem.setLabel(item.getLabel())
@@ -1174,6 +1194,7 @@ class Compilers(
       debugItem.setSelectionStart(selection)
     }
 
+    debugItem.setDetail(item.getDetail())
     debugItem.setText(fullText.replace("$0", ""))
     debugItem.setStart(start)
     debugItem.setType(toDebugCompletionType(item.getKind()))

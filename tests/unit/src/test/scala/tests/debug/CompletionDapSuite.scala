@@ -250,7 +250,7 @@ class CompletionDapSuite
            |scale(int arg0, float arg1)
            |startsWith(java.lang.String arg0, int arg1)
            |""".stripMargin,
-    expectedEdit = "serialVersionUID",
+    expectedEdit = "name.serialVersionUID",
     topLines = Some(5),
   )(
     """|/a/src/main/java/a/Main.java
