@@ -9,9 +9,11 @@ title: Making a release
 
 - Choose the right version number:
 
-  - `x.0.0` is reserved for incompatible changes and require a milestone cycle.
-  - `x.y.0` is reserved for compatible changes.
-  - `x.y.z` is reserved for bugfixes that don't change the public API,
+  - `x.0.0` should not be used unless Metals is totally reworked.
+  - `x.y.0` is reserved for changes that require adjustments in the plugins for
+    different editors.
+  - `x.y.z` is reserved in remaining cases, where the changes do not require any
+    adjustments in the plugins.
 
   For most releases bumping `z` is enough especially that Metals not being used
   as a library anywhere and do not have a public API.
@@ -26,6 +28,10 @@ title: Making a release
   Please wait with pushing the tag until the release notes are accepted.
 
 ### Draft the release notes
+
+First of all, if you are bumping the minor part of the version choose a new
+metal or an alloy as a new for the release! Use that in the release notes and in
+the release title on GitHub. Otherwie, use the metals from the previous release.
 
 You might use the `./bin/merged_prs.sc` script to generate merged PRs list
 between two last release tags. It can be run using scala-cli:
