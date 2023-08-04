@@ -184,7 +184,8 @@ class SymbolIndexBucket(
     if (!definitions.contains(symbol.value)) {
       // Fallback 1: enter the toplevel symbol definition
       val toplevel = symbol.toplevel
-      toplevels.get(toplevel.value) match {
+      val files = toplevels.get(toplevel.value)
+      files match {
         case Some(files) =>
           files.foreach(addMtagsSourceFile(_))
         case _ =>
@@ -192,9 +193,22 @@ class SymbolIndexBucket(
             .orElse(loadFromSourceJars(modulePaths(toplevel)))
             .foreach(_.foreach(addMtagsSourceFile(_)))
       }
+      if (!definitions.contains(symbol.value)) {
+        // Fallback 2: try with files for companion class
+        if (toplevel.value.endsWith(".")) {
+          val toplevelAlternative = s"${toplevel.value.stripSuffix(".")}#"
+          for {
+            companionClassFile <- toplevels
+              .get(toplevelAlternative)
+              .toSet
+              .flatten
+            if (!files.exists(_.contains(companionClassFile)))
+          } addMtagsSourceFile(companionClassFile)
+        }
+      }
     }
     if (!definitions.contains(symbol.value)) {
-      // Fallback 2: guess related symbols from the enclosing class.
+      // Fallback 3: guess related symbols from the enclosing class.
       DefinitionAlternatives(symbol)
         .flatMap(alternative => query0(querySymbol, alternative))
     } else {
