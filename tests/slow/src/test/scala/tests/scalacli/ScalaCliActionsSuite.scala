@@ -48,7 +48,9 @@ class ScalaCliActionsSuite
         |  println("Hello")
         |}
         |""".stripMargin,
-    s"""Apply suggestion: "os-lib is outdated, update to $newestOsLib"""",
+    s"""|"os-lib is outdated, update to ${newestOsLib}"
+        |     os-lib 0.7.8 -> com.lihaoyi::os-lib:${newestOsLib}
+        |""".stripMargin,
     s"""|// commentary
         |//> using lib "com.lihaoyi::os-lib:$newestOsLib"
         |
@@ -61,6 +63,24 @@ class ScalaCliActionsSuite
         s"""//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}""",
         s"""|// commentary
             |//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}""".stripMargin,
+      ).stripMargin,
+    scalaCliOptions = List("--actions", "-S", scalaVersion),
+    expectNoDiagnostics = false,
+  )
+
+  checkNoActionScalaCLI(
+    "actionable-diagnostic-didchange-stale-action-not-returned",
+    s"""|//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}"
+        |
+        |object Hello extends App {
+        |  println("Hello")
+        |}
+        |""".stripMargin,
+    changeFile = f =>
+      f.replace(
+        s"""//> using lib "<<>>com.lihaoyi::os-lib:${oldOsLibVersion.repr}""",
+        s"""|//> using lib "<<>>com.lihaoyi::os-
+            |//lib:${oldOsLibVersion.repr}""".stripMargin,
       ).stripMargin,
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,

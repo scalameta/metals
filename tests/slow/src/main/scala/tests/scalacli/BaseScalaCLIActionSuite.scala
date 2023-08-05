@@ -26,14 +26,12 @@ class BaseScalaCLIActionSuite(name: String)
       changeFile: String => String = identity,
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
-  ): Unit = {
-    val fileContent = input.replace("<<", "").replace(">>", "")
-
+  ): Unit =
     checkScalaCLI(
       name = name,
       input = input,
       expectedActions = "",
-      expectedCode = fileContent,
+      expectedCode = changeFile(input).replace("<<", "").replace(">>", ""),
       expectNoDiagnostics = expectNoDiagnostics,
       kind = kind,
       scalaCliOptions = scalaCliOptions,
@@ -48,7 +46,6 @@ class BaseScalaCLIActionSuite(name: String)
       expectError = expectError,
       filterAction = filterAction,
     )
-  }
 
   def checkScalaCLI(
       name: TestOptions,

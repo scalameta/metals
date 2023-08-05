@@ -283,7 +283,7 @@ final class Diagnostics(
                 .isLeft() && d.getCode().getLeft() != "-1"
             )
               ld.setCode(d.getCode())
-            ld.setData(adjustDiagnosticData(d, edit))
+            adjustedDiagnosticData(d, edit).map(newData => ld.setData(newData))
             ld
           }
         if (result.isEmpty) {
@@ -313,22 +313,28 @@ final class Diagnostics(
     toPublish
   }
 
-  private def adjustDiagnosticData(
+  private def adjustedDiagnosticData(
       diagnostic: l.Diagnostic,
       edit: TokenEditDistance,
-  ): Object =
+  ): Option[Object] =
     diagnostic match {
       case ScalacDiagnostic.ScalaDiagnostic(Left(textEdit)) =>
-        val range = textEdit.getRange
-        val revisedRange = edit
+        edit
           .toRevised(
-            range = range,
-            adjustWithinToken = shouldAdjustWithinToken(diagnostic),
+            textEdit,
+            shouldAdjustWithinToken(diagnostic),
+            fallbackToNearest = false,
           )
-        textEdit.setRange(revisedRange.getOrElse(range))
-        textEdit.toJsonObject
-      // TODO also update bsp scala diagnostics, e.g. ScalaDiagnostic(Right(textEdits))
-      case diagnostic => diagnostic.getData
+          .map(_.toJsonObject)
+      case ScalacDiagnostic.ScalaDiagnostic(Right(scalaDiagnostic)) =>
+        edit
+          .toRevised(
+            scalaDiagnostic,
+            shouldAdjustWithinToken(diagnostic),
+            fallbackToNearest = false,
+          )
+          .map(_.toJsonObject)
+      case _ => Some(diagnostic.getData())
     }
 
   private def shouldAdjustWithinToken(diagnostic: l.Diagnostic): Boolean =
