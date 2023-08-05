@@ -748,6 +748,11 @@ object MetalsEnrichments
       new l.Position(pos.getLine, pos.getCharacter)
   }
 
+  implicit class XtensionLspPositionBsp(pos: l.Position) {
+    def toBsp: b.Position =
+      new b.Position(pos.getLine, pos.getCharacter)
+  }
+
   implicit class XtensionPositionRange(range: s.Range) {
     def inString(text: String): Option[String] = {
       var i = 0
@@ -823,6 +828,31 @@ object MetalsEnrichments
       }
       ld.setData(diag.getData)
       ld
+    }
+  }
+
+  implicit class XtensionLspRangeBsp(range: l.Range) {
+    def toBsp: b.Range =
+      new b.Range(range.getStart.toBsp, range.getEnd.toBsp)
+  }
+
+  implicit class XtensionScalaAction(scalaAction: b.ScalaAction) {
+    def asLspTextEdits: Seq[l.TextEdit] =
+      scalaAction
+        .getEdit()
+        .getChanges()
+        .asScala
+        .toSeq
+        .map(edit => new l.TextEdit(edit.getRange().toLsp, edit.getNewText()))
+
+    def setEditFromLspTextEdits(lspTextEdits: Seq[l.TextEdit]): Unit = {
+      val scalaWorkspaceEdit =
+        new b.ScalaWorkspaceEdit(
+          lspTextEdits.map { edit =>
+            new b.ScalaTextEdit(edit.getRange().toBsp, edit.getNewText())
+          }.asJava
+        )
+      scalaAction.setEdit(scalaWorkspaceEdit)
     }
   }
 

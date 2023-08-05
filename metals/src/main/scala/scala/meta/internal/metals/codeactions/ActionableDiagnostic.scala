@@ -36,14 +36,7 @@ class ActionableDiagnostic() extends CodeAction {
           )
         case Right(scalaAction) =>
           val uri = params.getTextDocument().getUri()
-          val edits = scalaAction
-            .getEdit()
-            .getChanges()
-            .asScala
-            .toSeq
-            .map(edit =>
-              new l.TextEdit(edit.getRange().toLsp, edit.getNewText())
-            )
+          val edits = scalaAction.asLspTextEdits
           CodeActionBuilder.build(
             title = scalaAction.getTitle(),
             kind = l.CodeActionKind.QuickFix,
