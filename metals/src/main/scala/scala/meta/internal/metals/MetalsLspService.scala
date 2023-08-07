@@ -699,6 +699,7 @@ class MetalsLspService(
       statusBar,
       sourceMapper,
       userConfig,
+      testProvider,
     )
   )
 

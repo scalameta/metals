@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.testProvider.frameworks
 
+import scala.reflect.NameTransformer
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.mtags
@@ -37,7 +39,14 @@ class JunitTestFinder {
         case symbol if isValid(symbol) =>
           doc
             .toLocation(uri, symbol.symbol)
-            .map(location => TestCaseEntry(symbol.displayName, location))
+            .map { location =>
+              val encodedName = NameTransformer.encode(symbol.displayName)
+              TestCaseEntry(
+                encodedName,
+                symbol.displayName,
+                location,
+              )
+            }
       }
       .flatten
       .toVector

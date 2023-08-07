@@ -539,6 +539,52 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   checkEvents(
+    "check-backtick",
+    List("junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3"),
+    s"""|
+        |/app/src/main/scala/JunitTestSuite.scala
+        |import org.junit.Test
+        |class JunitTestSuite {
+        |  @Test
+        |  def `test-backtick` = ()
+        |}
+        |""".stripMargin,
+    file = "app/src/main/scala/JunitTestSuite.scala",
+    expected = () => {
+      val fcqn = "JunitTestSuite"
+      val className = "JunitTestSuite"
+      val symbol = "_empty_/JunitTestSuite#"
+      val file = "app/src/main/scala/JunitTestSuite.scala"
+      List(
+        rootBuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestSuite(
+              fcqn,
+              className,
+              symbol,
+              QuickLocation(classUriFor(file), (1, 6, 1, 20)).toLsp,
+              canResolveChildren = true,
+            ),
+            AddTestCases(
+              fcqn,
+              className,
+              List(
+                TestCaseEntry(
+                  "test$minusbacktick",
+                  "test-backtick",
+                  QuickLocation(classUriFor(file), (3, 6, 3, 21)).toLsp,
+                )
+              ).asJava,
+            ),
+          ).asJava,
+        )
+      )
+    },
+  )
+
+  checkEvents(
     "scalatest-any-fun-suite",
     List("org.scalatest::scalatest:3.2.13"),
     s"""|
