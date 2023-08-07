@@ -1,13 +1,9 @@
 package scala.meta.internal.parsing
 
 import scala.collection.mutable.ArrayBuffer
-import scala.util.Failure
-import scala.util.Success
 import scala.util.Try
 
 import scala.meta.inputs.Input
-import scala.meta.inputs.Input.File
-import scala.meta.inputs.Input.VirtualFile
 import scala.meta.inputs.Position
 
 import org.eclipse.jdt.core.ToolFactory
@@ -32,7 +28,7 @@ object JavaTokens {
    * @param source to tokenize
    * @return tokenized source
    */
-  def tokenize(source: Input): Option[Array[JavaToken]] = Try {
+  def tokenize(source: Input): Try[Array[JavaToken]] = Try {
 
     val scanner = ToolFactory.createScanner(
       /*tokenizeComments = */ true, /*tokenizeWhiteSpace = */ true,
@@ -74,16 +70,5 @@ object JavaTokens {
 
     loop(scanner.getNextToken())
     buffer.toArray
-  } match {
-    case Failure(exception) =>
-      source match {
-        case VirtualFile(path, _) =>
-          scribe.warn(s"Cannot tokenize Java file $path", exception)
-        case File(path, _) =>
-          scribe.warn(s"Cannot tokenize Java file $path", exception)
-        case _ =>
-      }
-      None
-    case Success(value) => Some(value)
   }
 }

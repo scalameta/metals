@@ -1411,6 +1411,7 @@ class MetalsLspService(
         else {
           val edit = TokenEditDistance(old, newBuffer, trees)
           edit
+            .getOrElse(TokenEditDistance.NoMatch)
             .toRevised(
               params.getPosition.getLine,
               params.getPosition.getCharacter,

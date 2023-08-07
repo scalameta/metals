@@ -329,4 +329,42 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       )
     } yield ()
   }
+
+  test("tokenization-error") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |object A {
+          |  val n: Int = ""
+          |}
+        """.stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/A.scala:2:16: error: type mismatch;
+           | found   : String("")
+           | required: Int
+           |  val n: Int = ""
+           |               ^^
+           |""".stripMargin,
+      )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+        _.replace("val n: Int = \"\"", "val n: Int = \" ")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/A.scala:2:16: error: unclosed string literal
+           |  val n: Int = " 
+           |               ^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }
