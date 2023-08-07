@@ -23,11 +23,11 @@ object V {
   val coursierInterfaces =
     "1.0.18" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
-  val debugAdapter = "3.1.3"
+  val debugAdapter = "3.1.4"
   val genyVersion = "1.0.0"
   val gradleBloop = "1.6.1"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.8.24"
+  val javaSemanticdb = "0.9.0"
   val jsoup = "1.16.1"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.20.1"
@@ -40,13 +40,13 @@ object V {
   val sbtJdiTools = "1.1.1"
   val scalaCli = "1.0.2"
   val scalafix = "0.11.0"
-  val scalafmt = "3.7.10"
+  val scalafmt = "3.7.12"
   val scalameta = "4.8.3"
-  val scribe = "3.11.8"
+  val scribe = "3.11.9"
   val semanticdb = scalameta
   val qdox = "2.0.3"
 
-  val guava = "com.google.guava" % "guava" % "32.1.1-jre"
+  val guava = "com.google.guava" % "guava" % "32.1.2-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 

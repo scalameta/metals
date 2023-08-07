@@ -47,6 +47,7 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
@@ -84,6 +85,7 @@ class DebugProvider(
     statusBar: StatusBar,
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
+    testProvider: TestSuitesProvider,
 ) extends Cancelable {
 
   import DebugProvider._
@@ -634,13 +636,20 @@ class DebugProvider(
   )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
     def makeDebugSession() = {
       val debugSession =
-        if (supportsTestSelection(request.target))
+        if (supportsTestSelection(request.target)) {
+          val testSuites =
+            request.requestData.copy(suites = request.requestData.suites.map {
+              suite =>
+                if (testProvider.getFramework(buildTarget, suite) == JUnit4)
+                  suite.copy(tests = suite.tests.map(_.replace("$", "\\$")))
+                else suite
+            })
           new b.DebugSessionParams(
             singletonList(buildTarget.getId),
             DebugProvider.ScalaTestSelection,
-            request.requestData.toJson,
+            testSuites.toJson,
           )
-        else
+        } else
           new b.DebugSessionParams(
             singletonList(buildTarget.getId),
             b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,

@@ -582,14 +582,14 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |StringBuilder(initCapacity: Int, initValue: String): StringBuilder
            |""".stripMargin,
       "3" ->
-        s"""$scala213Docs
-           |StringBuilder scala.collection.mutable
-           |StringBuilder(): StringBuilder
-           |StringBuilder(str: String): StringBuilder
-           |StringBuilder(underlying: StringBuilder): StringBuilder
-           |StringBuilder(capacity: Int): StringBuilder
-           |StringBuilder(initCapacity: Int, initValue: String): StringBuilder
-           |""".stripMargin,
+        List(
+          "StringBuilder scala.collection.mutable",
+          "StringBuilder(): StringBuilder",
+          "StringBuilder(str: String): StringBuilder",
+          "StringBuilder(underlying: StringBuilder): StringBuilder",
+          "StringBuilder(capacity: Int): StringBuilder",
+          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder",
+        ).map(s => scala213Docs + "\n" + s).mkString("\n"),
       "2.13.11" ->
         s"""|$scala213Docs
             |StringBuilder scala.collection.mutable

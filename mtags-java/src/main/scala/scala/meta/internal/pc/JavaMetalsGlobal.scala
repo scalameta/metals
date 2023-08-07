@@ -1,7 +1,10 @@
 package scala.meta.internal.pc
 
 import java.net.URI
+import javax.tools.Diagnostic
+import javax.tools.DiagnosticListener
 import javax.tools.JavaCompiler
+import javax.tools.JavaFileObject
 import javax.tools.ToolProvider
 
 import scala.jdk.CollectionConverters._
@@ -19,6 +22,13 @@ class JavaMetalsGlobal(
 
   private val COMPILER: JavaCompiler = ToolProvider.getSystemJavaCompiler()
 
+  private val noopDiagnosticListener = new DiagnosticListener[JavaFileObject] {
+
+    // ignore errors since presentation compiler will have a lot of transient ones
+    override def report(diagnostic: Diagnostic[_ <: JavaFileObject]): Unit = ()
+
+  }
+
   def compilationTask(sourceCode: String, uri: URI): JavacTask = {
     val javaFileObject = SourceJavaFileObject.make(sourceCode, uri)
 
@@ -26,7 +36,7 @@ class JavaMetalsGlobal(
       .getTask(
         null,
         null,
-        null,
+        noopDiagnosticListener,
         null,
         null,
         List(javaFileObject).asJava
