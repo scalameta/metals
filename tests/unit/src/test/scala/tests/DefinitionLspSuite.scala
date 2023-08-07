@@ -571,4 +571,39 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       }
     }
 
+  test("init-args") {
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": { }
+          |}
+          |/a/src/main/scala/a/Main.scala
+          |class A(
+          |  a: Int, 
+          |  b: Int
+          |) {}
+          |object Main {
+          |  val aa = new A(a = 1, b = 2)
+          |}
+          |""".stripMargin
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/Main.scala
+           |class A/*L0*/(
+           |  a/*L1*/: Int/*Int.scala*/, 
+           |  b/*L2*/: Int/*Int.scala*/
+           |) {}
+           |object Main/*L4*/ {
+           |  val aa/*L5*/ = new A/*L0*/(a/*L1*/ = 1, b/*L2*/ = 2)
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
 }

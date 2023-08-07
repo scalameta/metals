@@ -12,6 +12,7 @@ object DefinitionAlternatives {
       caseClassCompanionToType(symbol),
       caseClassApplyOrCopy(symbol),
       caseClassApplyOrCopyParams(symbol),
+      initParamToValue(symbol),
       varGetter(symbol),
       methodOwner(symbol),
       objectInsteadOfAny(symbol)
@@ -44,6 +45,22 @@ object DefinitionAlternatives {
       case GlobalSymbol(owner, method @ Descriptor.Method(methodName, _))
           if owner.value == "scala/Any#" && objectMethods(methodName) =>
         Symbol("java/lang/Object#" + method)
+    }
+  }
+
+  private def initParamToValue(symbol: Symbol): Option[Symbol] = {
+    Option(symbol).collect {
+      case GlobalSymbol(
+            GlobalSymbol(
+              GlobalSymbol(owner, signature),
+              Descriptor.Method("<init>", _)
+            ),
+            Descriptor.Parameter(param)
+          ) =>
+        GlobalSymbol(
+          GlobalSymbol(owner, Descriptor.Type(signature.name.value)),
+          Descriptor.Term(param)
+        )
     }
   }
 
