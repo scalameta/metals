@@ -5,12 +5,15 @@ import java.util.logging.Logger
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 import scala.reflect.ClassTag
+import scala.util.Failure
+import scala.util.Success
 
 import scala.meta.Input
 import scala.meta.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.TokenOps.syntax._
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.tokenizers.Tokenized
 
 import difflib._
 import org.eclipse.{lsp4j => l}
@@ -391,7 +394,7 @@ object TokenEditDistance {
       revisedInput: Input.VirtualFile,
       trees: Trees,
       doNothingWhenUnchanged: Boolean = true,
-  ): TokenEditDistance = {
+  ): Either[String, TokenEditDistance] = {
     val isScala =
       originalInput.path.isScalaFilename &&
         revisedInput.path.isScalaFilename
@@ -401,37 +404,57 @@ object TokenEditDistance {
 
     if (!isScala && !isJava) {
       // Ignore non-scala/java Files.
-      Unchanged
+      Right(Unchanged)
     } else if (originalInput.value.isEmpty() || revisedInput.value.isEmpty()) {
-      NoMatch
+      Right(NoMatch)
     } else if (doNothingWhenUnchanged && originalInput == revisedInput) {
-      Unchanged
+      Right(Unchanged)
     } else if (isJava) {
-      val result = for {
-        revised <- JavaTokens.tokenize(revisedInput)
-        original <- JavaTokens.tokenize(originalInput)
-      } yield {
-        TokenEditDistance.fromTokens(
-          originalInput,
-          original,
-          revisedInput,
-          revised,
-        )
+      val tokenizedRevised = JavaTokens.tokenize(revisedInput)
+      val tokenizedOriginal = JavaTokens.tokenize(originalInput)
+      (tokenizedRevised, tokenizedOriginal) match {
+        case (Success(revised), Success(original)) =>
+          Right(
+            TokenEditDistance.fromTokens(
+              originalInput,
+              original,
+              revisedInput,
+              revised,
+            )
+          )
+        case (err: Failure[_], _) => Left(err.exception.getMessage())
+        case (_, err: Failure[_]) => Left(err.exception.getMessage())
       }
-      result.getOrElse(NoMatch)
     } else {
-      val result = for {
-        revised <- trees.tokenized(revisedInput).toOption
-        original <- trees.tokenized(originalInput).toOption
-      } yield {
-        TokenEditDistance.fromTokens(
-          originalInput,
-          original.tokens,
-          revisedInput,
-          revised.tokens,
-        )
+      val tokenizedRevised = trees.tokenized(revisedInput)
+      val tokenizedOriginal = trees.tokenized(originalInput)
+      val result = (tokenizedRevised, tokenizedOriginal) match {
+        case (Tokenized.Success(revised), Tokenized.Success(original)) =>
+          Right(
+            TokenEditDistance.fromTokens(
+              originalInput,
+              original.tokens,
+              revisedInput,
+              revised.tokens,
+            )
+          )
+        case (err: Tokenized.Error, _) =>
+          Left(err.message)
+        case (_, err: Tokenized.Error) =>
+          Left(err.message)
+        case _ => Right(NoMatch)
       }
-      result.getOrElse(NoMatch)
+
+      result match {
+        case Left(message) =>
+          scribe.debug(
+            s"Could not tokenize file ${revisedInput.path} because of:",
+            message,
+          )
+        case _ =>
+      }
+
+      result
     }
   }
 
