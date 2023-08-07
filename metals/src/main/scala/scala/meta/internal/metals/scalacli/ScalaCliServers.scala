@@ -7,6 +7,8 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
@@ -19,11 +21,9 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
-
-import org.eclipse.lsp4j.services.LanguageClient
-import scala.meta.internal.metals.BuildServerConnection
 
 class ScalaCliServers(
     compilers: () => Compilers,
@@ -34,12 +34,17 @@ class ScalaCliServers(
     diagnostics: () => Diagnostics,
     tables: Tables,
     buildClient: () => MetalsBuildClient,
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
     config: () => MetalsServerConfig,
     userConfig: () => UserConfiguration,
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
-)(implicit ec: ExecutionContextExecutorService) extends Cancelable {
-  private val serversRef: AtomicReference[Set[ScalaCli]] = ???
+    buildTargets: BuildTargets,
+)(implicit ec: ExecutionContextExecutorService)
+    extends Cancelable {
+  val buildTargetsData = new TargetData
+  private val serversRef: AtomicReference[Set[ScalaCli]] = new AtomicReference(
+    Set.empty
+  )
 
   private lazy val localScalaCli: Option[Seq[String]] =
     ScalaCli.localScalaCli(userConfig())
@@ -87,8 +92,10 @@ class ScalaCliServers(
     )
   }
 
-  def lastImportedBuilds: List[(ImportedBuild, TargetData)] = 
-    servers.map( server => (server.lastImportedBuild, server.buildTargetsData)).toList
+  def lastImportedBuilds: List[(ImportedBuild, TargetData)] =
+    servers
+      .map(server => (server.lastImportedBuild, server.buildTargetsData))
+      .toList
 
   def buildServers: List[BuildServerConnection] = servers.flatMap(_.buildServer)
 
@@ -97,13 +104,13 @@ class ScalaCliServers(
     servers.foreach(_.cancel())
   }
 
-  def loaded(path: AbsolutePath): Boolean = 
+  def loaded(path: AbsolutePath): Boolean =
     servers.exists(_.path.toNIO.startsWith(path.toNIO))
 
   def paths: List[AbsolutePath] = servers.map(_.path)
 
   def start(path: AbsolutePath): Future[Unit] = {
-    val scalaCli = 
+    val scalaCli =
       new ScalaCli(
         compilers,
         compilations,
@@ -117,20 +124,37 @@ class ScalaCliServers(
         config,
         cliCommand,
         parseTreesAndPublishDiags,
-        path
+        path,
       )
 
-    val prevServers = serversRef.getAndUpdate{ servers =>
-      if(servers.exists(_.path == path)) servers
+    val prevServers = serversRef.getAndUpdate { servers =>
+      if (servers.exists(_.path == path)) servers
       else servers + scalaCli
     }
 
-    prevServers.find(_.path == path).getOrElse(scalaCli).start()
+    prevServers
+      .find(_.path == path)
+      .getOrElse {
+        buildTargets.addData(scalaCli.buildTargetsData)
+        scalaCli
+      }
+      .start()
   }
 
   def stop(): Future[Unit] = {
     val servers = serversRef.getAndSet(Set.empty)
     Future.sequence(servers.map(_.stop())).ignoreValue
+  }
+
+  def stop(path: AbsolutePath): Future[Unit] = {
+    val servers = serversRef.getAndUpdate(s => s.filterNot(_.path == path))
+    servers
+      .collectFirst {
+        case s if s.path == path =>
+          buildTargets.removeData(s.buildTargetsData)
+          s.stop()
+      }
+      .getOrElse(Future.successful(()))
   }
 
 }

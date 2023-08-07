@@ -60,7 +60,7 @@ class ScalaCli(
     config: () => MetalsServerConfig,
     cliCommand: List[String],
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
-    val path: AbsolutePath
+    val path: AbsolutePath,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 

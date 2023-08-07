@@ -101,6 +101,7 @@ class WorkspaceLspService(
     client: MetalsLanguageClient,
     initializeParams: lsp4j.InitializeParams,
     val folders: List[Folder],
+    fallbackServicePath: => AbsolutePath,
 ) extends ScalaLspService {
   import serverInputs._
   implicit val ex: ExecutionContextExecutorService = ec
@@ -166,6 +167,24 @@ class WorkspaceLspService(
     focusedDocument = newFocusedDocument
   }
 
+  lazy val fallbackService: FallbackMetalsLspService =
+    new FallbackMetalsLspService(
+      ec,
+      sh,
+      serverInputs,
+      languageClient,
+      initializeParams,
+      clientConfig,
+      statusBar,
+      () => focusedDocument,
+      shellRunner,
+      timerProvider,
+      initTreeView,
+      fallbackServicePath,
+      Some("fallback-service"),
+      doctor,
+    )
+
   def createService(folder: Folder): MetalsLspService =
     folder match {
       case Folder(uri, name) =>
@@ -201,7 +220,6 @@ class WorkspaceLspService(
 
   def folderServices = workspaceFolders.getFolderServices
   def nonScalaProjects = workspaceFolders.nonScalaProjects
-  def fallbackService: MetalsLspService = folderServices.head
 
   val treeView: TreeViewProvider =
     if (clientConfig.isTreeViewProvider) {
@@ -220,7 +238,7 @@ class WorkspaceLspService(
     clientConfig,
     shellRunner,
     clientConfig.icons,
-    folders.head.path,
+    fallbackService.path,
   )
 
   private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
@@ -1013,7 +1031,7 @@ class WorkspaceLspService(
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
       case actionCommand
-          if folderServices.head.allActionCommandsIds(
+          if fallbackService.allActionCommandsIds(
             actionCommand.getCommand()
           ) =>
         val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
@@ -1055,7 +1073,7 @@ class WorkspaceLspService(
         val capabilities = new lsp4j.ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new lsp4j.ExecuteCommandOptions(
-            (ServerCommands.allIds ++ folderServices.head.allActionCommandsIds).toList.asJava
+            (ServerCommands.allIds ++ fallbackService.allActionCommandsIds).toList.asJava
           )
         )
         capabilities.setFoldingRangeProvider(true)
