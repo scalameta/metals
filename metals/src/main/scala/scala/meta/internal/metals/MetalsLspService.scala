@@ -64,7 +64,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
-import scala.meta.internal.metals.scalacli.ScalaCli
+import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.watcher.FileWatcher
@@ -2312,11 +2312,12 @@ class MetalsLspService(
         val connOpt = buildTargets.buildServerOf(change.getTarget)
         connOpt.nonEmpty && connOpt == ammonite.buildServer
       }
-    val (scalaCliBuildChanges, otherChanges0) =
-      otherChanges.partition { change =>
-        val connOpt = buildTargets.buildServerOf(change.getTarget)
-        connOpt.nonEmpty && connOpt == scalaCli.buildServer
-      }
+
+    val scalaCliServers = scalaCli.servers
+    val scalaCliBuildChanges = otherChanges.groupBy { change =>
+      val connOpt = buildTargets.buildServerOf(change.getTarget)
+      connOpt.flatMap(conn => scalaCliServers.find(_ == conn))
+    }
 
     if (ammoniteChanges.nonEmpty)
       ammonite.importBuild().onComplete {
@@ -2325,17 +2326,21 @@ class MetalsLspService(
           scribe.error("Error re-importing Ammonite build", exception)
       }
 
-    if (scalaCliBuildChanges.nonEmpty)
-      scalaCli
+    scalaCliBuildChanges.collect { case (Some(server), _) =>
+      server
         .importBuild()
         .onComplete {
           case Success(()) =>
           case Failure(exception) =>
             scribe
-              .error("Error re-importing Scala CLI build", exception)
+              .error(
+                s"Error re-importing for a Scala CLI build with path ${server.path}",
+                exception,
+              )
         }
+    }
 
-    if (otherChanges0.nonEmpty) {
+    if (scalaCliBuildChanges.exists(_._1.isEmpty)) {
       bspSession match {
         case None => scribe.warn("No build server connected")
         case Some(session) =>
@@ -2346,7 +2351,6 @@ class MetalsLspService(
             focusedDocument().foreach(path => compilations.compileFile(path))
           }
       }
-
     }
   }
 
@@ -2365,7 +2369,7 @@ class MetalsLspService(
       case other => Future.successful(other)
     }
 
-    val scalaCliPath = scalaCli.path
+    val scalaCliPaths = scalaCli.paths
 
     isConnecting.set(true)
     (for {
@@ -2391,12 +2395,13 @@ class MetalsLspService(
         case None =>
           Future.successful(BuildChange.None)
       }
-      _ <- scalaCliPath
-        .collectFirst {
-          case path if (!conflictsWithMainBsp(path.toNIO)) =>
-            scalaCli.start(path)
-        }
-        .getOrElse(Future.successful(()))
+      _ <- Future.sequence(
+        scalaCliPaths
+          .collect {
+            case path if (!conflictsWithMainBsp(path.toNIO)) =>
+              scalaCli.start(path)
+          }
+      )
       _ = initTreeView()
     } yield result)
       .recover { case NonFatal(e) =>
@@ -2477,8 +2482,8 @@ class MetalsLspService(
     }
   }
 
-  val scalaCli: ScalaCli = register(
-    new ScalaCli(
+  val scalaCli: ScalaCliServers = register(
+    new ScalaCliServers(
       () => compilers,
       compilations,
       workDoneProgress,
@@ -2493,7 +2498,9 @@ class MetalsLspService(
       parseTreesAndPublishDiags,
     )
   )
-  buildTargets.addData(scalaCli.buildTargetsData)
+  scalaCli.lastImportedBuilds.foreach { case (_, scalaCliBuildTargets) =>
+    buildTargets.addData(scalaCliBuildTargets)
+  }
 
   private val indexer = Indexer(
     () => workspaceReload,
@@ -2521,12 +2528,13 @@ class MetalsLspService(
           ammonite.buildTargetsData,
           ammonite.lastImportedBuild,
         ),
-        Indexer.BuildTool(
-          "scala-cli",
-          scalaCli.buildTargetsData,
-          scalaCli.lastImportedBuild,
-        ),
-      ),
+      )
+        ++
+          scalaCli.lastImportedBuilds.map {
+            case (lastImportedBuild, buildTargetsData) =>
+              Indexer
+                .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
+          },
     clientConfig,
     definitionIndex,
     () => referencesProvider,

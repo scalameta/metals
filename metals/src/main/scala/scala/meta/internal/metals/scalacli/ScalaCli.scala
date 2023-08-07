@@ -58,8 +58,9 @@ class ScalaCli(
     buildClient: () => MetalsBuildClient,
     languageClient: MetalsLanguageClient,
     config: () => MetalsServerConfig,
-    userConfig: () => UserConfiguration,
+    cliCommand: List[String],
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
+    val path: AbsolutePath
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -156,28 +157,6 @@ class ScalaCli(
     }
   }
 
-  private lazy val localScalaCli: Option[Seq[String]] =
-    ScalaCli.localScalaCli(userConfig())
-
-  private lazy val cliCommand = {
-    localScalaCli.getOrElse {
-      scribe.warn(
-        s"scala-cli >= ${ScalaCli.minVersion} not found in PATH, fetching and starting a JVM-based Scala CLI"
-      )
-      jvmBased()
-    }
-  }
-
-  def jvmBased(): Seq[String] = {
-    val cp = ScalaCli.scalaCliClassPath()
-    Seq(
-      ScalaCli.javaCommand,
-      "-cp",
-      cp.mkString(File.pathSeparator),
-      ScalaCli.scalaCliMainClass,
-    )
-  }
-
   def loaded(path: AbsolutePath): Boolean =
     ifConnectedOrElse(st =>
       st.path == path || path.toNIO.startsWith(st.path.toNIO)
@@ -209,6 +188,7 @@ class ScalaCli(
     ifConnectedOrElse(st => Option(st.path))(None)
 
   def start(path: AbsolutePath): Future[Unit] = {
+
     disconnectOldBuildServer().onComplete {
       case Failure(e) =>
         scribe.warn("Error disconnecting old Scala CLI server", e)
