@@ -247,4 +247,24 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |end extension""".stripMargin,
   )
 
+  check(
+    "enum-cases".tag(IgnoreScala2),
+    """|enum MyOption:
+       |  case <<My@@Some>>(value: Int)
+       |  case MyNone
+       |
+       |val alpha = MyOption.<<MySome>>(1)
+       |""".stripMargin,
+  )
+
+  check(
+    "enum-cases2".tag(IgnoreScala2),
+    """|enum MyOption:
+       |  case <<My@@Some>>[U](value: U)
+       |  case MyNone
+       |
+       |val alpha = MyOption.<<MySome>>(1)
+       |""".stripMargin,
+  )
+
 }
