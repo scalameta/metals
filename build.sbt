@@ -282,6 +282,22 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
   result.toList
 }
 
+def scala3ScalametaDependency =
+  ("org.scalameta" %% "scalameta" % V.scalameta)
+    .cross(CrossVersion.for3Use2_13)
+    .exclude("org.scala-lang", "scala-reflect")
+    .exclude("org.scala-lang", "scala-compiler")
+    // the correct one should be brought in by the scala 3 compiler
+    .exclude("org.scala-lang", "scala-library")
+    .exclude(
+      "com.lihaoyi",
+      "geny_2.13",
+    ) // avoid 2.13 and 3 on the classpath since we rely on it directly
+    .exclude(
+      "com.lihaoyi",
+      "sourcecode_2.13",
+    ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
+
 val mtagsSettings = List(
   crossScalaVersions := V.supportedScalaVersions ++ V.nightlyScala3Versions,
   crossTarget := target.value / s"scala-${scalaVersion.value}",
@@ -302,22 +318,6 @@ val mtagsSettings = List(
     "org.lz4" % "lz4-java" % "1.8.0",
   ),
   libraryDependencies ++= {
-    val scala3ScalametaDependency =
-      ("org.scalameta" %% "scalameta" % V.scalameta)
-        .cross(CrossVersion.for3Use2_13)
-        .exclude("org.scala-lang", "scala-reflect")
-        .exclude("org.scala-lang", "scala-compiler")
-        // the correct one should be brought in by the scala 3 compiler
-        .exclude("org.scala-lang", "scala-library")
-        .exclude(
-          "com.lihaoyi",
-          "geny_2.13",
-        ) // avoid 2.13 and 3 on the classpath since we rely on it directly
-        .exclude(
-          "com.lihaoyi",
-          "sourcecode_2.13",
-        ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
-
     crossSetting(
       scalaVersion.value,
       if2 = List(
@@ -330,8 +330,7 @@ val mtagsSettings = List(
         scala3ScalametaDependency,
       ),
       if3WithPresentationCompiler = List(
-        "org.scala-lang" %% "scala3-presentation-compiler" % scalaVersion.value,
-        scala3ScalametaDependency % Test,
+        "org.scala-lang" %% "scala3-presentation-compiler" % scalaVersion.value
       ),
     ),
   },
@@ -358,14 +357,6 @@ val mtagsSettings = List(
       List(base / s"scala-3-wrapper")
     else
       current
-  },
-  Test / unmanagedSourceDirectories ++= {
-    val base = (Compile / sourceDirectory).value
-    if (isScala3WithPresentationCompiler(scalaVersion.value)) {
-      List(base / s"scala")
-    } else {
-      Nil
-    }
   },
 )
 
@@ -697,8 +688,21 @@ lazy val mtest = project
       (ThisBuild / baseDirectory).value / "tests" / "mtest",
       scalaVersion.value,
     ),
+    libraryDependencies ++= {
+      if (isScala3WithPresentationCompiler(scalaVersion.value))
+        List(scala3ScalametaDependency)
+      else Nil
+    },
+    Compile / unmanagedSourceDirectories ++= {
+      val base = (mtags / Compile / sourceDirectory).value
+      if (isScala3WithPresentationCompiler(scalaVersion.value)) {
+        List(base / "scala")
+      } else {
+        Nil
+      }
+    },
   )
-  .dependsOn(mtags % "compile->test")
+  .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val cross = project

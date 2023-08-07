@@ -42,8 +42,13 @@ object DottyVersion {
         val Array(major, minor, patch) = parts.take(3).map(_.toInt)
         val rc = parts.lift(3).map(_.toInt)
         // format is "$major.$minor.$patch-RC$rc-bin-$date-hash-NIGHTLY"
-        val date = parts.lift(5).map(_.toInt)
-        Some(DottyVersion(major, minor, patch, rc, date, v))
+        // or when locally published "$major.$minor.$patch-RC$rc-bin-SNAPSHOT"
+        if (parts.lift(5) == Some("SNAPSHOT")) {
+          Some(DottyVersion(major, minor, patch, rc, None, v))
+        } else {
+          val date = parts.lift(5).map(_.toInt)
+          Some(DottyVersion(major, minor, patch, rc, date, v))
+        }
       }
 
     }.toOption.flatten
