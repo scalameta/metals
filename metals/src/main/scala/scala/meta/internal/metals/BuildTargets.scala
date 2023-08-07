@@ -508,6 +508,14 @@ final class BuildTargets private (
     dataLock.synchronized {
       this.data = BuildTargets.DataSeq(data :: this.data.list)
     }
+
+  def removeData(data: TargetData): Unit =
+    dataLock.synchronized {
+      this.data match {
+        case BuildTargets.DataSeq(list) =>
+          BuildTargets.DataSeq(list.filterNot(_ == data))
+      }
+    }
 }
 
 object BuildTargets {

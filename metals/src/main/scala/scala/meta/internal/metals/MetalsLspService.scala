@@ -2375,11 +2375,9 @@ class MetalsLspService(
       () => clientConfig.initialConfig,
       () => userConfig,
       parseTreesAndPublishDiags,
+      buildTargets,
     )
   )
-  scalaCli.lastImportedBuilds.foreach { case (_, scalaCliBuildTargets) =>
-    buildTargets.addData(scalaCliBuildTargets)
-  }
 
   private val indexer = Indexer(
     () => workspaceReload,
