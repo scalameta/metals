@@ -47,7 +47,7 @@ case class UserConfiguration(
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
-    enableSemanticHighlighting: Boolean = false,
+    enableSemanticHighlighting: Boolean = true,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
@@ -237,11 +237,11 @@ object UserConfiguration {
       ),
       UserConfigurationOption(
         "enable-semantic-highlighting",
+        "true",
         "false",
-        "false",
-        "Use semantic tokens highlight (experimental).",
+        "Use semantic tokens highlight",
         """|When this option is enabled, Metals will provide semantic tokens for clients that support it.
-           |The feature is still experimental and does not work for all sources.
+           |The feature should work within all supported files extensions aside from Java.
            |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -496,7 +496,7 @@ object UserConfiguration {
     val enableIndentOnPaste =
       getBooleanKey("enable-indent-on-paste").getOrElse(true)
     val enableSemanticHighlighting =
-      getBooleanKey("enable-semantic-highlighting").getOrElse(false)
+      getBooleanKey("enable-semantic-highlighting").getOrElse(true)
     val excludedPackages =
       getStringListKey("excluded-packages")
     // `automatic` should be treated as None
