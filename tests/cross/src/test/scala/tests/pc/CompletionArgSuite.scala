@@ -981,4 +981,55 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(2),
   )
+
+  check(
+    "lambda".tag(IgnoreScala2),
+    """|val hello: (x: Int) => Unit = x => println(x)
+       |val k = hello(@@)
+       |""".stripMargin,
+    """|x = : Int
+       |""".stripMargin,
+    topLines = Some(1),
+  )
+
+  check(
+    "lambda2".tag(IgnoreScala2),
+    """|object O:
+       |  val hello: (x: Int, y: Int) => Unit = (x, _) => println(x)
+       |val k = O.hello(x = 1, @@)
+       |""".stripMargin,
+    """|y = : Int
+       |""".stripMargin,
+    topLines = Some(1),
+  )
+
+  check(
+    "lambda3".tag(IgnoreScala2),
+    """|val hello: (x: Int) => (j: Int) => Unit = x => j => println(x)
+       |val k = hello(@@)
+       |""".stripMargin,
+    """|x = : Int
+       |""".stripMargin,
+    topLines = Some(1),
+  )
+
+  check(
+    "lambda4".tag(IgnoreScala2),
+    """|val hello: (x: Int) => (j: Int) => (str: String) => Unit = x => j => str => println(str)
+       |val k = hello(x = 1)(2)(@@)
+       |""".stripMargin,
+    """|str = : String
+       |""".stripMargin,
+    topLines = Some(1),
+  )
+
+  check(
+    "lambda5".tag(IgnoreScala2),
+    """|val hello: (x: Int) => Int => (str: String) => Unit = x => j => str => println(str)
+       |val k = hello(x = 1)(2)(@@)
+       |""".stripMargin,
+    """|str = : String
+       |""".stripMargin,
+    topLines = Some(1),
+  )
 }
