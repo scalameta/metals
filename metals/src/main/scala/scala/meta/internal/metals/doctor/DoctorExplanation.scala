@@ -170,9 +170,10 @@ object DoctorExplanation {
   case object JavaSupport extends DoctorExplanation {
     val title = "Java Support:"
     val correctMessage: String =
-      s"${Icons.unicode.check} - working non-interactive features (references, rename etc.)"
+      s"${Icons.unicode.check} - hover, completions and index based features supported"
     val incorrectMessage: String =
-      s"""|${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server (which is only done when using Bloop)
+      s"""|${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server.
+          |${Icons.unicode.alert} - no Java information available in the build server
           |${Icons.unicode.info} - build target doesn't support Java files""".stripMargin
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
