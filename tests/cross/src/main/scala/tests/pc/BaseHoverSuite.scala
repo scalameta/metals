@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import scala.meta.XtensionSyntax
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionOptionalJava
 
 import munit.Location
 import munit.TestOptions

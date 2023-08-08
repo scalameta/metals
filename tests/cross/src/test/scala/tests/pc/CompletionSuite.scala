@@ -778,7 +778,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|incrementThisType(): A.this.type (with underlying type singleton.A)
        |""".stripMargin,
     compat = Map(
-      "3" -> "incrementThisType(): (A.this : singleton.A)"
+      scala3PresentationCompilerVersion -> "incrementThisType(): A.this.type",
+      "3" -> "incrementThisType(): (A.this : singleton.A)",
     ),
   )
 
@@ -1258,14 +1259,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
-  val pre331: String =
-    """|dynamics scala.languageFeature
-       |existentials scala.languageFeature
-       |experimental scala.languageFeature
-       |higherKinds scala.languageFeature
-       |implicitConversions scala.languageFeature
-       |""".stripMargin
-
   check(
     "ordering-1",
     s"""|object Main {
@@ -1280,7 +1273,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
-      // higherKinds was deprecated
+      // higherKinds was deprecated in 2.13.11 but current dotty still depends on 2.13.10
       "2.13.11" ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
@@ -1288,16 +1281,12 @@ class CompletionSuite extends BaseCompletionSuite {
            |implicitConversions scala.languageFeature
            |postfixOps scala.languageFeature
            |""".stripMargin,
-      "3.2" -> pre331,
-      "3.1" -> pre331,
-      "3.3.0" -> pre331,
-      "3.3.1" -> pre331,
-      "3" ->
-        """|dynamics languageFeature
-           |existentials languageFeature
-           |experimental languageFeature
-           |higherKinds languageFeature
-           |implicitConversions languageFeature
+      scala3PresentationCompilerVersion ->
+        """|dynamics scala.languageFeature
+           |existentials scala.languageFeature
+           |experimental scala.languageFeature
+           |higherKinds scala.languageFeature
+           |implicitConversions scala.languageFeature
            |""".stripMargin,
     ),
   )
@@ -1405,7 +1394,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |  def hello = {
        |    val name = Option("Bob")
        |    name.@@
-       |    println(msg) 
+       |    println(msg)
        |  }
        |}
        |""".stripMargin,

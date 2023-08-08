@@ -17,18 +17,26 @@ def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
 def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
+def isScala3WithPresentationCompiler(v: String): Boolean =
+  (DottyVersion.parse(v), DottyVersion.parse(V.firstScala3PCVersion)) match {
+    case (Some(v), Some(firstScala3PCVersion)) => v >= firstScala3PCVersion
+    case _ => false
+  }
 
 def crossSetting[A](
     scalaVersion: String,
     if211: List[A] = Nil,
     if213: List[A] = Nil,
     if3: List[A] = Nil,
+    if3WithPresentationCompiler: List[A] = Nil,
     if2: List[A] = Nil,
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
     case partialVersion if isScala211(partialVersion) => if211 ::: if2
     case partialVersion if isScala212(partialVersion) => if2
     case partialVersion if isScala213(partialVersion) => if2 ::: if213
+    case _ if isScala3WithPresentationCompiler(scalaVersion) =>
+      if3WithPresentationCompiler
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
@@ -97,11 +105,12 @@ def configureMtagsScalaVersionDynamically(
 ): State = {
   val scalaVersionSettings =
     List(
-      mtest / scalaVersion := scalaV,
       mtagsShared / scalaVersion := scalaV,
+      mtest / scalaVersion := scalaV,
       mtags / scalaVersion := scalaV,
       cross / scalaVersion := scalaV,
     )
+
   val extracted = Project.extract(state)
   extracted
     .appendWithSession(
@@ -242,9 +251,10 @@ lazy val mtagsShared = project
   .settings(
     moduleName := "mtags-shared",
     crossTarget := target.value / s"scala-${scalaVersion.value}",
-    crossScalaVersions := {
-      V.supportedScalaVersions ++ V.nightlyScala3Versions
-    },
+    // Dotty depends on Scala 2.13 for compatibility guarantees for from-source compilation.
+    crossScalaVersions :=
+      (V.supportedScalaVersions ++ V.nightlyScala3Versions)
+        .filterNot(isScala3WithPresentationCompiler),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
@@ -272,10 +282,24 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
   result.toList
 }
 
+def scala3ScalametaDependency =
+  ("org.scalameta" %% "scalameta" % V.scalameta)
+    .cross(CrossVersion.for3Use2_13)
+    .exclude("org.scala-lang", "scala-reflect")
+    .exclude("org.scala-lang", "scala-compiler")
+    // the correct one should be brought in by the scala 3 compiler
+    .exclude("org.scala-lang", "scala-library")
+    .exclude(
+      "com.lihaoyi",
+      "geny_2.13",
+    ) // avoid 2.13 and 3 on the classpath since we rely on it directly
+    .exclude(
+      "com.lihaoyi",
+      "sourcecode_2.13",
+    ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
+
 val mtagsSettings = List(
-  crossScalaVersions := {
-    V.supportedScalaVersions ++ V.nightlyScala3Versions
-  },
+  crossScalaVersions := V.supportedScalaVersions ++ V.nightlyScala3Versions,
   crossTarget := target.value / s"scala-${scalaVersion.value}",
   crossVersion := CrossVersion.full,
   Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
@@ -291,40 +315,30 @@ val mtagsSettings = List(
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions
     "io.get-coursier" % "interface" % V.coursierInterfaces,
+    "org.lz4" % "lz4-java" % "1.8.0",
   ),
-  libraryDependencies ++= crossSetting(
-    scalaVersion.value,
-    if2 = List(
-      // for token edit-distance used by goto definition
-      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+  libraryDependencies ++= {
+    crossSetting(
+      scalaVersion.value,
+      if2 = List(
+        // for token edit-distance used by goto definition
+        "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
+        "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+      ),
+      if3 = List(
+        "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
+        scala3ScalametaDependency,
+      ),
+      if3WithPresentationCompiler = List(
+        "org.scala-lang" %% "scala3-presentation-compiler" % scalaVersion.value
+      ),
     ),
-    if3 = List(
-      "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
-      ("org.scalameta" %% "scalameta" % V.scalameta)
-        .cross(CrossVersion.for3Use2_13)
-        .exclude("org.scala-lang", "scala-reflect")
-        .exclude("org.scala-lang", "scala-compiler")
-        // the correct one should be brought in by the scala 3 compiler
-        .exclude("org.scala-lang", "scala-library")
-        .exclude(
-          "com.lihaoyi",
-          "geny_2.13",
-        ) // avoid 2.13 and 3 on the classpath since we rely on it directly
-        .exclude(
-          "com.lihaoyi",
-          "sourcecode_2.13",
-        ), // avoid 2.13 and 3 on the classpath since it comes in via pprint
-    ),
-  ),
-  libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.8.0"),
+  },
   libraryDependencies ++= {
     if (isCI) Nil
     // NOTE(olafur) pprint is indispensable for me while developing, I can't
     // use println anymore for debugging because pprint.log is 100 times better.
-    else {
-      List("com.lihaoyi" %% "pprint" % V.pprint)
-    }
+    else List("com.lihaoyi" %% "pprint" % V.pprint)
   },
   buildInfoPackage := "scala.meta.internal.mtags",
   buildInfoKeys := Seq[BuildInfoKey](
@@ -339,6 +353,8 @@ val mtagsSettings = List(
     val scalaVersionsWithSpecialCompat = Set("2.13.9", "2.13.10", "2.13.11")
     if (scalaVersionsWithSpecialCompat(scalaVersion.value))
       current.filter(f => f.getName() != "scala-2.13")
+    else if (isScala3WithPresentationCompiler(scalaVersion.value))
+      List(base / s"scala-3-wrapper")
     else
       current
   },
@@ -364,11 +380,35 @@ lazy val mtags3 = project
   .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
 
+lazy val mtags3WithPresentationCompiler = project
+  .in(file(".mtags"))
+  .settings(
+    Compile / unmanagedSourceDirectories := Seq(),
+    sharedSettings,
+    mtagsSettings,
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala-3-wrapper",
+    moduleName := "mtags3WithPresentationCompiler",
+    scalaVersion := V.firstScala3PCVersion,
+    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3-wrapper",
+    publish / skip := true,
+    scalafixConfig := Some(
+      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
+    ),
+  )
+  .dependsOn(interfaces)
+  .enablePlugins(BuildInfoPlugin)
+
 lazy val mtags = project
   .settings(
     sharedSettings,
     mtagsSettings,
     moduleName := "mtags",
+    projectDependencies := {
+      // mtags-shared are included in scala3-presentation-compiler module as sources
+      if (isScala3WithPresentationCompiler(scalaVersion.value)) {
+        projectDependencies.value.filterNot(_.name == "mtags-shared")
+      } else projectDependencies.value
+    },
   )
   .dependsOn(mtagsShared)
   .enablePlugins(BuildInfoPlugin)
@@ -575,8 +615,8 @@ def runMtagsPublishLocal(
     .extract(state)
     .appendWithSession(
       List(
-        mtags / scalaVersion := scalaV,
         mtagsShared / scalaVersion := scalaV,
+        mtags / scalaVersion := scalaV,
         ThisBuild / version := projectV,
         ThisBuild / useSuperShell := false,
       ),
@@ -635,6 +675,7 @@ lazy val mtest = project
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "firstScala3PCVersion" -> V.firstScala3PCVersion,
       "scala2Versions" -> V.scala2Versions,
       "scala3Versions" -> (V.scala3Versions ++ V.nightlyScala3Versions),
       "scala2Versions" -> V.scala2Versions,
@@ -647,6 +688,19 @@ lazy val mtest = project
       (ThisBuild / baseDirectory).value / "tests" / "mtest",
       scalaVersion.value,
     ),
+    libraryDependencies ++= {
+      if (isScala3WithPresentationCompiler(scalaVersion.value))
+        List(scala3ScalametaDependency)
+      else Nil
+    },
+    Compile / unmanagedSourceDirectories ++= {
+      val base = (mtags / Compile / sourceDirectory).value
+      if (isScala3WithPresentationCompiler(scalaVersion.value)) {
+        List(base / "scala")
+      } else {
+        Nil
+      }
+    },
   )
   .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)

@@ -636,6 +636,17 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  val defaultRefinedTypes: String =
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |    type G
+       |  }
+       |
+       |  val c: Foo{type T = Int; type G = Long} = new Foo { type T = Int; type G = Long}
+       |}
+       |""".stripMargin
+
   checkEdit(
     "refined-types",
     """|object O{
@@ -647,16 +658,9 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  val <<c>> = new Foo { type T = Int; type G = Long}
        |}
        |""".stripMargin,
-    """|object O{
-       |  trait Foo {
-       |    type T
-       |    type G
-       |  }
-       |
-       |  val c: Foo{type T = Int; type G = Long} = new Foo { type T = Int; type G = Long}
-       |}
-       |""".stripMargin,
+    defaultRefinedTypes,
     compat = Map(
+      scala3PresentationCompilerVersion -> defaultRefinedTypes,
       "3" ->
         """|object O{
            |  trait Foo {
@@ -666,9 +670,19 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
            |
            |  val c: Foo{type T >: Int <: Int; type G >: Long <: Long} = new Foo { type T = Int; type G = Long}
            |}
-           |""".stripMargin
+           |""".stripMargin,
     ),
   )
+
+  val defaultRefinedTypes2: String =
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |  }
+       |  val c = new Foo { type T = Int }
+       |  val d: Foo{type T = Int} = c
+       |}
+       |""".stripMargin
 
   checkEdit(
     "refined-types2",
@@ -680,15 +694,9 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  val <<d>> = c
        |}
        |""".stripMargin,
-    """|object O{
-       |  trait Foo {
-       |    type T
-       |  }
-       |  val c = new Foo { type T = Int }
-       |  val d: Foo{type T = Int} = c
-       |}
-       |""".stripMargin,
+    defaultRefinedTypes2,
     compat = Map(
+      scala3PresentationCompilerVersion -> defaultRefinedTypes2,
       "3" ->
         """|object O{
            |  trait Foo {
@@ -697,9 +705,19 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
            |  val c = new Foo { type T = Int }
            |  val d: Foo{type T >: Int <: Int} = c
            |}
-           |""".stripMargin
+           |""".stripMargin,
     ),
   )
+
+  val defaultRefinedTypes3: String =
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |  }
+       |
+       |  val c: Foo{type T = Int} = new Foo { type T = Int }
+       |}
+       |""".stripMargin
 
   checkEdit(
     "refined-types3",
@@ -711,15 +729,9 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  val <<c>> = new Foo { type T = Int }
        |}
        |""".stripMargin,
-    """|object O{
-       |  trait Foo {
-       |    type T
-       |  }
-       |
-       |  val c: Foo{type T = Int} = new Foo { type T = Int }
-       |}
-       |""".stripMargin,
+    defaultRefinedTypes3,
     compat = Map(
+      scala3PresentationCompilerVersion -> defaultRefinedTypes3,
       "3" ->
         """|object O{
            |  trait Foo {
@@ -728,9 +740,22 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
            |
            |  val c: Foo{type T >: Int <: Int} = new Foo { type T = Int }
            |}
-           |""".stripMargin
+           |""".stripMargin,
     ),
   )
+
+  val defaultRefinedTypes4: String =
+    """|trait Foo extends Selectable {
+       |  type T
+       |}
+       |
+       |val c: Foo{type T = Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit} = new Foo {
+       |  type T = Int
+       |  val x = 0
+       |  def y = 0
+       |  var z = 0
+       |}
+       |""".stripMargin
 
   checkEdit(
     "refined-types4".tag(IgnoreScala2),
@@ -745,17 +770,22 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  var z = 0
        |}
        |""".stripMargin,
-    """|trait Foo extends Selectable {
-       |  type T
-       |}
-       |
-       |val c: Foo{type T >: Int <: Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit} = new Foo {
-       |  type T = Int
-       |  val x = 0
-       |  def y = 0
-       |  var z = 0
-       |}
-       |""".stripMargin,
+    defaultRefinedTypes4,
+    compat = Map(
+      scala3PresentationCompilerVersion -> defaultRefinedTypes4,
+      "3" ->
+        """|trait Foo extends Selectable {
+           |  type T
+           |}
+           |
+           |val c: Foo{type T >: Int <: Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit} = new Foo {
+           |  type T = Int
+           |  val x = 0
+           |  def y = 0
+           |  var z = 0
+           |}
+           |""".stripMargin,
+    ),
   )
 
   checkEdit(
