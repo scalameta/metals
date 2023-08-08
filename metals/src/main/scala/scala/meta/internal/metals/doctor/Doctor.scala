@@ -468,6 +468,8 @@ final class Doctor(
     val recommendedFix = problemResolver
       .recommendation(scalaTarget)
       .orElse {
+        if (javaTarget.isEmpty)
+          scribe.debug("No javac information found from the build server")
         javaTarget.flatMap(target => problemResolver.recommendation(target))
       }
     val (targetType, diagnosticsStatus) =

@@ -106,7 +106,13 @@ object SbtServerInitializer extends BuildServerInitializer {
       initializeResult <- server.initialize()
       _ <- server.initialized()
       // choose sbt as the Bsp Server
-      _ = client.selectBspServer = { _ => new MessageActionItem("sbt") }
+      _ = client.selectBspServer = { items =>
+        items.find(_.getTitle().contains("sbt")).getOrElse {
+          throw new RuntimeException(
+            "sbt was expected in the test, but not found"
+          )
+        }
+      }
       _ <- server.executeCommand(ServerCommands.BspSwitch)
     } yield {
       if (!expectError) {

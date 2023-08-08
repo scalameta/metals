@@ -889,8 +889,10 @@ class Compilers(
   def loadJavaCompiler(
       targetId: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
-    val target = buildTargets.javaTarget(targetId)
-    target.flatMap(loadJavaCompilerForTarget)
+    val targetClasspath = buildTargets.targetClasspath(targetId)
+    targetClasspath.flatMap(classpath =>
+      loadJavaCompilerForTarget(targetId.getUri, classpath)
+    )
   }
 
   def loadCompilerForTarget(
@@ -917,18 +919,14 @@ class Compilers(
   }
 
   def loadJavaCompilerForTarget(
-      target: JavaTarget
+      targetUri: String,
+      classpath: List[String],
   ): Option[PresentationCompiler] = {
     val pc = JavaPresentationCompiler()
-
-    val name = target.javac.getTarget.getUri
-    val classpath =
-      target.javac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-
     Some(
       configure(pc, search).newInstance(
-        name,
-        classpath.asJava,
+        targetUri,
+        classpath.toAbsoluteClasspath.map(_.toNIO).toSeq.asJava,
         log.asJava,
       )
     )
