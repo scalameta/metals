@@ -651,15 +651,15 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  val <<c>> = new Foo { type T = Int; type G = Long}
        |}
        |""".stripMargin,
-   """|object O{
-      |  trait Foo {
-      |    type T
-      |    type G
-      |  }
-      |
-      |  val c: Foo{type T = Int; type G = Long} = new Foo { type T = Int; type G = Long}
-      |}
-      |""".stripMargin
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |    type G
+       |  }
+       |
+       |  val c: Foo{type T = Int; type G = Long} = new Foo { type T = Int; type G = Long}
+       |}
+       |""".stripMargin,
   )
 
   checkEdit(
