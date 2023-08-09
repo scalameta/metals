@@ -318,9 +318,9 @@ abstract class PcCollector[T](
   def result(): List[T] =
     params match
       case _: OffsetParams => resultWithSought()
-      case _ => resultAllOccurences().toList
+      case _ => resultAllOccurences()
 
-  def resultAllOccurences(includeSynthetics: Boolean = false): Set[T] =
+  def resultAllOccurences(includeSynthetics: Boolean = false): List[T] =
     def noTreeFilter = (_: Tree) => true
     def noSoughtFilter = (_: Symbol => Boolean) => true
 
@@ -379,15 +379,15 @@ abstract class PcCollector[T](
       filter: Tree => Boolean,
       soughtFilter: (Symbol => Boolean) => Boolean,
       includeSynthetics: Boolean = false,
-  ): Set[T] =
+  ): List[T] =
     def syntheticFilter(tree: Tree) = includeSynthetics &&
       tree.span.isSynthetic &&
       tree.symbol.isOneOf(Flags.GivenOrImplicit)
     def collectNamesWithParent(
-        occurences: Set[T],
+        occurences: List[T],
         tree: Tree,
         parent: Option[Tree],
-    ): Set[T] =
+    ): List[T] =
       def collect(
           tree: Tree,
           pos: SourcePosition,
@@ -405,20 +405,20 @@ abstract class PcCollector[T](
           // symbols will differ for params in different ext methods, but source pos will be the same
           if soughtFilter(_.sourcePos == ident.symbol.sourcePos)
           then
-            occurences + collect(
+            collect(
               ident,
               ident.sourcePos,
-            )
+            ) :: occurences
           else occurences
         /**
          * All select statements such as:
          * val a = hello.<<b>>
          */
         case sel: Select if sel.span.isCorrect && filter(sel) =>
-          occurences + collect(
+          collect(
             sel,
             pos.withSpan(selectNameSpan(sel)),
-          )
+          ) :: occurences
         /**
          * for synthetic decorations in:
          * given Conversion[Int, String] = _.toString
@@ -426,10 +426,10 @@ abstract class PcCollector[T](
          */
         case Select(id: Ident, name)
             if syntheticFilter(id) && name == nme.apply =>
-          occurences + collect(
+          collect(
             id,
             id.sourcePos,
-          )
+          ) :: occurences
         /* all definitions:
          * def <<foo>> = ???
          * class <<Foo>> = ???
@@ -440,14 +440,14 @@ abstract class PcCollector[T](
               filter(df) && !isGeneratedGiven(df) =>
           val annots = collectTrees(df.mods.annotations)
           val traverser =
-            new PcCollector.DeepFolderWithParent[Set[T]](
+            new PcCollector.DeepFolderWithParent[List[T]](
               collectNamesWithParent
             )
           annots.foldLeft(
-            occurences + collect(
+            collect(
               df,
               pos.withSpan(df.nameSpan),
-            )
+            ) :: occurences
           ) { case (set, tree) =>
             traverser(set, tree)
           }
@@ -495,11 +495,11 @@ abstract class PcCollector[T](
         case mdf: MemberDef if mdf.mods.annotations.nonEmpty =>
           val trees = collectTrees(mdf.mods.annotations)
           val traverser =
-            new PcCollector.DeepFolderWithParent[Set[T]](
+            new PcCollector.DeepFolderWithParent[List[T]](
               collectNamesWithParent
             )
-          trees.foldLeft(occurences) { case (set, tree) =>
-            traverser(set, tree)
+          trees.foldLeft(occurences) { case (list, tree) =>
+            traverser(list, tree)
           }
         /**
          * For traversing import selectors:
@@ -534,22 +534,20 @@ abstract class PcCollector[T](
                   )
                 }
             }
-            .flatten
-            .toSet ++ occurences
+            .flatten ++ occurences
         case tt: TypeTree if includeSynthetics && parent.exists(isTypeApply) =>
-          val x = collect(
+          collect(
             tt,
             tt.sourcePos,
-          )
-          occurences + x
+          ) :: occurences
         case inl: Inlined =>
           val traverser =
-            new PcCollector.DeepFolderWithParent[Set[T]](
+            new PcCollector.DeepFolderWithParent[List[T]](
               collectNamesWithParent
             )
           val trees = inl.call :: inl.bindings
-          trees.foldLeft(occurences) { case (set, tree) =>
-            traverser(set, tree)
+          trees.foldLeft(occurences) { case (list, tree) =>
+            traverser(list, tree)
           }
         case o =>
           occurences
@@ -557,8 +555,8 @@ abstract class PcCollector[T](
     end collectNamesWithParent
 
     val traverser =
-      new PcCollector.DeepFolderWithParent[Set[T]](collectNamesWithParent)
-    val all = traverser(Set.empty[T], unit.tpdTree)
+      new PcCollector.DeepFolderWithParent[List[T]](collectNamesWithParent)
+    val all = traverser(List.empty[T], unit.tpdTree)
     all
   end traverseSought
 
