@@ -91,6 +91,11 @@ class DelegatingScalaService(
   ): CompletableFuture[util.List[InlayHint]] =
     underlying.inlayHints(params)
 
+  override def inlayHintResolve(
+      inlayHint: InlayHint
+  ): CompletableFuture[InlayHint] =
+    underlying.inlayHintResolve(inlayHint)
+
   override def documentSymbol(params: DocumentSymbolParams): CompletableFuture[
     JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
   ] = underlying.documentSymbol(params)

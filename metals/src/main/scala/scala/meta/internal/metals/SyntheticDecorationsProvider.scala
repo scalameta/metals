@@ -9,6 +9,8 @@ import scala.collection.mutable
 import scala.{meta => m}
 import scala.meta.tokens.{Token => T}
 import scala.meta.inputs.Position
+import scala.meta.pc.InlayHintPart
+import scala.meta.internal.pc.LabelPart
 import scala.meta.internal.pc.DecorationKind
 
 class SyntheticDecorationsProvider(
@@ -54,23 +56,38 @@ class SyntheticDecorationsProvider(
       decoration: SyntheticDecoration,
       pos: Position,
   ): l.InlayHint = {
-    val hint = new l.InlayHint()
-    hint.setPosition(new l.Position(pos.endLine, pos.endColumn))
-    hint.setLabel(": " + decoration.text)
-    hint.setKind(l.InlayHintKind.forValue(decoration.kind))
-
-    hint
+    val labelParts = labelPart(": ") :: decoration.labelParts().asScala.toList
+    makeInlayHint(
+      new l.Position(pos.endLine, pos.endColumn),
+      labelParts,
+      l.InlayHintKind.Type,
+      addTextEdit = true,
+    )
   }
 
   def makeInlayHint(
       pos: l.Position,
-      text: String,
+      labelParts: List[InlayHintPart],
       kind: l.InlayHintKind,
+      addTextEdit: Boolean = false,
   ) = {
     val hint = new l.InlayHint()
     hint.setPosition(pos)
-    hint.setLabel(text)
+    val (label, data) =
+      labelParts.map { lp =>
+        val labelPart = new l.InlayHintLabelPart()
+        labelPart.setValue(lp.label())
+        (labelPart, lp.symbol())
+      }.unzip
+    hint.setLabel(label.asJava)
+    hint.setData(data.asJava)
     hint.setKind(kind)
+    if (addTextEdit) {
+      val textEdit = new l.TextEdit()
+      textEdit.setRange(new l.Range(pos, pos))
+      textEdit.setNewText(labelParts.map(_.label()).mkString)
+      hint.setTextEdits(List(textEdit).asJava)
+    }
     hint
   }
 
@@ -96,39 +113,53 @@ class SyntheticDecorationsProvider(
       decorations: List[SyntheticDecoration]
   ) = {
     val result = mutable.ListBuffer.empty[l.InlayHint]
-    decorations.foreach { decoration =>
-      decoration.kind() match {
+    // TODO: Optimize to use takeWhile instead of groupBy
+    val grouped =
+      decorations.groupBy(_.range()).map { case (range, decorations) =>
+        val labels0 = decorations.reverse.map(_.labelParts().asScala.toList)
+        val labels = labels0.head ++ labels0.tail.flatMap { labels =>
+          labelPart(", ") :: labels
+        }
+        (range, labels, decorations.head.kind)
+      }
+    grouped.foreach { case (range, labelParts, kind) =>
+      kind match {
         case DecorationKind.ImplicitParameter
             if userConfig().showImplicitArguments =>
           result += makeInlayHint(
-            decoration.range().getStart(),
-            "(" + decoration.text() + ")",
+            range.getStart(),
+            labelPart("(") :: labelParts ++ List(labelPart(")")),
             l.InlayHintKind.Parameter,
           )
         case DecorationKind.ImplicitConversion
             if userConfig().showImplicitConversionsAndClasses =>
           result += makeInlayHint(
-            decoration.range().getStart(),
-            decoration.text() + "(",
+            range.getStart(),
+            labelParts ++ List(labelPart("(")),
             l.InlayHintKind.Parameter,
           )
           result += makeInlayHint(
-            decoration.range().getEnd(),
-            ")",
+            range.getEnd(),
+            List(labelPart(")")),
             l.InlayHintKind.Parameter,
           )
 
         case DecorationKind.TypeParameter
             if userConfig().showInferredType.contains("true") =>
           result += makeInlayHint(
-            decoration.range().getStart(),
-            "[" + decoration.text() + "]",
+            range.getStart(),
+            labelPart("[") :: labelParts ++ List(labelPart("]")),
             l.InlayHintKind.Type,
+            addTextEdit = true
           )
         case _ =>
       }
     }
     result.toList
+  }
+
+  private def labelPart(str: String): InlayHintPart = {
+    LabelPart(str, "")
   }
 
   private def declarationsWithoutTypes() = {

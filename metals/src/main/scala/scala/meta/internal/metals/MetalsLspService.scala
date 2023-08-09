@@ -1371,6 +1371,54 @@ class MetalsLspService(
       // Future{List.empty[InlayHint].asJava}
     }
   }
+
+  def inlayHintResolve(
+      inlayHint: InlayHint
+  ): CompletableFuture[InlayHint] = {
+    val parser = new JsonParser.Of[java.util.List[String]]
+    CancelTokens.future { token =>
+      val labelParts = inlayHint.getLabel().asScala match {
+        case Left(text) =>
+          val label = new InlayHintLabelPart()
+          label.setValue(text)
+          List(
+            label
+          )
+        case Right(labelParts) => labelParts.asScala.toList
+      }
+      val x = inlayHint.getData() match {
+        case parser.Jsonized(data) =>
+          val symbols = data.asScala.toList
+          val x = labelParts.zip(symbols).map { case (labelPart, symbol) =>
+            if (symbol == "") Future.successful(labelPart)
+            else {
+              getLocationForSymbol(symbol)
+                .map { location =>
+                  labelPart
+                    .setCommand(ServerCommands.GotoPosition.toLsp(location))
+                  val hoverParams = HoverExtParams(
+                    new TextDocumentIdentifier(location.getUri()),
+                    location.getRange().getStart(),
+                  )
+                  compilers.hover(hoverParams, token).map { hover =>
+                    hover
+                      .foreach(h => labelPart.setTooltip(h.toMarkupContent()))
+                    labelPart
+                  }
+                }
+                .getOrElse(Future.successful(labelPart))
+            }
+          }
+          Future.sequence(x).map { labelParts =>
+            inlayHint.setLabel(labelParts.asJava)
+            inlayHint
+          }
+        case _ => Future.successful(inlayHint)
+      }
+      x
+    }
+  }
+
   override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =

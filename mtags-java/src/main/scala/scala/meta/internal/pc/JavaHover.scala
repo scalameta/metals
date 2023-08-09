@@ -16,15 +16,17 @@ case class JavaHover(
 ) extends HoverSignature {
 
   def signature(): Optional[String] = symbolSignature.asJava
+
+  def toMarkupContent(): lsp4j.MarkupContent = 
+    HoverMarkup.javaHoverMarkup(
+      expressionType.getOrElse(""),
+      symbolSignature.getOrElse(""),
+      docstring.getOrElse(""),
+      forceExpressionType
+    ).toMarkupContent
+
   def toLsp(): lsp4j.Hover = {
-    val markdown =
-      HoverMarkup.javaHoverMarkup(
-        expressionType.getOrElse(""),
-        symbolSignature.getOrElse(""),
-        docstring.getOrElse(""),
-        forceExpressionType
-      )
-    new lsp4j.Hover(markdown.toMarkupContent, range.orNull)
+    new lsp4j.Hover(toMarkupContent(), range.orNull)
   }
 
   def getRange(): Optional[lsp4j.Range] = range.asJava
