@@ -899,7 +899,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type",
+    "type".tag(IgnoreForScala3CompilerPC),
     s"""|object Main {
         |  val foo: ListBuffe@@
         |}
@@ -908,14 +908,14 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|ListBuffer[T] - scala.collection.mutable
+        """|ListBuffer[A] - scala.collection.mutable
            |ListBuffer - scala.collection.mutable
            |""".stripMargin
     ),
   )
 
   check(
-    "type1",
+    "type1".tag(IgnoreForScala3CompilerPC),
     s"""|object Main {
         |  val foo: Map[Int, ListBuffe@@]
         |}
@@ -924,7 +924,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|ListBuffer[T] - scala.collection.mutable
+        """|ListBuffer[A] - scala.collection.mutable
            |ListBuffer - scala.collection.mutable
            |""".stripMargin
     ),
@@ -1636,6 +1636,96 @@ class CompletionSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "abcCURSORde: Unit",
+  )
+
+  check(
+    "type-with-params".tag(IgnoreForScala3CompilerPC),
+    s"""|object O {
+        | type TTT[A <: Int] = List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT",
+    compat = Map(
+      "3" -> "TTT[A <: Int]"
+    ),
+    includeDetail = false,
+  )
+
+  check(
+    "type-with-params-with-detail".tag(IgnoreForScala3CompilerPC),
+    s"""|object O {
+        | type TTT[A <: Int] = List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[A] = O.TTT",
+    compat = Map(
+      "3" -> "TTT[A <: Int] = List[A]"
+    ),
+  )
+
+  check(
+    "type-lambda".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    s"""|object O {
+        | type TTT = [A <: Int] =>> List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[A <: Int]",
+    includeDetail = false,
+  )
+
+  check(
+    "type-lambda2".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    s"""|object O {
+        | type TTT[K <: Int] = [V] =>> Map[K, V]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[K <: Int]",
+    includeDetail = false,
+  )
+
+  check(
+    "type-lambda2-with-detail".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    s"""|object O {
+        | type TTT[K <: Int] = [V] =>> Map[K, V]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[K <: Int] = [V] =>> Map[K, V]",
+  )
+
+  check(
+    "type-bound".tag(IgnoreForScala3CompilerPC),
+    s"""|trait O {
+        | type TTT <: Int
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT<: O.TTT",
+    compat = Map(
+      "3" -> "TTT <: Int"
+    ),
+  )
+
+  check(
+    "class-with-params".tag(IgnoreForScala3CompilerPC),
+    s"""|object O {
+        | class AClass[A <: Int]
+        | object AClass
+        | val v: ACla@@
+        |}
+        |""".stripMargin,
+    "AClass `class-with-params`.O",
+    compat = Map(
+      "3" ->
+        """|AClass[A <: Int] class-with-params.O
+           |AClass class-with-params.O
+           |AbstractTypeClassManifest - scala.reflect.ClassManifestFactory
+           |""".stripMargin
+    ),
   )
 
 }

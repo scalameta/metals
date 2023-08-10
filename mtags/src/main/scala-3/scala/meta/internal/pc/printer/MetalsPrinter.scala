@@ -139,7 +139,14 @@ class MetalsPrinter(
       else " " + dotcPrinter.fullName(sym.effectiveOwner)
     else if sym.is(Flags.Method) then
       defaultMethodSignature(sym, info, onlyMethodParams = true)
+    else if sym.isType
+    then
+      info match
+        case TypeAlias(t) => " = " + tpe(t.resultType)
+        case t => tpe(t.resultType)
     else tpe(info)
+    end if
+  end completionSymbol
 
   /**
    * Compute method signature for the given (method) symbol.

@@ -742,7 +742,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "ordering-1",
+    "ordering-1".tag(IgnoreForScala3CompilerPC),
     """|import scala.concurrent.Future
        |object Main {
        |  def foo(
@@ -764,13 +764,13 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       "3" ->
         """|Future[T] scala.concurrent
            |Future scala.concurrent
-           |Future[T] - java.util.concurrent
+           |Future[V] - java.util.concurrent
            |""".stripMargin,
     ),
   )
 
   check(
-    "ordering-2",
+    "ordering-2".tag(IgnoreForScala3CompilerPC),
     """|import java.util.concurrent.Future
        |object Main {
        |  def foo(
@@ -790,7 +790,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
            |FutureOps - scala.jdk.FutureConverters
            |""".stripMargin,
       "3" ->
-        """|Future[T] java.util.concurrent
+        """|Future[V] java.util.concurrent
            |Future java.util.concurrent
            |Future[T] - scala.concurrent
            |""".stripMargin,
