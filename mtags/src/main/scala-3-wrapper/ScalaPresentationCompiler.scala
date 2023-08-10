@@ -25,6 +25,7 @@ import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import scala.meta.pc.SyntheticDecoration
 
 /**
  * This is a wrapper around the DottyPresentationCompiler
@@ -39,6 +40,11 @@ import org.eclipse.lsp4j.TextEdit
 class ScalaPresentationCompiler(
     underlying: DottyPresentationCompiler = new DottyPresentationCompiler()
 ) extends PresentationCompiler:
+
+  override def syntheticDecorations(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[SyntheticDecoration]] =
+    underlying.syntheticDecorations(params)
 
   override def didClose(uri: URI): Unit =
     underlying.didClose(uri)
