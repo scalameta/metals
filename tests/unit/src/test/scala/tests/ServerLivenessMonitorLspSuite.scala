@@ -10,7 +10,7 @@ import bill.Bill
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaMainClassesParams
 
-class ServerLivenessMonitorSuite extends BaseLspSuite("liveness-monitor") {
+class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
   override def serverConfig: MetalsServerConfig =
     MetalsServerConfig.default.copy(
       metalsToIdleTime = Duration("3m"),
