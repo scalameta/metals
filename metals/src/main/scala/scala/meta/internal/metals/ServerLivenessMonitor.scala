@@ -4,6 +4,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -56,6 +57,8 @@ class ServerLivenessMonitor(
     metalsIdleInterval: Duration,
     pingInterval: Duration,
 )(implicit ex: ExecutionContext) {
+  private val state: AtomicReference[ServerLivenessMonitor.State] =
+    new AtomicReference(ServerLivenessMonitor.Idle)
   @volatile private var isDismissed = false
   @volatile private var isServerResponsive = true
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
@@ -72,25 +75,33 @@ class ServerLivenessMonitor(
           (now - lastOutgoing) > metalsIdleInterval.toMillis
         )
       if (!metalsIsIdle) {
-        if (notResponding) {
-          isServerResponsive = false
-          if (!isDismissed) {
-            languageClient
-              .showMessageRequest(
-                ServerLivenessMonitor.ServerNotResponding
-                  .params(pingInterval, serverName)
-              )
-              .asScala
-              .map {
-                case ServerLivenessMonitor.ServerNotResponding.dismiss =>
-                  isDismissed = true
-                case _ =>
-              }
+        val currState = state.getAndUpdate {
+          case ServerLivenessMonitor.Idle => ServerLivenessMonitor.FirstPing
+          case _ => ServerLivenessMonitor.Running
+        }
+        if (currState == ServerLivenessMonitor.Running) {
+          if (notResponding) {
+            isServerResponsive = false
+            if (!isDismissed) {
+              languageClient
+                .showMessageRequest(
+                  ServerLivenessMonitor.ServerNotResponding
+                    .params(pingInterval, serverName)
+                )
+                .asScala
+                .map {
+                  case ServerLivenessMonitor.ServerNotResponding.dismiss =>
+                    isDismissed = true
+                  case _ =>
+                }
+            }
+          } else {
+            isServerResponsive = true
           }
-        } else {
-          isServerResponsive = true
         }
         server.workspaceBuildTargets()
+      } else {
+        state.set(ServerLivenessMonitor.Idle)
       }
     }
   }
@@ -129,5 +140,16 @@ object ServerLivenessMonitor {
     val dismiss = new MessageActionItem("Dismiss")
     val ok = new MessageActionItem("OK")
   }
+
+  /**
+   * State of the metals server:
+   *  - Idle - set as initial state and after metals goes into idle state
+   *  - FistPing - set after first ping after metals comes out of idle state
+   *  - Running - set after 2nd, 3rd... nth pings after metals comes out of idle state
+   */
+  sealed trait State
+  object Idle extends State
+  object FirstPing extends State
+  object Running extends State
 
 }
