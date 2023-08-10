@@ -1,9 +1,10 @@
 package scala.meta.internal.pc
 
+import scala.collection.mutable.ListBuffer
+
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.VirtualFileParams
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.collection.mutable.ListBuffer
 
 final class PcSyntheticDecorationsProvider(
     protected val cp: MetalsGlobal, // compiler
@@ -22,7 +23,7 @@ final class PcSyntheticDecorationsProvider(
       extends PcCollector[Option[SyntheticDecoration]](cp, params) {
 
     import compiler._
-    val context = doLocateImportContext(pos)
+    val context: Context = doLocateImportContext(pos)
     val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
     val history = new ShortenedNames(
       lookupSymbol = name =>
@@ -31,7 +32,7 @@ final class PcSyntheticDecorationsProvider(
       renames = re
     )
 
-    def printType(tpe: Type) =
+    def printType(tpe: Type): String =
       metalsToLongString(tpe.widen.finalResultType, history)
 
     override def collect(

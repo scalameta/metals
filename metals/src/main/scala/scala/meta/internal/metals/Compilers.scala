@@ -15,6 +15,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
@@ -43,6 +44,8 @@ import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
@@ -55,10 +58,6 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
-import org.eclipse.lsp4j.InlayHintParams
-import org.eclipse.lsp4j.InlayHint
-import org.eclipse.lsp4j.WorkDoneProgressParams
-import scala.meta.pc.VirtualFileParams
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -537,6 +536,7 @@ class Compilers(
 
   }
 
+  // TODO: Add adjust
   def inlayHints(
       params: InlayHintParams,
       token: CancelToken,
@@ -547,15 +547,52 @@ class Compilers(
       val path = params.getTextDocument().getUri().toAbsolutePath
       val vFile =
         CompilerVirtualFileParams(path.toNIO.toUri(), pos.text, token)
-      pc.syntheticDecorations(vFile).asScala.map { decorations =>
-        new SyntheticDecorationsProvider(
-          vFile,
-          trees,
-          userConfig,
-        ).provide(decorations.asScala.toList).asJava
-      }
+      pc.syntheticDecorations(vFile)
+        .asScala
+        .map { decorations =>
+          new InlayHintProvider(
+            vFile,
+            trees,
+            userConfig,
+          ).provide(decorations.asScala.toList).asJava
+        }
+        .map(
+          adjust.adjustInlayHints
+        )
 
     }.getOrElse(Future.successful(Nil.asJava))
+  }
+
+  def syntheticDecorations(
+      path: AbsolutePath,
+      token: CancelToken,
+  ): Future[ju.List[DecorationOptions]] = {
+    loadCompiler(path)
+      .map { compiler =>
+        val (input, _, adjust) =
+          sourceAdjustments(
+            path.toNIO.toUri().toString(),
+            compiler.scalaVersion(),
+          )
+        val vFile =
+          CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
+        compiler
+          .syntheticDecorations(vFile)
+          .asScala
+          .map { decorations =>
+            new DecorationProvider(
+              vFile,
+              trees,
+              userConfig,
+            ).provide(decorations.asScala.toList)
+          }
+          .map(_.map { decoration =>
+            decoration.copy(
+              range = adjust.adjustRange(decoration.range)
+            )
+          }.asJava)
+      }
+      .getOrElse(Future.successful(Nil.asJava))
   }
 
   def completions(

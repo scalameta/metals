@@ -154,7 +154,7 @@ trait TextDocumentService {
 
   @JsonRequest("inlayHint/resolve")
   def inlayHintResolve(
-    inlayHint: InlayHint
+      inlayHint: InlayHint
   ): CompletableFuture[InlayHint]
 
 }

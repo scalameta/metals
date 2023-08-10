@@ -17,13 +17,15 @@ case class JavaHover(
 
   def signature(): Optional[String] = symbolSignature.asJava
 
-  def toMarkupContent(): lsp4j.MarkupContent = 
-    HoverMarkup.javaHoverMarkup(
-      expressionType.getOrElse(""),
-      symbolSignature.getOrElse(""),
-      docstring.getOrElse(""),
-      forceExpressionType
-    ).toMarkupContent
+  def toMarkupContent(): lsp4j.MarkupContent =
+    HoverMarkup
+      .javaHoverMarkup(
+        expressionType.getOrElse(""),
+        symbolSignature.getOrElse(""),
+        docstring.getOrElse(""),
+        forceExpressionType
+      )
+      .toMarkupContent
 
   def toLsp(): lsp4j.Hover = {
     new lsp4j.Hover(toMarkupContent(), range.orNull)

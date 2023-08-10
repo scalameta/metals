@@ -506,35 +506,33 @@ abstract class PcCollector[T](
          * import scala.util.<<Try>>
          */
         case imp: Import if filter(imp) =>
-          imp.selectors
-            .collect {
-              case sel: ImportSelector
-                  if soughtFilter(_.decodedName == sel.name.decoded) =>
-                // Show both rename and main together
-                val spans =
-                  if !sel.renamed.isEmpty then
-                    Set(sel.renamed.span, sel.imported.span)
-                  else Set(sel.imported.span)
-                // See https://github.com/scalameta/metals/pull/5100
-                val symbol = imp.expr.symbol.info.member(sel.name).symbol match
-                  // We can get NoSymbol when we import "_", "*"", "given" or when the names don't match
-                  // eg. "@@" doesn't match "$at$at".
-                  // Then we try to find member based on decodedName
-                  case NoSymbol =>
-                    imp.expr.symbol.info.allMembers
-                      .find(_.name.decoded == sel.name.decoded)
-                      .map(_.symbol)
-                      .getOrElse(NoSymbol)
-                  case sym => sym
-                spans.filter(_.isCorrect).map { span =>
-                  collect(
-                    imp,
-                    pos.withSpan(span),
-                    Some(symbol),
-                  )
-                }
-            }
-            .flatten ++ occurences
+          imp.selectors.collect {
+            case sel: ImportSelector
+                if soughtFilter(_.decodedName == sel.name.decoded) =>
+              // Show both rename and main together
+              val spans =
+                if !sel.renamed.isEmpty then
+                  Set(sel.renamed.span, sel.imported.span)
+                else Set(sel.imported.span)
+              // See https://github.com/scalameta/metals/pull/5100
+              val symbol = imp.expr.symbol.info.member(sel.name).symbol match
+                // We can get NoSymbol when we import "_", "*"", "given" or when the names don't match
+                // eg. "@@" doesn't match "$at$at".
+                // Then we try to find member based on decodedName
+                case NoSymbol =>
+                  imp.expr.symbol.info.allMembers
+                    .find(_.name.decoded == sel.name.decoded)
+                    .map(_.symbol)
+                    .getOrElse(NoSymbol)
+                case sym => sym
+              spans.filter(_.isCorrect).map { span =>
+                collect(
+                  imp,
+                  pos.withSpan(span),
+                  Some(symbol),
+                )
+              }
+          }.flatten ++ occurences
         case tt: TypeTree if includeSynthetics && parent.exists(isTypeApply) =>
           collect(
             tt,

@@ -10,6 +10,7 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextEdit
@@ -31,6 +32,15 @@ trait AdjustLspData {
     edits.asScala.map { loc =>
       loc.setRange(adjustRange(loc.getRange()))
       loc
+    }.asJava
+  }
+
+  def adjustInlayHints(
+      inlayHints: ju.List[InlayHint]
+  ): java.util.List[InlayHint] = {
+    inlayHints.asScala.map { hint =>
+      hint.setPosition(adjustPos(hint.getPosition()))
+      hint
     }.asJava
   }
 

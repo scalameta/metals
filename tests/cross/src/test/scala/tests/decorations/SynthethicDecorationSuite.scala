@@ -1,7 +1,8 @@
 package tests.decorations
 
-import tests.BaseSyntheticDecorationsSuite
 import scala.meta.internal.pc.DecorationKind
+
+import tests.BaseSyntheticDecorationsSuite
 
 class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
 

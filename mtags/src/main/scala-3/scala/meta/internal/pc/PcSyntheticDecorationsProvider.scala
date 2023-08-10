@@ -110,11 +110,15 @@ class PcSyntheticDecorationsProvider(
           allIndexesWhere(tp.name, tpeStr).map((_, tp))
           // find all occurences of str in tpe
         }
-        .sortBy(_._1)
+        .sortWith { case ((idx1, tp1), (idx2, tp2)) =>
+          if idx1 == idx2 then tp1.name.length > tp2.name.length
+          else idx1 < idx2
+        }
         .foreach { case (index, tp) =>
-          buffer += labelPart(tpeStr.substring(current, index))
-          buffer += labelPart(tp.name, Some(tp.tpe.typeSymbol))
-          current = index + tp.name.length
+          if index >= current then
+            buffer += labelPart(tpeStr.substring(current, index))
+            buffer += labelPart(tp.name, Some(tp.tpe.typeSymbol))
+            current = index + tp.name.length
         }
       buffer += labelPart(tpeStr.substring(current, tpeStr.length))
       buffer.toList.filter(_.label.nonEmpty)

@@ -22,6 +22,7 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.VirtualFileParams
 
 import org.eclipse.lsp4j
@@ -32,7 +33,6 @@ import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import scala.meta.pc.SyntheticDecoration
 
 case class JavaPresentationCompiler(
     buildTargetIdentifier: String = "",

@@ -1,19 +1,19 @@
 package tests
 
 import java.net.URI
+import java.{util => ju}
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
+import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.pc.DecorationKind
+import scala.meta.pc.InlayHintPart
+import scala.meta.pc.SyntheticDecoration
 
 import munit.Location
 import munit.TestOptions
-import scala.meta.internal.metals.TextEdits
 import org.eclipse.lsp4j.TextEdit
-import scala.meta.pc.SyntheticDecoration
 import org.eclipse.{lsp4j => l}
-import java.{util => ju}
-import scala.meta.internal.pc.DecorationKind
-import scala.meta.pc.InlayHintPart
 
 class BaseSyntheticDecorationsSuite extends BasePCSuite {
 

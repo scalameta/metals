@@ -35,6 +35,8 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceReload
+import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.decorations.SyntheticHoverProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -536,6 +538,18 @@ class MetalsLspService(
     buildTargets,
   )
 
+  private val syntheticHoverProvider: SyntheticHoverProvider =
+    new SyntheticHoverProvider(
+      folder,
+      semanticdbs,
+      buffers,
+      fingerprints,
+      charset,
+      clientConfig,
+      userConfig,
+      trees,
+    )
+
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
@@ -918,9 +932,13 @@ class MetalsLspService(
         userConfig().showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
         userConfig().showInferredType != old.showInferredType
       ) {
-        buildServerPromise.future.flatMap { _ =>
-          publishSynthetics()
-        }
+        for {
+          _ <- buildServerPromise.future
+          _ <- focusedDocument()
+            .map(publishSynthetics)
+            .getOrElse(Future.successful(()))
+          _ <- languageClient.refreshInlayHints().asScala
+        } yield ()
       } else {
         Future.successful(())
       }
@@ -1023,7 +1041,7 @@ class MetalsLspService(
             .sequence(
               List(
                 compileAndLoad,
-                publishSynthetics(),
+                publishSynthetics(path),
               )
             )
             .ignoreValue
@@ -1033,11 +1051,20 @@ class MetalsLspService(
     }
   }
 
-  def publishSynthetics(): Future[Unit] = {
-    if (!clientConfig.isInlayHintsEnabled()) Future.successful(())
-    else
-      // TODO: Publish via DecorationProvider
-      Future.successful(())
+  def publishSynthetics(path: AbsolutePath): Future[Unit] = {
+    if (clientConfig.isInlayHintsEnabled()) Future.successful(())
+    else {
+      CancelTokens.future { token =>
+        compilers.syntheticDecorations(path, token).map { decorations =>
+          val params = new PublishDecorationsParams(
+            path.toURI.toString(),
+            decorations.asScala.toArray,
+            if (clientConfig.isInlineDecorationProvider()) true else null,
+          )
+          languageClient.metalsPublishDecorations(params)
+        }
+      }.asScala
+    }
   }
 
   def didFocus(
@@ -1052,12 +1079,12 @@ class MetalsLspService(
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
-      publishSynthetics()
+      publishSynthetics(path)
       CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
     } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
-      publishSynthetics()
+      publishSynthetics(path)
       worksheetProvider.onDidFocus(path)
       buildTargets.inverseSources(path) match {
         case Some(target) =>
@@ -1108,7 +1135,7 @@ class MetalsLspService(
         diagnostics.didChange(path)
         parseTrees(path)
           .flatMap { _ =>
-            publishSynthetics()
+            publishSynthetics(path)
           }
           .ignoreValue
           .asJava
@@ -1301,11 +1328,12 @@ class MetalsLspService(
     CancelTokens.future { token =>
       compilers
         .hover(params, token)
-        // TODO: Add synthtetic hover for decoration Provider
-        // .map { hover =>
-        //  syntheticsDecorator.addSyntheticsHover(params, hover.map(_.toLsp()))
-        // }
-        .map(_.map(_.toLsp()))
+        .map { hover =>
+          syntheticHoverProvider.addSyntheticsHover(
+            params,
+            hover.map(_.toLsp()),
+          )
+        }
         .map(
           _.orElse {
             val path = params.textDocument.getUri.toAbsolutePath
@@ -1366,9 +1394,11 @@ class MetalsLspService(
       params: InlayHintParams
   ): CompletableFuture[util.List[InlayHint]] = {
     CancelTokens.future { token =>
-      // inlayHintsProvider.inlayHints(params).map(_.asJava)
-      compilers.inlayHints(params, token)
-      // Future{List.empty[InlayHint].asJava}
+      if (clientConfig.isInlayHintsEnabled()) {
+        compilers.inlayHints(params, token)
+      } else {
+        Future.successful(List.empty[InlayHint].asJava)
+      }
     }
   }
 

@@ -1,28 +1,31 @@
 package scala.meta.internal.metals
 
-import org.eclipse.{lsp4j => l}
-import scala.meta.pc.SyntheticDecoration
-import scala.meta.pc.VirtualFileParams
-import scala.meta.internal.parsing.Trees
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.collection.mutable
 import scala.{meta => m}
-import scala.meta.tokens.{Token => T}
-import scala.meta.inputs.Position
-import scala.meta.pc.InlayHintPart
-import scala.meta.internal.pc.LabelPart
-import scala.meta.internal.pc.DecorationKind
 
-class SyntheticDecorationsProvider(
+import scala.meta.inputs.Position
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.DecorationKind
+import scala.meta.internal.pc.LabelPart
+import scala.meta.pc.InlayHintPart
+import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.VirtualFileParams
+import scala.meta.tokens.{Token => T}
+
+import org.eclipse.{lsp4j => l}
+import scala.meta.io.AbsolutePath
+
+abstract class SyntheticDecorationsProvider[T](
     params: VirtualFileParams,
     trees: Trees,
     userConfig: () => UserConfiguration,
 ) {
-  val path = params.uri().toAbsolutePath
+  val path: AbsolutePath = params.uri().toAbsolutePath
 
   def provide(
       synthteticDecorations: List[SyntheticDecoration]
-  ): List[l.InlayHint] = {
+  ): List[T] = {
     val (withoutTypes, methodPositions) = declarationsWithoutTypes()
     val declarations = withoutTypes.sortWith((a, b) =>
       if (a.start == b.start) a.end < b.end else a.start < b.start
@@ -31,7 +34,7 @@ class SyntheticDecorationsProvider(
     val (inferredTypeDecorations, otherDecorations) =
       synthteticDecorations.partition(_.kind == 1)
 
-    val result: mutable.ListBuffer[l.InlayHint] = mutable.ListBuffer.empty
+    val result: mutable.ListBuffer[T] = mutable.ListBuffer.empty
 
     var decorationsIterator = inferredTypeDecorations
     for (pos <- declarations) {
@@ -42,8 +45,7 @@ class SyntheticDecorationsProvider(
         case None =>
         case Some(decoration) =>
           val hintPos = methodPositions.getOrElse(pos, pos)
-          val inlayHint = makeInlayHint(decoration, hintPos)
-          result += inlayHint
+          result += makeDecoration(decoration, hintPos)
       }
     }
 
@@ -52,12 +54,12 @@ class SyntheticDecorationsProvider(
 
   }
 
-  def makeInlayHint(
+  def makeDecoration(
       decoration: SyntheticDecoration,
       pos: Position,
-  ): l.InlayHint = {
+  ): T = {
     val labelParts = labelPart(": ") :: decoration.labelParts().asScala.toList
-    makeInlayHint(
+    makeDecoration(
       new l.Position(pos.endLine, pos.endColumn),
       labelParts,
       l.InlayHintKind.Type,
@@ -65,31 +67,12 @@ class SyntheticDecorationsProvider(
     )
   }
 
-  def makeInlayHint(
+  def makeDecoration(
       pos: l.Position,
       labelParts: List[InlayHintPart],
       kind: l.InlayHintKind,
       addTextEdit: Boolean = false,
-  ) = {
-    val hint = new l.InlayHint()
-    hint.setPosition(pos)
-    val (label, data) =
-      labelParts.map { lp =>
-        val labelPart = new l.InlayHintLabelPart()
-        labelPart.setValue(lp.label())
-        (labelPart, lp.symbol())
-      }.unzip
-    hint.setLabel(label.asJava)
-    hint.setData(data.asJava)
-    hint.setKind(kind)
-    if (addTextEdit) {
-      val textEdit = new l.TextEdit()
-      textEdit.setRange(new l.Range(pos, pos))
-      textEdit.setNewText(labelParts.map(_.label()).mkString)
-      hint.setTextEdits(List(textEdit).asJava)
-    }
-    hint
-  }
+  ): T
 
   def findDecoration(
       pos: Position,
@@ -112,7 +95,7 @@ class SyntheticDecorationsProvider(
   private def makeSynthethicDecorations(
       decorations: List[SyntheticDecoration]
   ) = {
-    val result = mutable.ListBuffer.empty[l.InlayHint]
+    val result = mutable.ListBuffer.empty[T]
     // TODO: Optimize to use takeWhile instead of groupBy
     val grouped =
       decorations.groupBy(_.range()).map { case (range, decorations) =>
@@ -126,19 +109,19 @@ class SyntheticDecorationsProvider(
       kind match {
         case DecorationKind.ImplicitParameter
             if userConfig().showImplicitArguments =>
-          result += makeInlayHint(
+          result += makeDecoration(
             range.getStart(),
             labelPart("(") :: labelParts ++ List(labelPart(")")),
             l.InlayHintKind.Parameter,
           )
         case DecorationKind.ImplicitConversion
             if userConfig().showImplicitConversionsAndClasses =>
-          result += makeInlayHint(
+          result += makeDecoration(
             range.getStart(),
             labelParts ++ List(labelPart("(")),
             l.InlayHintKind.Parameter,
           )
-          result += makeInlayHint(
+          result += makeDecoration(
             range.getEnd(),
             List(labelPart(")")),
             l.InlayHintKind.Parameter,
@@ -146,11 +129,11 @@ class SyntheticDecorationsProvider(
 
         case DecorationKind.TypeParameter
             if userConfig().showInferredType.contains("true") =>
-          result += makeInlayHint(
+          result += makeDecoration(
             range.getStart(),
             labelPart("[") :: labelParts ++ List(labelPart("]")),
             l.InlayHintKind.Type,
-            addTextEdit = true
+            addTextEdit = true,
           )
         case _ =>
       }

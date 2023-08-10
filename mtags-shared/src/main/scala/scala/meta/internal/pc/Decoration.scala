@@ -1,11 +1,13 @@
 package scala.meta.internal.pc
 
-import scala.meta.pc.SyntheticDecoration
+import java.{util => ju}
+
 import scala.collection.JavaConverters._
 
-import org.eclipse.{lsp4j => l}
-import java.{util => ju}
 import scala.meta.pc.InlayHintPart
+import scala.meta.pc.SyntheticDecoration
+
+import org.eclipse.{lsp4j => l}
 
 case class Decoration(
     range: l.Range,
