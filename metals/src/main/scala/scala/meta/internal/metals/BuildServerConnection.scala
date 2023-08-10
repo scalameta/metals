@@ -428,7 +428,7 @@ object BuildServerConnection {
     def setupServer(): Future[LauncherConnection] = {
       connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
         val tracePrinter = Trace.setupTracePrinter("BSP", workspace)
-        val requestMonitor = new RequestMonitor
+        val requestMonitor = new RequestMonitorImpl
         val launcher = new Launcher.Builder[MetalsBuildServer]()
           .traceMessages(tracePrinter.orNull)
           .setOutput(output)
@@ -461,7 +461,7 @@ object BuildServerConnection {
           result.getCapabilities(),
           new ServerLivenessMonitor(
             requestMonitor,
-            server,
+            () => server.workspaceBuildTargets(),
             languageClient,
             result.getDisplayName(),
             config.metalsToIdleTime,

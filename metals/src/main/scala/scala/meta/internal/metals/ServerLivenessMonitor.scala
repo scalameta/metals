@@ -21,7 +21,12 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.eclipse.lsp4j.services.LanguageClient
 
-class RequestMonitor {
+trait RequestMonitor {
+  def lastOutgoing: Option[Long]
+  def lastIncoming: Option[Long]
+}
+
+class RequestMonitorImpl extends RequestMonitor {
   @volatile private var lastOutgoing_ : Option[Long] = None
   @volatile private var lastIncoming_ : Option[Long] = None
 
@@ -51,7 +56,7 @@ class RequestMonitor {
 
 class ServerLivenessMonitor(
     requestMonitor: RequestMonitor,
-    server: MetalsBuildServer,
+    ping: () => Unit,
     languageClient: LanguageClient,
     serverName: String,
     metalsIdleInterval: Duration,
@@ -71,9 +76,11 @@ class ServerLivenessMonitor(
           .getOrElse(pingInterval.toMillis)
       def notResponding = lastIncoming > (pingInterval.toMillis * 2)
       def metalsIsIdle =
-        requestMonitor.lastOutgoing.exists(lastOutgoing =>
-          (now - lastOutgoing) > metalsIdleInterval.toMillis
-        )
+        requestMonitor.lastOutgoing
+          .map(lastOutgoing =>
+            (now - lastOutgoing) > metalsIdleInterval.toMillis
+          )
+          .getOrElse(true)
       if (!metalsIsIdle) {
         val currState = state.getAndUpdate {
           case ServerLivenessMonitor.Idle => ServerLivenessMonitor.FirstPing
@@ -99,7 +106,7 @@ class ServerLivenessMonitor(
             isServerResponsive = true
           }
         }
-        server.workspaceBuildTargets()
+        ping()
       } else {
         state.set(ServerLivenessMonitor.Idle)
       }
@@ -120,6 +127,8 @@ class ServerLivenessMonitor(
     scheduled.cancel(true)
     scheduler.shutdown()
   }
+
+  def getState: ServerLivenessMonitor.State = state.get()
 }
 
 object ServerLivenessMonitor {
