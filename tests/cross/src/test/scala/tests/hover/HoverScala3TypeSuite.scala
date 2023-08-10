@@ -144,7 +144,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |class C
        |object Foo:
        |    extension [T](using A)(s: T)(using B)
-       |        def double[G](using C)(times: G) = (s.toString + s.toString) * times
+       |        def double[G <: Int](using C)(times: G) = (s.toString + s.toString) * times
        |    end extension
        |    given A with {}
        |    given B with {}
@@ -152,7 +152,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |    "".<<doub@@le(1)>>
        |end Foo
        |""".stripMargin,
-    "extension [T](using A)(s: T) def double(using B)[G](using C)(times: G): String".hover,
+    "extension [T](using A)(s: T) def double(using B)[G <: Int](using C)(times: G): String".hover,
   )
 
   check(
