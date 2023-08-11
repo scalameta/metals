@@ -294,7 +294,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   check(
     "type-params-in-enum4",
     """|enum MyOption[+<<AA>>]:
-       |  def get: <<A@@A>> = ??
+       |  def get: <<A@@A>> = ???
        |  case MySome(value: <<AA>>)
        |  case MyNone
        |""".stripMargin,
