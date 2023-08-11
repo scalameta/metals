@@ -155,7 +155,7 @@ case class ScalaPresentationCompiler(
   }
 
   override def syntheticDecorations(
-      params: VirtualFileParams
+      params: RangeParams
   ): CompletableFuture[ju.List[SyntheticDecoration]] = {
     val empty: ju.List[SyntheticDecoration] =
       new ju.ArrayList[SyntheticDecoration]()

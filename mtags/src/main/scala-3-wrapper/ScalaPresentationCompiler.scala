@@ -42,7 +42,7 @@ class ScalaPresentationCompiler(
 ) extends PresentationCompiler:
 
   override def syntheticDecorations(
-      params: VirtualFileParams
+      params: RangeParams
   ): CompletableFuture[ju.List[SyntheticDecoration]] =
     underlying.syntheticDecorations(params)
 

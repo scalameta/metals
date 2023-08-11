@@ -541,18 +541,16 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[InlayHint]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      // val rangeParams =
-      //   CompilerRangeParamsUtils.fromPos(pos, token)
-      val path = params.getTextDocument().getUri().toAbsolutePath
-      val vFile =
-        CompilerVirtualFileParams(path.toNIO.toUri(), pos.text, token)
-      pc.syntheticDecorations(vFile)
+      val rangeParams =
+        CompilerRangeParamsUtils.fromPos(pos, token)
+      pc.syntheticDecorations(rangeParams)
         .asScala
         .map { decorations =>
           new InlayHintsProvider(
-            vFile,
+            rangeParams,
             trees,
             userConfig,
+            pos,
           ).provide(decorations.asScala.toList).asJava
         }
         .map(

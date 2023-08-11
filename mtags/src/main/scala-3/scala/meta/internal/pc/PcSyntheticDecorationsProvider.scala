@@ -6,9 +6,10 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
+import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
-import scala.meta.pc.VirtualFileParams
+
 
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
@@ -19,13 +20,14 @@ import dotty.tools.dotc.util.SourcePosition
 
 class PcSyntheticDecorationsProvider(
     driver: InteractiveDriver,
-    params: VirtualFileParams,
+    params: RangeParams,
     symbolSearch: SymbolSearch,
 )(using ReportContext):
 
   def provide(): List[SyntheticDecoration] =
+    val trees = Collector.treesInRange(params)
     Collector
-      .resultAllOccurences(includeSynthetics = true)
+      .resultAllOccurences(includeSynthetics = true)(trees)
       .toList
       .flatten
       .sortWith((n1, n2) => n1.range().lt(n2.range()))

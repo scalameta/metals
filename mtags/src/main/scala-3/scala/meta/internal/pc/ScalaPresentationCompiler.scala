@@ -96,7 +96,7 @@ case class ScalaPresentationCompiler(
     }
 
   override def syntheticDecorations(
-      params: VirtualFileParams
+      params: RangeParams
   ): ju.concurrent.CompletableFuture[ju.List[SyntheticDecoration]] =
     compilerAccess.withInterruptableCompiler(Some(params))(
       new ju.ArrayList[SyntheticDecoration](),

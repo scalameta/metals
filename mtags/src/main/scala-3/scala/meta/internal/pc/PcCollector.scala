@@ -7,6 +7,7 @@ import scala.meta as m
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
 import scala.meta.pc.VirtualFileParams
 
 import dotty.tools.dotc.ast.NavigateAST
@@ -315,16 +316,26 @@ abstract class PcCollector[T](
         if symbols.nonEmpty then Some((symbols, namePos)) else None
   end collectAllExtensionParamSymbols
 
+  def treesInRange(rangeParams: RangeParams): List[Tree] =
+    val pos = driver.sourcePosition(rangeParams)
+    val path = Interactive
+      .pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
+    val trees =
+      path.headOption.getOrElse(unit.tpdTree)
+    List(trees)
+
   def result(): List[T] =
     params match
       case _: OffsetParams => resultWithSought()
-      case _ => resultAllOccurences()
+      case _ => resultAllOccurences()(List(unit.tpdTree))
 
-  def resultAllOccurences(includeSynthetics: Boolean = false): List[T] =
+  def resultAllOccurences(includeSynthetics: Boolean = false)(
+      toTraverse: List[Tree]
+  ): List[T] =
     def noTreeFilter = (_: Tree) => true
     def noSoughtFilter = (_: Symbol => Boolean) => true
 
-    traverseSought(noTreeFilter, noSoughtFilter, includeSynthetics)
+    traverseSought(noTreeFilter, noSoughtFilter, includeSynthetics)(toTraverse)
 
   def resultWithSought(): List[T] =
     soughtSymbols(path) match
@@ -367,7 +378,9 @@ abstract class PcCollector[T](
         def soughtFilter(f: Symbol => Boolean): Boolean =
           sought.exists(f)
 
-        traverseSought(soughtTreeFilter, soughtFilter).toList
+        traverseSought(soughtTreeFilter, soughtFilter)(
+          List(unit.tpdTree)
+        ).toList
 
       case None => Nil
 
@@ -379,7 +392,7 @@ abstract class PcCollector[T](
       filter: Tree => Boolean,
       soughtFilter: (Symbol => Boolean) => Boolean,
       includeSynthetics: Boolean = false,
-  ): List[T] =
+  )(toTraverse: List[Tree]): List[T] =
     def syntheticFilter(tree: Tree) = includeSynthetics &&
       tree.span.isSynthetic &&
       tree.symbol.isOneOf(Flags.GivenOrImplicit)
@@ -554,8 +567,7 @@ abstract class PcCollector[T](
 
     val traverser =
       new PcCollector.DeepFolderWithParent[List[T]](collectNamesWithParent)
-    val all = traverser(List.empty[T], unit.tpdTree)
-    all
+    toTraverse.flatMap(traverser(List.empty[T], _))
   end traverseSought
 
   // @note (tgodzik) Not sure currently how to get rid of the warning, but looks to correctly

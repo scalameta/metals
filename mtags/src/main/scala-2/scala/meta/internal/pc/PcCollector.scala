@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import scala.reflect.internal.util.RangePosition
 
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
 import scala.meta.pc.VirtualFileParams
 
 abstract class PcCollector[T](
@@ -202,10 +203,17 @@ abstract class PcCollector[T](
       None
   }
 
+  def treesInRange(rangeParams: RangeParams): List[Tree] = {
+    val pos: Position =
+      unit.position(rangeParams.offset()).withEnd(rangeParams.endOffset())
+    val tree = locateTree(pos, unit.lastBody, false)
+    List(tree)
+  }
+
   def result(): List[T] = {
     params match {
       case _: OffsetParams => resultWithSought()
-      case _ => resultAllOccurences()
+      case _ => resultAllOccurences()(List(unit.lastBody))
     }
   }
 
@@ -263,23 +271,27 @@ abstract class PcCollector[T](
           sought.exists(f)
         }
 
-        traverseSought(soughtTreeFilter, soughtFilter)
+        traverseSought(soughtTreeFilter, soughtFilter)(List(unit.lastBody))
 
       case None => Nil
     }
   }
 
-  def resultAllOccurences(includeSynthetics: Boolean = false): List[T] = {
+  def resultAllOccurences(includeSynthetics: Boolean = false)(
+      toTraverse: List[Tree]
+  ): List[T] = {
     def noTreeFilter = (_: Tree) => true
     def noSoughtFilter = (_: (Symbol => Boolean)) => true
 
-    traverseSought(noTreeFilter, noSoughtFilter, includeSynthetics)
+    traverseSought(noTreeFilter, noSoughtFilter, includeSynthetics)(toTraverse)
   }
 
   def traverseSought(
       filter: Tree => Boolean,
       soughtFilter: (Symbol => Boolean) => Boolean,
       includeSynthetics: Boolean = false
+  )(
+      toTraverse: List[Tree]
   ): List[T] = {
     def syntheticFilter(tree: Tree) = includeSynthetics &&
       tree.pos.isOffset &&
@@ -494,8 +506,7 @@ abstract class PcCollector[T](
           tree.children.foldLeft(acc)(traverse(_, _))
       }
     }
-    val all = traverseWithParent(None)(List.empty[T], unit.lastBody)
-    all
+    toTraverse.flatMap(traverseWithParent(None)(List.empty[T], _))
   }
 
   private def annotationChildren(mdef: MemberDef): List[Tree] = {

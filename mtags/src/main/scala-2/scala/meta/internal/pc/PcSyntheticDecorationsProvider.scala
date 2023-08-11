@@ -3,20 +3,22 @@ package scala.meta.internal.pc
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.pc.RangeParams
 import scala.meta.pc.SyntheticDecoration
-import scala.meta.pc.VirtualFileParams
 
 final class PcSyntheticDecorationsProvider(
     protected val cp: MetalsGlobal, // compiler
-    val params: VirtualFileParams
+    val params: RangeParams
 ) {
 
-  def provide(): List[SyntheticDecoration] =
+  def provide(): List[SyntheticDecoration] = {
+    val trees = Collector.treesInRange(params)
     Collector
-      .resultAllOccurences(includeSynthetics = true)
+      .resultAllOccurences(includeSynthetics = true)(trees)
       .flatten
       .toList
       .sortWith((n1, n2) => n1.range().lt(n2.range()))
+  }
 
   // Initialize Tree
   object Collector

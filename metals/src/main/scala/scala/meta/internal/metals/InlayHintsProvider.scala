@@ -10,16 +10,17 @@ import scala.meta.internal.pc.DecorationKind
 import scala.meta.internal.pc.LabelPart
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.InlayHintPart
+import scala.meta.pc.RangeParams
 import scala.meta.pc.SyntheticDecoration
-import scala.meta.pc.VirtualFileParams
 import scala.meta.tokens.{Token => T}
 
 import org.eclipse.{lsp4j => l}
 
 final class InlayHintsProvider(
-    params: VirtualFileParams,
+    params: RangeParams,
     trees: Trees,
     userConfig: () => UserConfiguration,
+    range: Position,
 ) {
   val path: AbsolutePath = params.uri().toAbsolutePath
 
@@ -242,9 +243,22 @@ final class InlayHintsProvider(
           other.children.flatMap(visit)
       }
     }
-    val tree = trees.get(path)
+    val tree = lastEnclosingTree()
     val declarations: List[Position] = tree.map(visit).getOrElse(Nil)
     (declarations, methodPositions.toMap)
   }
 
+  def lastEnclosingTree(): Option[m.Tree] = {
+    val tree: Option[m.Tree] = trees.get(path)
+    def loop(t: m.Tree): m.Tree = {
+      t.children.find(_.pos.encloses(range)) match {
+        case Some(child) =>
+          loop(child)
+        case None =>
+          t
+      }
+    }
+    tree.map(loop)
+
+  }
 }
