@@ -1,19 +1,21 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.interactive.InteractiveDriver
-import scala.meta.pc.VirtualFileParams
-import scala.meta.pc.SyntheticDecoration
-import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.core.Symbols.Symbol
-import dotty.tools.dotc.ast.tpd
-import scala.meta.internal.pc.printer.ShortenedNames
-import scala.meta.pc.SymbolSearch
+import scala.collection.mutable.ListBuffer
+
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
-import dotty.tools.dotc.core.Types.*
-import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.pc.printer.ShortenedNames
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.VirtualFileParams
+
 import dotty.tools.dotc.ast.Trees.*
-import scala.collection.mutable.ListBuffer
+import dotty.tools.dotc.ast.tpd
+import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.core.Types.*
+import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.util.SourcePosition
 
 class PcSyntheticDecorationsProvider(
     driver: InteractiveDriver,

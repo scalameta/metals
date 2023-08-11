@@ -15,7 +15,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
@@ -550,7 +549,7 @@ class Compilers(
       pc.syntheticDecorations(vFile)
         .asScala
         .map { decorations =>
-          new InlayHintProvider(
+          new InlayHintsProvider(
             vFile,
             trees,
             userConfig,
@@ -561,38 +560,6 @@ class Compilers(
         )
 
     }.getOrElse(Future.successful(Nil.asJava))
-  }
-
-  def syntheticDecorations(
-      path: AbsolutePath,
-      token: CancelToken,
-  ): Future[ju.List[DecorationOptions]] = {
-    loadCompiler(path)
-      .map { compiler =>
-        val (input, _, adjust) =
-          sourceAdjustments(
-            path.toNIO.toUri().toString(),
-            compiler.scalaVersion(),
-          )
-        val vFile =
-          CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
-        compiler
-          .syntheticDecorations(vFile)
-          .asScala
-          .map { decorations =>
-            new DecorationProvider(
-              vFile,
-              trees,
-              userConfig,
-            ).provide(decorations.asScala.toList)
-          }
-          .map(_.map { decoration =>
-            decoration.copy(
-              range = adjust.adjustRange(decoration.range)
-            )
-          }.asJava)
-      }
-      .getOrElse(Future.successful(Nil.asJava))
   }
 
   def completions(
