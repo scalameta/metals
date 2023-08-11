@@ -549,4 +549,14 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |
        |""".stripMargin,
   )
+
+  check(
+    "enum-type-param".tag(IgnoreScala2),
+    """|package a
+       |enum MyOption[+<<AA>>]:
+       |  case MySome(value: A@@A)
+       |  case MyNone
+       |""".stripMargin,
+  )
+
 }

@@ -124,8 +124,10 @@ abstract class PcCollector[T](
         val enumOwner =
           if enumClass.is(Flags.Case)
           then
+            // we check that the type parameter is the one from enum class
+            // and not an enum case type parameter with the same name
             Option.when(member(enumClass).is(Flags.Synthetic))(
-              enumClass.owner.companionClass
+              enumClass.maybeOwner.companionClass
             )
           else Some(enumClass)
         enumOwner.toSet.flatMap { enumOwner =>
@@ -157,11 +159,11 @@ abstract class PcCollector[T](
         ) ++ sym.allOverriddenSymbols.toSet
       // type used in primary constructor will not match the one used in the class
       else if sym.isTypeParam && sym.owner.isPrimaryConstructor then
-        Set(sym, member(sym.owner.owner))
-          ++ additionalForEnumTypeParam(sym.owner.owner)
+        Set(sym, member(sym.maybeOwner.maybeOwner))
+          ++ additionalForEnumTypeParam(sym.maybeOwner.maybeOwner)
       else if sym.isTypeParam then
-        primaryConstructorTypeParam(sym.owner).toSet
-          ++ additionalForEnumTypeParam(sym.owner) + sym
+        primaryConstructorTypeParam(sym.maybeOwner).toSet
+          ++ additionalForEnumTypeParam(sym.maybeOwner) + sym
       else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
   end symbolAlternatives

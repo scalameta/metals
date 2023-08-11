@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.nio.file.Paths
 import java.util.ArrayList
 
+import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -14,6 +15,7 @@ import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.ModuleClass
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
@@ -119,20 +121,26 @@ class PcDefinitionProvider(
       case symbols @ (sym :: other) =>
         val isLocal = sym.source == pos.source
         if isLocal then
-          val defs =
-            Interactive.findDefinitions(List(sym), driver, false, false)
-          defs.headOption match
-            case Some(srcTree) =>
-              val pos = srcTree.namePos
-              pos.toLocation match
-                case None => DefinitionResultImpl.empty
-                case Some(loc) =>
-                  DefinitionResultImpl(
-                    SemanticdbSymbols.symbolName(sym),
-                    List(loc).asJava,
-                  )
-            case None =>
-              DefinitionResultImpl.empty
+          @tailrec
+          def findDefsForSymbol(sym: Symbol): DefinitionResult =
+            val defs =
+              Interactive.findDefinitions(List(sym), driver, false, false)
+            defs.headOption match
+              case Some(srcTree) =>
+                val pos = srcTree.namePos
+                pos.toLocation match
+                  case None => DefinitionResultImpl.empty
+                  case Some(loc) =>
+                    DefinitionResultImpl(
+                      SemanticdbSymbols.symbolName(sym),
+                      List(loc).asJava,
+                    )
+              case None =>
+                alternative(sym) match
+                  case Some(alt) => findDefsForSymbol(alt)
+                  case None => DefinitionResultImpl.empty
+          end findDefsForSymbol
+          findDefsForSymbol(sym)
         else
           val res = new ArrayList[Location]()
           semanticSymbolsSorted(symbols)
@@ -153,7 +161,7 @@ class PcDefinitionProvider(
   )(using ctx: Context): List[String] =
     syms
       .map { sym =>
-        // in case of having the same type and teerm symbol
+        // in case of having the same type and term symbol
         // term comes first
         // used only for ordering symbols that come from `Import`
         val termFlag =
@@ -163,5 +171,24 @@ class PcDefinitionProvider(
       }
       .sorted
       .map(_._2)
+
+  /**
+   * For:
+   * ```
+   * enum MyOption[+<<AA>>]:
+   *   case MySome(value: A@@A)
+   *   case MyNone
+   * ```
+   * we emit `MyOption.AA` as an alternative for `MyOption.MySome.`<init>`.AA`
+   */
+  private def alternative(sym: Symbol)(using ctx: Context): Option[Symbol] =
+    def maybeEnumCase = sym.maybeOwner.maybeOwner
+    if sym.isTypeParam && sym.maybeOwner.isPrimaryConstructor
+      && maybeEnumCase.isAllOf(Flags.EnumCase)
+    then
+      Some(maybeEnumCase.maybeOwner.companionClass.info.member(sym.name).symbol)
+        .filter(_ != NoSymbol)
+    else None
+  end alternative
 
 end PcDefinitionProvider
