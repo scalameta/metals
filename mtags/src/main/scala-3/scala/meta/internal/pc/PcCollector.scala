@@ -112,6 +112,33 @@ abstract class PcCollector[T](
   end adjust
 
   def symbolAlternatives(sym: Symbol) =
+    def member(parent: Symbol) = parent.info.member(sym.name).symbol
+    def primaryConstructorTypeParam(owner: Symbol) =
+      for
+        typeParams <- owner.primaryConstructor.paramSymss.headOption
+        param <- typeParams.find(_.name == sym.name)
+        if (param.isType)
+      yield param
+    def additionalForEnumTypeParam(enumClass: Symbol) =
+      if enumClass.is(Flags.Enum) then
+        val enumOwner =
+          if enumClass.is(Flags.Case)
+          then
+            Option.when(member(enumClass).is(Flags.Synthetic))(
+              enumClass.owner.companionClass
+            )
+          else Some(enumClass)
+        enumOwner.toSet.flatMap { enumOwner =>
+          val symsInEnumCases = enumOwner.children.toSet.flatMap(enumCase =>
+            if member(enumCase).is(Flags.Synthetic)
+            then primaryConstructorTypeParam(enumCase)
+            else None
+          )
+          val symsInEnumOwner =
+            primaryConstructorTypeParam(enumOwner).toSet + member(enumOwner)
+          symsInEnumCases ++ symsInEnumOwner
+        }
+      else Set.empty
     val all =
       if sym.is(Flags.ModuleClass) then
         Set(sym, sym.companionModule, sym.companionModule.companion)
@@ -130,7 +157,11 @@ abstract class PcCollector[T](
         ) ++ sym.allOverriddenSymbols.toSet
       // type used in primary constructor will not match the one used in the class
       else if sym.isTypeParam && sym.owner.isPrimaryConstructor then
-        Set(sym, sym.owner.owner.info.member(sym.name).symbol)
+        Set(sym, member(sym.owner.owner))
+          ++ additionalForEnumTypeParam(sym.owner.owner)
+      else if sym.isTypeParam then
+        primaryConstructorTypeParam(sym.owner).toSet
+          ++ additionalForEnumTypeParam(sym.owner) + sym
       else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
   end symbolAlternatives
