@@ -1779,12 +1779,12 @@ final case class TestingServer(
   }
 
   def jar(filename: String): String = {
-    server.buildTargets.allWorkspaceJars
+    server.buildTargets.allSourceJars
       .find(_.filename.contains(filename))
       .map(_.toURI.toString())
       .getOrElse {
         val alternatives =
-          server.buildTargets.allWorkspaceJars
+          server.buildTargets.allSourceJars
             .map(_.filename)
             .mkString(" ")
         throw new NoSuchElementException(
@@ -1834,8 +1834,11 @@ final case class TestingServer(
     val tree = parents
       .zip(reveal.uriChain :+ "root")
       .foldLeft(PrettyPrintTree.empty) { case (child, (parent, uri)) =>
+        val realUri =
+          if (uri.contains("-sources.jar")) uri
+          else uri.replace(".jar", "-sources.jar")
         PrettyPrintTree(
-          label(uri.toLowerCase),
+          label.getOrElse(realUri.toLowerCase, realUri),
           parent.nodes
             .map(n => PrettyPrintTree(label(n.nodeUri.toLowerCase)))
             .filterNot(t => isIgnored(t.value))

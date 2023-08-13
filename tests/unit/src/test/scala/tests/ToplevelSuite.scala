@@ -30,7 +30,7 @@ abstract class ToplevelSuite(
             FileIO.slurp(ls.root.resolve(relpath), StandardCharsets.UTF_8)
           val input = Input.VirtualFile(relpath.toURI(false).toString, text)
           val reluri = relpath.toURI(isDirectory = false).toString
-          Mtags.toplevels(input, dialect).foreach { toplevel =>
+          Mtags.topLevelSymbols(input, dialect).foreach { toplevel =>
             // do not check symtab for Scala 3 since it's not possible currently
             if (symtab.info(toplevel).isEmpty && dialect != Scala3) {
               missingSymbols += toplevel

@@ -77,7 +77,7 @@ class TestingSymbolSearch(
           filename,
           content,
         )
-        Mtags.toplevels(input).asJava
+        Mtags.topLevelSymbols(input).asJava
     }
   }
 

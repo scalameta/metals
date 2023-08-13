@@ -82,7 +82,7 @@ class MetalsSymbolSearch(
         } else {
           dependencySourceCache.getOrElseUpdate(
             path,
-            Mtags.toplevels(input).asJava,
+            Mtags.topLevelSymbols(input).asJava,
           )
         }
       })

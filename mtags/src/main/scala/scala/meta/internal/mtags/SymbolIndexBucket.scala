@@ -51,6 +51,58 @@ class SymbolIndexBucket(
 
   def close(): Unit = sourceJars.close()
 
+  def toplevelsAt(path: AbsolutePath): List[SymbolDefinition] = {
+
+    def indexJar(jar: AbsolutePath) = {
+      FileIO.withJarFileSystem(jar, create = false) { root =>
+        try {
+          root.listRecursive.toList.collect {
+            case source if source.isFile =>
+              (source, mtags.toplevels(source.toInput, dialect).symbols)
+          }
+        } catch {
+          // this happens in broken jars since file from FileWalker should exists
+          case _: UncheckedIOException => Nil
+        }
+      }
+    }
+
+    val pathSymbolInfos = if (path.isSourcesJar) {
+      indexJar(path)
+    } else {
+      List((path, mtags.toplevels(path.toInput, dialect).symbols))
+    }
+    pathSymbolInfos.collect { case (path, infos) =>
+      infos.map { info =>
+        SymbolDefinition(
+          Symbol("_empty_"),
+          Symbol(info.symbol),
+          path,
+          dialect,
+          None,
+          Some(info.kind),
+          info.properties
+        )
+      }
+    }.flatten
+  }
+
+  def symbolsAt(path: AbsolutePath): List[SymbolDefinition] = {
+    val document = allSymbols(path)
+    document.symbols.map { info =>
+      SymbolDefinition(
+        Symbol("_empty_"),
+        Symbol(info.symbol),
+        path,
+        dialect,
+        None,
+        Some(info.kind),
+        info.properties
+      )
+    }.toList
+
+  }
+
   def addSourceDirectory(dir: AbsolutePath): List[(String, AbsolutePath)] = {
     if (sourceJars.addEntry(dir.toNIO)) {
       dir.listRecursive.toList.flatMap {
@@ -106,8 +158,7 @@ class SymbolIndexBucket(
       sourceDirectory: Option[AbsolutePath],
       fromSourceJar: Option[AbsolutePath] = None
   ): List[String] = {
-    val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val symbols = indexSource(source, uri, dialect)
+    val symbols = indexSource(source, dialect, sourceDirectory)
 
     val patched =
       fromSourceJar match {
@@ -125,12 +176,13 @@ class SymbolIndexBucket(
 
   private def indexSource(
       source: AbsolutePath,
-      uri: String,
-      dialect: Dialect
+      dialect: Dialect,
+      sourceDirectory: Option[AbsolutePath]
   ): List[String] = {
+    val uri = source.toIdeallyRelativeURI(sourceDirectory)
     val text = FileIO.slurp(source, StandardCharsets.UTF_8)
     val input = Input.VirtualFile(uri, text)
-    val sourceToplevels = mtags.toplevels(input, dialect)
+    val sourceToplevels = mtags.topLevelSymbols(input, dialect)
     if (source.isAmmoniteScript)
       sourceToplevels
     else
@@ -221,7 +273,9 @@ class SymbolIndexBucket(
               definitionSymbol = symbol,
               path = location.path,
               dialect = dialect,
-              range = location.range
+              range = location.range,
+              kind = None,
+              properties = 0
             )
           }.toList
         }
@@ -257,6 +311,17 @@ class SymbolIndexBucket(
     }
   }
 
+  private def allSymbols(path: AbsolutePath): s.TextDocument = {
+    val language = path.toLanguage
+    val toIndexSource0 = toIndexSource(path)
+    val input = toIndexSource0.toInput
+
+    stdLibPatches.patchDocument(
+      path,
+      mtags.index(language, input, dialect)
+    )
+  }
+
   // similar as addSourceFile except indexes all global symbols instead of
   // only non-trivial toplevel symbols.
   private def addMtagsSourceFile(
@@ -265,14 +330,7 @@ class SymbolIndexBucket(
   ): Unit = try {
     val docs: s.TextDocuments = PathIO.extension(file.toNIO) match {
       case "scala" | "java" | "sc" =>
-        val language = file.toLanguage
-        val toIndexSource0 = toIndexSource(file)
-        val input = toIndexSource0.toInput
-        val document =
-          stdLibPatches.patchDocument(
-            file,
-            mtags.index(language, input, dialect)
-          )
+        val document = allSymbols(file)
         s.TextDocuments(List(document))
       case _ =>
         s.TextDocuments(Nil)
