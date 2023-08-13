@@ -2,7 +2,11 @@ package bench
 
 import java.util.concurrent.TimeUnit
 
-import scala.meta.internal.tvp.ClasspathSymbols
+import scala.meta.dialects
+import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.tvp.IndexedSymbols
 import scala.meta.io.AbsolutePath
 
 import org.openjdk.jmh.annotations.Benchmark
@@ -21,7 +25,7 @@ class ClasspathSymbolsBench {
 
   @Setup
   def setup(): Unit = {
-    classpath = Library.cats
+    classpath = Library.catsSources.filter(_.filename.contains("sources"))
   }
 
   @TearDown
@@ -31,8 +35,14 @@ class ClasspathSymbolsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Unit = {
-    val jars = new ClasspathSymbols()
-    classpath.foreach { jar => jars.symbols(jar, "cats/") }
+    implicit val reporting = EmptyReportContext
+    val jars = new IndexedSymbols(
+      OnDemandSymbolIndex.empty(),
+      isStatisticsEnabled = false,
+    )
+    classpath.foreach { jar =>
+      jars.jarSymbols(jar, "cats/", dialects.Scala213)
+    }
   }
 
 }

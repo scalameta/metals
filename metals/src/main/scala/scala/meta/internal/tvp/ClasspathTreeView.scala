@@ -78,7 +78,9 @@ class ClasspathTreeView[Value, Key](
         val label =
           if (child.kind.isPackage) {
             displayName + "/"
-          } else if (child.kind.isMethod && !child.isVal && !child.isVar) {
+          } else if (
+            child.kind.isConstructor || (child.kind.isMethod && !child.isVal && !child.isVar)
+          ) {
             displayName + "()"
           } else {
             displayName
@@ -87,6 +89,7 @@ class ClasspathTreeView[Value, Key](
         // Get the children of this child to determine its collapse state.
         val grandChildren =
           transitiveChildren.filter(_.symbol.owner == child.symbol)
+
         val collapseState =
           if (!childHasSiblings && grandChildren.nonEmpty)
             MetalsTreeItemCollapseState.expanded
@@ -106,6 +109,7 @@ class ClasspathTreeView[Value, Key](
           case k.TRAIT => "trait"
           case k.CLASS => "class"
           case k.INTERFACE => "interface"
+          case k.CONSTRUCTOR => "method"
           case k.METHOD | k.MACRO =>
             if (child.properties.isVal) "val"
             else if (child.properties.isVar) "var"
@@ -113,6 +117,8 @@ class ClasspathTreeView[Value, Key](
           case k.FIELD =>
             if (child.properties.isEnum) "enum"
             else "field"
+          case k.TYPE_PARAMETER => "type"
+          case k.TYPE => "type"
           case _ => null
         }
 

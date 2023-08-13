@@ -82,7 +82,7 @@ class JavaToplevelSuite extends BaseSuite {
     test(name) {
       val input = Input.VirtualFile("Test.java", code)
       val obtained =
-        Mtags.toplevels(input, dialects.Scala213)
+        Mtags.topLevelSymbols(input, dialects.Scala213)
 
       assertNoDiff(
         obtained.sorted.mkString("\n"),

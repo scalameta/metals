@@ -90,7 +90,7 @@ class StandaloneSymbolSearch(
         val input = symDef.path.toInput
         dependencySourceCache.getOrElseUpdate(
           symDef.path,
-          mtags.toplevels(input).asJava,
+          mtags.topLevelSymbols(input).asJava,
         )
       }
       .orElse(workspaceFallback.map(_.definitionSourceToplevels(sym, source)))

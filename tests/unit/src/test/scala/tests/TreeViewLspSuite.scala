@@ -1,9 +1,14 @@
 package tests
 
+import java.nio.file.Paths
+
 import scala.collection.SortedSet
+import scala.util.Properties
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.tvp.TreeViewProvider
+import scala.meta.io.AbsolutePath
 
 /**
  * @note This suite will fail on openjdk8 < 262)
@@ -11,41 +16,47 @@ import scala.meta.internal.tvp.TreeViewProvider
  */
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
+  private val javaVersion =
+    JdkVersion
+      .fromReleaseFileString(AbsolutePath(Paths.get(Properties.javaHome)))
+      .getOrElse("")
+  private val jdkSourcesName = s"jdk-$javaVersion-sources"
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
 
   /**
    * The libraries we expect to find for tests in this file.
-   *
-   * @note this value changes depending on the JVM version in use as some JAR
-   *       files have moved to become modules on JVM > 8.
    */
-  val expectedLibraries: SortedSet[String] = {
-    lazy val jdk8Libraries = SortedSet(
-      "charsets", "jce", "jsse", "resources", "rt",
-    )
-
-    val otherLibraries = SortedSet(
-      "cats-core_2.13", "cats-kernel_2.13", "checker-qual", "circe-core_2.13",
-      "circe-numbers_2.13", "error_prone_annotations", "failureaccess", "gson",
-      "guava", "j2objc-annotations", "jsr305", "listenablefuture",
-      "org.eclipse.lsp4j", "org.eclipse.lsp4j.generator",
-      "org.eclipse.lsp4j.jsonrpc", "org.eclipse.xtend.lib",
-      "org.eclipse.xtend.lib.macro", "org.eclipse.xtext.xbase.lib",
-      "scala-library", "scala-reflect", "semanticdb-javac",
-      "simulacrum-scalafix-annotations_2.13", "sourcecode_2.13",
-    )
-
-    if (scala.util.Properties.isJavaAtLeast(9.toString)) {
-      otherLibraries
-    } else {
-      otherLibraries ++ jdk8Libraries + "jfr"
-    }
-  }
+  val expectedLibraries: SortedSet[String] = SortedSet(
+    "cats-core_2.13",
+    "cats-kernel_2.13",
+    "checker-qual",
+    "circe-core_2.13",
+    "circe-numbers_2.13",
+    "error_prone_annotations",
+    "failureaccess",
+    "gson",
+    "guava",
+    "j2objc-annotations",
+    jdkSourcesName,
+    "jsr305",
+    "org.eclipse.lsp4j",
+    "org.eclipse.lsp4j.generator",
+    "org.eclipse.lsp4j.jsonrpc",
+    "org.eclipse.xtend.lib",
+    "org.eclipse.xtend.lib.macro",
+    "org.eclipse.xtext.xbase.lib",
+    "scala-library",
+    "scala-reflect",
+    "simulacrum-scalafix-annotations_2.13",
+    "sourcecode_2.13",
+  )
 
   lazy val expectedLibrariesString: String =
-    this.expectedLibraries.toVector
-      .map((s: String) => s"${s}.jar -")
+    (this.expectedLibraries.toVector
+      .map { (s: String) =>
+        if (s != jdkSourcesName) s"${s}.jar -" else s"$jdkSourcesName -"
+      })
       .mkString("\n")
 
   lazy val expectedLibrariesCount: Int =
@@ -96,12 +107,6 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             |""".stripMargin,
       )
       folder = server.server.path
-      _ = server.assertTreeViewChildren(
-        s"projects-$folder:${server.buildTarget("a")}",
-        "",
-      )
-      _ <- server.didOpen("a/src/main/scala/a/First.scala")
-      _ <- server.didOpen("b/src/main/scala/b/Third.scala")
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}",
         """|_empty_/ -
@@ -175,19 +180,32 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
-          s"libraries-$folder:${server.jar("lsp4j")}!/org/eclipse/lsp4j/FileChangeType#",
-          """|Created enum
+          s"libraries-$folder:${server.jar("lsp4j-")}!/org/eclipse/lsp4j/FileChangeType#",
+          """|getValue() method
+             |forValue() method
+             |<init>() method
+             |Created enum
              |Changed enum
              |Deleted enum
-             |values() method
-             |valueOf() method
-             |getValue() method
-             |forValue() method
+             |value field
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("circe-core")}!/_root_/",
           """|io/ +
+             |""".stripMargin,
+        )
+        server.assertTreeViewChildren(
+          s"libraries-$folder:${server.jar("cats-core")}!/_root_/",
+          """|cats/ +
+             |""".stripMargin,
+        )
+        server.assertTreeViewChildren(
+          s"libraries-$folder:${server.jar("cats-core")}!/cats/compat/",
+          """|FoldableCompat object -
+             |Seq object -
+             |SortedSet object -
+             |Vector object -
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
@@ -220,10 +238,11 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
           ),
           s"""|root
               |  Projects (0)
-              |  Libraries (${expectedLibrariesCount})
-              |  Libraries (${expectedLibrariesCount})
-              |    sourcecode_2.13-0.1.7.jar
-              |    sourcecode_2.13-0.1.7.jar
+              |  Libraries (22)
+              |  Libraries (22)
+              |    $jdkSourcesName
+              |    sourcecode_2.13-0.1.7-sources.jar
+              |    sourcecode_2.13-0.1.7-sources.jar
               |      sourcecode/
               |      sourcecode/
               |        Args class
@@ -268,17 +287,16 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             "registerCapability",
             isIgnored = { label =>
               label.endsWith(".jar") &&
-              !label.contains("lsp4j")
+              !label.contains("lsp4j-0")
             },
           ),
           s"""|root
               |  Projects (0)
               |  Libraries (${expectedLibrariesCount})
               |  Libraries (${expectedLibrariesCount})
-              |    org.eclipse.lsp4j-0.5.0.jar
-              |    org.eclipse.lsp4j.generator-0.5.0.jar
-              |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar
-              |    org.eclipse.lsp4j-0.5.0.jar
+              |    $jdkSourcesName
+              |    org.eclipse.lsp4j-0.5.0-sources.jar
+              |    org.eclipse.lsp4j-0.5.0-sources.jar
               |      org/
               |      org/
               |        eclipse/
@@ -378,7 +396,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |            HoverCapabilities class
               |            ImplementationCapabilities class
               |            InitializeError class
-              |            InitializeErrorCode class
+              |            InitializeErrorCode interface
               |            InitializeParams class
               |            InitializeResult class
               |            InitializedParams class
@@ -453,13 +471,13 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |            WorkspaceServerCapabilities class
               |            WorkspaceSymbolParams class
               |            services/
-              |              LanguageClient class
-              |              LanguageClientAware class
-              |              LanguageClientExtensions class
-              |              LanguageServer class
-              |              TextDocumentService class
-              |              WorkspaceService class
-              |              LanguageClient class
+              |              LanguageClient interface
+              |              LanguageClientAware interface
+              |              LanguageClientExtensions interface
+              |              LanguageServer interface
+              |              TextDocumentService interface
+              |              WorkspaceService interface
+              |              LanguageClient interface
               |                applyEdit() method
               |                registerCapability() method
               |                unregisterCapability() method

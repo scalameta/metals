@@ -615,7 +615,7 @@ class ScalaToplevelSuite extends BaseSuite {
               .occurrences
               .map(_.symbol)
               .toList
-          case Toplevel => Mtags.toplevels(input, dialect)
+          case Toplevel => Mtags.topLevelSymbols(input, dialect)
         }
       assertNoDiff(
         obtained.sorted.mkString("\n"),

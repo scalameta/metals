@@ -17,7 +17,7 @@ final class Mtags(implicit rc: ReportContext) {
   def toplevels(
       input: Input.VirtualFile,
       dialect: Dialect = dialects.Scala213
-  ): List[String] = {
+  ): TextDocument = {
     val language = input.toLanguage
 
     if (language.isJava || language.isScala) {
@@ -32,16 +32,20 @@ final class Mtags(implicit rc: ReportContext) {
             dialect
           )
       addLines(language, input.text)
-      mtags
-        .index()
-        .occurrences
-        .iterator
-        .filterNot(_.symbol.isPackage)
-        .map(_.symbol)
-        .toList
+      mtags.index()
     } else {
-      Nil
+      TextDocument()
     }
+  }
+
+  def topLevelSymbols(
+      input: Input.VirtualFile,
+      dialect: Dialect = dialects.Scala213
+  ): List[String] = {
+    toplevels(input, dialect).occurrences.iterator
+      .filterNot(_.symbol.isPackage)
+      .map(_.symbol)
+      .toList
   }
 
   def index(
@@ -107,11 +111,19 @@ object Mtags {
         TextDocument()
     }
   }
+
   def toplevels(
       input: Input.VirtualFile,
       dialect: Dialect = dialects.Scala213
-  )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
     new Mtags().toplevels(input, dialect)
+  }
+
+  def topLevelSymbols(
+      input: Input.VirtualFile,
+      dialect: Dialect = dialects.Scala213
+  )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
+    new Mtags().topLevelSymbols(input, dialect)
   }
 
 }
