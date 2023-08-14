@@ -320,11 +320,11 @@ abstract class PcCollector[T](
          * val a = hello.<<b>>
          */
         case sel: Select if sel.pos.isRange && filter(sel) =>
+          val newAcc =
+            if (isForComprehensionMethod(sel)) acc
+            else acc + collect(sel, sel.namePosition)
           traverse(
-            acc + collect(
-              sel,
-              sel.namePosition
-            ),
+            newAcc,
             sel.qualifier
           )
         /* all definitions:
@@ -489,6 +489,19 @@ abstract class PcCollector[T](
       case sel: NameTree => sel.namePosition
       case _ => tpe.pos
     }
+  }
+
+  private val forCompMethods =
+    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
+
+  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
+  private def isForComprehensionMethod(sel: Select): Boolean = {
+    val syntheticName = sel.name match {
+      case name: TermName => forCompMethods(name)
+      case _ => false
+    }
+    val wrongSpan = sel.qualifier.pos.includes(sel.namePosition.focusStart)
+    syntheticName && wrongSpan
   }
 
 }
