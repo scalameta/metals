@@ -45,43 +45,48 @@ final class PcSyntheticDecorationsProvider(
         symbol: Option[compiler.Symbol]
     ): Option[SyntheticDecoration] = {
       val sym = symbol.fold(tree.symbol)(identity)
-      parent
-        .collectFirst {
-          case Apply(fun, args) if fun.pos == pos && pos.isOffset =>
-            val lastArgPos = args.lastOption.fold(pos)(_.pos)
-            Decoration(
-              lastArgPos.toLsp,
-              sym.decodedName,
-              DecorationKind.ImplicitConversion,
-              Some(semanticdbSymbol(sym))
-            )
-          case ap @ Apply(_, args)
-              if args.exists(_.pos == pos) && pos.isOffset =>
-            Decoration(
-              ap.pos.focusEnd.toLsp,
-              sym.decodedName,
-              DecorationKind.ImplicitParameter,
-              Some(semanticdbSymbol(sym))
-            )
-          case TypeApply(fun, args)
-              if args.exists(_.pos == pos) && pos.isOffset &&
-                !compiler.definitions.isTupleType(fun.tpe.finalResultType) =>
-            val parts = partsFromType(tree.tpe.widen.finalResultType)
-            val labelParts = makeLabelParts(parts, tree.tpe)
-            Decoration(
-              fun.pos.focusEnd.toLsp,
-              labelParts,
-              DecorationKind.TypeParameter
-            )
-        }
-        .orElse {
-          val parts = partsFromType(sym.tpe.widen.finalResultType)
-          val labelParts = makeLabelParts(parts, sym.tpe)
-          val kind = DecorationKind.InferredType
-          Some(
-            Decoration(pos.toLsp, labelParts, kind)
-          )
-        }
+      if (sym == null) None
+      else 
+        parent
+          .collectFirst {
+            case Apply(fun, args) if fun.pos == pos && pos.isOffset =>
+              val lastArgPos = args.lastOption.fold(pos)(_.pos)
+              Decoration(
+                lastArgPos.toLsp,
+                sym.decodedName,
+                DecorationKind.ImplicitConversion,
+                Some(semanticdbSymbol(sym))
+              )
+            case ap @ Apply(_, args)
+                if args.exists(_.pos == pos) && pos.isOffset =>
+              Decoration(
+                ap.pos.focusEnd.toLsp,
+                sym.decodedName,
+                DecorationKind.ImplicitParameter,
+                Some(semanticdbSymbol(sym))
+              )
+            case ta @ TypeApply(fun, args)
+                if args.exists(_.pos == pos) && pos.isOffset && ta.pos.isRange &&
+                  !compiler.definitions.isTupleType(fun.tpe.finalResultType) =>
+              val parts = partsFromType(tree.tpe.widen.finalResultType)
+              val labelParts = makeLabelParts(parts, tree.tpe)
+              Decoration(
+                fun.pos.focusEnd.toLsp,
+                labelParts,
+                DecorationKind.TypeParameter
+              )
+          }
+          .orElse {
+            if (pos.isRange) {
+
+              val parts = partsFromType(sym.tpe.widen.finalResultType)
+              val labelParts = makeLabelParts(parts, sym.tpe)
+              val kind = DecorationKind.InferredType
+              Some(
+                Decoration(pos.toLsp, labelParts, kind)
+              )
+            } else None
+          }
     }
 
     def partsFromType(tpe: Type): List[TypeWithName] = {
@@ -91,7 +96,7 @@ final class PcSyntheticDecorationsProvider(
         }
         .distinctBy(_.name)
     }
-
+    
     def makeLabelParts(
         parts: List[TypeWithName],
         tpe: Type

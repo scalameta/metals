@@ -22,6 +22,7 @@ final class InlayHintsProvider(
     userConfig: () => UserConfiguration,
     range: Position,
 ) {
+
   val path: AbsolutePath = params.uri().toAbsolutePath
 
   def provide(

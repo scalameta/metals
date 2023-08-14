@@ -10,7 +10,6 @@ import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
 
-
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Symbols.Symbol
@@ -50,48 +49,53 @@ class PcSyntheticDecorationsProvider(
         symbol: Option[Symbol],
     ): Option[SyntheticDecoration] =
       val sym = symbol.fold(tree.symbol)(identity)
-      parent
-        .zip(Some(tree))
-        .collectFirst {
-          case (Apply(fun, args), _)
-              if fun.span == pos.span && pos.span.isSynthetic =>
-            val lastArgPos =
-              args.lastOption.map(_.sourcePos).getOrElse(pos).toLsp
-            lastArgPos.setStart(pos.toLsp.getStart())
-            Decoration(
-              lastArgPos,
-              sym.decodedName,
-              DecorationKind.ImplicitConversion,
-              Some(semanticdbSymbol(sym)),
-            )
-          case (Apply(_, args), _)
-              if args.exists(_.span == pos.span) && pos.span.isSynthetic =>
-            Decoration(
-              pos.toLsp,
-              sym.decodedName,
-              DecorationKind.ImplicitParameter,
-              Some(semanticdbSymbol(sym)),
-            )
-          case (TypeApply(fun, _), TypeTree())
-              if !definitions.isTupleNType(fun.symbol.info.finalResultType) &&
-                !pos.span.isZeroExtent // inferred type parameters with zero extent span are mostly incorrect
-              =>
-            val tpe = optDealias(tree.tpe)
-            val parts = partsFromType(tpe)
-            val labelParts = makeLabelParts(parts, tpe)
-            Decoration(
-              pos.endPos.toLsp,
-              labelParts,
-              DecorationKind.TypeParameter,
-            )
-        }
-        .orElse {
-          val tpe = optDealias(sym.info)
-          val parts = partsFromType(tpe)
-          val kind = DecorationKind.InferredType // inferred type
-          val labelParts = makeLabelParts(parts, tpe)
-          Some(Decoration(pos.toLsp, labelParts, kind))
-        }
+      if sym == null then None
+      else
+        parent
+          .zip(Some(tree))
+          .collectFirst {
+            case (Apply(fun, args), _)
+                if fun.span == pos.span && pos.span.isSynthetic =>
+              val lastArgPos =
+                args.lastOption.map(_.sourcePos).getOrElse(pos).toLsp
+              lastArgPos.setStart(pos.toLsp.getStart())
+              Decoration(
+                lastArgPos,
+                sym.decodedName,
+                DecorationKind.ImplicitConversion,
+                Some(semanticdbSymbol(sym)),
+              )
+            case (Apply(_, args), _)
+                if args.exists(_.span == pos.span) && pos.span.isSynthetic =>
+              Decoration(
+                pos.toLsp,
+                sym.decodedName,
+                DecorationKind.ImplicitParameter,
+                Some(semanticdbSymbol(sym)),
+              )
+            case (TypeApply(fun, _), TypeTree())
+                if !definitions.isTupleNType(fun.symbol.info.finalResultType) &&
+                  !pos.span.isZeroExtent // inferred type parameters with zero extent span are mostly incorrect
+                =>
+              val tpe = optDealias(tree.tpe)
+              val parts = partsFromType(tpe)
+              val labelParts = makeLabelParts(parts, tpe)
+              Decoration(
+                pos.endPos.toLsp,
+                labelParts,
+                DecorationKind.TypeParameter,
+              )
+          }
+          .orElse {
+            if (!pos.span.isZeroExtent) {
+              val tpe = optDealias(sym.info)
+              val parts = partsFromType(tpe)
+              val kind = DecorationKind.InferredType // inferred type
+              val labelParts = makeLabelParts(parts, tpe)
+              Some(Decoration(pos.toLsp, labelParts, kind))
+            } else None
+          }
+      end if
     end collect
 
     private def optDealias(tpe: Type): Type =
