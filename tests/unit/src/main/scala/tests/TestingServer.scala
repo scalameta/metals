@@ -671,15 +671,18 @@ final case class TestingServer(
   // note(@tgodzik) all test should have `System.exit(0)` added to avoid occasional issue due to:
   // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
   private def assertSystemExit(parameter: AnyRef) = {
-    def check() = {
+    def check() = try {
+      val nonTarget = workspace.list.filter(_.filename != "target")
       val workspaceFiles =
-        workspace.listRecursive.filter(_.isScalaOrJava).toList
+        nonTarget.flatMap(_.listRecursive.filter(_.isScalaOrJava).toList)
       val usesSystemExit =
         workspaceFiles.exists(_.text.contains("System.exit(0)"))
       if (!usesSystemExit)
         throw new RuntimeException(
           "All debug test for main classes should have `System.exit(0)`"
         )
+    } catch {
+      case _: IOException =>
     }
 
     parameter match {
