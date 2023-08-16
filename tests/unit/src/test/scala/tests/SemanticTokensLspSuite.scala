@@ -220,6 +220,28 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
        |}""".stripMargin,
   )
 
+  check(
+    "interpolated-string",
+    s"""|<<package>>/*keyword*/ <<a>>/*namespace*/
+        |<<object>>/*keyword*/ <<A>>/*class*/ {
+        |<<s>>/*keyword*/<<\"\"\">>/*string*/
+        |<<some text>>/*string*/
+        |<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+  )
+
+  check(
+    "interpolated-string2",
+    s"""|<<package>>/*keyword*/ <<a>>/*namespace*/
+        |<<object>>/*keyword*/ <<A>>/*class*/ {
+        |<<s>>/*keyword*/<<\"\"\">>/*string*/
+        |<<some text>>/*string*/
+        |<< >>/*string*/<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       expected: String,
