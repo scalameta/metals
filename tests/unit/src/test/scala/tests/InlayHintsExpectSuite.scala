@@ -1,14 +1,13 @@
 package tests
 
-import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.InlayHintsProvider
-import scala.meta.internal.pc.ScalaPresentationCompiler
-import scala.meta.internal.metals.CompilerRangeParams
-import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.inputs.Position
-
+import scala.meta.internal.metals.CompilerRangeParams
+import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.InlayHintsProvider
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.pc.ScalaPresentationCompiler
 
 class InlayHintsExpectSuite extends DirectoryExpectSuite("inlayHints") {
 
@@ -35,15 +34,17 @@ class InlayHintsExpectSuite extends DirectoryExpectSuite("inlayHints") {
             file.code.length,
             EmptyCancelToken,
           )
-          val decorations = compiler.syntheticDecorations(params).get().asScala.toList
+          val decorations =
+            compiler.syntheticDecorations(params).get().asScala.toList
 
           val pos = Position.Range(file.input, 0, file.code.length)
-          val inlayHintsProvider = new InlayHintsProvider(params, trees, () => userConfig, pos)
+          val inlayHintsProvider =
+            new InlayHintsProvider(params, trees, () => userConfig, pos)
           val inlayHints = inlayHintsProvider.provide(
-            decorations,
+            decorations
           )
           TestInlayHints.applyInlayHints(file.code, inlayHints)
-        }
+        },
       )
     }
   }

@@ -1,17 +1,19 @@
 package tests
 
-import org.eclipse.lsp4j.InlayHint
-import scala.meta.internal.mtags.CommonMtagsEnrichments._
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.collection.mutable.ListBuffer
+import scala.reflect.ClassTag
+import scala.reflect.classTag
+import scala.util.Try
+
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
+
 import com.google.gson.Gson
 import com.google.gson.JsonElement
-import scala.reflect.classTag
-import scala.reflect.ClassTag
-import scala.util.Try
+import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.metals.TextEdits
 object TestInlayHints {
 //
 //  val x = 123
@@ -40,7 +42,7 @@ object TestInlayHints {
         )
       } else {
         buffer ++= List(
-          label,
+          label
         )
       }
     }

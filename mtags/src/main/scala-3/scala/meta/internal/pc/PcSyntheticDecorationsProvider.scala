@@ -87,13 +87,13 @@ class PcSyntheticDecorationsProvider(
               )
           }
           .orElse {
-            if (!pos.span.isZeroExtent) {
+            if !pos.span.isZeroExtent then
               val tpe = optDealias(sym.info)
               val parts = partsFromType(tpe)
               val kind = DecorationKind.InferredType // inferred type
               val labelParts = makeLabelParts(parts, tpe)
               Some(Decoration(pos.toLsp, labelParts, kind))
-            } else None
+            else None
           }
       end if
     end collect

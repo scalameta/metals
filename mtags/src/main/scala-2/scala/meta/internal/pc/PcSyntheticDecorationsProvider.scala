@@ -46,7 +46,7 @@ final class PcSyntheticDecorationsProvider(
     ): Option[SyntheticDecoration] = {
       val sym = symbol.fold(tree.symbol)(identity)
       if (sym == null) None
-      else 
+      else
         parent
           .collectFirst {
             case Apply(fun, args) if fun.pos == pos && pos.isOffset =>
@@ -66,7 +66,9 @@ final class PcSyntheticDecorationsProvider(
                 Some(semanticdbSymbol(sym))
               )
             case ta @ TypeApply(fun, args)
-                if args.exists(_.pos == pos) && pos.isOffset && ta.pos.isRange &&
+                if args.exists(
+                  _.pos == pos
+                ) && pos.isOffset && ta.pos.isRange &&
                   !compiler.definitions.isTupleType(fun.tpe.finalResultType) =>
               val parts = partsFromType(tree.tpe.widen.finalResultType)
               val labelParts = makeLabelParts(parts, tree.tpe)
@@ -96,7 +98,7 @@ final class PcSyntheticDecorationsProvider(
         }
         .distinctBy(_.name)
     }
-    
+
     def makeLabelParts(
         parts: List[TypeWithName],
         tpe: Type

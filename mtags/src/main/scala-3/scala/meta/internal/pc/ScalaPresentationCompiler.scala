@@ -42,7 +42,6 @@ case class ScalaPresentationCompiler(
 ) extends PresentationCompiler:
 
   def this() = this("", Nil, Nil)
-
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")

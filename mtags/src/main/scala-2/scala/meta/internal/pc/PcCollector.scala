@@ -207,7 +207,8 @@ abstract class PcCollector[T](
     val pos: Position =
       unit.position(rangeParams.offset()).withEnd(rangeParams.endOffset())
     val tree = locateTree(pos, unit.lastBody, false)
-    List(tree)
+    if (tree.isEmpty) List(unit.lastBody)
+    else List(tree)
   }
 
   def result(): List[T] = {
