@@ -38,6 +38,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.SyntheticDecorationsParams
 import scala.meta.pc.VirtualFileParams
 
 import org.eclipse.lsp4j.CompletionItem
@@ -155,7 +156,7 @@ case class ScalaPresentationCompiler(
   }
 
   override def syntheticDecorations(
-      params: RangeParams
+      params: SyntheticDecorationsParams
   ): CompletableFuture[ju.List[SyntheticDecoration]] = {
     val empty: ju.List[SyntheticDecoration] =
       new ju.ArrayList[SyntheticDecoration]()

@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.{meta => m}
 
@@ -25,48 +26,14 @@ final class InlayHintsProvider(
 
   val path: AbsolutePath = params.uri().toAbsolutePath
 
+  lazy val (withoutTypes, methodPositions) = declarationsWithoutTypes()
+
   def provide(
       synthteticDecorations: List[SyntheticDecoration]
   ): List[l.InlayHint] = {
-    val (withoutTypes, methodPositions) = declarationsWithoutTypes()
-    val declarations = withoutTypes.sortWith((a, b) =>
-      if (a.start == b.start) a.end < b.end else a.start < b.start
-    )
+    val grouped = groupByRange(synthteticDecorations)
+    makeInlayHints(grouped)
 
-    val (inferredTypeDecorations, otherDecorations) =
-      synthteticDecorations.partition(_.kind == 1)
-
-    val result: mutable.ListBuffer[l.InlayHint] = mutable.ListBuffer.empty
-
-    var decorationsIterator = inferredTypeDecorations
-    for (pos <- declarations) {
-      val (decoration, remainingDecorations) =
-        findDecoration(pos, decorationsIterator)
-      decorationsIterator = remainingDecorations
-      decoration match {
-        case None =>
-        case Some(decoration) =>
-          val hintPos = methodPositions.getOrElse(pos, pos)
-          result += makeInlayHint(decoration, hintPos)
-      }
-    }
-
-    val missingTypeDecorations = result.toList
-    missingTypeDecorations ++ makeInlayHints(otherDecorations)
-
-  }
-
-  def makeInlayHint(
-      decoration: SyntheticDecoration,
-      pos: Position,
-  ): l.InlayHint = {
-    val labelParts = labelPart(": ") :: decoration.labelParts().asScala.toList
-    makeInlayHint(
-      new l.Position(pos.endLine, pos.endColumn),
-      labelParts,
-      l.InlayHintKind.Type,
-      addTextEdit = true,
-    )
   }
 
   def makeInlayHint(
@@ -113,52 +80,68 @@ final class InlayHintsProvider(
 
   }
 
-  private def makeInlayHints(
+  private def groupByRange(
       decorations: List[SyntheticDecoration]
+  ): List[List[SyntheticDecoration]] =
+    decorations.groupBy(_.range()).values.toList
+
+  @nowarn
+  private def makeInlayHints(
+      grouped: List[List[SyntheticDecoration]]
   ) = {
     val result = mutable.ListBuffer.empty[l.InlayHint]
-    // TODO: Optimize to use takeWhile instead of groupBy
-    val grouped =
-      decorations.groupBy(_.range()).map { case (range, decorations) =>
-        val labels0 = decorations.reverse.map(_.labelParts().asScala.toList)
-        val labels = labels0.head ++ labels0.tail.flatMap { labels =>
-          labelPart(", ") :: labels
+    grouped
+      .map { case decorations @ (d :: _) =>
+        if (d.kind == DecorationKind.InferredType) {
+          val decoration = decorations.head
+          (decoration.range, decoration.labelParts().asScala.toList, d.kind)
+        } else {
+          val labels0 = decorations.map(_.labelParts().asScala.toList)
+          val labels = labels0.head ++ labels0.tail.flatMap { labels =>
+            labelPart(", ") :: labels
+          }
+          (d.range, labels, d.kind)
         }
-        (range, labels, decorations.head.kind)
       }
-    grouped.foreach { case (range, labelParts, kind) =>
-      kind match {
-        case DecorationKind.ImplicitParameter
-            if userConfig().showImplicitArguments =>
-          result += makeInlayHint(
-            range.getStart(),
-            labelPart("(") :: labelParts ++ List(labelPart(")")),
-            l.InlayHintKind.Parameter,
-          )
-        case DecorationKind.ImplicitConversion
-            if userConfig().showImplicitConversionsAndClasses =>
-          result += makeInlayHint(
-            range.getStart(),
-            labelParts ++ List(labelPart("(")),
-            l.InlayHintKind.Parameter,
-          )
-          result += makeInlayHint(
-            range.getEnd(),
-            List(labelPart(")")),
-            l.InlayHintKind.Parameter,
-          )
-
-        case DecorationKind.TypeParameter
-            if userConfig().showInferredType.contains("true") =>
-          result += makeInlayHint(
-            range.getStart(),
-            labelPart("[") :: labelParts ++ List(labelPart("]")),
-            l.InlayHintKind.Type,
-            addTextEdit = true,
-          )
-        case _ =>
+      .foreach { case (range, labelParts, kind) =>
+        kind match {
+          case DecorationKind.ImplicitParameter
+              if userConfig().showImplicitArguments =>
+            result += makeInlayHint(
+              range.getStart(),
+              labelPart("(") :: labelParts ++ List(labelPart(")")),
+              l.InlayHintKind.Parameter,
+            )
+          case DecorationKind.ImplicitConversion
+              if userConfig().showImplicitConversionsAndClasses =>
+            result += makeInlayHint(
+              range.getStart(),
+              labelParts ++ List(labelPart("(")),
+              l.InlayHintKind.Parameter,
+            )
+            result += makeInlayHint(
+              range.getEnd(),
+              List(labelPart(")")),
+              l.InlayHintKind.Parameter,
+            )
+          case DecorationKind.TypeParameter
+              if userConfig().showInferredType.contains("true") =>
+            result += makeInlayHint(
+              range.getStart(),
+              labelPart("[") :: labelParts ++ List(labelPart("]")),
+              l.InlayHintKind.Type,
+              addTextEdit = true,
+            )
+          case DecorationKind.InferredType
+              if userConfig().showInferredType.contains("true") =>
+            result += makeInlayHint(
+              methodPositions.getOrElse(range, range).getEnd(),
+              labelPart(": ") :: labelParts,
+              l.InlayHintKind.Type,
+              addTextEdit = true,
+            )
+        }
       }
-    }
     result.toList
   }
 
@@ -168,12 +151,12 @@ final class InlayHintsProvider(
 
   private def declarationsWithoutTypes() = {
 
-    val methodPositions = mutable.Map.empty[Position, Position]
+    val methodPositions = mutable.Map.empty[l.Range, l.Range]
 
-    def explorePatterns(pats: List[m.Pat]): List[Position] = {
+    def explorePatterns(pats: List[m.Pat]): List[l.Range] = {
       pats.flatMap {
         case m.Pat.Var(nm @ m.Term.Name(_)) =>
-          List(nm.pos)
+          List(nm.pos.toLsp)
         case m.Pat.Extract((_, pats)) =>
           explorePatterns(pats)
         case m.Pat.ExtractInfix(lhs, _, pats) =>
@@ -186,7 +169,7 @@ final class InlayHintsProvider(
       }
     }
 
-    def visit(tree: m.Tree): List[Position] = {
+    def visit(tree: m.Tree): List[l.Range] = {
       tree match {
         case enumerator: m.Enumerator.Generator =>
           explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
@@ -195,7 +178,7 @@ final class InlayHintsProvider(
         case enumerator: m.Enumerator.Val =>
           explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
         case param: m.Term.Param =>
-          if (param.decltpe.isEmpty) List(param.name.pos)
+          if (param.decltpe.isEmpty) List(param.name.pos.toLsp)
           else Nil
         case cs: m.Case =>
           explorePatterns(List(cs.pat)) ++ visit(cs.body)
@@ -234,8 +217,8 @@ final class InlayHintsProvider(
                   .orElse(lastParen)
                   .orElse(lastTypeParamPos)
                   .getOrElse(namePos)
-              methodPositions += namePos -> destination
-              List(namePos)
+              methodPositions += namePos.toLsp -> destination.toLsp
+              List(namePos.toLsp)
             } else {
               Nil
             }
@@ -244,13 +227,14 @@ final class InlayHintsProvider(
           other.children.flatMap(visit)
       }
     }
-    val tree = lastEnclosingTree()
-    val declarations: List[Position] = tree.map(visit).getOrElse(Nil)
-    (declarations, methodPositions.toMap)
+    if (userConfig().showInferredType.contains("true")) {
+      val tree = lastEnclosingTree()
+      val declarations: List[l.Range] = tree.flatMap(visit)
+      (declarations, methodPositions.toMap)
+    } else (Nil, Map.empty[l.Range, l.Range])
   }
 
-  def lastEnclosingTree(): Option[m.Tree] = {
-    val tree: Option[m.Tree] = trees.get(path)
+  def lastEnclosingTree(): List[m.Tree] = {
     def loop(t: m.Tree): m.Tree = {
       t.children.find(_.pos.encloses(range)) match {
         case Some(child) =>
@@ -259,7 +243,16 @@ final class InlayHintsProvider(
           t
       }
     }
-    tree.map(loop)
+    trees
+      .get(path)
+      .map { tree =>
+        val enclosingTree = loop(tree)
+        if (range.encloses(enclosingTree.pos)) List(enclosingTree)
+        else {
+          enclosingTree.children.filter(_.pos.overlapsWith(range))
+        }
+      }
+      .getOrElse(Nil)
 
   }
 }

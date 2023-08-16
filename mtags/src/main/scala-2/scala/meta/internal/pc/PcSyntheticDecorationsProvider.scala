@@ -1,14 +1,16 @@
 package scala.meta.internal.pc
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.pc.RangeParams
 import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.SyntheticDecorationsParams
+
+import org.eclipse.lsp4j
 
 final class PcSyntheticDecorationsProvider(
     protected val cp: MetalsGlobal, // compiler
-    val params: RangeParams
+    val params: SyntheticDecorationsParams
 ) {
 
   def provide(): List[SyntheticDecoration] = {
@@ -17,7 +19,6 @@ final class PcSyntheticDecorationsProvider(
       .resultAllOccurences(includeSynthetics = true)(trees)
       .flatten
       .toList
-      .sortWith((n1, n2) => n1.range().lt(n2.range()))
   }
 
   // Initialize Tree
@@ -37,6 +38,8 @@ final class PcSyntheticDecorationsProvider(
     def printType(tpe: Type): String =
       metalsToLongString(tpe.widen.finalResultType, history)
 
+    val withoutTypes: Set[lsp4j.Range] = params.withoutTypes().asScala.toSet
+
     override def collect(
         parent: Option[compiler.Tree]
     )(
@@ -50,42 +53,55 @@ final class PcSyntheticDecorationsProvider(
         parent
           .collectFirst {
             case Apply(fun, args) if fun.pos == pos && pos.isOffset =>
-              val lastArgPos = args.lastOption.fold(pos)(_.pos)
-              Decoration(
-                lastArgPos.toLsp,
-                sym.decodedName,
-                DecorationKind.ImplicitConversion,
-                Some(semanticdbSymbol(sym))
-              )
+              if (params.implicitConversions) {
+                val lastArgPos = args.lastOption.fold(pos)(_.pos)
+                Some(
+                  Decoration(
+                    lastArgPos.toLsp,
+                    sym.decodedName,
+                    DecorationKind.ImplicitConversion,
+                    Some(semanticdbSymbol(sym))
+                  )
+                )
+              } else None
             case ap @ Apply(_, args)
                 if args.exists(_.pos == pos) && pos.isOffset =>
-              Decoration(
-                ap.pos.focusEnd.toLsp,
-                sym.decodedName,
-                DecorationKind.ImplicitParameter,
-                Some(semanticdbSymbol(sym))
-              )
+              if (params.implicitParameters) {
+                Some(
+                  Decoration(
+                    ap.pos.focusEnd.toLsp,
+                    sym.decodedName,
+                    DecorationKind.ImplicitParameter,
+                    Some(semanticdbSymbol(sym))
+                  )
+                )
+              } else None
             case ta @ TypeApply(fun, args)
                 if args.exists(
                   _.pos == pos
                 ) && pos.isOffset && ta.pos.isRange &&
                   !compiler.definitions.isTupleType(fun.tpe.finalResultType) =>
-              val parts = partsFromType(tree.tpe.widen.finalResultType)
-              val labelParts = makeLabelParts(parts, tree.tpe)
-              Decoration(
-                fun.pos.focusEnd.toLsp,
-                labelParts,
-                DecorationKind.TypeParameter
-              )
-          }
-          .orElse {
-            if (pos.isRange) {
+              if (params.inferredTypes) {
+                val parts = partsFromType(tree.tpe.widen.finalResultType)
+                val labelParts = makeLabelParts(parts, tree.tpe)
+                Some(
+                  Decoration(
+                    fun.pos.focusEnd.toLsp,
+                    labelParts,
+                    DecorationKind.TypeParameter
+                  )
+                )
+              } else None
 
+          }
+          .getOrElse {
+            val lspPos = pos.toLsp
+            if (withoutTypes(lspPos)) {
               val parts = partsFromType(sym.tpe.widen.finalResultType)
               val labelParts = makeLabelParts(parts, sym.tpe)
               val kind = DecorationKind.InferredType
               Some(
-                Decoration(pos.toLsp, labelParts, kind)
+                Decoration(lspPos, labelParts, kind)
               )
             } else None
           }
@@ -96,7 +112,6 @@ final class PcSyntheticDecorationsProvider(
         .collect {
           case t: TypeRef if t.typeSymbol != NoSymbol => TypeWithName(t)
         }
-        .distinctBy(_.name)
     }
 
     def makeLabelParts(

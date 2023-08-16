@@ -1,14 +1,15 @@
 package scala.meta.internal.pc
 
+import scala.collection.JavaConverters.*
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
-import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.SyntheticDecorationsParams
 
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
@@ -19,7 +20,7 @@ import dotty.tools.dotc.util.SourcePosition
 
 class PcSyntheticDecorationsProvider(
     driver: InteractiveDriver,
-    params: RangeParams,
+    params: SyntheticDecorationsParams,
     symbolSearch: SymbolSearch,
 )(using ReportContext):
 
@@ -29,7 +30,6 @@ class PcSyntheticDecorationsProvider(
       .resultAllOccurences(includeSynthetics = true)(trees)
       .toList
       .flatten
-      .sortWith((n1, n2) => n1.range().lt(n2.range()))
 
   object Collector
       extends PcCollector[Option[SyntheticDecoration]](driver, params):
@@ -42,6 +42,7 @@ class PcSyntheticDecorationsProvider(
       symbolSearch,
       includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
     )
+    val withoutTypes = params.withoutTypes().asScala.toSet
 
     override def collect(parent: Option[tpd.Tree])(
         tree: tpd.Tree,
@@ -56,43 +57,56 @@ class PcSyntheticDecorationsProvider(
           .collectFirst {
             case (Apply(fun, args), _)
                 if fun.span == pos.span && pos.span.isSynthetic =>
-              val lastArgPos =
-                args.lastOption.map(_.sourcePos).getOrElse(pos).toLsp
-              lastArgPos.setStart(pos.toLsp.getStart())
-              Decoration(
-                lastArgPos,
-                sym.decodedName,
-                DecorationKind.ImplicitConversion,
-                Some(semanticdbSymbol(sym)),
-              )
+              if params.implicitConversions then
+                val lastArgPos =
+                  args.lastOption.map(_.sourcePos).getOrElse(pos).toLsp
+                lastArgPos.setStart(pos.toLsp.getStart())
+                Some(
+                  Decoration(
+                    lastArgPos,
+                    sym.decodedName,
+                    DecorationKind.ImplicitConversion,
+                    Some(semanticdbSymbol(sym)),
+                  )
+                )
+              else None
             case (Apply(_, args), _)
                 if args.exists(_.span == pos.span) && pos.span.isSynthetic =>
-              Decoration(
-                pos.toLsp,
-                sym.decodedName,
-                DecorationKind.ImplicitParameter,
-                Some(semanticdbSymbol(sym)),
-              )
+              if params.implicitParameters then
+                Some(
+                  Decoration(
+                    pos.toLsp,
+                    sym.decodedName,
+                    DecorationKind.ImplicitParameter,
+                    Some(semanticdbSymbol(sym)),
+                  )
+                )
+              else None
             case (TypeApply(fun, _), TypeTree())
                 if !definitions.isTupleNType(fun.symbol.info.finalResultType) &&
                   !pos.span.isZeroExtent // inferred type parameters with zero extent span are mostly incorrect
                 =>
-              val tpe = optDealias(tree.tpe)
-              val parts = partsFromType(tpe)
-              val labelParts = makeLabelParts(parts, tpe)
-              Decoration(
-                pos.endPos.toLsp,
-                labelParts,
-                DecorationKind.TypeParameter,
-              )
+              if params.inferredTypes then
+                val tpe = optDealias(tree.tpe)
+                val parts = partsFromType(tpe)
+                val labelParts = makeLabelParts(parts, tpe)
+                Some(
+                  Decoration(
+                    pos.endPos.toLsp,
+                    labelParts,
+                    DecorationKind.TypeParameter,
+                  )
+                )
+              else None
           }
-          .orElse {
-            if !pos.span.isZeroExtent then
+          .getOrElse {
+            val lspPos = pos.toLsp
+            if withoutTypes(lspPos) then
               val tpe = optDealias(sym.info)
               val parts = partsFromType(tpe)
               val kind = DecorationKind.InferredType // inferred type
               val labelParts = makeLabelParts(parts, tpe)
-              Some(Decoration(pos.toLsp, labelParts, kind))
+              Some(Decoration(lspPos, labelParts, kind))
             else None
           }
       end if

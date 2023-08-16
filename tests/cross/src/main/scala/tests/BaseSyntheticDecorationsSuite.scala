@@ -5,6 +5,7 @@ import java.{util => ju}
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerRangeParams
+import scala.meta.internal.metals.CompilerSyntheticDecorationsParams
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.pc.DecorationKind
 import scala.meta.pc.InlayHintPart
@@ -30,14 +31,22 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
         else s"package ${scala.meta.Term.Name(name.name)}\n$text"
 
       val withPkg = pkgWrap(base)
+      val rangeParams = CompilerRangeParams(
+        URI.create("file:/Decorations.scala"),
+        withPkg,
+        0,
+        withPkg.length(),
+      )
+      val pcParams = CompilerSyntheticDecorationsParams(
+        rangeParams,
+        Nil.asJava,
+        true,
+        true,
+        true,
+      )
       val allDecorations = presentationCompiler
         .syntheticDecorations(
-          CompilerRangeParams(
-            URI.create("file:/Decorations.scala"),
-            withPkg,
-            0,
-            withPkg.length(),
-          )
+          pcParams
         )
         .get()
         .asScala

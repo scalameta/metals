@@ -54,6 +54,12 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       pos.start <= other.start && pos.end >= other.end
     }
 
+    def overlapsWith(other: m.Position): Boolean = {
+      pos.start <= other.end && pos.end >= other.start
+    }
+
+
+
     def encloses(other: l.Range): Boolean = {
       val start = other.getStart()
       val end = other.getEnd()
@@ -66,27 +72,6 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         (pos.endLine >= end.getLine() && pos.endColumn >= end.getCharacter())
 
       isBefore && isAfter
-    }
-
-    def overlaps(other: l.Range): Boolean = {
-      val start = other.getStart()
-      val end = other.getEnd()
-      val isBefore =
-        pos.startLine < start.getLine ||
-          (pos.startLine == start.getLine && pos.startColumn <= start
-            .getCharacter())
-
-      val isAfter = pos.endLine > end.getLine() ||
-        (pos.endLine >= end.getLine() && pos.endColumn >= end.getCharacter())
-
-      val isAfterStart = pos.startLine > start.getLine ||
-        (pos.startLine == start.getLine && pos.startColumn >= start
-          .getCharacter())
-
-      val isBeforeEnd = pos.endLine < end.getLine ||
-        (pos.endLine <= end.getLine && pos.endColumn <= end.getCharacter())
-
-      (isBefore && isAfterStart) || (isAfter && isBeforeEnd)
     }
   }
 

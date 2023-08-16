@@ -984,6 +984,20 @@ class MetalsLspService(
       .map(new ApplyWorkspaceEditParams(_))
       .foreach(languageClient.applyEdit)
 
+    /**
+     * Trigger compilation in preparation for definition requests for dependency
+     * sources and standalone files, but wait for build tool information, so
+     * that we don't try to generate it for project files
+     */
+    val interactive = buildServerPromise.future.map { _ =>
+      interactiveSemanticdbs.textDocument(path)
+    }
+    // We need both parser and semanticdb for synthetic decorations
+    val didOpenTest = for {
+      _ <- Future.sequence(List(parseTrees(path), interactive))
+      _ <- testProvider.didOpen(path),
+    } yield ()
+
     if (path.isDependencySource(folder)) {
       CancelTokens { _ =>
         // publish diagnostics
@@ -1003,7 +1017,8 @@ class MetalsLspService(
           Future
             .sequence(
               List(
-                compileAndLoad
+                compileAndLoad,
+                didOpenTest,
               )
             )
             .ignoreValue

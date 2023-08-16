@@ -95,18 +95,16 @@ case class ScalaPresentationCompiler(
     }
 
   override def syntheticDecorations(
-      params: RangeParams
+      params: SyntheticDecorationsParams
   ): ju.concurrent.CompletableFuture[ju.List[SyntheticDecoration]] =
     compilerAccess.withInterruptableCompiler(Some(params))(
       new ju.ArrayList[SyntheticDecoration](),
       params.token(),
     ) { access =>
       val driver = access.compiler()
-      new ju.ArrayList[SyntheticDecoration]()
       new PcSyntheticDecorationsProvider(driver, params, search)
         .provide()
         .asJava
-      // new PcSemanticTokensProvider(driver, params).provide().asJava
     }
 
   override def getTasty(

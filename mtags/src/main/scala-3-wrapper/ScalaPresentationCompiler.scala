@@ -16,6 +16,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.SyntheticDecorationsParams
 import scala.meta.pc.VirtualFileParams
 
 import dotty.tools.pc.{ScalaPresentationCompiler as DottyPresentationCompiler}
@@ -42,7 +43,7 @@ class ScalaPresentationCompiler(
 ) extends PresentationCompiler:
 
   override def syntheticDecorations(
-      params: RangeParams
+      params: SyntheticDecorationsParams
   ): CompletableFuture[ju.List[SyntheticDecoration]] =
     underlying.syntheticDecorations(params)
 

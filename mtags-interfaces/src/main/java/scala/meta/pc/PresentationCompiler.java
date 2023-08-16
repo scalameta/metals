@@ -167,7 +167,7 @@ public abstract class PresentationCompiler {
 	/**
 	 * 
 	 */
-	public abstract CompletableFuture<List<SyntheticDecoration>> syntheticDecorations(RangeParams params);
+	public abstract CompletableFuture<List<SyntheticDecoration>> syntheticDecorations(SyntheticDecorationsParams params);
 
 	/**
 	 * File was closed.

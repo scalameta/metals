@@ -535,29 +535,43 @@ class Compilers(
 
   }
 
-  // TODO: Add adjust
   def inlayHints(
       params: InlayHintParams,
       token: CancelToken,
   ): Future[ju.List[InlayHint]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val rangeParams =
-        CompilerRangeParamsUtils.fromPos(pos, token)
-      pc.syntheticDecorations(rangeParams)
-        .asScala
-        .map { decorations =>
-          new InlayHintsProvider(
-            rangeParams,
-            trees,
-            userConfig,
-            pos,
-          ).provide(decorations.asScala.toList).asJava
-        }
-        .map(
-          adjust.adjustInlayHints
+    val anyEnabled =
+      userConfig().showInferredType.contains("true") ||
+        userConfig().showImplicitArguments ||
+        userConfig().showImplicitConversionsAndClasses
+    if (!anyEnabled) Future.successful(Nil.asJava)
+    else
+      withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+        val rangeParams =
+          CompilerRangeParamsUtils.fromPos(pos, token)
+        val inlayHintsProvider = new InlayHintsProvider(
+          rangeParams,
+          trees,
+          userConfig,
+          pos,
         )
+        val withoutTypes = inlayHintsProvider.withoutTypes
+        val pcParams = CompilerSyntheticDecorationsParams(
+          rangeParams,
+          withoutTypes.asJava,
+          userConfig().showInferredType.contains("true"),
+          userConfig().showImplicitArguments,
+          userConfig().showImplicitConversionsAndClasses,
+        )
+        pc.syntheticDecorations(pcParams)
+          .asScala
+          .map { decorations =>
+            inlayHintsProvider.provide(decorations.asScala.toList).asJava
+          }
+          .map(
+            adjust.adjustInlayHints
+          )
 
-    }.getOrElse(Future.successful(Nil.asJava))
+      }.getOrElse(Future.successful(Nil.asJava))
   }
 
   def completions(

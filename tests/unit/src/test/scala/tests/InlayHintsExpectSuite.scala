@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.CompilerRangeParams
+import scala.meta.internal.metals.CompilerSyntheticDecorationsParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.InlayHintsProvider
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -27,19 +28,26 @@ class InlayHintsExpectSuite extends DirectoryExpectSuite("inlayHints") {
       ExpectTestCase(
         file,
         () => {
-          val params = CompilerRangeParams(
+          val rangeParams = CompilerRangeParams(
             file.file.toURI,
             file.code,
             0,
             file.code.length,
             EmptyCancelToken,
           )
-          val decorations =
-            compiler.syntheticDecorations(params).get().asScala.toList
-
           val pos = Position.Range(file.input, 0, file.code.length)
           val inlayHintsProvider =
-            new InlayHintsProvider(params, trees, () => userConfig, pos)
+            new InlayHintsProvider(rangeParams, trees, () => userConfig, pos)
+          val withoutTypes = inlayHintsProvider.withoutTypes
+          val pcParams = CompilerSyntheticDecorationsParams(
+            rangeParams,
+            withoutTypes.asJava,
+            true,
+            true,
+            true,
+          )
+          val decorations =
+            compiler.syntheticDecorations(pcParams).get().asScala.toList
           val inlayHints = inlayHintsProvider.provide(
             decorations
           )
