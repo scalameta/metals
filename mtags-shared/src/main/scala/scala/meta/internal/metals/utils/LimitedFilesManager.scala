@@ -22,11 +22,14 @@ class LimitedFilesManager(
     } else List()
   }
 
-  def directoriesWithDate: List[File] = directory
-    .toFile()
-    .listFiles()
-    .toList
-    .filter(d => d.isDirectory() && TimeFormatter.hasDateName(d.getName()))
+  def directoriesWithDate: List[File] =
+    if (Files.exists(directory) && Files.isDirectory(directory))
+      directory
+        .toFile()
+        .listFiles()
+        .toList
+        .filter(d => d.isDirectory() && TimeFormatter.hasDateName(d.getName()))
+    else List()
 
   def deleteOld(limit: Int = fileLimit): List[TimestampedFile] = {
     val files = getAllFiles()

@@ -179,13 +179,14 @@ class WorkspaceLspService(
     new WorkspaceFolders(
       folders,
       createService,
-      _.initialized(),
       () => shutdown().asScala,
       redirectSystemOut,
       serverInputs.initialServerConfig,
     )
 
   def folderServices = workspaceFolders.getFolderServices
+  def nonScalaProjects = workspaceFolders.nonScalaProjects
+  def fallbackService: MetalsLspService = folderServices.head
 
   val treeView: TreeViewProvider =
     if (clientConfig.isTreeViewProvider) {
@@ -223,30 +224,32 @@ class WorkspaceLspService(
     cancelable
   }
 
-  def getServiceForOpt(path: AbsolutePath): Option[MetalsLspService] =
+  def getFolderForOpt[T <: Folder](
+      path: AbsolutePath,
+      folders: List[T],
+  ): Option[T] =
     try {
       for {
-        workSpaceFolder <- folderServices
-          .filter(service => path.toNIO.startsWith(service.folder.toNIO))
-          .sortBy(_.folder.toNIO.getNameCount())
+        workSpaceFolder <- folders
+          .filter(service => path.toNIO.startsWith(service.path.toNIO))
+          .sortBy(_.path.toNIO.getNameCount())
           .lastOption
       } yield workSpaceFolder
     } catch {
       case _: ProviderMismatchException => None
     }
 
-  def getServiceFor(path: AbsolutePath): MetalsLspService =
-    if (folderServices.length == 1) folderServices.head
-    else getServiceForOpt(path).getOrElse(folderServices.head)
+  def getServiceForOpt(path: AbsolutePath): Option[MetalsLspService] =
+    getFolderForOpt(path, folderServices)
 
-  def getServiceFor(uri: String): MetalsLspService = {
-    val folder =
-      for {
-        // "metalsDecode" prefix is used for showing special files and is not an actual file system
-        path <- uri.stripPrefix("metalsDecode:").toAbsolutePathSafe()
-      } yield getServiceFor(path)
-    folder.getOrElse(folderServices.head) // fallback to the first one
-  }
+  def getServiceFor(path: AbsolutePath): MetalsLspService =
+    getServiceForOpt(path).getOrElse(fallbackService)
+
+  def getServiceFor(uri: String): MetalsLspService =
+    (for {
+      // "metalsDecode" prefix is used for showing special files and is not an actual file system
+      path <- uri.stripPrefix("metalsDecode:").toAbsolutePathSafe()
+    } yield getServiceFor(path)).getOrElse(fallbackService)
 
   def currentFolder: Option[MetalsLspService] =
     focusedDocument.flatMap(getServiceForOpt)
@@ -295,7 +298,7 @@ class WorkspaceLspService(
   ): Option[MetalsLspService] =
     for {
       workSpaceFolder <- folderServices
-        .find(service => service.folder.toString == folderUri)
+        .find(service => service.path.toString == folderUri)
     } yield workSpaceFolder
 
   def foreachSeq[A](
@@ -316,8 +319,18 @@ class WorkspaceLspService(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = {
     focusedDocument.foreach(recentlyFocusedFiles.add)
-    focusedDocument = Some(params.getTextDocument.getUri.toAbsolutePath)
-    getServiceFor(params.getTextDocument().getUri()).didOpen(params)
+    val uri = params.getTextDocument.getUri
+    val path = uri.toAbsolutePath
+    focusedDocument = Some(path)
+    val service = getServiceForOpt(path)
+      .orElse {
+        if (path.isScalaFilename) {
+          getFolderForOpt(path, nonScalaProjects)
+            .map(workspaceFolders.convertToScalaProject)
+        } else None
+      }
+      .getOrElse(fallbackService)
+    service.didOpen(params)
   }
 
   override def didChange(
@@ -469,7 +482,7 @@ class WorkspaceLspService(
         /* Changing package for files moved out of the workspace or between folders will cause unexpected issues
          * This showed up with emacs automated backups.
          */
-        if (newPath.startWith(service.folder))
+        if (newPath.startWith(service.path))
           service.willRenameFile(oldPath, newPath)
         else
           Future.successful(
@@ -526,8 +539,18 @@ class WorkspaceLspService(
   ): CompletableFuture[Unit] =
     workspaceFolders
       .changeFolderServices(
-        params.getEvent().getRemoved().map(Folder.apply).asScala.toList,
-        params.getEvent().getAdded().map(Folder.apply).asScala.toList,
+        params
+          .getEvent()
+          .getRemoved()
+          .map(Folder(_, isKnownScalaProject = false))
+          .asScala
+          .toList,
+        params
+          .getEvent()
+          .getAdded()
+          .map(Folder(_, isKnownScalaProject = false))
+          .asScala
+          .toList,
       )
       .asJava
 
@@ -792,7 +815,7 @@ class WorkspaceLspService(
         onCurrentFolder(
           service =>
             Future {
-              val log = service.folder.resolve(Directories.log)
+              val log = service.path.resolve(Directories.log)
               val linesCount = log.readText.linesIterator.size
               val pos = new lsp4j.Position(linesCount, 0)
               val location = new Location(
@@ -880,7 +903,7 @@ class WorkspaceLspService(
         Future {
           // Getting the service for focused document and first one otherwise
           val service =
-            focusedDocument.map(getServiceFor).getOrElse(folderServices.head)
+            focusedDocument.map(getServiceFor).getOrElse(fallbackService)
           val command = service.analyzeStackTrace(content)
           command.foreach(languageClient.metalsExecuteClientCommand)
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
@@ -926,7 +949,7 @@ class WorkspaceLspService(
         val fileType = args.lift(2).flatten
         directoryURI
           .map(getServiceFor)
-          .getOrElse(folderServices.head)
+          .getOrElse(fallbackService)
           .createFile(directoryURI, name, fileType, isScala = true)
       case ServerCommands.NewJavaFile(args) =>
         val directoryURI = args.lift(0).flatten
@@ -934,7 +957,7 @@ class WorkspaceLspService(
         val fileType = args.lift(2).flatten
         directoryURI
           .map(getServiceFor)
-          .getOrElse(folderServices.head)
+          .getOrElse(fallbackService)
           .createFile(directoryURI, name, fileType, isScala = false)
       case ServerCommands.StartAmmoniteBuildServer() =>
         val res = focusedDocument match {
@@ -998,8 +1021,6 @@ class WorkspaceLspService(
   def initialize(): CompletableFuture[lsp4j.InitializeResult] = {
     timerProvider
       .timed("initialize")(Future {
-        // load fingerprints from last execution
-        folderServices.foreach(_.loadFingerPrints())
         val capabilities = new lsp4j.ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new lsp4j.ExecuteCommandOptions(
@@ -1109,10 +1130,6 @@ class WorkspaceLspService(
 
   def initialized(): Future[Unit] = {
     statusBar.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
-    folderServices.foreach { service =>
-      service.registerNiceToHaveFilePatterns()
-      service.connectTables()
-    }
     syncUserconfiguration().flatMap { _ =>
       Future
         .sequence(folderServices.map(_.initialized()))
@@ -1260,16 +1277,29 @@ class WorkspaceLspService(
 
 }
 
-case class Folder(path: AbsolutePath, visibleName: Option[String]) {
+class Folder(
+    val path: AbsolutePath,
+    val visibleName: Option[String],
+    isKnownScalaProject: Boolean,
+) {
+  lazy val isScalaProject: Boolean =
+    isKnownScalaProject || path.resolve(".metals").exists || path
+      .isScalaProject()
   def nameOrUri: String = visibleName.getOrElse(path.toString())
 }
 
 object Folder {
-  def apply(folder: lsp4j.WorkspaceFolder): Folder = {
+  def unapply(f: Folder): Option[(AbsolutePath, Option[String])] = Some(
+    (f.path, f.visibleName)
+  )
+  def apply(
+      folder: lsp4j.WorkspaceFolder,
+      isKnownScalaProject: Boolean,
+  ): Folder = {
     val name = Option(folder.getName()) match {
       case Some("") => None
       case maybeValue => maybeValue
     }
-    Folder(folder.getUri().toAbsolutePath, name)
+    new Folder(folder.getUri().toAbsolutePath, name, isKnownScalaProject)
   }
 }

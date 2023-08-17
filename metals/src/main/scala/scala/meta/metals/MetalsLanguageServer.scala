@@ -126,19 +126,27 @@ class MetalsLanguageServer(
         )
         .asJava
     } else {
-      val folders = {
-        val workspaceFolders =
+      val folders: List[Folder] = {
+        val allFolders =
           Option(params.getWorkspaceFolders())
             .map(_.asScala)
             .toList
             .flatten
-            .map(Folder.apply)
-        if (workspaceFolders.nonEmpty) workspaceFolders
-        else
-          Option(params.getRootUri())
-            .orElse(Option(params.getRootPath()))
-            .map(root => Folder(root.toAbsolutePath, Some("root")))
-            .toList
+        allFolders match {
+          case Nil =>
+            Option(params.getRootUri())
+              .orElse(Option(params.getRootPath()))
+              .map(root =>
+                new Folder(
+                  root.toAbsolutePath,
+                  Some("root"),
+                  isKnownScalaProject = true,
+                )
+              )
+              .toList
+          case head :: Nil => List(Folder(head, isKnownScalaProject = true))
+          case many => many.map(Folder(_, isKnownScalaProject = false))
+        }
       }
 
       folders match {
@@ -163,8 +171,21 @@ class MetalsLanguageServer(
           val folderPaths = folders.map(_.path)
 
           setupJna()
+
+          val folderPathsWithScala =
+            folders.collect {
+              case folder if folder.isScalaProject => folder.path
+            } match {
+              case Nil =>
+                scribe.warn(
+                  s"No scala project detected. The logs will be in the first workspace folder: ${folderPaths.head}"
+                )
+                List(folderPaths.head)
+              case paths => paths
+            }
+
           MetalsLogger.setupLspLogger(
-            folderPaths,
+            folderPathsWithScala,
             redirectSystemOut,
             serverInputs.initialServerConfig,
           )
