@@ -1,73 +1,93 @@
 package tests
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicReference
+
+import scala.collection.immutable.Queue
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.duration.Duration
 
-import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.RequestMonitor
+import scala.meta.internal.metals.ServerLivenessMonitor
+import scala.meta.internal.metals.clients.language.NoopLanguageClient
 
-import bill.Bill
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.ScalaMainClassesParams
+import org.eclipse.lsp4j.MessageActionItem
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
-class ServerLivenessMonitorSuite extends BaseLspSuite("liveness-monitor") {
-  override def serverConfig: MetalsServerConfig =
-    MetalsServerConfig.default.copy(
-      metalsToIdleTime = Duration("3m"),
-      pingInterval = ServerLivenessTestData.pingInterval,
+class ServerLivenessMonitorSuite extends BaseSuite {
+  implicit val ex: ExecutionContextExecutorService =
+    ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
+
+  test("basic") {
+    val pingInterval = Duration("3s")
+    val server = new ResponsiveServer(pingInterval)
+    val client = new CountMessageRequestsClient
+    val livenessMonitor = new ServerLivenessMonitor(
+      server,
+      () => server.sendRequest(true),
+      client,
+      serverName = "responsive server",
+      metalsIdleInterval = pingInterval * 4,
+      pingInterval,
     )
+    Thread.sleep(pingInterval.toMillis * 3 / 2)
+    assertEquals(livenessMonitor.getState, ServerLivenessMonitor.Idle)
+    server.sendRequest(false)
+    Thread.sleep(pingInterval.toMillis * 2)
+    assertNotEquals(livenessMonitor.getState, ServerLivenessMonitor.Idle)
+    Thread.sleep(pingInterval.toMillis * 5)
+    assertEquals(livenessMonitor.getState, ServerLivenessMonitor.Idle)
+    server.sendRequest(false)
+    Thread.sleep(pingInterval.toMillis)
+    server.sendRequest(false)
+    server.sendRequest(false)
+    Thread.sleep(pingInterval.toMillis * 2)
+    server.sendRequest(false)
+    assertEquals(livenessMonitor.getState, ServerLivenessMonitor.Running)
+    assert(client.showMessageRequests == 0)
+  }
+}
 
-  test("handle-not-responding-server") {
-    val sleepTime = ServerLivenessTestData.pingInterval.toMillis * 4
-    cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO)
+/**
+ * A mock implementation of a responsive build server,
+ * that keeps timestamps of the last incoming and last outgoing, non-ping requests.
+ * For every `sendRequest` a response is scheduled to be recorded after `pingInterval`.
+ */
+class ResponsiveServer(pingInterval: Duration) extends RequestMonitor {
+  private val respondAfter = pingInterval.toMillis
+  @volatile private var lastOutgoing_ : Option[Long] = None
+  private val nextIncoming: AtomicReference[Queue[Long]] = new AtomicReference(
+    Queue()
+  )
 
-    def isServerResponsive =
-      server.server.doctor.buildTargetsJson().header.isBuildServerResponsive
-    for {
-      _ <- initialize(
-        """
-          |/src/com/App.scala
-          |object App {
-          |  val x: Int = 4
-          |}
-        """.stripMargin
-      )
-      _ <- server.didOpen("src/com/App.scala")
-      _ = Thread.sleep(sleepTime)
-      _ <- server.didSave("src/com/App.scala")(str => s"""|$str
-                                                          |
-                                                          |object O {
-                                                          | def i: Int = 3
-                                                          |}
-                                                          |""".stripMargin)
-      _ = Thread.sleep(sleepTime)
-      _ = assertNoDiff(
-        server.client.workspaceMessageRequests,
-        Messages.CheckDoctor.allProjectsMisconfigured,
-      )
-      _ <- server.server.bspSession.get.main.mainClasses(
-        new ScalaMainClassesParams(
-          List(
-            new BuildTargetIdentifier("break"),
-            new BuildTargetIdentifier(
-              (ServerLivenessTestData.pingInterval * 6).toString()
-            ),
-          ).asJava
-        )
-      )
-      _ = Thread.sleep(sleepTime)
-      _ = assertNoDiff(
-        server.client.workspaceMessageRequests,
-        List(
-          Messages.CheckDoctor.allProjectsMisconfigured,
-          ServerLivenessTestData.serverNotRespondingMessage,
-        ).mkString("\n"),
-      )
-      _ = assertEquals(isServerResponsive, Some(false))
-      _ = Thread.sleep(sleepTime)
-      // we start getting responses from initial pings
-      _ = assertEquals(isServerResponsive, Some(true))
-    } yield ()
+  def sendRequest(isPing: Boolean): Queue[Long] = {
+    if (!isPing) lastOutgoing_ = Some(now)
+    nextIncoming.getAndUpdate(_.appended(now + respondAfter))
+  }
+
+  private def now = System.currentTimeMillis()
+
+  override def lastOutgoing: Option[Long] = lastOutgoing_
+
+  override def lastIncoming: Option[Long] = {
+    val now_ = now
+    nextIncoming.updateAndGet { queue =>
+      queue.findLast(_ <= now_) match {
+        case None => queue
+        case Some(last) => queue.dropWhile(_ != last)
+      }
+    }.headOption
+  }
+}
+
+class CountMessageRequestsClient extends NoopLanguageClient {
+  var showMessageRequests = 0
+  override def showMessageRequest(
+      params: ShowMessageRequestParams
+  ): CompletableFuture[MessageActionItem] = {
+    showMessageRequests += 1
+    CompletableFuture.completedFuture(new MessageActionItem("OK"))
   }
 }

@@ -4,6 +4,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -20,7 +21,12 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.eclipse.lsp4j.services.LanguageClient
 
-class RequestMonitor {
+trait RequestMonitor {
+  def lastOutgoing: Option[Long]
+  def lastIncoming: Option[Long]
+}
+
+class RequestMonitorImpl extends RequestMonitor {
   @volatile private var lastOutgoing_ : Option[Long] = None
   @volatile private var lastIncoming_ : Option[Long] = None
 
@@ -50,12 +56,14 @@ class RequestMonitor {
 
 class ServerLivenessMonitor(
     requestMonitor: RequestMonitor,
-    server: MetalsBuildServer,
+    ping: () => Unit,
     languageClient: LanguageClient,
     serverName: String,
     metalsIdleInterval: Duration,
     pingInterval: Duration,
 )(implicit ex: ExecutionContext) {
+  private val state: AtomicReference[ServerLivenessMonitor.State] =
+    new AtomicReference(ServerLivenessMonitor.Idle)
   @volatile private var isDismissed = false
   @volatile private var isServerResponsive = true
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
@@ -68,29 +76,39 @@ class ServerLivenessMonitor(
           .getOrElse(pingInterval.toMillis)
       def notResponding = lastIncoming > (pingInterval.toMillis * 2)
       def metalsIsIdle =
-        requestMonitor.lastOutgoing.exists(lastOutgoing =>
-          (now - lastOutgoing) > metalsIdleInterval.toMillis
-        )
+        requestMonitor.lastOutgoing
+          .map(lastOutgoing =>
+            (now - lastOutgoing) > metalsIdleInterval.toMillis
+          )
+          .getOrElse(true)
       if (!metalsIsIdle) {
-        if (notResponding) {
-          isServerResponsive = false
-          if (!isDismissed) {
-            languageClient
-              .showMessageRequest(
-                ServerLivenessMonitor.ServerNotResponding
-                  .params(pingInterval, serverName)
-              )
-              .asScala
-              .map {
-                case ServerLivenessMonitor.ServerNotResponding.dismiss =>
-                  isDismissed = true
-                case _ =>
-              }
-          }
-        } else {
-          isServerResponsive = true
+        val currState = state.getAndUpdate {
+          case ServerLivenessMonitor.Idle => ServerLivenessMonitor.FirstPing
+          case _ => ServerLivenessMonitor.Running
         }
-        server.workspaceBuildTargets()
+        if (currState == ServerLivenessMonitor.Running) {
+          if (notResponding) {
+            isServerResponsive = false
+            if (!isDismissed) {
+              languageClient
+                .showMessageRequest(
+                  ServerLivenessMonitor.ServerNotResponding
+                    .params(pingInterval, serverName)
+                )
+                .asScala
+                .map {
+                  case ServerLivenessMonitor.ServerNotResponding.dismiss =>
+                    isDismissed = true
+                  case _ =>
+                }
+            }
+          } else {
+            isServerResponsive = true
+          }
+        }
+        ping()
+      } else {
+        state.set(ServerLivenessMonitor.Idle)
       }
     }
   }
@@ -109,6 +127,8 @@ class ServerLivenessMonitor(
     scheduled.cancel(true)
     scheduler.shutdown()
   }
+
+  def getState: ServerLivenessMonitor.State = state.get()
 }
 
 object ServerLivenessMonitor {
@@ -129,5 +149,16 @@ object ServerLivenessMonitor {
     val dismiss = new MessageActionItem("Dismiss")
     val ok = new MessageActionItem("OK")
   }
+
+  /**
+   * State of the metals server:
+   *  - Idle - set as initial state and after metals goes into idle state
+   *  - FistPing - set after first ping after metals comes out of idle state
+   *  - Running - set after 2nd, 3rd... nth pings after metals comes out of idle state
+   */
+  sealed trait State
+  object Idle extends State
+  object FirstPing extends State
+  object Running extends State
 
 }
