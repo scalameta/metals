@@ -73,17 +73,26 @@ final class RunTestCodeLens(
       // most of the bsp servers such as bloop and sbt might not support it.
     } yield {
       val classes = buildTargetClasses.classesOf(buildTargetId)
+      // sbt doesn't declare debugging provider
+      def buildServerCanDebug =
+        connection.isDebuggingProvider || connection.isSbt
+
       if (connection.isScalaCLI && path.isAmmoniteScript) {
-        scalaCliCodeLenses(textDocument, buildTargetId, classes, distance)
-      } else if (
-        buildTarget.getCapabilities.getCanDebug || connection.isBloop || connection.isSbt
-      ) {
+        scalaCliCodeLenses(
+          textDocument,
+          buildTargetId,
+          classes,
+          distance,
+          buildServerCanDebug,
+        )
+      } else if (buildServerCanDebug || clientConfig.isRunProvider()) {
         codeLenses(
           textDocument,
           buildTargetId,
           classes,
           distance,
           path,
+          buildServerCanDebug,
         )
       } else { Nil }
 
@@ -132,6 +141,7 @@ final class RunTestCodeLens(
       occurence: SymbolOccurrence,
       textDocument: TextDocument,
       target: BuildTargetIdentifier,
+      buildServerCanDebug: Boolean,
   ): Seq[l.Command] = {
     if (occurence.symbol.endsWith("#main().")) {
       textDocument.symbols
@@ -148,6 +158,7 @@ final class RunTestCodeLens(
                 Nil.asJava,
                 Nil.asJava,
               ),
+              buildServerCanDebug,
             )
           else
             Nil
@@ -164,6 +175,7 @@ final class RunTestCodeLens(
       classes: BuildTargetClasses.Classes,
       distance: TokenEditDistance,
       path: AbsolutePath,
+      buildServerCanDebug: Boolean,
   ): Seq[l.CodeLens] = {
     for {
       occurrence <- textDocument.occurrences
@@ -172,11 +184,11 @@ final class RunTestCodeLens(
       commands = {
         val main = classes.mainClasses
           .get(symbol)
-          .map(mainCommand(target, _))
+          .map(mainCommand(target, _, buildServerCanDebug))
           .getOrElse(Nil)
         val tests =
           // Currently tests can only be run via DAP
-          if (clientConfig.isDebuggingProvider())
+          if (clientConfig.isDebuggingProvider() && buildServerCanDebug)
             testClasses(target, classes, symbol)
           else Nil
         val fromAnnot = DebugProvider
@@ -184,11 +196,13 @@ final class RunTestCodeLens(
           .flatMap { symbol =>
             classes.mainClasses
               .get(symbol)
-              .map(mainCommand(target, _))
+              .map(mainCommand(target, _, buildServerCanDebug))
           }
           .getOrElse(Nil)
         val javaMains =
-          if (path.isJava) javaLenses(occurrence, textDocument, target) else Nil
+          if (path.isJava)
+            javaLenses(occurrence, textDocument, target, buildServerCanDebug)
+          else Nil
         main ++ tests ++ fromAnnot ++ javaMains
       }
       if commands.nonEmpty
@@ -209,6 +223,7 @@ final class RunTestCodeLens(
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
       distance: TokenEditDistance,
+      buildServerCanDebug: Boolean,
   ): Seq[l.CodeLens] = {
     val scriptFileName = textDocument.uri.stripSuffix(".sc")
 
@@ -218,7 +233,7 @@ final class RunTestCodeLens(
     val main =
       classes.mainClasses
         .get(expectedMainClass)
-        .map(mainCommand(target, _))
+        .map(mainCommand(target, _, buildServerCanDebug))
         .getOrElse(Nil)
 
     val fromAnnotations = textDocument.occurrences.flatMap { occ =>
@@ -226,7 +241,7 @@ final class RunTestCodeLens(
         sym <- DebugProvider.mainFromAnnotation(occ, textDocument)
         cls <- classes.mainClasses.get(sym)
         range <- occurrenceRange(occ, distance)
-      } yield mainCommand(target, cls).map { cmd =>
+      } yield mainCommand(target, cls, buildServerCanDebug).map { cmd =>
         new l.CodeLens(range, cmd, null)
       }
     }.flatten
@@ -276,26 +291,30 @@ final class RunTestCodeLens(
   private def mainCommand(
       target: b.BuildTargetIdentifier,
       main: b.ScalaMainClass,
+      buildServerCanDebug: Boolean,
   ): List[l.Command] = {
-    val data = buildTargetClasses.jvmRunEnvironment
+    val (data, shellCommandAdded) = buildTargetClasses.jvmRunEnvironment
       .get(target)
       .zip(userConfig().usedJavaBinary) match {
       case None =>
-        main.toJson
+        (main.toJson, false)
       case Some((env, javaHome)) =>
-        ExtendedScalaMainClass(main, env, javaHome, workspace).toJson
+        (ExtendedScalaMainClass(main, env, javaHome, workspace).toJson, true)
     }
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
       sessionParams(target, dataKind, data)
     }
 
-    if (clientConfig.isDebuggingProvider())
+    if (clientConfig.isDebuggingProvider() && buildServerCanDebug)
       List(
         command("run", StartRunSession, params),
         command("debug", StartDebugSession, params),
       )
-    else List(command("run", StartRunSession, params))
+    // run provider needs shell command to run currently, we don't support pure run inside metals
+    else if (shellCommandAdded && clientConfig.isRunProvider())
+      List(command("run", StartRunSession, params))
+    else Nil
   }
 
   private def sessionParams(

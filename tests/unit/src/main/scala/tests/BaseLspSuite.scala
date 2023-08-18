@@ -112,7 +112,7 @@ abstract class BaseLspSuite(
 
   def test(
       testOpts: TestOptions,
-      withoutVirtualDocs: Boolean,
+      withoutVirtualDocs: Boolean = false,
       maxRetry: Int = 0,
   )(
       fn: => Future[Unit]

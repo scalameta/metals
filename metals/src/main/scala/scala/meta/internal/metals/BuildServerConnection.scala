@@ -72,6 +72,8 @@ class BuildServerConnection private (
 
   // the name is set before when establishing conenction
   def name: String = initialConnection.socketConnection.serverName
+  private def capabilities: BuildServerCapabilities =
+    initialConnection.capabilities
 
   def isBloop: Boolean = name == BloopServers.name
 
@@ -82,6 +84,13 @@ class BuildServerConnection private (
   def isScalaCLI: Boolean = ScalaCli.names(name)
 
   def isAmmonite: Boolean = name == Ammonite.name
+
+  def isDebuggingProvider: Boolean =
+    Option(capabilities.getDebugProvider())
+      .exists(_.getLanguageIds().contains("scala"))
+
+  def isJvmEnvironmentSupported: Boolean =
+    capabilities.getJvmRunEnvironmentProvider()
 
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
