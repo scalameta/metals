@@ -27,7 +27,9 @@ class ScalaCliActionsSuite
         |  println("Hello")
         |}
         |""".stripMargin,
-    s"""Apply suggestion: "os-lib is outdated, update to $newestOsLib"""",
+    s"""|"os-lib is outdated, update to ${newestOsLib}"
+        |     os-lib 0.7.8 -> com.lihaoyi::os-lib:${newestOsLib}
+        |""".stripMargin,
     s"""|//> using lib "com.lihaoyi::os-lib:$newestOsLib"
         |
         |object Hello extends App {
