@@ -1,34 +1,31 @@
 package scala.meta.internal.metals
 
 import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.nio.file.Files
 import java.nio.file.Path
 import java.{util => ju}
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 import scala.io.Source
 import scala.util.Properties
 import scala.util.Try
-import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.process.SystemProcess
+import scala.meta.internal.pc.JavaMetalsGlobal
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
 class JavaInteractiveSemanticdb(
-    javac: AbsolutePath,
     jdkVersion: JdkVersion,
     pluginJars: List[Path],
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
-)(implicit ec: ExecutionContext) {
-
+) {
   private val readonly = workspace.resolve(Directories.readonly)
 
   def textDocument(source: AbsolutePath, text: String): s.TextDocument = {
@@ -56,11 +53,9 @@ class JavaInteractiveSemanticdb(
       .getOrElse(Nil)
       .map(_.toString)
 
-    val jigsawOptions =
-      addExportsFlags ++ patchModuleFlags(localSource, sourceRoot, source)
+    val jigsawOptions = patchModuleFlags(localSource, sourceRoot, source)
     val mainOptions =
       List(
-        javac.toString,
         "-cp",
         (pluginJars ++ targetClasspath).mkString(File.pathSeparator),
         "-d",
@@ -68,25 +63,30 @@ class JavaInteractiveSemanticdb(
       )
     val pluginOption =
       s"-Xplugin:semanticdb -sourceroot:${sourceRoot} -targetroot:${targetRoot}"
-    val cmd =
-      mainOptions ::: jigsawOptions ::: pluginOption :: localSource.toString :: Nil
+    val allOptions = mainOptions ::: jigsawOptions ::: pluginOption :: Nil
 
-    val stdout = List.newBuilder[String]
-    val ps = SystemProcess.run(
-      cmd,
-      workDir,
-      false,
-      Map.empty,
-      Some(outLine => stdout += outLine),
-      Some(errLine => stdout += errLine),
-    )
+    val writer = new StringWriter()
+    val printWriter = new PrintWriter(writer)
+    try {
+      // JavacFileManager#getLocationForModule specifically tests that JavaFileObject is instanceof PathFileObject when using Patch-Module
+      // so can't use Metals SourceJavaFileObject
+      val javaFileObject = JavaMetalsGlobal.makeFileObject(localSource.toFile)
 
-    val future = ps.complete.recover { case NonFatal(e) =>
-      scribe.error(s"Running javac-semanticdb failed for $localSource", e)
-      1
+      val javacTask = JavaMetalsGlobal.compilationTask(
+        javaFileObject,
+        Some(printWriter),
+        allOptions,
+      )
+
+      javacTask.call()
+    } catch {
+      case e: Throwable =>
+        scribe.error(
+          s"Can't run javac on $localSource with options: [${allOptions.mkString("\n")}]",
+          e,
+        )
     }
 
-    val exitCode = Await.result(future, 10.seconds)
     val semanticdbFile =
       targetRoot
         .resolve("META-INF")
@@ -99,11 +99,10 @@ class JavaInteractiveSemanticdb(
         .headOption
         .getOrElse(s.TextDocument())
     } else {
-      val log = stdout.result()
-      if (exitCode != 0 || log.nonEmpty)
-        scribe.warn(
-          s"Running javac-semanticdb failed for ${source.toURI}. Output:\n${log.mkString("\n")}"
-        )
+      val log = writer.getBuffer()
+      scribe.warn(
+        s"Running javac-semanticdb failed for ${source.toURI}. Output:\n${log}"
+      )
       s.TextDocument()
     }
 
@@ -169,63 +168,24 @@ class JavaInteractiveSemanticdb(
       }
     } else Nil
   }
-
-  private def addExportsFlags: List[String] = {
-    if (jdkVersion.major >= 12) {
-      val compilerPackages = List(
-        "com.sun.tools.javac.api", "com.sun.tools.javac.code",
-        "com.sun.tools.javac.model", "com.sun.tools.javac.tree",
-        "com.sun.tools.javac.util",
-      )
-      compilerPackages.flatMap(pkg =>
-        List(s"-J--add-exports", s"-Jjdk.compiler/$pkg=ALL-UNNAMED")
-      )
-    } else Nil
-  }
-
 }
 
 object JavaInteractiveSemanticdb {
 
   def create(
-      javaHome: AbsolutePath,
       workspace: AbsolutePath,
       buildTargets: BuildTargets,
       jdkVersion: JdkVersion,
-  )(implicit ec: ExecutionContext): Option[JavaInteractiveSemanticdb] = {
+  ): JavaInteractiveSemanticdb = {
 
-    def pathToJavac(p: AbsolutePath): AbsolutePath = {
-      val binaryName = if (Properties.isWin) "javac.exe" else "javac"
-      p.resolve("bin").resolve(binaryName)
-    }
-
-    val jdkHome =
-      // jdk 8 might point at ${JDK_HOME}/jre
-      if (!pathToJavac(javaHome).exists && javaHome.filename == "jre")
-        javaHome.parent
-      else
-        javaHome
-
-    val javac = pathToJavac(jdkHome)
-
-    if (javac.exists) {
-      val pluginJars = Embedded.downloadSemanticdbJavac
-      val instance = new JavaInteractiveSemanticdb(
-        javac,
-        jdkVersion,
-        pluginJars,
-        workspace,
-        buildTargets,
-      )
-      Some(instance)
-    } else {
-      scribe.warn(
-        s"Can't instantiate JavaInteractiveSemanticdb (version: ${jdkVersion}, jdkHome: ${jdkHome}, javac exists: ${javac.exists})"
-      )
-      None
-    }
+    val pluginJars = Embedded.downloadSemanticdbJavac
+    new JavaInteractiveSemanticdb(
+      jdkVersion,
+      pluginJars,
+      workspace,
+      buildTargets,
+    )
   }
-
 }
 
 case class JdkVersion(

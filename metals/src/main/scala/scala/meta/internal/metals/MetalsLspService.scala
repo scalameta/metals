@@ -339,18 +339,9 @@ class MetalsLspService(
     )
 
   private val interactiveSemanticdbs: InteractiveSemanticdbs = {
-    val javaInteractiveSemanticdb =
-      for {
-        javaHome <- optJavaHome
-        jdkVersion <- maybeJdkVersion
-        javaSemanticDb <- JavaInteractiveSemanticdb.create(
-          javaHome,
-          folder,
-          buildTargets,
-          jdkVersion,
-        )
-      } yield javaSemanticDb
-
+    val javaInteractiveSemanticdb = maybeJdkVersion.map(jdkVersion =>
+      JavaInteractiveSemanticdb.create(folder, buildTargets, jdkVersion)
+    )
     register(
       new InteractiveSemanticdbs(
         folder,
