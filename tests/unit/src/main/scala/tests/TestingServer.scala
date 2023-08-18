@@ -1948,6 +1948,7 @@ object TestingServer {
   val TestDefault: InitializationOptions =
     InitializationOptions.Default.copy(
       debuggingProvider = Some(true),
+      runProvider = Some(true),
       treeViewProvider = Some(true),
       slowTaskProvider = Some(true),
     )

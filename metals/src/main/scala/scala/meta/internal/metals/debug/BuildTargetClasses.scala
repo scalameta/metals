@@ -76,9 +76,13 @@ final class BuildTargetClasses(
             .mainClasses(new b.ScalaMainClassesParams(targetsList))
             .map(cacheMainClasses(classes, _))
 
-          val updateTestClasses = connection
-            .testClasses(new b.ScalaTestClassesParams(targetsList))
-            .map(cacheTestClasses(classes, _))
+          // Currently tests are only run using DAP
+          val updateTestClasses =
+            if (connection.isDebuggingProvider || connection.isSbt)
+              connection
+                .testClasses(new b.ScalaTestClassesParams(targetsList))
+                .map(cacheTestClasses(classes, _))
+            else Future.unit
 
           val jvmRunEnvironment = connection
             .jvmRunEnvironment(new b.JvmRunEnvironmentParams(targetsList))

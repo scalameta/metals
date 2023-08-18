@@ -1575,13 +1575,15 @@ class MetalsLspService(
   override def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
-    CancelTokens { _ =>
-      timerProvider.timedThunk(
-        "code lens generation",
-        thresholdMillis = 1.second.toMillis,
-      ) {
-        val path = params.getTextDocument.getUri.toAbsolutePath
-        codeLensProvider.findLenses(path).toList.asJava
+    CancelTokens.future { _ =>
+      buildServerPromise.future.map { _ =>
+        timerProvider.timedThunk(
+          "code lens generation",
+          thresholdMillis = 1.second.toMillis,
+        ) {
+          val path = params.getTextDocument.getUri.toAbsolutePath
+          codeLensProvider.findLenses(path).toList.asJava
+        }
       }
     }
 
