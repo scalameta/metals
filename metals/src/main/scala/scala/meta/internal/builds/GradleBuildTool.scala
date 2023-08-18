@@ -75,9 +75,11 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
 
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val cmd = {
-      if (isBloopConfigured(workspace)) List("--console=plain", "bloopInstall")
+      if (isBloopConfigured(workspace))
+        List("--stacktrace", "--console=plain", "bloopInstall")
       else {
         List(
+          "--stacktrace",
           "--console=plain",
           "--init-script",
           initScriptPath.toString,
