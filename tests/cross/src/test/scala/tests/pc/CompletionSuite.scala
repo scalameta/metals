@@ -899,7 +899,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type".tag(IgnoreForScala3CompilerPC),
+    "type",
     s"""|object Main {
         |  val foo: ListBuffe@@
         |}
@@ -915,7 +915,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type1".tag(IgnoreForScala3CompilerPC),
+    "type1",
     s"""|object Main {
         |  val foo: Map[Int, ListBuffe@@]
         |}
@@ -1639,7 +1639,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type-with-params".tag(IgnoreForScala3CompilerPC),
+    "type-with-params",
     s"""|object O {
         | type TTT[A <: Int] = List[A]
         | val t: TT@@
@@ -1653,7 +1653,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type-with-params-with-detail".tag(IgnoreForScala3CompilerPC),
+    "type-with-params-with-detail",
     s"""|object O {
         | type TTT[A <: Int] = List[A]
         | val t: TT@@
@@ -1666,7 +1666,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type-lambda".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "type-lambda".tag(IgnoreScala2),
     s"""|object O {
         | type TTT = [A <: Int] =>> List[A]
         | val t: TT@@
@@ -1677,7 +1677,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type-lambda2".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "type-lambda2".tag(IgnoreScala2),
     s"""|object O {
         | type TTT[K <: Int] = [V] =>> Map[K, V]
         | val t: TT@@
@@ -1688,7 +1688,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type-lambda2-with-detail".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "type-lambda2-with-detail".tag(IgnoreScala2),
     s"""|object O {
         | type TTT[K <: Int] = [V] =>> Map[K, V]
         | val t: TT@@
@@ -1698,7 +1698,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type-bound".tag(IgnoreForScala3CompilerPC),
+    "type-bound",
     s"""|trait O {
         | type TTT <: Int
         | val t: TT@@
@@ -1711,7 +1711,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "class-with-params".tag(IgnoreForScala3CompilerPC),
+    "class-with-params",
     s"""|object O {
         | class AClass[A <: Int]
         | object AClass

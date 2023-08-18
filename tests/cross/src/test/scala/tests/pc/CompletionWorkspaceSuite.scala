@@ -742,7 +742,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "ordering-1".tag(IgnoreForScala3CompilerPC),
+    "ordering-1",
     """|import scala.concurrent.Future
        |object Main {
        |  def foo(
@@ -770,7 +770,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "ordering-2".tag(IgnoreForScala3CompilerPC),
+    "ordering-2",
     """|import java.util.concurrent.Future
        |object Main {
        |  def foo(
