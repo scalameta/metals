@@ -116,6 +116,18 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
     kind = Some(DecorationKind.ImplicitConversion),
   )
 
+  check(
+    "wrong-given-conversion".ignore,
+    """|trait Xg:
+       |  def doX: Int
+       |trait Yg:
+       |  def doY: String
+       |given (using Xg): Yg with
+       |  def doY = "7"
+       |""".stripMargin,
+    "",
+  )
+
   checkInferredType(
     "basic",
     "123",
@@ -254,6 +266,21 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
        | def get: W = ???
        |}
        |""".stripMargin,
+  )
+
+  checkInferredType(
+    "dealias5",
+    "get",
+    "W => S.M",
+    """|object S {
+       |  type M = Int
+       |} 
+       |type W
+       |def get: W => S.M = ???
+       |""".stripMargin,
+    compat = Map(
+      "3" -> "W => Int"
+    ),
   )
 
 }

@@ -26,20 +26,6 @@ final class PcSyntheticDecorationsProvider(
       extends PcCollector[Option[SyntheticDecoration]](cp, params) {
 
     import compiler._
-    val context: Context = doLocateImportContext(pos)
-    val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
-
-    def printTypeWithContext(tpe: Type, pos: Position): String = {
-      val context: Context = doLocateImportContext(pos)
-      val history = new ShortenedNames(
-        lookupSymbol = name =>
-          context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
-        config = renameConfig,
-        renames = re
-      )
-      metalsToLongString(tpe.widen.finalResultType, history)
-    }
-
     val withoutTypes: Set[lsp4j.Range] = params.withoutTypes().asScala.toSet
 
     override def collect(
@@ -84,8 +70,8 @@ final class PcSyntheticDecorationsProvider(
                 ) && pos.isOffset && ta.pos.isRange &&
                   !compiler.definitions.isTupleType(fun.tpe.finalResultType) =>
               if (params.inferredTypes) {
-                val parts = partsFromType(tree.tpe.widen.finalResultType)
-                val labelParts = makeLabelParts(parts, tree.tpe, pos)
+                val tpe = tree.tpe.widen.finalResultType
+                val labelParts = toLabelParts(tpe, pos)
                 Some(
                   Decoration(
                     fun.pos.focusEnd.toLsp,
@@ -98,8 +84,8 @@ final class PcSyntheticDecorationsProvider(
           }
           .getOrElse {
             if (pos.isRange && withoutTypes(pos.toLsp)) {
-              val parts = partsFromType(sym.tpe.widen.finalResultType)
-              val labelParts = makeLabelParts(parts, sym.tpe, pos)
+              val tpe = sym.tpe.widen.finalResultType
+              val labelParts = toLabelParts(tpe, pos)
               val kind = DecorationKind.InferredType
               Some(
                 Decoration(pos.toLsp, labelParts, kind)
@@ -118,14 +104,29 @@ final class PcSyntheticDecorationsProvider(
         }
     }
 
-    def makeLabelParts(
-        parts: List[TypeWithName],
+    private def toLabelParts(
         tpe: Type,
         pos: Position
     ): List[LabelPart] = {
+      val context: Context = doLocateImportContext(pos)
+      val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
+      val history = new ShortenedNames(
+        lookupSymbol = name =>
+          context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
+        config = renameConfig,
+        renames = re
+      )
+      val tpeStr = metalsToLongString(tpe, history)
+      val parts = partsFromType(tpe)
+      makeLabelParts(parts, tpeStr)
+    }
+
+    private def makeLabelParts(
+        parts: List[TypeWithName],
+        tpeStr: String
+    ): List[LabelPart] = {
       val buffer = ListBuffer.empty[LabelPart]
       var current = 0
-      val tpeStr = printTypeWithContext(tpe, pos)
       parts
         .flatMap { tp =>
           allIndexesWhere(tp.name, tpeStr).map((_, tp))

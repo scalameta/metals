@@ -17,6 +17,8 @@ import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.dotc.interactive.Interactive
+import dotty.tools.dotc.core.Symbols.NoSymbol
 
 class PcSyntheticDecorationsProvider(
     driver: InteractiveDriver,
@@ -33,15 +35,8 @@ class PcSyntheticDecorationsProvider(
 
   object Collector
       extends PcCollector[Option[SyntheticDecoration]](driver, params):
-    val indexedCtx = IndexedContext(ctx)
-    val shortenedNames = new ShortenedNames(indexedCtx)
-    val definitions = indexedCtx.ctx.definitions
-    val printer = MetalsPrinter.forInferredType(
-      shortenedNames,
-      indexedCtx,
-      symbolSearch,
-      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
-    )
+
+    val definitions = IndexedContext(ctx).ctx.definitions
     val withoutTypes = params.withoutTypes().asScala.toSet
 
     override def collect(parent: Option[tpd.Tree])(
@@ -87,9 +82,8 @@ class PcSyntheticDecorationsProvider(
                   !pos.span.isZeroExtent // inferred type parameters with zero extent span are mostly incorrect
                 =>
               if params.inferredTypes then
-                val tpe = optDealias(tree.tpe)
-                val parts = partsFromType(tpe)
-                val labelParts = makeLabelParts(parts, tpe)
+                val tpe = tree.tpe.stripTypeVar.widen.finalResultType
+                val labelParts = toLabelParts(tpe, pos)
                 Some(
                   Decoration(
                     pos.endPos.toLsp,
@@ -100,33 +94,67 @@ class PcSyntheticDecorationsProvider(
               else None
           }
           .getOrElse {
-            val lspPos = pos.toLsp
-            if withoutTypes(lspPos) then
-              val tpe = optDealias(sym.info)
-              val parts = partsFromType(tpe)
+            if pos.span.exists && !pos.span.isZeroExtent && withoutTypes(
+                pos.toLsp
+              )
+            then
+              val tpe = sym.info.widen.finalResultType
               val kind = DecorationKind.InferredType // inferred type
-              val labelParts = makeLabelParts(parts, tpe)
-              Some(Decoration(lspPos, labelParts, kind))
+              val labelParts = toLabelParts(tpe, pos)
+              Some(Decoration(pos.toLsp, labelParts, kind))
             else None
           }
       end if
     end collect
 
-    private def optDealias(tpe: Type): Type =
-      tpe.finalResultType.metalsDealias
-    end optDealias
-
     private def partsFromType(tpe: Type): List[TypeWithName] =
       val acc = NamedPartsAccumulator.apply(_ => true)
-      acc.apply(Nil, tpe).map(TypeWithName(_)).distinctBy(_.name)
+      acc
+        .apply(Nil, tpe)
+        .filter(_.symbol != NoSymbol)
+        .map(t =>
+          TypeWithName(t.symbol.decodedName, semanticdbSymbol(t.symbol))
+        )
+
+    private def toLabelParts(
+        tpe: Type,
+        pos: SourcePosition,
+    ): List[LabelPart] =
+      val tpdPath =
+        Interactive.pathTo(unit.tpdTree, pos.span)
+      val indexedCtx = IndexedContext(MetalsInteractive.contextOfPath(tpdPath))
+      val shortenedNames = new ShortenedNames(indexedCtx)
+      val printer = MetalsPrinter.forInferredType(
+        shortenedNames,
+        indexedCtx,
+        symbolSearch,
+        includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater,
+      )
+      def optDealias(tpe: Type): Type =
+        def isInScope(tpe: Type): Boolean =
+          tpe match
+            case tref: TypeRef =>
+              indexedCtx.lookupSym(
+                tref.currentSymbol
+              ) == IndexedContext.Result.InScope
+            case AppliedType(tycon, args) =>
+              isInScope(tycon) && args.forall(isInScope)
+            case _ => true
+        if isInScope(tpe)
+        then tpe
+        else tpe.metalsDealias(using indexedCtx.ctx)
+
+      val dealiased = optDealias(tpe)
+      val parts = partsFromType(dealiased)
+      makeLabelParts(parts, printer.tpe(dealiased))
+    end toLabelParts
 
     private def makeLabelParts(
         parts: List[TypeWithName],
-        tpe: Type,
+        tpeStr: String,
     ): List[LabelPart] =
       val buffer = ListBuffer.empty[LabelPart]
       var current = 0
-      val tpeStr = printer.tpe(tpe)
       parts
         .flatMap { tp =>
           allIndexesWhere(tp.name, tpeStr).map((_, tp))
@@ -139,15 +167,15 @@ class PcSyntheticDecorationsProvider(
         .foreach { case (index, tp) =>
           if index >= current then
             buffer += labelPart(tpeStr.substring(current, index))
-            buffer += labelPart(tp.name, Some(tp.tpe.typeSymbol))
+            buffer += labelPart(tp.name, Some(tp.semanticdbSymbol))
             current = index + tp.name.length
         }
       buffer += labelPart(tpeStr.substring(current, tpeStr.length))
       buffer.toList.filter(_.label.nonEmpty)
     end makeLabelParts
 
-    private def labelPart(str: String, symbol: Option[Symbol] = None) =
-      val symbolStr = symbol.map(semanticdbSymbol).getOrElse("")
+    private def labelPart(str: String, symbol: Option[String] = None) =
+      val symbolStr = symbol.getOrElse("")
       LabelPart(str, symbolStr)
 
     private def semanticdbSymbol(sym: Symbol): String =
@@ -168,10 +196,7 @@ class PcSyntheticDecorationsProvider(
       buffer.toList
     end allIndexesWhere
 
-    case class TypeWithName(tpe: Type, name: String)
-    object TypeWithName:
-      def apply(tpe: Type): TypeWithName =
-        TypeWithName(tpe, printer.tpe(tpe))
+    case class TypeWithName(name: String, semanticdbSymbol: String)
 
   end Collector
 
