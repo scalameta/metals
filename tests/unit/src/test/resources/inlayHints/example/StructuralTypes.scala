@@ -6,7 +6,7 @@ object StructuralTypes {
     def age: Int
   }
 
-  val user/*: StructuralTypes.User*/ = null.asInstanceOf[User]
+  val user/*: User<<example/StructuralTypes.User#>>*/ = null.asInstanceOf[User]
   user.name
   user.age
 

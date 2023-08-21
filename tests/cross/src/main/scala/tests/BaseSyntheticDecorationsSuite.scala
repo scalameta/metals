@@ -57,7 +57,9 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
         case None => allDecorations
       }
 
-      val obtained = TextEdits.applyEdits(withPkg, decorations.flatMap(edits))
+      val edits = decorations.flatMap(toEdits)
+
+      val obtained = TextEdits.applyEdits(withPkg, edits)
 
       assertEquals(
         obtained,
@@ -66,10 +68,51 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
 
     }
 
+  def checkInferredType(
+      name: TestOptions,
+      value: String,
+      expectedType: String,
+      template: String = "",
+      compat: Map[String, String] = Map.empty,
+  )(implicit location: Location) = {
+    val (code, expected) = inferredTypeTemplate(
+      value,
+      getExpected(expectedType, compat, scalaVersion),
+      template,
+    )
+    check(
+      name,
+      code,
+      expected,
+      compat = Map.empty,
+      kind = Some(DecorationKind.TypeParameter),
+    )
+  }
+
+  private def inferredTypeTemplate(
+      value: String,
+      expectedType: String,
+      template: String,
+  ): (String, String) = {
+    val base = s"""|object Main {
+                   |  $template
+                   |  def hello[T](t: T) = t
+                   |  val x = hello($value)
+                   |}
+                   |""".stripMargin
+    val expected = s"""|object Main {
+                       |  $template
+                       |  def hello[T](t: T) = t
+                       |  val x = hello[$expectedType]($value)
+                       |}
+                       |""".stripMargin
+    (base, expected)
+  }
+
   private def toText(labelParts: ju.List[InlayHintPart]): String =
     labelParts.asScala.map(_.label()).mkString("")
 
-  private def edits(decoration: SyntheticDecoration): List[TextEdit] = {
+  private def toEdits(decoration: SyntheticDecoration): List[TextEdit] = {
     decoration.kind() match {
       case DecorationKind.ImplicitParameter =>
         new TextEdit(

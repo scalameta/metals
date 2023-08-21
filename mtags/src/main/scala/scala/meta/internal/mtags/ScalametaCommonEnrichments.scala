@@ -58,8 +58,6 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       pos.start <= other.end && pos.end >= other.start
     }
 
-
-
     def encloses(other: l.Range): Boolean = {
       val start = other.getStart()
       val end = other.getEnd()

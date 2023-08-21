@@ -115,4 +115,145 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
        |""".stripMargin,
     kind = Some(DecorationKind.ImplicitConversion),
   )
+
+  checkInferredType(
+    "basic",
+    "123",
+    "Int",
+  )
+
+  checkInferredType(
+    "list",
+    "List[Int](1,2,3)",
+    "List[Int]",
+  )
+
+  checkInferredType(
+    "two-param",
+    """Map[Int, String]((1, "abc"))""",
+    "Map[Int,String]",
+    compat = Map(
+      "3" -> """Map[Int, String]"""
+    ),
+  )
+
+  checkInferredType(
+    "tuple",
+    "(123, 456)",
+    "(Int, Int)",
+  )
+
+  checkInferredType(
+    "import-needed",
+    """List[String]("").toBuffer[String]""",
+    "Buffer[String]",
+  )
+
+  checkInferredType(
+    "lambda-type",
+    "() => 123",
+    "() => Int",
+  )
+
+  checkInferredType(
+    "block",
+    "{ val z = 123; z + 2}",
+    "Int",
+  )
+
+  checkInferredType(
+    "refined-type",
+    "new Foo { type T = Int; type G = Long}",
+    "Foo{type T = Int; type G = Long}",
+    """|trait Foo {
+       |  type T
+       |  type G
+       |}
+       |""".stripMargin,
+  )
+
+  checkInferredType(
+    "refined-type1",
+    "new Foo { type T = Int }",
+    "Foo{type T = Int}",
+    """|trait Foo {
+       |  type T
+       |}
+       |""".stripMargin,
+  )
+
+  checkInferredType(
+    "refined-type2".tag(IgnoreScala2),
+    """|new Foo {
+       |  type T = Int
+       |  val x = 0
+       |  def y = 0
+       |  var z = 0
+       |}
+       |""".stripMargin,
+    "Foo{type T = Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit}",
+    """|trait Foo extends Selectable {
+       |  type T
+       |}
+       |""".stripMargin,
+  )
+
+  checkInferredType(
+    "dealias",
+    "new Foo().getT",
+    "Int",
+    """|class Foo() {
+       |  type T = Int
+       |  def getT: T = 1
+       |}
+       |""".stripMargin,
+  )
+
+  checkInferredType(
+    "dealias1",
+    "getT",
+    "T",
+    """|type T = Int
+       |def getT: T = 1
+       |""".stripMargin,
+  )
+
+  checkInferredType(
+    "dealias2".tag(IgnoreScala2),
+    "Foo.getT",
+    "T",
+    """|object Foo {
+       |  opaque type T = Int
+       |  def getT: T = 1
+       |}
+       |""".stripMargin,
+  )
+
+  checkInferredType(
+    "dealias3",
+    "O.get",
+    "Int => Int",
+    """|object O {
+       | type M = Int
+       | type W = M => Int
+       | def get: W = ???
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "2" -> "O.W"
+    ),
+  )
+
+  checkInferredType(
+    "dealias4".tag(IgnoreScala2),
+    "O.get",
+    "M => Int",
+    """|object O {
+       | opaque type M = Int
+       | type W = M => Int
+       | def get: W = ???
+       |}
+       |""".stripMargin,
+  )
+
 }

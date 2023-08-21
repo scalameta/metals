@@ -12,7 +12,7 @@ object LocalDeclarations {
   def create(): LocalDeclarations = {
     def bar(): Unit = ()
 
-    val x/*: AnyRef{val x: Int<<scala/Int#>>}*/ = new {
+    val x/*: AnyRef<<scala/AnyRef#>>{val x: Int<<scala/Int#>>}*/ = new {
       val x/*: Int<<scala/Int#>>*/ = 2
     }
 

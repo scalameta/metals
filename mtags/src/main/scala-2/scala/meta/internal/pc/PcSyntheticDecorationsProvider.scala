@@ -28,15 +28,17 @@ final class PcSyntheticDecorationsProvider(
     import compiler._
     val context: Context = doLocateImportContext(pos)
     val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
-    val history = new ShortenedNames(
-      lookupSymbol = name =>
-        context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
-      config = renameConfig,
-      renames = re
-    )
 
-    def printType(tpe: Type): String =
+    def printTypeWithContext(tpe: Type, pos: Position): String = {
+      val context: Context = doLocateImportContext(pos)
+      val history = new ShortenedNames(
+        lookupSymbol = name =>
+          context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
+        config = renameConfig,
+        renames = re
+      )
       metalsToLongString(tpe.widen.finalResultType, history)
+    }
 
     val withoutTypes: Set[lsp4j.Range] = params.withoutTypes().asScala.toSet
 
@@ -83,7 +85,7 @@ final class PcSyntheticDecorationsProvider(
                   !compiler.definitions.isTupleType(fun.tpe.finalResultType) =>
               if (params.inferredTypes) {
                 val parts = partsFromType(tree.tpe.widen.finalResultType)
-                val labelParts = makeLabelParts(parts, tree.tpe)
+                val labelParts = makeLabelParts(parts, tree.tpe, pos)
                 Some(
                   Decoration(
                     fun.pos.focusEnd.toLsp,
@@ -95,13 +97,12 @@ final class PcSyntheticDecorationsProvider(
 
           }
           .getOrElse {
-            val lspPos = pos.toLsp
-            if (withoutTypes(lspPos)) {
+            if (pos.isRange && withoutTypes(pos.toLsp)) {
               val parts = partsFromType(sym.tpe.widen.finalResultType)
-              val labelParts = makeLabelParts(parts, sym.tpe)
+              val labelParts = makeLabelParts(parts, sym.tpe, pos)
               val kind = DecorationKind.InferredType
               Some(
-                Decoration(lspPos, labelParts, kind)
+                Decoration(pos.toLsp, labelParts, kind)
               )
             } else None
           }
@@ -110,17 +111,21 @@ final class PcSyntheticDecorationsProvider(
     def partsFromType(tpe: Type): List[TypeWithName] = {
       tpe
         .collect {
-          case t: TypeRef if t.typeSymbol != NoSymbol => TypeWithName(t)
+          case t: TypeRef if t.sym != NoSymbol =>
+            TypeWithName(t.sym.decodedName, semanticdbSymbol(t.sym))
+          case SingleType(_, sym) if sym != NoSymbol =>
+            TypeWithName(sym.decodedName, semanticdbSymbol(sym))
         }
     }
 
     def makeLabelParts(
         parts: List[TypeWithName],
-        tpe: Type
+        tpe: Type,
+        pos: Position
     ): List[LabelPart] = {
       val buffer = ListBuffer.empty[LabelPart]
       var current = 0
-      val tpeStr = printType(tpe)
+      val tpeStr = printTypeWithContext(tpe, pos)
       parts
         .flatMap { tp =>
           allIndexesWhere(tp.name, tpeStr).map((_, tp))
@@ -131,7 +136,7 @@ final class PcSyntheticDecorationsProvider(
         .foreach { case (index, tp) =>
           if (index >= current) {
             buffer += labelPart(tpeStr.substring(current, index))
-            buffer += labelPart(tp.name, Some(tp.tpe.typeSymbol))
+            buffer += labelPart(tp.name, Some(tp.semanticdbSymbol))
             current = index + tp.name.length
           }
 
@@ -142,9 +147,9 @@ final class PcSyntheticDecorationsProvider(
 
     def labelPart(
         label: String,
-        symbol: Option[Symbol] = None
+        symbol: Option[String] = None
     ): LabelPart = {
-      val symbolStr = symbol.map(semanticdbSymbol).getOrElse("")
+      val symbolStr = symbol.getOrElse("")
       LabelPart(label, symbolStr)
     }
 
@@ -161,10 +166,6 @@ final class PcSyntheticDecorationsProvider(
       buffer.toList
     }
 
-    case class TypeWithName(tpe: Type, name: String)
-    object TypeWithName {
-      def apply(tpe: Type): TypeWithName =
-        TypeWithName(tpe, tpe.typeSymbol.decodedName)
-    }
+    case class TypeWithName(name: String, semanticdbSymbol: String)
   }
 }
