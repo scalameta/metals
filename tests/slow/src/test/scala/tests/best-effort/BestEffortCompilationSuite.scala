@@ -1,38 +1,37 @@
 package tests.`best-effort`
 
 import tests.BaseCompletionLspSuite
-import munit.Assertions._
 
 class BestEffortCompilationSuite
-    extends BaseCompletionLspSuite("best-effort-compilation") { // TODO names
+    extends BaseCompletionLspSuite("best-effort-compilation") {
+  // TODO - replace with newest Scala 3 verison from buildInfo after scala release with best-effort support
+  val scalaVersion = "3.4.0-RC1-bin-SNAPSHOT"
 
   // implemented in bloop
   test("best-effort-error-diagnostics") {
     cleanWorkspace()
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {"scalaVersion": "3.3.1-RC1-bin-SNAPSHOT" },
-           |  "b": {
-           |    "scalaVersion": "3.3.1-RC1-bin-SNAPSHOT",
-           |    "dependsOn": [ "a" ]
-           |  }
-           |}
-           |/a/src/main/scala/sample/A.scala
-           |package sample
-           |
-           |object A:
-           |  def foo: Int = "error"
-           |  def bar: String = "correct"
-           |/b/src/main/scala/sample/B.scala
-           |package sample
-           |
-           |object B:
-           |  A.bar
-           |  A.foo
-           |  A.unknown
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {"scalaVersion": "${scalaVersion}"},
+            |  "b": {
+            |    "scalaVersion": "${scalaVersion}",
+            |    "dependsOn": [ "a" ]
+            |  }
+            |}
+            |/a/src/main/scala/sample/A.scala
+            |package sample
+            |object A:
+            |  def foo: Int = "error"
+            |  def bar: String = "correct"
+            |/b/src/main/scala/sample/B.scala
+            |package sample
+            |object B:
+            |  A.bar
+            |  A.foo
+            |  A.unknown
+            |""".stripMargin
       )
       _ <- server.didOpen("b/src/main/scala/sample/B.scala")
       // Here we check that there is an error in `a`
@@ -40,11 +39,11 @@ class BestEffortCompilationSuite
       // The only error in `b` is a reference to not defined member
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/sample/A.scala:4:18: error: Found:    ("error" : String)
+        """|a/src/main/scala/sample/A.scala:3:18: error: Found:    ("error" : String)
            |Required: Int
            |  def foo: Int = "error"
            |                 ^^^^^^^
-           |b/src/main/scala/sample/B.scala:6:3: error: value unknown is not a member of object sample.A
+           |b/src/main/scala/sample/B.scala:5:3: error: value unknown is not a member of object sample.A
            |  A.unknown
            |  ^^^^^^^^^
            |""".stripMargin,
@@ -59,17 +58,15 @@ class BestEffortCompilationSuite
       _ <- initialize(
         s"""/metals.json
            |{
-           |  "a": { "scalaVersion": "3.3.1-RC1-bin-SNAPSHOT" }
+           |  "a": { "scalaVersion": "${scalaVersion}" }
            |}
            |/a/src/main/scala/a/A.scala
            |package a
-           |
            |object A {
            |  // @@
            |}
            |/a/src/main/scala/a/DefinedInA.scala
            |package a
-           |
            |object DefinedInA {
            |  def bFoo: Int = "asdsdd"
            |  def bBar: String = "asdsad"
@@ -80,7 +77,7 @@ class BestEffortCompilationSuite
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/DefinedInA.scala:4:19: error: Found:    ("asdsdd" : String)
+        """|a/src/main/scala/a/DefinedInA.scala:3:19: error: Found:    ("asdsdd" : String)
            |Required: Int
            |  def bFoo: Int = "asdsdd"
            |                  ^^^^^^^^
@@ -102,36 +99,37 @@ class BestEffortCompilationSuite
       _ <- initialize(
         s"""/metals.json
            |{
-           |  "b": { "scalaVersion": "3.3.1-RC1-bin-SNAPSHOT" },
            |  "a": {
-           |    "scalaVersion": "3.3.1-RC1-bin-SNAPSHOT",
-           |    "dependsOn": [ "a" ]
-           |  }
+           |    "scalaVersion": "${scalaVersion}",
+           |    "dependsOn": [ "b" ]
+           |  },
+           |  "b": { "scalaVersion": "${scalaVersion}" }
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |object A {
+           |  // @@
            |}
            |/b/src/main/scala/b/B.scala
+           |package b
            |object B {
            |  def bFoo: Int = "asdsdd"
            |  def bBar: String = "asdsad"
-           |}
-           |
-           |/a/src/main/scala/a/A.scala
-           |object A {
-           |  // @@
            |}
            |""".stripMargin
       )
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      // _ = assertNoDiff(
-      //   client.workspaceDiagnostics,
-      //   """a/src/main/scala/a/A.scala:4:19: error: Found:    ("asdsdd" : String)
-      //      |Required: Int
-      //      |  def bFoo: Int = "asdsdd"
-      //      |                  ^^^^^^^^
-      //      |""".stripMargin
-      // )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """b/src/main/scala/b/B.scala:3:19: error: Found:    ("asdsdd" : String)
+          |Required: Int
+          |  def bFoo: Int = "asdsdd"
+          |                  ^^^^^^^^
+          |""".stripMargin,
+      )
       _ <- assertCompletion(
-        "B.b@@",
+        "b.B.b@@",
         """|bBar: String
            |bFoo: Int
            |""".stripMargin,
@@ -148,9 +146,9 @@ class BestEffortCompilationSuite
       _ <- initialize(
         s"""/metals.json
            |{
-           |  "b": { "scalaVersion": "3.3.1-RC1-bin-SNAPSHOT" },
+           |  "b": { "scalaVersion": "${scalaVersion}" },
            |  "a": {
-           |    "scalaVersion": "3.3.1-RC1-bin-SNAPSHOT",
+           |    "scalaVersion": "${scalaVersion}",
            |    "dependsOn": [ "b" ]
            |  }
            |}
