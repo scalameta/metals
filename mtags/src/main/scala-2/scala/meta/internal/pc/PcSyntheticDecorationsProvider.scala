@@ -94,7 +94,7 @@ final class PcSyntheticDecorationsProvider(
           }
     }
 
-    def partsFromType(tpe: Type): List[TypeWithName] = {
+    private def partsFromType(tpe: Type): List[TypeWithName] = {
       tpe
         .collect {
           case t: TypeRef if t.sym != NoSymbol =>
@@ -146,7 +146,7 @@ final class PcSyntheticDecorationsProvider(
       buffer.toList.filter(!_.label.isEmpty())
     }
 
-    def labelPart(
+    private def labelPart(
         label: String,
         symbol: Option[String] = None
     ): LabelPart = {
@@ -154,7 +154,7 @@ final class PcSyntheticDecorationsProvider(
       LabelPart(label, symbolStr)
     }
 
-    def allIndexesWhere(
+    private def allIndexesWhere(
         str: String,
         in: String
     ): List[Int] = {

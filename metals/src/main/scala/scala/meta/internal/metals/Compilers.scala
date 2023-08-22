@@ -541,6 +541,7 @@ class Compilers(
   ): Future[ju.List[InlayHint]] = {
     val anyEnabled =
       userConfig().showInferredType.contains("true") ||
+        userConfig().showInferredType.contains("minimal") ||
         userConfig().showImplicitArguments ||
         userConfig().showImplicitConversionsAndClasses
     if (!anyEnabled) Future.successful(Nil.asJava)

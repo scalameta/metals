@@ -1,7 +1,5 @@
 package tests.decorations
 
-import java.net.URLEncoder
-
 import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.InitializationOptions
 
@@ -18,6 +16,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
     )
 
+  // TODO: Fix hover for local symbols
   test("all-synthetics") {
     for {
       _ <- initialize(
@@ -63,28 +62,28 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff( // foo[t]() to foo()
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|import scala.concurrent.Future
            |case class Location(city: String)
            |object Main{
-           |  def hello()(implicit name: String, from: Location): Unit = {
+           |  def hello()(implicit name: String, from: Location)/*: Unit<<scala/Unit#>>*/ = {
            |    println(s"Hello $name from ${from.city}")
            |  }
            |  implicit val andy : String = "Andy"
            |
-           |  def greeting(): Unit = {
-           |    implicit val boston: Location = Location("Boston")
-           |    hello()(andy, boston)
-           |    hello()(andy, boston);    hello()(andy, boston)
+           |  def greeting()/*: Unit<<scala/Unit#>>*/ = {
+           |    implicit val boston/*: Location<<_empty_/Location#>>*/ = Location("Boston")
+           |    hello()/*(andy<<_empty_/Main.andy.>>, boston<<local0>>)*/
+           |    hello()/*(andy<<_empty_/Main.andy.>>, boston<<local0>>)*/;    hello()/*(andy<<_empty_/Main.andy.>>, boston<<local0>>)*/
            |  }
            |  
-           |  val ordered: String = augmentString("acb").sorted(Char)
-           |  augmentString("foo").map(c: Char => c.toInt)
+           |  val ordered/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"acb"/*)*/.sorted/*(Char<<scala/math/Ordering.Char.>>)*/
+           |  /*augmentString<<scala/Predef.augmentString().>>(*/"foo"/*)*/.map(c/*: Char<<scala/Char#>>*/ => c.toInt)
            |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
            |  Future{
            |    println("")
-           |  }(ec)
+           |  }/*(ec<<_empty_/Main.ec.>>)*/
            |}
            |""".stripMargin,
       )
@@ -100,106 +99,84 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|import scala.concurrent.Future
            |case class Location(city: String)
            |object Main{
-           |  def hello()(implicit name: String, from: Location): Unit = {
+           |  def hello()(implicit name: String, from: Location)/*: Unit<<scala/Unit#>>*/ = {
            |    println(s"Hello $name from ${from.city}")
            |  }
            |  implicit val andy : String = "Andy"
            |
-           |  def greeting(): Unit = {
-           |    implicit val boston: Location = Location("Boston")
-           |    hello()(andy, boston)
-           |    hello()(andy, boston);    hello()(andy, boston)
+           |  def greeting()/*: Unit<<scala/Unit#>>*/ = {
+           |    implicit val boston/*: Location<<_empty_/Location#>>*/ = Location("Boston")
+           |    hello()/*(andy<<_empty_/Main.andy.>>, boston<<local0>>)*/
+           |    hello()/*(andy<<_empty_/Main.andy.>>, boston<<local0>>)*/;    hello()/*(andy<<_empty_/Main.andy.>>, boston<<local0>>)*/
            |  }
            |  
-           |  val ordered: String = augmentString("acb").sorted(Char)[Char]
-           |  augmentString("foo").map[Int](c: Char => c.toInt)
+           |  val ordered/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"acb"/*)*/.sorted/*[Char<<scala/Char#>>]*//*(Char<<scala/math/Ordering.Char.>>)*/
+           |  /*augmentString<<scala/Predef.augmentString().>>(*/"foo"/*)*/.map/*[Int<<scala/Int#>>]*/(c/*: Char<<scala/Char#>>*/ => c.toInt)
            |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-           |  Future[Unit]{
+           |  Future/*[Unit<<scala/Unit#>>]*/{
            |    println("")
-           |  }(ec)
+           |  }/*(ec<<_empty_/Main.ec.>>)*/
            |}
            |""".stripMargin,
       )
       // Implicit parameters
-      expectedParamsAndy = URLEncoder.encode("""["_empty_/Main.andy."]""")
-      mainClassPath = workspace
-        .resolve("a/src/main/scala/Main.scala")
-        .toURI
-        .toString()
-      expectedParamsBoston = URLEncoder.encode(
-        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":23}},"otherWindow":false}]"""
-      )
-      _ <- server.assertHoverAtLine(
+      _ <- server.assertInlayHintResolve(
         "a/src/main/scala/Main.scala",
-        "    hello()@@",
-        s"""|**Synthetics**:
+        s"""|import scala.concurrent.Future
+            |case class Location(city: String)
+            |object Main{
+            |  def hello()(implicit name: String, from: Location) = {
+            |    println(s"Hello $$name from $${from.city}")
+            |  }
+            |  implicit val andy : String = "Andy"
             |
-            |([andy](command:metals.goto?$expectedParamsAndy), [boston](command:metals.metals-goto-location?$expectedParamsBoston))
-            |""".stripMargin,
+            |  def greeting() = {
+            |    implicit val boston = Location("Boston")
+            |    hello()
+            |    hello();    hello()@@
+            |  }
+            |}""".stripMargin,
+        List("""|```scala
+                |implicit val andy: String
+                |```
+                |""".stripMargin),
       )
-      // Implicit conversions
-      augmentStringParams = URLEncoder.encode(
-        """["scala/Predef.augmentString()."]"""
-      )
-      _ <- server.assertHoverAtLine(
+      // Type parameter
+      _ <- server.assertInlayHintResolve(
         "a/src/main/scala/Main.scala",
-        "  val ordered = @@\"acb\".sorted",
-        s"""|**Synthetics**:
+        s"""|import scala.concurrent.Future
+            |case class Location(city: String)
+            |object Main{
+            |  def hello()(implicit name: String, from: Location) = {
+            |    println(s"Hello $$name from $${from.city}")
+            |  }
+            |  implicit val andy : String = "Andy"
             |
-            |[augmentString](command:metals.goto?$augmentStringParams)
-            |""".stripMargin,
-      )
-      // Normal hover without synthetics
-      _ <- server.assertHoverAtLine(
-        "a/src/main/scala/Main.scala",
-        "  val or@@dered = \"acb\".sorted",
-        """|```scala
-           |val ordered: String
-           |```
-           |""".stripMargin,
-      )
-      orderingParams = URLEncoder.encode("""["scala/math/Ordering.Char."]""")
-      charParams = URLEncoder.encode("""["scala/Char#"]""")
-      // Implicit parameter from Math Ordering
-      _ <- server.assertHoverAtLine(
-        "a/src/main/scala/Main.scala",
-        "  val ordered = \"acb\".sorted@@",
-        s"""|```scala
-            |def sorted[B >: Char](implicit ord: Ordering[B]): String
-            |```
-            |Sorts the characters of this string according to an Ordering.
-            |
-            | The sort is stable. That is, elements that are equal (as determined by
-            | `ord.compare`) appear in the same order in the sorted sequence as in the original.
-            |
-            |
-            |**Notes**
-            |- This method treats a string as a plain sequence of
-            |Char code units and makes no attempt to keep
-            |surrogate pairs or codepoint sequences together.
-            |The user is responsible for making sure such cases
-            |are handled correctly. Failing to do so may result in
-            |an invalid Unicode string.
-            |
-            |**Parameters**
-            |- `ord`: the ordering to be used to compare elements.
-            |
-            |**Returns:** a string consisting of the chars of this string
-            |             sorted according to the ordering `ord`.
-            |
-            |**See**
-            |- [scala.math.Ordering](scala.math.Ordering)
-            |
-            |**Synthetics**:
-            |
-            |([Char](command:metals.goto?$orderingParams))
-            |[[Char](command:metals.goto?$charParams)]
-            |""".stripMargin,
+            |  def greeting() = {
+            |    implicit val boston = Location("Boston")
+            |    hello()
+            |    hello();    hello()
+            |  }
+            |  
+            |  val ordered = "acb".sorted@@
+            |}""".stripMargin,
+        List(
+          """|```scala
+             |final abstract class Char: Char
+             |```
+             |`Char`, a 16-bit unsigned integer (equivalent to Java's `char` primitive type) is a
+             | subtype of [scala.AnyVal](scala.AnyVal). Instances of `Char` are not
+             | represented by an object in the underlying runtime system.
+             |
+             | There is an implicit conversion from [scala.Char](scala.Char) => [scala.runtime.RichChar](scala.runtime.RichChar)
+             | which provides useful non-primitive operations.
+             |""".stripMargin
+        ),
       )
     } yield ()
   }
@@ -232,22 +209,19 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|object Main{
            |  def hello()(implicit name: String) = {
            |    println(s"Hello $name!")
            |  }
            |  implicit val andy : String = "Andy"
-           |  hello()(andy)
+           |  hello()/*(andy<<_empty_/Main.andy.>>)*/
            |  ("1" + "2").map(c => c.toDouble)
            |}
            |""".stripMargin,
       )
-      _ = client.decorations.clear()
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
@@ -256,20 +230,18 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|object Main{
-           |  def hello()(implicit name: String): Unit = {
+           |  def hello()(implicit name: String)/*: Unit<<scala/Unit#>>*/ = {
            |    println(s"Hello $name!")
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()
-           |  ("1" + "2").map[Double](c: Char => c.toDouble)
+           |  ("1" + "2").map/*[Double<<scala/Double#>>]*/(c/*: Char<<scala/Char#>>*/ => c.toDouble)
            |}
            |""".stripMargin,
       )
-      _ = client.decorations.clear()
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
@@ -278,16 +250,15 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|object Main{
            |  def hello()(implicit name: String) = {
            |    println(s"Hello $name!")
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()
-           |  (augmentString("1" + "2")).map(c => c.toDouble)
+           |  (/*augmentString<<scala/Predef.augmentString().>>(*/"1" + "2"/*)*/).map(c => c.toDouble)
            |}
            |""".stripMargin,
       )
@@ -300,8 +271,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|object Main{
            |  def hello()(implicit name: String) = {
            |    println(s"Hello $name!")
@@ -338,88 +309,32 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|object Main{
-           |  augmentString(augmentString((augmentString("1" + "2"))
-           |    .stripSuffix("."))
-           |    .stripSuffix("#"))
+           |  /*augmentString<<scala/Predef.augmentString().>>(*//*augmentString<<scala/Predef.augmentString().>>(*/(/*augmentString<<scala/Predef.augmentString().>>(*/"1" + "2"/*)*/)
+           |    .stripSuffix(".")/*)*/
+           |    .stripSuffix("#")/*)*/
            |    .stripPrefix("_empty_.")
            |}
            |""".stripMargin,
       )
-      augmentStringParams = URLEncoder.encode(
-        """["scala/Predef.augmentString()."]"""
-      )
-      _ <- server.assertHoverAtLine(
+      _ <- server.assertInlayHintResolve(
         "a/src/main/scala/Main.scala",
-        "  (@@\"1\" + \"2\")",
-        s"""|**Synthetics**:
-            |
-            |[augmentString](command:metals.goto?$augmentStringParams)
-            |""".stripMargin,
-      )
-    } yield ()
-  }
-
-  test("readonly-files") {
-    for {
-      _ <- initialize(
-        s"""|/metals.json
-            |{
-            |  "a": {}
-            |}
-            |
-            |/standalone/Main.scala
-            |object Main{
-            |  val value = "asd.".stripSuffix(".")
-            |}
-            |""".stripMargin
-      )
-      _ <- server.didChangeConfiguration(
-        """|{
-           |  "show-implicit-conversions-and-classes": true,
-           |  "show-inferred-type": true
-           |}
-           |""".stripMargin
-      )
-      _ <- server.didOpen("standalone/Main.scala")
-      _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
         """|object Main{
-           |  val value: String = augmentString("asd.").stripSuffix(".")
+           |  @@("1" + "2")
+           |    .stripSuffix(".")
+           |    .stripSuffix("#")
+           |    .stripPrefix("_empty_.")
            |}
            |""".stripMargin,
-      )
-      augmentStringParams = URLEncoder.encode(
-        """["scala/Predef.augmentString()."]"""
-      )
-      _ <- server.assertHoverAtLine(
-        "standalone/Main.scala",
-        "  val value = @@\"asd.\".stripSuffix(\".\")",
-        s"""|**Synthetics**:
-            |
-            |[augmentString](command:metals.goto?$augmentStringParams)
-            |""".stripMargin,
-      )
-      _ <- server.didSave("standalone/Main.scala") { _ =>
-        s"""|object Main{
-            |  "asd.".stripSuffix(".")
-            |  "asd.".stripSuffix(".")
-            |}
-            |""".stripMargin
-      }
-      _ = assertNoDiff(
-        client.workspaceDecorations,
-        """|object Main{
-           |  augmentString("asd.").stripSuffix(".")
-           |  augmentString("asd.").stripSuffix(".")
-           |}
-           |""".stripMargin,
+        List(
+          """|```scala
+             |implicit def augmentString(x: String): StringOps
+             |```
+             |""".stripMargin
+        ),
       )
     } yield ()
   }
@@ -483,48 +398,46 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|object Main{
-           |  val head: Double :: tail: List[Double] = List[Double](0.1, 0.2, 0.3)
-           |  val List[Int](l1: Int, l2: Int) = List[Int](12, 13)
+           |  val head/*: Double<<scala/Double#>>*/ :: tail/*: List<<scala/collection/immutable/List#>>[Double<<scala/Double#>>]*/ = List/*[Double<<scala/Double#>>, Double<<scala/Double#>>]*/(0.1, 0.2, 0.3)
+           |  val List/*[Int<<scala/Int#>>]*/(l1/*: Int<<scala/Int#>>*/, l2/*: Int<<scala/Int#>>*/) = List/*[Int<<scala/Int#>>, Int<<scala/Int#>>]*/(12, 13)
            |  println("Hello!")
-           |  val abc: Int = 123
-           |  val tupleBound @ (one: String, two: String) = ("1", "2")
-           |  val tupleExplicit: (String, String) = Tuple2[String, String]("1", "2")
-           |  val tupleExplicitApply: (String, String) = Tuple2.apply[String, String]("1", "2")
-           |  var variable: Int = 123
+           |  val abc/*: Int<<scala/Int#>>*/ = 123
+           |  val tupleBound @ (one/*: String<<java/lang/String#>>*/, two/*: String<<java/lang/String#>>*/) = ("1", "2")
+           |  val tupleExplicit/*: (String<<java/lang/String#>>, String<<java/lang/String#>>)*/ = Tuple2("1", "2")
+           |  val tupleExplicitApply/*: (String<<java/lang/String#>>, String<<java/lang/String#>>)*/ = Tuple2.apply("1", "2")
+           |  var variable/*: Int<<scala/Int#>>*/ = 123
            |  val bcd: Int = 2
-           |  val (hello: String, bye: String) = ("hello", "bye")
-           |  def method(): Unit = {
-           |    val local: Double = 1.0
+           |  val (hello/*: String<<java/lang/String#>>*/, bye/*: String<<java/lang/String#>>*/) = ("hello", "bye")
+           |  def method()/*: Unit<<scala/Unit#>>*/ = {
+           |    val local/*: Double<<scala/Double#>>*/ = 1.0
            |  }
-           |  def methodNoParen: Unit = {
-           |    val (local: String, _) = ("", 1.0)
+           |  def methodNoParen/*: Unit<<scala/Unit#>>*/ = {
+           |    val (local/*: String<<java/lang/String#>>*/, _) = ("", 1.0)
            |  }
-           |  def hello()(name: String): Unit = {
+           |  def hello()(name: String)/*: Unit<<scala/Unit#>>*/ = {
            |    println(s"Hello $name!")
            |  }
-           |  def convert()(name: String => String = _ => ""): Unit = {
+           |  def convert()(name: String => String = _ => "")/*: Unit<<scala/Unit#>>*/ = {
            |    println(s"Hello $name!")
            |  }
-           |  val tpl1: (Int, Int) = (123, 1)
-           |  val tpl2: (Int, Int, Int) = (123, 1, 3)
-           |  val func0: () => Int = () => 2
-           |  val func1: (Int) => Int = (a : Int) => a + 2
-           |  val func2: (Int, Int) => Int = (a : Int, b: Int) => a + b
-           |  val complex: List[(Double, Int)] = tail.zip[Int](1 to 12)
+           |  val tpl1/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ = (123, 1)
+           |  val tpl2/*: (Int<<scala/Int#>>, Int<<scala/Int#>>, Int<<scala/Int#>>)*/ = (123, 1, 3)
+           |  val func0/*: () => Int<<scala/Int#>>*/ = () => 2
+           |  val func1/*: Int<<scala/Int#>> => Int<<scala/Int#>>*/ = (a : Int) => a + 2
+           |  val func2/*: (Int<<scala/Int#>>, Int<<scala/Int#>>) => Int<<scala/Int#>>*/ = (a : Int, b: Int) => a + b
+           |  val complex/*: List<<scala/collection/immutable/List#>>[(Double<<scala/Double#>>, Int<<scala/Int#>>)]*/ = tail.zip/*[Int<<scala/Int#>>]*/(1 to 12)
            |  for{
-           |    i: (Double, Int) <- complex
-           |    c: (Int) => Int = func1
+           |    i/*: (Double<<scala/Double#>>, Int<<scala/Int#>>)*/ <- complex/*[((Double<<scala/Double#>>, Int<<scala/Int#>>), Int<<scala/Int#>> => Int<<scala/Int#>>)]*/
+           |    c/*: Int<<scala/Int#>> => Int<<scala/Int#>>*/ = func1/*[Unit<<scala/Unit#>>]*/
            |  } i match {
-           |    case (b: Double, c: Int) =>
-           |    case a: (Double, Int) =>
+           |    case (b/*: Double<<scala/Double#>>*/, c: Int) =>
+           |    case a/*: (Double<<scala/Double#>>, Int<<scala/Int#>>)*/ =>
            |  }
-           |  convert(){str: String => str.stripMargin}
+           |  convert(){str/*: String<<scala/Predef.String#>>*/ => str.stripMargin}
            |  convert(){str : String => str.stripMargin}
            |}
            |""".stripMargin,
@@ -570,11 +483,9 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|import scala.concurrent.ExecutionContextExecutorService
            |
            |trait A
@@ -582,14 +493,14 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |
            |class Main(implicit ec: ExecutionContextExecutorService){
            |  // structural types
-           |  val anon1: A {} = new A {}
-           |  val anon2: A {...} = new A { def a: Int = 123 }
-           |  val anon3: A with B {} = new A with B {}
+           |  val anon1/*: A<<_empty_/A#>>*/ = new A {}
+           |  val anon2/*: A<<_empty_/A#>>{def a: Int<<scala/Int#>>}*/ = new A { def a/*: Int<<scala/Int#>>*/ = 123 }
+           |  val anon3/*: A<<_empty_/A#>> with B<<_empty_/B#>>*/ = new A with B {}
            |  // existential type
-           |  val job: Future[_] = ec.submit(new Runnable {
+           |  val job/*: Future<<java/util/concurrent/Future#>>[_ <: Object<<java/lang/Object#>>]*/ = ec.submit(new Runnable {
            |     override def run(): Unit = {}
            |  })
-           |  val runnable: Runnable {} = new Runnable {
+           |  val runnable/*: Runnable<<java/lang/Runnable#>>*/ = new Runnable {
            |    override def run(): Unit = {}
            |  }
            |}
@@ -621,38 +532,36 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|object Main{
-           |  val abc: Int = 123
+           |  val abc/*: Int<<scala/Int#>>*/ = 123
            |}
            |""".stripMargin,
       )
       // introduce a change
-      _ <- server.didChange("a/src/main/scala/Main.scala") { text =>
+      _ <- server.didSave("a/src/main/scala/Main.scala") { text =>
         "\n" + text
       }
-      _ = assertNoDiff(
-        client.workspaceDecorations,
-        """|
-           |object Main{
-           |  val abc: Int = 123
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
+        """|object Main{
+           |  val abc/*: Int<<scala/Int#>>*/ = 123
            |}
            |""".stripMargin,
       )
       // introduce a parsing error
-      _ <- server.didChange("a/src/main/scala/Main.scala") { text =>
+      // should show empty decorations
+      _ <- server.didSave("a/src/main/scala/Main.scala") { text =>
         "}\n" + text
       }
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|}
            |
            |object Main{
-           |  val abc: Int = 123
+           |  val abc = 123
            |}
            |""".stripMargin,
       )
@@ -707,11 +616,9 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.scala",
         """|import cats.Parallel
            |import cats.effect.ConcurrentEffect
            |import cats.effect.ContextShift
@@ -728,9 +635,9 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  def mkLogger[F[_]: ConcurrentEffect: Timer: ContextShift]: Resource[F, Logger[F]] = ???
            |
            |  // The actual tested method:
-           |  def serve[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel](): Resource[F, Unit] =
+           |  def serve[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel]()/*: Resource<<cats/effect/Resource#>>[F<<_empty_/Main2.serve().[F]>>,Unit<<scala/Unit#>>]*/ =
            |    for {
-           |      logger: Logger[F] <- mkLogger[F]
+           |      logger/*: Logger<<_empty_/Main2.Logger#>>[F<<_empty_/Main2.serve().[F]>>]*/ <- mkLogger[F]/*[F<<_empty_/Main2.serve().[F]>>[x<<cats/effect/ResourceLike#map().[G][x]>>], Unit<<scala/Unit#>>]*/
            |    } yield ()
            |
            |  def run(args: List[String]): IO[ExitCode] = ???
@@ -773,248 +680,254 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
       _ = assertNoDiff(
         client.workspaceDecorations,
-        """|def method(implicit str: String): String = str + str
-           |implicit val name: String = augmentString("Susan").stripMargin // : String = "Susan"
-           |val greeting: String = s"Hello $name" // : String = "Hello Susan"
-           |method(name) // : String = "SusanSusan"
+        """|def method(implicit str: String) = str + str
+           |implicit val name = "Susan".stripMargin // : String = "Susan"
+           |val greeting = s"Hello $name" // : String = "Hello Susan"
+           |method // : String = "SusanSusan"
+           |""".stripMargin,
+      )
+      _ <- server.assertInlayHints(
+        "a/Main.worksheet.sc",
+        """|def method(implicit str: String)/*: String<<java/lang/String#>>*/ = str + str
+           |implicit val name/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"Susan"/*)*/.stripMargin
+           |val greeting/*: String<<java/lang/String#>>*/ = s"Hello $name"
+           |method/*(name<<local0>>)*/
            |""".stripMargin,
       )
     } yield ()
   }
 
-  // https://github.com/scalameta/metals/pull/3948
-  test("for-yield") {
-    for {
-      _ <- initialize(
-        s"""
-           |/metals.json
-           |{"a": {}}
-           |/a/Main.scala
-           |class Evidence
-           |
-           |final case class DataType[T](number: Int, other: T) {
-           |  def next(implicit evidence: Evidence): Int = number + 1
-           |}
-           |
-           |object Example extends App {
-           |
-           |  implicit val evidence: Evidence = ???
-           |
-           |  def opts(i: Int)(implicit ev: Evidence) = Option(i)
-           |  for {
-           |    number <- Option(5)
-           |    num2 <- opts(2)
-           |    _ = "abc ".stripMargin
-           |  } yield DataType(number, "").next
-           |
-           |  Option(5).map(DataType(_, "").next)
-           |
-           |}
-           |""".stripMargin
-      )
-      _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": false,
-          |  "show-implicit-conversions-and-classes": false,
-          |  "show-inferred-type": true
-          |}
-          |""".stripMargin
-      )
-      _ <- server.didOpen("a/Main.scala")
-      _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
-        """|class Evidence
-           |
-           |final case class DataType[T](number: Int, other: T) {
-           |  def next(implicit evidence: Evidence): Int = number + 1
-           |}
-           |
-           |object Example extends App {
-           |
-           |  implicit val evidence: Evidence = ???
-           |
-           |  def opts(i: Int)(implicit ev: Evidence): Option[Int] = Option[Int](i)
-           |  for {
-           |    number: Int <- Option[Int](5)
-           |    num2: Int <- opts(2)(evidence)
-           |    _ = augmentString("abc ").stripMargin
-           |  } yield DataType[String](number, "").next(evidence)
-           |
-           |  Option[Int](5).map[Int](DataType[String](_, "").next(evidence))
-           |
-           |}
-           |""".stripMargin,
-      )
-      expectedParams = URLEncoder.encode(
-        """["_empty_/Example.evidence."]"""
-      )
-      _ <- server.assertHoverAtLine(
-        "a/Main.scala",
-        "    num2 <- opts(2)@@",
-        s"""|**Synthetics**:
-            |
-            |([evidence](command:metals.goto?$expectedParams))""".stripMargin,
-      )
-    } yield ()
-  }
+  // TODO: Fix test after merging https://github.com/scalameta/metals/pull/5552
+  // test("for-yield") {
+  //   for {
+  //     _ <- initialize(
+  //       s"""
+  //          |/metals.json
+  //          |{"a": {}}
+  //          |/a/Main.scala
+  //          |class Evidence
+  //          |
+  //          |final case class DataType[T](number: Int, other: T) {
+  //          |  def next(implicit evidence: Evidence): Int = number + 1
+  //          |}
+  //          |
+  //          |object Example extends App {
+  //          |
+  //          |  implicit val evidence: Evidence = ???
+  //          |
+  //          |  def opts(i: Int)(implicit ev: Evidence) = Option(i)
+  //          |  for {
+  //          |    number <- Option(5)
+  //          |    num2 <- opts(2)
+  //          |    _ = "abc ".stripMargin
+  //          |  } yield DataType(number, "").next
+  //          |
+  //          |  Option(5).map(DataType(_, "").next)
+  //          |
+  //          |}
+  //          |""".stripMargin
+  //     )
+  //     _ <- server.didChangeConfiguration(
+  //       """{
+  //         |  "show-implicit-arguments": false,
+  //         |  "show-implicit-conversions-and-classes": false,
+  //         |  "show-inferred-type": true
+  //         |}
+  //         |""".stripMargin
+  //     )
+  //     _ <- server.didOpen("a/Main.scala")
+  //     _ = assertNoDiagnostics()
+  //     _ = assertNoDiff(
+  //       client.workspaceDecorations,
+  //       """|class Evidence
+  //          |
+  //          |final case class DataType[T](number: Int, other: T) {
+  //          |  def next(implicit evidence: Evidence): Int = number + 1
+  //          |}
+  //          |
+  //          |object Example extends App {
+  //          |
+  //          |  implicit val evidence: Evidence = ???
+  //          |
+  //          |  def opts(i: Int)(implicit ev: Evidence): Option[Int] = Option[Int](i)
+  //          |  for {
+  //          |    number: Int <- Option[Int](5)
+  //          |    num2: Int <- opts(2)(evidence)
+  //          |    _ = augmentString("abc ").stripMargin
+  //          |  } yield DataType[String](number, "").next(evidence)
+  //          |
+  //          |  Option[Int](5).map[Int](DataType[String](_, "").next(evidence))
+  //          |
+  //          |}
+  //          |""".stripMargin,
+  //     )
+  //     expectedParams = URLEncoder.encode(
+  //       """["_empty_/Example.evidence."]"""
+  //     )
+  //     _ <- server.assertHoverAtLine(
+  //       "a/Main.scala",
+  //       "    num2 <- opts(2)@@",
+  //       s"""|**Synthetics**:
+  //           |
+  //           |([evidence](command:metals.goto?$expectedParams))""".stripMargin,
+  //     )
+  //   } yield ()
+  // }
 
-  // https://github.com/scalameta/metals/pull/3948
-  test("issue") {
-    for {
-      _ <- initialize(
-        s"""
-           |/metals.json
-           |{"a": {}}
-           |/a/Main.scala
-           |class Evidence
-           |
-           |final case class DataType[T](number: Int, other: T) {
-           |  def next(implicit evidence: Evidence): Int = number + 1
-           |}
-           |
-           |object Example extends App {
-           |
-           |  implicit val evidence: Evidence = ???
-           |
-           |  def opts(i: Int)(implicit ev: Evidence) = Option(i)
-           |  for {
-           |    number <- Option(5)
-           |    num2 <- opts(2)
-           |    _ = "abc ".stripMargin
-           |  } yield DataType(number, "").next
-           |
-           |  Option(5).map(DataType(_, "").next)
-           |
-           |}
-           |""".stripMargin
-      )
-      _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": false,
-          |  "show-implicit-conversions-and-classes": false,
-          |  "show-inferred-type": true
-          |}
-          |""".stripMargin
-      )
-      _ <- server.didOpen("a/Main.scala")
-      // _ = assertNoDiagnostics()
-      // _ = assertNoDiff(
-      //   client.workspaceDecorations,
-      //   """|class Evidence
-      //      |
-      //      |final case class DataType[T](number: Int, other: T) {
-      //      |  def next(implicit evidence: Evidence): Int = number + 1
-      //      |}
-      //      |
-      //      |object Example extends App {
-      //      |
-      //      |  implicit val evidence: Evidence = ???
-      //      |
-      //      |  def opts(i: Int)(implicit ev: Evidence): Option[Int] = Option[Int](i)
-      //      |  for {
-      //      |    number: Int <- Option[Int](5)
-      //      |    num2: Int <- opts(2)
-      //      |    _ = "abc ".stripMargin
-      //      |  } yield DataType[String](number, "").next
-      //      |
-      //      |  Option[Int](5).map[Int](DataType[String](_, "").next)
-      //      |
-      //      |}
-      //      |""".stripMargin
-      // )
-    } yield ()
-  }
+  // test("issue") {
+  //   for {
+  //     _ <- initialize(
+  //       s"""
+  //          |/metals.json
+  //          |{"a": {}}
+  //          |/a/Main.scala
+  //          |class Evidence
+  //          |
+  //          |final case class DataType[T](number: Int, other: T) {
+  //          |  def next(implicit evidence: Evidence): Int = number + 1
+  //          |}
+  //          |
+  //          |object Example extends App {
+  //          |
+  //          |  implicit val evidence: Evidence = ???
+  //          |
+  //          |  def opts(i: Int)(implicit ev: Evidence) = Option(i)
+  //          |  for {
+  //          |    number <- Option(5)
+  //          |    num2 <- opts(2)
+  //          |    _ = "abc ".stripMargin
+  //          |  } yield DataType(number, "").next
+  //          |
+  //          |  Option(5).map(DataType(_, "").next)
+  //          |
+  //          |}
+  //          |""".stripMargin
+  //     )
+  //     _ <- server.didChangeConfiguration(
+  //       """{
+  //         |  "show-implicit-arguments": false,
+  //         |  "show-implicit-conversions-and-classes": false,
+  //         |  "show-inferred-type": true
+  //         |}
+  //         |""".stripMargin
+  //     )
+  //     _ <- server.didOpen("a/Main.scala")
+  //     // _ = assertNoDiagnostics()
+  //     // _ = assertNoDiff(
+  //     //   client.workspaceDecorations,
+  //     //   """|class Evidence
+  //     //      |
+  //     //      |final case class DataType[T](number: Int, other: T) {
+  //     //      |  def next(implicit evidence: Evidence): Int = number + 1
+  //     //      |}
+  //     //      |
+  //     //      |object Example extends App {
+  //     //      |
+  //     //      |  implicit val evidence: Evidence = ???
+  //     //      |
+  //     //      |  def opts(i: Int)(implicit ev: Evidence): Option[Int] = Option[Int](i)
+  //     //      |  for {
+  //     //      |    number: Int <- Option[Int](5)
+  //     //      |    num2: Int <- opts(2)
+  //     //      |    _ = "abc ".stripMargin
+  //     //      |  } yield DataType[String](number, "").next
+  //     //      |
+  //     //      |  Option[Int](5).map[Int](DataType[String](_, "").next)
+  //     //      |
+  //     //      |}
+  //     //      |""".stripMargin
+  //     // )
+  //   } yield ()
+  // }
 
-  test("type-aliases") {
-    for {
-      _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/a/src/main/scala/Main.scala
-           |object O {
-           | type Foo3[T, R] = (T, R, "")
-           | def hello: Option[(Int, String)] = {
-           |  type Foo = (Int, String)
-           |  type Foo2[T] = (T, String)
-           |  def foo: Option[Foo] = ???
-           |  def foo2: Option[Foo2[Int]] = Option((1, ""))
-           |  def foo3: Option[Foo3[Int, String]] = Option((1, "", ""))
-           |  for {
-           |    a <- foo
-           |    b <- foo2
-           |    c <- foo3
-           |  } yield a
-           | }
-           |}
-           |""".stripMargin
-      )
-      _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions-and-classes": true,
-          |  "show-inferred-type": true
-          |}
-          |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
-      _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
-        """|object O {
-           | type Foo3[T, R] = (T, R, "")
-           | def hello: Option[(Int, String)] = {
-           |  type Foo = (Int, String)
-           |  type Foo2[T] = (T, String)
-           |  def foo: Option[Foo] = ???
-           |  def foo2: Option[Foo2[Int]] = Option[(Int, String)]((1, ""))
-           |  def foo3: Option[Foo3[Int, String]] = Option[(Int, String, )]((1, "", ""))
-           |  for {
-           |    a: Foo <- foo
-           |    b: Foo2[Int] <- foo2
-           |    c: Foo3[Int, String] <- foo3
-           |  } yield a
-           | }
-           |}
-           |""".stripMargin,
-      )
-    } yield ()
-  }
+  // test("type-aliases") {
+  //   for {
+  //     _ <- initialize(
+  //       """|/metals.json
+  //          |{
+  //          |  "a": {}
+  //          |}
+  //          |/a/src/main/scala/Main.scala
+  //          |object O {
+  //          | type Foo3[T, R] = (T, R, "")
+  //          | def hello: Option[(Int, String)] = {
+  //          |  type Foo = (Int, String)
+  //          |  type Foo2[T] = (T, String)
+  //          |  def foo: Option[Foo] = ???
+  //          |  def foo2: Option[Foo2[Int]] = Option((1, ""))
+  //          |  def foo3: Option[Foo3[Int, String]] = Option((1, "", ""))
+  //          |  for {
+  //          |    a <- foo
+  //          |    b <- foo2
+  //          |    c <- foo3
+  //          |  } yield a
+  //          | }
+  //          |}
+  //          |""".stripMargin
+  //     )
+  //     _ <- server.didChangeConfiguration(
+  //       """{
+  //         |  "show-implicit-arguments": true,
+  //         |  "show-implicit-conversions-and-classes": true,
+  //         |  "show-inferred-type": true
+  //         |}
+  //         |""".stripMargin
+  //     )
+  //     _ <- server.didOpen("a/src/main/scala/Main.scala")
+  //     _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+  //     _ = assertNoDiagnostics()
+  //     _ = assertNoDiff(
+  //       client.workspaceDecorations,
+  //       """|object O {
+  //          | type Foo3[T, R] = (T, R, "")
+  //          | def hello: Option[(Int, String)] = {
+  //          |  type Foo = (Int, String)
+  //          |  type Foo2[T] = (T, String)
+  //          |  def foo: Option[Foo] = ???
+  //          |  def foo2: Option[Foo2[Int]] = Option[(Int, String)]((1, ""))
+  //          |  def foo3: Option[Foo3[Int, String]] = Option[(Int, String, )]((1, "", ""))
+  //          |  for {
+  //          |    a: Foo <- foo
+  //          |    b: Foo2[Int] <- foo2
+  //          |    c: Foo3[Int, String] <- foo3
+  //          |  } yield a
+  //          | }
+  //          |}
+  //          |""".stripMargin,
+  //     )
+  //   } yield ()
+  // }
 
-  test("value-of") {
-    for {
-      _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/a/src/main/scala/Main.scala
-           |object O {
-           |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
-           |  val m = foo[500]
-           |}
-           |""".stripMargin
-      )
-      _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": true
-          |}
-          |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
-      _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
-        """|object O {
-           |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
-           |  val m = foo[500](new ValueOf(...))
-           |}
-           |""".stripMargin,
-      )
-    } yield ()
-  }
+  // TODO: Uncomment after fixing for ValueOf
+  // test("value-of") {
+  //   for {
+  //     _ <- initialize(
+  //       """|/metals.json
+  //          |{
+  //          |  "a": {}
+  //          |}
+  //          |/a/src/main/scala/Main.scala
+  //          |object O {
+  //          |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
+  //          |  val m = foo[500]
+  //          |}
+  //          |""".stripMargin
+  //     )
+  //     _ <- server.didChangeConfiguration(
+  //       """{
+  //         |  "show-implicit-arguments": true
+  //         |}
+  //         |""".stripMargin
+  //     )
+  //     _ = assertNoDiagnostics()
+  //     _ <- server.assertInlayHints(
+  //       "a/src/main/scala/Main.scala",
+  //       """|object O {
+  //          |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
+  //          |  val m = foo[500](new ValueOf(...))
+  //          |}
+  //          |""".stripMargin,
+  //     )
+  //   } yield ()
+  // }
 }

@@ -4,7 +4,7 @@ import scala.meta.internal.pc.DecorationKind
 
 import tests.BaseSyntheticDecorationsSuite
 
-class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
+class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
 
   check(
     "type-params",
@@ -116,6 +116,7 @@ class SynthethicDecorationSuite extends BaseSyntheticDecorationsSuite {
     kind = Some(DecorationKind.ImplicitConversion),
   )
 
+  // TODO: Examinate implicit conversion here and unignore
   check(
     "wrong-given-conversion".ignore,
     """|trait Xg:

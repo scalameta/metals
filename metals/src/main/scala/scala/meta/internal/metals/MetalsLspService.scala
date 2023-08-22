@@ -18,6 +18,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
@@ -918,10 +919,7 @@ class MetalsLspService(
         userConfig().showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
         userConfig().showInferredType != old.showInferredType
       ) {
-        for {
-          _ <- buildServerPromise.future
-          _ <- languageClient.refreshInlayHints().asScala
-        } yield ()
+        languageClient.refreshInlayHints().asScala
       } else {
         Future.successful(())
       }
@@ -1354,7 +1352,6 @@ class MetalsLspService(
   def inlayHintResolve(
       inlayHint: InlayHint
   ): CompletableFuture[InlayHint] = {
-    val parser = new JsonParser.Of[java.util.List[String]]
     CancelTokens.future { token =>
       val labelParts = inlayHint.getLabel().asScala match {
         case Left(text) =>
@@ -1365,8 +1362,20 @@ class MetalsLspService(
           )
         case Right(labelParts) => labelParts.asScala.toList
       }
-      val x = inlayHint.getData() match {
-        case parser.Jsonized(data) =>
+
+      def parseData(inlayHint: InlayHint): Option[util.List[String]] = {
+        Try {
+          inlayHint.getData.asInstanceOf[java.util.List[String]]
+        }.toOption.orElse {
+          val parser = new JsonParser.Of[java.util.List[String]]
+          inlayHint.getData match {
+            case parser.Jsonized(data) => Some(data)
+            case _ => None
+          }
+        }
+      }
+      parseData(inlayHint) match {
+        case Some(data) =>
           val symbols = data.asScala.toList
           val x = labelParts.zip(symbols).map { case (labelPart, symbol) =>
             if (symbol == "") Future.successful(labelPart)
@@ -1392,9 +1401,9 @@ class MetalsLspService(
             inlayHint.setLabel(labelParts.asJava)
             inlayHint
           }
-        case _ => Future.successful(inlayHint)
+        case _ =>
+          Future.successful(inlayHint)
       }
-      x
     }
   }
 

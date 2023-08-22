@@ -1,29 +1,29 @@
 package tests.feature
 
+import scala.meta.inputs.Position
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.CompilerRangeParams
+import scala.meta.internal.metals.CompilerSyntheticDecorationsParams
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.InlayHintsProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsBinaries
 import scala.meta.internal.metals.ProgressTicks
-import scala.meta.inputs.Position
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.DirectoryExpectSuite
-import scala.meta.internal.metals.InlayHintsProvider
 import tests.ExpectTestCase
 import tests.FakeTime
 import tests.InputProperties
+import tests.TestInlayHints
 import tests.TestMtagsResolver
 import tests.TestingClient
-import scala.meta.internal.metals.CompilerRangeParams
 import tests.TreeUtils
-import scala.meta.internal.metals.CompilerSyntheticDecorationsParams
-import tests.TestInlayHints
-import scala.meta.internal.metals.UserConfiguration
 
 class InlayHintsScala3ExpectSuite(
 ) extends DirectoryExpectSuite("inlayHints3") {

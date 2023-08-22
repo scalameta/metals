@@ -74,7 +74,7 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
       expectedType: String,
       template: String = "",
       compat: Map[String, String] = Map.empty,
-  )(implicit location: Location) = {
+  )(implicit location: Location): Unit = {
     val (code, expected) = inferredTypeTemplate(
       value,
       getExpected(expectedType, compat, scalaVersion),

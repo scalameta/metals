@@ -13,12 +13,12 @@ import scala.meta.pc.SyntheticDecorationsParams
 
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.tpd
+import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.*
+import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.core.Symbols.NoSymbol
 
 class PcSyntheticDecorationsProvider(
     driver: InteractiveDriver,
@@ -181,20 +181,16 @@ class PcSyntheticDecorationsProvider(
     private def semanticdbSymbol(sym: Symbol): String =
       SemanticdbSymbols.symbolName(sym)
 
-    def allIndexesWhere(
+    private def allIndexesWhere(
         str: String,
-        tpe: String,
+        in: String,
     ): List[Int] =
       val buffer = ListBuffer.empty[Int]
-      var current = 0
-      while current < tpe.length do
-        val index = tpe.indexOf(str, current)
-        if index == -1 then current = tpe.length
-        else
-          buffer += index
-          current = index + str.length
+      var index = in.indexOf(str)
+      while index >= 0 do
+        buffer += index
+        index = in.indexOf(str, index + 1)
       buffer.toList
-    end allIndexesWhere
 
     case class TypeWithName(name: String, semanticdbSymbol: String)
 

@@ -35,7 +35,7 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit =
     ()
   override def refreshInlayHints(): CompletableFuture[Void] = {
-    super.refreshInlayHints()
+    CompletableFuture.completedFuture(null)
   }
 
   override def rawMetalsInputBox(

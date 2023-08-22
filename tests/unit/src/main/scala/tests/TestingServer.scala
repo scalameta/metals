@@ -550,7 +550,15 @@ final case class TestingServer(
     val documentSymbolCapabilities = new DocumentSymbolCapabilities()
     documentSymbolCapabilities.setHierarchicalDocumentSymbolSupport(true)
     textDocumentCapabilities.setDocumentSymbol(documentSymbolCapabilities)
-
+    val inlayHintsCapabilities = new l.InlayHintCapabilities()
+    val inlayHintProperties =
+      List("tooltip", "label.tooltip", "label.command").asJava
+    val inlayHintResolveSupportCapabilities =
+      new l.InlayHintResolveSupportCapabilities(inlayHintProperties)
+    inlayHintsCapabilities.setResolveSupport(
+      inlayHintResolveSupportCapabilities
+    )
+    textDocumentCapabilities.setInlayHint(inlayHintsCapabilities)
     // Yes, this is a bit gross :/
     // However, I want to only get the existing fields that are being set
     // much like it'd be when a client actually sends this. This will just
@@ -797,7 +805,6 @@ final case class TestingServer(
     // lsp -didChangeConfiguration method should be called with a wrapped object
     val didChangeJson = new JsonObject()
     didChangeJson.add("metals", json)
-
     val params = new DidChangeConfigurationParams(didChangeJson)
     fullServer.didChangeConfiguration(params).asScala
   }
@@ -1354,6 +1361,64 @@ final case class TestingServer(
       Assertions.assertNoDiff(
         obtained,
         expected,
+      )
+    }
+  }
+
+  def assertInlayHints(
+      filename: String,
+      expected: String,
+  )(implicit location: munit.Location): Future[Unit] = {
+    val uri = toPath(filename).toTextDocumentIdentifier
+    val text = workspace.resolve(filename).readText
+
+    val endPos = new l.Position(text.split("\n").length, 0)
+    val range = new l.Range(new l.Position(0, 0), endPos)
+    val params = new org.eclipse.lsp4j.InlayHintParams(uri, range)
+    for {
+      inlayHints <- fullServer.inlayHints(params).asScala
+    } yield {
+      val obtained =
+        TestInlayHints.applyInlayHints(text, inlayHints.asScala.toList)
+      Assertions.assertNoDiff(
+        obtained,
+        expected,
+      )
+    }
+  }
+
+  def assertInlayHintResolve(
+      filename: String,
+      fileContent: String,
+      expectedHovers: List[String],
+  ): Future[Unit] = {
+    val uri = toPath(filename).toTextDocumentIdentifier
+    val offset = fileContent.indexOf("@@")
+    if (offset < 0) sys.error("missing @@")
+    val (line, column) = {
+      val lines = fileContent.take(offset).split("\n")
+      (lines.length - 1, lines.last.length)
+    }
+    val position = new l.Position(line, column)
+    val range = new l.Range(new l.Position(0, 0), position)
+    val params = new org.eclipse.lsp4j.InlayHintParams(uri, range)
+    for {
+      inlayHints <- fullServer.inlayHints(params).asScala
+      _ = if (inlayHints.isEmpty()) {
+        Assertions.fail("No inlay hints found")
+      }
+      toResolve = inlayHints.asScala
+        .dropWhile(_.getPosition().lt(position))
+        .head
+      resolved <- fullServer.inlayHintResolve(toResolve).asScala
+    } yield {
+      val labelParts = resolved.getLabel().getRight().asScala.toList
+      val markups = labelParts
+        .filter(_.getTooltip != null)
+        .map(_.getTooltip().getRight().getValue())
+      Assertions.assertNoDiff(
+        markups.mkString("\n"),
+        expectedHovers.mkString("\n"),
       )
     }
   }

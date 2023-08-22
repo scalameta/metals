@@ -62,28 +62,18 @@ final class InlayHintsProvider(
     hint
   }
 
-  def findDecoration(
-      pos: Position,
-      decorations: List[SyntheticDecoration],
-  ): (Option[SyntheticDecoration], List[SyntheticDecoration]) = {
-    val lspPos = pos.toLsp
-    def isTarget(dec: SyntheticDecoration): Boolean =
-      dec.range().sameAs(lspPos)
-
-    val candidates = decorations.dropWhile(_.range().lt(lspPos))
-    val decoration = candidates
-      .takeWhile(_.range.getStart.sameAs(lspPos.getStart()))
-      .filter(isTarget)
-      .headOption
-
-    (decoration, candidates)
-
-  }
-
   private def groupByRange(
       decorations: List[SyntheticDecoration]
   ): List[List[SyntheticDecoration]] =
-    decorations.groupBy(_.range()).values.toList
+    decorations
+      .groupBy(d => (d.range(), d.kind()))
+      .toList
+      .sortWith { case (((r1, k1), _), ((r2, k2), _)) =>
+        if (r1.lt(r2)) true
+        else if (r2.lt(r1)) false
+        else k1 < k2
+      }
+      .map(_._2)
 
   @nowarn
   private def makeInlayHints(
@@ -96,7 +86,7 @@ final class InlayHintsProvider(
           val decoration = decorations.head
           (decoration.range, decoration.labelParts().asScala.toList, d.kind)
         } else {
-          val labels0 = decorations.map(_.labelParts().asScala.toList)
+          val labels0 = decorations.map(_.labelParts().asScala.toList).reverse
           val labels = labels0.head ++ labels0.tail.flatMap { labels =>
             labelPart(", ") :: labels
           }
@@ -105,15 +95,13 @@ final class InlayHintsProvider(
       }
       .foreach { case (range, labelParts, kind) =>
         kind match {
-          case DecorationKind.ImplicitParameter
-              if userConfig().showImplicitArguments =>
+          case DecorationKind.ImplicitParameter =>
             result += makeInlayHint(
               range.getStart(),
               labelPart("(") :: labelParts ++ List(labelPart(")")),
               l.InlayHintKind.Parameter,
             )
-          case DecorationKind.ImplicitConversion
-              if userConfig().showImplicitConversionsAndClasses =>
+          case DecorationKind.ImplicitConversion =>
             result += makeInlayHint(
               range.getStart(),
               labelParts ++ List(labelPart("(")),
@@ -124,16 +112,14 @@ final class InlayHintsProvider(
               List(labelPart(")")),
               l.InlayHintKind.Parameter,
             )
-          case DecorationKind.TypeParameter
-              if userConfig().showInferredType.contains("true") =>
+          case DecorationKind.TypeParameter =>
             result += makeInlayHint(
               range.getStart(),
               labelPart("[") :: labelParts ++ List(labelPart("]")),
               l.InlayHintKind.Type,
               addTextEdit = true,
             )
-          case DecorationKind.InferredType
-              if userConfig().showInferredType.contains("true") =>
+          case DecorationKind.InferredType =>
             result += makeInlayHint(
               methodPositions.getOrElse(range, range).getEnd(),
               labelPart(": ") :: labelParts,
@@ -227,7 +213,10 @@ final class InlayHintsProvider(
           other.children.flatMap(visit)
       }
     }
-    if (userConfig().showInferredType.contains("true")) {
+    if (
+      userConfig().showInferredType.contains("true") ||
+      userConfig().showInferredType.contains("minimal")
+    ) {
       val tree = lastEnclosingTree()
       val declarations: List[l.Range] = tree.flatMap(visit)
       (declarations, methodPositions.toMap)
