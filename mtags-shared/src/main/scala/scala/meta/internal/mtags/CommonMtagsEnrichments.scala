@@ -134,6 +134,15 @@ trait CommonMtagsEnrichments {
     def isNone: Boolean =
       pos.getLine() < 0 &&
         pos.getCharacter() < 0
+
+    def lt(other: l.Position): Boolean =
+      pos.getLine() < other.getLine() ||
+        pos.getLine() == other.getLine() &&
+        pos.getCharacter() < other.getCharacter()
+
+    def sameAs(other: l.Position): Boolean =
+      pos.getLine() == other.getLine() &&
+        pos.getCharacter() == other.getCharacter()
   }
 
   implicit class XtensionLspRange(range: l.Range) {
@@ -143,6 +152,15 @@ trait CommonMtagsEnrichments {
     def isNone: Boolean =
       range.getStart().isNone &&
         range.getEnd().isNone
+
+    def lt(other: l.Range): Boolean =
+      range.getStart().lt(other.getStart()) ||
+        other.getStart.sameAs(range.getStart()) &&
+        range.getEnd().lt(other.getEnd())
+
+    def sameAs(other: l.Range): Boolean =
+      range.getStart().sameAs(other.getStart()) &&
+        range.getEnd().sameAs(other.getEnd())
 
     def encloses(position: l.Position): Boolean = {
       val startsBeforeOrAt =

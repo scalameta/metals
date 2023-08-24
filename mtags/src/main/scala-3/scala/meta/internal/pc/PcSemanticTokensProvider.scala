@@ -90,6 +90,7 @@ final class PcSemanticTokensProvider(
     Collector
       .result()
       .flatten
+      .distinct
       .sortWith((n1, n2) =>
         if n1.start() == n2.start() then n1.end() < n2.end()
         else n1.start() < n2.start()
@@ -102,9 +103,9 @@ final class PcSemanticTokensProvider(
       isDeclaration: Boolean,
   ): Node =
 
-    var mod: Int = 0
+    var mod = 0
     def addPwrToMod(tokenID: String) =
-      val place: Int = getModifierId(tokenID)
+      val place = getModifierId(tokenID)
       if place != -1 then mod += (1 << place)
     // get Type
     val typ =

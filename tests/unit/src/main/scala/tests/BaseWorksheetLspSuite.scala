@@ -366,7 +366,7 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("b/src/main/scala/foo/Main.worksheet.sc")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.workspaceDecorations("b/src/main/scala/foo/Main.worksheet.sc"),
         """|println(core.Lib) // Lib
            |println(core.Lib2) // Lib2
            |""".stripMargin,
@@ -419,7 +419,7 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.workspaceDecorations("a/src/main/scala/a/Main.worksheet.sc"),
         """
           |a.Util.increase(1) // : Int = 2
           |""".stripMargin,
@@ -429,7 +429,7 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didSave("a/src/main/scala/a/Main.worksheet.sc")(identity)
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.workspaceDecorations("a/src/main/scala/a/Main.worksheet.sc"),
         """
           |a.Util.increase(1) // : Int = 3
           |""".stripMargin,

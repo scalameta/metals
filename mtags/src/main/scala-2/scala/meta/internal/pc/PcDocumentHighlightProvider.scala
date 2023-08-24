@@ -26,5 +26,5 @@ final class PcDocumentHighlightProvider(
   }
 
   def highlights(): List[DocumentHighlight] =
-    result()
+    result().distinct
 }

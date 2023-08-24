@@ -38,7 +38,7 @@ final class PcInlineValueProviderImpl(
   override val text: Array[Char] = pcCollector.text
 
   override def defAndRefs(): Either[String, (Definition, List[Reference])] = {
-    val allOccurences = pcCollector.result()
+    val allOccurences = pcCollector.result().distinct
     for {
       definition <- allOccurences
         .collectFirst { case Occurence(defn: ValDef, _, pos) =>

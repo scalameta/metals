@@ -71,6 +71,7 @@ final class PcSemanticTokensProvider(
     Collector
       .result()
       .flatten
+      .distinct
       .sortWith((n1, n2) =>
         if (n1.start() == n2.start()) n1.end() < n2.end()
         else n1.start() < n2.start()
