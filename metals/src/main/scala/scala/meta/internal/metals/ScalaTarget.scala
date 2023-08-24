@@ -38,8 +38,15 @@ case class ScalaTarget(
             Scala213Source3
           case Scala212 if containsSource3 =>
             Scala212Source3
-          case Scala3 if other.contains("NIGHTLY") =>
-            Scala3.withAllowFewerBraces(true)
+          case Scala3
+              if scalac
+                .getOptions()
+                .asScala
+                .exists(_.startsWith("-Ykind-projector")) =>
+            dialect.withAllowStarAsTypePlaceholder(true)
+          case Scala3 =>
+            // set to false since this needs an additional compiler option
+            Scala3.withAllowStarAsTypePlaceholder(false)
           case other => other
         }
     }
