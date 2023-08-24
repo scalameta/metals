@@ -47,7 +47,7 @@ class PcRenameProvider(
   def rename(): List[l.TextEdit] = {
     val symbols = soughtSymbols.map(_._1).getOrElse(Set.empty)
     if (symbols.nonEmpty && symbols.forall(canRenameSymbol(_)))
-      result()
+      result().distinct
     else Nil
   }
 

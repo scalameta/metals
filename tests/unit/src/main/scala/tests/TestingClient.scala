@@ -457,25 +457,28 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   def workspaceDecorations: String = {
     workspaceDecorations(isHover = false)
   }
-  def workspaceDecorationHoverMessage: String = {
-    workspaceDecorations(isHover = true)
+
+  def workspaceDecorations(filename: String): String = {
+    workspaceDecorations(isHover = false, Some(filename))
   }
-  private def workspaceDecorations(isHover: Boolean): String = {
+
+  def workspaceDecorationHoverMessage: String =
+    workspaceDecorations(isHover = true)
+
+  def workspaceDecorationHoverMessage(
+      filename: String
+  ): String = {
+    workspaceDecorations(isHover = true, Some(filename))
+  }
+  private def workspaceDecorations(
+      isHover: Boolean,
+      filename: Option[String] = None,
+  ): String = {
     val out = new StringBuilder()
-    val nonEmptyDecorations = decorations.asScala.filter {
-      case (_, decorations) => decorations.nonEmpty
-    }
-    val isSingle = nonEmptyDecorations.size == 1
-    nonEmptyDecorations.foreach { case (path, decorations) =>
-      if (!isSingle) {
-        out
-          .append("/")
-          .append(path.toRelative(workspace).toURI(false).toString())
-          .append("\n")
-      }
+    decorationsForPath(filename).foreach { case (path, synthetics) =>
       val input = path.toInputFromBuffers(buffers)
       input.text.linesIterator.zipWithIndex.foreach { case (line, i) =>
-        val lineDecorations = decorations.toList
+        val lineDecorations = synthetics.toList
           .flatMap(params =>
             params.options.map(o =>
               (
@@ -519,6 +522,17 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       }
     }
     out.toString()
+  }
+
+  private def decorationsForPath(filename: Option[String]) = {
+    filename match {
+      case None =>
+        decorations.asScala.find(_._2.nonEmpty)
+      case Some(file) =>
+        val path = workspace.resolve(file)
+        val synthetics = decorations.asScala.getOrElse(path, Set.empty)
+        Some(path, synthetics)
+    }
   }
 
   def workspaceTreeViewChanges: String = {

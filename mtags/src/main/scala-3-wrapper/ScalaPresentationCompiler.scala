@@ -19,6 +19,8 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.SyntheticDecorationsParams
 import scala.meta.pc.VirtualFileParams
 
 import dotty.tools.pc.{ScalaPresentationCompiler as DottyPresentationCompiler}
@@ -64,6 +66,11 @@ case class ScalaPresentationCompiler(
   )
 
   def this() = this("", Nil, Nil)
+
+  override def syntheticDecorations(
+      params: SyntheticDecorationsParams
+  ): CompletableFuture[ju.List[SyntheticDecoration]] =
+    underlying.syntheticDecorations(params)
 
   override def didClose(uri: URI): Unit =
     underlying.didClose(uri)

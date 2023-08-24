@@ -50,7 +50,7 @@ final class PcRenameProvider(
     val (symbols, _) = soughtSymbols(path).getOrElse(Set.empty, pos)
     if symbols.nonEmpty && symbols.forall(canRenameSymbol(_))
     then
-      val res = result()
+      val res = result().distinct
       res
     else Nil
   end rename
