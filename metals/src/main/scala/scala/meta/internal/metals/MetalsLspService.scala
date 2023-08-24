@@ -1423,7 +1423,15 @@ class MetalsLspService(
       if (path.isJava)
         javaFormattingProvider.format(params)
       else
-        formattingProvider.format(path, token)
+        for {
+          projectRoot <-
+            buildTools.projectRoot match {
+              case Some(root) => Future.successful(root)
+              case None =>
+                supportedBuildTool().map(_.map(_.projectRoot).getOrElse(folder))
+            }
+          res <- formattingProvider.format(path, projectRoot, token)
+        } yield res
     }
 
   override def onTypeFormatting(

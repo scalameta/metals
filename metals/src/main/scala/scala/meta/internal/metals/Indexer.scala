@@ -306,7 +306,11 @@ final case class Indexer(
       check()
       buildTools()
         .loadSupported()
-      formattingProvider().validateWorkspace()
+        .map(_.projectRoot)
+        .distinct
+        .foreach(
+          formattingProvider().validateWorkspace(_)
+        )
     }
     timerProvider.timedThunk(
       "started file watcher",
