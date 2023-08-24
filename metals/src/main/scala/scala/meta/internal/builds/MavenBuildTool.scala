@@ -6,8 +6,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
-case class MavenBuildTool(userConfig: () => UserConfiguration)
-    extends BuildTool
+case class MavenBuildTool(
+    userConfig: () => UserConfiguration,
+    projectRoot: AbsolutePath,
+) extends BuildTool
     with BloopInstallProvider {
 
   private lazy val embeddedMavenLauncher: AbsolutePath = {
@@ -37,7 +39,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
         val javaArgs = List[String](
           JavaBinary(userConfig().javaHome),
           "-Dfile.encoding=UTF-8",
-          s"-Dmaven.multiModuleProjectDirectory=$workspace",
+          s"-Dmaven.multiModuleProjectDirectory=$projectRoot",
           s"-Dmaven.home=$tempDir",
         )
 
@@ -55,7 +57,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
   }
 
   def digest(workspace: AbsolutePath): Option[String] = {
-    MavenDigest.current(workspace)
+    MavenDigest.current(projectRoot)
   }
 
   override def minimumVersion: String = "3.5.2"

@@ -1,7 +1,11 @@
 package scala.meta.internal.bsp
 
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
@@ -31,10 +35,28 @@ final class BspConfigGenerator(
       .run(
         s"${buildTool.getBuildServerName} bspConfig",
         args,
-        workspace,
+        buildTool.projectRoot,
         buildTool.redirectErrorOutput,
       )
       .map(BspConfigGenerationStatus.fromExitCode)
+      .map {
+        case Generated if buildTool.projectRoot != workspace =>
+          try {
+            workspace.resolve(".bsp").createDirectories()
+            val bspConfig = s".bsp/${buildTool.getBuildServerName}.json"
+            Files.move(
+              buildTool.projectRoot.resolve(bspConfig).toNIO,
+              workspace.resolve(bspConfig).toNIO,
+              StandardCopyOption.REPLACE_EXISTING,
+            )
+            Files.delete(buildTool.projectRoot.resolve(".bsp").toNIO)
+            Generated
+          } catch {
+            case NonFatal(_) =>
+              Failed(Right("Could not move bsp config from project root"))
+          }
+        case status => status
+      }
 
   /**
    * Given multiple build tools that are all BuildServerProviders, allow the

@@ -14,6 +14,7 @@ import scala.meta.io.AbsolutePath
 
 class ScalaCliBuildTool(
     val workspaceVersion: Option[String],
+    val projectRoot: AbsolutePath,
     userConfig: () => UserConfiguration,
 ) extends BuildTool
     with BuildServerProvider {
@@ -26,12 +27,13 @@ class ScalaCliBuildTool(
       systemProcess: List[String] => Future[BspConfigGenerationStatus],
       statusBar: StatusBar,
   ): Future[BspConfigGenerationStatus] =
-    createBspFileArgs(workspace).map(systemProcess).getOrElse {
+    createBspFileArgs(workspace, projectRoot).map(systemProcess).getOrElse {
       // fallback to creating `.bsp/scala-cli.json` that starts JVM launcher
       val bspConfig = workspace.resolve(".bsp").resolve("scala-cli.json")
       statusBar.addMessage("scala-cli bspConfig")
-      bspConfig
-        .writeText(ScalaCli.scalaCliBspJsonContent(root = workspace.toString()))
+      bspConfig.writeText(
+        ScalaCli.scalaCliBspJsonContent(projectRoot = projectRoot.toString())
+      )
       Future.successful(Generated)
     }
 
@@ -46,12 +48,15 @@ class ScalaCliBuildTool(
   }
 
   override def createBspFileArgs(
-      workspace: AbsolutePath
+      workspace: AbsolutePath,
+      projectRoot: AbsolutePath,
   ): Option[List[String]] =
     runScalaCliCommand.map(
       _.toList ++ List(
         "setup-ide",
-        workspace.toString(),
+        projectRoot.toString(),
+        "--bsp-directory",
+        workspace.resolve(".bsp").toString(),
       )
     )
 
@@ -84,18 +89,20 @@ object ScalaCliBuildTool {
   )
 
   def apply(
-      root: AbsolutePath,
+      workspace: AbsolutePath,
+      projectRoot: AbsolutePath,
       userConfig: () => UserConfiguration,
   ): ScalaCliBuildTool = {
     val workspaceFolderVersions =
       for {
-        path <- pathsToScalaCliBsp(root)
+        path <- pathsToScalaCliBsp(workspace)
         text <- path.readTextOpt
         json = ujson.read(text)
         version <- json("version").strOpt
       } yield version
     new ScalaCliBuildTool(
       workspaceFolderVersions.headOption,
+      projectRoot,
       userConfig,
     )
   }

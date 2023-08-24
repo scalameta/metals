@@ -91,6 +91,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     ServerLivenessMonitor.ServerNotResponding.dismiss
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
   var bspError = BspErrorHandler.dismiss
+  var fallbackToScalaCli = ScalaCliFallback.yes
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -336,7 +337,9 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
       showMessageRequestHandler(params).getOrElse {
-        if (isSameMessage(ImportBuildChanges.params)) {
+        if (params == ScalaCliFallback.params()) {
+          fallbackToScalaCli
+        } else if (isSameMessage(ImportBuildChanges.params)) {
           importBuildChanges
         } else if (isSameMessage(ImportBuild.params)) {
           importBuild

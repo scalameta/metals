@@ -72,7 +72,7 @@ final class BloopInstall(
       .run(
         s"${buildTool.executableName} bloopInstall",
         args,
-        workspace,
+        buildTool.projectRoot,
         buildTool.redirectErrorOutput,
         Map(
           "COURSIER_PROGRESS" -> "disable",

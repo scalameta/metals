@@ -29,8 +29,14 @@ final class BuildTools(
     explicitChoiceMade: () => Boolean,
 ) {
   private val lastDetectedBuildTools = new AtomicReference(Set.empty[String])
+  // project root set explicitly by the user, takes precedence
+  val projectRoot_ : AtomicReference[Option[AbsolutePath]] =
+    new AtomicReference(None)
+
+  def setProjectRoot(path: AbsolutePath): Unit = projectRoot_.set(Some(path))
+  def projectRoot: Option[AbsolutePath] = projectRoot_.get()
   // NOTE: We do a couple extra check here before we say a workspace with a
-  // `.bsp` is auto-connectable, and we ensure that a user has explicity chosen
+  // `.bsp` is auto-connectable, and we ensure that a user has explicitly chosen
   // to use another build server besides Bloop or it's a BSP server for a build
   // tool we don't support. If this isn't done, it causes unexpected warnings
   // since if a `.bsp/<something>.json` exists before a `.bloop` one does in a
@@ -40,9 +46,9 @@ final class BuildTools(
   def isAutoConnectable: Boolean = {
     isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || (isBsp && isBazel)
   }
-  def isBloop: Boolean = {
-    hasJsonFile(workspace.resolve(".bloop"))
-  }
+  def bloopProject: Option[AbsolutePath] =
+    searchForBuildTool(root => hasJsonFile(root.resolve(".bloop")))
+  def isBloop: Boolean = bloopProject.isDefined
   def isBsp: Boolean = {
     hasJsonFile(workspace.resolve(".bsp")) ||
     bspGlobalDirectories.exists(hasJsonFile)
@@ -50,11 +56,12 @@ final class BuildTools(
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
     dir.list.exists(_.extension == "json")
   }
+
   // Returns true if there's a build.sbt file or project/build.properties with sbt.version
-  def isSbt: Boolean = {
-    workspace.resolve("build.sbt").isFile || {
+  def sbtProject: Option[AbsolutePath] = searchForBuildTool { root =>
+    root.resolve("build.sbt").isFile || {
       val buildProperties =
-        workspace.resolve("project").resolve("build.properties")
+        root.resolve("project").resolve("build.properties")
       buildProperties.isFile && {
         val props = new Properties()
         val in = Files.newInputStream(buildProperties.toNIO)
@@ -64,31 +71,81 @@ final class BuildTools(
       }
     }
   }
-  def isMill: Boolean = workspace.resolve("build.sc").isFile
-  def isScalaCli: Boolean =
-    ScalaCliBuildTool
-      .pathsToScalaCliBsp(workspace)
-      .exists(_.isFile) || workspace.resolve("project.scala").isFile
-  def isGradle: Boolean = {
+  def isSbt: Boolean = sbtProject.isDefined
+  def millProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve("build.sc").isFile
+  )
+  def isMill: Boolean = millProject.isDefined
+  def scalaCliProject: Option[AbsolutePath] =
+    searchForBuildTool(_.resolve("project.scala").isFile).orElse {
+      if (
+        ScalaCliBuildTool
+          .pathsToScalaCliBsp(workspace)
+          .exists(_.isFile)
+      )
+        // TODO: retrieve path from bsp config
+        Some(workspace)
+      else None
+    }
+
+  def gradleProject: Option[AbsolutePath] = {
     val defaultGradlePaths = List(
       "settings.gradle",
       "settings.gradle.kts",
       "build.gradle",
       "build.gradle.kts",
     )
-    defaultGradlePaths.exists(workspace.resolve(_).isFile)
+    searchForBuildTool(root =>
+      defaultGradlePaths.exists(root.resolve(_).isFile)
+    )
   }
-  def isMaven: Boolean = workspace.resolve("pom.xml").isFile
-  def isPants: Boolean = workspace.resolve("pants.ini").isFile
-  def isBazel: Boolean = workspace.resolve("WORKSPACE").isFile
+  def isGradle: Boolean = gradleProject.isDefined
+  def mavenProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve("pom.xml").isFile
+  )
+  def isMaven: Boolean = mavenProject.isDefined
+  def pantsProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve("pants.ini").isFile
+  )
+  def isPants: Boolean = pantsProject.isDefined
+  def bazelProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve("WORKSPACE").isFile
+  )
+  def isBazel: Boolean = bazelProject.isDefined
 
+  private def searchForBuildTool(
+      isProjectRoot: AbsolutePath => Boolean
+  ): Option[AbsolutePath] = {
+    projectRoot_.get() match {
+      case Some(root) => if (isProjectRoot(root)) Some(root) else None
+      case None =>
+        def recIsProjectRoot(
+            path: AbsolutePath,
+            level: Int = 0,
+        ): Option[AbsolutePath] =
+          if (path.isDirectory) {
+            if (isProjectRoot(path)) Some(path)
+            else if (level < 1)
+              path.toNIO
+                .toFile()
+                .listFiles()
+                .collectFirst(root =>
+                  recIsProjectRoot(AbsolutePath(root), level + 1) match {
+                    case Some(root) => root
+                  }
+                )
+            else None
+          } else None
+        recIsProjectRoot(workspace)
+    }
+  }
   def allAvailable: List[BuildTool] = {
     List(
-      SbtBuildTool(workspaceVersion = None, userConfig),
-      GradleBuildTool(userConfig),
-      MavenBuildTool(userConfig),
-      MillBuildTool(userConfig),
-      ScalaCliBuildTool(workspace, userConfig),
+      SbtBuildTool(workspaceVersion = None, workspace, userConfig),
+      GradleBuildTool(userConfig, workspace),
+      MavenBuildTool(userConfig, workspace),
+      MillBuildTool(userConfig, workspace),
+      ScalaCliBuildTool(workspace, workspace, userConfig),
     )
   }
 
@@ -111,12 +168,11 @@ final class BuildTools(
   def loadSupported(): List[BuildTool] = {
     val buf = List.newBuilder[BuildTool]
 
-    if (isSbt) buf += SbtBuildTool(workspace, userConfig)
-    if (isGradle) buf += GradleBuildTool(userConfig)
-    if (isMaven) buf += MavenBuildTool(userConfig)
-    if (isMill) buf += MillBuildTool(userConfig)
-    if (isScalaCli)
-      buf += ScalaCliBuildTool(workspace, userConfig)
+    sbtProject.foreach(buf += SbtBuildTool(_, userConfig))
+    gradleProject.foreach(buf += GradleBuildTool(userConfig, _))
+    mavenProject.foreach(buf += MavenBuildTool(userConfig, _))
+    millProject.foreach(buf += MillBuildTool(userConfig, _))
+    scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
 
     buf.result()
   }

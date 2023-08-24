@@ -17,7 +17,7 @@ import tests.BaseImportSuite
 
 class MavenLspSuite extends BaseImportSuite("maven-import") {
 
-  val buildTool: MavenBuildTool = MavenBuildTool(() => userConfig)
+  def buildTool: MavenBuildTool = MavenBuildTool(() => userConfig, workspace)
 
   val defaultPom: String = new String(
     InputStreamIO.readBytes(

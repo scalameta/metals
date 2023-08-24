@@ -37,6 +37,8 @@ final class Tables(
     new ChosenBuildTool(() => connection)
   val fingerprints =
     new Fingerprints(() => connection)
+  val projectRoot =
+    new ProjectRoot(() => connection)
 
   private val ref: AtomicReference[ConnectionState] =
     new AtomicReference(ConnectionState.Empty)

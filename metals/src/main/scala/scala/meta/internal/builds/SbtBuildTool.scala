@@ -19,6 +19,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
+    projectRoot: AbsolutePath,
     userConfig: () => UserConfiguration,
 ) extends BuildTool
     with BloopInstallProvider
@@ -46,37 +47,37 @@ case class SbtBuildTool(
       "-Dbloop.export-jar-classifiers=sources",
       "bloopInstall",
     )
-    val allArgs = composeArgs(bloopInstallArgs, workspace, tempDir)
+    val allArgs = composeArgs(bloopInstallArgs, projectRoot, tempDir)
     removeLegacyGlobalPlugin()
-    writeBloopPlugin(workspace)
+    writeBloopPlugin(projectRoot)
     allArgs
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
-    SbtDigest.current(workspace)
+    SbtDigest.current(projectRoot)
   override val minimumVersion: String = "0.13.17"
   override val recommendedVersion: String = BuildInfo.sbtVersion
 
   override def createBspFileArgs(
-      workspace: AbsolutePath
+      workspace: AbsolutePath,
+      projectRoot: AbsolutePath,
   ): Option[List[String]] =
-    Option.when(workspaceSupportsBsp(workspace)) {
+    Option.when(workspaceSupportsBsp(projectRoot)) {
       val bspConfigArgs = List[String]("bspConfig")
       val bspDir = workspace.resolve(".bsp").toNIO
-      composeArgs(bspConfigArgs, workspace, bspDir)
+      composeArgs(bspConfigArgs, projectRoot, bspDir)
     }
 
   def shutdownBspServer(
-      shellRunner: ShellRunner,
-      workspace: AbsolutePath,
+      shellRunner: ShellRunner
   ): Future[Int] = {
     val shutdownArgs =
-      composeArgs(List("--client", "shutdown"), workspace, workspace.toNIO)
+      composeArgs(List("--client", "shutdown"), projectRoot, projectRoot.toNIO)
     scribe.info(s"running ${shutdownArgs.mkString(" ")}")
     shellRunner.run(
       "Shutting down sbt server",
       shutdownArgs,
-      workspace,
+      projectRoot,
       true,
     )
   }
@@ -149,7 +150,7 @@ case class SbtBuildTool(
   }
 
   private def writeBloopPlugin(
-      workspace: AbsolutePath
+      projectRoot: AbsolutePath
   ): Unit = {
 
     def sbtMetaDirs(
@@ -178,8 +179,8 @@ case class SbtBuildTool(
         else userConfig().currentBloopVersion
 
       val plugin = bloopPluginDetails(pluginVersion)
-      val mainMeta = workspace.resolve("project")
-      val metaMeta = workspace.resolve("project").resolve("project")
+      val mainMeta = projectRoot.resolve("project")
+      val metaMeta = projectRoot.resolve("project").resolve("project")
       sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(dir =>
         writePlugins(dir, plugin)
       )
@@ -203,7 +204,7 @@ case class SbtBuildTool(
         .asScala
         .flatMap {
           case Messages.SbtServerJavaHomeUpdate.restart =>
-            shutdownBspServer(shellRunner, workspace).ignoreValue
+            shutdownBspServer(shellRunner).ignoreValue
           case _ => Future.successful(())
         }
     }
@@ -250,9 +251,9 @@ object SbtBuildTool {
    *
    * Return true if any plugin file changed, meaning we should reload
    */
-  def writeSbtMetalsPlugins(workspace: AbsolutePath): Boolean = {
-    val mainMeta = workspace.resolve("project")
-    val metaMeta = workspace.resolve("project").resolve("project")
+  def writeSbtMetalsPlugins(projectRoot: AbsolutePath): Boolean = {
+    val mainMeta = projectRoot.resolve("project")
+    val metaMeta = projectRoot.resolve("project").resolve("project")
     val writtenPlugin =
       writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
     val writtenMeta =
@@ -354,11 +355,11 @@ object SbtBuildTool {
   }
 
   def apply(
-      workspace: AbsolutePath,
+      projectRoot: AbsolutePath,
       userConfig: () => UserConfiguration,
   ): SbtBuildTool = {
-    val version = loadVersion(workspace).map(_.toString())
-    SbtBuildTool(version, userConfig)
+    val version = loadVersion(projectRoot).map(_.toString())
+    SbtBuildTool(version, projectRoot, userConfig)
   }
 
   def loadVersion(workspace: AbsolutePath): Option[String] = {

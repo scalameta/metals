@@ -17,7 +17,7 @@ import tests.BaseImportSuite
 
 class GradleLspSuite extends BaseImportSuite("gradle-import") {
 
-  val buildTool: GradleBuildTool = GradleBuildTool(() => userConfig)
+  def buildTool: GradleBuildTool = GradleBuildTool(() => userConfig, workspace)
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -70,6 +70,46 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         ).mkString("\n"),
       )
     }
+  }
+
+  test("inner") {
+    client.importBuild = ImportBuild.yes
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/inner/build.gradle
+            |plugins {
+            |    id 'scala'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.scala-lang:scala-library:${V.scala213}'
+            |}
+            |/inner/src/main/scala/A.scala
+            |object A {
+            | val foo: Int = "aaa"
+            |}
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(server.server.bspSession.get.main.isBloop)
+      buildTool <- server.server.supportedBuildTool()
+      _ = assertEquals(buildTool.get.executableName, "gradle")
+      _ = assertEquals(buildTool.get.projectRoot, workspace.resolve("inner"))
+      _ <- server.didOpen("inner/src/main/scala/A.scala")
+      _ <- server.didSave("inner/src/main/scala/A.scala")(identity)
+      _ = assertNoDiff(
+        client.pathDiagnostics("inner/src/main/scala/A.scala"),
+        """|inner/src/main/scala/A.scala:3:18: error: type mismatch;
+           | found   : String("aaa")
+           | required: Int
+           |  val foo: Int = "aaa"
+           |                 ^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
   }
 
   test("basic-configured") {

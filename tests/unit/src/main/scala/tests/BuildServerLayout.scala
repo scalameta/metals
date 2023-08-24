@@ -29,10 +29,16 @@ object SbtBuildLayout extends BuildToolLayout {
   override def apply(
       sourceLayout: String,
       scalaVersion: String,
+  ): String = apply(sourceLayout, scalaVersion, "")
+
+  def apply(
+      sourceLayout: String,
+      scalaVersion: String,
+      directory: String,
   ): String = {
-    s"""|/project/build.properties
+    s"""|$directory/project/build.properties
         |sbt.version=${V.sbtVersion}
-        |/build.sbt
+        |$directory/build.sbt
         |$commonSbtSettings
         |ThisBuild / scalaVersion := "$scalaVersion"
         |val a = project.in(file("a"))

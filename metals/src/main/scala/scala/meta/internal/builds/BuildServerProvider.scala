@@ -21,7 +21,7 @@ trait BuildServerProvider extends BuildTool {
       systemProcess: List[String] => Future[BspConfigGenerationStatus],
       statusBar: StatusBar,
   ): Future[BspConfigGenerationStatus] =
-    createBspFileArgs(workspace).map(systemProcess).getOrElse {
+    createBspFileArgs(workspace, projectRoot).map(systemProcess).getOrElse {
       Future.successful(
         Failed(Right(Messages.NoBspSupport.toString()))
       )
@@ -32,7 +32,10 @@ trait BuildServerProvider extends BuildTool {
    * if the build tool workspace supports BSP. Many times this is
    * limited by the version of the build tool that introduces BSP support.
    */
-  protected def createBspFileArgs(workspace: AbsolutePath): Option[List[String]]
+  protected def createBspFileArgs(
+      workspace: AbsolutePath,
+      projectRoot: AbsolutePath,
+  ): Option[List[String]]
 
   /**
    * Name of the build server if different than the actual build-tool that is

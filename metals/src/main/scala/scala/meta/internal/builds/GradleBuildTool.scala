@@ -16,8 +16,10 @@ import coursierapi.IvyRepository
 import coursierapi.MavenRepository
 import coursierapi.Repository
 
-case class GradleBuildTool(userConfig: () => UserConfiguration)
-    extends BuildTool
+case class GradleBuildTool(
+    userConfig: () => UserConfiguration,
+    projectRoot: AbsolutePath,
+) extends BuildTool
     with BloopInstallProvider {
 
   private val initScriptName = "init-script.gradle"
@@ -55,8 +57,8 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     AbsolutePath(out)
   }
 
-  private def isBloopConfigured(workspace: AbsolutePath): Boolean = {
-    val gradlePropsFile = workspace.resolve("gradle.properties")
+  private def isBloopConfigured(): Boolean = {
+    val gradlePropsFile = projectRoot.resolve("gradle.properties")
     try {
       val contents =
         new String(gradlePropsFile.readAllBytes, StandardCharsets.UTF_8)
@@ -71,11 +73,11 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
-    GradleDigest.current(workspace)
+    GradleDigest.current(projectRoot)
 
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val cmd = {
-      if (isBloopConfigured(workspace))
+      if (isBloopConfigured())
         List("--stacktrace", "--console=plain", "bloopInstall")
       else {
         List(
@@ -92,7 +94,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
       case Some(script) =>
         script :: cmd
       case None =>
-        val workspaceGradle = workspaceGradleLauncher(workspace)
+        val workspaceGradle = workspaceGradleLauncher(projectRoot)
         if (workspaceGradle.isFile)
           workspaceGradle.toString() :: cmd
         else

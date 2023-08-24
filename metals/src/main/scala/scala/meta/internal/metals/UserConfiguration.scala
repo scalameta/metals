@@ -54,6 +54,7 @@ case class UserConfiguration(
     javaFormatConfig: Option[JavaFormatConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
     scalaCliLauncher: Option[String] = None,
+    projectsRoots: Map[String, String] = Map.empty,
 ) {
 
   def currentBloopVersion: String =
@@ -313,6 +314,19 @@ object UserConfiguration {
           |launcher, not available in PATH.
           |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "projects-roots",
+        """empty map""",
+        """"{
+          "project1": "backend",
+          "project2": "backend",
+        }"""",
+        "Project roots",
+        """Optional map of Scala projects' roots as relative path from workspace folder root.
+          |The project root should contain the build tool configuration if not passed workspace root is assumed.
+          |For a single root project a the key should be set to "root" or simply a plain string can be passed.
+          |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -352,12 +366,16 @@ object UserConfiguration {
             )
         },
       )
-    def getStringKey(key: String): Option[String] =
-      getStringKeyOnObj(key, json)
+    def getStringKey(
+        key: String,
+        customError: JsonElement => Option[String] = _ => None,
+    ): Option[String] =
+      getStringKeyOnObj(key, json, customError)
 
     def getStringKeyOnObj(
         key: String,
         currentObject: JsonObject,
+        customError: JsonElement => Option[String] = _ => None,
     ): Option[String] =
       getKey(
         key,
@@ -366,7 +384,9 @@ object UserConfiguration {
           Try(value.getAsString)
             .fold(
               _ => {
-                errors += s"json error: key '$key' should have value of type string but obtained $value"
+                errors += customError(value).getOrElse(
+                  s"json error: key '$key' should have value of type string but obtained $value"
+                )
                 None
               },
               Some(_),
@@ -424,7 +444,10 @@ object UserConfiguration {
         },
       )
 
-    def getStringMap(key: String): Option[Map[String, String]] =
+    def getStringMap(
+        key: String,
+        collectError: Boolean = true,
+    ): Option[Map[String, String]] =
       getKey(
         key,
         json,
@@ -439,7 +462,9 @@ object UserConfiguration {
             }
           }.fold(
             _ => {
-              errors += s"json error: key '$key' should have be object with string values but obtained $value"
+              if (collectError) {
+                errors += s"json error: key '$key' should have be object with string values but obtained $value"
+              }
               None
             },
             entries => Some(entries.toMap),
@@ -525,6 +550,21 @@ object UserConfiguration {
     val scalafixRulesDependencies =
       getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
 
+    val projectsRoots = {
+      val key = "projects-roots"
+      getStringMap(key, collectError = false)
+        .orElse {
+          getStringKey(
+            key,
+            customError = value =>
+              Some(
+                s"json error: key '$key' should have value of type map of strings or string but obtained $value"
+              ),
+          ).map(root => Map("root" -> root))
+        }
+        .getOrElse(Map.empty)
+    }
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -555,6 +595,7 @@ object UserConfiguration {
           disableTestCodeLenses,
           javaFormatConfig,
           scalafixRulesDependencies,
+          projectsRoots = projectsRoots,
         )
       )
     } else {

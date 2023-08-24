@@ -8,6 +8,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -28,7 +29,7 @@ class SbtBloopLspSuite
 
   val sbtVersion = V.sbtVersion
   val scalaVersion = V.scala213
-  val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
+  val buildTool: SbtBuildTool = SbtBuildTool(None, workspace, () => userConfig)
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -75,6 +76,40 @@ class SbtBloopLspSuite
         ).mkString("\n"),
       )
     }
+  }
+
+  test("inner") {
+    cleanWorkspace()
+    client.importBuild = ImportBuild.yes
+    for {
+      _ <- initialize(
+        s"""|/inner/project/build.properties
+            |sbt.version=$sbtVersion
+            |/inner/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |/inner/src/main/scala/A.scala
+            |
+            |object A {
+            |  val i: Int = "aaa"
+            |}
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(workspace.resolve("inner/.bloop").exists)
+      _ = assert(server.server.bspSession.get.main.isBloop)
+      _ <- server.didOpen("inner/src/main/scala/A.scala")
+      _ <- server.didSave("inner/src/main/scala/A.scala")(identity)
+      _ = assertNoDiff(
+        client.pathDiagnostics("inner/src/main/scala/A.scala"),
+        """|inner/src/main/scala/A.scala:3:16: error: type mismatch;
+           | found   : String("aaa")
+           | required: Int
+           |  val i: Int = "aaa"
+           |               ^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+
   }
 
   test("no-sbt-version") {
@@ -501,7 +536,7 @@ class SbtBloopLspSuite
       _ = assertNoDiff(
         client.workspaceShowMessages,
         IncompatibleBuildToolVersion
-          .params(SbtBuildTool(Some("0.13.15"), () => userConfig))
+          .params(SbtBuildTool(Some("0.13.15"), workspace, () => userConfig))
           .getMessage,
       )
     } yield ()
@@ -509,7 +544,11 @@ class SbtBloopLspSuite
 
   test("min-sbt-version") {
     val minimal =
-      SbtBuildTool(None, () => UserConfiguration.default).minimumVersion
+      SbtBuildTool(
+        None,
+        workspace,
+        () => UserConfiguration.default,
+      ).minimumVersion
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -797,6 +836,45 @@ class SbtBloopLspSuite
         "build.sbt",
         expected,
         fileContent,
+      )
+    } yield ()
+  }
+
+  test("custom-project-root") {
+    cleanWorkspace()
+    client.fallbackToScalaCli = Messages.ScalaCliFallback.notNow
+    client.importBuild = ImportBuild.yes
+    writeLayout(
+      s"""|/deep/and-deeper/build.sbt
+          |scalaVersion := "${V.scala213}"
+          |/deep/and-deeper/src/main/scala/A.scala
+          |
+          |object A {
+          |  val foo: Int = "aaa"
+          |}
+          |""".stripMargin
+    )
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "projects-roots": "deep/and-deeper"
+          |}
+          |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(server.server.bspSession.get.main.isBloop)
+      _ <- server.didOpen("deep/and-deeper/src/main/scala/A.scala")
+      _ <- server.didSave("deep/and-deeper/src/main/scala/A.scala")(identity)
+      _ = assertNoDiff(
+        client.pathDiagnostics("deep/and-deeper/src/main/scala/A.scala"),
+        """|deep/and-deeper/src/main/scala/A.scala:3:18: error: type mismatch;
+           | found   : String("aaa")
+           | required: Int
+           |  val foo: Int = "aaa"
+           |                 ^^^^^
+           |""".stripMargin,
       )
     } yield ()
   }

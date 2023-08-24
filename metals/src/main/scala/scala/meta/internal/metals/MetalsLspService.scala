@@ -104,9 +104,9 @@ import org.eclipse.{lsp4j => l}
  *  manage the lifecycle of this executor.
  * @param serverInputs
  *  Collection of different parameters used by Metals for running,
- *  which main purpose is allowing for custom bahaviour in tests.
+ *  which main purpose is allowing for custom behavior in tests.
  * @param workspace
- *  An absolute path to the workscape.
+ *  An absolute path to the workspace.
  * @param client
  *  Metals client used for sending notifications to the client. This class DO
  *  NOT manage the lifecycle of this client. It is the responsibility of the
@@ -215,7 +215,6 @@ class MetalsLspService(
   private val sourceMapper = SourceMapper(
     buildTargets,
     buffers,
-    () => folder,
   )
 
   private val scalaVersionSelector = new ScalaVersionSelector(
@@ -888,7 +887,16 @@ class MetalsLspService(
 
   def connectTables(): Connection = tables.connect()
 
-  def initialized(): Future[Unit] =
+  def loadProjectRootSetting(): Unit = {
+    for {
+      relativePath <- tables.projectRoot.relativePath()
+      absolutePath = folder.resolve(relativePath)
+      if (absolutePath.isDirectory)
+    } buildTools.setProjectRoot(absolutePath)
+  }
+
+  def initialized(): Future[Unit] = {
+    loadProjectRootSetting()
     for {
       _ <- maybeSetupScalaCli()
       _ <-
@@ -903,6 +911,7 @@ class MetalsLspService(
             )
           )
     } yield ()
+  }
 
   def onShutdown(): Unit = {
     tables.fingerprints.save(fingerprints.getAllFingerprints())
@@ -981,7 +990,29 @@ class MetalsLspService(
         }
       }
       .getOrElse(Future.successful(()))
-    Future.sequence(List(restartBuildServer, resetDecorations)).map(_ => ())
+
+    val reconnectWithNewRoot = {
+      val projectRoot = userConfig().projectsRoots
+        .get(getVisibleName)
+        .orElse(userConfig().projectsRoots.get(folder.toString()))
+        .map(folder.resolve(_))
+        .flatMap {
+          case path if path.exists && path.isDirectory => Some(path)
+          case errorRoot =>
+            scribe.error(s"$errorRoot is not a valid directory")
+            None
+        }
+      val previousProjectRoot = buildTools.projectRoot_.getAndSet(projectRoot)
+      if (projectRoot != previousProjectRoot && bspSession.isEmpty) {
+        slowConnectToBuildServer(false)
+      } else Future.successful(())
+    }
+
+    Future
+      .sequence(
+        List(reconnectWithNewRoot, restartBuildServer, resetDecorations)
+      )
+      .map(_ => ())
   }
 
   override def didOpen(
@@ -1652,7 +1683,7 @@ class MetalsLspService(
               case Some(sbt: SbtBuildTool) =>
                 for {
                   _ <- disconnectOldBuildServer()
-                  code <- sbt.shutdownBspServer(shellRunner, folder)
+                  code <- sbt.shutdownBspServer(shellRunner)
                 } yield code == 0
               case _ => Future.successful(false)
             }
@@ -1939,7 +1970,7 @@ class MetalsLspService(
     })
   }
 
-  private def supportedBuildTool(): Future[Option[BuildTool]] = {
+  def supportedBuildTool(): Future[Option[BuildTool]] = {
     def isCompatibleVersion(buildTool: BuildTool) = {
       val isCompatibleVersion = SemVer.isCompatibleVersion(
         buildTool.minimumVersion,
@@ -2026,7 +2057,13 @@ class MetalsLspService(
       && buildTools.loadSupported.isEmpty
       && folder.hasScalaFiles
     ) {
-      scalaCli.setupIDE(folder)
+      languageClient
+        .showMessageRequest(Messages.ScalaCliFallback.params())
+        .asScala
+        .flatMap {
+          case Messages.ScalaCliFallback.yes => scalaCli.setupIDE(folder)
+          case _ => Future.successful(())
+        }
     } else Future.successful(())
   }
 
@@ -2136,8 +2173,11 @@ class MetalsLspService(
 
     (for {
       _ <- disconnectOldBuildServer()
+      possibleBuildTool <- supportedBuildTool
+      projectRoot = possibleBuildTool.map(_.projectRoot).getOrElse(folder)
       maybeSession <- timerProvider.timed("Connected to build server", true) {
         bspConnector.connect(
+          projectRoot,
           folder,
           userConfig(),
           shellRunner,
