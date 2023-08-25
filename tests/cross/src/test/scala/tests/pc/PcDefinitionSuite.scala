@@ -551,7 +551,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
-    "enum-type-param".tag(IgnoreScala2),
+    "enum-type-param".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
     """|package a
        |enum MyOption[+<<AA>>]:
        |  case MySome(value: A@@A)

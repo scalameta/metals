@@ -268,7 +268,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "type-params-in-enum",
+    "type-params-in-enum".tag(IgnoreForScala3CompilerPC),
     """|enum MyOption[+<<A@@A>>]:
        |  case MySome(value: <<AA>>)
        |  case MyNone
@@ -276,7 +276,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "type-params-in-enum2",
+    "type-params-in-enum2".tag(IgnoreForScala3CompilerPC),
     """|enum MyOption[+<<AA>>]:
        |  case MySome(value: <<A@@A>>)
        |  case MyNone
@@ -284,7 +284,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "type-params-in-enum3",
+    "type-params-in-enum3".tag(IgnoreForScala3CompilerPC),
     """|enum MyOption[<<AA>>](v: <<AA>>):
        |  def get: <<A@@A>> = ???
        |  case MySome[AA](value: AA) extends MyOption[Int](1)
@@ -292,7 +292,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "type-params-in-enum4",
+    "type-params-in-enum4".tag(IgnoreForScala3CompilerPC),
     """|enum MyOption[+<<AA>>]:
        |  def get: <<A@@A>> = ???
        |  case MySome(value: <<AA>>)
