@@ -8,7 +8,6 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -842,7 +841,6 @@ class SbtBloopLspSuite
 
   test("custom-project-root") {
     cleanWorkspace()
-    client.fallbackToScalaCli = Messages.ScalaCliFallback.notNow
     client.importBuild = ImportBuild.yes
     writeLayout(
       s"""|/deep/and-deeper/build.sbt
@@ -867,6 +865,10 @@ class SbtBloopLspSuite
       _ = assert(server.server.bspSession.get.main.isBloop)
       _ <- server.didOpen("deep/and-deeper/src/main/scala/A.scala")
       _ <- server.didSave("deep/and-deeper/src/main/scala/A.scala")(identity)
+      _ = assertEquals(
+        server.server.tables.projectRoot.relativePath(),
+        Some("deep/and-deeper"),
+      )
       _ = assertNoDiff(
         client.pathDiagnostics("deep/and-deeper/src/main/scala/A.scala"),
         """|deep/and-deeper/src/main/scala/A.scala:3:18: error: type mismatch;

@@ -10,7 +10,7 @@ object ScalaCliBuildLayout extends BuildToolLayout {
       scalaVersion: String,
   ): String = {
     s"""/.bsp/scala-cli.json
-       |${ScalaCli.scalaCliBspJsonContent(List("-S", scalaVersion, "."))}
+       |${ScalaCli.scalaCliBspJsonContent(List("-S", scalaVersion))}
        |/.scala-build/ide-inputs.json
        |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
        |$sourceLayout

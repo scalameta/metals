@@ -34,8 +34,3 @@ create table dismissed_notification(
 create table chosen_build_tool(
   build_tool varchar primary key
 );
-
--- Choice of project root
-create table project_root(
-  relative_path varchar primary key
-);

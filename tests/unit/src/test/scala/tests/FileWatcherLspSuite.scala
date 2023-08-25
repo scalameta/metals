@@ -170,7 +170,9 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
         .asScala
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.ImportBuild.params("sbt").getMessage(),
+        s"""|${Messages.ScalaCliFallback.message}
+            |${Messages.ImportBuild.params("sbt").getMessage()}
+            |""".stripMargin,
       )
     } yield ()
   }

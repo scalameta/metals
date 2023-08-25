@@ -42,14 +42,19 @@ final class BspConfigGenerator(
       .map {
         case Generated if buildTool.projectRoot != workspace =>
           try {
-            workspace.resolve(".bsp").createDirectories()
-            val bspConfig = s".bsp/${buildTool.getBuildServerName}.json"
-            Files.move(
-              buildTool.projectRoot.resolve(bspConfig).toNIO,
-              workspace.resolve(bspConfig).toNIO,
-              StandardCopyOption.REPLACE_EXISTING,
-            )
-            Files.delete(buildTool.projectRoot.resolve(".bsp").toNIO)
+            val bsp = ".bsp"
+            workspace.resolve(bsp).createDirectories()
+            val buildToolBspDir = buildTool.projectRoot.resolve(bsp).toNIO
+            val workspaceBspDir = workspace.resolve(bsp).toNIO
+            buildToolBspDir.toFile.listFiles().foreach { file =>
+              val path = file.toPath()
+              if (!file.isDirectory() && path.filename.endsWith(".json")) {
+                val to =
+                  workspaceBspDir.resolve(path.relativize(buildToolBspDir))
+                Files.move(path, to, StandardCopyOption.REPLACE_EXISTING)
+              }
+            }
+            Files.delete(buildToolBspDir)
             Generated
           } catch {
             case NonFatal(_) =>

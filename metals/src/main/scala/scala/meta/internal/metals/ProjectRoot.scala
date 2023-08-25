@@ -12,10 +12,15 @@ class ProjectRoot(conn: () => Connection) {
       )(_ => ()) { _.getString("relative_path") }
       .headOption
   }
-  def set(relativePath: String): Int = {
-    conn().update {
-      "insert into project_root values (?);"
-    } { stmt => stmt.setString(1, relativePath) }
+  def set(relativePath: Option[String]): Int = synchronized {
+    reset()
+    relativePath
+      .map { relativePath =>
+        conn().update {
+          "insert into project_root values (?);"
+        } { stmt => stmt.setString(1, relativePath) }
+      }
+      .getOrElse(0)
   }
 
   def reset(): Unit = {

@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -30,11 +31,10 @@ final class BuildTools(
 ) {
   private val lastDetectedBuildTools = new AtomicReference(Set.empty[String])
   // project root set explicitly by the user, takes precedence
-  val projectRoot_ : AtomicReference[Option[AbsolutePath]] =
+  val projectRoot: AtomicReference[Option[AbsolutePath]] =
     new AtomicReference(None)
 
-  def setProjectRoot(path: AbsolutePath): Unit = projectRoot_.set(Some(path))
-  def projectRoot: Option[AbsolutePath] = projectRoot_.get()
+  def setProjectRoot(path: AbsolutePath): Unit = projectRoot.set(Some(path))
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicitly chosen
   // to use another build server besides Bloop or it's a BSP server for a build
@@ -77,16 +77,17 @@ final class BuildTools(
   )
   def isMill: Boolean = millProject.isDefined
   def scalaCliProject: Option[AbsolutePath] =
-    searchForBuildTool(_.resolve("project.scala").isFile).orElse {
-      if (
-        ScalaCliBuildTool
-          .pathsToScalaCliBsp(workspace)
-          .exists(_.isFile)
-      )
-        // TODO: retrieve path from bsp config
-        Some(workspace)
-      else None
-    }
+    searchForBuildTool(_.resolve("project.scala").isFile)
+      .orElse {
+        ScalaCliBspScope.scalaCliBspRoot(workspace) match {
+          case Nil => None
+          case path :: Nil if path.isFile => Some(path.parent)
+          case path :: Nil =>
+            scribe.info(s"path: $path")
+            Some(path)
+          case _ => Some(workspace)
+        }
+      }
 
   def gradleProject: Option[AbsolutePath] = {
     val defaultGradlePaths = List(
@@ -116,14 +117,19 @@ final class BuildTools(
   private def searchForBuildTool(
       isProjectRoot: AbsolutePath => Boolean
   ): Option[AbsolutePath] = {
-    projectRoot_.get() match {
+    projectRoot.get() match {
       case Some(root) => if (isProjectRoot(root)) Some(root) else None
       case None =>
         def recIsProjectRoot(
             path: AbsolutePath,
             level: Int = 0,
         ): Option[AbsolutePath] =
-          if (path.isDirectory) {
+          // we skip `.scala-build` and `project`, which both contain .bloop
+          if (
+            path.isDirectory && !path.toNIO.filename.startsWith(
+              "."
+            ) && path.toNIO.filename != "project"
+          ) {
             if (isProjectRoot(path)) Some(path)
             else if (level < 1)
               path.toNIO
@@ -186,11 +192,11 @@ final class BuildTools(
   def isBuildRelated(
       path: AbsolutePath
   ): Option[String] = {
-    if (isSbt && SbtBuildTool.isSbtRelatedPath(workspace, path))
+    if (sbtProject.exists(SbtBuildTool.isSbtRelatedPath(_, path)))
       Some(SbtBuildTool.name)
-    else if (isGradle && GradleBuildTool.isGradleRelatedPath(workspace, path))
+    else if (gradleProject.exists(GradleBuildTool.isGradleRelatedPath(_, path)))
       Some(GradleBuildTool.name)
-    else if (isMaven && MavenBuildTool.isMavenRelatedPath(workspace, path))
+    else if (mavenProject.exists(MavenBuildTool.isMavenRelatedPath(_, path)))
       Some(MavenBuildTool.name)
     else if (isMill && MillBuildTool.isMillRelatedPath(path))
       Some(MillBuildTool.name)

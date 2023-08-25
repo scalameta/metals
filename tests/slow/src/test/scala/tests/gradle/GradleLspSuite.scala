@@ -89,7 +89,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |}
             |/inner/src/main/scala/A.scala
             |object A {
-            | val foo: Int = "aaa"
+            |  val foo: Int = "aaa"
             |}
             |""".stripMargin
       )
@@ -102,7 +102,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ <- server.didSave("inner/src/main/scala/A.scala")(identity)
       _ = assertNoDiff(
         client.pathDiagnostics("inner/src/main/scala/A.scala"),
-        """|inner/src/main/scala/A.scala:3:18: error: type mismatch;
+        """|inner/src/main/scala/A.scala:2:18: error: type mismatch;
            | found   : String("aaa")
            | required: Int
            |  val foo: Int = "aaa"

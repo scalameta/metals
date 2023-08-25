@@ -59,8 +59,7 @@ case class SbtBuildTool(
   override val recommendedVersion: String = BuildInfo.sbtVersion
 
   override def createBspFileArgs(
-      workspace: AbsolutePath,
-      projectRoot: AbsolutePath,
+      workspace: AbsolutePath
   ): Option[List[String]] =
     Option.when(workspaceSupportsBsp(projectRoot)) {
       val bspConfigArgs = List[String]("bspConfig")

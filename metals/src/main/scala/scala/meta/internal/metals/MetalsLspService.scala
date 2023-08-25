@@ -887,7 +887,7 @@ class MetalsLspService(
 
   def connectTables(): Connection = tables.connect()
 
-  def loadProjectRootSetting(): Unit = {
+  def loadProjectRootSetting(): Future[Unit] = Future {
     for {
       relativePath <- tables.projectRoot.relativePath()
       absolutePath = folder.resolve(relativePath)
@@ -896,8 +896,8 @@ class MetalsLspService(
   }
 
   def initialized(): Future[Unit] = {
-    loadProjectRootSetting()
     for {
+      _ <- loadProjectRootSetting()
       _ <- maybeSetupScalaCli()
       _ <-
         Future
@@ -1002,9 +1002,12 @@ class MetalsLspService(
             scribe.error(s"$errorRoot is not a valid directory")
             None
         }
-      val previousProjectRoot = buildTools.projectRoot_.getAndSet(projectRoot)
-      if (projectRoot != previousProjectRoot && bspSession.isEmpty) {
-        slowConnectToBuildServer(false)
+      val previousProjectRoot = buildTools.projectRoot.getAndSet(projectRoot)
+      if (projectRoot != previousProjectRoot) {
+        tables.projectRoot.set(projectRoot.map(_.toRelative(folder).toString()))
+        if (bspSession.isEmpty) {
+          slowConnectToBuildServer(false)
+        } else Future.successful(())
       } else Future.successful(())
     }
 
@@ -1191,11 +1194,12 @@ class MetalsLspService(
     def isScalaCli = bspSession.exists(_.main.isScalaCLI)
     def isScalaFile =
       file.toString.isScala || file.isJava || file.isAmmoniteScript
+    val projectRoot = buildTools.projectRoot.get().getOrElse(folder)
     if (
       isScalaCli && isScalaFile &&
       buildTargets.inverseSources(file).isEmpty &&
-      file.toNIO.startsWith(folder.toNIO) &&
-      !ScalaCliBspScope.inScope(folder, file)
+      file.toNIO.startsWith(projectRoot.toNIO) &&
+      !ScalaCliBspScope.inScope(projectRoot, file)
     ) {
       languageClient
         .showMessageRequest(
@@ -1206,8 +1210,7 @@ class MetalsLspService(
         .asScala
         .flatMap {
           case FileOutOfScalaCliBspScope.regenerateAndRestart =>
-            val buildTool =
-              ScalaCliBuildTool(folder, userConfig)
+            val buildTool = ScalaCliBuildTool(folder, projectRoot, userConfig)
             for {
               _ <- buildTool.generateBspConfig(
                 folder,
@@ -1425,7 +1428,7 @@ class MetalsLspService(
       else
         for {
           projectRoot <-
-            buildTools.projectRoot match {
+            buildTools.projectRoot.get() match {
               case Some(root) => Future.successful(root)
               case None =>
                 supportedBuildTool().map(_.map(_.projectRoot).getOrElse(folder))
@@ -2350,6 +2353,7 @@ class MetalsLspService(
     symbolDocs,
     scalaVersionSelector,
     sourceMapper,
+    folder,
   )
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {

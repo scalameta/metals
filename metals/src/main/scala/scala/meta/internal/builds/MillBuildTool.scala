@@ -132,13 +132,10 @@ case class MillBuildTool(
   }
 
   override def createBspFileArgs(
-      workspace: AbsolutePath,
-      projectRoot: AbsolutePath,
+      workspace: AbsolutePath
   ): Option[List[String]] =
     Option.when(workspaceSupportsBsp(workspace: AbsolutePath)) {
       val cmd = "mill.bsp.BSP/install" :: Nil
-      // TODO:: this doesn't seem to take a param of where the config file should be put
-      // http://mill-build.com/mill/Installation_IDE_Support.html#_build_server_protocol_bsp
       putTogetherArgs(cmd, getMillVersion(projectRoot), workspace)
     }
 
