@@ -65,6 +65,7 @@ object MtagsResolver {
     "3.3.1-RC2" -> "0.11.12",
     "3.3.1-RC3" -> "0.11.12",
     "3.3.1-RC4" -> "1.0.0",
+    "3.3.1-RC5" -> "1.0.0",
   )
 
   class Default extends MtagsResolver {
