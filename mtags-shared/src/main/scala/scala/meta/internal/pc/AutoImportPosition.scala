@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.annotation.tailrec
+
 /**
  * A position to insert new imports
  *
@@ -19,6 +21,7 @@ case class AutoImportPosition(
 }
 
 object AutoImportPosition {
+  private val endOfLineCharacters = Set('\r', '\n')
 
   // Infers the indentation at the completion position by counting the number of leading
   // spaces in the line.
@@ -26,11 +29,17 @@ object AutoImportPosition {
   // class Main {
   //   def foo<COMPLETE> // inferred indent is 2 spaces.
   // }
+  @tailrec
   def inferIndent(lineStart: Int, text: String): Int = {
     var i = 0
     while (lineStart + i < text.length && text.charAt(lineStart + i) == ' ') {
       i += 1
     }
-    i
+
+    val pos = lineStart + i
+    if (pos < text.length() && endOfLineCharacters(text.charAt(pos))) {
+      // skip any empty lines
+      inferIndent(pos + 1, text)
+    } else i
   }
 }
