@@ -180,6 +180,13 @@ object DebugProtocol {
     }
   }
 
+  object HotCodeReplace {
+    def unapply(request: RequestMessage): Option[RequestMessage] = {
+      if (request.getMethod != "redefineClasses") None
+      else Some(request)
+    }
+  }
+
   object StackTraceResponse {
     def unapply(
         response: DebugResponseMessage
