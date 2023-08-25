@@ -233,4 +233,32 @@ class ImportMissingSymbolLspSuite
     expectNoDiagnostics = false,
   )
 
+  check(
+    "i5567",
+    """package p {
+      |
+      |  import scala.collection.mutable
+      |
+      |  class C {
+      |    def f = mutable.Map.empty[Int, Int]
+      |    val p = <<Instant.now>>
+      |  }
+      |}
+      |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Instant", "java.time")}
+        |${CreateNewSymbol.title("Instant")}
+        |""".stripMargin,
+    """|package p {
+       |
+       |  import scala.collection.mutable
+       |  import java.time.Instant
+       |
+       |  class C {
+       |    def f = mutable.Map.empty[Int, Int]
+       |    val p = Instant.now
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
 }
