@@ -298,6 +298,7 @@ class DebugProvider(
         clientConfig.disableColorOutput(),
         statusBar,
         sourceMapper,
+        compilations,
       )
     }
     val server = new DebugServer(sessionName, uri, proxyFactory)
