@@ -8,7 +8,7 @@ object V {
   val scala3 = "3.3.0"
   val firstScala3PCVersion = "3.3.2-RC1-bin-20230721-492f777-NIGHTLY"
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
-  val scala3RC: Option[String] = Some("3.3.1-RC5")
+  val scala3RC: Option[String] = Some("3.3.1-RC6")
   val sbtScala = "2.12.17"
   val ammonite212Version = "2.12.18"
   val ammonite213Version = "2.13.11"
