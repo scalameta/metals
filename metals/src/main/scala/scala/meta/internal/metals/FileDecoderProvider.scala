@@ -147,6 +147,9 @@ final class FileDecoderProvider(
    *
    * build target:
    * metalsDecode:file:///workspacePath/buildTargetName.metals-buildtarget
+   *
+   * native intermediate representation (NIR):
+   * metalsDecode:file:///somePath/someFile.scala.nir
    */
   def decodedFileContents(uriAsStr: String): Future[DecoderResponse] = {
     Try(URI.create(URIEncoderDecoder.encode(uriAsStr))) match {
@@ -209,10 +212,7 @@ final class FileDecoderProvider(
       uri: URI
   ): Future[DecoderResponse] = {
     val supportedExtensions = Set(
-      "javap",
-      "javap-verbose",
-      "tasty-decoded",
-      "cfr",
+      "javap", "javap-verbose", "tasty-decoded", "cfr", "nir",
     ) ++ semanticdbExtensions
     val additionalExtension = uri.toString().split('.').toList.last
     if (supportedExtensions(additionalExtension)) {
@@ -226,6 +226,12 @@ final class FileDecoderProvider(
             case "javap-verbose" =>
               decodeJavaOrScalaOrClass(path, decodeJavapFromClassFile(true))
             case "cfr" => decodeJavaOrScalaOrClass(path, decodeCFRFromClassFile)
+            case "nir" =>
+              selectClassFromScalaFileAndDecode(
+                path.toURI,
+                path,
+                ClassFinderGranularity.NIR,
+              )(p => decodeNIR(p.path))
             case "tasty-decoded" => decodeTasty(path)
             case "semanticdb-compact" =>
               Future.successful(
@@ -558,6 +564,57 @@ final class FileDecoderProvider(
         .map(_ => {
           if (sbErr.nonEmpty)
             DecoderResponse.failed(path.toURI, sbErr.toString)
+          else
+            DecoderResponse.success(path.toURI, sbOut.toString)
+        })
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(e.toString())
+        Future.successful(DecoderResponse.failed(path.toURI, e))
+    }
+  }
+
+  private def decodeNIR(
+      path: AbsolutePath
+  ): Future[DecoderResponse] = {
+    val scalaNativeCLIDependency =
+      Dependency.of("org.scala-native", "scala-native-cli_2.13", "0.4.10")
+    val scalaNativePMain = "scala.scalanative.cli.ScalaNativeP"
+
+    // the class finder gets us the .nir under the java built target. How to get the proper native one?
+    // the replaceAll below assumes a particular layout.
+    val parent = path.parent
+    val args = List(
+      "--verbose",
+      "--from-path",
+      path.toString().replaceAll(".jvm", ".native"),
+    )
+    val sbOut = new StringBuilder()
+    val sbErr = new StringBuilder()
+    try {
+      shellRunner
+        .runJava(
+          scalaNativeCLIDependency,
+          scalaNativePMain,
+          parent,
+          args,
+          redirectErrorOutput = false,
+          s => {
+            sbOut.append(s)
+            sbOut.append(Properties.lineSeparator)
+          },
+          s => {
+            sbErr.append(s)
+            sbErr.append(Properties.lineSeparator)
+          },
+          propagateError = true,
+        )
+        .map(_ => {
+          if (sbOut.isEmpty && sbErr.nonEmpty)
+            DecoderResponse.failed(
+              path.toURI,
+              s"$scalaNativeCLIDependency\n$scalaNativePMain\n$parent\n$args\n${sbErr.toString}",
+            )
           else
             DecoderResponse.success(path.toURI, sbOut.toString)
         })

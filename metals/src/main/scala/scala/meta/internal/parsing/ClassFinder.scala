@@ -250,16 +250,19 @@ sealed trait ClassFinderGranularity {
 
   def isTasty: Boolean = this match {
     case ClassFiles => false
+    case NIR => false
     case Tasty => true
   }
 
   def extension: String = this match {
     case ClassFiles => ".class"
+    case NIR => ".nir"
     case Tasty => ".tasty"
   }
 }
 
 object ClassFinderGranularity {
   case object ClassFiles extends ClassFinderGranularity
+  case object NIR extends ClassFinderGranularity
   case object Tasty extends ClassFinderGranularity
 }
