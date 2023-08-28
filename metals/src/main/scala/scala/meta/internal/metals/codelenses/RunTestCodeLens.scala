@@ -31,6 +31,10 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
 
 /**
  * Class to generate the Run and Test code lenses to trigger debugging.
@@ -67,6 +71,7 @@ final class RunTestCodeLens(
       if buildTarget.asScalaBuildTarget.forall(
         _.getPlatform == b.ScalaPlatform.JVM
       )
+      if isNonMetaFileInClasspath(buildTargetId)
       connection <- buildTargets.buildServerOf(buildTargetId)
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
@@ -90,6 +95,32 @@ final class RunTestCodeLens(
     }
 
     lenses.getOrElse(Seq.empty)
+  }
+
+  /**
+   * Checks if there exist any files outside of the META-INF directory of build target classpath.
+   *
+   * When using Scala 3 Best Effort compilation, the compilation may fail,
+   * but semanticDB (and thus the META_INF directory) may still be produced.
+   * We want to avoid creating run/test/debug code lens in those situations.
+   */
+  private def isNonMetaFileInClasspath(
+      buildTargetId: BuildTargetIdentifier
+  ): Boolean = {
+    import scala.jdk.FunctionConverters._
+    buildTargetClasses.jvmRunEnvironment
+      .get(buildTargetId)
+      .map(_.getClasspath().asScala.map(_.toAbsolutePath.toString).toList)
+      .map { classpath =>
+        classpath.exists { dir =>
+          val rootPath = Paths.get(dir)
+          val predicate = { (path: Path, _: BasicFileAttributes) =>
+            !path.endsWith("META-INF") && path != rootPath
+          }.asJavaBiPredicate
+          Files.find(rootPath, 1, predicate).findAny().asScala.isDefined
+        }
+      }
+      .getOrElse(true)
   }
 
   /**

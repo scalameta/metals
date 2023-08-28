@@ -16,7 +16,8 @@ object V {
 
   val ammonite = "2.5.9"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.8"
+  val bloop =
+    "1.5.6-192-7f53ceaa-SNAPSHOT" // "1.5.6" // TODO change after release
   val bloopConfig = "1.5.5"
   val bsp = "2.1.0-M5"
   val coursier = "2.1.6"
@@ -104,8 +105,9 @@ object V {
 
   // Scala 3
   def nonDeprecatedScala3Versions =
-    Seq(scala3, "3.2.2", "3.1.3") ++ scala3RC.toSeq
-  // ++ Seq("3.4.0-RC1-bin-SNAPSHOT") // local testing of scala3-presentation-compiler
+    Seq(scala3, "3.2.2", "3.1.3") ++ scala3RC.toSeq ++ Seq(
+      "3.4.0-RC1"
+    ) // local testing of scala3-presentation-compiler
 
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =

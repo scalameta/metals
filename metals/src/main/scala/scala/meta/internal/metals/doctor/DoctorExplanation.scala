@@ -117,7 +117,8 @@ object DoctorExplanation {
     val correctMessage: String =
       s"${Icons.unicode.check} - code is compiling"
     val incorrectMessage: String =
-      s"${Icons.unicode.error} - code isn't compiling, open problems tab to see detailed compilation errors"
+      s"""|${Icons.unicode.error} - code isn't compiling, open problems tab to see detailed compilation errors
+          |${Icons.unicode.alert} - code compiles in the "best effort" mode while depending on errored projects""".stripMargin
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
       allTargetsInfo.exists(_.compilationStatus.isCorrect == false)
