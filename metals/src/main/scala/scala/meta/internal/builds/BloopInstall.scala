@@ -127,6 +127,7 @@ final class BloopInstall(
           scribe.info(s"skipping build import with status '${result.name}'")
           Future.successful(result)
         case _ =>
+          scribe.debug("Awaiting user response...")
           for {
             userResponse <- requestImport(
               buildTools,
