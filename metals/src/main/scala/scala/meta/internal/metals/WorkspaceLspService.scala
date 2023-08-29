@@ -826,15 +826,14 @@ class WorkspaceLspService(
             Future.failed(DebugProvider.WorkspaceErrorsException).asJavaObject
         }
       case ServerCommands.StartMainClass(params) if params.mainClass != null =>
-        onFirstSatifying(_.findMainClassAndItsBuildTarget(params))(
-          _.nonEmpty,
-          (service, buildTargets) =>
-            service.startMainClass(buildTargets, params),
-          () => {
+        DebugProvider
+          .getResultFromSearches(
+            folderServices.map(_.mainClassSearch(params))
+          ) {
             displayNotFound("Main class", params.mainClass)
             Future.failed(new ju.NoSuchElementException(params.mainClass))
-          },
-        ).asJavaObject
+          }
+          .asJavaObject
 
       case ServerCommands.StartTestSuite(params)
           if params.target != null && params.requestData != null =>
@@ -851,15 +850,14 @@ class WorkspaceLspService(
         ).asJavaObject
       case ServerCommands.ResolveAndStartTestSuite(params)
           if params.testClass != null =>
-        onFirstSatifying(_.findTestClassAndItsBuildTarget(params))(
-          _.nonEmpty,
-          (service, buildTargets) =>
-            service.startTestSuiteForResolved(buildTargets, params),
-          () => {
+        DebugProvider
+          .getResultFromSearches(
+            folderServices.map(_.testClassSearch(params))
+          ) {
             displayNotFound("Test class", params.testClass)
             Future.failed(new ju.NoSuchElementException(params.testClass))
-          },
-        ).asJavaObject
+          }
+          .asJavaObject
       case ServerCommands.StartAttach(params) if params.hostName != null =>
         onFirstSatifying(service =>
           Future.successful(

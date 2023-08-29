@@ -522,16 +522,14 @@ class DebugProvider(
     result
   }
 
-  def findMainClassAndItsBuildTarget(params: DebugUnresolvedMainClassParams)(
-      implicit ec: ExecutionContext
-  ): Future[List[(ScalaMainClass, b.BuildTarget)]] =
-    withRebuildRetry(() =>
-      buildTargetClassesFinder
-        .findMainClassAndItsBuildTarget(
-          params.mainClass,
-          Option(params.buildTarget),
-        )
-    )
+  def findMainClassAndItsBuildTarget(
+      params: DebugUnresolvedMainClassParams
+  ): Try[List[(ScalaMainClass, b.BuildTarget)]] =
+    buildTargetClassesFinder
+      .findMainClassAndItsBuildTarget(
+        params.mainClass,
+        Option(params.buildTarget),
+      )
 
   def buildMainClassParams(
       foundClasses: List[(ScalaMainClass, b.BuildTarget)],
@@ -570,14 +568,12 @@ class DebugProvider(
 
   def findTestClassAndItsBuildTarget(
       params: DebugUnresolvedTestClassParams
-  )(implicit ec: ExecutionContext): Future[List[(String, b.BuildTarget)]] =
-    withRebuildRetry(() => {
-      buildTargetClassesFinder
-        .findTestClassAndItsBuildTarget(
-          params.testClass,
-          Option(params.buildTarget),
-        )
-    })
+  ): Try[List[(String, b.BuildTarget)]] =
+    buildTargetClassesFinder
+      .findTestClassAndItsBuildTarget(
+        params.testClass,
+        Option(params.buildTarget),
+      )
 
   def buildTestClassParams(
       targets: List[(String, b.BuildTarget)],
@@ -801,26 +797,26 @@ class DebugProvider(
     }
   }
 
-  private def withRebuildRetry[A](
-      f: () => Try[A]
-  )(implicit ec: ExecutionContext): Future[A] = {
-    Future.fromTry(f()).recoverWith {
-      case ClassNotFoundInBuildTargetException(_, buildTarget) =>
+  def retryAfterRebuild[A](previousResult: Try[A], f: () => Try[A])(implicit
+      ec: ExecutionContext
+  ): Future[Try[A]] =
+    previousResult match {
+      case Failure(ClassNotFoundInBuildTargetException(_, buildTarget)) =>
         val target = Seq(buildTarget.getId())
         for {
           _ <- compilations.compileTargets(target)
           _ <- buildTargetClasses.rebuildIndex(target)
-          result <- Future.fromTry(f())
+          result <- Future(f())
         } yield result
-      case _: ClassNotFoundException =>
+      case Failure(_: ClassNotFoundException) =>
         val allTargetIds = buildTargets.allBuildTargetIds
         for {
           _ <- compilations.compileTargets(allTargetIds)
           _ <- buildTargetClasses.rebuildIndex(allTargetIds)
-          result <- Future.fromTry(f())
+          result <- Future(f())
         } yield result
+      case result => Future.successful(result)
     }
-  }
 
   private def reportOtherBuildTargets(
       className: String,
@@ -927,6 +923,7 @@ object DebugProvider {
         "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
       )
 
+
   val specialChars: Set[Char] = ".+*?^()[]{}|&$".toSet
 
   def escapeTestName(testName: String): String =
@@ -934,4 +931,81 @@ object DebugProvider {
       case c if specialChars(c) => s"\\$c"
       case c => s"$c"
     }
+
+  sealed abstract class ClassSearch[A](debugProvider: DebugProvider)(implicit
+      ec: ExecutionContext
+  ) {
+    private val searchStarted = new ju.concurrent.atomic.AtomicBoolean(false)
+    private val searchPromise = Promise[Try[A]]()
+    protected def search(): Try[A]
+    protected def dapSessionParams(res: A): Future[DebugSessionParams]
+    def createDapSession(args: A): Future[DebugSession] =
+      dapSessionParams(args).flatMap(debugProvider.asSession(_))
+    def searchResult: Future[(Option[A], ClassSearch[A])] = {
+      if (searchStarted.compareAndSet(false, true)) {
+        Future {
+          val resolved = search()
+          searchPromise.trySuccess(resolved)
+        }
+      }
+      searchPromise.future.map(e => (e.toOption, this))
+    }
+    def retrySearchResult: Future[(Option[A], ClassSearch[A])] =
+      searchPromise.future
+        .flatMap(debugProvider.retryAfterRebuild(_, search).map(_.toOption))
+        .map((_, this))
+  }
+
+  final class MainClassSearch(
+      debugProvider: DebugProvider,
+      params: DebugUnresolvedMainClassParams,
+  )(implicit ec: ExecutionContext)
+      extends ClassSearch[List[(ScalaMainClass, b.BuildTarget)]](
+        debugProvider
+      ) {
+    override protected def search()
+        : Try[List[(ScalaMainClass, b.BuildTarget)]] =
+      debugProvider.findMainClassAndItsBuildTarget(params)
+    override protected def dapSessionParams(
+        res: List[(ScalaMainClass, b.BuildTarget)]
+    ): Future[DebugSessionParams] =
+      debugProvider.buildMainClassParams(res, params)
+  }
+
+  final class TestClassSearch(
+      debugProvider: DebugProvider,
+      params: DebugUnresolvedTestClassParams,
+  )(implicit ec: ExecutionContext)
+      extends ClassSearch[List[(String, b.BuildTarget)]](debugProvider) {
+    override protected def search(): Try[List[(String, b.BuildTarget)]] =
+      debugProvider.findTestClassAndItsBuildTarget(params)
+    override protected def dapSessionParams(
+        res: List[(String, b.BuildTarget)]
+    ): Future[DebugSessionParams] =
+      debugProvider.buildTestClassParams(res, params)
+  }
+
+  def getResultFromSearches[A](searches: List[ClassSearch[A]])(
+      default: => Future[DebugSession]
+  )(implicit ec: ExecutionContext): Future[DebugSession] =
+    Future
+      .sequence(searches.map(_.searchResult))
+      .getFirstOrElse(
+        Future
+          .sequence(searches.map(_.retrySearchResult))
+          .getFirstOrElse(default)
+      )
+
+  private implicit class FindFirstDebugSession[A](
+      from: Future[List[(Option[A], ClassSearch[A])]]
+  ) {
+    def getFirstOrElse(
+        default: => Future[DebugSession]
+    )(implicit ec: ExecutionContext): Future[DebugSession] =
+      from.flatMap {
+        _.collectFirst { case (Some(dapSession), search) =>
+          search.createDapSession(dapSession)
+        }.getOrElse(default)
+      }
+  }
 }

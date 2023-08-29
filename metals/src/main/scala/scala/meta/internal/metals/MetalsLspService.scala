@@ -1832,29 +1832,15 @@ class MetalsLspService(
   ): Future[DebugSession] =
     debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
 
-  def findTestClassAndItsBuildTarget(
+  def testClassSearch(
       params: DebugUnresolvedTestClassParams
-  ): Future[List[(String, b.BuildTarget)]] =
-    debugProvider.findTestClassAndItsBuildTarget(params)
+  ): DebugProvider.TestClassSearch =
+    new DebugProvider.TestClassSearch(debugProvider, params)
 
-  def startTestSuiteForResolved(
-      targets: List[(String, b.BuildTarget)],
-      params: DebugUnresolvedTestClassParams,
-  ): Future[DebugSession] = debugProvider
-    .buildTestClassParams(targets, params)
-    .flatMap(debugProvider.asSession)
-
-  def findMainClassAndItsBuildTarget(
+  def mainClassSearch(
       params: DebugUnresolvedMainClassParams
-  ): Future[List[(b.ScalaMainClass, b.BuildTarget)]] =
-    debugProvider.findMainClassAndItsBuildTarget(params)
-
-  def startMainClass(
-      foundClasses: List[(b.ScalaMainClass, b.BuildTarget)],
-      params: DebugUnresolvedMainClassParams,
-  ): Future[DebugSession] = debugProvider
-    .buildMainClassParams(foundClasses, params)
-    .flatMap(debugProvider.asSession)
+  ): DebugProvider.MainClassSearch =
+    new DebugProvider.MainClassSearch(debugProvider, params)
 
   def supportsBuildTarget(
       target: b.BuildTargetIdentifier
