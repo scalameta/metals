@@ -7,6 +7,10 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.{util as ju}
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
+
+import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.HoverSignature
@@ -36,9 +40,30 @@ import org.eclipse.lsp4j.TextEdit
  *
  * New features can be developed here, and then later moved to dotty.
  */
-class ScalaPresentationCompiler(
-    underlying: DottyPresentationCompiler = new DottyPresentationCompiler()
+case class ScalaPresentationCompiler(
+    buildTargetIdentifier: String = "",
+    classpath: Seq[Path] = Nil,
+    options: List[String] = Nil,
+    search: SymbolSearch = EmptySymbolSearch,
+    ec: ExecutionContextExecutor = ExecutionContext.global,
+    sh: Option[ScheduledExecutorService] = None,
+    config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
+    folderPath: Option[Path] = None,
+    reportsLevel: ReportLevel = ReportLevel.Info,
 ) extends PresentationCompiler:
+  val underlying: DottyPresentationCompiler = new DottyPresentationCompiler(
+    buildTargetIdentifier,
+    classpath,
+    options,
+    search,
+    ec,
+    sh,
+    config,
+    folderPath,
+    reportsLevel,
+  )
+
+  def this() = this("", Nil, Nil)
 
   override def didClose(uri: URI): Unit =
     underlying.didClose(uri)
