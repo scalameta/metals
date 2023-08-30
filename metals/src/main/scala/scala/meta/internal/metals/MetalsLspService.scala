@@ -28,6 +28,7 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.builds.BloopInstall
+import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
@@ -365,6 +366,14 @@ class MetalsLspService(
     )
   )
 
+  private val bspErrorHandler: BspErrorHandler =
+    new BspErrorHandler(
+      languageClient,
+      folder,
+      restartBspServer,
+      () => bspSession,
+    )
+
   private val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,
@@ -390,6 +399,7 @@ class MetalsLspService(
       onBuildTargetDidChangeFunc = params => {
         maybeQuickConnectToBuildServer(params)
       },
+      bspErrorHandler,
     )
 
   private val bloopServers: BloopServers = new BloopServers(
