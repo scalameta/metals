@@ -11,18 +11,21 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.{semanticdb => s}
 
-trait MtagsIndexer {
+trait GenericMtagsIndexer[T <: EnrichedTextDocument] {
   def language: Language
   def indexRoot(): Unit
   def input: Input.VirtualFile
-  def index(): s.TextDocument = {
+  protected def documentToResult(doc: s.TextDocument): T
+  def index(): T = {
     indexRoot()
-    s.TextDocument(
-      uri = input.path,
-      text = input.text,
-      language = language,
-      occurrences = names.result(),
-      symbols = symbols.result()
+    documentToResult(
+      s.TextDocument(
+        uri = input.path,
+        text = input.text,
+        language = language,
+        occurrences = names.result(),
+        symbols = symbols.result()
+      )
     )
   }
   // This method is intentionally non-final to allow accessing this stream directly without building a s.TextDocument.
@@ -64,8 +67,8 @@ trait MtagsIndexer {
         )
     }
   }
-  def term(name: String, pos: m.Position, kind: Kind, properties: Int, overriddenSymbols: List[(String, m.Position)] = List.empty): String =
-    addSignature(Descriptor.Term(name), pos, kind, properties, overriddenSymbols)
+  def term(name: String, pos: m.Position, kind: Kind, properties: Int): String =
+    addSignature(Descriptor.Term(name), pos, kind, properties)
   def term(name: Term.Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Term(name.value), name.pos, kind, properties)
   def tparam(name: Name, kind: Kind, properties: Int): String =
@@ -122,8 +125,8 @@ trait MtagsIndexer {
       properties
     )
   }
-  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int, overriddenSymbols: List[(String, m.Position)] = List.empty): String =
-    addSignature(Descriptor.Type(name), pos, kind, properties, overriddenSymbols)
+  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int): String =
+    addSignature(Descriptor.Type(name), pos, kind, properties)
   def tpe(name: Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Type(name.value), name.pos, kind, properties)
   def pkg(name: String, pos: m.Position): String = {
@@ -141,8 +144,7 @@ trait MtagsIndexer {
       signature: Descriptor,
       definition: m.Position,
       kind: s.SymbolInformation.Kind,
-      properties: Int,
-      overriddenSymbols: List[(String, m.Position)] = List.empty
+      properties: Int
   ): String = {
     val previousOwner = currentOwner
     currentOwner = symbol(signature)
@@ -156,16 +158,12 @@ trait MtagsIndexer {
       syntax,
       role
     )
-    val encodedOverriddenSymbols = overriddenSymbols.map{
-      case (simpleName, pos) => UnresolvedOverriddenSymbol(simpleName, pos.start)
-    }
     val info = s.SymbolInformation(
       symbol = syntax,
       language = language,
       kind = kind,
       properties = properties,
-      displayName = signature.name.value,
-      overriddenSymbols = encodedOverriddenSymbols
+      displayName = signature.name.value
     )
     visitOccurrence(occ, info, previousOwner)
     syntax
@@ -174,4 +172,16 @@ trait MtagsIndexer {
     if (currentOwner.eq(Symbols.EmptyPackage) && signature.isPackage)
       Symbols.Global(Symbols.RootPackage, signature)
     else Symbols.Global(currentOwner, signature)
+}
+
+trait EnrichedTextDocument {
+  def textDocument: s.TextDocument
+}
+
+case class JustDocument(textDocument: s.TextDocument)
+    extends EnrichedTextDocument
+
+trait MtagsIndexer extends GenericMtagsIndexer[JustDocument] {
+  protected def documentToResult(doc: s.TextDocument): JustDocument =
+    JustDocument(doc)
 }
