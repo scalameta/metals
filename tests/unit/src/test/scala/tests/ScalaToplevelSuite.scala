@@ -4,6 +4,7 @@ import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 
 import munit.TestOptions
 
@@ -530,7 +531,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |  }
        |}
        |""".stripMargin,
-    List("a/", "a/TypeProxy#"),
+    List("a/", "a/TypeProxy# -> Type"),
     dialect = dialects.Scala3,
     mode = ToplevelWithInner,
   )
@@ -603,6 +604,7 @@ class ScalaToplevelSuite extends BaseSuite {
       expected: List[String],
       mode: Mode = Toplevel,
       dialect: Dialect = dialects.Scala3,
+      includeOverridden: Boolean = true
   )(implicit location: munit.Location): Unit = {
     test(options) {
       val input = Input.VirtualFile("Test.scala", code)
@@ -612,8 +614,17 @@ class ScalaToplevelSuite extends BaseSuite {
             val includeMembers = mode == All
             Mtags
               .allToplevels(input, dialect, includeMembers)
-              .occurrences
-              .map(_.symbol)
+              .symbols
+              .map{ si => 
+                if(!includeOverridden || si.overriddenSymbols.isEmpty) si.symbol
+                else {
+                  val overridden = 
+                    si.overriddenSymbols.collect{
+                      case UnresolvedOverriddenSymbol(name, _) => name
+                    }.mkString(", ")
+                  s"${si.symbol} -> $overridden"
+                }
+              }
               .toList
           case Toplevel => Mtags.toplevels(input, dialect)
         }

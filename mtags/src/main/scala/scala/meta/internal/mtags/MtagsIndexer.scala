@@ -64,8 +64,8 @@ trait MtagsIndexer {
         )
     }
   }
-  def term(name: String, pos: m.Position, kind: Kind, properties: Int): String =
-    addSignature(Descriptor.Term(name), pos, kind, properties)
+  def term(name: String, pos: m.Position, kind: Kind, properties: Int, overriddenSymbols: List[(String, m.Position)] = List.empty): String =
+    addSignature(Descriptor.Term(name), pos, kind, properties, overriddenSymbols)
   def term(name: Term.Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Term(name.value), name.pos, kind, properties)
   def tparam(name: Name, kind: Kind, properties: Int): String =
@@ -122,8 +122,8 @@ trait MtagsIndexer {
       properties
     )
   }
-  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int): String =
-    addSignature(Descriptor.Type(name), pos, kind, properties)
+  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int, overriddenSymbols: List[(String, m.Position)] = List.empty): String =
+    addSignature(Descriptor.Type(name), pos, kind, properties, overriddenSymbols)
   def tpe(name: Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Type(name.value), name.pos, kind, properties)
   def pkg(name: String, pos: m.Position): String = {
@@ -141,7 +141,8 @@ trait MtagsIndexer {
       signature: Descriptor,
       definition: m.Position,
       kind: s.SymbolInformation.Kind,
-      properties: Int
+      properties: Int,
+      overriddenSymbols: List[(String, m.Position)] = List.empty
   ): String = {
     val previousOwner = currentOwner
     currentOwner = symbol(signature)
@@ -155,12 +156,16 @@ trait MtagsIndexer {
       syntax,
       role
     )
+    val encodedOverriddenSymbols = overriddenSymbols.map{
+      case (simpleName, pos) => UnresolvedOverriddenSymbol(simpleName, pos.start)
+    }
     val info = s.SymbolInformation(
       symbol = syntax,
       language = language,
       kind = kind,
       properties = properties,
-      displayName = signature.name.value
+      displayName = signature.name.value,
+      overriddenSymbols = encodedOverriddenSymbols
     )
     visitOccurrence(occ, info, previousOwner)
     syntax

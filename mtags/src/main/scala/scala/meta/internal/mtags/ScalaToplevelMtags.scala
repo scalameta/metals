@@ -177,13 +177,13 @@ class ScalaToplevelMtags(
             newExpectExtensionTemplate(nextOwner)
           )
         case CLASS | TRAIT | OBJECT | ENUM if needEmitMember(currRegion) =>
-          emitMember(false, currRegion.owner)
+          val maybeNewIdent = emitMember(false, currRegion.owner)
           val template = expectTemplate match {
             case Some(expect) if expect.isCaseClassConstructor =>
               newExpectCaseClassTemplate
             case _ => newExpectClassTemplate
           }
-          loop(indent, isAfterNewline = false, currRegion, template)
+          loop(maybeNewIdent.getOrElse(indent), isAfterNewline = maybeNewIdent.isDefined, currRegion, template)
         // also covers extension methods because of `def` inside
         case DEF
             // extension group
@@ -485,30 +485,59 @@ class ScalaToplevelMtags(
     buf.result()
   }
 
+  @tailrec
+  private def acceptAllAfterOverriddenIdentifier(): Unit = {
+    scanner.curr.token match {
+      case LPAREN =>
+        acceptBalancedDelimeters(LPAREN, RPAREN)
+        acceptAllAfterOverriddenIdentifier()
+      case LBRACKET =>
+        acceptBalancedDelimeters(LBRACKET, RBRACKET)
+        acceptAllAfterOverriddenIdentifier()
+      case _ =>
+    }
+
+  }
+
+  @tailrec
+  private def findOverridden(acc : List[Identifier]): (List[Identifier], Option[Int]) = {
+    val maybeNewIdent = acceptTrivia()
+    scanner.curr.token match {
+      case EXTENDS | WITH =>
+        acceptTrivia()
+        val curr = newIdentifier.toList
+        acceptAllAfterOverriddenIdentifier()
+        findOverridden(curr ++ acc)
+      case _ => (acc, maybeNewIdent)
+    }
+  }
+
   /**
    * Enters a toplevel symbol such as class, trait or object
    */
-  def emitMember(isPackageObject: Boolean, owner: String): Unit = {
+  def emitMember(isPackageObject: Boolean, owner: String): Option[Int] = {
     val kind = scanner.curr.token
     acceptTrivia()
     val maybeName = newIdentifier
     currentOwner = owner
+    val (overridden0, maybeNewIdent) = findOverridden(List.empty)
+    val overridden = overridden0.map(id => (id.name, id.pos))
     maybeName.foreach { name =>
       kind match {
         case CLASS | ENUM =>
-          tpe(name.name, name.pos, Kind.CLASS, 0)
+          tpe(name.name, name.pos, Kind.CLASS, 0, overridden)
         case TRAIT =>
-          tpe(name.name, name.pos, Kind.TRAIT, 0)
+          tpe(name.name, name.pos, Kind.TRAIT, 0, overridden)
         case OBJECT =>
           if (isPackageObject) {
             currentOwner = symbol(Scala.Descriptor.Package(name.name))
             term("package", name.pos, Kind.OBJECT, 0)
           } else {
-            term(name.name, name.pos, Kind.OBJECT, 0)
+            term(name.name, name.pos, Kind.OBJECT, 0, overridden)
           }
       }
     }
-    scanner.nextToken()
+    maybeNewIdent
   }
 
   /**
@@ -668,7 +697,9 @@ class ScalaToplevelMtags(
     }
   }
 
-  private def acceptTrivia(): Unit = {
+  private def acceptTrivia(): Option[Int] = {
+    var includedNewline = false
+    var ident = 0
     scanner.nextToken()
     while (
       !isDone &&
@@ -677,8 +708,15 @@ class ScalaToplevelMtags(
         case _ => false
       })
     ) {
+      if(isNewline){
+        includedNewline = true
+        ident = 0
+      } else if(scanner.curr.token == WHITESPACE) {
+        ident += 1
+      }
       scanner.nextToken()
     }
+    if(includedNewline) Some(ident) else None
   }
 
   private def nextIsNL(): Boolean = {
