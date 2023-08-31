@@ -4,6 +4,8 @@ import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.ResolvedOverriddenSymbol
+import scala.meta.internal.mtags.TextDocumentWithOverridden
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 
 import munit.TestOptions
@@ -52,7 +54,7 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
       "_empty_/B#X#", "_empty_/B#foo().", "_empty_/B#v.", "_empty_/C#",
-      "_empty_/C#i.", "_empty_/D#", "_empty_/D.Da.", "_empty_/D.Db.",
+      "_empty_/C#i.", "_empty_/D#", "_empty_/D.Da. -> D", "_empty_/D.Db. -> D",
       "_empty_/D#getI().", "_empty_/D#i.",
     ),
     mode = All,
@@ -100,7 +102,7 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
       "_empty_/B#X#", "_empty_/B#foo().", "_empty_/C#", "_empty_/D#",
-      "_empty_/D.Da.", "_empty_/D.Db.",
+      "_empty_/D.Da. -> _empty_/D#", "_empty_/D.Db. -> _empty_/D#",
     ),
     mode = All,
   )
@@ -472,9 +474,10 @@ class ScalaToplevelSuite extends BaseSuite {
        |
        |enum NotPlanets{ case Vase }
        |""".stripMargin,
-    List("a/", "a/Planets#", "a/Planets.Earth.", "a/Planets.Mercury.",
-      "a/Planets#num.", "a/Planets.Venus.", "a/NotPlanets#",
-      "a/NotPlanets.Vase."),
+    List("a/", "a/Planets#", "a/Planets.Earth. -> Planets",
+      "a/Planets.Mercury. -> Planets", "a/Planets#num.",
+      "a/Planets.Venus. -> Planets", "a/NotPlanets#",
+      "a/NotPlanets.Vase. -> a/NotPlanets#"),
     dialect = dialects.Scala3,
     mode = All,
   )
@@ -495,9 +498,10 @@ class ScalaToplevelSuite extends BaseSuite {
        |enum NotPlanets:
        |  case Vase
        |""".stripMargin,
-    List("a/", "a/Planets#", "a/Planets.Earth.", "a/Planets.Mercury.",
-      "a/Planets#num.", "a/Planets.Venus.", "a/NotPlanets#",
-      "a/NotPlanets.Vase."),
+    List("a/", "a/Planets#", "a/Planets.Earth. -> Planets",
+      "a/Planets.Mercury. -> Planets", "a/Planets#num.",
+      "a/Planets.Venus. -> Planets", "a/NotPlanets#",
+      "a/NotPlanets.Vase. -> a/NotPlanets#"),
     dialect = dialects.Scala3,
     mode = All,
   )
@@ -514,9 +518,10 @@ class ScalaToplevelSuite extends BaseSuite {
        |enum NotPlanets:
        |  case Vase
        |""".stripMargin,
-    List("a/", "a/Planets#", "a/Planets#mmm().", "a/Planets.Earth#",
-      "a/Planets.Earth#v.", "a/Planets.Mercury#", "a/Planets#num.",
-      "a/Planets.Venus#", "a/NotPlanets#", "a/NotPlanets.Vase."),
+    List("a/", "a/Planets#", "a/Planets#mmm().", "a/Planets.Earth# -> Planets",
+      "a/Planets.Earth#v.", "a/Planets.Mercury# -> Planets", "a/Planets#num.",
+      "a/Planets.Venus# -> Planets", "a/NotPlanets#",
+      "a/NotPlanets.Vase. -> a/NotPlanets#"),
     dialect = dialects.Scala3,
     mode = All,
   )
@@ -598,13 +603,24 @@ class ScalaToplevelSuite extends BaseSuite {
     mode = All,
   )
 
+  check(
+    "overridden",
+    """|package a
+       |case class A[T](v: Int)(using Context) extends B[Int](2) with C:
+       |  object O extends H
+       |class M(ctx: Context) extends W(1)(ctx)
+       |""".stripMargin,
+    List("a/", "a/A# -> B, C", "a/A#v.", "a/A#O. -> H", "a/M# -> W"),
+    dialect = dialects.Scala3,
+    mode = All,
+  )
+
   def check(
       options: TestOptions,
       code: String,
       expected: List[String],
       mode: Mode = Toplevel,
       dialect: Dialect = dialects.Scala3,
-      includeOverridden: Boolean = true
   )(implicit location: munit.Location): Unit = {
     test(options) {
       val input = Input.VirtualFile("Test.scala", code)
@@ -612,20 +628,29 @@ class ScalaToplevelSuite extends BaseSuite {
         mode match {
           case All | ToplevelWithInner =>
             val includeMembers = mode == All
-            Mtags
-              .allToplevels(input, dialect, includeMembers)
-              .symbols
-              .map{ si => 
-                if(!includeOverridden || si.overriddenSymbols.isEmpty) si.symbol
-                else {
-                  val overridden = 
-                    si.overriddenSymbols.collect{
-                      case UnresolvedOverriddenSymbol(name, _) => name
-                    }.mkString(", ")
-                  s"${si.symbol} -> $overridden"
+            val enrichedDoc =
+              Mtags.allToplevelsEnriched(input, dialect, includeMembers)
+            val symbols =
+              enrichedDoc.textDocument.occurrences.map(_.symbol).toList
+            enrichedDoc match {
+              case doc: TextDocumentWithOverridden =>
+                val overriddenMap = doc.overridden.toMap
+                symbols.map { symbol =>
+                  overriddenMap.get(symbol) match {
+                    case None => symbol
+                    case Some(symbols) =>
+                      val overridden =
+                        symbols
+                          .map {
+                            case ResolvedOverriddenSymbol(symbol) => symbol
+                            case UnresolvedOverriddenSymbol(name, _) => name
+                          }
+                          .mkString(", ")
+                      s"$symbol -> $overridden"
+                  }
                 }
-              }
-              .toList
+              case _ => symbols
+            }
           case Toplevel => Mtags.toplevels(input, dialect)
         }
       assertNoDiff(

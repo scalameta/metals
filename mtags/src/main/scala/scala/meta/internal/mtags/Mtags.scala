@@ -34,6 +34,7 @@ final class Mtags(implicit rc: ReportContext) {
       addLines(language, input.text)
       mtags
         .index()
+        .textDocument
         .occurrences
         .iterator
         .filterNot(_.symbol.isPackage)
@@ -55,8 +56,9 @@ final class Mtags(implicit rc: ReportContext) {
         JavaMtags
           .index(input, includeMembers = true)
           .index()
+          .textDocument
       } else if (language.isScala) {
-        ScalaMtags.index(input, dialect).index()
+        ScalaMtags.index(input, dialect).index().textDocument
       } else {
         TextDocument()
       }
@@ -91,11 +93,11 @@ object Mtags {
       .toList
   }
 
-  def allToplevels(
+  def allToplevelsEnriched(
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean = true
-  )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
+  )(implicit rc: ReportContext = EmptyReportContext): EnrichedTextDocument = {
     input.toLanguage match {
       case Language.JAVA =>
         new JavaMtags(input, includeMembers = true).index()
@@ -104,9 +106,17 @@ object Mtags {
           new ScalaToplevelMtags(input, true, includeMembers, dialect)
         mtags.index()
       case _ =>
-        TextDocument()
+        JustDocument(TextDocument())
     }
   }
+
+  def allToplevels(
+      input: Input.VirtualFile,
+      dialect: Dialect,
+      includeMembers: Boolean = true
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
+    allToplevelsEnriched(input, dialect, includeMembers).textDocument
+
   def toplevels(
       input: Input.VirtualFile,
       dialect: Dialect = dialects.Scala213
