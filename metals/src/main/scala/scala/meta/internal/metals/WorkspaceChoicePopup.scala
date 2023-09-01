@@ -17,27 +17,43 @@ class WorkspaceChoicePopup(
   def interactiveChooseFolder(
       actionName: String
   )(implicit ec: ExecutionContext): Future[Option[MetalsLspService]] = {
-    def choicesParams(): ShowMessageRequestParams = {
-      val params = new ShowMessageRequestParams()
-      params.setMessage(
-        s"For which folder would you like to $actionName?"
-      )
-      params.setType(MessageType.Info)
-      params.setActions(
-        folders()
-          .map(folder => new MessageActionItem(folder.getVisibleName))
-          .asJava
-      )
-      params
-    }
 
     val currentFolders = folders()
     if (currentFolders.length == 1) Future.successful(currentFolders.headOption)
     else {
       languageClient
-        .showMessageRequest(choicesParams())
+        .showMessageRequest(
+          WorkspaceChoicePopup
+            .choicesParams(actionName, currentFolders.map(_.getVisibleName))
+        )
         .asScala
-        .map { item => currentFolders.find(_.getVisibleName == item) }
+        .map { item =>
+          currentFolders.find(_.getVisibleName == item.getTitle())
+        }
     }
+  }
+}
+
+object WorkspaceChoicePopup {
+  def choicesParams(
+      actionName: String,
+      folders: List[String],
+  ): ShowMessageRequestParams = {
+    val params = new ShowMessageRequestParams()
+
+    val lowerCaseActionName =
+      if (actionName.nonEmpty) actionName.head.toLower + actionName.tail
+      else actionName
+
+    params.setMessage(
+      s"For which folder would you like to $lowerCaseActionName?"
+    )
+    params.setType(MessageType.Info)
+    params.setActions(
+      folders
+        .map(folder => new MessageActionItem(folder))
+        .asJava
+    )
+    params
   }
 }

@@ -20,8 +20,10 @@ import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.ServerLivenessMonitor
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.WorkspaceChoicePopup
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
@@ -322,6 +324,13 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       )
     }
 
+    def choicesMessage = WorkspaceChoicePopup
+      .choicesParams(
+        ServerCommands.ConnectBuildServer.title.toLowerCase(),
+        Nil,
+      )
+      .getMessage()
+
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
       showMessageRequestHandler(params).getOrElse {
@@ -360,6 +369,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
             )
         ) {
           regenerateAndRestartScalaCliBuildSever
+        } else if (params.getMessage() == choicesMessage) {
+          params.getActions().asScala.head
         } else {
           throw new IllegalArgumentException(params.toString)
         }
