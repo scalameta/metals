@@ -34,6 +34,7 @@ import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 import org.eclipse.lsp4j.services.LanguageClient
 
@@ -41,7 +42,7 @@ import org.eclipse.lsp4j.services.LanguageClient
  * An actively running and initialized BSP connection
  */
 class BuildServerConnection private (
-    reestablishConnection: () => Future[
+    setupConnection: () => Future[
       BuildServerConnection.LauncherConnection
     ],
     initialConnection: BuildServerConnection.LauncherConnection,
@@ -54,7 +55,13 @@ class BuildServerConnection private (
     extends Cancelable {
 
   @volatile private var connection = Future.successful(initialConnection)
-  initialConnection.onConnectionFinished(reconnect)
+  initialConnection.setReconnect(() => reconnect().ignoreValue)
+  private def reestablishConnection(
+      original: Future[BuildServerConnection.LauncherConnection]
+  ) = {
+    original.foreach(_.optLivenessMonitor.foreach(_.shutdown()))
+    setupConnection()
+  }
 
   private val isShuttingDown = new AtomicBoolean(false)
   private val onReconnection =
@@ -70,7 +77,7 @@ class BuildServerConnection private (
 
   def version: String = _version.get()
 
-  // the name is set before when establishing conenction
+  // the name is set before when establishing connection
   def name: String = initialConnection.socketConnection.serverName
 
   def isBloop: Boolean = name == BloopServers.name
@@ -116,7 +123,7 @@ class BuildServerConnection private (
         if (isShuttingDown.compareAndSet(false, true)) {
           conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
           conn.server.onBuildExit()
-          conn.livenessMonitor.shutdown()
+          conn.optLivenessMonitor.foreach(_.shutdown())
           scribe.info("Shut down connection with build server.")
           // Cancel pending compilations on our side, this is not needed for Bloop.
           cancel()
@@ -291,13 +298,15 @@ class BuildServerConnection private (
     ongoingCompilations.cancel()
   }
 
-  private def askUser(): Future[BuildServerConnection.LauncherConnection] = {
+  private def askUser(
+      original: Future[BuildServerConnection.LauncherConnection]
+  ): Future[BuildServerConnection.LauncherConnection] = {
     if (config.askToReconnect) {
       if (!reconnectNotification.isDismissed) {
         val params = Messages.DisconnectedServer.params()
         languageClient.showMessageRequest(params).asScala.flatMap {
           case response if response == Messages.DisconnectedServer.reconnect =>
-            reestablishConnection()
+            reestablishConnection(original)
           case response if response == Messages.DisconnectedServer.notNow =>
             reconnectNotification.dismiss(5, TimeUnit.MINUTES)
             connection
@@ -308,7 +317,7 @@ class BuildServerConnection private (
         connection
       }
     } else {
-      reestablishConnection()
+      reestablishConnection(original)
     }
   }
 
@@ -318,11 +327,11 @@ class BuildServerConnection private (
       synchronized {
         // if the future is different then the connection is already being reestablished
         if (connection eq original) {
-          connection = askUser().map { conn =>
+          connection = askUser(original).map { conn =>
             // version can change when reconnecting
             _version.set(conn.version)
             ongoingRequests.addAll(conn.cancelables)
-            conn.onConnectionFinished(reconnect)
+            conn.setReconnect(() => reconnect().ignoreValue)
             conn
           }
           connection.foreach(_ => onReconnection.get()(this))
@@ -395,9 +404,12 @@ class BuildServerConnection private (
     CancelTokens.future(_ => actionFuture)
   }
 
-  def isBuildServerResponsive: Future[Boolean] = {
+  def isBuildServerResponsive: Future[Option[Boolean]] = {
     val original = connection
-    original.map(_.livenessMonitor.isBuildServerResponsive)
+    original.map(
+      _.optLivenessMonitor
+        .map(_.isBuildServerResponsive)
+    )
   }
 
 }
@@ -419,6 +431,7 @@ object BuildServerConnection {
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
       serverName: String,
+      addLivenessMonitor: Boolean = false,
       retry: Int = 5,
       supportsWrappedSources: Option[Boolean] = None,
   )(implicit
@@ -428,16 +441,20 @@ object BuildServerConnection {
     def setupServer(): Future[LauncherConnection] = {
       connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
         val tracePrinter = Trace.setupTracePrinter("BSP", workspace)
-        val requestMonitor = new RequestMonitorImpl
-        val launcher = new Launcher.Builder[MetalsBuildServer]()
-          .traceMessages(tracePrinter.orNull)
-          .setOutput(output)
-          .setInput(input)
-          .setLocalService(localClient)
-          .setRemoteInterface(classOf[MetalsBuildServer])
-          .setExecutorService(ec)
-          .wrapMessages(requestMonitor.wrapper(_))
-          .create()
+        val requestMonitor =
+          if (addLivenessMonitor) Some(new RequestMonitorImpl) else None
+        val wrapper: MessageConsumer => MessageConsumer =
+          requestMonitor.map(_.wrapper).getOrElse(identity)
+        val launcher =
+          new Launcher.Builder[MetalsBuildServer]()
+            .traceMessages(tracePrinter.orNull)
+            .setOutput(output)
+            .setInput(input)
+            .setLocalService(localClient)
+            .setRemoteInterface(classOf[MetalsBuildServer])
+            .setExecutorService(ec)
+            .wrapMessages(wrapper(_))
+            .create()
         val listening = launcher.startListening()
         val server = launcher.getRemoteProxy
         val stopListening =
@@ -452,6 +469,19 @@ object BuildServerConnection {
               scribe.error("Timeout waiting for 'build/initialize' response")
               throw e
           }
+
+        val optServerLivenessMonitor =
+          requestMonitor.map {
+            new ServerLivenessMonitor(
+              _,
+              () => server.workspaceBuildTargets(),
+              languageClient,
+              result.getDisplayName(),
+              config.metalsToIdleTime,
+              config.pingInterval,
+            )
+          }
+
         LauncherConnection(
           conn,
           server,
@@ -459,14 +489,7 @@ object BuildServerConnection {
           stopListening,
           result.getVersion(),
           result.getCapabilities(),
-          new ServerLivenessMonitor(
-            requestMonitor,
-            () => server.workspaceBuildTargets(),
-            languageClient,
-            result.getDisplayName(),
-            config.metalsToIdleTime,
-            config.pingInterval,
-          ),
+          optServerLivenessMonitor,
         )
       }
     }
@@ -494,6 +517,7 @@ object BuildServerConnection {
             reconnectNotification,
             config,
             serverName,
+            addLivenessMonitor,
             retry - 1,
           )
         } else {
@@ -557,16 +581,17 @@ object BuildServerConnection {
       cancelServer: Cancelable,
       version: String,
       capabilities: BuildServerCapabilities,
-      livenessMonitor: ServerLivenessMonitor,
+      optLivenessMonitor: Option[ServerLivenessMonitor],
   ) {
 
     def cancelables: List[Cancelable] =
       cancelServer :: socketConnection.cancelables
 
-    def onConnectionFinished(
-        f: () => Unit
+    def setReconnect(
+        reconnect: () => Future[Unit]
     )(implicit ec: ExecutionContext): Unit = {
-      socketConnection.finishedPromise.future.foreach(_ => f())
+      optLivenessMonitor.foreach(_.setReconnect(reconnect))
+      socketConnection.finishedPromise.future.foreach(_ => reconnect())
     }
 
     /**
