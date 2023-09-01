@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -66,8 +67,14 @@ class ServerLivenessMonitor(
     new AtomicReference(ServerLivenessMonitor.Idle)
   @volatile private var isDismissed = false
   @volatile private var isServerResponsive = true
+  @volatile private var reconnectOptions
+      : ServerLivenessMonitor.ReconnectOptions =
+    ServerLivenessMonitor.ReconnectOptions.empty
+  def setReconnect(reconnect: () => Future[Unit]): Unit = {
+    reconnectOptions = ServerLivenessMonitor.ReconnectOptions(reconnect)
+  }
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
-  val runnable: Runnable = new Runnable {
+  def runnable(): Runnable = new Runnable {
     def run(): Unit = {
       def now = System.currentTimeMillis()
       def lastIncoming =
@@ -93,12 +100,18 @@ class ServerLivenessMonitor(
               languageClient
                 .showMessageRequest(
                   ServerLivenessMonitor.ServerNotResponding
-                    .params(pingInterval, serverName)
+                    .params(
+                      pingInterval,
+                      serverName,
+                      includeReconnectOption = reconnectOptions.canReconnect,
+                    )
                 )
                 .asScala
                 .map {
                   case ServerLivenessMonitor.ServerNotResponding.dismiss =>
                     isDismissed = true
+                  case ServerLivenessMonitor.ServerNotResponding.reestablishConnection =>
+                    reconnectOptions.reconnect()
                   case _ =>
                 }
             }
@@ -112,14 +125,12 @@ class ServerLivenessMonitor(
       }
     }
   }
-
-  val scheduled: ScheduledFuture[_ <: Object] =
-    scheduler.scheduleAtFixedRate(
-      runnable,
-      pingInterval.toMillis,
-      pingInterval.toMillis,
-      TimeUnit.MILLISECONDS,
-    )
+  val scheduled: ScheduledFuture[_ <: Object] = scheduler.scheduleAtFixedRate(
+    runnable(),
+    pingInterval.toMillis,
+    pingInterval.toMillis,
+    TimeUnit.MILLISECONDS,
+  )
 
   def isBuildServerResponsive: Boolean = isServerResponsive
 
@@ -139,15 +150,21 @@ object ServerLivenessMonitor {
     def params(
         pingInterval: Duration,
         serverName: String,
+        includeReconnectOption: Boolean,
     ): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(message(pingInterval, serverName))
-      params.setActions(List(dismiss, ok).asJava)
+      val actions =
+        if (includeReconnectOption) List(dismiss, reestablishConnection)
+        else List(dismiss)
+      params.setActions(actions.asJava)
       params.setType(MessageType.Warning)
       params
     }
     val dismiss = new MessageActionItem("Dismiss")
-    val ok = new MessageActionItem("OK")
+    val reestablishConnection = new MessageActionItem(
+      "Reestablish connection with BSP server"
+    )
   }
 
   /**
@@ -160,5 +177,18 @@ object ServerLivenessMonitor {
   object Idle extends State
   object FirstPing extends State
   object Running extends State
+
+  class ReconnectOptions(optReconnect: Option[() => Future[Unit]]) {
+    val canReconnect = optReconnect.nonEmpty
+    val reconnect: () => Future[Unit] =
+      optReconnect.getOrElse(() => Future.successful(()))
+  }
+
+  object ReconnectOptions {
+    def empty = new ReconnectOptions(None)
+    def apply(reconnect: () => Future[Unit]) = new ReconnectOptions(
+      Some(reconnect)
+    )
+  }
 
 }

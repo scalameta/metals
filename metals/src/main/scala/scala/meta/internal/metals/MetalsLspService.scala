@@ -1642,7 +1642,9 @@ class MetalsLspService(
     val shutdownBsp =
       bspSession match {
         case Some(session) if session.main.isBloop =>
-          Future.successful(bloopServers.shutdownServer())
+          for {
+            _ <- disconnectOldBuildServer()
+          } yield bloopServers.shutdownServer()
         case Some(session) if session.main.isSbt =>
           for {
             currentBuildTool <- supportedBuildTool
@@ -2135,7 +2137,11 @@ class MetalsLspService(
     (for {
       _ <- disconnectOldBuildServer()
       maybeSession <- timerProvider.timed("Connected to build server", true) {
-        bspConnector.connect(folder, userConfig(), shellRunner)
+        bspConnector.connect(
+          folder,
+          userConfig(),
+          shellRunner,
+        )
       }
       result <- maybeSession match {
         case Some(session) =>
