@@ -55,7 +55,7 @@ trait GlobalSymbolIndex {
       file: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       dialect: Dialect
-  ): List[String]
+  ): Option[EnrichedTextDocument]
 
   /**
    * Index a jar or zip file containing Scala and Java source files.
@@ -88,7 +88,7 @@ trait GlobalSymbolIndex {
   def addSourceJar(
       jar: AbsolutePath,
       dialect: Dialect
-  ): List[(String, AbsolutePath)]
+  ): List[(AbsolutePath, EnrichedTextDocument)]
 
   /**
    * The same as `addSourceJar` except for directories
@@ -96,7 +96,7 @@ trait GlobalSymbolIndex {
   def addSourceDirectory(
       dir: AbsolutePath,
       dialect: Dialect
-  ): List[(String, AbsolutePath)]
+  ): List[(AbsolutePath, EnrichedTextDocument)]
 
 }
 

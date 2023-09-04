@@ -3,9 +3,10 @@ package tests
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.OverriddenSymbolsEnrichment
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
-import scala.meta.internal.mtags.TextDocumentWithOverridden
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 
 import munit.TestOptions
@@ -629,12 +630,14 @@ class ScalaToplevelSuite extends BaseSuite {
           case All | ToplevelWithInner =>
             val includeMembers = mode == All
             val enrichedDoc =
-              Mtags.allToplevelsEnriched(input, dialect, includeMembers)
+              new Mtags()(EmptyReportContext)
+                .enrichedTextDocument(input, dialect, includeMembers)
+                .get
             val symbols =
               enrichedDoc.textDocument.occurrences.map(_.symbol).toList
-            enrichedDoc match {
-              case doc: TextDocumentWithOverridden =>
-                val overriddenMap = doc.overridden.toMap
+            enrichedDoc.enrichment match {
+              case OverriddenSymbolsEnrichment(overridden) =>
+                val overriddenMap = overridden.toMap
                 symbols.map { symbol =>
                   overriddenMap.get(symbol) match {
                     case None => symbol

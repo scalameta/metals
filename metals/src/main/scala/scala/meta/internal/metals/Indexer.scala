@@ -23,12 +23,16 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.WorkspaceReload
+import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.watcher.FileWatcher
+import scala.meta.internal.mtags.EnrichedTextDocument
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.OverriddenSymbol
+import scala.meta.internal.mtags.OverriddenSymbolsEnrichment
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -79,6 +83,7 @@ final case class Indexer(
     scalaVersionSelector: ScalaVersionSelector,
     sourceMapper: SourceMapper,
     workspaceFolder: AbsolutePath,
+    implementationProvider: ImplementationProvider,
 )(implicit rc: ReportContext) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
@@ -465,7 +470,12 @@ final case class Indexer(
               )
             )
             .getOrElse(Scala213)
-          definitionIndex.addSourceDirectory(path, dialect)
+
+          val documents = definitionIndex.addSourceDirectory(path, dialect)
+          val overriddenInfo = collectOverriddenInfo(documents)
+          implementationProvider.addImplementationInDependenciesInfo(
+            overriddenInfo
+          )
         } else {
           scribe.warn(s"unexpected dependency: $path")
         }
@@ -476,6 +486,17 @@ final case class Indexer(
     }
     usedJars.toSet
   }
+
+  private def collectOverriddenInfo(
+      documents: List[(AbsolutePath, EnrichedTextDocument)]
+  ): List[(AbsolutePath, List[(String, List[OverriddenSymbol])])] =
+    documents.flatMap { case (path, document) =>
+      document.enrichment match {
+        case OverriddenSymbolsEnrichment(overridden) =>
+          Some((path, overridden))
+        case _ => None
+      }
+    }
 
   private def indexJdkSources(
       data: TargetData,
@@ -593,14 +614,26 @@ final case class Indexer(
    * @param path JAR path
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
-    tables.jarSymbols.getTopLevels(path) match {
-      case Some(toplevels) =>
+    (
+      tables.jarSymbols.getTopLevels(path),
+      tables.jarOverriddenSymbols.getOverriddenInfo(path),
+    ) match {
+      case (Some(toplevels), Some(overridden)) =>
         val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
         definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
-      case None =>
+        implementationProvider.addImplementationInDependenciesInfo(overridden)
+      case _ =>
         val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
-        val toplevels = definitionIndex.addSourceJar(path, dialect)
+        val documents = definitionIndex.addSourceJar(path, dialect)
+        val toplevels = documents.flatMap { case (path, document) =>
+          document.topLevels.map((_, path))
+        }
+        val overriddenInfo = collectOverriddenInfo(documents)
+        implementationProvider.addImplementationInDependenciesInfo(
+          overriddenInfo
+        )
         tables.jarSymbols.putTopLevels(path, toplevels)
+        tables.jarOverriddenSymbols.putOverriddenInfo(path, overriddenInfo)
     }
   }
 

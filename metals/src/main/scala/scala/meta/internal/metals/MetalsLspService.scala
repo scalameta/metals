@@ -2387,6 +2387,7 @@ class MetalsLspService(
     scalaVersionSelector,
     sourceMapper,
     folder,
+    implementationProvider,
   )
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {

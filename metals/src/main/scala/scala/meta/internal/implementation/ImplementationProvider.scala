@@ -18,8 +18,12 @@ import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.OverriddenSymbol
+import scala.meta.internal.mtags.ResolvedOverriddenSymbol
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.SymbolDefinition
+import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.ClassSignature
@@ -53,6 +57,8 @@ final class ImplementationProvider(
   private val globalTable = new GlobalClassTable(buildTargets)
   private val implementationsInPath =
     new ConcurrentHashMap[Path, Map[String, Set[ClassLocation]]]
+  private val implementationsInDependencySources =
+    new ConcurrentHashMap[String, Set[Implementation]]
 
   override def reset(): Unit = {
     implementationsInPath.clear()
@@ -68,6 +74,39 @@ final class ImplementationProvider(
         path.toNIO,
         { (_, _) => computeInheritance(docs) },
       )
+  }
+
+  def addImplementationInDependenciesInfo(
+      overriddenInfo: List[
+        (AbsolutePath, List[(String, List[OverriddenSymbol])])
+      ]
+  ): Unit = {
+    overriddenInfo.foreach { case (path, overridden) =>
+      addImplementationInDependenciesInfo(path, overridden)
+    }
+  }
+
+  private def addImplementationInDependenciesInfo(
+      path: AbsolutePath,
+      newOverridden: List[(String, List[OverriddenSymbol])],
+  ): Unit = {
+    def createUpdate(
+        newSymbol: Implementation
+    ): (String, Set[Implementation]) => Set[Implementation] = {
+      case (_, null) => Set(newSymbol)
+      case (_, previous) => previous + newSymbol
+    }
+    newOverridden.foreach { case (clazz, list) =>
+      list.foreach {
+        case ResolvedOverriddenSymbol(symbol) =>
+          val update = createUpdate(ImplementationForResolved(clazz))
+          implementationsInDependencySources.compute(symbol, update(_, _))
+        case UnresolvedOverriddenSymbol(name, pos) =>
+          val update =
+            createUpdate(ImplementationForUnresolved(clazz, path, pos))
+          implementationsInDependencySources.compute(name, update(_, _))
+      }
+    }
   }
 
   private def computeInheritance(
@@ -530,3 +569,12 @@ object ImplementationProvider {
     info.isObject || info.isClass || info.isTrait || info.isType || info.isInterface
 
 }
+
+sealed trait Implementation
+case class ImplementationForResolved(implementationSymbol: String)
+    extends Implementation
+case class ImplementationForUnresolved(
+    implementationSymbol: String,
+    usagePath: AbsolutePath,
+    usagePosition: Int,
+) extends Implementation

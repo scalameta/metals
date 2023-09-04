@@ -47,12 +47,15 @@ class ScalaToplevelMtags(
     includeMembers: Boolean,
     dialect: Dialect
 )(implicit rc: ReportContext)
-    extends GenericMtagsIndexer[TextDocumentWithOverridden] {
+    extends GenericMtagsIndexer[OverriddenSymbolsEnrichment] {
 
-  override protected def documentToResult(
+  override protected def enrich(
       doc: TextDocument
-  ): TextDocumentWithOverridden =
-    new TextDocumentWithOverridden(doc, overridden.result)
+  ): EnrichedTextDocument =
+    new EnrichedTextDocument(
+      doc,
+      OverriddenSymbolsEnrichment(overridden.result)
+    )
 
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
 
@@ -1033,8 +1036,3 @@ object ScalaToplevelMtags {
     }
   }
 }
-
-case class TextDocumentWithOverridden(
-    textDocument: TextDocument,
-    overridden: List[(String, List[OverriddenSymbol])]
-) extends EnrichedTextDocument

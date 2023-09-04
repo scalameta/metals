@@ -51,27 +51,30 @@ class SymbolIndexBucket(
 
   def close(): Unit = sourceJars.close()
 
-  def addSourceDirectory(dir: AbsolutePath): List[(String, AbsolutePath)] = {
+  def addSourceDirectory(
+      dir: AbsolutePath
+  ): List[(AbsolutePath, EnrichedTextDocument)] = {
     if (sourceJars.addEntry(dir.toNIO)) {
       dir.listRecursive.toList.flatMap {
         case source if source.isScala =>
-          addSourceFile(source, Some(dir)).map(sym => (sym, source))
+          addSourceFile(source, Some(dir)).map((source, _))
         case _ =>
-          List.empty
+          None
       }
-    } else
-      List.empty
+    } else List.empty
   }
 
-  def addSourceJar(jar: AbsolutePath): List[(String, AbsolutePath)] = {
+  def addSourceJar(
+      jar: AbsolutePath
+  ): List[(AbsolutePath, EnrichedTextDocument)] = {
     if (sourceJars.addEntry(jar.toNIO)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
             case source if source.isScala =>
-              addSourceFile(source, None, Some(jar)).map(sym => (sym, source))
+              addSourceFile(source, None, Some(jar)).map((source, _))
             case _ =>
-              List.empty
+              None
           }
         } catch {
           // this happens in broken jars since file from FileWalker should exists
@@ -105,36 +108,41 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       fromSourceJar: Option[AbsolutePath] = None
-  ): List[String] = {
+  ): Option[EnrichedTextDocument] = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val symbols = indexSource(source, uri, dialect)
-
-    val patched =
-      fromSourceJar match {
-        case Some(jar) if stdLibPatches.isScala3Library(jar) =>
-          symbols.map(stdLibPatches.patchSymbol)
-        case _ => symbols
+    for {
+      doc <- indexSource(source, uri, dialect)
+    } yield {
+      val enrichedDocument = doc.withFilter { symbols =>
+        fromSourceJar match {
+          case Some(jar) if stdLibPatches.isScala3Library(jar) =>
+            symbols.map(stdLibPatches.patchSymbol)
+          case _ => symbols
+        }
       }
-
-    patched.foreach { symbol =>
-      val acc = toplevels.getOrElse(symbol, Set.empty)
-      toplevels(symbol) = acc + source
+      enrichedDocument.topLevels.foreach { symbol =>
+        val acc = toplevels.getOrElse(symbol, Set.empty)
+        toplevels(symbol) = acc + source
+      }
+      enrichedDocument
     }
-    symbols
   }
 
   private def indexSource(
       source: AbsolutePath,
       uri: String,
       dialect: Dialect
-  ): List[String] = {
+  ): Option[EnrichedTextDocument] = {
     val text = FileIO.slurp(source, StandardCharsets.UTF_8)
     val input = Input.VirtualFile(uri, text)
-    val sourceToplevels = mtags.toplevels(input, dialect)
-    if (source.isAmmoniteScript)
-      sourceToplevels
-    else
-      sourceToplevels.filter(sym => !isTrivialToplevelSymbol(uri, sym))
+    mtags
+      .enrichedTextDocument(input, dialect)
+      .map(_.withFilter { sourceToplevels =>
+        if (source.isAmmoniteScript)
+          sourceToplevels
+        else
+          sourceToplevels.filter(sym => !isTrivialToplevelSymbol(uri, sym))
+      })
   }
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala

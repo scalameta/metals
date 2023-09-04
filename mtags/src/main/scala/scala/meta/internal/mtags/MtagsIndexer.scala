@@ -11,14 +11,14 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.{semanticdb => s}
 
-trait GenericMtagsIndexer[T <: EnrichedTextDocument] {
+trait GenericMtagsIndexer[E <: TextDocumentEnrichment] {
   def language: Language
   def indexRoot(): Unit
   def input: Input.VirtualFile
-  protected def documentToResult(doc: s.TextDocument): T
-  def index(): T = {
+  protected def enrich(doc: s.TextDocument): EnrichedTextDocument
+  def index(): EnrichedTextDocument = {
     indexRoot()
-    documentToResult(
+    enrich(
       s.TextDocument(
         uri = input.path,
         text = input.text,
@@ -174,14 +174,35 @@ trait GenericMtagsIndexer[T <: EnrichedTextDocument] {
     else Symbols.Global(currentOwner, signature)
 }
 
-trait EnrichedTextDocument {
-  def textDocument: s.TextDocument
+class EnrichedTextDocument(
+    val textDocument: s.TextDocument,
+    val enrichment: TextDocumentEnrichment,
+    topLevelFiler: List[String] => List[String] = identity
+) {
+  lazy val topLevels: List[String] = {
+    val topLevelSymbols =
+      textDocument.occurrences.iterator
+        .filterNot(_.symbol.isPackage)
+        .map(_.symbol)
+        .toList
+    topLevelFiler(topLevelSymbols)
+  }
+
+  def withFilter(newFilter: List[String] => List[String]) =
+    new EnrichedTextDocument(
+      textDocument,
+      enrichment,
+      topLevelFiler.compose(newFilter)
+    )
 }
 
-case class JustDocument(textDocument: s.TextDocument)
-    extends EnrichedTextDocument
+sealed trait TextDocumentEnrichment
+case object NoEnrichment extends TextDocumentEnrichment
+case class OverriddenSymbolsEnrichment(
+    overridden: List[(String, List[OverriddenSymbol])]
+) extends TextDocumentEnrichment
 
-trait MtagsIndexer extends GenericMtagsIndexer[JustDocument] {
-  protected def documentToResult(doc: s.TextDocument): JustDocument =
-    JustDocument(doc)
+trait MtagsIndexer extends GenericMtagsIndexer[NoEnrichment.type] {
+  protected def enrich(doc: s.TextDocument): EnrichedTextDocument =
+    new EnrichedTextDocument(doc, NoEnrichment)
 }

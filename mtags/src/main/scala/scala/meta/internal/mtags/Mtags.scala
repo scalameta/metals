@@ -45,6 +45,28 @@ final class Mtags(implicit rc: ReportContext) {
     }
   }
 
+  def enrichedTextDocument(
+      input: Input.VirtualFile,
+      dialect: Dialect = dialects.Scala213,
+      includeMembers: Boolean = false
+  ): Option[EnrichedTextDocument] = {
+    val language = input.toLanguage
+    if (language.isJava || language.isScala) {
+      val mtags =
+        if (language.isJava)
+          new JavaToplevelMtags(input)
+        else
+          new ScalaToplevelMtags(
+            input,
+            includeInnerClasses = true,
+            includeMembers,
+            dialect
+          )
+      addLines(language, input.text)
+      Some(mtags.index())
+    } else None
+  }
+
   def index(
       language: Language,
       input: Input.VirtualFile,
@@ -93,29 +115,21 @@ object Mtags {
       .toList
   }
 
-  def allToplevelsEnriched(
-      input: Input.VirtualFile,
-      dialect: Dialect,
-      includeMembers: Boolean = true
-  )(implicit rc: ReportContext = EmptyReportContext): EnrichedTextDocument = {
-    input.toLanguage match {
-      case Language.JAVA =>
-        new JavaMtags(input, includeMembers = true).index()
-      case Language.SCALA =>
-        val mtags =
-          new ScalaToplevelMtags(input, true, includeMembers, dialect)
-        mtags.index()
-      case _ =>
-        JustDocument(TextDocument())
-    }
-  }
-
   def allToplevels(
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean = true
   )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
-    allToplevelsEnriched(input, dialect, includeMembers).textDocument
+    input.toLanguage match {
+      case Language.JAVA =>
+        new JavaMtags(input, includeMembers = true).index().textDocument
+      case Language.SCALA =>
+        val mtags =
+          new ScalaToplevelMtags(input, true, includeMembers, dialect)
+        mtags.index().textDocument
+      case _ =>
+        TextDocument()
+    }
 
   def toplevels(
       input: Input.VirtualFile,
