@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
 import scribe.Level
-import scribe.data.MDC
-import scribe.message.LoggableMessage
+import scribe.LogFeature
+import scribe.mdc.MDC
 
 package object logging {
 
@@ -10,7 +10,7 @@ package object logging {
   private def scribeLogWhen(
       level: Level,
       condition: Boolean,
-      msg: LoggableMessage,
+      msg: LogFeature,
   )(implicit
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
@@ -22,7 +22,7 @@ package object logging {
       scribe.log(level, mdc, msg)
 
   @inline
-  def logErrorWhen(condition: Boolean, msg: LoggableMessage)(implicit
+  def logErrorWhen(condition: Boolean, msg: LogFeature)(implicit
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
