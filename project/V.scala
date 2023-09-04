@@ -40,7 +40,7 @@ object V {
   val sbtJdiTools = "1.1.1"
   val scalaCli = "1.0.4"
   val scalafix = "0.11.0"
-  val scalafmt = "3.7.13"
+  val scalafmt = "3.7.14"
   val scalameta = "4.8.3"
   val scribe = "3.11.9"
   val semanticdb = scalameta
