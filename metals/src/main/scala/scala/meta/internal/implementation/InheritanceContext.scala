@@ -3,19 +3,28 @@ package scala.meta.internal.implementation
 import java.nio.file.Path
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
+import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.io.AbsolutePath
 
-case class InheritanceContext(
-    findSymbol: String => Option[SymbolInformation],
-    private val inheritance: Map[String, Set[ClassLocation]],
+class InheritanceContext(
+    val findSymbol: String => Option[SymbolInformation],
+    inheritance: Map[String, Set[ClassLocation]],
 ) {
 
   def allClassSymbols = inheritance.keySet
 
-  def getLocations(symbol: String): Set[ClassLocation] = {
+  def getLocations(symbol: String)(implicit
+      ec: ExecutionContext
+  ): Future[Set[ClassLocation]] =
+    Future.successful(getWorkspaceLocations(symbol))
+
+  protected def getWorkspaceLocations(symbol: String): Set[ClassLocation] =
     inheritance.getOrElse(symbol, Set.empty)
-  }
 
   def withClasspathContext(
       classpathInheritance: Map[String, Set[ClassLocation]]
@@ -26,9 +35,53 @@ case class InheritanceContext(
         newInheritance.getOrElse(symbol, Set.empty) ++ locations
       newInheritance += symbol -> newLocations
     }
-    this.copy(
-      inheritance = newInheritance.toMap
+    new InheritanceContext(
+      findSymbol,
+      newInheritance.toMap,
     )
+  }
+
+  def toGlobal(
+      definitionProvider: DefinitionProvider,
+      implementationsInDependencySources: Map[String, Set[ClassLocation]],
+  ) = new GlobalInheritanceContext(
+    findSymbol,
+    definitionProvider,
+    implementationsInDependencySources,
+    inheritance,
+  )
+}
+
+class GlobalInheritanceContext(
+    override val findSymbol: String => Option[SymbolInformation],
+    definitionProvider: DefinitionProvider,
+    implementationsInDependencySources: Map[String, Set[ClassLocation]],
+    localInheritance: Map[String, Set[ClassLocation]],
+) extends InheritanceContext(findSymbol, localInheritance) {
+  override def getLocations(
+      symbol: String
+  )(implicit ec: ExecutionContext): Future[Set[ClassLocation]] = {
+    val workspaceImplementations = getWorkspaceLocations(symbol)
+    val enumCasesImplementations =
+      implementationsInDependencySources.getOrElse(symbol, Set.empty)
+    val shortName = symbol.desc.name.value
+    val resolveGlobal =
+      implementationsInDependencySources
+        .getOrElse(shortName, Set.empty)
+        .collect { case loc @ ClassLocation(_, Some(file), Some(pos)) =>
+          definitionProvider.definition(AbsolutePath(file), pos).map {
+            definition =>
+              def dealiased = ImplementationProvider
+                .dealiasClass(definition.symbol, findSymbol)
+              if (definition.symbol == symbol || dealiased == symbol) Some(loc)
+              else None
+          }
+        }
+    Future
+      .sequence(resolveGlobal)
+      .map { globalImplementations =>
+        workspaceImplementations ++ globalImplementations.flatten ++ enumCasesImplementations
+      }
   }
 }
 
@@ -47,6 +100,6 @@ object InheritanceContext {
       val updated = inheritance.getOrElse(symbol, Set.empty) ++ locations
       inheritance += symbol -> updated
     }
-    InheritanceContext(findSymbol, inheritance.toMap)
+    new InheritanceContext(findSymbol, inheritance.toMap)
   }
 }

@@ -1,5 +1,6 @@
 package scala.meta.internal.implementation
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -9,12 +10,15 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.inputs.Input
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
@@ -58,7 +62,7 @@ final class ImplementationProvider(
   private val implementationsInPath =
     new ConcurrentHashMap[Path, Map[String, Set[ClassLocation]]]
   private val implementationsInDependencySources =
-    new ConcurrentHashMap[String, Set[Implementation]]
+    new ConcurrentHashMap[String, Set[ClassLocation]]
 
   override def reset(): Unit = {
     implementationsInPath.clear()
@@ -91,19 +95,19 @@ final class ImplementationProvider(
       newOverridden: List[(String, List[OverriddenSymbol])],
   ): Unit = {
     def createUpdate(
-        newSymbol: Implementation
-    ): (String, Set[Implementation]) => Set[Implementation] = {
+        newSymbol: ClassLocation
+    ): (String, Set[ClassLocation]) => Set[ClassLocation] = {
       case (_, null) => Set(newSymbol)
       case (_, previous) => previous + newSymbol
     }
     newOverridden.foreach { case (clazz, list) =>
       list.foreach {
         case ResolvedOverriddenSymbol(symbol) =>
-          val update = createUpdate(ImplementationForResolved(clazz))
+          val update = createUpdate(ClassLocation(clazz, Some(path.toNIO)))
           implementationsInDependencySources.compute(symbol, update(_, _))
         case UnresolvedOverriddenSymbol(name, pos) =>
           val update =
-            createUpdate(ImplementationForUnresolved(clazz, path, pos))
+            createUpdate(ClassLocation(clazz, Some(path.toNIO), Some(pos)))
           implementationsInDependencySources.compute(name, update(_, _))
       }
     }
@@ -179,6 +183,8 @@ final class ImplementationProvider(
           globalTable.globalContextFor(
             source,
             implementationsInPath.asScala.toMap,
+            definitionProvider,
+            implementationsInDependencySources.asScala.toMap,
           )
         // symbol is in workspace,
         // we might need to search different places for related symbols
@@ -333,12 +339,7 @@ final class ImplementationProvider(
           file <- files
           locations = locationsByFile(file)
           implPath = AbsolutePath(file)
-          implDocument <- findSemanticdb(implPath).toIterable
-          distance = buffer.tokenEditDistance(
-            implPath,
-            implDocument.text,
-            trees,
-          )
+          implDocument <- findSemanticdb(implPath, handleJars = true)
           implLocation <- locations
           implSymbol <- findImplementationSymbol(
             parentSymbol,
@@ -354,7 +355,17 @@ final class ImplementationProvider(
             source,
           )
           range <- implOccurrence.range
-          revised <- distance.toRevised(range.toLsp)
+          revised <-
+            if (implPath.isJarFileSystem) {
+              Some(range.toLsp)
+            } else {
+              val distance = buffer.tokenEditDistance(
+                implPath,
+                implDocument.text,
+                trees,
+              )
+              distance.toRevised(range.toLsp)
+            }
         } { allLocations.add(new Location(file.toUri.toString, revised)) }
       }
 
@@ -363,55 +374,86 @@ final class ImplementationProvider(
       classContext <- inheritanceContext.toIterable
       parentSymbol <- classContext.findSymbol(symbol).toIterable
       symbolClass <- classFromSymbol(parentSymbol, classContext.findSymbol)
-      locationsByFile = findImplementation(
-        symbolClass.symbol,
-        classContext,
-        source.toNIO,
-      )
-      files <- locationsByFile.keySet.grouped(
-        Math.max(locationsByFile.size / cores, 1)
-      )
-    } yield findImplementationLocations(files, locationsByFile, parentSymbol)
+    } yield {
+      for {
+        locationsByFile <- findImplementation(
+          symbolClass.symbol,
+          classContext,
+          source.toNIO,
+        )
+        files = locationsByFile.keySet.grouped(
+          Math.max(locationsByFile.size / cores, 1)
+        )
+        collected <-
+          Future.sequence(
+            files.map(
+              findImplementationLocations(_, locationsByFile, parentSymbol)
+            )
+          )
+      } yield collected
+    }
     Future.sequence(splitJobs).map { _ =>
       allLocations.asScala.toSeq
     }
   }
 
-  private def findSemanticdb(fileSource: AbsolutePath): Option[TextDocument] = {
+  private def findSemanticdb(
+      fileSource: AbsolutePath,
+      handleJars: Boolean = false,
+  ): Option[TextDocument] = {
     if (fileSource.isJarFileSystem)
-      None
+      if (!handleJars) None
+      else Some(semanticdbForJarFile(fileSource))
     else
       semanticdbs
         .textDocument(fileSource)
         .documentIncludingStale
   }
 
+  private def semanticdbForJarFile(fileSource: AbsolutePath) = {
+    val dialect = ScalaVersions.dialectForDependencyJar(fileSource.filename)
+    val text = FileIO.slurp(fileSource, StandardCharsets.UTF_8)
+    val input = Input.VirtualFile(fileSource.toURI.toString(), text)
+    val textDocument = Mtags.index(input, dialect)
+    textDocument
+  }
+
   private def findImplementation(
       symbol: String,
       classContext: InheritanceContext,
       file: Path,
-  ): Map[Path, Set[ClassLocation]] = {
+  ): Future[Map[Path, Set[ClassLocation]]] = {
 
-    def loop(symbol: String, currentPath: Option[Path]): Set[ClassLocation] = {
+    def loop(
+        symbol: String,
+        currentPath: Option[Path],
+    ): Future[Set[ClassLocation]] = {
       val directImplementations =
-        classContext.getLocations(symbol).filterNot { loc =>
-          // we are not interested in local symbols from outside the workspace
-          (loc.symbol.isLocal && loc.file.isEmpty) ||
-          // for local symbols, inheritance should only be picked up in the same file
-          // otherwise there can be a name collision between files
-          // local1' is from file A, local2 extends local1''
-          // but both local2 and local1'' are from file B
-          // clearly, local2 shouldn't be considered for local1'
-          (symbol.isLocal && loc.symbol.isLocal && loc.file != currentPath)
-        }
-      directImplementations ++ directImplementations
-        .flatMap { loc => loop(loc.symbol, loc.file) }
+        classContext
+          .getLocations(symbol)
+          .map(_.filterNot { loc =>
+            // we are not interested in local symbols from outside the workspace
+            (loc.symbol.isLocal && loc.file.isEmpty) ||
+            // for local symbols, inheritance should only be picked up in the same file
+            // otherwise there can be a name collision between files
+            // local1' is from file A, local2 extends local1''
+            // but both local2 and local1'' are from file B
+            // clearly, local2 shouldn't be considered for local1'
+            (symbol.isLocal && loc.symbol.isLocal && loc.file != currentPath)
+          })
+      directImplementations.flatMap { directImplementations =>
+        Future
+          .sequence(directImplementations.map { loc =>
+            loop(loc.symbol, loc.file)
+          })
+          .map(rec => directImplementations ++ rec.flatten)
+      }
     }
 
-    loop(symbol, Some(file)).groupBy(_.file).collect {
+    loop(symbol, Some(file)).map(_.groupBy(_.file).collect {
       case (Some(path), locs) =>
         path -> locs
-    }
+    })
   }
 
   private def findSymbolInformation(
@@ -569,12 +611,3 @@ object ImplementationProvider {
     info.isObject || info.isClass || info.isTrait || info.isType || info.isInterface
 
 }
-
-sealed trait Implementation
-case class ImplementationForResolved(implementationSymbol: String)
-    extends Implementation
-case class ImplementationForUnresolved(
-    implementationSymbol: String,
-    usagePath: AbsolutePath,
-    usagePosition: Int,
-) extends Implementation

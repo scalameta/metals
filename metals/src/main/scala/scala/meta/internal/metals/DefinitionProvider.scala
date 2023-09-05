@@ -8,6 +8,7 @@ import scala.concurrent.Future
 import scala.meta.Term
 import scala.meta.Type
 import scala.meta.inputs.Input
+import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
@@ -34,6 +35,7 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
@@ -127,6 +129,23 @@ final class DefinitionProvider(
         definition
       }
     }
+  }
+
+  def definition(
+      path: AbsolutePath,
+      pos: Int,
+  ): Future[DefinitionResult] = {
+    val text = path.readText
+    val input = new Input.VirtualFile(path.toURI.toString(), text)
+    val range = Range(input, pos, pos)
+    definition(
+      path,
+      new TextDocumentPositionParams(
+        new TextDocumentIdentifier(path.toURI.toString()),
+        range.toLsp.getStart(),
+      ),
+      EmptyCancelToken,
+    )
   }
 
   /**

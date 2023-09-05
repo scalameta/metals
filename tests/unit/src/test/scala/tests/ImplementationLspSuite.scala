@@ -571,6 +571,33 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin,
   )
 
+  test("global-implementations") {
+    cleanWorkspace()
+    val fileName = "a/src/main/scala/a/Main.scala"
+    val fileContent =
+      """|package a
+         |class MyException extends Excep@@tion
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{"a":
+           |  {
+           |    "scalaVersion" : "${BuildInfo.scalaVersion}",
+           |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
+           |  }
+           |}
+           |/$fileName
+           |${fileContent.replace("@@", "")}
+        """.stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.implementation(fileName, fileContent)
+      _ = assert(locations.length > 1)
+      _ <- server.shutdown()
+    } yield ()
+  }
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.16", "io.circe::circe-generic:0.12.0")
 
