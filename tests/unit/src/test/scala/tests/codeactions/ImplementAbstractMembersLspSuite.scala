@@ -279,7 +279,7 @@ class ImplementAbstractMembersLspSuite
             path,
             """|package a
                |
-               |object Impl extends <<Service>>
+               |<<object Impl extends Service>>
                |""".stripMargin,
             s"""|${ImplementAbstractMembers.title}
                 |""".stripMargin,
