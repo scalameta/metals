@@ -473,9 +473,7 @@ final case class Indexer(
 
           val documents = definitionIndex.addSourceDirectory(path, dialect)
           val overriddenInfo = collectOverriddenInfo(documents)
-          implementationProvider.addImplementationInDependenciesInfo(
-            overriddenInfo
-          )
+          implementationProvider.addTypeHierarchy(overriddenInfo)
         } else {
           scribe.warn(s"unexpected dependency: $path")
         }
@@ -614,26 +612,35 @@ final case class Indexer(
    * @param path JAR path
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
-    (
-      tables.jarSymbols.getTopLevels(path),
-      tables.jarOverriddenSymbols.getOverriddenInfo(path),
-    ) match {
-      case (Some(toplevels), Some(overridden)) =>
-        val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
-        definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
-        implementationProvider.addImplementationInDependenciesInfo(overridden)
-      case _ =>
-        val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
-        val documents = definitionIndex.addSourceJar(path, dialect)
-        val toplevels = documents.flatMap { case (path, document) =>
-          document.topLevels.map((_, path))
+    val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
+    def indexJar() = {
+      val documents = definitionIndex.addSourceJar(path, dialect)
+      val toplevels = documents.flatMap { case (path, document) =>
+        document.topLevels.map((_, path))
+      }
+      val overrides = collectOverriddenInfo(documents).flatMap {
+        case (path, list) =>
+          list.flatMap { case (symbol, overridden) =>
+            overridden.map((path, symbol, _))
+          }
+      }
+      implementationProvider.addTypeHierarchyElements(overrides)
+      (toplevels, overrides)
+    }
+
+    tables.jarSymbols.getTopLevels(path) match {
+      case Some(toplevels) =>
+        tables.jarSymbols.getTypeHierarchy(path) match {
+          case Some(overrides) =>
+            definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
+            implementationProvider.addTypeHierarchyElements(overrides)
+          case None =>
+            val (_, overrides) = indexJar()
+            tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
         }
-        val overriddenInfo = collectOverriddenInfo(documents)
-        implementationProvider.addImplementationInDependenciesInfo(
-          overriddenInfo
-        )
-        tables.jarSymbols.putTopLevels(path, toplevels)
-        tables.jarOverriddenSymbols.putOverriddenInfo(path, overriddenInfo)
+      case None =>
+        val (toplevels, overrides) = indexJar()
+        tables.jarSymbols.putJarIndexingInfo(path, toplevels, overrides)
     }
   }
 

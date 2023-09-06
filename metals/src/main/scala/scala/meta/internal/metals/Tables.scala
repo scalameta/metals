@@ -23,7 +23,6 @@ final class Tables(
   import Tables.ConnectionState
 
   val jarSymbols = new JarTopLevels(() => connection)
-  val jarOverriddenSymbols = new JarOverridden(() => connection)
   val digests =
     new Digests(() => connection, time)
   val dependencySources =

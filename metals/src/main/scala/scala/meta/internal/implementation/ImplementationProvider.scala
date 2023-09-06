@@ -80,19 +80,28 @@ final class ImplementationProvider(
       )
   }
 
-  def addImplementationInDependenciesInfo(
+  def addTypeHierarchy(
       overriddenInfo: List[
         (AbsolutePath, List[(String, List[OverriddenSymbol])])
       ]
   ): Unit = {
-    overriddenInfo.foreach { case (path, overridden) =>
-      addImplementationInDependenciesInfo(path, overridden)
+    overriddenInfo.foreach { case (path, list) =>
+      list.foreach { case (overridesSymbol, overridden) =>
+        overridden.foreach(addTypeHierarchyElement(path, overridesSymbol, _))
+      }
     }
   }
 
-  private def addImplementationInDependenciesInfo(
+  def addTypeHierarchyElements(
+      elements: List[(AbsolutePath, String, OverriddenSymbol)]
+  ): Unit = elements.foreach { case (path, overridesSymbol, overridden) =>
+    addTypeHierarchyElement(path, overridesSymbol, overridden)
+  }
+
+  private def addTypeHierarchyElement(
       path: AbsolutePath,
-      newOverridden: List[(String, List[OverriddenSymbol])],
+      overridesSymbol: String,
+      overridden: OverriddenSymbol,
   ): Unit = {
     def createUpdate(
         newSymbol: ClassLocation
@@ -100,16 +109,18 @@ final class ImplementationProvider(
       case (_, null) => Set(newSymbol)
       case (_, previous) => previous + newSymbol
     }
-    newOverridden.foreach { case (clazz, list) =>
-      list.foreach {
-        case ResolvedOverriddenSymbol(symbol) =>
-          val update = createUpdate(ClassLocation(clazz, Some(path.toNIO)))
-          implementationsInDependencySources.compute(symbol, update(_, _))
-        case UnresolvedOverriddenSymbol(name, pos) =>
-          val update =
-            createUpdate(ClassLocation(clazz, Some(path.toNIO), Some(pos)))
-          implementationsInDependencySources.compute(name, update(_, _))
-      }
+    overridden match {
+      case ResolvedOverriddenSymbol(symbol) =>
+        val update = createUpdate(
+          ClassLocation(overridesSymbol, Some(path.toNIO))
+        )
+        implementationsInDependencySources.compute(symbol, update(_, _))
+      case UnresolvedOverriddenSymbol(name, pos) =>
+        val update =
+          createUpdate(
+            ClassLocation(overridesSymbol, Some(path.toNIO), Some(pos))
+          )
+        implementationsInDependencySources.compute(name, update(_, _))
     }
   }
 
