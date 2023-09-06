@@ -41,7 +41,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
         |<<object>>/*keyword*/ <<Main>>/*class*/ {
         |  <<val>>/*keyword*/ <<vTrue>>/*variable,definition,readonly*/ = <<true>>/*keyword*/
         |  <<val>>/*keyword*/ <<vFalse>>/*variable,definition,readonly*/ = <<false>>/*keyword*/
-        |  (<<null>>/*keyword*/: <<AccessMode>>/*enumMember,abstract*/) <<match>>/*keyword*/ {
+        |  (<<null>>/*keyword*/: <<AccessMode>>/*enumMember*/) <<match>>/*keyword*/ {
         |    <<case>>/*keyword*/ <<READ>>/*enumMember*/ <<=>>>/*operator*/ <<0>>/*number*/
         |    <<case>>/*keyword*/ <<WRITE>>/*enumMember*/ <<=>>>/*operator*/
         |    <<case>>/*keyword*/ <<EXECUTE>>/*enumMember*/ <<=>>>/*operator*/

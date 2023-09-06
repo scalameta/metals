@@ -594,6 +594,10 @@ class CompletionDocSuite extends BaseCompletionSuite {
         s"""|$scala213Docs
             |StringBuilder scala.collection.mutable
             |""".stripMargin,
+      "2.13.12" ->
+        s"""|$scala213Docs
+            |StringBuilder scala.collection.mutable
+            |""".stripMargin,
     ),
   )
 
