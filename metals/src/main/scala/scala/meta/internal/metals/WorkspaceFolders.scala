@@ -17,7 +17,7 @@ class WorkspaceFolders(
 
   private val folderServices: AtomicReference[WorkspaceFoldersServices] = {
     val (scalaProjects, nonScalaProjects) =
-      initialFolders.partition(_.isScalaProject) match {
+      initialFolders.partition(_.isMetalsProject) match {
         case (Nil, nonScala) => (List(nonScala.head), nonScala.tail)
         case t => t
       }
@@ -37,7 +37,7 @@ class WorkspaceFolders(
     def shouldBeRemoved(folder: Folder) =
       actualToRemove.exists(_.path == folder.path)
 
-    val (newScala, newNonScala) = toAdd.partition(_.isScalaProject)
+    val (newScala, newNonScala) = toAdd.partition(_.isMetalsProject)
     val newServices = newScala.map(createService(_))
     if (newServices.isEmpty && getFolderServices.forall(shouldBeRemoved)) {
       shutdownMetals()

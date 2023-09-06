@@ -130,7 +130,7 @@ class MetalsLspService(
     folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
-) extends Folder(folder, folderVisibleName, isKnownScalaProject = true)
+) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService {
   import serverInputs._
@@ -2052,7 +2052,7 @@ class MetalsLspService(
     if (
       !buildTools.isAutoConnectable()
       && buildTools.loadSupported.isEmpty
-      && folder.isScalaProject(extendSearchToScriptsAndSbt = false)
+      && folder.isScalaProject()
     ) {
       scalaCli.setupIDE(folder)
     } else Future.successful(())

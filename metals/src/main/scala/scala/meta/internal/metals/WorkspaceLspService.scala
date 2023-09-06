@@ -324,7 +324,7 @@ class WorkspaceLspService(
     focusedDocument = Some(path)
     val service = getServiceForOpt(path)
       .orElse {
-        if (path.isScalaFilename) {
+        if (path.filename.isScalaOrJavaFilename) {
           getFolderForOpt(path, nonScalaProjects)
             .map(workspaceFolders.convertToScalaProject)
         } else None
@@ -542,13 +542,13 @@ class WorkspaceLspService(
         params
           .getEvent()
           .getRemoved()
-          .map(Folder(_, isKnownScalaProject = false))
+          .map(Folder(_, isKnownMetalsProject = false))
           .asScala
           .toList,
         params
           .getEvent()
           .getAdded()
-          .map(Folder(_, isKnownScalaProject = false))
+          .map(Folder(_, isKnownMetalsProject = false))
           .asScala
           .toList,
       )
@@ -1280,11 +1280,11 @@ class WorkspaceLspService(
 class Folder(
     val path: AbsolutePath,
     val visibleName: Option[String],
-    isKnownScalaProject: Boolean,
+    isKnownMetalsProject: Boolean,
 ) {
-  lazy val isScalaProject: Boolean =
-    isKnownScalaProject || path.resolve(".metals").exists || path
-      .isScalaProject()
+  lazy val isMetalsProject: Boolean =
+    isKnownMetalsProject || path.resolve(".metals").exists || path
+      .isMetalsProject()
   def nameOrUri: String = visibleName.getOrElse(path.toString())
 }
 
@@ -1294,12 +1294,12 @@ object Folder {
   )
   def apply(
       folder: lsp4j.WorkspaceFolder,
-      isKnownScalaProject: Boolean,
+      isKnownMetalsProject: Boolean,
   ): Folder = {
     val name = Option(folder.getName()) match {
       case Some("") => None
       case maybeValue => maybeValue
     }
-    new Folder(folder.getUri().toAbsolutePath, name, isKnownScalaProject)
+    new Folder(folder.getUri().toAbsolutePath, name, isKnownMetalsProject)
   }
 }

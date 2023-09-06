@@ -303,9 +303,14 @@ object MetalsEnrichments
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
-    def isScalaProject(extendSearchToScriptsAndSbt: Boolean = true): Boolean = {
-      val isScala: String => Boolean =
-        if (extendSearchToScriptsAndSbt) _.isScalaFilename else _.isScala
+    def isScalaProject(): Boolean =
+      containsProjectFilesSatisfying(_.isScala)
+    def isMetalsProject(): Boolean =
+      containsProjectFilesSatisfying(_.isScalaOrJavaFilename)
+
+    private def containsProjectFilesSatisfying(
+        fileNamePredicate: String => Boolean
+    ): Boolean = {
       val directoriesToCheck = Set("test", "src", "it")
       def dirFilter(f: File) = directoriesToCheck(f.getName()) || f
         .listFiles()
@@ -316,7 +321,7 @@ object MetalsEnrichments
       ): Boolean = {
         file.listFiles().exists { file =>
           if (file.isDirectory()) dirFilter(file) && isScalaDir(file)
-          else isScala(file.getName())
+          else fileNamePredicate(file.getName())
         }
       }
       path.isDirectory && isScalaDir(path.toFile, dirFilter)

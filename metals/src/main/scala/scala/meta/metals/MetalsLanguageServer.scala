@@ -140,12 +140,12 @@ class MetalsLanguageServer(
                 new Folder(
                   root.toAbsolutePath,
                   Some("root"),
-                  isKnownScalaProject = true,
+                  isKnownMetalsProject = true,
                 )
               )
               .toList
-          case head :: Nil => List(Folder(head, isKnownScalaProject = true))
-          case many => many.map(Folder(_, isKnownScalaProject = false))
+          case head :: Nil => List(Folder(head, isKnownMetalsProject = true))
+          case many => many.map(Folder(_, isKnownMetalsProject = false))
         }
       }
 
@@ -174,7 +174,7 @@ class MetalsLanguageServer(
 
           val folderPathsWithScala =
             folders.collect {
-              case folder if folder.isScalaProject => folder.path
+              case folder if folder.isMetalsProject => folder.path
             } match {
               case Nil =>
                 scribe.warn(
