@@ -89,6 +89,14 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
+  def typeHierarchyIndex(): Unit = {
+    scalaDependencySources.inputs.foreach { input =>
+      Mtags.enrichedTextDocument(input)
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalaTokenize(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
       val scanner = new LegacyScanner(input, Trees.defaultTokenizerDialect)

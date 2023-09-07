@@ -138,4 +138,14 @@ object Mtags {
     new Mtags().toplevels(input, dialect)
   }
 
+  def enrichedTextDocument(
+      input: Input.VirtualFile,
+      dialect: Dialect = dialects.Scala213,
+      includeMembers: Boolean = false
+  )(implicit
+      rc: ReportContext = EmptyReportContext
+  ): Option[EnrichedTextDocument] = {
+    new Mtags().enrichedTextDocument(input, dialect, includeMembers)
+  }
+
 }

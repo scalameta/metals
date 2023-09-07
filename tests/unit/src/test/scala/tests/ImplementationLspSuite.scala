@@ -576,13 +576,13 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
   checkSymbols(
     "set",
     """|package a
-        |class MySet[A] extends S@@et[A] {
-        |  override def iterator: Iterator[A] = ???
-        |  override def contains(elem: A): Boolean = ???
-        |  override def incl(elem: A): Set[A] = ???
-        |  override def excl(elem: A): Set[A] = ???
-        |}
-        |""".stripMargin,
+       |class MySet[A] extends S@@et[A] {
+       |  override def iterator: Iterator[A] = ???
+       |  override def contains(elem: A): Boolean = ???
+       |  override def incl(elem: A): Set[A] = ???
+       |  override def excl(elem: A): Set[A] = ???
+       |}
+       |""".stripMargin,
     """|a/MySet#
        |scala/Enumeration#ValueSet#
        |scala/Enumeration#ValueSet#
@@ -608,7 +608,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |scala/collection/immutable/SortedSet#
        |scala/collection/immutable/TreeSet#
        |scala/collection/immutable/TreeSet#
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkSymbols(
@@ -626,7 +626,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |scala/reflect/macros/ReificationException#
        |scala/reflect/macros/TypecheckException#
        |scala/reflect/macros/UnexpectedReificationException#
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   override protected def libraryDependencies: List[String] =
@@ -647,9 +647,9 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
   }
 
   def checkSymbols(
-    name: String,
-    fileContents: String,
-    expectedSymbols: String
+      name: String,
+      fileContents: String,
+      expectedSymbols: String,
   ): Unit =
     test(name) {
       val fileName = "a/src/main/scala/a/Main.scala"
@@ -657,22 +657,23 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
       for {
         _ <- initialize(
           s"""/metals.json
-            |{"a":
-            |  {
-            |    "scalaVersion" : "${BuildInfo.scalaVersion}"
-            |  }
-            |}
-            |/$fileName
-            |${fileContents.replace("@@", "")}
+             |{"a":
+             |  {
+             |    "scalaVersion" : "${BuildInfo.scalaVersion}"
+             |  }
+             |}
+             |/$fileName
+             |${fileContents.replace("@@", "")}
           """.stripMargin
         )
         _ <- server.didOpen(fileName)
         locations <- server.implementation(fileName, fileContents)
         definitions <-
           Future.sequence(
-            locations.map(
-              location =>
-                server.server.definitionResult(location.toTextDocumentPositionParams)
+            locations.map(location =>
+              server.server.definitionResult(
+                location.toTextDocumentPositionParams
+              )
             )
           )
         symbols = definitions.map(_.symbol).sorted

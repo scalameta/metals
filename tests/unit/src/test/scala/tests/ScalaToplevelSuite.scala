@@ -3,7 +3,6 @@ package tests
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OverriddenSymbolsEnrichment
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
@@ -639,9 +638,7 @@ class ScalaToplevelSuite extends BaseSuite {
           case All | ToplevelWithInner =>
             val includeMembers = mode == All
             val enrichedDoc =
-              new Mtags()(EmptyReportContext)
-                .enrichedTextDocument(input, dialect, includeMembers)
-                .get
+              Mtags.enrichedTextDocument(input, dialect, includeMembers).get
             val symbols =
               enrichedDoc.textDocument.occurrences.map(_.symbol).toList
             enrichedDoc.enrichment match {
