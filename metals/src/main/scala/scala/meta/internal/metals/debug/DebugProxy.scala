@@ -190,8 +190,7 @@ private[debug] final class DebugProxy(
     case HotCodeReplace(req) =>
       scribe.info("Hot code replace triggered")
       compilations
-        .compile(sourceMapper.buildTargets.allBuildTargetIds)
-        .future
+        .compileAll()
         .onComplete { res =>
           res match {
             case _: Success[?] => server.send(req)
