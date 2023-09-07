@@ -89,7 +89,12 @@ class BspConnector(
           Future.successful(None)
         case ResolvedBloop =>
           bloopServers
-            .newServer(projectRoot, bspTraceRoot, userConfiguration, addLivenessMonitor)
+            .newServer(
+              projectRoot,
+              bspTraceRoot,
+              userConfiguration,
+              addLivenessMonitor,
+            )
             .map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
@@ -114,7 +119,9 @@ class BspConnector(
             .map(Some(_))
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
-          bspServers.newServer(projectRoot, bspTraceRoot, details, addLivenessMonitor).map(Some(_))
+          bspServers
+            .newServer(projectRoot, bspTraceRoot, details, addLivenessMonitor)
+            .map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
             .groupBy(_.getName())
@@ -146,7 +153,12 @@ class BspConnector(
                 )
               )
             _ = tables.buildServers.chooseServer(item.getName())
-            conn <- bspServers.newServer(projectRoot, bspTraceRoot, item, addLivenessMonitor)
+            conn <- bspServers.newServer(
+              projectRoot,
+              bspTraceRoot,
+              item,
+              addLivenessMonitor,
+            )
           } yield Some(conn)
       }
     }

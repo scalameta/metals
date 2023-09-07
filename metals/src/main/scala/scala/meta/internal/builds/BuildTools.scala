@@ -117,29 +117,19 @@ final class BuildTools(
 
   private def searchForBuildTool(
       isProjectRoot: AbsolutePath => Boolean
-  ): Option[AbsolutePath] = {
-    def recIsProjectRoot(
-        path: AbsolutePath,
-        level: Int = 0,
-    ): Option[AbsolutePath] =
-      if (
-        path.isDirectory &&
-        !path.toNIO.filename.startsWith(".")
-      ) {
-        if (isProjectRoot(path)) Some(path)
-        else if (level < 1)
-          path.toNIO
-            .toFile()
-            .listFiles()
-            .collectFirst(root =>
-              recIsProjectRoot(AbsolutePath(root), level + 1) match {
-                case Some(root) => root
-              }
-            )
-        else None
-      } else None
-    recIsProjectRoot(workspace)
-  }
+  ): Option[AbsolutePath] =
+    if (isProjectRoot(workspace)) Some(workspace)
+    else
+      workspace.toNIO
+        .toFile()
+        .listFiles()
+        .collectFirst {
+          case file
+              if file.isDirectory &&
+                !file.getName.startsWith(".") &&
+                isProjectRoot(AbsolutePath(file.toPath())) =>
+            AbsolutePath(file.toPath())
+        }
 
   def allAvailable: List[BuildTool] = {
     List(

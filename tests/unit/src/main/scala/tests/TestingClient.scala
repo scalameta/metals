@@ -90,6 +90,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var buildServerNotResponding =
     ServerLivenessMonitor.ServerNotResponding.dismiss
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
+  var bspError = BspErrorHandler.dismiss
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =

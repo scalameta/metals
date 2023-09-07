@@ -1009,6 +1009,7 @@ object Messages {
       params
     }
   }
+
 }
 
 object FileOutOfScalaCliBspScope {

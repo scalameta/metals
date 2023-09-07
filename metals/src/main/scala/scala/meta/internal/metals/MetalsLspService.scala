@@ -887,7 +887,7 @@ class MetalsLspService(
 
   def connectTables(): Connection = tables.connect()
 
-  def initialized(): Future[Unit] = {
+  def initialized(): Future[Unit] =
     for {
       _ <- maybeSetupScalaCli()
       _ <-
@@ -902,7 +902,6 @@ class MetalsLspService(
             )
           )
     } yield ()
-  }
 
   def onShutdown(): Unit = {
     tables.fingerprints.save(fingerprints.getAllFingerprints())
@@ -1397,9 +1396,7 @@ class MetalsLspService(
         javaFormattingProvider.format(params)
       else
         for {
-          projectRoot <- supportedBuildTool().map(
-            _.map(_.projectRoot).getOrElse(folder)
-          )
+          projectRoot <- calculateOptProjectRoot().map(_.getOrElse(folder))
           res <- formattingProvider.format(path, projectRoot, token)
         } yield res
     }
@@ -1656,7 +1653,7 @@ class MetalsLspService(
           } yield bloopServers.shutdownServer()
         case Some(session) if session.main.isSbt =>
           for {
-            currentBuildTool <- supportedBuildTool
+            currentBuildTool <- buildTool()
             res <- currentBuildTool match {
               case Some(sbt: SbtBuildTool) =>
                 for {
@@ -1948,12 +1945,28 @@ class MetalsLspService(
     })
   }
 
+  private def buildTool(): Future[Option[BuildTool]] = {
+    buildTools.loadSupported match {
+      case Nil => Future(None)
+      case buildTools =>
+        for {
+          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
+            buildTools
+          )
+          if isCompatibleVersion(buildTool)
+        } yield Some(buildTool)
+    }
+  }
+
+  private def isCompatibleVersion(buildTool: BuildTool) =
+    SemVer.isCompatibleVersion(
+      buildTool.minimumVersion,
+      buildTool.version,
+    )
+
   def supportedBuildTool(): Future[Option[BuildTool]] = {
     def isCompatibleVersion(buildTool: BuildTool) = {
-      val isCompatibleVersion = SemVer.isCompatibleVersion(
-        buildTool.minimumVersion,
-        buildTool.version,
-      )
+      val isCompatibleVersion = this.isCompatibleVersion(buildTool)
       if (isCompatibleVersion) {
         Some(buildTool)
       } else {
@@ -1987,7 +2000,7 @@ class MetalsLspService(
       forceImport: Boolean
   ): Future[BuildChange] =
     for {
-      possibleBuildTool <- supportedBuildTool
+      possibleBuildTool <- supportedBuildTool()
       chosenBuildServer = tables.buildServers.selectedServer()
       isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
         _ == BloopServers.name
@@ -2078,7 +2091,7 @@ class MetalsLspService(
 
   def calculateOptProjectRoot(): Future[Option[AbsolutePath]] =
     for {
-      possibleBuildTool <- supportedBuildTool
+      possibleBuildTool <- buildTool()
     } yield possibleBuildTool.map(_.projectRoot).orElse(buildTools.bloopProject)
 
   def quickConnectToBuildServer(): Future[BuildChange] =
