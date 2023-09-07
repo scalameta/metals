@@ -839,46 +839,4 @@ class SbtBloopLspSuite
     } yield ()
   }
 
-  test("custom-project-root") {
-    cleanWorkspace()
-    client.importBuild = ImportBuild.yes
-    writeLayout(
-      s"""|/deep/and-deeper/build.sbt
-          |scalaVersion := "${V.scala213}"
-          |/deep/and-deeper/src/main/scala/A.scala
-          |
-          |object A {
-          |  val foo: Int = "aaa"
-          |}
-          |""".stripMargin
-    )
-    for {
-      _ <- server.initialize()
-      _ <- server.initialized()
-      _ <- server.didChangeConfiguration(
-        """{
-          |  "projects-roots": "deep/and-deeper"
-          |}
-          |""".stripMargin
-      )
-      _ <- server.server.indexingPromise.future
-      _ = assert(server.server.bspSession.get.main.isBloop)
-      _ <- server.didOpen("deep/and-deeper/src/main/scala/A.scala")
-      _ <- server.didSave("deep/and-deeper/src/main/scala/A.scala")(identity)
-      _ = assertEquals(
-        server.server.tables.projectRoot.relativePath(),
-        Some("deep/and-deeper"),
-      )
-      _ = assertNoDiff(
-        client.pathDiagnostics("deep/and-deeper/src/main/scala/A.scala"),
-        """|deep/and-deeper/src/main/scala/A.scala:3:18: error: type mismatch;
-           | found   : String("aaa")
-           | required: Int
-           |  val foo: Int = "aaa"
-           |                 ^^^^^
-           |""".stripMargin,
-      )
-    } yield ()
-  }
-
 }

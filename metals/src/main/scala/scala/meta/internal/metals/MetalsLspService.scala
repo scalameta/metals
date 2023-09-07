@@ -887,17 +887,8 @@ class MetalsLspService(
 
   def connectTables(): Connection = tables.connect()
 
-  def loadProjectRootSetting(): Future[Unit] = Future {
-    for {
-      relativePath <- tables.projectRoot.relativePath()
-      absolutePath = folder.resolve(relativePath)
-      if (absolutePath.isDirectory)
-    } buildTools.setProjectRoot(absolutePath)
-  }
-
   def initialized(): Future[Unit] = {
     for {
-      _ <- loadProjectRootSetting()
       _ <- maybeSetupScalaCli()
       _ <-
         Future
@@ -991,29 +982,9 @@ class MetalsLspService(
       }
       .getOrElse(Future.successful(()))
 
-    val reconnectWithNewRoot = {
-      val projectRoot = userConfig().projectsRoots
-        .get(getVisibleName)
-        .orElse(userConfig().projectsRoots.get(folder.toString()))
-        .map(folder.resolve(_))
-        .flatMap {
-          case path if path.exists && path.isDirectory => Some(path)
-          case errorRoot =>
-            scribe.error(s"$errorRoot is not a valid directory")
-            None
-        }
-      val previousProjectRoot = buildTools.projectRoot.getAndSet(projectRoot)
-      if (projectRoot != previousProjectRoot) {
-        tables.projectRoot.set(projectRoot.map(_.toRelative(folder).toString()))
-        if (bspSession.isEmpty) {
-          slowConnectToBuildServer(false)
-        } else Future.successful(())
-      } else Future.successful(())
-    }
-
     Future
       .sequence(
-        List(reconnectWithNewRoot, restartBuildServer, resetDecorations)
+        List(restartBuildServer, resetDecorations)
       )
       .map(_ => ())
   }
@@ -1194,12 +1165,11 @@ class MetalsLspService(
     def isScalaCli = bspSession.exists(_.main.isScalaCLI)
     def isScalaFile =
       file.toString.isScala || file.isJava || file.isAmmoniteScript
-    val projectRoot = buildTools.projectRoot.get().getOrElse(folder)
     if (
       isScalaCli && isScalaFile &&
       buildTargets.inverseSources(file).isEmpty &&
-      file.toNIO.startsWith(projectRoot.toNIO) &&
-      !ScalaCliBspScope.inScope(projectRoot, file)
+      file.toNIO.startsWith(folder.toNIO) &&
+      !ScalaCliBspScope.inScope(folder, file)
     ) {
       languageClient
         .showMessageRequest(
@@ -1210,7 +1180,7 @@ class MetalsLspService(
         .asScala
         .flatMap {
           case FileOutOfScalaCliBspScope.regenerateAndRestart =>
-            val buildTool = ScalaCliBuildTool(folder, projectRoot, userConfig)
+            val buildTool = ScalaCliBuildTool(folder, folder, userConfig)
             for {
               _ <- buildTool.generateBspConfig(
                 folder,
@@ -1427,12 +1397,9 @@ class MetalsLspService(
         javaFormattingProvider.format(params)
       else
         for {
-          projectRoot <-
-            buildTools.projectRoot.get() match {
-              case Some(root) => Future.successful(root)
-              case None =>
-                supportedBuildTool().map(_.map(_.projectRoot).getOrElse(folder))
-            }
+          projectRoot <- supportedBuildTool().map(
+            _.map(_.projectRoot).getOrElse(folder)
+          )
           res <- formattingProvider.format(path, projectRoot, token)
         } yield res
     }
@@ -2067,15 +2034,8 @@ class MetalsLspService(
       !buildTools.isAutoConnectable
       && buildTools.loadSupported.isEmpty
       && folder.hasScalaFiles
-    ) {
-      languageClient
-        .showMessageRequest(Messages.ScalaCliFallback.params())
-        .asScala
-        .flatMap {
-          case Messages.ScalaCliFallback.yes => scalaCli.setupIDE(folder)
-          case _ => Future.successful(())
-        }
-    } else Future.successful(())
+    ) scalaCli.setupIDE(folder)
+    else Future.successful(())
   }
 
   private def slowConnectToBloopServer(

@@ -238,7 +238,6 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
   }
 
   test("connecting-scalacli-as-fallback") {
-    client.fallbackToScalaCli = Messages.ScalaCliFallback.yes
     cleanWorkspace()
     FileLayout.fromString(simpleFileLayout, workspace)
     for {

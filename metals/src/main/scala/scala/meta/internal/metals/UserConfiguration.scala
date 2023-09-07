@@ -54,7 +54,6 @@ case class UserConfiguration(
     javaFormatConfig: Option[JavaFormatConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
     scalaCliLauncher: Option[String] = None,
-    projectsRoots: Map[String, String] = Map.empty,
 ) {
 
   def currentBloopVersion: String =
@@ -550,21 +549,6 @@ object UserConfiguration {
     val scalafixRulesDependencies =
       getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
 
-    val projectsRoots = {
-      val key = "projects-roots"
-      getStringMap(key, collectError = false)
-        .orElse {
-          getStringKey(
-            key,
-            customError = value =>
-              Some(
-                s"json error: key '$key' should have value of type map of strings or string but obtained $value"
-              ),
-          ).map(root => Map("root" -> root))
-        }
-        .getOrElse(Map.empty)
-    }
-
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -595,7 +579,6 @@ object UserConfiguration {
           disableTestCodeLenses,
           javaFormatConfig,
           scalafixRulesDependencies,
-          projectsRoots = projectsRoots,
         )
       )
     } else {

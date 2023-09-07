@@ -30,11 +30,6 @@ final class BuildTools(
     explicitChoiceMade: () => Boolean,
 ) {
   private val lastDetectedBuildTools = new AtomicReference(Set.empty[String])
-  // project root set explicitly by the user, takes precedence
-  val projectRoot: AtomicReference[Option[AbsolutePath]] =
-    new AtomicReference(None)
-
-  def setProjectRoot(path: AbsolutePath): Unit = projectRoot.set(Some(path))
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicitly chosen
   // to use another build server besides Bloop or it's a BSP server for a build
@@ -117,34 +112,31 @@ final class BuildTools(
   private def searchForBuildTool(
       isProjectRoot: AbsolutePath => Boolean
   ): Option[AbsolutePath] = {
-    projectRoot.get() match {
-      case Some(root) => if (isProjectRoot(root)) Some(root) else None
-      case None =>
-        def recIsProjectRoot(
-            path: AbsolutePath,
-            level: Int = 0,
-        ): Option[AbsolutePath] =
-          // we skip `.scala-build` and `project`, which both contain .bloop
-          if (
-            path.isDirectory && !path.toNIO.filename.startsWith(
-              "."
-            ) && path.toNIO.filename != "project"
-          ) {
-            if (isProjectRoot(path)) Some(path)
-            else if (level < 1)
-              path.toNIO
-                .toFile()
-                .listFiles()
-                .collectFirst(root =>
-                  recIsProjectRoot(AbsolutePath(root), level + 1) match {
-                    case Some(root) => root
-                  }
-                )
-            else None
-          } else None
-        recIsProjectRoot(workspace)
-    }
+    def recIsProjectRoot(
+        path: AbsolutePath,
+        level: Int = 0,
+    ): Option[AbsolutePath] =
+      // we skip `.scala-build` and `project`, which both contain .bloop
+      if (
+        path.isDirectory && !path.toNIO.filename.startsWith(
+          "."
+        ) && path.toNIO.filename != "project"
+      ) {
+        if (isProjectRoot(path)) Some(path)
+        else if (level < 1)
+          path.toNIO
+            .toFile()
+            .listFiles()
+            .collectFirst(root =>
+              recIsProjectRoot(AbsolutePath(root), level + 1) match {
+                case Some(root) => root
+              }
+            )
+        else None
+      } else None
+    recIsProjectRoot(workspace)
   }
+
   def allAvailable: List[BuildTool] = {
     List(
       SbtBuildTool(workspaceVersion = None, workspace, userConfig),

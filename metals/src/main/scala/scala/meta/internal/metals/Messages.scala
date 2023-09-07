@@ -1009,21 +1009,6 @@ object Messages {
       params
     }
   }
-
-  object ScalaCliFallback {
-    val yes = new MessageActionItem("Import as a scala-cli project.")
-    val notNow = new MessageActionItem("Not now.")
-    val message =
-      "No build tool or bsp configuration detected. Would you like to import the project using scala-cli?"
-    def params(): ShowMessageRequestParams = {
-      val params = new ShowMessageRequestParams()
-      params.setMessage(message)
-      params.setType(MessageType.Info)
-      params.setActions(List(yes, notNow).asJava)
-      params
-    }
-  }
-
 }
 
 object FileOutOfScalaCliBspScope {
