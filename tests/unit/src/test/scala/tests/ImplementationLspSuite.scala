@@ -1,6 +1,8 @@
 package tests
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.MetalsEnrichments._
+
 class ImplementationLspSuite extends BaseRangesSuite("implementation") {
 
   check(
@@ -571,32 +573,61 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin,
   )
 
-  test("global-implementations") {
-    cleanWorkspace()
-    val fileName = "a/src/main/scala/a/Main.scala"
-    val fileContent =
-      """|package a
-         |class MyException extends Excep@@tion
-         |""".stripMargin
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{"a":
-           |  {
-           |    "scalaVersion" : "${BuildInfo.scalaVersion}",
-           |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
-           |  }
-           |}
-           |/$fileName
-           |${fileContent.replace("@@", "")}
-        """.stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      locations <- server.implementation(fileName, fileContent)
-      _ = assert(locations.length > 1)
-      _ <- server.shutdown()
-    } yield ()
-  }
+  checkSymbols(
+    "set",
+    """|package a
+        |class MySet[A] extends S@@et[A] {
+        |  override def iterator: Iterator[A] = ???
+        |  override def contains(elem: A): Boolean = ???
+        |  override def incl(elem: A): Set[A] = ???
+        |  override def excl(elem: A): Set[A] = ???
+        |}
+        |""".stripMargin,
+    """|a/MySet#
+       |scala/Enumeration#ValueSet#
+       |scala/Enumeration#ValueSet#
+       |scala/collection/immutable/AbstractSet#
+       |scala/collection/immutable/BitSet#
+       |scala/collection/immutable/BitSet#
+       |scala/collection/immutable/BitSet.BitSet1#
+       |scala/collection/immutable/BitSet.BitSet2#
+       |scala/collection/immutable/BitSet.BitSetN#
+       |scala/collection/immutable/HashMap#HashKeySet#
+       |scala/collection/immutable/HashSet#
+       |scala/collection/immutable/ListSet#
+       |scala/collection/immutable/ListSet#Node#
+       |scala/collection/immutable/ListSet.EmptyListSet.
+       |scala/collection/immutable/MapOps#ImmutableKeySet#
+       |scala/collection/immutable/Set.EmptySet.
+       |scala/collection/immutable/Set.Set1#
+       |scala/collection/immutable/Set.Set2#
+       |scala/collection/immutable/Set.Set3#
+       |scala/collection/immutable/Set.Set4#
+       |scala/collection/immutable/SortedMapOps#ImmutableKeySortedSet#
+       |scala/collection/immutable/SortedMapOps#ImmutableKeySortedSet#
+       |scala/collection/immutable/SortedSet#
+       |scala/collection/immutable/TreeSet#
+       |scala/collection/immutable/TreeSet#
+       |""".stripMargin
+  )
+
+  checkSymbols(
+    "exception",
+    """package a
+      |class MyException extends Excep@@tion
+      |""".stripMargin,
+    """|a/MyException#
+       |scala/ScalaReflectionException#
+       |scala/reflect/internal/FatalError#
+       |scala/reflect/internal/MissingRequirementError#
+       |scala/reflect/internal/Positions#ValidateException#
+       |scala/reflect/macros/Enclosures#EnclosureException#
+       |scala/reflect/macros/ParseException#
+       |scala/reflect/macros/ReificationException#
+       |scala/reflect/macros/TypecheckException#
+       |scala/reflect/macros/UnexpectedReificationException#
+       |""".stripMargin
+  )
 
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.16", "io.circe::circe-generic:0.12.0")
@@ -614,4 +645,39 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
       base.toMap,
     )
   }
+
+  def checkSymbols(
+    name: String,
+    fileContents: String,
+    expectedSymbols: String
+  ): Unit =
+    test(name) {
+      val fileName = "a/src/main/scala/a/Main.scala"
+      cleanWorkspace()
+      for {
+        _ <- initialize(
+          s"""/metals.json
+            |{"a":
+            |  {
+            |    "scalaVersion" : "${BuildInfo.scalaVersion}"
+            |  }
+            |}
+            |/$fileName
+            |${fileContents.replace("@@", "")}
+          """.stripMargin
+        )
+        _ <- server.didOpen(fileName)
+        locations <- server.implementation(fileName, fileContents)
+        definitions <-
+          Future.sequence(
+            locations.map(
+              location =>
+                server.server.definitionResult(location.toTextDocumentPositionParams)
+            )
+          )
+        symbols = definitions.map(_.symbol).sorted
+        _ = assertNoDiff(symbols.mkString("\n"), expectedSymbols)
+        _ <- server.shutdown()
+      } yield ()
+    }
 }

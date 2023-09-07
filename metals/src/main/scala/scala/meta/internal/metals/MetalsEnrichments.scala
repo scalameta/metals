@@ -1186,6 +1186,14 @@ object MetalsEnrichments
     }
   }
 
+  implicit class XtensionLocation(location: l.Location) {
+    def toTextDocumentPositionParams =
+      new l.TextDocumentPositionParams(
+        new l.TextDocumentIdentifier(location.getUri()),
+        location.getRange().getStart(),
+      )
+  }
+
   /**
    * Strips ANSI colors.
    * As long as the color codes are valid this should correctly strip
