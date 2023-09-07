@@ -1967,7 +1967,7 @@ class MetalsLspService(
 
     buildTools.loadSupported match {
       case Nil => {
-        if (!buildTools.isAutoConnectable) {
+        if (!buildTools.isAutoConnectable()) {
           warnings.noBuildTool()
         }
         // wait for a bsp file to show up
@@ -2031,7 +2031,7 @@ class MetalsLspService(
    */
   def maybeSetupScalaCli(): Future[Unit] = {
     if (
-      !buildTools.isAutoConnectable
+      !buildTools.isAutoConnectable()
       && buildTools.loadSupported.isEmpty
       && folder.hasScalaFiles
     ) scalaCli.setupIDE(folder)
@@ -2052,38 +2052,49 @@ class MetalsLspService(
       change <- {
         if (result.isInstalled) quickConnectToBuildServer()
         else if (result.isFailed) {
-          if (buildTools.isAutoConnectable) {
-            // TODO(olafur) try to connect but gracefully error
-            languageClient.showMessage(
-              Messages.ImportProjectPartiallyFailed
-            )
-            // Connect nevertheless, many build import failures are caused
-            // by resolution errors in one weird module while other modules
-            // exported successfully.
-            quickConnectToBuildServer()
-          } else {
-            languageClient.showMessage(Messages.ImportProjectFailed)
-            Future.successful(BuildChange.Failed)
-          }
+          for {
+            maybeProjectRoot <- calculateOptProjectRoot()
+            change <-
+              if (buildTools.isAutoConnectable(maybeProjectRoot)) {
+                // TODO(olafur) try to connect but gracefully error
+                languageClient.showMessage(
+                  Messages.ImportProjectPartiallyFailed
+                )
+                // Connect nevertheless, many build import failures are caused
+                // by resolution errors in one weird module while other modules
+                // exported successfully.
+                quickConnectToBuildServer()
+              } else {
+                languageClient.showMessage(Messages.ImportProjectFailed)
+                Future.successful(BuildChange.Failed)
+              }
+          } yield change
         } else {
           Future.successful(BuildChange.None)
         }
+
       }
     } yield change
 
-  def quickConnectToBuildServer(): Future[BuildChange] = {
-    val connected = if (!buildTools.isAutoConnectable) {
-      scribe.warn("Build server is not auto-connectable.")
-      Future.successful(BuildChange.None)
-    } else {
-      autoConnectToBuildServer()
-    }
+  def calculateOptProjectRoot(): Future[Option[AbsolutePath]] =
+    for {
+      possibleBuildTool <- supportedBuildTool
+    } yield possibleBuildTool.map(_.projectRoot).orElse(buildTools.bloopProject)
 
-    connected.map { change =>
+  def quickConnectToBuildServer(): Future[BuildChange] =
+    for {
+      optRoot <- calculateOptProjectRoot()
+      change <-
+        if (!buildTools.isAutoConnectable(optRoot)) {
+          scribe.warn("Build server is not auto-connectable.")
+          Future.successful(BuildChange.None)
+        } else {
+          autoConnectToBuildServer()
+        }
+    } yield {
       buildServerPromise.trySuccess(())
       change
     }
-  }
 
   private def maybeQuickConnectToBuildServer(
       params: b.DidChangeBuildTarget
@@ -2144,11 +2155,10 @@ class MetalsLspService(
 
     (for {
       _ <- disconnectOldBuildServer()
-      possibleBuildTool <- supportedBuildTool
-      projectRoot = possibleBuildTool.map(_.projectRoot).getOrElse(folder)
+      maybeProjectRoot <- calculateOptProjectRoot()
       maybeSession <- timerProvider.timed("Connected to build server", true) {
         bspConnector.connect(
-          projectRoot,
+          maybeProjectRoot.getOrElse(folder),
           folder,
           userConfig(),
           shellRunner,
@@ -2641,7 +2651,7 @@ class MetalsLspService(
     }
   }
 
-  private def clearBloopDir(): Unit = {
+  private def clearBloopDir(folder: AbsolutePath): Unit = {
     try BloopDir.clear(folder)
     catch {
       case e: Throwable =>
@@ -2650,17 +2660,19 @@ class MetalsLspService(
     }
   }
 
-  def resetWorkspace(): Future[Unit] = {
-    if (buildTools.isBloop) {
-      bloopServers.shutdownServer()
-    }
-    disconnectOldBuildServer()
-      .map { _ =>
-        if (buildTools.isBloop) clearBloopDir()
-        tables.cleanAll()
+  def resetWorkspace(): Future[Unit] =
+    for {
+      maybeProjectRoot <- calculateOptProjectRoot()
+      _ <- disconnectOldBuildServer()
+      _ = maybeProjectRoot match {
+        case Some(path) if buildTools.isBloop(path) =>
+          bloopServers.shutdownServer()
+          clearBloopDir(path)
+        case _ =>
       }
-      .flatMap(_ => autoConnectToBuildServer().map(_ => ()))
-  }
+      _ = tables.cleanAll()
+      _ <- autoConnectToBuildServer().map(_ => ())
+    } yield ()
 
   def getTastyForURI(uri: URI): Future[Either[String, String]] =
     fileDecoderProvider.getTastyForURI(uri)

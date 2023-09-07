@@ -38,11 +38,17 @@ final class BuildTools(
   // workspace with a build tool we support, we will attempt to autoconnect to
   // Bloop since Metals thinks it's in state that's auto-connectable before the
   // user is even prompted.
-  def isAutoConnectable: Boolean = {
-    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || (isBsp && isBazel)
+  def isAutoConnectable(
+      maybeProjectRoot: Option[AbsolutePath] = None
+  ): Boolean = {
+    maybeProjectRoot
+      .map(isBloop)
+      .getOrElse(
+        isBloop
+      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || (isBsp && isBazel)
   }
-  def bloopProject: Option[AbsolutePath] =
-    searchForBuildTool(root => hasJsonFile(root.resolve(".bloop")))
+  def isBloop(root: AbsolutePath): Boolean = hasJsonFile(root.resolve(".bloop"))
+  def bloopProject: Option[AbsolutePath] = searchForBuildTool(isBloop)
   def isBloop: Boolean = bloopProject.isDefined
   def isBsp: Boolean = {
     hasJsonFile(workspace.resolve(".bsp")) ||
@@ -116,11 +122,9 @@ final class BuildTools(
         path: AbsolutePath,
         level: Int = 0,
     ): Option[AbsolutePath] =
-      // we skip `.scala-build` and `project`, which both contain .bloop
       if (
-        path.isDirectory && !path.toNIO.filename.startsWith(
-          "."
-        ) && path.toNIO.filename != "project"
+        path.isDirectory &&
+        !path.toNIO.filename.startsWith(".")
       ) {
         if (isProjectRoot(path)) Some(path)
         else if (level < 1)

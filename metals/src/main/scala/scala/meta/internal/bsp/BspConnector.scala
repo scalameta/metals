@@ -252,7 +252,9 @@ class BspConnector(
       BuildServerProvider,
       BspConnectionDetails,
     ]] = {
-      if (bloopPresent || buildTools.loadSupported().nonEmpty)
+      if (
+        bloopPresent || buildTools.loadSupported().exists(_.isBloopDefaultBsp)
+      )
         new BspConnectionDetails(
           BloopServers.name,
           ImmutableList.of(),
