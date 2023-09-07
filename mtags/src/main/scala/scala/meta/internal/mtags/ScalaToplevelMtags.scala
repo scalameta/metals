@@ -532,24 +532,35 @@ class ScalaToplevelMtags(
   private def findOverridden(
       acc0: List[Identifier]
   ): (List[Identifier], Option[Int]) = {
-    val maybeNewIdent = acceptTrivia()
-    val (shouldGoOn, acc) = scanner.curr.token match {
+    val maybeNewIdent0 = acceptTrivia()
+    scanner.curr.token match {
       case IDENTIFIER =>
-        (true, newIdentifier.toList ++ acc0)
+        @tailrec
+        def getIdentifier(): (Option[Identifier], Option[Int]) = {
+          val currentIdentifier = newIdentifier
+          val maybeNewIdent = acceptAllAfterOverriddenIdentifier()
+          scanner.curr.token match {
+            case DOT =>
+              scanner.nextToken()
+              getIdentifier()
+            case _ => (currentIdentifier, maybeNewIdent)
+          }
+        }
+        val (identifier, maybeNewIdent) = getIdentifier()
+        val acc = identifier.toList ++ acc0
+        scanner.curr.token match {
+          case WITH => findOverridden(acc)
+          case _ => (acc, maybeNewIdent)
+        }
       case LBRACE =>
         acceptBalancedDelimeters(LBRACE, RBRACE)
-        (true, acc0)
-      case _ => (false, acc0)
+        val maybeNewIdent = acceptTrivia()
+        scanner.curr.token match {
+          case WITH => findOverridden(acc0)
+          case _ => (acc0, maybeNewIdent)
+        }
+      case _ => (acc0, maybeNewIdent0)
     }
-
-    if (shouldGoOn) {
-      val maybeNewIdent = acceptAllAfterOverriddenIdentifier()
-      scanner.curr.token match {
-        case WITH => findOverridden(acc)
-        case _ => (acc, maybeNewIdent)
-      }
-    } else (acc, maybeNewIdent)
-
   }
 
   /**
