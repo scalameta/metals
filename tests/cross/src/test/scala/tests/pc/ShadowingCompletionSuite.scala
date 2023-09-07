@@ -12,7 +12,7 @@ class ShadowingCompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "buffer".tag(IgnoreForScala3CompilerPC),
+    "buffer",
     """package pkg
       |object Main {
       |  val x = ListBuff@@
