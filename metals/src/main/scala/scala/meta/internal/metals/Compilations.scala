@@ -204,6 +204,9 @@ final class Compilations(
     Future.sequence(expansions).map(_.flatten)
   }
 
+  def compileAll(): Future[Map[BuildTargetIdentifier, b.CompileResult]] =
+    compile(None)(buildTargets.allBuildTargetIds).future
+
   private def compile(timeout: Option[Timeout])(
       targets: Seq[b.BuildTargetIdentifier]
   ): CancelableFuture[Map[BuildTargetIdentifier, b.CompileResult]] = {
