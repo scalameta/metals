@@ -38,7 +38,7 @@ object ServerCommands {
 
   val DisconnectBuildServer = new Command(
     "build-disconnect",
-    "Disconnect to build server",
+    "Disconnect from old build server",
     """Unconditionally cancel existing build server connection without reconnecting""",
   )
 

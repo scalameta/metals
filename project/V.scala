@@ -5,10 +5,10 @@ object V {
   val scala211 = "2.11.12"
   val scala212 = "2.12.18"
   val scala213 = "2.13.11"
-  val scala3 = "3.3.0"
+  val scala3 = "3.3.1"
   val firstScala3PCVersion = "3.3.2-RC1-bin-20230721-492f777-NIGHTLY"
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
-  val scala3RC: Option[String] = Some("3.3.1-RC7")
+  val scala3RC: Option[String] = None
   val sbtScala = "2.12.17"
   val ammonite212Version = "2.12.18"
   val ammonite213Version = "2.13.11"
@@ -16,7 +16,7 @@ object V {
 
   val ammonite = "2.5.9"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.8"
+  val bloop = "1.5.11"
   val bloopConfig = "1.5.5"
   val bsp = "2.1.0-M5"
   val coursier = "2.1.6"
@@ -40,9 +40,9 @@ object V {
   val sbtJdiTools = "1.1.1"
   val scalaCli = "1.0.4"
   val scalafix = "0.11.0"
-  val scalafmt = "3.7.13"
+  val scalafmt = "3.7.14"
   val scalameta = "4.8.3"
-  val scribe = "3.11.9"
+  val scribe = "3.12.2"
   val semanticdb = scalameta
   val qdox = "2.0.3"
 
@@ -104,7 +104,7 @@ object V {
 
   // Scala 3
   def nonDeprecatedScala3Versions =
-    Seq(scala3, "3.2.2", "3.1.3") ++ scala3RC.toSeq
+    Seq(scala3, "3.3.0", "3.2.2", "3.1.3") ++ scala3RC.toSeq
   // ++ Seq("3.4.0-RC1-bin-SNAPSHOT") // local testing of scala3-presentation-compiler
 
   // whenever version is removed please add it to MtagsResolver under last supported Metals version

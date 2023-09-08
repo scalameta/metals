@@ -9,12 +9,12 @@ object StructuralTypes/*StructuralTypes.scala*/:
   }
 
   val user/*StructuralTypes.scala*/ = null.asInstanceOf[User/*StructuralTypes.scala*/]
-  user/*StructuralTypes.scala*/.name/*<no symbol>*/
-  user/*StructuralTypes.scala*/.age/*<no symbol>*/
+  user/*StructuralTypes.scala*/./*unexpected: scala.reflect.Selectable#selectDynamic().*/name/*Selectable.scala*/
+  user/*StructuralTypes.scala*/./*unexpected: scala.reflect.Selectable#selectDynamic().*/age/*Selectable.scala*/
 
   val V/*StructuralTypes.scala*/: Object/*Object.java*/ {
     def scalameta/*StructuralTypes.semanticdb*/: String/*Predef.scala*/
   } = new:
     def scalameta/*StructuralTypes.semanticdb*/ = "4.0"
-  V/*StructuralTypes.scala*/.scalameta/*<no symbol>*/
+  V/*StructuralTypes.scala*/./*unexpected: scala.reflect.Selectable#selectDynamic().*/scalameta/*Selectable.scala*/
 end/*<no symbol>*/ StructuralTypes/*StructuralTypes.scala*/
