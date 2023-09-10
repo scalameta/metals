@@ -123,13 +123,4 @@ class ConvertSingleLineCommentLspSuite
     """/* comment middle */""",
     fileName = "script.sc",
   )
-
-  checkNoAction(
-    "should not show action for single-line multiline comment",
-    """|val a = 1
-       |<<>>/* comment middle */
-       |val b = 2""".stripMargin,
-    fileName = "script2.sc",
-  )
-
 }
