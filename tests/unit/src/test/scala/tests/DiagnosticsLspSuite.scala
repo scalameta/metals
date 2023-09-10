@@ -149,12 +149,12 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen("a/src/main/scala/a/Post.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Post.scala:5:1: error: object creation impossible.
+        """|a/src/main/scala/a/Post.scala:5:8: error: object creation impossible.
            |Missing implementation for member of trait Post:
            |  def post: Int = ???
            |
            |object Post extends Post
-           |^^^^^^^^^^^^^^^^^^^^^^^^
+           |       ^^^^
            |""".stripMargin,
       )
     } yield ()

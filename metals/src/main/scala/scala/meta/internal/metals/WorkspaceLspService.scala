@@ -642,29 +642,29 @@ class WorkspaceLspService(
       case ServerCommands.RestartBuildServer() =>
         onCurrentFolder(
           _.restartBspServer().ignoreValue,
-          "restart BSP server",
+          ServerCommands.RestartBuildServer.title,
         ).asJavaObject
       case ServerCommands.GenerateBspConfig() =>
         onCurrentFolder(
           _.generateBspConfig(),
-          "generate BSP config",
+          ServerCommands.GenerateBspConfig.title,
         ).asJavaObject
       case ServerCommands.ImportBuild() =>
         onCurrentFolder(
           _.slowConnectToBuildServer(forceImport = true),
-          "import build",
+          ServerCommands.ImportBuild.title,
           default = () => BuildChange.None,
         ).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
         onCurrentFolder(
           _.quickConnectToBuildServer(),
-          "connect build server",
+          ServerCommands.ConnectBuildServer.title,
           default = () => BuildChange.None,
         ).asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
         onCurrentFolder(
           _.disconnectOldBuildServer(),
-          "disconnect old build server",
+          ServerCommands.DisconnectBuildServer.title,
         ).asJavaObject
       case ServerCommands.DecodeFile(uri) =>
         getServiceFor(uri).decodeFile(uri).asJavaObject
@@ -734,7 +734,10 @@ class WorkspaceLspService(
             .asJava
         }.asJavaObject
       case ServerCommands.BspSwitch() =>
-        onCurrentFolder(_.switchBspServer(), "switch BSP server").asJavaObject
+        onCurrentFolder(
+          _.switchBspServer(),
+          ServerCommands.BspSwitch.title,
+        ).asJavaObject
       case ServerCommands.OpenIssue() =>
         Future
           .successful(Urls.openBrowser(githubNewIssueUrlCreator.buildUrl()))
@@ -742,9 +745,15 @@ class WorkspaceLspService(
       case OpenBrowserCommand(url) =>
         Future.successful(Urls.openBrowser(url)).asJavaObject
       case ServerCommands.CascadeCompile() =>
-        onCurrentFolder(_.cascadeCompile(), "cascade compile").asJavaObject
+        onCurrentFolder(
+          _.cascadeCompile(),
+          ServerCommands.CascadeCompile.title,
+        ).asJavaObject
       case ServerCommands.CleanCompile() =>
-        onCurrentFolder(_.cleanCompile(), "clean compile").asJavaObject
+        onCurrentFolder(
+          _.cleanCompile(),
+          ServerCommands.CleanCompile.title,
+        ).asJavaObject
       case ServerCommands.CancelCompile() =>
         foreachSeq(_.cancelCompile(), ignoreValue = true)
       case ServerCommands.PresentationCompilerRestart() =>
@@ -799,7 +808,7 @@ class WorkspaceLspService(
                 )
               )
             },
-          "go to log",
+          ServerCommands.GotoLog.title,
         ).asJavaObject
 
       case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
@@ -901,14 +910,14 @@ class WorkspaceLspService(
             )
             onCurrentFolder(
               _.interactivePopupChoiceReset(),
-              "interactive reset choice",
+              ServerCommands.ResetChoicePopup.title,
             )
         }).asJavaObject
 
       case ServerCommands.ResetNotifications() =>
         onCurrentFolder(
           _.resetNotifications(),
-          "reset dismissed notifications",
+          ServerCommands.ResetNotifications.title,
         ).asJavaObject
 
       case ServerCommands.NewScalaFile(args) =>

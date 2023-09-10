@@ -28,6 +28,7 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.builds.BloopInstall
+import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
@@ -365,6 +366,14 @@ class MetalsLspService(
     )
   )
 
+  private val bspErrorHandler: BspErrorHandler =
+    new BspErrorHandler(
+      languageClient,
+      folder,
+      restartBspServer,
+      () => bspSession,
+    )
+
   private val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,
@@ -390,6 +399,7 @@ class MetalsLspService(
       onBuildTargetDidChangeFunc = params => {
         maybeQuickConnectToBuildServer(params)
       },
+      bspErrorHandler,
     )
 
   private val bloopServers: BloopServers = new BloopServers(
@@ -1565,13 +1575,15 @@ class MetalsLspService(
   override def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
-    CancelTokens { _ =>
-      timerProvider.timedThunk(
-        "code lens generation",
-        thresholdMillis = 1.second.toMillis,
-      ) {
-        val path = params.getTextDocument.getUri.toAbsolutePath
-        codeLensProvider.findLenses(path).toList.asJava
+    CancelTokens.future { _ =>
+      buildServerPromise.future.map { _ =>
+        timerProvider.timedThunk(
+          "code lens generation",
+          thresholdMillis = 1.second.toMillis,
+        ) {
+          val path = params.getTextDocument.getUri.toAbsolutePath
+          codeLensProvider.findLenses(path).toList.asJava
+        }
       }
     }
 
@@ -1630,7 +1642,9 @@ class MetalsLspService(
     val shutdownBsp =
       bspSession match {
         case Some(session) if session.main.isBloop =>
-          Future.successful(bloopServers.shutdownServer())
+          for {
+            _ <- disconnectOldBuildServer()
+          } yield bloopServers.shutdownServer()
         case Some(session) if session.main.isSbt =>
           for {
             currentBuildTool <- supportedBuildTool
@@ -2123,7 +2137,11 @@ class MetalsLspService(
     (for {
       _ <- disconnectOldBuildServer()
       maybeSession <- timerProvider.timed("Connected to build server", true) {
-        bspConnector.connect(folder, userConfig(), shellRunner)
+        bspConnector.connect(
+          folder,
+          userConfig(),
+          shellRunner,
+        )
       }
       result <- maybeSession match {
         case Some(session) =>

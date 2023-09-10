@@ -208,7 +208,8 @@ trait ScaladocCompletions { this: MetalsGlobal =>
           true
       }
       if (isEligible) {
-        if (t.pos.isDefined && t.pos.start >= pos.start) associatedDef = Some(t)
+        if (t.pos.isDefined && t.pos.focusStart.line == pos.line + 1)
+          associatedDef = Some(t)
         if (treePos(t).includes(pos)) super.traverse(t)
       }
     }

@@ -736,10 +736,15 @@ final case class TestingServer(
   }
 
   def didChange(filename: String)(fn: String => String): Future[Unit] = {
-    Debug.printEnclosing(filename)
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
     val newText = fn(oldText)
+    didChange(filename, newText)
+  }
+
+  def didChange(filename: String, newText: String): Future[Unit] = {
+    Debug.printEnclosing(filename)
+    val abspath = toPath(filename)
     fullServer
       .didChange(
         new DidChangeTextDocumentParams(
@@ -1948,6 +1953,7 @@ object TestingServer {
   val TestDefault: InitializationOptions =
     InitializationOptions.Default.copy(
       debuggingProvider = Some(true),
+      runProvider = Some(true),
       treeViewProvider = Some(true),
       slowTaskProvider = Some(true),
     )

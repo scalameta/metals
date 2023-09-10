@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
 class WorkspaceFoldersSuite
@@ -32,6 +33,15 @@ class WorkspaceFoldersSuite
         expectError = false,
       )
       _ = assert(server.fullServer.folderServices.length == 2)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
+      _ = assertNoDiff(
+        server.client.workspaceMessageRequests,
+        "For which folder would you like to connect to build server?",
+      )
+      _ = assertNoDiff(
+        server.client.workspaceShowMessages,
+        "",
+      )
       _ = assertNoDiff(
         server.workspaceSymbol("MyObject"),
         s"""|a.MyObjectA

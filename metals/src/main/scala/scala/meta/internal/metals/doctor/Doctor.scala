@@ -445,7 +445,7 @@ final class Doctor(
   private def isServerResponsive: Option[Boolean] =
     currentBuildServer().flatMap { conn =>
       val isResponsiveFuture = conn.main.isBuildServerResponsive
-      Try(Await.result(isResponsiveFuture, Duration("1s"))).toOption
+      Try(Await.result(isResponsiveFuture, Duration("1s"))).toOption.flatten
     }
 
   private def extractScalaTargetInfo(

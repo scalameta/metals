@@ -96,7 +96,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
   )
 
   val addedSpace: String =
-    if (BuildInfo.scalaCompilerVersion == "2.13.11") "" else " "
+    if (Set("2.13.11", "2.13.12")(BuildInfo.scalaCompilerVersion)) "" else " "
   checkDoc(
     "curry3",
     """

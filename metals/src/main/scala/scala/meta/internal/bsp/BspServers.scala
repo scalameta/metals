@@ -68,6 +68,7 @@ final class BspServers(
   def newServer(
       projectDirectory: AbsolutePath,
       details: BspConnectionDetails,
+      addLivenessMonitor: Boolean,
   ): Future[BuildServerConnection] = {
 
     def newConnection(): Future[SocketConnection] = {
@@ -140,6 +141,7 @@ final class BspServers(
       tables.dismissedNotifications.ReconnectBsp,
       config,
       details.getName(),
+      addLivenessMonitor,
     )
   }
 

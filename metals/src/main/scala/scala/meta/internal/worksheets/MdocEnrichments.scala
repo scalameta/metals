@@ -67,9 +67,9 @@ object MdocEnrichments {
       statement: EvaluatedWorksheetStatement
   ) {
     def prettyDetails(): String =
-      MetalsEnrichments.filerANSIColorCodes(statement.details())
+      MetalsEnrichments.filterANSIColorCodes(statement.details())
     def prettySummary(): String =
-      MetalsEnrichments.filerANSIColorCodes(statement.summary())
+      MetalsEnrichments.filterANSIColorCodes(statement.summary())
   }
 
 }

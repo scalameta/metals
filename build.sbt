@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.0.1-SNAPSHOT"
+def localSnapshotVersion = "1.0.2-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -232,7 +232,7 @@ lazy val interfaces = project
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     mimaPreviousArtifacts := Set(
-      "org.scalameta" % "mtags-interfaces" % "0.11.12"
+      "org.scalameta" % "mtags-interfaces" % "1.0.0"
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -259,7 +259,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.24.1",
+      "com.google.protobuf" % "protobuf-java" % "3.24.3",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -350,7 +350,8 @@ val mtagsSettings = List(
     val regex = "(\\d+)\\.(\\d+)\\.(\\d+).*".r
     // For scala +2.13.9 we need to have a special Compat.scala
     // For this case filter out `scala-2.13` directory that comes by default
-    val scalaVersionsWithSpecialCompat = Set("2.13.9", "2.13.10", "2.13.11")
+    val scalaVersionsWithSpecialCompat =
+      Set("2.13.9", "2.13.10", "2.13.11", "2.13.12")
     if (scalaVersionsWithSpecialCompat(scalaVersion.value))
       current.filter(f => f.getName() != "scala-2.13")
     else if (isScala3WithPresentationCompiler(scalaVersion.value))
@@ -438,7 +439,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.10.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.21.2",
+      "org.flywaydb" % "flyway-core" % "9.22.0",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",

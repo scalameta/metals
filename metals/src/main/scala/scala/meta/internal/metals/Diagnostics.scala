@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.parsing.TokenEditDistance
@@ -264,7 +265,7 @@ final class Diagnostics(
         val result = edit
           .toRevised(
             range = d.getRange,
-            adjustWithinToken = d.getSource() == "scala-cli",
+            adjustWithinToken = shouldAdjustWithinToken(d),
           )
           .map { range =>
             val ld = new l.Diagnostic(
@@ -282,7 +283,7 @@ final class Diagnostics(
                 .isLeft() && d.getCode().getLeft() != "-1"
             )
               ld.setCode(d.getCode())
-            ld.setData(d.getData)
+            adjustedDiagnosticData(d, edit).map(newData => ld.setData(newData))
             ld
           }
         if (result.isEmpty) {
@@ -312,4 +313,30 @@ final class Diagnostics(
     toPublish
   }
 
+  private def adjustedDiagnosticData(
+      diagnostic: l.Diagnostic,
+      edit: TokenEditDistance,
+  ): Option[Object] =
+    diagnostic match {
+      case ScalacDiagnostic.ScalaDiagnostic(Left(textEdit)) =>
+        edit
+          .toRevised(
+            textEdit,
+            shouldAdjustWithinToken(diagnostic),
+            fallbackToNearest = false,
+          )
+          .map(_.toJsonObject)
+      case ScalacDiagnostic.ScalaDiagnostic(Right(scalaDiagnostic)) =>
+        edit
+          .toRevised(
+            scalaDiagnostic,
+            shouldAdjustWithinToken(diagnostic),
+            fallbackToNearest = false,
+          )
+          .map(_.toJsonObject)
+      case _ => Some(diagnostic.getData())
+    }
+
+  private def shouldAdjustWithinToken(diagnostic: l.Diagnostic): Boolean =
+    diagnostic.getSource() == "scala-cli"
 }
