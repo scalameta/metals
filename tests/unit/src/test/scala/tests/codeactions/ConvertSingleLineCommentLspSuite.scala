@@ -34,7 +34,7 @@ class ConvertSingleLineCommentLspSuite
     ConvertCommentCodeAction.Title,
     """val a = 1
       |
-      |/* comment middle */
+      |   /* comment middle */
       |
       |val b = 2
       |""".stripMargin,
@@ -50,10 +50,25 @@ class ConvertSingleLineCommentLspSuite
     ConvertCommentCodeAction.Title,
     """val a = 1
       |
-      |/* comment middle */
-      |
-      |val b = 2
+      |val b = 2 /* comment middle */
       |""".stripMargin,
+    fileName = "script.sc",
+  )
+
+  check(
+    "convert single line comment to multiline if it is defined between method params",
+    """def foo(
+      |  name: String, // another comment
+      |  age: Int, //<<>> imporant comment
+      |  amount: Int
+      |)
+      |""".stripMargin,
+    ConvertCommentCodeAction.Title,
+    """def foo(
+      |  name: String, // another comment
+      |  age: Int, /* imporant comment */
+      |  amount: Int
+      |)""".stripMargin,
     fileName = "script.sc",
   )
 

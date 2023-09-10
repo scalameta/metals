@@ -28,9 +28,11 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
           .get(path)
           .flatMap { content =>
             val currentLine = content.split('\n')(range.getStart().getLine())
-            if (currentLine.trim().startsWith("//"))
+            val cursorIsInTheSingleLineComment =
+              currentLine.take(range.getStart().getCharacter()).contains("//")
+            if (cursorIsInTheSingleLineComment) {
               Trees.defaultTokenizerDialect(content).tokenize.toOption
-            else None
+            } else None
           }
       else None
 
@@ -53,9 +55,10 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       tokens: Tokens,
       range: l.Range,
   ): Option[List[l.TextEdit]] = {
-    val where = tokens.indexWhere(t =>
+    val where = tokens.lastIndexWhere(t =>
       t.pos.startLine == range.getStart.getLine
         && t.pos.endLine == range.getEnd.getLine
+        && t.pos.startColumn < range.getStart.getCharacter
     )
     val commentBeforeCursor = collectContinuousComments(
       tokens
@@ -77,7 +80,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         commentTokens
           .map(_.value)
           .mkString("/*", "\n *", " */")
-      commentStart.setCharacter(0)
+      commentStart.setCharacter(tokens(where).pos.startColumn)
       val pos = new l.Range(commentStart, commentEnd)
       Some(List(new l.TextEdit(pos, replaceText)))
     } else {
@@ -115,7 +118,8 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
           (last, item) match {
             case (_: Token.EOL, newComment: Token.Comment) =>
               State.Continue(acc :+ newComment, newComment)
-            case (_: Token.Comment, eol: Token.EOL) => State.Continue(acc, eol)
+            case (_: Token.Comment, eol: Token.EOL) =>
+              State.Continue(acc, eol)
             // if the new item is whitespace but not EOL then continue but keep the last token as it was
             case (_: Token.Comment, _: Token.Whitespace) =>
               State.Continue(acc, last)
