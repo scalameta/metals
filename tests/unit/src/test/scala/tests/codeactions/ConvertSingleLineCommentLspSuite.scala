@@ -58,6 +58,20 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
+    "mixed style comments gets merged" ,
+    """// <<>>comment start
+      |/* comment middle */
+      |
+      |""".stripMargin,
+    ConvertCommentCodeAction.Title,
+    """/* comment start
+      | * comment middle  */
+      |
+      |""".stripMargin,
+    fileName = "script.sc",
+  )
+
+  check(
     "convert single line comment to multiline if it starts with var decl",
     """val a = 1
       |
