@@ -58,7 +58,7 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
-    "mixed style comments gets merged" ,
+    "mixed style comments gets merged",
     """// <<>>comment start
       |/* comment middle */
       |
