@@ -42,6 +42,22 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
+    "convert single line comments to multilne when part of it is indented",
+    """// comment start
+      |   // <<>>comment middle
+      |
+      |val b = 2
+      |""".stripMargin,
+    ConvertCommentCodeAction.Title,
+    """/* comment start
+      | * comment middle */
+      |
+      |val b = 2
+      |""".stripMargin,
+    fileName = "script.sc",
+  )
+
+  check(
     "convert single line comment to multiline if it starts with var decl",
     """val a = 1
       |

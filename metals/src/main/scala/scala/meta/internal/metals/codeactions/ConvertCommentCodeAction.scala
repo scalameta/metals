@@ -80,7 +80,9 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         commentTokens
           .map(_.value)
           .mkString("/*", "\n *", " */")
-      commentStart.setCharacter(tokens(where).pos.startColumn)
+      if (commentBeforeCursor.isEmpty) {
+        commentStart.setCharacter(tokens(where).pos.startColumn)
+      }
       val pos = new l.Range(commentStart, commentEnd)
       Some(List(new l.TextEdit(pos, replaceText)))
     } else {
