@@ -44,7 +44,7 @@ case class SbtBuildTool(
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val bloopInstallArgs = List[String](
       "-Dbloop.export-jar-classifiers=sources",
-      "bloopInstall",
+      "+bloopInstall",
     )
     val allArgs = composeArgs(bloopInstallArgs, workspace, tempDir)
     removeLegacyGlobalPlugin()
