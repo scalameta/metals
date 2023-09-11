@@ -8,10 +8,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
+import scala.meta.tokens.Token
+import scala.meta.tokens.Tokens
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.tokens.Tokens
-import scala.meta.tokens.Token
 
 class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
