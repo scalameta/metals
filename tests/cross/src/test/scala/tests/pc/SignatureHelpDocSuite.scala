@@ -1,6 +1,7 @@
 package tests.pc
 
 import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.semver.SemVer.Version.{fromString => ver}
 
 import tests.BaseSignatureHelpSuite
 
@@ -95,8 +96,11 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     ),
   )
 
-  val addedSpace: String =
-    if (Set("2.13.11", "2.13.12")(BuildInfo.scalaCompilerVersion)) "" else " "
+  val addedSpace: String = {
+    val parsed = ver(BuildInfo.scalaCompilerVersion)
+    if (parsed >= ver("2.13.11") && parsed < ver("3.0.0")) "" else " "
+  }
+
   checkDoc(
     "curry3",
     """

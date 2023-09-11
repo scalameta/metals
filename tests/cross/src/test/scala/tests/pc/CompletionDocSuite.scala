@@ -572,6 +572,19 @@ class CompletionDocSuite extends BaseCompletionSuite {
                    | section on `StringBuilders` for more information.
                    |StringBuilder scala.collection.mutable
                    |""".stripMargin,
+      ">=2.13.11" ->
+        s"""|$scala213Docs
+            |StringBuilder scala.collection.mutable
+            |""".stripMargin,
+      ">=3.0.0" ->
+        List(
+          "StringBuilder scala.collection.mutable",
+          "StringBuilder(): StringBuilder",
+          "StringBuilder(str: String): StringBuilder",
+          "StringBuilder(underlying: StringBuilder): StringBuilder",
+          "StringBuilder(capacity: Int): StringBuilder",
+          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder",
+        ).map(s => scala213Docs + "\n" + s).mkString("\n"),
       scala3PresentationCompilerVersion ->
         List(
           "StringBuilder scala.collection.mutable",
@@ -581,23 +594,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
           "StringBuilder(capacity: Int): StringBuilder",
           "StringBuilder(initCapacity: Int, initValue: String): StringBuilder",
         ).map(s => scala213Docs + "\n" + s).mkString("\n"),
-      "3" ->
-        List(
-          "StringBuilder scala.collection.mutable",
-          "StringBuilder(): StringBuilder",
-          "StringBuilder(str: String): StringBuilder",
-          "StringBuilder(underlying: StringBuilder): StringBuilder",
-          "StringBuilder(capacity: Int): StringBuilder",
-          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder",
-        ).map(s => scala213Docs + "\n" + s).mkString("\n"),
-      "2.13.11" ->
-        s"""|$scala213Docs
-            |StringBuilder scala.collection.mutable
-            |""".stripMargin,
-      "2.13.12" ->
-        s"""|$scala213Docs
-            |StringBuilder scala.collection.mutable
-            |""".stripMargin,
     ),
   )
 
