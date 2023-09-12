@@ -379,12 +379,10 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       "File: SomeFile.scala"
     )
     def workspaceMsgs =
-      (server.client.messageRequests.asScala ++ server.client.showMessages.asScala
-        .map(_.getMessage()))
-        .collect {
-          case `msg` => msg
-          case msg @ "scala-cli bspConfig" => msg
-        }
+      server.client.messageRequests.asScala
+        .filter(
+          _ != "scala-cli bspConfig"
+        ) // to achieve the same behavior no matter if scala-cli in installed or not
         .mkString("\n")
     def hasBuildTarget(fileName: String) = server.server.buildTargets
       .inverseSources(workspace.resolve(fileName))
@@ -421,7 +419,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- server.server.buildServerPromise.future
       _ = assertNoDiff(
         workspaceMsgs,
-        List(msg, msg, "scala-cli bspConfig").mkString("\n"),
+        List(msg, msg).mkString("\n"),
       )
       _ = assert(hasBuildTarget("src/Main.scala"))
       _ = assert(hasBuildTarget("SomeFile.scala"))
@@ -429,7 +427,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- server.didOpen("SomeFile.scala")
       _ = assertNoDiff(
         workspaceMsgs,
-        List(msg, msg, "scala-cli bspConfig").mkString("\n"),
+        List(msg, msg).mkString("\n"),
       )
     } yield ()
   }
