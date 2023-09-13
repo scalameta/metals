@@ -54,6 +54,15 @@ class CompletionKeywordSuite extends BaseJavaCompletionSuite {
   )
 
   check(
+    "end of file",
+    """
+      |pac@@""".stripMargin,
+    """
+      |package
+      |""".stripMargin,
+  )
+
+  check(
     "extends",
     """
       |
