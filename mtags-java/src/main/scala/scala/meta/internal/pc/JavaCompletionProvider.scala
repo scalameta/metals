@@ -36,7 +36,9 @@ class JavaCompletionProvider(
   lazy val identifier = extractIdentifier.toLowerCase
   def completions(): CompletionList = {
     val nextIsWhitespace =
-      params.text().charAt(params.offset()).isWhitespace
+      if (params.offset() < params.text().length())
+        params.text().charAt(params.offset()).isWhitespace
+      else false
     val textWithSemicolon =
       if (nextIsWhitespace)
         params.text().substring(0, params.offset()) +
