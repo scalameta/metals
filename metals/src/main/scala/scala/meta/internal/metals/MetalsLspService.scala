@@ -1991,16 +1991,19 @@ class MetalsLspService(
               Future.successful(BuildChange.None)
             case (Some(_), buildTool: ScalaCliBuildTool)
                 if chosenBuildServer.isEmpty =>
-              for {
-                _ <- buildTool.createBspConfigIfNone(
-                  folder,
-                  args =>
-                    bspConfigGenerator.runUnconditionally(buildTool, args),
-                  statusBar,
-                )
-                _ = tables.buildServers.chooseServer(ScalaCliBuildTool.name)
-                buildChange <- quickConnectToBuildServer()
-              } yield buildChange
+              tables.buildServers.chooseServer(ScalaCliBuildTool.name)
+              val scalaCliBspConfigExists =
+                ScalaCliBuildTool.pathsToScalaCliBsp(folder).exists(_.isFile)
+              if (scalaCliBspConfigExists) Future.successful(BuildChange.None)
+              else
+                buildTool
+                  .generateBspConfig(
+                    folder,
+                    args =>
+                      bspConfigGenerator.runUnconditionally(buildTool, args),
+                    statusBar,
+                  )
+                  .flatMap(_ => quickConnectToBuildServer())
             case (Some(digest), _) if isBloopOrEmpty =>
               slowConnectToBloopServer(forceImport, buildTool, digest)
             case (Some(digest), _) =>
