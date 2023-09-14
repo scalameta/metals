@@ -388,7 +388,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       .inverseSources(workspace.resolve(fileName))
       .isDefined
     for {
-      _ <- scalaCliInitialize(useBsp = false)(
+      _ <- initialize(
         s"""/src/Main.scala
            |object Main:
            |  def foo = 3

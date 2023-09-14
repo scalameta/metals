@@ -35,16 +35,6 @@ class ScalaCliBuildTool(
       Future.successful(Generated)
     }
 
-  def createBspConfigIfNone(
-      workspace: AbsolutePath,
-      systemProcess: List[String] => Future[BspConfigGenerationStatus],
-      statusBar: StatusBar,
-  ): Future[BspConfigGenerationStatus] = {
-    if (ScalaCliBuildTool.pathsToScalaCliBsp(workspace).exists(_.isFile))
-      Future.successful(Generated)
-    else generateBspConfig(workspace, systemProcess, statusBar)
-  }
-
   override def createBspFileArgs(
       workspace: AbsolutePath
   ): Option[List[String]] =
