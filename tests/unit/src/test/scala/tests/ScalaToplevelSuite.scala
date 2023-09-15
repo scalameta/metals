@@ -624,6 +624,15 @@ class ScalaToplevelSuite extends BaseSuite {
     mode = All,
   )
 
+  check(
+    "overridden3",
+    """|package a
+       |class A extends B, C
+       |""".stripMargin,
+    List("a/", "a/A# -> B, C"),
+    mode = All,
+  )
+
   def check(
       options: TestOptions,
       code: String,

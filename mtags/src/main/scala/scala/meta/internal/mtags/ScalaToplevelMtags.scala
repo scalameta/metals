@@ -417,7 +417,7 @@ class ScalaToplevelMtags(
             nextExpectTemplate
           )
         case EXTENDS =>
-          val (overridden, maybeNewIdent) = findOverridden(List.empty)
+          val (overridden, maybeNewIndent) = findOverridden(List.empty)
           expectTemplate.map(tmpl =>
             withOwner(tmpl.owner) {
               addOverridden(
@@ -428,8 +428,8 @@ class ScalaToplevelMtags(
             }
           )
           loop(
-            maybeNewIdent.getOrElse(indent),
-            isAfterNewline = maybeNewIdent.isDefined,
+            maybeNewIndent.getOrElse(indent),
+            isAfterNewline = maybeNewIndent.isDefined,
             currRegion,
             expectTemplate
           )
@@ -515,7 +515,7 @@ class ScalaToplevelMtags(
 
   @tailrec
   private def acceptAllAfterOverriddenIdentifier(): Option[Int] = {
-    val maybeNewIdent = acceptTrivia()
+    val maybeNewIndent = acceptTrivia()
     scanner.curr.token match {
       case LPAREN =>
         acceptBalancedDelimeters(LPAREN, RPAREN)
@@ -523,7 +523,7 @@ class ScalaToplevelMtags(
       case LBRACKET =>
         acceptBalancedDelimeters(LBRACKET, RBRACKET)
         acceptAllAfterOverriddenIdentifier()
-      case _ => maybeNewIdent
+      case _ => maybeNewIndent
     }
 
   }
@@ -532,34 +532,35 @@ class ScalaToplevelMtags(
   private def findOverridden(
       acc0: List[Identifier]
   ): (List[Identifier], Option[Int]) = {
-    val maybeNewIdent0 = acceptTrivia()
+    val maybeNewIndent0 = acceptTrivia()
     scanner.curr.token match {
       case IDENTIFIER =>
         @tailrec
         def getIdentifier(): (Option[Identifier], Option[Int]) = {
           val currentIdentifier = newIdentifier
-          val maybeNewIdent = acceptAllAfterOverriddenIdentifier()
+          val maybeNewIndent = acceptAllAfterOverriddenIdentifier()
           scanner.curr.token match {
             case DOT =>
               scanner.nextToken()
               getIdentifier()
-            case _ => (currentIdentifier, maybeNewIdent)
+            case _ => (currentIdentifier, maybeNewIndent)
           }
         }
-        val (identifier, maybeNewIdent) = getIdentifier()
+        val (identifier, maybeNewIndent) = getIdentifier()
         val acc = identifier.toList ++ acc0
         scanner.curr.token match {
           case WITH => findOverridden(acc)
-          case _ => (acc, maybeNewIdent)
+          case COMMA => findOverridden(acc)
+          case _ => (acc, maybeNewIndent)
         }
       case LBRACE =>
         acceptBalancedDelimeters(LBRACE, RBRACE)
-        val maybeNewIdent = acceptTrivia()
+        val maybeNewIndent = acceptTrivia()
         scanner.curr.token match {
           case WITH => findOverridden(acc0)
-          case _ => (acc0, maybeNewIdent)
+          case _ => (acc0, maybeNewIndent)
         }
-      case _ => (acc0, maybeNewIdent0)
+      case _ => (acc0, maybeNewIndent0)
     }
   }
 
@@ -754,7 +755,7 @@ class ScalaToplevelMtags(
 
   private def acceptTrivia(): Option[Int] = {
     var includedNewline = false
-    var ident = 0
+    var indent = 0
     scanner.nextToken()
     while (
       !isDone &&
@@ -765,13 +766,13 @@ class ScalaToplevelMtags(
     ) {
       if (isNewline) {
         includedNewline = true
-        ident = 0
+        indent = 0
       } else if (scanner.curr.token == WHITESPACE) {
-        ident += 1
+        indent += 1
       }
       scanner.nextToken()
     }
-    if (includedNewline) Some(ident) else None
+    if (includedNewline) Some(indent) else None
   }
 
   private def nextIsNL(): Boolean = {

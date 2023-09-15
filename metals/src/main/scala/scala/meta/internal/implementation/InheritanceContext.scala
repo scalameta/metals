@@ -62,6 +62,7 @@ class GlobalInheritanceContext(
       symbol: String
   )(implicit ec: ExecutionContext): Future[Set[ClassLocation]] = {
     val workspaceImplementations = getWorkspaceLocations(symbol)
+    // for enum class we resolve all cases as implementations while indexing
     val enumCasesImplementations =
       implementationsInDependencySources.getOrElse(symbol, Set.empty)
     val shortName = symbol.desc.name.value

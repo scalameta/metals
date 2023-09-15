@@ -84,13 +84,11 @@ final class ImplementationProvider(
       overriddenInfo: List[
         (AbsolutePath, List[(String, List[OverriddenSymbol])])
       ]
-  ): Unit = {
-    overriddenInfo.foreach { case (path, list) =>
-      list.foreach { case (overridesSymbol, overridden) =>
-        overridden.foreach(addTypeHierarchyElement(path, overridesSymbol, _))
-      }
-    }
-  }
+  ): Unit = for {
+    (path, list) <- overriddenInfo
+    (overridesSymbol, overriddenSymbols) <- list
+    overridden <- overriddenSymbols
+  } addTypeHierarchyElement(path, overridesSymbol, overridden)
 
   def addTypeHierarchyElements(
       elements: List[(AbsolutePath, String, OverriddenSymbol)]
