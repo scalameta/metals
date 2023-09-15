@@ -5,7 +5,6 @@ import java.nio.file.Files
 import java.util.Optional
 import java.{util => ju}
 
-import scala.meta.inputs.Input
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.EmptyReportContext
@@ -15,6 +14,7 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc.ParentSymbols
@@ -73,7 +73,7 @@ class TestingSymbolSearch(
         import scala.collection.JavaConverters._
         val filename = value.path.toNIO.getFileName().toString()
         val content = new String(Files.readAllBytes(value.path.toNIO))
-        val input = Input.VirtualFile(
+        val input = VirtualFile(
           filename,
           content,
         )

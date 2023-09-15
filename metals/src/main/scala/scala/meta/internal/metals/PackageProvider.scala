@@ -659,7 +659,7 @@ class PackageProvider(
     val result = for {
       content <- path.content()
     } yield {
-      val input = Input.VirtualFile(filename, content)
+      val input = VirtualFile(filename, content)
 
       def isPackageObjectLike(symbol: String) =
         Set("package", filenamePart ++ "$package").contains(symbol)

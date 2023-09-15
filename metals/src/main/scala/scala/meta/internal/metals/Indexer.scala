@@ -276,7 +276,7 @@ final case class Indexer(
                 val updatedContent =
                   sourceItem.getTopWrapper + content + sourceItem.getBottomWrapper
                 (
-                  Input.VirtualFile(
+                  VirtualFile(
                     generatedPath.toNIO.toString
                       .stripSuffix(".scala") + ".sc.scala",
                     updatedContent,

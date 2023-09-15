@@ -136,7 +136,7 @@ final class DefinitionProvider(
 
     val defResult = for {
       sourceText <- buffers.get(path)
-      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
+      virtualFile = VirtualFile(path.toURI.toString(), sourceText)
       metaPos <- pos.toMeta(virtualFile)
       tokens <- trees.tokenized(virtualFile).toOption
       ident <- tokens.collectFirst {

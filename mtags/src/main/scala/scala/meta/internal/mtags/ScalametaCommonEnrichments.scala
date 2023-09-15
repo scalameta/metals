@@ -377,7 +377,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def toInput: Input.VirtualFile = {
       val text = FileIO.slurp(path, StandardCharsets.UTF_8)
       val file = path.toURI.toString()
-      Input.VirtualFile(file, text)
+      VirtualFile(file, text)
     }
 
     def jarPath: Option[AbsolutePath] = {
@@ -524,6 +524,21 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       info.kind.isRelevantKind && query.matches(info.symbol)
     }
 
+  }
+
+  object VirtualFile {
+    def apply(path: String, value: String): Input.VirtualFile = {
+      val buffer = new StringBuilder()
+      var isLastCR = false
+      value.foreach { char =>
+        val isCR = char == '\r'
+        def CRSubstitute = if (char == '\n') ' ' else '\n'
+        if (isLastCR) buffer.append(CRSubstitute)
+        if (!isCR) buffer.append(char)
+        isLastCR = isCR
+      }
+      Input.VirtualFile(path, buffer.result())
+    }
   }
 
 }

@@ -9,7 +9,6 @@ import scala.concurrent.Future
 import scala.util.Try
 import scala.{meta => m}
 
-import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
@@ -551,8 +550,8 @@ final class SyntheticsDecorationProvider(
     val uri = path.toURI.toString
     val typeDecorations = for {
       tree <- trees.get(path).toIterable
-      textDocumentInput = Input.VirtualFile(uri, textDocument.text)
-      treeInput = Input.VirtualFile(uri, tree.pos.input.text)
+      textDocumentInput = VirtualFile(uri, textDocument.text)
+      treeInput = VirtualFile(uri, tree.pos.input.text)
       semanticDbToTreeEdit = TokenEditDistance(
         textDocumentInput,
         treeInput,

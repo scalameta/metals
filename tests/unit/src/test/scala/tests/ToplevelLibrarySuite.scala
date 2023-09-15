@@ -23,7 +23,8 @@ class ToplevelLibrarySuite extends BaseSuite {
     "/dotty/tools/dotc/transform/patmat/Space.scala",
   )
 
-  val javaTestClasspath: List[AbsolutePath] = Library.damlrxjavaSources
+  val javaTestClasspath: List[AbsolutePath] =
+    Library.damlrxjavaSources ++ Library.msal4jSources
 
   scala2TestClasspath.foreach { entry =>
     test(entry.toNIO.getFileName.toString) {

@@ -11,7 +11,6 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
-import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
@@ -129,7 +128,7 @@ class SymbolIndexBucket(
       dialect: Dialect
   ): List[String] = {
     val text = FileIO.slurp(source, StandardCharsets.UTF_8)
-    val input = Input.VirtualFile(uri, text)
+    val input = VirtualFile(uri, text)
     val sourceToplevels = mtags.toplevels(input, dialect)
     if (source.isAmmoniteScript)
       sourceToplevels

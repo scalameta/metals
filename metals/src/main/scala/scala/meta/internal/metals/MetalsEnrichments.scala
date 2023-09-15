@@ -294,7 +294,7 @@ object MetalsEnrichments
     def toUriInput: Input.VirtualFile = {
       val uri = path.toAbsolutePath.toUri.toString
       val text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
-      Input.VirtualFile(uri, text)
+      VirtualFile(uri, text)
     }
 
     def isSemanticdb: Boolean =
@@ -489,7 +489,7 @@ object MetalsEnrichments
      */
     def toInputFromBuffers(buffers: Buffers): m.Input.VirtualFile = {
       buffers.get(path) match {
-        case Some(text) => Input.VirtualFile(path.toURI.toString(), text)
+        case Some(text) => VirtualFile(path.toURI.toString(), text)
         case None => path.toInput
       }
     }

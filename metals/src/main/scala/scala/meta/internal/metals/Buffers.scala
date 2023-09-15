@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import scala.collection.concurrent.TrieMap
 
-import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
@@ -26,7 +25,7 @@ case class Buffers(
       trees: Trees,
   ): TokenEditDistance = {
     val bufferInput = source.toInputFromBuffers(this)
-    val snapshotInput = Input.VirtualFile(bufferInput.path, snapshot)
+    val snapshotInput = VirtualFile(bufferInput.path, snapshot)
     TokenEditDistance(snapshotInput, bufferInput, trees).getOrElse(
       TokenEditDistance.NoMatch
     )

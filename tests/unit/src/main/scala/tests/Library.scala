@@ -59,6 +59,13 @@ object Library {
     ).sources.entries
       .filter(_.toString.endsWith("bindings-rxjava-2.0.0-sources.jar"))
 
+  def msal4jSources: List[AbsolutePath] =
+    fetchSources(
+      "azure",
+      List(Dependency.of("com.microsoft.azure", "msal4j", "1.13.8")),
+    ).sources.entries
+      .filter(_.toString().endsWith("msal4j-1.13.8-sources.jar"))
+
   def allScala2: List[Library] = {
     import mtags.BuildInfo.scalaCompilerVersion
 

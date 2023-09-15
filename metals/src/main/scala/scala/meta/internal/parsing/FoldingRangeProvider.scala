@@ -3,7 +3,6 @@ package scala.meta.internal.parsing
 import java.util
 import java.util.Collections
 
-import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -26,9 +25,9 @@ final class FoldingRangeProvider(
       if filePath.isScala
       tree <- trees.get(filePath)
     } yield {
-      val revised = Input.VirtualFile(filePath.toURI.toString(), code)
+      val revised = VirtualFile(filePath.toURI.toString(), code)
       val fromTree =
-        Input.VirtualFile(filePath.toURI.toString(), tree.pos.input.text)
+        VirtualFile(filePath.toURI.toString(), tree.pos.input.text)
       val distance = TokenEditDistance(fromTree, revised, trees).getOrElse(
         TokenEditDistance.NoMatch
       )

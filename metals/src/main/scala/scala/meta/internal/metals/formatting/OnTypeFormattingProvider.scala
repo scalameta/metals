@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.formatting
 
-import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
@@ -51,7 +50,7 @@ class OnTypeFormattingProvider(
 
     val edits = for {
       sourceText <- buffers.get(path)
-      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
+      virtualFile = VirtualFile(path.toURI.toString(), sourceText)
       startPos <- range.getStart.toMeta(virtualFile)
       endPos <- range.getEnd.toMeta(virtualFile)
     } yield {
