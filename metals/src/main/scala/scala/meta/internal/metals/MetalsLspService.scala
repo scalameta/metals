@@ -2053,9 +2053,8 @@ class MetalsLspService(
       !buildTools.isAutoConnectable()
       && buildTools.loadSupported.isEmpty
       && folder.isScalaProject()
-    ) {
-      scalaCli.setupIDE(folder)
-    } else Future.successful(())
+    ) scalaCli.setupIDE(folder)
+    else Future.successful(())
   }
 
   private def slowConnectToBloopServer(

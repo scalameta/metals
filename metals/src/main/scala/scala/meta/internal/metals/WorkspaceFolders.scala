@@ -75,7 +75,7 @@ class WorkspaceFolders(
         if (!isIn(services, folder)) {
           WorkspaceFoldersServices(
             services :+ newService,
-            nonScalaProjects.filter(_ == folder),
+            nonScalaProjects.filterNot(_ == folder),
           )
         } else wfs
     }
@@ -99,14 +99,6 @@ class WorkspaceFolders(
   private def isIn(services: List[Folder], service: Folder) =
     services.exists(_.path == service.path)
 
-}
-
-trait MetalsLspServiceCreator {
-  def apply(
-      folder: Folder,
-      updateLoggerFiles: () => Future[Unit],
-      forceIsScalaProject: Boolean = false,
-  ): MetalsLspService
 }
 
 case class WorkspaceFoldersServices(
