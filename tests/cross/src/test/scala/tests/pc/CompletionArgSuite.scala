@@ -244,6 +244,121 @@ class CompletionArgSuite extends BaseCompletionSuite {
     "",
   )
 
+  check(
+    "default-args",
+    """|object Main {
+       |  def foo() = {
+       |    def deployment(
+       |      fst: String,
+       |      snd: Int = 1,
+       |    ): Option[Int] = ???
+       |    val abc = deployment(@@)
+       |  }
+       |}
+       |""".stripMargin,
+    """|fst = : String
+       |snd = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "default-args2",
+    """|object Main {
+       |  def deployment(
+       |    fst: String,
+       |    snd: Int = 1,
+       |  ): Option[Int] = ???
+       |  val abc = deployment(@@)
+       |}
+       |""".stripMargin,
+    """|fst = : String
+       |snd = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "default-args3",
+    """|object Main {
+       |  def deployment(str: String)(
+       |    fst: String,
+       |    snd: Int = 1,
+       |  ): Option[Int] = ???
+       |  val abc = deployment("str")(
+       |    @@
+       |  )
+       |}
+       |""".stripMargin,
+    """|fst = : String
+       |snd = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  check(
+    "default-args4",
+    """|object Main {
+       |  def deployment(str: String)(opt: Option[Int])(
+       |    fst: String,
+       |    snd: Int = 1,
+       |  ): Option[Int] = ???
+       |  val abc = deployment("str")(None)(
+       |    @@
+       |  )
+       |}
+       |""".stripMargin,
+    """|fst = : String
+       |snd = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
+  // NOTE: In Scala 3.3.1 the tree for this test changed, which allowed easy fix
+  // For previous Scala 3 versions it shows wrong completions
+  check(
+    "default-args5",
+    """|object Main {
+       |  def deployment(str: String)(opt: Option[Int] = None)(
+       |    fst: String,
+       |    snd: Int = 1,
+       |  ): Option[Int] = ???
+       |  val abc = deployment("str")(
+       |    @@
+       |  )
+       |}
+       |""".stripMargin,
+    """|abc: (String, Int) => Option[Int]
+       |""".stripMargin,
+    topLines = Some(1),
+    compat = Map(
+      ">=3.3.1" ->
+        """|opt = : Option[Int]
+           |""".stripMargin,
+      "2" ->
+        """|opt = : Option[Int]
+           |""".stripMargin,
+    ),
+  )
+
+  check(
+    "default-args6".tag(IgnoreScala2),
+    """|object Main {
+       |  def deployment(using str: String)(
+       |    fst: String,
+       |    snd: Int = 1,
+       |  ): Option[Int] = ???
+       |  val abc = deployment(using "str")(
+       |    @@
+       |  )
+       |}
+       |""".stripMargin,
+    """|fst = : String
+       |snd = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+  )
+
   checkSnippet( // see: https://github.com/scalameta/metals/issues/2400
     "explicit-dollar",
     """

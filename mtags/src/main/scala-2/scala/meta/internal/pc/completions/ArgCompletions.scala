@@ -19,7 +19,12 @@ trait ArgCompletions { this: MetalsGlobal =>
     val editRange: l.Range =
       pos.withStart(ident.pos.start).withEnd(pos.start).toLsp
     val funPos = apply.fun.pos
-    val method: Tree = typedTreeAt(funPos)
+    val method: Tree = typedTreeAt(funPos) match {
+      case Apply(Block(defParams, app: Apply), _)
+          if defParams.forall(p => p.isInstanceOf[ValDef]) =>
+        app
+      case t => t
+    }
     val methodSym = method.symbol
     lazy val methodsParams: List[MethodParams] = {
       if (methodSym.isModule) getParamsFromObject(methodSym)
