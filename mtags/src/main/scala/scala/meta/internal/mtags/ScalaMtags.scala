@@ -60,10 +60,12 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           paramss: List[List[Term.Param]],
           isPrimaryCtor: Boolean
       ): Unit = {
+        val old = myCurrentTree
         for {
           params <- paramss
           param <- params
         } {
+          myCurrentTree = param
           withOwner() {
             if (isPrimaryCtor) {
               param.name match {
@@ -77,15 +79,19 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           }
         }
 
+        myCurrentTree = old
       }
       def enterTypeParameters(tparams: List[Type.Param]): Unit = {
+        val old = myCurrentTree
         for {
           tparam <- tparams
         } {
+          myCurrentTree = tparam
           withOwner() {
             super.tparam(tparam.name, Kind.TYPE_PARAMETER, 0)
           }
         }
+        myCurrentTree = old
       }
       def enterPatterns(ps: List[Pat], kind: Kind, properties: Int): Unit = {
         ps.foreach { pat =>

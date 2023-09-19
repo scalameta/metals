@@ -294,6 +294,145 @@ class HoverDocSuite extends BaseHoverSuite {
   )
 
   check(
+    "class-param",
+    """|
+       |/**
+       |  * Doc about class
+       |  *
+       |  */
+       |class Alpha(abc: Int) {
+       |  val y = <<a@@bc>>
+       |}
+       |
+       |""".stripMargin,
+    """|```scala
+       |private[this] val abc: Int
+       |```
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|```scala
+           |val abc: Int
+           |```
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "case-class-param",
+    """|
+       |/**
+       |  * Doc about class
+       |  *
+       |  */
+       |case class Alpha(abc: Int) {
+       |  val y = <<a@@bc>>
+       |}
+       |
+       |""".stripMargin,
+    """|```scala
+       |val abc: Int
+       |```
+       |""".stripMargin,
+  )
+
+  check(
+    "enum-param".tag(IgnoreScala2),
+    """|
+       |/**
+       |  * Doc about enum
+       |  *
+       |  */
+       |enum Alpha(abc: Int):
+       |  case Beta extends Alpha(1)
+       |  val y = <<ab@@c>>
+       |""".stripMargin,
+    """|```scala
+       |val abc: Int
+       |```
+       |""".stripMargin,
+  )
+
+  check(
+    "class-type-param",
+    """|
+       |/**
+       |  * Doc about class
+       |  *
+       |  */
+       |class Alpha[T](abc: T) {
+       |  val y: <<@@T>> = abc
+       |}
+       |
+       |""".stripMargin,
+    """|```scala
+       |T: T
+       |```
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|```scala
+           |type T: T
+           |```
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "method-param",
+    """|
+       |object O {
+       |  /**
+       |    * Doc about method
+       |    */
+       |  def foo(abc: Int) = <<a@@bc>> + 1
+       |
+       |}
+       |
+       |""".stripMargin,
+    """|```scala
+       |abc: Int
+       |```
+       |""".stripMargin,
+  )
+
+  check(
+    "method-param2",
+    """|
+       |object O {
+       |  /**
+       |    * Doc about method
+       |    */
+       |  def foo(abc: Int)(foo: Int) = abc + <<f@@oo>>
+       |
+       |}
+       |
+       |""".stripMargin,
+    """|```scala
+       |foo: Int
+       |```
+       |""".stripMargin,
+  )
+
+  check(
+    "method-type-param",
+    """|
+       |object O {
+       |  /**
+       |    * Doc about method
+       |    */
+       |  def foo[T](abc: T): <<@@T>> = abc
+       |
+       |}
+       |
+       |""".stripMargin,
+    """|```scala
+       |T: T
+       |```
+       |""".stripMargin,
+  )
+
+  check(
     "universal-apply".tag(IgnoreScala2),
     """|
        |/**
