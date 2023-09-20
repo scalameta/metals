@@ -12,6 +12,7 @@ import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
 
 import org.eclipse.{lsp4j => l}
+import scala.meta.io.AbsolutePath
 
 class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
@@ -22,26 +23,24 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    buffers
-      .get(path)
-      .toList
-      .flatMap { content =>
-        val tokenized =
-          if (range.getStart == range.getEnd)
-            Trees.defaultTokenizerDialect(content).tokenize.toOption
-          else None
-        tokenized.flatMap { tokens =>
-          findAndExpandComment(tokens, range, isSingleLineComment(content))
-            .map { changes =>
-              val action = CodeActionBuilder.build(
-                title = ConvertCommentCodeAction.Title,
-                kind = this.kind,
-                changes = List(path -> changes),
-              )
-              action
-            }
-        }.toList
-      }
+    (for {
+      content <- buffers.get(path)
+      tokens <- tokenizeIfNotRangeSelection(range, content)
+      codeAction <- createActionIfPossible(
+        path,
+        tokens,
+        range,
+        isSingleLineComment(content),
+      )
+    } yield codeAction).toList
+  }
+
+  private def tokenizeIfNotRangeSelection(range: l.Range, content: String) = {
+    Option
+      .when(range.getStart == range.getEnd)(
+        Trees.defaultTokenizerDialect(content).tokenize
+      )
+      .flatMap(_.toOption)
   }
 
   private def isSingleLineComment(content: String)(
@@ -54,11 +53,12 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     case _ => false
   }
 
-  private def findAndExpandComment(
+  private def createActionIfPossible(
+      path: AbsolutePath,
       tokens: Tokens,
       range: l.Range,
       isSingleLineComment: Token => Boolean,
-  ): Option[List[l.TextEdit]] = {
+  ): Option[l.CodeAction] = {
     val indexOfLineTokenUnderCursor = tokens.lastIndexWhere(t =>
       t.pos.startLine == range.getStart.getLine
         && t.pos.endLine == t.pos.startLine
@@ -70,11 +70,16 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       val tokensBeforeCursor = tokens.take(indexOfLineTokenUnderCursor)
       // token under the cursor + following tokens
       val tokensAfterCursor = tokens.drop(indexOfLineTokenUnderCursor)
+      val textEdit = createTextEdit(
+        tokensBeforeCursor,
+        tokensAfterCursor,
+        range,
+      )
       Some(
-        createTextEdit(
-          tokensBeforeCursor,
-          tokensAfterCursor,
-          range,
+        CodeActionBuilder.build(
+          title = ConvertCommentCodeAction.Title,
+          kind = this.kind,
+          changes = List(path -> List(textEdit)),
         )
       )
     } else {
@@ -111,7 +116,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       commentStart.setCharacter(tokensAfterCursor.head.pos.startColumn)
     }
     val pos = new l.Range(commentStart, commentEnd)
-    List(new l.TextEdit(pos, replaceText))
+    new l.TextEdit(pos, replaceText)
   }
 
   private def collectContinuousComments(
