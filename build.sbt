@@ -434,7 +434,7 @@ lazy val metals = project
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
-      "com.swoval" % "file-tree-views" % "2.1.10",
+      "com.swoval" % "file-tree-views" % "2.1.11",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.10.Final",
