@@ -12,6 +12,7 @@ import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
 
 import org.eclipse.{lsp4j => l}
+import scala.meta.prettyprinters.Structure
 
 class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
@@ -22,51 +23,63 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val tokenized =
-      if (range.getStart == range.getEnd)
-        buffers
-          .get(path)
-          .flatMap { content =>
-            val currentLine = content.split('\n')(range.getStart().getLine())
-            val cursorIsInTheSingleLineComment =
-              currentLine.take(range.getStart().getCharacter()).contains("//")
-            if (cursorIsInTheSingleLineComment) {
-              Trees.defaultTokenizerDialect(content).tokenize.toOption
-            } else None
-          }
-      else None
-
-    tokenized
-      .flatMap { tokens =>
-        computeChanges(tokens, range)
-          .map { changes =>
-            val action = CodeActionBuilder.build(
-              title = ConvertCommentCodeAction.Title,
-              kind = this.kind,
-              changes = List(path -> changes),
-            )
-            List(action)
-          }
+    buffers
+      .get(path)
+      .toList
+      .flatMap { content =>
+        val tokenized =
+          if (range.getStart == range.getEnd)
+            Trees.defaultTokenizerDialect(content).tokenize.toOption
+          else None
+        tokenized.flatMap { tokens =>
+          computeChanges(tokens, range, isSingleLineComment(content))
+            .map { changes =>
+              val action = CodeActionBuilder.build(
+                title = ConvertCommentCodeAction.Title,
+                kind = this.kind,
+                changes = List(path -> changes),
+              )
+              action
+            }
+        }.toList
       }
-      .getOrElse(List.empty)
+  }
+
+  private def isSingleLineComment(content: String)(
+      t: Token
+  ): Boolean = t match {
+    case tc: Token.Comment =>
+      val currentLine = content.split('\n')(t.pos.startLine)
+      tc.pos.startLine == tc.pos.endLine &&
+      currentLine.slice(tc.pos.startColumn, tc.pos.startColumn + 2) == "//"
+    case _ => false
   }
 
   private def computeChanges(
       tokens: Tokens,
       range: l.Range,
+      isSingleLineComment: Token => Boolean,
   ): Option[List[l.TextEdit]] = {
     val where = tokens.lastIndexWhere(t =>
       t.pos.startLine == range.getStart.getLine
-        && t.pos.endLine == range.getEnd.getLine
+        && t.pos.endLine == t.pos.startLine
         && t.pos.startColumn < range.getStart.getCharacter
+        && isSingleLineComment(t)
     )
+    if (where == -1) return None
+
     val commentBeforeCursor = collectContinuousComments(
-      tokens
-        .take(where)
-        .reverse
+      tokens = tokens.take(where).reverse,
+      // expanding backwards does not include token under the cursor at the first index.
+      // That token is already guaranteed to be a line comment due to the search above.
+      // Because of that we allow the expansion to continue even if the first token is a block comment
+      shouldIncludeComment = _ => true,
     ).reverse
 
-    val commentAfterCursor = collectContinuousComments(tokens.drop(where))
+    val commentAfterCursor = collectContinuousComments(
+      tokens = tokens.drop(where),
+      shouldIncludeComment = isSingleLineComment,
+    )
     val commentStart = commentBeforeCursor.headOption
       .map(_.pos.toLsp.getStart)
       .getOrElse(range.getStart)
@@ -78,8 +91,8 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     if (commentTokens.nonEmpty) {
       val replaceText =
         commentTokens
-          .map(_.value)
-          .mkString("/*", "\n *", " */")
+          .map(_.value.trim())
+          .mkString("/* ", "\n * ", " */")
       if (commentBeforeCursor.isEmpty) {
         commentStart.setCharacter(tokens(where).pos.startColumn)
       }
@@ -89,7 +102,11 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       None
     }
   }
-  private def collectContinuousComments(tokens: Seq[Token]) = {
+
+  private def collectContinuousComments(
+      tokens: Seq[Token],
+      shouldIncludeComment: Token.Comment => Boolean,
+  ) = {
     sealed trait State {
       def fold[T](isEmpty: => T)(nonEmpty: Seq[Token.Comment] => T): T = {
         this match {
@@ -109,7 +126,8 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         case (s: State.Stop, _) => s
         case (State.Empty, item) =>
           item match {
-            case newComment: Token.Comment =>
+            case newComment: Token.Comment
+                if shouldIncludeComment(newComment) =>
               State.Continue(Seq(newComment), newComment)
             case _: Token.Whitespace => State.Empty
             case _: Token.BOF => State.Empty
