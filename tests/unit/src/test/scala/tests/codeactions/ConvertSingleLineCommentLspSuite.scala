@@ -6,7 +6,7 @@ class ConvertSingleLineCommentLspSuite
     extends BaseCodeActionLspSuite("convertComment") {
 
   check(
-    "convert single line comment to multiline",
+    "convert single line comment to block comment",
     """val a = 1
       |
       |// <<>>comment middle
@@ -24,7 +24,7 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
-    "convert single line comment to multiline if it starts with a whitespace",
+    "convert single line comment to block comment if it starts with a whitespace",
     """val a = 1
       |
       |   // <<>>comment middle
@@ -42,7 +42,7 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
-    "convert single line comments to multilne when part of it is indented",
+    "convert single line comments to block comment when part of it is indented",
     """// comment start
       |   // <<>>comment middle
       |
@@ -72,7 +72,7 @@ class ConvertSingleLineCommentLspSuite
   )
 
   checkNoAction(
-    "comment inside block comment",
+    "show no action when line comment is inside block comment",
     """|
        |/* comment //<<>> start */
        |
@@ -81,7 +81,7 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
-    "convert single line comment to multiline if it starts with var decl",
+    "convert single line comment to block comment if it starts with var decl",
     """val a = 1
       |
       |val b = 2 // <<>>comment middle
@@ -95,17 +95,31 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
-    "convert single line comment to multiline if it is defined between method params",
+    "convert single line comment to block comment if it includes a block comment",
+    """val a = 1
+      |
+      |// <<>> /* comment middle */
+      |""".stripMargin,
+    ConvertCommentCodeAction.Title,
+    """val a = 1
+      |
+      |/* /* comment middle */ */
+      |""".stripMargin,
+    fileName = "script.sc",
+  )
+
+  check(
+    "convert single line comment to block comment if it is defined between method params",
     """def foo(
       |  name: String, // another comment
-      |  age: Int, //<<>> imporant comment
+      |  age: Int, //<<>> important comment
       |  amount: Int
       |)
       |""".stripMargin,
     ConvertCommentCodeAction.Title,
     """def foo(
       |  name: String, // another comment
-      |  age: Int, /* imporant comment */
+      |  age: Int, /* important comment */
       |  amount: Int
       |)""".stripMargin,
     fileName = "script.sc",
@@ -198,7 +212,7 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
-    "should show action if line comment is the first line in the file",
+    "show action if line comment is the first line in the file",
     """// <<>>comment middle""",
     ConvertCommentCodeAction.Title,
     """/* comment middle */""",
