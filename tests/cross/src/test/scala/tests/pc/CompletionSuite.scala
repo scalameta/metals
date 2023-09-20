@@ -1274,21 +1274,14 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(5),
     compat = Map(
       // higherKinds was deprecated in 2.13.11 but current dotty still depends on 2.13.10
-      "2.13.11" ->
+      ">=2.13.11" ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
            |experimental scala.languageFeature
            |implicitConversions scala.languageFeature
            |postfixOps scala.languageFeature
            |""".stripMargin,
-      "2.13.12" ->
-        """|dynamics scala.languageFeature
-           |existentials scala.languageFeature
-           |experimental scala.languageFeature
-           |implicitConversions scala.languageFeature
-           |postfixOps scala.languageFeature
-           |""".stripMargin,
-      scala3PresentationCompilerVersion ->
+      ">=3.0.0" ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
            |experimental scala.languageFeature

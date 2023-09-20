@@ -23,7 +23,7 @@ final class CodeActionProvider(
 )(implicit ec: ExecutionContext) {
 
   private val extractMemberAction =
-    new ExtractRenameMember(trees, languageClient)
+    new ExtractRenameMember(trees, languageClient, buffers)
 
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),

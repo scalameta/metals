@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -23,27 +24,32 @@ class BspErrorHandler(
     currentSession: () => Option[BspSession],
 )(implicit context: ExecutionContext) {
 
-  private def logsPath = workspaceFolder.resolve(Directories.log)
+  protected def logsPath: AbsolutePath =
+    workspaceFolder.resolve(Directories.log)
   private val lastError = new AtomicReference[String]("")
+  private val dismissedErrors = ConcurrentHashSet.empty[String]
 
-  def onError(message: String): Unit = {
-    if (shouldShowBspError) {
+  def onError(message: String): Future[Unit] = {
+    if (shouldShowBspError && !dismissedErrors.contains(message)) {
       val previousError = lastError.getAndSet(message)
       if (message != previousError) {
         showError(message)
-      }
+      } else Future.successful(())
     } else {
-      scribe.error(message)
+      logError(message)
+      Future.successful(())
     }
   }
 
-  private def shouldShowBspError = currentSession().exists(session =>
+  def shouldShowBspError: Boolean = currentSession().exists(session =>
     session.main.isBloop || session.main.isScalaCLI
   )
 
+  protected def logError(message: String): Unit = scribe.error(message)
+
   private def showError(message: String): Future[Unit] = {
-    val bspError = s"${BspErrorHandler.errorInBsp}: $message"
-    scribe.error(bspError)
+    val bspError = s"${BspErrorHandler.errorInBsp} $message"
+    logError(bspError)
     val params = BspErrorHandler.makeShowMessage(message)
     languageClient.showMessageRequest(params).asScala.flatMap {
       case BspErrorHandler.goToLogs =>
@@ -54,6 +60,8 @@ class BspErrorHandler(
         Future.successful(gotoLogs(errorMsgStartLine))
       case BspErrorHandler.restartBuildServer =>
         restartBspServer().ignoreValue
+      case BspErrorHandler.dismiss =>
+        Future.successful(dismissedErrors.add(message)).ignoreValue
       case _ => Future.successful(())
     }
   }
@@ -94,15 +102,12 @@ object BspErrorHandler {
     val (msg, actions) =
       if (message.length() <= MESSAGE_MAX_LENGTH) {
         (
-          s"""|$errorHeader
-              |$message""".stripMargin,
+          makeShortMessage(message),
           List(restartBuildServer, dismiss),
         )
       } else {
         (
-          s"""|$errorHeader
-              |${message.take(MESSAGE_MAX_LENGTH)}...
-              |$gotoLogsToSeeFull""".stripMargin,
+          makeLongMessage(message),
           List(goToLogs, restartBuildServer, dismiss),
         )
       }
@@ -113,13 +118,23 @@ object BspErrorHandler {
     params
   }
 
-  private val errorHeader = "Encountered an error in the build server:"
-  private val goToLogs = new l.MessageActionItem("Go to logs.")
-  private val restartBuildServer =
+  def makeShortMessage(message: String): String =
+    s"""|$errorHeader
+        |$message""".stripMargin
+
+  def makeLongMessage(message: String): String =
+    s"""|${makeShortMessage(s"${message.take(MESSAGE_MAX_LENGTH)}...")}
+        |$gotoLogsToSeeFull""".stripMargin
+
+  val goToLogs = new l.MessageActionItem("Go to logs.")
+  val dismiss = new l.MessageActionItem("Dismiss.")
+  val restartBuildServer =
     new l.MessageActionItem("Restart build server.")
-  private val dismiss = new l.MessageActionItem("Dismiss.")
+
+  val errorHeader = "Encountered an error in the build server:"
   private val gotoLogsToSeeFull = "Go to logs to see the full error"
-  private val errorInBsp = "Build server error:"
+
+  val errorInBsp = "Build server error:"
 
   private val MESSAGE_MAX_LENGTH = 150
 

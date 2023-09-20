@@ -304,6 +304,34 @@ class ExtractRenameMemberLspSuite
   )
 
   checkExtractedMember(
+    "extract-class-with-scaladoc",
+    """|package a
+       |
+       |case class A()
+       |/**
+       | * some scala doc
+       | */
+       |class <<B>>()
+       |""".stripMargin,
+    expectedActions = ExtractRenameMember.title("class", "B"),
+    """|package a
+       |
+       |case class A()
+       |""".stripMargin,
+    fileName = "A.scala",
+    newFile = (
+      "B.scala",
+      s"""|package a
+          |
+          |/**
+          | * some scala doc
+          | */
+          |class B()
+          |""".stripMargin,
+    ),
+  )
+
+  checkExtractedMember(
     "extract-class-without-non-in-scope-imports",
     """|package a
        |import scala.io.Source
@@ -454,7 +482,7 @@ class ExtractRenameMemberLspSuite
       val pos = scala.meta.Position
         .Range(input, startOffset, endOffset - "<<".length())
         .toLsp
-      val extractRenameMember = new ExtractRenameMember(trees, client)
+      val extractRenameMember = new ExtractRenameMember(trees, client, buffers)
       buffers.put(path, sourceText)
       val textDocumentIdentifier = path.toTextDocumentIdentifier
       val codeActionParams = new CodeActionParams(

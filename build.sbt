@@ -439,7 +439,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.10.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.22.0",
+      "org.flywaydb" % "flyway-core" % "9.22.1",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
@@ -486,7 +486,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "3.1.2",
+      "com.lihaoyi" %% "ujson" % "3.1.3",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.8.0",
       // for producing SemanticDB from Scala source files

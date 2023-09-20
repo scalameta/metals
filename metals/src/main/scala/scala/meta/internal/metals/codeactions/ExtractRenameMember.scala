@@ -14,6 +14,7 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -24,6 +25,7 @@ import scala.meta.internal.metals.codeactions.ExtractRenameMember.getMemberType
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.tokens.Token
 import scala.meta.transversers.SimpleTraverser
 
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
@@ -34,6 +36,7 @@ import org.eclipse.{lsp4j => l}
 class ExtractRenameMember(
     trees: Trees,
     languageClient: MetalsLanguageClient,
+    buffers: Buffers,
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
@@ -156,10 +159,22 @@ class ExtractRenameMember(
     nodes.toList
   }
 
+  case class Comments(text: String, startPos: l.Position)
+
   case class EndableMember(
       member: Member,
       maybeEndMarker: Option[Term.EndMarker],
-  )
+      commentsAbove: Option[Comments] = None,
+  ) {
+    def withComments(comments: Comments): EndableMember =
+      this.copy(commentsAbove = Some(comments))
+    def memberPos: l.Range = {
+      val pos = member.pos.toLsp
+      commentsAbove.foreach(comments => pos.setStart(comments.startPos))
+      pos
+    }
+    def endMarkerPos: Option[l.Range] = maybeEndMarker.map(_.pos.toLsp)
+  }
 
   private def isSealed(t: Tree): Boolean = t match {
     case node: Defn.Trait => node.mods.exists(_.isInstanceOf[Mod.Sealed])
@@ -262,7 +277,12 @@ class ExtractRenameMember(
 
     val structure = pkg.toList.mkString("\n") ::
       imports.mkString("\n") ::
+      endableMember.commentsAbove.map(_.text).getOrElse("") +
       endableMember.member.toString + marker(endableMember) ::
+      maybeCompanionEndableMember
+        .flatMap(_.commentsAbove)
+        .map(_.text)
+        .getOrElse("") +
       maybeCompanionEndableMember
         .map(_.member.toString)
         .getOrElse("") + maybeCompanionEndableMember
@@ -391,13 +411,23 @@ class ExtractRenameMember(
     val range = new l.Range(pos, pos)
     val path = uri.toAbsolutePath
 
+    def withComment(member: EndableMember) =
+      findCommentsAbove(path, member.member) match {
+        case Some(comments) => member.withComments(comments)
+        case None => member
+      }
+
     val opt = for {
       tree <- trees.get(path)
       definitions = membersDefinitions(tree)
-      memberDefn <- definitions.find(
-        _.member.name.pos.toLsp.overlapsWith(range)
-      )
-      companion = definitions.find(isCompanion(memberDefn.member))
+      memberDefn <- definitions
+        .find(
+          _.member.name.pos.toLsp.overlapsWith(range)
+        )
+        .map(withComment)
+      companion = definitions
+        .find(isCompanion(memberDefn.member))
+        .map(withComment)
       (fileContent, defnLine) = newFileContent(
         tree,
         range,
@@ -451,8 +481,8 @@ class ExtractRenameMember(
 
     newPath.writeText(content)
 
-    def removeTreeEdits(t: Tree): List[l.TextEdit] =
-      List(new l.TextEdit(t.pos.toLsp, ""))
+    def removeEdits(range: l.Range): List[l.TextEdit] =
+      List(new l.TextEdit(range, ""))
 
     val packageEdit = endableMember.member.parent
       .flatMap {
@@ -465,17 +495,37 @@ class ExtractRenameMember(
           Some(p)
         case _ => None
       }
-      .map(removeTreeEdits)
+      .map(tree => removeEdits(tree.pos.toLsp))
 
     packageEdit.getOrElse(
-      removeTreeEdits(endableMember.member) ++
+      removeEdits(endableMember.memberPos) ++
         (maybeEndableMemberCompanion
-          .map(_.member)
-          ++ endableMember.maybeEndMarker
+          .map(_.memberPos)
+          ++ endableMember.endMarkerPos
           ++ maybeEndableMemberCompanion
-            .flatMap(_.maybeEndMarker)).flatMap(removeTreeEdits)
+            .flatMap(_.endMarkerPos)).flatMap(removeEdits)
     )
 
+  }
+
+  private def findCommentsAbove(path: AbsolutePath, member: Member) = {
+    for {
+      text <- buffers.get(path)
+      (part, _) = text.splitAt(member.pos.start)
+      tokenized <- Trees.defaultTokenizerDialect(part).tokenize.toOption
+      collectComments = tokenized.tokens.reverse.takeWhile {
+        case _: Token.EOF => true
+        case _: Token.Comment => true
+        case _: Token.Whitespace => true
+        case _ => false
+      }
+      commentPos <- collectComments
+        .findLast(_.isInstanceOf[Token.Comment])
+        .map(_.pos)
+    } yield Comments(
+      part.splitAt(commentPos.start)._2,
+      commentPos.toLsp.getStart(),
+    )
   }
 
 }
