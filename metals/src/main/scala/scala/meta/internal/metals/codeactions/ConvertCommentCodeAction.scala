@@ -70,17 +70,19 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       val tokensBeforeCursor = tokens.take(indexOfLineTokenUnderCursor)
       // token under the cursor + following tokens
       val tokensAfterCursor = tokens.drop(indexOfLineTokenUnderCursor)
-      expandCommentCluster(
-        tokensBeforeCursor,
-        tokensAfterCursor,
-        range,
+      Some(
+        createTextEdit(
+          tokensBeforeCursor,
+          tokensAfterCursor,
+          range,
+        )
       )
     } else {
       None
     }
   }
 
-  private def expandCommentCluster(
+  private def createTextEdit(
       tokensBeforeCursor: Tokens,
       tokensAfterCursor: Tokens,
       range: l.Range,
@@ -100,20 +102,16 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       .getOrElse(range.getEnd())
 
     val commentTokens = commentBeforeCursor ++ commentAfterCursor
-    if (commentTokens.nonEmpty) {
-      val replaceText =
-        commentTokens
-          .map(_.value.trim())
-          .mkString("/* ", "\n * ", " */")
-      if (commentBeforeCursor.isEmpty) {
-        // this is safe as there have to be some tokens after cursor if commentBeforeCursor is empty
-        commentStart.setCharacter(tokensAfterCursor.head.pos.startColumn)
-      }
-      val pos = new l.Range(commentStart, commentEnd)
-      Some(List(new l.TextEdit(pos, replaceText)))
-    } else {
-      None
+    val replaceText =
+      commentTokens
+        .map(_.value.trim())
+        .mkString("/* ", "\n * ", " */")
+    if (commentBeforeCursor.isEmpty) {
+      // this is safe as there have to be some tokens after cursor if commentBeforeCursor is empty
+      commentStart.setCharacter(tokensAfterCursor.head.pos.startColumn)
     }
+    val pos = new l.Range(commentStart, commentEnd)
+    List(new l.TextEdit(pos, replaceText))
   }
 
   private def collectContinuousComments(
