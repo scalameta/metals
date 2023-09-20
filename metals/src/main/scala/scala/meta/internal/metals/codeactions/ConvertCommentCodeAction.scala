@@ -12,7 +12,6 @@ import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.prettyprinters.Structure
 
 class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
@@ -32,7 +31,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
             Trees.defaultTokenizerDialect(content).tokenize.toOption
           else None
         tokenized.flatMap { tokens =>
-          computeChanges(tokens, range, isSingleLineComment(content))
+          findAndExpandComment(tokens, range, isSingleLineComment(content))
             .map { changes =>
               val action = CodeActionBuilder.build(
                 title = ConvertCommentCodeAction.Title,
@@ -55,30 +54,43 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     case _ => false
   }
 
-  private def computeChanges(
+  private def findAndExpandComment(
       tokens: Tokens,
       range: l.Range,
       isSingleLineComment: Token => Boolean,
   ): Option[List[l.TextEdit]] = {
-    val where = tokens.lastIndexWhere(t =>
+    val indexOfLineTokenUnderCursor = tokens.lastIndexWhere(t =>
       t.pos.startLine == range.getStart.getLine
         && t.pos.endLine == t.pos.startLine
         && t.pos.startColumn < range.getStart.getCharacter
         && isSingleLineComment(t)
     )
-    if (where == -1) return None
+    if (indexOfLineTokenUnderCursor != -1) {
+      // tokens that are strictly before cursor, i.e. they end before cursor position
+      val tokensBeforeCursor = tokens.take(indexOfLineTokenUnderCursor)
+      // token under the cursor + following tokens
+      val tokensAfterCursor = tokens.drop(indexOfLineTokenUnderCursor)
+      expandCommentCluster(
+        tokensBeforeCursor,
+        tokensAfterCursor,
+        range,
+      )
+    } else {
+      None
+    }
+  }
 
+  private def expandCommentCluster(
+      tokensBeforeCursor: Tokens,
+      tokensAfterCursor: Tokens,
+      range: l.Range,
+  ) = {
     val commentBeforeCursor = collectContinuousComments(
-      tokens = tokens.take(where).reverse,
-      // expanding backwards does not include token under the cursor at the first index.
-      // That token is already guaranteed to be a line comment due to the search above.
-      // Because of that we allow the expansion to continue even if the first token is a block comment
-      shouldIncludeComment = _ => true,
+      tokens = tokensBeforeCursor.reverse
     ).reverse
 
     val commentAfterCursor = collectContinuousComments(
-      tokens = tokens.drop(where),
-      shouldIncludeComment = isSingleLineComment,
+      tokens = tokensAfterCursor
     )
     val commentStart = commentBeforeCursor.headOption
       .map(_.pos.toLsp.getStart)
@@ -94,7 +106,8 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
           .map(_.value.trim())
           .mkString("/* ", "\n * ", " */")
       if (commentBeforeCursor.isEmpty) {
-        commentStart.setCharacter(tokens(where).pos.startColumn)
+        // this is safe as there have to be some tokens after cursor if commentBeforeCursor is empty
+        commentStart.setCharacter(tokensAfterCursor.head.pos.startColumn)
       }
       val pos = new l.Range(commentStart, commentEnd)
       Some(List(new l.TextEdit(pos, replaceText)))
@@ -104,8 +117,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   }
 
   private def collectContinuousComments(
-      tokens: Seq[Token],
-      shouldIncludeComment: Token.Comment => Boolean,
+      tokens: Seq[Token]
   ) = {
     sealed trait State {
       def fold[T](isEmpty: => T)(nonEmpty: Seq[Token.Comment] => T): T = {
@@ -126,8 +138,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         case (s: State.Stop, _) => s
         case (State.Empty, item) =>
           item match {
-            case newComment: Token.Comment
-                if shouldIncludeComment(newComment) =>
+            case newComment: Token.Comment =>
               State.Continue(Seq(newComment), newComment)
             case _: Token.Whitespace => State.Empty
             case _: Token.BOF => State.Empty
@@ -141,9 +152,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
             case (_: Token.Comment, eol: Token.EOL) =>
               State.Continue(acc, eol)
             // if the new item is whitespace but not EOL then continue but keep the last token as it was
-            case (_: Token.Comment, _: Token.Whitespace) =>
-              State.Continue(acc, last)
-            case (_: Token.EOL, _: Token.Whitespace) =>
+            case (_, _: Token.Whitespace) =>
               State.Continue(acc, last)
             case _ => State.Stop(acc)
           }
