@@ -109,6 +109,29 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
+    "convert single line comment to block comment if the line starts with a block comment",
+    """val a = 1
+      |
+      |/* comment start */ //<<>> comment end
+      |""".stripMargin,
+    ConvertCommentCodeAction.Title,
+    """val a = 1
+      |
+      |/* comment start
+      | * comment end */
+      |""".stripMargin,
+    fileName = "script.sc",
+  )
+
+  checkNoAction(
+    "show no action when cursor is before line comment",
+    """|
+       |<<>>// start 
+       |""".stripMargin,
+    fileName = "script.sc",
+  )
+
+  check(
     "convert single line comment to block comment if it is defined between method params",
     """def foo(
       |  name: String, // another comment
