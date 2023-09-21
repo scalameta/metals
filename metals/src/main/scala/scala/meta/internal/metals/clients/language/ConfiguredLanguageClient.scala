@@ -37,13 +37,24 @@ final class ConfiguredLanguageClient(
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    if (clientConfig.statusBarState == StatusBarState.On) {
+    val level =
+      params.level match {
+        case "error" => MessageType.Error
+        case "warn" => MessageType.Warning
+        case _ => MessageType.Info
+      }
+    val statusBarState =
+      params.getStatusType match {
+        case StatusType.bsp => clientConfig.bspStatusBarState()
+        case _ => clientConfig.statusBarState()
+      }
+    if (statusBarState == StatusBarState.On) {
       underlying.metalsStatus(params)
-    } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
-      if (clientConfig.statusBarState == StatusBarState.ShowMessage) {
-        underlying.showMessage(new MessageParams(MessageType.Log, params.text))
-      } else if (clientConfig.statusBarState == StatusBarState.LogMessage) {
-        underlying.logMessage(new MessageParams(MessageType.Log, params.text))
+    } else if (params.logMessage.nonEmpty && !pendingShowMessage.get()) {
+      if (statusBarState == StatusBarState.ShowMessage) {
+        underlying.showMessage(new MessageParams(level, params.logMessage))
+      } else if (statusBarState == StatusBarState.LogMessage) {
+        underlying.logMessage(new MessageParams(level, params.logMessage))
       } else {
         ()
       }

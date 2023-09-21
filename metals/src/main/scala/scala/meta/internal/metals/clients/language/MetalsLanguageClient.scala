@@ -3,6 +3,8 @@ package scala.meta.internal.metals.clients.language
 import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
 
+import scala.util.Try
+
 import scala.meta.internal.decorations.DecorationClient
 import scala.meta.internal.tvp._
 
@@ -122,19 +124,41 @@ case class RawMetalsQuickPickResult(
  * Arguments for the metals/status notification.
  *
  * @param text The text to display in the status bar.
+ * @param level info, warn, error
  * @param show if true, show the status bar.
  * @param hide if true, hide the status bar.
  * @param tooltip optional display this message when the user hovers over the status bar item.
  * @param command optional command that the client should trigger when the user clicks on
  *                the status bar item.
+ * @param statusType is this a bsp or metals status.
  */
 case class MetalsStatusParams(
     text: String,
+    @Nullable level: String = "info",
     @Nullable show: java.lang.Boolean = null,
     @Nullable hide: java.lang.Boolean = null,
     @Nullable tooltip: String = null,
     @Nullable command: String = null,
-)
+    @Nullable statusType: String = StatusType.metals.toString(),
+) {
+
+  def logMessage: String =
+    if (statusType == StatusType.bsp.toString())
+      if (level == "info") ""
+      else s"$text: $tooltip"
+    else text
+
+  def getStatusType: StatusType.Value =
+    Try(StatusType.withName(statusType)).toOption.getOrElse(StatusType.metals)
+
+  def withStatusType(statusType: StatusType.StatusType): MetalsStatusParams =
+    this.copy(statusType = statusType.toString())
+}
+
+object StatusType extends Enumeration {
+  type StatusType = Value
+  val metals, bsp = Value
+}
 
 case class MetalsSlowTaskParams(
     message: String,

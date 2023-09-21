@@ -49,6 +49,7 @@ import org.eclipse.{lsp4j => l}
  * @param disableColorOutput in the situation where your DAP client may not handle color codes in
  *                            the output, you can enable this to strip them.
  * @param doctorVisibilityProvider if the clients implements `metals/doctorVisibilityDidChange`
+ * @param bspStatusBarProvider if the client supports `metals/status` with "bsp" status type
  */
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
@@ -77,12 +78,16 @@ final case class InitializationOptions(
     copyWorksheetOutputProvider: Option[Boolean],
     disableColorOutput: Option[Boolean],
     doctorVisibilityProvider: Option[Boolean],
+    bspStatusBarProvider: Option[String],
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
 
   def statusBarState: Option[StatusBarState.StatusBarState] =
     statusBarProvider.flatMap(StatusBarState.fromString)
+
+  def bspStatusBarState: Option[StatusBarState.StatusBarState] =
+    bspStatusBarProvider.flatMap(StatusBarState.fromString)
 }
 
 object InitializationOptions {
@@ -90,6 +95,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -172,6 +178,7 @@ object InitializationOptions {
       disableColorOutput = jsonObj.getBooleanOption("disableColorOutput"),
       doctorVisibilityProvider =
         jsonObj.getBooleanOption("doctorVisibilityProvider"),
+      bspStatusBarProvider = jsonObj.getStringOption("bspStatusBarProvider"),
     )
   }
 

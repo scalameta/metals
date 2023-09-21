@@ -49,6 +49,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
+    bspStatusBar: StatusBarConfig = StatusBarConfig.bspDefault,
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,

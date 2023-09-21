@@ -6,21 +6,17 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
+import scala.meta.internal.metals.clients.language.StatusType
 
-import org.eclipse.lsp4j.MessageActionItem
-import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
-import org.eclipse.lsp4j.services.LanguageClient
 
 trait RequestMonitor {
   def lastOutgoing: Option[Long]
@@ -58,22 +54,23 @@ class RequestMonitorImpl extends RequestMonitor {
 class ServerLivenessMonitor(
     requestMonitor: RequestMonitor,
     ping: () => Unit,
-    languageClient: LanguageClient,
-    serverName: String,
+    client: MetalsLanguageClient,
     metalsIdleInterval: Duration,
     pingInterval: Duration,
-)(implicit ex: ExecutionContext) {
+    serverName: String,
+    icons: Icons,
+) {
   private val state: AtomicReference[ServerLivenessMonitor.State] =
     new AtomicReference(ServerLivenessMonitor.Idle)
-  @volatile private var isDismissed = false
   @volatile private var isServerResponsive = true
-  @volatile private var reconnectOptions
-      : ServerLivenessMonitor.ReconnectOptions =
-    ServerLivenessMonitor.ReconnectOptions.empty
-  def setReconnect(reconnect: () => Future[Unit]): Unit = {
-    reconnectOptions = ServerLivenessMonitor.ReconnectOptions(reconnect)
-  }
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+  val connectedParams: MetalsStatusParams =
+    ServerLivenessMonitor.connectedParams(serverName, icons)
+  val noResponseParams: MetalsStatusParams =
+    ServerLivenessMonitor.noResponseParams(serverName, icons)
+
+  client.metalsStatus(connectedParams)
+
   def runnable(): Runnable = new Runnable {
     def run(): Unit = {
       def now = System.currentTimeMillis()
@@ -94,30 +91,11 @@ class ServerLivenessMonitor(
           case _ => ServerLivenessMonitor.Running
         }
         if (currState == ServerLivenessMonitor.Running) {
-          if (notResponding) {
-            isServerResponsive = false
-            if (!isDismissed) {
-              languageClient
-                .showMessageRequest(
-                  ServerLivenessMonitor.ServerNotResponding
-                    .params(
-                      pingInterval,
-                      serverName,
-                      includeReconnectOption = reconnectOptions.canReconnect,
-                    )
-                )
-                .asScala
-                .map {
-                  case ServerLivenessMonitor.ServerNotResponding.dismiss =>
-                    isDismissed = true
-                  case ServerLivenessMonitor.ServerNotResponding.reestablishConnection =>
-                    reconnectOptions.reconnect()
-                  case _ =>
-                }
-            }
-          } else {
-            isServerResponsive = true
-          }
+          if (notResponding && isServerResponsive)
+            client.metalsStatus(noResponseParams)
+          else if (!notResponding && !isServerResponsive)
+            client.metalsStatus(connectedParams)
+          isServerResponsive = !notResponding
         }
         ping()
       } else {
@@ -137,35 +115,13 @@ class ServerLivenessMonitor(
   def shutdown(): Unit = {
     scheduled.cancel(true)
     scheduler.shutdown()
+    client.metalsStatus(ServerLivenessMonitor.disconnectedParams)
   }
 
   def getState: ServerLivenessMonitor.State = state.get()
 }
 
 object ServerLivenessMonitor {
-  object ServerNotResponding {
-    def message(pingInterval: Duration, serverName: String): String =
-      s"The build server has not responded in over $pingInterval. You may want to restart $serverName build server."
-
-    def params(
-        pingInterval: Duration,
-        serverName: String,
-        includeReconnectOption: Boolean,
-    ): ShowMessageRequestParams = {
-      val params = new ShowMessageRequestParams()
-      params.setMessage(message(pingInterval, serverName))
-      val actions =
-        if (includeReconnectOption) List(dismiss, reestablishConnection)
-        else List(dismiss)
-      params.setActions(actions.asJava)
-      params.setType(MessageType.Warning)
-      params
-    }
-    val dismiss = new MessageActionItem("Dismiss")
-    val reestablishConnection = new MessageActionItem(
-      "Reestablish connection with BSP server"
-    )
-  }
 
   /**
    * State of the metals server:
@@ -178,17 +134,25 @@ object ServerLivenessMonitor {
   object FirstPing extends State
   object Running extends State
 
-  class ReconnectOptions(optReconnect: Option[() => Future[Unit]]) {
-    val canReconnect = optReconnect.nonEmpty
-    val reconnect: () => Future[Unit] =
-      optReconnect.getOrElse(() => Future.successful(()))
-  }
+  def connectedParams(serverName: String, icons: Icons): MetalsStatusParams =
+    MetalsStatusParams(
+      s"$serverName ${icons.link}",
+      "info",
+      show = true,
+      tooltip = s"Metals is connected to the build server ($serverName).",
+    ).withStatusType(StatusType.bsp)
 
-  object ReconnectOptions {
-    def empty = new ReconnectOptions(None)
-    def apply(reconnect: () => Future[Unit]) = new ReconnectOptions(
-      Some(reconnect)
-    )
-  }
+  val disconnectedParams: MetalsStatusParams =
+    MetalsStatusParams("", hide = true).withStatusType(StatusType.bsp)
+
+  def noResponseParams(serverName: String, icons: Icons): MetalsStatusParams =
+    MetalsStatusParams(
+      s"$serverName ${icons.error}",
+      "error",
+      show = true,
+      tooltip =
+        s"Broken connection, build sever ($serverName) is not responding. Press to reconnect.",
+      command = ClientCommands.ReconnectBsp.id,
+    ).withStatusType(StatusType.bsp)
 
 }
