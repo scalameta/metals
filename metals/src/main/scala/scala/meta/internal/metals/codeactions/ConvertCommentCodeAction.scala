@@ -7,14 +7,17 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.parsing.Trees
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.io.AbsolutePath
 
 class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
+
+  private val LineSeparator: String = System.lineSeparator()
+
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
@@ -30,7 +33,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         path,
         tokens,
         range,
-        isSingleLineComment(content),
+        isSingleLineComment(content.split(LineSeparator).toVector),
       )
     } yield codeAction).toList
   }
@@ -43,11 +46,11 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       .flatMap(_.toOption)
   }
 
-  private def isSingleLineComment(content: String)(
+  private def isSingleLineComment(contentLines: Vector[String])(
       t: Token
   ): Boolean = t match {
     case tc: Token.Comment =>
-      val currentLine = content.split('\n')(t.pos.startLine)
+      val currentLine = contentLines(t.pos.startLine)
       tc.pos.startLine == tc.pos.endLine &&
       currentLine.slice(tc.pos.startColumn, tc.pos.startColumn + 2) == "//"
     case _ => false
@@ -109,8 +112,8 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     val commentTokens = commentBeforeCursor ++ commentAfterCursor
     val replaceText =
       commentTokens
-        .map(_.value.trim())
-        .mkString("/* ", "\n * ", " */")
+        .map(_.value.strip())
+        .mkString("/* ", s"${LineSeparator} * ", " */")
     if (commentBeforeCursor.isEmpty) {
       // this is safe as there have to be some tokens after cursor if commentBeforeCursor is empty
       commentStart.setCharacter(tokensAfterCursor.head.pos.startColumn)

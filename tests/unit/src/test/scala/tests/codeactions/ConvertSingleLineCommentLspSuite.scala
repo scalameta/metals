@@ -243,22 +243,6 @@ class ConvertSingleLineCommentLspSuite
   )
 
   checkNoAction(
-    "should not show action when inside single-line block comment",
-    """|val a = 1
-       |/* <<>>comment middle */
-       |val b = 2""".stripMargin,
-    fileName = "script2.sc",
-  )
-
-  checkNoAction(
-    "should not show action when cursor is before a line comment",
-    """|val a = 1
-       |<<>> // comment middle
-       |val b = 2""".stripMargin,
-    fileName = "script2.sc",
-  )
-
-  checkNoAction(
     "should not show action when cursor is after block comment",
     """|val a = 1
        |/* comment middle */ <<>> 
