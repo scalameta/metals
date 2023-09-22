@@ -118,12 +118,6 @@ object MillifyScalaCliDependencyCodeAction {
   private val dependencyIdentifiers = Set("dep", "lib", "plugin")
   private val sbtDependencyDelimiters = Set("%", "%%", "%%%")
 
-  private def isScalaCliUsingDirectiveComment(text: String): Boolean =
-    text.split(" ").filterNot(_.isEmpty).toList match {
-      case "//>" :: "using" :: _ => true
-      case _ => false
-    }
-
   private def actionTitle(millStyleDependency: String): String =
     s"""Convert to "$millStyleDependency""""
 
@@ -134,4 +128,13 @@ object MillifyScalaCliDependencyCodeAction {
     val replacementText: String =
       s"//> using $dependencyIdentifier \"$millStyleDependency\""
   }
+
+  private[codeactions] def isScalaCliUsingDirectiveComment(
+      text: String
+  ): Boolean =
+    text.split(" ").filterNot(_.isEmpty).toList match {
+      case "//>" :: "using" :: _ => true
+      case _ => false
+    }
+
 }

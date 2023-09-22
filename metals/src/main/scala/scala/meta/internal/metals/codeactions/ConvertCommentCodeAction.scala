@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.codeactions.MillifyScalaCliDependencyCodeAction._
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -23,15 +24,17 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   ): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
+    val couldBeScalaCli = path.isScalaScript || path.isScala
 
     (for {
       content <- buffers.get(path)
       tokens <- tokenizeIfNotRangeSelection(range, content)
+      contentLines = content.split("\\r?(\\n|\\r)").toVector
       codeAction <- createActionIfPossible(
         path,
         tokens,
         range,
-        isSingleLineComment(content.split("\\r?(\\n|\\r)").toVector),
+        isSingleLineComment(contentLines, couldBeScalaCli),
       )
     } yield codeAction).toList
   }
@@ -44,13 +47,23 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       .flatMap(_.toOption)
   }
 
-  private def isSingleLineComment(contentLines: Vector[String])(
+  private def isSingleLineComment(
+      contentLines: Vector[String],
+      couldBeScalaCli: Boolean,
+  )(
       t: Token
   ): Boolean = t match {
     case tc: Token.Comment =>
       val currentLine = contentLines(t.pos.startLine)
-      tc.pos.startLine == tc.pos.endLine &&
-      currentLine.slice(tc.pos.startColumn, tc.pos.startColumn + 2) == "//"
+      val isLikelyScalaCliDirective =
+        couldBeScalaCli && isScalaCliUsingDirectiveComment(currentLine)
+      val tokenIsSingleLine = tc.pos.startLine == tc.pos.endLine
+      val tokenStartsWithDoubleSlash =
+        currentLine.slice(tc.pos.startColumn, tc.pos.startColumn + 2) == "//"
+
+      !isLikelyScalaCliDirective &&
+      tokenIsSingleLine &&
+      tokenStartsWithDoubleSlash
     case _ => false
   }
 
