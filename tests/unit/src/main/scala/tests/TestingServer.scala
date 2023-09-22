@@ -1810,7 +1810,9 @@ final case class TestingServer(
     val reveal =
       fullServer.treeView
         .reveal(toPath(filename), new l.Position(line, 0))
-        .get
+        .getOrElse {
+          sys.error(s"$path: cannot reveal")
+        }
     val parents = (reveal.uriChain :+ null).map { uri =>
       fullServer.treeView.children(
         TreeViewChildrenParams(reveal.viewId, uri)

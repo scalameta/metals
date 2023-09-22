@@ -33,7 +33,7 @@ object JdkSources {
   }
 
   private def fromString(path: String): Option[AbsolutePath] = {
-    Option(path).flatMap { str =>
+    Option(path).filter(_.nonEmpty).flatMap { str =>
       Try(AbsolutePath(str)) match {
         case Failure(exception) =>
           logger.warning(
@@ -41,6 +41,7 @@ object JdkSources {
           )
           None
         case Success(value) =>
+          if (value.toString().contains("unit")) throw new Exception
           Some(value)
       }
     }

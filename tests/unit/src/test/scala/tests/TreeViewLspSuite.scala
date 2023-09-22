@@ -214,6 +214,26 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
              |""".stripMargin,
         )
         assertNoDiff(
+          server.workspaceSymbol("Paths", includeKind = true),
+          """|java.nio.file.Paths Class
+             |""".stripMargin,
+        )
+        val withBase = if (!isJava8) "java.base/" else ""
+        assertNoDiff(
+          server.treeViewReveal(
+            withBase + "java/nio/file/Paths.java",
+            "class Paths",
+          ),
+          s"""|root
+              |  Libraries (22)
+              |    $jdkSourcesName
+              |      java/
+              |        nio/
+              |          file/
+              |            Paths class
+              |""".stripMargin,
+        )
+        assertNoDiff(
           server.workspaceSymbol("sourcecode.File", includeKind = true),
           """|sourcecode.File Class
              |sourcecode.File Object
