@@ -378,18 +378,18 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     }
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |     "scalaVersion": "2.13.6",
-           |     "scalacOptions": ["-Xsource:3"]
-           |  }
-           |}
-           |/.scalafmt.conf
-           |version = "2.7.5"
-           |/a/src/main/scala/A.scala
-           |object A
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |     "scalaVersion": "${V.scala213}",
+            |     "scalacOptions": ["-Xsource:3"]
+            |  }
+            |}
+            |/.scalafmt.conf
+            |version = "2.7.5"
+            |/a/src/main/scala/A.scala
+            |object A
+            |""".stripMargin
       )
       _ = assertNoDiff(
         server.textContents(".scalafmt.conf"),
@@ -447,23 +447,23 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     }
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |     "scalaVersion": "3.0.0"
-           |  },
-           |  "b" : {
-           |     "scalaVersion": "2.13.5",
-           |     "scalacOptions": ["-Xsource:3"]
-           |  }
-           |}
-           |/.scalafmt.conf
-           |version = "2.7.5"
-           |/a/src/main/scala/A.scala
-           |object A
-           |/b/src/main/scala/B.scala
-           |object B
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |     "scalaVersion": "3.0.0"
+            |  },
+            |  "b" : {
+            |     "scalaVersion": "${V.scala213}",
+            |     "scalacOptions": ["-Xsource:3"]
+            |  }
+            |}
+            |/.scalafmt.conf
+            |version = "2.7.5"
+            |/a/src/main/scala/A.scala
+            |object A
+            |/b/src/main/scala/B.scala
+            |object B
+            |""".stripMargin
       )
       _ = assertNoDiff(
         server.textContents(".scalafmt.conf"),

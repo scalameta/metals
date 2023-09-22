@@ -7,7 +7,7 @@ val checkSemanticdb =
 lazy val a = project
   .in(file("a"))
   .settings(
-    scalaVersion := "2.13.5",
+    scalaVersion := "2.13.12",
     inConfig(Compile) {
       checkSemanticdb := {
         assertSemanticdbForScala2.value
@@ -21,7 +21,7 @@ lazy val a = project
 lazy val b = project
   .in(file("b"))
   .settings(
-    scalaVersion := "3.0.1",
+    scalaVersion := "3.3.1",
     inConfig(Compile) { checkSemanticdb := assertSemanticdbForScala3.value },
     inConfig(Test) { checkSemanticdb := assertSemanticdbForScala3.value },
   )
@@ -30,7 +30,7 @@ lazy val b = project
 lazy val c = project
   .in(file("c"))
   .settings(
-    scalaVersion := "2.12.17",
+    scalaVersion := "2.12.18",
     inConfig(Compile) {
       checkSemanticdb := {
         assertSemanticdbForScala2.value

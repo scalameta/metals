@@ -30,7 +30,10 @@ object MetalsPlugin extends AutoPlugin {
   override lazy val projectSettings: Seq[Def.Setting[_]] = Def.settings(
     Keys.semanticdbVersion := {
       if (requiresSemanticdb.value && !isScala3.value)
-        BuildInfo.semanticdbVersion
+        BuildInfo.lastSupportedSemanticdb.getOrElse(
+          scalaVersion.value,
+          BuildInfo.semanticdbVersion,
+        )
       else Keys.semanticdbVersion.value
     },
     semanticdbEnabled := {

@@ -41,14 +41,16 @@ object V {
   val scalaCli = "1.0.4"
   val scalafix = "0.11.1"
   val scalafmt = "3.7.14"
-  val scalameta = "4.8.3"
+  val scalameta = "4.8.10"
   val scribe = "3.12.2"
-  val semanticdb = scalameta
   val qdox = "2.0.3"
 
   val guava = "com.google.guava" % "guava" % "32.1.2-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
+
+  def semanticdb(scalaVersion: String) =
+    SemanticDbSupport.last.getOrElse(scalaVersion, scalameta)
 
   def isNightliesEnabled: Boolean =
     sys.env.get("CI").isDefined || sys.env.get("NIGHTLIES").isDefined
