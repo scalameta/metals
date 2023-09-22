@@ -72,7 +72,7 @@ final class BloopInstall(
       .run(
         s"${buildTool.executableName} bloopInstall",
         args,
-        workspace,
+        buildTool.projectRoot,
         buildTool.redirectErrorOutput,
         Map(
           "COURSIER_PROGRESS" -> "disable",
@@ -165,7 +165,7 @@ final class BloopInstall(
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
     tables.digests.setStatus(digest, Status.Requested)
     val (params, yes) =
-      if (buildTools.isBloop) {
+      if (buildTools.isBloop(buildTool.projectRoot)) {
         ImportBuildChanges.params(buildTool.toString) ->
           ImportBuildChanges.yes
       } else {

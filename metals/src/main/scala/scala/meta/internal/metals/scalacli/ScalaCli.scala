@@ -219,6 +219,7 @@ class ScalaCli(
     if (state.compareAndSet(ConnectionState.Empty, nextSt)) {
       val futureConn = BuildServerConnection.fromSockets(
         connDir,
+        connDir,
         buildClient(),
         languageClient,
         () => ScalaCli.socketConn(command, connDir),
@@ -423,7 +424,7 @@ object ScalaCli {
 
   def scalaCliBspJsonContent(
       args: List[String] = Nil,
-      root: String = ".",
+      projectRoot: String = ".",
   ): String = {
     val argv = List(
       ScalaCli.javaCommand,
@@ -431,7 +432,7 @@ object ScalaCli {
       ScalaCli.scalaCliClassPath().mkString(File.pathSeparator),
       ScalaCli.scalaCliMainClass,
       "bsp",
-      root,
+      projectRoot,
     ) ++ args
     val bsjJson = ujson.Obj(
       "name" -> "scala-cli",

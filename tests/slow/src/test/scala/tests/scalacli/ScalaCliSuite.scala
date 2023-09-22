@@ -204,6 +204,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         |""".stripMargin
 
   test(s"simple-file-bsp") {
+    cleanWorkspace()
     simpleFileTest(useBsp = true)
   }
 
@@ -212,6 +213,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
   }
 
   test(s"simple-script-bsp") {
+    cleanWorkspace()
     simpleScriptTest(useBsp = true)
   }
 
@@ -401,7 +403,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       .inverseSources(workspace.resolve(fileName))
       .isDefined
     for {
-      _ <- scalaCliInitialize(useBsp = false)(
+      _ <- initialize(
         s"""/src/Main.scala
            |object Main:
            |  def foo = 3
@@ -411,7 +413,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
            |  def foo = 3
            |  val m = foo
            |/.bsp/scala-cli.json
-           |${ScalaCli.scalaCliBspJsonContent(root = workspace.resolve("src/Main.scala").toString())}
+           |${ScalaCli.scalaCliBspJsonContent(projectRoot = workspace.resolve("src/Main.scala").toString())}
            |/.scala-build/ide-inputs.json
            |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
            |""".stripMargin

@@ -308,4 +308,35 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin,
   )
 
+  check(
+    "i5630",
+    """|class MyIntOut(val value: Int)
+       |object MyIntOut:
+       |  extension (i: MyIntOut) def <<uneven>> = i.value % 2 == 1
+       |
+       |val a = MyIntOut(1)
+       |val m = a.<<un@@even>>
+       |""".stripMargin,
+  )
+
+  check(
+    "i5630-2",
+    """|class MyIntOut(val value: Int)
+       |object MyIntOut:
+       |  extension (i: MyIntOut) def <<uneven>>(u: Int) = i.value % 2 == 1
+       |
+       |val a = MyIntOut(1).<<un@@even>>(3)
+       |""".stripMargin,
+  )
+
+  check(
+    "i5630-infix",
+    """|class MyIntOut(val value: Int)
+       |object MyIntOut:
+       |  extension (i: MyIntOut) def <<++>>(u: Int) = i.value + u
+       |
+       |val a = MyIntOut(1) <<+@@+>> 3
+       |""".stripMargin,
+  )
+
 }

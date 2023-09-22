@@ -14,7 +14,7 @@ object ScalaCliBspScope {
     )
   }
 
-  private def scalaCliBspRoot(root: AbsolutePath): List[AbsolutePath] =
+  def scalaCliBspRoot(root: AbsolutePath): List[AbsolutePath] =
     for {
       path <- ScalaCliBuildTool.pathsToScalaCliBsp(root)
       text <- path.readTextOpt.toList
@@ -25,7 +25,7 @@ object ScalaCliBspScope {
         case "bsp" :: tail => dropOptions(tail).takeWhile(!_.startsWith("-"))
         case _ => Nil
       }
-      rootPath <- Try(AbsolutePath(rootArg).dealias).toOption
+      rootPath <- Try(AbsolutePath(rootArg)(root).dealias).toOption
       if rootPath.exists
     } yield rootPath
 

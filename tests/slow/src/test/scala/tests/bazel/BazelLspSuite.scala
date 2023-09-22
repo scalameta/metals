@@ -16,7 +16,7 @@ import tests.BazelServerInitializer
 class BazelLspSuite
     extends BaseImportSuite("bazel-import", BazelServerInitializer) {
   val scalaVersion = "2.13.6"
-  val buildTool: BazelBuildTool = BazelBuildTool(() => userConfig)
+  val buildTool: BazelBuildTool = BazelBuildTool(() => userConfig, workspace)
 
   val bazelVersion = "6.2.1"
 

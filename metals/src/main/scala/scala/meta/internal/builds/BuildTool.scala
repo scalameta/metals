@@ -28,6 +28,8 @@ trait BuildTool {
 
   def isBloopDefaultBsp = true
 
+  def projectRoot: AbsolutePath
+
 }
 
 object BuildTool {

@@ -11,7 +11,6 @@ import org.eclipse.{lsp4j => l}
 final case class SourceMapper(
     buildTargets: BuildTargets,
     buffers: Buffers,
-    workspace: () => AbsolutePath,
 ) {
   def mappedFrom(path: AbsolutePath): Option[AbsolutePath] =
     buildTargets.mappedFrom(path)

@@ -431,9 +431,12 @@ object BuildServerConnection {
    * This method is blocking, doesn't return Future[], because if the `initialize` handshake
    * doesn't complete within a few seconds then something is wrong. We want to fail fast
    * when initialization is not successful.
+   *
+   * @param bspTraceRoot we look for  `bspTraceRoot/.metals/.bsp.trace.json` to write down bsp trace
    */
   def fromSockets(
-      workspace: AbsolutePath,
+      projectRoot: AbsolutePath,
+      bspTraceRoot: AbsolutePath,
       localClient: MetalsBuildClient,
       languageClient: LanguageClient,
       connect: () => Future[SocketConnection],
@@ -449,7 +452,7 @@ object BuildServerConnection {
 
     def setupServer(): Future[LauncherConnection] = {
       connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
-        val tracePrinter = Trace.setupTracePrinter("BSP", workspace)
+        val tracePrinter = Trace.setupTracePrinter("BSP", bspTraceRoot)
         val requestMonitor =
           if (addLivenessMonitor) Some(new RequestMonitorImpl) else None
         val wrapper: MessageConsumer => MessageConsumer =
@@ -470,7 +473,7 @@ object BuildServerConnection {
           Cancelable(() => listening.cancel(false))
         val result =
           try {
-            BuildServerConnection.initialize(workspace, server, serverName)
+            BuildServerConnection.initialize(projectRoot, server, serverName)
           } catch {
             case e: TimeoutException =>
               conn.cancelables.foreach(_.cancel())
@@ -511,7 +514,7 @@ object BuildServerConnection {
           languageClient,
           reconnectNotification,
           config,
-          workspace,
+          projectRoot,
           supportsWrappedSources.getOrElse(connection.supportsWrappedSources),
         )
       }
@@ -519,7 +522,8 @@ object BuildServerConnection {
         if (retry > 0) {
           scribe.warn(s"Retrying connection to the build server $serverName")
           fromSockets(
-            workspace,
+            projectRoot,
+            bspTraceRoot,
             localClient,
             languageClient,
             connect,

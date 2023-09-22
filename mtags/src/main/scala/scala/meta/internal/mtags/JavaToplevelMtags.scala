@@ -80,7 +80,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     @tailrec
     def kwOrIdent(start: Int, builder: StringBuilder): Token = {
       val ch = reader.ch
-      if (Character.isJavaIdentifierPart(ch)) {
+      if (ch != SU && Character.isJavaIdentifierPart(ch)) {
         reader.nextChar()
         kwOrIdent(start, builder.append(ch))
       } else if (builder.isEmpty) {

@@ -76,12 +76,14 @@ class BspConnector(
    * of the bsp entry has already happened at this point.
    */
   def connect(
+      projectRoot: AbsolutePath,
       workspace: AbsolutePath,
       userConfiguration: UserConfiguration,
       shellRunner: ShellRunner,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     def connect(
-        workspace: AbsolutePath,
+        projectRoot: AbsolutePath,
+        bspTraceRoot: AbsolutePath,
         addLivenessMonitor: Boolean,
     ): Future[Option[BuildServerConnection]] = {
       scribe.info("Attempting to connect to the build server...")
@@ -91,18 +93,24 @@ class BspConnector(
           Future.successful(None)
         case ResolvedBloop =>
           bloopServers
-            .newServer(workspace, userConfiguration, addLivenessMonitor)
+            .newServer(
+              projectRoot,
+              bspTraceRoot,
+              userConfiguration,
+              addLivenessMonitor,
+            )
             .map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
           tables.buildServers.chooseServer(SbtBuildTool.name)
-          val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(workspace)
+          val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
           val connectionF =
             for {
-              _ <- SbtBuildTool(workspace, () => userConfiguration)
-                .ensureCorrectJavaVersion(shellRunner, workspace, client)
+              _ <- SbtBuildTool(projectRoot, () => userConfiguration)
+                .ensureCorrectJavaVersion(shellRunner, projectRoot, client)
               connection <- bspServers.newServer(
-                workspace,
+                projectRoot,
+                bspTraceRoot,
                 details,
                 addLivenessMonitor,
               )
@@ -129,7 +137,12 @@ class BspConnector(
                   case details if details.getName == BazelBuildTool.bspName =>
                     tables.buildServers.chooseServer(BazelBuildTool.bspName)
                     bspServers
-                      .newServer(workspace, details, addLivenessMonitor)
+                      .newServer(
+                        projectRoot,
+                        bspTraceRoot,
+                        details,
+                        addLivenessMonitor,
+                      )
                       .map(Some(_))
                 }
                 .getOrElse(Future.successful(None))
@@ -138,7 +151,7 @@ class BspConnector(
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
           bspServers
-            .newServer(workspace, details, addLivenessMonitor)
+            .newServer(projectRoot, bspTraceRoot, details, addLivenessMonitor)
             .map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
@@ -172,7 +185,8 @@ class BspConnector(
               )
             _ = tables.buildServers.chooseServer(item.getName())
             conn <- bspServers.newServer(
-              workspace,
+              projectRoot,
+              bspTraceRoot,
               item,
               addLivenessMonitor,
             )
@@ -180,7 +194,7 @@ class BspConnector(
       }
     }
 
-    connect(workspace, addLivenessMonitor = true).flatMap {
+    connect(projectRoot, workspace, addLivenessMonitor = true).flatMap {
       possibleBuildServerConn =>
         possibleBuildServerConn match {
           case None => Future.successful(None)
@@ -189,8 +203,8 @@ class BspConnector(
             // NOTE: (ckipp01) we special case this here since sbt bsp server
             // doesn't yet support metabuilds. So in the future when that
             // changes, re-work this and move the creation of this out above
-            val metaConns = sbtMetaWorkspaces(workspace).map(
-              connect(_, addLivenessMonitor = false)
+            val metaConns = sbtMetaWorkspaces(workspace).map(root =>
+              connect(root, root, addLivenessMonitor = false)
             )
             Future
               .sequence(metaConns)
@@ -246,8 +260,8 @@ class BspConnector(
    * Runs "Switch build server" command, returns true if build server choice
    * was changed.
    *
-   * NOTE: that in most cases this doesn't actaully change your build server
-   * and connect to it, but stores that you want to chage it unless you are
+   * NOTE: that in most cases this doesn't actually change your build server
+   * and connect to it, but stores that you want to change it unless you are
    * choosing Bloop, since in that case it's special cased and does start it.
    */
   def switchBuildServer(

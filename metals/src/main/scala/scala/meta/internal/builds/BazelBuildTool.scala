@@ -18,19 +18,21 @@ import coursierapi.Dependency
 import coursierapi.Fetch
 import org.eclipse.lsp4j.services.LanguageClient
 
-case class BazelBuildTool(userConfig: () => UserConfiguration)
-    extends BuildTool
+case class BazelBuildTool(
+    userConfig: () => UserConfiguration,
+    projectRoot: AbsolutePath,
+) extends BuildTool
     with BuildServerProvider {
 
   override def digest(workspace: AbsolutePath): Option[String] = {
-    BazelDigest.current(workspace)
+    BazelDigest.current(projectRoot)
   }
 
   def createBspFileArgs(workspace: AbsolutePath): Option[List[String]] =
-    Option.when(workspaceSupportsBsp(workspace))(composeArgs())
+    Option.when(workspaceSupportsBsp)(composeArgs())
 
-  def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
-    workspace.list.exists {
+  def workspaceSupportsBsp: Boolean = {
+    projectRoot.list.exists {
       case file if file.filename == "WORKSPACE" => true
       case _ => false
     }

@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -30,19 +31,25 @@ final class BuildTools(
 ) {
   private val lastDetectedBuildTools = new AtomicReference(Set.empty[String])
   // NOTE: We do a couple extra check here before we say a workspace with a
-  // `.bsp` is auto-connectable, and we ensure that a user has explicity chosen
+  // `.bsp` is auto-connectable, and we ensure that a user has explicitly chosen
   // to use another build server besides Bloop or it's a BSP server for a build
   // tool we don't support. If this isn't done, it causes unexpected warnings
   // since if a `.bsp/<something>.json` exists before a `.bloop` one does in a
   // workspace with a build tool we support, we will attempt to autoconnect to
   // Bloop since Metals thinks it's in state that's auto-connectable before the
   // user is even prompted.
-  def isAutoConnectable: Boolean = {
-    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || isBazelBsp
+  def isAutoConnectable(
+      maybeProjectRoot: Option[AbsolutePath] = None
+  ): Boolean = {
+    maybeProjectRoot
+      .map(isBloop)
+      .getOrElse(
+        isBloop
+      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || isBazelBsp
   }
-  def isBloop: Boolean = {
-    hasJsonFile(workspace.resolve(".bloop"))
-  }
+  def isBloop(root: AbsolutePath): Boolean = hasJsonFile(root.resolve(".bloop"))
+  def bloopProject: Option[AbsolutePath] = searchForBuildTool(isBloop)
+  def isBloop: Boolean = bloopProject.isDefined
   def isBsp: Boolean = {
     hasJsonFile(workspace.resolve(".bsp")) ||
     bspGlobalDirectories.exists(hasJsonFile)
@@ -54,10 +61,10 @@ final class BuildTools(
     workspace.resolve(".bazelbsp").isDirectory
   }
   // Returns true if there's a build.sbt file or project/build.properties with sbt.version
-  def isSbt: Boolean = {
-    workspace.resolve("build.sbt").isFile || {
+  def sbtProject: Option[AbsolutePath] = searchForBuildTool { root =>
+    root.resolve("build.sbt").isFile || {
       val buildProperties =
-        workspace.resolve("project").resolve("build.properties")
+        root.resolve("project").resolve("build.properties")
       buildProperties.isFile && {
         val props = new Properties()
         val in = Files.newInputStream(buildProperties.toNIO)
@@ -67,32 +74,73 @@ final class BuildTools(
       }
     }
   }
-  def isMill: Boolean = workspace.resolve("build.sc").isFile
-  def isScalaCli: Boolean =
-    ScalaCliBuildTool
-      .pathsToScalaCliBsp(workspace)
-      .exists(_.isFile) || workspace.resolve("project.scala").isFile
-  def isGradle: Boolean = {
+  def isSbt: Boolean = sbtProject.isDefined
+  def millProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve("build.sc").isFile
+  )
+  def isMill: Boolean = millProject.isDefined
+  def scalaCliProject: Option[AbsolutePath] =
+    searchForBuildTool(_.resolve("project.scala").isFile)
+      .orElse {
+        ScalaCliBspScope.scalaCliBspRoot(workspace) match {
+          case Nil => None
+          case path :: Nil if path.isFile => Some(path.parent)
+          case path :: Nil =>
+            scribe.info(s"path: $path")
+            Some(path)
+          case _ => Some(workspace)
+        }
+      }
+
+  def gradleProject: Option[AbsolutePath] = {
     val defaultGradlePaths = List(
       "settings.gradle",
       "settings.gradle.kts",
       "build.gradle",
       "build.gradle.kts",
     )
-    defaultGradlePaths.exists(workspace.resolve(_).isFile)
+    searchForBuildTool(root =>
+      defaultGradlePaths.exists(root.resolve(_).isFile)
+    )
   }
-  def isMaven: Boolean = workspace.resolve("pom.xml").isFile
-  def isPants: Boolean = workspace.resolve("pants.ini").isFile
-  def isBazel: Boolean = workspace.resolve("WORKSPACE").isFile
+  def isGradle: Boolean = gradleProject.isDefined
+  def mavenProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve("pom.xml").isFile
+  )
+  def isMaven: Boolean = mavenProject.isDefined
+  def pantsProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve("pants.ini").isFile
+  )
+  def isPants: Boolean = pantsProject.isDefined
+  def bazelProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve("WORKSPACE").isFile
+  )
+  def isBazel: Boolean = bazelProject.isDefined
+
+  private def searchForBuildTool(
+      isProjectRoot: AbsolutePath => Boolean
+  ): Option[AbsolutePath] =
+    if (isProjectRoot(workspace)) Some(workspace)
+    else
+      workspace.toNIO
+        .toFile()
+        .listFiles()
+        .collectFirst {
+          case file
+              if file.isDirectory &&
+                !file.getName.startsWith(".") &&
+                isProjectRoot(AbsolutePath(file.toPath())) =>
+            AbsolutePath(file.toPath())
+        }
 
   def allAvailable: List[BuildTool] = {
     List(
-      SbtBuildTool(workspaceVersion = None, userConfig),
-      GradleBuildTool(userConfig),
-      MavenBuildTool(userConfig),
-      MillBuildTool(userConfig),
-      ScalaCliBuildTool(workspace, userConfig),
-      BazelBuildTool(userConfig),
+      SbtBuildTool(workspaceVersion = None, workspace, userConfig),
+      GradleBuildTool(userConfig, workspace),
+      MavenBuildTool(userConfig, workspace),
+      MillBuildTool(userConfig, workspace),
+      ScalaCliBuildTool(workspace, workspace, userConfig),
+      BazelBuildTool(userConfig, workspace),
     )
   }
 
@@ -115,13 +163,12 @@ final class BuildTools(
   def loadSupported(): List[BuildTool] = {
     val buf = List.newBuilder[BuildTool]
 
-    if (isSbt) buf += SbtBuildTool(workspace, userConfig)
-    if (isGradle) buf += GradleBuildTool(userConfig)
-    if (isMaven) buf += MavenBuildTool(userConfig)
-    if (isMill) buf += MillBuildTool(userConfig)
-    if (isBazel) buf += BazelBuildTool(userConfig)
-    if (isScalaCli) buf += ScalaCliBuildTool(workspace, userConfig)
-
+    sbtProject.foreach(buf += SbtBuildTool(_, userConfig))
+    gradleProject.foreach(buf += GradleBuildTool(userConfig, _))
+    mavenProject.foreach(buf += MavenBuildTool(userConfig, _))
+    millProject.foreach(buf += MillBuildTool(userConfig, _))
+    scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
+    bazelProject.foreach(buf += BazelBuildTool(userConfig, _))
     buf.result()
   }
 
@@ -134,11 +181,11 @@ final class BuildTools(
   def isBuildRelated(
       path: AbsolutePath
   ): Option[String] = {
-    if (isSbt && SbtBuildTool.isSbtRelatedPath(workspace, path))
+    if (sbtProject.exists(SbtBuildTool.isSbtRelatedPath(_, path)))
       Some(SbtBuildTool.name)
-    else if (isGradle && GradleBuildTool.isGradleRelatedPath(workspace, path))
+    else if (gradleProject.exists(GradleBuildTool.isGradleRelatedPath(_, path)))
       Some(GradleBuildTool.name)
-    else if (isMaven && MavenBuildTool.isMavenRelatedPath(workspace, path))
+    else if (mavenProject.exists(MavenBuildTool.isMavenRelatedPath(_, path)))
       Some(MavenBuildTool.name)
     else if (isMill && MillBuildTool.isMillRelatedPath(path))
       Some(MillBuildTool.name)

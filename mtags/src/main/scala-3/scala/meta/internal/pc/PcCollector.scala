@@ -258,6 +258,17 @@ abstract class PcCollector[T](
           .selector(pos.span)
           .map(sym => (symbolAlternatives(sym), sym.sourcePos))
 
+      /* Workaround for missing span in:
+       * class MyIntOut(val value: Int)
+       * object MyIntOut:
+       *   extension (i: MyIntOut) def <<uneven>> = i.value % 2 == 1
+       *
+       * val a = MyIntOut(1).<<un@@even>>
+       */
+      case (a @ Apply(sel: Select, _)) :: _
+          if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
+        val span = a.span.withStart(a.span.point)
+        Some(symbolAlternatives(sel.symbol), pos.withSpan(span))
       case _ => None
 
     sought match
@@ -448,6 +459,26 @@ abstract class PcCollector[T](
             sel,
             pos.withSpan(selectNameSpan(sel)),
           )
+        /* Workaround for missing span in:
+         * class MyIntOut(val value: Int)
+         * object MyIntOut:
+         *   extension (i: MyIntOut) def <<uneven>> = i.value % 2 == 1
+         *
+         * val a = MyIntOut(1).<<un@@even>>
+         */
+        case sel: Select
+            if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
+          parent match
+            case Some(a: Apply) =>
+              val span = a.span.withStart(a.span.point)
+              val amendedSelect = sel.withSpan(span)
+              if filter(amendedSelect) then
+                occurences + collect(
+                  amendedSelect,
+                  pos.withSpan(span),
+                )
+              else occurences
+            case _ => occurences
         /* all definitions:
          * def <<foo>> = ???
          * class <<Foo>> = ???
