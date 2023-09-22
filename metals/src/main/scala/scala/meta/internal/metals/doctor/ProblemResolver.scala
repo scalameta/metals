@@ -185,7 +185,7 @@ class ProblemResolver(
         )
       case _ =>
         Some(
-          s"Multiple problems detected in your build."
+          Messages.CheckDoctor.multipleProblemsDetected
         )
     }
   }

@@ -122,19 +122,17 @@ class BspConnector(
               shellRunner,
               workspace,
             )
-            .flatMap { result =>
-              result match {
-                case _ =>
-                  bspServers
-                    .findAvailableServers()
-                    .collectFirst {
-                      case details
-                          if details.getName == BazelBuildTool.bspName =>
-                        tables.buildServers.chooseServer(BazelBuildTool.bspName)
-                        bspServers.newServer(workspace, details).map(Some(_))
-                    }
-                    .getOrElse(Future.successful(None))
-              }
+            .flatMap { _ =>
+              bspServers
+                .findAvailableServers()
+                .collectFirst {
+                  case details if details.getName == BazelBuildTool.bspName =>
+                    tables.buildServers.chooseServer(BazelBuildTool.bspName)
+                    bspServers
+                      .newServer(workspace, details, addLivenessMonitor)
+                      .map(Some(_))
+                }
+                .getOrElse(Future.successful(None))
 
             }
         case ResolvedBspOne(details) =>

@@ -26,6 +26,9 @@ abstract class BaseImportSuite(
   def allProjectsMisconfiguredMessage: String =
     CheckDoctor.allProjectsMisconfigured
 
+  def multipleProblemsDetectedMessage: String =
+    CheckDoctor.multipleProblemsDetected
+
   def currentDigest(workspace: AbsolutePath): Option[String]
 
   def currentChecksum(): String =

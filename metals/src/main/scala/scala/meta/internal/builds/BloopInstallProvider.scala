@@ -6,7 +6,7 @@ import scala.meta.io.AbsolutePath
 /**
  * Helper trait for build tools that have a Bloop plugin
  */
-trait BloopInstallProvider extends BuildTool { this: BuildTool =>
+trait BloopInstallProvider extends BuildTool {
 
   /**
    * Export the build to Bloop

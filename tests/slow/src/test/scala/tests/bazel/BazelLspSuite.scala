@@ -41,7 +41,7 @@ class BazelLspSuite
           importBuildMessage,
           // create .bazelbsp progress message
           BazelBuildTool.mainClass,
-          allProjectsMisconfiguredMessage,
+          multipleProblemsDetectedMessage,
         ).mkString("\n"),
       )
       _ = assert(bazelBspConfig.exists)
@@ -92,7 +92,7 @@ class BazelLspSuite
         client.workspaceMessageRequests,
         List(
           "bazelbsp bspConfig",
-          allProjectsMisconfiguredMessage,
+          multipleProblemsDetectedMessage,
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)
@@ -124,7 +124,7 @@ class BazelLspSuite
         client.workspaceMessageRequests,
         List(
           BazelBuildTool.mainClass,
-          allProjectsMisconfiguredMessage,
+          multipleProblemsDetectedMessage,
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)

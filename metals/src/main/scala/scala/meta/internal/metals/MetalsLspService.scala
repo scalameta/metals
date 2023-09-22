@@ -25,12 +25,11 @@ import scala.meta.internal.bsp.BspConfigGenerator
 import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
-import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BloopInstallProvider
-import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool

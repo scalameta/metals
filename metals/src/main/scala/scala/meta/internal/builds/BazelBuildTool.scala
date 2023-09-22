@@ -56,7 +56,7 @@ case class BazelBuildTool(userConfig: () => UserConfiguration)
 
   override def recommendedVersion: String = version
 
-  override def version: String = BazelBuildTool.version
+  override def version: String = "3.1.0"
 
   override def toString: String = "Bazel"
 
@@ -138,4 +138,11 @@ object BazelBuildTool {
       Future.successful(WorkspaceLoadedStatus.Dismissed)
     }
   }
+
+  def isBazelRelatedPath(
+      workspace: AbsolutePath,
+      path: AbsolutePath,
+  ): Boolean =
+    path.toNIO.startsWith(workspace.toNIO) &&
+      path.isBazelRelatedPath
 }
