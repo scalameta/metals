@@ -31,7 +31,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         path,
         tokens,
         range,
-        isSingleLineComment(content.split("\\r?\\n").toVector),
+        isSingleLineComment(content.split("\\r?(\\n|\\r)").toVector),
       )
     } yield codeAction).toList
   }
