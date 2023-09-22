@@ -416,7 +416,15 @@ class FolderTreeViewProvider(
       closestSymbol: SymbolOccurrence,
   ): Option[List[String]] = {
     if (path.isDependencySource(folder.path) || path.isJarFileSystem) {
-      buildTargets
+      def jdkSources = JdkSources(userJavaHome.map(_.toString())).toOption
+        .collect {
+          case sources
+              if sources.toString == path.toNIO.getFileSystem().toString() ||
+                path.isSrcZipInReadonlyDirectory(folder.path) =>
+            libraries.toUri(sources, closestSymbol.symbol).parentChain
+        }
+
+      val result = buildTargets
         .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
         .map { inferred =>
           val sourceJar = inferred.jar.parent.resolve(
@@ -424,6 +432,7 @@ class FolderTreeViewProvider(
           )
           libraries.toUri(sourceJar, inferred.symbol).parentChain
         }
+      result.orElse(jdkSources)
     } else {
       buildTargets
         .inverseSources(path)

@@ -361,7 +361,11 @@ object MetalsEnrichments
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
       )
-
+    def isSrcZipInReadonlyDirectory(workspace: AbsolutePath): Boolean = {
+      path.toNIO.startsWith(
+        workspace.resolve(Directories.dependencies.resolve("src.zip")).toNIO
+      )
+    }
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
       // windows throws an exception on toRelative when on different drives
       if (path.toNIO.getRoot() != prefix.toNIO.getRoot())
