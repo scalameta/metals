@@ -216,7 +216,9 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
     scalaVersion.value,
     if2 = List(
       compilerPlugin(
-        "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
+        "org.scalameta" % "semanticdb-scalac" % V.semanticdb(
+          scalaVersion.value
+        ) cross CrossVersion.full
       )
     ),
   ),
@@ -323,7 +325,9 @@ val mtagsSettings = List(
       if2 = List(
         // for token edit-distance used by goto definition
         "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-        "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+        "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
+          scalaVersion.value
+        ) cross CrossVersion.full,
       ),
       if3 = List(
         "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
@@ -489,9 +493,11 @@ lazy val metals = project
       "com.lihaoyi" %% "ujson" % "3.1.3",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.8.0",
-      // for producing SemanticDB from Scala source files
-      "org.scalameta" %% "scalameta" % V.scalameta,
-      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+      // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
+      "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
+      "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
+        scalaVersion.value
+      ) cross CrossVersion.full,
       // For starting Ammonite
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
       "org.scala-lang.modules" %% "scala-xml" % "2.2.0",
@@ -514,7 +520,7 @@ lazy val metals = project
       "mavenBloopVersion" -> V.mavenBloop,
       "gradleBloopVersion" -> V.gradleBloop,
       "scalametaVersion" -> V.scalameta,
-      "semanticdbVersion" -> V.semanticdb,
+      "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
@@ -536,6 +542,7 @@ lazy val metals = project
       "ammonite3" -> V.ammonite3Version,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
   .dependsOn(mtags, `mtags-java`)
@@ -545,9 +552,10 @@ lazy val `sbt-metals` = project
   .settings(
     buildInfoPackage := "scala.meta.internal.sbtmetals",
     buildInfoKeys := Seq[BuildInfoKey](
-      "semanticdbVersion" -> V.semanticdb,
+      "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "supportedScala2Versions" -> V.scala2Versions,
       "javaSemanticdbVersion" -> V.javaSemanticdb,
+      "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
     scalaVersion := V.scala212,
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
@@ -683,6 +691,7 @@ lazy val mtest = project
       "scalaVersion" -> scalaVersion.value,
       "kindProjector" -> V.kindProjector,
       "betterMonadicFor" -> V.betterMonadicFor,
+      "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
     crossScalaVersions := V.nonDeprecatedScalaVersions,
     Compile / unmanagedSourceDirectories ++= multiScalaDirectories(

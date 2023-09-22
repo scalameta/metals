@@ -141,9 +141,16 @@ case class QuickBuild(
     }
     val classpath = classDirectory :: allJars.filterNot(isSourceJar)
     val allPlugins =
-      if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion))
-        s"org.scalameta:::semanticdb-scalac:${V.semanticdbVersion}" :: compilerPlugins.toList
-      else compilerPlugins.toList
+      if (
+        ScalaVersions.isSupportedAtReleaseMomentScalaVersion(
+          scalaVersion
+        ) && !ScalaVersions.isScala3Version(scalaVersion)
+      ) {
+        val semanticdbVersion = BuildInfoVersions.lastSupportedSemanticdb(
+          scalaVersion
+        )
+        s"org.scalameta:::semanticdb-scalac:$semanticdbVersion" :: compilerPlugins.toList
+      } else compilerPlugins.toList
     val pluginDependencies = allPlugins.map(plugin =>
       QuickBuild
         .toDependency(plugin, scalaVersion, binaryVersion)
