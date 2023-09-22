@@ -57,7 +57,8 @@ object SemanticTokensProvider {
           delta = delta.moveLine(1)
         }
       }
-      delta = Line(0, lines.last.length())
+      if (lines.last.isEmpty()) delta = Line(1, 0)
+      else delta = Line(0, lines.last.length())
     } else {
       val lines = text.split("\n", -1)
       if (lines.length > 1) delta = delta.moveLine(lines.length - 1)

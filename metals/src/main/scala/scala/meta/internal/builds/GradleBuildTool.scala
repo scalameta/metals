@@ -75,9 +75,11 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
 
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val cmd = {
-      if (isBloopConfigured(workspace)) List("--console=plain", "bloopInstall")
+      if (isBloopConfigured(workspace))
+        List("--stacktrace", "--console=plain", "bloopInstall")
       else {
         List(
+          "--stacktrace",
           "--console=plain",
           "--init-script",
           initScriptPath.toString,
@@ -98,12 +100,12 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     }
   }
 
-  // @tgodzik This this is the wrapper version we specify it as such,
+  // @tgodzik This is the wrapper version we specify it as such,
   // since it's hard to determine which version will be used as gradle
   // doesn't save it in any settings
   override def version: String = "7.5.0"
 
-  override def minimumVersion: String = "4.3.0"
+  override def minimumVersion: String = "5.0.0"
 
   override def recommendedVersion: String = version
 

@@ -174,10 +174,13 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
           URLDecoder.decode(_, "UTF-8").toAbsolutePath(followSymlink)
         )
       else if (value.toUpperCase.startsWith("JAR")) {
-        withTryDecode(value.stripPrefix("jar:"))(
-          new URI("jar", _, null)
-            .toAbsolutePath(followSymlink)
-        )
+        try URI.create(value).toAbsolutePath(followSymlink)
+        catch {
+          case _: NoSuchFileException | _: FileSystemNotFoundException =>
+            withTryDecode(value.stripPrefix("jar:"))(
+              new URI("jar", _, null).toAbsolutePath(followSymlink)
+            )
+        }
       } else {
         val stripped = value.stripPrefix("metals:")
         val percentEncoded = URIEncoderDecoder.encode(stripped)

@@ -108,13 +108,14 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           tparams: List[Type.Param],
           paramss: List[List[Term.Param]],
           kind: Kind,
-          overloads: OverloadDisambiguator
+          overloads: OverloadDisambiguator,
+          properties: Int = 0
       ): Unit = {
         val old = myCurrentTree
         myCurrentTree = member
         val disambiguator = overloads.disambiguator(name.value)
         withOwner() {
-          method(name, disambiguator, kind, 0)
+          method(name, disambiguator, kind, properties)
           enterTypeParameters(tparams)
           enterTermParameters(paramss, isPrimaryCtor = false)
         }
@@ -133,7 +134,12 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
             enterTermParameters(paramss, isPrimaryCtor = false)
 
           } else {
-            term(name, pos, Kind.METHOD, Property.IMPLICIT.value)
+            term(
+              name,
+              pos,
+              Kind.METHOD,
+              Property.IMPLICIT.value | Property.GIVEN.value
+            )
           }
         }
       }
@@ -147,13 +153,23 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           val ownerKind: String =
             if (tparams.nonEmpty || paramss.nonEmpty) {
               withOwner(owner)(
-                method(name, "()", pos, Property.IMPLICIT.value)
+                method(
+                  name,
+                  "()",
+                  pos,
+                  Property.IMPLICIT.value | Property.GIVEN.value
+                )
               )
 
               "#"
             } else {
               withOwner(owner)(
-                term(name, pos, Kind.METHOD, Property.IMPLICIT.value)
+                term(
+                  name,
+                  pos,
+                  Kind.METHOD,
+                  Property.IMPLICIT.value | Property.GIVEN.value
+                )
               )
 
               "."
@@ -230,12 +246,13 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
               method(t.name, "()", Kind.METHOD, Property.IMPLICIT.value)
             }
           }
-          tpe(t.name, Kind.CLASS, 0)
+          val properties = if (t.mods.has[Mod.Case]) Property.CASE.value else 0
+          tpe(t.name, Kind.CLASS, properties)
           enterTypeParameters(t.tparams)
           enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
           continue()
         case t: Defn.Enum =>
-          tpe(t.name, Kind.CLASS, 0)
+          tpe(t.name, Kind.CLASS, Property.ENUM.value)
           enterTypeParameters(t.tparams)
           enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
           continue()
@@ -244,7 +261,15 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
             withOwner(ownerCompanion)(term(c, Kind.OBJECT, 0))
           )
         case t: Defn.EnumCase =>
-          withOwner(ownerCompanion)(term(t.name, Kind.OBJECT, 0))
+          t.ctor match {
+            case Ctor.Primary(_, _, _ :: _) =>
+              withOwner(ownerCompanion) {
+                tpe(t.name, Kind.CLASS, 0)
+                enterTypeParameters(t.tparams)
+                enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
+              }
+            case _ => withOwner(ownerCompanion)(term(t.name, Kind.OBJECT, 0))
+          }
         case t: Defn.Trait =>
           tpe(t.name, Kind.TRAIT, 0); continue()
           enterTypeParameters(t.tparams)
@@ -311,7 +336,8 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
                 Nil,
                 t.paramss ++ extensionParamss,
                 Kind.CONSTRUCTOR,
-                overloads
+                overloads,
+                EXTENSION
               )
             }
           def addDeclDef(t: Decl.Def): Unit =
@@ -322,7 +348,8 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
                 Nil,
                 t.paramss ++ extensionParamss,
                 Kind.CONSTRUCTOR,
-                overloads
+                overloads,
+                EXTENSION
               )
             }
 

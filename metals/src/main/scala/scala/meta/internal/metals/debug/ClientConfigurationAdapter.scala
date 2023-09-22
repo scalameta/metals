@@ -20,7 +20,7 @@ import org.eclipse.lsp4j.debug.SourceBreakpoint
  */
 private[debug] final case class ClientConfigurationAdapter(
     pathFormat: String,
-    linesStartAt1: Boolean,
+    val linesStartAt1: Boolean,
     sourceMapper: SourceMapper,
 ) {
   // The scala-debug-adapter uses the JVM class file format

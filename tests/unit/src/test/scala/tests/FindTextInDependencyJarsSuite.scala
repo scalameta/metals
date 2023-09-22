@@ -6,6 +6,7 @@ import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location
@@ -67,7 +68,14 @@ class FindTextInDependencyJarsSuite
       assertLocations(
         jdkLocations, {
           val line =
-            if (isJavaAtLeast17) 1445
+            if (
+              SemVer.isCompatibleVersion(
+                "17.0.8",
+                // for 17.0.8+7 or 17.0.7-7 the suffix is irrelevant here
+                scala.util.Properties.javaVersion.replaceAll("(\\+|\\-).*", ""),
+              )
+            ) 1449
+            else if (isJavaAtLeast17) 1445
             else if (isJavaAtLeast9) 626
             else 578
 

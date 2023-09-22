@@ -364,4 +364,28 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |def foo(param1: Int)(using s: String): Int = ???
        |""".stripMargin,
   )
+
+  checkEdit(
+    "no-def",
+    """|object A {
+       |  def m() = {
+       |    /**@@
+       |    1 + 2
+       |  }
+       |
+       |  def r(a: Int) = ???
+       |}
+       |""".stripMargin,
+    """|object A {
+       |  def m() = {
+       |    /**
+       |      * $0
+       |      */
+       |    1 + 2
+       |  }
+       |
+       |  def r(a: Int) = ???
+       |}
+       |""".stripMargin,
+  )
 }

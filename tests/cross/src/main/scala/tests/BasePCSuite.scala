@@ -213,7 +213,12 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
   }
 
   case class IgnoreScalaVersion(ignored: String => Boolean)
-      extends Tag("NoScalaVersion")
+      extends Tag("NoScalaVersion") {
+    def and(other: IgnoreScalaVersion): IgnoreScalaVersion =
+      IgnoreScalaVersion { v =>
+        ignored(v) || other.ignored(v)
+      }
+  }
 
   object IgnoreScalaVersion {
     def apply(version: String): IgnoreScalaVersion = {
@@ -248,7 +253,7 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
       }
     }
 
-    def forLaterThan(version: String): IgnoreScalaVersion = {
+    def forLaterOrEqualTo(version: String): IgnoreScalaVersion = {
       val disableFrom = SemVer.Version.fromString(version)
       IgnoreScalaVersion { v =>
         val semver = SemVer.Version.fromString(v)
@@ -263,6 +268,9 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
   object IgnoreScala212 extends IgnoreScalaVersion(_.startsWith("2.12"))
 
   object IgnoreScala3 extends IgnoreScalaVersion(_.startsWith("3."))
+
+  val IgnoreForScala3CompilerPC: IgnoreScalaVersion =
+    IgnoreScalaVersion.forLaterOrEqualTo(BuildInfoVersions.firstScala3PCVersion)
 
   case class RunForScalaVersion(versions: Set[String])
       extends Tag("RunScalaVersion")

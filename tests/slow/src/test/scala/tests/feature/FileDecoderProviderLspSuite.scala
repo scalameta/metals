@@ -455,6 +455,44 @@ class FileDecoderProviderSbtLspSuite
         Set("Target", "Scala Version", "Base Directory", "Source Directories"),
       ),
   )
+
+  check(
+    "sbt-java-semanticdb",
+    SbtBuildLayout(
+      s"""|/a/src/main/java/a/A.java
+          |package a;
+          |public class A {}
+          |""".stripMargin,
+      V.scala3,
+    ),
+    "a/src/main/java/a/A.java",
+    None,
+    "semanticdb-detailed",
+    Right(
+      """|a/src/main/java/a/A.java
+         |------------------------
+         |
+         |Summary:
+         |Schema => SemanticDB v4
+         |Uri => a/src/main/java/a/A.java
+         |Text => empty
+         |Language => Java
+         |Symbols => 2 entries
+         |Occurrences => 3 entries
+         |
+         |Symbols:
+         |a/A# => class A extends Object { +1 decls } <: java/lang/Object#
+         |  Object => java/lang/Object#
+         |a/A#`<init>`(). => ctor <init>(): Unit
+         |  Unit => scala/Unit#
+         |
+         |Occurrences:
+         |[0:8..0:9) => a/
+         |[1:13..1:14) <= a/A#
+         |[1:13..1:14) <= a/A#`<init>`().
+         |""".stripMargin
+    ),
+  )
 }
 
 trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
@@ -502,6 +540,7 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
       customUri: Option[String] = None,
   ): Unit = {
     test(testName) {
+      cleanWorkspace()
       picked.foreach { pickedItem =>
         client.showMessageRequestHandler = { params =>
           params.getActions().asScala.find(_.getTitle == pickedItem)

@@ -97,7 +97,7 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
            |/${fooPath}
@@ -337,7 +337,7 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
            |/${fooPath}
@@ -370,7 +370,7 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
            |/${fooPath}
@@ -439,7 +439,7 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
            |/${fooPath}

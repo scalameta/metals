@@ -1,5 +1,5 @@
-//> using scala "3.2.2"
-//> using dep "org.kohsuke:github-api:1.315"
+//> using scala "3.3.0"
+//> using dep "org.kohsuke:github-api:1.316"
 //> using dep "com.lihaoyi::os-lib:0.9.1"
 //> using options "-Wunused:all", "-deprecation"
 
@@ -8,6 +8,7 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
 import org.kohsuke.github.GitHubBuilder
+import org.kohsuke.github.GHIssueState
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -75,6 +76,14 @@ def main(
     mergedPRs += formattedPR
   }
 
+  val milestone = gh
+    .getRepository("scalameta/metals")
+    .listMilestones(GHIssueState.OPEN)
+    .asScala
+    .headOption
+    .map(_.getNumber())
+    .getOrElse(0)
+
   val releaseNotes =
     template(
       author,
@@ -82,6 +91,7 @@ def main(
       codename,
       lastTag,
       mergedPRs.toList,
+      milestone,
       commits,
       contributors,
     )
@@ -102,6 +112,7 @@ def template(
     codename: String,
     lastTag: String,
     mergedPrs: List[String],
+    milestone: Int,
     commits: Int,
     contributors: List[String],
 ) = {
@@ -139,8 +150,8 @@ def template(
       |</tbody>
       |</table>
       |
-      |For full details: [https://github.com/scalameta/metals/milestone/_num_?closed=1]
-      |(https://github.com/scalameta/metals/milestone/_num_?closed=1)
+      |For full details: [https://github.com/scalameta/metals/milestone/$milestone?closed=1]
+      |(https://github.com/scalameta/metals/milestone/$milestone?closed=1)
       |
       |Metals is a language server for Scala that works with VS Code, Vim, Emacs and
       |Sublime Text. Metals is developed at the

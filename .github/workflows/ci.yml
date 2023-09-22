@@ -111,6 +111,10 @@ jobs:
             command: sbt javapc/test
             name: Scala javapc tests
             os: ubuntu-latest
+          - type: cross-test-nightly
+            command: sbt cross-test-latest-nightly
+            name: Scala3 latest NIGHTLY cross test
+            os: ubuntu-latest
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs

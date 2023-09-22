@@ -36,7 +36,7 @@ jobs:
             METALS_VERSION=$(echo $GITHUB_REF_NAME | cut -d "_" -f2 | cut -c2-)
             SCALA_VERSION=$(echo $GITHUB_REF_NAME | cut -d "_" -f3)
             if [ ! -z $METALS_VERSION ] && [ ! -z $SCALA_VERSION ]; then
-              export CI_RELEASE="++$SCALA_VERSION! mtags/publishSigned"
+              export CI_RELEASE="++$SCALA_VERSION! mtags/publishSigned; mtagsShared/publishSigned"
               UPDATE_DOCS=false
               COMMAND="; set ThisBuild/version :=\"$METALS_VERSION\"; $COMMAND"
             else

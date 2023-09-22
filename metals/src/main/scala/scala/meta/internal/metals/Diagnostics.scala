@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.parsing.TokenEditDistance
@@ -217,19 +218,11 @@ final class Diagnostics(
       queue: ju.Queue[Diagnostic],
   ): Unit = {
     if (!path.isFile) return didDelete(path)
-    val current = path.toInputFromBuffers(buffers)
-    val snapshot = snapshots.getOrElse(path, current)
-    val edit = TokenEditDistance(
-      snapshot,
-      current,
-      trees,
-      doNothingWhenUnchanged = false,
-    )
     val uri = path.toURI.toString
     val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
     for {
       diagnostic <- queue.asScala
-      freshDiagnostic <- toFreshDiagnostic(edit, diagnostic, snapshot)
+      freshDiagnostic <- toFreshDiagnostic(path, diagnostic)
     } {
       all.add(freshDiagnostic)
     }
@@ -256,44 +249,58 @@ final class Diagnostics(
   // Adjust positions for type errors for changes in the open buffer.
   // Only needed when merging syntax errors with type errors.
   private def toFreshDiagnostic(
-      edit: TokenEditDistance,
+      path: AbsolutePath,
       d: Diagnostic,
-      snapshot: Input,
   ): Option[Diagnostic] = {
-    val result = edit
-      .toRevised(
-        range = d.getRange,
-        adjustWithinToken = d.getSource() == "scala-cli",
-      )
-      .map { range =>
-        val ld = new l.Diagnostic(
-          range,
-          d.getMessage,
-          d.getSeverity,
-          d.getSource,
-        )
-        // Scala 3 sets the diagnostic code to -1 for NoExplanation Messages. Ideally
-        // this will change and we won't need this check in the future, but for now
-        // let's not forward them.
-        if (
-          d.getCode() != null && d
-            .getCode()
-            .isLeft() && d.getCode().getLeft() != "-1"
-        )
-          ld.setCode(d.getCode())
-        ld.setData(d.getData)
-        ld
-      }
-    if (result.isEmpty) {
-      d.getRange.toMeta(snapshot).foreach { pos =>
-        val message = pos.formatMessage(
-          s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
-          d.getMessage,
-        )
-        scribe.info(message)
-      }
+    val current = path.toInputFromBuffers(buffers)
+    val snapshot = snapshots.getOrElse(path, current)
+    val edit = TokenEditDistance(
+      snapshot,
+      current,
+      trees,
+      doNothingWhenUnchanged = false,
+    )
+    edit match {
+      case Right(edit) =>
+        val result = edit
+          .toRevised(
+            range = d.getRange,
+            adjustWithinToken = shouldAdjustWithinToken(d),
+          )
+          .map { range =>
+            val ld = new l.Diagnostic(
+              range,
+              d.getMessage,
+              d.getSeverity,
+              d.getSource,
+            )
+            // Scala 3 sets the diagnostic code to -1 for NoExplanation Messages. Ideally
+            // this will change and we won't need this check in the future, but for now
+            // let's not forward them.
+            if (
+              d.getCode() != null && d
+                .getCode()
+                .isLeft() && d.getCode().getLeft() != "-1"
+            )
+              ld.setCode(d.getCode())
+            adjustedDiagnosticData(d, edit).map(newData => ld.setData(newData))
+            ld
+          }
+        if (result.isEmpty) {
+          d.getRange.toMeta(snapshot).foreach { pos =>
+            val message = pos.formatMessage(
+              s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
+              d.getMessage,
+            )
+            scribe.info(message)
+          }
+        }
+        result
+
+      case Left(_) =>
+        // tokenization error will be shown from scalameta tokenizer
+        None
     }
-    result
   }
 
   private def clearDiagnosticsBuffer(): Iterable[AbsolutePath] = {
@@ -306,4 +313,30 @@ final class Diagnostics(
     toPublish
   }
 
+  private def adjustedDiagnosticData(
+      diagnostic: l.Diagnostic,
+      edit: TokenEditDistance,
+  ): Option[Object] =
+    diagnostic match {
+      case ScalacDiagnostic.ScalaDiagnostic(Left(textEdit)) =>
+        edit
+          .toRevised(
+            textEdit,
+            shouldAdjustWithinToken(diagnostic),
+            fallbackToNearest = false,
+          )
+          .map(_.toJsonObject)
+      case ScalacDiagnostic.ScalaDiagnostic(Right(scalaDiagnostic)) =>
+        edit
+          .toRevised(
+            scalaDiagnostic,
+            shouldAdjustWithinToken(diagnostic),
+            fallbackToNearest = false,
+          )
+          .map(_.toJsonObject)
+      case _ => Some(diagnostic.getData())
+    }
+
+  private def shouldAdjustWithinToken(diagnostic: l.Diagnostic): Boolean =
+    diagnostic.getSource() == "scala-cli"
 }

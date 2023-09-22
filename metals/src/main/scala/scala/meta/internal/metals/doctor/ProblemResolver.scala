@@ -81,7 +81,8 @@ class ProblemResolver(
         case _ =>
       }
     }
-    for {
+
+    val javaIssues = for {
       target <- javaTargets
       issue <- findProblem(target)
     } yield {
@@ -91,6 +92,7 @@ class ProblemResolver(
         case _: WrongJavaReleaseVersion => misconfiguredProjects += 1
         case _: MissingJavaTargetRoot => misconfiguredProjects += 1
       }
+      issue.message
     }
 
     val unsupportedMessage = if (unsupportedVersions.nonEmpty) {
@@ -166,7 +168,7 @@ class ProblemResolver(
       unsupportedSbtMessage,
       futureSbtMessage,
       semanticdbMessage,
-    ).flatten
+    ).flatten ++ javaIssues
 
     def scalaVersionsMessages = List(
       deprecatedMessage,

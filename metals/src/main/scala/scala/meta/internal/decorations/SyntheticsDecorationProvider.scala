@@ -565,7 +565,10 @@ final class SyntheticsDecorationProvider(
       )
       occ <- textDocument.occurrences
       range <- occ.range.toIterable
-      treeRange <- semanticDbToTreeEdit.toRevisedStrict(range).toIterable
+      treeRange <- semanticDbToTreeEdit
+        .getOrElse(TokenEditDistance.NoMatch)
+        .toRevisedStrict(range)
+        .toIterable
       if occ.role.isDefinition && allMissingTypeRanges(treeRange)
       signature <- textDocument.symbols.find(_.symbol == occ.symbol).toIterable
       decorationPosition = methodPositions.getOrElse(treeRange, treeRange)

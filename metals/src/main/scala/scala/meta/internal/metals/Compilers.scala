@@ -288,11 +288,22 @@ class Compilers(
       Nil
     }
 
+  /**
+   * Calculates completions for a expression evaluator at breakpointPosition
+   *
+   * @param path path to file containing ht ebreakpoint
+   * @param breakpointPosition actual breakpoint position
+   * @param token cancel token for the compiler
+   * @param expression expression that is currently being types
+   * @param isZeroBased whether the client supports starting at 0 or 1 index
+   * @return
+   */
   def debugCompletions(
       path: AbsolutePath,
       breakpointPosition: LspPosition,
       token: CancelToken,
       expression: d.CompletionsArguments,
+      isZeroBased: Boolean,
   ): Future[Seq[d.CompletionItem]] = {
 
     /**
@@ -340,10 +351,22 @@ class Compilers(
             // insert expression at the start of breakpoint's line and move the lines one down
             val modified = s"$prev;$expressionText\n$indentation$succ"
 
+            val rangeEnd =
+              lineStart + expressionOffset(expressionText, indentation) + 1
+
+            /**
+             * Calculate the start if insertText is used for item, which does not declare an exact start.
+             */
+            def insertStart = {
+              var i = rangeEnd - 1
+              while (modified.charAt(i).isLetterOrDigit) i -= 1
+              if (isZeroBased) i else i + 1
+            }
+
             val offsetParams = CompilerOffsetParams(
               path.toURI,
               modified,
-              lineStart + expressionOffset(expressionText, indentation) + 1,
+              rangeEnd,
               token,
             )
 
@@ -373,6 +396,11 @@ class Compilers(
                     toDebugCompletionItem(
                       _,
                       adjustStart,
+                      Position.Range(
+                        input.copy(value = modified),
+                        insertStart,
+                        rangeEnd,
+                      ),
                     )
                   )
               )
@@ -861,8 +889,10 @@ class Compilers(
   def loadJavaCompiler(
       targetId: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
-    val target = buildTargets.javaTarget(targetId)
-    target.flatMap(loadJavaCompilerForTarget)
+    val targetClasspath = buildTargets.targetClasspath(targetId)
+    targetClasspath.flatMap(classpath =>
+      loadJavaCompilerForTarget(targetId.getUri, classpath)
+    )
   }
 
   def loadCompilerForTarget(
@@ -889,18 +919,14 @@ class Compilers(
   }
 
   def loadJavaCompilerForTarget(
-      target: JavaTarget
+      targetUri: String,
+      classpath: List[String],
   ): Option[PresentationCompiler] = {
     val pc = JavaPresentationCompiler()
-
-    val name = target.javac.getTarget.getUri
-    val classpath =
-      target.javac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-
     Some(
       configure(pc, search).newInstance(
-        name,
-        classpath.asJava,
+        targetUri,
+        classpath.toAbsoluteClasspath.map(_.toNIO).toSeq.asJava,
         log.asJava,
       )
     )
@@ -1132,14 +1158,24 @@ class Compilers(
   private def toDebugCompletionItem(
       item: CompletionItem,
       adjustStart: Int,
+      insertTextPosition: Position.Range,
   ): d.CompletionItem = {
     val debugItem = new d.CompletionItem()
     debugItem.setLabel(item.getLabel())
-    val (newText, range) = item.getTextEdit().asScala match {
-      case Left(textEdit) =>
+    val (newText, range) = Option(item.getTextEdit()).map(_.asScala) match {
+      case Some(Left(textEdit)) =>
         (textEdit.getNewText, textEdit.getRange)
-      case Right(insertReplace) =>
+      case Some(Right(insertReplace)) =>
         (insertReplace.getNewText, insertReplace.getReplace)
+      case None =>
+        Option(item.getInsertText()).orElse(Option(item.getLabel())) match {
+          case Some(text) =>
+            (text, insertTextPosition.toLsp)
+          case None =>
+            throw new RuntimeException(
+              "Completion item does not contain expected data"
+            )
+        }
     }
     val start = range.getStart().getCharacter + adjustStart
 
@@ -1156,6 +1192,7 @@ class Compilers(
       debugItem.setSelectionStart(selection)
     }
 
+    debugItem.setDetail(item.getDetail())
     debugItem.setText(fullText.replace("$0", ""))
     debugItem.setStart(start)
     debugItem.setType(toDebugCompletionType(item.getKind()))

@@ -196,9 +196,17 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
           else symbol
         )
       val sym = toSemanticdbSymbol(symbol)
+      def parentSymbols =
+        if symbol.name == nme.apply && symbol.maybeOwner.is(ModuleClass) then
+          List(
+            symbol.maybeOwner,
+            symbol.maybeOwner.companion,
+          ).filter(_ != NoSymbol) ++ symbol.allOverriddenSymbols
+        else symbol.allOverriddenSymbols
+
       val documentation = search.documentation(
         sym,
-        () => symbol.allOverriddenSymbols.map(toSemanticdbSymbol).toList.asJava,
+        () => parentSymbols.map(toSemanticdbSymbol).toList.asJava,
       )
       if documentation.isPresent then Some(documentation.get())
       else None

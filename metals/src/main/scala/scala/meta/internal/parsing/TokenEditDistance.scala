@@ -5,13 +5,17 @@ import java.util.logging.Logger
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 import scala.reflect.ClassTag
+import scala.util.Failure
+import scala.util.Success
 
 import scala.meta.Input
 import scala.meta.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.TokenOps.syntax._
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.tokenizers.Tokenized
 
+import ch.epfl.scala.{bsp4j => b}
 import difflib._
 import org.eclipse.{lsp4j => l}
 
@@ -26,7 +30,8 @@ sealed trait TokenEditDistance {
    * This method behaves differently from the other `toRevised` in a few ways:
    * - it should only return `None` in the case when the sources don't tokenize.
    *   When the original token is removed in the revised document, we find instead the
-   *   nearest token in the original document instead.
+   *   nearest token in the original document instead.  This behaviour can be toggled
+   *   off by providing value of false for `fallbackToNearest`.
    *
    * If `adjustWithinToken` is true and the original and revised range are both contained within
    * a single (matching) token, then adjust the returned range to match the start/end offsets of
@@ -35,6 +40,7 @@ sealed trait TokenEditDistance {
   def toRevised(
       range: l.Range,
       adjustWithinToken: Boolean = false,
+      fallbackToNearest: Boolean = true,
   ): Option[l.Range]
   def toRevised(originalOffset: Int): Either[EmptyResult, Position]
   def toRevised(
@@ -96,6 +102,73 @@ sealed trait TokenEditDistance {
     }
   }
 
+  final def toRevised(
+      textEdit: l.TextEdit,
+      adjustWithinToken: Boolean,
+      fallbackToNearest: Boolean,
+  ): Option[l.TextEdit] = {
+    val revisedRange = toRevised(
+      range = textEdit.getRange(),
+      adjustWithinToken = adjustWithinToken,
+      fallbackToNearest = fallbackToNearest,
+    )
+    revisedRange.map(r => new l.TextEdit(r, textEdit.getNewText()))
+  }
+
+  final def toRevised(
+      scalaAction: b.ScalaAction,
+      adjustWithinToken: Boolean,
+      fallbackToNearest: Boolean,
+  ): Option[b.ScalaAction] = {
+    val existingEdits = scalaAction.asLspTextEdits
+    existingEdits
+      .map { textEdit =>
+        toRevised(
+          textEdit = textEdit,
+          adjustWithinToken = adjustWithinToken,
+          fallbackToNearest = fallbackToNearest,
+        )
+      }
+      .foldLeft[Option[Seq[l.TextEdit]]](Some(Seq.empty)) {
+        case (Some(seq), Some(e)) => Some(seq :+ e)
+        case _ => None
+      }
+      .map { newEdits =>
+        val newAction = new b.ScalaAction(scalaAction.getTitle())
+        newAction.setEditFromLspTextEdits(newEdits)
+        newAction
+      }
+  }
+
+  /**
+   * Converts a bsp diagnostic in the original document to the revised document.
+   * `None` will be returned if conversion of any of the diagnostic's underlying
+   * text edits cannot be revised.
+   */
+  final def toRevised(
+      scalaDiagnostic: b.ScalaDiagnostic,
+      adjustWithinToken: Boolean,
+      fallbackToNearest: Boolean,
+  ): Option[b.ScalaDiagnostic] = {
+    val actions = scalaDiagnostic.getActions()
+    val newActions = actions.asScala
+      .map { action =>
+        toRevised(
+          action,
+          adjustWithinToken = adjustWithinToken,
+          fallbackToNearest = fallbackToNearest,
+        )
+      }
+      .foldLeft[Option[Seq[b.ScalaAction]]](Some(Seq.empty)) {
+        case (Some(seq), Some(e)) => Some(seq :+ e)
+        case _ => None
+      }
+    newActions.map { scalaActions =>
+      val newDiagnostic = new b.ScalaDiagnostic()
+      newDiagnostic.setActions(scalaActions.asJava)
+      newDiagnostic
+    }
+  }
 }
 
 object TokenEditDistance {
@@ -104,6 +177,7 @@ object TokenEditDistance {
     def toRevised(
         range: l.Range,
         adjustWithinToken: Boolean = false,
+        fallbackToNearest: Boolean = true,
     ): Option[l.Range] = Some(range)
     def toRevised(originalOffset: Int): Either[EmptyResult, Position] =
       EmptyResult.unchanged
@@ -129,6 +203,7 @@ object TokenEditDistance {
     def toRevised(
         range: l.Range,
         adjustWithinToken: Boolean = false,
+        fallbackToNearest: Boolean = true,
     ): Option[l.Range] = None
     def toRevised(originalOffset: Int): Either[EmptyResult, Position] =
       EmptyResult.noMatch
@@ -161,6 +236,7 @@ object TokenEditDistance {
     def toRevised(
         range: l.Range,
         adjustWithinToken: Boolean = false,
+        fallbackToNearest: Boolean = true,
     ): Option[l.Range] = {
       range.toMeta(originalInput).flatMap { pos =>
         val matchingTokens = matching.lift
@@ -227,23 +303,27 @@ object TokenEditDistance {
 
         (startMatch, endMatch) match {
           case (Some(start), Some(end)) =>
-            val revised =
-              if (startFallback && endFallback) {
-                val offset = end.revised.start
-                Position.Range(revisedInput, offset - 1, offset)
-              } else if (start.revised == end.revised) {
-                // new range spans one token
-                if (adjustWithinToken)
-                  computeAdjustmentWithinToken(range, start)
-                else start.revised.pos
-              } else {
-                val endOffset = end.revised match {
-                  case t if t.isLF => t.start
-                  case t => t.end
-                }
-                Position.Range(revisedInput, start.revised.start, endOffset)
+            if ((startFallback || endFallback) && !fallbackToNearest)
+              None
+            else if (startFallback && endFallback) {
+              val offset = end.revised.start
+              Some(Position.Range(revisedInput, offset - 1, offset).toLsp)
+            } else if (start.revised == end.revised) {
+              // new range spans one token
+              if (adjustWithinToken)
+                Some(computeAdjustmentWithinToken(range, start).toLsp)
+              else Some(start.revised.pos.toLsp)
+            } else {
+              val endOffset = end.revised match {
+                case t if t.isLF => t.start
+                case t => t.end
               }
-            Some(revised.toLsp)
+              Some(
+                Position
+                  .Range(revisedInput, start.revised.start, endOffset)
+                  .toLsp
+              )
+            }
           case (start, end) =>
             logger.warning(
               s"stale range: ${start.map(_.show)} ${end.map(_.show)}"
@@ -391,7 +471,7 @@ object TokenEditDistance {
       revisedInput: Input.VirtualFile,
       trees: Trees,
       doNothingWhenUnchanged: Boolean = true,
-  ): TokenEditDistance = {
+  ): Either[String, TokenEditDistance] = {
     val isScala =
       originalInput.path.isScalaFilename &&
         revisedInput.path.isScalaFilename
@@ -401,37 +481,57 @@ object TokenEditDistance {
 
     if (!isScala && !isJava) {
       // Ignore non-scala/java Files.
-      Unchanged
+      Right(Unchanged)
     } else if (originalInput.value.isEmpty() || revisedInput.value.isEmpty()) {
-      NoMatch
+      Right(NoMatch)
     } else if (doNothingWhenUnchanged && originalInput == revisedInput) {
-      Unchanged
+      Right(Unchanged)
     } else if (isJava) {
-      val result = for {
-        revised <- JavaTokens.tokenize(revisedInput)
-        original <- JavaTokens.tokenize(originalInput)
-      } yield {
-        TokenEditDistance.fromTokens(
-          originalInput,
-          original,
-          revisedInput,
-          revised,
-        )
+      val tokenizedRevised = JavaTokens.tokenize(revisedInput)
+      val tokenizedOriginal = JavaTokens.tokenize(originalInput)
+      (tokenizedRevised, tokenizedOriginal) match {
+        case (Success(revised), Success(original)) =>
+          Right(
+            TokenEditDistance.fromTokens(
+              originalInput,
+              original,
+              revisedInput,
+              revised,
+            )
+          )
+        case (err: Failure[_], _) => Left(err.exception.getMessage())
+        case (_, err: Failure[_]) => Left(err.exception.getMessage())
       }
-      result.getOrElse(NoMatch)
     } else {
-      val result = for {
-        revised <- trees.tokenized(revisedInput).toOption
-        original <- trees.tokenized(originalInput).toOption
-      } yield {
-        TokenEditDistance.fromTokens(
-          originalInput,
-          original.tokens,
-          revisedInput,
-          revised.tokens,
-        )
+      val tokenizedRevised = trees.tokenized(revisedInput)
+      val tokenizedOriginal = trees.tokenized(originalInput)
+      val result = (tokenizedRevised, tokenizedOriginal) match {
+        case (Tokenized.Success(revised), Tokenized.Success(original)) =>
+          Right(
+            TokenEditDistance.fromTokens(
+              originalInput,
+              original.tokens,
+              revisedInput,
+              revised.tokens,
+            )
+          )
+        case (err: Tokenized.Error, _) =>
+          Left(err.message)
+        case (_, err: Tokenized.Error) =>
+          Left(err.message)
+        case _ => Right(NoMatch)
       }
-      result.getOrElse(NoMatch)
+
+      result match {
+        case Left(message) =>
+          scribe.debug(
+            s"Could not tokenize file ${revisedInput.path} because of:",
+            message,
+          )
+        case _ =>
+      }
+
+      result
     }
   }
 

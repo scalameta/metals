@@ -764,7 +764,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       "3" ->
         """|Future[T] scala.concurrent
            |Future scala.concurrent
-           |Future[T] - java.util.concurrent
+           |Future[V] - java.util.concurrent
            |""".stripMargin,
     ),
   )
@@ -790,7 +790,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
            |FutureOps - scala.jdk.FutureConverters
            |""".stripMargin,
       "3" ->
-        """|Future[T] java.util.concurrent
+        """|Future[V] java.util.concurrent
            |Future java.util.concurrent
            |Future[T] - scala.concurrent
            |""".stripMargin,

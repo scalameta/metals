@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
@@ -23,21 +24,25 @@ class ScalaCliBuildTool(
   override def generateBspConfig(
       workspace: AbsolutePath,
       systemProcess: List[String] => Future[BspConfigGenerationStatus],
+      statusBar: StatusBar,
   ): Future[BspConfigGenerationStatus] =
     createBspFileArgs(workspace).map(systemProcess).getOrElse {
       // fallback to creating `.bsp/scala-cli.json` that starts JVM launcher
       val bspConfig = workspace.resolve(".bsp").resolve("scala-cli.json")
-      bspConfig.writeText(ScalaCli.scalaCliBspJsonContent())
+      statusBar.addMessage("scala-cli bspConfig")
+      bspConfig
+        .writeText(ScalaCli.scalaCliBspJsonContent(root = workspace.toString()))
       Future.successful(Generated)
     }
 
   def createBspConfigIfNone(
       workspace: AbsolutePath,
       systemProcess: List[String] => Future[BspConfigGenerationStatus],
+      statusBar: StatusBar,
   ): Future[BspConfigGenerationStatus] = {
     if (ScalaCliBuildTool.pathsToScalaCliBsp(workspace).exists(_.isFile))
       Future.successful(Generated)
-    else generateBspConfig(workspace, systemProcess)
+    else generateBspConfig(workspace, systemProcess, statusBar)
   }
 
   override def createBspFileArgs(
@@ -83,7 +88,10 @@ object ScalaCliBuildTool {
         json = ujson.read(text)
         version <- json("version").strOpt
       } yield version
-    new ScalaCliBuildTool(workspaceFolderVersions.headOption, userConfig)
+    new ScalaCliBuildTool(
+      workspaceFolderVersions.headOption,
+      userConfig,
+    )
   }
 }
 

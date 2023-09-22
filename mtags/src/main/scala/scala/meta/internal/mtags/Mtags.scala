@@ -93,14 +93,15 @@ object Mtags {
 
   def allToplevels(
       input: Input.VirtualFile,
-      dialect: Dialect
+      dialect: Dialect,
+      includeMembers: Boolean = true
   )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
     input.toLanguage match {
       case Language.JAVA =>
         new JavaMtags(input, includeMembers = true).index()
       case Language.SCALA =>
         val mtags =
-          new ScalaToplevelMtags(input, true, includeMembers = true, dialect)
+          new ScalaToplevelMtags(input, true, includeMembers, dialect)
         mtags.index()
       case _ =>
         TextDocument()

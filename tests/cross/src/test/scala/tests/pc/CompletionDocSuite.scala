@@ -29,10 +29,14 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |join(delimiter: CharSequence, elements: Iterable[_ <: CharSequence]): String
        |""".stripMargin,
     compat = Map(
+      scala3PresentationCompilerVersion ->
+        """|join(delimiter: CharSequence, elements: CharSequence*): String
+           |join(delimiter: CharSequence, elements: java.lang.Iterable[? <: CharSequence]): String
+           |""".stripMargin,
       "3" ->
         """|join(delimiter: CharSequence, elements: CharSequence*): String
            |join(delimiter: CharSequence, elements: Iterable[? <: CharSequence]): String
-           |""".stripMargin
+           |""".stripMargin,
     ),
   )
 
@@ -568,19 +572,28 @@ class CompletionDocSuite extends BaseCompletionSuite {
                    | section on `StringBuilders` for more information.
                    |StringBuilder scala.collection.mutable
                    |""".stripMargin,
-      "3" ->
-        s"""$scala213Docs
-           |StringBuilder scala.collection.mutable
-           |StringBuilder(): StringBuilder
-           |StringBuilder(str: String): StringBuilder
-           |StringBuilder(underlying: StringBuilder): StringBuilder
-           |StringBuilder(capacity: Int): StringBuilder
-           |StringBuilder(initCapacity: Int, initValue: String): StringBuilder
-           |""".stripMargin,
-      "2.13.11" ->
+      ">=2.13.11" ->
         s"""|$scala213Docs
             |StringBuilder scala.collection.mutable
             |""".stripMargin,
+      ">=3.0.0" ->
+        List(
+          "StringBuilder scala.collection.mutable",
+          "StringBuilder(): StringBuilder",
+          "StringBuilder(str: String): StringBuilder",
+          "StringBuilder(underlying: StringBuilder): StringBuilder",
+          "StringBuilder(capacity: Int): StringBuilder",
+          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder",
+        ).map(s => scala213Docs + "\n" + s).mkString("\n"),
+      scala3PresentationCompilerVersion ->
+        List(
+          "StringBuilder scala.collection.mutable",
+          "StringBuilder(): StringBuilder",
+          "StringBuilder(str: String): StringBuilder",
+          "StringBuilder(underlying: java.lang.StringBuilder): StringBuilder",
+          "StringBuilder(capacity: Int): StringBuilder",
+          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder",
+        ).map(s => scala213Docs + "\n" + s).mkString("\n"),
     ),
   )
 

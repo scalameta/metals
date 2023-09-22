@@ -49,7 +49,13 @@ case class JavaPresentationCompiler(
   override def complete(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
-    CompletableFuture.completedFuture(new CompletionList())
+    CompletableFuture.completedFuture(
+      new JavaCompletionProvider(
+        javaCompiler,
+        params,
+        config.isCompletionSnippetsEnabled
+      ).completions()
+    )
 
   override def completionItemResolve(
       item: CompletionItem,

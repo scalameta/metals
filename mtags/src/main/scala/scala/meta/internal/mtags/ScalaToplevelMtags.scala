@@ -124,19 +124,6 @@ class ScalaToplevelMtags(
     def needToParseExtension(expect: ExpectTemplate): Boolean =
       includeInnerClasses && expect.isExtension && !expect.ignoreBody
 
-    def nextIsNL: Boolean = {
-      scanner.nextToken()
-      scanner.curr.token match {
-        case WHITESPACE if isNewline => true
-        case WHITESPACE =>
-          nextIsNL
-        case COMMENT =>
-          scanner.skipComment()
-          nextIsNL
-        case _ => false
-      }
-    }
-
     def needEmitMember(region: Region): Boolean =
       includeInnerClasses || region.acceptMembers
 
@@ -200,7 +187,7 @@ class ScalaToplevelMtags(
         // also covers extension methods because of `def` inside
         case DEF
             // extension group
-            if (dialect.allowExtensionMethods && currRegion.isExtension) =>
+            if (includeMembers && dialect.allowExtensionMethods && currRegion.isExtension) =>
           acceptTrivia()
           newIdentifier.foreach { name =>
             withOwner(currRegion.owner) {
@@ -209,7 +196,10 @@ class ScalaToplevelMtags(
           }
           loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         // inline extension method `extension (...) def foo = ...`
-        case DEF if expectTemplate.map(needToParseExtension).getOrElse(false) =>
+        case DEF
+            if includeMembers && expectTemplate
+              .map(needToParseExtension)
+              .getOrElse(false) =>
           expectTemplate match {
             case None =>
               reportError(
@@ -240,14 +230,14 @@ class ScalaToplevelMtags(
             expectTemplate
           )
         case DEF | VAL | VAR | GIVEN | TYPE
-            if needEmitTermMember() && expectTemplate
-              .map(!_.isExtension)
-              .getOrElse(true) =>
-          withOwner(currRegion.termOwner) {
-            emitTerm(currRegion)
-          }
+            if expectTemplate.map(!_.isExtension).getOrElse(true) =>
+          if (needEmitTermMember()) {
+            withOwner(currRegion.termOwner) {
+              emitTerm(currRegion)
+            }
+          } else scanner.nextToken()
           loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
-        case IMPORT =>
+        case IMPORT | EXPORT =>
           // skip imports because they might have `given` kw
           acceptToStatSep()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
@@ -295,16 +285,26 @@ class ScalaToplevelMtags(
               expectTemplate
             )
           }
-        case MATCH if dialect.allowSignificantIndentation && nextIsNL =>
-          val nextIndent = acceptWhileIndented(indent)
-          loop(
-            nextIndent,
-            isAfterNewline = false,
-            currRegion,
-            None
-          )
+        case MATCH | THEN | ELSE | DO | WHILE | TRY | FINALLY | THROW | RETURN |
+            YIELD | FOR if dialect.allowSignificantIndentation =>
+          if (nextIsNL()) {
+            val nextIndent = acceptWhileIndented(indent)
+            loop(
+              nextIndent,
+              isAfterNewline = false,
+              currRegion,
+              None
+            )
+          } else {
+            loop(
+              indent,
+              isAfterNewline = false,
+              currRegion,
+              expectTemplate
+            )
+          }
         case COLON if dialect.allowSignificantIndentation =>
-          (expectTemplate, nextIsNL) match {
+          (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
               val next = expect.startIndentedRegion(currRegion)
               resetRegion(next)
@@ -347,7 +347,7 @@ class ScalaToplevelMtags(
             case _ =>
               acceptBalancedDelimeters(LBRACE, RBRACE)
               scanner.nextToken()
-              loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+              loop(indent, isAfterNewline = false, currRegion, None)
           }
         case RBRACE =>
           val nextRegion = currRegion match {
@@ -418,12 +418,15 @@ class ScalaToplevelMtags(
             expectTemplate
           )
         case CASE =>
-          val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
-          acceptTrivia()
-          emitEnumCases(region)
+          val nextIsNewLine = nextIsNL()
+          val (shouldCreateClassTemplate, isAfterNewline) =
+            emitEnumCases(region, nextIsNewLine)
+          val nextExpectTemplate =
+            if (shouldCreateClassTemplate) newExpectClassTemplate
+            else expectTemplate.filter(!_.isPackageBody)
           loop(
             indent,
-            isAfterNewline = false,
+            isAfterNewline,
             currRegion,
             if (scanner.curr.token == CLASS) newExpectCaseClassTemplate
             else nextExpectTemplate
@@ -562,26 +565,49 @@ class ScalaToplevelMtags(
   }
 
   @tailrec
-  private def emitEnumCases(region: Region): Unit = {
+  private def emitEnumCases(
+      region: Region,
+      nextIsNewLine: Boolean
+  ): (Boolean, Boolean) = {
+    def ownerCompanionObject =
+      if (currentOwner.endsWith("#"))
+        s"${currentOwner.stripSuffix("#")}."
+      else currentOwner
     scanner.curr.token match {
       case IDENTIFIER =>
         val pos = newPosition
         val name = scanner.curr.name
-        term(
-          name,
-          pos,
-          Kind.METHOD,
-          SymbolInformation.Property.VAL.value
-        )
-        resetRegion(region)
-        acceptTrivia()
+        def emitEnumCaseObject() = {
+          withOwner(ownerCompanionObject) {
+            term(
+              name,
+              pos,
+              Kind.METHOD,
+              SymbolInformation.Property.VAL.value
+            )
+          }
+        }
+        val nextIsNewLine0 = nextIsNL()
         scanner.curr.token match {
           case COMMA =>
-            acceptTrivia()
-            emitEnumCases(region)
+            emitEnumCaseObject()
+            resetRegion(region)
+            val nextIsNewLine1 = nextIsNL()
+            emitEnumCases(region, nextIsNewLine1)
+          case LPAREN | LBRACKET =>
+            currentOwner = ownerCompanionObject
+            tpe(
+              name,
+              pos,
+              Kind.CLASS,
+              SymbolInformation.Property.VAL.value
+            )
+            (true, false)
           case _ =>
+            emitEnumCaseObject()
+            (false, nextIsNewLine0)
         }
-      case _ =>
+      case _ => (false, nextIsNewLine)
     }
   }
 
@@ -652,6 +678,19 @@ class ScalaToplevelMtags(
       })
     ) {
       scanner.nextToken()
+    }
+  }
+
+  private def nextIsNL(): Boolean = {
+    scanner.nextToken()
+    scanner.curr.token match {
+      case WHITESPACE if isNewline => true
+      case WHITESPACE =>
+        nextIsNL()
+      case COMMENT =>
+        scanner.skipComment()
+        nextIsNL()
+      case _ => false
     }
   }
 

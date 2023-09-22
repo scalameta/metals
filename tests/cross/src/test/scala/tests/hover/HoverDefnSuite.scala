@@ -137,9 +137,9 @@ class HoverDefnSuite extends BaseHoverSuite {
 
   check(
     "object",
-    """object M@@yObject
+    """object <<M@@yObject>>
       |""".stripMargin,
-    "",
+    "object object.MyObject".hover,
     compat = Map(
       "3" -> "object MyObject: `object`".hover
     ),
@@ -147,9 +147,9 @@ class HoverDefnSuite extends BaseHoverSuite {
 
   check(
     "trait",
-    """trait M@@yTrait
+    """trait <<M@@yTrait>>
       |""".stripMargin,
-    "",
+    "abstract trait MyTrait: MyTrait".hover,
     compat = Map(
       "3" -> "trait MyTrait: MyTrait".hover
     ),
@@ -157,12 +157,17 @@ class HoverDefnSuite extends BaseHoverSuite {
 
   check(
     "class",
-    """trait M@@yClass
+    """class <<M@@yClass>>
       |""".stripMargin,
-    "",
-    compat = Map(
-      "3" -> "trait MyClass: MyClass".hover
-    ),
+    "class MyClass: MyClass".hover,
+  )
+
+  check(
+    "type",
+    """|object a {
+       |  type <<M@@yType>> = Int
+       |}""".stripMargin,
+    "type MyType: MyType".hover,
   )
 
   check(

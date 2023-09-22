@@ -432,4 +432,36 @@ class SbtServerSuite
     } yield ()
   }
 
+  test("java-hover") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        SbtBuildLayout(
+          """|/a/src/main/java/a/A.java
+             |package a;
+             |public class A{
+             |  String name = "";
+             |}
+             |""".stripMargin,
+          V.scala213,
+        )
+      )
+      _ <- server.hover("a/src/main/java/A.java", "String na@@me", workspace)
+      _ <- server.didOpen("build.sbt")
+      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.assertHover(
+        "a/src/main/java/a/Main.java",
+        """"|package a;
+           |public class A{
+           |  String na@@me = "";
+           |}
+           |""".stripMargin,
+        """|```java
+           |java.lang.String name
+           |```
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
 }

@@ -206,6 +206,68 @@ class CompletionDapSuite
        |""".stripMargin
   )
 
+  assertCompletion(
+    "java-scope",
+    expression = "n@@",
+    expectedCompletions = """|name
+                             |notify()
+                             |notifyAll()
+                             |new
+                             |""".stripMargin,
+    expectedEdit = "name",
+    topLines = None,
+  )(
+    """|/a/src/main/java/a/Main.java
+       |package a;
+       |
+       |class Main{
+       |
+       |  public static void main(String[] args) {
+       |     String name = "Tom";
+       |>>   System.out.println(name);
+       |     System.exit(0);
+       |  }
+       |}
+       |
+       |""".stripMargin
+  )
+
+  assertCompletion(
+    "java-member",
+    expression = "name.s@@",
+    expectedCompletions =
+      if (isJava8)
+        """|serialVersionUID
+           |serialPersistentFields
+           |startsWith(java.lang.String arg0, int arg1)
+           |startsWith(java.lang.String arg0)
+           |substring(int arg0)
+           |""".stripMargin
+      else
+        """|serialVersionUID
+           |serialPersistentFields
+           |safeTrim(byte[] arg0, int arg1, boolean arg2)
+           |scale(int arg0, float arg1)
+           |startsWith(java.lang.String arg0, int arg1)
+           |""".stripMargin,
+    expectedEdit = "name.serialVersionUID",
+    topLines = Some(5),
+  )(
+    """|/a/src/main/java/a/Main.java
+       |package a;
+       |
+       |class Main{
+       |
+       |  public static void main(String[] args) {
+       |     String name = "Tom";
+       |>>   System.out.println(name);
+       |     System.exit(0);
+       |  }
+       |}
+       |
+       |""".stripMargin
+  )
+
   def assertCompletion(
       name: TestOptions,
       expression: String,

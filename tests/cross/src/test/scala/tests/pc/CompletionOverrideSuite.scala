@@ -283,6 +283,18 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     compat = Map(
+      scala3PresentationCompilerVersion ->
+        """|package a.b
+           |abstract class Conflict {
+           |  def self: Conflict
+           |}
+           |object Main {
+           |  class Conflict
+           |  new a.b.Conflict {
+           |    def self: a.b.Conflict = ${0:???}
+           |  }
+           |}
+           |""".stripMargin,
       "3" ->
         """|package a.b
            |
@@ -296,7 +308,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
            |    def self: a.b.Conflict = ${0:???}
            |  }
            |}
-           |""".stripMargin
+           |""".stripMargin,
     ),
   )
 
@@ -370,8 +382,10 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     "    def foo@@",
     """    def foo: scala.collection.mutable.Set[Int] = ${0:???}""",
     compat = Map(
+      scala3PresentationCompilerVersion ->
+        """    def foo: scala.collection.mutable.Set[Int] = ${0:???}""",
       "3" ->
-        """    def foo: collection.mutable.Set[Int] = ${0:???}"""
+        """    def foo: collection.mutable.Set[Int] = ${0:???}""",
     ),
   )
 
@@ -452,6 +466,16 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |  def foo: lang.StringBuilder = ${0:???}
        |}
        |""".stripMargin,
+    compat = Map(
+      scala3PresentationCompilerVersion ->
+        """|abstract class Mutable {
+           |  def foo: java.lang.StringBuilder
+           |}
+           |class Main extends Mutable {
+           |  def foo: java.lang.StringBuilder = ${0:???}
+           |}
+           |""".stripMargin
+    ),
   )
 
   checkEditLine(

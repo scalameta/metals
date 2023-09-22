@@ -7,7 +7,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionCompletionItemData
 import scala.meta.pc.CancelToken
 
 import munit.Location

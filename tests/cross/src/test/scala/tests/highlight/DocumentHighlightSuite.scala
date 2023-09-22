@@ -782,4 +782,88 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  }
       |}""".stripMargin,
   )
+
+  check(
+    "for-comp-map",
+    """|object Main {
+       |  val x = List(1).<<m@@ap>>(_ + 1)
+       |  val y = for {
+       |    a <- List(1)
+       |  } yield a + 1
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "for-comp-map1",
+    """|object Main {
+       |  val x = List(1).<<m@@ap>>(_ + 1)
+       |  val y = for {
+       |    a <- List(1)
+       |    if true
+       |  } yield a + 1
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "for-comp-foreach",
+    """|object Main {
+       |  val x = List(1).<<for@@each>>(_ => ())
+       |  val y = for {
+       |    a <- List(1)
+       |  } {}
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "for-comp-withFilter",
+    """|object Main {
+       |  val x = List(1).<<with@@Filter>>(_ => true)
+       |  val y = for {
+       |    a <- List(1)
+       |    if true
+       |  } {}
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "for-comp-withFilter1",
+    """|object Main {
+       |  val x = List(1).withFilter(_ => true).<<m@@ap>>(_ + 1)
+       |  val y = for {
+       |    a <- List(1)
+       |    if true
+       |  } yield a + 1
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "for-comp-flatMap1",
+    """|object Main {
+       |  val x = List(1).<<flat@@Map>>(_ => List(1))
+       |  val y = for {
+       |    a <- List(1)
+       |    b <- List(2)
+       |    if true
+       |  } yield a + 1
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "for-comp-flatMap2",
+    """|object Main {
+       |  val x = List(1).withFilter(_ => true).<<flat@@Map>>(_ => List(1))
+       |  val y = for {
+       |    a <- List(1)
+       |    if true
+       |    b <- List(2)
+       |  } yield a + 1
+       |}
+       |""".stripMargin,
+  )
 }

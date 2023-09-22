@@ -225,4 +225,65 @@ class DefinitionCrossLspSuite
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
+
+  test("i5494") {
+    cleanWorkspace()
+    val mainFile =
+      """|package a
+         |
+         |def otherMethod(prd: TypeDecl.Pro@@duct) = ???
+         |def mm(prd: Types.Product) = ???
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": { "scalaVersion": "${BuildInfo.scala3}" }
+            |}
+            |
+            |/a/src/main/scala/a/TypeDecl.scala
+            |package a
+            |
+            |enum TypeDecl:
+            |  case Product(id: String)
+            |  case Coproduct(id: String)
+            |
+            |/a/src/main/scala/a/Types.scala
+            |package a
+            |
+            |sealed trait Types {}
+            |
+            |object Types {
+            |  case class Product(id: String) extends Types
+            |}
+            |
+            |/a/src/main/scala/a/Main.scala
+            |${mainFile.replace("@@", "")}
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = server.didOpen("a/src/main/scala/a/TypeDecl.scala")
+      _ = server.didOpen("a/src/main/scala/a/Types.scala")
+      _ = server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = server.workspaceDefinitions
+      definition <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        mainFile,
+        workspace,
+      )
+      uri = workspace
+        .resolve("a/src/main/scala/a/TypeDecl.scala")
+        .toURI
+        .toString()
+      _ = assertEquals(
+        definition,
+        List(
+          new l.Location(
+            uri,
+            new l.Range(new l.Position(3, 7), new l.Position(3, 14)),
+          )
+        ),
+      )
+    } yield ()
+  }
 }

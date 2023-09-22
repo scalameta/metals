@@ -613,7 +613,7 @@ class SbtBloopLspSuite
             |import sbt._
             |import Keys._
             |object Deps {
-            |  val scalatest = "org.scalatest" %% "scalatest" % "3.2.4"
+            |  val scalatest = "org.scalatest" %% "scalatest" % "3.2.16"
             |}
          """.stripMargin
       )
@@ -623,7 +623,7 @@ class SbtBloopLspSuite
            |val scalatest: ModuleID
            |```
            |```range
-           |val scalatest = "org.scalatest" %% "scalatest" % "3.2.4"
+           |val scalatest = "org.scalatest" %% "scalatest" % "3.2.16"
            |```
            |""".stripMargin
       _ = assertNoDiff(hoverRes, expectedHoverRes)

@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.TextEdits
 
 import munit.Location
+import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 
 abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
@@ -23,6 +24,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       .textContentsOnDisk(filename)
       .replace("// @@", query.replace("@@", ""))
     for {
+      _ <- server.didFocus(filename)
       _ <- server.didChange(filename)(_ => text)
       completion <- server.completionList(filename, query)
     } yield {
@@ -75,6 +77,57 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   )(implicit loc: Location): Future[Unit] = {
     withCompletionEdit(query, project, filter) { obtained =>
       assertNoDiff(obtained, expected)
+    }
+  }
+
+  def withCompletionItemResolve(
+      query: String,
+      project: Char = 'a',
+      filter: String => Boolean = _ => true,
+      index: Int = 0,
+  )(
+      fn: CompletionItem => Unit
+  ): Future[Unit] = {
+    import scala.collection.JavaConverters._
+    val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    val text = server
+      .textContentsOnDisk(filename)
+      .replace("// @@", query.replace("@@", ""))
+    for {
+      _ <- server.didFocus(filename)
+      _ <- server.didChange(filename)(_ => text)
+      completion <- server.completionList(filename, query)
+      items =
+        completion
+          .getItems()
+          .asScala
+          .filter(item => filter(item.getLabel))
+          .toList
+      _ = assert(items.length > index, "Completion item index out of bounds")
+      resolved <- server.completionItemResolve(items(index))
+    } yield fn(resolved)
+  }
+
+  def assertCompletionItemResolve(
+      query: String,
+      expectedLabel: String,
+      expectedDoc: Option[String] = None,
+      project: Char = 'a',
+      filter: String => Boolean = _ => true,
+      index: Int = 0,
+  )(implicit loc: Location): Future[Unit] = {
+    withCompletionItemResolve(query, project, filter, index) { resolved =>
+      assertNoDiff(resolved.getLabel(), expectedLabel)
+      expectedDoc.foreach { doc =>
+        val obtainedDoc =
+          if (resolved.getDocumentation() == null) ""
+          else if (resolved.getDocumentation().isRight()) {
+            resolved.getDocumentation().getRight().getValue()
+          } else {
+            resolved.getDocumentation().getLeft()
+          }
+        assertNoDiff(obtainedDoc, doc)
+      }
     }
   }
 

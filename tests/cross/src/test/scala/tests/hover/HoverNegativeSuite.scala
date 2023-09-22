@@ -53,6 +53,22 @@ class HoverNegativeSuite extends BaseHoverSuite {
   )
 
   checkNegative(
+    "object-keyword",
+    """obj@@ect a {
+      |  val x = 42
+      |}
+      |""".stripMargin,
+  )
+
+  checkNegative(
+    "type-keyword",
+    """object a {
+      |  ty@@pe Alpha = Int
+      |}
+      |""".stripMargin,
+  )
+
+  checkNegative(
     "val-equal",
     """object a {
       |  val x =@@ 42

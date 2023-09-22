@@ -7,6 +7,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
+import scala.util.matching.Regex
 
 import scala.meta.Importee
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -90,19 +91,33 @@ final class ReferenceProvider(
   }
 
   def referencesForWildcardImport(
-      sym: String,
+      owner: String,
       source: AbsolutePath,
       directlyImportedSymbols: Set[String],
   ): List[String] = {
+    def matchesOwner(symbol: String) = {
+      symbol.startsWith(owner) && {
+        val rest = symbol.stripPrefix(owner)
+        rest match {
+          case "" => true
+          case "/package." => true
+          case SyntheticPackageObject(_) => true
+          case _ => false
+        }
+      }
+    }
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         doc.occurrences
           .map(_.symbol)
           .distinct
-          .filter(s =>
-            s.ownerChain.contains(sym) && s != sym && !directlyImportedSymbols
-              .contains(s)
-          )
+          .filter { s =>
+            val reversedOwners = s.ownerChain.reverse
+
+            (reversedOwners.length > 1
+            && matchesOwner(reversedOwners(1))
+            && !directlyImportedSymbols.contains(s))
+          }
           .toList
       case None => List()
     }
@@ -271,12 +286,12 @@ final class ReferenceProvider(
     result
   }
 
-  private def workspaceReferences(
+  def workspaceReferences(
       source: AbsolutePath,
       isSymbol: Set[String],
       isIncludeDeclaration: Boolean,
-      findRealRange: AdjustRange,
-      includeSynthetics: Synthetic => Boolean,
+      findRealRange: AdjustRange = noAdjustRange,
+      includeSynthetics: Synthetic => Boolean = _ => true,
   ): Seq[Location] = {
     buildTargets.inverseSources(source) match {
       case None => Seq.empty
@@ -566,4 +581,10 @@ class SymbolAlternatives(symbol: String, name: String) {
         case _ =>
           ""
       })
+}
+
+object SyntheticPackageObject {
+  val regex: Regex = "/.*[$]package[.]".r
+  def unapply(str: String): Option[String] =
+    Option.when(regex.matches(str))(str)
 }

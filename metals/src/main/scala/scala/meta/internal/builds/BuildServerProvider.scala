@@ -4,6 +4,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.StatusBar
 import scala.meta.io.AbsolutePath
 
 /**
@@ -18,6 +19,7 @@ trait BuildServerProvider extends BuildTool {
   def generateBspConfig(
       workspace: AbsolutePath,
       systemProcess: List[String] => Future[BspConfigGenerationStatus],
+      statusBar: StatusBar,
   ): Future[BspConfigGenerationStatus] =
     createBspFileArgs(workspace).map(systemProcess).getOrElse {
       Future.successful(

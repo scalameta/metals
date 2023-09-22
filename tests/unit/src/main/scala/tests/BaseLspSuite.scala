@@ -6,6 +6,7 @@ import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
@@ -17,6 +18,7 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.ServerLivenessMonitor
 import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
@@ -110,7 +112,7 @@ abstract class BaseLspSuite(
 
   def test(
       testOpts: TestOptions,
-      withoutVirtualDocs: Boolean,
+      withoutVirtualDocs: Boolean = false,
       maxRetry: Int = 0,
   )(
       fn: => Future[Unit]
@@ -222,4 +224,11 @@ abstract class BaseLspSuite(
       }
     }
   }
+}
+
+object ServerLivenessTestData {
+  val serverName = "Bill"
+  val pingInterval: Duration = Duration("3s")
+  def serverNotRespondingMessage: String =
+    ServerLivenessMonitor.ServerNotResponding.message(pingInterval, serverName)
 }

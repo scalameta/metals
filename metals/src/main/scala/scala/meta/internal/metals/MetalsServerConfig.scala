@@ -1,5 +1,8 @@
 package scala.meta.internal.metals
 
+import scala.concurrent.duration.Duration
+import scala.util.Try
+
 import scala.meta.internal.metals.Configs._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
@@ -40,6 +43,8 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param macOsMaxWatchRoots The maximum number of root directories to watch on MacOS.
  * @param maxLogFileSize The maximum size of the log file before it gets backed up and truncated.
  * @param maxLogBackups The maximum number of backup log files.
+ * @param metalsToIdleTime The time that needs to pass with no action to consider metals as idle.
+ * @param pingInterval Interval in which we ping the build server.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -102,6 +107,14 @@ final case class MetalsServerConfig(
       .withFilter(_.forall(Character.isDigit(_)))
       .map(_.toInt)
       .getOrElse(10),
+    metalsToIdleTime: Duration =
+      Option(System.getProperty("metals.server-to-idle-time"))
+        .flatMap(opt => Try(Duration(opt)).toOption)
+        .getOrElse(Duration("10m")),
+    pingInterval: Duration =
+      Option(System.getProperty("metals.build-server-ping-interval"))
+        .flatMap(opt => Try(Duration(opt)).toOption)
+        .getOrElse(Duration("1m")),
 ) {
   override def toString: String =
     List[String](
@@ -122,6 +135,8 @@ final case class MetalsServerConfig(
       s"loglevel=${loglevel}",
       s"max-logfile-size=${maxLogFileSize}",
       s"max-log-backup=${maxLogBackups}",
+      s"server-to-idle-time=${metalsToIdleTime}",
+      s"build-server-ping-interval=${pingInterval}",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

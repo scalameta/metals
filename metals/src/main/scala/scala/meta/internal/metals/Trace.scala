@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.io.PrintWriter
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 
 import scala.annotation.tailrec
@@ -26,8 +27,13 @@ object Trace {
       // the path making it difficult to tail/cat from the terminal and cmd+click from VS Code.
       // Instead, we use the `cacheDir` which has no spaces. The logs are safe to remove so
       // putting them in the "cache directory" makes more sense compared to the "config directory".
-      AbsolutePath(projectDirectories.cacheDir)
-    }.toOption
+      val cacheDir = Paths.get(projectDirectories.cacheDir)
+      // https://github.com/scalameta/metals/issues/5590
+      // deal with issue on windows and PowerShell, which would cause us to create a null directory in the workspace
+      if (cacheDir.isAbsolute())
+        Some(AbsolutePath(cacheDir))
+      else None
+    }.toOption.flatten
 
   private val localDirectory: AbsolutePath =
     PathIO.workingDirectory.resolve(".metals/")

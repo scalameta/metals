@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.TimeFormatter
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
@@ -139,9 +140,7 @@ object MetalsLogger {
           logFilePath.toNIO
         ) > config.maxLogFileSize
       ) {
-        val backedUpLogFile = backupLogsDir(workspaceFolder).resolve(
-          s"log_${System.currentTimeMillis()}"
-        )
+        val backedUpLogFile = backupLogPath(workspaceFolder)
         backedUpLogFile.parent.createDirectories()
         Files.move(
           logFilePath.toNIO,
@@ -158,6 +157,13 @@ object MetalsLogger {
                         |""".stripMargin)
     }
     logFilePath
+  }
+
+  private def backupLogPath(wokspaceFolder: AbsolutePath): AbsolutePath = {
+    val date = TimeFormatter.getDate()
+    val time = TimeFormatter.getTime()
+    val filename = s"log_${time}"
+    backupLogsDir(wokspaceFolder).resolve(date).resolve(filename)
   }
 
   private def limitKeptBackupLogs(workspaceFolder: AbsolutePath, limit: Int) = {

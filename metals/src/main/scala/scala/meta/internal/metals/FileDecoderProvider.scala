@@ -509,7 +509,10 @@ final class FileDecoderProvider(
       sourceRoot <- buildTargets.inverseSourceItem(sourceFile)
       (classDir, targetroot) <-
         if (sourceFile.isJava)
-          findJavaBuildTargetMetadata(targetId)
+          // sbt doesn't provide separate javac info
+          findJavaBuildTargetMetadata(targetId).orElse(
+            findScalaBuildTargetMetadata(targetId)
+          )
         else
           findScalaBuildTargetMetadata(targetId)
     } yield BuildTargetMetadata(

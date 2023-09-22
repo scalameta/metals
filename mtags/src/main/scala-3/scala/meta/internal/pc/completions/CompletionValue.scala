@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 package completions
 
+import scala.meta.internal.mtags.MtagsEnrichments.decoded
 import scala.meta.internal.pc.printer.MetalsPrinter
 
 import dotty.tools.dotc.core.Contexts.Context
@@ -33,9 +34,7 @@ sealed trait CompletionValue:
    * Label with potentially attached description.
    */
   def labelWithDescription(printer: MetalsPrinter)(using Context): String =
-    labelWithSuffix
-  def labelWithSuffix: String =
-    s"$label${snippetSuffix.labelSnippet.getOrElse("")}"
+    label
   def lspTags(using Context): List[CompletionItemTag] = Nil
 end CompletionValue
 
@@ -75,14 +74,24 @@ object CompletionValue:
     override def labelWithDescription(
         printer: MetalsPrinter
     )(using Context): String =
-      if symbol.is(Method) then s"${labelWithSuffix}${description(printer)}"
-      else if symbol.isConstructor then labelWithSuffix
-      else if symbol.is(Mutable) then
-        s"${labelWithSuffix}: ${description(printer)}"
+      if symbol.is(Method) then s"${label}${description(printer)}"
+      else if symbol.isConstructor then label
+      else if symbol.is(Mutable) then s"$label: ${description(printer)}"
       else if symbol.is(Package) || symbol.is(Module) || symbol.isClass then
-        if isFromWorkspace then s"${labelWithSuffix} -${description(printer)}"
-        else s"${labelWithSuffix}${description(printer)}"
-      else s"${labelWithSuffix}: ${description(printer)}"
+        if isFromWorkspace then
+          s"${labelWithSuffix(printer)} -${description(printer)}"
+        else s"${labelWithSuffix(printer)}${description(printer)}"
+      else if symbol.isType then labelWithSuffix(printer)
+      else s"$label: ${description(printer)}"
+
+    private def labelWithSuffix(printer: MetalsPrinter)(using Context): String =
+      if snippetSuffix.addLabelSnippet
+      then
+        val printedParams = symbol.info.typeParams.map(p =>
+          p.paramName.decoded ++ printer.tpe(p.paramInfo)
+        )
+        s"${label}${printedParams.mkString("[", ",", "]")}"
+      else label
 
     override def description(printer: MetalsPrinter)(using Context): String =
       printer.completionSymbol(symbol)
@@ -93,7 +102,11 @@ object CompletionValue:
       symbol: Symbol,
       override val snippetSuffix: CompletionSuffix,
   ) extends Symbolic
-  case class Scope(label: String, symbol: Symbol) extends Symbolic
+  case class Scope(
+      label: String,
+      symbol: Symbol,
+      override val snippetSuffix: CompletionSuffix,
+  ) extends Symbolic
   case class Workspace(
       label: String,
       symbol: Symbol,
@@ -244,10 +257,10 @@ object CompletionValue:
       description
     override def insertMode: Option[InsertTextMode] = Some(InsertTextMode.AsIs)
 
-  def namedArg(label: String, sym: Symbol)(using
+  def namedArg(label: String, sym: ParamSymbol)(using
       Context
   ): CompletionValue =
-    NamedArg(label, sym.info.widenTermRefExpr, sym)
+    NamedArg(label, sym.info.widenTermRefExpr, sym.symbol)
 
   def keyword(label: String, insertText: String): CompletionValue =
     Keyword(label, Some(insertText))
@@ -259,6 +272,4 @@ object CompletionValue:
   ): CompletionValue =
     Document(label, insertText, description)
 
-  def scope(label: String, sym: Symbol): CompletionValue =
-    Scope(label, sym)
 end CompletionValue

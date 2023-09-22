@@ -30,11 +30,14 @@ class JavaEditDistanceSuite extends BaseSuite {
 
     val distance = TokenEditDistance(original, revised, trees = null)
 
-    if (isWindows)
-      assertNoDiff(distance.toString(), "Diff(22 tokens)")
-    else
-      assertNoDiff(distance.toString(), "Diff(19 tokens)")
+    val diffString =
+      if (isWindows) "Diff(22 tokens)"
+      else "Diff(19 tokens)"
 
+    assertNoDiff(
+      distance.map(_.toString()).getOrElse("TokenizationError"),
+      diffString,
+    )
   }
 
   test("no-change") {
@@ -59,7 +62,10 @@ class JavaEditDistanceSuite extends BaseSuite {
 
     val distance = TokenEditDistance(original, revised, trees = null)
 
-    assertNoDiff(distance.toString(), "unchanged")
+    assertNoDiff(
+      distance.map(_.toString()).getOrElse("TokenizationError"),
+      "unchanged",
+    )
 
   }
 }

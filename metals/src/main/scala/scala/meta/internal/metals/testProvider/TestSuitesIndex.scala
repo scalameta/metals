@@ -127,6 +127,9 @@ private[testProvider] final class TestSuitesIndex {
   ): Set[FullyQualifiedName] =
     cachedTestSuites.get(buildTarget).map(_.keySet.toSet).getOrElse(Set.empty)
 
+  def get(target: BuildTarget, name: FullyQualifiedName): Option[TestEntry] =
+    cachedTestSuites.get(target).flatMap(_.get(name))
+
   def remove(
       buildTarget: BuildTarget,
       suiteName: FullyQualifiedName,

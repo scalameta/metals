@@ -80,6 +80,7 @@ final class BloopServers(
   def newServer(
       workspace: AbsolutePath,
       userConfiguration: UserConfiguration,
+      addLivenessMonitor: Boolean,
   ): Future[BuildServerConnection] = {
     val bloopVersion = userConfiguration.currentBloopVersion
     BuildServerConnection
@@ -92,6 +93,7 @@ final class BloopServers(
         tables.dismissedNotifications.ReconnectBsp,
         config,
         name,
+        addLivenessMonitor,
       )
   }
 

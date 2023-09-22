@@ -93,6 +93,11 @@ class ShortenedNames(
   def shortType(longType: Type)(using ctx: Context): Type =
     val isVisited = collection.mutable.Set.empty[(Type, Option[ShortName])]
     val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
+    def loopForTypeBounds(tpe: TypeBounds): TypeBounds =
+      tpe match
+        case TypeAlias(a) => TypeAlias(loop(a, None))
+        case MatchAlias(a) => MatchAlias(loop(a, None))
+        case TypeBounds(lo, hi) => TypeBounds(loop(lo, None), loop(hi, None))
 
     def loop(tpe: Type, name: Option[ShortName]): Type =
       val key = tpe -> name
@@ -182,8 +187,7 @@ class ShortenedNames(
           SuperType(loop(thistpe, None), loop(supertpe, None))
         case AppliedType(tycon, args) =>
           AppliedType(loop(tycon, None), args.map(a => loop(a, None)))
-        case TypeBounds(lo, hi) =>
-          TypeBounds(loop(lo, None), loop(hi, None))
+        case t: TypeBounds => loopForTypeBounds(t)
         case RefinedType(parent, names, infos) =>
           RefinedType(loop(parent, None), names, loop(infos, None))
         case ExprType(res) =>
@@ -194,6 +198,12 @@ class ShortenedNames(
           AndType(loop(tp1, None), loop(tp2, None))
         case or @ OrType(tp1, tp2) =>
           OrType(loop(tp1, None), loop(tp2, None), or.isSoft)
+        case h @ HKTypeLambda(params, result) =>
+          h.newLikeThis(
+            params.map(_.paramName),
+            params.map(p => loopForTypeBounds(p.paramInfo)),
+            loop(result, None),
+          )
         // Replace error type into Any
         // Otherwise, DotcPrinter (more specifically, RefinedPrinter in Dotty) print the error type as
         // <error ....>, that is hard to read for users.

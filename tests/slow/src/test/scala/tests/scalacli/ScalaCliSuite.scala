@@ -2,9 +2,14 @@ package tests.scalacli
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.SlowTaskConfig
+import scala.meta.internal.metals.StatusBarConfig
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.{lsp4j => l}
@@ -12,6 +17,11 @@ import org.eclipse.{lsp4j => l}
 import tests.FileLayout
 
 class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
+  override def serverConfig: MetalsServerConfig =
+    MetalsServerConfig.default.copy(
+      slowTask = SlowTaskConfig.on,
+      statusBar = StatusBarConfig.showMessage,
+    )
 
   private def simpleFileTest(useBsp: Boolean): Future[Unit] =
     for {
@@ -373,6 +383,65 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         "test/MyTests.scala",
         "val tests = Test@@s",
         "utest/Tests.scala",
+      )
+    } yield ()
+  }
+
+  test("single-file-config") {
+    cleanWorkspace()
+    val msg = FileOutOfScalaCliBspScope.askToRegenerateConfigAndRestartBspMsg(
+      "File: SomeFile.scala"
+    )
+    def workspaceMsgs =
+      server.client.messageRequests.asScala
+        .filter(
+          _ != "scala-cli bspConfig"
+        ) // to achieve the same behavior no matter if scala-cli in installed or not
+        .mkString("\n")
+    def hasBuildTarget(fileName: String) = server.server.buildTargets
+      .inverseSources(workspace.resolve(fileName))
+      .isDefined
+    for {
+      _ <- scalaCliInitialize(useBsp = false)(
+        s"""/src/Main.scala
+           |object Main:
+           |  def foo = 3
+           |  val m = foo
+           |/SomeFile.scala
+           |object Other:
+           |  def foo = 3
+           |  val m = foo
+           |/.bsp/scala-cli.json
+           |${ScalaCli.scalaCliBspJsonContent(root = workspace.resolve("src/Main.scala").toString())}
+           |/.scala-build/ide-inputs.json
+           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("src/Main.scala")
+      _ = assertNoDiff(workspaceMsgs, "")
+      _ = assert(hasBuildTarget("src/Main.scala"))
+      _ = assert(!hasBuildTarget("SomeFile.scala"))
+
+      _ <- server.didOpen("SomeFile.scala")
+      _ <- server.server.buildServerPromise.future
+      _ = assertNoDiff(workspaceMsgs, msg)
+      _ = assert(!hasBuildTarget("SomeFile.scala"))
+
+      _ = server.client.regenerateAndRestartScalaCliBuildSever =
+        FileOutOfScalaCliBspScope.regenerateAndRestart
+      _ <- server.didOpen("SomeFile.scala")
+      _ <- server.server.buildServerPromise.future
+      _ = assertNoDiff(
+        workspaceMsgs,
+        List(msg, msg).mkString("\n"),
+      )
+      _ = assert(hasBuildTarget("src/Main.scala"))
+      _ = assert(hasBuildTarget("SomeFile.scala"))
+
+      _ <- server.didOpen("SomeFile.scala")
+      _ = assertNoDiff(
+        workspaceMsgs,
+        List(msg, msg).mkString("\n"),
       )
     } yield ()
   }

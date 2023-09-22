@@ -8,6 +8,7 @@ import scala.meta.internal.metals.FolderReportsZippper
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.StdReportContext
+import scala.meta.internal.metals.TimeFormatter
 import scala.meta.internal.metals.ZipReportsProvider
 import scala.meta.io.AbsolutePath
 
@@ -40,6 +41,14 @@ class ReportsSuite extends BaseSuite {
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(exampleText(StdReportContext.WORKSPACE_STR), obtained)
     assert(reportsProvider.incognito.getReports().length == 1)
+    val dirsWithDate =
+      reportsProvider.reportsDir.resolve("metals").toFile().listFiles()
+    assert(dirsWithDate.length == 1)
+    assert(
+      dirsWithDate.forall(d =>
+        d.isDirectory() && TimeFormatter.hasDateName(d.getName())
+      )
+    )
   }
 
   test("delete-old-reports") {

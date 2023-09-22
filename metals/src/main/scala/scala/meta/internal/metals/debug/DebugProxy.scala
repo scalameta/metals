@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilers
@@ -134,10 +135,15 @@ private[debug] final class DebugProxy(
           new Position(frame.getLine() - 1, 0),
           EmptyCancelToken,
           args,
+          isZeroBased = !clientAdapter.linesStartAt1,
         )
       }
       completions
         .getOrElse(Future.failed(new Exception("No source data available")))
+        .recover { case NonFatal(t) =>
+          scribe.error("Could not find any completions for the debugger", t)
+          Nil
+        }
         .map { items =>
           val responseArgs = new CompletionsResponse()
           responseArgs.setTargets(items.toArray)

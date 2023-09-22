@@ -9,12 +9,12 @@
   }
 
   <<val>>/*keyword*/ <<user>>/*variable,definition,readonly*/ = <<null>>/*keyword*/.<<asInstanceOf>>/*method*/[<<User>>/*type*/]
-  <<user>>/*variable,readonly*/.<<name>>/*variable,readonly*/
-  <<user>>/*variable,readonly*/.<<age>>/*variable,readonly*/
+  <<user>>/*variable,readonly*/.<<name>>/*method*/
+  <<user>>/*variable,readonly*/.<<age>>/*method*/
 
   <<val>>/*keyword*/ <<V>>/*variable,definition,readonly*/: <<Object>>/*class*/ {
     <<def>>/*keyword*/ <<scalameta>>/*method,declaration*/: <<String>>/*type*/
   } = <<new>>/*keyword*/:
     <<def>>/*keyword*/ <<scalameta>>/*method,definition*/ = <<"4.0">>/*string*/
-  <<V>>/*variable,readonly*/.<<scalameta>>/*variable,readonly*/
+  <<V>>/*variable,readonly*/.<<scalameta>>/*method*/
 <<end>>/*keyword*/ <<StructuralTypes>>/*class*/

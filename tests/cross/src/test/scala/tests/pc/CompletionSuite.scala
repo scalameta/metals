@@ -778,7 +778,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|incrementThisType(): A.this.type (with underlying type singleton.A)
        |""".stripMargin,
     compat = Map(
-      "3" -> "incrementThisType(): (A.this : singleton.A)"
+      scala3PresentationCompilerVersion -> "incrementThisType(): A.this.type",
+      "3" -> "incrementThisType(): (A.this : singleton.A)",
     ),
   )
 
@@ -907,7 +908,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|ListBuffer[T] - scala.collection.mutable
+        """|ListBuffer[A] - scala.collection.mutable
            |ListBuffer - scala.collection.mutable
            |""".stripMargin
     ),
@@ -923,7 +924,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|ListBuffer[T] - scala.collection.mutable
+        """|ListBuffer[A] - scala.collection.mutable
            |ListBuffer - scala.collection.mutable
            |""".stripMargin
     ),
@@ -1258,14 +1259,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
-  val pre331: String =
-    """|dynamics scala.languageFeature
-       |existentials scala.languageFeature
-       |experimental scala.languageFeature
-       |higherKinds scala.languageFeature
-       |implicitConversions scala.languageFeature
-       |""".stripMargin
-
   check(
     "ordering-1",
     s"""|object Main {
@@ -1280,24 +1273,20 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
-      // higherKinds was deprecated
-      "2.13.11" ->
+      // higherKinds was deprecated in 2.13.11 but current dotty still depends on 2.13.10
+      ">=2.13.11" ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
            |experimental scala.languageFeature
            |implicitConversions scala.languageFeature
            |postfixOps scala.languageFeature
            |""".stripMargin,
-      "3.2" -> pre331,
-      "3.1" -> pre331,
-      "3.3.0" -> pre331,
-      "3.3.1" -> pre331,
-      "3" ->
-        """|dynamics languageFeature
-           |existentials languageFeature
-           |experimental languageFeature
-           |higherKinds languageFeature
-           |implicitConversions languageFeature
+      ">=3.0.0" ->
+        """|dynamics scala.languageFeature
+           |existentials scala.languageFeature
+           |experimental scala.languageFeature
+           |higherKinds scala.languageFeature
+           |implicitConversions scala.languageFeature
            |""".stripMargin,
     ),
   )
@@ -1405,7 +1394,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |  def hello = {
        |    val name = Option("Bob")
        |    name.@@
-       |    println(msg) 
+       |    println(msg)
        |  }
        |}
        |""".stripMargin,
@@ -1621,6 +1610,122 @@ class CompletionSuite extends BaseCompletionSuite {
         |}""".stripMargin,
     "add(d: => `t-t`): `B-A`.Foo[`B-A`.`x-x`]",
     topLines = Some(1),
+  )
+
+  // In Scala 3 we get: (x$1 : (String, Unit)) @unchecked scala
+  // should be solved by https://github.com/scalameta/metals/pull/5292
+  check(
+    "for-comprehension".tag(IgnoreScala3),
+    """|object B {
+       |  val a = for {
+       |    foo <- List("a", "b", "c")
+       |    abc@@ = println("Print!")
+       |  } yield abc
+       |}
+       |""".stripMargin,
+    "",
+  )
+
+  check(
+    "for-comprehension2".tag(IgnoreScala3),
+    """|object B {
+       |  val a = for {
+       |    foo <- List("a", "b", "c")
+       |    abcCURSORde = println("Print!")
+       |  } yield abc@@
+       |}
+       |""".stripMargin,
+    "abcCURSORde: Unit",
+  )
+
+  check(
+    "type-with-params",
+    s"""|object O {
+        | type TTT[A <: Int] = List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT",
+    compat = Map(
+      "3" -> "TTT[A <: Int]"
+    ),
+    includeDetail = false,
+  )
+
+  check(
+    "type-with-params-with-detail",
+    s"""|object O {
+        | type TTT[A <: Int] = List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[A] = O.TTT",
+    compat = Map(
+      "3" -> "TTT[A <: Int] = List[A]"
+    ),
+  )
+
+  check(
+    "type-lambda".tag(IgnoreScala2),
+    s"""|object O {
+        | type TTT = [A <: Int] =>> List[A]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[A <: Int]",
+    includeDetail = false,
+  )
+
+  check(
+    "type-lambda2".tag(IgnoreScala2),
+    s"""|object O {
+        | type TTT[K <: Int] = [V] =>> Map[K, V]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[K <: Int]",
+    includeDetail = false,
+  )
+
+  check(
+    "type-lambda2-with-detail".tag(IgnoreScala2),
+    s"""|object O {
+        | type TTT[K <: Int] = [V] =>> Map[K, V]
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT[K <: Int] = [V] =>> Map[K, V]",
+  )
+
+  check(
+    "type-bound",
+    s"""|trait O {
+        | type TTT <: Int
+        | val t: TT@@
+        |}
+        |""".stripMargin,
+    "TTT<: O.TTT",
+    compat = Map(
+      "3" -> "TTT <: Int"
+    ),
+  )
+
+  check(
+    "class-with-params",
+    s"""|object O {
+        | class AClass[A <: Int]
+        | object AClass
+        | val v: ACla@@
+        |}
+        |""".stripMargin,
+    "AClass `class-with-params`.O",
+    compat = Map(
+      "3" ->
+        """|AClass[A <: Int] class-with-params.O
+           |AClass class-with-params.O
+           |AbstractTypeClassManifest - scala.reflect.ClassManifestFactory
+           |""".stripMargin
+    ),
   )
 
 }

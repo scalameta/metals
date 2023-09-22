@@ -247,4 +247,65 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |end extension""".stripMargin,
   )
 
+  check(
+    "enum-cases",
+    """|enum MyOption:
+       |  case <<My@@Some>>(value: Int)
+       |  case MyNone
+       |
+       |val alpha = MyOption.<<MySome>>(1)
+       |""".stripMargin,
+  )
+
+  check(
+    "enum-cases2",
+    """|enum MyOption:
+       |  case <<My@@Some>>[U](value: U)
+       |  case MyNone
+       |
+       |val alpha = MyOption.<<MySome>>(1)
+       |""".stripMargin,
+  )
+
+  check(
+    "type-params-in-enum".tag(IgnoreForScala3CompilerPC),
+    """|enum MyOption[+<<A@@A>>]:
+       |  case MySome(value: <<AA>>)
+       |  case MyNone
+       |""".stripMargin,
+  )
+
+  check(
+    "type-params-in-enum2".tag(IgnoreForScala3CompilerPC),
+    """|enum MyOption[+<<AA>>]:
+       |  case MySome(value: <<A@@A>>)
+       |  case MyNone
+       |""".stripMargin,
+  )
+
+  check(
+    "type-params-in-enum3".tag(IgnoreForScala3CompilerPC),
+    """|enum MyOption[<<AA>>](v: <<AA>>):
+       |  def get: <<A@@A>> = ???
+       |  case MySome[AA](value: AA) extends MyOption[Int](1)
+       |""".stripMargin,
+  )
+
+  check(
+    "type-params-in-enum4".tag(IgnoreForScala3CompilerPC),
+    """|enum MyOption[+<<AA>>]:
+       |  def get: <<A@@A>> = ???
+       |  case MySome(value: <<AA>>)
+       |  case MyNone
+       |""".stripMargin,
+  )
+
+  check(
+    "type-params-in-enum5",
+    """|enum MyOption[AA]:
+       |  def get: AA = ???
+       |  case MySome[<<AA>>](value: <<A@@A>>) extends MyOption[Int]
+       |""".stripMargin,
+  )
+
 }

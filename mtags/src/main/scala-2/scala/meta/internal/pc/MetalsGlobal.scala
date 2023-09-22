@@ -231,8 +231,17 @@ class MetalsGlobal(
     val documentation = search.documentation(
       sym,
       new ParentSymbols {
-        def parents(): util.List[String] =
-          symbol.overrides.map(toSemanticdbSymbol).asJava
+        def parents(): util.List[String] = {
+          val parentSymbols =
+            if (symbol.name == nme.apply && symbol.safeOwner.isModuleClass)
+              List(
+                symbol.safeOwner,
+                symbol.safeOwner.companion
+              ).filter(_ != NoSymbol) ++ symbol.overrides
+            else symbol.overrides
+
+          parentSymbols.map(toSemanticdbSymbol).asJava
+        }
       }
     )
 
@@ -498,7 +507,11 @@ class MetalsGlobal(
       else if (s.isEmptyPackage) rootMirror.EmptyPackage :: Nil
       else if (s.isPackage) {
         try {
-          rootMirror.staticPackage(s.stripSuffix("/").replace("/", ".")) :: Nil
+          val pkg = s
+            .split("/")
+            .map(n => TermName(n.stripBackticks).encoded)
+            .mkString(".")
+          rootMirror.staticPackage(pkg) :: Nil
         } catch {
           case NonFatal(_) =>
             Nil
@@ -516,20 +529,25 @@ class MetalsGlobal(
                 case Descriptor.None =>
                   Nil
                 case Descriptor.Type(value) =>
-                  val member = owner.info.decl(TypeName(value)) :: Nil
-                  if (sym.isJava) owner.info.decl(TermName(value)) :: member
+                  val member = owner.info.decl(TypeName(value).encode) :: Nil
+                  if (sym.isJava)
+                    owner.info.decl(TermName(value).encode) :: member
                   else member
                 case Descriptor.Term(value) =>
-                  owner.info.decl(TermName(value)) :: Nil
+                  owner.info.decl(TermName(value).encode) :: Nil
                 case Descriptor.Package(value) =>
-                  owner.info.decl(TermName(value)) :: Nil
+                  owner.info.decl(TermName(value).encode) :: Nil
                 case Descriptor.Parameter(value) =>
-                  owner.paramss.flatten.filter(_.name.containsName(value))
+                  owner.paramss.flatten.filter(
+                    _.name.decodedName.containsName(value)
+                  )
                 case Descriptor.TypeParameter(value) =>
-                  owner.typeParams.filter(_.name.containsName(value))
+                  owner.typeParams.filter(
+                    _.name.decodedName.containsName(value)
+                  )
                 case Descriptor.Method(value, _) =>
                   owner.info
-                    .decl(TermName(value))
+                    .decl(TermName(value).encode)
                     .alternatives
                     .iterator
                     .filter(sym => semanticdbSymbol(sym) == s)

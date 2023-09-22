@@ -144,7 +144,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |class C
        |object Foo:
        |    extension [T](using A)(s: T)(using B)
-       |        def double[G](using C)(times: G) = (s.toString + s.toString) * times
+       |        def double[G <: Int](using C)(times: G) = (s.toString + s.toString) * times
        |    end extension
        |    given A with {}
        |    given B with {}
@@ -152,7 +152,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |    "".<<doub@@le(1)>>
        |end Foo
        |""".stripMargin,
-    "extension [T](using A)(s: T) def double(using B)[G](using C)(times: G): String".hover,
+    "extension [T](using A)(s: T) def double(using B)[G <: Int](using C)(times: G): String".hover,
   )
 
   check(
@@ -323,6 +323,45 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|type Ident: Ident
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "nested-selectable",
+    """|trait Sel extends Selectable:
+       |  def selectDynamic(name: String): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { val foo: Sel { def bar: Int } }]
+       |val bar = sel.foo.ba@@r
+       |""".stripMargin,
+    """|def bar: Int
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "nested-selectable2",
+    """|class SimpleSelectable(key : String, value: Any) extends Selectable:
+       |  def selectDynamic(name: String): Any =
+       |    if(name == key) value else ???
+       |
+       |type Node[T] = SimpleSelectable { val child: T }
+       |
+       |val leaf = SimpleSelectable("child", ()).asInstanceOf[Node[Unit]]
+       |val node = SimpleSelectable("child", leaf).asInstanceOf[Node[Node[Unit]]]
+       |
+       |val k = node.child.ch@@ild
+       |""".stripMargin,
+    """|val child: Unit
+       |""".stripMargin.hover,
+  )
+
+  check(
+    "very-nested-selectable",
+    """|trait Sel extends Selectable:
+       |  def selectDynamic(name: String): Any = ???
+       |val sel = (new Sel {}).asInstanceOf[Sel { val foo: Sel { val bar: Sel { val ddd: Int } } }]
+       |val bar = sel.foo.bar.dd@@d
+       |""".stripMargin,
+    """|val ddd: Int
        |""".stripMargin.hover,
   )
 }

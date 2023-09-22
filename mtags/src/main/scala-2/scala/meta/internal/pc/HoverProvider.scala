@@ -167,6 +167,23 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
           range = pos,
           Some(report)
         )
+      // Class, object, type definitions, matches only if the cursor is over the definition name.
+      case t: MemberDef
+          if (t.namePosition
+            .includes(pos) || pos.includes(
+            t.namePosition
+          )) && t.symbol != null =>
+        val symbol = tree.symbol
+        val tpe = seenFromType(tree, symbol)
+        toHover(
+          symbol = symbol,
+          keyword = symbol.keyString,
+          seenFrom = tpe,
+          tpe = tpe,
+          pos = pos,
+          range = t.namePosition,
+          Some(report)
+        )
       case _ =>
         // Don't show hover for non-identifiers.
         None

@@ -114,4 +114,204 @@ class HoverDocSuite extends BaseHoverSuite {
        |a path string, to a `Path`.
        |""".stripMargin,
   )
+
+  check(
+    "object",
+    """|
+       |/** 
+       |  * Doc about object
+       |  */
+       |object Alpha {
+       |  def apply(x: Int) = x + 1
+       |}
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def apply(x: Int): Int
+       |```
+       |Doc about object
+       |
+       |""".stripMargin,
+  )
+
+  check(
+    "object1",
+    """|
+       |/** 
+       |  * Doc about object
+       |  */
+       |object Alpha {
+       |  /**
+       |    * Doc about method
+       |    */
+       |  def apply(x: Int) = x + 1
+       |}
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def apply(x: Int): Int
+       |```
+       |Doc about method
+       |
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class",
+    """|
+       |/**
+       |  * Doc about case class
+       |  *
+       |  */
+       |case class Alpha(x: Int)
+       |
+       |/** 
+       |  * Doc about object
+       |  */
+       |object Alpha {
+       |  /**
+       |    * Doc about method
+       |    */
+       |  def apply(x: Int) = x + 1
+       |}
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def apply(x: Int): Int
+       |```
+       |Doc about method
+       |
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class1",
+    """|
+       |/**
+       |  * Doc about case class
+       |  *
+       |  */
+       |case class Alpha(x: Int)
+       |
+       |/** 
+       |  * Doc about object
+       |  */
+       |object Alpha {
+       |  def apply(x: Int) = x + 1
+       |}
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def apply(x: Int): Int
+       |```
+       |Doc about object
+       |
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class2",
+    """|
+       |/**
+       |  * Doc about case class
+       |  *
+       |  */
+       |case class Alpha(x: Int)
+       |
+       |object Alpha {
+       |  def apply(x: Int) = x + 1
+       |}
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def apply(x: Int): Int
+       |```
+       |Doc about case class
+       |
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class3",
+    """|
+       |/**
+       |  * Doc about case class
+       |  *
+       |  */
+       |case class Alpha(x: Int)
+       |
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def apply(x: Int): Alpha
+       |```
+       |Doc about case class
+       |
+       |""".stripMargin,
+  )
+
+  check(
+    "class",
+    """|
+       |/**
+       |  * Doc about class
+       |  *
+       |  */
+       |class Alpha(x: Int)
+       |
+       |object Alpha {
+       |  def apply(x: Int) = x + 1
+       |}
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def apply(x: Int): Int
+       |```
+       |Doc about class
+       |
+       |""".stripMargin,
+  )
+
+  check(
+    "universal-apply".tag(IgnoreScala2),
+    """|
+       |/**
+       |  * Doc about class
+       |  *
+       |  */
+       |class Alpha(x: Int)
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|```scala
+       |def this(x: Int): Alpha
+       |```
+       |Doc about class
+       |
+       |""".stripMargin,
+  )
+
 }

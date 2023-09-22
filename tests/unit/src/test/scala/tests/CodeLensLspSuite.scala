@@ -1,12 +1,6 @@
 package tests
 
-import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
-
-import ch.epfl.scala.bsp4j.DebugSessionParams
-import com.google.gson.JsonObject
-import org.eclipse.lsp4j.Command
 
 class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
   override protected val changeSpacesToDash = false
@@ -46,7 +40,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  check("test-suite-class", library = Some("org.scalatest::scalatest:3.2.4"))(
+  check("test-suite-class", library = Some("org.scalatest::scalatest:3.2.16"))(
     """|package foo.bar
        |<<test>><<debug test>>
        |class Foo extends org.scalatest.funsuite.AnyFunSuite {
@@ -56,7 +50,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
 
   checkTestCases(
     "test-suite-with-tests",
-    library = Some("org.scalatest::scalatest:3.2.4"),
+    library = Some("org.scalatest::scalatest:3.2.16"),
   )(
     """|package foo.bar
        |<<test>><<debug test>>
@@ -310,77 +304,6 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         |}
         |""".stripMargin
   )
-
-  private def runFromCommand(cmd: Command) = {
-    cmd.getArguments().asScala.toList match {
-      case (params: DebugSessionParams) :: _ =>
-        params.getData() match {
-          case obj: JsonObject =>
-            val cmd = obj
-              .get("shellCommand")
-              .getAsString()
-              // need to remove all escapes since ShellRunner does escaping itself
-              // for windows
-              .replace("\\\"", "")
-              .replace("\"\\", "\\")
-              // for linux
-              .replace("/\"", "/")
-              .replace("\"/", "/")
-              // when testing on Windows Program Files is problematic when splitting into list
-              .replace("Program Files", "ProgramFiles")
-              .replace("run shell command", "runshellcommand")
-              .split("\\s+")
-              .map(
-                // remove from escaped classpath
-                _.stripPrefix("\"")
-                  .stripSuffix("\"")
-                  // Add back spaces
-                  .replace("ProgramFiles", "Program Files")
-                  .replace("runshellcommand", "run shell command")
-              )
-            ShellRunner
-              .runSync(cmd.toList, workspace, redirectErrorOutput = false)
-              .map(_.trim())
-              .orElse {
-                scribe.error(
-                  "Couldn't run command specified in shellCommand."
-                )
-                scribe.error("The command run was:\n" + cmd.mkString(" "))
-                None
-              }
-          case _ => None
-        }
-
-      case _ => None
-    }
-  }
-
-  def testRunShellCommand(name: String): Unit =
-    test(name) {
-      cleanWorkspace()
-      for {
-        _ <- initialize(
-          s"""|/metals.json
-              |{
-              |  "a": {}
-              |}
-              |/a/src/main/scala/a/Main.scala
-              |package foo
-              |
-              |object Main {
-              |  def main(args: Array[String]): Unit = {
-              |     println("Hello java!")
-              |  }
-              |}
-              |""".stripMargin
-        )
-        _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-        lenses <- server.codeLenses("a/src/main/scala/a/Main.scala")
-        _ = assert(lenses.size > 0, "No lenses were generated!")
-        command = lenses.head.getCommand()
-        _ = assertEquals(runFromCommand(command), Some("Hello java!"))
-      } yield ()
-    }
 
   testRunShellCommand("run-shell-command")
   testRunShellCommand("run shell command")

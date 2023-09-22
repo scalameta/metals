@@ -27,6 +27,9 @@ case class Buffers(
   ): TokenEditDistance = {
     val bufferInput = source.toInputFromBuffers(this)
     val snapshotInput = Input.VirtualFile(bufferInput.path, snapshot)
-    TokenEditDistance(snapshotInput, bufferInput, trees)
+    TokenEditDistance(snapshotInput, bufferInput, trees).getOrElse(
+      TokenEditDistance.NoMatch
+    )
   }
+
 }

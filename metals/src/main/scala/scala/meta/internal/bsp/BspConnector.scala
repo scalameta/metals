@@ -81,7 +81,8 @@ class BspConnector(
       shellRunner: ShellRunner,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     def connect(
-        workspace: AbsolutePath
+        workspace: AbsolutePath,
+        addLivenessMonitor: Boolean,
     ): Future[Option[BuildServerConnection]] = {
       scribe.info("Attempting to connect to the build server...")
       resolve() match {
@@ -89,7 +90,9 @@ class BspConnector(
           scribe.info("No build server found")
           Future.successful(None)
         case ResolvedBloop =>
-          bloopServers.newServer(workspace, userConfiguration).map(Some(_))
+          bloopServers
+            .newServer(workspace, userConfiguration, addLivenessMonitor)
+            .map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
           tables.buildServers.chooseServer(SbtBuildTool.name)
@@ -98,7 +101,11 @@ class BspConnector(
             for {
               _ <- SbtBuildTool(workspace, () => userConfiguration)
                 .ensureCorrectJavaVersion(shellRunner, workspace, client)
-              connection <- bspServers.newServer(workspace, details)
+              connection <- bspServers.newServer(
+                workspace,
+                details,
+                addLivenessMonitor,
+              )
               _ <-
                 if (shouldReload) connection.workspaceReload()
                 else Future.successful(())
@@ -132,7 +139,9 @@ class BspConnector(
             }
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
-          bspServers.newServer(workspace, details).map(Some(_))
+          bspServers
+            .newServer(workspace, details, addLivenessMonitor)
+            .map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
             .groupBy(_.getName())
@@ -164,26 +173,33 @@ class BspConnector(
                 )
               )
             _ = tables.buildServers.chooseServer(item.getName())
-            conn <- bspServers.newServer(workspace, item)
+            conn <- bspServers.newServer(
+              workspace,
+              item,
+              addLivenessMonitor,
+            )
           } yield Some(conn)
       }
     }
 
-    connect(workspace).flatMap { possibleBuildServerConn =>
-      possibleBuildServerConn match {
-        case None => Future.successful(None)
-        case Some(buildServerConn)
-            if buildServerConn.isBloop && buildTools.isSbt =>
-          // NOTE: (ckipp01) we special case this here since sbt bsp server
-          // doesn't yet support metabuilds. So in the future when that
-          // changes, re-work this and move the creation of this out above
-          val metaConns = sbtMetaWorkspaces(workspace).map(connect(_))
-          Future
-            .sequence(metaConns)
-            .map(meta => Some(BspSession(buildServerConn, meta.flatten)))
-        case Some(buildServerConn) =>
-          Future(Some(BspSession(buildServerConn, List.empty)))
-      }
+    connect(workspace, addLivenessMonitor = true).flatMap {
+      possibleBuildServerConn =>
+        possibleBuildServerConn match {
+          case None => Future.successful(None)
+          case Some(buildServerConn)
+              if buildServerConn.isBloop && buildTools.isSbt =>
+            // NOTE: (ckipp01) we special case this here since sbt bsp server
+            // doesn't yet support metabuilds. So in the future when that
+            // changes, re-work this and move the creation of this out above
+            val metaConns = sbtMetaWorkspaces(workspace).map(
+              connect(_, addLivenessMonitor = false)
+            )
+            Future
+              .sequence(metaConns)
+              .map(meta => Some(BspSession(buildServerConn, meta.flatten)))
+          case Some(buildServerConn) =>
+            Future(Some(BspSession(buildServerConn, List.empty)))
+        }
     }
   }
 
@@ -329,7 +345,9 @@ class BspConnector(
               buildTool
                 .generateBspConfig(
                   workspace,
-                  args => bspConfigGenerator.runUnconditionally(buildTool, args),
+                  args =>
+                    bspConfigGenerator.runUnconditionally(buildTool, args),
+                  statusBar,
                 )
                 .map(status => handleGenerationStatus(buildTool, status))
             case Right(details) if details.getName == BloopServers.name =>
@@ -362,6 +380,7 @@ class BspConnector(
               .generateBspConfig(
                 workspace,
                 args => bspConfigGenerator.runUnconditionally(buildTool, args),
+                statusBar,
               )
               .map(status => handleGenerationStatus(buildTool, status))
           case Right(connectionDetails) =>

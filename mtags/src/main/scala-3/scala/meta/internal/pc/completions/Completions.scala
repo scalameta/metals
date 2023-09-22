@@ -71,17 +71,24 @@ class Completions(
       case _ :: (_: Import) :: _ => false
       case (_: Ident) :: (_: SeqLiteral) :: _ => false
       case _ => true
-
   enum CursorPos:
     case Type(hasTypeParams: Boolean, hasNewKw: Boolean)
     case Term
     case Import
 
     def include(sym: Symbol)(using Context): Boolean =
+      def hasSyntheticCursorSuffix: Boolean =
+        if !sym.name.endsWith(Cursor.value) then false
+        else
+          val realNameLength = sym.decodedName.length - Cursor.value.length
+          sym.source == pos.source &&
+          sym.span.start + realNameLength == pos.span.end
+
       val generalExclude =
         isUninterestingSymbol(sym) ||
           !isNotLocalForwardReference(sym) ||
-          sym.isPackageObject
+          sym.isPackageObject ||
+          hasSyntheticCursorSuffix
 
       def isWildcardParam(sym: Symbol) =
         if sym.isTerm && sym.owner.isAnonymousFunction then
@@ -198,7 +205,6 @@ class Completions(
               .filterInteresting()
             (allAdvanced ++ compiler, result)
         end match
-
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application, cursorPos)
     val values = application.postProcess(all.sorted(ordering))
@@ -252,9 +258,7 @@ class Completions(
       .chain { suffix => // for [] suffix
         if shouldAddSnippet &&
           cursorPos.allowBracketSuffix && symbol.info.typeParams.nonEmpty
-        then
-          val typeParamsCount = symbol.info.typeParams.length
-          suffix.withNewSuffixSnippet(SuffixKind.Bracket(typeParamsCount))
+        then suffix.withNewSuffixSnippet(SuffixKind.Bracket)
         else suffix
       }
       .chain { suffix => // for () suffix
@@ -562,14 +566,16 @@ class Completions(
           )
 
         filtered.map { sym =>
-          visit(CompletionValue.scope(sym.decodedName, sym))
+          visit(CompletionValue.Scope(sym.decodedName, sym, findSuffix(sym)))
         }
         Some(SymbolSearch.Result.INCOMPLETE)
       case CompletionKind.Scope =>
         val visitor = new CompilerSearchVisitor(sym =>
           indexedContext.lookupSym(sym) match
             case IndexedContext.Result.InScope =>
-              visit(CompletionValue.scope(sym.decodedName, sym))
+              visit(
+                CompletionValue.Scope(sym.decodedName, sym, findSuffix(sym))
+              )
             case _ =>
               completionsWithSuffix(
                 sym,
@@ -633,7 +639,9 @@ class Completions(
                   // drop #|. at the end to avoid duplication
                   name.substring(0, name.length - 1)
                 else name
-              val id = nameId + symOnly.snippetSuffix.labelSnippet.getOrElse("")
+              val suffix =
+                if symOnly.snippetSuffix.addLabelSnippet then "[]" else ""
+              val id = nameId + suffix
               val include = cursorPos.include(sym)
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)

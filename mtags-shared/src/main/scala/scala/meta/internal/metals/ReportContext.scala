@@ -107,8 +107,8 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       val sanitizedId = report.id.map(sanitize)
       if (sanitizedId.isDefined && reported.contains(sanitizedId.get)) None
       else {
-        val path =
-          reportsDir.resolve(s"r_${report.name}_${System.currentTimeMillis()}")
+        val path = reportPath(report.name)
+        path.getParent.createDirectories()
         sanitizedId.foreach(reported += _)
         val idString = sanitizedId.map(id => s"$idPrefix$id\n").getOrElse("")
         path.writeText(s"$idString${sanitize(report.fullText)}")
@@ -124,6 +124,13 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       .getOrElse(textAfterWokspaceReplace)
   }
 
+  private def reportPath(name: String): Path = {
+    val date = TimeFormatter.getDate()
+    val time = TimeFormatter.getTime()
+    val filename = s"r_${name}_${time}"
+    reportsDir.resolve(date).resolve(filename)
+  }
+
   override def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
   ): List[TimestampedFile] = limitedFilesManager.deleteOld(maxReportsNumber)
@@ -131,8 +138,12 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
   override def getReports(): List[TimestampedFile] =
     limitedFilesManager.getAllFiles()
 
-  override def deleteAll(): Unit =
+  override def deleteAll(): Unit = {
     getReports().foreach(r => Files.delete(r.toPath))
+    limitedFilesManager.directoriesWithDate.foreach { d =>
+      Files.delete(d.toPath)
+    }
+  }
 
 }
 

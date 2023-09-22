@@ -12,14 +12,19 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
+import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.ServerLivenessMonitor
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.WorkspaceChoicePopup
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
@@ -82,6 +87,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
   var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
+  var buildServerNotResponding =
+    ServerLivenessMonitor.ServerNotResponding.dismiss
+  var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
+  var bspError = BspErrorHandler.dismiss
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -317,6 +326,13 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       )
     }
 
+    def choicesMessage = WorkspaceChoicePopup
+      .choicesParams(
+        ServerCommands.ConnectBuildServer.title.toLowerCase(),
+        Nil,
+      )
+      .getMessage()
+
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
       showMessageRequestHandler(params).getOrElse {
@@ -342,6 +358,25 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           importScalaCliScript
         } else if (ResetWorkspace.params() == params) {
           resetWorkspace
+        } else if (
+          params.getMessage == ServerLivenessTestData.serverNotRespondingMessage
+        ) {
+          buildServerNotResponding
+        } else if (
+          params
+            .getMessage()
+            .endsWith(
+              FileOutOfScalaCliBspScope
+                .askToRegenerateConfigAndRestartBspMsg("")
+            )
+        ) {
+          regenerateAndRestartScalaCliBuildSever
+        } else if (params.getMessage() == choicesMessage) {
+          params.getActions().asScala.head
+        } else if (
+          params.getMessage().startsWith(BspErrorHandler.errorHeader)
+        ) {
+          bspError
         } else {
           throw new IllegalArgumentException(params.toString)
         }

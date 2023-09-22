@@ -9,9 +9,11 @@ title: Making a release
 
 - Choose the right version number:
 
-  - `x.0.0` is reserved for incompatible changes and require a milestone cycle.
-  - `x.y.0` is reserved for compatible changes.
-  - `x.y.z` is reserved for bugfixes that don't change the public API,
+  - `x.0.0` should not be used unless Metals is totally reworked.
+  - `x.y.0` is reserved for changes that require adjustments in the plugins for
+    different editors.
+  - `x.y.z` is reserved in remaining cases, where the changes do not require any
+    adjustments in the plugins.
 
   For most releases bumping `z` is enough especially that Metals not being used
   as a library anywhere and do not have a public API.
@@ -27,13 +29,22 @@ title: Making a release
 
 ### Draft the release notes
 
-You might use the `./bin/merged_prs.sc` script to generate merged PRs list
-between two last release tags. It can be run using scala-cli:
+First of all, if you are bumping the minor part of the version choose a new
+metal or an alloy as a new for the release! Use that in the release notes and in
+the release title on GitHub. Otherwise, use the metal from the previous release.
+
+You might use the `./bin/merged_prs.sc` script to generate a draft of release
+notes with merged PRs list between two last release tags. It can be run using
+scala-cli:
 
 ```
 cs install scala-cli
 scala-cli ./bin/merged_prs.scala -- <tag1> <tag2> "<github_api_token>"
 ```
+
+Make sure that required tags, the previous one and the new one, are available.
+You might need to do `git fetch <main_fork> --tags` to fetch the older tag. You
+need to create the new one.
 
 It will need a [basic github API token](https://github.com/settings/tokens)
 (don't need any additional scopes) to run, which may be specified via the last
@@ -43,7 +54,15 @@ The script will generate a new markdown file in `website/blog` filled with a
 basic release template.
 
 You can fill in the number of closed issues from the last milestone, though you
-will need to make sure everything is included there.
+will need to make sure everything is included there. In most cases you can just
+add all the closed issues since the last milestone.
+
+Please also fill in any missing details like the author or author image.
+
+To write the actual release notes you can look through the list of closed PR,
+put any smaller changes that you think are worth mentioning to the users in the
+`Miscellaneous` section and any large ones as their own section with more
+explanation and examples.
 
 ### Update Metals version
 
@@ -56,11 +75,23 @@ will need to make sure everything is included there.
 
 ### Open a PR with release notes
 
-Open the PR to the repo https://github.com/scalameta/metals/releases/new.
+Open the PR to the repo and wait until they are approved to merge them. This
+might take some time if the release is large enough.
 
 ### Start the release process:
 
-- `git push upstream --tags` will trigger release workflow
+- `git push <main_fork> <tag_name>` will trigger release workflow on the main
+  fork of the metals repository. This for example can be
+  `git push git@github.com:scalameta/metals.git v1.0.0` or if you have the
+  remote set up:
+
+```bash
+> git remote -v
+primary	git@github.com:scalameta/metals.git (fetch)
+primary	git@github.com:scalameta/metals.git (push)
+> git push primary v1.0.0
+```
+
 - Do not create a release on GitHub just yet. Creating a release on GitHub sends
   out a notification to repository watchers, and the release isn't ready for
   that yet.
@@ -93,8 +124,9 @@ Open the PR to the repo https://github.com/scalameta/metals/releases/new.
     yet available on Maven Central run:
     `./bin/test-release.sh $VERSION -r sonatype:public`
 
-- Make sure all docs are up to date.
-
+- Double check if the release starts up and some basic features work.
+- Merge the release notes PR
+- Wait until it's available on https://scalameta.org/metals/blog/
 - Upgrade downstream projects:
 
   - https://github.com/scalameta/metals-vscode:
@@ -108,8 +140,11 @@ Open the PR to the repo https://github.com/scalameta/metals/releases/new.
       `build.sbt`
     - open a PR, feel free to merge after CI is green
     - open the last generated release draft, tag with a new version and publish
-      the release. This will start github actions job and publish the extension
-      to both the Visual Studio Code Code Marketplace and openvsx.
+      the release. The new version should always be the next minor since patches
+      are used for prerelease versions, so if the last full release was `1.24.0`
+      then the next should be `1.25.0`. This will start github actions job and
+      publish the extension to both the Visual Studio Code Marketplace and
+      openvsx.
 
 ### Official release
 
@@ -124,6 +159,12 @@ Open the PR to the repo https://github.com/scalameta/metals/releases/new.
 
 - Announce the new release with the link to the release notes:
   - on [Discord](https://discord.com/invite/RFpSVth)
+
+### Post release
+
+See if any docs need to be updated due to the changes in the last PR. This could
+potentially be done also before the release, but might be easier as a follow up
+afterwards without the release pressure.
 
 ## Sanity check
 
