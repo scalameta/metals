@@ -16,8 +16,6 @@ import org.eclipse.{lsp4j => l}
 
 class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
 
-  private val LineSeparator: String = System.lineSeparator()
-
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
@@ -33,7 +31,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         path,
         tokens,
         range,
-        isSingleLineComment(content.split(LineSeparator).toVector),
+        isSingleLineComment(content.split("\\r?\\n").toVector),
       )
     } yield codeAction).toList
   }
@@ -104,7 +102,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     )
     val commentStart = commentBeforeCursor.headOption
       .map(_.pos.toLsp.getStart)
-      .getOrElse(range.getStart)
+      .getOrElse(tokensAfterCursor.head.pos.toLsp.getStart)
     val commentEnd = commentAfterCursor.lastOption
       .map(_.pos.toLsp.getEnd())
       .getOrElse(range.getEnd())
@@ -112,12 +110,8 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     val commentTokens = commentBeforeCursor ++ commentAfterCursor
     val replaceText =
       commentTokens
-        .map(_.value.strip())
-        .mkString("/* ", s"${LineSeparator} * ", " */")
-    if (commentBeforeCursor.isEmpty) {
-      // this is safe as there have to be some tokens after cursor if commentBeforeCursor is empty
-      commentStart.setCharacter(tokensAfterCursor.head.pos.startColumn)
-    }
+        .map(_.value.trim()) // TODO replace with strip once we drop jdk 8
+        .mkString("/* ", "\n * ", " */")
     val pos = new l.Range(commentStart, commentEnd)
     new l.TextEdit(pos, replaceText)
   }
@@ -125,45 +119,12 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   private def collectContinuousComments(
       tokens: Seq[Token]
   ) = {
-    sealed trait State {
-      def fold[T](isEmpty: => T)(nonEmpty: Seq[Token.Comment] => T): T = {
-        this match {
-          case State.Empty => isEmpty
-          case State.Continue(acc, _) => nonEmpty(acc)
-          case State.Stop(acc) => nonEmpty(acc)
-        }
-      }
-    }
-    object State {
-      case object Empty extends State
-      case class Continue(acc: Seq[Token.Comment], last: Token) extends State
-      case class Stop(acc: Seq[Token.Comment]) extends State
-    }
     tokens
-      .foldLeft(State.Empty: State) {
-        case (s: State.Stop, _) => s
-        case (State.Empty, item) =>
-          item match {
-            case newComment: Token.Comment =>
-              State.Continue(Seq(newComment), newComment)
-            case _: Token.Whitespace => State.Empty
-            case _: Token.BOF => State.Empty
-            case _ => State.Stop(Seq.empty)
-          }
-        case (State.Continue(acc, last), item) =>
-          // comments can be separated by EOL tokens and other whitespace characters
-          (last, item) match {
-            case (_: Token.EOL, newComment: Token.Comment) =>
-              State.Continue(acc :+ newComment, newComment)
-            case (_: Token.Comment, eol: Token.EOL) =>
-              State.Continue(acc, eol)
-            // if the new item is whitespace but not EOL then continue but keep the last token as it was
-            case (_, _: Token.Whitespace) =>
-              State.Continue(acc, last)
-            case _ => State.Stop(acc)
-          }
+      .takeWhile {
+        case _: Token.Trivia => true
+        case _ => false
       }
-      .fold(Seq.empty[Token.Comment])(identity)
+      .collect { case t: Token.Comment => t }
       .toVector
   }
 }
