@@ -11,9 +11,10 @@ class MultipleBuildFilesLspSuite
 
   // SBT will be the main tool for this test, which is what will be
   // chosen when the user is prompted in the test
-  val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
+  def buildTool: SbtBuildTool = SbtBuildTool(None, workspace, () => userConfig)
 
-  val alternativeBuildTool: MillBuildTool = MillBuildTool(() => userConfig)
+  def alternativeBuildTool: MillBuildTool =
+    MillBuildTool(() => userConfig, workspace)
 
   def chooseBuildToolMessage: String =
     ChooseBuildTool.params(List(buildTool, alternativeBuildTool)).getMessage

@@ -67,6 +67,7 @@ final class BspServers(
 
   def newServer(
       projectDirectory: AbsolutePath,
+      bspTraceRoot: AbsolutePath,
       details: BspConnectionDetails,
       addLivenessMonitor: Boolean,
   ): Future[BuildServerConnection] = {
@@ -135,6 +136,7 @@ final class BspServers(
 
     BuildServerConnection.fromSockets(
       projectDirectory,
+      bspTraceRoot,
       buildClient,
       client,
       newConnection,
