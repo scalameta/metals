@@ -8,6 +8,7 @@ import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.ContextOps.*
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.CyclicReference
+import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
@@ -265,6 +266,17 @@ object MetalsInteractive:
             List((tpeSym, tpeSym.info))
           case _ =>
             Nil
+
+      /* Workaround for missing span in:
+       * class MyIntOut(val value: Int)
+       * object MyIntOut:
+       *   extension (i: MyIntOut) def <<uneven>> = i.value % 2 == 1
+       *
+       * val a = MyIntOut(1).un@@even
+       */
+      case (a @ Apply(sel: Select, _)) :: _
+          if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
+        List((sel.symbol, a.typeOpt))
 
       case path @ head :: tail =>
         if head.symbol.is(Synthetic) then

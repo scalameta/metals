@@ -35,7 +35,7 @@ class SbtServerSuite
   val supportedMetaBuildVersion = "1.6.0-M1"
   val supportedBspVersion = V.sbtVersion
   val scalaVersion = V.scala213
-  val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
+  val buildTool: SbtBuildTool = SbtBuildTool(None, workspace, () => userConfig)
   var compilationCount = 0
 
   override def beforeEach(context: BeforeEach): Unit = {
@@ -105,6 +105,39 @@ class SbtServerSuite
     }
   }
 
+  test("inner-project") {
+    cleanWorkspace()
+    client.importBuildChanges = ImportBuildChanges.yes
+    for {
+      _ <- initialize(
+        SbtBuildLayout(
+          """|/inner/a/src/main/scala/A.scala
+             |
+             |object A {
+             |  val foo: Int = "aaa"
+             |}
+             |""".stripMargin,
+          V.scala213,
+          "/inner",
+        )
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(workspace.resolve(".bsp/sbt.json").exists)
+      _ = assert(server.server.bspSession.get.main.isSbt)
+      _ <- server.didOpen("inner/a/src/main/scala/A.scala")
+      _ <- server.didSave("inner/a/src/main/scala/A.scala")(identity)
+      _ = assertNoDiff(
+        client.pathDiagnostics("inner/a/src/main/scala/A.scala"),
+        """|inner/a/src/main/scala/A.scala:3:18: error: type mismatch;
+           | found   : String("aaa")
+           | required: Int
+           |  val foo: Int = "aaa"
+           |                 ^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("reload plugins") {
     // should reload existing server after writing the metals.sbt plugin file
     cleanWorkspace
@@ -168,7 +201,7 @@ class SbtServerSuite
         )
         client.showMessages.clear()
       }
-      // This is a little hacky but up above this promise is suceeded already, so down
+      // This is a little hacky but up above this promise is succeeded already, so down
       // below it won't wait until it reconnects to Sbt and indexed like we want
       _ = server.server.indexingPromise = Promise()
       _ <- server.didSave("build.sbt") { text =>

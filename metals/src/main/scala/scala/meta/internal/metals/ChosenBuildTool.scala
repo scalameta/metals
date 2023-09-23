@@ -12,7 +12,8 @@ class ChosenBuildTool(conn: () => Connection) {
       )(_ => ()) { _.getString("build_tool") }
       .headOption
   }
-  def chooseBuildTool(buildTool: String): Int = {
+  def chooseBuildTool(buildTool: String): Int = synchronized {
+    reset()
     conn().update {
       "insert into chosen_build_tool values (?);"
     } { stmt => stmt.setString(1, buildTool) }

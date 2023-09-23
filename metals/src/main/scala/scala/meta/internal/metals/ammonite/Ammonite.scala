@@ -244,6 +244,7 @@ final class Ammonite(
           command.addJvmArgs(jvmOpts: _*)
         val futureConn = BuildServerConnection.fromSockets(
           workspace(),
+          workspace(),
           buildClient,
           languageClient,
           () =>

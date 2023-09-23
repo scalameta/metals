@@ -28,7 +28,7 @@ class SbtBloopLspSuite
 
   val sbtVersion = V.sbtVersion
   val scalaVersion = V.scala213
-  val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
+  val buildTool: SbtBuildTool = SbtBuildTool(None, workspace, () => userConfig)
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -75,6 +75,40 @@ class SbtBloopLspSuite
         ).mkString("\n"),
       )
     }
+  }
+
+  test("inner") {
+    cleanWorkspace()
+    client.importBuild = ImportBuild.yes
+    for {
+      _ <- initialize(
+        s"""|/inner/project/build.properties
+            |sbt.version=$sbtVersion
+            |/inner/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |/inner/src/main/scala/A.scala
+            |
+            |object A {
+            |  val i: Int = "aaa"
+            |}
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(workspace.resolve("inner/.bloop").exists)
+      _ = assert(server.server.bspSession.get.main.isBloop)
+      _ <- server.didOpen("inner/src/main/scala/A.scala")
+      _ <- server.didSave("inner/src/main/scala/A.scala")(identity)
+      _ = assertNoDiff(
+        client.pathDiagnostics("inner/src/main/scala/A.scala"),
+        """|inner/src/main/scala/A.scala:3:16: error: type mismatch;
+           | found   : String("aaa")
+           | required: Int
+           |  val i: Int = "aaa"
+           |               ^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+
   }
 
   test("no-sbt-version") {
@@ -501,7 +535,7 @@ class SbtBloopLspSuite
       _ = assertNoDiff(
         client.workspaceShowMessages,
         IncompatibleBuildToolVersion
-          .params(SbtBuildTool(Some("0.13.15"), () => userConfig))
+          .params(SbtBuildTool(Some("0.13.15"), workspace, () => userConfig))
           .getMessage,
       )
     } yield ()
@@ -509,7 +543,11 @@ class SbtBloopLspSuite
 
   test("min-sbt-version") {
     val minimal =
-      SbtBuildTool(None, () => UserConfiguration.default).minimumVersion
+      SbtBuildTool(
+        None,
+        workspace,
+        () => UserConfiguration.default,
+      ).minimumVersion
     cleanWorkspace()
     for {
       _ <- initialize(

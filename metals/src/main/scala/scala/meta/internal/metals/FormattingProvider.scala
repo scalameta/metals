@@ -27,6 +27,7 @@ import scala.meta.internal.metals.Messages.UpdateScalafmtConf
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.semver.SemVer
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
@@ -81,10 +82,10 @@ final class FormattingProvider(
   // Warms up the Scalafmt instance so that the first formatting request responds faster.
   // Does nothing if there is no .scalafmt.conf or there is no configured version setting.
   def load(): Unit = {
-    if (scalafmtConf.isFile && !Testing.isEnabled) {
+    if (scalafmtConf(workspace).isFile && !Testing.isEnabled) {
       try {
         scalafmt.format(
-          scalafmtConf.toNIO,
+          scalafmtConf(workspace).toNIO,
           Paths.get("Main.scala"),
           "object Main  {}",
         )
@@ -100,20 +101,21 @@ final class FormattingProvider(
 
   def format(
       path: AbsolutePath,
+      projectRoot: AbsolutePath,
       token: CancelChecker,
   ): Future[util.List[l.TextEdit]] = {
     scalafmt = scalafmt.withReporter(activeReporter)
     reset(token)
     val input = path.toInputFromBuffers(buffers)
-    if (!scalafmtConf.isFile) {
-      handleMissingFile(scalafmtConf).map {
+    if (!scalafmtConf(projectRoot).isFile) {
+      handleMissingFile(scalafmtConf(projectRoot)).map {
         case true =>
-          runFormat(path, input).asJava
+          runFormat(path, projectRoot, input).asJava
         case false =>
           Collections.emptyList[l.TextEdit]()
       }
     } else {
-      val result = runFormat(path, input)
+      val result = runFormat(path, projectRoot, input)
       if (token.isCancelled) {
         statusBar.addMessage(
           s"${icons.info}Scalafmt cancelled by editor, try saving file again"
@@ -124,7 +126,8 @@ final class FormattingProvider(
           // Wait until "update .scalafmt.conf" dialogue has completed
           // before returning future.
           promise.future.map {
-            case true if !token.isCancelled => runFormat(path, input).asJava
+            case true if !token.isCancelled =>
+              runFormat(path, projectRoot, input).asJava
             case _ => result.asJava
           }
         case None =>
@@ -133,11 +136,15 @@ final class FormattingProvider(
     }
   }
 
-  private def runFormat(path: AbsolutePath, input: Input): List[l.TextEdit] = {
+  private def runFormat(
+      path: AbsolutePath,
+      projectRoot: AbsolutePath,
+      input: Input,
+  ): List[l.TextEdit] = {
     val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLsp
     val formatted =
       try {
-        scalafmt.format(scalafmtConf.toNIO, path.toNIO, input.text)
+        scalafmt.format(scalafmtConf(projectRoot).toNIO, path.toNIO, input.text)
       } catch {
         case e: ScalafmtDynamicError =>
           scribe.debug(
@@ -351,14 +358,16 @@ final class FormattingProvider(
   }
 
   private def checkIfDialectUpgradeRequired(
-      config: ScalafmtConfig
+      config: ScalafmtConfig,
+      projectRoot: AbsolutePath,
   ): Future[Unit] = {
     if (tables.dismissedNotifications.UpdateScalafmtConf.isDismissed)
       Future.unit
     else {
       Future(inspectDialectRewrite(config)).flatMap {
         case Some(rewrite) =>
-          val canUpdate = rewrite.canUpdate && scalafmtConf.isInside(workspace)
+          val canUpdate =
+            rewrite.canUpdate && scalafmtConf(projectRoot).isInside(projectRoot)
           val params =
             UpdateScalafmtConf.params(rewrite.maxDialect, canUpdate)
 
@@ -369,10 +378,11 @@ final class FormattingProvider(
 
           client.showMessageRequest(params).asScala.map { item =>
             if (item == UpdateScalafmtConf.letUpdate) {
-              val text = scalafmtConf.toInputFromBuffers(buffers).text
+              val text =
+                scalafmtConf(projectRoot).toInputFromBuffers(buffers).text
               val updatedText = rewrite.rewrite(text)
               Files.write(
-                scalafmtConf.toNIO,
+                scalafmtConf(projectRoot).toNIO,
                 updatedText.getBytes(StandardCharsets.UTF_8),
               )
             } else if (item == Messages.notNow) {
@@ -387,36 +397,36 @@ final class FormattingProvider(
     }
   }
 
-  def validateWorkspace(): Future[Unit] = {
-    if (scalafmtConf.exists) {
-      val text = scalafmtConf.toInputFromBuffers(buffers).text
+  def validateWorkspace(projectRoot: AbsolutePath): Future[Unit] = {
+    if (scalafmtConf(projectRoot).exists) {
+      val text = scalafmtConf(projectRoot).toInputFromBuffers(buffers).text
       ScalafmtConfig.parse(text) match {
         case Failure(e) =>
-          scribe.error(s"Failed to parse ${scalafmtConf}", e)
+          scribe.error(s"Failed to parse ${scalafmtConf(projectRoot)}", e)
           Future.unit
         case Success(values) =>
-          checkIfDialectUpgradeRequired(values)
+          checkIfDialectUpgradeRequired(values, projectRoot)
       }
     } else {
       Future.unit
     }
   }
 
-  private def scalafmtConf: AbsolutePath = {
+  private def scalafmtConf(projectRoot: AbsolutePath): AbsolutePath = {
     val configpath = userConfig().scalafmtConfigPath
-    configpath.getOrElse(workspace.resolve(".scalafmt.conf"))
+    configpath.getOrElse(projectRoot.resolve(".scalafmt.conf"))
   }
 
   private val activeReporter: ScalafmtReporter = new ScalafmtReporter {
     private var downloadingScalafmt = Promise[Unit]()
     override def error(file: Path, message: String): Unit = {
       scribe.error(s"scalafmt: $file: $message")
-      if (file == scalafmtConf.toNIO) {
+      if (file == scalafmtConf(workspace).toNIO) {
         downloadingScalafmt.trySuccess(())
         if (message.contains("failed to resolve Scalafmt version")) {
           client.showMessage(MissingScalafmtVersion.failedToResolve(message))
         }
-        val input = scalafmtConf.toInputFromBuffers(buffers)
+        val input = scalafmtConf(workspace).toInputFromBuffers(buffers)
         val pos = Position.Range(input, 0, input.chars.length)
         client.publishDiagnostics(
           new l.PublishDiagnosticsParams(

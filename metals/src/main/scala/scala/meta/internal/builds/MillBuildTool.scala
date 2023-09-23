@@ -9,8 +9,10 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
-case class MillBuildTool(userConfig: () => UserConfiguration)
-    extends BuildTool
+case class MillBuildTool(
+    userConfig: () => UserConfiguration,
+    projectRoot: AbsolutePath,
+) extends BuildTool
     with BloopInstallProvider
     with BuildServerProvider {
 
@@ -102,7 +104,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   }
 
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
-    val millVersion = getMillVersion(workspace)
+    val millVersion = getMillVersion(projectRoot)
 
     val cmd =
       bloopImportArgs(millVersion) ::: bloopCmd(millVersion) :: Nil
@@ -110,7 +112,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
-    MillDigest.current(workspace)
+    MillDigest.current(projectRoot)
 
   override def minimumVersion: String = "0.6.0"
 
@@ -134,7 +136,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   ): Option[List[String]] =
     Option.when(workspaceSupportsBsp(workspace: AbsolutePath)) {
       val cmd = "mill.bsp.BSP/install" :: Nil
-      putTogetherArgs(cmd, getMillVersion(workspace), workspace)
+      putTogetherArgs(cmd, getMillVersion(projectRoot), workspace)
     }
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {

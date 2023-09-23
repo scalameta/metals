@@ -78,6 +78,7 @@ final case class Indexer(
     symbolDocs: Docstrings,
     scalaVersionSelector: ScalaVersionSelector,
     sourceMapper: SourceMapper,
+    workspaceFolder: AbsolutePath,
 )(implicit rc: ReportContext) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
@@ -306,7 +307,15 @@ final case class Indexer(
       check()
       buildTools()
         .loadSupported()
-      formattingProvider().validateWorkspace()
+        .map(_.projectRoot)
+        .distinct match {
+        case Nil => formattingProvider().validateWorkspace(workspaceFolder)
+        case paths =>
+          paths.foreach(
+            formattingProvider().validateWorkspace(_)
+          )
+      }
+
     }
     timerProvider.timedThunk(
       "started file watcher",

@@ -104,9 +104,9 @@ import org.eclipse.{lsp4j => l}
  *  manage the lifecycle of this executor.
  * @param serverInputs
  *  Collection of different parameters used by Metals for running,
- *  which main purpose is allowing for custom bahaviour in tests.
+ *  which main purpose is allowing for custom behavior in tests.
  * @param workspace
- *  An absolute path to the workscape.
+ *  An absolute path to the workspace.
  * @param client
  *  Metals client used for sending notifications to the client. This class DO
  *  NOT manage the lifecycle of this client. It is the responsibility of the
@@ -215,7 +215,6 @@ class MetalsLspService(
   private val sourceMapper = SourceMapper(
     buildTargets,
     buffers,
-    () => folder,
   )
 
   private val scalaVersionSelector = new ScalaVersionSelector(
@@ -981,7 +980,12 @@ class MetalsLspService(
         }
       }
       .getOrElse(Future.successful(()))
-    Future.sequence(List(restartBuildServer, resetDecorations)).map(_ => ())
+
+    Future
+      .sequence(
+        List(restartBuildServer, resetDecorations)
+      )
+      .map(_ => ())
   }
 
   override def didOpen(
@@ -1175,8 +1179,7 @@ class MetalsLspService(
         .asScala
         .flatMap {
           case FileOutOfScalaCliBspScope.regenerateAndRestart =>
-            val buildTool =
-              ScalaCliBuildTool(folder, userConfig)
+            val buildTool = ScalaCliBuildTool(folder, folder, userConfig)
             for {
               _ <- buildTool.generateBspConfig(
                 folder,
@@ -1392,7 +1395,10 @@ class MetalsLspService(
       if (path.isJava)
         javaFormattingProvider.format(params)
       else
-        formattingProvider.format(path, token)
+        for {
+          projectRoot <- calculateOptProjectRoot().map(_.getOrElse(folder))
+          res <- formattingProvider.format(path, projectRoot, token)
+        } yield res
     }
 
   override def onTypeFormatting(
@@ -1647,12 +1653,12 @@ class MetalsLspService(
           } yield bloopServers.shutdownServer()
         case Some(session) if session.main.isSbt =>
           for {
-            currentBuildTool <- supportedBuildTool
+            currentBuildTool <- buildTool()
             res <- currentBuildTool match {
               case Some(sbt: SbtBuildTool) =>
                 for {
                   _ <- disconnectOldBuildServer()
-                  code <- sbt.shutdownBspServer(shellRunner, folder)
+                  code <- sbt.shutdownBspServer(shellRunner)
                 } yield code == 0
               case _ => Future.successful(false)
             }
@@ -1939,12 +1945,28 @@ class MetalsLspService(
     })
   }
 
-  private def supportedBuildTool(): Future[Option[BuildTool]] = {
+  private def buildTool(): Future[Option[BuildTool]] = {
+    buildTools.loadSupported match {
+      case Nil => Future(None)
+      case buildTools =>
+        for {
+          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
+            buildTools
+          )
+          if isCompatibleVersion(buildTool)
+        } yield Some(buildTool)
+    }
+  }
+
+  private def isCompatibleVersion(buildTool: BuildTool) =
+    SemVer.isCompatibleVersion(
+      buildTool.minimumVersion,
+      buildTool.version,
+    )
+
+  def supportedBuildTool(): Future[Option[BuildTool]] = {
     def isCompatibleVersion(buildTool: BuildTool) = {
-      val isCompatibleVersion = SemVer.isCompatibleVersion(
-        buildTool.minimumVersion,
-        buildTool.version,
-      )
+      val isCompatibleVersion = this.isCompatibleVersion(buildTool)
       if (isCompatibleVersion) {
         Some(buildTool)
       } else {
@@ -1958,7 +1980,7 @@ class MetalsLspService(
 
     buildTools.loadSupported match {
       case Nil => {
-        if (!buildTools.isAutoConnectable) {
+        if (!buildTools.isAutoConnectable()) {
           warnings.noBuildTool()
         }
         // wait for a bsp file to show up
@@ -1978,7 +2000,7 @@ class MetalsLspService(
       forceImport: Boolean
   ): Future[BuildChange] =
     for {
-      possibleBuildTool <- supportedBuildTool
+      possibleBuildTool <- supportedBuildTool()
       chosenBuildServer = tables.buildServers.selectedServer()
       isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
         _ == BloopServers.name
@@ -1991,16 +2013,19 @@ class MetalsLspService(
               Future.successful(BuildChange.None)
             case (Some(_), buildTool: ScalaCliBuildTool)
                 if chosenBuildServer.isEmpty =>
-              for {
-                _ <- buildTool.createBspConfigIfNone(
-                  folder,
-                  args =>
-                    bspConfigGenerator.runUnconditionally(buildTool, args),
-                  statusBar,
-                )
-                _ = tables.buildServers.chooseServer(ScalaCliBuildTool.name)
-                buildChange <- quickConnectToBuildServer()
-              } yield buildChange
+              tables.buildServers.chooseServer(ScalaCliBuildTool.name)
+              val scalaCliBspConfigExists =
+                ScalaCliBuildTool.pathsToScalaCliBsp(folder).exists(_.isFile)
+              if (scalaCliBspConfigExists) Future.successful(BuildChange.None)
+              else
+                buildTool
+                  .generateBspConfig(
+                    folder,
+                    args =>
+                      bspConfigGenerator.runUnconditionally(buildTool, args),
+                    statusBar,
+                  )
+                  .flatMap(_ => quickConnectToBuildServer())
             case (Some(digest), _) if isBloopOrEmpty =>
               slowConnectToBloopServer(forceImport, buildTool, digest)
             case (Some(digest), _) =>
@@ -2022,12 +2047,11 @@ class MetalsLspService(
    */
   def maybeSetupScalaCli(): Future[Unit] = {
     if (
-      !buildTools.isAutoConnectable
+      !buildTools.isAutoConnectable()
       && buildTools.loadSupported.isEmpty
       && folder.hasScalaFiles
-    ) {
-      scalaCli.setupIDE(folder)
-    } else Future.successful(())
+    ) scalaCli.setupIDE(folder)
+    else Future.successful(())
   }
 
   private def slowConnectToBloopServer(
@@ -2044,38 +2068,49 @@ class MetalsLspService(
       change <- {
         if (result.isInstalled) quickConnectToBuildServer()
         else if (result.isFailed) {
-          if (buildTools.isAutoConnectable) {
-            // TODO(olafur) try to connect but gracefully error
-            languageClient.showMessage(
-              Messages.ImportProjectPartiallyFailed
-            )
-            // Connect nevertheless, many build import failures are caused
-            // by resolution errors in one weird module while other modules
-            // exported successfully.
-            quickConnectToBuildServer()
-          } else {
-            languageClient.showMessage(Messages.ImportProjectFailed)
-            Future.successful(BuildChange.Failed)
-          }
+          for {
+            maybeProjectRoot <- calculateOptProjectRoot()
+            change <-
+              if (buildTools.isAutoConnectable(maybeProjectRoot)) {
+                // TODO(olafur) try to connect but gracefully error
+                languageClient.showMessage(
+                  Messages.ImportProjectPartiallyFailed
+                )
+                // Connect nevertheless, many build import failures are caused
+                // by resolution errors in one weird module while other modules
+                // exported successfully.
+                quickConnectToBuildServer()
+              } else {
+                languageClient.showMessage(Messages.ImportProjectFailed)
+                Future.successful(BuildChange.Failed)
+              }
+          } yield change
         } else {
           Future.successful(BuildChange.None)
         }
+
       }
     } yield change
 
-  def quickConnectToBuildServer(): Future[BuildChange] = {
-    val connected = if (!buildTools.isAutoConnectable) {
-      scribe.warn("Build server is not auto-connectable.")
-      Future.successful(BuildChange.None)
-    } else {
-      autoConnectToBuildServer()
-    }
+  def calculateOptProjectRoot(): Future[Option[AbsolutePath]] =
+    for {
+      possibleBuildTool <- buildTool()
+    } yield possibleBuildTool.map(_.projectRoot).orElse(buildTools.bloopProject)
 
-    connected.map { change =>
+  def quickConnectToBuildServer(): Future[BuildChange] =
+    for {
+      optRoot <- calculateOptProjectRoot()
+      change <-
+        if (!buildTools.isAutoConnectable(optRoot)) {
+          scribe.warn("Build server is not auto-connectable.")
+          Future.successful(BuildChange.None)
+        } else {
+          autoConnectToBuildServer()
+        }
+    } yield {
       buildServerPromise.trySuccess(())
       change
     }
-  }
 
   private def maybeQuickConnectToBuildServer(
       params: b.DidChangeBuildTarget
@@ -2136,8 +2171,10 @@ class MetalsLspService(
 
     (for {
       _ <- disconnectOldBuildServer()
+      maybeProjectRoot <- calculateOptProjectRoot()
       maybeSession <- timerProvider.timed("Connected to build server", true) {
         bspConnector.connect(
+          maybeProjectRoot.getOrElse(folder),
           folder,
           userConfig(),
           shellRunner,
@@ -2302,6 +2339,7 @@ class MetalsLspService(
     symbolDocs,
     scalaVersionSelector,
     sourceMapper,
+    folder,
   )
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
@@ -2629,7 +2667,7 @@ class MetalsLspService(
     }
   }
 
-  private def clearBloopDir(): Unit = {
+  private def clearBloopDir(folder: AbsolutePath): Unit = {
     try BloopDir.clear(folder)
     catch {
       case e: Throwable =>
@@ -2638,17 +2676,19 @@ class MetalsLspService(
     }
   }
 
-  def resetWorkspace(): Future[Unit] = {
-    if (buildTools.isBloop) {
-      bloopServers.shutdownServer()
-    }
-    disconnectOldBuildServer()
-      .map { _ =>
-        if (buildTools.isBloop) clearBloopDir()
-        tables.cleanAll()
+  def resetWorkspace(): Future[Unit] =
+    for {
+      maybeProjectRoot <- calculateOptProjectRoot()
+      _ <- disconnectOldBuildServer()
+      _ = maybeProjectRoot match {
+        case Some(path) if buildTools.isBloop(path) =>
+          bloopServers.shutdownServer()
+          clearBloopDir(path)
+        case _ =>
       }
-      .flatMap(_ => autoConnectToBuildServer().map(_ => ()))
-  }
+      _ = tables.cleanAll()
+      _ <- autoConnectToBuildServer().map(_ => ())
+    } yield ()
 
   def getTastyForURI(uri: URI): Future[Either[String, String]] =
     fileDecoderProvider.getTastyForURI(uri)

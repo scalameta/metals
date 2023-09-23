@@ -10,7 +10,7 @@ import tests.BaseImportSuite
 
 class MillLspSuite extends BaseImportSuite("mill-import") {
 
-  val buildTool: MillBuildTool = MillBuildTool(() => userConfig)
+  def buildTool: MillBuildTool = MillBuildTool(() => userConfig, workspace)
 
   override def currentDigest(
       workspace: AbsolutePath

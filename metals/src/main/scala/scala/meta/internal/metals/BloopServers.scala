@@ -78,14 +78,16 @@ final class BloopServers(
   }
 
   def newServer(
-      workspace: AbsolutePath,
+      projectRoot: AbsolutePath,
+      bspTraceRoot: AbsolutePath,
       userConfiguration: UserConfiguration,
       addLivenessMonitor: Boolean,
   ): Future[BuildServerConnection] = {
     val bloopVersion = userConfiguration.currentBloopVersion
     BuildServerConnection
       .fromSockets(
-        workspace,
+        projectRoot,
+        bspTraceRoot,
         client,
         languageClient,
         () =>
