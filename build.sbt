@@ -18,7 +18,7 @@ def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
 def isScala3WithPresentationCompiler(v: String): Boolean =
-  (DottyVersion.parse(v), DottyVersion.parse(V.firstScala3PCVersion)) match {
+  (Version.parse(v), Version.parse(V.firstScala3PCVersion)) match {
     case (Some(v), Some(firstScala3PCVersion)) => v >= firstScala3PCVersion
     case _ => false
   }

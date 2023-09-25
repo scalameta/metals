@@ -11,6 +11,9 @@ object SemanticDbSupport {
   private val AllScalaVersions =
     Scala213Versions ++ Scala212Versions ++ Scala211Versions
 
+  private val latestVersion = Version
+    .parse(V.scalameta)
+    .getOrElse(sys.error("Failed to parse V.scalameta version"))
   val last: Map[String, String] = AllScalaVersions.flatMap { scalaVersion =>
     coursierapi.Complete
       .create()
@@ -20,7 +23,11 @@ object SemanticDbSupport {
       .complete()
       .getCompletions()
       .asScala
-      .lastOption
+      .reverse
+      .collectFirst {
+        case version if Version.parse(version).exists(latestVersion >= _) =>
+          version
+      }
       .map(scalaVersion -> _)
   }.toMap
 
