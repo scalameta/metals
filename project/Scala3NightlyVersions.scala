@@ -7,15 +7,15 @@ object Scala3NightlyVersions {
       "3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY",
       "3.2.0-RC1-bin-20220308-29073f1-NIGHTLY",
       "3.1.3-RC1-bin-20220406-73cda0c-NIGHTLY",
-    ).flatMap(DottyVersion.parse)
+    ).flatMap(Version.parse)
 
   /**
    * Fetches last 5 nightly releases.
    * They should come at least after the last supported scala3 version
    * otherwise there is no point to use these versions.
    */
-  def nightlyReleasesAfter(version: String): List[DottyVersion] = {
-    val lastVersion = DottyVersion.parse(version) match {
+  def nightlyReleasesAfter(version: String): List[Version] = {
+    val lastVersion = Version.parse(version) match {
       case Some(v) => v
       case None =>
         throw new Exception(s"Can't parse dotty versions from $version")
@@ -34,7 +34,7 @@ object Scala3NightlyVersions {
     }
   }
 
-  def nonPublishedNightlyVersions(): List[DottyVersion] = {
+  def nonPublishedNightlyVersions(): List[Version] = {
     val all = fetchScala3NightlyVersions()
     lastPublishedMtagsForNightly() match {
       case None =>
@@ -45,7 +45,7 @@ object Scala3NightlyVersions {
     }
   }
 
-  private def fetchScala3NightlyVersions(): List[DottyVersion] = {
+  private def fetchScala3NightlyVersions(): List[Version] = {
     coursierapi.Complete
       .create()
       .withInput("org.scala-lang:scala3-compiler_3:")
@@ -53,12 +53,12 @@ object Scala3NightlyVersions {
       .getCompletions()
       .asScala
       .filter(_.endsWith("NIGHTLY"))
-      .flatMap(DottyVersion.parse)
+      .flatMap(Version.parse)
       .filter(!broken.contains(_))
       .toList
   }
 
-  private def lastPublishedMtagsForNightly(): Option[DottyVersion] = {
+  private def lastPublishedMtagsForNightly(): Option[Version] = {
     coursierapi.Complete
       .create()
       .withInput("org.scalameta:mtags_3")
@@ -67,7 +67,7 @@ object Scala3NightlyVersions {
       .asScala
       .filter(_.endsWith("NIGHTLY"))
       .map(_.stripPrefix("mtags_"))
-      .flatMap(DottyVersion.parse)
+      .flatMap(Version.parse)
       .sorted
       .lastOption
   }

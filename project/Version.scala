@@ -1,6 +1,6 @@
 import scala.util.Try
 
-final case class DottyVersion(
+final case class Version(
     major: Int,
     minor: Int,
     patch: Int,
@@ -9,7 +9,7 @@ final case class DottyVersion(
     original: String,
 ) {
 
-  def >(o: DottyVersion): Boolean = {
+  def >(o: Version): Boolean = {
     val diff = toList
       .zip(o.toList)
       .collectFirst {
@@ -19,7 +19,7 @@ final case class DottyVersion(
     diff > 0
   }
 
-  def >=(o: DottyVersion): Boolean = this == o || this > o
+  def >=(o: Version): Boolean = this == o || this > o
 
   override def toString(): String = original
 
@@ -33,8 +33,8 @@ final case class DottyVersion(
     )
 }
 
-object DottyVersion {
-  def parse(v: String): Option[DottyVersion] = {
+object Version {
+  def parse(v: String): Option[Version] = {
     Try {
       val parts = v.split("\\.|-RC|-")
       if (parts.size < 3) None
@@ -44,19 +44,19 @@ object DottyVersion {
         // format is "$major.$minor.$patch-RC$rc-bin-$date-hash-NIGHTLY"
         // or when locally published "$major.$minor.$patch-RC$rc-bin-SNAPSHOT"
         if (parts.lift(5) == Some("SNAPSHOT")) {
-          Some(DottyVersion(major, minor, patch, rc, None, v))
+          Some(Version(major, minor, patch, rc, None, v))
         } else {
           val date = parts.lift(5).map(_.toInt)
-          Some(DottyVersion(major, minor, patch, rc, date, v))
+          Some(Version(major, minor, patch, rc, date, v))
         }
       }
 
     }.toOption.flatten
   }
 
-  implicit val ordering: Ordering[DottyVersion] =
-    new Ordering[DottyVersion] {
-      override def compare(x: DottyVersion, y: DottyVersion): Int =
+  implicit val ordering: Ordering[Version] =
+    new Ordering[Version] {
+      override def compare(x: Version, y: Version): Int =
         if (x == y) 0
         else if (x > y) 1
         else -1
