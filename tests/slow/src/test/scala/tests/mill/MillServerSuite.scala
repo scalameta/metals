@@ -25,7 +25,7 @@ class MillServerSuite
   val preBspVersion = "0.9.10"
   val supportedBspVersion = V.millVersion
   val scalaVersion = V.scala213
-  val buildTool: MillBuildTool = MillBuildTool(() => userConfig)
+  def buildTool: MillBuildTool = MillBuildTool(() => userConfig, workspace)
   def bspTrace: AbsolutePath =
     workspace.resolve(".metals").resolve("bsp.trace.json")
 

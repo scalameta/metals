@@ -12,7 +12,7 @@ class MillVersionSuite extends BaseSuite {
     test(expected) {
       val root = FileLayout.fromString(layout)
       val obtained =
-        MillBuildTool(() => UserConfiguration()).bloopInstallArgs(root)
+        MillBuildTool(() => UserConfiguration(), root).bloopInstallArgs(root)
       assert(obtained.contains(expected))
     }
   }
