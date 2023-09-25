@@ -640,9 +640,11 @@ class DebugProvider(
           val testSuites =
             request.requestData.copy(suites = request.requestData.suites.map {
               suite =>
-                if (testProvider.getFramework(buildTarget, suite) == JUnit4)
-                  suite.copy(tests = suite.tests.map(_.replace("$", "\\$")))
-                else suite
+                testProvider.getFramework(buildTarget, suite) match {
+                  case JUnit4 | MUnit =>
+                    suite.copy(tests = suite.tests.map(escapeTestName))
+                  case _ => suite
+                }
             })
           new b.DebugSessionParams(
             singletonList(buildTarget.getId),
@@ -924,4 +926,12 @@ object DebugProvider {
       extends Exception(
         "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
       )
+
+  val specialChars: Set[Char] = ".+*?^()[]{}|&$".toSet
+
+  def escapeTestName(testName: String): String =
+    testName.flatMap {
+      case c if specialChars(c) => s"\\$c"
+      case c => s"$c"
+    }
 }
