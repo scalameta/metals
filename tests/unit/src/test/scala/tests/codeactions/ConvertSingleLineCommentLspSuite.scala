@@ -126,7 +126,7 @@ class ConvertSingleLineCommentLspSuite
   checkNoAction(
     "show no action when cursor is before line comment",
     """|
-       |<<>>// start 
+       |<<>> // start 
        |""".stripMargin,
     fileName = "script.sc",
   )
@@ -235,6 +235,20 @@ class ConvertSingleLineCommentLspSuite
   )
 
   check(
+    "should not consume scala-cli directives when expanding comment cluster",
+    """//> using scala 3.3.1
+      |//<<>>my class
+      |class A
+      |""".stripMargin,
+    ConvertCommentCodeAction.Title,
+    """//> using scala 3.3.1
+      |/* my class */
+      |class A
+      |""".stripMargin,
+    fileName = "script.sc",
+  )
+
+  check(
     "show action if line comment is the first line in the file",
     """// <<>>comment middle""",
     ConvertCommentCodeAction.Title,
@@ -246,6 +260,13 @@ class ConvertSingleLineCommentLspSuite
     "should not show action when cursor is after block comment",
     """|val a = 1
        |/* comment middle */ <<>> 
+       |val b = 2""".stripMargin,
+    fileName = "script2.sc",
+  )
+
+  checkNoAction(
+    "should not show action when a comment is scala-cli directive",
+    """|//> <<>>using scala 3.3.3
        |val b = 2""".stripMargin,
     fileName = "script2.sc",
   )

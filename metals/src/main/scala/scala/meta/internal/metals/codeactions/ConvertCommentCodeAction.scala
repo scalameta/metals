@@ -34,7 +34,8 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         path,
         tokens,
         range,
-        isSingleLineComment(contentLines, couldBeScalaCli),
+        isSingleLineComment(contentLines),
+        isLikelyScalaCliDirective(contentLines, couldBeScalaCli),
       )
     } yield codeAction).toList
   }
@@ -46,22 +47,30 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       )
       .flatMap(_.toOption)
   }
-
-  private def isSingleLineComment(
+  private def isLikelyScalaCliDirective(
       contentLines: Vector[String],
       couldBeScalaCli: Boolean,
+  )(t: Token) = {
+    t match {
+      case tc: Token.Comment =>
+        val currentLine = contentLines(tc.pos.startLine)
+        couldBeScalaCli && isScalaCliUsingDirectiveComment(currentLine)
+      case _ => false
+    }
+  }
+
+  private def isSingleLineComment(
+      contentLines: Vector[String]
   )(
       t: Token
   ): Boolean = t match {
     case tc: Token.Comment =>
       val currentLine = contentLines(t.pos.startLine)
-      val isLikelyScalaCliDirective =
-        couldBeScalaCli && isScalaCliUsingDirectiveComment(currentLine)
+
       val tokenIsSingleLine = tc.pos.startLine == tc.pos.endLine
       val tokenStartsWithDoubleSlash =
         currentLine.slice(tc.pos.startColumn, tc.pos.startColumn + 2) == "//"
 
-      !isLikelyScalaCliDirective &&
       tokenIsSingleLine &&
       tokenStartsWithDoubleSlash
     case _ => false
@@ -72,12 +81,12 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       tokens: Tokens,
       range: l.Range,
       isSingleLineComment: Token => Boolean,
+      isLikelyScalaCliDirective: Token => Boolean,
   ): Option[l.CodeAction] = {
     val indexOfLineTokenUnderCursor = tokens.lastIndexWhere(t =>
-      t.pos.startLine == range.getStart.getLine
-        && t.pos.endLine == t.pos.startLine
-        && t.pos.startColumn < range.getStart.getCharacter
+      t.pos.encloses(range)
         && isSingleLineComment(t)
+        && !isLikelyScalaCliDirective(t)
     )
     if (indexOfLineTokenUnderCursor != -1) {
       // tokens that are strictly before cursor, i.e. they end before cursor position
@@ -88,6 +97,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
         tokensBeforeCursor,
         tokensAfterCursor,
         range,
+        isLikelyScalaCliDirective,
       )
       Some(
         CodeActionBuilder.build(
@@ -105,13 +115,16 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
       tokensBeforeCursor: Tokens,
       tokensAfterCursor: Tokens,
       range: l.Range,
+      isLikelyScalaCliDirective: Token => Boolean,
   ) = {
     val commentBeforeCursor = collectContinuousComments(
-      tokens = tokensBeforeCursor.reverse
+      tokens = tokensBeforeCursor.reverse,
+      isLikelyScalaCliDirective,
     ).reverse
 
     val commentAfterCursor = collectContinuousComments(
-      tokens = tokensAfterCursor
+      tokens = tokensAfterCursor,
+      isLikelyScalaCliDirective,
     )
     val commentStart = commentBeforeCursor.headOption
       .map(_.pos.toLsp.getStart)
@@ -130,11 +143,12 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   }
 
   private def collectContinuousComments(
-      tokens: Seq[Token]
+      tokens: Seq[Token],
+      isLikelyScalaCliDirective: Token => Boolean,
   ) = {
     tokens
       .takeWhile {
-        case _: Token.Trivia => true
+        case t: Token.Trivia if !isLikelyScalaCliDirective(t) => true
         case _ => false
       }
       .collect { case t: Token.Comment => t }
