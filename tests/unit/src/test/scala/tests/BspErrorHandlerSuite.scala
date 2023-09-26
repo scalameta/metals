@@ -52,6 +52,10 @@ class BspErrorHandlerSuite extends BaseSuite {
       _ = client.bspError = BspErrorHandler.goToLogs
       _ <- errorHandler.onError(longError)
       _ <- errorHandler.onError(exampleError1)
+      _ = client.bspError = BspErrorHandler.doNotShowErrors
+      _ <- errorHandler.onError(exampleError2)
+      _ <- errorHandler.onError(longError)
+      _ <- errorHandler.onError(exampleError2)
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
@@ -59,6 +63,7 @@ class BspErrorHandlerSuite extends BaseSuite {
             |${BspErrorHandler.makeShortMessage(exampleError2)}
             |${BspErrorHandler.makeShortMessage(exampleError1)}
             |${BspErrorHandler.makeLongMessage(longError)}
+            |${BspErrorHandler.makeShortMessage(exampleError2)}
             |""".stripMargin,
       )
       assert(client.clientCommands.asScala.nonEmpty)

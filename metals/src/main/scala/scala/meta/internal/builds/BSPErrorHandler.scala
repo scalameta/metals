@@ -28,9 +28,14 @@ class BspErrorHandler(
     workspaceFolder.resolve(Directories.log)
   private val lastError = new AtomicReference[String]("")
   private val dismissedErrors = ConcurrentHashSet.empty[String]
+  @volatile private var doNotShowErrors = false
 
   def onError(message: String): Future[Unit] = {
-    if (shouldShowBspError && !dismissedErrors.contains(message)) {
+    if (
+      !doNotShowErrors &&
+      shouldShowBspError &&
+      !dismissedErrors.contains(message)
+    ) {
       val previousError = lastError.getAndSet(message)
       if (message != previousError) {
         showError(message)
@@ -62,6 +67,8 @@ class BspErrorHandler(
         restartBspServer().ignoreValue
       case BspErrorHandler.dismiss =>
         Future.successful(dismissedErrors.add(message)).ignoreValue
+      case BspErrorHandler.doNotShowErrors =>
+        Future.successful { doNotShowErrors = true }
       case _ => Future.successful(())
     }
   }
@@ -103,12 +110,12 @@ object BspErrorHandler {
       if (message.length() <= MESSAGE_MAX_LENGTH) {
         (
           makeShortMessage(message),
-          List(restartBuildServer, dismiss),
+          List(restartBuildServer, dismiss, doNotShowErrors),
         )
       } else {
         (
           makeLongMessage(message),
-          List(goToLogs, restartBuildServer, dismiss),
+          List(goToLogs, restartBuildServer, dismiss, doNotShowErrors),
         )
       }
     val params = new l.ShowMessageRequestParams()
@@ -130,6 +137,7 @@ object BspErrorHandler {
   val dismiss = new l.MessageActionItem("Dismiss.")
   val restartBuildServer =
     new l.MessageActionItem("Restart build server.")
+  val doNotShowErrors = new l.MessageActionItem("Stop showing bsp errors.")
 
   val errorHeader = "Encountered an error in the build server:"
   private val gotoLogsToSeeFull = "Go to logs to see the full error"
