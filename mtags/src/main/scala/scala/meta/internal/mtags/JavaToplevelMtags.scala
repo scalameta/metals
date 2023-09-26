@@ -82,13 +82,14 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
       val ch = reader.ch
       if (ch != SU && Character.isJavaIdentifierPart(ch)) {
         reader.nextChar()
-        kwOrIdent(start, builder.append(ch))
+        kwOrIdent(start, builder.append(ch.toChar))
       } else if (builder.isEmpty) {
         throw new Exception(
           s"Unexpected symbol at word pos: '$ch'. Line: '$readCurrentLine'"
         )
       } else {
-        val pos = Position.Range(input, start, reader.charOffset)
+
+        val pos = Position.Range(input, start, reader.endCharOffset)
         builder.mkString match {
           case "package" => Token.Package
           case "class" => Token.Class
@@ -133,13 +134,13 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
               parseToken
             case _ =>
               val token = kwOrIdent(
-                reader.charOffset - 1,
-                new StringBuilder().append(first).append(next)
+                reader.begCharOffset,
+                new StringBuilder().append(first.toChar).append(next.toChar)
               )
               (token, true)
           }
         case _ =>
-          val token = kwOrIdent(reader.charOffset, new StringBuilder(first))
+          val token = kwOrIdent(reader.endCharOffset, new StringBuilder(first))
           (token, true)
       }
     }
@@ -205,7 +206,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
 
   @tailrec
   private def toNextNonWhiteSpace(): Unit = {
-    if (isWhitespace(reader.ch)) {
+    if (isWhitespace(reader.ch.toChar)) {
       reader.nextChar()
       toNextNonWhiteSpace()
     }
@@ -213,7 +214,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
 
   private def readCurrentLine: String = {
     def loop(builder: StringBuilder): String = {
-      val ch = reader.ch
+      val ch = reader.ch.toChar
       if (ch == '\n' || ch == SU)
         builder.mkString
       else {
@@ -224,7 +225,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     }
 
     val lineOffset = reader.lineStartOffset
-    val existing = input.text.substring(lineOffset, reader.charOffset)
+    val existing = input.text.substring(lineOffset, reader.endCharOffset)
     loop(new StringBuilder().append(existing))
   }
 

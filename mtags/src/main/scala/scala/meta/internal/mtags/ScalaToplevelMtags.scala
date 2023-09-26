@@ -688,7 +688,6 @@ class ScalaToplevelMtags(
       case WHITESPACE =>
         nextIsNL()
       case COMMENT =>
-        scanner.skipComment()
         nextIsNL()
       case _ => false
     }

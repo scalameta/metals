@@ -876,7 +876,7 @@ trait Completions { this: MetalsGlobal =>
   def inferStart(
       pos: Position,
       text: String,
-      charPred: Char => Boolean
+      charPred: Int => Boolean
   ): Int = {
     def fallback: Int = {
       var i = pos.point - 1
