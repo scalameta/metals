@@ -925,4 +925,144 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
   )
 
+  check(
+    "default-args".tag(
+      IgnoreScalaVersion.for3LessThan(
+        "3.4.0-RC1-bin-20231001-09ea77e-NIGHTLY"
+      )
+    ),
+    """
+      |object Main {
+      |  def foo() = {
+      |    def deployment(
+      |      fst: String,
+      |      snd: Int = 1,
+      |    ): Option[Int] = ???
+      |    val abc = deployment(@@)
+      |  }
+      |}
+      |""".stripMargin,
+    """|deployment(fst: String, snd: Int = ...): Option[Int]
+       |           ^^^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|deployment(fst: String, snd: Int): Option[Int]
+           |           ^^^^^^^^^^^
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "default-args2",
+    """
+      |object Main {
+      |  def deployment(
+      |    fst: String,
+      |    snd: Int = 1,
+      |  ): Option[Int] = ???
+      |  val abc = deployment(@@)
+      |}
+      |""".stripMargin,
+    """|deployment(fst: String, snd: Int = 1): Option[Int]
+       |           ^^^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|deployment(fst: String, snd: Int): Option[Int]
+           |           ^^^^^^^^^^^
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "default-args3",
+    """
+      |object Main {
+      |  def deployment(str: String)(
+      |    fst: String,
+      |    snd: Int = 1,
+      |  ): Option[Int] = ???
+      |  val abc = deployment("str")(
+      |    @@
+      |  )
+      |}
+      |""".stripMargin,
+    """|deployment(fst: String, snd: Int = ...): Option[Int]
+       |           ^^^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|deployment(str: String)(fst: String, snd: Int): Option[Int]
+           |                        ^^^^^^^^^^^
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "default-args4",
+    """
+      |object Main {
+      |  def deployment(str: String)(opt: Option[Int])(
+      |    fst: String,
+      |    snd: Int = 1,
+      |  ): Option[Int] = ???
+      |  val abc = deployment("str")(None)(
+      |    @@
+      |  )
+      |}
+      |""".stripMargin,
+    """|deployment(fst: String, snd: Int = ...): Option[Int]
+       |           ^^^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|deployment(str: String)(opt: Option[Int])(fst: String, snd: Int): Option[Int]
+           |                                          ^^^^^^^^^^^
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "default-args5",
+    """
+      |object Main {
+      |  def deployment(str: String)(opt: Option[Int] = None)(
+      |    fst: String,
+      |    snd: Int = 1,
+      |  ): Option[Int] = ???
+      |  val abc = deployment("str")(
+      |    @@
+      |  )
+      |}
+      |""".stripMargin,
+    """|deployment(str: String)(opt: Option[Int] = None)(fst: String, snd: Int = 1): Option[Int]
+       |                        ^^^^^^^^^^^^^^^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|deployment(str: String)(opt: Option[Int])(fst: String, snd: Int): Option[Int]
+           |                        ^^^^^^^^^^^^^^^^
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "default-args6".tag(IgnoreScala2),
+    """
+      |object Main {
+      |  def deployment(using str: String)(
+      |    fst: String,
+      |    snd: Int = 1,
+      |  ): Option[Int] = ???
+      |  val abc = deployment(using "str")(
+      |    @@
+      |  )
+      |}
+      |""".stripMargin,
+    """|deployment(using str: String)(fst: String, snd: Int): Option[Int]
+       |                              ^^^^^^^^^^^
+       |""".stripMargin,
+  )
+
 }

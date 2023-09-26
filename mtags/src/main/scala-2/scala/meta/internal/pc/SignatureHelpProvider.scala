@@ -148,7 +148,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           o.info.member(compiler.nme.apply).alternatives
         case o: ClassSymbol =>
           o.info.member(compiler.termNames.CONSTRUCTOR).alternatives
-        case m: MethodSymbol =>
+        case m: MethodSymbol if !m.isLocalToBlock =>
           m.owner.info.member(symbol.name).alternatives
         case _ =>
           symbol.alternatives
@@ -359,6 +359,14 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         tree match {
           case UnApply(qual, _) =>
             qual.symbol
+          // Special case: a method call with named arguments like `foo(a = 1, b = 2)` gets desugared into the following:
+          // {
+          //   val x$1 = 1
+          //   val x$2 = 2
+          //   foo(x$1, x$2)
+          // }
+          case Apply(Block(_, expr), _) =>
+            expr.symbol
           case _ =>
             NoSymbol
         }
