@@ -80,20 +80,21 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       maybeReportsDir,
       StdReportContext.MAX_NUMBER_OF_REPORTS,
       ReportFileName.pattern,
+      ".md"
     )
 
   private lazy val userHome = Option(System.getProperty("user.home"))
 
   private var initialized = false
   private var reported = Set.empty[String]
-  private val idPrefix = "id: "
 
   def readInIds(): Unit = {
     reported = getReports().flatMap { report =>
       val lines = Files.readAllLines(report.file.toPath())
       if (lines.size() > 0) {
         lines.get(0) match {
-          case id if id.startsWith(idPrefix) => Some(id.stripPrefix(idPrefix))
+          case id if id.startsWith(Report.idPrefix) =>
+            Some(id.stripPrefix(Report.idPrefix))
           case _ => None
         }
       } else None
@@ -116,8 +117,7 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
         val path = reportPath(report.name)
         path.getParent.createDirectories()
         sanitizedId.foreach(reported += _)
-        val idString = sanitizedId.map(id => s"$idPrefix$id\n").getOrElse("")
-        path.writeText(s"$idString${sanitize(report.fullText)}")
+        path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
         Some(path)
       }
     }
@@ -133,7 +133,7 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
   private def reportPath(name: String): Path = {
     val date = TimeFormatter.getDate()
     val time = TimeFormatter.getTime()
-    val filename = s"r_${name}_${time}"
+    val filename = s"r_${name}_${time}.md"
     reportsDir.resolve(date).resolve(filename)
   }
 
@@ -179,7 +179,6 @@ object EmptyReportContext extends ReportContext {
 
   override def getReports(): List[TimestampedFile] = List.empty
 
-
   override def unsanitized: Reporter = EmptyReporter
 
   override def incognito: Reporter = EmptyReporter
@@ -189,7 +188,9 @@ object EmptyReportContext extends ReportContext {
 
 case class Report(
     name: String,
+    path: Option[String],
     text: String,
+    shortSummary: String,
     id: Option[String] = None,
     error: Option[Throwable] = None
 ) {
@@ -199,24 +200,61 @@ case class Report(
                  |$moreInfo"""".stripMargin
     )
 
-  def fullText: String =
+  def fullText(withIdAndSummary: Boolean): String = {
+    val sb = new StringBuilder
+    if (withIdAndSummary) {
+      id.foreach(id => sb.append(s"${Report.idPrefix}$id\n"))
+    }
+    path.foreach(path => sb.append(s"$path\n"))
     error match {
       case Some(error) =>
-        s"""|$error
-            |$text
-            |
-            |error stacktrace:
-            |${error.getStackTrace().mkString("\n\t")}
-            |""".stripMargin
-      case None => text
+        sb.append(
+          s"""|### $error
+              |
+              |$text
+              |
+              |#### Error stacktrace:
+              |
+              |```
+              |${error.getStackTrace().mkString("\n\t")}
+              |```
+              |""".stripMargin
+        )
+      case None => sb.append(s"$text\n")
     }
+    if (withIdAndSummary)
+      sb.append(s"""|${Report.summaryTitle}
+                    |
+                    |$shortSummary""".stripMargin)
+    sb.result()
+  }
 }
 
 object Report {
-  def apply(name: String, text: String, id: String): Report =
-    Report(name, text, id = Some(id))
-  def apply(name: String, text: String, error: Throwable): Report =
-    Report(name, text, error = Some(error))
+  def apply(
+      name: String,
+      path: Option[String],
+      text: String,
+      shortSummary: String,
+      id: String
+  ): Report =
+    Report(name, path, text, shortSummary, id = Some(id))
+  def apply(
+      name: String,
+      path: Option[String],
+      text: String,
+      error: Throwable
+  ): Report =
+    Report(
+      name,
+      path,
+      text,
+      shortSummary = error.toString(),
+      error = Some(error)
+    )
+
+  val idPrefix = "id: "
+  val summaryTitle = "#### Short summary: "
 }
 
 sealed trait ReportLevel {
@@ -243,5 +281,8 @@ object ReportFileName {
   val pattern: Regex = "r_(.*)_".r
 
   def getReportName(file: File): String =
-    pattern.findPrefixMatchOf(file.getName()).map(_.group(1)).getOrElse(file.getName())
+    pattern
+      .findPrefixMatchOf(file.getName())
+      .map(_.group(1))
+      .getOrElse(file.getName())
 }

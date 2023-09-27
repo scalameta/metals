@@ -29,6 +29,9 @@ class ReportsSuite extends BaseSuite {
         |${workspaceStr}/WrongFile.scala
         |""".stripMargin
 
+  def exampleReport(name: String): Report =
+    Report(name, None, exampleText(), "Test error report.")
+
   override def afterEach(context: AfterEach): Unit = {
     reportsProvider.deleteAll()
     super.afterEach(context)
@@ -36,10 +39,17 @@ class ReportsSuite extends BaseSuite {
 
   test("create-report") {
     val path =
-      reportsProvider.incognito.create(Report("test_error", exampleText()))
+      reportsProvider.incognito.create(exampleReport("test_error"))
     val obtained =
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
-    assertNoDiff(exampleText(StdReportContext.WORKSPACE_STR), obtained)
+    assertNoDiff(
+      s"""|${exampleText(StdReportContext.WORKSPACE_STR)}
+          |#### Short summary: 
+          |
+          |Test error report.
+          |""".stripMargin,
+      obtained,
+    )
     assert(reportsProvider.incognito.getReports().length == 1)
     val dirsWithDate =
       reportsProvider.reportsDir.resolve("metals").toFile().listFiles()
@@ -53,23 +63,17 @@ class ReportsSuite extends BaseSuite {
 
   test("delete-old-reports") {
     reportsProvider.incognito.create(
-      Report("some_test_error_old", exampleText())
+      exampleReport("some_test_error_old")
     )
     reportsProvider.incognito.create(
-      Report(
-        "some_different_test_error_old",
-        exampleText(),
-      )
+      exampleReport("some_different_test_error_old")
     )
     Thread.sleep(2) // to make sure, that the new tests have a later timestamp
     reportsProvider.incognito.create(
-      Report("some_test_error_new", exampleText())
+      exampleReport("some_test_error_new")
     )
     reportsProvider.incognito.create(
-      Report(
-        "some_different_test_error_new",
-        exampleText(),
-      )
+      exampleReport("some_different_test_error_new")
     )
     val deleted = reportsProvider.incognito.cleanUpOldReports(2)
     deleted match {
@@ -86,22 +90,26 @@ class ReportsSuite extends BaseSuite {
   test("save-with-id") {
     val testId = "test-id"
     val path = reportsProvider.incognito.create(
-      Report("test_error", exampleText(), testId)
+      Report("test_error", None, exampleText(), "Test error", testId)
     )
     val obtained =
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(
       s"""|id: $testId
-          |${exampleText(StdReportContext.WORKSPACE_STR)}""".stripMargin,
+          |${exampleText(StdReportContext.WORKSPACE_STR)}
+          |#### Short summary: 
+          |
+          |Test error
+          |""".stripMargin,
       obtained,
     )
     val none1 = reportsProvider.incognito.create(
-      Report("test_error_again", exampleText(), testId)
+      Report("test_error_again", None, exampleText(), "Test error", testId)
     )
     assert(none1.isEmpty)
     val newReportsProvider = new StdReportContext(workspace.toNIO)
     val none2 = newReportsProvider.incognito.create(
-      Report("test_error_again", exampleText(), testId)
+      Report("test_error_again", None, exampleText(), "Test error", testId)
     )
     assert(none2.isEmpty)
     val reports = newReportsProvider.incognito.getReports()
@@ -112,13 +120,8 @@ class ReportsSuite extends BaseSuite {
   }
 
   test("zip-reports") {
-    reportsProvider.incognito.create(Report("test_error", exampleText()))
-    reportsProvider.incognito.create(
-      Report(
-        "different_test_error",
-        exampleText(),
-      )
-    )
+    reportsProvider.incognito.create(exampleReport("test_error"))
+    reportsProvider.incognito.create(exampleReport("different_test_error"))
     val pathToReadMe = ZipReportsProvider.zip(List(folderReportsZippper))
     val zipPath =
       reportsProvider.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)

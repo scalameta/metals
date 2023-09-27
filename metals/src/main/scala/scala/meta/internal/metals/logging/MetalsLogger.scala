@@ -168,7 +168,7 @@ object MetalsLogger {
 
   private def limitKeptBackupLogs(workspaceFolder: AbsolutePath, limit: Int) = {
     val backupDir = backupLogsDir(workspaceFolder)
-    new LimitedFilesManager(backupDir.toNIO, limit, "log_".r).deleteOld()
+    new LimitedFilesManager(backupDir.toNIO, limit, "log_".r, "").deleteOld()
   }
 
   def newFileWriter(logfile: AbsolutePath): FileWriter =

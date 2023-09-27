@@ -26,6 +26,7 @@ class LogBackupSuite extends BaseSuite {
     backupDir.toNIO,
     maxLogBackups,
     "log_".r,
+    "",
   )
 
   override def beforeEach(context: BeforeEach): Unit = {

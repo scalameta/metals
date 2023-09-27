@@ -30,6 +30,7 @@ class CompilerSearchVisitor(
       reports.incognito.create(
         Report(
           "is_public",
+          None,
           s"""Symbol: $sym""".stripMargin,
           e,
         )

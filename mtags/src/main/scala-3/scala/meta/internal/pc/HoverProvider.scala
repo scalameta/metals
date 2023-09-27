@@ -56,8 +56,8 @@ object HoverProvider:
           else path.head.sourcePos.start
         Report(
           "empty-hover-scala3",
-          s"""|$uri
-              |pos: ${pos.toLsp}
+          Some(uri.toString),
+          s"""|pos: ${pos.toLsp}
               |
               |tp: $tp
               |has error: ${tp.isError}
@@ -70,6 +70,7 @@ object HoverProvider:
               |trees:
               |- ${trees.map(_.toString()).mkString("\n- ")}
               |""".stripMargin,
+          s"empty hover in $uri",
           s"$uri::$posId",
         )
       end report

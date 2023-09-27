@@ -631,6 +631,7 @@ object MetalsEnrichments
           reports.incognito.create(
             Report(
               "absolute-path",
+              None,
               s"""|Uri: $value
                   |""".stripMargin,
               e,

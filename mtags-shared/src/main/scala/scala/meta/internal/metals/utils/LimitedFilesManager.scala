@@ -13,6 +13,7 @@ class LimitedFilesManager(
     directory: Path,
     fileLimit: Int,
     prefixRegex: Regex,
+    extension: String
 ) {
 
   def getAllFiles(): List[TimestampedFile] = {
@@ -50,7 +51,8 @@ class LimitedFilesManager(
   private def timestampedFile(file: File): Option[TimestampedFile] = {
     for {
       reMatch <- prefixRegex.findPrefixMatchOf(file.getName())
-      time <- Try(reMatch.after.toString.toLong).toOption
+      timeStr = reMatch.after.toString.stripSuffix(extension)
+      time <- Try(timeStr.toLong).toOption
     } yield TimestampedFile(file, time)
   }
 
@@ -76,7 +78,7 @@ class LimitedFilesManager(
     def unapply(filename: String): Option[String] = {
       for {
         prefixMatch <- prefixRegex.findPrefixMatchOf(filename)
-        time = prefixMatch.after.toString
+        time = prefixMatch.after.toString.stripSuffix(extension)
       } yield time
     }
   }

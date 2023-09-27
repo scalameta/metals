@@ -3,7 +3,6 @@ package scala.meta.internal.metals.doctor
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.TimeUnit
@@ -34,6 +33,7 @@ import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.PopupChoiceReset
+import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.ScalaTarget
@@ -239,15 +239,13 @@ final class Doctor(
   }
 
   private def getErrorReports(): List[ErrorReportInfo] = {
-    def getBuildTarget(path: Path) =
+    def decode(text: String) =
+      text.replace(StdReportContext.WORKSPACE_STR, workspace.toString())
+    def getBuildTarget(lines: List[String]) =
       for {
-        lines <- Try(Files.readAllLines(path).asScala.toList).toOption
         filePath <- lines.collectFirst {
           case line if line.startsWith("file:") =>
-            line
-              .strip()
-              .replace(StdReportContext.WORKSPACE_STR, workspace.toString())
-              .toAbsolutePath
+            decode(line.trim()).toAbsolutePath
         }
         buildTargetId <- buildTargets.inverseSources(filePath)
         name <- buildTargets
@@ -255,14 +253,28 @@ final class Doctor(
           .map(_.displayName)
           .orElse(buildTargets.javaTarget(buildTargetId).map(_.displayName))
       } yield name
-    rc.getReports().map {
-      case TimestampedFile(file, timestamp) =>
-        ErrorReportInfo(
-          ReportFileName.getReportName(file),
-          timestamp,
-          file.toPath.toUri().toString(),
-          getBuildTarget(file.toPath),
-        )
+    def getSummary(lines: List[String]) = {
+      val reversed = lines.reverse
+      val index = reversed.indexWhere(_.startsWith(Report.summaryTitle))
+      if (index < 0) ""
+      else
+        reversed
+          .slice(0, index)
+          .reverse
+          .dropWhile(_ == "")
+          .map(decode)
+          .mkString("\n")
+    }
+    rc.getReports().map { case TimestampedFile(file, timestamp) =>
+      val optLines =
+        Try(Files.readAllLines(file.toPath).asScala.toList).toOption
+      ErrorReportInfo(
+        ReportFileName.getReportName(file),
+        timestamp,
+        file.toPath.toUri().toString(),
+        optLines.flatMap(getBuildTarget(_)),
+        optLines.map(getSummary(_)).getOrElse(""),
+      )
     }
   }
 
@@ -399,10 +411,12 @@ final class Doctor(
     html.element("h2")(_.text("Error reports:"))
     errorReports.foreach { case (optBuildTarget, reports) =>
       def name(default: String) = optBuildTarget.getOrElse(default)
-      html.element("div")(div =>
-        div
-          .element("p", s"id=reports-${name("other")}")(
-            _.element("b")(_.text(s"${name("Other error reports")}:"))
+      html.element("details")(details =>
+        details
+          .element("summary", s"id=reports-${name("other")}")(
+            _.element("b")(
+              _.text(s"${name("Other error reports")} (${reports.length}):")
+            )
           )
           .element("table") { table =>
             reports.foreach { report =>
@@ -410,9 +424,9 @@ final class Doctor(
               val dateTime = dateTimeFormat.format(new Date(report.timestamp))
               table.element("tr")(tr =>
                 tr.element("td")(_.raw(Icons.unicode.folder))
-                  .element("td")(_.text(reportName))
+                  .element("td")(_.link(goToCommand(report.uri), reportName))
                   .element("td")(_.text(dateTime))
-                  .element("td")(_.link(goToCommand(report.uri), "(see report)"))
+                  .element("td")(_.text(report.shortSummary))
               )
             }
           }
