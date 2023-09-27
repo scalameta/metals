@@ -75,7 +75,7 @@ object Bill {
     private var sleepBeforePingResponse: Option[Duration] = None
     val languages: util.List[String] = Collections.singletonList("scala")
     var client: BuildClient = _
-    override def onConnectWithClient(server: BuildClient): Unit =
+    def onConnectWithClient(server: BuildClient): Unit =
       client = server
     var workspace: Path = Paths.get(".").toAbsolutePath.normalize()
 
@@ -126,7 +126,11 @@ object Bill {
         scalaJars,
       )
       val id = new BuildTargetIdentifier("id")
-      val capabilities = new BuildTargetCapabilities(true, false, false)
+      val capabilities = new BuildTargetCapabilities()
+      capabilities.setCanCompile(true)
+      capabilities.setCanDebug(false)
+      capabilities.setCanRun(false)
+      capabilities.setCanTest(false)
       val result = new BuildTarget(
         id,
         Collections.singletonList("tag"),
@@ -354,7 +358,9 @@ object Bill {
       CompletableFuture.completedFuture {
         val count = RecursivelyDelete(out)
         val plural = if (count != 1) "s" else ""
-        new CleanCacheResult(s"deleted $count file$plural", true)
+        val result = new CleanCacheResult(true)
+        result.setMessage(s"deleted $count file$plural")
+        result
       }
     }
 

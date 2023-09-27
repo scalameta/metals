@@ -258,13 +258,18 @@ class ProblemResolverSuite extends FunSuite {
     val scalaBinaryVersion =
       ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
     val buildId = new BuildTargetIdentifier(id)
+    val capabilities = new BuildTargetCapabilities()
+    capabilities.setCanCompile(true)
+    capabilities.setCanDebug(true)
+    capabilities.setCanRun(true)
+    capabilities.setCanTest(true)
     val buildTarget =
       new BuildTarget(
         buildId,
         /* tags = */ Nil.asJava,
         /* languageIds = */ Nil.asJava,
         /* dependencies = */ Nil.asJava,
-        /* capabilities = */ new BuildTargetCapabilities(true, true, true),
+        /* capabilities = */ capabilities,
       )
     buildTarget.setDisplayName(id)
     val scalaBuildTarget = new ScalaBuildTarget(

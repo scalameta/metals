@@ -207,7 +207,7 @@ class BuildServerConnection private (
     connection.flatMap { conn =>
       if (conn.capabilities.getJvmRunEnvironmentProvider()) {
         register(
-          server => server.jvmRunEnvironment(params),
+          server => server.buildTargetJvmRunEnvironment(params),
           onFail = Some(
             (
               empty,

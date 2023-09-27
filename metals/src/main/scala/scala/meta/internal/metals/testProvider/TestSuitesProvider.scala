@@ -139,9 +139,13 @@ final class TestSuitesProvider(
         cases.asScala.flatMap { entry =>
           val c = ScalaTestSuiteSelection(fqn, List(entry.name).asJava)
           val params = new b.DebugSessionParams(
-            List(target).asJava,
-            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES_SELECTION,
-            ScalaTestSuites(List(c).asJava, Nil.asJava, Nil.asJava).toJson,
+            List(target).asJava
+          )
+          params.setDataKind(
+            b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
+          )
+          params.setData(
+            ScalaTestSuites(List(c).asJava, Nil.asJava, Nil.asJava).toJson
           )
           def lens(name: String, cmd: BaseCommand) = new l.CodeLens(
             entry.location.getRange(),
