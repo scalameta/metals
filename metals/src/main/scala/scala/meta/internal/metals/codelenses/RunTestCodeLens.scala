@@ -277,7 +277,7 @@ final class RunTestCodeLens(
       className: String,
   ): List[l.Command] = {
     val params = {
-      val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
+      val dataKind = b.TestParamsDataKind.SCALA_TEST_SUITES
       val data = singletonList(className).toJson
       sessionParams(target, dataKind, data)
     }
@@ -322,7 +322,10 @@ final class RunTestCodeLens(
       dataKind: String,
       data: JsonElement,
   ): b.DebugSessionParams = {
-    new b.DebugSessionParams(List(target).asJava, dataKind, data)
+    val params = new b.DebugSessionParams(List(target).asJava)
+    params.setDataKind(dataKind)
+    params.setData(data)
+    params
   }
 
   private def command(
