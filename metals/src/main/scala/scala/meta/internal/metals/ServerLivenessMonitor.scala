@@ -150,9 +150,9 @@ object ServerLivenessMonitor {
       s"$serverName ${icons.error}",
       "error",
       show = true,
-      tooltip =
-        s"Broken connection, build sever ($serverName) is not responding. Press to reconnect.",
+      tooltip = s"Build sever ($serverName) is not responding.",
       command = ClientCommands.ReconnectBsp.id,
+      commandTooltip = "Press to reconnect.",
     ).withStatusType(StatusType.bsp)
 
 }

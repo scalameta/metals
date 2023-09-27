@@ -139,6 +139,7 @@ case class MetalsStatusParams(
     @Nullable hide: java.lang.Boolean = null,
     @Nullable tooltip: String = null,
     @Nullable command: String = null,
+    @Nullable commandTooltip: String = null,
     @Nullable statusType: String = StatusType.metals.toString(),
 ) {
 

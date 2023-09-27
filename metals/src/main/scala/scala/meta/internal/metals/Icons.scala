@@ -100,6 +100,6 @@ object Icons {
     override def error: String = span("error")
     override def rightArrow: String = "⇒"
     override def ellipsis: String = "…"
-    def link: String = "connected"
+    override def link: String = span("link")
   }
 }
