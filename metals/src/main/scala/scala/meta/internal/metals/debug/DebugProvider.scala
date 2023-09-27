@@ -272,11 +272,10 @@ class DebugProvider(
     )
     envFromFile(envFile).map { envFromFile =>
       main.setEnvironmentVariables((envFromFile ::: env).asJava)
-      new b.DebugSessionParams(
-        singletonList(target),
-        b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        main.toJson,
-      )
+      val params = new b.DebugSessionParams(singletonList(target))
+      params.setDataKind(b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS)
+      params.setData(main.toJson)
+      params
     }
   }
 
@@ -360,13 +359,13 @@ class DebugProvider(
         if (mains.nonEmpty) {
           verifyMain(buildTarget, mains.toList, params)
         } else if (tests.nonEmpty) {
-          Future(
-            new b.DebugSessionParams(
-              singletonList(buildTarget),
-              b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-              tests.asJava.toJson,
-            )
-          )
+          Future {
+            val params = new b.DebugSessionParams(singletonList(buildTarget))
+            params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+            params.setData(tests.asJava.toJson)
+            params
+          }
+
         } else {
           Future.failed(NoRunOptionException)
         }
@@ -498,23 +497,29 @@ class DebugProvider(
             }
           }
           .map { tests =>
-            new b.DebugSessionParams(
-              singletonList(target),
-              b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-              tests.asJava.toJson,
+            val params = new b.DebugSessionParams(
+              singletonList(target)
             )
+            params.setDataKind(
+              b.TestParamsDataKind.SCALA_TEST_SUITES
+            )
+            params.setData(tests.asJava.toJson)
+            params
           }
       case (Some(TestTarget), Some(target)) =>
         Future {
-          new b.DebugSessionParams(
-            singletonList(target),
-            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+          val params = new b.DebugSessionParams(
+            singletonList(target)
+          )
+          params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+          params.setData(
             testClasses(target).values
               .map(_.fullyQualifiedName)
               .toList
               .asJava
-              .toJson,
+              .toJson
           )
+          params
         }
     }
 
@@ -601,11 +606,14 @@ class DebugProvider(
             Option(params.jvmOptions).getOrElse(Nil.asJava),
             (envFromFile ::: env).asJava,
           )
-          new b.DebugSessionParams(
-            singletonList(target.getId()),
-            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES_SELECTION,
-            scalaTestSuite.toJson,
+          val debugParams = new b.DebugSessionParams(
+            singletonList(target.getId())
           )
+          debugParams.setDataKind(
+            b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
+          )
+          debugParams.setData(scalaTestSuite.toJson)
+          debugParams
         }
       // should not really happen due to
       // `findMainClassAndItsBuildTarget` succeeding with non-empty list
@@ -618,13 +626,14 @@ class DebugProvider(
   def createDebugSession(
       target: b.BuildTargetIdentifier
   ): Future[DebugSessionParams] =
-    Future.successful(
-      new b.DebugSessionParams(
-        singletonList(target),
-        b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE,
-        ().toJson,
+    Future.successful {
+      val params = new b.DebugSessionParams(
+        singletonList(target)
       )
-    )
+      params.setDataKind(b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE)
+      params.setData(().toJson)
+      params
+    }
 
   def startTestSuite(
       buildTarget: b.BuildTarget,
@@ -642,17 +651,22 @@ class DebugProvider(
                   case _ => suite
                 }
             })
-          new b.DebugSessionParams(
-            singletonList(buildTarget.getId),
-            DebugProvider.ScalaTestSelection,
-            testSuites.toJson,
+          val params = new b.DebugSessionParams(
+            singletonList(buildTarget.getId)
           )
-        } else
-          new b.DebugSessionParams(
-            singletonList(buildTarget.getId),
-            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-            request.requestData.suites.map(_.className).toJson,
+          params.setDataKind(
+            b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
           )
+          params.setData(testSuites.toJson)
+          params
+        } else {
+          val params = new b.DebugSessionParams(
+            singletonList(buildTarget.getId)
+          )
+          params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+          params.setData(request.requestData.suites.map(_.className).toJson)
+          params
+        }
       Future.successful(debugSession)
     }
     for {
@@ -726,11 +740,11 @@ class DebugProvider(
         parameters.getDataKind match {
           case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
             json.as[b.ScalaMainClass].map(_.getClassName)
-          case b.DebugSessionParamsDataKind.SCALA_TEST_SUITES =>
+          case b.TestParamsDataKind.SCALA_TEST_SUITES =>
             json.as[ju.List[String]].map(_.asScala.sorted.mkString(";"))
           case b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE =>
             Success("attach-remote-debug-session")
-          case DebugProvider.ScalaTestSelection =>
+          case b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION =>
             json.as[ScalaTestSuites].map { params =>
               params.suites.asScala
                 .map(suite =>
@@ -907,8 +921,6 @@ object DebugProvider {
         None
     }
   }
-
-  val ScalaTestSelection = "scala-test-suites-selection"
 
   case object WorkspaceErrorsException
       extends Exception(

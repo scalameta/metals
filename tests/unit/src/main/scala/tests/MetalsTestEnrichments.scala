@@ -86,12 +86,17 @@ object MetalsTestEnrichments {
         }
       )
       val bti = new BuildTargetIdentifier("workspace")
+      val capabilities = new BuildTargetCapabilities()
+      capabilities.setCanCompile(true)
+      capabilities.setCanDebug(true)
+      capabilities.setCanRun(true)
+      capabilities.setCanTest(true)
       val buildTarget = new BuildTarget(
         bti,
         Nil.asJava,
         Nil.asJava,
         Nil.asJava,
-        new BuildTargetCapabilities(true, true, true),
+        capabilities,
       )
       val scalaTarget = new ScalaBuildTarget(
         "org.scala-lang",

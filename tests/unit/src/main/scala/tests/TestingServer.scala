@@ -659,8 +659,9 @@ final case class TestingServer(
     assertSystemExit(parameter)
     val targets = List(new b.BuildTargetIdentifier(buildTarget(target)))
     val params =
-      new b.DebugSessionParams(targets.asJava, kind, parameter.toJson)
-
+      new b.DebugSessionParams(targets.asJava)
+    params.setDataKind(kind)
+    params.setData(parameter.toJson)
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
       .collect { case DebugSession(_, uri) =>
         scribe.info(s"Starting debug session for $uri")

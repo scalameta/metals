@@ -121,7 +121,7 @@ final class ForwardingMetalsBuildClient(
   @JsonNotification("build/taskStart")
   def buildTaskStart(params: TaskStartParams): Unit = {
     params.getDataKind match {
-      case TaskDataKind.COMPILE_TASK =>
+      case TaskStartDataKind.COMPILE_TASK =>
         if (
           params.getMessage != null && params.getMessage.startsWith("Compiling")
         ) {
@@ -159,7 +159,7 @@ final class ForwardingMetalsBuildClient(
   @JsonNotification("build/taskFinish")
   def buildTaskFinish(params: TaskFinishParams): Unit = {
     params.getDataKind match {
-      case TaskDataKind.COMPILE_REPORT =>
+      case TaskFinishDataKind.COMPILE_REPORT =>
         for {
           report <- params.asCompileReport
           compilation <- compilations.remove(report.getTarget)
