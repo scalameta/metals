@@ -2,6 +2,10 @@ package scala.meta.internal.metals.doctor
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -30,9 +34,13 @@ import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.PopupChoiceReset
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.ScalaTarget
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -57,7 +65,7 @@ final class Doctor(
     maybeJDKVersion: Option[JdkVersion],
     folderName: String,
     buildTools: BuildTools,
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext, rc: ReportContext) {
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
     new ProblemResolver(
@@ -203,6 +211,7 @@ final class Doctor(
         ),
         None,
         List.empty,
+        getErrorReports(),
       )
     } else {
       val allTargetsInfo = targetIds
@@ -224,17 +233,50 @@ final class Doctor(
         None,
         Some(allTargetsInfo),
         explanations,
+        getErrorReports(),
       )
+    }
+  }
+
+  private def getErrorReports(): List[ErrorReportInfo] = {
+    def getBuildTarget(path: Path) =
+      for {
+        lines <- Try(Files.readAllLines(path).asScala.toList).toOption
+        filePath <- lines.collectFirst {
+          case line if line.startsWith("file:") =>
+            line
+              .strip()
+              .replace(StdReportContext.WORKSPACE_STR, workspace.toString())
+              .toAbsolutePath
+        }
+        buildTargetId <- buildTargets.inverseSources(filePath)
+        name <- buildTargets
+          .scalaTarget(buildTargetId)
+          .map(_.displayName)
+          .orElse(buildTargets.javaTarget(buildTargetId).map(_.displayName))
+      } yield name
+    rc.getReports().map {
+      case TimestampedFile(file, timestamp) =>
+        ErrorReportInfo(
+          ReportFileName.getReportName(file),
+          timestamp,
+          file.toPath.toUri().toString(),
+          getBuildTarget(file.toPath),
+        )
     }
   }
 
   private def gotoBuildTargetCommand(
       workspace: AbsolutePath,
       buildTargetName: String,
-  ): String = {
-    val uriAsStr = FileDecoderProvider
-      .createBuildTargetURI(workspace, buildTargetName)
-      .toString
+  ): String =
+    goToCommand(
+      FileDecoderProvider
+        .createBuildTargetURI(workspace, buildTargetName)
+        .toString
+    )
+
+  private def goToCommand(uri: String): String =
     clientConfig
       .commandInHtmlFormat()
       .map(format => {
@@ -242,11 +284,10 @@ final class Doctor(
           new l.Position(0, 0),
           new l.Position(0, 0),
         )
-        val location = ClientCommands.WindowLocation(uriAsStr, range)
+        val location = ClientCommands.WindowLocation(uri, range)
         ClientCommands.GotoLocation.toCommandLink(location, format)
       })
-      .getOrElse(uriAsStr)
-  }
+      .getOrElse(uri)
 
   private def resetChoiceCommand(choice: String): String = {
     val param = s"""["$choice"]"""
@@ -304,6 +345,7 @@ final class Doctor(
     }
 
     val targetIds = allTargetIds()
+    val errorReports = getErrorReports().groupBy(_.buildTarget)
     if (targetIds.isEmpty) {
       html
         .element("p")(
@@ -330,9 +372,12 @@ final class Doctor(
                 .element("th")(_.text("Semanticdb"))
                 .element("th")(_.text("Debugging"))
                 .element("th")(_.text("Java support"))
+                .element("th")(_.text("Error reports"))
                 .element("th")(_.text("Recommendation"))
             )
-          ).element("tbody")(html => buildTargetRows(html, allTargetsInfo))
+          ).element("tbody")(html =>
+            buildTargetRows(html, allTargetsInfo, errorReports)
+          )
         )
 
       // Additional explanations
@@ -342,17 +387,54 @@ final class Doctor(
       DoctorExplanation.SemanticDB.toHtml(html, allTargetsInfo)
       DoctorExplanation.Debugging.toHtml(html, allTargetsInfo)
       DoctorExplanation.JavaSupport.toHtml(html, allTargetsInfo)
+
+      addErrorReportsInfo(html, errorReports)
+    }
+  }
+
+  private def addErrorReportsInfo(
+      html: HtmlBuilder,
+      errorReports: Map[Option[String], List[ErrorReportInfo]],
+  ) = {
+    html.element("h2")(_.text("Error reports:"))
+    errorReports.foreach { case (optBuildTarget, reports) =>
+      def name(default: String) = optBuildTarget.getOrElse(default)
+      html.element("div")(div =>
+        div
+          .element("p", s"id=reports-${name("other")}")(
+            _.element("b")(_.text(s"${name("Other error reports")}:"))
+          )
+          .element("table") { table =>
+            reports.foreach { report =>
+              val reportName = report.name.replaceAll("[_-]", " ")
+              val dateTime = dateTimeFormat.format(new Date(report.timestamp))
+              table.element("tr")(tr =>
+                tr.element("td")(_.raw(Icons.unicode.folder))
+                  .element("td")(_.text(reportName))
+                  .element("td")(_.text(dateTime))
+                  .element("td")(_.link(goToCommand(report.uri), "(see report)"))
+              )
+            }
+          }
+      )
     }
   }
 
   private def buildTargetRows(
       html: HtmlBuilder,
       infos: Seq[DoctorTargetInfo],
+      errorReports: Map[Option[String], List[ErrorReportInfo]],
   ): Unit = {
     infos
       .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
       .foreach { targetInfo =>
         val center = "style='text-align: center'"
+        def addErrorReportText(html: HtmlBuilder) =
+          errorReports.getOrElse(Some(targetInfo.name), List.empty) match {
+            case Nil => html.text(Icons.unicode.check)
+            case _ =>
+              html.link(s"#reports-${targetInfo.name}", Icons.unicode.alert)
+          }
         html.element("tr")(
           _.element("td")(_.link(targetInfo.gotoCommand, targetInfo.name))
             .element("td")(_.text(targetInfo.targetType))
@@ -370,6 +452,7 @@ final class Doctor(
               _.text(targetInfo.debuggingStatus.explanation)
             )
             .element("td", center)(_.text(targetInfo.javaStatus.explanation))
+            .element("td", center)(addErrorReportText)
             .element("td")(_.raw(targetInfo.recommenedFix))
         )
       }
@@ -531,6 +614,7 @@ final class Doctor(
     "Try removing the directories .metals/ and .bloop/, then restart metals And import the build again."
   private val buildServerNotResponsive =
     "Build server is not responding."
+  private val dateTimeFormat = new SimpleDateFormat("dd MMM HH:mm:ss")
 }
 
 case class DoctorVisibilityDidChangeParams(

@@ -21,6 +21,8 @@ object LoggerReporter extends Reporter {
 
 object LoggerReportContext extends ReportContext {
 
+  override def getReports(): List[TimestampedFile] = List.empty
+
   override def unsanitized: Reporter = LoggerReporter
 
   override def incognito: Reporter = LoggerReporter

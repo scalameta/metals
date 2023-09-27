@@ -25,7 +25,7 @@ class LogBackupSuite extends BaseSuite {
   def limitedFilesManager = new LimitedFilesManager(
     backupDir.toNIO,
     maxLogBackups,
-    "log_",
+    "log_".r,
   )
 
   override def beforeEach(context: BeforeEach): Unit = {

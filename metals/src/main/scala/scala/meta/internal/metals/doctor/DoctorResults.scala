@@ -29,6 +29,7 @@ final case class DoctorFolderResults(
     messages: Option[List[DoctorMessage]],
     targets: Option[Seq[DoctorTargetInfo]],
     explanations: List[Obj],
+    errorReports: List[ErrorReportInfo]
 ) {
   def toJson: Obj = {
     val json = ujson.Obj(
@@ -152,3 +153,17 @@ final case class DoctorFolderHeader(
     base
   }
 }
+
+/**
+  * Information about an error report.
+  * @param name display name of the error
+  * @param timestamp date and time timestamp of the report
+  * @param uri error report file uri
+  * @param buildTarget optional build target that error is associated with
+  */
+final case class ErrorReportInfo(
+  name: String,
+  timestamp: Long,
+  uri: String,
+  buildTarget: Option[String]
+)

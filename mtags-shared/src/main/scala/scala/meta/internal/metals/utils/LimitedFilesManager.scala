@@ -4,14 +4,16 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.util.Try
+import scala.util.matching.Regex
+
 import scala.meta.internal.metals.TimeFormatter
 
 class LimitedFilesManager(
     directory: Path,
     fileLimit: Int,
-    prefixPattern: String
+    prefixRegex: Regex,
 ) {
-  private val fileNameRegex = s"${prefixPattern}([-+]?[0-9]+)".r
 
   def getAllFiles(): List[TimestampedFile] = {
     if (Files.exists(directory) && Files.isDirectory(directory)) {
@@ -46,10 +48,10 @@ class LimitedFilesManager(
   }
 
   private def timestampedFile(file: File): Option[TimestampedFile] = {
-    file.getName() match {
-      case fileNameRegex(time) => Some(TimestampedFile(file, time.toLong))
-      case _: String => None
-    }
+    for {
+      reMatch <- prefixRegex.findPrefixMatchOf(file.getName())
+      time <- Try(reMatch.after.toString.toLong).toOption
+    } yield TimestampedFile(file, time)
   }
 
   private def filesWithDate(dir: File): List[TimestampedFile] = {
@@ -71,10 +73,9 @@ class LimitedFilesManager(
   }
 
   object WithTimestamp {
-    private val prefix = prefixPattern.r
     def unapply(filename: String): Option[String] = {
       for {
-        prefixMatch <- prefix.findPrefixMatchOf(filename)
+        prefixMatch <- prefixRegex.findPrefixMatchOf(filename)
         time = prefixMatch.after.toString
       } yield time
     }

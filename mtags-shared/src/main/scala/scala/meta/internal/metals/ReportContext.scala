@@ -1,8 +1,11 @@
 package scala.meta.internal.metals
 
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+
+import scala.util.matching.Regex
 
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.internal.metals.utils.TimestampedFile
@@ -18,6 +21,7 @@ trait ReportContext {
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
   ): Unit = all.foreach(_.cleanUpOldReports(maxReportsNumber))
   def deleteAll(): Unit = all.foreach(_.deleteAll())
+  def getReports(): List[TimestampedFile]
 }
 
 trait Reporter {
@@ -58,6 +62,8 @@ class StdReportContext(workspace: Path, level: ReportLevel = ReportLevel.Info)
     all.foreach(_.cleanUpOldReports(maxReportsNumber))
   }
 
+  override def getReports(): List[TimestampedFile] = all.flatMap(_.getReports())
+
   override def deleteAll(): Unit = {
     all.foreach(_.deleteAll())
     val zipFile = reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)
@@ -73,7 +79,7 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
     new LimitedFilesManager(
       maybeReportsDir,
       StdReportContext.MAX_NUMBER_OF_REPORTS,
-      "r_.*_"
+      ReportFileName.pattern,
     )
 
   private lazy val userHome = Option(System.getProperty("user.home"))
@@ -171,6 +177,9 @@ object EmptyReporter extends Reporter {
 
 object EmptyReportContext extends ReportContext {
 
+  override def getReports(): List[TimestampedFile] = List.empty
+
+
   override def unsanitized: Reporter = EmptyReporter
 
   override def incognito: Reporter = EmptyReporter
@@ -228,4 +237,11 @@ object ReportLevel {
       case "debug" => Debug
       case _ => Info
     }
+}
+
+object ReportFileName {
+  val pattern: Regex = "r_(.*)_".r
+
+  def getReportName(file: File): String =
+    pattern.findPrefixMatchOf(file.getName()).map(_.group(1)).getOrElse(file.getName())
 }
