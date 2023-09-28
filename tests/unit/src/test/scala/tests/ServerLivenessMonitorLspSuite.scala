@@ -66,7 +66,7 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
       )
       _ = assertNoDiff(
         server.client.workspaceShowMessages,
-        noResponseParams.logMessage,
+        noResponseParams.logMessage(Icons.none),
       )
       _ = assertEquals(isServerResponsive, Some(false))
       _ = Thread.sleep(sleepTime)

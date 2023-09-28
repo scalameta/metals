@@ -52,10 +52,10 @@ final class ConfiguredLanguageClient(
         case _ => clientConfig.statusBarState()
       }
 
+    val logMessage = params.logMessage(clientConfig.icons())
     statusBarState match {
       case On => underlying.metalsStatus(params)
-      case ShowMessage
-          if params.logMessage.nonEmpty && !pendingShowMessage.get() =>
+      case ShowMessage if logMessage.nonEmpty && !pendingShowMessage.get() =>
         if (params.command != null && params.command.nonEmpty) {
           val action = new MessageActionItem(
             Option(params.commandTooltip)
@@ -63,7 +63,7 @@ final class ConfiguredLanguageClient(
               .getOrElse(params.command)
           )
           val requestParams = new ShowMessageRequestParams()
-          requestParams.setMessage(params.logMessage)
+          requestParams.setMessage(logMessage)
           requestParams.setType(level)
           requestParams.setActions(List(action).asJava)
           underlying.showMessageRequest(requestParams).asScala.map {
@@ -74,10 +74,10 @@ final class ConfiguredLanguageClient(
             case _ =>
           }
         } else {
-          underlying.showMessage(new MessageParams(level, params.logMessage))
+          underlying.showMessage(new MessageParams(level, logMessage))
         }
-      case LogMessage if params.logMessage.nonEmpty =>
-        underlying.logMessage(new MessageParams(level, params.logMessage))
+      case LogMessage if logMessage.nonEmpty =>
+        underlying.logMessage(new MessageParams(level, logMessage))
       case _ =>
     }
   }

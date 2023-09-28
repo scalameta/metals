@@ -6,6 +6,7 @@ import javax.annotation.Nullable
 import scala.util.Try
 
 import scala.meta.internal.decorations.DecorationClient
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -143,11 +144,16 @@ case class MetalsStatusParams(
     @Nullable statusType: String = StatusType.metals.toString(),
 ) {
 
-  def logMessage: String =
+  def logMessage(icons: Icons): String = {
+    val decodedText =
+      if (icons != Icons.unicode && icons != Icons.none)
+        icons.all.foldLeft(text)((acc, icon) => acc.replace(icon, ""))
+      else text
     if (statusType == StatusType.bsp.toString())
       if (level == "info") ""
-      else s"$text: $tooltip"
-    else text
+      else s"$decodedText: $tooltip"
+    else decodedText
+  }
 
   def getStatusType: StatusType.Value =
     Try(StatusType.withName(statusType)).toOption.getOrElse(StatusType.metals)
