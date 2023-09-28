@@ -151,7 +151,7 @@ object ServerLivenessMonitor {
       "error",
       show = true,
       tooltip = s"Build sever ($serverName) is not responding.",
-      command = ClientCommands.ReconnectBsp.id,
+      command = ServerCommands.ConnectBuildServer.id,
       commandTooltip = "Reconnect.",
     ).withStatusType(StatusType.bsp)
 

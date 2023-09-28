@@ -342,12 +342,6 @@ object ClientCommands {
     "[string], the markdown representation of the stacktrace",
   )
 
-  val ReconnectBsp = new Command(
-    "reconnect-bsp",
-    "Reconnect with the build server.",
-    """The client should send back "build-connect". """,
-  )
-
   def all: List[BaseCommand] =
     List(
       OpenFolder,
@@ -362,6 +356,5 @@ object ClientCommands {
       CopyWorksheetOutput,
       StartRunSession,
       StartDebugSession,
-      ReconnectBsp,
     )
 }
