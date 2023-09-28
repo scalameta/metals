@@ -19,9 +19,11 @@ import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.ServerLivenessMonitor
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.WorkspaceChoicePopup
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
@@ -370,6 +372,12 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           params.getMessage().startsWith(BspErrorHandler.errorHeader)
         ) {
           bspError
+        } else if (
+          params.getMessage() == ServerLivenessMonitor
+            .noResponseParams("Bill", Icons.default)
+            .logMessage(Icons.default)
+        ) {
+          new MessageActionItem("ok")
         } else {
           throw new IllegalArgumentException(params.toString)
         }
