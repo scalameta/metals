@@ -923,7 +923,6 @@ object DebugProvider {
         "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
       )
 
-
   val specialChars: Set[Char] = ".+*?^()[]{}|&$".toSet
 
   def escapeTestName(testName: String): String =
@@ -935,18 +934,15 @@ object DebugProvider {
   sealed abstract class ClassSearch[A](debugProvider: DebugProvider)(implicit
       ec: ExecutionContext
   ) {
-    private val searchStarted = new ju.concurrent.atomic.AtomicBoolean(false)
     private val searchPromise = Promise[Try[A]]()
     protected def search(): Try[A]
     protected def dapSessionParams(res: A): Future[DebugSessionParams]
     def createDapSession(args: A): Future[DebugSession] =
       dapSessionParams(args).flatMap(debugProvider.asSession(_))
     def searchResult: Future[(Option[A], ClassSearch[A])] = {
-      if (searchStarted.compareAndSet(false, true)) {
-        Future {
-          val resolved = search()
-          searchPromise.trySuccess(resolved)
-        }
+      Future {
+        val resolved = search()
+        searchPromise.trySuccess(resolved)
       }
       searchPromise.future.map(e => (e.toOption, this))
     }
