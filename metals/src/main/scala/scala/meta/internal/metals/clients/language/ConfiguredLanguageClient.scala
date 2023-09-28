@@ -9,7 +9,9 @@ import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkspaceLspService
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.metals.config.StatusBarState.LogMessage
 import scala.meta.internal.metals.config.StatusBarState.On
@@ -32,6 +34,7 @@ final class ConfiguredLanguageClient(
     initial: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
+    service: WorkspaceLspService,
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
@@ -68,9 +71,13 @@ final class ConfiguredLanguageClient(
           requestParams.setActions(List(action).asJava)
           underlying.showMessageRequest(requestParams).asScala.map {
             case `action` =>
-              underlying.metalsExecuteClientCommand(
+              val execCommandParams =
                 new ExecuteCommandParams(params.command, List.empty.asJava)
-              )
+              if (ServerCommands.allIds.contains(params.command)) {
+                service.executeCommand(execCommandParams)
+              } else {
+                underlying.metalsExecuteClientCommand(execCommandParams)
+              }
             case _ =>
           }
         } else {
