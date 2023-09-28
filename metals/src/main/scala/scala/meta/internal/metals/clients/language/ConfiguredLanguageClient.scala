@@ -11,6 +11,9 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.config.StatusBarState
+import scala.meta.internal.metals.config.StatusBarState.LogMessage
+import scala.meta.internal.metals.config.StatusBarState.On
+import scala.meta.internal.metals.config.StatusBarState.ShowMessage
 
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
@@ -48,18 +51,34 @@ final class ConfiguredLanguageClient(
         case StatusType.bsp => clientConfig.bspStatusBarState()
         case _ => clientConfig.statusBarState()
       }
-    if (statusBarState == StatusBarState.On) {
-      underlying.metalsStatus(params)
-    } else if (params.logMessage.nonEmpty && !pendingShowMessage.get()) {
-      if (statusBarState == StatusBarState.ShowMessage) {
-        underlying.showMessage(new MessageParams(level, params.logMessage))
-      } else if (statusBarState == StatusBarState.LogMessage) {
+
+    statusBarState match {
+      case On => underlying.metalsStatus(params)
+      case ShowMessage
+          if params.logMessage.nonEmpty && !pendingShowMessage.get() =>
+        if (params.command != null && params.command.nonEmpty) {
+          val action = new MessageActionItem(
+            Option(params.commandTooltip)
+              .filter(_.nonEmpty)
+              .getOrElse(params.command)
+          )
+          val requestParams = new ShowMessageRequestParams()
+          requestParams.setMessage(params.logMessage)
+          requestParams.setType(level)
+          requestParams.setActions(List(action).asJava)
+          underlying.showMessageRequest(requestParams).asScala.map {
+            case `action` =>
+              underlying.metalsExecuteClientCommand(
+                new ExecuteCommandParams(params.command, List.empty.asJava)
+              )
+            case _ =>
+          }
+        } else {
+          underlying.showMessage(new MessageParams(level, params.logMessage))
+        }
+      case LogMessage if params.logMessage.nonEmpty =>
         underlying.logMessage(new MessageParams(level, params.logMessage))
-      } else {
-        ()
-      }
-    } else {
-      ()
+      case _ =>
     }
   }
   override def metalsSlowTask(
