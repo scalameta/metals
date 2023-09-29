@@ -252,7 +252,9 @@ class BillLspSuite extends BaseLspSuite("bill") {
         }
       _ = assertEquals(compileReport.getStatusCode(), StatusCode.CANCELLED)
       currentTrace = trace
-      cancelId = cancelPattern.findFirstMatchIn(currentTrace).get.group(1)
+      cancelMatch = cancelPattern.findFirstMatchIn(currentTrace)
+      _ = assert(cancelMatch.nonEmpty, trace)
+      cancelId = cancelMatch.get.group(1)
       _ = assert(currentTrace.contains(s"buildTarget/compile - ($cancelId)"))
       compileReport <- server.server.compilations
         .compileFile(
