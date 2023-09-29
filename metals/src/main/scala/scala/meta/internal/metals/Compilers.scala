@@ -6,6 +6,7 @@ import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
@@ -472,25 +473,46 @@ class Compilers(
           }
 
           @tailrec
+          @nowarn
           def adjustForScala3Worksheet(
               remaining: List[Integer],
               acc: List[List[Integer]] = List.empty,
+              adjustColumnDelta: Int =
+                0, // after multiline string we need to adjust column delta of the next token in line
           ): List[Integer] = {
             remaining match {
               case Nil => acc.reverse.flatten
-              case deltaLine :: deltaColumn :: next if deltaLine != 0 =>
-                // we need to remove additional indent
-                val adjustedColumn: Integer = (Math.max(0, deltaColumn - 2))
+              // we need to remove additional indent
+              case deltaLine :: deltaColumn :: len :: next if deltaLine != 0 =>
+                if (deltaColumn - 2 >= 0) {
+                  val adjustedColumn: Integer = deltaColumn - 2
+                  val adjusted: List[Integer] =
+                    List(deltaLine, adjustedColumn, len) ++ next.take(2)
+                  adjustForScala3Worksheet(
+                    next.drop(2),
+                    adjusted :: acc,
+                  )
+                }
+                // for multiline strings, we highlight the entire line inluding leading whitespace
+                // so we need to adjust the length after removing additional indent
+                else {
+                  val deltaLen = deltaColumn - 2
+                  val adjustedLen: Integer = Math.max(0, len + deltaLen)
+                  val adjusted: List[Integer] =
+                    List(deltaLine, deltaColumn, adjustedLen) ++ next.take(2)
+                  adjustForScala3Worksheet(
+                    next.drop(2),
+                    adjusted :: acc,
+                    deltaLen,
+                  )
+                }
+              case deltaLine :: deltaColumn :: next =>
+                val adjustedColumn: Integer = deltaColumn + adjustColumnDelta
                 val adjusted: List[Integer] =
                   List(deltaLine, adjustedColumn) ++ next.take(3)
                 adjustForScala3Worksheet(
                   next.drop(3),
                   adjusted :: acc,
-                )
-              case _ =>
-                adjustForScala3Worksheet(
-                  remaining.drop(5),
-                  remaining.take(5) :: acc,
                 )
             }
           }
