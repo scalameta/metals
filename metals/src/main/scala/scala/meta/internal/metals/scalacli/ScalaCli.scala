@@ -37,11 +37,11 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import coursier.version.Version
-import org.eclipse.lsp4j.services.LanguageClient
 
 // todo https://github.com/scalameta/metals/issues/4788
 // clean () =>, use plain values
@@ -54,7 +54,7 @@ class ScalaCli(
     diagnostics: () => Diagnostics,
     tables: Tables,
     buildClient: () => MetalsBuildClient,
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
     config: () => MetalsServerConfig,
     userConfig: () => UserConfiguration,
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],

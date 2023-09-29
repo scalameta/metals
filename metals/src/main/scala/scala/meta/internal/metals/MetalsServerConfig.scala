@@ -13,7 +13,8 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * that instead you configure Metals via `InitializationOptions`.
  *
  * @param globSyntax pattern used for `DidChangeWatchedFilesRegistrationOptions`.
- * @param statusBar how to handle metals/status notifications.
+ * @param statusBar how to handle metals/status notifications with {"statusType": "metals"}.
+ * @param bspStatusBar how to handle metals/status notifications with {"statusType": "bsp"}.
  * @param slowTask how to handle metals/slowTask requests.
  * @param executeClientCommand whether client provides the ability to support the
  *                             `metals/executeClientCommand` command.
@@ -49,6 +50,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
+    bspStatusBar: StatusBarConfig = StatusBarConfig.bspDefault,
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,

@@ -47,6 +47,13 @@ final class ClientConfiguration(
         .getOrElse(StatusBarState.Off),
     )
 
+  def bspStatusBarState(): StatusBarState.StatusBarState =
+    extract(
+      initializationOptions.bspStatusBarState,
+      StatusBarState.fromString(initialConfig.bspStatusBar.value),
+      StatusBarState.ShowMessage,
+    )
+
   def globSyntax(): GlobSyntaxConfig =
     initializationOptions.globSyntax
       .flatMap(GlobSyntaxConfig.fromString)

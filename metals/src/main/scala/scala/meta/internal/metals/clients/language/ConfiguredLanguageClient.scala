@@ -9,8 +9,13 @@ import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkspaceLspService
 import scala.meta.internal.metals.config.StatusBarState
+import scala.meta.internal.metals.config.StatusBarState.LogMessage
+import scala.meta.internal.metals.config.StatusBarState.On
+import scala.meta.internal.metals.config.StatusBarState.ShowMessage
 
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
@@ -29,6 +34,7 @@ final class ConfiguredLanguageClient(
     initial: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
+    service: WorkspaceLspService,
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
@@ -37,18 +43,49 @@ final class ConfiguredLanguageClient(
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    if (clientConfig.statusBarState == StatusBarState.On) {
-      underlying.metalsStatus(params)
-    } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
-      if (clientConfig.statusBarState == StatusBarState.ShowMessage) {
-        underlying.showMessage(new MessageParams(MessageType.Log, params.text))
-      } else if (clientConfig.statusBarState == StatusBarState.LogMessage) {
-        underlying.logMessage(new MessageParams(MessageType.Log, params.text))
-      } else {
-        ()
+    val level =
+      params.level match {
+        case "error" => MessageType.Error
+        case "warn" => MessageType.Warning
+        case _ => MessageType.Info
       }
-    } else {
-      ()
+    val statusBarState =
+      params.getStatusType match {
+        case StatusType.bsp => clientConfig.bspStatusBarState()
+        case _ => clientConfig.statusBarState()
+      }
+
+    val logMessage = params.logMessage(clientConfig.icons())
+    statusBarState match {
+      case On => underlying.metalsStatus(params)
+      case ShowMessage if logMessage.nonEmpty && !pendingShowMessage.get() =>
+        if (params.command != null && params.command.nonEmpty) {
+          val action = new MessageActionItem(
+            Option(params.commandTooltip)
+              .filter(_.nonEmpty)
+              .getOrElse(params.command)
+          )
+          val requestParams = new ShowMessageRequestParams()
+          requestParams.setMessage(logMessage)
+          requestParams.setType(level)
+          requestParams.setActions(List(action).asJava)
+          underlying.showMessageRequest(requestParams).asScala.map {
+            case `action` =>
+              val execCommandParams =
+                new ExecuteCommandParams(params.command, List.empty.asJava)
+              if (ServerCommands.allIds.contains(params.command)) {
+                service.executeCommand(execCommandParams)
+              } else {
+                underlying.metalsExecuteClientCommand(execCommandParams)
+              }
+            case _ =>
+          }
+        } else {
+          underlying.showMessage(new MessageParams(level, logMessage))
+        }
+      case LogMessage if logMessage.nonEmpty =>
+        underlying.logMessage(new MessageParams(level, logMessage))
+      case _ =>
     }
   }
   override def metalsSlowTask(

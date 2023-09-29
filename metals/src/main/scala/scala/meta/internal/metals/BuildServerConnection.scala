@@ -25,6 +25,7 @@ import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
@@ -438,7 +439,7 @@ object BuildServerConnection {
       projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       localClient: MetalsBuildClient,
-      languageClient: LanguageClient,
+      languageClient: MetalsLanguageClient,
       connect: () => Future[SocketConnection],
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
@@ -488,9 +489,10 @@ object BuildServerConnection {
               _,
               () => server.workspaceBuildTargets(),
               languageClient,
-              result.getDisplayName(),
               config.metalsToIdleTime,
               config.pingInterval,
+              serverName,
+              config.icons,
             )
           }
 
@@ -602,10 +604,8 @@ object BuildServerConnection {
 
     def setReconnect(
         reconnect: () => Future[Unit]
-    )(implicit ec: ExecutionContext): Unit = {
-      optLivenessMonitor.foreach(_.setReconnect(reconnect))
+    )(implicit ec: ExecutionContext): Unit =
       socketConnection.finishedPromise.future.foreach(_ => reconnect())
-    }
 
     /**
      * Whether we can call buildTargetWrappedSources through the BSP connection.

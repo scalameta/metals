@@ -19,6 +19,7 @@ import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -87,8 +88,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
   var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
-  var buildServerNotResponding =
-    ServerLivenessMonitor.ServerNotResponding.dismiss
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
   var bspError = BspErrorHandler.dismiss
 
@@ -359,10 +358,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         } else if (ResetWorkspace.params() == params) {
           resetWorkspace
         } else if (
-          params.getMessage == ServerLivenessTestData.serverNotRespondingMessage
-        ) {
-          buildServerNotResponding
-        } else if (
           params
             .getMessage()
             .endsWith(
@@ -377,6 +372,12 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           params.getMessage().startsWith(BspErrorHandler.errorHeader)
         ) {
           bspError
+        } else if (
+          params.getMessage() == ServerLivenessMonitor
+            .noResponseParams("Bill", Icons.default)
+            .logMessage(Icons.default)
+        ) {
+          new MessageActionItem("ok")
         } else {
           throw new IllegalArgumentException(params.toString)
         }
