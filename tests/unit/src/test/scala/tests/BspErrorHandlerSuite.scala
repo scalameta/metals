@@ -1,28 +1,24 @@
 package tests
 
-import java.nio.file.Paths
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 
 import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Tables
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonObject
+import org.eclipse.lsp4j.MessageActionItem
 
-class BspErrorHandlerSuite extends BaseSuite {
+class BspErrorHandlerSuite extends BaseTablesSuite {
   implicit val ec: ExecutionContext =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
 
-  val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
-    .resolve("target/bsp-error-suite/")
-    .createDirectories()
   val client = new TestingClient(workspace, Buffers())
-  val errorHandler = new TestBspErrorHandler(client, workspace)
   val exampleError1 = "an error"
   val exampleError2 = "a different error"
   val longError: String =
@@ -34,6 +30,8 @@ class BspErrorHandlerSuite extends BaseSuite {
        |""".stripMargin
 
   test("handle-bsp-error") {
+    val errorHandler = new TestBspErrorHandler(client, workspace, tables)
+
     FileLayout.fromString(
       s"""|/.metals/metals.log
           |
@@ -41,7 +39,7 @@ class BspErrorHandlerSuite extends BaseSuite {
       workspace,
     )
 
-    client.bspError = BspErrorHandler.restartBuildServer
+    client.bspError = new MessageActionItem("OK")
 
     for {
       _ <- errorHandler.onError(exampleError1)
@@ -97,12 +95,13 @@ class BspErrorHandlerSuite extends BaseSuite {
 class TestBspErrorHandler(
     val languageClient: TestingClient,
     workspaceFolder: AbsolutePath,
+    tables: Tables,
 )(implicit context: ExecutionContext)
     extends BspErrorHandler(
       languageClient,
       workspaceFolder,
-      () => Future.successful(true),
       () => None,
+      tables,
     ) {
   override def shouldShowBspError: Boolean = true
 
