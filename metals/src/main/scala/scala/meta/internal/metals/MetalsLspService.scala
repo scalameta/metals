@@ -1217,6 +1217,13 @@ class MetalsLspService(
   def didChangeWatchedFiles(
       events: List[FileEvent]
   ): Future[Unit] = {
+    def isNewBuildTool(path: AbsolutePath): Boolean = {
+      path.isInBspDirectory(folder) &&
+      path.extension == "json" &&
+      !tables.buildServers
+        .selectedServer()
+        .contains(path.filename.stripSuffix(".json"))
+    }
     val importantEvents =
       events
         .filterNot(event =>
@@ -1229,11 +1236,12 @@ class MetalsLspService(
         .toSeq
     val (deleteEvents, changeAndCreateEvents) =
       importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
+
     changeAndCreateEvents.foreach { event =>
       val path = event.getUri().toAbsolutePath
+
       event.getType match {
-        case FileChangeType.Created
-            if path.isInBspDirectory(folder) && path.extension == "json" =>
+        case FileChangeType.Created if isNewBuildTool(path) =>
           scribe.info(s"Detected new build tool in $path")
           quickConnectToBuildServer()
         case _ =>
@@ -1250,8 +1258,7 @@ class MetalsLspService(
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isBazelRelatedPath ||
-    abs.isInBspDirectory(folder)
+    abs.isScalaOrJava || abs.isSemanticdb || abs.isBazelRelatedPath
   }
 
   /**

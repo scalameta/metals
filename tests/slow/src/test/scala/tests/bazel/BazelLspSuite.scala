@@ -18,7 +18,7 @@ class BazelLspSuite
   val scalaVersion = "2.13.6"
   val buildTool: BazelBuildTool = BazelBuildTool(() => userConfig, workspace)
 
-  val bazelVersion = "6.2.1"
+  val bazelVersion = "6.3.2"
 
   val libPath = "src/main/scala/lib"
   val cmdPath = "src/main/scala/cmd"

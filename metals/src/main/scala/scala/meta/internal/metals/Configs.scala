@@ -24,7 +24,7 @@ object Configs {
         if (isVscode) workspace.toString()
         else workspace.toURI.toString.stripSuffix("/")
       new DidChangeWatchedFilesRegistrationOptions(
-        List(
+        (List(
           new FileSystemWatcher(Either.forLeft(s"$root/*.sbt")),
           new FileSystemWatcher(Either.forLeft(s"$root/pom.xml")),
           new FileSystemWatcher(Either.forLeft(s"$root/*.sc")),
@@ -37,15 +37,20 @@ object Configs {
           new FileSystemWatcher(
             Either.forLeft(s"$root/project/build.properties")
           ),
-          new FileSystemWatcher(Either.forLeft(s"$root/**/BUILD")),
-          new FileSystemWatcher(Either.forLeft(s"$root/**/BUILD.bazel")),
-          new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE")),
-          new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE.bazel")),
-          new FileSystemWatcher(Either.forLeft(s"$root/**/*.bzl")),
           new FileSystemWatcher(Either.forLeft(s"$root/.bsp/*.json")),
-        ).asJava
+        ) ++ bazelPaths(root)).asJava
       )
     }
+
+    def bazelPaths(root: String): List[FileSystemWatcher] =
+      List(
+        new FileSystemWatcher(Either.forLeft(s"$root/**/BUILD")),
+        new FileSystemWatcher(Either.forLeft(s"$root/**/BUILD.bazel")),
+        new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE")),
+        new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE.bazel")),
+        new FileSystemWatcher(Either.forLeft(s"$root/**/*.bzl")),
+        new FileSystemWatcher(Either.forLeft(s"$root/*.bazelproject")),
+      )
   }
 
   object GlobSyntaxConfig {

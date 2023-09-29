@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.util.UUID
+
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -226,7 +228,9 @@ final class Compilations(
       connection: BuildServerConnection,
       targets: Seq[b.BuildTargetIdentifier],
   ): CancelableFuture[b.CompileResult] = {
+    val originId = UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
+    params.setOriginId(originId)
     targets.foreach(target => isCompiling(target) = true)
     val compilation = connection.compile(params)
 

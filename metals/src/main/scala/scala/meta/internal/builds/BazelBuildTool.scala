@@ -51,14 +51,14 @@ case class BazelBuildTool(
       "-classpath",
       classpath,
       BazelBuildTool.mainClass,
-    )
+    ) ++ BazelBuildTool.projectViewArgs(projectRoot)
   }
 
   override def minimumVersion: String = "1.0.0"
 
   override def recommendedVersion: String = version
 
-  override def version: String = "3.1.0"
+  override def version: String = BazelBuildTool.version
 
   override def toString: String = "Bazel"
 
@@ -73,7 +73,7 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "2.7.2"
+  val version: String = "3.1.0"
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
@@ -83,6 +83,17 @@ object BazelBuildTool {
     version,
   )
 
+  def projectViewArgs(projectRoot: AbsolutePath): List[String] = {
+    val hasProjectView =
+      projectRoot.list.exists(_.filename.endsWith(".bazelproject"))
+    if (hasProjectView) Nil
+    else // we default to all targets view
+      List(
+        "-t",
+        "//...",
+      )
+  }
+
   def writeBazelConfig(
       shellRunner: ShellRunner,
       projectDirectory: AbsolutePath,
@@ -90,7 +101,13 @@ object BazelBuildTool {
       ec: ExecutionContext
   ): Future[WorkspaceLoadedStatus] = {
     def run() =
-      shellRunner.runJava(dependency, mainClass, projectDirectory, Nil, false)
+      shellRunner.runJava(
+        dependency,
+        mainClass,
+        projectDirectory,
+        projectViewArgs(projectDirectory),
+        false,
+      )
     run()
       .flatMap { code =>
         scribe.info(s"Generate Bazel-BSP process returned code $code")
@@ -146,5 +163,6 @@ object BazelBuildTool {
       path: AbsolutePath,
   ): Boolean =
     path.toNIO.startsWith(workspace.toNIO) &&
-      path.isBazelRelatedPath
+      path.isBazelRelatedPath &&
+      !path.isInBazelBspDirectory(workspace)
 }

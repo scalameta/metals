@@ -316,7 +316,8 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       filename == "WORKSPACE" ||
       filename == "BUILD" ||
       filename == "BUILD.bazel" ||
-      filename.endsWith(".bzl")
+      filename.endsWith(".bzl") ||
+      filename.endsWith(".bazelproject")
     }
 
     def isInBazelBspDirectory(workspace: AbsolutePath): Boolean =
