@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 object HoverMarkup {
 
+  private val MaxHoverBodyLength = 50000
+
   /**
    * Render the textDocument/hover result into markdown.
    *
@@ -42,15 +44,19 @@ object HoverMarkup {
     markdown.toString()
   }
 
+  private def trimBody(body: String) =
+    if (body.length() <= MaxHoverBodyLength) body
+    else body.take(MaxHoverBodyLength) + "..."
+
   def apply(body: String): String = {
     s"""|```scala
-        |$body
+        |${trimBody(body)}
         |```""".stripMargin
   }
 
   def javaHoverMarkup(body: String): String = {
     s"""|```java
-        |$body
+        |${trimBody(body)}
         |```""".stripMargin
   }
 
