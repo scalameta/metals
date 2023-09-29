@@ -576,13 +576,13 @@ object BuildServerConnection {
       params.setData(data)
       params
     }
-    // Block on the `build/initialize` request because it should respond instantly
-    // and we want to fail fast if the connection is not
+    // Block on the `build/initialize` request because it should respond instantly by Bloop
+    // and we want to fail fast if the connection is not made
     val result =
-      if (serverName == SbtBuildTool.name) {
-        initializeResult.get(60, TimeUnit.SECONDS)
-      } else {
+      if (serverName == BloopServers.name) {
         initializeResult.get(20, TimeUnit.SECONDS)
+      } else {
+        initializeResult.get(60, TimeUnit.SECONDS)
       }
 
     server.onBuildInitialized()
