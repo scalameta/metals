@@ -21,7 +21,7 @@ object V {
   val bsp = "2.1.0-M5"
   val coursier = "2.1.7"
   val coursierInterfaces =
-    "1.0.18" // changing coursier interfaces version may be not binary compatible.
+    "1.0.19" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
   val debugAdapter = "3.1.4"
   val genyVersion = "1.0.0"
