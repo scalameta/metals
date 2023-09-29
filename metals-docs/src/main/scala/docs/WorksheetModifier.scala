@@ -70,6 +70,19 @@ class WorksheetModifier extends StringModifier {
         |```scala
         |import $$scalac.`-Ywarn-unused`
         |```
+        |
+        |### Troubleshooting
+        |
+        |Since worksheets are not standard Scala files, you may run into issues with some constructs.
+        |For example, you may see an error like this:
+        |
+        |```
+        |value classes may not be a member of another class - mdoc
+        |```
+        |
+        |This means that one of the classes defined in the worksheet extends AnyVal, which is
+        |not currently supported. You can work around this by moving the class to a separate file or removing
+        |the AnyVal parent.
         |""".stripMargin
   }
 
