@@ -556,6 +556,30 @@ class Scala3CodeActionLspSuite
     ),
   )
 
+  checkEdit(
+    "alias-rename",
+    s"""|/metals.json
+        |{"a":
+        |  {  "scalaVersion" : "$scalaVersion",
+        |     "libraryDependencies": [
+        |      "org.typelevel::cats-parse:0.3.7"
+        |    ]
+        |  }
+        |}
+        |/${toPath("A.scala")}
+        |import cats.parse.{Parser => P}
+        |def <<read>>(txt: String) = {
+        |  P.string("a").parseAll(txt)
+        |}
+        |""".stripMargin,
+    InsertInferredType.insertType,
+    """|import cats.parse.{Parser => P}
+       |def read(txt: String): Either[P.Error, Unit] = {
+       |  P.string("a").parseAll(txt)
+       |}
+       |""".stripMargin,
+  )
+
   check(
     "issue",
     """|object Main {
