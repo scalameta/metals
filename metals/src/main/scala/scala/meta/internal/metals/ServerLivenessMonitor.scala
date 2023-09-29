@@ -70,7 +70,7 @@ class ServerLivenessMonitor(
     ServerLivenessMonitor.noResponseParams(serverName, icons)
 
   client.metalsStatus(connectedParams)
-  scribe.debug("starting BSLM")
+  scribe.debug("starting server liveness monitor")
 
   def runnable(): Runnable = new Runnable {
     def run(): Unit = {
@@ -93,24 +93,24 @@ class ServerLivenessMonitor(
         }
         currState match {
           case ServerLivenessMonitor.Idle =>
-            scribe.debug("setting BSLM state to FirstPing")
+            scribe.debug("setting server liveness monitor state to FirstPing")
           case ServerLivenessMonitor.FirstPing =>
-            scribe.debug("setting BSLM state to Running")
+            scribe.debug("setting server liveness monitor state to Running")
           case _ =>
         }
         if (currState == ServerLivenessMonitor.Running) {
           if (notResponding && isServerResponsive) {
-            scribe.debug("BSLM detected no response")
+            scribe.debug("server liveness monitor detected no response")
             client.metalsStatus(noResponseParams)
           } else if (!notResponding && !isServerResponsive)
             client.metalsStatus(connectedParams)
           isServerResponsive = !notResponding
         }
-        scribe.debug("BSLM: pinging build server...")
+        scribe.debug("server liveness monitor: pinging build server...")
         ping()
       } else {
         if (state.get() != ServerLivenessMonitor.Idle)
-          scribe.debug("setting BSLM state to Idle")
+          scribe.debug("setting server liveness monitor state to Idle")
         state.set(ServerLivenessMonitor.Idle)
       }
     }
@@ -125,7 +125,7 @@ class ServerLivenessMonitor(
   def isBuildServerResponsive: Boolean = isServerResponsive
 
   def shutdown(): Unit = {
-    scribe.debug("shutting down BSLM")
+    scribe.debug("shutting down server liveness monitor")
     scheduled.cancel(true)
     scheduler.shutdown()
     client.metalsStatus(ServerLivenessMonitor.disconnectedParams)
