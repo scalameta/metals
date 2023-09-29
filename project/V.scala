@@ -11,10 +11,10 @@ object V {
   val scala3RC: Option[String] = None
   val sbtScala = "2.12.17"
   val ammonite212Version = "2.12.18"
-  val ammonite213Version = "2.13.11"
-  val ammonite3Version = "3.1.3"
+  val ammonite213Version = "2.13.12"
+  val ammonite3Version = "3.3.1"
 
-  val ammonite = "2.5.9"
+  val ammonite = "3.0.0-M0-55-8ef21714"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.11"
   val bloopConfig = "1.5.5"
