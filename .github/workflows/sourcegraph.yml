@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     name: "Upload SCIP"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: coursier/setup-action@v1.3.3
       - run: cs launch --contrib scip-java -- index
       - name: src scip upload
