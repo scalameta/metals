@@ -1,12 +1,15 @@
 package scala.meta.internal.metals
 
+import java.util.concurrent.CancellationException
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.async.ConcurrentQueue
@@ -22,6 +25,7 @@ final class BatchedFunction[A, B](
     fn: Seq[A] => CancelableFuture[B],
     functionId: String,
     shouldLogQueue: Boolean = false,
+    default: Option[B] = None,
 )(implicit ec: ExecutionContext)
     extends (Seq[A] => Future[B])
     with Function2[Seq[A], () => Unit, Future[B]]
@@ -75,8 +79,17 @@ final class BatchedFunction[A, B](
   }
 
   def cancelAll(): Unit = {
-    queue.clear()
-    unlock()
+    val requests = ConcurrentQueue.pollAll(queue)
+    requests.foreach(_.result.complete(defaultResult))
+    cancelCurrent()
+  }
+
+  def cancelCurrent(): Unit = {
+    lock.get() match {
+      case None =>
+      case Some(promise) =>
+        promise.tryFailure(new BatchedFunction.BatchedFunctionCancelation)
+    }
   }
 
   def currentFuture(): Future[B] = {
@@ -97,22 +110,28 @@ final class BatchedFunction[A, B](
       callback: () => Unit,
   )
 
-  private val lock = new AtomicBoolean()
+  private val lock = new AtomicReference[Option[Promise[B]]](None)
+
   private def unlock(): Unit = {
-    lock.set(false)
+    lock.set(None)
     if (!queue.isEmpty) {
       runAcquire()
     }
   }
   private def runAcquire(): Unit = {
-    if (!isPaused.get() && lock.compareAndSet(false, true)) {
-      runRelease()
+    lazy val promise = {
+      val p = Promise[B]
+      p.future.onComplete { _ => unlock() }
+      p
+    }
+    if (!isPaused.get() && lock.compareAndSet(None, Some(promise))) {
+      runRelease(promise)
     } else {
       // Do nothing, the submitted arguments will be handled
       // by a separate request.
     }
   }
-  private def runRelease(): Unit = {
+  private def runRelease(p: Promise[B]): Unit = {
     // Pre-condition: lock is acquired.
     // Pos-condition:
     //   - lock is released
@@ -128,24 +147,29 @@ final class BatchedFunction[A, B](
         this.current.set(result)
         val resultF = for {
           result <- result.future
-          _ <- Future {
-            callbacks.foreach(cb => cb())
-          }
+          _ <- Future { callbacks.foreach(cb => cb()) }
         } yield result
-        resultF.onComplete { response =>
-          unlock()
-          requests.foreach(_.result.complete(response))
+        resultF.onComplete(p.tryComplete)
+        p.future.onComplete {
+          case Failure(_: BatchedFunction.BatchedFunctionCancelation) =>
+            result.cancel()
+            requests.foreach(_.result.complete(defaultResult))
+          case result =>
+            requests.foreach(_.result.complete(result))
         }
       } else {
-        unlock()
+        p.tryFailure(new BatchedFunction.BatchedFunctionCancelation)
       }
     } catch {
       case NonFatal(e) =>
         unlock()
-        requests.foreach(_.result.failure(e))
+        requests.foreach(_.result.tryFailure(e))
         scribe.error(s"Unexpected error releasing buffered job", e)
     }
   }
+
+  def defaultResult: Try[B] =
+    default.map(Success(_)).getOrElse(Failure(new CancellationException))
 }
 
 object BatchedFunction {
@@ -153,6 +177,7 @@ object BatchedFunction {
       fn: Seq[A] => Future[B],
       functionId: String,
       shouldLogQueue: Boolean = false,
+      default: Option[B] = None,
   )(implicit
       ec: ExecutionContext
   ): BatchedFunction[A, B] =
@@ -160,5 +185,7 @@ object BatchedFunction {
       fn.andThen(CancelableFuture(_)),
       functionId,
       shouldLogQueue,
+      default,
     )
+  class BatchedFunctionCancelation extends RuntimeException
 }

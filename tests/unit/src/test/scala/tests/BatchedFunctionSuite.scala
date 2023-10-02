@@ -1,10 +1,14 @@
 package tests
 
+import java.util.concurrent.Executors
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Success
 
 import scala.meta.internal.metals.BatchedFunction
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.CancelableFuture
 
 class BatchedFunctionSuite extends BaseSuite {
   test("batch") {
@@ -95,11 +99,51 @@ class BatchedFunctionSuite extends BaseSuite {
 
     mkString.unpause()
 
-    assertDiffEqual(paused.value, None)
-    assertDiffEqual(paused2.value, None)
+    for {
+      _ <- paused.failed
+      _ <- paused2.failed
+      res <- mkString(List("a", "b"))
+      _ = assertEquals(res, "ab")
+    } yield ()
+  }
 
-    val unpaused2 = mkString(List("a", "b"))
-    assertDiffEqual(unpaused2.value, Some(Success("ab")))
-
+  test("cancel2") {
+    val executorService = Executors.newFixedThreadPool(10)
+    val ec2 = ExecutionContext.fromExecutor(executorService)
+    var i = 1
+    val stuckExample: BatchedFunction[String, String] =
+      new BatchedFunction(
+        (seq: Seq[String]) => {
+          seq.toList match {
+            case "loop" :: Nil =>
+              val future = Future.apply {
+                while (i == 1) {
+                  Thread.sleep(1)
+                }
+                "loop-result"
+              }(ec2)
+              CancelableFuture[String](future, Cancelable { () => i = 2 })
+            case _ =>
+              CancelableFuture[String](
+                Future.successful("result"),
+                Cancelable.empty,
+              )
+          }
+        },
+        "stuck example",
+        default = Some("default"),
+      )(ec2)
+    val cancelled = stuckExample("loop")
+    assertEquals(i, 1)
+    assert(cancelled.value.isEmpty)
+    val normal = stuckExample("normal")
+    stuckExample.cancelCurrent()
+    for {
+      str <- cancelled
+      _ = assertEquals(i, 2)
+      _ = assertEquals(str, "default")
+      str <- normal
+      _ = assertEquals(str, "result")
+    } yield ()
   }
 }

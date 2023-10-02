@@ -19,6 +19,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.reflect.ClassTag
+import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.builds.MillBuildTool
@@ -74,7 +75,6 @@ class BuildServerConnection private (
 
   private val ongoingRequests =
     new MutableCancelable().addAll(initialConnection.cancelables)
-  private val ongoingCompilations = new MutableCancelable()
 
   def version: String = _version.get()
 
@@ -155,7 +155,6 @@ class BuildServerConnection private (
   def compile(params: CompileParams): CompletableFuture[CompileResult] = {
     register(
       server => server.buildTargetCompile(params),
-      isCompile = true,
       onFail = Some(
         (
           new CompileResult(StatusCode.CANCELLED),
@@ -300,12 +299,7 @@ class BuildServerConnection private (
   override def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
       ongoingRequests.cancel()
-      ongoingCompilations.cancel()
     }
-  }
-
-  def cancelCompilations(): Unit = {
-    ongoingCompilations.cancel()
   }
 
   private def askUser(
@@ -357,9 +351,8 @@ class BuildServerConnection private (
   private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
-      isCompile: Boolean = false,
   ): CompletableFuture[T] = {
-
+    val localCancelable = new MutableCancelable()
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
     ): Future[T] = {
@@ -367,14 +360,14 @@ class BuildServerConnection private (
       val cancelable = Cancelable { () =>
         Try(resultFuture.cancel(true))
       }
-      if (isCompile) ongoingCompilations.add(cancelable)
-      else ongoingRequests.add(cancelable)
+      ongoingRequests.add(cancelable)
+      localCancelable.add(cancelable)
 
       val result = resultFuture.asScala
 
       result.onComplete { _ =>
-        if (isCompile) ongoingCompilations.remove(cancelable)
-        else ongoingRequests.remove(cancelable)
+        ongoingRequests.remove(cancelable)
+        localCancelable.remove(cancelable)
       }
       result
     }
@@ -411,7 +404,14 @@ class BuildServerConnection private (
               Future.failed(new MetalsBspException(name, t))
             })
       }
-    CancelTokens.future(_ => actionFuture)
+
+    CancelTokens.future { token =>
+      token.onCancel().asScala.onComplete {
+        case Success(java.lang.Boolean.TRUE) => localCancelable.cancel()
+        case _ =>
+      }
+      actionFuture
+    }
   }
 
   def isBuildServerResponsive: Future[Option[Boolean]] = {

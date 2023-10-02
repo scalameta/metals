@@ -2202,6 +2202,8 @@ class MetalsLspService(
   }
 
   def disconnectOldBuildServer(): Future[Unit] = {
+    compilations.cancel()
+    buildTargetClasses.cancel()
     diagnostics.reset()
     bspSession.foreach(connection =>
       scribe.info(s"Disconnecting from ${connection.main.name} session...")

@@ -24,7 +24,11 @@ final class BuildTargetClasses(
       : TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem] =
     TrieMap.empty[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
   val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
-    BatchedFunction.fromFuture(fetchClasses, "buildTargetClasses")
+    BatchedFunction.fromFuture(
+      fetchClasses,
+      "buildTargetClasses",
+      default = Some(()),
+    )
 
   def classesOf(target: b.BuildTargetIdentifier): Classes = {
     index.getOrElse(target, new Classes)
@@ -174,6 +178,10 @@ final class BuildTargetClasses(
     }
     val name = NameTransformer.decode(names.last)
     descriptors.map(descriptor => Symbols.Global(prefix, descriptor(name)))
+  }
+
+  def cancel(): Unit = {
+    rebuildIndex.cancelAll()
   }
 }
 

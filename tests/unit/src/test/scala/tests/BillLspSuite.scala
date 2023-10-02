@@ -10,6 +10,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.io.AbsolutePath
 
 import bill._
+import ch.epfl.scala.bsp4j.StatusCode
 
 class BillLspSuite extends BaseLspSuite("bill") {
 
@@ -221,5 +222,45 @@ class BillLspSuite extends BaseLspSuite("bill") {
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installGlobal(globalBsp.toNIO, "Bob")
     testSelectServerDialogue()
+  }
+
+  test("cancel-compile") {
+    val cancelPattern =
+      """Sending notification '\$\/cancelRequest'\s*Params: \{\s*\"id\": \"([0-9]+)\"\s*\}""".r
+    cleanWorkspace()
+    Bill.installWorkspace(workspace.toNIO, "Bill")
+    def trace = workspace.resolve(".metals/bsp.trace.json").readText
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {
+           |  val x: Int = 1
+           |}
+           |/.metals/bsp.trace.json
+           |""".stripMargin
+      )
+      (compileReport, _) <- server.server.compilations
+        .compileFile(
+          workspace.resolve("src/com/App.scala")
+        )
+        .zip {
+          // wait until the compilation start
+          while (!trace.contains(s"buildTarget/compile")) {
+            Thread.sleep(1)
+          }
+          server.executeCommand(ServerCommands.CancelCompile)
+        }
+      _ = assertEquals(compileReport.getStatusCode(), StatusCode.CANCELLED)
+      currentTrace = trace
+      cancelMatch = cancelPattern.findFirstMatchIn(currentTrace)
+      _ = assert(cancelMatch.nonEmpty, trace)
+      cancelId = cancelMatch.get.group(1)
+      _ = assert(currentTrace.contains(s"buildTarget/compile - ($cancelId)"))
+      compileReport <- server.server.compilations
+        .compileFile(
+          workspace.resolve("src/com/App.scala")
+        )
+      _ = assertEquals(compileReport.getStatusCode(), StatusCode.OK)
+    } yield ()
   }
 }
