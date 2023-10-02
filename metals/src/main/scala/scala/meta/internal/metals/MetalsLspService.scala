@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import java.net.URI
 import java.nio.file._
-import java.sql.Connection
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
@@ -128,10 +127,11 @@ class MetalsLspService(
     shellRunner: ShellRunner,
     timerProvider: TimerProvider,
     initTreeView: () => Unit,
-    val folder: AbsolutePath,
+    folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
-) extends Cancelable
+) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
+    with Cancelable
     with TextDocumentService {
   import serverInputs._
 
@@ -781,7 +781,7 @@ class MetalsLspService(
 
   val treeView =
     new FolderTreeViewProvider(
-      Folder(folder, folderVisibleName),
+      new Folder(folder, folderVisibleName, true),
       buildTargets,
       () => buildClient.ongoingCompilations(),
       definitionIndex,
@@ -847,7 +847,7 @@ class MetalsLspService(
     cancelable
   }
 
-  def loadFingerPrints(): Unit = {
+  private def loadFingerPrints(): Unit = {
     // load fingerprints from last execution
     fingerprints.addAll(tables.fingerprints.load())
   }
@@ -859,7 +859,7 @@ class MetalsLspService(
       token: CancelToken,
   ): Future[Unit] = codeActionProvider.executeCommands(params, token)
 
-  def registerNiceToHaveFilePatterns(): Unit = {
+  private def registerNiceToHaveFilePatterns(): Unit = {
     for {
       params <- Option(initializeParams)
       capabilities <- Option(params.getCapabilities)
@@ -885,9 +885,11 @@ class MetalsLspService(
 
   val isInitialized = new AtomicBoolean(false)
 
-  def connectTables(): Connection = tables.connect()
+  def initialized(): Future[Unit] = {
+    loadFingerPrints()
+    registerNiceToHaveFilePatterns()
+    tables.connect()
 
-  def initialized(): Future[Unit] =
     for {
       _ <- maybeSetupScalaCli()
       _ <-
@@ -902,6 +904,7 @@ class MetalsLspService(
             )
           )
     } yield ()
+  }
 
   def onShutdown(): Unit = {
     tables.fingerprints.save(fingerprints.getAllFingerprints())
@@ -2035,7 +2038,7 @@ class MetalsLspService(
     if (
       !buildTools.isAutoConnectable()
       && buildTools.loadSupported.isEmpty
-      && folder.hasScalaFiles
+      && folder.isScalaProject()
     ) scalaCli.setupIDE(folder)
     else Future.successful(())
   }

@@ -1064,7 +1064,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       targetName,
       targetUri,
       "root",
-      server.server.folder.toNIO.toString,
+      server.server.path.toNIO.toString,
       events,
     )
 }

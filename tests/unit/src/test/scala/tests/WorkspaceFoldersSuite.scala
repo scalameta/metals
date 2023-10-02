@@ -56,4 +56,48 @@ class WorkspaceFoldersSuite
       )
     } yield ()
   }
+
+  test("non-scala-project") {
+    cleanWorkspace()
+    val newScalaFile = "/a/src/main/scala/A.scala"
+    for {
+      _ <- initialize(
+        Map(
+          "testFolder" ->
+            s"""|/metals.json
+                |{"a":{"scalaVersion" : ${V.scala213}}}
+                |/a/src/main/scala/a/A.scala
+                |package a
+                |case class MyObjectA()
+                |""".stripMargin,
+          "notYetScalaProject" ->
+            s"""|/README.md
+                |Will be a Scala project.
+                |""".stripMargin,
+        ),
+        expectError = false,
+      )
+      _ = assert(server.fullServer.folderServices.length == 1)
+      _ = assert(server.fullServer.nonScalaProjects.length == 1)
+      _ = writeLayout(
+        s"""|$newScalaFile
+            |package a
+            |object O {
+            | val i: Int = "aaa"
+            |}
+            |""".stripMargin,
+        "notYetScalaProject",
+      )
+      _ <- server.didOpen(s"notYetScalaProject$newScalaFile")
+      _ = assert(server.fullServer.folderServices.length == 2)
+      _ = assertNoDiff(
+        server.client.pathDiagnostics(s"notYetScalaProject$newScalaFile"),
+        s"""|notYetScalaProject$newScalaFile:3:15: error: Found:    ("aaa" : String)
+            |Required: Int
+            | val i: Int = "aaa"
+            |              ^^^^^
+            |""".stripMargin,
+      )
+    } yield ()
+  }
 }

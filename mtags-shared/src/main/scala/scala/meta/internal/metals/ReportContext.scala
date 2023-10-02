@@ -31,8 +31,7 @@ trait Reporter {
 
 class StdReportContext(workspace: Path, level: ReportLevel = ReportLevel.Info)
     extends ReportContext {
-  lazy val reportsDir: Path =
-    workspace.resolve(StdReportContext.reportsDir).createDirectories()
+  val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
   val unsanitized =
     new StdReporter(
@@ -61,17 +60,18 @@ class StdReportContext(workspace: Path, level: ReportLevel = ReportLevel.Info)
 
   override def deleteAll(): Unit = {
     all.foreach(_.deleteAll())
-    Files.delete(reportsDir.resolve(StdReportContext.ZIP_FILE_NAME))
+    val zipFile = reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)
+    if (Files.exists(zipFile)) Files.delete(zipFile)
   }
 }
 
 class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
     extends Reporter {
-  private lazy val reportsDir =
-    workspace.resolve(pathToReports).createDirectories()
+  private lazy val maybeReportsDir: Path = workspace.resolve(pathToReports)
+  private lazy val reportsDir = maybeReportsDir.createDirectories()
   private val limitedFilesManager =
     new LimitedFilesManager(
-      reportsDir,
+      maybeReportsDir,
       StdReportContext.MAX_NUMBER_OF_REPORTS,
       "r_.*_"
     )

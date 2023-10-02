@@ -95,7 +95,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             |${TreeViewProvider.Compile} <root>
             |""".stripMargin,
       )
-      folder = server.server.folder
+      folder = server.server.path
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}",
         "",
@@ -158,7 +158,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
           |}
           |""".stripMargin
       )
-      folder = server.server.folder
+      folder = server.server.path
       _ = {
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("sourcecode")}",
@@ -500,7 +500,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
           |}
           |""".stripMargin
       )
-      folder = server.server.folder
+      folder = server.server.path
       // Trigger a compilation of Second.scala
       _ <- server.didOpen("b/src/main/scala/b/Second.scala")
       _ = server.assertTreeViewChildren(

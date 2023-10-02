@@ -303,14 +303,28 @@ object MetalsEnrichments
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
-    def hasScalaFiles: Boolean = {
-      def isScalaDir(file: File): Boolean = {
+    def isScalaProject(): Boolean =
+      containsProjectFilesSatisfying(_.isScala)
+    def isMetalsProject(): Boolean =
+      containsProjectFilesSatisfying(_.isScalaOrJavaFilename)
+
+    private def containsProjectFilesSatisfying(
+        fileNamePredicate: String => Boolean
+    ): Boolean = {
+      val directoriesToCheck = Set("test", "src", "it")
+      def dirFilter(f: File) = directoriesToCheck(f.getName()) || f
+        .listFiles()
+        .exists(dir => dir.isDirectory && directoriesToCheck(dir.getName()))
+      def isScalaDir(
+          file: File,
+          dirFilter: File => Boolean = _ => true,
+      ): Boolean = {
         file.listFiles().exists { file =>
-          if (file.isDirectory()) isScalaDir(file)
-          else file.getName().endsWith(".scala")
+          if (file.isDirectory()) dirFilter(file) && isScalaDir(file)
+          else fileNamePredicate(file.getName())
         }
       }
-      path.isDirectory && isScalaDir(path.toFile)
+      path.isDirectory && isScalaDir(path.toFile, dirFilter)
     }
 
     def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""

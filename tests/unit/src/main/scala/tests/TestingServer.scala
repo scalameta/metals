@@ -594,7 +594,7 @@ final case class TestingServer(
     fullServer.folderServices.foreach { service =>
       require(
         service.bspSession.isDefined,
-        s"Build server ${service.folder} did not initialize",
+        s"Build server ${service.path} did not initialize",
       )
     }
   }
