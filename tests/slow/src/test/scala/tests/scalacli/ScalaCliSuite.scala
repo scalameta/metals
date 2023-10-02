@@ -8,7 +8,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.SlowTaskConfig
-import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -16,10 +15,7 @@ import tests.FileLayout
 
 class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
   override def serverConfig: MetalsServerConfig =
-    MetalsServerConfig.default.copy(
-      slowTask = SlowTaskConfig.on,
-      statusBar = StatusBarConfig.showMessage,
-    )
+    MetalsServerConfig.default.copy(slowTask = SlowTaskConfig.on)
 
   private def simpleFileTest(useBsp: Boolean): Future[Unit] =
     for {
