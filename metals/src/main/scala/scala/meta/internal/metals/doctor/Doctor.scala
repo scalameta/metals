@@ -37,6 +37,7 @@ import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.ScalaTarget
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -301,6 +302,16 @@ final class Doctor(
       })
       .getOrElse(uri)
 
+  private def zipReports(): Option[String] =
+    clientConfig
+      .commandInHtmlFormat()
+      .map(ServerCommands.ZipReports.toCommandLink(_))
+
+  private def createGithubIssue(): Option[String] =
+    clientConfig
+      .commandInHtmlFormat()
+      .map(ServerCommands.OpenIssue.toCommandLink(_))
+
   private def resetChoiceCommand(choice: String): String = {
     val param = s"""["$choice"]"""
     s"command:metals.reset-choice?${URLEncoder.encode(param, StandardCharsets.UTF_8.name())}"
@@ -409,29 +420,47 @@ final class Doctor(
       errorReports: Map[Option[String], List[ErrorReportInfo]],
   ) = {
     html.element("h2")(_.text("Error reports:"))
-    errorReports.foreach { case (optBuildTarget, reports) =>
-      def name(default: String) = optBuildTarget.getOrElse(default)
-      html.element("details")(details =>
-        details
-          .element("summary", s"id=reports-${name("other")}")(
-            _.element("b")(
-              _.text(s"${name("Other error reports")} (${reports.length}):")
-            )
-          )
-          .element("table") { table =>
-            reports.foreach { report =>
-              val reportName = report.name.replaceAll("[_-]", " ")
-              val dateTime = dateTimeFormat.format(new Date(report.timestamp))
-              table.element("tr")(tr =>
-                tr.element("td")(_.raw(Icons.unicode.folder))
-                  .element("td")(_.link(goToCommand(report.uri), reportName))
-                  .element("td")(_.text(dateTime))
-                  .element("td")(_.text(report.shortSummary))
+    errorReports.toVector
+      .sortWith {
+        case (Some(v1) -> _, Some(v2) -> _) => v1 < v2
+        case (None -> _, _ -> _) => false
+        case (_ -> _, None -> _) => true
+      }
+      .foreach { case (optBuildTarget, reports) =>
+        def name(default: String) = optBuildTarget.getOrElse(default)
+        html.element("details")(details =>
+          details
+            .element("summary", s"id=reports-${name("other")}")(
+              _.element("b")(
+                _.text(s"${name("Other error reports")} (${reports.length}):")
               )
+            )
+            .element("table") { table =>
+              reports.foreach { report =>
+                val reportName = report.name.replaceAll("[_-]", " ")
+                val dateTime = dateTimeFormat.format(new Date(report.timestamp))
+                table.element("tr")(tr =>
+                  tr.element("td")(_.raw(Icons.unicode.folder))
+                    .element("td")(_.link(goToCommand(report.uri), reportName))
+                    .element("td")(_.text(dateTime))
+                    .element("td")(_.text(report.shortSummary))
+                )
+              }
             }
-          }
+        )
+      }
+    for {
+      zipReportsCommand <- zipReports()
+      createIssueCommand <- createGithubIssue()
+    } html.element("p")(
+      _.text(
+        "You can attach a single error report or a couple or reports in a zip file "
       )
-    }
+        .link(zipReportsCommand, "(create a zip file from anonymized reports)")
+        .text(" to your GitHub issue ")
+        .link(createIssueCommand, "(create a github issue)")
+        .text(" to help with debugging.")
+    )
   }
 
   private def buildTargetRows(
