@@ -63,10 +63,14 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
             |tpe: ${tree.tpe}
             |
             |tree:
+            |```scala
             |$tree
+            |```
             |
             |full tree:
+            |```scala
             |${unit.body}
+            |```
             |""".stripMargin,
         s"empty hover in $fileName",
         s"$fileName::$posId"

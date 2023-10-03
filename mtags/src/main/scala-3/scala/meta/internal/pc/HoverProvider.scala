@@ -66,9 +66,19 @@ object HoverProvider:
               |has error: ${tpw.isError}
               |
               |path:
-              |- ${path.map(_.toString()).mkString("\n- ")}
+              |${path
+               .map(tree => s"""|```scala
+                                |$tree
+                                |```
+                                |""".stripMargin)
+               .mkString("\n")}
               |trees:
-              |- ${trees.map(_.toString()).mkString("\n- ")}
+              |${trees
+               .map(tree => s"""|```scala
+                                |$tree
+                                |```
+                                |""".stripMargin)
+               .mkString("\n")}
               |""".stripMargin,
           s"empty hover in $uri",
           s"$uri::$posId",

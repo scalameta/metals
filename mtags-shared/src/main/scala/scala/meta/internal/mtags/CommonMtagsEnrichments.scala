@@ -358,16 +358,25 @@ trait CommonMtagsEnrichments {
           s"""|range: ${r.start} - ${r.end}
               |uri: ${r.uri()}
               |text:
-              |$withMarkers""".stripMargin
+              |```scala
+              |$withMarkers
+              |```
+              |""".stripMargin
         case o: OffsetParams =>
           s"""|offset: ${o.offset()}
               |uri: ${o.uri()}
               |text:
-              |${textWithPosMarker(o.offset(), o.text())}""".stripMargin
+              |```scala
+              |${textWithPosMarker(o.offset(), o.text())}
+              |```
+              |""".stripMargin
         case v =>
           s"""|uri: ${v.uri()}
               |text:
-              |${v.text()}""".stripMargin
+              |```scala
+              |${v.text()}
+              |```
+              |""".stripMargin
       }
     }
   }

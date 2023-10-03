@@ -20,7 +20,7 @@ final case class DoctorResults(
 
 object DoctorResults {
   // Version of the Doctor json that is returned.
-  val version = 4
+  val version = 5
 }
 
 final case class DoctorFolderResults(
@@ -41,6 +41,7 @@ final case class DoctorFolderResults(
     )
     targets.foreach(targetList => json("targets") = targetList.map(_.toJson))
     json("explanations") = explanations
+    json("errorReports") = errorReports.map(_.toJson)
     json
   }
 }
@@ -168,4 +169,15 @@ final case class ErrorReportInfo(
     uri: String,
     buildTarget: Option[String],
     shortSummary: String,
-)
+) {
+  def toJson: Obj = {
+    val json = ujson.Obj(
+      "name" -> name,
+      "timestamp" -> timestamp,
+      "uri" -> uri,
+      "shortSummary" -> shortSummary,
+    )
+    buildTarget.foreach(json("buildTarget") = _)
+    json
+  }
+}
