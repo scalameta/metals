@@ -13,6 +13,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -26,6 +27,7 @@ final class BspConfigGenerator(
     languageClient: MetalsLanguageClient,
     shellRunner: ShellRunner,
     statusBar: StatusBar,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(
       buildTool: BuildServerProvider,
@@ -37,6 +39,7 @@ final class BspConfigGenerator(
         args,
         buildTool.projectRoot,
         buildTool.redirectErrorOutput,
+        userConfig().javaHome,
       )
       .map(BspConfigGenerationStatus.fromExitCode)
       .map {

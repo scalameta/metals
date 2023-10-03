@@ -13,6 +13,7 @@ class WorkspaceFolders(
     shutdownMetals: () => Future[Unit],
     redirectSystemOut: Boolean,
     initialServerConfig: MetalsServerConfig,
+    syncUserConfiguration: List[MetalsLspService] => Future[Unit],
 )(implicit ec: ExecutionContext) {
 
   private val folderServices: AtomicReference[WorkspaceFoldersServices] = {
@@ -59,10 +60,10 @@ class WorkspaceFolders(
 
       setupLogger()
 
+      val services = newServices.filterNot(isIn(prev, _))
       for {
-        _ <- Future.sequence(
-          newServices.filterNot(isIn(prev, _)).map(_.initialized())
-        )
+        _ <- syncUserConfiguration(services)
+        _ <- Future.sequence(services.map(_.initialized()))
         _ <- Future(prev.filter(shouldBeRemoved).foreach(_.onShutdown()))
       } yield ()
     }
@@ -84,7 +85,9 @@ class WorkspaceFolders(
       case Some(service) => service
       case None =>
         setupLogger()
-        newService.initialized()
+        for {
+          _ <- syncUserConfiguration(List(newService))
+        } newService.initialized()
         newService
     }
   }

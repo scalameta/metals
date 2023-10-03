@@ -10,7 +10,6 @@ import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkspaceLspService
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.metals.config.StatusBarState.LogMessage
@@ -33,7 +32,6 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 final class ConfiguredLanguageClient(
     initial: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
-    userConfig: () => UserConfiguration,
     service: WorkspaceLspService,
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
@@ -136,10 +134,7 @@ final class ConfiguredLanguageClient(
   }
 
   override def refreshSemanticTokens(): CompletableFuture[Void] = {
-    if (
-      userConfig().enableSemanticHighlighting &&
-      clientConfig.semanticTokensRefreshSupport()
-    ) {
+    if (clientConfig.semanticTokensRefreshSupport()) {
       underlying
         .refreshSemanticTokens()
         .handle { (msg, ex) =>

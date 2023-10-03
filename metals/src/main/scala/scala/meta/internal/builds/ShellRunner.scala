@@ -15,7 +15,6 @@ import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.process.ExitCodes
@@ -26,7 +25,6 @@ import coursierapi._
 
 class ShellRunner(
     languageClient: MetalsLanguageClient,
-    userConfig: () => UserConfiguration,
     time: Time,
     statusBar: StatusBar,
 )(implicit
@@ -44,6 +42,7 @@ class ShellRunner(
       main: String,
       dir: AbsolutePath,
       arguments: List[String],
+      javaHome: Option[String],
       redirectErrorOutput: Boolean = false,
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
@@ -59,7 +58,7 @@ class ShellRunner(
       .mkString(classpathSeparator)
 
     val cmd = List(
-      JavaBinary(userConfig().javaHome),
+      JavaBinary(javaHome),
       "-classpath",
       classpath,
       main,
@@ -69,6 +68,7 @@ class ShellRunner(
       cmd,
       dir,
       redirectErrorOutput,
+      javaHome,
       processOut = processOut,
       processErr = processErr,
       propagateError = propagateError,
@@ -80,6 +80,7 @@ class ShellRunner(
       args: List[String],
       directory: AbsolutePath,
       redirectErrorOutput: Boolean,
+      javaHome: Option[String],
       additionalEnv: Map[String, String] = Map.empty,
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
@@ -87,8 +88,7 @@ class ShellRunner(
       logInfo: Boolean = true,
   ): Future[Int] = {
     val elapsed = new Timer(time)
-
-    val env = additionalEnv ++ userConfig().javaHome.map("JAVA_HOME" -> _).toMap
+    val env = additionalEnv ++ javaHome.map("JAVA_HOME" -> _).toMap
     val ps = SystemProcess.run(
       args,
       directory,

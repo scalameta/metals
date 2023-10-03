@@ -121,7 +121,6 @@ class MetalsLspService(
     languageClient: ConfiguredLanguageClient,
     initializeParams: InitializeParams,
     clientConfig: ClientConfiguration,
-    userConfig: () => UserConfiguration,
     statusBar: StatusBar,
     focusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
@@ -134,6 +133,9 @@ class MetalsLspService(
     with Cancelable
     with TextDocumentService {
   import serverInputs._
+
+  @volatile
+  private var userConfig: UserConfiguration = initialUserConfig
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -182,12 +184,13 @@ class MetalsLspService(
   private val buildTools: BuildTools = new BuildTools(
     folder,
     bspGlobalDirectories,
-    userConfig,
+    () => userConfig,
     () => tables.buildServers.selectedServer().nonEmpty,
   )
 
+  def javaHome = userConfig.javaHome
   private val optJavaHome =
-    JdkSources.defaultJavaHome(userConfig().javaHome).headOption
+    JdkSources.defaultJavaHome(javaHome).headOption
   private val maybeJdkVersion: Option[JdkVersion] =
     JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
 
@@ -218,12 +221,12 @@ class MetalsLspService(
   )
 
   private val scalaVersionSelector = new ScalaVersionSelector(
-    userConfig,
+    () => userConfig,
     buildTargets,
   )
   private val remote = new RemoteLanguageServer(
     () => folder,
-    userConfig,
+    () => userConfig,
     initialServerConfig,
     buffers,
     buildTargets,
@@ -288,9 +291,9 @@ class MetalsLspService(
   )
 
   private val onTypeFormattingProvider =
-    new OnTypeFormattingProvider(buffers, trees, userConfig)
+    new OnTypeFormattingProvider(buffers, trees, () => userConfig)
   private val rangeFormattingProvider =
-    new RangeFormattingProvider(buffers, trees, userConfig)
+    new RangeFormattingProvider(buffers, trees, () => userConfig)
 
   private val foldingRangeProvider = new FoldingRangeProvider(
     trees,
@@ -304,6 +307,7 @@ class MetalsLspService(
     buildTools,
     tables,
     shellRunner,
+    () => userConfig,
   )
 
   private val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
@@ -311,6 +315,7 @@ class MetalsLspService(
     languageClient,
     shellRunner,
     statusBar,
+    () => userConfig,
   )
 
   private val diagnostics: Diagnostics = new Diagnostics(
@@ -416,7 +421,7 @@ class MetalsLspService(
     tables,
     bspGlobalDirectories,
     clientConfig.initialConfig,
-    userConfig,
+    () => userConfig,
   )
 
   private val bspConnector: BspConnector = new BspConnector(
@@ -425,7 +430,7 @@ class MetalsLspService(
     buildTools,
     languageClient,
     tables,
-    userConfig,
+    () => userConfig,
     statusBar,
     bspConfigGenerator,
     () => bspSession.map(_.mainConnection),
@@ -474,7 +479,7 @@ class MetalsLspService(
     semanticdbs,
     buffers,
     clientConfig,
-    userConfig,
+    () => userConfig,
     languageClient,
     getVisibleName,
     folder,
@@ -487,13 +492,13 @@ class MetalsLspService(
         buffers,
         buildTargets,
         clientConfig,
-        userConfig,
+        () => userConfig,
         trees,
         folder,
       )
     val goSuperLensProvider = new SuperMethodCodeLens(
       buffers,
-      userConfig,
+      () => userConfig,
       clientConfig,
       trees,
     )
@@ -549,7 +554,7 @@ class MetalsLspService(
       charset,
       focusedDocument,
       clientConfig,
-      userConfig,
+      () => userConfig,
       trees,
     )
 
@@ -567,7 +572,7 @@ class MetalsLspService(
   private val formattingProvider: FormattingProvider = new FormattingProvider(
     folder,
     buffers,
-    userConfig,
+    () => userConfig,
     languageClient,
     clientConfig,
     statusBar,
@@ -579,7 +584,7 @@ class MetalsLspService(
   private val javaFormattingProvider: JavaFormattingProvider =
     new JavaFormattingProvider(
       buffers,
-      userConfig,
+      () => userConfig,
       buildTargets,
     )
 
@@ -640,7 +645,7 @@ class MetalsLspService(
         buffers,
         buildTargets,
         languageClient,
-        userConfig,
+        () => userConfig,
         statusBar,
         diagnostics,
         embedded,
@@ -655,7 +660,7 @@ class MetalsLspService(
     new Compilers(
       folder,
       clientConfig,
-      userConfig,
+      () => userConfig,
       buildTargets,
       buffers,
       symbolSearch,
@@ -700,14 +705,14 @@ class MetalsLspService(
       compilers,
       statusBar,
       sourceMapper,
-      userConfig,
+      () => userConfig,
       testProvider,
     )
   )
 
   private val scalafixProvider: ScalafixProvider = ScalafixProvider(
     buffers,
-    userConfig,
+    () => userConfig,
     folder,
     statusBar,
     compilations,
@@ -737,7 +742,7 @@ class MetalsLspService(
     tables,
     clientConfig,
     mtagsResolver,
-    () => userConfig().javaHome,
+    () => userConfig.javaHome,
     maybeJdkVersion,
     getVisibleName,
     buildTools,
@@ -756,7 +761,7 @@ class MetalsLspService(
       folder,
       compilers,
       buildTargets,
-      userConfig,
+      () => userConfig,
       shellRunner,
       fileSystemSemanticdbs,
       interactiveSemanticdbs,
@@ -818,7 +823,7 @@ class MetalsLspService(
       tables,
       languageClient,
       buildClient,
-      userConfig,
+      () => userConfig,
       () => indexer.profiledIndexWorkspace(() => ()),
       () => folder,
       focusedDocument,
@@ -911,15 +916,17 @@ class MetalsLspService(
     cancel()
   }
 
-  def onUserConfigUpdate(old: UserConfiguration): Future[Unit] = {
-    if (userConfig().excludedPackages != old.excludedPackages) {
+  def onUserConfigUpdate(newConfig: UserConfiguration): Future[Unit] = {
+    val old = userConfig
+    userConfig = newConfig
+    if (userConfig.excludedPackages != old.excludedPackages) {
       excludedPackageHandler = ExcludedPackagesHandler.fromUserConfiguration(
-        userConfig().excludedPackages.getOrElse(Nil)
+        userConfig.excludedPackages.getOrElse(Nil)
       )
       workspaceSymbols.indexClasspath()
     }
 
-    userConfig().fallbackScalaVersion.foreach { version =>
+    userConfig.fallbackScalaVersion.foreach { version =>
       if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
         val params =
           Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
@@ -929,15 +936,15 @@ class MetalsLspService(
       }
     }
 
-    if (userConfig().symbolPrefixes != old.symbolPrefixes) {
+    if (userConfig.symbolPrefixes != old.symbolPrefixes) {
       compilers.restartAll()
     }
 
     val resetDecorations =
       if (
-        userConfig().showImplicitArguments != old.showImplicitArguments ||
-        userConfig().showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
-        userConfig().showInferredType != old.showInferredType
+        userConfig.showImplicitArguments != old.showImplicitArguments ||
+        userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
+        userConfig.showInferredType != old.showInferredType
       ) {
         buildServerPromise.future.flatMap { _ =>
           syntheticsDecorator.refresh()
@@ -951,21 +958,21 @@ class MetalsLspService(
         if (session.main.isBloop) {
           bloopServers
             .ensureDesiredVersion(
-              userConfig().currentBloopVersion,
+              userConfig.currentBloopVersion,
               session.version,
-              userConfig().bloopVersion.nonEmpty,
+              userConfig.bloopVersion.nonEmpty,
               old.bloopVersion.isDefined,
               () => autoConnectToBuildServer,
             )
             .flatMap { _ =>
               bloopServers.ensureDesiredJvmSettings(
-                userConfig().bloopJvmProperties,
-                userConfig().javaHome,
+                userConfig.bloopJvmProperties,
+                userConfig.javaHome,
                 () => autoConnectToBuildServer(),
               )
             }
         } else if (
-          userConfig().ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
+          userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
             .exists(Ammonite.isAmmBuildTarget)
         ) {
           languageClient
@@ -1182,7 +1189,7 @@ class MetalsLspService(
         .asScala
         .flatMap {
           case FileOutOfScalaCliBspScope.regenerateAndRestart =>
-            val buildTool = ScalaCliBuildTool(folder, folder, userConfig)
+            val buildTool = ScalaCliBuildTool(folder, folder, () => userConfig)
             for {
               _ <- buildTool.generateBspConfig(
                 folder,
@@ -2165,7 +2172,7 @@ class MetalsLspService(
         bspConnector.connect(
           maybeProjectRoot.getOrElse(folder),
           folder,
-          userConfig(),
+          userConfig,
           shellRunner,
         )
       }
@@ -2271,7 +2278,7 @@ class MetalsLspService(
       () => buildClient,
       languageClient,
       () => clientConfig.initialConfig,
-      userConfig,
+      () => userConfig,
       parseTreesAndPublishDiags,
     )
   )
@@ -2325,7 +2332,7 @@ class MetalsLspService(
     focusedDocument,
     focusedDocumentBuildTarget,
     buildTargetClasses,
-    userConfig,
+    () => userConfig,
     sh,
     symbolDocs,
     scalaVersionSelector,
@@ -2340,7 +2347,7 @@ class MetalsLspService(
         val messageParams = IncompatibleBloopVersion.params(
           bspServerVersion,
           BuildInfo.bloopVersion,
-          isChangedInSettings = userConfig().bloopVersion != None,
+          isChangedInSettings = userConfig.bloopVersion != None,
         )
         languageClient.showMessageRequest(messageParams).asScala.foreach {
           case action if action == IncompatibleBloopVersion.shutdown =>
