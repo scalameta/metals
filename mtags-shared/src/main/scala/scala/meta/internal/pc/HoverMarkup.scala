@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 object HoverMarkup {
 
+  // VSCode trims the message to ~100000, thus messing the markdown for very long messages.
+  // Number based on experiments from 29.09.2023.
   private val MaxHoverBodyLength = 50000
 
   /**
