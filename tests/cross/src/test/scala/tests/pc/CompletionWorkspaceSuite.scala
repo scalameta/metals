@@ -343,7 +343,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
 
   checkEdit(
     "match-typed".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|object Main {
        |  def foo(): Unit = null match {
