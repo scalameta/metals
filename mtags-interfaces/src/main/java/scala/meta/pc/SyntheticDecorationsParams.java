@@ -12,7 +12,7 @@ public interface SyntheticDecorationsParams extends VirtualFileParams {
   /**
    * Ranges of missing type annotations.
    */
-  List<Range> withoutTypes();
+  List<Range> declsWithoutTypesRanges();
 
   /**
    * Response should contain inferred type parameters.

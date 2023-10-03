@@ -588,10 +588,10 @@ class Compilers(
             trees,
             userConfig,
           )
-          val withoutTypes = syntheticDecorationsProvider.withoutTypes
+          val declsWithoutTypes = syntheticDecorationsProvider.declsWithoutTypes
           val pcParams = CompilerSyntheticDecorationsParams(
             vFile,
-            withoutTypes.asJava,
+            declsWithoutTypes.asJava,
             userConfig().showInferredType.contains("true"),
             userConfig().showImplicitArguments,
             userConfig().showImplicitConversionsAndClasses,

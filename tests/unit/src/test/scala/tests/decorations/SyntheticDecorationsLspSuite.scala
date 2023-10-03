@@ -553,6 +553,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val anon1 = new A {}
            |  val anon2 = new A { def a = 123 }
            |  val anon3 = new A with B {}
+           |  val anon4 = new A {def a = 123; def b = 123}
            |  // existential type
            |  val job = ec.submit(new Runnable {
            |     override def run(): Unit = {}
@@ -586,6 +587,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val anon1: A = new A {}
            |  val anon2: A{def a: Int} = new A { def a: Int = 123 }
            |  val anon3: A with B = new A with B {}
+           |  val anon4: A{def a: Int; def b: Int} = new A {def a: Int = 123; def b: Int = 123}
            |  // existential type
            |  val job: Future[_ <: Object] = ec.submit(new Runnable {
            |     override def run(): Unit = {}
