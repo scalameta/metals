@@ -46,9 +46,6 @@ import scala.meta.metals.lsp.ScalaLspService
 import scala.meta.pc.DisplayableException
 
 import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonNull
-import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j
@@ -126,8 +123,8 @@ class WorkspaceLspService(
     languageClient
   }
 
-  // @volatile
-  // private var userConfig: UserConfiguration = initialUserConfig
+  private val userConfigSync =
+    new UserConfigurationSync(initializeParams, languageClient, clientConfig)
 
   val statusBar: StatusBar = new StatusBar(
     languageClient,
@@ -181,7 +178,7 @@ class WorkspaceLspService(
       () => shutdown().asScala,
       redirectSystemOut,
       serverInputs.initialServerConfig,
-      syncUserconfiguration,
+      userConfigSync,
     )
 
   def folderServices = workspaceFolders.getFolderServices
@@ -494,34 +491,8 @@ class WorkspaceLspService(
 
   override def didChangeConfiguration(
       params: DidChangeConfigurationParams
-  ): CompletableFuture[Unit] = {
-    val future = if (supportsConfiguration) {
-      syncUserconfiguration()
-    } else {
-      val fullJson =
-        params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
-      val metalsSection =
-        Option(fullJson.getAsJsonObject("metals")).getOrElse(new JsonObject)
-      updateConfiguration(metalsSection, None)
-    }
-    future.asJava
-  }
-
-  private def updateConfiguration(
-      json: JsonObject,
-      workspaceFolder: Option[MetalsLspService],
-  ): Future[Unit] =
-    UserConfiguration.fromJson(json, clientConfig) match {
-      case Left(errors) =>
-        errors.foreach { error => scribe.error(s"config error: $error") }
-        Future.successful(())
-      case Right(newUserConfig) =>
-        workspaceFolder match {
-          case Some(workspaceFolder) =>
-            workspaceFolder.onUserConfigUpdate(newUserConfig)
-          case None => collectSeq(_.onUserConfigUpdate(newUserConfig))(_ => ())
-        }
-    }
+  ): CompletableFuture[Unit] =
+    userConfigSync.onDidChangeConfiguration(params, folderServices).asJava
 
   override def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
@@ -1140,12 +1111,11 @@ class WorkspaceLspService(
 
   def initialized(): Future[Unit] = {
     statusBar.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
-    syncUserconfiguration().flatMap { _ =>
-      Future
-        .sequence(folderServices.map(_.initialized()))
-        .flatMap(_ => Future(startHttpServer()))
-        .ignoreValue
-    }
+    for {
+      _ <- userConfigSync.syncUserConfiguration(folderServices)
+      _ <- Future.sequence(folderServices.map(_.initialized()))
+      _ <- Future(startHttpServer())
+    } yield ()
   }
 
   private def startHttpServer(): Unit = {
@@ -1230,38 +1200,6 @@ class WorkspaceLspService(
     } finally {
       System.exit(0)
     }
-  }
-
-  def supportsConfiguration: Boolean = (for {
-    capabilities <- Option(initializeParams.getCapabilities)
-    workspace <- Option(capabilities.getWorkspace)
-    out <- Option(workspace.getConfiguration())
-  } yield out.booleanValue()).getOrElse(false)
-
-  private def syncUserconfiguration(
-      services: List[MetalsLspService] = folderServices
-  ): Future[Unit] = {
-    if (supportsConfiguration) {
-      val items = services.map { service =>
-        val configItem = new lsp4j.ConfigurationItem()
-        configItem.setScopeUri(service.path.toURI.toString())
-        configItem.setSection("metals")
-        configItem
-      }
-      val params = new lsp4j.ConfigurationParams(items.asJava)
-      languageClient
-        .configuration(params)
-        .asScala
-        .flatMap { items =>
-          val res = items.asScala.toList.zip(services).map {
-            case (_: JsonNull, _) => Future.successful(())
-            case (item, folder) =>
-              val json = item.asInstanceOf[JsonElement].getAsJsonObject()
-              updateConfiguration(json, Some(folder))
-          }
-          Future.sequence(res).ignoreValue
-        }
-    } else Future.unit
   }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] =
