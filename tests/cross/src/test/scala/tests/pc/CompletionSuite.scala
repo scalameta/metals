@@ -1729,7 +1729,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-scope".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1741,7 +1741,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-symbol-search".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|object T:
        |  extension (x: ListBuffe@@)
@@ -1753,7 +1753,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-type-parameter".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1765,7 +1765,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-type-parameter-symbol-search".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|object T:
        |  extension [A <: ListBuffe@@]
@@ -1777,7 +1777,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-using-param-clause".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1789,7 +1789,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-mix-1".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1801,7 +1801,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-mix-2".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1813,7 +1813,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-mix-3".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1825,7 +1825,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-mix-4".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1837,7 +1837,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-mix-5".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1849,7 +1849,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-mix-6".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1861,7 +1861,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-mix-7".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|trait Foo
        |object T:
@@ -1873,7 +1873,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-select".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|object Test:
        |  class TestSelect()
@@ -1886,7 +1886,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-select-mix-1".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|object Test:
        |  class TestSelect()
@@ -1899,7 +1899,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   check(
     "extension-definition-select-mix-2".tag(
-      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004")
     ),
     """|object Test:
        |  class TestSelect[T]()
@@ -1912,7 +1912,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "no-square-brackets",
+    "no-square-brackets".tag(IgnoreScala2),
     """|object O:
        |  val a = List.appl@@
        |""".stripMargin,
