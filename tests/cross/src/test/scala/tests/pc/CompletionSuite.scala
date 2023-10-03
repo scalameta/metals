@@ -839,7 +839,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3" -> "selectDynamic(field: String): Foo"
+      "3" -> "selectDynamic(field: String): Foo",
+      ">=3.4.0-RC1-bin-20231004" -> "banana: Int",
     ),
   )
 
@@ -853,7 +854,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3" -> "selectDynamic(field: String): Foo"
+      "3" -> "selectDynamic(field: String): Foo",
+      ">=3.4.0-RC1-bin-20231004" -> "banana: Int",
     ),
   )
 
@@ -868,7 +870,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3" -> "selectDynamic(field: String): Foo"
+      "3" -> "selectDynamic(field: String): Foo",
+      ">=3.4.0-RC1-bin-20231004" -> "banana: Int",
     ),
   )
 
@@ -882,7 +885,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3" -> "selectDynamic(field: String): Foo"
+      "3" -> "selectDynamic(field: String): Foo",
+      ">=3.4.0-RC1-bin-20231004" -> "banana: Int",
     ),
   )
 
@@ -1044,24 +1048,18 @@ class CompletionSuite extends BaseCompletionSuite {
     "adt2",
     s"""|object Main {
         |  Option(1) match {
-        |    case _: S@@
+        |    case _: Som@@
         |}
         |""".stripMargin,
     """|Some[_] scala
-       |Seq scala.collection
-       |Set scala.collection.immutable
        |""".stripMargin,
-    topLines = Some(3),
+    topLines = Some(1),
     compat = Map(
       "2.13" ->
         """|Some[_] scala
-           |Seq scala.collection.immutable
-           |Set scala.collection.immutable
            |""".stripMargin,
       "3" ->
         """|Some[?] scala
-           |Seq scala.collection.immutable
-           |Set scala.collection.immutable
            |""".stripMargin,
     ),
   )
@@ -1082,14 +1080,12 @@ class CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|NotString: Int
        |Number: Regex
-       |Nil scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3),
+    topLines = Option(2),
     compat = Map(
       "3" ->
         """|NotString: Int
            |Number: Regex
-           |Nil scala.collection.immutable
            |""".stripMargin
     ),
   )
@@ -1099,29 +1095,25 @@ class CompletionSuite extends BaseCompletionSuite {
     s"""|object Main {
         |  val Number = "".r
         |  "" match {
-        |    case _: N@@
+        |    case _: Numb@@
         |}
         |""".stripMargin,
     """|Number: Regex
-       |Nil scala.collection.immutable
-       |NoManifest scala.reflect
        |""".stripMargin,
-    topLines = Option(3),
+    topLines = Option(1),
   )
 
   check(
-    "adt5",
+    "no-methods-on-case-type",
     s"""|object Main {
         |  val Number = "".r
         |  "" match {
-        |    case _: N@@
+        |    case _: NotImpl@@
         |}
         |""".stripMargin,
-    """|Number: Regex
-       |Nil scala.collection.immutable
-       |NoManifest scala.reflect
+    """|NotImplementedError scala
        |""".stripMargin,
-    topLines = Option(3),
+    topLines = Some(1),
   )
 
   check(
@@ -1733,6 +1725,200 @@ class CompletionSuite extends BaseCompletionSuite {
            |AbstractTypeClassManifest - scala.reflect.ClassManifestFactory
            |""".stripMargin
     ),
+  )
+
+  check(
+    "extension-definition-scope".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension (x: Fo@@)
+       |""".stripMargin,
+    """|Foo extension-definition-scope
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-symbol-search".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|object T:
+       |  extension (x: ListBuffe@@)
+       |""".stripMargin,
+    """|ListBuffer[A] - scala.collection.mutable
+       |ListBuffer - scala.collection.mutable
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-type-parameter".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension [A <: Fo@@]
+       |""".stripMargin,
+    """|Foo extension-definition-type-parameter
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-type-parameter-symbol-search".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|object T:
+       |  extension [A <: ListBuffe@@]
+       |""".stripMargin,
+    """|ListBuffer[A] - scala.collection.mutable
+       |ListBuffer - scala.collection.mutable
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-using-param-clause".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension (using Fo@@)
+       |""".stripMargin,
+    """|Foo extension-definition-using-param-clause
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-mix-1".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension (x: Int)(using Fo@@)
+       |""".stripMargin,
+    """|Foo extension-definition-mix-1
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-mix-2".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension (using Fo@@)(x: Int)(using Foo)
+       |""".stripMargin,
+    """|Foo extension-definition-mix-2
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-mix-3".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension (using Foo)(x: Int)(using Fo@@)
+       |""".stripMargin,
+    """|Foo extension-definition-mix-3
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-mix-4".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension [A](x: Fo@@)
+       |""".stripMargin,
+    """|Foo extension-definition-mix-4
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-mix-5".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension [A](using Fo@@)(x: Int)
+       |""".stripMargin,
+    """|Foo extension-definition-mix-5
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-mix-6".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension [A](using Foo)(x: Fo@@)
+       |""".stripMargin,
+    """|Foo extension-definition-mix-6
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-mix-7".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|trait Foo
+       |object T:
+       |  extension [A](using Foo)(x: Fo@@)(using Foo)
+       |""".stripMargin,
+    """|Foo extension-definition-mix-7
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-select".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|object Test:
+       |  class TestSelect()
+       |object T:
+       |  extension (x: Test.TestSel@@)
+       |""".stripMargin,
+    """|TestSelect extension-definition-select.Test
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-select-mix-1".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|object Test:
+       |  class TestSelect()
+       |object T:
+       |  extension (using Int)(x: Test.TestSel@@)
+       |""".stripMargin,
+    """|TestSelect extension-definition-select-mix-1.Test
+       |""".stripMargin,
+  )
+
+  check(
+    "extension-definition-select-mix-2".tag(
+      IgnoreScalaVersion.for3LessThan("3.4.0-RC1-bin-20231004")
+    ),
+    """|object Test:
+       |  class TestSelect[T]()
+       |object T:
+       |  extension [T](x: Test.TestSel@@)
+       |""".stripMargin,
+    """|TestSelect[T] extension-definition-select-mix-2.Test
+       |TestSelect extension-definition-select-mix-2.Test
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "no-square-brackets",
+    """|object O:
+       |  val a = List.appl@@
+       |""".stripMargin,
+    """|object O:
+       |  val a = List.apply($0)
+       |""".stripMargin,
   )
 
 }
