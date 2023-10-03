@@ -10,7 +10,7 @@ import org.eclipse.{lsp4j => l}
 
 case class CompilerSyntheticDecorationsParams(
     vFileParams: CompilerVirtualFileParams,
-    withoutTypes: ju.List[l.Range],
+    declsWithoutTypesRanges: ju.List[l.Range],
     inferredTypes: Boolean,
     implicitParameters: Boolean,
     implicitConversions: Boolean

@@ -1,4 +1,4 @@
-package tests
+package tests.pc
 
 import scala.meta.internal.pc.DecorationKind
 

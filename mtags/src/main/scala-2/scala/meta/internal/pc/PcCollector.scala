@@ -67,14 +67,6 @@ abstract class PcCollector[T](
     all.filter(s => s != NoSymbol && !s.isError)
   }
 
-  /**
-   * For classes defined in methods it's not possible to find
-   * companion via methods in symbol.
-   *
-   * @param sym symbol to find a companion for
-   * @return companion if it exists
-   */
-
   def adjust(
       pos: Position,
       forRename: Boolean = false

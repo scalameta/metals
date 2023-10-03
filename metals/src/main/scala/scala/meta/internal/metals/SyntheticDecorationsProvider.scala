@@ -22,7 +22,7 @@ final class SyntheticDecorationsProvider(
 
   val path: AbsolutePath = params.uri().toAbsolutePath
 
-  lazy val (withoutTypes, methodPositions) = declarationsWithoutTypes()
+  lazy val (declsWithoutTypes, methodPositions) = declarationsWithoutTypes()
 
   def provide(
       synthteticDecorations: List[SyntheticDecoration]
@@ -63,14 +63,19 @@ final class SyntheticDecorationsProvider(
       }
       .map(_._2)
 
+  /**
+   * Puts multiple implicit parameters and type parameters on the same position into one decoration.
+   */
   @nowarn
-  private def makeDecorations(
+  private def zipDecorations(
       grouped: List[List[SyntheticDecoration]]
   ) = {
-    val result = mutable.ListBuffer.empty[DecorationOptions]
     grouped
       .map { case decorations @ (d :: _) =>
-        if (d.kind == DecorationKind.InferredType) {
+        if (
+          d.kind == DecorationKind.InferredType ||
+          d.kind() == DecorationKind.ImplicitConversion
+        ) {
           val decoration = decorations.head
           (decoration.range, decoration.label(), d.kind)
         } else {
@@ -78,6 +83,13 @@ final class SyntheticDecorationsProvider(
           (d.range, labels, d.kind)
         }
       }
+  }
+
+  private def makeDecorations(
+      grouped: List[List[SyntheticDecoration]]
+  ) = {
+    val result = mutable.ListBuffer.empty[DecorationOptions]
+    zipDecorations(grouped)
       .foreach { case (range, label, kind) =>
         kind match {
           case DecorationKind.ImplicitParameter =>

@@ -24,7 +24,7 @@ final class PcSyntheticDecorationsProvider(
       extends PcCollector[Option[SyntheticDecoration]](cp, params) {
 
     import compiler._
-    val withoutTypes: Set[lsp4j.Range] = params.withoutTypes().asScala.toSet
+    val withoutTypes: Set[lsp4j.Range] = params.declsWithoutTypesRanges().asScala.toSet
 
     override def collect(
         parent: Option[compiler.Tree]
@@ -40,7 +40,7 @@ final class PcSyntheticDecorationsProvider(
           .collectFirst {
             case Apply(fun, args) if fun.pos == pos && pos.isOffset =>
               if (params.implicitConversions) {
-                val lastArgPos = args.lastOption.fold(pos)(_.pos)
+                val (lastArgPos, _) = adjust(args.lastOption.fold(pos)(_.pos))
                 Some(
                   Decoration(
                     lastArgPos.toLsp,
@@ -52,9 +52,10 @@ final class PcSyntheticDecorationsProvider(
             case ap @ Apply(_, args)
                 if args.exists(_.pos == pos) && pos.isOffset =>
               if (params.implicitParameters) {
+                val (adjustedPos, _) = adjust(ap.pos.focusEnd)
                 Some(
                   Decoration(
-                    ap.pos.focusEnd.toLsp,
+                    adjustedPos.toLsp,
                     sym.decodedName,
                     DecorationKind.ImplicitParameter
                   )
@@ -70,9 +71,10 @@ final class PcSyntheticDecorationsProvider(
               if (params.inferredTypes) {
                 val tpe = tree.tpe.widen.finalResultType
                 val label = toLabel(tpe, pos)
+                val adjustedPos = fun.pos.focusEnd
                 Some(
                   Decoration(
-                    fun.pos.focusEnd.toLsp,
+                    adjustedPos.toLsp,
                     label,
                     DecorationKind.TypeParameter
                   )
@@ -81,12 +83,13 @@ final class PcSyntheticDecorationsProvider(
 
           }
           .getOrElse {
-            if (pos.isRange && withoutTypes(pos.toLsp)) {
+            val adjustedPos = adjust(pos)._1.toLsp
+            if (pos.isRange && withoutTypes(adjustedPos)) {
               val tpe = sym.tpe.widen.finalResultType
               val label = toLabel(tpe, pos)
               val kind = DecorationKind.InferredType
               Some(
-                Decoration(pos.toLsp, label, kind)
+                Decoration(adjustedPos, label, kind)
               )
             } else None
           }

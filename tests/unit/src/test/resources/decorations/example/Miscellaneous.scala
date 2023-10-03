@@ -2,7 +2,7 @@ package example
 
 class Miscellaneous {
   // backtick identifier
-  val `a b` = 42
+  val `a b`/*: Int*/ = 42
 
   // block with only wildcard value
   def apply(): Unit = {

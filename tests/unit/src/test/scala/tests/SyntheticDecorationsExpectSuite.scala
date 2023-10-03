@@ -38,7 +38,7 @@ class SyntheticDecorationsExpectSuite
           )
           val syntheticDecorationsProvider =
             new SyntheticDecorationsProvider(vFile, trees, () => userConfig)
-          val withoutTypes = syntheticDecorationsProvider.withoutTypes
+          val withoutTypes = syntheticDecorationsProvider.declsWithoutTypes
           val pcParams = CompilerSyntheticDecorationsParams(
             vFile,
             withoutTypes.asJava,

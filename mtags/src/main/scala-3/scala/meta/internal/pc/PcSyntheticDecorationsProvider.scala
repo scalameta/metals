@@ -34,7 +34,7 @@ class PcSyntheticDecorationsProvider(
       extends PcCollector[Option[SyntheticDecoration]](driver, params):
 
     val definitions = IndexedContext(ctx).ctx.definitions
-    val withoutTypes = params.withoutTypes().asScala.toSet
+    val withoutTypes = params.declsWithoutTypesRanges().asScala.toSet
 
     override def collect(parent: Option[tpd.Tree])(
         tree: tpd.Tree,
