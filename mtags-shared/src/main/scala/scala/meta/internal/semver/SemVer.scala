@@ -59,7 +59,10 @@ object SemVer {
         }
         .getOrElse((None, None))
       // specific condition for Scala 3 nightlies - 3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY
-      val date = parts.lift(5).flatMap(d => Try(d.toInt).toOption)
+      val date =
+        if (parts.lift(7).contains("NIGHTLY"))
+          parts.lift(5).flatMap(d => Try(d.toInt).toOption)
+        else None
       Version(major, minor, patch, rc, milestone, date)
     }
 
