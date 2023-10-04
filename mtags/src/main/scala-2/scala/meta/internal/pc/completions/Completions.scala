@@ -876,7 +876,7 @@ trait Completions { this: MetalsGlobal =>
   def inferStart(
       pos: Position,
       text: String,
-      charPred: Int => Boolean
+      charPred: Char => Boolean
   ): Int = {
     def fallback: Int = {
       var i = pos.point - 1
@@ -903,11 +903,15 @@ trait Completions { this: MetalsGlobal =>
     loop(lastVisitedParentTrees)
   }
 
+  /** Can character form part of an alphanumeric Scala identifier? */
+  private def isIdentifierPart(c: Char) =
+    (c == '$') || Character.isUnicodeIdentifierPart(c)
+
   /**
    * Returns the start offset of the identifier starting as the given offset position.
    */
   def inferIdentStart(pos: Position, text: String): Int =
-    inferStart(pos, text, Chars.isIdentifierPart)
+    inferStart(pos, text, isIdentifierPart)
 
   /**
    * Returns the end offset of the identifier starting as the given offset position.

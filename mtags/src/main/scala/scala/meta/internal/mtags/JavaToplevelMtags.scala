@@ -7,7 +7,6 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.tokenizers.CharArrayReader
 import scala.meta.internal.tokenizers.Chars._
 import scala.meta.internal.tokenizers.Reporter
 
