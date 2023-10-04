@@ -8,7 +8,7 @@ import scala.meta.internal.tokenizers.Chars._
 object ScaladocUtils {
 
   /** Is character a whitespace character (but not a new line)? */
-  def isWhitespace(c: Char) =
+  def isWhitespace(c: Char): Boolean =
     c == ' ' || c == '\t' || c == CR
 
   /**
@@ -199,7 +199,7 @@ object ScaladocUtils {
       str
 
   /** Can character form part of a doc comment variable xxx? */
-  def isVarPart(c: Char) =
+  def isVarPart(c: Char): Boolean =
     '0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z'
 
   /**
