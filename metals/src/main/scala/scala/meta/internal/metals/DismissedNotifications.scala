@@ -22,6 +22,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val UpdateBloopJson = new Notification(12)
   val ReconnectScalaCli = new Notification(13)
   val ScalaCliImportAuto = new Notification(14)
+  val BspErrors = new Notification(15)
 
   val all: List[Notification] = List(
     Only212Navigation,
@@ -38,6 +39,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
     UpdateBloopJson,
     ReconnectScalaCli,
     ScalaCliImportAuto,
+    BspErrors,
   )
 
   def resetAll(): Unit = {

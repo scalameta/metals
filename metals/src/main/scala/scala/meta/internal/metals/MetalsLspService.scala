@@ -369,8 +369,8 @@ class MetalsLspService(
     new BspErrorHandler(
       languageClient,
       folder,
-      restartBspServer,
       () => bspSession,
+      tables,
     )
 
   private val buildClient: ForwardingMetalsBuildClient =
