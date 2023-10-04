@@ -251,6 +251,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
           server.executeCommand(ServerCommands.CancelCompile)
         }
       _ = assertEquals(compileReport.getStatusCode(), StatusCode.CANCELLED)
+      // wait for all the side effect (`onComplete`) actions of cancellation to happen
+      _ = Thread.sleep(1000)
       currentTrace = trace
       cancelMatch = cancelPattern.findFirstMatchIn(currentTrace)
       _ = assert(cancelMatch.nonEmpty, trace)
