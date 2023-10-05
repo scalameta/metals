@@ -5,7 +5,6 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.duration.Duration
 
@@ -62,52 +61,38 @@ class ServerLivenessMonitor(
     pingInterval: Duration,
     bspStatus: BspStatus,
 ) {
-  private val state: AtomicReference[ServerLivenessMonitor.State] =
-    new AtomicReference(ServerLivenessMonitor.Idle)
+  @volatile private var lastPing: Long = 0
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
   scribe.debug("starting server liveness monitor")
 
   def runnable(): Runnable = new Runnable {
     def run(): Unit = {
-      def now = System.currentTimeMillis()
       def lastIncoming =
         requestMonitor.lastIncoming
           .map(now - _)
           .getOrElse(pingInterval.toMillis)
       def notResponding = lastIncoming > (pingInterval.toMillis * 2)
-      def metalsIsIdle =
-        requestMonitor.lastOutgoing
-          .map(lastOutgoing =>
-            (now - lastOutgoing) > metalsIdleInterval.toMillis
-          )
-          .getOrElse(true)
       if (!metalsIsIdle) {
-        val currState = state.getAndUpdate {
-          case ServerLivenessMonitor.Idle => ServerLivenessMonitor.FirstPing
-          case _ => ServerLivenessMonitor.Running
-        }
-        currState match {
-          case ServerLivenessMonitor.Idle =>
-            scribe.debug("setting server liveness monitor state to FirstPing")
-          case ServerLivenessMonitor.FirstPing =>
-            scribe.debug("setting server liveness monitor state to Running")
-          case _ =>
-        }
-        if (currState == ServerLivenessMonitor.Running) {
-          if (notResponding) {
-            bspStatus.noResponse()
-          }
+        if (lastPingOk && notResponding) {
+          bspStatus.noResponse()
         }
         scribe.debug("server liveness monitor: pinging build server...")
+        lastPing = now
         ping()
-      } else {
-        if (state.get() != ServerLivenessMonitor.Idle)
-          scribe.debug("setting server liveness monitor state to Idle")
-        state.set(ServerLivenessMonitor.Idle)
       }
     }
   }
+
+  private def now = System.currentTimeMillis()
+
+  def metalsIsIdle: Boolean =
+    requestMonitor.lastOutgoing
+      .map(lastOutgoing => (now - lastOutgoing) > metalsIdleInterval.toMillis)
+      .getOrElse(true)
+
+  def lastPingOk: Boolean = now - lastPing < (pingInterval.toMillis * 2)
+
   val scheduled: ScheduledFuture[_ <: Object] = scheduler.scheduleAtFixedRate(
     runnable(),
     pingInterval.toMillis,
@@ -124,7 +109,6 @@ class ServerLivenessMonitor(
     bspStatus.disconnected()
   }
 
-  def getState: ServerLivenessMonitor.State = state.get()
 }
 
 object ServerLivenessMonitor {
