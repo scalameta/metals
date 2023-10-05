@@ -239,34 +239,22 @@ final class Doctor(
     }
   }
 
-  private def getErrorReports(): List[ErrorReportInfo] = {
-    def decode(text: String) =
-      text.replace(StdReportContext.WORKSPACE_STR, workspace.toString())
-    def getSummary(lines: List[String]) = {
-      val reversed = lines.reverse
-      val index = reversed.indexWhere(_.startsWith(Report.summaryTitle))
-      if (index < 0) ""
-      else
-        reversed
-          .slice(0, index)
-          .reverse
-          .dropWhile(_ == "")
-          .map(decode)
-          .mkString("\n")
-    }
-    rc.getReports().map { case TimestampedFile(file, timestamp) =>
-      val optLines =
-        Try(Files.readAllLines(file.toPath).asScala.toList).toOption
-      val (name, buildTarget) = ReportFileName.getReportNameAndBuildTarget(file)
+  private def getErrorReports(): List[ErrorReportInfo] =
+    for {
+      provider <- rc.all
+      report <- provider.getReports()
+    } yield {
+      val (name, buildTarget) =
+        ReportFileName.getReportNameAndBuildTarget(report)
       ErrorReportInfo(
         name,
-        timestamp,
-        file.toPath.toUri().toString(),
+        report.timestamp,
+        report.toPath.toUri().toString(),
         buildTarget,
-        optLines.map(getSummary(_)).getOrElse(""),
+        Doctor.getErrorReportSummary(report, workspace).getOrElse(""),
+        provider.name,
       )
     }
-  }
 
   private def gotoBuildTargetCommand(
       workspace: AbsolutePath,
@@ -652,3 +640,24 @@ final class Doctor(
 case class DoctorVisibilityDidChangeParams(
     visible: Boolean
 )
+
+object Doctor {
+  def getErrorReportSummary(
+      file: TimestampedFile,
+      root: AbsolutePath,
+  ): Option[String] = {
+    def decode(text: String) =
+      text.replace(StdReportContext.WORKSPACE_STR, root.toString())
+    for {
+      lines <- Try(Files.readAllLines(file.toPath).asScala.toList).toOption
+      reversed = lines.reverse
+      index = reversed.indexWhere(_.startsWith(Report.summaryTitle))
+      if index >= 0
+    } yield reversed
+      .slice(0, index)
+      .reverse
+      .dropWhile(_ == "")
+      .map(decode)
+      .mkString("\n")
+  }
+}

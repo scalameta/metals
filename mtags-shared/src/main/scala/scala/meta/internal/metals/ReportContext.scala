@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -21,10 +20,10 @@ trait ReportContext {
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
   ): Unit = all.foreach(_.cleanUpOldReports(maxReportsNumber))
   def deleteAll(): Unit = all.foreach(_.deleteAll())
-  def getReports(): List[TimestampedFile]
 }
 
 trait Reporter {
+  def name: String
   def create(report: => Report, ifVerbose: Boolean = false): Option[Path]
   def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
@@ -43,23 +42,26 @@ class StdReportContext(
   val unsanitized =
     new StdReporter(
       workspace,
-      StdReportContext.reportsDir.resolve("metals-full"),
+      StdReportContext.reportsDir,
       resolveBuildTarget,
-      level
+      level,
+      "metals-full"
     )
   val incognito =
     new StdReporter(
       workspace,
-      StdReportContext.reportsDir.resolve("metals"),
+      StdReportContext.reportsDir,
       resolveBuildTarget,
-      level
+      level,
+      "metals"
     )
   val bloop =
     new StdReporter(
       workspace,
-      StdReportContext.reportsDir.resolve("bloop"),
+      StdReportContext.reportsDir,
       resolveBuildTarget,
-      level
+      level,
+      "bloop"
     )
 
   override def cleanUpOldReports(
@@ -67,8 +69,6 @@ class StdReportContext(
   ): Unit = {
     all.foreach(_.cleanUpOldReports(maxReportsNumber))
   }
-
-  override def getReports(): List[TimestampedFile] = all.flatMap(_.getReports())
 
   override def deleteAll(): Unit = {
     all.foreach(_.deleteAll())
@@ -81,9 +81,11 @@ class StdReporter(
     workspace: Path,
     pathToReports: Path,
     resolveBuildTarget: Option[String] => Option[String],
-    level: ReportLevel
+    level: ReportLevel,
+    override val name: String
 ) extends Reporter {
-  private lazy val maybeReportsDir: Path = workspace.resolve(pathToReports)
+  private lazy val maybeReportsDir: Path =
+    workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
   private val limitedFilesManager =
     new LimitedFilesManager(
@@ -144,7 +146,7 @@ class StdReporter(
     val date = TimeFormatter.getDate()
     val time = TimeFormatter.getTime()
     val buildTargetPart =
-      resolveBuildTarget(report.path).map(":" ++ _).getOrElse("")
+      resolveBuildTarget(report.path).map("_(" ++ _ ++ ")").getOrElse("")
     val filename = s"r_${report.name}${buildTargetPart}_${time}.md"
     reportsDir.resolve(date).resolve(filename)
   }
@@ -176,6 +178,7 @@ object StdReportContext {
 
 object EmptyReporter extends Reporter {
 
+  override def name = "empty-reporter"
   override def create(report: => Report, ifVerbose: Boolean): Option[Path] =
     None
 
@@ -188,8 +191,6 @@ object EmptyReporter extends Reporter {
 }
 
 object EmptyReportContext extends ReportContext {
-
-  override def getReports(): List[TimestampedFile] = List.empty
 
   override def unsanitized: Reporter = EmptyReporter
 
@@ -286,15 +287,15 @@ object ReportLevel {
 }
 
 object ReportFileName {
-  val pattern: Regex = "r_([^:]*)(:.*)?_".r
+  val pattern: Regex = "r_(?<name>[^()]*)(_\\((?<buildTarget>.*)\\))?_".r
 
-  def getReportNameAndBuildTarget(file: File): (String, Option[String]) =
-    pattern.findPrefixMatchOf(file.getName()) match {
-      case None => (file.getName(), None)
+  def getReportNameAndBuildTarget(
+      file: TimestampedFile
+  ): (String, Option[String]) =
+    pattern.findPrefixMatchOf(file.name) match {
+      case None => (file.name, None)
       case Some(foundMatch) =>
-        (
-          foundMatch.group(1),
-          Option(foundMatch.group(2)).map(_.stripPrefix(":"))
-        )
+        (foundMatch.group("name"), Option(foundMatch.group("buildTarget")))
     }
+
 }

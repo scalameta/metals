@@ -7,15 +7,17 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.FolderReportsZippper
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TimeFormatter
 import scala.meta.internal.metals.ZipReportsProvider
+import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.io.AbsolutePath
 
 class ReportsSuite extends BaseSuite {
   val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
   val reportsProvider =
-    new StdReportContext(workspace.toNIO, _ => Some("buildTarget"))
+    new StdReportContext(workspace.toNIO, _.map(_ => "build-target"))
   val folderReportsZippper: FolderReportsZippper =
     FolderReportsZippper(exampleBuildTargetsInfo, reportsProvider)
 
@@ -30,8 +32,8 @@ class ReportsSuite extends BaseSuite {
         |${workspaceStr}/WrongFile.scala
         |""".stripMargin
 
-  def exampleReport(name: String): Report =
-    Report(name, exampleText(), "Test error report.")
+  def exampleReport(name: String, path: Option[String] = None): Report =
+    Report(name, exampleText(), "Test error report.", path)
 
   override def afterEach(context: AfterEach): Unit = {
     reportsProvider.deleteAll()
@@ -59,6 +61,29 @@ class ReportsSuite extends BaseSuite {
       dirsWithDate.forall(d =>
         d.isDirectory() && TimeFormatter.hasDateName(d.getName())
       )
+    )
+  }
+
+  test("get-name-summary-and-buildTarget") {
+    val report = exampleReport("test_error")
+    val report2 = exampleReport("test_error2", Some("<path>"))
+    reportsProvider.incognito.create(report)
+    reportsProvider.incognito.create(report2)
+    val reports = reportsProvider.incognito
+      .getReports()
+      .map { report =>
+        val (name, buildTarget) =
+          ReportFileName.getReportNameAndBuildTarget(report)
+        val summary = Doctor.getErrorReportSummary(report, workspace)
+        name -> (buildTarget, summary)
+      }
+      .toMap
+    assertEquals(
+      reports,
+      Map(
+        report.name -> (None, Some(report.shortSummary)),
+        report2.name -> (Some("build-target"), Some(report2.shortSummary)),
+      ),
     )
   }
 

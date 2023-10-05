@@ -162,6 +162,7 @@ final case class DoctorFolderHeader(
  * @param uri error report file uri
  * @param buildTarget optional build target that error is associated with
  * @param shortSummary short error summary
+ * @param errorReportType one of "metals", "metals-full", "bloop"
  */
 final case class ErrorReportInfo(
     name: String,
@@ -169,6 +170,7 @@ final case class ErrorReportInfo(
     uri: String,
     buildTarget: Option[String],
     shortSummary: String,
+    errorReportType: String,
 ) {
   def toJson: Obj = {
     val json = ujson.Obj(
@@ -176,6 +178,7 @@ final case class ErrorReportInfo(
       "timestamp" -> timestamp,
       "uri" -> uri,
       "shortSummary" -> shortSummary,
+      "errorReportType" -> errorReportType,
     )
     buildTarget.foreach(json("buildTarget") = _)
     json

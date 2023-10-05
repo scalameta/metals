@@ -6,6 +6,7 @@ import scala.meta.internal.metals.utils.TimestampedFile
 
 object LoggerReporter extends Reporter {
 
+  override def name: String = "logger-report"
   override def create(report: => Report, ifVerbose: Boolean): Option[Path] = {
     scribe.info(
       s"Report ${report.name}: ${report.fullText(withIdAndSummary = false)}"
@@ -22,8 +23,6 @@ object LoggerReporter extends Reporter {
 }
 
 object LoggerReportContext extends ReportContext {
-
-  override def getReports(): List[TimestampedFile] = List.empty
 
   override def unsanitized: Reporter = LoggerReporter
 
