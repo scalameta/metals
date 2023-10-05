@@ -121,7 +121,7 @@ class ServerLivenessMonitor(
     scribe.debug("shutting down server liveness monitor")
     scheduled.cancel(true)
     scheduler.shutdown()
-    bspStatus.connected()
+    bspStatus.disconnected()
   }
 
   def getState: ServerLivenessMonitor.State = state.get()
