@@ -3,6 +3,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -206,6 +208,8 @@ case class SbtBuildTool(
             shutdownBspServer(shellRunner).ignoreValue
           case _ => Future.successful(())
         }
+        .withTimeout(10, TimeUnit.SECONDS)
+        .recover { case _: TimeoutException => Future.successful(()) }
     }
 }
 
