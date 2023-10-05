@@ -173,6 +173,16 @@ class MetalsLspService(
 
   implicit val reports: StdReportContext = new StdReportContext(
     folder.toNIO,
+    _.flatMap { uri =>
+      for {
+        filePath <- uri.toAbsolutePathSafe
+        buildTargetId <- buildTargets.inverseSources(filePath)
+        name <- buildTargets
+          .scalaTarget(buildTargetId)
+          .map(_.displayName)
+          .orElse(buildTargets.javaTarget(buildTargetId).map(_.displayName))
+      } yield name
+    },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
 

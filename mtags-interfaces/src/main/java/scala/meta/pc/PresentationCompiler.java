@@ -43,7 +43,7 @@ public abstract class PresentationCompiler {
 	 *
 	 */
 	public CompletableFuture<List<Node>> semanticTokens(VirtualFileParams params) {
-		
+
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
@@ -209,6 +209,13 @@ public abstract class PresentationCompiler {
 	};
 
 	/**
+	 * Set build target name.
+	 */
+	public PresentationCompiler withBuildTargetName(String buildTargetName) {
+		return this;
+	};
+
+	/**
 	 * Provide a SymbolSearch to extract docstrings, java parameter names and Scala
 	 * default parameter values.
 	 */
@@ -252,7 +259,7 @@ public abstract class PresentationCompiler {
 	 *                              better-monadic-for.
 	 */
 	public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
-		List<String> options);
+			List<String> options);
 
 	// =============================
 	// Intentionally missing methods

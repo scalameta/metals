@@ -165,7 +165,8 @@ final case class TestingServer(
   lazy val fullServer = languageServer.getOldMetalsLanguageServer
   def server = fullServer.folderServices.head
 
-  implicit val reports: ReportContext = new StdReportContext(workspace.toNIO)
+  implicit val reports: ReportContext =
+    new StdReportContext(workspace.toNIO, _ => None)
 
   private lazy val trees = new Trees(
     buffers,

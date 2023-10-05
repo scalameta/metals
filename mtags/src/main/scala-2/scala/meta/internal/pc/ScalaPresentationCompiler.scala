@@ -50,6 +50,7 @@ import org.eclipse.lsp4j.TextEdit
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
+    buildTargetName: Option[String] = None,
     classpath: Seq[Path] = Nil,
     options: List[String] = Nil,
     search: SymbolSearch = EmptySymbolSearch,
@@ -69,8 +70,13 @@ case class ScalaPresentationCompiler(
 
   implicit val reportContex: ReportContext =
     folderPath
-      .map(new StdReportContext(_, reportsLevel))
+      .map(new StdReportContext(_, _ => buildTargetName, reportsLevel))
       .getOrElse(EmptyReportContext)
+
+  override def withBuildTargetName(
+      buildTargetName: String
+  ): ScalaPresentationCompiler =
+    copy(buildTargetName = Some(buildTargetName))
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
     copy(reportsLevel = ReportLevel.fromString(level))

@@ -33,26 +33,32 @@ trait Reporter {
   def deleteAll(): Unit
 }
 
-class StdReportContext(workspace: Path, level: ReportLevel = ReportLevel.Info)
-    extends ReportContext {
+class StdReportContext(
+    workspace: Path,
+    resolveBuildTarget: Option[String] => Option[String],
+    level: ReportLevel = ReportLevel.Info
+) extends ReportContext {
   val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
   val unsanitized =
     new StdReporter(
       workspace,
       StdReportContext.reportsDir.resolve("metals-full"),
+      resolveBuildTarget,
       level
     )
   val incognito =
     new StdReporter(
       workspace,
       StdReportContext.reportsDir.resolve("metals"),
+      resolveBuildTarget,
       level
     )
   val bloop =
     new StdReporter(
       workspace,
       StdReportContext.reportsDir.resolve("bloop"),
+      resolveBuildTarget,
       level
     )
 
@@ -71,8 +77,12 @@ class StdReportContext(workspace: Path, level: ReportLevel = ReportLevel.Info)
   }
 }
 
-class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
-    extends Reporter {
+class StdReporter(
+    workspace: Path,
+    pathToReports: Path,
+    resolveBuildTarget: Option[String] => Option[String],
+    level: ReportLevel
+) extends Reporter {
   private lazy val maybeReportsDir: Path = workspace.resolve(pathToReports)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
   private val limitedFilesManager =
@@ -114,7 +124,7 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       val sanitizedId = report.id.map(sanitize)
       if (sanitizedId.isDefined && reported.contains(sanitizedId.get)) None
       else {
-        val path = reportPath(report.name)
+        val path = reportPath(report)
         path.getParent.createDirectories()
         sanitizedId.foreach(reported += _)
         path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
@@ -130,10 +140,12 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       .getOrElse(textAfterWokspaceReplace)
   }
 
-  private def reportPath(name: String): Path = {
+  private def reportPath(report: Report): Path = {
     val date = TimeFormatter.getDate()
     val time = TimeFormatter.getTime()
-    val filename = s"r_${name}_${time}.md"
+    val buildTargetPart =
+      resolveBuildTarget(report.path).map(":" ++ _).getOrElse("")
+    val filename = s"r_${report.name}${buildTargetPart}_${time}.md"
     reportsDir.resolve(date).resolve(filename)
   }
 
@@ -278,11 +290,15 @@ object ReportLevel {
 }
 
 object ReportFileName {
-  val pattern: Regex = "r_(.*)_".r
+  val pattern: Regex = "r_([^:]*)(:.*)?_".r
 
-  def getReportName(file: File): String =
-    pattern
-      .findPrefixMatchOf(file.getName())
-      .map(_.group(1))
-      .getOrElse(file.getName())
+  def getReportNameAndBuildTarget(file: File): (String, Option[String]) =
+    pattern.findPrefixMatchOf(file.getName()) match {
+      case None => (file.getName(), None)
+      case Some(foundMatch) =>
+        (
+          foundMatch.group(1),
+          Option(foundMatch.group(2)).map(_.stripPrefix(":"))
+        )
+    }
 }

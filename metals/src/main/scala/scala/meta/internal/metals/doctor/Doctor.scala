@@ -242,18 +242,6 @@ final class Doctor(
   private def getErrorReports(): List[ErrorReportInfo] = {
     def decode(text: String) =
       text.replace(StdReportContext.WORKSPACE_STR, workspace.toString())
-    def getBuildTarget(lines: List[String]) =
-      for {
-        filePath <- lines.collectFirst {
-          case line if line.startsWith("file:") =>
-            decode(line.trim()).toAbsolutePath
-        }
-        buildTargetId <- buildTargets.inverseSources(filePath)
-        name <- buildTargets
-          .scalaTarget(buildTargetId)
-          .map(_.displayName)
-          .orElse(buildTargets.javaTarget(buildTargetId).map(_.displayName))
-      } yield name
     def getSummary(lines: List[String]) = {
       val reversed = lines.reverse
       val index = reversed.indexWhere(_.startsWith(Report.summaryTitle))
@@ -269,11 +257,12 @@ final class Doctor(
     rc.getReports().map { case TimestampedFile(file, timestamp) =>
       val optLines =
         Try(Files.readAllLines(file.toPath).asScala.toList).toOption
+      val (name, buildTarget) = ReportFileName.getReportNameAndBuildTarget(file)
       ErrorReportInfo(
-        ReportFileName.getReportName(file),
+        name,
         timestamp,
         file.toPath.toUri().toString(),
-        optLines.flatMap(getBuildTarget(_)),
+        buildTarget,
         optLines.map(getSummary(_)).getOrElse(""),
       )
     }

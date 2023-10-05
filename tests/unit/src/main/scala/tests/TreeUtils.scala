@@ -21,7 +21,8 @@ object TreeUtils {
         () => UserConfiguration(fallbackScalaVersion = scalaVersion),
         buildTargets,
       )
-    implicit val reports = new StdReportContext(Paths.get(".").toAbsolutePath)
+    implicit val reports =
+      new StdReportContext(Paths.get(".").toAbsolutePath, _ => None)
     val trees =
       new Trees(buffers, selector)
     (buffers, trees)

@@ -14,7 +14,8 @@ import scala.meta.io.AbsolutePath
 
 class ReportsSuite extends BaseSuite {
   val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
-  val reportsProvider = new StdReportContext(workspace.toNIO)
+  val reportsProvider =
+    new StdReportContext(workspace.toNIO, _ => Some("buildTarget"))
   val folderReportsZippper: FolderReportsZippper =
     FolderReportsZippper(exampleBuildTargetsInfo, reportsProvider)
 
@@ -107,7 +108,8 @@ class ReportsSuite extends BaseSuite {
       Report("test_error_again", None, exampleText(), "Test error", testId)
     )
     assert(none1.isEmpty)
-    val newReportsProvider = new StdReportContext(workspace.toNIO)
+    val newReportsProvider =
+      new StdReportContext(workspace.toNIO, _ => Some("buildTarget"))
     val none2 = newReportsProvider.incognito.create(
       Report("test_error_again", None, exampleText(), "Test error", testId)
     )
