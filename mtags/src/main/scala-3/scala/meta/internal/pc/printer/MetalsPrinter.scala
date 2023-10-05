@@ -76,11 +76,10 @@ class MetalsPrinter(
         val reportContext = summon[ReportContext]
         val report = Report(
           "short-name-error",
-          path = None,
           s"""|Error while printing type, could not create short name for type: 
               |$tpe
               |""".stripMargin,
-          shortSummary = e.toString,
+          e.toString,
           id = Some(tpe.typeSymbol.name.show),
           error = Some(e),
         )

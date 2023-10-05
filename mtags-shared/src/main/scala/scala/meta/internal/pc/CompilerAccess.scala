@@ -197,13 +197,13 @@ abstract class CompilerAccess[Reporter, Compiler](
     val report =
       Report(
         "compiler-error",
-        params.map(_.uri().toString),
         s"""|occurred in the presentation compiler.
             |
             |action parameters:
             |${params.map(_.printed()).getOrElse("<NONE>")}
             |""".stripMargin,
-        error
+        error,
+        path = params.map(_.uri().toString)
       )
     val pathToReport =
       rc.unsanitized.create(report)

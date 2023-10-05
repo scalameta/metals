@@ -200,9 +200,9 @@ object EmptyReportContext extends ReportContext {
 
 case class Report(
     name: String,
-    path: Option[String],
     text: String,
     shortSummary: String,
+    path: Option[String] = None,
     id: Option[String] = None,
     error: Option[Throwable] = None
 ) {
@@ -243,27 +243,23 @@ case class Report(
 }
 
 object Report {
+
   def apply(
       name: String,
-      path: Option[String],
       text: String,
-      shortSummary: String,
-      id: String
-  ): Report =
-    Report(name, path, text, shortSummary, id = Some(id))
-  def apply(
-      name: String,
-      path: Option[String],
-      text: String,
-      error: Throwable
+      error: Throwable,
+      path: Option[String]
   ): Report =
     Report(
       name,
-      path,
       text,
       shortSummary = error.toString(),
+      path = path,
       error = Some(error)
     )
+
+  def apply(name: String, text: String, error: Throwable): Report =
+    Report(name, text, error, path = None)
 
   val idPrefix = "id: "
   val summaryTitle = "#### Short summary: "

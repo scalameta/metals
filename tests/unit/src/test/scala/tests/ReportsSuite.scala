@@ -31,7 +31,7 @@ class ReportsSuite extends BaseSuite {
         |""".stripMargin
 
   def exampleReport(name: String): Report =
-    Report(name, None, exampleText(), "Test error report.")
+    Report(name, exampleText(), "Test error report.")
 
   override def afterEach(context: AfterEach): Unit = {
     reportsProvider.deleteAll()
@@ -91,7 +91,7 @@ class ReportsSuite extends BaseSuite {
   test("save-with-id") {
     val testId = "test-id"
     val path = reportsProvider.incognito.create(
-      Report("test_error", None, exampleText(), "Test error", testId)
+      Report("test_error", exampleText(), "Test error", id = Some(testId))
     )
     val obtained =
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
@@ -105,13 +105,13 @@ class ReportsSuite extends BaseSuite {
       obtained,
     )
     val none1 = reportsProvider.incognito.create(
-      Report("test_error_again", None, exampleText(), "Test error", testId)
+      Report("test_error_again", exampleText(), "Test error", id = Some(testId))
     )
     assert(none1.isEmpty)
     val newReportsProvider =
       new StdReportContext(workspace.toNIO, _ => Some("buildTarget"))
     val none2 = newReportsProvider.incognito.create(
-      Report("test_error_again", None, exampleText(), "Test error", testId)
+      Report("test_error_again", exampleText(), "Test error", id = Some(testId))
     )
     assert(none2.isEmpty)
     val reports = newReportsProvider.incognito.getReports()

@@ -55,7 +55,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
 
       Report(
         "empty-hover-scala2",
-        Some(fileName),
         s"""|pos: ${pos.toLsp}
             |
             |is error: $hasErroneousType
@@ -73,7 +72,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
             |```
             |""".stripMargin,
         s"empty hover in $fileName",
-        s"$fileName::$posId"
+        id = Some(s"$fileName::$posId"),
+        path = Some(fileName)
       )
     }
 

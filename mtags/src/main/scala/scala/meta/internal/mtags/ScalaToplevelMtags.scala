@@ -784,10 +784,10 @@ class ScalaToplevelMtags(
     rc.incognito.create(
       Report(
         "scala-toplevel-mtags",
-        Some(input.path),
         failMessage(expected),
         s"expected $expected; obtained $currentToken",
-        s"""${input.path}:${newPosition}"""
+        id = Some(s"""${input.path}:${newPosition}"""),
+        path = Some(input.path)
       )
     )
   }

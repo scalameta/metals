@@ -2528,7 +2528,6 @@ class MetalsLspService(
           reports.incognito.create(
             Report(
               "invalid-symbol",
-              None,
               s"""Symbol: ${e.symbol}""".stripMargin,
               e,
             )

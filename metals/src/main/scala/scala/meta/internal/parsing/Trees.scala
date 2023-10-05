@@ -144,9 +144,9 @@ final class Trees(
         val newPathCopy = reports.unsanitized.create(
           Report(
             s"stackoverflow_${path.filename}",
-            Some(path.toURI.toString()),
             text,
-            shortSummary = s"Stack overflow in ${path.filename}",
+            s"Stack overflow in ${path.filename}",
+            path = Some(path.toURI.toString()),
           )
         )
         val message =
