@@ -39,7 +39,6 @@ object CaseKeywordCompletion:
    * @param selector `selector` of `selector match { cases }`  or `EmptyTree` when
    *                 not in a match expression (for example `List(1).foreach { case@@ }`.
    * @param completionPos the position of the completion
-   * @param typedtree typed tree of the file, used for generating auto imports
    * @param indexedContext
    * @param config
    * @param parent the parent tree node of the pattern match, for example `Apply(_, _)` when in
@@ -88,7 +87,7 @@ object CaseKeywordCompletion:
             new Parents(NoType, definitions)
       case sel => new Parents(sel.tpe, definitions)
 
-    val selectorSym = parents.selector.typeSymbol
+    val selectorSym = parents.selector.metalsDealias.typeSymbol
 
     // Special handle case when selector is a tuple or `FunctionN`.
     if definitions.isTupleClass(selectorSym) || definitions.isFunctionClass(
@@ -240,8 +239,8 @@ object CaseKeywordCompletion:
       clientSupportsSnippets,
     )
     val tpe = selector.tpe.widen.bounds.hi match
-      case tr @ TypeRef(_, _) => tr.underlying
-      case t => t
+      case tr @ TypeRef(_, _) => tr.underlying.metalsDealias
+      case t => t.metalsDealias
 
     val sortedSubclasses =
       val subclasses =

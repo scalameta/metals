@@ -757,4 +757,52 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "type-alias".tag(IgnoreScala2),
+    s"""|object O {
+        | type Id[A] = A
+        |
+        | enum Animal:
+        |   case Cat, Dog
+        | 
+        | val animal: Id[Animal] = ???
+        |
+        | animal ma@@
+        |}
+        |""".stripMargin,
+    s"""object O {
+       | type Id[A] = A
+       |
+       | enum Animal:
+       |   case Cat, Dog
+       | 
+       | val animal: Id[Animal] = ???
+       |
+       | animal match
+       |\tcase Animal.Cat => $$0
+       |\tcase Animal.Dog =>
+       |
+       |}
+       |""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  check(
+    "type-alias2".tag(IgnoreScala2),
+    s"""|object O {
+        | type Id[A] = A
+        |
+        | enum Animal:
+        |   case Cat, Dog
+        | 
+        | val animal: Id[Animal] = ???
+        |
+        |  animal match {
+        |  \tcase Animal.C@@
+        |  }
+        |}
+        |""".stripMargin,
+    "Cat: Animal",
+  )
+
 }
