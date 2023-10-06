@@ -807,7 +807,9 @@ abstract class BaseWorksheetLspSuite(
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
-      groupExpectedCompletionList = "io.circe"
+      groupExpectedCompletionList =
+        """|io.circe
+           |io.circul""".stripMargin
       groupCompletionList <- server.completion(
         "a/src/main/scala/foo/Main.worksheet.sc",
         "import $ivy.`io.cir@@`",

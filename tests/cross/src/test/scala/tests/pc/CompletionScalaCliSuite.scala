@@ -8,7 +8,8 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "io.cir@@
        |package A
        |""".stripMargin,
-    "io.circe",
+    """|io.circe
+       |io.circul""".stripMargin,
   )
 
   checkEdit(
@@ -132,7 +133,8 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using dep "io.cir@@
        |package A
        |""".stripMargin,
-    "io.circe",
+    """|io.circe
+       |io.circul""".stripMargin,
   )
 
   check(

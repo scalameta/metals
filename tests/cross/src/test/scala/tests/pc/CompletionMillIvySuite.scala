@@ -12,6 +12,7 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
     """|val dependency = ivy"io.cir@@"
        |""".stripMargin,
     """|io.circe
+       |io.circul
        |""".stripMargin,
     filename = "build.sc",
   )

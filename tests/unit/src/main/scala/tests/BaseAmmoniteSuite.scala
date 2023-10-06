@@ -627,7 +627,9 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- server.didSave("main.sc")(identity)
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
-      groupExpectedCompletionList = "io.circe"
+      groupExpectedCompletionList =
+        """|io.circe
+           |io.circul""".stripMargin
       groupCompletionList <- server.completion(
         "main.sc",
         "import $ivy.`io.cir@@`",
