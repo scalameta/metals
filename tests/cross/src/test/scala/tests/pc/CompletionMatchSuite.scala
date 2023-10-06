@@ -787,22 +787,66 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive"),
   )
 
-  check(
-    "type-alias2".tag(IgnoreScala2),
+  checkEdit(
+    "type-alias-sealed-trait",
     s"""|object O {
         | type Id[A] = A
         |
-        | enum Animal:
-        |   case Cat, Dog
+        |sealed trait Animal
+        |object Animal {
+        |   case object Cat extends Animal
+        |   case object Dog extends Animal
+        |}
         | 
         | val animal: Id[Animal] = ???
         |
-        |  animal match {
-        |  \tcase Animal.C@@
-        |  }
+        |animal ma@@
         |}
         |""".stripMargin,
-    "Cat: Animal",
+    s"""
+       |import O.Animal.Cat
+       |import O.Animal.Dog
+       |object O {
+       | type Id[A] = A
+       |
+       |sealed trait Animal
+       |object Animal {
+       |   case object Cat extends Animal
+       |   case object Dog extends Animal
+       |}
+       | 
+       | val animal: Id[Animal] = ???
+       |
+       |animal match {
+       |\tcase Cat => $$0
+       |\tcase Dog =>
+       |}
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        s"""
+           |import O.Animal.Cat
+           |import O.Animal.Dog
+           |object O {
+           | type Id[A] = A
+           |
+           |sealed trait Animal
+           |object Animal {
+           |   case object Cat extends Animal
+           |   case object Dog extends Animal
+           |}
+           | 
+           | val animal: Id[Animal] = ???
+           |
+           |animal match
+           |\tcase Cat => $$0
+           |\tcase Dog =>
+           |
+           |}
+           |""".stripMargin
+    ),
+    filter = _.contains("exhaustive"),
   )
 
 }
