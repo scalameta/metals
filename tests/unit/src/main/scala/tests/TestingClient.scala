@@ -13,7 +13,6 @@ import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.decorations.PublishDecorationsParams
@@ -91,7 +90,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
-  var bspError = BspErrorHandler.dismiss
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -370,10 +368,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           regenerateAndRestartScalaCliBuildSever
         } else if (params.getMessage() == choicesMessage) {
           params.getActions().asScala.head
-        } else if (
-          params.getMessage().startsWith(BspErrorHandler.errorHeader)
-        ) {
-          bspError
         } else if (
           params.getMessage() == ConnectionBspStatus
             .noResponseParams("Bill", Icons.default)

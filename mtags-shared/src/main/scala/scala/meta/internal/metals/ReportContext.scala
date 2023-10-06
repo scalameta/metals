@@ -84,7 +84,7 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
-  private lazy val maybeReportsDir: Path =
+  val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
   private val limitedFilesManager =

@@ -415,14 +415,6 @@ class BuildServerConnection private (
     }
   }
 
-  def isBuildServerResponsive: Future[Option[Boolean]] = {
-    val original = connection
-    original.map(
-      _.optLivenessMonitor
-        .map(_.isBuildServerResponsive)
-    )
-  }
-
 }
 
 object BuildServerConnection {
@@ -494,7 +486,6 @@ object BuildServerConnection {
             config.metalsToIdleTime,
             config.pingInterval,
             bspStatus,
-            serverName,
           )
 
         LauncherConnection(

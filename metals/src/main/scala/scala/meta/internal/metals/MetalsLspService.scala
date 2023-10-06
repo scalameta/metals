@@ -384,10 +384,9 @@ class MetalsLspService(
 
   private val bspErrorHandler: BspErrorHandler =
     new BspErrorHandler(
-      languageClient,
-      folder,
       () => bspSession,
       tables,
+      connectionBspStatus,
     )
 
   private val buildClient: ForwardingMetalsBuildClient =
@@ -423,6 +422,7 @@ class MetalsLspService(
     languageClient,
     tables,
     clientConfig.initialConfig,
+    bspStatus,
   )
 
   private val connectionBspStatus =
@@ -437,6 +437,7 @@ class MetalsLspService(
     bspGlobalDirectories,
     clientConfig.initialConfig,
     () => userConfig,
+    bspStatus,
   )
 
   private val bspConnector: BspConnector = new BspConnector(
@@ -762,6 +763,7 @@ class MetalsLspService(
     maybeJdkVersion,
     getVisibleName,
     buildTools,
+    connectionBspStatus,
   )
 
   val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
@@ -1301,7 +1303,13 @@ class MetalsLspService(
         quickConnectToBuildServer()
       case _ =>
     }
-    if (isScalaOrJava && event.eventType == EventType.Delete) {
+    if (
+      path.toNIO.startsWith(
+        reports.bloop.maybeReportsDir
+      ) && event.eventType == EventType.Delete
+    ) {
+      Future(connectionBspStatus.onReportsUpdate()).asJava
+    } else if (isScalaOrJava && event.eventType == EventType.Delete) {
       onDelete(path).asJava
     } else if (
       isScalaOrJava &&

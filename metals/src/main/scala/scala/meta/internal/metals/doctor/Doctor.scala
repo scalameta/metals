@@ -8,13 +8,12 @@ import java.util.Date
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.Duration
 import scala.util.Try
 
 import scala.meta.internal.bsp.BspResolvedResult
 import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
 import scala.meta.internal.bsp.ResolvedMultiple
@@ -66,6 +65,7 @@ final class Doctor(
     maybeJDKVersion: Option[JdkVersion],
     folderName: String,
     buildTools: BuildTools,
+    bspStatus: ConnectionBspStatus,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
@@ -546,10 +546,7 @@ final class Doctor(
   }
 
   private def isServerResponsive: Option[Boolean] =
-    currentBuildServer().flatMap { conn =>
-      val isResponsiveFuture = conn.main.isBuildServerResponsive
-      Try(Await.result(isResponsiveFuture, Duration("1s"))).toOption.flatten
-    }
+    bspStatus.isBuildServerResponsive
 
   private def extractScalaTargetInfo(
       scalaTarget: ScalaTarget,

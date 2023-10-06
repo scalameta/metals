@@ -46,6 +46,7 @@ final class BloopServers(
     languageClient: MetalsLanguageClient,
     tables: Tables,
     config: MetalsServerConfig,
+    bspStatus: BspStatus,
 )(implicit ec: ExecutionContextExecutorService) {
 
   import BloopServers._

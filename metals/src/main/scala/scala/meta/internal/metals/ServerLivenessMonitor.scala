@@ -58,7 +58,6 @@ class ServerLivenessMonitor(
     metalsIdleInterval: Duration,
     pingInterval: Duration,
     bspStatus: ConnectionBspStatus,
-    serverName: String,
 ) {
   @volatile private var lastPing: Long = 0
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
@@ -74,7 +73,7 @@ class ServerLivenessMonitor(
       def notResponding = lastIncoming > (pingInterval.toMillis * 2)
       if (!metalsIsIdle) {
         if (lastPingOk && notResponding) {
-          bspStatus.noResponse(serverName)
+          bspStatus.noResponse()
         }
         scribe.debug("server liveness monitor: pinging build server...")
         lastPing = now
@@ -98,8 +97,6 @@ class ServerLivenessMonitor(
     pingInterval.toMillis,
     TimeUnit.MILLISECONDS,
   )
-
-  def isBuildServerResponsive: Boolean = bspStatus.isBuildServerResponsive
 
   def shutdown(): Unit = {
     scribe.debug("shutting down server liveness monitor")

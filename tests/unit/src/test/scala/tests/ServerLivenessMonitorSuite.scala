@@ -12,6 +12,7 @@ import scala.concurrent.duration.Duration
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.BspStatus
 import scala.meta.internal.metals.Icons
+import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.RequestMonitor
 import scala.meta.internal.metals.ServerLivenessMonitor
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
@@ -25,20 +26,18 @@ class ServerLivenessMonitorSuite extends BaseSuite {
   test("basic") {
     val pingInterval = Duration("3s")
     val server = new ResponsiveServer(pingInterval)
-    val client = new CountMessageRequestsClient
-    val bspStatus = new BspStatus(client, isBspStatusProvider = true)
+    val bspStatus = new CountMessageRequestsBspStatus
     val connectionBspStatus = new ConnectionBspStatus(
       bspStatus,
       AbsolutePath(Paths.get(".")),
       Icons.default,
-    )
+    )(LoggerReportContext)
     val livenessMonitor = new ServerLivenessMonitor(
       server,
       () => server.sendRequest(true),
       metalsIdleInterval = pingInterval * 4,
       pingInterval,
       connectionBspStatus,
-      "responsive-server",
     )
     connectionBspStatus.connected("responsive-server")
     Thread.sleep(pingInterval.toMillis * 3 / 2)
@@ -56,7 +55,7 @@ class ServerLivenessMonitorSuite extends BaseSuite {
     server.sendRequest(false)
     assert(!livenessMonitor.metalsIsIdle)
     assert(livenessMonitor.lastPingOk)
-    assert(client.showMessageRequests == 0)
+    assert(bspStatus.noResponseMessages == 0)
     livenessMonitor.shutdown()
   }
 }
@@ -93,16 +92,16 @@ class ResponsiveServer(pingInterval: Duration) extends RequestMonitor {
   }
 }
 
-class CountMessageRequestsClient extends NoopLanguageClient {
-  var showMessageRequests = 0
-
-  override def metalsStatus(params: MetalsStatusParams): Unit =
+class CountMessageRequestsBspStatus
+    extends BspStatus(NoopLanguageClient, true) {
+  var noResponseMessages = 0
+  override def status(folder: AbsolutePath, params: MetalsStatusParams): Unit =
     if (
       params == ConnectionBspStatus.noResponseParams(
         "responsive-server",
         Icons.default,
       )
     ) {
-      showMessageRequests += 1
+      noResponseMessages += 1
     }
 }
