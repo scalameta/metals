@@ -8,6 +8,7 @@ import java.util.concurrent.TimeoutException
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -196,20 +197,32 @@ case class SbtBuildTool(
       shellRunner: ShellRunner,
       workspace: AbsolutePath,
       languageClient: LanguageClient,
+      restartSbtBuildServer: () => Future[Unit],
   )(implicit ex: ExecutionContext): Future[Unit] =
     if (checkCorrectJavaVersion(workspace, userConfig().javaHome)) {
       Future.successful(())
     } else {
-      languageClient
-        .showMessageRequest(Messages.SbtServerJavaHomeUpdate.params())
-        .asScala
-        .flatMap {
-          case Messages.SbtServerJavaHomeUpdate.restart =>
-            shutdownBspServer(shellRunner).ignoreValue
-          case _ => Future.successful(())
-        }
-        .withTimeout(10, TimeUnit.SECONDS)
-        .recover { case _: TimeoutException => Future.successful(()) }
+      val promise = Promise[Unit]()
+      val future: Future[Unit] =
+        languageClient
+          .showMessageRequest(Messages.SbtServerJavaHomeUpdate.params())
+          .asScala
+          .flatMap {
+            case Messages.SbtServerJavaHomeUpdate.restart =>
+              if (promise.isCompleted) {
+                // executes when user chooses `restart` after the timeout
+                restartSbtBuildServer()
+              } else shutdownBspServer(shellRunner).ignoreValue
+            case _ =>
+              promise.trySuccess(())
+              Future.successful(())
+          }
+          .withTimeout(15, TimeUnit.SECONDS)
+          .recover { case _: TimeoutException =>
+            Future.successful(())
+          }
+      future.onComplete(promise.tryComplete(_))
+      promise.future
     }
 }
 
