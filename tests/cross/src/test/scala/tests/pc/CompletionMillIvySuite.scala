@@ -61,8 +61,8 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
   )
 
   check(
-    "version-double-colon",
-    """|val dependency = ivy"org.typelevel:cats-core_2.11::@@"
+    "version2",
+    """|val dependency = ivy"org.typelevel:cats-core_2.11:@@"
        |""".stripMargin,
     """|1.0.1
        |1.0.0
@@ -86,23 +86,27 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
 
   check(
     "version-double-colon2",
-    """|val dependency = ivy"org.typelevel:cats-core_2.11::1.0.@@"
+    """|val dependency = ivy"org.typelevel::cats-core::2.10@@"
        |""".stripMargin,
-    """|1.0.1
-       |1.0.0
-       |1.0.0-RC2
-       |1.0.0-RC1
-       |1.0.0-MF
+    """|2.10.0
        |""".stripMargin,
     filename = "build.sc",
   )
 
   checkEdit(
     "version-double-colon-edit",
-    """|val dependency = ivy"org.typelevel:cats-core_2.11::1.0.1@@"
+    """|val dependency = ivy"org.typelevel::cats-core::2.10@@"
        |""".stripMargin,
-    """|val dependency = ivy"org.typelevel:cats-core_2.11::1.0.1"
+    """|val dependency = ivy"org.typelevel::cats-core::2.10.0"
        |""".stripMargin,
+    filename = "build.sc",
+  )
+
+  check(
+    "version-double-colon3",
+    """|val dependency = ivy"org.typelevel:cats-core_2.11::1.0.@@"
+       |""".stripMargin,
+    "",
     filename = "build.sc",
   )
 
