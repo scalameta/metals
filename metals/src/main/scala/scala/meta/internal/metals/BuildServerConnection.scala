@@ -454,10 +454,14 @@ object BuildServerConnection {
     def setupServer(): Future[LauncherConnection] = {
       connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
         val tracePrinter = Trace.setupTracePrinter("BSP", bspTraceRoot)
-        val requestMonitor =
-          if (addLivenessMonitor) Some(new RequestMonitorImpl) else None
+        val bspStatusOpt =
+          if (addLivenessMonitor)
+            Some(new BspStatus(languageClient, serverName, config.icons))
+          else None
+        val requestMonitorOpt =
+          bspStatusOpt.map(new RequestMonitorImpl(_))
         val wrapper: MessageConsumer => MessageConsumer =
-          requestMonitor.map(_.wrapper).getOrElse(identity)
+          requestMonitorOpt.map(_.wrapper).getOrElse(identity)
         val launcher =
           new Launcher.Builder[MetalsBuildServer]()
             .traceMessages(tracePrinter.orNull)
@@ -484,17 +488,16 @@ object BuildServerConnection {
           }
 
         val optServerLivenessMonitor =
-          requestMonitor.map {
-            new ServerLivenessMonitor(
-              _,
-              () => server.workspaceBuildTargets(),
-              languageClient,
-              config.metalsToIdleTime,
-              config.pingInterval,
-              serverName,
-              config.icons,
-            )
-          }
+          for {
+            bspStatus <- bspStatusOpt
+            requestMonitor <- requestMonitorOpt
+          } yield new ServerLivenessMonitor(
+            requestMonitor,
+            () => server.workspaceBuildTargets(),
+            config.metalsToIdleTime,
+            config.pingInterval,
+            bspStatus,
+          )
 
         LauncherConnection(
           conn,

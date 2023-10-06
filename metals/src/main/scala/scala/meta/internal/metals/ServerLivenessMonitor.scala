@@ -4,6 +4,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.duration.Duration
@@ -23,7 +24,7 @@ trait RequestMonitor {
   def lastIncoming: Option[Long]
 }
 
-class RequestMonitorImpl extends RequestMonitor {
+class RequestMonitorImpl(bspStatus: BspStatus) extends RequestMonitor {
   @volatile private var lastOutgoing_ : Option[Long] = None
   @volatile private var lastIncoming_ : Option[Long] = None
 
@@ -44,7 +45,10 @@ class RequestMonitorImpl extends RequestMonitor {
     }
 
   private def outgoingMessage() = lastOutgoing_ = now
-  private def incomingMessage(): Unit = lastIncoming_ = now
+  private def incomingMessage(): Unit = {
+    bspStatus.connected()
+    lastIncoming_ = now
+  }
   private def now = Some(System.currentTimeMillis())
 
   def lastOutgoing: Option[Long] = lastOutgoing_
@@ -54,22 +58,14 @@ class RequestMonitorImpl extends RequestMonitor {
 class ServerLivenessMonitor(
     requestMonitor: RequestMonitor,
     ping: () => Unit,
-    client: MetalsLanguageClient,
     metalsIdleInterval: Duration,
     pingInterval: Duration,
-    serverName: String,
-    icons: Icons,
+    bspStatus: BspStatus,
 ) {
   private val state: AtomicReference[ServerLivenessMonitor.State] =
     new AtomicReference(ServerLivenessMonitor.Idle)
-  @volatile private var isServerResponsive = true
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
-  val connectedParams: MetalsStatusParams =
-    ServerLivenessMonitor.connectedParams(serverName, icons)
-  val noResponseParams: MetalsStatusParams =
-    ServerLivenessMonitor.noResponseParams(serverName, icons)
 
-  client.metalsStatus(connectedParams)
   scribe.debug("starting server liveness monitor")
 
   def runnable(): Runnable = new Runnable {
@@ -99,12 +95,9 @@ class ServerLivenessMonitor(
           case _ =>
         }
         if (currState == ServerLivenessMonitor.Running) {
-          if (notResponding && isServerResponsive) {
-            scribe.debug("server liveness monitor detected no response")
-            client.metalsStatus(noResponseParams)
-          } else if (!notResponding && !isServerResponsive)
-            client.metalsStatus(connectedParams)
-          isServerResponsive = !notResponding
+          if (notResponding) {
+            bspStatus.noResponse()
+          }
         }
         scribe.debug("server liveness monitor: pinging build server...")
         ping()
@@ -122,13 +115,13 @@ class ServerLivenessMonitor(
     TimeUnit.MILLISECONDS,
   )
 
-  def isBuildServerResponsive: Boolean = isServerResponsive
+  def isBuildServerResponsive: Boolean = bspStatus.isBuildServerResponsive
 
   def shutdown(): Unit = {
     scribe.debug("shutting down server liveness monitor")
     scheduled.cancel(true)
     scheduler.shutdown()
-    client.metalsStatus(ServerLivenessMonitor.disconnectedParams)
+    bspStatus.disconnected()
   }
 
   def getState: ServerLivenessMonitor.State = state.get()
@@ -147,6 +140,29 @@ object ServerLivenessMonitor {
   object FirstPing extends State
   object Running extends State
 
+}
+
+class BspStatus(
+    client: MetalsLanguageClient,
+    serverName: String,
+    icons: Icons,
+) {
+  private val isServerResponsive = new AtomicBoolean(false)
+
+  def connected(): Unit =
+    if (isServerResponsive.compareAndSet(false, true))
+      client.metalsStatus(BspStatus.connectedParams(serverName, icons))
+  def noResponse(): Unit =
+    if (isServerResponsive.compareAndSet(true, false)) {
+      scribe.debug("server liveness monitor detected no response")
+      client.metalsStatus(BspStatus.noResponseParams(serverName, icons))
+    }
+  def disconnected(): Unit = client.metalsStatus(BspStatus.disconnectedParams)
+
+  def isBuildServerResponsive: Boolean = isServerResponsive.get()
+}
+
+object BspStatus {
   def connectedParams(serverName: String, icons: Icons): MetalsStatusParams =
     MetalsStatusParams(
       s"$serverName ${icons.link}",
@@ -167,5 +183,4 @@ object ServerLivenessMonitor {
       command = ServerCommands.ConnectBuildServer.id,
       commandTooltip = "Reconnect.",
     ).withStatusType(StatusType.bsp)
-
 }

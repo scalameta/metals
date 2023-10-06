@@ -14,7 +14,7 @@ object V {
   val ammonite213Version = "2.13.12"
   val ammonite3Version = "3.3.1"
 
-  val ammonite = "3.0.0-M0-55-8ef21714"
+  val ammonite = "3.0.0-M0-56-1bcbe7f6"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.11"
   val bloopConfig = "1.5.5"
@@ -32,7 +32,7 @@ object V {
   val kindProjector = "0.13.2"
   val lsp4jV = "0.20.1"
   val mavenBloop = "2.0.0"
-  val mill = "0.11.4"
+  val mill = "0.11.5"
   val mdoc = "2.3.7"
   val munit = "1.0.0-M10"
   val pprint = "0.7.3"
