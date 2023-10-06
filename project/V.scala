@@ -14,7 +14,7 @@ object V {
   val ammonite213Version = "2.13.12"
   val ammonite3Version = "3.3.1"
 
-  val ammonite = "3.0.0-M0-55-8ef21714"
+  val ammonite = "3.0.0-M0-56-1bcbe7f6"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.11"
   val bloopConfig = "1.5.5"
