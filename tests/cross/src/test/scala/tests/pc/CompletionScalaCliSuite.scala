@@ -200,6 +200,25 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     filter = _.startsWith("3.7.1"),
   )
 
+  check(
+    "version-double-colon3",
+    """|//> using lib "com.outr:scribe-cats_3::@@"
+       |package A
+       |""".stripMargin,
+    "",
+  )
+
+  checkEdit(
+    "version-double-colon-edit2",
+    """|//> using lib "com.outr:scribe-cats_3:3.7@@"
+       |package A
+       |""".stripMargin,
+    """|//> using lib "com.outr:scribe-cats_3:3.7.1"
+       |package A
+       |""".stripMargin,
+    filter = _.startsWith("3.7.1"),
+  )
+
   private def scriptWrapper(code: String, filename: String): String =
     // Vaguely looks like a scala file that ScalaCLI generates
     // from a sc file.
