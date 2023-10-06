@@ -543,6 +543,7 @@ final class FileDecoderProvider(
           ),
           path.parent,
           redirectErrorOutput = false,
+          userConfig().javaHome,
           Map.empty,
           s => {
             sbOut.append(s)
@@ -642,6 +643,7 @@ final class FileDecoderProvider(
           cfrMain,
           parent,
           args,
+          userConfig().javaHome,
           redirectErrorOutput = false,
           s => {
             sbOut.append(s)

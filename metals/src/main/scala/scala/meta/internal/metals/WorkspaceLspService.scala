@@ -46,9 +46,6 @@ import scala.meta.metals.lsp.ScalaLspService
 import scala.meta.pc.DisplayableException
 
 import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonNull
-import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j
@@ -119,15 +116,15 @@ class WorkspaceLspService(
 
   private val languageClient = {
     val languageClient =
-      new ConfiguredLanguageClient(client, clientConfig, () => userConfig, this)
+      new ConfiguredLanguageClient(client, clientConfig, this)
     // Set the language client so that we can forward log messages to the client
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())
     languageClient
   }
 
-  @volatile
-  private var userConfig: UserConfiguration = initialUserConfig
+  private val userConfigSync =
+    new UserConfigurationSync(initializeParams, languageClient, clientConfig)
 
   val statusBar: StatusBar = new StatusBar(
     languageClient,
@@ -137,7 +134,7 @@ class WorkspaceLspService(
   )
 
   private val shellRunner = register {
-    new ShellRunner(languageClient, () => userConfig, time, statusBar)
+    new ShellRunner(languageClient, time, statusBar)
   }
 
   var focusedDocument: Option[AbsolutePath] = None
@@ -163,7 +160,6 @@ class WorkspaceLspService(
           languageClient,
           initializeParams,
           clientConfig,
-          () => userConfig,
           statusBar,
           () => focusedDocument,
           shellRunner,
@@ -182,6 +178,7 @@ class WorkspaceLspService(
       () => shutdown().asScala,
       redirectSystemOut,
       serverInputs.initialServerConfig,
+      userConfigSync,
     )
 
   def folderServices = workspaceFolders.getFolderServices
@@ -494,24 +491,8 @@ class WorkspaceLspService(
 
   override def didChangeConfiguration(
       params: DidChangeConfigurationParams
-  ): CompletableFuture[Unit] = {
-    val fullJson = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
-    val metalsSection =
-      Option(fullJson.getAsJsonObject("metals")).getOrElse(new JsonObject)
-
-    updateConfiguration(metalsSection).asJava
-  }
-
-  private def updateConfiguration(json: JsonObject): Future[Unit] =
-    UserConfiguration.fromJson(json, clientConfig) match {
-      case Left(errors) =>
-        errors.foreach { error => scribe.error(s"config error: $error") }
-        Future.successful(())
-      case Right(newUserConfig) =>
-        val old = userConfig
-        userConfig = newUserConfig
-        collectSeq(_.onUserConfigUpdate(old))(_ => ())
-    }
+  ): CompletableFuture[Unit] =
+    userConfigSync.onDidChangeConfiguration(params, folderServices).asJava
 
   override def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
@@ -976,7 +957,9 @@ class WorkspaceLspService(
       case ServerCommands.StopScalaCliServer() =>
         foreachSeq(_.stopScalaCli(), ignoreValue = true)
       case ServerCommands.NewScalaProject() =>
-        newProjectProvider.createNewProjectFromTemplate().asJavaObject
+        newProjectProvider
+          .createNewProjectFromTemplate(fallbackService.javaHome)
+          .asJavaObject
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
       case actionCommand
@@ -1128,12 +1111,11 @@ class WorkspaceLspService(
 
   def initialized(): Future[Unit] = {
     statusBar.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
-    syncUserconfiguration().flatMap { _ =>
-      Future
-        .sequence(folderServices.map(_.initialized()))
-        .flatMap(_ => Future(startHttpServer()))
-        .ignoreValue
-    }
+    for {
+      _ <- userConfigSync.syncUserConfiguration(folderServices)
+      _ <- Future.sequence(folderServices.map(_.initialized()))
+      _ <- Future(startHttpServer())
+    } yield ()
   }
 
   private def startHttpServer(): Unit = {
@@ -1218,34 +1200,6 @@ class WorkspaceLspService(
     } finally {
       System.exit(0)
     }
-  }
-
-  private def syncUserconfiguration(): Future[Unit] = {
-    val supportsConfiguration = for {
-      capabilities <- Option(initializeParams.getCapabilities)
-      workspace <- Option(capabilities.getWorkspace)
-      out <- Option(workspace.getConfiguration())
-    } yield out.booleanValue()
-
-    if (supportsConfiguration.getOrElse(false)) {
-      val item = new lsp4j.ConfigurationItem()
-      item.setSection("metals")
-      val params = new lsp4j.ConfigurationParams(List(item).asJava)
-      languageClient
-        .configuration(params)
-        .asScala
-        .flatMap { items =>
-          items.asScala.headOption.flatMap(item =>
-            Option.unless(item.isInstanceOf[JsonNull])(item)
-          ) match {
-            case Some(item) =>
-              val json = item.asInstanceOf[JsonElement].getAsJsonObject()
-              updateConfiguration(json)
-            case None =>
-              Future.unit
-          }
-        }
-    } else Future.unit
   }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] =

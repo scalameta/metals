@@ -67,7 +67,7 @@ class NewProjectProvider(
       NewProjectProvider.back +: allTemplates.toSeq
     }
 
-  def createNewProjectFromTemplate(): Future[Unit] = {
+  def createNewProjectFromTemplate(javaHome: Option[String]): Future[Unit] = {
     val base = workspace.parent
     val withTemplate = askForTemplate(
       NewProjectProvider.curatedTemplates(icons)
@@ -86,6 +86,7 @@ class NewProjectProvider(
             inputPath,
             template.label.replace(s"${icons.github}", ""),
             projectName,
+            javaHome,
           )
         // It's fine to just return if the user resigned
         case _ => Future.successful(())
@@ -96,6 +97,7 @@ class NewProjectProvider(
       inputPath: AbsolutePath,
       template: String,
       projectName: String,
+      javaHome: Option[String],
   ): Future[Unit] = {
     val projectPath = inputPath.resolve(projectName.toLowerCase())
     val parent = projectPath.parent
@@ -110,6 +112,7 @@ class NewProjectProvider(
         giterMain,
         parent,
         command,
+        javaHome,
       )
       .flatMap {
         case ExitCodes.Success =>

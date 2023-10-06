@@ -12,6 +12,7 @@ import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
@@ -30,6 +31,7 @@ final class BloopInstall(
     buildTools: BuildTools,
     tables: Tables,
     shellRunner: ShellRunner,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
 
   override def toString: String = s"BloopInstall($workspace)"
@@ -43,7 +45,8 @@ final class BloopInstall(
         workspace,
         args => {
           scribe.info(s"running '${args.mkString(" ")}'")
-          val process = runArgumentsUnconditionally(buildTool, args)
+          val process =
+            runArgumentsUnconditionally(buildTool, args, userConfig().javaHome)
           process.foreach { e =>
             if (e.isFailed) {
               // Record the exact command that failed to help troubleshooting.
@@ -66,6 +69,7 @@ final class BloopInstall(
   private def runArgumentsUnconditionally(
       buildTool: BuildTool,
       args: List[String],
+      javaHome: Option[String],
   ): Future[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
     val processFuture = shellRunner
@@ -74,6 +78,7 @@ final class BloopInstall(
         args,
         buildTool.projectRoot,
         buildTool.redirectErrorOutput,
+        javaHome,
         Map(
           "COURSIER_PROGRESS" -> "disable",
           // Envs below might be used to customize build/bloopInstall procedure.

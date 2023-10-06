@@ -78,6 +78,7 @@ case class SbtBuildTool(
       shutdownArgs,
       projectRoot,
       true,
+      userConfig().javaHome,
     )
   }
 
