@@ -866,4 +866,15 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |}
        |""".stripMargin,
   )
+
+  check(
+    "named-arg-backtick",
+    """|object Main {
+       |  def foo(<<`type`>>: String): String = <<`type`>>
+       |  val x = foo(
+       |    <<`ty@@pe`>> = "abc"
+       |  )
+       |}
+       |""".stripMargin,
+  )
 }
