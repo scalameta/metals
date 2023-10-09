@@ -6,6 +6,7 @@ import scala.util.Try
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IndexedContext
 
+import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.Trees.ValDef
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.Constant
@@ -15,7 +16,10 @@ import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.Method
 import dotty.tools.dotc.core.NameKinds.DefaultGetterName
 import dotty.tools.dotc.core.Names.Name
+import dotty.tools.dotc.core.StdNames.*
+import dotty.tools.dotc.core.SymDenotations.NoDenotation
 import dotty.tools.dotc.core.Symbols
+import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.AndType
 import dotty.tools.dotc.core.Types.AppliedType
@@ -66,6 +70,26 @@ object NamedArgCompletions:
             clientSupportsSnippets,
           )
         contribution.getOrElse(Nil)
+      case (app: Apply) :: _ =>
+        /**
+         * def foo(aaa: Int, bbb: Int, ccc: Int) = ???
+         * val x = foo(
+         *  bbb = 123,
+         *  ccc = 123,
+         *  @@
+         * )
+         * In this case, typed path doesn't contain already provided arguments
+         */
+        NavigateAST.untypedPath(pos.span) match
+          case (ident: Ident) :: (app: Apply) :: _ =>
+            contribute(
+              Some(ident),
+              app,
+              indexedContext,
+              clientSupportsSnippets,
+            )
+          case _ =>
+            Nil
       case _ =>
         Nil
     end match
@@ -116,6 +140,11 @@ object NamedArgCompletions:
     val method = apply.fun
 
     val argss = collectArgss(apply)
+
+    def fallbackFindApply(sym: Symbol) =
+      sym.info.member(nme.apply) match
+        case NoDenotation => Nil
+        case den => List(den.symbol)
 
     // fallback for when multiple overloaded methods match the supplied args
     def fallbackFindMatchingMethods() =
@@ -182,7 +211,9 @@ object NamedArgCompletions:
           if foundPotential.contains(method.symbol) then foundPotential
           else method.symbol :: foundPotential
         else List(method.symbol)
-      else fallbackFindMatchingMethods()
+      else if method.symbol.is(Method) || method.symbol == NoSymbol then
+        fallbackFindMatchingMethods()
+      else fallbackFindApply(method.symbol)
       end if
     end matchingMethods
 
@@ -227,8 +258,13 @@ object NamedArgCompletions:
         def refineParams(method: Tree, level: Int): List[ParamSymbol] =
           method match
             case Select(Apply(f, _), _) => refineParams(f, level + 1)
-            case Select(h, v) => getRefinedParams(h.symbol.info, level)
-            case _ => defaultBaseParams
+            case Select(h, name) =>
+              // for Select(foo, name = apply) we want `foo.symbol`
+              if name == nme.apply then getRefinedParams(h.symbol.info, level)
+              else getRefinedParams(method.symbol.info, level)
+            case Apply(f, _) =>
+              refineParams(f, level + 1)
+            case _ => getRefinedParams(method.symbol.info, level)
         refineParams(method, 0)
       end baseParams
 
