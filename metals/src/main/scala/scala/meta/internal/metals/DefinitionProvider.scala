@@ -80,6 +80,9 @@ final class DefinitionProvider(
     sourceMapper,
   )
 
+  val scaladocDefinitionProvider =
+    new ScaladocDefinitionProvider(buffers, trees, destinationProvider)
+
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
@@ -112,7 +115,10 @@ final class DefinitionProvider(
 
     fromCompilerOrSemanticdb.map { definition =>
       if (definition.isEmpty && !definition.symbol.endsWith("/")) {
-        fromSearch(path, params.getPosition(), token).getOrElse(definition)
+        scaladocDefinitionProvider
+          .definition(path, params)
+          .orElse(fromSearch(path, params.getPosition(), token))
+          .getOrElse(definition)
       } else {
         definition
       }

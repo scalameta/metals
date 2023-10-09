@@ -606,4 +606,75 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
+  test("scaladoc-definition") {
+    val testCase =
+      """|package a
+         |
+         |object O {
+         |  /**
+         |   * Returns a [[scala.Do@@uble]] representing yada yada yada...
+         |   */
+         |  def f: Double = ???
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      definition <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(definition.nonEmpty)
+      _ = assert(definition.head.getUri().endsWith("scala/Double.scala"))
+    } yield ()
+  }
+
+  test("scaladoc-definition-this") {
+    val testCase =
+      """|package a
+         |
+         |object O {
+         |  class A {
+         |    /**
+         |     * Calls [[this@@.g]]
+         |     */
+         |    def f: Int = g
+         |    def g: Int = ???
+         |  }
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      definition <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(definition.nonEmpty)
+      _ = assert(definition.head.getUri().endsWith("a/Main.scala"))
+    } yield ()
+  }
+
 }
