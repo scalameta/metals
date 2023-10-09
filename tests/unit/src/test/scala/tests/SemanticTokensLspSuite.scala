@@ -82,7 +82,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
        |<<    * >>/*comment*/<<@param>>/*keyword*/<< >>/*comment*/<<xs>>/*variable,readonly*/<< is [[>>/*comment*/<<scala.collection.immutable.List>>/*string*/<<]]>>/*comment*/
        |<<    * >>/*comment*/<<@throws>>/*keyword*/<< >>/*comment*/<<java.util.Exception>>/*class*/<< is [[>>/*comment*/<<scala.collection.immutable.List>>/*string*/<<]]>>/*comment*/
        |<<    * >>/*comment*/<<@return>>/*keyword*/<< the same list>>/*comment*/
-       |<<    * >>/*comment*/<<@note>>/*keyword*/<< This is a note>>/*comment*/
+       |<<    * >>/*comment*/<<@note>>/*keyword*/<< This is a note [[>>/*comment*/<<java.lang.String>>/*string*/<<]] or [[>>/*comment*/<<scala.collection.Seq>>/*string*/<<]]>>/*comment*/
        |<<    */>>/*comment*/
        |  <<def>>/*keyword*/ <<m>>/*method,definition*/(<<xs>>/*parameter,declaration,readonly*/: <<List>>/*type*/[<<Int>>/*class,abstract*/]): <<List>>/*type*/[<<Int>>/*class,abstract*/] = <<xs>>/*parameter,readonly*/
        |}

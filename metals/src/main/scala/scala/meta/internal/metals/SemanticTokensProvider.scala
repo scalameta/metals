@@ -413,7 +413,7 @@ object SemanticTokensProvider {
   object DocstringToken {
 
     val paramOrThrows: String = "(@param|@tparam|@throws)\\s+([\\w.]+)"
-    val apiLink: String = "\\[\\[(.*)\\]\\]"
+    val apiLink: String = "\\[\\[(.*?)\\]\\]"
     val other: String = "(@[a-zA-Z]+)"
     val reg: Regex = s"$paramOrThrows|$apiLink|$other".r
 
