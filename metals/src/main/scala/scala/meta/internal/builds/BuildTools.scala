@@ -11,6 +11,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
+import ujson.ParsingFailedException
+
 /**
  * Detects what build tool is used in this workspace.
  *
@@ -80,13 +82,17 @@ final class BuildTools(
   def scalaCliProject: Option[AbsolutePath] =
     searchForBuildTool(_.resolve("project.scala").isFile)
       .orElse {
-        ScalaCliBspScope.scalaCliBspRoot(workspace) match {
-          case Nil => None
-          case path :: Nil if path.isFile => Some(path.parent)
-          case path :: Nil =>
-            scribe.info(s"path: $path")
-            Some(path)
-          case _ => Some(workspace)
+        try {
+          ScalaCliBspScope.scalaCliBspRoot(workspace) match {
+            case Nil => None
+            case path :: Nil if path.isFile => Some(path.parent)
+            case path :: Nil => Some(path)
+            case _ => Some(workspace)
+          }
+        } catch {
+          case _: ParsingFailedException =>
+            scribe.warn(s"could not parse scala-cli build server configuration")
+            None
         }
       }
 
