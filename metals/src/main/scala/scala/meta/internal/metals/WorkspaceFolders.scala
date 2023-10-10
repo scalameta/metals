@@ -62,7 +62,7 @@ class WorkspaceFolders(
 
       val services = newServices.filterNot(isIn(prev, _))
       for {
-        _ <- userConfigSync.syncUserConfiguration(services)
+        _ <- userConfigSync.initSyncUserConfiguration(services)
         _ <- Future.sequence(services.map(_.initialized()))
         _ <- Future(prev.filter(shouldBeRemoved).foreach(_.onShutdown()))
       } yield ()
@@ -86,7 +86,7 @@ class WorkspaceFolders(
       case None =>
         setupLogger()
         userConfigSync
-          .syncUserConfiguration(List(newService))
+          .initSyncUserConfiguration(List(newService))
           .map(_ => newService.initialized())
         newService
     }

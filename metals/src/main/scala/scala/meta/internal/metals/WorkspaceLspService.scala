@@ -1112,7 +1112,7 @@ class WorkspaceLspService(
   def initialized(): Future[Unit] = {
     statusBar.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
     for {
-      _ <- userConfigSync.syncUserConfiguration(folderServices)
+      _ <- userConfigSync.initSyncUserConfiguration(folderServices)
       _ <- Future.sequence(folderServices.map(_.initialized()))
       _ <- Future(startHttpServer())
     } yield ()
