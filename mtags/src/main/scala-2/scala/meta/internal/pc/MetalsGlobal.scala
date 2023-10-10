@@ -772,10 +772,9 @@ class MetalsGlobal(
       def loop(sym: Symbol): Unit = {
         sym.knownDirectSubclasses.foreach { child =>
           val unique = semanticdbSymbol(child)
-          if (!isVisited(unique)) {
+          if (!isVisited(unique) && !child.isStale) {
             isVisited += unique
             if (child.name.containsName(CURSOR)) ()
-            else if (child.isStale) ()
             else if (child.name == tpnme.LOCAL_CHILD) ()
             else if (child.isSealed && (child.isAbstract || child.isTrait)) {
               loop(child)
