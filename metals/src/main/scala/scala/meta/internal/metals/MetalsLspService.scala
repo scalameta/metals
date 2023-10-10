@@ -17,6 +17,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
@@ -1267,7 +1268,8 @@ class MetalsLspService(
 
     event.eventType match {
       case EventType.CreateOrModify
-          if path.isInBspDirectory(folder) && path.extension == "json" =>
+          if path.isInBspDirectory(folder) && path.extension == "json"
+            && isValidBspFile(path) =>
         scribe.info(s"Detected new build tool in $path")
         quickConnectToBuildServer()
       case _ =>
@@ -1304,6 +1306,9 @@ class MetalsLspService(
       CompletableFuture.completedFuture(())
     }
   }
+
+  private def isValidBspFile(path: AbsolutePath): Boolean =
+    path.readTextOpt.exists(text => Try(ujson.read(text)).toOption.nonEmpty)
 
   private def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
     paths.foreach { path =>
