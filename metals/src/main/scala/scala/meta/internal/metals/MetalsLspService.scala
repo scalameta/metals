@@ -177,10 +177,7 @@ class MetalsLspService(
       for {
         filePath <- uri.toAbsolutePathSafe
         buildTargetId <- buildTargets.inverseSources(filePath)
-        name <- buildTargets
-          .scalaTarget(buildTargetId)
-          .map(_.displayName)
-          .orElse(buildTargets.javaTarget(buildTargetId).map(_.displayName))
+        name <- buildTargets.info(buildTargetId).map(_.getDisplayName())
       } yield name
     },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),

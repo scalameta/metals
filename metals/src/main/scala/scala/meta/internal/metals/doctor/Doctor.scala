@@ -642,6 +642,14 @@ case class DoctorVisibilityDidChangeParams(
 )
 
 object Doctor {
+
+  /**
+   * Extracts the short summary [[scala.meta.internal.metals.Report.shortSummary]]
+   * from an error report file.
+   * @param file error report file
+   * @param root workspace folder root
+   * @return short summary or nothing if no summary or error while reading the file
+   */
   def getErrorReportSummary(
       file: TimestampedFile,
       root: AbsolutePath,
