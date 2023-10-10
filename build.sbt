@@ -841,7 +841,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "com.lihaoyi" %% "pprint" % "0.6.6",
+    dependencyOverrides += "com.geirsson" %% "metaconfig-core" % "0.12.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)
