@@ -23,14 +23,26 @@ class UserConfigurationSync(
     out <- Option(workspace.getConfiguration())
   } yield out.booleanValue()).getOrElse(false)
 
-  def syncUserConfiguration(services: List[MetalsLspService]): Future[Unit] =
-    optSyncUserConfiguration(services).getOrElse(Future.successful(()))
+  def initSyncUserConfiguration(
+      services: List[MetalsLspService]
+  ): Future[Unit] =
+    optSyncUserConfiguration(
+      services,
+      folder =>
+        newConfig => {
+          folder.setUserConfig(newConfig)
+          Future.unit
+        },
+    ).getOrElse(Future.successful(()))
 
   def onDidChangeConfiguration(
       params: lsp4j.DidChangeConfigurationParams,
       services: List[MetalsLspService],
   ): Future[Unit] =
-    optSyncUserConfiguration(services)
+    optSyncUserConfiguration(
+      services,
+      folder => newConfig => folder.onUserConfigUpdate(newConfig),
+    )
       .orElse {
         val fullJson =
           params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
@@ -44,7 +56,8 @@ class UserConfigurationSync(
       .getOrElse(Future.successful(()))
 
   private def optSyncUserConfiguration(
-      services: List[MetalsLspService]
+      services: List[MetalsLspService],
+      consume: MetalsLspService => UserConfiguration => Future[Unit],
   ): Option[Future[Unit]] =
     Option.when(supportsConfiguration) {
       val items = services.map { service =>
@@ -63,7 +76,7 @@ class UserConfigurationSync(
               case (item, folder) =>
                 val json = item.asInstanceOf[JsonElement].getAsJsonObject()
                 userConfigFrom(json)
-                  .map(folder.onUserConfigUpdate)
+                  .map(consume(folder))
                   .getOrElse(Future.successful(()))
             }
           )

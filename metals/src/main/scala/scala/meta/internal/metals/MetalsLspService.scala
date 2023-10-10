@@ -917,9 +917,14 @@ class MetalsLspService(
     cancel()
   }
 
-  def onUserConfigUpdate(newConfig: UserConfiguration): Future[Unit] = {
+  def setUserConfig(newConfig: UserConfiguration): UserConfiguration = {
     val old = userConfig
     userConfig = newConfig
+    old
+  }
+
+  def onUserConfigUpdate(newConfig: UserConfiguration): Future[Unit] = {
+    val old = setUserConfig(newConfig)
     if (userConfig.excludedPackages != old.excludedPackages) {
       excludedPackageHandler = ExcludedPackagesHandler.fromUserConfiguration(
         userConfig.excludedPackages.getOrElse(Nil)
