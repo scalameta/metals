@@ -734,4 +734,27 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive"),
   )
 
+  check(
+    "stale-symbols",
+    """
+      |package example
+      |      
+      |object Main {
+      |  val x: ScalaTargetType = ???
+      |  val y = x match@@
+      |}
+      |sealed trait ScalaTargetType
+      |object ScalaTargetType {
+      |  case object Scala2 extends ScalaTargetType
+      |  case object Scala3 extends ScalaTargetType
+      |  case object JS extends ScalaTargetType
+      |  case object Native extends ScalaTargetType
+      |  case object Typelevel extends ScalaTargetType
+      |  case object ScalaCli extends ScalaTargetType
+      |}""".stripMargin,
+    """|match
+       |match (exhaustive) ScalaTargetType (6 cases)
+       |""".stripMargin,
+  )
+
 }
