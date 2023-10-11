@@ -35,6 +35,7 @@ class BspConnector(
     statusBar: StatusBar,
     bspConfigGenerator: BspConfigGenerator,
     currentConnection: () => Option[BuildServerConnection],
+    restartBspServer: () => Future[Boolean],
 )(implicit ec: ExecutionContext) {
 
   /**
@@ -100,10 +101,19 @@ class BspConnector(
             if details.getName() == SbtBuildTool.name =>
           tables.buildServers.chooseServer(SbtBuildTool.name)
           val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
+          def restartSbtBuildServer() = currentConnection()
+            .withFilter(_.isSbt)
+            .map(_ => restartBspServer().ignoreValue)
+            .getOrElse(Future.successful(()))
           val connectionF =
             for {
               _ <- SbtBuildTool(projectRoot, () => userConfiguration)
-                .ensureCorrectJavaVersion(shellRunner, projectRoot, client)
+                .ensureCorrectJavaVersion(
+                  shellRunner,
+                  projectRoot,
+                  client,
+                  restartSbtBuildServer,
+                )
               connection <- bspServers.newServer(
                 projectRoot,
                 bspTraceRoot,

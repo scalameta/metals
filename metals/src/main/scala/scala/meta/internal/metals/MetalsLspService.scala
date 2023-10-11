@@ -434,6 +434,7 @@ class MetalsLspService(
     statusBar,
     bspConfigGenerator,
     () => bspSession.map(_.mainConnection),
+    restartBspServer,
   )
 
   private val workspaceSymbols: WorkspaceSymbolProvider =
