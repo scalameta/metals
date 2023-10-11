@@ -371,6 +371,42 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     } yield ()
   }
 
+  test("properly-reindex") {
+    cleanWorkspace()
+    server.client.importBuild = Messages.ImportBuild.yes
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""|/Main.scala
+            |//> using scala 2.13.11
+            |// > using toolkit latest
+            |
+            |object Main {
+            |    println(os.pwd)
+            |}
+            |
+            |""".stripMargin
+      )
+      _ <- server.server.buildServerPromise.future
+      _ <- server.didOpen("Main.scala")
+      _ = assertEquals(
+        server.client.workspaceDiagnostics,
+        """|Main.scala:5:13: error: not found: value os
+           |    println(os.pwd)
+           |            ^^
+           |""".stripMargin,
+      )
+      _ <- server.didSave("Main.scala") { text =>
+        text.replace("// >", "//>")
+      }
+      // cause another compilation to wait on workspace reload, the previous gets cancelled
+      _ <- server.didSave("Main.scala")(identity)
+      _ = assertEquals(
+        server.client.workspaceDiagnostics,
+        "",
+      )
+    } yield ()
+  }
+
   test("single-file-config") {
     cleanWorkspace()
     val msg = FileOutOfScalaCliBspScope.askToRegenerateConfigAndRestartBspMsg(

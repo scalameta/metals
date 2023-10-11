@@ -401,7 +401,7 @@ class MetalsLspService(
         worksheetProvider.onBuildTargetDidCompile(target)
       },
       onBuildTargetDidChangeFunc = params => {
-        maybeQuickConnectToBuildServer(params)
+        onBuildTargetChanges(params)
       },
       bspErrorHandler,
     )
@@ -1966,11 +1966,19 @@ class MetalsLspService(
       buildTool.version,
     )
 
-  def supportedBuildTool(): Future[Option[BuildTool]] = {
+  def supportedBuildTool(): Future[Option[BuildTool.Found]] = {
     def isCompatibleVersion(buildTool: BuildTool) = {
       val isCompatibleVersion = this.isCompatibleVersion(buildTool)
       if (isCompatibleVersion) {
-        Some(buildTool)
+        buildTool.digest(folder) match {
+          case Some(digest) =>
+            Some(BuildTool.Found(buildTool, digest))
+          case None =>
+            scribe.warn(
+              s"Could not calculate checksum for ${buildTool.executableName} in $folder"
+            )
+            None
+        }
       } else {
         scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
         languageClient.showMessage(
@@ -1991,10 +1999,12 @@ class MetalsLspService(
       }
       case buildTools =>
         for {
-          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
+          buildTool <- buildToolSelector.checkForChosenBuildTool(
             buildTools
           )
-        } yield isCompatibleVersion(buildTool)
+        } yield {
+          buildTool.flatMap(isCompatibleVersion)
+        }
     }
   }
 
@@ -2008,38 +2018,32 @@ class MetalsLspService(
         _ == BloopServers.name
       )
       buildChange <- possibleBuildTool match {
-        case Some(buildTool) =>
-          (buildTool.digest(folder), buildTool) match {
-            case (None, _) =>
-              scribe.warn(s"Skipping build import, no checksum.")
-              Future.successful(BuildChange.None)
-            case (Some(_), buildTool: ScalaCliBuildTool)
-                if chosenBuildServer.isEmpty =>
-              tables.buildServers.chooseServer(ScalaCliBuildTool.name)
-              val scalaCliBspConfigExists =
-                ScalaCliBuildTool.pathsToScalaCliBsp(folder).exists(_.isFile)
-              if (scalaCliBspConfigExists) Future.successful(BuildChange.None)
-              else
-                buildTool
-                  .generateBspConfig(
-                    folder,
-                    args =>
-                      bspConfigGenerator.runUnconditionally(buildTool, args),
-                    statusBar,
-                  )
-                  .flatMap(_ => quickConnectToBuildServer())
-            case (Some(digest), _) if isBloopOrEmpty =>
-              slowConnectToBloopServer(forceImport, buildTool, digest)
-            case (Some(digest), _) =>
-              indexer.reloadWorkspaceAndIndex(
-                forceImport,
-                buildTool,
-                digest,
-                importBuild,
+        case Some(BuildTool.Found(buildTool: ScalaCliBuildTool, _))
+            if chosenBuildServer.isEmpty =>
+          tables.buildServers.chooseServer(ScalaCliBuildTool.name)
+          val scalaCliBspConfigExists =
+            ScalaCliBuildTool.pathsToScalaCliBsp(folder).exists(_.isFile)
+          if (scalaCliBspConfigExists) Future.successful(BuildChange.None)
+          else
+            buildTool
+              .generateBspConfig(
+                folder,
+                args => bspConfigGenerator.runUnconditionally(buildTool, args),
+                statusBar,
               )
-          }
+              .flatMap(_ => quickConnectToBuildServer())
+        case Some(found) if isBloopOrEmpty =>
+          slowConnectToBloopServer(forceImport, found.buildTool, found.digest)
+        case Some(found) =>
+          indexer.reloadWorkspaceAndIndex(
+            forceImport,
+            found.buildTool,
+            found.digest,
+            importBuild,
+          )
         case None =>
           Future.successful(BuildChange.None)
+
       }
     } yield buildChange
 
@@ -2114,9 +2118,11 @@ class MetalsLspService(
       change
     }
 
-  private def maybeQuickConnectToBuildServer(
+  private def onBuildTargetChanges(
       params: b.DidChangeBuildTarget
   ): Unit = {
+    // Make sure that no compilation is running, if it is it might not get completed properly
+    compilations.cancel()
     val (ammoniteChanges, otherChanges) =
       params.getChanges.asScala.partition { change =>
         val connOpt = buildTargets.buildServerOf(change.getTarget)
@@ -2145,13 +2151,20 @@ class MetalsLspService(
               .error("Error re-importing Scala CLI build", exception)
         }
 
-    if (otherChanges0.nonEmpty)
-      quickConnectToBuildServer().onComplete {
-        case Failure(e) =>
-          scribe.warn("Error refreshing build", e)
-        case Success(_) =>
-          scribe.info("Refreshed build after change")
+    if (otherChanges0.nonEmpty) {
+      bspSession match {
+        case None => scribe.warn("No build server connected")
+        case Some(session) =>
+          for {
+            _ <- importBuild(session)
+            _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
+          } {
+            focusedDocument().foreach(path => compilations.compileFile(path))
+            compilers.cancel()
+          }
       }
+
+    }
   }
 
   def autoConnectToBuildServer(): Future[BuildChange] = {
