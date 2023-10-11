@@ -630,13 +630,13 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       )
       _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      definition <- server.definition(
+      locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
         testCase,
         workspace,
       )
-      _ = assert(definition.nonEmpty)
-      _ = assert(definition.head.getUri().endsWith("scala/Double.scala"))
+      _ = assert(locations.nonEmpty)
+      _ = assert(locations.head.getUri().endsWith("scala/Double.scala"))
     } yield ()
   }
 
@@ -667,13 +667,52 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       )
       _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      definition <- server.definition(
+      locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
         testCase,
         workspace,
       )
-      _ = assert(definition.nonEmpty)
-      _ = assert(definition.head.getUri().endsWith("a/Main.scala"))
+      _ = assert(locations.nonEmpty)
+      _ = assert(locations.head.getUri().endsWith("a/Main.scala"))
+    } yield ()
+  }
+
+  test("scaladoc-find-all-overridden-methods") {
+    val testCase =
+      """|package a.internal
+         |
+         |object O {
+         |  class A {
+         |    /**
+         |     * Calls [[fo@@o]]
+         |     */
+         |    def f: Int = g
+         |    def foo: Int = ???
+         |    def foo(i: Int): Int = ???
+         |    def foo(str: String, i: Int): Int = ???
+         |  }
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.length == 3)
+      _ = assert(locations.forall(_.getUri().endsWith("a/Main.scala")))
     } yield ()
   }
 

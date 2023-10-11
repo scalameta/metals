@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.collection.mutable.ListBuffer
 import scala.util.Success
 import scala.util.Try
 
@@ -30,19 +31,58 @@ class ScaladocDefinitionProvider(
       buffer <- buffers.get(path)
       position <- params.getPosition().toMeta(Input.String(buffer))
       symbol <- extractScalaDocLinkAtPos(buffer, position)
-      scalaMetaSymbols = symbol.toScalaMetaSymbols(
-        getPackageAndThisSymbols(path, position)
-      )
+      contextSymbols = getContext(path, position)
+      scalaMetaSymbols = symbol.toScalaMetaSymbols(contextSymbols)
       _ = scribe.debug(
         s"looking for definition for scaladoc symbol: $symbol considering alternatives: ${scalaMetaSymbols
+            .map(_.showSymbol)
             .mkString(", ")}"
       )
       definitionResult <- scalaMetaSymbols.collectFirst { sym =>
-        Try(destinationProvider.fromSymbol(sym, Some(path))) match {
-          case Success(Some(value)) => value
+        search(sym, path) match {
+          case Some(value) => value
         }
       }
     } yield definitionResult
+  }
+
+  private def search(symbol: ScalaDocLinkSymbol, path: AbsolutePath) =
+    symbol match {
+      case method: MethodSymbol => findAllOverLoadedMethods(method, path)
+      case StringSymbol(symbol) =>
+        Try(destinationProvider.fromSymbol(symbol, Some(path))).toOption.flatten
+          .filter(_.symbol == symbol)
+    }
+
+  private def findAllOverLoadedMethods(
+      method: MethodSymbol,
+      path: AbsolutePath,
+  ) = {
+    var ident: Int = 0
+    val results: ListBuffer[DefinitionResult] = new ListBuffer
+    var ok: Boolean = true
+    while (ok) {
+      val currentSymbol = method.symbol(ident)
+      Try(
+        destinationProvider.fromSymbol(currentSymbol, Some(path))
+      ) match {
+        case Success(Some(value)) if value.symbol == currentSymbol =>
+          ident += 1
+          results.addOne(value)
+        case _ => ok = false
+      }
+    }
+
+    if (results.isEmpty) None
+    else
+      Some(
+        new DefinitionResult(
+          results.toList.flatMap(_.locations.asScala).asJava,
+          results.head.symbol,
+          None,
+          None,
+        )
+      )
   }
 
   private def extractScalaDocLinkAtPos(
@@ -59,7 +99,7 @@ class ScaladocDefinitionProvider(
       symbol <- ScalaDocLink.atOffset(comment.text, offset)
     } yield symbol
 
-  private def getPackageAndThisSymbols(
+  private def getContext(
       path: AbsolutePath,
       pos: Position,
   ): ContextSymbols = {
@@ -108,7 +148,9 @@ class ScaladocDefinitionProvider(
 }
 
 case class ScalaDocLink(value: String) {
-  def toScalaMetaSymbols(contextSymbols: => ContextSymbols): List[String] =
+  def toScalaMetaSymbols(
+      contextSymbols: => ContextSymbols
+  ): List[ScalaDocLinkSymbol] =
     if (value.isEmpty()) List.empty
     else {
       val symbol = symbolWithFixedPackages
@@ -127,15 +169,33 @@ case class ScalaDocLink(value: String) {
           }
         }
 
-      symbol.last match {
-        case '#' | '.' | '/' => withPrefixes
-        case '$' =>
-          withPrefixes.flatMap(sym =>
-            List(s"${sym.dropRight(1)}.", s"${sym.dropRight(1)}().")
-          )
-        case '!' => withPrefixes.flatMap(sym => List(s"${sym.dropRight(1)}#"))
-        case _ =>
-          withPrefixes.flatMap(sym => List(s"$sym#", s"$sym.", s"$sym()."))
+      List(symbol.indexOf("("), symbol.indexOf("[")).filter(_ >= 0) match {
+        case Nil =>
+          symbol.last match {
+            case '#' | '.' | '/' => withPrefixes.map(StringSymbol(_))
+            case '$' =>
+              withPrefixes.flatMap(sym =>
+                List(
+                  StringSymbol(s"${sym.dropRight(1)}."),
+                  MethodSymbol(s"${sym.dropRight(1)}"),
+                )
+              )
+            case '!' =>
+              withPrefixes.flatMap(sym =>
+                List(StringSymbol(s"${sym.dropRight(1)}#"))
+              )
+            case _ =>
+              withPrefixes.flatMap(sym =>
+                List(
+                  StringSymbol(s"$sym#"),
+                  StringSymbol(s"$sym."),
+                  MethodSymbol(sym),
+                )
+              )
+          }
+        case list =>
+          val toDrop = symbol.length - list.min
+          withPrefixes.flatMap(sym => List(MethodSymbol(sym.dropRight(toDrop))))
       }
     }
 
@@ -184,4 +244,19 @@ object ContextSymbols {
 
   def empty: ContextSymbols = ContextSymbols(None, None)
 
+}
+
+sealed trait ScalaDocLinkSymbol {
+  def showSymbol: String
+}
+case class StringSymbol(symbol: String) extends ScalaDocLinkSymbol {
+  override def showSymbol: String = symbol
+}
+case class MethodSymbol(prefixSymbol: String) extends ScalaDocLinkSymbol {
+  def symbol(i: Int): String =
+    i match {
+      case 0 => s"$prefixSymbol()."
+      case _ => s"$prefixSymbol(+$i)."
+    }
+  override def showSymbol: String = s"$prefixSymbol(+n)."
 }
