@@ -658,12 +658,10 @@ object Doctor {
       text.replace(StdReportContext.WORKSPACE_STR, root.toString())
     for {
       lines <- Try(Files.readAllLines(file.toPath).asScala.toList).toOption
-      reversed = lines.reverse
-      index = reversed.indexWhere(_.startsWith(Report.summaryTitle))
+      index = lines.lastIndexWhere(_.startsWith(Report.summaryTitle))
       if index >= 0
-    } yield reversed
-      .slice(0, index)
-      .reverse
+    } yield lines
+      .drop(index + 1)
       .dropWhile(_ == "")
       .map(decode)
       .mkString("\n")
