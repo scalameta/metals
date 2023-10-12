@@ -18,10 +18,7 @@ class WorkspaceFolders(
 
   private val folderServices: AtomicReference[WorkspaceFoldersServices] = {
     val (scalaProjects, nonScalaProjects) =
-      initialFolders.partition(_.isMetalsProject) match {
-        case (Nil, nonScala) => (List(nonScala.head), nonScala.tail)
-        case t => t
-      }
+      initialFolders.partition(_.isMetalsProject)
     val services = scalaProjects.map(createService(_))
     new AtomicReference(WorkspaceFoldersServices(services, nonScalaProjects))
   }

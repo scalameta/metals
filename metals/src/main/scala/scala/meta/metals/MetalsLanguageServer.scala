@@ -172,9 +172,9 @@ class MetalsLanguageServer(
           if (folderPathsWithScala.nonEmpty) folderPathsWithScala
           else List(fallbackServicePath)
 
-          folderPathsWithScala.foreach(folder =>
-            new StdReportContext(folder.toNIO, _ => None).cleanUpOldReports()
-          )
+        folderPathsWithScala.foreach(folder =>
+          new StdReportContext(folder.toNIO, _ => None).cleanUpOldReports()
+        )
 
         MetalsLogger.setupLspLogger(
           logPaths,

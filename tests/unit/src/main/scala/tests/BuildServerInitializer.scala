@@ -23,7 +23,7 @@ sealed trait BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
-      workspaceFolders: List[String] = Nil,
+      workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult]
 }
 
@@ -38,11 +38,13 @@ object QuickBuildInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
-      workspaceFolders: List[String] = Nil,
+      workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     val foldersToInit =
-      if (workspaceFolders.nonEmpty) workspaceFolders.map(workspace.resolve)
-      else List(workspace)
+      workspaceFolders match {
+        case Some(workspaceFolders) => workspaceFolders.map(workspace.resolve)
+        case None => List(workspace)
+      }
     foldersToInit.foreach(QuickBuild.bloopInstall)
     for {
       initializeResult <- server.initialize(workspaceFolders)
@@ -67,7 +69,7 @@ object BloopImportInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
-      workspaceFolders: List[String] = Nil,
+      workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()
@@ -95,11 +97,12 @@ object SbtServerInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
-      workspaceFolders: List[String] = Nil,
+      workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
-    val paths =
-      if (workspaceFolders.isEmpty) List(workspace)
-      else workspaceFolders.map(workspace.resolve)
+    val paths = workspaceFolders match {
+      case Some(workspaceFolders) => workspaceFolders.map(workspace.resolve)
+      case None => List(workspace)
+    }
     paths.foreach { path =>
       val sbtVersion =
         SbtBuildTool
@@ -174,7 +177,7 @@ object MillServerInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
-      workspaceFolders: List[String] = Nil,
+      workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()

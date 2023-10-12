@@ -47,6 +47,10 @@ class FallbackMetalsLspService(
       folderVisibleName,
       headDoctor,
     ) {
+
+  buildServerPromise.success(())
+  indexingPromise.success(())
+
   private val files: AtomicReference[Set[AbsolutePath]] = new AtomicReference(
     Set.empty
   )

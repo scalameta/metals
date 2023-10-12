@@ -41,7 +41,6 @@ class ScalaCliServers(
     buildTargets: BuildTargets,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
-  val buildTargetsData = new TargetData
   private val serversRef: AtomicReference[Set[ScalaCli]] = new AtomicReference(
     Set.empty
   )

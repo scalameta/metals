@@ -540,7 +540,7 @@ final case class TestingServer(
   }
 
   def initialize(
-      workspaceFolders: List[String] = Nil
+      workspaceFolders: Option[List[String]] = None
   ): Future[l.InitializeResult] = {
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
@@ -580,12 +580,18 @@ final case class TestingServer(
         Map.empty.asJava.toJson,
       )
     )
-    params.setWorkspaceFolders(
-      workspaceFolders
-        .map(file => new WorkspaceFolder(toPath(file).toURI.toString))
-        .asJava
-    )
-    params.setRootUri(workspace.toURI.toString)
+
+    workspaceFolders match {
+      case Some(workspaceFolders) =>
+        params.setWorkspaceFolders(
+          workspaceFolders
+            .map(file => new WorkspaceFolder(toPath(file).toURI.toString))
+            .asJava
+        )
+      case None =>
+        params.setRootUri(workspace.toURI.toString)
+    }
+
     languageServer.initialize(params).asScala
   }
 
