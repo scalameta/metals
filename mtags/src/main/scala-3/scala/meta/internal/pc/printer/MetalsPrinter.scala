@@ -77,14 +77,11 @@ class MetalsPrinter(
         val report = Report(
           "short-name-error",
           s"""|Error while printing type, could not create short name for type: 
-              |
               |$tpe
-              |
-              |Exception:
-              |${e.getMessage}
-              |${e.getStackTrace.mkString("\n")}
               |""".stripMargin,
-          tpe.typeSymbol.name.show,
+          e.toString,
+          id = Some(tpe.typeSymbol.name.show),
+          error = Some(e),
         )
         reportContext.unsanitized.create(report, ifVerbose = false)
         tpe

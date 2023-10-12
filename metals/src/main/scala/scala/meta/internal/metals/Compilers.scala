@@ -946,11 +946,12 @@ class Compilers(
   ): Option[PresentationCompiler] = {
     val pc = JavaPresentationCompiler()
     Some(
-      configure(pc, search).newInstance(
-        targetUri,
-        classpath.toAbsoluteClasspath.map(_.toNIO).toSeq.asJava,
-        log.asJava,
-      )
+      configure(pc, search)
+        .newInstance(
+          targetUri,
+          classpath.toAbsoluteClasspath.map(_.toNIO).toSeq.asJava,
+          log.asJava,
+        )
     )
   }
 
@@ -1119,7 +1120,7 @@ class Compilers(
       classpath,
       search,
       target.scalac.getTarget.getUri,
-    )
+    ).withBuildTargetName(target.displayName)
   }
 
   def newCompiler(
@@ -1138,11 +1139,12 @@ class Compilers(
       }
 
     val filteredOptions = plugins.filterSupportedOptions(options)
-    configure(pc, search).newInstance(
-      name,
-      classpath.asJava,
-      (log ++ filteredOptions).asJava,
-    )
+    configure(pc, search)
+      .newInstance(
+        name,
+        classpath.asJava,
+        (log ++ filteredOptions).asJava,
+      )
   }
 
   private def toDebugCompletionType(

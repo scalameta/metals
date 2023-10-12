@@ -784,7 +784,9 @@ class ScalaToplevelMtags(
       Report(
         "scala-toplevel-mtags",
         failMessage(expected),
-        s"""${input.path}:${newPosition}"""
+        s"expected $expected; obtained $currentToken",
+        id = Some(s"""${input.path}:${newPosition}"""),
+        path = Some(input.path)
       )
     )
   }

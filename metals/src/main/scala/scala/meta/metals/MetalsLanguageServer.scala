@@ -202,7 +202,7 @@ class MetalsLanguageServer(
           metalsService.underlying = service
 
           folderPathsWithScala.foreach(folder =>
-            new StdReportContext(folder.toNIO).cleanUpOldReports()
+            new StdReportContext(folder.toNIO, _ => None).cleanUpOldReports()
           )
 
           service.initialize()

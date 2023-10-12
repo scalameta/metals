@@ -26,15 +26,15 @@ class CompilerSearchVisitor(
     case err: AssertionError =>
       logger.log(Level.WARNING, err.getMessage())
       false
-    case NonFatal(e) =>
+    case NonFatal(error) =>
       reports.incognito.create(
         Report(
           "is_public",
           s"""Symbol: $sym""".stripMargin,
-          e,
+          error,
         )
       )
-      logger.log(Level.SEVERE, e.getMessage(), e)
+      logger.log(Level.SEVERE, error.getMessage(), error)
       false
 
   private def toSymbols(

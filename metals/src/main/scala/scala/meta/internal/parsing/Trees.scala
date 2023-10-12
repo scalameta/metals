@@ -145,6 +145,8 @@ final class Trees(
           Report(
             s"stackoverflow_${path.filename}",
             text,
+            s"Stack overflow in ${path.filename}",
+            path = Some(path.toURI.toString()),
           )
         )
         val message =
