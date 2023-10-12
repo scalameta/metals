@@ -1921,4 +1921,20 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "multiline-comment",
+    """|package a
+       |object O {
+       |  /*@@
+       |  def f = 1
+       |}
+       |""".stripMargin,
+    """|package a
+       |object O {
+       |  /* $0 */
+       |  def f = 1
+       |}
+       |""".stripMargin,
+  )
+
 }
