@@ -2178,7 +2178,6 @@ class MetalsLspService(
             _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
           } {
             focusedDocument().foreach(path => compilations.compileFile(path))
-            compilers.cancel()
           }
       }
 
@@ -2269,7 +2268,6 @@ class MetalsLspService(
   }
 
   private def importBuild(session: BspSession) = {
-    compilers.cancel()
     val importedBuilds0 = timerProvider.timed("Imported build") {
       session.importBuilds()
     }
@@ -2283,7 +2281,7 @@ class MetalsLspService(
         }
         mainBuildTargetsData.resetConnections(idToConnection)
       }
-    } yield ()
+    } yield compilers.cancel()
   }
 
   private def connectToNewBuildServer(
