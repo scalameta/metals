@@ -472,49 +472,55 @@ class Compilers(
             }
           }
 
-          @tailrec
-          @nowarn
-          def adjustForScala3Worksheet(
-              remaining: List[Integer],
-              acc: List[List[Integer]] = List.empty,
-              adjustColumnDelta: Int =
-                0, // after multiline string we need to adjust column delta of the next token in line
-          ): List[Integer] = {
-            remaining match {
-              case Nil => acc.reverse.flatten
-              // we need to remove additional indent
-              case deltaLine :: deltaColumn :: len :: next if deltaLine != 0 =>
-                if (deltaColumn - 2 >= 0) {
-                  val adjustedColumn: Integer = deltaColumn - 2
+          def adjustForScala3Worksheet(tokens: List[Integer]): List[Integer] = {
+            @tailrec
+            @nowarn
+            def loop(
+                remaining: List[Integer],
+                acc: List[List[Integer]],
+                adjustColumnDelta: Int =
+                  0, // after multiline string we need to adjust column delta of the next token in line
+            ): List[Integer] = {
+              remaining match {
+                case Nil => acc.reverse.flatten
+                // we need to remove additional indent
+                case deltaLine :: deltaColumn :: len :: next
+                    if deltaLine != 0 =>
+                  if (deltaColumn - 2 >= 0) {
+                    val adjustedColumn: Integer = deltaColumn - 2
+                    val adjusted: List[Integer] =
+                      List(deltaLine, adjustedColumn, len) ++ next.take(2)
+                    loop(
+                      next.drop(2),
+                      adjusted :: acc,
+                    )
+                  }
+                  // for multiline strings, we highlight the entire line inluding leading whitespace
+                  // so we need to adjust the length after removing additional indent
+                  else {
+                    val deltaLen = deltaColumn - 2
+                    val adjustedLen: Integer = Math.max(0, len + deltaLen)
+                    val adjusted: List[Integer] =
+                      List(deltaLine, deltaColumn, adjustedLen) ++ next.take(2)
+                    loop(
+                      next.drop(2),
+                      adjusted :: acc,
+                      deltaLen,
+                    )
+                  }
+                case deltaLine :: deltaColumn :: next =>
+                  val adjustedColumn: Integer = deltaColumn + adjustColumnDelta
                   val adjusted: List[Integer] =
-                    List(deltaLine, adjustedColumn, len) ++ next.take(2)
-                  adjustForScala3Worksheet(
-                    next.drop(2),
+                    List(deltaLine, adjustedColumn) ++ next.take(3)
+                  loop(
+                    next.drop(3),
                     adjusted :: acc,
                   )
-                }
-                // for multiline strings, we highlight the entire line inluding leading whitespace
-                // so we need to adjust the length after removing additional indent
-                else {
-                  val deltaLen = deltaColumn - 2
-                  val adjustedLen: Integer = Math.max(0, len + deltaLen)
-                  val adjusted: List[Integer] =
-                    List(deltaLine, deltaColumn, adjustedLen) ++ next.take(2)
-                  adjustForScala3Worksheet(
-                    next.drop(2),
-                    adjusted :: acc,
-                    deltaLen,
-                  )
-                }
-              case deltaLine :: deltaColumn :: next =>
-                val adjustedColumn: Integer = deltaColumn + adjustColumnDelta
-                val adjusted: List[Integer] =
-                  List(deltaLine, adjustedColumn) ++ next.take(3)
-                adjustForScala3Worksheet(
-                  next.drop(3),
-                  adjusted :: acc,
-                )
+              }
             }
+
+            // Delta for first token was already adjusted in `findCorrectStart`
+            loop(tokens.drop(5), List(tokens.take(5)))
           }
 
           val vFile =

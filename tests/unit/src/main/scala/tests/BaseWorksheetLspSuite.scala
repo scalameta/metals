@@ -960,4 +960,41 @@ abstract class BaseWorksheetLspSuite(
       )
     } yield ()
   }
+
+  test("semantic-highlighting2") {
+    val expected =
+      s"""|
+          |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+          |""".stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |$fileContent
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      _ <- server.assertSemanticHighlight(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
 }
