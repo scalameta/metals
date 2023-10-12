@@ -2314,10 +2314,12 @@ class MetalsLspService(
       }
 
     val scalaCliServers = scalaCli.servers
-    val scalaCliBuildChanges = otherChanges.groupBy { change =>
+    val groupedByServer = otherChanges.groupBy { change =>
       val connOpt = buildTargets.buildServerOf(change.getTarget)
       connOpt.flatMap(conn => scalaCliServers.find(_ == conn))
     }
+    val scalaCliAffectedServers = groupedByServer.collect { case (Some(server), _) => server }
+    val mainConnectionChanges = groupedByServer.get(None)
 
     if (ammoniteChanges.nonEmpty)
       ammonite.importBuild().onComplete {
@@ -2326,9 +2328,8 @@ class MetalsLspService(
           scribe.error("Error re-importing Ammonite build", exception)
       }
 
-    scalaCliBuildChanges.collect { case (Some(server), _) =>
-      server
-        .importBuild()
+    scalaCliAffectedServers.map { server =>
+      server.importBuild()
         .onComplete {
           case Success(()) =>
           case Failure(exception) =>
@@ -2340,7 +2341,7 @@ class MetalsLspService(
         }
     }
 
-    if (scalaCliBuildChanges.exists(_._1.isEmpty)) {
+    if (mainConnectionChanges.nonEmpty) {
       bspSession match {
         case None => scribe.warn("No build server connected")
         case Some(session) =>
