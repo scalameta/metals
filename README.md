@@ -21,36 +21,12 @@ https://scalameta.org/metals/docs/contributors/getting-started.html
 
 To learn more about how Metals works, see [./architecture.md](./architecture.md). It explains the high-level layout of the source code. Do skim through that document.
 
-### Team
+### Acknowledgements and Development
 
-The current maintainers (people who can merge pull requests) are:
-
-- Adrien Piquerez - [`@adpi2`](https://github.com/adpi2)
-- Arthur McGibbon - [`@Arthurm1`](https://github.com/Arthurm1)
-- Chris Kipp - [`@ckipp01`](https://github.com/ckipp01)
-- Kamil Podsiadło - [`@kpodsiad`](https://github.com/kpodsiad)
-- Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
-- Rikito Taniguchi - [`@tanishiking`](https://github.com/tanishiking)
-- Tomasz Godzik - [`@tgodzik`](https://github.com/tgodzik)
-- Vadim Chelyshov - [`@dos65`](https://github.com/dos65)
-
-Past maintainers:
-
-- Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
-- Gabriele Petronella - [`@gabro`](https://github.com/gabro)
-- Johan Mudsam - [`@mudsam`](https://github.com/mudsam)
-- Krzysztof Bochenek - [`@kpbochenek`](https://github.com/kpbochenek)
-- Jorge Vicente Cantero - [`@jvican`](https://github.com/jvican)
-- Marek Żarnowski - [`@marek1840`](https://github.com/marek1840)
-- Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
-
-## Acknowledgement
-
-Huge thanks to [`@dragos`](https://github.com/dragos) for his work on a Scala
-implementation of the LSP (see: https://github.com/dragos/dragos-vscode-scala).
-This project helped us get quickly started with LSP. Since then, we have
-refactored the project's original sources to the point where only a few simple
-case classes remain.
+For more information on the current maintainers, companies that have/are
+sponsoring the development of Metals, and acknowledgements of previous work,
+please see
+[https://scalameta.org/metals/docs/acknowledgements/development.html](https://scalameta.org/metals/docs/acknowledgements/development.html).
 
 ## Alternatives
 
