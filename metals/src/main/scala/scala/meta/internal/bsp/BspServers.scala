@@ -11,7 +11,6 @@ import scala.util.Properties
 import scala.util.Try
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.BspStatus
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
@@ -47,7 +46,6 @@ final class BspServers(
     bspGlobalInstallDirectories: List[AbsolutePath],
     config: MetalsServerConfig,
     userConfig: () => UserConfiguration,
-    bspStatus: BspStatus,
 )(implicit ec: ExecutionContextExecutorService) {
 
   def resolve(): BspResolvedResult = {

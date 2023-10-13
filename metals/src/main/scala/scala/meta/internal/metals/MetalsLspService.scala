@@ -422,7 +422,6 @@ class MetalsLspService(
     languageClient,
     tables,
     clientConfig.initialConfig,
-    bspStatus,
   )
 
   private val connectionBspStatus =
@@ -437,7 +436,6 @@ class MetalsLspService(
     bspGlobalDirectories,
     clientConfig.initialConfig,
     () => userConfig,
-    bspStatus,
   )
 
   private val bspConnector: BspConnector = new BspConnector(

@@ -345,7 +345,7 @@ final class Doctor(
     }
 
     val targetIds = allTargetIds()
-    val errorReports = getErrorReports().groupBy(_.buildTarget)
+    val errorReports = getErrorReports().groupBy(ErrorReportsGroup.from)
     if (targetIds.isEmpty) {
       html
         .element("p")(
@@ -376,7 +376,13 @@ final class Doctor(
                 .element("th")(_.text("Recommendation"))
             )
           ).element("tbody")(html =>
-            buildTargetRows(html, allTargetsInfo, errorReports)
+            buildTargetRows(
+              html,
+              allTargetsInfo,
+              errorReports.collect { case (BuildTarget(name) -> v) =>
+                (name -> v)
+              },
+            )
           )
         )
 
@@ -394,22 +400,32 @@ final class Doctor(
 
   private def addErrorReportsInfo(
       html: HtmlBuilder,
-      errorReports: Map[Option[String], List[ErrorReportInfo]],
+      errorReports: Map[ErrorReportsGroup, List[ErrorReportInfo]],
   ) = {
     html.element("h2")(_.text("Error reports:"))
     errorReports.toVector
       .sortWith {
-        case (Some(v1) -> _, Some(v2) -> _) => v1 < v2
-        case (None -> _, _ -> _) => false
-        case (_ -> _, None -> _) => true
+        case (BuildTarget(v1) -> _, BuildTarget(v2) -> _) => v1 < v2
+        case (v1 -> _, v2 -> _) => v1.orderingNumber < v2.orderingNumber
       }
-      .foreach { case (optBuildTarget, reports) =>
-        def name(default: String) = optBuildTarget.getOrElse(default)
+      .foreach { case (group, reports) =>
+        def id =
+          group match {
+            case Bloop => "bloop"
+            case BuildTarget(name) => name
+            case Other => "other"
+          }
+        def name =
+          group match {
+            case Bloop => "Bloop error reports"
+            case BuildTarget(name) => name
+            case Other => "Other error reports"
+          }
         html.element("details")(details =>
           details
-            .element("summary", s"id=reports-${name("other")}")(
+            .element("summary", s"id=reports-$id}")(
               _.element("b")(
-                _.text(s"${name("Other error reports")} (${reports.length}):")
+                _.text(s"$name (${reports.length}):")
               )
             )
             .element("table") { table =>
@@ -443,14 +459,14 @@ final class Doctor(
   private def buildTargetRows(
       html: HtmlBuilder,
       infos: Seq[DoctorTargetInfo],
-      errorReports: Map[Option[String], List[ErrorReportInfo]],
+      errorReports: Map[String, List[ErrorReportInfo]],
   ): Unit = {
     infos
       .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
       .foreach { targetInfo =>
         val center = "style='text-align: center'"
         def addErrorReportText(html: HtmlBuilder) =
-          errorReports.getOrElse(Some(targetInfo.name), List.empty) match {
+          errorReports.getOrElse(targetInfo.name, List.empty) match {
             case Nil => html.text(Icons.unicode.check)
             case _ =>
               html.link(s"#reports-${targetInfo.name}", Icons.unicode.alert)
@@ -662,5 +678,28 @@ object Doctor {
       .dropWhile(_ == "")
       .map(decode)
       .mkString("\n")
+  }
+}
+
+sealed trait ErrorReportsGroup {
+  def orderingNumber: Int
+}
+case object Bloop extends ErrorReportsGroup {
+  def orderingNumber = 1
+}
+case class BuildTarget(name: String) extends ErrorReportsGroup {
+  def orderingNumber = 2
+}
+case object Other extends ErrorReportsGroup {
+  def orderingNumber = 3
+}
+
+object ErrorReportsGroup {
+  def from(info: ErrorReportInfo): ErrorReportsGroup = {
+    info.buildTarget match {
+      case Some(bt) => BuildTarget(bt)
+      case None if info.errorReportType == "bloop" => Bloop
+      case _ => Other
+    }
   }
 }

@@ -33,4 +33,5 @@ class BspStatus(client: MetalsLanguageClient, isBspStatusProvider: Boolean) {
       }
     }
   }
+
 }
