@@ -359,7 +359,6 @@ class MetalsLspService(
       new InteractiveSemanticdbs(
         folder,
         buildTargets,
-        charset,
         languageClient,
         tables,
         statusBar,
@@ -367,6 +366,7 @@ class MetalsLspService(
         clientConfig,
         () => semanticDBIndexer,
         javaInteractiveSemanticdb,
+        buffers,
       )
     )
   }
