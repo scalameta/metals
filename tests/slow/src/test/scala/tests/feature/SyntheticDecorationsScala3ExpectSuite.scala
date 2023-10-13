@@ -11,7 +11,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsBinaries
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.SyntheticDecorationsProvider
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -23,7 +22,6 @@ import tests.FakeTime
 import tests.InputProperties
 import tests.TestMtagsResolver
 import tests.TestingClient
-import tests.TreeUtils
 
 class SyntheticDecorationsScala3ExpectSuite(
 ) extends DirectoryExpectSuite("decorations3") {
@@ -53,7 +51,6 @@ class SyntheticDecorationsScala3ExpectSuite(
     }
 
   }
-  private val (_, trees) = TreeUtils.getTrees(V.scala3)
   val userConfig: UserConfiguration = UserConfiguration().copy(
     showInferredType = Some("true"),
     showImplicitArguments = true,
@@ -70,23 +67,19 @@ class SyntheticDecorationsScala3ExpectSuite(
             file.code,
             EmptyCancelToken,
           )
-          val syntheticDecorationsProvider =
-            new SyntheticDecorationsProvider(vFile, trees, () => userConfig)
-          val withoutTypes = syntheticDecorationsProvider.declsWithoutTypes
           val pcParams = CompilerSyntheticDecorationsParams(
             vFile,
-            withoutTypes.asJava,
+            true,
             true,
             true,
             true,
           )
-          val decorations = syntheticDecorationsProvider.provide(
+          val decorations =
             compiler.syntheticDecorations(pcParams).get().asScala.toList
-          )
           val edits = decorations.map { d =>
             new TextEdit(
               d.range,
-              "/*" + d.renderOptions.after.contentText + "*/",
+              "/*" + d.label + "*/",
             )
           }
 

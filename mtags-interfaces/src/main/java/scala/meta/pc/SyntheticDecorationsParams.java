@@ -10,14 +10,14 @@ import org.eclipse.lsp4j.Range;
 public interface SyntheticDecorationsParams extends VirtualFileParams {
   
   /**
-   * Ranges of missing type annotations.
+   * Response should contain missing type annotations parameters.
    */
-  List<Range> declsWithoutTypesRanges();
+  boolean inferredTypes();
 
   /**
    * Response should contain inferred type parameters.
    */
-  boolean inferredTypes();
+  boolean typeParameters();
 
   /**
    * Response should contain decorations for implicit parameters.

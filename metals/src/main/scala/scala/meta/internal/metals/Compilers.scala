@@ -583,34 +583,26 @@ class Compilers(
           val vFile =
             CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
 
-          val syntheticDecorationsProvider = new SyntheticDecorationsProvider(
-            vFile,
-            trees,
-            userConfig,
-          )
-          val declsWithoutTypes = syntheticDecorationsProvider.declsWithoutTypes
           val pcParams = CompilerSyntheticDecorationsParams(
             vFile,
-            declsWithoutTypes.asJava,
-            userConfig().showInferredType.contains("true"),
-            userConfig().showImplicitArguments,
-            userConfig().showImplicitConversionsAndClasses,
+            typeParameters = userConfig().showInferredType.contains("true"),
+            inferredTypes = userConfig().showInferredType.contains("minimal") ||
+              userConfig().showInferredType.contains("true"),
+            implicitParameters = userConfig().showImplicitArguments,
+            implicitConversions = userConfig().showImplicitConversionsAndClasses,
           )
           compiler
             .syntheticDecorations(pcParams)
             .asScala
-            .map { decorations =>
-              syntheticDecorationsProvider
-                .provide(decorations.asScala.toList)
-                .asJava
-            }
             .map(_.map { decoration =>
-              decoration.copy(
-                range = adjust.adjustRange(decoration.range)
+              DecorationOptions(
+                adjust.adjustRange(decoration.range()),
+                decoration.label(),
               )
             })
         }
         .getOrElse(Future.successful(Nil.asJava))
+
   }
 
   def completions(

@@ -12,7 +12,7 @@ class ImplicitConversions {
   // extension methods
   /*augmentString(*/message/*)*/
     .stripSuffix("h")
-  tuple + "Hello"
+  /*any2stringadd(*/tuple/*)*/ + "Hello"
 
   // implicit conversions
   val x: Int = /*string2Number(*/message/*)*/

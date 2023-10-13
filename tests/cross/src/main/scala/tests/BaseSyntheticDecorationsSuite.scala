@@ -6,10 +6,10 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerSyntheticDecorationsParams
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.pc.DecorationKind
 
 import munit.Location
 import munit.TestOptions
+import org.eclipse.lsp4j.TextEdit
 
 class BaseSyntheticDecorationsSuite extends BasePCSuite {
 
@@ -33,7 +33,7 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
 
       val pcParams = CompilerSyntheticDecorationsParams(
         vFile,
-        Nil.asJava,
+        true,
         true,
         true,
         true,
@@ -52,7 +52,7 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
         case None => allDecorations
       }
 
-      val edits = TestSyntheticDecorations.toEdits(decorations)
+      val edits = decorations.map(d => new TextEdit(d.range(), d.label()))
       val obtained = TextEdits.applyEdits(withPkg, edits)
 
       assertEquals(
@@ -61,46 +61,4 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
       )
 
     }
-
-  def checkInferredType(
-      name: TestOptions,
-      value: String,
-      expectedType: String,
-      template: String = "",
-      compat: Map[String, String] = Map.empty,
-  )(implicit location: Location): Unit = {
-    val (code, expected) = inferredTypeTemplate(
-      value,
-      getExpected(expectedType, compat, scalaVersion),
-      template,
-    )
-    check(
-      name,
-      code,
-      expected,
-      compat = Map.empty,
-      kind = Some(DecorationKind.TypeParameter),
-    )
-  }
-
-  private def inferredTypeTemplate(
-      value: String,
-      expectedType: String,
-      template: String,
-  ): (String, String) = {
-    val base = s"""|object Main {
-                   |  $template
-                   |  def hello[T](t: T) = t
-                   |  val x = hello($value)
-                   |}
-                   |""".stripMargin
-    val expected = s"""|object Main {
-                       |  $template
-                       |  def hello[T](t: T) = t
-                       |  val x = hello[$expectedType]($value)
-                       |}
-                       |""".stripMargin
-    (base, expected)
-  }
-
 }
