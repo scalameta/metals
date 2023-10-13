@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.charset.Charset
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 
@@ -8,7 +7,6 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -34,7 +32,6 @@ import org.eclipse.{lsp4j => l}
 final class InteractiveSemanticdbs(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
-    charset: Charset,
     client: MetalsLanguageClient,
     tables: Tables,
     statusBar: StatusBar,
@@ -42,6 +39,7 @@ final class InteractiveSemanticdbs(
     clientConfig: ClientConfiguration,
     semanticdbIndexer: () => SemanticdbIndexer,
     javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb],
+    buffers: Buffers,
 ) extends Cancelable
     with Semanticdbs {
 
@@ -87,18 +85,25 @@ final class InteractiveSemanticdbs(
       val result = textDocumentCache.compute(
         source,
         (path, existingDoc) => {
-          val text = unsavedContents.getOrElse(FileIO.slurp(source, charset))
-          val sha = MD5.compute(text)
-          if (existingDoc == null || existingDoc.md5 != sha) {
-            Try(compile(path, text)) match {
-              case Success(doc) if doc != null =>
-                if (!source.isDependencySource(workspace))
-                  semanticdbIndexer().onChange(source, doc)
-                doc
-              case _ => null
-            }
-          } else
-            existingDoc
+          unsavedContents.orElse(buffers.get(source).orElse {
+            if (source.exists) Some(source.readText)
+            else None
+          }) match {
+            case None => null
+            case Some(text) =>
+              val sha = MD5.compute(text)
+              if (existingDoc == null || existingDoc.md5 != sha) {
+                Try(compile(path, text)) match {
+                  case Success(doc) if doc != null =>
+                    if (!source.isDependencySource(workspace))
+                      semanticdbIndexer().onChange(source, doc)
+                    doc
+                  case _ => null
+                }
+              } else
+                existingDoc
+          }
+
         },
       )
       TextDocumentLookup.fromOption(source, Option(result))
