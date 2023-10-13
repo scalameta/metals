@@ -115,9 +115,11 @@ class ReportsSuite extends BaseSuite {
 
   test("save-with-id") {
     val testId = "test-id"
-    val path = reportsProvider.incognito.create(
-      Report("test_error", exampleText(), "Test error", id = Some(testId))
-    )
+    val path = reportsProvider.incognito
+      .create(
+        Report("test_error", exampleText(), "Test error", id = Some(testId))
+      )
+      .map(_.toRealPath())
     val obtained =
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(
@@ -132,13 +134,16 @@ class ReportsSuite extends BaseSuite {
     val none1 = reportsProvider.incognito.create(
       Report("test_error_again", exampleText(), "Test error", id = Some(testId))
     )
-    assert(none1.isEmpty)
+    assertEquals(
+      none1.map(_.toRealPath()),
+      path,
+    ) // check that it returns the path to the original report
     val newReportsProvider =
       new StdReportContext(workspace.toNIO, _ => Some("buildTarget"))
     val none2 = newReportsProvider.incognito.create(
       Report("test_error_again", exampleText(), "Test error", id = Some(testId))
     )
-    assert(none2.isEmpty)
+    assertEquals(none2.map(_.toRealPath()), path)
     val reports = newReportsProvider.incognito.getReports()
     reports match {
       case head :: Nil => assert(head.file.getName == path.get.toFile.getName)

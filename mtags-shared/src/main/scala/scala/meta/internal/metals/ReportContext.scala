@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.matching.Regex
 
@@ -97,20 +99,20 @@ class StdReporter(
 
   private lazy val userHome = Option(System.getProperty("user.home"))
 
-  private var initialized = false
-  private var reported = Set.empty[String]
+  private val initialized = new AtomicBoolean(false)
+  private val reported = new AtomicReference(Map[String, Path]())
 
   def readInIds(): Unit = {
-    reported = getReports().flatMap { report =>
+    reported.updateAndGet(_ ++ getReports().flatMap { report =>
       val lines = Files.readAllLines(report.file.toPath())
       if (lines.size() > 0) {
         lines.get(0) match {
           case id if id.startsWith(Report.idPrefix) =>
-            Some(id.stripPrefix(Report.idPrefix))
+            Some((id.stripPrefix(Report.idPrefix) -> report.toPath))
           case _ => None
         }
       } else None
-    }.toSet
+    }.toMap)
   }
 
   override def create(
@@ -119,16 +121,23 @@ class StdReporter(
   ): Option[Path] =
     if (ifVerbose && !level.isVerbose) None
     else {
-      if (!initialized) {
+      if (initialized.compareAndSet(false, true)) {
         readInIds()
-        initialized = true
       }
       val sanitizedId = report.id.map(sanitize)
-      if (sanitizedId.isDefined && reported.contains(sanitizedId.get)) None
-      else {
-        val path = reportPath(report)
-        path.getParent.createDirectories()
-        sanitizedId.foreach(reported += _)
+      val path = reportPath(report)
+
+      val optDuplicate =
+        for {
+          id <- sanitizedId
+          reportedMap = reported.getAndUpdate(map =>
+            if (map.contains(id)) map else map + (id -> path)
+          )
+          duplicate <- reportedMap.get(sanitizedId.get)
+        } yield duplicate
+
+      optDuplicate.orElse {
+        path.createDirectories()
         path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
         Some(path)
       }

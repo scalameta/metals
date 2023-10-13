@@ -1,5 +1,7 @@
 package scala.meta.internal.builds
 
+import java.security.MessageDigest
+
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -27,8 +29,20 @@ class BspErrorHandler(
 
   protected def logError(message: String): Unit = scribe.error(message)
 
-  private def createReport(message: String) =
+  private def createReport(message: String) = {
+    val id = MessageDigest
+      .getInstance("MD5")
+      .digest(message.getBytes)
+      .map(_.toChar)
+      .mkString
     reportContext.bloop.create(
-      Report(message.trimTo(20), message, shortSummary = message.trimTo(100))
+      Report(
+        message.trimTo(20),
+        message,
+        shortSummary = message.trimTo(100),
+        path = None,
+        id = Some(id),
+      )
     )
+  }
 }
