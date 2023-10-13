@@ -28,7 +28,7 @@ trait Zg[T]:
 given Xg with
   def doX/*: Int*/ = 7
 
-/*x$1(*//*)*/given (using Xg): Yg with
+/*(x$1)*/given (using Xg): Yg with
   def doY/*: String*/ = "7"
 
 given [T]: Zg[T] with
@@ -42,6 +42,6 @@ val e/*: Char*/ = given_Char
 val f/*: Float*/ = given_Float
 val g/*: Long*/ = `* *`
 val i/*: Option[Int]*/ = X.of[Int]
-val x/*: given_Xg*/ = given_Xg
+val x/*: given_Xg.type*/ = given_Xg
 val y/*: given_Yg*/ = given_Yg/*(given_Xg)*/
 val z/*: given_Zg_T[String]*/ = given_Zg_T[String]

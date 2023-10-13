@@ -1,17 +1,14 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import java.{util => ju}
 
 import scala.meta.pc.CancelToken
 import scala.meta.pc.SyntheticDecorationsParams
 
-import org.eclipse.{lsp4j => l}
-
 case class CompilerSyntheticDecorationsParams(
     vFileParams: CompilerVirtualFileParams,
-    declsWithoutTypesRanges: ju.List[l.Range],
     inferredTypes: Boolean,
+    typeParameters: Boolean,
     implicitParameters: Boolean,
     implicitConversions: Boolean
 ) extends SyntheticDecorationsParams {

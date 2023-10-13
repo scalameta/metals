@@ -67,13 +67,13 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
     "implicit-conversion",
     """|case class User(name: String)
        |object Main {
-       |  implicit def intToUser(x: Int): User = User(x.toString)
+       |  implicit def intToUser(x: Int): User = new User(x.toString)
        |  val y: User = 1
        |}
        |""".stripMargin,
     """|case class User(name: String)
        |object Main {
-       |  implicit def intToUser(x: Int): User = User(x.toString)
+       |  implicit def intToUser(x: Int): User = new User(x.toString)
        |  val y: User = intToUser(1)
        |}
        |""".stripMargin,
@@ -129,159 +129,251 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
     "",
   )
 
-  checkInferredType(
+  check(
     "basic",
-    "123",
-    "Int",
+    """|object Main {
+       |  val foo = 123
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val foo: Int = 123
+       |}
+       |""".stripMargin,
   )
 
-  checkInferredType(
+  check(
     "list",
-    "List[Int](1,2,3)",
-    "List[Int]",
+    """|object Main {
+       |  val foo = List[Int](123)
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val foo: List[Int] = List[Int](123)
+       |}
+       |""".stripMargin,
   )
 
-  checkInferredType(
+  check(
     "two-param",
-    """Map[Int, String]((1, "abc"))""",
-    "Map[Int,String]",
+    """|object Main {
+       |  val foo = Map((1, "abc"))
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val foo: Map[Int,String] = Map[Int, String]((1, "abc"))
+       |}
+       |""".stripMargin,
     compat = Map(
-      "3" -> """Map[Int, String]"""
+      "3" ->
+        """|object Main {
+           |  val foo: Map[Int, String] = Map[Int, String]((1, "abc"))
+           |}
+           |""".stripMargin
     ),
   )
 
-  checkInferredType(
+  check(
     "tuple",
-    "(123, 456)",
-    "(Int, Int)",
+    """|object Main {
+       |  val foo = (123, 456)
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val foo: (Int, Int) = (123, 456)
+       |}
+       |""".stripMargin,
   )
 
-  checkInferredType(
+  check(
     "import-needed",
-    """List[String]("").toBuffer[String]""",
-    "Buffer[String]",
+    """|object Main {
+       |  val foo = List[String]("").toBuffer[String]
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val foo: Buffer[String] = List[String]("").toBuffer[String]
+       |}
+       |""".stripMargin,
   )
 
-  checkInferredType(
+  check(
     "lambda-type",
-    "() => 123",
-    "() => Int",
+    """|object Main {
+       |  val foo = () => 123
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val foo: () => Int = () => 123
+       |}
+       |""".stripMargin,
   )
 
-  checkInferredType(
+  check(
     "block",
-    "{ val z = 123; z + 2}",
-    "Int",
-  )
-
-  checkInferredType(
-    "refined-type",
-    "new Foo { type T = Int; type G = Long}",
-    "Foo{type T = Int; type G = Long}",
-    """|trait Foo {
-       |  type T
-       |  type G
+    """|object Main {
+       |  val foo = { val z = 123; z + 2}
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val foo: Int = { val z: Int = 123; z + 2}
        |}
        |""".stripMargin,
   )
 
-  checkInferredType(
-    "refined-type1",
-    "new Foo { type T = Int }",
-    "Foo{type T = Int}",
-    """|trait Foo {
-       |  type T
+  check(
+    "refined-types",
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |    type G
+       |  }
+       |
+       |  val c = new Foo { type T = Int; type G = Long}
+       |}
+       |""".stripMargin,
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |    type G
+       |  }
+       |
+       |  val c: Foo{type T = Int; type G = Long} = new Foo { type T = Int; type G = Long}
        |}
        |""".stripMargin,
   )
 
-  checkInferredType(
-    "refined-type2".tag(IgnoreScala2),
-    """|new Foo {
+  check(
+    "refined-types2",
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |  }
+       |  val c = new Foo { type T = Int }
+       |  val d = c
+       |}
+       |""".stripMargin,
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |  }
+       |  val c: Foo{type T = Int} = new Foo { type T = Int }
+       |  val d: Foo{type T = Int} = c
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "refined-types4".tag(IgnoreScala2),
+    """|trait Foo extends Selectable {
+       |  type T
+       |}
+       |
+       |val c = new Foo {
        |  type T = Int
        |  val x = 0
        |  def y = 0
        |  var z = 0
        |}
        |""".stripMargin,
-    "Foo{type T = Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit}",
     """|trait Foo extends Selectable {
        |  type T
+       |}
+       |
+       |val c: Foo{type T = Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit} = new Foo {
+       |  type T = Int
+       |  val x: Int = 0
+       |  def y: Int = 0
+       |  var z: Int = 0
        |}
        |""".stripMargin,
   )
 
-  checkInferredType(
+  check(
     "dealias",
-    "new Foo().getT",
-    "Int",
     """|class Foo() {
        |  type T = Int
        |  def getT: T = 1
        |}
+       |
+       |object O {
+       | val c = new Foo().getT
+       |}
        |""".stripMargin,
-  )
-
-  checkInferredType(
-    "dealias1",
-    "getT",
-    "T",
-    """|type T = Int
-       |def getT: T = 1
-       |""".stripMargin,
-  )
-
-  checkInferredType(
-    "dealias2".tag(IgnoreScala2),
-    "Foo.getT",
-    "T",
-    """|object Foo {
-       |  opaque type T = Int
+    """|class Foo() {
+       |  type T = Int
        |  def getT: T = 1
+       |}
+       |
+       |object O {
+       | val c: Int = new Foo().getT
        |}
        |""".stripMargin,
   )
 
-  checkInferredType(
-    "dealias3",
-    "O.get",
-    "Int => Int",
-    """|object O {
+  check(
+    "dealias2",
+    """|object Foo {
+       |  type T = Int
+       |  def getT: T = 1
+       |  val c = getT
+       |}
+       |""".stripMargin,
+    """|object Foo {
+       |  type T = Int
+       |  def getT: T = 1
+       |  val c: T = getT
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "dealias3".tag(IgnoreScala2),
+    """|object Foo:
+       |  opaque type T = Int
+       |  def getT: T = 1
+       |val c = Foo.getT
+       |""".stripMargin,
+    """|object Foo:
+       |  opaque type T = Int
+       |  def getT: T = 1
+       |val c: T = Foo.getT
+       |""".stripMargin,
+  )
+
+  check(
+    "dealias4".tag(IgnoreScala2),
+    """|object O:
        | type M = Int
        | type W = M => Int
        | def get: W = ???
-       |}
+       |
+       |val m = O.get
        |""".stripMargin,
-    compat = Map(
-      "2" -> "O.W"
-    ),
+    """|object O:
+       | type M = Int
+       | type W = M => Int
+       | def get: W = ???
+       |
+       |val m: Int => Int = O.get
+       |""".stripMargin,
   )
 
-  checkInferredType(
-    "dealias4".tag(IgnoreScala2),
-    "O.get",
-    "M => Int",
-    """|object O {
+  check(
+    "dealias5".tag(IgnoreScala2),
+    """|object O:
        | opaque type M = Int
        | type W = M => Int
        | def get: W = ???
-       |}
+       |
+       |val m = O.get
        |""".stripMargin,
-  )
-
-  checkInferredType(
-    "dealias5",
-    "get",
-    "W => S.M",
-    """|object S {
-       |  type M = Int
-       |} 
-       |type W
-       |def get: W => S.M = ???
+    """|object O:
+       | opaque type M = Int
+       | type W = M => Int
+       | def get: W = ???
+       |
+       |val m: M => Int = O.get
        |""".stripMargin,
-    compat = Map(
-      "3" -> "W => Int"
-    ),
   )
 
   check(
@@ -291,7 +383,7 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val x = (1, 2)
+       |  val x: (Int, Int) = (1, 2)
        |}
        |""".stripMargin,
   )
@@ -303,7 +395,7 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val x = Tuple2.apply[Int, Int](1, 2)
+       |  val x: (Int, Int) = Tuple2.apply[Int, Int](1, 2)
        |}
        |""".stripMargin,
   )
@@ -315,7 +407,7 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val x = Tuple2[Int, Int](1, 2)
+       |  val x: (Int, Int) = Tuple2[Int, Int](1, 2)
        |}
        |""".stripMargin,
   )
@@ -327,7 +419,7 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val (fst, snd) = (1, 2)
+       |  val (fst: Int, snd: Int) = (1, 2)
        |}
        |""".stripMargin,
   )
@@ -339,13 +431,13 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val hd :: tail = List[Int](1, 2)
+       |  val hd: Int :: tail: List[Int] = List[Int](1, 2)
        |}
        |""".stripMargin,
     compat = Map(
       "3" ->
         """|object Main {
-           |  val hd ::[Int] tail = List[Int](1, 2)
+           |  val hd: Int ::[Int] tail: List[Int] = List[Int](1, 2)
            |}
            |""".stripMargin
     ),
@@ -360,16 +452,16 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val x = List[Int](1, 2) match {
-       |    case hd :: tail => hd
+       |  val x: Int = List[Int](1, 2) match {
+       |    case hd: Int :: tail: List[Int] => hd
        |  }
        |}
        |""".stripMargin,
     compat = Map(
       "3" ->
         """|object Main {
-           |  val x = List[Int](1, 2) match {
-           |    case hd ::[Int] tail => hd
+           |  val x: Int = List[Int](1, 2) match {
+           |    case hd: Int ::[Int] tail: List[Int] => hd
            |  }
            |}
            |""".stripMargin
@@ -385,14 +477,14 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |""".stripMargin,
     """|object Main {
        |case class Foo[A](x: A, y: A)
-       |  val Foo(fst, snd) = Foo[Int](1, 2)
+       |  val Foo(fst: Int, snd: Int) = Foo[Int](1, 2)
        |}
        |""".stripMargin,
     compat = Map(
       "3" ->
         """|object Main {
            |case class Foo[A](x: A, y: A)
-           |  val Foo[Int](fst, snd) = Foo[Int](1, 2)
+           |  val Foo[Int](fst: Int, snd: Int) = Foo[Int](1, 2)
            |}
            |""".stripMargin
     ),

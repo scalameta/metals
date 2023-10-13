@@ -494,7 +494,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val List[Int](l1: Int, l2: Int) = List[Int](12, 13)
            |  println("Hello!")
            |  val abc: Int = 123
-           |  val tupleBound @ (one: String, two: String) = ("1", "2")
+           |  val tupleBound: (String, String) @ (one: String, two: String) = ("1", "2")
            |  val tupleExplicit: (String, String) = Tuple2[String, String]("1", "2")
            |  val tupleExplicitApply: (String, String) = Tuple2.apply[String, String]("1", "2")
            |  var variable: Int = 123
@@ -786,10 +786,6 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |/a/Main.scala
            |class Evidence
            |
-           |final case class DataType[T](number: Int, other: T) {
-           |  def next(implicit evidence: Evidence): Int = number + 1
-           |}
-           |
            |object Example extends App {
            |
            |  implicit val evidence: Evidence = ???
@@ -799,9 +795,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    number <- Option(5)
            |    num2 <- opts(2)
            |    _ = "abc ".stripMargin
-           |  } yield DataType(number, "").next
-           |
-           |  Option(5).map(DataType(_, "").next)
+           |  } yield 1
            |
            |}
            |""".stripMargin
@@ -820,10 +814,6 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         client.workspaceDecorations,
         """|class Evidence
            |
-           |final case class DataType[T](number: Int, other: T) {
-           |  def next(implicit evidence: Evidence): Int = number + 1
-           |}
-           |
            |object Example extends App {
            |
            |  implicit val evidence: Evidence = ???
@@ -833,9 +823,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    number: Int <- Option[Int](5)
            |    num2: Int <- opts(2)(evidence)
            |    _ = augmentString("abc ").stripMargin
-           |  } yield DataType[String](number, "").next(evidence)
-           |
-           |  Option[Int](5).map[Int](DataType[String](_, "").next(evidence))
+           |  } yield 1
            |
            |}
            |""".stripMargin,

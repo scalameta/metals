@@ -7,7 +7,7 @@ case class User(
     }
 )
 object NamedArguments {
-  final val susan/*: String*/ = "Susan"
+  final val susan/*: "Susan"*/ = "Susan"
   val user1/*: User*/ =
     User
       .apply(
