@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.nio.charset.Charset
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 
@@ -32,6 +33,7 @@ import org.eclipse.{lsp4j => l}
 final class InteractiveSemanticdbs(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
+    charset: Charset,
     client: MetalsLanguageClient,
     tables: Tables,
     statusBar: StatusBar,
@@ -86,7 +88,7 @@ final class InteractiveSemanticdbs(
         source,
         (path, existingDoc) => {
           unsavedContents.orElse(buffers.get(source).orElse {
-            if (source.exists) Some(source.readText)
+            if (source.exists) Some(source.readText(charset))
             else None
           }) match {
             case None => null

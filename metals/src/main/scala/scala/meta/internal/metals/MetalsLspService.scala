@@ -359,6 +359,7 @@ class MetalsLspService(
       new InteractiveSemanticdbs(
         folder,
         buildTargets,
+        charset,
         languageClient,
         tables,
         statusBar,
