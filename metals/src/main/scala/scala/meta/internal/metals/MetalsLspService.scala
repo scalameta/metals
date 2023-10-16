@@ -137,6 +137,7 @@ class MetalsLspService(
 
   @volatile
   private var userConfig: UserConfiguration = initialUserConfig
+  private val userConfigPromise: Promise[Unit] = Promise()
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -929,6 +930,7 @@ class MetalsLspService(
   def setUserConfig(newConfig: UserConfiguration): UserConfiguration = {
     val old = userConfig
     userConfig = newConfig
+    userConfigPromise.trySuccess(())
     old
   }
 
@@ -1549,10 +1551,13 @@ class MetalsLspService(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] = {
     CancelTokens.future { token =>
-      compilers.semanticTokens(params, token).map { semanticTokens =>
-        if (semanticTokens.getData().isEmpty()) null
-        else semanticTokens
-      }
+      for {
+        _ <- userConfigPromise.future
+        res <- compilers.semanticTokens(params, token).map { semanticTokens =>
+          if (semanticTokens.getData().isEmpty()) null
+          else semanticTokens
+        }
+      } yield res
     }
   }
 
