@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.Success
 import scala.util.Try
@@ -33,7 +34,7 @@ class ScaladocDefinitionProvider(
       symbol <- extractScalaDocLinkAtPos(buffer, position)
       contextSymbols = getContext(path, position)
       scalaMetaSymbols = symbol.toScalaMetaSymbols(contextSymbols)
-      _ = scribe.debug(
+      _ = scribe.info(
         s"looking for definition for scaladoc symbol: $symbol considering alternatives: ${scalaMetaSymbols
             .map(_.showSymbol)
             .mkString(", ")}"
@@ -120,26 +121,41 @@ class ScaladocDefinitionProvider(
         tree: Tree,
         packageParts: String = "",
         otherParts: String = "",
-    ): (String, String) = {
-      val (packageParts1, otherParts1) =
+        alternative: Option[String] = None,
+    ): (String, String, Option[String]) = {
+      val (packageParts1, otherParts1, alternative1) =
         tree match {
           case Pkg(name, _) =>
-            (s"$packageParts${extractName(name)}/", otherParts)
-          case d: Defn.Object => (packageParts, s"$otherParts${d.name.value}.")
-          case d: Defn.Class => (packageParts, s"$otherParts${d.name.value}#")
-          case _ => (packageParts, otherParts)
+            (s"$packageParts${extractName(name)}/", otherParts, None)
+          case d: Defn.Object =>
+            (packageParts, s"$otherParts${d.name.value}.", None)
+          case d: Defn.Class =>
+            (packageParts, s"$otherParts${d.name.value}#", None)
+          case d: Defn.Trait =>
+            (packageParts, s"$otherParts${d.name.value}#", None)
+          case d: Defn.Enum =>
+            (
+              packageParts,
+              s"$otherParts${d.name.value}#",
+              Some(s"$otherParts${d.name.value}."),
+            )
+          case d: Defn.Given =>
+            (packageParts, s"$otherParts${d.name.value}#", None)
+          case _ => (packageParts, otherParts, alternative)
         }
 
-      enclosedChild(tree).map(loop(_, packageParts1, otherParts1)).getOrElse {
-        (packageParts1, otherParts1)
-      }
+      enclosedChild(tree)
+        .map(loop(_, packageParts1, otherParts1, alternative1))
+        .getOrElse {
+          (packageParts1, otherParts1, alternative1)
+        }
     }
 
     trees
       .get(path)
       .map { tree =>
-        val (packagePart, otherParts) = loop(tree)
-        ContextSymbols(packagePart, otherParts)
+        val (packagePart, otherParts, alternative) = loop(tree)
+        ContextSymbols(packagePart, otherParts, alternative)
       }
       .getOrElse(ContextSymbols.empty)
 
@@ -154,57 +170,64 @@ case class ScalaDocLink(value: String) {
     if (value.isEmpty()) List.empty
     else {
       val symbol = symbolWithFixedPackages
-      val indexOfDot = value.indexOf(".")
+      val optIndexOfDot =
+        ScalaDocLink.findIndicesOf(value, List('.')).headOption
       def all = List(symbol) ++
         contextSymbols.withThis(symbol) ++
         contextSymbols.withPackage(symbol)
       val withPrefixes: List[String] =
-        if (indexOfDot < 0) all
-        else {
-          symbol.splitAt(indexOfDot + 1) match {
-            case ("this/", rest) => contextSymbols.withThis(rest)
-            case ("package/", rest) => contextSymbols.withPackage(rest)
-            case _ if symbol.contains("/") => List(symbol)
-            case _ => all
+        optIndexOfDot
+          .map { indexOfDot =>
+            symbol.splitAt(indexOfDot + 1) match {
+              case ("this/", rest) => contextSymbols.withThis(rest)
+              case ("package/", rest) => contextSymbols.withPackage(rest)
+              case _ if symbol.contains("/") => List(symbol)
+              case _ => all
+            }
           }
-        }
+          .getOrElse(all)
 
-      List(symbol.indexOf("("), symbol.indexOf("[")).filter(_ >= 0) match {
-        case Nil =>
-          symbol.last match {
-            case '#' | '.' | '/' => withPrefixes.map(StringSymbol(_))
-            case '$' =>
-              withPrefixes.flatMap(sym =>
-                List(
-                  StringSymbol(s"${sym.dropRight(1)}."),
-                  MethodSymbol(s"${sym.dropRight(1)}"),
-                )
+      val indexOfLParen =
+        ScalaDocLink.findIndicesOf(symbol, List('(', '[')).headOption
+
+      if (indexOfLParen.nonEmpty) {
+        val toDrop = symbol.length - indexOfLParen.get
+        withPrefixes.flatMap(sym => List(MethodSymbol(sym.dropRight(toDrop))))
+      } else {
+        symbol.last match {
+          case '#' | '.' | '/' => withPrefixes.map(StringSymbol(_))
+          case '$' => // forces link to refer to a value (an object, a value, a given)
+            withPrefixes.flatMap(sym =>
+              List(
+                StringSymbol(s"${sym.dropRight(1)}."),
+                MethodSymbol(s"${sym.dropRight(1)}"),
               )
-            case '!' =>
-              withPrefixes.flatMap(sym =>
-                List(StringSymbol(s"${sym.dropRight(1)}#"))
+            )
+          case '!' => // forces link to refer to a type (a class, a type alias, a type member)
+            withPrefixes.flatMap(sym =>
+              List(StringSymbol(s"${sym.dropRight(1)}#"))
+            )
+          case _ =>
+            withPrefixes.flatMap(sym =>
+              List(
+                StringSymbol(s"$sym#"),
+                StringSymbol(s"$sym."),
+                MethodSymbol(sym),
               )
-            case _ =>
-              withPrefixes.flatMap(sym =>
-                List(
-                  StringSymbol(s"$sym#"),
-                  StringSymbol(s"$sym."),
-                  MethodSymbol(sym),
-                )
-              )
-          }
-        case list =>
-          val toDrop = symbol.length - list.min
-          withPrefixes.flatMap(sym => List(MethodSymbol(sym.dropRight(toDrop))))
+            )
+        }
       }
     }
 
   private def symbolWithFixedPackages = {
     val fixedPackages =
-      value
-        .split("\\.")
+      ScalaDocLink
+        .splitAt(value, '.')
         .map { str =>
-          if (str.headOption.exists(_.isLower)) s"$str/"
+          if (
+            str.headOption.exists(_.isLower) ||
+            (str.length > 1 && str.head == '`' && str.charAt(1).isLower)
+          ) s"$str/"
           else s"$str."
         }
         .mkString
@@ -221,28 +244,82 @@ object ScalaDocLink {
       case m if m.start(1) <= offset && offset <= m.end(1) =>
         ScalaDocLink(m.group(1))
     }
+
+  def splitAt(text: String, c: Char): List[String] = {
+    val indices = findIndicesOf(text, List(c))
+    splitAt(text, indices)
+  }
+
+  @tailrec
+  private def splitAt(
+      text: String,
+      indices: List[Int],
+      offset: Int = 0,
+      acc: List[String] = List.empty,
+  ): List[String] = {
+    indices match {
+      case i :: rest =>
+        val (part1, part2) = text.splitAt(i - offset)
+        splitAt(part2.tail, rest, i + 1, part1 :: acc)
+      case _ => (text :: acc).reverse
+    }
+  }
+
+  def findIndicesOf(text: String, symbols: List[Char]): List[Int] = {
+    @tailrec
+    def loop(
+        index: Int,
+        afterEscape: Boolean,
+        inBackticks: Boolean,
+        acc: List[Int],
+    ): List[Int] =
+      if (index >= text.length()) acc.reverse
+      else {
+        val c = text.charAt(index)
+        val newAcc =
+          if (symbols.contains(c) && !inBackticks && !afterEscape) index :: acc
+          else acc
+        loop(
+          index + 1,
+          afterEscape = c == '\\',
+          inBackticks = c == '`' ^ inBackticks,
+          acc = newAcc,
+        )
+      }
+    loop(index = 0, afterEscape = false, inBackticks = false, acc = List.empty)
+  }
 }
 
 case class ContextSymbols(
     packageSymbol: Option[String],
     thisSymbol: Option[String],
+    alternativeThisSymbol: Option[String],
 ) {
-  def withThis(sym: String): List[String] = thisSymbol.map(_ ++ sym).toList
+  def withThis(sym: String): List[String] =
+    thisSymbol.map(_ ++ sym).toList ++ alternativeThisSymbol
+      .map(_ ++ sym)
+      .toList
   def withPackage(sym: String): List[String] =
     packageSymbol.map(_ ++ sym).toList
 }
 
 object ContextSymbols {
-  def apply(packageSymbol: String, thisSymbol: String): ContextSymbols = {
+  def apply(
+      packageSymbol: String,
+      thisSymbol: String,
+      alternative: Option[String],
+  ): ContextSymbols = {
     val packageSymbol1 =
       if (packageSymbol.nonEmpty) packageSymbol
       else "_empty_/"
     val thisSymbol1 =
       Option.when(thisSymbol.nonEmpty)(packageSymbol1 ++ thisSymbol)
-    ContextSymbols(Some(packageSymbol1), thisSymbol1)
+    val thisSymbolAlt =
+      alternative.map(packageSymbol1 ++ _)
+    ContextSymbols(Some(packageSymbol1), thisSymbol1, thisSymbolAlt)
   }
 
-  def empty: ContextSymbols = ContextSymbols(None, None)
+  def empty: ContextSymbols = ContextSymbols(None, None, None)
 
 }
 
