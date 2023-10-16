@@ -1,6 +1,7 @@
 package scala.meta.internal.mtags
 
 import java.net.URI
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -285,8 +286,12 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       }
     }
 
+    def readText(charset: Charset): String = {
+      FileIO.slurp(path, charset)
+    }
+
     def readText: String = {
-      FileIO.slurp(path, StandardCharsets.UTF_8)
+      readText(StandardCharsets.UTF_8)
     }
 
     def readTextOpt: Option[String] = {
