@@ -634,11 +634,10 @@ class MetalsLspService(
     )
 
   private val newFileProvider: NewFileProvider = new NewFileProvider(
-    folder,
     languageClient,
     packageProvider,
-    focusedDocument,
     scalaVersionSelector,
+    clientConfig.icons,
   )
 
   private val symbolSearch: MetalsSymbolSearch = new MetalsSymbolSearch(
