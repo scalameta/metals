@@ -74,7 +74,9 @@ class NewProjectProvider(
     )
     withTemplate
       .flatMapOption { template =>
-        askForPath(Some(base)).mapOptionInside { path => (template, path) }
+        NewProjectProvider
+          .askForPath(Some(base), icons, client)
+          .mapOptionInside { path => (template, path) }
       }
       .flatMapOption { case (template, path) =>
         askForName(nameFromPath(template.id), NewScalaProject.enterName)
@@ -212,9 +214,19 @@ class NewProjectProvider(
     }
   }
 
-  private def askForPath(
-      from: Option[AbsolutePath]
-  ): Future[Option[AbsolutePath]] = {
+  // scala/hello-world.g8 -> hello-world
+  private def nameFromPath(g8Path: String) = {
+    g8Path.replaceAll(".*/", "").replace(".g8", "")
+  }
+}
+
+object NewProjectProvider {
+
+  def askForPath(
+      from: Option[AbsolutePath],
+      icons: Icons,
+      client: MetalsLanguageClient,
+  )(implicit ex: ExecutionContext): Future[Option[AbsolutePath]] = {
 
     def quickPickDir(filename: String) = {
       MetalsQuickPickItem(
@@ -250,11 +262,11 @@ class NewProjectProvider(
         case path if path.itemId == currentDir.id =>
           Future.successful(from)
         case path if path.itemId == parentDir.id =>
-          askForPath(from.flatMap(_.parentOpt))
+          askForPath(from.flatMap(_.parentOpt), icons, client)
         case path =>
           from match {
             case Some(nonRootPath) =>
-              askForPath(Some(nonRootPath.resolve(path.itemId)))
+              askForPath(Some(nonRootPath.resolve(path.itemId)), icons, client)
             case None =>
               val newRoot = File
                 .listRoots()
@@ -263,19 +275,11 @@ class NewProjectProvider(
                     AbsolutePath(root.toPath())
                 }
                 .headOption
-              askForPath(newRoot)
+              askForPath(newRoot, icons, client)
           }
 
       }
   }
-
-  // scala/hello-world.g8 -> hello-world
-  private def nameFromPath(g8Path: String) = {
-    g8Path.replaceAll(".*/", "").replace(".g8", "")
-  }
-}
-
-object NewProjectProvider {
 
   val custom: MetalsQuickPickItem = MetalsQuickPickItem(
     id = "custom",

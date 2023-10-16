@@ -8,7 +8,9 @@ import scala.concurrent.Future
 import scala.util.Properties
 import scala.util.control.NonFatal
 
+import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PackageProvider
@@ -26,11 +28,10 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Range
 
 class NewFileProvider(
-    workspace: AbsolutePath,
     client: MetalsLanguageClient,
     packageProvider: PackageProvider,
-    focusedDocument: () => Option[AbsolutePath],
     selector: ScalaVersionSelector,
+    icons: Icons,
 )(implicit
     ec: ExecutionContext
 ) {
@@ -40,44 +41,50 @@ class NewFileProvider(
       name: Option[String],
       fileType: Option[String],
       isScala: Boolean,
-  ): Future[Unit] = {
-    val directory = directoryUri
-      .map { uri =>
-        val path = uri.toString.toAbsolutePath
-        if (path.isFile)
-          path.parent
-        else
-          path
-      }
-      .orElse(focusedDocument().map(_.parent))
+  ): Future[Unit] =
+    for {
+      optDirectory <- directoryUri
+        .map { uri =>
+          val path = uri.toString.toAbsolutePath
+          if (path.isFile)
+            path.parent
+          else
+            path
+        }
+        .map(x => Future.successful(Some(x)))
+        .getOrElse(NewProjectProvider.askForPath(None, icons, client))
+      _ <- optDirectory
+        .map { directory =>
+          val newlyCreatedFile = {
+            fileType.flatMap(getFromString) match {
+              case Some(ft) => createFile(directory, ft, name)
+              case None =>
+                val askForKind =
+                  if (isScala)
+                    askForScalaKind(
+                      ScalaVersions.isScala3Version(
+                        selector.scalaVersionForPath(directory)
+                      )
+                    )
+                  else askForJavaKind
+                askForKind.flatMapOption(createFile(directory, _, name))
+            }
+          }
 
-    val newlyCreatedFile = {
-      fileType.flatMap(getFromString) match {
-        case Some(ft) => createFile(directory, ft, name)
-        case None =>
-          val askForKind =
-            if (isScala)
-              askForScalaKind(
-                directory.forall(dir =>
-                  ScalaVersions.isScala3Version(
-                    selector.scalaVersionForPath(dir)
-                  )
-                )
-              )
-            else askForJavaKind
-          askForKind.flatMapOption(createFile(directory, _, name))
-      }
-    }
-
-    newlyCreatedFile.map {
-      case Some((path, cursorRange)) =>
-        openFile(path, cursorRange)
-      case None => ()
-    }
-  }
+          newlyCreatedFile.map {
+            case Some((path, cursorRange)) =>
+              openFile(path, cursorRange)
+            case None => ()
+          }
+        }
+        .getOrElse {
+          scribe.warn("Cannot create file, no directory provided.")
+          Future.successful(())
+        }
+    } yield ()
 
   private def createFile(
-      directory: Option[AbsolutePath],
+      directory: AbsolutePath,
       fileType: NewFileType,
       name: Option[String],
   ) = {
@@ -175,15 +182,15 @@ class NewFileProvider(
   }
 
   private def createClass(
-      directory: Option[AbsolutePath],
+      directory: AbsolutePath,
       name: String,
       kind: NewFileType,
       ext: String,
   ): Future[(AbsolutePath, Range)] = {
-    val path = directory.getOrElse(workspace).resolve(name + ext)
+    val path = directory.resolve(name + ext)
     // name can be actually be "foo/Name", where "foo" is a folder to create
     val className = Identifier.backtickWrap(
-      directory.getOrElse(workspace).resolve(name).filename
+      directory.resolve(name).filename
     )
     val template = kind match {
       case CaseClass => caseClassTemplate(className)
@@ -201,10 +208,10 @@ class NewFileProvider(
   }
 
   private def createEmptyFileWithPackage(
-      directory: Option[AbsolutePath],
+      directory: AbsolutePath,
       name: String,
   ): Future[(AbsolutePath, Range)] = {
-    val path = directory.getOrElse(workspace).resolve(name + ".scala")
+    val path = directory.resolve(name + ".scala")
     val pkg = packageProvider
       .packageStatement(path)
       .map(_.fileContent)
@@ -215,33 +222,23 @@ class NewFileProvider(
   }
 
   private def createPackageObject(
-      directory: Option[AbsolutePath]
+      directory: AbsolutePath
   ): Future[(AbsolutePath, Range)] = {
-    directory
-      .map { directory =>
-        val path = directory.resolve("package.scala")
-        createFileAndWriteText(
-          path,
-          packageProvider
-            .packageStatement(path)
-            .getOrElse(NewFileTemplate.empty),
-        )
-      }
-      .getOrElse(
-        Future.failed(
-          new IllegalArgumentException(
-            "'directory' must be provided to create a package object"
-          )
-        )
-      )
+    val path = directory.resolve("package.scala")
+    createFileAndWriteText(
+      path,
+      packageProvider
+        .packageStatement(path)
+        .getOrElse(NewFileTemplate.empty),
+    )
   }
 
   private def createEmptyFile(
-      directory: Option[AbsolutePath],
+      directory: AbsolutePath,
       name: String,
       extension: String,
   ): Future[(AbsolutePath, Range)] = {
-    val path = directory.getOrElse(workspace).resolve(name + extension)
+    val path = directory.resolve(name + extension)
     createFileAndWriteText(path, NewFileTemplate.empty)
   }
 

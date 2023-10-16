@@ -923,7 +923,10 @@ class WorkspaceLspService(
         ).asJavaObject
 
       case ServerCommands.NewScalaFile(args) =>
-        val directoryURI = args.lift(0).flatten
+        val directoryURI = args
+          .lift(0)
+          .flatten
+          .orElse(focusedDocument.map(_.parent.toURI.toString()))
         val name = args.lift(1).flatten
         val fileType = args.lift(2).flatten
         directoryURI
@@ -931,7 +934,10 @@ class WorkspaceLspService(
           .getOrElse(fallbackService)
           .createFile(directoryURI, name, fileType, isScala = true)
       case ServerCommands.NewJavaFile(args) =>
-        val directoryURI = args.lift(0).flatten
+        val directoryURI = args
+          .lift(0)
+          .flatten
+          .orElse(focusedDocument.map(_.parent.toURI.toString()))
         val name = args.lift(1).flatten
         val fileType = args.lift(2).flatten
         directoryURI
