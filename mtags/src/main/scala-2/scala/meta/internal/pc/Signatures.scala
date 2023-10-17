@@ -147,7 +147,6 @@ trait Signatures { compiler: MetalsGlobal =>
             case LookupSucceeded(qual, symbol) =>
               symbol.isKindaTheSameAs(sym) && {
                 prefix == NoPrefix ||
-                prefix.isInstanceOf[PrettyType] ||
                 qual.tpe.computeMemberType(symbol) <:<
                   prefix.computeMemberType(sym)
               }

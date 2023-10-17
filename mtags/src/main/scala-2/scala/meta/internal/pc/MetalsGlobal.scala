@@ -252,20 +252,6 @@ class MetalsGlobal(
     }
   }
 
-  /**
-   * A `Type` with custom pretty-printing representation, not used for typechecking.
-   *
-   * NOTE(olafur) Creating a new `Type` subclass is a hack, a better long-term solution would be
-   * to implement a custom pretty-printer for types so that we don't have to rely on `Type.toString`.
-   */
-  class PrettyType(
-      override val prefixString: String,
-      override val safeToString: String
-  ) extends Type {
-    def this(string: String) =
-      this(string + ".", string)
-  }
-
   private def backtickify(sym: Symbol) =
     if (
       Identifier.needsBacktick(sym.name.decoded)
@@ -294,11 +280,19 @@ class MetalsGlobal(
       isVisited += key
       val result = tpe match {
         case TypeRef(pre, sym, args) =>
-          def backtickifiedSymbol = backtickify(sym)
+          def shortSymbol = {
+            /* If it's an alias type we want to prevent dealiasing it
+               AnyRef should stay to be dropped if neded later on since it's
+               not an important class.
+             */
+            if (sym.isAliasType && sym != definitions.AnyRefClass)
+              backtickify(sym.newErrorSymbol(sym.name).updateInfo(sym.info))
+            else backtickify(sym)
+          }
           if (history.isSymbolInScope(sym, pre)) {
             TypeRef(
               NoPrefix,
-              backtickifiedSymbol,
+              shortSymbol,
               args.map(arg => loop(arg, None))
             )
           } else {
@@ -324,8 +318,11 @@ class MetalsGlobal(
             history.config.get(ownerSymbol) match {
               case Some(rename) if canRename(rename, ownerSymbol) =>
                 TypeRef(
-                  new PrettyType(rename.toString),
-                  backtickifiedSymbol,
+                  SingleType(
+                    NoPrefix,
+                    sym.newErrorSymbol(rename)
+                  ),
+                  shortSymbol,
                   args.map(arg => loop(arg, None))
                 )
               case _ =>
@@ -352,20 +349,20 @@ class MetalsGlobal(
                       if (history.nameResolvesToSymbol(sym.name, sym)) {
                         TypeRef(
                           NoPrefix,
-                          backtickifiedSymbol,
+                          shortSymbol,
                           args.map(arg => loop(arg, None))
                         )
                       } else {
                         TypeRef(
                           ThisType(pre.typeSymbol),
-                          backtickifiedSymbol,
+                          shortSymbol,
                           args.map(arg => loop(arg, None))
                         )
                       }
                     } else {
                       TypeRef(
                         loop(pre, Some(ShortName(sym))),
-                        backtickifiedSymbol,
+                        shortSymbol,
                         args.map(arg => loop(arg, None))
                       )
                     }
@@ -424,7 +421,10 @@ class MetalsGlobal(
                 }
               else renamedOwnerIndex
             if (prefix < 0) {
-              new PrettyType(history.fullname(sym))
+              SingleType(
+                NoPrefix,
+                sym.newErrorSymbol(TypeName(history.fullname(sym)))
+              )
             } else {
               val names = owners
                 .take(prefix + 1)
@@ -440,7 +440,10 @@ class MetalsGlobal(
               val ref = names.tail.foldLeft(names.head: m.Term.Ref) {
                 case (qual, name) => m.Term.Select(qual, name)
               }
-              new PrettyType(ref.syntax)
+              SingleType(
+                NoPrefix,
+                sym.newErrorSymbol(TypeName(ref.syntax))
+              )
             }
           }
         case ConstantType(Constant(sym: TermSymbol))
@@ -464,7 +467,11 @@ class MetalsGlobal(
             // [x] => F[x] is not printable in the code, we need to use just `F`
             case TypeRef(_, sym, args)
                 if typeParams == args.map(_.typeSymbol) =>
-              new PrettyType(sym.name.toString())
+              TypeRef(
+                NoPrefix,
+                sym.newErrorSymbol(sym.name),
+                Nil
+              )
             case otherType =>
               PolyType(typeParams, otherType)
           }
