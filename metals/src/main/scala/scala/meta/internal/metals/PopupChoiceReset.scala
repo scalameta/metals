@@ -35,13 +35,13 @@ class PopupChoiceReset(
       Future.successful(())
     } else if (value == BuildServer) {
       scribe.info("Resetting build server selection.")
-      (for {
+      for {
         didChange <- bspConnector.switchBuildServer(
           workspace,
           slowConnect,
         )
-        if didChange
-      } yield quickConnect()).ignoreValue
+        _ <- if (didChange) quickConnect() else Future.successful(())
+      } yield ()
     } else {
       Future.successful(())
     }
