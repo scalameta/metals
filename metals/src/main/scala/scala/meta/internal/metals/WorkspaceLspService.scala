@@ -242,11 +242,17 @@ class WorkspaceLspService(
   def getServiceFor(path: AbsolutePath): MetalsLspService =
     getServiceForOpt(path).getOrElse(fallbackService)
 
-  def getServiceFor(uri: String): MetalsLspService =
+  def getServiceFor(uri: String): MetalsLspService = {
+    // "metalsDecode" prefix is used for showing special files and is not an actual file system
+    val strippedUri = uri.stripPrefix("metalsDecode:")
     (for {
-      // "metalsDecode" prefix is used for showing special files and is not an actual file system
-      path <- uri.stripPrefix("metalsDecode:").toAbsolutePathSafe()
-    } yield getServiceFor(path)).getOrElse(fallbackService)
+      path <- strippedUri.toAbsolutePathSafe()
+      service <-
+        if (strippedUri.startsWith("jar:"))
+          folderServices.find(_.buildTargets.inverseSources(path).nonEmpty)
+        else Some(getServiceFor(path))
+    } yield service).getOrElse(fallbackService)
+  }
 
   def currentFolder: Option[MetalsLspService] =
     focusedDocument.flatMap(getServiceForOpt)

@@ -75,6 +75,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var selectBspServer: Seq[MessageActionItem] => MessageActionItem = { _ =>
     null
   }
+  var chooseWorkspaceFolder: Seq[MessageActionItem] => MessageActionItem =
+    _.head
   var chooseBuildTool: Seq[MessageActionItem] => MessageActionItem = {
     actions =>
       actions
@@ -378,6 +380,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
             .logMessage(Icons.default)
         ) {
           new MessageActionItem("ok")
+        } else if (
+          params.getMessage().startsWith("For which folder would you like to")
+        ) {
+          chooseWorkspaceFolder(params.getActions().asScala.toSeq)
         } else {
           throw new IllegalArgumentException(params.toString)
         }
