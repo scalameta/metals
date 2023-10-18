@@ -1957,11 +1957,10 @@ class MetalsLspService(
       case Nil => Future(None)
       case buildTools =>
         for {
-          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
+          buildTool <- buildToolSelector.checkForChosenBuildTool(
             buildTools
           )
-          if isCompatibleVersion(buildTool)
-        } yield Some(buildTool)
+        } yield buildTool.filter(isCompatibleVersion)
     }
   }
 
