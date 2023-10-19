@@ -47,21 +47,22 @@ final class BspConfigGenerator(
           try {
             val bsp = ".bsp"
             workspace.resolve(bsp).createDirectories()
-            val buildToolBspDir = buildTool.projectRoot.resolve(bsp).toNIO
+            val buildToolBspDir = buildTool.projectRoot.resolve(bsp)
             val workspaceBspDir = workspace.resolve(bsp).toNIO
             buildToolBspDir.toFile.listFiles().foreach { file =>
               val path = file.toPath()
               if (!file.isDirectory() && path.filename.endsWith(".json")) {
-                val to =
-                  workspaceBspDir.resolve(path.relativize(buildToolBspDir))
+                val to = workspaceBspDir.resolve(path.filename)
                 Files.move(path, to, StandardCopyOption.REPLACE_EXISTING)
               }
             }
-            Files.delete(buildToolBspDir)
+            buildToolBspDir.deleteRecursively()
             Generated
           } catch {
-            case NonFatal(_) =>
-              Failed(Right("Could not move bsp config from project root"))
+            case NonFatal(e) =>
+              val message = s"Could not move bsp config from project root: $e"
+              scribe.error(message)
+              Failed(Right(message))
           }
         case status => status
       }
