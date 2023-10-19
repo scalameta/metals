@@ -1,10 +1,11 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.SyntheticDecorationsParams
 
 final class PcSyntheticDecorationsProvider(
-    protected val compiler: MetalsGlobal, // compiler
+    protected val compiler: MetalsGlobal,
     val params: SyntheticDecorationsParams
 ) {
   import compiler._
@@ -27,7 +28,7 @@ final class PcSyntheticDecorationsProvider(
   ): Synthetics =
     tree match {
       case ImplicitConversion(name, pos) if params.implicitConversions() =>
-        val adjusted = adjust(pos)
+        val adjusted = pos.adjust(text)._1
         decorations
           .add(
             Decoration(
@@ -48,7 +49,7 @@ final class PcSyntheticDecorationsProvider(
         val label =
           if (allImplicit) names.mkString("(", ", ", ")")
           else names.mkString(", ", ", ", "")
-        val adjusted = adjust(pos)
+        val adjusted = pos.adjust(text)._1
         decorations.add(
           Decoration(
             adjusted.focusEnd.toLsp,
@@ -58,7 +59,7 @@ final class PcSyntheticDecorationsProvider(
         )
       case TypeParameters(types, pos) if params.typeParameters() =>
         val label = types.map(toLabel(_, pos)).mkString("[", ", ", "]")
-        val adjusted = adjust(pos)
+        val adjusted = pos.adjust(text)._1
         decorations.add(
           Decoration(
             adjusted.focusEnd.toLsp,
@@ -68,8 +69,8 @@ final class PcSyntheticDecorationsProvider(
         )
       case InferredType(tpe, pos) if params.inferredTypes() =>
         val label = toLabel(tpe, pos)
-        val adjusted = adjust(pos)
-        if (decorations.containsDef(adjusted.start)) decorations
+        val adjusted = pos.adjust(text)._1
+        if (decorations.containsDef(adjusted.end)) decorations
         else
           decorations.add(
             Decoration(
@@ -77,7 +78,7 @@ final class PcSyntheticDecorationsProvider(
               ": " + label,
               DecorationKind.InferredType
             ),
-            adjusted.start
+            adjusted.end
           )
       case _ => decorations
     }
@@ -88,20 +89,6 @@ final class PcSyntheticDecorationsProvider(
   ): Synthetics = {
     val decorations = collectDecorations(tree, acc)
     tree.children.foldLeft(decorations)(traverse(_, _))
-  }
-
-  private def adjust(
-      pos: Position
-  ): Position = {
-    if (pos.isOffset) pos
-    else {
-      val isOldNameBackticked = text(pos.start) == '`' &&
-        (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
-        text(pos.end + 1) == '`'
-      if (isOldNameBackticked) // pos
-        pos.withEnd(pos.end + 2)
-      else pos
-    }
   }
 
   object ImplicitConversion {
@@ -122,9 +109,20 @@ final class PcSyntheticDecorationsProvider(
           val allImplicit = providedArgs.isEmpty
           val pos = providedArgs.lastOption.fold(tree.pos)(_.pos)
           Some(implicitArgs.map(_.symbol.decodedName), pos, allImplicit)
+        case Apply(ta: TypeApply, Apply(fun, _) :: _)
+            if fun.pos.isOffset && isValueOf(fun.symbol) =>
+          val pos = ta.pos
+          Some(
+            List("new " + nme.valueOf.decoded.capitalize + "(...)"),
+            pos,
+            true
+          )
         case _ => None
       }
-    def isSyntheticArg(arg: Tree): Boolean =
+    private def isValueOf(symbol: Symbol) =
+      symbol != null && symbol.safeOwner.decodedName == nme.valueOf.decoded.capitalize
+
+    private def isSyntheticArg(arg: Tree): Boolean =
       arg.pos.isOffset && arg.symbol != null && arg.symbol.isImplicit
   }
 
@@ -171,7 +169,7 @@ final class PcSyntheticDecorationsProvider(
           c => !c.isWhitespace && c != '=' && c != '{',
           dd.rhs.pos.start - 1
         )
-        dd.pos.withEnd(tpeIdx + 1)
+        dd.pos.withEnd(Math.max(dd.namePosition.end, tpeIdx + 1))
       }
     }
     private def isCompilerGeneratedSymbol(sym: Symbol) =
@@ -179,19 +177,6 @@ final class PcSyntheticDecorationsProvider(
 
     private def isNotInUnapply(vd: ValDef) =
       !vd.rhs.pos.isRange || vd.rhs.pos.start > vd.namePosition.end
-  }
-
-  private val forCompMethods =
-    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
-
-  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
-  private def isForComprehensionMethod(sel: Select): Boolean = {
-    val syntheticName = sel.name match {
-      case name: TermName => forCompMethods(name)
-      case _ => false
-    }
-    val wrongSpan = sel.qualifier.pos.includes(sel.namePosition.focusStart)
-    syntheticName && wrongSpan
   }
 
   private def syntheticTupleApply(sel: Select): Boolean = {

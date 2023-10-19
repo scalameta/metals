@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import scala.reflect.internal.util.RangePosition
 
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.RangeParams
 import scala.meta.pc.VirtualFileParams
 
 abstract class PcCollector[T](
@@ -65,24 +64,6 @@ abstract class PcCollector[T](
         ) ++ sym.allOverriddenSymbols.toSet
       } else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
-  }
-
-  def adjust(
-      pos: Position,
-      forRename: Boolean = false
-  ): (Position, Boolean) = {
-    val isBackticked = text(pos.start) == '`' &&
-      text(pos.end - 1) == '`' &&
-      pos.start != (pos.end - 1) // for one character names, e.g. `c`
-    //                                                    start-^^-end
-    val isOldNameBackticked = text(pos.start) == '`' &&
-      (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
-      text(pos.end + 1) == '`'
-    if (isBackticked && forRename)
-      (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
-    else if (isOldNameBackticked) // pos
-      (pos.withEnd(pos.end + 2), false)
-    else (pos, false)
   }
 
   private lazy val namedArgCache = {
@@ -215,28 +196,10 @@ abstract class PcCollector[T](
         .getOrElse(None)
   }
 
-  def treesInRange(rangeParams: RangeParams): List[Tree] = {
-    val pos: Position =
-      unit.position(rangeParams.offset()).withEnd(rangeParams.endOffset())
-    val tree = locateTree(pos, unit.lastBody, false)
-    if (tree.isEmpty) {
-      List(unit.lastBody)
-    } else if (!tree.pos.isDefined || rangeParams.offset() <= tree.pos.start) {
-      List(tree)
-    } else {
-      tree.children
-        .filter(c =>
-          !c.pos.isDefined ||
-            c.pos.start <= rangeParams.endOffset && c.pos.end >= rangeParams
-              .offset()
-        )
-    }
-  }
-
   def result(): List[T] = {
     params match {
       case _: OffsetParams => resultWithSought()
-      case _ => resultAllOccurences()(List(unit.lastBody))
+      case _ => resultAllOccurences().toList
     }
   }
 
@@ -295,37 +258,29 @@ abstract class PcCollector[T](
           sought.exists(f)
         }
 
-        traverseSought(soughtTreeFilter, soughtFilter)(List(unit.lastBody))
+        traverseSought(soughtTreeFilter, soughtFilter).toList
 
       case None => Nil
     }
   }
 
-  def resultAllOccurences(includeSynthetics: Boolean = false)(
-      toTraverse: List[Tree] = List(unit.lastBody)
-  ): List[T] = {
+  def resultAllOccurences(): Set[T] = {
     def noTreeFilter = (_: Tree) => true
     def noSoughtFilter = (_: (Symbol => Boolean)) => true
 
-    traverseSought(noTreeFilter, noSoughtFilter, includeSynthetics)(toTraverse)
+    traverseSought(noTreeFilter, noSoughtFilter)
   }
 
   def traverseSought(
       filter: Tree => Boolean,
-      soughtFilter: (Symbol => Boolean) => Boolean,
-      includeSynthetics: Boolean = false
-  )(
-      toTraverse: List[Tree]
-  ): List[T] = {
-    def syntheticFilter(tree: Tree) = includeSynthetics &&
-      tree.pos.isOffset &&
-      tree.symbol.isImplicit
+      soughtFilter: (Symbol => Boolean) => Boolean
+  ): Set[T] = {
     // Now find all matching symbols in the document, comments identify <<>> as the symbol we are looking for
     def traverseWithParent(parent: Option[Tree])(
-        acc: List[T],
+        acc: Set[T],
         tree: Tree
-    ): List[T] = {
-      val traverse: (List[T], Tree) => List[T] = traverseWithParent(
+    ): Set[T] = {
+      val traverse: (Set[T], Tree) => Set[T] = traverseWithParent(
         Some(tree)
       )
       def collect(t: Tree, pos: Position, sym: Option[Symbol] = None): T =
@@ -336,13 +291,11 @@ abstract class PcCollector[T](
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident
-            if ident.pos.isRange && filter(ident) ||
-              syntheticFilter(ident) =>
+        case ident: Ident if ident.pos.isRange && filter(ident) =>
           if (ident.symbol == NoSymbol)
-            collect(ident, ident.pos, fallbackSymbol(ident.name, pos)) :: acc
+            acc + collect(ident, ident.pos, fallbackSymbol(ident.name, pos))
           else
-            collect(ident, ident.pos) :: acc
+            acc + collect(ident, ident.pos)
 
         /**
          * Needed for type trees such as:
@@ -351,10 +304,10 @@ abstract class PcCollector[T](
         case tpe: TypeTree
             if tpe.pos.isRange && tpe.original != null && filter(tpe) =>
           tpe.original.children.foldLeft(
-            collect(
+            acc + collect(
               tpe.original,
               typePos(tpe)
-            ) :: acc
+            )
           )(traverse(_, _))
 
         /**
@@ -364,18 +317,9 @@ abstract class PcCollector[T](
         case sel: Select if sel.pos.isRange && filter(sel) =>
           val newAcc =
             if (isForComprehensionMethod(sel)) acc
-            else collect(sel, sel.namePosition) :: acc
+            else acc + collect(sel, sel.namePosition)
           traverse(
             newAcc,
-            sel.qualifier
-          )
-
-        case sel: Select if syntheticFilter(sel) =>
-          traverse(
-            collect(
-              sel,
-              sel.pos
-            ) :: acc,
             sel.qualifier
           )
         /* all definitions:
@@ -389,7 +333,7 @@ abstract class PcCollector[T](
               df,
               df.namePosition
             )
-            if (acc.contains(t)) acc else t :: acc
+            if (acc(t)) acc else acc + t
           })(traverse(_, _))
         /* Named parameters, since they don't show up in typed tree:
          * foo(<<name>> = "abc")
@@ -424,17 +368,11 @@ abstract class PcCollector[T](
          */
         case bind: Bind if bind.pos.isDefined && filter(bind) =>
           bind.children.foldLeft(
-            collect(
+            acc + collect(
               bind,
               bind.namePosition
-            ) :: acc
+            )
           )(traverse(_, _))
-
-        /**
-         * We don't want to collect type parameters in for-comp map, flatMap etc.
-         */
-        case TypeApply(sel: Select, _) if isForComprehensionMethod(sel) =>
-          traverse(acc, sel.qualifier)
 
         /**
          * We don't automatically traverser types like:
@@ -442,17 +380,6 @@ abstract class PcCollector[T](
          */
         case tpe: TypeTree if tpe.original != null =>
           tpe.original.children.foldLeft(acc)(traverse(_, _))
-
-        /**
-         * For collecting synthetic type parameters:
-         * def hello[T](t: T) = t
-         * val x = hello<<[List[Int]]>>(List<<Int>>(1))
-         */
-        case tpe: TypeTree if includeSynthetics && tpe.pos.isOffset =>
-          collect(
-            tpe,
-            tpe.pos
-          ) :: acc
         /**
          * Some type trees don't have symbols attached such as:
          * type A = List[_ <: <<Iterable>>[Int]]
@@ -462,19 +389,13 @@ abstract class PcCollector[T](
               soughtFilter(_.decodedName == id.name.decoded) =>
           fallbackSymbol(id.name, id.pos) match {
             case Some(sym) if soughtFilter(_ == sym) =>
-              collect(
+              acc + collect(
                 id,
                 id.pos
-              ) :: acc
+              )
             case _ => acc
           }
 
-        /**
-         * We don't want to traverse type from synthetic match-case in
-         * val <<hd :: tail = List(1,2,3)>>
-         */
-        case Typed(expr, tpt) if !tpt.pos.isRange =>
-          traverse(acc, expr)
         /**
          * For traversing annotations:
          * @<<JsonNotification>>("")
@@ -518,10 +439,10 @@ abstract class PcCollector[T](
         case name: NameTree
             if soughtFilter(_ == name.symbol) && name.pos.isRange =>
           tree.children.foldLeft(
-            collect(
+            acc + collect(
               name,
               name.namePosition
-            ) :: acc
+            )
           )(traverse(_, _))
 
         // needed for `classOf[<<ABC>>]`
@@ -530,7 +451,7 @@ abstract class PcCollector[T](
           val posStart = text.indexOfSlice(sym.decodedName, lit.pos.start)
           if (posStart == -1) acc
           else
-            collect(
+            acc + collect(
               lit,
               new RangePosition(
                 lit.pos.source,
@@ -539,13 +460,14 @@ abstract class PcCollector[T](
                 posStart + sym.decodedName.length
               ),
               Option(sym)
-            ) :: acc
+            )
 
         case _ =>
           tree.children.foldLeft(acc)(traverse(_, _))
       }
     }
-    toTraverse.flatMap(traverseWithParent(None)(List.empty[T], _))
+    val all = traverseWithParent(None)(Set.empty[T], unit.lastBody)
+    all
   }
 
   private def annotationChildren(mdef: MemberDef): List[Tree] = {
@@ -571,19 +493,6 @@ abstract class PcCollector[T](
       case appl: Apply => collectArguments(appl) ++ apply.args
       case _ => apply.args
     }
-  }
-
-  private val forCompMethods =
-    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
-
-  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
-  private def isForComprehensionMethod(sel: Select): Boolean = {
-    val syntheticName = sel.name match {
-      case name: TermName => forCompMethods(name)
-      case _ => false
-    }
-    val wrongSpan = sel.qualifier.pos.includes(sel.namePosition.focusStart)
-    syntheticName && wrongSpan
   }
 
 }

@@ -7,7 +7,6 @@ import scala.meta as m
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.RangeParams
 import scala.meta.pc.VirtualFileParams
 
 import dotty.tools.dotc.ast.NavigateAST
@@ -38,6 +37,7 @@ abstract class PcCollector[T](
   val uri = params.uri()
   val filePath = Paths.get(uri)
   val sourceText = params.text
+  val text = sourceText.toCharArray()
   val source =
     SourceFile.virtual(filePath.toString, sourceText)
   driver.run(uri, source)
@@ -72,45 +72,6 @@ abstract class PcCollector[T](
   def collect(
       parent: Option[Tree]
   )(tree: Tree | EndMarker, pos: SourcePosition, symbol: Option[Symbol]): T
-
-  /**
-   * @return (adjusted position, should strip backticks)
-   */
-  def adjust(
-      pos1: SourcePosition,
-      forRename: Boolean = false,
-  ): (SourcePosition, Boolean) =
-    if !pos1.span.isCorrect then (pos1, false)
-    else
-      val pos0 =
-        val span = pos1.span
-        if span.exists && span.point > span.end then
-          pos1.withSpan(
-            span
-              .withStart(span.point)
-              .withEnd(span.point + (span.end - span.start))
-          )
-        else pos1
-
-      val pos =
-        if pos0.end > 0 && sourceText(pos0.end - 1) == ',' then
-          pos0.withEnd(pos0.end - 1)
-        else pos0
-      val isBackticked =
-        sourceText(pos.start) == '`' &&
-          pos.end > 0 &&
-          sourceText(pos.end - 1) == '`'
-      // when the old name contains backticks, the position is incorrect
-      val isOldNameBackticked = sourceText(pos.start) != '`' &&
-        pos.start > 0 &&
-        sourceText(pos.start - 1) == '`' &&
-        sourceText(pos.end) == '`'
-      if isBackticked && forRename then
-        (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
-      else if isOldNameBackticked then
-        (pos.withStart(pos.start - 1).withEnd(pos.end + 1), false)
-      else (pos, false)
-  end adjust
 
   def symbolAlternatives(sym: Symbol) =
     def member(parent: Symbol) = parent.info.member(sym.name).symbol
@@ -366,26 +327,16 @@ abstract class PcCollector[T](
         if symbols.nonEmpty then Some((symbols, namePos)) else None
   end collectAllExtensionParamSymbols
 
-  def treesInRange(rangeParams: RangeParams): List[Tree] =
-    val pos = driver.sourcePosition(rangeParams)
-    val path = Interactive
-      .pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
-    val trees =
-      path.headOption.getOrElse(unit.tpdTree)
-    List(trees)
-
   def result(): List[T] =
     params match
       case _: OffsetParams => resultWithSought()
-      case _ => resultAllOccurences()(List(unit.tpdTree))
+      case _ => resultAllOccurences().toList
 
-  def resultAllOccurences(includeSynthetics: Boolean = false)(
-      toTraverse: List[Tree] = List(unit.tpdTree)
-  ): List[T] =
+  def resultAllOccurences(): Set[T] =
     def noTreeFilter = (_: Tree) => true
     def noSoughtFilter = (_: Symbol => Boolean) => true
 
-    traverseSought(noTreeFilter, noSoughtFilter, includeSynthetics)(toTraverse)
+    traverseSought(noTreeFilter, noSoughtFilter)
 
   def resultWithSought(): List[T] =
     soughtSymbols(path) match
@@ -428,9 +379,7 @@ abstract class PcCollector[T](
         def soughtFilter(f: Symbol => Boolean): Boolean =
           sought.exists(f)
 
-        traverseSought(soughtTreeFilter, soughtFilter)(
-          List(unit.tpdTree)
-        ).toList
+        traverseSought(soughtTreeFilter, soughtFilter).toList
 
       case None => Nil
 
@@ -441,16 +390,12 @@ abstract class PcCollector[T](
   def traverseSought(
       filter: Tree => Boolean,
       soughtFilter: (Symbol => Boolean) => Boolean,
-      includeSynthetics: Boolean = false,
-  )(toTraverse: List[Tree]): List[T] =
-    def syntheticFilter(tree: Tree) = includeSynthetics &&
-      tree.span.isSynthetic &&
-      tree.symbol.isOneOf(Flags.GivenOrImplicit)
+  ): Set[T] =
     def collectNamesWithParent(
-        occurences: List[T],
+        occurences: Set[T],
         tree: Tree,
         parent: Option[Tree],
-    ): List[T] =
+    ): Set[T] =
       def collect(
           tree: Tree | EndMarker,
           pos: SourcePosition,
@@ -462,16 +407,14 @@ abstract class PcCollector[T](
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident
-            if ident.span.isCorrect && filter(ident) ||
-              syntheticFilter(ident) =>
+        case ident: Ident if ident.span.isCorrect && filter(ident) =>
           // symbols will differ for params in different ext methods, but source pos will be the same
           if soughtFilter(_.sourcePos == ident.symbol.sourcePos)
           then
-            collect(
+            occurences + collect(
               ident,
               ident.sourcePos,
-            ) :: occurences
+            )
           else occurences
         /**
          * All select statements such as:
@@ -479,8 +422,8 @@ abstract class PcCollector[T](
          */
         case sel: Select
             if sel.span.isCorrect && filter(sel) &&
-              !isForComprehensionMethod(sel) =>
-          collect(
+              !sel.isForComprehensionMethod =>
+          occurences + collect(
             sel,
             pos.withSpan(selectNameSpan(sel)),
           )
@@ -504,18 +447,24 @@ abstract class PcCollector[T](
                 )
               else occurences
             case _ => occurences
-          ) :: occurences
         /**
          * for synthetic decorations in:
          * given Conversion[Int, String] = _.toString
          * val x: String = <<>>123
          */
-        case Select(id: Ident, name)
-            if syntheticFilter(id) && name == nme.apply =>
-          collect(
-            id,
-            id.sourcePos,
-          ) :: occurences
+        case sel: Select
+            if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
+          parent match
+            case Some(a: Apply) =>
+              val span = a.span.withStart(a.span.point)
+              val amendedSelect = sel.withSpan(span)
+              if filter(amendedSelect) then
+                occurences + collect(
+                  amendedSelect,
+                  pos.withSpan(span),
+                )
+              else occurences
+            case _ => occurences
         /* all definitions:
          * def <<foo>> = ???
          * class <<Foo>> = ???
@@ -532,14 +481,14 @@ abstract class PcCollector[T](
 
           val annots = collectTrees(df.mods.annotations)
           val traverser =
-            new PcCollector.DeepFolderWithParent[List[T]](
+            new PcCollector.DeepFolderWithParent[Set[T]](
               collectNamesWithParent
             )
           annots.foldLeft(
-            collect(
+            occurences + collect(
               df,
               pos.withSpan(df.nameSpan),
-            ) ++ collectEndMarker ++ occurences
+            ) ++ collectEndMarker
           ) { case (set, tree) =>
             traverser(set, tree)
           }
@@ -588,57 +537,55 @@ abstract class PcCollector[T](
         case mdf: MemberDef if mdf.mods.annotations.nonEmpty =>
           val trees = collectTrees(mdf.mods.annotations)
           val traverser =
-            new PcCollector.DeepFolderWithParent[List[T]](
+            new PcCollector.DeepFolderWithParent[Set[T]](
               collectNamesWithParent
             )
-          trees.foldLeft(occurences) { case (list, tree) =>
-            traverser(list, tree)
+          trees.foldLeft(occurences) { case (set, tree) =>
+            traverser(set, tree)
           }
         /**
          * For traversing import selectors:
          * import scala.util.<<Try>>
          */
         case imp: Import if filter(imp) =>
-          imp.selectors.collect {
-            case sel: ImportSelector
-                if soughtFilter(_.decodedName == sel.name.decoded) =>
-              // Show both rename and main together
-              val spans =
-                if !sel.renamed.isEmpty then
-                  Set(sel.renamed.span, sel.imported.span)
-                else Set(sel.imported.span)
-              // See https://github.com/scalameta/metals/pull/5100
-              val symbol = imp.expr.symbol.info.member(sel.name).symbol match
-                // We can get NoSymbol when we import "_", "*"", "given" or when the names don't match
-                // eg. "@@" doesn't match "$at$at".
-                // Then we try to find member based on decodedName
-                case NoSymbol =>
-                  imp.expr.symbol.info.allMembers
-                    .find(_.name.decoded == sel.name.decoded)
-                    .map(_.symbol)
-                    .getOrElse(NoSymbol)
-                case sym => sym
-              spans.filter(_.isCorrect).map { span =>
-                collect(
-                  imp,
-                  pos.withSpan(span),
-                  Some(symbol),
-                )
-              }
-          }.flatten ++ occurences
-        case tt: TypeTree if includeSynthetics && parent.exists(isTypeApply) =>
-          collect(
-            tt,
-            tt.sourcePos,
-          ) :: occurences
+          imp.selectors
+            .collect {
+              case sel: ImportSelector
+                  if soughtFilter(_.decodedName == sel.name.decoded) =>
+                // Show both rename and main together
+                val spans =
+                  if !sel.renamed.isEmpty then
+                    Set(sel.renamed.span, sel.imported.span)
+                  else Set(sel.imported.span)
+                // See https://github.com/scalameta/metals/pull/5100
+                val symbol = imp.expr.symbol.info.member(sel.name).symbol match
+                  // We can get NoSymbol when we import "_", "*"", "given" or when the names don't match
+                  // eg. "@@" doesn't match "$at$at".
+                  // Then we try to find member based on decodedName
+                  case NoSymbol =>
+                    imp.expr.symbol.info.allMembers
+                      .find(_.name.decoded == sel.name.decoded)
+                      .map(_.symbol)
+                      .getOrElse(NoSymbol)
+                  case sym => sym
+                spans.filter(_.isCorrect).map { span =>
+                  collect(
+                    imp,
+                    pos.withSpan(span),
+                    Some(symbol),
+                  )
+                }
+            }
+            .flatten
+            .toSet ++ occurences
         case inl: Inlined =>
           val traverser =
-            new PcCollector.DeepFolderWithParent[List[T]](
+            new PcCollector.DeepFolderWithParent[Set[T]](
               collectNamesWithParent
             )
           val trees = inl.call :: inl.bindings
-          trees.foldLeft(occurences) { case (list, tree) =>
-            traverser(list, tree)
+          trees.foldLeft(occurences) { case (set, tree) =>
+            traverser(set, tree)
           }
         case o =>
           occurences
@@ -646,8 +593,9 @@ abstract class PcCollector[T](
     end collectNamesWithParent
 
     val traverser =
-      new PcCollector.DeepFolderWithParent[List[T]](collectNamesWithParent)
-    toTraverse.flatMap(traverser(List.empty[T], _))
+      new PcCollector.DeepFolderWithParent[Set[T]](collectNamesWithParent)
+    val all = traverser(Set.empty[T], unit.tpdTree)
+    all
   end traverseSought
 
   // @note (tgodzik) Not sure currently how to get rid of the warning, but looks to correctly
@@ -670,27 +618,6 @@ abstract class PcCollector[T](
         Span(span.start, span.start + realName.length, point)
       else Span(point, span.end, point)
     else span
-
-  private val forCompMethods =
-    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
-
-  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
-  private def isForComprehensionMethod(sel: Select): Boolean =
-    val syntheticName = sel.name match
-      case name: TermName => forCompMethods(name)
-      case _ => false
-    val wrongSpan = sel.qualifier.span.contains(sel.nameSpan)
-    syntheticName && wrongSpan
-
-  /**
-   * We don't want to collect type parameters in for-comp map, flatMap etc.
-   */
-  private def isTypeApply(t: Tree): Boolean =
-    t match
-      case TypeApply(sel: Select, _) if isForComprehensionMethod(sel) => false
-      case _: TypeApply => true
-      case _ => false
-
 end PcCollector
 
 object PcCollector:

@@ -1025,6 +1025,19 @@ class MetalsGlobal(
     }
   }
 
+  private val forCompMethods =
+    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
+
+  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
+  def isForComprehensionMethod(sel: Select): Boolean = {
+    val syntheticName = sel.name match {
+      case name: TermName => forCompMethods(name)
+      case _ => false
+    }
+    val wrongSpan = sel.qualifier.pos.includes(sel.namePosition.focusStart)
+    syntheticName && wrongSpan
+  }
+
   // Extractor for both term and type applications like `foo(1)` and foo[T]`
   object TreeApply {
     def unapply(tree: Tree): Option[(Tree, List[Tree])] =

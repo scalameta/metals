@@ -4,7 +4,7 @@ import scala.meta.internal.pc.DecorationKind
 
 import tests.BaseSyntheticDecorationsSuite
 
-class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
+class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
 
   check(
     "type-params",
@@ -488,6 +488,20 @@ class SynthethicDecorationsSuite extends BaseSyntheticDecorationsSuite {
            |}
            |""".stripMargin
     ),
+  )
+
+  check(
+    "valueOf".tag(IgnoreScalaVersion.forLessThan("2.13.0")),
+    """|object O {
+       |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
+       |  val m = foo[500]
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
+       |  val m: Int = foo[500](new ValueOf(...))
+       |}
+       |""".stripMargin,
   )
 
 }

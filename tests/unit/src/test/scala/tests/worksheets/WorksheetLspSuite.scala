@@ -57,7 +57,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
         _ = assertNoDiff(identity, "render: String")
         _ = assertNoDiagnostics()
         _ = assertNoDiff(
-          client.workspaceDecorations,
+          client.workspaceDecorations(path),
           """|import $dep.`com.lihaoyi::scalatags:0.9.0`
              |import scalatags.Text.all._
              |val htmlFile = html(

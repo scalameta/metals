@@ -20,7 +20,7 @@ case class DecorationOptions(
 )
 
 object DecorationOptions {
-  def apply(range: Range, text: String) =
+  def apply(text: String, range: Range) =
     new DecorationOptions(
       range,
       renderOptions = ThemableDecorationInstanceRenderOptions(
