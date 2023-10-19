@@ -38,7 +38,7 @@ final class PcRenameProvider(
       toAdjust: SourcePosition,
       sym: Option[Symbol],
   ): l.TextEdit =
-    val (pos, stripBackticks) = adjust(toAdjust, forRename = true)
+    val (pos, stripBackticks) = toAdjust.adjust(text, forRename = true)
     l.TextEdit(
       pos.toLsp,
       if stripBackticks then newName.stripBackticks else newName,
@@ -50,7 +50,7 @@ final class PcRenameProvider(
     val (symbols, _) = soughtSymbols(path).getOrElse(Set.empty, pos)
     if symbols.nonEmpty && symbols.forall(canRenameSymbol(_))
     then
-      val res = result().distinct
+      val res = result()
       res
     else Nil
   end rename

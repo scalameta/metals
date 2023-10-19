@@ -566,42 +566,44 @@ class Compilers(
       path: AbsolutePath,
       token: CancelToken,
   ): Future[ju.List[DecorationOptions]] = {
-    val anyEnabled =
-      userConfig().showInferredType.contains("true") ||
-        userConfig().showInferredType.contains("minimal") ||
-        userConfig().showImplicitArguments ||
-        userConfig().showImplicitConversionsAndClasses
-    if (!anyEnabled) Future.successful(Nil.asJava)
-    else
-      loadCompiler(path)
-        .map { compiler =>
-          val (input, _, adjust) =
-            sourceAdjustments(
-              path.toNIO.toUri().toString(),
-              compiler.scalaVersion(),
-            )
-          val vFile =
-            CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
-
-          val pcParams = CompilerSyntheticDecorationsParams(
-            vFile,
-            typeParameters = userConfig().showInferredType.contains("true"),
-            inferredTypes = userConfig().showInferredType.contains("minimal") ||
-              userConfig().showInferredType.contains("true"),
-            implicitParameters = userConfig().showImplicitArguments,
-            implicitConversions = userConfig().showImplicitConversionsAndClasses,
+    loadCompiler(path)
+      .map { compiler =>
+        val (input, _, adjust) =
+          sourceAdjustments(
+            path.toNIO.toUri().toString(),
+            compiler.scalaVersion(),
           )
-          compiler
-            .syntheticDecorations(pcParams)
-            .asScala
-            .map(_.map { decoration =>
+        val vFile =
+          CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
+
+        val pcParams = CompilerSyntheticDecorationsParams(
+          vFile,
+          typeParameters = userConfig().showInferredType.contains("true"),
+          inferredTypes = userConfig().showInferredType.contains("minimal") ||
+            userConfig().showInferredType.contains("true"),
+          implicitParameters = userConfig().showImplicitArguments,
+          implicitConversions = userConfig().showImplicitConversionsAndClasses,
+        )
+        compiler
+          .syntheticDecorations(pcParams)
+          .asScala
+          .map { decorations =>
+            val decorationOptions = decorations.map { decoration =>
               DecorationOptions(
-                adjust.adjustRange(decoration.range()),
                 decoration.label(),
+                adjust.adjustRange(decoration.range()),
               )
-            })
-        }
-        .getOrElse(Future.successful(Nil.asJava))
+            }
+            val isScala2 = compiler.scalaVersion().startsWith("2.")
+            if (isScala2 && path.isWorksheet && !decorationOptions.isEmpty()) {
+              // In scala 2 worksheet, last decoration is for synthetic `main` method
+              decorationOptions.remove(decorationOptions.size() - 1)
+              decorationOptions
+            } else decorationOptions
+          }
+
+      }
+      .getOrElse(Future.successful(Nil.asJava))
 
   }
 

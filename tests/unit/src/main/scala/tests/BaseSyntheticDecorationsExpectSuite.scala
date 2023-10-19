@@ -6,17 +6,17 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.pc.PresentationCompiler
 
 import org.eclipse.lsp4j.TextEdit
 
-class SyntheticDecorationsExpectSuite
-    extends DirectoryExpectSuite("decorations") {
+abstract class BaseSyntheticDecorationsExpectSuite(
+    name: String,
+    inputProperties: => InputProperties,
+) extends DirectoryExpectSuite(name) {
+  def compiler: PresentationCompiler
 
-  override lazy val input: InputProperties = InputProperties.scala2()
-  private val compiler = new ScalaPresentationCompiler(
-    classpath = input.classpath.entries.map(_.toNIO)
-  )
+  override lazy val input: InputProperties = inputProperties
   val userConfig: UserConfiguration = UserConfiguration().copy(
     showInferredType = Some("true"),
     showImplicitArguments = true,

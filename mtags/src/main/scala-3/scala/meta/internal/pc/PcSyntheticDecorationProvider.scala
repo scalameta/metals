@@ -14,7 +14,6 @@ import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
-import dotty.tools.dotc.core.Names.TermName
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Interactive
@@ -32,6 +31,7 @@ class PcSyntheticDecorationsProvider(
   val uri = params.uri()
   val filePath = Paths.get(uri)
   val sourceText = params.text
+  val text = sourceText.toCharArray()
   val source =
     SourceFile.virtual(filePath.toString, sourceText)
   driver.run(uri, source)
@@ -39,20 +39,18 @@ class PcSyntheticDecorationsProvider(
   val unit = driver.currentCtx.run.units.head
 
   def tpdTree = unit.tpdTree
-  // def tpdTree = pprint.log(unit.tpdTree)
 
   def provide(): List[SyntheticDecoration] =
     val deepFolder = DeepFolder[Synthetics](collectDecorations)
     deepFolder(Synthetics.empty, tpdTree).decorations
 
-  // TODO: Add adjust
   def collectDecorations(
       decorations: Synthetics,
       tree: Tree,
   ): Synthetics =
     tree match
       case ImplicitConversion(name, range) if params.implicitConversions() =>
-        val adjusted = adjust(range)
+        val adjusted = range.adjust(text)._1
         decorations
           .add(
             Decoration(
@@ -75,7 +73,7 @@ class PcSyntheticDecorationsProvider(
           else names.mkString(", ", ", ", "")
         decorations.add(
           Decoration(
-            adjust(pos).toLsp,
+            pos.adjust(text)._1.toLsp,
             label,
             DecorationKind.ImplicitParameter,
           )
@@ -85,13 +83,13 @@ class PcSyntheticDecorationsProvider(
         val label = tpes.map(toLabel(_, pos)).mkString("[", ", ", "]")
         decorations.add(
           Decoration(
-            adjust(pos).endPos.toLsp,
+            pos.adjust(text)._1.endPos.toLsp,
             label,
             DecorationKind.TypeParameter,
           )
         )
       case InferredType(tpe, pos, defTree) if params.inferredTypes() =>
-        val adjustedPos = adjustForInit(defTree, adjust(pos)).endPos
+        val adjustedPos = pos.adjust(text)._1.endPos
         if decorations.containsDef(adjustedPos.start) then decorations
         else
           decorations.add(
@@ -151,61 +149,6 @@ class PcSyntheticDecorationsProvider(
             case _ => true
         else false
       case _ => false
-
-  private def adjustForInit(defTree: Tree, pos: SourcePosition) =
-    defTree match
-      case dd: DefDef if dd.symbol.isConstructor =>
-        if dd.rhs.isEmpty then dd
-        else
-          val tpeIdx = sourceText.lastIndexWhere(
-            c => !c.isWhitespace && c != '=',
-            dd.rhs.span.start - 1,
-          )
-          pos.withEnd(tpeIdx + 1)
-      case _ => pos
-
-  /**
-   * @return (adjusted position, should strip backticks)
-   */
-  private def adjust(
-      pos1: SourcePosition,
-      forRename: Boolean = false,
-  ): SourcePosition =
-    if !pos1.span.isCorrect then pos1
-    else
-      val pos0 =
-        val span = pos1.span
-        if span.exists && span.point > span.end then
-          pos1.withSpan(
-            span
-              .withStart(span.point)
-              .withEnd(span.point + (span.end - span.start))
-          )
-        else pos1
-      val pos =
-        if pos0.end > 0 && sourceText(pos0.end - 1) == ',' then
-          pos0.withEnd(pos0.end - 1)
-        else pos0
-      val isBackticked =
-        sourceText(pos.start) == '`' &&
-          pos.end > 0 &&
-          sourceText(pos.end - 1) == '`'
-      // when the old name contains backticks, the position is incorrect
-      val isOldNameBackticked = sourceText(pos.start) != '`' &&
-        pos.start > 0 &&
-        sourceText(pos.start - 1) == '`' &&
-        sourceText(pos.end) == '`'
-      if isBackticked && forRename then
-        pos.withStart(pos.start + 1).withEnd(pos.end - 1)
-      else if isOldNameBackticked then
-        pos.withStart(pos.start - 1).withEnd(pos.end + 1)
-      else pos
-  end adjust
-
-  extension (span: Span)
-    def isCorrect =
-      !span.isZeroExtent && span.exists && span.start < sourceText.size && span.end <= sourceText.size
-
 end PcSyntheticDecorationsProvider
 
 object ImplicitConversion:
@@ -239,7 +182,17 @@ object ImplicitParameters:
         val allImplicit = providedArgs.isEmpty
         val pos = implicitArgs.head.sourcePos
         Some(implicitArgs.map(_.symbol.decodedName), pos, allImplicit)
+      case Apply(ta @ TypeApply(fun, _), _)
+          if fun.span.isSynthetic && isValueOf(fun) =>
+        Some(
+          List("new " + tpnme.valueOf.decoded.capitalize + "(...)"),
+          fun.sourcePos,
+          true,
+        )
       case _ => None
+  private def isValueOf(tree: Tree)(using Context) =
+    val symbol = tree.symbol.maybeOwner
+    symbol.name.decoded == tpnme.valueOf.decoded.capitalize
   private def isSyntheticArg(tree: Tree)(using Context) = tree match
     case tree: Ident =>
       tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit)
@@ -249,7 +202,7 @@ end ImplicitParameters
 object TypeParameters:
   def unapply(tree: Tree)(using Context) =
     tree match
-      case TypeApply(sel: Select, _) if isForComprehensionMethod(sel) => None
+      case TypeApply(sel: Select, _) if sel.isForComprehensionMethod => None
       case TypeApply(fun, args) if inferredTypeArgs(args) =>
         val tpes = args.map(_.tpe.stripTypeVar.widen.finalResultType)
         Some((tpes, tree.endPos, fun))
@@ -259,16 +212,6 @@ object TypeParameters:
       case tt: TypeTree if tt.span.exists && !tt.span.isZeroExtent => true
       case _ => false
     }
-  private val forCompMethods =
-    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
-  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
-  private def isForComprehensionMethod(sel: Select)(using Context): Boolean =
-    val syntheticName = sel.name match
-      case name: TermName => forCompMethods(name)
-      case _ => false
-    val wrongSpan = sel.qualifier.span.contains(sel.nameSpan)
-    syntheticName && wrongSpan
-
 end TypeParameters
 
 object InferredType:
@@ -291,7 +234,7 @@ object InferredType:
       case bd @ Bind(
             name,
             Ident(nme.WILDCARD),
-          ) /* if equalSpan(bd.span, bd.nameSpan)*/ =>
+          ) =>
         Some(bd.symbol.info, bd.namePos, bd)
       case _ => None
 

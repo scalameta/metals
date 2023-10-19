@@ -981,7 +981,14 @@ class MetalsLspService(
         for {
           _ <- buildServerPromise.future
           _ <- focusedDocument()
-            .map(publishSynthetics)
+            .map { path =>
+              Future.sequence(
+                List(
+                  publishSynthetics(path, force = true),
+                  worksheetProvider.onDidFocus(path),
+                )
+              )
+            }
             .getOrElse(Future.successful(()))
         } yield ()
       } else {
@@ -1102,16 +1109,27 @@ class MetalsLspService(
     }
   }
 
-  def publishSynthetics(path: AbsolutePath): Future[Unit] = {
+  def publishSynthetics(
+      path: AbsolutePath,
+      force: Boolean = false,
+  ): Future[Unit] = {
     CancelTokens.future { token =>
-      compilers.syntheticDecorations(path, token).map { decorations =>
-        val params = new PublishDecorationsParams(
-          path.toURI.toString(),
-          decorations.asScala.toArray,
-          if (clientConfig.isInlineDecorationProvider()) true else null,
-        )
-        languageClient.metalsPublishDecorations(params)
-      }
+      val shouldShow =
+        force ||
+          userConfig.showInferredType.contains("true") ||
+          userConfig.showInferredType.contains("minimal") ||
+          userConfig.showImplicitArguments ||
+          userConfig.showImplicitConversionsAndClasses
+      if (shouldShow) {
+        compilers.syntheticDecorations(path, token).map { decorations =>
+          val params = new PublishDecorationsParams(
+            path.toURI.toString(),
+            decorations.asScala.toArray,
+            if (clientConfig.isInlineDecorationProvider()) true else null,
+          )
+          languageClient.metalsPublishDecorations(params)
+        }
+      } else Future.successful(())
     }.asScala
   }
 
