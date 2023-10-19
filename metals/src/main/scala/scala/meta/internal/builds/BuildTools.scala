@@ -121,21 +121,37 @@ final class BuildTools(
   )
   def isBazel: Boolean = bazelProject.isDefined
 
+  private def customProjectRoot =
+    userConfig().customProjectRoot
+      .map(relativePath => workspace.resolve(relativePath.trim()))
+      .filter { projectRoot =>
+        val exists = projectRoot.exists
+        if (!exists) {
+          scribe.error(s"custom project root $projectRoot does not exist")
+        }
+        exists
+      }
+
   private def searchForBuildTool(
       isProjectRoot: AbsolutePath => Boolean
-  ): Option[AbsolutePath] =
-    if (isProjectRoot(workspace)) Some(workspace)
-    else
-      workspace.toNIO
-        .toFile()
-        .listFiles()
-        .collectFirst {
-          case file
-              if file.isDirectory &&
-                !file.getName.startsWith(".") &&
-                isProjectRoot(AbsolutePath(file.toPath())) =>
-            AbsolutePath(file.toPath())
-        }
+  ): Option[AbsolutePath] = {
+    customProjectRoot match {
+      case Some(projectRoot) => Some(projectRoot).filter(isProjectRoot)
+      case None =>
+        if (isProjectRoot(workspace)) Some(workspace)
+        else
+          workspace.toNIO
+            .toFile()
+            .listFiles()
+            .collectFirst {
+              case file
+                  if file.isDirectory &&
+                    !file.getName.startsWith(".") &&
+                    isProjectRoot(AbsolutePath(file.toPath())) =>
+                AbsolutePath(file.toPath())
+            }
+    }
+  }
 
   def allAvailable: List[BuildTool] = {
     List(
