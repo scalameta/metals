@@ -249,6 +249,29 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     } yield ()
   }
 
+  test("inner") {
+    for {
+      _ <- scalaCliInitialize(useBsp = false)(
+        s"""|/inner/project.scala
+            |//> using scala "$scalaVersion"
+            |//> using lib "com.lihaoyi::utest::0.8.1"
+            |/inner/MyTests.scala
+            |import utest._
+            |
+            |object MyTests extends TestSuite {
+            |  val tests = Tests {
+            |    test("foo") {
+            |      assert(2 + 2 == 4)
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("inner/MyTests.scala")
+      _ = assert(!client.workspaceDiagnostics.contains("Not found: utest"))
+    } yield ()
+  }
+
   test("relative-semanticdb-root") {
     for {
       _ <- scalaCliInitialize(useBsp = false)(
