@@ -4,13 +4,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.duration.Duration
-
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsStatusParams
-import scala.meta.internal.metals.clients.language.StatusType
 
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
@@ -23,7 +18,7 @@ trait RequestMonitor {
   def lastIncoming: Option[Long]
 }
 
-class RequestMonitorImpl(bspStatus: BspStatus) extends RequestMonitor {
+class RequestMonitorImpl(bspStatus: ConnectionBspStatus) extends RequestMonitor {
   @volatile private var lastOutgoing_ : Option[Long] = None
   @volatile private var lastIncoming_ : Option[Long] = None
 
@@ -59,7 +54,7 @@ class ServerLivenessMonitor(
     ping: () => Unit,
     metalsIdleInterval: Duration,
     pingInterval: Duration,
-    bspStatus: BspStatus,
+    bspStatus: ConnectionBspStatus,
 ) {
   @volatile private var lastPing: Long = 0
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
@@ -124,47 +119,4 @@ object ServerLivenessMonitor {
   object FirstPing extends State
   object Running extends State
 
-}
-
-class BspStatus(
-    client: MetalsLanguageClient,
-    serverName: String,
-    icons: Icons,
-) {
-  private val isServerResponsive = new AtomicBoolean(false)
-
-  def connected(): Unit =
-    if (isServerResponsive.compareAndSet(false, true))
-      client.metalsStatus(BspStatus.connectedParams(serverName, icons))
-  def noResponse(): Unit =
-    if (isServerResponsive.compareAndSet(true, false)) {
-      scribe.debug("server liveness monitor detected no response")
-      client.metalsStatus(BspStatus.noResponseParams(serverName, icons))
-    }
-  def disconnected(): Unit = client.metalsStatus(BspStatus.disconnectedParams)
-
-  def isBuildServerResponsive: Boolean = isServerResponsive.get()
-}
-
-object BspStatus {
-  def connectedParams(serverName: String, icons: Icons): MetalsStatusParams =
-    MetalsStatusParams(
-      s"$serverName ${icons.link}",
-      "info",
-      show = true,
-      tooltip = s"Metals is connected to the build server ($serverName).",
-    ).withStatusType(StatusType.bsp)
-
-  val disconnectedParams: MetalsStatusParams =
-    MetalsStatusParams("", hide = true).withStatusType(StatusType.bsp)
-
-  def noResponseParams(serverName: String, icons: Icons): MetalsStatusParams =
-    MetalsStatusParams(
-      s"$serverName ${icons.error}",
-      "error",
-      show = true,
-      tooltip = s"Build sever ($serverName) is not responding.",
-      command = ServerCommands.ConnectBuildServer.id,
-      commandTooltip = "Reconnect.",
-    ).withStatusType(StatusType.bsp)
 }

@@ -456,7 +456,7 @@ object BuildServerConnection {
         val tracePrinter = Trace.setupTracePrinter("BSP", bspTraceRoot)
         val bspStatusOpt =
           if (addLivenessMonitor)
-            Some(new BspStatus(languageClient, serverName, config.icons))
+            Some(new ConnectionBspStatus(languageClient, serverName, config.icons))
           else None
         val requestMonitorOpt =
           bspStatusOpt.map(new RequestMonitorImpl(_))

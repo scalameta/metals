@@ -16,9 +16,9 @@ import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.decorations.PublishDecorationsParams
-import scala.meta.internal.metals.BspStatus
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ConnectionBspStatus
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
@@ -373,7 +373,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         ) {
           bspError
         } else if (
-          params.getMessage() == BspStatus
+          params.getMessage() == ConnectionBspStatus
             .noResponseParams("Bill", Icons.default)
             .logMessage(Icons.default)
         ) {

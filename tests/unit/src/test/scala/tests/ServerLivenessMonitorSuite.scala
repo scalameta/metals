@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.duration.Duration
 
-import scala.meta.internal.metals.BspStatus
+import scala.meta.internal.metals.ConnectionBspStatus
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.RequestMonitor
 import scala.meta.internal.metals.ServerLivenessMonitor
@@ -23,7 +23,7 @@ class ServerLivenessMonitorSuite extends BaseSuite {
     val pingInterval = Duration("3s")
     val server = new ResponsiveServer(pingInterval)
     val client = new CountMessageRequestsClient
-    val bspStatus = new BspStatus(client, "responsive-server", Icons.default)
+    val bspStatus = new ConnectionBspStatus(client, "responsive-server", Icons.default)
     val livenessMonitor = new ServerLivenessMonitor(
       server,
       () => server.sendRequest(true),
@@ -89,7 +89,7 @@ class CountMessageRequestsClient extends NoopLanguageClient {
 
   override def metalsStatus(params: MetalsStatusParams): Unit =
     if (
-      params == BspStatus.noResponseParams("responsive-server", Icons.default)
+      params == ConnectionBspStatus.noResponseParams("responsive-server", Icons.default)
     ) {
       showMessageRequests += 1
     }
