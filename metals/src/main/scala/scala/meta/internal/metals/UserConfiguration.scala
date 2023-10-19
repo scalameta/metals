@@ -53,6 +53,7 @@ case class UserConfiguration(
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     javaFormatConfig: Option[JavaFormatConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
+    customProjectRoot: Option[String] = None,
     scalaCliLauncher: Option[String] = None,
 ) {
 
@@ -313,6 +314,14 @@ object UserConfiguration {
           |launcher, not available in PATH.
           |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "custom-project-root",
+        """empty string `""`.""",
+        """"backend/scalaProject/"""",
+        "Custom project root",
+        """Optional relative path to your project's root.
+          |If you want your project root to be the workspace/workspace root set it to "." .""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -525,6 +534,8 @@ object UserConfiguration {
     val scalafixRulesDependencies =
       getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
 
+    val customProjectRoot = getStringKey("custom-project-root")
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -555,6 +566,7 @@ object UserConfiguration {
           disableTestCodeLenses,
           javaFormatConfig,
           scalafixRulesDependencies,
+          customProjectRoot,
         )
       )
     } else {

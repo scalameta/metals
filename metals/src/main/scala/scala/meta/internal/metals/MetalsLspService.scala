@@ -962,6 +962,13 @@ class MetalsLspService(
       compilers.restartAll()
     }
 
+    val slowConnect =
+      if (userConfig.customProjectRoot != old.customProjectRoot) {
+        tables.buildTool.reset()
+        tables.buildServers.reset()
+        slowConnectToBuildServer(false).ignoreValue
+      } else Future.successful(())
+
     val resetDecorations =
       if (
         userConfig.showImplicitArguments != old.showImplicitArguments ||
@@ -1013,11 +1020,10 @@ class MetalsLspService(
       }
       .getOrElse(Future.successful(()))
 
-    Future
-      .sequence(
-        List(restartBuildServer, resetDecorations)
-      )
-      .map(_ => ())
+    for {
+      _ <- slowConnect
+      _ <- Future.sequence(List(restartBuildServer, resetDecorations))
+    } yield ()
   }
 
   override def didOpen(
