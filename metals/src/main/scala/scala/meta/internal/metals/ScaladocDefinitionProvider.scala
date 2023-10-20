@@ -12,6 +12,7 @@ import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Token.Comment
@@ -27,11 +28,12 @@ class ScaladocDefinitionProvider(
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
+      isScala3: Boolean,
   ): Option[DefinitionResult] = {
     for {
       buffer <- buffers.get(path)
       position <- params.getPosition().toMeta(Input.String(buffer))
-      symbol <- extractScalaDocLinkAtPos(buffer, position)
+      symbol <- extractScalaDocLinkAtPos(buffer, position, isScala3)
       contextSymbols = getContext(path, position)
       scalaMetaSymbols = symbol.toScalaMetaSymbols(contextSymbols)
       _ = scribe.debug(
@@ -89,6 +91,7 @@ class ScaladocDefinitionProvider(
   private def extractScalaDocLinkAtPos(
       buffer: String,
       position: Position,
+      isScala3: Boolean,
   ) =
     for {
       tokens <- Trees.defaultTokenizerDialect(buffer).tokenize.toOption
@@ -97,7 +100,7 @@ class ScaladocDefinitionProvider(
       }
       if comment.text.startsWith("/**") && comment.text.endsWith("*/")
       offset = position.start - comment.start
-      symbol <- ScalaDocLink.atOffset(comment.text, offset)
+      symbol <- ScalaDocLink.atOffset(comment.text, offset, isScala3)
     } yield symbol
 
   private def getContext(
@@ -188,13 +191,18 @@ class ScaladocDefinitionProvider(
 
 }
 
-case class ScalaDocLink(rawSymbol: String) {
+case class ScalaDocLink(rawSymbol: String, isScala3: Boolean) {
+  private val keywordWrapper =
+    if (isScala3) KeywordWrapper.Scala3 else KeywordWrapper.Scala2
+
   def toScalaMetaSymbols(
       contextSymbols: => ContextSymbols
   ): List[ScalaDocLinkSymbol] =
     if (rawSymbol.isEmpty()) List.empty
     else {
-      val symbol = symbolWithFixedPackages
+      val (symbol0, symbolType) = symbolWithType
+      val symbol = fixPackages(symbol0)
+
       val optIndexOfSlash =
         ScalaDocLink.findIndicesOf(symbol, List('/')).headOption
       val withPrefixes: List[String] =
@@ -218,71 +226,80 @@ case class ScalaDocLink(rawSymbol: String) {
               contextSymbols.withPackage(symbol)
         }
 
-      val indexOfLParen =
-        ScalaDocLink.findIndicesOf(symbol, List('(', '[')).headOption
-
-      if (indexOfLParen.nonEmpty) {
-        // overridden method link e.g. [[a.b.Foo#bar(i: Int): String]]
-        // we look only for methods `a/b/Foo#bar(+n)`
-        // we don't distinguish by signature but find all overridden methods
-        val toDrop = symbol.length - indexOfLParen.get
-        withPrefixes.flatMap(sym => List(MethodSymbol(sym.dropRight(toDrop))))
-      } else {
-        symbol.last match {
-          case '#' | '.' | '/' => withPrefixes.map(StringSymbol(_))
-          // e.g. [[a.b.Foo$]]
-          // forces link to refer to a value (an object, a value, a given)
-          case '$' =>
-            withPrefixes.flatMap(sym =>
-              List(
-                StringSymbol(s"${sym.dropRight(1)}."),
-                MethodSymbol(s"${sym.dropRight(1)}"),
-              )
+      symbolType match {
+        case ScalaDocLink.SymbolType.Method =>
+          withPrefixes.flatMap(sym => List(MethodSymbol(sym)))
+        case ScalaDocLink.SymbolType.Value =>
+          withPrefixes.flatMap(sym =>
+            List(StringSymbol(s"$sym."), MethodSymbol(sym))
+          )
+        case ScalaDocLink.SymbolType.Type =>
+          withPrefixes.flatMap(sym => List(StringSymbol(s"$sym#")))
+        case ScalaDocLink.SymbolType.Any =>
+          withPrefixes.flatMap(sym =>
+            List(
+              StringSymbol(s"$sym#"),
+              StringSymbol(s"$sym."),
+              MethodSymbol(sym),
             )
-          // e.g. [[a.b.Foo!]]
-          // forces link to refer to a type (a class, a type alias, a type member)
-          case '!' =>
-            withPrefixes.flatMap(sym =>
-              List(StringSymbol(s"${sym.dropRight(1)}#"))
-            )
-          // no meaningful suffix, e.g. [[a.b.Foo]]
-          // we search for types then values
-          case _ =>
-            withPrefixes.flatMap(sym =>
-              List(
-                StringSymbol(s"$sym#"),
-                StringSymbol(s"$sym."),
-                MethodSymbol(sym),
-              )
-            )
-        }
+          )
       }
     }
 
-  private def symbolWithFixedPackages = {
-    val fixedPackages =
-      ScalaDocLink
-        .splitAt(rawSymbol, '.')
-        .map { str =>
-          if (
-            str.headOption.exists(_.isLower) ||
-            (str.length > 1 && str.head == '`' && str.charAt(1).isLower)
-          ) s"$str/"
-          else s"$str."
+  private def symbolWithType: (String, ScalaDocLink.SymbolType) =
+    ScalaDocLink.findIndicesOf(rawSymbol, List('(', '[')).headOption match {
+      case Some(index) =>
+        val toDrop = rawSymbol.length() - index
+        (rawSymbol.dropRight(toDrop), ScalaDocLink.SymbolType.Method)
+      case None =>
+        rawSymbol.last match {
+          // e.g. [[a.b.Foo$]]
+          // forces link to refer to a value (an object, a value, a given)
+          case '$' => (rawSymbol.dropRight(1), ScalaDocLink.SymbolType.Value)
+          // e.g. [[a.b.Foo!]]
+          // forces link to refer to a type (a class, a type alias, a type member)
+          case '!' => (rawSymbol.dropRight(1), ScalaDocLink.SymbolType.Type)
+          // no meaningful suffix, e.g. [[a.b.Foo]]
+          // we search for types then values
+          case _ => (rawSymbol, ScalaDocLink.SymbolType.Any)
         }
-        .mkString
-    if (rawSymbol.endsWith(".")) fixedPackages
-    else fixedPackages.dropRight(1)
-  }
+    }
+
+  /**
+   * Replace `.` with `\` for packages and wrap with backticks when needed.
+   * e.g. a.b.c.A.O to a/b/c/A.O
+   */
+  private def fixPackages(symbol: String) =
+    ScalaDocLink
+      .splitAt(symbol, '.')
+      .map { str =>
+        // drop `\` used for escaping and wrap in backticks when needed
+        // e.g. [[Foo\\.bar]] -> [[`Foo.bar`]]
+        val name = keywordWrapper.backtickWrap(
+          str.replace("\\", ""),
+          Set("this", "package"),
+        )
+        if (
+          str.headOption.exists(_.isLower) ||
+          (name.length > 1 && name.head == '`' && name.charAt(1).isLower)
+        ) s"$name/"
+        else s"$name."
+      }
+      .mkString
+      .dropRight(1)
 }
 
 object ScalaDocLink {
   private val irrelevantWhite = "[ \\n\\t\\r]"
   private val regex = s"\\[\\[$irrelevantWhite*(.*?)$irrelevantWhite*\\]\\]".r
-  def atOffset(text: String, offset: Int): Option[ScalaDocLink] =
+  def atOffset(
+      text: String,
+      offset: Int,
+      isScala3: Boolean,
+  ): Option[ScalaDocLink] =
     regex.findAllMatchIn(text).collectFirst {
       case m if m.start(1) <= offset && offset <= m.end(1) =>
-        ScalaDocLink(m.group(1))
+        ScalaDocLink(m.group(1), isScala3)
     }
 
   def splitAt(text: String, c: Char): List[String] = {
@@ -327,6 +344,14 @@ object ScalaDocLink {
         )
       }
     loop(index = 0, afterEscape = false, inBackticks = false, acc = List.empty)
+  }
+
+  sealed trait SymbolType
+  object SymbolType {
+    case object Method extends SymbolType
+    case object Value extends SymbolType
+    case object Type extends SymbolType
+    case object Any extends SymbolType
   }
 }
 

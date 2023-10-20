@@ -50,8 +50,8 @@ class ScaladocSymbolsSuite extends BaseSuite {
     "escape2-scaladoc-link",
     "this\\.B",
     List(
-      "a/A.this\\.B#", "a/A.this\\.B.", "a/A.this\\.B(+n).", "a/this\\.B#",
-      "a/this\\.B.", "a/this\\.B(+n).",
+      "a/A.`this.B`#", "a/A.`this.B`.", "a/A.`this.B`(+n).", "a/`this.B`#",
+      "a/`this.B`.", "a/`this.B`(+n).",
     ),
   )
 
@@ -63,7 +63,7 @@ class ScaladocSymbolsSuite extends BaseSuite {
   ): Unit =
     test(name) {
       assertEquals(
-        ScalaDocLink(symbol)
+        ScalaDocLink(symbol, isScala3 = true)
           .toScalaMetaSymbols(contextSymbols)
           .map(_.showSymbol),
         expected,

@@ -6,9 +6,7 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-class DefinitionLspSuite
-    extends BaseLspSuite("definition")
-    with ScriptsAssertions {
+class DefinitionLspSuite extends BaseLspSuite("definition") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
@@ -630,7 +628,6 @@ class DefinitionLspSuite
            |${testCase.replace("@@", "")}
            |""".stripMargin
       )
-      _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
@@ -667,14 +664,15 @@ class DefinitionLspSuite
            |${testCase.replace("@@", "")}
            |""".stripMargin
       )
-      _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ <- assertDefinitionAtLocation(
+      locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
         testCase,
-        "a/src/main/scala/a/Main.scala",
-        8,
+        workspace,
       )
+      _ = assert(locations.length == 1)
+      _ = assert(locations.head.getUri().endsWith("a/Main.scala"))
+      _ = assertEquals(locations.head.getRange().getStart().getLine(), 8)
     } yield ()
   }
 
@@ -705,7 +703,6 @@ class DefinitionLspSuite
            |${testCase.replace("@@", "")}
            |""".stripMargin
       )
-      _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
