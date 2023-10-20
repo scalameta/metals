@@ -34,7 +34,7 @@ class ScaladocDefinitionProvider(
       symbol <- extractScalaDocLinkAtPos(buffer, position)
       contextSymbols = getContext(path, position)
       scalaMetaSymbols = symbol.toScalaMetaSymbols(contextSymbols)
-      _ = scribe.info(
+      _ = scribe.debug(
         s"looking for definition for scaladoc symbol: $symbol considering alternatives: ${scalaMetaSymbols
             .map(_.showSymbol)
             .mkString(", ")}"
@@ -119,43 +119,68 @@ class ScaladocDefinitionProvider(
 
     def loop(
         tree: Tree,
-        packageParts: String = "",
-        otherParts: String = "",
-        alternative: Option[String] = None,
+        enclosingPackagePath: String = "",
+        enclosingSymbol: String = "",
+        alternativeEnclosingSymbol: Option[String] = None,
     ): (String, String, Option[String]) = {
-      val (packageParts1, otherParts1, alternative1) =
+      val (
+        enclosingPackagePath1,
+        enclosingSymbol1,
+        alternativeEnclosingSymbol1,
+      ) =
         tree match {
           case Pkg(name, _) =>
-            (s"$packageParts${extractName(name)}/", otherParts, None)
+            (
+              s"$enclosingPackagePath${extractName(name)}/",
+              enclosingSymbol,
+              None,
+            )
           case d: Defn.Object =>
-            (packageParts, s"$otherParts${d.name.value}.", None)
+            (enclosingPackagePath, s"$enclosingSymbol${d.name.value}.", None)
           case d: Defn.Class =>
-            (packageParts, s"$otherParts${d.name.value}#", None)
+            (enclosingPackagePath, s"$enclosingSymbol${d.name.value}#", None)
           case d: Defn.Trait =>
-            (packageParts, s"$otherParts${d.name.value}#", None)
+            (enclosingPackagePath, s"$enclosingSymbol${d.name.value}#", None)
           case d: Defn.Enum =>
             (
-              packageParts,
-              s"$otherParts${d.name.value}#",
-              Some(s"$otherParts${d.name.value}."),
+              enclosingPackagePath,
+              s"$enclosingSymbol${d.name.value}#",
+              Some(s"$enclosingSymbol${d.name.value}."),
             )
           case d: Defn.Given =>
-            (packageParts, s"$otherParts${d.name.value}#", None)
-          case _ => (packageParts, otherParts, alternative)
+            (enclosingPackagePath, s"$enclosingSymbol${d.name.value}#", None)
+          case _ =>
+            (enclosingPackagePath, enclosingSymbol, alternativeEnclosingSymbol)
         }
 
       enclosedChild(tree)
-        .map(loop(_, packageParts1, otherParts1, alternative1))
+        .map(
+          loop(
+            _,
+            enclosingPackagePath1,
+            enclosingSymbol1,
+            alternativeEnclosingSymbol1,
+          )
+        )
         .getOrElse {
-          (packageParts1, otherParts1, alternative1)
+          (enclosingPackagePath1, enclosingSymbol1, alternativeEnclosingSymbol1)
         }
     }
 
     trees
       .get(path)
       .map { tree =>
-        val (packagePart, otherParts, alternative) = loop(tree)
-        ContextSymbols(packagePart, otherParts, alternative)
+        val (
+          enclosingPackagePath,
+          enclosingSymbol,
+          alternativeEnclosingSymbol,
+        ) =
+          loop(tree)
+        ContextSymbols(
+          enclosingPackagePath,
+          enclosingSymbol,
+          alternativeEnclosingSymbol,
+        )
       }
       .getOrElse(ContextSymbols.empty)
 
@@ -163,50 +188,65 @@ class ScaladocDefinitionProvider(
 
 }
 
-case class ScalaDocLink(value: String) {
+case class ScalaDocLink(rawSymbol: String) {
   def toScalaMetaSymbols(
       contextSymbols: => ContextSymbols
   ): List[ScalaDocLinkSymbol] =
-    if (value.isEmpty()) List.empty
+    if (rawSymbol.isEmpty()) List.empty
     else {
       val symbol = symbolWithFixedPackages
-      val optIndexOfDot =
-        ScalaDocLink.findIndicesOf(value, List('.')).headOption
-      def all = List(symbol) ++
-        contextSymbols.withThis(symbol) ++
-        contextSymbols.withPackage(symbol)
+      val optIndexOfSlash =
+        ScalaDocLink.findIndicesOf(symbol, List('/')).headOption
       val withPrefixes: List[String] =
-        optIndexOfDot
-          .map { indexOfDot =>
-            symbol.splitAt(indexOfDot + 1) match {
+        optIndexOfSlash match {
+          case Some(indexOfSlash) =>
+            symbol.splitAt(indexOfSlash + 1) match {
+              // raw symbol [[this.<symbol>]], e.g. [[this.someMethod]]
+              // we substitute `this.` for `enclosingSymbol`
               case ("this/", rest) => contextSymbols.withThis(rest)
+              // raw symbol [[package.<symbol>]], e.g. [[package.SomeObject.someMethod]]
+              // we substitute `package.` for `enclosingPackagePath`
               case ("package/", rest) => contextSymbols.withPackage(rest)
-              case _ if symbol.contains("/") => List(symbol)
-              case _ => all
+              // the symbol has some package defined e.g. [[a.b.SomeThing]]
+              // we search for `package.<symbol>` and `<symbol>`
+              case _ => contextSymbols.withPackage(symbol) ++ List(symbol)
             }
-          }
-          .getOrElse(all)
+          // symbol has no package defined e.g. [[someMethod]]
+          // we search for [[this.<symbol>]] and [[package.<symbol>]]
+          case None =>
+            contextSymbols.withThis(symbol) ++
+              contextSymbols.withPackage(symbol)
+        }
 
       val indexOfLParen =
         ScalaDocLink.findIndicesOf(symbol, List('(', '[')).headOption
 
       if (indexOfLParen.nonEmpty) {
+        // overridden method link e.g. [[a.b.Foo#bar(i: Int): String]]
+        // we look only for methods `a/b/Foo#bar(+n)`
+        // we don't distinguish by signature but find all overridden methods
         val toDrop = symbol.length - indexOfLParen.get
         withPrefixes.flatMap(sym => List(MethodSymbol(sym.dropRight(toDrop))))
       } else {
         symbol.last match {
           case '#' | '.' | '/' => withPrefixes.map(StringSymbol(_))
-          case '$' => // forces link to refer to a value (an object, a value, a given)
+          // e.g. [[a.b.Foo$]]
+          // forces link to refer to a value (an object, a value, a given)
+          case '$' =>
             withPrefixes.flatMap(sym =>
               List(
                 StringSymbol(s"${sym.dropRight(1)}."),
                 MethodSymbol(s"${sym.dropRight(1)}"),
               )
             )
-          case '!' => // forces link to refer to a type (a class, a type alias, a type member)
+          // e.g. [[a.b.Foo!]]
+          // forces link to refer to a type (a class, a type alias, a type member)
+          case '!' =>
             withPrefixes.flatMap(sym =>
               List(StringSymbol(s"${sym.dropRight(1)}#"))
             )
+          // no meaningful suffix, e.g. [[a.b.Foo]]
+          // we search for types then values
           case _ =>
             withPrefixes.flatMap(sym =>
               List(
@@ -222,7 +262,7 @@ case class ScalaDocLink(value: String) {
   private def symbolWithFixedPackages = {
     val fixedPackages =
       ScalaDocLink
-        .splitAt(value, '.')
+        .splitAt(rawSymbol, '.')
         .map { str =>
           if (
             str.headOption.exists(_.isLower) ||
@@ -231,7 +271,7 @@ case class ScalaDocLink(value: String) {
           else s"$str."
         }
         .mkString
-    if (value.endsWith(".")) fixedPackages
+    if (rawSymbol.endsWith(".")) fixedPackages
     else fixedPackages.dropRight(1)
   }
 }
@@ -291,31 +331,31 @@ object ScalaDocLink {
 }
 
 case class ContextSymbols(
-    packageSymbol: Option[String],
-    thisSymbol: Option[String],
-    alternativeThisSymbol: Option[String],
+    enclosingPackagePath: Option[String],
+    enclosingSymbol: Option[String],
+    alternativeEnclosingSymbol: Option[String],
 ) {
   def withThis(sym: String): List[String] =
-    thisSymbol.map(_ ++ sym).toList ++ alternativeThisSymbol
+    enclosingSymbol.map(_ ++ sym).toList ++ alternativeEnclosingSymbol
       .map(_ ++ sym)
       .toList
   def withPackage(sym: String): List[String] =
-    packageSymbol.map(_ ++ sym).toList
+    enclosingPackagePath.map(_ ++ sym).toList
 }
 
 object ContextSymbols {
   def apply(
-      packageSymbol: String,
-      thisSymbol: String,
-      alternative: Option[String],
+      enclosingPackagePath: String,
+      enclosingSymbol: String,
+      alternativeEnclosingSymbol: Option[String],
   ): ContextSymbols = {
     val packageSymbol1 =
-      if (packageSymbol.nonEmpty) packageSymbol
+      if (enclosingPackagePath.nonEmpty) enclosingPackagePath
       else "_empty_/"
     val thisSymbol1 =
-      Option.when(thisSymbol.nonEmpty)(packageSymbol1 ++ thisSymbol)
+      Option.when(enclosingSymbol.nonEmpty)(packageSymbol1 ++ enclosingSymbol)
     val thisSymbolAlt =
-      alternative.map(packageSymbol1 ++ _)
+      alternativeEnclosingSymbol.map(packageSymbol1 ++ _)
     ContextSymbols(Some(packageSymbol1), thisSymbol1, thisSymbolAlt)
   }
 

@@ -6,7 +6,9 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-class DefinitionLspSuite extends BaseLspSuite("definition") {
+class DefinitionLspSuite
+    extends BaseLspSuite("definition")
+    with ScriptsAssertions {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
@@ -667,13 +669,12 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       )
       _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      locations <- server.definition(
+      _ <- assertDefinitionAtLocation(
         "a/src/main/scala/a/Main.scala",
         testCase,
-        workspace,
+        "a/src/main/scala/a/Main.scala",
+        8,
       )
-      _ = assert(locations.nonEmpty)
-      _ = assert(locations.head.getUri().endsWith("a/Main.scala"))
     } yield ()
   }
 
@@ -713,6 +714,10 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       )
       _ = assert(locations.length == 3)
       _ = assert(locations.forall(_.getUri().endsWith("a/Main.scala")))
+      _ = assertEquals(
+        locations.map(_.getRange().getStart().getLine()),
+        List(8, 9, 10),
+      )
     } yield ()
   }
 
