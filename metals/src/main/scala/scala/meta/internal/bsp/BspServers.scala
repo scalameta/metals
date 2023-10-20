@@ -14,6 +14,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
+import scala.meta.internal.metals.ConnectionBspStatus
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -69,7 +70,7 @@ final class BspServers(
       projectDirectory: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       details: BspConnectionDetails,
-      addLivenessMonitor: Boolean,
+      bspStatusOpt: Option[ConnectionBspStatus],
   ): Future[BuildServerConnection] = {
 
     def newConnection(): Future[SocketConnection] = {
@@ -143,7 +144,7 @@ final class BspServers(
       tables.dismissedNotifications.ReconnectBsp,
       config,
       details.getName(),
-      addLivenessMonitor,
+      bspStatusOpt,
     )
   }
 

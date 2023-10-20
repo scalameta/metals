@@ -18,7 +18,8 @@ trait RequestMonitor {
   def lastIncoming: Option[Long]
 }
 
-class RequestMonitorImpl(bspStatus: ConnectionBspStatus) extends RequestMonitor {
+class RequestMonitorImpl(bspStatus: ConnectionBspStatus, serverName: String)
+    extends RequestMonitor {
   @volatile private var lastOutgoing_ : Option[Long] = None
   @volatile private var lastIncoming_ : Option[Long] = None
 
@@ -40,7 +41,7 @@ class RequestMonitorImpl(bspStatus: ConnectionBspStatus) extends RequestMonitor 
 
   private def outgoingMessage() = lastOutgoing_ = now
   private def incomingMessage(): Unit = {
-    bspStatus.connected()
+    bspStatus.connected(serverName)
     lastIncoming_ = now
   }
   private def now = Some(System.currentTimeMillis())
@@ -55,6 +56,7 @@ class ServerLivenessMonitor(
     metalsIdleInterval: Duration,
     pingInterval: Duration,
     bspStatus: ConnectionBspStatus,
+    serverName: String,
 ) {
   @volatile private var lastPing: Long = 0
   val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
@@ -70,7 +72,7 @@ class ServerLivenessMonitor(
       def notResponding = lastIncoming > (pingInterval.toMillis * 2)
       if (!metalsIsIdle) {
         if (lastPingOk && notResponding) {
-          bspStatus.noResponse()
+          bspStatus.noResponse(serverName)
         }
         scribe.debug("server liveness monitor: pinging build server...")
         lastPing = now

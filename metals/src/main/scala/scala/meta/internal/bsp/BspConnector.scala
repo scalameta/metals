@@ -12,6 +12,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.ConnectionBspStatus
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -36,6 +37,7 @@ class BspConnector(
     bspConfigGenerator: BspConfigGenerator,
     currentConnection: () => Option[BuildServerConnection],
     restartBspServer: () => Future[Boolean],
+    bspStatus: ConnectionBspStatus,
 )(implicit ec: ExecutionContext) {
 
   /**
@@ -83,6 +85,7 @@ class BspConnector(
         bspTraceRoot: AbsolutePath,
         addLivenessMonitor: Boolean,
     ): Future[Option[BuildServerConnection]] = {
+      def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
       scribe.info("Attempting to connect to the build server...")
       resolve() match {
         case ResolvedNone =>
@@ -94,7 +97,7 @@ class BspConnector(
               projectRoot,
               bspTraceRoot,
               userConfiguration,
-              addLivenessMonitor,
+              bspStatusOpt,
             )
             .map(Some(_))
         case ResolvedBspOne(details)
@@ -118,7 +121,7 @@ class BspConnector(
                 projectRoot,
                 bspTraceRoot,
                 details,
-                addLivenessMonitor,
+                bspStatusOpt,
               )
               _ <-
                 if (shouldReload) connection.workspaceReload()
@@ -130,7 +133,7 @@ class BspConnector(
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
           bspServers
-            .newServer(projectRoot, bspTraceRoot, details, addLivenessMonitor)
+            .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
             .map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
@@ -167,7 +170,7 @@ class BspConnector(
               projectRoot,
               bspTraceRoot,
               item,
-              addLivenessMonitor,
+              bspStatusOpt,
             )
           } yield Some(conn)
       }

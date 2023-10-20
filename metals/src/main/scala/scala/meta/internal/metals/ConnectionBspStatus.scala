@@ -2,26 +2,31 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.StatusType
+import scala.meta.io.AbsolutePath
 
 class ConnectionBspStatus(
-    client: MetalsLanguageClient,
-    serverName: String,
+    bspStatus: BspStatus,
+    folderPath: AbsolutePath,
     icons: Icons,
 ) {
   private val isServerResponsive = new AtomicBoolean(false)
+  val status: MetalsStatusParams => Unit = bspStatus.status(folderPath, _)
 
-  def connected(): Unit =
+  def connected(serverName: String): Unit =
     if (isServerResponsive.compareAndSet(false, true))
-      client.metalsStatus(ConnectionBspStatus.connectedParams(serverName, icons))
-  def noResponse(): Unit =
+      status(ConnectionBspStatus.connectedParams(serverName, icons))
+  def noResponse(serverName: String): Unit =
     if (isServerResponsive.compareAndSet(true, false)) {
       scribe.debug("server liveness monitor detected no response")
-      client.metalsStatus(ConnectionBspStatus.noResponseParams(serverName, icons))
+      status(ConnectionBspStatus.noResponseParams(serverName, icons))
     }
-  def disconnected(): Unit = client.metalsStatus(ConnectionBspStatus.disconnectedParams)
+
+  def disconnected(): Unit = {
+    isServerResponsive.set(false)
+    status(ConnectionBspStatus.disconnectedParams)
+  }
 
   def isBuildServerResponsive: Boolean = isServerResponsive.get()
 }

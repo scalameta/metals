@@ -444,7 +444,7 @@ object BuildServerConnection {
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
       serverName: String,
-      addLivenessMonitor: Boolean = false,
+      bspStatusOpt: Option[ConnectionBspStatus] = None,
       retry: Int = 5,
       supportsWrappedSources: Option[Boolean] = None,
   )(implicit
@@ -454,12 +454,8 @@ object BuildServerConnection {
     def setupServer(): Future[LauncherConnection] = {
       connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
         val tracePrinter = Trace.setupTracePrinter("BSP", bspTraceRoot)
-        val bspStatusOpt =
-          if (addLivenessMonitor)
-            Some(new ConnectionBspStatus(languageClient, serverName, config.icons))
-          else None
         val requestMonitorOpt =
-          bspStatusOpt.map(new RequestMonitorImpl(_))
+          bspStatusOpt.map(new RequestMonitorImpl(_, serverName))
         val wrapper: MessageConsumer => MessageConsumer =
           requestMonitorOpt.map(_.wrapper).getOrElse(identity)
         val launcher =
@@ -497,6 +493,7 @@ object BuildServerConnection {
             config.metalsToIdleTime,
             config.pingInterval,
             bspStatus,
+            serverName,
           )
 
         LauncherConnection(
@@ -535,7 +532,7 @@ object BuildServerConnection {
             reconnectNotification,
             config,
             serverName,
-            addLivenessMonitor,
+            bspStatusOpt,
             retry - 1,
           )
         } else {

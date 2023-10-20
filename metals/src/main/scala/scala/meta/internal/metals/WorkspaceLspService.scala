@@ -22,6 +22,7 @@ import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.metals.debug.BuildTargetNotFoundException
 import scala.meta.internal.metals.debug.BuildTargetUndefinedException
 import scala.meta.internal.metals.debug.DebugProvider
@@ -150,6 +151,18 @@ class WorkspaceLspService(
       languageClient,
     )
 
+  private val bspStatus = new BspStatus(
+    languageClient,
+    isBspStatusProvider = clientConfig.bspStatusBarState() == StatusBarState.On,
+  )
+
+  def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
+    newFocusedDocument
+      .flatMap(getServiceForOpt)
+      .foreach(service => bspStatus.focus(service.path))
+    focusedDocument = newFocusedDocument
+  }
+
   def createService(folder: Folder): MetalsLspService =
     folder match {
       case Folder(uri, name) =>
@@ -168,6 +181,7 @@ class WorkspaceLspService(
           uri,
           name,
           doctor,
+          bspStatus,
         )
     }
 
@@ -318,7 +332,7 @@ class WorkspaceLspService(
     focusedDocument.foreach(recentlyFocusedFiles.add)
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
-    focusedDocument = Some(path)
+    setFocusedDocument(Some(path))
     val service = getServiceForOpt(path)
       .orElse {
         if (path.filename.isScalaOrJavaFilename) {
@@ -338,7 +352,7 @@ class WorkspaceLspService(
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     if (focusedDocument.contains(path)) {
-      focusedDocument = recentlyFocusedFiles.pollRecent()
+      setFocusedDocument(recentlyFocusedFiles.pollRecent())
     }
     getServiceFor(params.getTextDocument().getUri()).didClose(params)
   }
@@ -605,7 +619,7 @@ class WorkspaceLspService(
     }
     uriOpt match {
       case Some(uri) =>
-        focusedDocument = Some(uri.toAbsolutePath)
+        setFocusedDocument(Some(uri.toAbsolutePath))
         getServiceFor(uri).didFocus(uri)
       case None =>
         CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
