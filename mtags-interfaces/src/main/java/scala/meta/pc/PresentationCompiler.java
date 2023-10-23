@@ -220,7 +220,14 @@ public abstract class PresentationCompiler {
 	/**
 	 * Clean the symbol table and other mutable state in the compiler.
 	 */
-	public abstract void restart();
+	public abstract void restart(Boolean successfulCompilation);
+
+	/**
+	 * Clean the symbol table and other mutable state in the compiler.
+	 */
+	public void restart(){
+		restart(true);
+	}
 
 	/**
 	 * Set logger level for reports.
@@ -233,6 +240,13 @@ public abstract class PresentationCompiler {
 	 * Set build target name.
 	 */
 	public PresentationCompiler withBuildTargetName(String buildTargetName) {
+		return this;
+	};
+
+	/**
+	 * Set an ability to search for all files within the compiler
+	 */
+	public PresentationCompiler withCompilerFiles(CompilerFiles files) {
 		return this;
 	};
 

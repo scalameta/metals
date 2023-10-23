@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.semanticdb.Scala._
+import java.nio.file.Path
 
 sealed abstract class SymbolSearchCandidate {
   final def nameLength(): Int = Fuzzy.nameLength(nameString)
@@ -18,7 +19,8 @@ object SymbolSearchCandidate {
     override def packageString: String = pkg
     override def termCharacter: Char = '$'
   }
-  final case class Workspace(symbol: String) extends SymbolSearchCandidate {
+  final case class Workspace(symbol: String, path: Path)
+      extends SymbolSearchCandidate {
     def nameString: String = symbol
     override def packageString: String = {
       def loop(s: String): String = {

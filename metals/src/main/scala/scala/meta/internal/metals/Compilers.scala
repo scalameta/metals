@@ -27,6 +27,7 @@ import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CompilerFiles
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -100,6 +101,21 @@ class Compilers(
   )
 
   import compilerConfiguration._
+
+  // TODO
+  // val wasPreviouslyCompiledSuccesfully = new ConcurrentHashSet[BuildTargetIdentifier]
+
+  class TargetCompilerFiles(targetId: BuildTargetIdentifier)
+      extends CompilerFiles {
+    override def allPaths(): ju.List[Path] = {
+      buildTargets
+        .buildTargetSources(targetId)
+        .flatMap(_.listRecursive.toList)
+        .map(_.toNIO)
+        .toList
+        .asJava
+    }
+  }
 
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
@@ -242,15 +258,17 @@ class Compilers(
 
   def didCompile(report: CompileReport): Unit = {
     if (report.getErrors > 0) {
-      buildTargetPCFromCache(report.getTarget).foreach(_.restart())
+      buildTargetPCFromCache(report.getTarget).foreach(_.restart(false))
     } else {
       // Restart PC for all build targets that depend on this target since the classfiles
       // may have changed.
+
+      // TODO should mark as succesful
       for {
         target <- buildTargets.allInverseDependencies(report.getTarget)
         compiler <- buildTargetPCFromCache(target)
       } {
-        compiler.restart()
+        compiler.restart(true)
       }
     }
   }
