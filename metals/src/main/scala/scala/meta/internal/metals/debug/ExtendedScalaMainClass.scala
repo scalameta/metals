@@ -47,7 +47,7 @@ case class ExtendedScalaMainClass private (
 object ExtendedScalaMainClass {
 
   private def createCommand(
-      javaHome: AbsolutePath,
+      javaBinary: AbsolutePath,
       classpath: List[String],
       jvmOptions: List[String],
       arguments: List[String],
@@ -61,16 +61,16 @@ object ExtendedScalaMainClass {
     )
     val argumentsString = arguments.mkString(" ")
     // We need to add "" to account for whitespace and also escaped \ before "
-    val escapedJavaHome = javaHome.toNIO.getRoot().toString +
-      javaHome.toNIO
+    val escapedJavaHome = javaBinary.toNIO.getRoot().toString +
+      javaBinary.toNIO
         .iterator()
         .asScala
         .map(p => s""""$p"""")
         .mkString(File.separator)
-    val safeJavaHome =
+    val safeJavaBinary =
       if (Properties.isWin) escapedJavaHome.replace("""\"""", """\\"""")
       else escapedJavaHome
-    s"$safeJavaHome $jvmOptsString -classpath \"$classpathString\" $mainClass $argumentsString"
+    s"$safeJavaBinary $jvmOptsString -classpath \"$classpathString\" $mainClass $argumentsString"
   }
 
   /**
@@ -126,7 +126,7 @@ object ExtendedScalaMainClass {
   def apply(
       main: ScalaMainClass,
       env: b.JvmEnvironmentItem,
-      javaHome: AbsolutePath,
+      javaBinary: AbsolutePath,
       workspace: AbsolutePath,
   ): ExtendedScalaMainClass = {
     val jvmOpts = (main.getJvmOptions().asScala ++ env
@@ -152,7 +152,7 @@ object ExtendedScalaMainClass {
       jvmOpts.asJava,
       (jvmEnvVariables ++ mainEnvVariables).asJava,
       createCommand(
-        javaHome,
+        javaBinary,
         env.getClasspath().asScala.map(_.toAbsolutePath.toString).toList,
         jvmOpts,
         main.getArguments().asScala.toList,

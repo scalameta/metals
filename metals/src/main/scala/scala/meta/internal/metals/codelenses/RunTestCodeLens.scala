@@ -9,6 +9,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TestUserInterfaceKind
@@ -293,13 +294,19 @@ final class RunTestCodeLens(
       main: b.ScalaMainClass,
       buildServerCanDebug: Boolean,
   ): List[l.Command] = {
+    val javaBinary = buildTargets
+      .scalaTarget(target)
+      .flatMap(scalaTarget =>
+        JavaBinary.javaBinaryFromPath(scalaTarget.jvmHome)
+      )
+      .orElse(userConfig().usedJavaBinary)
     val (data, shellCommandAdded) = buildTargetClasses.jvmRunEnvironment
       .get(target)
-      .zip(userConfig().usedJavaBinary) match {
+      .zip(javaBinary) match {
       case None =>
         (main.toJson, false)
-      case Some((env, javaHome)) =>
-        (ExtendedScalaMainClass(main, env, javaHome, workspace).toJson, true)
+      case Some((env, javaBinary)) =>
+        (ExtendedScalaMainClass(main, env, javaBinary, workspace).toJson, true)
     }
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS

@@ -40,14 +40,25 @@ object JavaBinary {
       }
   }
 
-  def allPossibleJavaBinaries(
-      javaHome: Option[String]
-  ): List[AbsolutePath] = {
-    JdkSources
-      .defaultJavaHome(javaHome)
+  private def fromAbsolutePath(javaPath: Iterable[AbsolutePath]) = {
+    javaPath
       .flatMap(home => List(home.resolve("bin"), home.resolve("bin/jre")))
       .flatMap(bin => List("java", "java.exe").map(bin.resolve))
       .withFilter(_.exists)
       .flatMap(binary => List(binary.dealias, binary))
+  }
+
+  def javaBinaryFromPath(
+      javaHome: Option[String]
+  ): Option[AbsolutePath] =
+    fromAbsolutePath(javaHome.map(_.toAbsolutePath)).headOption
+
+  def allPossibleJavaBinaries(
+      javaHome: Option[String]
+  ): Iterable[AbsolutePath] = {
+    fromAbsolutePath(
+      JdkSources
+        .defaultJavaHome(javaHome)
+    )
   }
 }

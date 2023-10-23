@@ -16,7 +16,10 @@ abstract class BaseCodeLensLspSuite(
     initializer: BuildServerInitializer = QuickBuildInitializer,
 ) extends BaseLspSuite(name, initializer) {
 
-  protected def runFromCommand(cmd: Command): Option[String] = {
+  protected def runFromCommand(
+      cmd: Command,
+      javaHome: Option[String],
+  ): Option[String] = {
     cmd.getArguments().asScala.toList match {
       case (params: DebugSessionParams) :: _ =>
         params.getData() match {
@@ -43,6 +46,12 @@ abstract class BaseCodeLensLspSuite(
                   .replace("ProgramFiles", "Program Files")
                   .replace("runshellcommand", "run shell command")
               )
+            javaHome.foreach { home =>
+              assert(
+                cmd(0).toLowerCase().startsWith(home.toLowerCase()),
+                s"${cmd(0)} didn't start with java home:\n$home ",
+              )
+            }
             ShellRunner
               .runSync(cmd.toList, workspace, redirectErrorOutput = false)
               .map(_.trim())
@@ -60,14 +69,21 @@ abstract class BaseCodeLensLspSuite(
     }
   }
 
-  protected def testRunShellCommand(name: String): Unit =
+  protected def testRunShellCommand(
+      name: String,
+      javaHome: Option[String] = None,
+  ): Unit =
     test(name) {
+      def javaHomeString(javaHome: String) = {
+        val escaped = javaHome.replace("\\", "\\\\")
+        s"\"platformJavaHome\": \"$escaped\""
+      }
       cleanWorkspace()
       for {
         _ <- initialize(
           s"""|/metals.json
               |{
-              |  "a": {}
+              |  "a": { ${javaHome.map(javaHomeString).getOrElse("")} }
               |}
               |/a/src/main/scala/a/Main.scala
               |package foo
@@ -83,7 +99,7 @@ abstract class BaseCodeLensLspSuite(
         lenses <- server.codeLenses("a/src/main/scala/a/Main.scala")
         _ = assert(lenses.size > 0, "No lenses were generated!")
         command = lenses.head.getCommand()
-        _ = assertEquals(runFromCommand(command), Some("Hello java!"))
+        _ = assertEquals(runFromCommand(command, javaHome), Some("Hello java!"))
       } yield ()
     }
 

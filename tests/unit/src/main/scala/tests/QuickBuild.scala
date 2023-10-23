@@ -71,6 +71,7 @@ case class QuickBuild(
     additionalSources: Array[String],
     sbtVersion: String,
     sbtAutoImports: Array[String],
+    platformJavaHome: String,
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -84,6 +85,7 @@ case class QuickBuild(
       orEmpty(additionalSources),
       sbtVersion,
       orEmpty(sbtAutoImports),
+      platformJavaHome,
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -203,7 +205,9 @@ case class QuickBuild(
           artifacts,
         )
       }
-    val javaHome = Option(Properties.jdkHome).map(Paths.get(_))
+    val javaHome = Option(platformJavaHome)
+      .map(Paths.get(_))
+      .orElse(Option(Properties.jdkHome).map(Paths.get(_)))
     val tags = if (isTest) Tag.Test :: Nil else Nil
 
     val scalaCompiler =
