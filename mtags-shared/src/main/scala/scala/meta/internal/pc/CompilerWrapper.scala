@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.meta.pc.VirtualFileParams
+
 trait CompilerWrapper[Reporter, Compiler] {
 
   def resetReporter(): Unit
@@ -12,7 +14,8 @@ trait CompilerWrapper[Reporter, Compiler] {
 
   def stop(): Unit
 
-  def compiler(): Compiler
+  def compiler(changeFiles: List[VirtualFileParams]): Compiler
 
   def presentationCompilerThread: Option[Thread]
+
 }

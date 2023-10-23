@@ -29,6 +29,7 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
 import org.eclipse.{lsp4j => l}
+import scala.collection.concurrent.TrieMap
 
 class MetalsGlobal(
     settings: Settings,
@@ -65,6 +66,8 @@ class MetalsGlobal(
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 
+  val richCompilationCache = TrieMap.empty[String, RichCompilationUnit]
+
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {
 
@@ -99,6 +102,7 @@ class MetalsGlobal(
       else super.pluginsMacroExpand(typer, expandee, mode, pt)
     }
   }
+
   override lazy val analyzer = new MetalsInteractiveAnalyzer(compiler)
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
@@ -163,6 +167,16 @@ class MetalsGlobal(
     }
   }
 
+  /**
+   * If we run outline compilation on a file this means it's fresher
+   * and we don't want to get older data from last compilation.
+   *
+   * @param symbol symbol to check
+   */
+  def isOutlinedFile(path: Path) = {
+    richCompilationCache.contains(path.toUri().toString())
+  }
+
   def workspaceSymbolListMembers(
       query: String,
       pos: Position,
@@ -170,7 +184,7 @@ class MetalsGlobal(
   ): SymbolSearch.Result = {
 
     def isRelevantWorkspaceSymbol(sym: Symbol): Boolean =
-      sym.isStatic
+      sym.isStatic && !sym.isStale
 
     lazy val isInStringInterpolation = {
       lastVisitedParentTrees match {
@@ -183,26 +197,31 @@ class MetalsGlobal(
       }
     }
 
+    def visitMember(sym: Symbol) = {
+      if (isRelevantWorkspaceSymbol(sym))
+        visit {
+          if (isInStringInterpolation)
+            new WorkspaceInterpolationMember(
+              sym,
+              Nil,
+              edit => s"{$edit}",
+              None
+            )
+          else
+            new WorkspaceMember(sym)
+        }
+      else false
+    }
+
+    // TODO the same in autoimports TEST
     if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
     else {
       val context = doLocateContext(pos)
       val visitor = new CompilerSearchVisitor(
         context,
-        sym =>
-          if (isRelevantWorkspaceSymbol(sym))
-            visit {
-              if (isInStringInterpolation)
-                new WorkspaceInterpolationMember(
-                  sym,
-                  Nil,
-                  edit => s"{$edit}",
-                  None
-                )
-              else
-                new WorkspaceMember(sym)
-            }
-          else false
+        visitMember
       )
+      searchOutline(visitMember, query)
       search.search(query, buildTargetIdentifier, visitor)
     }
   }
@@ -212,12 +231,17 @@ class MetalsGlobal(
       pos: Position
   ): List[Member] = {
     val buffer = mutable.ListBuffer.empty[Member]
+    val isSeen = mutable.Set.empty[String]
     workspaceSymbolListMembers(
       query,
       pos,
       mem => {
-        buffer.append(mem)
-        true
+        val id = mem.sym.fullName
+        if (!isSeen(id)) {
+          isSeen += id
+          buffer.append(mem)
+          true
+        } else true
       }
     )
     buffer.toList
@@ -627,6 +651,23 @@ class MetalsGlobal(
 
   def CURSOR = "_CURSOR_"
 
+  def runOutline(files: List[m.pc.VirtualFileParams]) = {
+    this.settings.Youtline.value = true
+    files.foreach { params =>
+      val unit = compiler.addCompilationUnit(
+        params.text(),
+        params.uri.toString(),
+        cursor = None
+      )
+      compiler.typeCheck(unit)
+      compiler.settings.Youtline.value = false
+
+      // TODO make sure we recompile afterwards correctly
+      // TODO make sure it's cleared
+      compiler.richCompilationCache.put(params.uri().toString(), unit)
+    }
+  }
+
   def addCompilationUnit(
       code: String,
       filename: String,
@@ -658,7 +699,7 @@ class MetalsGlobal(
     }
   }
 
-  // Needed for 2.11 where `Name` doesn't extend CharSequence.
+  // // Needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
 

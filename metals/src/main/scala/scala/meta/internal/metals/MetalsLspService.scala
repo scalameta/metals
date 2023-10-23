@@ -1144,7 +1144,7 @@ class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-
+        compilers.didChange(path)
         parseTrees(path)
           .map { _ =>
             treeView.onWorkspaceFileDidChange(path)
