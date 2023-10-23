@@ -63,7 +63,7 @@ class MillServerCodeLensSuite
       lenses <- server.codeLenses("MillMinimal/src/Main.scala")
       _ = assert(lenses.size > 0, "No lenses were generated!")
       command = lenses.head.getCommand()
-      _ = assertEquals(runFromCommand(command), Some("Hello java!"))
+      _ = assertEquals(runFromCommand(command, None), Some("Hello java!"))
     } yield ()
   }
 }

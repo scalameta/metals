@@ -29,6 +29,7 @@ import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
@@ -427,9 +428,15 @@ class DebugProvider(
           if params.getDataKind == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
         json.as[b.ScalaMainClass] match {
           case Success(main) if params.getTargets().size > 0 =>
+            val javaBinary = buildTargets
+              .scalaTarget(params.getTargets().get(0))
+              .flatMap(scalaTarget =>
+                JavaBinary.javaBinaryFromPath(scalaTarget.jvmHome)
+              )
+              .orElse(userConfig().usedJavaBinary)
             val updatedData = buildTargetClasses.jvmRunEnvironment
               .get(params.getTargets().get(0))
-              .zip(userConfig().usedJavaBinary) match {
+              .zip(javaBinary) match {
               case None =>
                 main.toJson
               case Some((env, javaHome)) =>
