@@ -282,11 +282,13 @@ class MetalsGlobal(
       val result = tpe match {
         case TypeRef(pre, sym, args) =>
           def shortSymbol = {
+            // workaround for Tuple1 (which is incorrectly printed by Scala 2 compiler)
+            def isTuple1 = sym == definitions.TupleClass(1)
             /* If it's an alias type we want to prevent dealiasing it
                AnyRef should stay to be dropped if neded later on since it's
                not an important class.
              */
-            if (sym.isAliasType && sym != definitions.AnyRefClass)
+            if ((sym.isAliasType && sym != definitions.AnyRefClass) || isTuple1)
               backtickify(sym.newErrorSymbol(sym.name).updateInfo(sym.info))
             else backtickify(sym)
           }
