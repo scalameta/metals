@@ -26,6 +26,7 @@ import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BspErrorHandler
@@ -130,6 +131,7 @@ class MetalsLspService(
     folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
+    bspStatus: BspStatus,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService {
@@ -423,6 +425,9 @@ class MetalsLspService(
     clientConfig.initialConfig,
   )
 
+  private val connectionBspStatus =
+    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
+
   private val bspServers: BspServers = new BspServers(
     folder,
     charset,
@@ -445,6 +450,7 @@ class MetalsLspService(
     bspConfigGenerator,
     () => bspSession.map(_.mainConnection),
     restartBspServer,
+    connectionBspStatus,
   )
 
   private val workspaceSymbols: WorkspaceSymbolProvider =

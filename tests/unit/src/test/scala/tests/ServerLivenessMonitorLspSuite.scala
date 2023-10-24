@@ -2,7 +2,7 @@ package tests
 
 import scala.concurrent.duration.Duration
 
-import scala.meta.internal.metals.BspStatus
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -60,7 +60,7 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
         )
       )
       _ = Thread.sleep(sleepTime)
-      noResponseParams = BspStatus.noResponseParams(
+      noResponseParams = ConnectionBspStatus.noResponseParams(
         "Bill",
         Icons.default,
       )
