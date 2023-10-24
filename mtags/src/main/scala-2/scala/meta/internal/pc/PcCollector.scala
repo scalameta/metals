@@ -95,7 +95,7 @@ abstract class PcCollector[T](
   private lazy val namedArgCache = {
     val parsedTree = parseTree(unit.source)
     parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
-      rhs.pos.start -> arg
+      rhs.pos -> arg
     }.toMap
   }
   def fallbackSymbol(name: Name, pos: Position): Option[Symbol] = {
@@ -122,48 +122,7 @@ abstract class PcCollector[T](
       else {
         Some(symbolAlternatives(id.symbol), id.pos)
       }
-    /* named argument, which is a bit complex:
-     * foo(nam@@e = "123")
-     */
-    case (apply: Apply) =>
-      apply.args
-        .flatMap { arg =>
-          namedArgCache.get(arg.pos.start)
-        }
-        .collectFirst {
-          case AssignOrNamedArg(id: Ident, _) if id.pos.includes(pos) =>
-            apply.symbol.paramss.flatten.find(_.name == id.name).map { s =>
-              // if it's a case class we need to look for parameters also
-              if (caseClassSynthetics(s.owner.name) && s.owner.isSynthetic) {
-                val applyOwner = s.owner.owner
-                val constructorOwner =
-                  if (applyOwner.isCaseClass) applyOwner
-                  else
-                    applyOwner.companion match {
-                      case NoSymbol =>
-                        applyOwner.localCompanion(pos).getOrElse(NoSymbol)
-                      case comp => comp
-                    }
-                val info = constructorOwner.info
-                val constructorParams = info.members
-                  .filter(_.isConstructor)
-                  .flatMap(_.paramss)
-                  .flatten
-                  .filter(_.name == id.name)
-                  .toSet
-                (
-                  (constructorParams ++ Set(
-                    s,
-                    info.member(s.getterName),
-                    info.member(s.setterName),
-                    info.member(s.localName)
-                  )).filter(_ != NoSymbol),
-                  id.pos
-                )
-              } else (Set(s), id.pos)
-            }
-        }
-        .flatten
+
     /* all definitions:
      * def fo@@o = ???
      * class Fo@@o = ???
@@ -198,8 +157,69 @@ abstract class PcCollector[T](
             )
           )
         )
+    /* named argument, which is a bit complex:
+     * foo(nam@@e = "123")
+     */
     case _ =>
-      None
+      val apply = typedTree match {
+        case (apply: Apply) => Some(apply)
+        /**
+         * For methods with multiple parameter lists and default args, the tree looks like this:
+         * Block(List(val x&1, val x&2, ...), Apply(<<method>>, List(x&1, x&2, ...)))
+         */
+        case _ =>
+          typedTree.children.collectFirst {
+            case Block(_, apply: Apply) if apply.pos.includes(pos) =>
+              apply
+          }
+      }
+      apply
+        .collect {
+          case apply if apply.symbol != null =>
+            collectArguments(apply)
+              .flatMap(arg => namedArgCache.find(_._1.includes(arg.pos)))
+              .collectFirst {
+                case (_, AssignOrNamedArg(id: Ident, _))
+                    if id.pos.includes(pos) =>
+                  apply.symbol.paramss.flatten.find(_.name == id.name).map {
+                    s =>
+                      // if it's a case class we need to look for parameters also
+                      if (
+                        caseClassSynthetics(s.owner.name) && s.owner.isSynthetic
+                      ) {
+                        val applyOwner = s.owner.owner
+                        val constructorOwner =
+                          if (applyOwner.isCaseClass) applyOwner
+                          else
+                            applyOwner.companion match {
+                              case NoSymbol =>
+                                applyOwner
+                                  .localCompanion(pos)
+                                  .getOrElse(NoSymbol)
+                              case comp => comp
+                            }
+                        val info = constructorOwner.info
+                        val constructorParams = info.members
+                          .filter(_.isConstructor)
+                          .flatMap(_.paramss)
+                          .flatten
+                          .filter(_.name == id.name)
+                          .toSet
+                        (
+                          (constructorParams ++ Set(
+                            s,
+                            info.member(s.getterName),
+                            info.member(s.setterName),
+                            info.member(s.localName)
+                          )).filter(_ != NoSymbol),
+                          id.pos
+                        )
+                      } else (Set(s), id.pos)
+                  }
+              }
+              .flatten
+        }
+        .getOrElse(None)
   }
 
   def result(): List[T] = {
@@ -244,8 +264,9 @@ abstract class PcCollector[T](
               (soughtOrOverride(df.symbol) ||
               isForComprehensionOwner(df))
             case appl: Apply =>
-              owners(appl.symbol) ||
-              symbolAlternatives(appl.symbol.owner).exists(owners(_))
+              appl.symbol != null &&
+              (owners(appl.symbol) ||
+                symbolAlternatives(appl.symbol.owner).exists(owners(_)))
             case imp: Import =>
               owners(imp.expr.symbol) && imp.selectors
                 .exists(sel => soughtNames(sel.name))
@@ -346,18 +367,20 @@ abstract class PcCollector[T](
          * etc.
          */
         case appl: Apply if filter(appl) =>
-          val named = appl.args
+          val named = collectArguments(appl)
             .flatMap { arg =>
-              namedArgCache.get(arg.pos.start)
+              namedArgCache.find(_._1.includes(arg.pos))
             }
             .collect {
-              case AssignOrNamedArg(i @ Ident(name), _)
+              case (_, AssignOrNamedArg(i @ Ident(name), _))
                   if soughtFilter(_.decodedName == name.decoded) =>
+                val symbol = Option(appl.symbol).flatMap(
+                  _.paramss.flatten.find(_.name == i.name)
+                )
                 collect(
                   i,
                   i.pos,
-                  appl.symbol.paramss.flatten
-                    .find(_.name == i.name)
+                  symbol
                 )
             }
           tree.children.foldLeft(acc ++ named)(traverse(_, _))
@@ -488,6 +511,13 @@ abstract class PcCollector[T](
       case AppliedTypeTree(tpt, _) => tpt.pos
       case sel: NameTree => sel.namePosition
       case _ => tpe.pos
+    }
+  }
+
+  private def collectArguments(apply: Apply): List[Tree] = {
+    apply.fun match {
+      case appl: Apply => collectArguments(appl) ++ apply.args
+      case _ => apply.args
     }
   }
 
