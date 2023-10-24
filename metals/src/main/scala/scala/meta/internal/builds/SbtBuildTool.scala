@@ -109,8 +109,8 @@ case class SbtBuildTool(
         List(
           javaArgs,
           sbtVersion,
-          SbtOpts.fromWorkspace(workspace),
-          JvmOpts.fromWorkspace(workspace),
+          SbtOpts.fromWorkspaceOrEnv(workspace),
+          JvmOpts.fromWorkspaceOrEnv(workspace),
           jarArgs,
           sbtArgs,
         ).flatten

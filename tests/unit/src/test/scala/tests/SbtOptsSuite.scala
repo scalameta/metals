@@ -12,8 +12,8 @@ class SbtOptsSuite extends BaseSuite {
     test(name) {
       val root = FileLayout.fromString(original)
       val obtained =
-        SbtOpts.fromWorkspace(root).mkString("\n") ++
-          JvmOpts.fromWorkspace(root).mkString("\n")
+        SbtOpts.fromWorkspaceOrEnv(root).mkString("\n") ++
+          JvmOpts.fromWorkspaceOrEnv(root).mkString("\n")
       assertNoDiff(obtained, expected)
     }
   }
