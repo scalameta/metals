@@ -65,7 +65,9 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
+import scala.meta.internal.tvp.TreeViewNodeCollapseDidChangeParams
 import scala.meta.internal.tvp.TreeViewProvider
+import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
@@ -1875,6 +1877,14 @@ final case class TestingServer(
       }
       .mkString("\n")
     Assertions.assertNoDiff(obtained, expected)
+  }
+
+  def treeViewVisibilityDidChange(viewId: String, isVisible: Boolean): Future[Unit] = {
+    fullServer.treeViewVisibilityDidChange(TreeViewVisibilityDidChangeParams(viewId, isVisible)).asScala
+  }
+
+  def treeViewNodeCollapseDidChange(viewId: String, nodeId: String, isCollapsed: Boolean): Future[Unit] = {
+    fullServer.treeViewNodeCollapseDidChange(TreeViewNodeCollapseDidChangeParams(viewId, nodeId, isCollapsed)).asScala
   }
 
   def findTextInDependencyJars(

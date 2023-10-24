@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit
 import scala.meta.dialects
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.tvp.IndexedSymbols
 import scala.meta.io.AbsolutePath
 
@@ -37,8 +36,7 @@ class ClasspathSymbolsBench {
   def run(): Unit = {
     implicit val reporting = EmptyReportContext
     val jars = new IndexedSymbols(
-      OnDemandSymbolIndex.empty(),
-      isStatisticsEnabled = false,
+      isStatisticsEnabled = false
     )
     classpath.foreach { jar =>
       jars.jarSymbols(jar, "cats/", dialects.Scala213)

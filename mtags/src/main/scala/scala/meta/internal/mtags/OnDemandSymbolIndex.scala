@@ -62,22 +62,6 @@ final class OnDemandSymbolIndex(
         List.empty
     }
 
-  override def toplevelsAt(
-      path: AbsolutePath,
-      dialect: Dialect
-  ): List[SymbolDefinition] = {
-    val bucket = getOrCreateBucket(dialect)
-    bucket.toplevelsAt(path)
-  }
-
-  override def symbolsAt(
-      path: AbsolutePath,
-      dialect: Dialect
-  ): List[SymbolDefinition] = {
-    val bucket = getOrCreateBucket(dialect)
-    bucket.symbolsAt(path)
-  }
-
   override def addSourceDirectory(
       dir: AbsolutePath,
       dialect: Dialect

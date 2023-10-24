@@ -522,7 +522,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
 
   def workspaceTreeViewChanges: String = {
-    treeViewChanges.asScala.toSeq
+    val changes = treeViewChanges.asScala.toSeq
       .map { change =>
         change.nodes
           .map(n => n.viewId + " " + Option(n.nodeUri).getOrElse("<root>"))
@@ -530,6 +530,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       }
       .sorted
       .mkString("----\n")
+    treeViewChanges.clear()
+    changes
   }
 
   def applyCodeAction(

@@ -106,7 +106,18 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             |${TreeViewProvider.Compile} <root>
             |""".stripMargin,
       )
+      _ <- server.didOpen("a/src/main/scala/a/Zero.scala")
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala")(identity)
+      _ <- server.treeViewVisibilityDidChange(
+        TreeViewProvider.Project,
+        isVisible = true,
+      )
       folder = server.server.path
+      _ <- server.treeViewNodeCollapseDidChange(
+        TreeViewProvider.Project,
+        s"projects-$folder:${server.buildTarget("a")}!/_root_/",
+        isCollapsed = false,
+      )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}",
         """|_empty_/ -
@@ -133,16 +144,40 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/First#",
-        """|a() method
-           |b val
+        """|b val
+           |a() method
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/Second#",
-        """|a() method
+        """|c var
            |b val
-           |c var
+           |a() method
            |""".stripMargin,
+      )
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala") { text =>
+        text.replace("val a = 1", "val a = 1\nval b = 1.0")
+      }
+      _ = assertEquals(
+        server.client.workspaceTreeViewChanges,
+        s"metalsPackages projects-$folder:${server.buildTarget("a")}!/_root_/"
+      )
+      _ = server.assertTreeViewChildren(
+        s"projects-$folder:${server.buildTarget("a")}!/_empty_/Zero#",
+        """|a val
+           |b val
+           |""".stripMargin,
+      )
+      _ <- server.treeViewNodeCollapseDidChange(
+        TreeViewProvider.Project,
+        s"projects-$folder:${server.buildTarget("a")}!/_root_/",
+        isCollapsed = true,
+      )
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala") { text =>
+        text.replace("val a = 1", "val a = 1\nval c = 1.0")
+      }
+      _ = assertEmpty(
+        server.client.workspaceTreeViewChanges
       )
     } yield ()
   }

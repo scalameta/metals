@@ -1,36 +1,72 @@
 package scala.meta.internal.tvp
 
+import java.io.UncheckedIOException
+
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.Dialect
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
-class IndexedSymbols(index: GlobalSymbolIndex, isStatisticsEnabled: Boolean) {
+class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
+    extends SemanticdbFeatureProvider {
 
+  private val mtags = new Mtags()
   // Used for workspace, is eager
   private val workspaceCache = TrieMap.empty[
     AbsolutePath,
-    Array[TreeViewSymbolInformation],
+    AllSymbols,
   ]
 
   type TopLevel = SymbolDefinition
+  type ToplevelSymbol = String
   type AllSymbols = Array[TreeViewSymbolInformation]
-  // Used for dependencies, is lazy, TopLevel is changed to AllSymbols when needed
+
+  /* Used for dependencies lazily calculates all symbols in a jar.
+   * At the start it only contains the definition of a toplevel Symbol, later
+   * resolves to information about all symbols contained in the top level.
+   */
   private val jarCache = TrieMap.empty[
     AbsolutePath,
-    TrieMap[String, Either[TopLevel, AllSymbols]],
+    TrieMap[ToplevelSymbol, Either[TopLevel, AllSymbols]],
   ]
 
-  def clearCache(path: AbsolutePath): Unit = {
-    jarCache.remove(path)
-    workspaceCache.remove(path)
+  private val filteredSymbols: Set[SymbolInformation.Kind] = Set(
+    SymbolInformation.Kind.CONSTRUCTOR,
+    SymbolInformation.Kind.PARAMETER,
+    SymbolInformation.Kind.TYPE_PARAMETER,
+  )
+
+  override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
+    val all = docs.documents.flatMap { doc =>
+      val existing = doc.occurrences.collect {
+        case occ if occ.role.isDefinition => occ.symbol
+      }.toSet
+      doc.symbols.distinct.collect {
+        case info if existing(info.symbol) && !filteredSymbols(info.kind) =>
+          TreeViewSymbolInformation(
+            info.symbol,
+            info.kind,
+            info.properties,
+          )
+      }
+    }.toList
+    workspaceCache.put(path, all.toArray)
+  }
+
+  override def onDelete(path: SemanticdbPath): Unit = {
+    workspaceCache.remove(path.absolutePath)
   }
 
   def reset(): Unit = {
@@ -57,13 +93,9 @@ class IndexedSymbols(index: GlobalSymbolIndex, isStatisticsEnabled: Boolean) {
   def workspaceSymbols(
       in: AbsolutePath,
       symbol: String,
-      dialect: Dialect,
   ): Iterator[TreeViewSymbolInformation] = withTimer(s"$in/!$symbol") {
     val syms = workspaceCache
-      .getOrElseUpdate(
-        in,
-        members(in, dialect).map(toTreeView),
-      )
+      .getOrElse(in, Array.empty)
     if (Symbol(symbol).isRootPackage) syms.iterator
     else
       syms.collect {
@@ -92,8 +124,7 @@ class IndexedSymbols(index: GlobalSymbolIndex, isStatisticsEnabled: Boolean) {
       val realIn = if (!in.isSourcesJar) potentialSourceJar else in
       val jarSymbols = jarCache.getOrElseUpdate(
         realIn, {
-          val toplevels = index
-            .toplevelsAt(in, dialect)
+          val toplevels = toplevelsAt(in, dialect)
             .map(defn => defn.definitionSymbol.value -> Left(defn))
 
           TrieMap.empty[
@@ -128,7 +159,10 @@ class IndexedSymbols(index: GlobalSymbolIndex, isStatisticsEnabled: Boolean) {
         jarSymbols.get(toplevelOwner(Symbol(symbol)).value) match {
           case Some(Left(toplevelOnly)) =>
             val allSymbols = members(toplevelOnly.path, dialect).map(toTreeView)
-            jarSymbols.put(symbol, Right(allSymbols))
+            jarSymbols.put(
+              toplevelOnly.definitionSymbol.value,
+              Right(allSymbols),
+            )
             allSymbols.iterator
           case Some(Right(calculated)) =>
             calculated.iterator
@@ -167,8 +201,7 @@ class IndexedSymbols(index: GlobalSymbolIndex, isStatisticsEnabled: Boolean) {
       path: AbsolutePath,
       dialect: Dialect,
   ): Array[SymbolDefinition] = {
-    index
-      .symbolsAt(path, dialect)
+    symbolsAt(path, dialect)
       .filter(defn =>
         defn.kind.isEmpty || !defn.kind.exists(kind =>
           kind.isParameter || kind.isTypeParameter
@@ -194,6 +227,64 @@ class IndexedSymbols(index: GlobalSymbolIndex, isStatisticsEnabled: Boolean) {
       kind,
       symDef.properties,
     )
+  }
+
+  private def toplevelsAt(
+      path: AbsolutePath,
+      dialect: Dialect,
+  ): List[SymbolDefinition] = {
+
+    def indexJar(jar: AbsolutePath) = {
+      FileIO.withJarFileSystem(jar, create = false) { root =>
+        try {
+          root.listRecursive.toList.collect {
+            case source if source.isFile =>
+              (source, mtags.toplevels(source.toInput, dialect).symbols)
+          }
+        } catch {
+          // this happens in broken jars since file from FileWalker should exists
+          case _: UncheckedIOException => Nil
+        }
+      }
+    }
+
+    val pathSymbolInfos = if (path.isSourcesJar) {
+      indexJar(path)
+    } else {
+      List((path, mtags.toplevels(path.toInput, dialect).symbols))
+    }
+    pathSymbolInfos.collect { case (path, infos) =>
+      infos.map { info =>
+        SymbolDefinition(
+          Symbol("_empty_"),
+          Symbol(info.symbol),
+          path,
+          dialect,
+          None,
+          Some(info.kind),
+          info.properties,
+        )
+      }
+    }.flatten
+  }
+
+  private def symbolsAt(
+      path: AbsolutePath,
+      dialect: Dialect,
+  ): List[SymbolDefinition] = {
+    val document = mtags.allSymbols(path, dialect)
+    document.symbols.map { info =>
+      SymbolDefinition(
+        Symbol("_empty_"),
+        Symbol(info.symbol),
+        path,
+        dialect,
+        None,
+        Some(info.kind),
+        info.properties,
+      )
+    }.toList
+
   }
 
 }
