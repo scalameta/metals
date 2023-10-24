@@ -1330,11 +1330,13 @@ class MetalsLspService(
     paths.foreach { path =>
       fingerprints.add(path, FileIO.slurp(path, charset))
     }
+
     Future
       .sequence(
         List(
           Future(indexer.reindexWorkspaceSources(paths)),
-          compilations.compileFiles(paths),
+          compilations
+            .compileFiles(paths, Option(focusedDocumentBuildTarget.get())),
           onBuildChanged(paths).ignoreValue,
           Future.sequence(paths.map(onBuildToolAdded)),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
@@ -1346,7 +1348,8 @@ class MetalsLspService(
     Future
       .sequence(
         List(
-          compilations.compileFiles(List(path)),
+          compilations
+            .compileFiles(List(path), Option(focusedDocumentBuildTarget.get())),
           Future {
             diagnostics.didDelete(path)
             testProvider.onFileDelete(path)
