@@ -5,7 +5,7 @@ import scala.meta.inputs._
 import scala.meta.internal.tokenizers.Chars._
 import scala.meta.internal.tokenizers.Reporter
 
-private[mtags] case class CharArrayReader private (
+private[meta] case class CharArrayReader private (
     buf: Array[Char],
     dialect: Dialect,
     reporter: Reporter,
@@ -61,6 +61,7 @@ private[mtags] case class CharArrayReader private (
     } else {
       begCharOffset = endCharOffset
       val (hi, hiEnd) = readUnicodeChar(endCharOffset)
+
       if (!Character.isHighSurrogate(hi)) {
         ch = hi
         endCharOffset = hiEnd
@@ -68,9 +69,10 @@ private[mtags] case class CharArrayReader private (
         readerError("invalid unicode surrogate pair", at = begCharOffset)
       else {
         val (lo, loEnd) = readUnicodeChar(hiEnd)
-        if (!Character.isLowSurrogate(lo))
-          readerError("invalid unicode surrogate pair", at = begCharOffset)
-        else {
+        if (!Character.isLowSurrogate(lo)) {
+          ch = hi
+          endCharOffset = hiEnd
+        } else {
           ch = Character.toCodePoint(hi, lo)
           endCharOffset = loEnd
         }

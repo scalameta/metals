@@ -575,12 +575,17 @@ class MetalsLspService(
       trees,
     )
 
+  val classpathTreeIndex = new IndexedSymbols(
+    isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView
+  )
+
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
       syntheticsDecorator,
       testProvider,
+      classpathTreeIndex,
     ),
     buildTargets,
     folder,
@@ -806,9 +811,9 @@ class MetalsLspService(
       buildTargets,
       () => buildClient.ongoingCompilations(),
       definitionIndex,
-      clientConfig.initialConfig.statistics,
       optJavaHome,
       scalaVersionSelector,
+      classpathTreeIndex,
     )
 
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(

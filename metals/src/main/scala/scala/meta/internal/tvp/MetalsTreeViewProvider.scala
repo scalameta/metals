@@ -198,7 +198,10 @@ class MetalsTreeViewProvider(
   override def onVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams
   ): Unit = {
-    val trees = getFolderTreeViewProviders()
+    val trees = getFolderTreeViewProviders()        
+    trees.foreach{
+      _.setVisible(params.viewId, params.visible)
+    }
     if (params.visible) {
       params.viewId match {
         case TreeViewProvider.Compile =>
@@ -233,19 +236,6 @@ class MetalsTreeViewProvider(
     }
   }
 
-  override def onBuildTargetDidCompile(
-      id: BuildTargetIdentifier
-  ): Unit = {
-    val toUpdate =
-      getFolderTreeViewProviders().map(_.onBuildTargetDidCompile(id)).collect {
-        case Some(value) => value
-      }
-    if (toUpdate.nonEmpty) {
-      languageClient.metalsTreeViewDidChange(
-        TreeViewDidChangeParams(toUpdate.flatten.toArray)
-      )
-    }
-  }
 }
 
 class FolderTreeViewProvider(
@@ -253,9 +243,9 @@ class FolderTreeViewProvider(
     buildTargets: BuildTargets,
     compilations: () => TreeViewCompilations,
     definitionIndex: GlobalSymbolIndex,
-    statistics: StatisticsConfig,
     userJavaHome: Option[AbsolutePath],
     scalaVersionSelector: ScalaVersionSelector,
+    classpath: IndexedSymbols,
 ) {
   def dialectOf(path: AbsolutePath): Option[Dialect] =
     scalaVersionSelector.dialectFromBuildTarget(path)
@@ -263,12 +253,8 @@ class FolderTreeViewProvider(
     userJavaHome.flatMap { path =>
       JdkVersion.fromReleaseFileString(path)
     }
-  private val classpath = new IndexedSymbols(
-    definitionIndex,
-    isStatisticsEnabled = statistics.isTreeView,
-  )
   private val isVisible = TrieMap.empty[String, Boolean].withDefaultValue(false)
-  private val isCollapsed = TrieMap.empty[BuildTargetIdentifier, Boolean]
+  private val isCollapsedTarget = TrieMap.empty[BuildTargetIdentifier, Boolean]
   private val pendingProjectUpdates =
     ConcurrentHashSet.empty[BuildTargetIdentifier]
   val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
@@ -317,15 +303,19 @@ class FolderTreeViewProvider(
         scalaTarget <- buildTargets.scalaTarget(id).iterator
         source <- buildTargets.buildTargetSources(id)
         dialect = scalaTarget.dialect(source)
-      } yield classpath.workspaceSymbols(source, symbol, dialect)
+      } yield classpath.workspaceSymbols(source, symbol)
       tops.flatten
     },
   )
 
+  def setVisible(viewId: String, visibility: Boolean): Unit ={
+     isVisible(viewId) = visibility
+  }
+
   def flushPendingProjectUpdates(): Option[Array[TreeViewNode]] = {
     val toUpdate = pendingProjectUpdates.asScala.iterator
       .filter { id =>
-        !isCollapsed.getOrElse(id, true) &&
+        !isCollapsedTarget.getOrElse(id, true) &&
         isVisible(TreeViewProvider.Project)
       }
       .flatMap(buildTargets.info)
@@ -345,14 +335,12 @@ class FolderTreeViewProvider(
   def onBuildTargetDidCompile(
       id: BuildTargetIdentifier
   ): Option[Array[TreeViewNode]] = {
-    buildTargets
-      .targetClassDirectories(id)
-      .foreach(cd => classpath.clearCache(cd.toAbsolutePath))
-    if (isCollapsed.contains(id)) {
+    if (isCollapsedTarget.getOrElse(id, true) == true) {
+      None // do nothing if the user never expanded the tree view node.
+    } else {
       pendingProjectUpdates.add(id)
       flushPendingProjectUpdates()
-    } else {
-      None // do nothing if the user never expanded the tree view node.
+
     }
   }
 
@@ -362,7 +350,7 @@ class FolderTreeViewProvider(
     if (projects.matches(params.nodeUri)) {
       val uri = projects.fromUri(params.nodeUri)
       if (uri.isRoot) {
-        isCollapsed(uri.key) = params.collapsed
+        isCollapsedTarget(uri.key) = params.collapsed
       }
     }
   }

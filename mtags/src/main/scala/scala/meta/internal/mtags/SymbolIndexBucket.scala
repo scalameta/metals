@@ -14,6 +14,7 @@ import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.mtags.Mtags.stdLibPatches
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -45,63 +46,9 @@ class SymbolIndexBucket(
     dialect: Dialect
 ) {
 
-  import SymbolIndexBucket.stdLibPatches
-
   private val logger = Logger.getLogger(classOf[SymbolIndexBucket].getName)
 
   def close(): Unit = sourceJars.close()
-
-  def toplevelsAt(path: AbsolutePath): List[SymbolDefinition] = {
-
-    def indexJar(jar: AbsolutePath) = {
-      FileIO.withJarFileSystem(jar, create = false) { root =>
-        try {
-          root.listRecursive.toList.collect {
-            case source if source.isFile =>
-              (source, mtags.toplevels(source.toInput, dialect).symbols)
-          }
-        } catch {
-          // this happens in broken jars since file from FileWalker should exists
-          case _: UncheckedIOException => Nil
-        }
-      }
-    }
-
-    val pathSymbolInfos = if (path.isSourcesJar) {
-      indexJar(path)
-    } else {
-      List((path, mtags.toplevels(path.toInput, dialect).symbols))
-    }
-    pathSymbolInfos.collect { case (path, infos) =>
-      infos.map { info =>
-        SymbolDefinition(
-          Symbol("_empty_"),
-          Symbol(info.symbol),
-          path,
-          dialect,
-          None,
-          Some(info.kind),
-          info.properties
-        )
-      }
-    }.flatten
-  }
-
-  def symbolsAt(path: AbsolutePath): List[SymbolDefinition] = {
-    val document = allSymbols(path)
-    document.symbols.map { info =>
-      SymbolDefinition(
-        Symbol("_empty_"),
-        Symbol(info.symbol),
-        path,
-        dialect,
-        None,
-        Some(info.kind),
-        info.properties
-      )
-    }.toList
-
-  }
 
   def addSourceDirectory(dir: AbsolutePath): List[(String, AbsolutePath)] = {
     if (sourceJars.addEntry(dir.toNIO)) {
@@ -312,14 +259,8 @@ class SymbolIndexBucket(
   }
 
   private def allSymbols(path: AbsolutePath): s.TextDocument = {
-    val language = path.toLanguage
     val toIndexSource0 = toIndexSource(path)
-    val input = toIndexSource0.toInput
-
-    stdLibPatches.patchDocument(
-      path,
-      mtags.index(language, input, dialect)
-    )
+    mtags.allSymbols(toIndexSource0, dialect)
   }
 
   // similar as addSourceFile except indexes all global symbols instead of
@@ -427,37 +368,4 @@ object SymbolIndexBucket {
       dialect
     )
 
-  /**
-   * Scala 3 has a specific package that adds / replaces some symbols in scala.Predef + scala.language
-   * https://github.com/lampepfl/dotty/blob/main/library/src/scala/runtime/stdLibPatches/
-   * We need to do the same to correctly provide location for symbols obtained from semanticdb.
-   */
-  object stdLibPatches {
-    val packageName = "scala/runtime/stdLibPatches"
-
-    def isScala3Library(jar: AbsolutePath): Boolean =
-      jar.filename.startsWith("scala3-library_3")
-
-    def isScala3LibraryPatchSource(file: AbsolutePath): Boolean = {
-      file.jarPath.exists(
-        isScala3Library(_)
-      ) && file.parent.filename == "stdLibPatches"
-    }
-
-    def patchSymbol(sym: String): String =
-      sym.replace(packageName, "scala")
-
-    def patchDocument(
-        file: AbsolutePath,
-        doc: s.TextDocument
-    ): s.TextDocument = {
-      if (isScala3LibraryPatchSource(file)) {
-        val occs =
-          doc.occurrences.map(occ => occ.copy(symbol = patchSymbol(occ.symbol)))
-
-        doc.copy(occurrences = occs)
-      } else doc
-    }
-
-  }
 }
