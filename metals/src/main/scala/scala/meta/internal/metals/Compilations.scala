@@ -91,10 +91,20 @@ final class Compilations(
     } yield result
   }
 
-  def compileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
+  def compileFiles(
+      paths: Seq[AbsolutePath],
+      focusedDocumentBuildTarget: Option[BuildTargetIdentifier],
+  ): Future[Unit] = {
     for {
       targets <- expand(paths)
       _ <- compileBatch(targets)
+      _ <- focusedDocumentBuildTarget match {
+        case Some(bt)
+            if !targets.contains(bt) &&
+              buildTargets.isInverseDependency(bt, targets.toList) =>
+          compileBatch(bt)
+        case _ => Future.successful(())
+      }
       _ <- compileWorksheets(paths)
     } yield ()
   }
