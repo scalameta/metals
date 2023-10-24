@@ -16,6 +16,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.BloopJsonUpdateCause.BloopJsonUpdateCause
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient

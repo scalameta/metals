@@ -14,7 +14,6 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
-import scala.meta.internal.metals.ConnectionBspStatus
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._

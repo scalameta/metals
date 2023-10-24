@@ -2,7 +2,7 @@ package tests
 
 import scala.concurrent.duration.Duration
 
-import scala.meta.internal.metals.ConnectionBspStatus
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._

@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.io.AbsolutePath

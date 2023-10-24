@@ -22,6 +22,7 @@ import scala.reflect.ClassTag
 import scala.util.Success
 import scala.util.Try
 
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._

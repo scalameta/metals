@@ -12,7 +12,6 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
-import scala.meta.internal.metals.ConnectionBspStatus
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
 import scala.meta.internal.metals.MetalsEnrichments._

@@ -1,7 +1,10 @@
-package scala.meta.internal.metals
+package scala.meta.internal.bsp
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.meta.internal.metals.BspStatus
+import scala.meta.internal.metals.Icons
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.io.AbsolutePath

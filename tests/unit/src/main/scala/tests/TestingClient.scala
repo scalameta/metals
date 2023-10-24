@@ -12,13 +12,13 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.ConnectionBspStatus
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._

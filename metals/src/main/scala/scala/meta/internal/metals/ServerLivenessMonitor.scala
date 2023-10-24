@@ -7,6 +7,8 @@ import java.util.concurrent.TimeUnit
 
 import scala.concurrent.duration.Duration
 
+import scala.meta.internal.bsp.ConnectionBspStatus
+
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage

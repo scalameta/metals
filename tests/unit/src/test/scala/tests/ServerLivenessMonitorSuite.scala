@@ -9,8 +9,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.duration.Duration
 
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.BspStatus
-import scala.meta.internal.metals.ConnectionBspStatus
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.RequestMonitor
 import scala.meta.internal.metals.ServerLivenessMonitor
