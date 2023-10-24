@@ -59,6 +59,7 @@ abstract class BaseCodeActionLspSuite(
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
       overrideLayout: Option[String] = None,
+      isDiagnosticBased: Boolean = false,
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -88,6 +89,7 @@ abstract class BaseCodeActionLspSuite(
       changeFile,
       expectError,
       filterAction,
+      isDiagnosticBased,
     )
   }
 
@@ -105,6 +107,7 @@ abstract class BaseCodeActionLspSuite(
       changeFile: String => String = identity,
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
+      isDiagnosticBased: Boolean = false,
   )(implicit loc: Location): Unit = {
     val files = FileLayout.mapFromString(layout)
     val (path, input) = files
@@ -135,6 +138,9 @@ abstract class BaseCodeActionLspSuite(
           path,
           changeFile(input).replace("<<", "").replace(">>", ""),
         )
+        _ <-
+          if (isDiagnosticBased) server.didSave(path)(identity)
+          else Future.successful(())
         codeActions <-
           server
             .assertCodeAction(

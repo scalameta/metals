@@ -98,10 +98,16 @@ class ScalaCliActionsSuite
     expectNoDiagnostics = false,
   )
 
+  val newestCatsLib: String = coursierComplete
+    .complete("org.typelevel::cats-core:")
+    .headOption
+    .map(_.stripPrefix(":"))
+    .getOrElse("2.9.0")
+
   checkScalaCLI(
     "auto-import",
     s"""|//> using scala "${BuildInfo.scala213}"
-        |//> using lib "org.typelevel::cats-core:2.9.0"
+        |//> using lib "org.typelevel::cats-core:$newestCatsLib"
         |
         |object A {
         |  <<Future>>.successful(2)
@@ -112,7 +118,7 @@ class ScalaCliActionsSuite
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     s"""|//> using scala "${BuildInfo.scala213}"
-        |//> using lib "org.typelevel::cats-core:2.9.0"
+        |//> using lib "org.typelevel::cats-core:$newestCatsLib"
         |import scala.concurrent.Future
         |
         |object A {
@@ -120,7 +126,6 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     scalaCliOptions = List("--actions", "-S", scalaVersion),
-    expectNoDiagnostics = false,
     fileName = "A.sc",
   )
 

@@ -96,6 +96,7 @@ class BaseScalaCLIActionSuite(name: String)
       expectError,
       filterAction,
       overrideLayout = layout,
+      isDiagnosticBased = true,
     )
   }
 }
