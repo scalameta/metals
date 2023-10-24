@@ -14,13 +14,13 @@ import scala.meta.io.AbsolutePath
  */
 object JvmOpts {
 
-  def fromWorkspace(workspace: AbsolutePath): List[String] = {
+  def fromWorkspaceOrEnv(workspace: AbsolutePath): List[String] = {
     val jvmOpts = workspace.resolve(".jvmopts")
     if (jvmOpts.isFile && Files.isReadable(jvmOpts.toNIO)) {
       val text = FileIO.slurp(jvmOpts, StandardCharsets.UTF_8)
       text.linesIterator.map(_.trim).filter(_.startsWith("-")).toList
     } else {
-      Nil
+      fromEnvironment
     }
   }
 
