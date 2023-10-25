@@ -135,6 +135,7 @@ class MetalsLspService(
     headDoctor: HeadDoctor,
     bspStatus: BspStatus,
     workDoneProgress: WorkDoneProgress,
+    maxScalaCliServers: Int,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService {
@@ -1173,6 +1174,9 @@ class MetalsLspService(
         .inverseSources(path)
         .getOrElse(current)
     }
+    // unpublish diagnostic for dependencies
+    interactiveSemanticdbs.didFocus(path)
+    scalaCli.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
@@ -2498,6 +2502,7 @@ class MetalsLspService(
       () => userConfig,
       parseTreesAndPublishDiags,
       buildTargets,
+      maxScalaCliServers,
     )
   )
 

@@ -46,6 +46,7 @@ class FallbackMetalsLspService(
       folder,
       folderVisibleName,
       headDoctor,
+      maxScalaCliServers = 10,
     ) {
 
   buildServerPromise.success(())
