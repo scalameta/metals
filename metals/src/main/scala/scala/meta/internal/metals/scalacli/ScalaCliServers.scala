@@ -3,6 +3,7 @@ package scala.meta.internal.metals.scalacli
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 
@@ -39,16 +40,17 @@ class ScalaCliServers(
     userConfig: () => UserConfiguration,
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
     buildTargets: BuildTargets,
+    maxServers: Int,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
-  private val serversRef: AtomicReference[Set[ScalaCli]] = new AtomicReference(
-    Set.empty
-  )
+
+  private val serversRef: AtomicReference[Queue[ScalaCli]] =
+    new AtomicReference(Queue.empty)
 
   private lazy val localScalaCli: Option[Seq[String]] =
     ScalaCli.localScalaCli(userConfig())
 
-  def servers: List[ScalaCli] = serversRef.get().toList
+  def servers: Iterable[ScalaCli] = serversRef.get()
 
   def setupIDE(path: AbsolutePath): Future[Unit] = {
     localScalaCli
@@ -96,17 +98,18 @@ class ScalaCliServers(
       .map(server => (server.lastImportedBuild, server.buildTargetsData))
       .toList
 
-  def buildServers: List[BuildServerConnection] = servers.flatMap(_.buildServer)
+  def buildServers: Iterable[BuildServerConnection] =
+    servers.flatMap(_.buildServer)
 
   def cancel(): Unit = {
-    val servers = serversRef.getAndSet(Set.empty)
+    val servers = serversRef.getAndSet(Queue.empty)
     servers.foreach(_.cancel())
   }
 
   def loaded(path: AbsolutePath): Boolean =
     servers.exists(_.path.toNIO.startsWith(path.toNIO))
 
-  def paths: List[AbsolutePath] = servers.map(_.path)
+  def paths: Iterable[AbsolutePath] = servers.map(_.path)
 
   def start(path: AbsolutePath): Future[Unit] = {
     val scalaCli =
@@ -128,21 +131,32 @@ class ScalaCliServers(
 
     val prevServers = serversRef.getAndUpdate { servers =>
       if (servers.exists(_.path == path)) servers
-      else servers + scalaCli
+      else {
+        if (servers.size == maxServers) servers.drop(1) :+ scalaCli
+        else servers :+ scalaCli
+      }
     }
 
-    prevServers
-      .find(_.path == path)
-      .getOrElse {
-        buildTargets.addData(scalaCli.buildTargetsData)
-        scalaCli
-      }
-      .start()
+    val (newServer, outServer) =
+      prevServers
+        .find(_.path == path)
+        .map((_, None))
+        .getOrElse {
+          buildTargets.addData(scalaCli.buildTargetsData)
+          val outServer =
+            Option.when(servers.size == 10)(prevServers.dequeue._1)
+          (scalaCli, outServer)
+        }
+
+    for {
+      _ <- outServer.map(_.stop()).getOrElse(Future.unit)
+      _ <- newServer.start()
+    } yield ()
   }
 
   def stop(): Future[Unit] = {
-    val servers = serversRef.getAndSet(Set.empty)
-    Future.sequence(servers.map(_.stop())).ignoreValue
+    val servers = serversRef.getAndSet(Queue.empty)
+    Future.sequence(servers.map(_.stop()).toSeq).ignoreValue
   }
 
   def stop(path: AbsolutePath): Future[Unit] = {
@@ -155,5 +169,14 @@ class ScalaCliServers(
       }
       .getOrElse(Future.successful(()))
   }
+
+  def didFocus(path: AbsolutePath): Queue[ScalaCli] =
+    serversRef.getAndUpdate { servers =>
+      servers.find(server => path.startWith(server.path)) match {
+        case Some(foundServer) =>
+          servers.filterNot(_ == foundServer) :+ foundServer
+        case None => servers
+      }
+    }
 
 }

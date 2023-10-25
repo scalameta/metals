@@ -83,6 +83,7 @@ class BspMetalsLspService(
       folder,
       folderVisibleName,
       headDoctor,
+      maxScalaCliServers = 3,
     ) {
   import serverInputs._
 

@@ -52,6 +52,7 @@ class FallbackMetalsLspService(
       folder,
       folderVisibleName,
       headDoctor,
+      maxScalaCliServers = 10,
     ) {
 
   override protected def doctor: Doctor =

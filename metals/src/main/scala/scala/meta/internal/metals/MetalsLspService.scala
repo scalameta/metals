@@ -111,6 +111,7 @@ abstract class MetalsLspService(
     folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
+    maxScalaCliServers: Int,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService {
@@ -866,6 +867,7 @@ abstract class MetalsLspService(
       .foreach(focusedDocumentBuildTarget.set)
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
+    scalaCli.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
@@ -1601,6 +1603,7 @@ abstract class MetalsLspService(
       () => userConfig,
       parseTreesAndPublishDiags,
       buildTargets,
+      maxScalaCliServers,
     )
   )
 
