@@ -27,7 +27,9 @@ object JdkSources {
   ): Either[NoSourcesAvailable, AbsolutePath] = {
     val paths = candidates(userJavaHome)
     paths.find(_.isFile) match {
-      case Some(value) => Right(value)
+      case Some(value) =>
+        logger.info("Found JDK sources: " + value)
+        Right(value.dealias)
       case None => Left(NoSourcesAvailable(paths))
     }
   }
@@ -40,9 +42,7 @@ object JdkSources {
             s"Failed to parse java home path $str: ${exception.getMessage}"
           )
           None
-        case Success(value) =>
-          if (value.toString().contains("unit")) throw new Exception
-          Some(value)
+        case Success(value) => Some(value)
       }
     }
   }

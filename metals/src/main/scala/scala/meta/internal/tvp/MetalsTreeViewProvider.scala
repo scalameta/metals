@@ -1,5 +1,6 @@
 package scala.meta.internal.tvp
 
+import java.nio.file.Paths
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -198,8 +199,8 @@ class MetalsTreeViewProvider(
   override def onVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams
   ): Unit = {
-    val trees = getFolderTreeViewProviders()        
-    trees.foreach{
+    val trees = getFolderTreeViewProviders()
+    trees.foreach {
       _.setVisible(params.viewId, params.visible)
     }
     if (params.visible) {
@@ -243,15 +244,16 @@ class FolderTreeViewProvider(
     buildTargets: BuildTargets,
     compilations: () => TreeViewCompilations,
     definitionIndex: GlobalSymbolIndex,
-    userJavaHome: Option[AbsolutePath],
+    userConfig: () => UserConfiguration,
     scalaVersionSelector: ScalaVersionSelector,
     classpath: IndexedSymbols,
 ) {
   def dialectOf(path: AbsolutePath): Option[Dialect] =
     scalaVersionSelector.dialectFromBuildTarget(path)
-  private val maybeUsedJdkVersion =
-    userJavaHome.flatMap { path =>
-      JdkVersion.fromReleaseFileString(path)
+  private def maybeUsedJdkVersion =
+    JdkSources.defaultJavaHome(userConfig().javaHome).headOption.flatMap {
+      path =>
+        JdkVersion.fromReleaseFileString(path)
     }
   private val isVisible = TrieMap.empty[String, Boolean].withDefaultValue(false)
   private val isCollapsedTarget = TrieMap.empty[BuildTargetIdentifier, Boolean]
@@ -265,7 +267,7 @@ class FolderTreeViewProvider(
     folder,
     identity,
     _.toURI.toString(),
-    _.toAbsolutePath,
+    _.toAbsolutePath(followSymlink = false),
     path => {
       if (path.filename == JdkSources.zipFileName) {
         maybeUsedJdkVersion
@@ -308,8 +310,8 @@ class FolderTreeViewProvider(
     },
   )
 
-  def setVisible(viewId: String, visibility: Boolean): Unit ={
-     isVisible(viewId) = visibility
+  def setVisible(viewId: String, visibility: Boolean): Unit = {
+    isVisible(viewId) = visibility
   }
 
   def flushPendingProjectUpdates(): Option[Array[TreeViewNode]] = {
@@ -404,10 +406,13 @@ class FolderTreeViewProvider(
       closestSymbol: SymbolOccurrence,
   ): Option[List[String]] = {
     if (path.isDependencySource(folder.path) || path.isJarFileSystem) {
-      def jdkSources = JdkSources(userJavaHome.map(_.toString())).toOption
+      def pathJar = AbsolutePath(
+        Paths.get(path.toNIO.getFileSystem().toString())
+      ).dealias
+      def jdkSources = JdkSources(userConfig().javaHome).toOption
         .collect {
           case sources
-              if sources.toString == path.toNIO.getFileSystem().toString() ||
+              if sources == pathJar || !path.isJarFileSystem &&
                 path.isSrcZipInReadonlyDirectory(folder.path) =>
             libraries.toUri(sources, closestSymbol.symbol).parentChain
         }

@@ -12,7 +12,6 @@ import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.SymbolInformation
@@ -65,8 +64,8 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
     workspaceCache.put(path, all.toArray)
   }
 
-  override def onDelete(path: SemanticdbPath): Unit = {
-    workspaceCache.remove(path.absolutePath)
+  override def onDelete(path: AbsolutePath): Unit = {
+    workspaceCache.remove(path)
   }
 
   def reset(): Unit = {
@@ -84,10 +83,10 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
   }
 
   /**
-   * We load all symbols for workspace eagerly
+   * We load all symbols for workspace when semanticdb files are produced.
    *
-   * @param in the input file to index
-   * @param dialect dialect to parse the file with
+   * @param in the input file to get symbols for
+   * @param symbol we are looking for
    * @return list of tree view symbols within the file
    */
   def workspaceSymbols(
@@ -142,20 +141,50 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
       }
 
       val parsedSymbol = Symbol(symbol)
-      // if it's a package we'll collect all the children
-      if (parsedSymbol.isPackage) {
+      // root package doesn't need to calculate any members, they will be calculated lazily
+      if (parsedSymbol.isRootPackage) {
         jarSymbols.values
           .collect {
-            // root package doesn't need to calculate any members, they will be calculated lazily
-            case Left(defn) if parsedSymbol.isRootPackage =>
+            case Left(defn) =>
               Array(toTreeView(defn))
-            case Right(list) if parsedSymbol.isRootPackage => list
-            case cached =>
-              symbolsForPackage(cached, dialect, jarSymbols, parsedSymbol)
+            case Right(list) => list
           }
           .flatten
           .iterator
-      } else {
+      } // If it's a package we'll collect all the children
+      else if (parsedSymbol.isPackage) {
+        jarSymbols
+          .collect {
+            /* If the package we are looking for is the parent of the current symbol we
+             * need to check if we have grandchildren and the nodes are exapandable
+             * on the UI
+             */
+            case (_, Left(toplevel))
+                if (toplevel.definitionSymbol.owner == parsedSymbol) =>
+              val children =
+                members(toplevel.path, dialect).map(toTreeView)
+              jarSymbols.put(
+                toplevel.definitionSymbol.value,
+                Right(children),
+              )
+              children
+
+            /* If this is further down we don't need to resolve it yet as
+             * as we will check that later when resolving parent package
+             */
+            case (toplevelSymbol, Left(toplevel))
+                if toplevelSymbol.startsWith(symbol) =>
+              Array(toTreeView(toplevel))
+
+            // If it's already calculated then we can just return it
+            case (toplevelSymbol, Right(allSymbols))
+                if toplevelSymbol.startsWith(symbol) =>
+              allSymbols
+            case _ => Array.empty[TreeViewSymbolInformation]
+          }
+          .flatten
+          .iterator
+      } else { // if we are looking for a particular symbol then we need to resolve it properly
         jarSymbols.get(toplevelOwner(Symbol(symbol)).value) match {
           case Some(Left(toplevelOnly)) =>
             val allSymbols = members(toplevelOnly.path, dialect).map(toTreeView)
@@ -171,31 +200,6 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
       }
     }
   }
-
-  private def symbolsForPackage(
-      cached: Either[TopLevel, AllSymbols],
-      dialect: Dialect,
-      jarSymbols: TrieMap[String, Either[TopLevel, AllSymbols]],
-      symbol: Symbol,
-  ): Array[TreeViewSymbolInformation] =
-    cached match {
-      case Left(toplevel)
-          if toplevel.definitionSymbol.value.startsWith(symbol.value) =>
-        // we need to check if we have grandchildren and the nodes are exapandable
-        if (toplevel.definitionSymbol.owner == symbol) {
-          val children =
-            members(toplevel.path, dialect).map(toTreeView)
-          jarSymbols.put(
-            toplevel.definitionSymbol.value,
-            Right(children),
-          )
-          children
-        } else {
-          Array(toTreeView(toplevel))
-        }
-      case Right(allSymbols) => allSymbols
-      case _ => Array.empty[TreeViewSymbolInformation]
-    }
 
   private def members(
       path: AbsolutePath,

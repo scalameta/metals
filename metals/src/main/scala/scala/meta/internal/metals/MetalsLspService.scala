@@ -811,7 +811,7 @@ class MetalsLspService(
       buildTargets,
       () => buildClient.ongoingCompilations(),
       definitionIndex,
-      optJavaHome,
+      () => userConfig,
       scalaVersionSelector,
       classpathTreeIndex,
     )

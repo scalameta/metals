@@ -7,6 +7,7 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.JdkVersion
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.io.AbsolutePath
 
@@ -20,9 +21,13 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
     JdkVersion
       .fromReleaseFileString(AbsolutePath(Paths.get(Properties.javaHome)))
       .getOrElse("")
+
   private val jdkSourcesName = s"jdk-$javaVersion-sources"
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
+
+  override def userConfig: UserConfiguration =
+    UserConfiguration(javaHome = Some(Properties.javaHome))
 
   /**
    * The libraries we expect to find for tests in this file.
@@ -160,7 +165,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       }
       _ = assertEquals(
         server.client.workspaceTreeViewChanges,
-        s"metalsPackages projects-$folder:${server.buildTarget("a")}!/_root_/"
+        s"metalsPackages projects-$folder:${server.buildTarget("a")}!/_root_/",
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/_empty_/Zero#",

@@ -1821,7 +1821,7 @@ final case class TestingServer(
       )
     }
 
-    val label = parents.iterator
+    val labelsMap = parents.iterator
       .flatMap { r =>
         r.nodes.iterator.map { n =>
           val icon = Option(n.icon) match {
@@ -1835,6 +1835,14 @@ final case class TestingServer(
       .toMap
       .updated("root", "root")
 
+    def label(uri: String, default: String): String =
+      labelsMap.get(uri) match {
+        case None =>
+          scribe.warn(s"Cannot find label for $uri")
+          scribe.warn(labelsMap.mkString("\n"))
+          default
+        case Some(value) => value
+      }
     val tree = parents
       .zip(reveal.uriChain :+ "root")
       .foldLeft(PrettyPrintTree.empty) { case (child, (parent, uri)) =>
@@ -1842,9 +1850,9 @@ final case class TestingServer(
           if (uri.contains("-sources.jar")) uri
           else uri.replace(".jar", "-sources.jar")
         PrettyPrintTree(
-          label.getOrElse(realUri.toLowerCase, realUri),
+          label(realUri.toLowerCase, realUri),
           parent.nodes
-            .map(n => PrettyPrintTree(label(n.nodeUri.toLowerCase)))
+            .map(n => PrettyPrintTree(label(n.nodeUri.toLowerCase, n.nodeUri)))
             .filterNot(t => isIgnored(t.value))
             .toList :+ child,
         )
@@ -1879,12 +1887,27 @@ final case class TestingServer(
     Assertions.assertNoDiff(obtained, expected)
   }
 
-  def treeViewVisibilityDidChange(viewId: String, isVisible: Boolean): Future[Unit] = {
-    fullServer.treeViewVisibilityDidChange(TreeViewVisibilityDidChangeParams(viewId, isVisible)).asScala
+  def treeViewVisibilityDidChange(
+      viewId: String,
+      isVisible: Boolean,
+  ): Future[Unit] = {
+    fullServer
+      .treeViewVisibilityDidChange(
+        TreeViewVisibilityDidChangeParams(viewId, isVisible)
+      )
+      .asScala
   }
 
-  def treeViewNodeCollapseDidChange(viewId: String, nodeId: String, isCollapsed: Boolean): Future[Unit] = {
-    fullServer.treeViewNodeCollapseDidChange(TreeViewNodeCollapseDidChangeParams(viewId, nodeId, isCollapsed)).asScala
+  def treeViewNodeCollapseDidChange(
+      viewId: String,
+      nodeId: String,
+      isCollapsed: Boolean,
+  ): Future[Unit] = {
+    fullServer
+      .treeViewNodeCollapseDidChange(
+        TreeViewNodeCollapseDidChangeParams(viewId, nodeId, isCollapsed)
+      )
+      .asScala
   }
 
   def findTextInDependencyJars(
