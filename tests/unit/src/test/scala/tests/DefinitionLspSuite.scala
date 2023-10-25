@@ -6,7 +6,9 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-class DefinitionLspSuite extends BaseLspSuite("definition") {
+class DefinitionLspSuite
+    extends BaseLspSuite("definition")
+    with ScriptsAssertions {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
@@ -640,19 +642,6 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
   }
 
   test("scaladoc-definition-this") {
-    val testCase =
-      """|package a
-         |
-         |object O {
-         |  class A {
-         |    /**
-         |     * Calls [[this@@.g]]
-         |     */
-         |    def f: Int = g
-         |    def g: Int = ???
-         |  }
-         |}
-         |""".stripMargin
     for {
       _ <- initialize(
         s"""
@@ -661,18 +650,25 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |  "a": { }
            |}
            |/a/src/main/scala/a/Main.scala
-           |${testCase.replace("@@", "")}
+           |package a
+           |
+           |object O {
+           |  class A {
+           |    /**
+           |     * Calls [[this.g]]
+           |     */
+           |    def f: Int = g
+           |    def g: Int = ???
+           |  }
+           |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      locations <- server.definition(
+      _ = assertDefinitionAtLocation(
         "a/src/main/scala/a/Main.scala",
-        testCase,
-        workspace,
+        "this@@.g",
+        "a/src/main/scala/a/Main.scala",
+        expectedLine = 8,
       )
-      _ = assert(locations.length == 1)
-      _ = assert(locations.head.getUri().endsWith("a/Main.scala"))
-      _ = assertEquals(locations.head.getRange().getStart().getLine(), 8)
     } yield ()
   }
 

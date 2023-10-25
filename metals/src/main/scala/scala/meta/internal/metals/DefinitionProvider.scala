@@ -116,7 +116,9 @@ final class DefinitionProvider(
     fromCompilerOrSemanticdb.map { definition =>
       if (definition.isEmpty && !definition.symbol.endsWith("/")) {
         val isScala3 =
-          scalaVersionSelector.scalaVersionForPath(path).startsWith("3")
+          ScalaVersions.isScala3Version(
+            scalaVersionSelector.scalaVersionForPath(path)
+          )
         scaladocDefinitionProvider
           .definition(path, params, isScala3)
           .orElse(fromSearch(path, params.getPosition(), token))
