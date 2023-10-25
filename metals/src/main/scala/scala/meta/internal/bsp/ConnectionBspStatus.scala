@@ -73,7 +73,8 @@ class ConnectionBspStatus(
     val showParams =
       state match {
         case Disconnected => ConnectionBspStatus.disconnectedParams
-        case NoResponse => ConnectionBspStatus.noResponseParams(serverName, icons)
+        case NoResponse =>
+          ConnectionBspStatus.noResponseParams(serverName, icons)
         case Connected(serverName) =>
           ConnectionBspStatus.connectedParams(serverName, icons)
         case ErrorMessage(message) =>

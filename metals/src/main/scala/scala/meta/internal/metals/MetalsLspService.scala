@@ -382,6 +382,9 @@ class MetalsLspService(
     )
   )
 
+  private val connectionBspStatus =
+    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
+
   private val bspErrorHandler: BspErrorHandler =
     new BspErrorHandler(
       () => bspSession,
@@ -423,9 +426,6 @@ class MetalsLspService(
     tables,
     clientConfig.initialConfig,
   )
-
-  private val connectionBspStatus =
-    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
 
   private val bspServers: BspServers = new BspServers(
     folder,
@@ -1252,6 +1252,7 @@ class MetalsLspService(
   def didChangeWatchedFiles(
       events: List[FileEvent]
   ): Future[Unit] = {
+    scribe.debug(s"did change watched files event $events")
     val importantEvents =
       events
         .filterNot(event =>
@@ -1264,7 +1265,13 @@ class MetalsLspService(
         .toSeq
     val (deleteEvents, changeAndCreateEvents) =
       importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
-    deleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
+    val (bloopReportDelete, otherDeleteEvents) =
+      deleteEvents.partition(
+        _.getUri().toAbsolutePath.toNIO
+          .startsWith(reports.bloop.maybeReportsDir)
+      )
+    if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
+    otherDeleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
     onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
   }
 
@@ -1292,7 +1299,6 @@ class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
-
     event.eventType match {
       case EventType.CreateOrModify
           if path.isInBspDirectory(folder) && path.extension == "json"
@@ -1301,13 +1307,7 @@ class MetalsLspService(
         quickConnectToBuildServer()
       case _ =>
     }
-    if (
-      path.toNIO.startsWith(
-        reports.bloop.maybeReportsDir
-      ) && event.eventType == EventType.Delete
-    ) {
-      Future(connectionBspStatus.onReportsUpdate()).asJava
-    } else if (isScalaOrJava && event.eventType == EventType.Delete) {
+    if (isScalaOrJava && event.eventType == EventType.Delete) {
       onDelete(path).asJava
     } else if (
       isScalaOrJava &&
