@@ -18,7 +18,7 @@ final class Warnings(
     buildTargets: BuildTargets,
     statusBar: StatusBar,
     icons: Icons,
-    buildTools: BuildTools,
+    buildTools: Option[BuildTools],
     isCompiling: BuildTargetIdentifier => Boolean,
 ) {
   def noSemanticdb(path: AbsolutePath): Unit = {
@@ -102,7 +102,7 @@ final class Warnings(
         }
     }
 
-    if (buildTools.isEmpty)
+    if (buildTools.exists(_.isEmpty))
       noBuildTool()
     else
       buildTargets.inverseSources(path) match {
@@ -127,30 +127,33 @@ final class Warnings(
       }
   }
 
-  def noBuildTool(): Unit = {
-    val tools = buildTools.all
-    if (tools.isEmpty) {
-      scribe.warn(
-        s"no build tool detected in workspace '$workspace'. " +
-          "The most common cause for this problem is that the editor was opened in the wrong working directory, " +
-          "for example if you use sbt then the workspace directory should contain build.sbt. "
-      )
-    } else {
-      val what =
-        if (tools.length == 1) {
-          s"build tool ${tools.head} is"
+  def noBuildTool(): Unit =
+    buildTools match {
+      case None =>
+      case Some(buildTools) =>
+        val tools = buildTools.all
+        if (tools.isEmpty) {
+          scribe.warn(
+            s"no build tool detected in workspace '$workspace'. " +
+              "The most common cause for this problem is that the editor was opened in the wrong working directory, " +
+              "for example if you use sbt then the workspace directory should contain build.sbt. "
+          )
         } else {
-          s"build tools ${tools.mkString(", ")} are"
+          val what =
+            if (tools.length == 1) {
+              s"build tool ${tools.head} is"
+            } else {
+              s"build tools ${tools.mkString(", ")} are"
+            }
+          scribe.warn(
+            s"the $what not supported by Metals, please open an issue if you would like to contribute to improve the situation."
+          )
         }
-      scribe.warn(
-        s"the $what not supported by Metals, please open an issue if you would like to contribute to improve the situation."
-      )
+        statusBar.addMessage(
+          MetalsStatusParams(
+            s"${icons.alert}No build tool",
+            command = ClientCommands.ToggleLogs.id,
+          )
+        )
     }
-    statusBar.addMessage(
-      MetalsStatusParams(
-        s"${icons.alert}No build tool",
-        command = ClientCommands.ToggleLogs.id,
-      )
-    )
-  }
 }

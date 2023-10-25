@@ -6,10 +6,16 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
+import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.builds.BspErrorHandler
+import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.LogBspErrorHandler
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.io.AbsolutePath
 
@@ -48,8 +54,28 @@ class FallbackMetalsLspService(
       headDoctor,
     ) {
 
-  buildServerPromise.success(())
-  indexingPromise.success(())
+  override protected def doctor: Doctor =
+    new Doctor(
+      path,
+      buildTargets,
+      diagnostics,
+      languageClient,
+      currentBuildServer = () => None,
+      calculateNewBuildServer = () => None,
+      tables,
+      clientConfig,
+      serverInputs.mtagsResolver,
+      () => userConfig.javaHome,
+      maybeJdkVersion,
+      folderName = getVisibleName,
+      buildTools = None,
+      bspStatus = None
+    )
+  override protected def bspSession: Option[BspSession] = None
+  override protected def buildServerPromise: Promise[Unit] =
+    Promise().success(())
+  override protected def bspErrorHandler: BspErrorHandler = LogBspErrorHandler
+  override protected def optBuildTools: Option[BuildTools] = None
 
   private val files: AtomicReference[Set[AbsolutePath]] = new AtomicReference(
     Set.empty

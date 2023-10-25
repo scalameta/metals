@@ -17,14 +17,15 @@ import org.eclipse.lsp4j.ClientInfo
 class GithubNewIssueUrlCreator(
     getFoldersInfo: () => List[GitHubIssueFolderInfo],
     clientInfo: ClientInfo,
+    fallbackServiceBuildTargets: () => BuildTargets,
 ) {
 
   def buildUrl(): String = {
     val foldersInfo = getFoldersInfo()
     val scalaVersions =
-      getFoldersInfo()
-        .flatMap(_.buildTargets.allScala)
-        .map(_.scalaVersion)
+      (fallbackServiceBuildTargets() :: getFoldersInfo()
+        .map(_.buildTargets))
+        .flatMap(_.allScala.map(_.scalaVersion))
         .toSet
         .mkString("; ")
     val clientVersion =

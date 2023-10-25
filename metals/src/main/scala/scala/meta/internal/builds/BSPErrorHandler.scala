@@ -9,11 +9,11 @@ import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Tables
 
-class BspErrorHandler(
+class ShowBspErrorHandler(
     currentSession: () => Option[BspSession],
     tables: Tables,
     bspStatus: ConnectionBspStatus,
-)(implicit reportContext: ReportContext) {
+)(implicit reportContext: ReportContext) extends BspErrorHandler {
   def onError(message: String): Unit = {
     if (shouldShowBspError) {
       for {
@@ -48,4 +48,12 @@ class BspErrorHandler(
       )
     )
   }
+}
+
+trait BspErrorHandler {
+  def onError(message: String): Unit
+}
+
+object LogBspErrorHandler extends BspErrorHandler {
+  def onError(message: String): Unit = scribe.error(message)
 }
