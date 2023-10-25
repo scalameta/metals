@@ -35,11 +35,14 @@ class BspErrorHandler(
       .digest(message.getBytes)
       .map(_.toChar)
       .mkString
+    val sanitized = reportContext.bloop.sanitize(message)
     reportContext.bloop.create(
       Report(
-        message.trimTo(20),
-        message,
-        shortSummary = message.trimTo(100),
+        sanitized.trimTo(20),
+        s"""|### Bloop error:
+            |
+            |$message""".stripMargin,
+        shortSummary = sanitized.trimTo(100),
         path = None,
         id = Some(id),
       )

@@ -32,6 +32,7 @@ trait Reporter {
   ): List[TimestampedFile]
   def getReports(): List[TimestampedFile]
   def deleteAll(): Unit
+  def sanitize(message: String) = message
 }
 
 class StdReportContext(
@@ -143,7 +144,7 @@ class StdReporter(
       }
     }
 
-  private def sanitize(text: String) = {
+  override def sanitize(text: String): String = {
     val textAfterWokspaceReplace =
       text.replace(workspace.toString(), StdReportContext.WORKSPACE_STR)
     userHome
