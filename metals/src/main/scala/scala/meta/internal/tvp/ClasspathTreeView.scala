@@ -105,20 +105,19 @@ class ClasspathTreeView[Value, Key](
           else MetalsCommand.goto(child.symbol)
 
         val icon = child.kind match {
-          case k.OBJECT | k.PACKAGE_OBJECT => "object"
-          case k.TRAIT => "trait"
-          case k.CLASS => "class"
-          case k.INTERFACE => "interface"
-          case k.CONSTRUCTOR => "method"
-          case k.METHOD | k.MACRO =>
-            if (child.properties.isVal) "val"
-            else if (child.properties.isVar) "var"
-            else "method"
-          case k.FIELD =>
-            if (child.properties.isEnum) "enum"
-            else "field"
-          case k.TYPE_PARAMETER => "type"
-          case k.TYPE => "type"
+          case k.OBJECT | k.PACKAGE_OBJECT => "symbol-object"
+          case k.TRAIT => "symbol-interface"
+          case k.CLASS if child.properties.isEnum => "symbol-enum"
+          case k.CLASS => "symbol-class"
+          case k.INTERFACE => "symbol-interface"
+          case k.CONSTRUCTOR => "symbol-method"
+          case k.METHOD | k.MACRO if (child.properties.isVal)  => "symbol-field"
+          case k.METHOD | k.MACRO if (child.properties.isVar) => "symbol-variable"
+          case k.METHOD | k.MACRO => "symbol-method"
+          case k.FIELD if (child.properties.isEnum) => "symbol-enum-member"
+          case k.FIELD => "symbol-field"
+          case k.TYPE_PARAMETER => "symbol-type-parameter"
+          case k.TYPE => "symbol-type-parameter"
           case _ => null
         }
 
