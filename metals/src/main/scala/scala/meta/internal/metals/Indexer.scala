@@ -488,6 +488,7 @@ final case class Indexer(
     val jdkSources = JdkSources(userConfig().javaHome)
     jdkSources match {
       case Right(zip) =>
+        scribe.debug(s"Indexing JDK sources from $zip")
         usedJars += zip
         addSourceJarSymbols(zip)
       case Left(notFound) =>

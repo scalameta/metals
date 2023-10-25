@@ -111,8 +111,9 @@ class ClasspathTreeView[Value, Key](
           case k.CLASS => "symbol-class"
           case k.INTERFACE => "symbol-interface"
           case k.CONSTRUCTOR => "symbol-method"
-          case k.METHOD | k.MACRO if (child.properties.isVal)  => "symbol-field"
-          case k.METHOD | k.MACRO if (child.properties.isVar) => "symbol-variable"
+          case k.METHOD | k.MACRO if (child.properties.isVal) => "symbol-field"
+          case k.METHOD | k.MACRO if (child.properties.isVar) =>
+            "symbol-variable"
           case k.METHOD | k.MACRO => "symbol-method"
           case k.FIELD if (child.properties.isEnum) => "symbol-enum-member"
           case k.FIELD => "symbol-field"

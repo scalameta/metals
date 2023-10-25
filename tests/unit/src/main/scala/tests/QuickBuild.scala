@@ -208,7 +208,7 @@ case class QuickBuild(
     val javaHome = Option(platformJavaHome)
       .map(Paths.get(_))
       .orElse(Option(Properties.jdkHome).map(Paths.get(_)))
-      
+
     val tags = if (isTest) Tag.Test :: Nil else Nil
 
     val scalaCompiler =
