@@ -215,23 +215,36 @@ final class ForwardingMetalsBuildClient(
 
   @JsonNotification("build/taskProgress")
   def buildTaskProgress(params: TaskProgressParams): Unit = {
+    def buildTargetFromParams: Option[BuildTargetIdentifier] =
+      for {
+        data <- Option(params.getData).collect { case o: JsonObject =>
+          o
+        }
+        targetElement <- Option(data.get("target"))
+        if targetElement.isJsonObject
+        target = targetElement.getAsJsonObject
+        uriElement <- Option(target.get("uri"))
+        if uriElement.isJsonPrimitive
+        uri = uriElement.getAsJsonPrimitive
+        if uri.isString
+      } yield new BuildTargetIdentifier(uri.getAsString)
+
     params.getDataKind match {
       case "bloop-progress" =>
         for {
-          data <- Option(params.getData).collect { case o: JsonObject =>
-            o
-          }
-          targetElement <- Option(data.get("target"))
-          if targetElement.isJsonObject
-          target = targetElement.getAsJsonObject
-          uriElement <- Option(target.get("uri"))
-          if uriElement.isJsonPrimitive
-          uri = uriElement.getAsJsonPrimitive
-          if uri.isString
-          buildTarget = new BuildTargetIdentifier(uri.getAsString)
+          buildTarget <- buildTargetFromParams
           report <- compilations.get(buildTarget)
         } yield {
           report.progress.update(params.getProgress, params.getTotal)
+        }
+      case "compile-progress" =>
+        // "compile-progress" is from sbt, however its progress field is actually a percentage,
+        // so we should fix the total to 100.
+        for {
+          buildTarget <- buildTargetFromParams
+          report <- compilations.get(buildTarget)
+        } yield {
+          report.progress.update(params.getProgress, newTotal = 100)
         }
       case _ =>
     }
