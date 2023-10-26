@@ -32,7 +32,6 @@ import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb
@@ -105,7 +104,7 @@ final class TestSuitesProvider(
       case _ => ()
     }
 
-  override def onDelete(file: SemanticdbPath): Unit = ()
+  override def onDelete(file: AbsolutePath): Unit = ()
   override def reset(): Unit = ()
 
   def onFileDelete(file: AbsolutePath): Unit = {

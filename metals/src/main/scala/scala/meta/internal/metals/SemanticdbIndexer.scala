@@ -17,7 +17,7 @@ import com.google.protobuf.InvalidProtocolBufferException
 
 trait SemanticdbFeatureProvider {
   def onChange(docs: TextDocuments, path: AbsolutePath): Unit
-  def onDelete(path: SemanticdbPath): Unit
+  def onDelete(path: AbsolutePath): Unit
   def reset(): Unit
 }
 
@@ -40,7 +40,10 @@ class SemanticdbIndexer(
   }
 
   def onDelete(semanticdbFile: SemanticdbPath): Unit = {
-    providers.foreach(_.onDelete(semanticdbFile))
+    SemanticdbClasspath.toScala(workspace, semanticdbFile).foreach {
+      sourceFile =>
+        providers.foreach(_.onDelete(sourceFile))
+    }
   }
 
   /**

@@ -13,7 +13,6 @@ import scala.meta.Importee
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
-import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.TokenEditDistance
@@ -56,7 +55,7 @@ final class ReferenceProvider(
     index.clear()
   }
 
-  override def onDelete(file: SemanticdbPath): Unit = {
+  override def onDelete(file: AbsolutePath): Unit = {
     index.remove(file.toNIO)
   }
 
