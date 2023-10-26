@@ -748,7 +748,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |{"a": {}}
            |/a/Main.worksheet.sc
            |def method(implicit str: String) = str + str
-           |implicit val name = "Susan".stripMargin
+           |implicit val name: String = "Susan".stripMargin
            |val greeting = s"Hello $$name"
            |method
            |""".stripMargin
@@ -758,7 +758,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|def method(implicit str: String) = str + str
-           |implicit val name = "Susan".stripMargin // : String = "Susan"
+           |implicit val name: String = "Susan".stripMargin // : String = "Susan"
            |val greeting = s"Hello $name" // : String = "Hello Susan"
            |method // : String = "SusanSusan"
            |""".stripMargin,
