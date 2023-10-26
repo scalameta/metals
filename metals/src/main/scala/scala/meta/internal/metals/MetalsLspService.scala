@@ -392,7 +392,7 @@ class MetalsLspService(
       connectionBspStatus,
     )
 
-  private val buildClient: ForwardingMetalsBuildClient =
+  val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,
       diagnostics,

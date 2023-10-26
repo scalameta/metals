@@ -187,6 +187,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     clientCommands.asScala.toList.map(_.getCommand)
   }
 
+  def pollStatusBar(): String = statusParams.poll().text
+
   def statusBarHistory: String = {
     statusParams.asScala
       .map { params =>
