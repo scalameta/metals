@@ -114,9 +114,9 @@ final class FormattingProvider(
     scalafmtConf(projectRoot) match {
       case None =>
         handleMissingFile(projectRoot).map {
-          case true =>
-            runFormat(path, projectRoot, input).asJava
-          case false =>
+          case Some(conf) =>
+            runFormat(path, conf, input).asJava
+          case None =>
             Collections.emptyList[l.TextEdit]()
         }
       case Some(config) =>
@@ -132,7 +132,7 @@ final class FormattingProvider(
             // before returning future.
             promise.future.map {
               case true if !token.isCancelled =>
-                runFormat(path, projectRoot, input).asJava
+                runFormat(path, config, input).asJava
               case _ => result.asJava
             }
           case None =>
@@ -215,29 +215,37 @@ final class FormattingProvider(
     } else Future.successful(None)
   }
 
-  private def handleMissingFile(projectRoot: AbsolutePath): Future[Boolean] = {
+  private def handleMissingFile(
+      projectRoot: AbsolutePath
+  ): Future[Option[AbsolutePath]] = {
     if (!tables.dismissedNotifications.CreateScalafmtFile.isDismissed) {
       val params = MissingScalafmtConf.params()
       client.showMessageRequest(params).asScala.map { item =>
-        if (item == MissingScalafmtConf.createFile) {
+        if (
+          item == MissingScalafmtConf.createFile || item == MissingScalafmtConf.runDefaults
+        ) {
+          val toWrite =
+            if (item == MissingScalafmtConf.createFile)
+              projectRoot.resolve(defaultScalafmtLocation)
+            else projectRoot.resolve(Directories.hiddenScalafmt)
           Files
             .write(
-              projectRoot.resolve(defaultScalafmtLocation).toNIO,
+              toWrite.toNIO,
               initialConfig().getBytes(StandardCharsets.UTF_8),
             )
           client.showMessage(MissingScalafmtConf.fixedParams(isCancelled))
-          true
+          Some(toWrite)
         } else if (item == Messages.notNow) {
           tables.dismissedNotifications.CreateScalafmtFile
             .dismiss(24, TimeUnit.HOURS)
-          false
+          None
         } else if (item == Messages.dontShowAgain) {
           tables.dismissedNotifications.CreateScalafmtFile
             .dismissForever()
-          false
-        } else false
+          None
+        } else None
       }
-    } else Future.successful(false)
+    } else Future.successful(None)
   }
 
   private def initialConfig(): String = {
@@ -424,8 +432,10 @@ final class FormattingProvider(
       val defaultLocation = projectRoot.resolve(defaultScalafmtLocation)
       lazy val scalacliDefault =
         projectRoot.resolve(".scala-build/.scalafmt.conf")
+      lazy val hiddenDefault = projectRoot.resolve(Directories.hiddenScalafmt)
       if (defaultLocation.exists) Some(defaultLocation)
       else if (scalacliDefault.exists) Some(scalacliDefault)
+      else if (hiddenDefault.exists) Some(hiddenDefault)
       else None
     }
     configpath.orElse(default)
