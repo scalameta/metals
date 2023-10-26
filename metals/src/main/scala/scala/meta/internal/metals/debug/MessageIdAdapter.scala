@@ -13,7 +13,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Message
 
 /**
  * Assigns an id to synthetic messages and fixes the id of
- * non-synthetic ones to keep the the id sequence monotonic.
+ * non-synthetic ones to keep the id sequence monotonic.
  *
  * Additionally, adapts the request id for responses being produced
  * to keep the whole procedure transparent for the caller.

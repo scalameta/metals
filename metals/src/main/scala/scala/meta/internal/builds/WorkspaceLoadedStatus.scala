@@ -3,7 +3,7 @@ package scala.meta.internal.builds
 import scala.meta.internal.builds.Digest.Status
 
 /**
- * Represents the the status of a `workspace/reload` or a `bloopInstall` request.
+ * Represents the status of a `workspace/reload` or a `bloopInstall` request.
  */
 sealed abstract class WorkspaceLoadedStatus extends Product with Serializable {
   import WorkspaceLoadedStatus._
