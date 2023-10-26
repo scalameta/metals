@@ -1168,6 +1168,7 @@ class MetalsLspService(
     compilers.didClose(path)
     trees.didClose(path)
     diagnostics.onClose(path)
+    interactiveSemanticdbs.onClose(path)
   }
 
   override def didSave(

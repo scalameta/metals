@@ -62,11 +62,14 @@ final class InteractiveSemanticdbs(
       source: AbsolutePath
   ): TextDocumentLookup = textDocument(source, unsavedContents = None)
 
+  def onClose(path: AbsolutePath): Unit = {
+    textDocumentCache.remove(path)
+  }
+
   def textDocument(
       source: AbsolutePath,
       unsavedContents: Option[String],
   ): TextDocumentLookup = {
-
     def doesNotBelongToBuildTarget = buildTargets.inverseSources(source).isEmpty
     def shouldTryCalculateInteractiveSemanticdb = {
       source.isLocalFileSystem(workspace) && (
