@@ -205,10 +205,6 @@ final class FormattingProvider(
               tables.dismissedNotifications.ChangeScalafmtVersion
                 .dismiss(24, TimeUnit.HOURS)
               None
-            } else if (item == Messages.dontShowAgain) {
-              tables.dismissedNotifications.ChangeScalafmtVersion
-                .dismissForever()
-              None
             } else None
           }
       }
@@ -224,16 +220,15 @@ final class FormattingProvider(
         if (
           item == MissingScalafmtConf.createFile || item == MissingScalafmtConf.runDefaults
         ) {
-          val toWrite =
-            if (item == MissingScalafmtConf.createFile)
-              projectRoot.resolve(defaultScalafmtLocation)
-            else projectRoot.resolve(Directories.hiddenScalafmt)
-          Files
-            .write(
-              toWrite.toNIO,
-              initialConfig().getBytes(StandardCharsets.UTF_8),
-            )
-          client.showMessage(MissingScalafmtConf.fixedParams(isCancelled))
+          val relative =
+            if (item == MissingScalafmtConf.createFile) defaultScalafmtLocation
+            else Directories.hiddenScalafmt
+          val toWrite = projectRoot.resolve(relative)
+          Files.write(
+            toWrite.toNIO,
+            initialConfig().getBytes(StandardCharsets.UTF_8),
+          )
+          client.showMessage(MissingScalafmtConf.fixedParams(relative))
           Some(toWrite)
         } else if (item == Messages.notNow) {
           tables.dismissedNotifications.CreateScalafmtFile
