@@ -2,7 +2,7 @@ package scala.meta.internal.pc
 
 /**
  * Represents the Compiler InitializationOptions that the client
- * sends in during the `initialize` process. If the the client doesn't
+ * sends in during the `initialize` process. If the client doesn't
  * doesn't explicity send in anything, we default everything to None to
  * signify the client didn't set this. This will then default to what is
  * currently set (more than likely the defaults) in the PresentationCompilerConfigImpl.

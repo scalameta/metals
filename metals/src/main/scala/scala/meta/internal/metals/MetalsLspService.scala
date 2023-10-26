@@ -2469,7 +2469,7 @@ class MetalsLspService(
   }
 
   /**
-   * Returns the the definition location or reference locations of a symbol at a
+   * Returns the definition location or reference locations of a symbol at a
    * given text document position. If the symbol represents the definition
    * itself, this method returns the reference locations, otherwise this returns
    * definition location. https://github.com/scalameta/metals/issues/755
