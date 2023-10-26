@@ -615,6 +615,7 @@ object Messages {
       else ""
 
     def createFile = new MessageActionItem("Create .scalafmt.conf")
+    def runDefaults = new MessageActionItem("Run with defaults")
 
     def fixedParams(isAgain: Boolean): MessageParams =
       new MessageParams(
@@ -636,6 +637,7 @@ object Messages {
       params.setActions(
         List(
           createFile,
+          runDefaults,
           notNow,
           dontShowAgain,
         ).asJava
