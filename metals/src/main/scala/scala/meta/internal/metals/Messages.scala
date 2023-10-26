@@ -12,6 +12,7 @@ import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
 
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
@@ -615,20 +616,20 @@ object Messages {
       else ""
 
     def createFile = new MessageActionItem("Create .scalafmt.conf")
-    def runDefaults = new MessageActionItem("Run with defaults")
+    def runDefaults = new MessageActionItem("Run anyway")
 
-    def fixedParams(isAgain: Boolean): MessageParams =
+    def fixedParams(where: RelativePath): MessageParams =
       new MessageParams(
         MessageType.Info,
-        s"Created .scalafmt.conf${tryAgain(isAgain)}.",
+        s"Created $where.",
       )
 
     def isCreateScalafmtConf(params: ShowMessageRequestParams): Boolean =
       params.getMessage == createScalafmtConfMessage
 
     def createScalafmtConfMessage: String =
-      s"Unable to format since this workspace has no .scalafmt.conf file. " +
-        s"To fix this problem, create an empty .scalafmt.conf and try again."
+      s"No .scalafmt.conf file detected. " +
+        s"How would you like to proceed:"
 
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
@@ -639,7 +640,6 @@ object Messages {
           createFile,
           runDefaults,
           notNow,
-          dontShowAgain,
         ).asJava
       )
       params
