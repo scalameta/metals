@@ -79,7 +79,7 @@ final class JarTopLevels(conn: () => Connection) {
       val toplevels = List.newBuilder[(AbsolutePath, String, OverriddenSymbol)]
       conn()
         .query(
-          """select th.symbol, th.extended_name, th.extended_name_offset, th.path
+          """select th.symbol, th.parent_name, th.parent_name_offset, th.path, th.is_resolved
             |from indexed_jar ij
             |left join type_hierarchy th
             |on ij.id=th.jar
@@ -90,12 +90,13 @@ final class JarTopLevels(conn: () => Connection) {
               .getString(2) != null && rs.getString(4) != null
           ) {
             val symbol = rs.getString(1)
-            val extendedName = rs.getString(2)
-            val extendedOffset = rs.getInt(3)
+            val parentName = rs.getString(2)
+            val parentOffset = rs.getInt(3)
             val path = AbsolutePath(fs.getPath(rs.getString(4)))
+            val isResolved = rs.getBoolean(5)
             val overridden =
-              if (extendedOffset < 0) ResolvedOverriddenSymbol(extendedName)
-              else UnresolvedOverriddenSymbol(extendedName, extendedOffset)
+              if (isResolved) ResolvedOverriddenSymbol(parentName)
+              else UnresolvedOverriddenSymbol(parentName, parentOffset)
             toplevels += ((path, symbol, overridden))
           }
         }
@@ -201,17 +202,19 @@ final class JarTopLevels(conn: () => Connection) {
       var symbolStmt: PreparedStatement = null
       try {
         symbolStmt = conn().prepareStatement(
-          s"insert into type_hierarchy (symbol, extended_name, extended_name_offset, path, jar) values (?, ?, ?, ?, ?)"
+          s"insert into type_hierarchy (symbol, parent_name, parent_name_offset, path, jar, is_resolved) values (?, ?, ?, ?, ?, ?)"
         )
         type_hierarchy.foreach { case (path, symbol, overridden) =>
           symbolStmt.setString(1, symbol)
           overridden match {
             case ResolvedOverriddenSymbol(name) =>
               symbolStmt.setString(2, name)
-              symbolStmt.setInt(3, -1)
+              symbolStmt.setInt(3, 0)
+              symbolStmt.setBoolean(6, true)
             case UnresolvedOverriddenSymbol(name, pos) =>
               symbolStmt.setString(2, name)
               symbolStmt.setInt(3, pos)
+              symbolStmt.setBoolean(6, false)
           }
           symbolStmt.setString(4, path.toString())
           symbolStmt.setInt(5, jar)

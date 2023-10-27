@@ -24,7 +24,6 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
-import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
