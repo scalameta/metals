@@ -6,7 +6,9 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-class DefinitionLspSuite extends BaseLspSuite("definition") {
+class DefinitionLspSuite
+    extends BaseLspSuite("definition")
+    with ScriptsAssertions {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
@@ -602,6 +604,112 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |  val aa/*L5*/ = new A/*L0*/(a/*L1*/ = 1, b/*L2*/ = 2)
            |}
            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("scaladoc-definition") {
+    val testCase =
+      """|package a
+         |
+         |object O {
+         |  /**
+         |   * Returns a [[scala.Do@@uble]] representing yada yada yada...
+         |   */
+         |  def f: Double = ???
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty)
+      _ = assert(locations.head.getUri().endsWith("scala/Double.scala"))
+    } yield ()
+  }
+
+  test("scaladoc-definition-this") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object O {
+           |  class A {
+           |    /**
+           |     * Calls [[this.g]]
+           |     */
+           |    def f: Int = g
+           |    def g: Int = ???
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ = assertDefinitionAtLocation(
+        "a/src/main/scala/a/Main.scala",
+        "this@@.g",
+        "a/src/main/scala/a/Main.scala",
+        expectedLine = 8,
+      )
+    } yield ()
+  }
+
+  test("scaladoc-find-all-overridden-methods") {
+    val testCase =
+      """|package a.internal
+         |
+         |object O {
+         |  class A {
+         |    /**
+         |     * Calls [[fo@@o]]
+         |     */
+         |    def f: Int = g
+         |    def foo: Int = ???
+         |    def foo(i: Int): Int = ???
+         |    def foo(str: String, i: Int): Int = ???
+         |  }
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.length == 3)
+      _ = assert(locations.forall(_.getUri().endsWith("a/Main.scala")))
+      _ = assertEquals(
+        locations.map(_.getRange().getStart().getLine()),
+        List(8, 9, 10),
       )
     } yield ()
   }
