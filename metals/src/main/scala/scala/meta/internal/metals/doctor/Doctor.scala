@@ -409,23 +409,11 @@ final class Doctor(
         case (v1 -> _, v2 -> _) => v1.orderingNumber < v2.orderingNumber
       }
       .foreach { case (group, reports) =>
-        def id =
-          group match {
-            case Bloop => "bloop"
-            case BuildTarget(name) => name
-            case Other => "other"
-          }
-        def name =
-          group match {
-            case Bloop => "Bloop error reports"
-            case BuildTarget(name) => name
-            case Other => "Other error reports"
-          }
         html.element("details")(details =>
           details
-            .element("summary", s"id=reports-$id}")(
+            .element("summary", s"id=reports-${group.id}")(
               _.element("b")(
-                _.text(s"$name (${reports.length}):")
+                _.text(s"${group.name} (${reports.length}):")
               )
             )
             .element("table") { table =>
@@ -683,15 +671,23 @@ object Doctor {
 
 sealed trait ErrorReportsGroup {
   def orderingNumber: Int
+  def id: String
+  def name: String
 }
+
 case object Bloop extends ErrorReportsGroup {
   def orderingNumber = 1
+  def id: String = "bloop"
+  def name: String = "Bloop error reports"
 }
 case class BuildTarget(name: String) extends ErrorReportsGroup {
   def orderingNumber = 2
+  def id: String = name
 }
 case object Other extends ErrorReportsGroup {
   def orderingNumber = 3
+  def id: String = "other"
+  def name: String = "Other error reports"
 }
 
 object ErrorReportsGroup {

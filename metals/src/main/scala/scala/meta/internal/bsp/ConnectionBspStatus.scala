@@ -18,7 +18,7 @@ class ConnectionBspStatus(
     icons: Icons,
 )(implicit rc: ReportContext) {
   private val status = new AtomicReference[BspStatusState](
-    BspStatusState(Disconnected, None, None)
+    BspStatusState(Disconnected, None, None, shouldShow = false)
   )
   private val currentSessionErrors = new AtomicReference[Set[String]](Set())
 
@@ -41,9 +41,8 @@ class ConnectionBspStatus(
   }
 
   def onReportsUpdate(): Unit = {
-    val currentState = status.get()
-    currentState.currentState match {
-      case error @ ErrorMessage(_) => showState(error, currentState)
+    status.get().currentState match {
+      case ErrorMessage(_) => showState(status.get())
       case _ =>
     }
   }
@@ -59,22 +58,21 @@ class ConnectionBspStatus(
       newState: BspServerState,
       errorReports: Set[String] = currentSessionErrors.get(),
   ) = {
-    val old = status.getAndUpdate(_.changeState(newState)._2)
-    val (newServerState, newBspState) = old.changeState(newState)
-    newServerState.foreach(showState(_, newBspState, errorReports))
+    val newServerState = status.updateAndGet(_.changeState(newState))
+    if (newServerState.shouldShow) {
+      showState(newServerState, errorReports)
+    }
   }
 
   private def showState(
-      state: BspServerState,
-      currState: BspStatusState,
+      statusState: BspStatusState,
       errorReports: Set[String] = currentSessionErrors.get(),
   ) = {
-    def serverName = currState.serverName.getOrElse("bsp")
     val showParams =
-      state match {
+      statusState.currentState match {
         case Disconnected => ConnectionBspStatus.disconnectedParams
         case NoResponse =>
-          ConnectionBspStatus.noResponseParams(serverName, icons)
+          ConnectionBspStatus.noResponseParams(statusState.serverName, icons)
         case Connected(serverName) =>
           ConnectionBspStatus.connectedParams(serverName, icons)
         case ErrorMessage(message) =>
@@ -82,10 +80,10 @@ class ConnectionBspStatus(
             rc.bloop.getReports().map(_.toPath.toUri().toString()).toSet
           )
           if (currentSessionReports.isEmpty)
-            ConnectionBspStatus.connectedParams(serverName, icons)
+            ConnectionBspStatus.connectedParams(statusState.serverName, icons)
           else
             ConnectionBspStatus.bspErrorParams(
-              serverName,
+              statusState.serverName,
               icons,
               message,
               currentSessionReports.size,
@@ -143,21 +141,25 @@ case object NoResponse extends BspServerState
 
 case class BspStatusState(
     currentState: BspServerState,
-    previousState: Option[BspServerState],
-    serverName: Option[String],
+    lastError: Option[ErrorMessage],
+    optServerName: Option[String],
+    shouldShow: Boolean,
 ) {
+  val serverName: String = optServerName.getOrElse("bsp")
   def changeState(
       newState: BspServerState
-  ): (Option[BspServerState], BspStatusState) = {
+  ): BspStatusState = {
     newState match {
       case Disconnected if currentState != Disconnected => moveTo(Disconnected)
       case NoResponse if currentState != NoResponse => moveTo(NoResponse)
       case ErrorMessage(msg) =>
         currentState match {
           case NoResponse =>
-            (
-              None,
-              BspStatusState(NoResponse, Some(ErrorMessage(msg)), serverName),
+            BspStatusState(
+              NoResponse,
+              Some(ErrorMessage(msg)),
+              optServerName,
+              shouldShow = false,
             )
           case _ => moveTo(ErrorMessage(msg))
         }
@@ -165,27 +167,27 @@ case class BspStatusState(
         currentState match {
           case Disconnected => moveTo(Connected(serverName))
           case NoResponse =>
-            previousState match {
-              case Some(ErrorMessage(msg)) => moveTo(ErrorMessage(msg))
+            lastError match {
+              case Some(error) => moveTo(error)
               case _ => moveTo(Connected(serverName))
             }
-          case _ => (None, this)
+          case _ => this.copy(shouldShow = false)
         }
-      case _ => (None, this)
+      case _ => this.copy(shouldShow = false)
     }
   }
 
   def moveTo(
       newState: BspServerState
-  ): (Some[BspServerState], BspStatusState) = {
+  ): BspStatusState = {
     val newServerName =
       newState match {
         case Connected(serverName) => Some(serverName)
-        case _ => serverName
+        case _ => optServerName
       }
-    (
-      Some(newState),
-      BspStatusState(newState, Some(currentState), newServerName),
-    )
+    val lastError = Some(currentState).collect { case error: ErrorMessage =>
+      error
+    }
+    BspStatusState(newState, lastError, newServerName, shouldShow = true)
   }
 }

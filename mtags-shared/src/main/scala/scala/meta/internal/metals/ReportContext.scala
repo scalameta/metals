@@ -104,7 +104,7 @@ class StdReporter(
   private val reported = new AtomicReference(Map[String, Path]())
 
   def readInIds(): Unit = {
-    reported.updateAndGet(_ ++ getReports().flatMap { report =>
+    val reports = getReports().flatMap { report =>
       val lines = Files.readAllLines(report.file.toPath())
       if (lines.size() > 0) {
         lines.get(0) match {
@@ -113,7 +113,8 @@ class StdReporter(
           case _ => None
         }
       } else None
-    }.toMap)
+    }.toMap
+    reported.updateAndGet(_ ++ reports)
   }
 
   override def create(
@@ -134,7 +135,7 @@ class StdReporter(
           reportedMap = reported.getAndUpdate(map =>
             if (map.contains(id)) map else map + (id -> path)
           )
-          duplicate <- reportedMap.get(sanitizedId.get)
+          duplicate <- reportedMap.get(id)
         } yield duplicate
 
       optDuplicate.orElse {
