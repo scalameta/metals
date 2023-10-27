@@ -234,10 +234,6 @@ final class FormattingProvider(
           tables.dismissedNotifications.CreateScalafmtFile
             .dismiss(24, TimeUnit.HOURS)
           None
-        } else if (item == Messages.dontShowAgain) {
-          tables.dismissedNotifications.CreateScalafmtFile
-            .dismissForever()
-          None
         } else None
       }
     } else Future.successful(None)
@@ -425,13 +421,10 @@ final class FormattingProvider(
     val configpath = userConfig().scalafmtConfigPath
     val default: Option[AbsolutePath] = {
       val defaultLocation = projectRoot.resolve(defaultScalafmtLocation)
-      lazy val scalacliDefault =
+      val scalacliDefault =
         projectRoot.resolve(".scala-build/.scalafmt.conf")
-      lazy val hiddenDefault = projectRoot.resolve(Directories.hiddenScalafmt)
-      if (defaultLocation.exists) Some(defaultLocation)
-      else if (scalacliDefault.exists) Some(scalacliDefault)
-      else if (hiddenDefault.exists) Some(hiddenDefault)
-      else None
+      val hiddenDefault = projectRoot.resolve(Directories.hiddenScalafmt)
+      List(defaultLocation, scalacliDefault, hiddenDefault).find(_.exists)
     }
     configpath.orElse(default)
   }
