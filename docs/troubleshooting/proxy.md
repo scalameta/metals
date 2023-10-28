@@ -173,7 +173,6 @@ java.util.concurrent.TimeoutException
 WARN  Stopped configuration of SemanticDB in Scala 2.13.1 projects: Error downloading org.scalameta:semanticdb-scalac_2.13.1:4.3.0
   not found: C:\Users\tgodzik\.ivy2\local\org.scalameta\semanticdb-scalac_2.13.1\4.3.0\ivys\ivy.xml
   download error: Caught java.net.ConnectException: Connection timed out: connect (Connection timed out: connect) while downloading https://repo1.maven.org/maven2/org/scalameta/semanticdb-scalac_2.13.1/4.3.0/semanticdb-scalac_2.13.1-4.3.0.pom
-  not found: https://dl.bintray.com/scalacenter/releases/org/scalameta/semanticdb-scalac_2.13.1/4.3.0/semanticdb-scalac_2.13.1-4.3.0.pom
 ```
 
 This might mean you need to specify proxy settings for Bloop or add custom
