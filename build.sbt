@@ -67,7 +67,6 @@ inThisBuild(
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
     packageSrc / publishArtifact := sys.env.contains("CI"),
-    resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
   )
 )
 
