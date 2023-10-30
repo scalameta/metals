@@ -8,7 +8,6 @@ import java.sql.Statement
 import java.util.zip.ZipError
 import java.util.zip.ZipException
 
-import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
@@ -31,17 +30,9 @@ final class JarTopLevels(conn: () => Connection) {
    * @return the top level Scala symbols in the jar
    */
   def getTopLevels(
-      path: AbsolutePath
+      jar: AbsolutePath
   ): Option[List[(String, AbsolutePath)]] =
     try {
-      val fs = path.jarPath
-        .map(jarPath =>
-          PlatformFileIO.newFileSystem(
-            jarPath.toURI,
-            new java.util.HashMap[String, String](),
-          )
-        )
-        .getOrElse(PlatformFileIO.newJarFileSystem(path, create = false))
       val toplevels = List.newBuilder[(String, AbsolutePath)]
       conn()
         .query(
@@ -50,32 +41,25 @@ final class JarTopLevels(conn: () => Connection) {
             |left join toplevel_symbol ts
             |on ij.id=ts.jar
             |where ij.md5=?""".stripMargin
-        ) { _.setString(1, getMD5Digest(path)) } { rs =>
+        ) { _.setString(1, getMD5Digest(jar)) } { rs =>
           if (rs.getString(1) != null && rs.getString(2) != null) {
             val symbol = rs.getString(1)
-            val path = AbsolutePath(fs.getPath(rs.getString(2)))
+            val path = toPath(jar, rs.getString(2))
             toplevels += (symbol -> path)
           }
         }
         .headOption
         .map(_ => toplevels.result)
     } catch {
-      case _: ZipError | _: ZipException =>
+      case error @ (_: ZipError | _: ZipException) =>
+        scribe.warn(s"corrupted jar $jar: $error")
         None
     }
 
   def getTypeHierarchy(
-      path: AbsolutePath
+      jar: AbsolutePath
   ): Option[List[(AbsolutePath, String, OverriddenSymbol)]] =
     try {
-      val fs = path.jarPath
-        .map(jarPath =>
-          PlatformFileIO.newFileSystem(
-            jarPath.toURI,
-            new java.util.HashMap[String, String](),
-          )
-        )
-        .getOrElse(PlatformFileIO.newJarFileSystem(path, create = false))
       val toplevels = List.newBuilder[(AbsolutePath, String, OverriddenSymbol)]
       conn()
         .query(
@@ -84,7 +68,7 @@ final class JarTopLevels(conn: () => Connection) {
             |left join type_hierarchy th
             |on ij.id=th.jar
             |where ij.type_hierarchy_indexed=true and ij.md5=?""".stripMargin
-        ) { _.setString(1, getMD5Digest(path)) } { rs =>
+        ) { _.setString(1, getMD5Digest(jar)) } { rs =>
           if (
             rs.getString(1) != null && rs
               .getString(2) != null && rs.getString(4) != null
@@ -92,7 +76,7 @@ final class JarTopLevels(conn: () => Connection) {
             val symbol = rs.getString(1)
             val parentName = rs.getString(2)
             val parentOffset = rs.getInt(3)
-            val path = AbsolutePath(fs.getPath(rs.getString(4)))
+            val path = toPath(jar, rs.getString(4))
             val isResolved = rs.getBoolean(5)
             val overridden =
               if (isResolved) ResolvedOverriddenSymbol(parentName)
@@ -103,9 +87,13 @@ final class JarTopLevels(conn: () => Connection) {
         .headOption
         .map(_ => toplevels.result)
     } catch {
-      case _: ZipError | _: ZipException =>
+      case error @ (_: ZipError | _: ZipException) =>
+        scribe.warn(s"corrupted jar $jar: $error")
         None
     }
+
+  private def toPath(jar: AbsolutePath, path: String) =
+    ("jar:" ++ jar.toNIO.toUri.toString() ++ "!" ++ path).toAbsolutePath
 
   /**
    * Stores the top level symbols for the Jar
