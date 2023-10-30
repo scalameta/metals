@@ -351,10 +351,10 @@ val mtagsSettings = List(
     val current = (Compile / unmanagedSourceDirectories).value
     val base = (Compile / sourceDirectory).value
     val regex = "(\\d+)\\.(\\d+)\\.(\\d+).*".r
-    // For scala +2.13.9 we need to have a special Compat.scala
+    // For scala -2.13.9 we need to have a special Compat.scala
     // For this case filter out `scala-2.13` directory that comes by default
     val scalaVersionsWithSpecialCompat =
-      Set("2.13.9", "2.13.10", "2.13.11", "2.13.12")
+      Set("2.13.5", "2.13.6", "2.13.7", "2.13.8")
     if (scalaVersionsWithSpecialCompat(scalaVersion.value))
       current.filter(f => f.getName() != "scala-2.13")
     else if (isScala3WithPresentationCompiler(scalaVersion.value))
