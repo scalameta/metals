@@ -15,11 +15,7 @@ trait Compat { this: MetalsGlobal =>
       case _ => None
     }
 
-  def isAliasCompletion(m: Member): Boolean = m match {
-    case tm: TypeMember => tm.aliasInfo.nonEmpty
-    case sm: ScopeMember => sm.aliasInfo.nonEmpty
-    case _ => false
-  }
+  def isAliasCompletion(m: Member): Boolean = false
 
   def constantType(c: ConstantType): ConstantType =
     if (c.value.isSuitableLiteralType) LiteralType(c.value) else c
