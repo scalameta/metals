@@ -4,7 +4,6 @@ import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.OverriddenSymbolsEnrichment
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 
@@ -646,28 +645,23 @@ class ScalaToplevelSuite extends BaseSuite {
         mode match {
           case All | ToplevelWithInner =>
             val includeMembers = mode == All
-            val enrichedDoc =
-              Mtags.enrichedTextDocument(input, dialect, includeMembers).get
-            val symbols =
-              enrichedDoc.textDocument.occurrences.map(_.symbol).toList
-            enrichedDoc.enrichment match {
-              case OverriddenSymbolsEnrichment(overridden) =>
-                val overriddenMap = overridden.toMap
-                symbols.map { symbol =>
-                  overriddenMap.get(symbol) match {
-                    case None => symbol
-                    case Some(symbols) =>
-                      val overridden =
-                        symbols
-                          .map {
-                            case ResolvedOverriddenSymbol(symbol) => symbol
-                            case UnresolvedOverriddenSymbol(name, _) => name
-                          }
-                          .mkString(", ")
-                      s"$symbol -> $overridden"
-                  }
-                }
-              case _ => symbols
+            val (doc, overrides) =
+              Mtags.indexWithOverrides(input, dialect, includeMembers)
+            val symbols = doc.occurrences.map(_.symbol).toList
+            val overriddenMap = overrides.toMap
+            symbols.map { symbol =>
+              overriddenMap.get(symbol) match {
+                case None => symbol
+                case Some(symbols) =>
+                  val overridden =
+                    symbols
+                      .map {
+                        case ResolvedOverriddenSymbol(symbol) => symbol
+                        case UnresolvedOverriddenSymbol(name, _) => name
+                      }
+                      .mkString(", ")
+                  s"$symbol -> $overridden"
+              }
             }
           case Toplevel => Mtags.toplevels(input, dialect)
         }

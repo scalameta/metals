@@ -53,11 +53,11 @@ class SymbolIndexBucket(
 
   def addSourceDirectory(
       dir: AbsolutePath
-  ): List[(AbsolutePath, EnrichedTextDocument)] = {
+  ): List[IndexingResult] = {
     if (sourceJars.addEntry(dir.toNIO)) {
       dir.listRecursive.toList.flatMap {
         case source if source.isScala =>
-          addSourceFile(source, Some(dir)).map((source, _))
+          addSourceFile(source, Some(dir))
         case _ =>
           None
       }
@@ -66,13 +66,13 @@ class SymbolIndexBucket(
 
   def addSourceJar(
       jar: AbsolutePath
-  ): List[(AbsolutePath, EnrichedTextDocument)] = {
+  ): List[IndexingResult] = {
     if (sourceJars.addEntry(jar.toNIO)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
             case source if source.isScala =>
-              addSourceFile(source, None, Some(jar)).map((source, _))
+              addSourceFile(source, None, Some(jar))
             case _ =>
               None
           }
@@ -108,41 +108,40 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       fromSourceJar: Option[AbsolutePath] = None
-  ): Option[EnrichedTextDocument] = {
+  ): Option[IndexingResult] = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    for {
-      doc <- indexSource(source, uri, dialect)
-    } yield {
-      val enrichedDocument = doc.withFilter { symbols =>
-        fromSourceJar match {
-          case Some(jar) if stdLibPatches.isScala3Library(jar) =>
-            symbols.map(stdLibPatches.patchSymbol)
-          case _ => symbols
-        }
+    val IndexingResult(path, topLevels, overrides) =
+      indexSource(source, uri, dialect)
+    val symbols =
+      fromSourceJar match {
+        case Some(jar) if stdLibPatches.isScala3Library(jar) =>
+          topLevels.map(stdLibPatches.patchSymbol)
+        case _ => topLevels
       }
-      enrichedDocument.topLevels.foreach { symbol =>
-        val acc = toplevels.getOrElse(symbol, Set.empty)
-        toplevels(symbol) = acc + source
-      }
-      enrichedDocument
+    symbols.foreach { symbol =>
+      val acc = toplevels.getOrElse(symbol, Set.empty)
+      toplevels(symbol) = acc + source
     }
+    Some(IndexingResult(path, symbols, overrides))
   }
 
   private def indexSource(
       source: AbsolutePath,
       uri: String,
       dialect: Dialect
-  ): Option[EnrichedTextDocument] = {
+  ): IndexingResult = {
     val text = FileIO.slurp(source, StandardCharsets.UTF_8)
     val input = Input.VirtualFile(uri, text)
-    mtags
-      .enrichedTextDocument(input, dialect)
-      .map(_.withFilter { sourceToplevels =>
-        if (source.isAmmoniteScript)
-          sourceToplevels
-        else
-          sourceToplevels.filter(sym => !isTrivialToplevelSymbol(uri, sym))
-      })
+    val (doc, overrides) = mtags.indexWithOverrides(input, dialect)
+    val sourceTopLevels =
+      doc.occurrences.iterator
+        .filterNot(_.symbol.isPackage)
+        .map(_.symbol)
+    val topLevels =
+      if (source.isAmmoniteScript) sourceTopLevels.toList
+      else
+        sourceTopLevels.filter(sym => !isTrivialToplevelSymbol(uri, sym)).toList
+    IndexingResult(source, topLevels, overrides)
   }
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala

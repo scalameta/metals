@@ -65,7 +65,7 @@ final class OnDemandSymbolIndex(
   override def addSourceDirectory(
       dir: AbsolutePath,
       dialect: Dialect
-  ): List[(AbsolutePath, EnrichedTextDocument)] =
+  ): List[IndexingResult] =
     tryRun(
       dir,
       List.empty,
@@ -77,7 +77,7 @@ final class OnDemandSymbolIndex(
   override def addSourceJar(
       jar: AbsolutePath,
       dialect: Dialect
-  ): List[(AbsolutePath, EnrichedTextDocument)] =
+  ): List[IndexingResult] =
     tryRun(
       jar,
       List.empty, {
@@ -109,7 +109,7 @@ final class OnDemandSymbolIndex(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       dialect: Dialect
-  ): Option[EnrichedTextDocument] =
+  ): Option[IndexingResult] =
     tryRun(
       source,
       None, {

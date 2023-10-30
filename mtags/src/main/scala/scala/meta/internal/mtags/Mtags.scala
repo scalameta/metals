@@ -34,7 +34,6 @@ final class Mtags(implicit rc: ReportContext) {
       addLines(language, input.text)
       mtags
         .index()
-        .textDocument
         .occurrences
         .iterator
         .filterNot(_.symbol.isPackage)
@@ -45,11 +44,11 @@ final class Mtags(implicit rc: ReportContext) {
     }
   }
 
-  def enrichedTextDocument(
+  def indexWithOverrides(
       input: Input.VirtualFile,
       dialect: Dialect = dialects.Scala213,
       includeMembers: Boolean = false
-  ): Option[EnrichedTextDocument] = {
+  ): (TextDocument, MtagsIndexer.AllOverrides) = {
     val language = input.toLanguage
     if (language.isJava || language.isScala) {
       val mtags =
@@ -63,8 +62,10 @@ final class Mtags(implicit rc: ReportContext) {
             dialect
           )
       addLines(language, input.text)
-      Some(mtags.index())
-    } else None
+      val doc = mtags.index()
+      val overrides = mtags.overrides()
+      (doc, overrides)
+    } else (TextDocument(), Nil)
   }
 
   def index(
@@ -78,9 +79,8 @@ final class Mtags(implicit rc: ReportContext) {
         JavaMtags
           .index(input, includeMembers = true)
           .index()
-          .textDocument
       } else if (language.isScala) {
-        ScalaMtags.index(input, dialect).index().textDocument
+        ScalaMtags.index(input, dialect).index()
       } else {
         TextDocument()
       }
@@ -122,11 +122,11 @@ object Mtags {
   )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
     input.toLanguage match {
       case Language.JAVA =>
-        new JavaMtags(input, includeMembers = true).index().textDocument
+        new JavaMtags(input, includeMembers = true).index()
       case Language.SCALA =>
         val mtags =
           new ScalaToplevelMtags(input, true, includeMembers, dialect)
-        mtags.index().textDocument
+        mtags.index()
       case _ =>
         TextDocument()
     }
@@ -138,14 +138,14 @@ object Mtags {
     new Mtags().toplevels(input, dialect)
   }
 
-  def enrichedTextDocument(
+  def indexWithOverrides(
       input: Input.VirtualFile,
       dialect: Dialect = dialects.Scala213,
       includeMembers: Boolean = false
   )(implicit
       rc: ReportContext = EmptyReportContext
-  ): Option[EnrichedTextDocument] = {
-    new Mtags().enrichedTextDocument(input, dialect, includeMembers)
+  ): (TextDocument, MtagsIndexer.AllOverrides) = {
+    new Mtags().indexWithOverrides(input, dialect, includeMembers)
   }
 
 }

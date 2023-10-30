@@ -14,7 +14,6 @@ import scala.meta.internal.semanticdb.Scala
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
-import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.tokenizers.TokenizeException
@@ -47,15 +46,10 @@ class ScalaToplevelMtags(
     includeMembers: Boolean,
     dialect: Dialect
 )(implicit rc: ReportContext)
-    extends GenericMtagsIndexer[OverriddenSymbolsEnrichment] {
+    extends MtagsIndexer {
 
-  override protected def enrich(
-      doc: TextDocument
-  ): EnrichedTextDocument =
-    new EnrichedTextDocument(
-      doc,
-      OverriddenSymbolsEnrichment(overridden.result)
-    )
+  override def overrides(): List[(String, List[OverriddenSymbol])] =
+    overridden.result
 
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
 

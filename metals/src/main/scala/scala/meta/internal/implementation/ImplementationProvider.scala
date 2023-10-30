@@ -21,6 +21,7 @@ import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
@@ -79,13 +80,9 @@ final class ImplementationProvider(
       )
   }
 
-  def addTypeHierarchy(
-      overriddenInfo: List[
-        (AbsolutePath, List[(String, List[OverriddenSymbol])])
-      ]
-  ): Unit = for {
-    (path, list) <- overriddenInfo
-    (overridesSymbol, overriddenSymbols) <- list
+  def addTypeHierarchy(results: List[IndexingResult]): Unit = for {
+    IndexingResult(path, _, overrides) <- results
+    (overridesSymbol, overriddenSymbols) <- overrides
     overridden <- overriddenSymbols
   } addTypeHierarchyElement(path, overridesSymbol, overridden)
 

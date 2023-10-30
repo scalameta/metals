@@ -11,21 +11,20 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.{semanticdb => s}
 
-trait GenericMtagsIndexer[E <: TextDocumentEnrichment] {
+trait MtagsIndexer {
   def language: Language
   def indexRoot(): Unit
   def input: Input.VirtualFile
-  protected def enrich(doc: s.TextDocument): EnrichedTextDocument
-  def index(): EnrichedTextDocument = {
+  // should only be called after `index`/`indexRoot`
+  def overrides(): MtagsIndexer.AllOverrides = Nil
+  def index(): s.TextDocument = {
     indexRoot()
-    enrich(
-      s.TextDocument(
-        uri = input.path,
-        text = input.text,
-        language = language,
-        occurrences = names.result(),
-        symbols = symbols.result()
-      )
+    s.TextDocument(
+      uri = input.path,
+      text = input.text,
+      language = language,
+      occurrences = names.result(),
+      symbols = symbols.result()
     )
   }
   // This method is intentionally non-final to allow accessing this stream directly without building a s.TextDocument.
@@ -174,35 +173,6 @@ trait GenericMtagsIndexer[E <: TextDocumentEnrichment] {
     else Symbols.Global(currentOwner, signature)
 }
 
-class EnrichedTextDocument(
-    val textDocument: s.TextDocument,
-    val enrichment: TextDocumentEnrichment,
-    topLevelFiler: List[String] => List[String] = identity
-) {
-  lazy val topLevels: List[String] = {
-    val topLevelSymbols =
-      textDocument.occurrences.iterator
-        .filterNot(_.symbol.isPackage)
-        .map(_.symbol)
-        .toList
-    topLevelFiler(topLevelSymbols)
-  }
-
-  def withFilter(newFilter: List[String] => List[String]) =
-    new EnrichedTextDocument(
-      textDocument,
-      enrichment,
-      topLevelFiler.compose(newFilter)
-    )
-}
-
-sealed trait TextDocumentEnrichment
-case object NoEnrichment extends TextDocumentEnrichment
-case class OverriddenSymbolsEnrichment(
-    overridden: List[(String, List[OverriddenSymbol])]
-) extends TextDocumentEnrichment
-
-trait MtagsIndexer extends GenericMtagsIndexer[NoEnrichment.type] {
-  protected def enrich(doc: s.TextDocument): EnrichedTextDocument =
-    new EnrichedTextDocument(doc, NoEnrichment)
+object MtagsIndexer {
+  type AllOverrides = List[(String, List[OverriddenSymbol])]
 }

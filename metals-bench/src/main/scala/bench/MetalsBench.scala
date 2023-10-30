@@ -90,9 +90,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def typeHierarchyIndex(): Unit = {
-    scalaDependencySources.inputs.foreach { input =>
-      Mtags.enrichedTextDocument(input)
-    }
+    scalaDependencySources.inputs.foreach { Mtags.indexWithOverrides(_) }
   }
 
   @Benchmark

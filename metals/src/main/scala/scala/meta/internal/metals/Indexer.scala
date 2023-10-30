@@ -29,10 +29,8 @@ import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.watcher.FileWatcher
-import scala.meta.internal.mtags.EnrichedTextDocument
+import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.OverriddenSymbol
-import scala.meta.internal.mtags.OverriddenSymbolsEnrichment
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -471,9 +469,7 @@ final case class Indexer(
             )
             .getOrElse(Scala213)
 
-          val documents = definitionIndex.addSourceDirectory(path, dialect)
-          val overriddenInfo = collectOverriddenInfo(documents)
-          implementationProvider.addTypeHierarchy(overriddenInfo)
+          definitionIndex.addSourceDirectory(path, dialect)
         } else {
           scribe.warn(s"unexpected dependency: $path")
         }
@@ -484,17 +480,6 @@ final case class Indexer(
     }
     usedJars.toSet
   }
-
-  private def collectOverriddenInfo(
-      documents: List[(AbsolutePath, EnrichedTextDocument)]
-  ): List[(AbsolutePath, List[(String, List[OverriddenSymbol])])] =
-    documents.flatMap { case (path, document) =>
-      document.enrichment match {
-        case OverriddenSymbolsEnrichment(overridden) =>
-          Some((path, overridden))
-        case _ => None
-      }
-    }
 
   private def indexJdkSources(
       data: TargetData,
@@ -614,12 +599,13 @@ final case class Indexer(
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
     val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
     def indexJar() = {
-      val documents = definitionIndex.addSourceJar(path, dialect)
-      val toplevels = documents.flatMap { case (path, document) =>
-        document.topLevels.map((_, path))
+      val indexResult = definitionIndex.addSourceJar(path, dialect)
+      val toplevels = indexResult.flatMap {
+        case IndexingResult(path, toplevels, _) =>
+          toplevels.map((_, path))
       }
-      val overrides = collectOverriddenInfo(documents).flatMap {
-        case (path, list) =>
+      val overrides = indexResult.flatMap {
+        case IndexingResult(path, _, list) =>
           list.flatMap { case (symbol, overridden) =>
             overridden.map((path, symbol, _))
           }
