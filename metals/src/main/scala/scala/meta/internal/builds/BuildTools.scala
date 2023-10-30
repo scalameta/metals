@@ -9,6 +9,7 @@ import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
 import ujson.ParsingFailedException
@@ -121,6 +122,26 @@ final class BuildTools(
   )
   def isBazel: Boolean = bazelProject.isDefined
 
+  private def customBsps: List[BspOnly] = {
+    val bspFolder = workspace.resolve(".bsp")
+    val root = customProjectRoot.getOrElse(workspace)
+    if (bspFolder.exists && bspFolder.isDirectory) {
+      bspFolder.toFile
+        .listFiles()
+        .collect {
+          case file
+              if file.isFile() && file.getName().endsWith(".json") && !knowBsps(
+                file.getName().stripSuffix(".json")
+              ) =>
+            BspOnly(file.getName().stripSuffix(".json"), root)
+        }
+        .toList
+    } else Nil
+  }
+
+  private def knowBsps =
+    Set(SbtBuildTool.name, MillBuildTool.name) ++ ScalaCli.names
+
   private def customProjectRoot =
     userConfig().customProjectRoot
       .map(relativePath => workspace.resolve(relativePath.trim()))
@@ -187,6 +208,7 @@ final class BuildTools(
     mavenProject.foreach(buf += MavenBuildTool(userConfig, _))
     millProject.foreach(buf += MillBuildTool(userConfig, _))
     scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
+    buf.addAll(customBsps)
 
     buf.result()
   }
@@ -221,6 +243,7 @@ final class BuildTools(
     val before = lastDetectedBuildTools.getAndUpdate(_ + buildTool)
     !before.contains(buildTool)
   }
+
 }
 
 object BuildTools {

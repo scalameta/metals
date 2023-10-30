@@ -4,31 +4,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
-import scala.concurrent.Future
-
 import scala.meta.io.AbsolutePath
 
 trait BuildTool {
 
-  /**
-   * Export the build to Bloop
-   *
-   * This operation should be roughly equivalent to running `sbt bloopInstall`
-   * and should work for both updating an existing Bloop build or creating a new
-   * Bloop build.
-   */
-  def bloopInstall(
-      workspace: AbsolutePath,
-      systemProcess: List[String] => Future[WorkspaceLoadedStatus],
-  ): Future[WorkspaceLoadedStatus]
-
   def digest(workspace: AbsolutePath): Option[String]
-
-  def version: String
-
-  def minimumVersion: String
-
-  def recommendedVersion: String
 
   protected lazy val tempDir: Path = {
     val dir = Files.createTempDirectory("metals")
@@ -40,15 +20,14 @@ trait BuildTool {
 
   def executableName: String
 
-  def isBloopDefaultBsp = true
-
   def projectRoot: AbsolutePath
+
+  val forcesBuildServer = false
 
 }
 
 object BuildTool {
 
-  case class Found(buildTool: BuildTool, digest: String)
   def copyFromResource(
       tempDir: Path,
       filePath: String,
@@ -61,5 +40,17 @@ object BuildTool {
     Files.copy(embeddedFile, outFile, StandardCopyOption.REPLACE_EXISTING)
     outFile
   }
+
+  trait Verified
+  case class IncompatibleVersion(buildTool: VersionRecommendation)
+      extends Verified {
+    def message: String = s"Unsupported $buildTool version ${buildTool.version}"
+  }
+  case class NoChecksum(buildTool: BuildTool, root: AbsolutePath)
+      extends Verified {
+    def message: String =
+      s"Could not calculate checksum for ${buildTool.executableName} in $root"
+  }
+  case class Found(buildTool: BuildTool, digest: String) extends Verified
 
 }

@@ -3,6 +3,7 @@ package tests
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.Messages.ChooseBuildTool
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -63,6 +64,26 @@ class MultipleBuildFilesLspSuite
         ).mkString("\n"),
       )
     }
+  }
+
+  test("custom-bsp") {
+    cleanWorkspace()
+    client.chooseBuildTool = actions =>
+      actions
+        .find(_.getTitle == "custom")
+        .getOrElse(throw new Exception("no custom as build tool"))
+    for {
+      _ <- initialize(
+        s"""|/.bsp/custom.json
+            |${ScalaCli.scalaCliBspJsonContent(bspName = "custom")}
+            |/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(server.server.bspSession.nonEmpty)
+      _ = assert(server.server.bspSession.get.main.name == "custom")
+    } yield ()
   }
 
 }

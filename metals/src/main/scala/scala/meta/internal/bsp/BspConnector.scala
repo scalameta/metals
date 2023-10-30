@@ -6,7 +6,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BuildServerProvider
+import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ShellRunner
@@ -43,13 +45,9 @@ class BspConnector(
    * Resolves the current build servers that either have a bsp entry or if the
    * workspace can support Bloop, it will also resolve Bloop.
    */
-  def resolve(): BspResolvedResult = {
+  def resolve(buildTool: Option[BuildTool]): BspResolvedResult = {
     resolveExplicit().getOrElse {
-      if (
-        buildTools
-          .loadSupported()
-          .exists(_.isBloopDefaultBsp) || buildTools.isBloop
-      )
+      if (buildTool.isInstanceOf[BloopInstallProvider] || buildTools.isBloop)
         ResolvedBloop
       else bspServers.resolve()
     }
@@ -74,11 +72,12 @@ class BspConnector(
    * of the bsp entry has already happened at this point.
    */
   def connect(
-      projectRoot: AbsolutePath,
+      buildTool: Option[BuildTool],
       workspace: AbsolutePath,
       userConfiguration: UserConfiguration,
       shellRunner: ShellRunner,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
+    val projectRoot = buildTool.map(_.projectRoot).getOrElse(workspace)
     def connect(
         projectRoot: AbsolutePath,
         bspTraceRoot: AbsolutePath,
@@ -86,7 +85,7 @@ class BspConnector(
     ): Future[Option[BuildServerConnection]] = {
       def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
       scribe.info("Attempting to connect to the build server...")
-      resolve() match {
+      resolve(buildTool) match {
         case ResolvedNone =>
           scribe.info("No build server found")
           Future.successful(None)
@@ -180,7 +179,9 @@ class BspConnector(
         possibleBuildServerConn match {
           case None => Future.successful(None)
           case Some(buildServerConn)
-              if buildServerConn.isBloop && buildTools.isSbt =>
+              if buildServerConn.isBloop && buildTool.exists(
+                _.isInstanceOf[SbtBuildTool]
+              ) =>
             // NOTE: (ckipp01) we special case this here since sbt bsp server
             // doesn't yet support metabuilds. So in the future when that
             // changes, re-work this and move the creation of this out above
@@ -277,7 +278,9 @@ class BspConnector(
       BspConnectionDetails,
     ]] = {
       if (
-        bloopPresent || buildTools.loadSupported().exists(_.isBloopDefaultBsp)
+        bloopPresent || buildTools
+          .loadSupported()
+          .exists(_.isInstanceOf[BloopInstallProvider])
       )
         new BspConnectionDetails(
           BloopServers.name,

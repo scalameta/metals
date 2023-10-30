@@ -37,7 +37,7 @@ final class BloopInstall(
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] = {
     if (isImportInProcess.compareAndSet(false, true)) {
@@ -121,7 +121,7 @@ final class BloopInstall(
   // notifications. This method is synchronized to prevent asking the user
   // twice whether to import the build.
   def runIfApproved(
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       digest: String,
       isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] =

@@ -5,6 +5,7 @@ import java.nio.file.Path
 import scala.collection.mutable
 
 import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.VersionRecommendation
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BloopJsonUpdateCause.BloopJsonUpdateCause
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
@@ -193,13 +194,13 @@ object Messages {
   }
 
   object ChooseBuildTool {
+    def message =
+      "Multiple build definitions found. Which would you like to use?"
     def params(builtTools: List[BuildTool]): ShowMessageRequestParams = {
       val messageActionItems =
         builtTools.map(bt => new MessageActionItem(bt.executableName))
       val params = new ShowMessageRequestParams()
-      params.setMessage(
-        "Multiple build definitions found. Which would you like to use?"
-      )
+      params.setMessage(message)
       params.setType(MessageType.Info)
       params.setActions(messageActionItems.asJava)
       params
@@ -288,7 +289,7 @@ object Messages {
 
     def learnMoreUrl: String = Urls.docs("import-build")
 
-    def params(tool: BuildTool): ShowMessageRequestParams = {
+    def params(tool: VersionRecommendation): ShowMessageRequestParams = {
       def toFixMessage =
         s"To fix this problem, upgrade to $tool ${tool.recommendedVersion} "
 
