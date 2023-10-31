@@ -8,6 +8,7 @@ example/ColorEnum.scala -> example/Color#
 example/Comments.scala -> example/Comments#
 example/Companion.scala -> example/Companion#
 example/Companion.scala -> example/Companion.
+example/EndMarker.scala -> example/EndMarker.
 example/EtaExpansion.scala -> example/EtaExpansion#
 example/Extension.scala -> example/AbstractExtension#
 example/Extension.scala -> example/Extension$package.

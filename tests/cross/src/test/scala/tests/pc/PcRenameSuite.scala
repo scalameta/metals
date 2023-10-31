@@ -488,4 +488,28 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  } yield b
        |""".stripMargin,
   )
+
+  check(
+    "end-marker".tag(IgnoreScala2),
+    """|def <<he@@llo>>(a: Int) =
+       |  ???
+       |end <<hello>>
+       |""".stripMargin,
+  )
+
+  check(
+    "end-marker-with-comment".tag(IgnoreScala2),
+    """|def <<he@@llo>>(a: Int) =
+       |  ???
+       |end /* a comment */ <<hello>> /* a comment */
+       |""".stripMargin,
+  )
+
+  check(
+    "end-marker-wrong".tag(IgnoreScala2),
+    """|def <<f@@oo>> =
+       |  def bar = 
+       |    ???
+       |  end bar""".stripMargin,
+  )
 }
