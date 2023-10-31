@@ -42,21 +42,19 @@ trait CommonMtagsEnrichments {
       cls: java.lang.Class[T],
       gson: Option[Gson] = None
   ): Option[T] =
-    for {
-      data <- Option(obj)
-      value <-
-        try {
-          Option(
-            gson
-              .getOrElse(new Gson())
-              .fromJson[T](data.asInstanceOf[JsonElement], cls)
-          )
-        } catch {
-          case NonFatal(e) =>
-            logger.log(Level.SEVERE, s"decode error: $cls", e)
-            None
-        }
-    } yield value
+    Option(obj).flatMap { data =>
+      try {
+        Option(
+          gson
+            .getOrElse(new Gson())
+            .fromJson[T](data.asInstanceOf[JsonElement], cls)
+        )
+      } catch {
+        case NonFatal(e) =>
+          logger.log(Level.SEVERE, s"decode error: $cls", e)
+          None
+      }
+    }
 
   implicit class XtensionJEitherCross[A, B](either: JEither[A, B]) {
     def asScala: Either[A, B] =
