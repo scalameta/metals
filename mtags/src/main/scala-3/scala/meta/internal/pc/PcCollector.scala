@@ -70,7 +70,7 @@ abstract class PcCollector[T](
     case _ => rawPath
   def collect(
       parent: Option[Tree]
-  )(tree: Tree, pos: SourcePosition, symbol: Option[Symbol]): T
+  )(tree: Tree | EndMarker, pos: SourcePosition, symbol: Option[Symbol]): T
 
   /**
    * @return (adjusted position, should strip backticks)
@@ -435,7 +435,7 @@ abstract class PcCollector[T](
         parent: Option[Tree],
     ): Set[T] =
       def collect(
-          tree: Tree,
+          tree: Tree | EndMarker,
           pos: SourcePosition,
           symbol: Option[Symbol] = None,
       ) =
@@ -493,6 +493,12 @@ abstract class PcCollector[T](
         case df: NamedDefTree
             if df.span.isCorrect && df.nameSpan.isCorrect &&
               filter(df) && !isGeneratedGiven(df) =>
+          def collectEndMarker =
+            EndMarker.getPosition(df, pos, sourceText).map {
+              collect(EndMarker(df.symbol), _)
+            }
+          end collectEndMarker
+
           val annots = collectTrees(df.mods.annotations)
           val traverser =
             new PcCollector.DeepFolderWithParent[Set[T]](
@@ -502,7 +508,7 @@ abstract class PcCollector[T](
             occurences + collect(
               df,
               pos.withSpan(df.nameSpan),
-            )
+            ) ++ collectEndMarker
           ) { case (set, tree) =>
             traverser(set, tree)
           }
@@ -667,3 +673,34 @@ case class ExtensionParamOccurence(
     sym: Symbol,
     methods: List[untpd.Tree],
 )
+
+case class EndMarker(symbol: Symbol)
+
+object EndMarker:
+  /**
+   * Matches end marker line from start to the name's beginning.
+   * E.g.
+   *    end /* some comment */
+   */
+  private val endMarkerRegex = """.*end(/\*.*\*/|\s)+""".r
+  def getPosition(df: NamedDefTree, pos: SourcePosition, sourceText: String)(
+      implicit ct: Context
+  ): Option[SourcePosition] =
+    val name = df.name.toString()
+    val endMarkerLine =
+      sourceText.slice(df.span.start, df.span.end).split('\n').last
+    val index = endMarkerLine.length() - name.length()
+    if index < 0 then None
+    else
+      val (possiblyEndMarker, possiblyEndMarkerName) =
+        endMarkerLine.splitAt(index)
+      Option.when(
+        possiblyEndMarkerName == name &&
+          endMarkerRegex.matches(possiblyEndMarker)
+      )(
+        pos
+          .withStart(df.span.end - name.length())
+          .withEnd(df.span.end)
+      )
+  end getPosition
+end EndMarker
