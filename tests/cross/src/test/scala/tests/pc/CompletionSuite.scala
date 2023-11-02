@@ -1937,4 +1937,56 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "prepend-instead-of-replace",
+    """|object O {
+       |  printl@@println()
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  printlnprintln()
+       |}
+       |""".stripMargin,
+    assertSingleItem = false,
+  )
+
+  checkEdit(
+    "prepend-instead-of-replace-duplicate-word",
+    """|object O {
+       |  println@@println()
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  printlnprintln()
+       |}
+       |""".stripMargin,
+    assertSingleItem = false,
+  )
+
+  checkEdit(
+    "replace-when-inside",
+    """|object O {
+       |  print@@ln()
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  println()
+       |}
+       |""".stripMargin,
+    assertSingleItem = false,
+  )
+
+  checkEdit(
+    "replace-exact-same",
+    """|object O {
+       |  println@@()
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  println()
+       |}
+       |""".stripMargin,
+    assertSingleItem = false,
+  )
+
 }
