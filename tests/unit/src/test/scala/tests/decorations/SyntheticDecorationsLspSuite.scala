@@ -64,7 +64,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff( // foo[t]() to foo()
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|import scala.concurrent.Future
            |case class Location(city: String)
            |object Main{
@@ -101,7 +101,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|import scala.concurrent.Future
            |case class Location(city: String)
            |object Main{
@@ -236,7 +236,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  def hello()(implicit name: String) = {
            |    println(s"Hello $name!")
@@ -258,7 +258,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  def hello()(implicit name: String): Unit = {
            |    println(s"Hello $name!")
@@ -280,7 +280,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  def hello()(implicit name: String) = {
            |    println(s"Hello $name!")
@@ -301,7 +301,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |""".stripMargin
       )
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  def hello()(implicit name: String) = {
            |    println(s"Hello $name!")
@@ -342,7 +342,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  augmentString(augmentString((augmentString("1" + "2"))
            |    .stripSuffix("."))
@@ -389,7 +389,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didOpen("standalone/Main.scala")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  val value: String = augmentString("asd.").stripSuffix(".")
            |}
@@ -415,7 +415,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       }
       _ <- server.didSave("standalone/Main.scala")(identity)
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  augmentString("asd.").stripSuffix(".")
            |  augmentString("asd.").stripSuffix(".")
@@ -488,7 +488,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  val head: Double :: tail: List[Double] = List[Double](0.1, 0.2, 0.3)
            |  val List[Int](l1: Int, l2: Int) = List[Int](12, 13)
@@ -576,7 +576,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|import scala.concurrent.ExecutionContextExecutorService
            |
            |trait A
@@ -628,7 +628,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object Main{
            |  val abc: Int = 123
            |}
@@ -639,7 +639,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         "\n" + text
       }
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|
            |object Main{
            |  val abc: Int = 123
@@ -650,6 +650,15 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChange("a/src/main/scala/Main.scala") { text =>
         "}\n" + text
       }
+      _ = assertNoDiff(
+        client.syntheticDecorations,
+        """|}
+           |
+           |object Main{
+           |  val abc: Int = 123
+           |}
+           |""".stripMargin,
+      )
     } yield ()
   }
 
@@ -705,7 +714,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|import cats.Parallel
            |import cats.effect.ConcurrentEffect
            |import cats.effect.ContextShift
@@ -750,7 +759,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didOpen("a/Main.worksheet.sc")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|def method(implicit str: String) = str + str
            |implicit val name: String = "Susan".stripMargin // : String = "Susan"
            |val greeting = s"Hello $name" // : String = "Hello Susan"
@@ -766,7 +775,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |""".stripMargin
       )
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|def method(implicit str: String): String = str + str
            |implicit val name: String = augmentString("Susan").stripMargin // : String = "Susan"
            |val greeting: String = s"Hello $name" // : String = "Hello Susan"
@@ -786,6 +795,10 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |/a/Main.scala
            |class Evidence
            |
+           |final case class DataType[T](number: Int, other: T) {
+           |  def next(implicit evidence: Evidence): Int = number + 1
+           |}
+           |
            |object Example extends App {
            |
            |  implicit val evidence: Evidence = ???
@@ -795,8 +808,9 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    number <- Option(5)
            |    num2 <- opts(2)
            |    _ = "abc ".stripMargin
-           |  } yield 1
+           |  } yield DataType(number, "").next
            |
+           |  Option(5).map(DataType(_, "").next)
            |}
            |""".stripMargin
       )
@@ -811,8 +825,12 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didOpen("a/Main.scala")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|class Evidence
+           |
+           |final case class DataType[T](number: Int, other: T) {
+           |  def next(implicit evidence: Evidence): Int = number + 1
+           |}
            |
            |object Example extends App {
            |
@@ -823,8 +841,9 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    number: Int <- Option[Int](5)
            |    num2: Int <- opts(2)(evidence)
            |    _ = augmentString("abc ").stripMargin
-           |  } yield 1
+           |  } yield DataType[String](number, "").next(evidence)
            |
+           |  Option[Int](5).map[Int](DataType[String](_, "").next(evidence))
            |}
            |""".stripMargin,
       )
@@ -878,7 +897,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object O {
            | type Foo3[T, R] = (T, R, "")
            | def hello: Option[(Int, String)] = {
@@ -923,7 +942,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|object O {
            |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
            |  val m = foo[500](new ValueOf(...))

@@ -454,23 +454,23 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     )
   }
 
-  def workspaceDecorations: String = {
-    workspaceDecorations(isHover = false)
+  def syntheticDecorations: String = {
+    syntheticDecorations(isHover = false)
   }
 
   def workspaceDecorations(filename: String): String = {
-    workspaceDecorations(isHover = false, Some(filename))
+    syntheticDecorations(isHover = false, Some(filename))
   }
 
-  def workspaceDecorationHoverMessage: String =
-    workspaceDecorations(isHover = true)
+  def syntheticDecorationHoverMessage: String =
+    syntheticDecorations(isHover = true)
 
-  def workspaceDecorationHoverMessage(
+  def syntheticDecorationHoverMessage(
       filename: String
   ): String = {
-    workspaceDecorations(isHover = true, Some(filename))
+    syntheticDecorations(isHover = true, Some(filename))
   }
-  private def workspaceDecorations(
+  private def syntheticDecorations(
       isHover: Boolean,
       filename: Option[String] = None,
   ): String = {

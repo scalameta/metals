@@ -165,9 +165,11 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
 	/**
-	 * 
+	 * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters and conversions.
 	 */
-	public abstract CompletableFuture<List<SyntheticDecoration>> syntheticDecorations(SyntheticDecorationsParams params);
+	public CompletableFuture<List<SyntheticDecoration>> syntheticDecorations(SyntheticDecorationsParams params) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
 
 	/**
 	 * File was closed.

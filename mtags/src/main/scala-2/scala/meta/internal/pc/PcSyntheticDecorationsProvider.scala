@@ -15,6 +15,8 @@ final class PcSyntheticDecorationsProvider(
     cursor = None
   )
   lazy val text = unit.source.content
+  lazy val textStr = text.mkString
+
   typeCheck(unit)
 
   def tpdTree = unit.lastBody
@@ -104,7 +106,8 @@ final class PcSyntheticDecorationsProvider(
   object ImplicitParameters {
     def unapply(tree: Tree): Option[(List[String], Position, Boolean)] =
       tree match {
-        case Apply(_, args) if args.exists(isSyntheticArg) =>
+        case Apply(_, args)
+            if args.exists(isSyntheticArg) && !tree.pos.isOffset =>
           val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
           val allImplicit = providedArgs.isEmpty
           val pos = providedArgs.lastOption.fold(tree.pos)(_.pos)
@@ -133,7 +136,11 @@ final class PcSyntheticDecorationsProvider(
         None
       case TypeApply(fun, args)
           if args.exists(_.pos.isOffset) && tree.pos.isRange =>
-        val pos = fun.pos
+        val pos = fun match {
+          case sel: Select if isInfix(sel, textStr) =>
+            sel.namePosition
+          case _ => fun.pos
+        }
         Some(args.map(_.tpe.widen.finalResultType), pos)
       case _ => None
     }
@@ -157,7 +164,7 @@ final class PcSyntheticDecorationsProvider(
       case _ => None
     }
     private def hasMissingTypeAnnot(tree: MemberDef, tpt: Tree) =
-      tree.pos.isRange && tree.namePosition.isRange && tpt.pos.isOffset
+      tree.pos.isRange && tree.namePosition.isRange && tpt.pos.isOffset && tpt.pos.start != 0
 
     private def primaryConstructorParam(sym: Symbol) =
       sym.safeOwner.isPrimaryConstructor
