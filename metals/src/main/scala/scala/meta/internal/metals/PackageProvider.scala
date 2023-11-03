@@ -656,81 +656,75 @@ class PackageProvider(
   ): List[TopLevelDeclaration] = {
     val filename = path.filename
     val filenamePart = filename.stripSuffix(".scala").stripSuffix(".sc")
-    val result = for {
-      content <- path.content()
-    } yield {
-      val input = Input.VirtualFile(filename, content)
 
-      def isPackageObjectLike(symbol: String) =
-        Set("package", filenamePart ++ "$package").contains(symbol)
-      def isTopLevelPackageOrPackageObject(symbol: String): Boolean =
-        symbol.isPackage || {
-          val (desc, owner) = DescriptorParser(symbol)
-          (isPackageObjectLike(desc.name.value)
-          && isTopLevelPackageOrPackageObject(owner))
-        }
-
-      def alternatives(si: s.SymbolInformation): Set[String] =
-        if (si.isCase) Set(s"${si.symbol.dropRight(1)}.") else Set.empty
-
-      val dialect = {
-        val optDialect =
-          for {
-            buidTargetId <- buildTargets.inverseSources(path.value)
-            scalaTarget <- buildTargets.scalaTarget(buidTargetId)
-          } yield ScalaVersions.dialectForScalaVersion(
-            scalaTarget.scalaVersion,
-            includeSource3 = true,
-          )
-        optDialect.getOrElse(dialects.Scala213)
+    def isPackageObjectLike(symbol: String) =
+      Set("package", filenamePart ++ "$package").contains(symbol)
+    def isTopLevelPackageOrPackageObject(symbol: String): Boolean =
+      symbol.isPackage || {
+        val (desc, owner) = DescriptorParser(symbol)
+        (isPackageObjectLike(desc.name.value)
+        && isTopLevelPackageOrPackageObject(owner))
       }
-      m.internal.mtags.Mtags
-        .index(input, dialect)
-        .symbols
-        .flatMap { si =>
-          if (si.symbol.isPackage)
-            None
-          else {
-            val (desc, owner) = DescriptorParser(si.symbol)
-            val descName = desc.name.value
-            if (
-              isTopLevelPackageOrPackageObject(owner) && !isPackageObjectLike(
-                descName
-              )
-            ) {
-              val packageParts =
-                owner
-                  .split('/')
-                  .filter {
-                    case "" => false
-                    case ObjectSymbol(obj) => !isPackageObjectLike(obj)
-                    case _ => true
-                  }
-                  .drop(topLevelPackageParts.length)
-                  .toList
-              Some(
-                TopLevelDeclaration(
-                  descName,
-                  packageParts,
-                  si.isGiven || si.isExtension,
-                  alternatives(si) + si.symbol,
-                )
-              )
-            } else None
-          }
-        }
-        .groupBy(decl => (decl.name, decl.innerPackageParts))
-        .collect { case ((name, innerPackageParts), otherDecl) =>
-          TopLevelDeclaration(
-            name,
-            innerPackageParts,
-            otherDecl.map(_.isGivenOrExtension).reduce(_ || _),
-            otherDecl.flatMap(_.symbols).toSet,
-          )
-        }
-        .toList
+
+    def alternatives(si: s.SymbolInformation): Set[String] =
+      if (si.isCase) Set(s"${si.symbol.dropRight(1)}.") else Set.empty
+
+    val dialect = {
+      val optDialect =
+        for {
+          buidTargetId <- buildTargets.inverseSources(path.value)
+          scalaTarget <- buildTargets.scalaTarget(buidTargetId)
+        } yield ScalaVersions.dialectForScalaVersion(
+          scalaTarget.scalaVersion,
+          includeSource3 = true,
+        )
+      optDialect.getOrElse(dialects.Scala213)
     }
-    result.getOrElse(List.empty)
+    m.internal.mtags.Mtags
+      .index(path.value, dialect)
+      .symbols
+      .flatMap { si =>
+        if (si.symbol.isPackage)
+          None
+        else {
+          val (desc, owner) = DescriptorParser(si.symbol)
+          val descName = desc.name.value
+          if (
+            isTopLevelPackageOrPackageObject(owner) && !isPackageObjectLike(
+              descName
+            )
+          ) {
+            val packageParts =
+              owner
+                .split('/')
+                .filter {
+                  case "" => false
+                  case ObjectSymbol(obj) => !isPackageObjectLike(obj)
+                  case _ => true
+                }
+                .drop(topLevelPackageParts.length)
+                .toList
+            Some(
+              TopLevelDeclaration(
+                descName,
+                packageParts,
+                si.isGiven || si.isExtension,
+                alternatives(si) + si.symbol,
+              )
+            )
+          } else None
+        }
+      }
+      .groupBy(decl => (decl.name, decl.innerPackageParts))
+      .collect { case ((name, innerPackageParts), otherDecl) =>
+        TopLevelDeclaration(
+          name,
+          innerPackageParts,
+          otherDecl.map(_.isGivenOrExtension).reduce(_ || _),
+          otherDecl.flatMap(_.symbols).toSet,
+        )
+      }
+      .toList
   }
 
   private def extendPositionToIncludeNewLine(pos: inputs.Position) = {

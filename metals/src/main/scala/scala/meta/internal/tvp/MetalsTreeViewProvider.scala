@@ -406,6 +406,7 @@ class FolderTreeViewProvider(
       closestSymbol: SymbolOccurrence,
   ): Option[List[String]] = {
     if (path.isDependencySource(folder.path) || path.isJarFileSystem) {
+      val closestToplevel = Symbol(closestSymbol.symbol).toplevel
       def pathJar = AbsolutePath(
         Paths.get(path.toNIO.getFileSystem().toString())
       ).dealias
@@ -414,11 +415,11 @@ class FolderTreeViewProvider(
           case sources
               if sources == pathJar || !path.isJarFileSystem &&
                 path.isSrcZipInReadonlyDirectory(folder.path) =>
-            libraries.toUri(sources, closestSymbol.symbol).parentChain
+            libraries.toUri(sources, closestToplevel.value).parentChain
         }
 
       val result = buildTargets
-        .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
+        .inferBuildTarget(List(closestToplevel))
         .map { inferred =>
           val sourceJar = inferred.jar.parent.resolve(
             inferred.jar.filename.replace(".jar", "-sources.jar")

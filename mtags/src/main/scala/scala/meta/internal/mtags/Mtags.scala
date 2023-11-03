@@ -18,18 +18,14 @@ final class Mtags(implicit rc: ReportContext) {
 
   def allSymbols(path: AbsolutePath, dialect: Dialect): TextDocument = {
     val language = path.toLanguage
-    val input = path.toInput
-
-    Mtags.stdLibPatches.patchDocument(
-      path,
-      index(language, input, dialect)
-    )
+    index(language, path, dialect)
   }
 
   def toplevels(
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
   ): TextDocument = {
+    val input = path.toInput
     val language = input.toLanguage
 
     if (language.isJava || language.isScala) {
@@ -44,17 +40,20 @@ final class Mtags(implicit rc: ReportContext) {
             dialect
           )
       addLines(language, input.text)
-      mtags.index()
+      Mtags.stdLibPatches.patchDocument(
+        path,
+        mtags.index()
+      )
     } else {
       TextDocument()
     }
   }
 
   def topLevelSymbols(
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
   ): List[String] = {
-    toplevels(input, dialect).occurrences.iterator
+    toplevels(path, dialect).occurrences.iterator
       .filterNot(_.symbol.isPackage)
       .map(_.symbol)
       .toList
@@ -62,9 +61,10 @@ final class Mtags(implicit rc: ReportContext) {
 
   def index(
       language: Language,
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect
   ): TextDocument = {
+    val input = path.toInput
     addLines(language, input.text)
     val result =
       if (language.isJava) {
@@ -76,7 +76,11 @@ final class Mtags(implicit rc: ReportContext) {
       } else {
         TextDocument()
       }
-    result
+    Mtags.stdLibPatches
+      .patchDocument(
+        path,
+        result
+      )
       .withUri(input.path)
       .withText(input.text)
   }
@@ -91,10 +95,10 @@ final class Mtags(implicit rc: ReportContext) {
   }
 }
 object Mtags {
-  def index(input: Input.VirtualFile, dialect: Dialect)(implicit
+  def index(path: AbsolutePath, dialect: Dialect)(implicit
       rc: ReportContext = EmptyReportContext
   ): TextDocument = {
-    new Mtags().index(input.toLanguage, input, dialect)
+    new Mtags().index(path.toLanguage, path, dialect)
   }
 
   def toplevels(document: TextDocument): List[String] = {
@@ -125,17 +129,17 @@ object Mtags {
   }
 
   def toplevels(
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
   )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
-    new Mtags().toplevels(input, dialect)
+    new Mtags().toplevels(path, dialect)
   }
 
   def topLevelSymbols(
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
   )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
-    new Mtags().topLevelSymbols(input, dialect)
+    new Mtags().topLevelSymbols(path, dialect)
   }
 
   /**
@@ -143,19 +147,19 @@ object Mtags {
    * https://github.com/lampepfl/dotty/blob/main/library/src/scala/runtime/stdLibPatches/
    * We need to do the same to correctly provide location for symbols obtained from semanticdb.
    */
-  object stdLibPatches {
+  private object stdLibPatches {
     val packageName = "scala/runtime/stdLibPatches"
 
-    def isScala3Library(jar: AbsolutePath): Boolean =
+    private def isScala3Library(jar: AbsolutePath): Boolean =
       jar.filename.startsWith("scala3-library_3")
 
-    def isScala3LibraryPatchSource(file: AbsolutePath): Boolean = {
-      file.jarPath.exists(
-        isScala3Library(_)
-      ) && file.parent.filename == "stdLibPatches"
+    private def isScala3LibraryPatchSource(file: AbsolutePath): Boolean = {
+      !file.parent.isRoot &&
+      file.parent.filename == "stdLibPatches" &&
+      file.jarPath.exists(isScala3Library(_))
     }
 
-    def patchSymbol(sym: String): String =
+    private def patchSymbol(sym: String): String =
       sym.replace(packageName, "scala")
 
     def patchDocument(

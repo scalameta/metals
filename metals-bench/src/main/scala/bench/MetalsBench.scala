@@ -8,9 +8,13 @@ import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
+import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.ScalaMtags
+import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.TextDocument
@@ -77,14 +81,22 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def mtagsScalaIndex(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
-      Mtags.index(input, dialects.Scala213)
+      ScalaMtags.index(input, dialects.Scala213).index()
     }
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def toplevelsScalaIndex(): Unit = {
-    scalaDependencySources.inputs.foreach { input => Mtags.toplevels(input) }
+    scalaDependencySources.inputs.foreach { input =>
+      implicit val rc: ReportContext = EmptyReportContext
+      new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = false,
+        includeMembers = false,
+        dialects.Scala213,
+      ).index()
+    }
   }
 
   @Benchmark
@@ -147,7 +159,9 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def mtagsJavaParse(): Unit = {
     javaDependencySources.inputs.foreach { input =>
-      Mtags.index(input, dialects.Scala213)
+      JavaMtags
+        .index(input, includeMembers = true)
+        .index()
     }
   }
 

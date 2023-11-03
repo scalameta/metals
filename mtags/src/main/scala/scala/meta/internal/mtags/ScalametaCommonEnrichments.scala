@@ -262,6 +262,8 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       Files.exists(path.toNIO)
     }
 
+    def isRoot: Boolean = path.toNIO.getRoot() == path.toNIO
+
     def root: Option[AbsolutePath] =
       Option(path.toNIO.getRoot()).map(AbsolutePath(_))
 

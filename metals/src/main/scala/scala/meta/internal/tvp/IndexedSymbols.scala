@@ -243,7 +243,7 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
         try {
           root.listRecursive.toList.collect {
             case source if source.isFile =>
-              (source, mtags.toplevels(source.toInput, dialect).symbols)
+              (source, mtags.toplevels(source, dialect).symbols)
           }
         } catch {
           // this happens in broken jars since file from FileWalker should exists
@@ -255,7 +255,7 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
     val pathSymbolInfos = if (path.isSourcesJar) {
       indexJar(path)
     } else {
-      List((path, mtags.toplevels(path.toInput, dialect).symbols))
+      List((path, mtags.toplevels(path, dialect).symbols))
     }
     pathSymbolInfos.collect { case (path, infos) =>
       infos.map { info =>
