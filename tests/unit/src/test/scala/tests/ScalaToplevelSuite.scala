@@ -620,10 +620,12 @@ class ScalaToplevelSuite extends BaseSuite {
               .map(_.symbol)
               .toList
           case Toplevel =>
-            val input = AbsolutePath(Files.createTempFile("mtags", ".java"))
+            val dir = AbsolutePath(Files.createTempDirectory("mtags"))
+            val input = dir.resolve("Test.scala")
             input.writeText(code)
             val obtained = Mtags.topLevelSymbols(input, dialect)
             input.delete()
+            dir.delete()
             obtained
         }
       assertNoDiff(

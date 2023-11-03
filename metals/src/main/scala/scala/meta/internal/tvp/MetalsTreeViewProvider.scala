@@ -159,7 +159,7 @@ class MetalsTreeViewProvider(
       val closestSymbol = occurrences.minBy { occ =>
         val startLine = occ.range.fold(Int.MaxValue)(_.startLine)
         val distance = math.abs(pos.getLine - startLine)
-        val isLeading = pos.getLine() > startLine
+        val isLeading = pos.getLine() >= startLine
         (!isLeading, distance)
       }
       val result =
