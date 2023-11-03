@@ -30,7 +30,7 @@ abstract class MtagsSuite(
         file,
         { () =>
           val input = file.input
-          val mtags = Mtags.index(input, dialect)
+          val mtags = Mtags.index(file.file, dialect)
           val obtained = Semanticdbs.printTextDocument(mtags)
           val unknownSymbols = mtags.occurrences.collect {
             case occ if symtab.info(occ.symbol).isEmpty =>

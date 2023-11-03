@@ -2,7 +2,6 @@ package scala.meta.internal.mtags
 
 import java.io.UncheckedIOException
 import java.nio.CharBuffer
-import java.nio.charset.StandardCharsets
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -11,10 +10,8 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
-import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.mtags.Mtags.stdLibPatches
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -68,7 +65,7 @@ class SymbolIndexBucket(
         try {
           root.listRecursive.toList.flatMap {
             case source if source.isScala =>
-              addSourceFile(source, None, Some(jar)).map(sym => (sym, source))
+              addSourceFile(source, None).map(sym => (sym, source))
             case _ =>
               List.empty
           }
@@ -86,14 +83,7 @@ class SymbolIndexBucket(
       symbols: List[(String, AbsolutePath)]
   ): Unit = {
     if (sourceJars.addEntry(jar.toNIO)) {
-      val patched =
-        if (stdLibPatches.isScala3Library(jar))
-          symbols.map { case (sym, path) =>
-            (stdLibPatches.patchSymbol(sym), path)
-          }
-        else symbols
-
-      patched.foreach { case (sym, path) =>
+      symbols.foreach { case (sym, path) =>
         val acc = toplevels.getOrElse(sym, Set.empty)
         toplevels(sym) = acc + path
       }
@@ -102,19 +92,10 @@ class SymbolIndexBucket(
 
   def addSourceFile(
       source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath],
-      fromSourceJar: Option[AbsolutePath] = None
+      sourceDirectory: Option[AbsolutePath]
   ): List[String] = {
     val symbols = indexSource(source, dialect, sourceDirectory)
-
-    val patched =
-      fromSourceJar match {
-        case Some(jar) if stdLibPatches.isScala3Library(jar) =>
-          symbols.map(stdLibPatches.patchSymbol)
-        case _ => symbols
-      }
-
-    patched.foreach { symbol =>
+    symbols.foreach { symbol =>
       val acc = toplevels.getOrElse(symbol, Set.empty)
       toplevels(symbol) = acc + source
     }
@@ -127,9 +108,7 @@ class SymbolIndexBucket(
       sourceDirectory: Option[AbsolutePath]
   ): List[String] = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val text = FileIO.slurp(source, StandardCharsets.UTF_8)
-    val input = Input.VirtualFile(uri, text)
-    val sourceToplevels = mtags.topLevelSymbols(input, dialect)
+    val sourceToplevels = mtags.topLevelSymbols(source, dialect)
     if (source.isAmmoniteScript)
       sourceToplevels
     else

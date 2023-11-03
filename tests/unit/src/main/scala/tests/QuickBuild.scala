@@ -122,8 +122,7 @@ case class QuickBuild(
     val scalaDependencies =
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         Array(
-          s"org.scala-lang:scala-library:2.13.11",
-          s"org.scala-lang:scala3-library_$binaryVersion:$scalaVersion",
+          s"org.scala-lang:scala3-library_$binaryVersion:$scalaVersion"
         )
       } else {
         Array(

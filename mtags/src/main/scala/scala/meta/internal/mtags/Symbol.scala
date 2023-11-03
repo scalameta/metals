@@ -41,15 +41,6 @@ final class Symbol private (val value: String) {
     }
     loop(this)
   }
-  def enclosingPackageChain: List[Symbol] = {
-    def loop(s: Symbol): List[Symbol] = {
-      if (s.isRootPackage) Nil
-      else if (s.isPackage) s :: loop(s.owner)
-      else loop(s.owner)
-    }
-    if (!owner.isPackage || isNone) Nil
-    else loop(this).reverse
-  }
   def toplevel: Symbol = {
     if (value.isNone) this
     else if (value.isPackage) this
