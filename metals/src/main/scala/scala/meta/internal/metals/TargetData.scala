@@ -77,7 +77,7 @@ final class TargetData {
 
   def allTargetRoots: Iterator[AbsolutePath] = {
     val scalaTargetRoots = scalaTargetInfo.map(_._2.targetroot)
-    val javaTargetRoots = javaTargetInfo.map(_._2.targetroot)
+    val javaTargetRoots = javaTargetInfo.flatMap(_._2.targetroot)
     val allTargetRoots = scalaTargetRoots.toSet ++ javaTargetRoots.toSet
     allTargetRoots.iterator
   }
@@ -110,7 +110,7 @@ final class TargetData {
   }
 
   def javaTargetRoot(buildTarget: BuildTargetIdentifier): Option[AbsolutePath] =
-    javaTarget(buildTarget).map(_.targetroot)
+    javaTarget(buildTarget).flatMap(_.targetroot)
 
   def scalaTargetRoot(
       buildTarget: BuildTargetIdentifier

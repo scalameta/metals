@@ -884,7 +884,7 @@ object MetalsEnrichments
   }
 
   implicit class XtensionJavacOptions(item: b.JavacOptionsItem) {
-    def targetroot: AbsolutePath = {
+    def targetroot: Option[AbsolutePath] = {
       item.getOptions.asScala
         .find(_.startsWith("-Xplugin:semanticdb"))
         .map(arg => {
@@ -901,7 +901,11 @@ object MetalsEnrichments
         })
         .filter(_ != "javac-classes-directory")
         .map(AbsolutePath(_))
-        .getOrElse(item.getClassDirectory.toAbsolutePath)
+        .orElse {
+          val classes = item.getClassDirectory()
+          if (classes.nonEmpty) Some(classes.toAbsolutePath)
+          else None
+        }
     }
 
     def isSemanticdbEnabled: Boolean = {

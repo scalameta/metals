@@ -101,6 +101,9 @@ class BuildServerConnection private (
   def isJvmEnvironmentSupported: Boolean =
     capabilities.getJvmRunEnvironmentProvider()
 
+  def isDependencySourcesSupported: Boolean =
+    capabilities.getDependencySourcesProvider()
+
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
    */
@@ -266,7 +269,15 @@ class BuildServerConnection private (
   def buildTargetDependencySources(
       params: DependencySourcesParams
   ): Future[DependencySourcesResult] = {
-    register(server => server.buildTargetDependencySources(params)).asScala
+    if (isDependencySourcesSupported) {
+      register(server => server.buildTargetDependencySources(params)).asScala
+    } else {
+      scribe.warn(
+        s"${initialConnection.displayName} does not support `buildTarget/dependencySources`, unable to fetch dependency sources."
+      )
+      val empty = new DependencySourcesResult(Collections.emptyList)
+      Future.successful(empty)
+    }
   }
 
   def buildTargetInverseSources(
