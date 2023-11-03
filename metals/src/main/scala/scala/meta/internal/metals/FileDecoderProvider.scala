@@ -487,7 +487,7 @@ final class FileDecoderProvider(
     for {
       javaTarget <- buildTargets.javaTarget(targetId)
       classDir = javaTarget.classDirectory
-      targetroot = javaTarget.targetroot
+      targetroot <- javaTarget.targetroot
     } yield (classDir, targetroot)
   }
 
