@@ -337,8 +337,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |        Text symbol-object
               |        TextMacros symbol-interface
               |        Util symbol-object
-              |        File symbol-class
-              |          value symbol-field
+              |        File symbol-object
               |""".stripMargin,
         )
         assertNoDiff(

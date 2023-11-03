@@ -27,9 +27,7 @@ object JdkSources {
   ): Either[NoSourcesAvailable, AbsolutePath] = {
     val paths = candidates(userJavaHome)
     paths.find(_.isFile) match {
-      case Some(value) =>
-        logger.info("Found JDK sources: " + value)
-        Right(value.dealias)
+      case Some(value) => Right(value.dealias)
       case None => Left(NoSourcesAvailable(paths))
     }
   }
