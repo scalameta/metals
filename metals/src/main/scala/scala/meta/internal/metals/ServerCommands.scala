@@ -485,7 +485,7 @@ object ServerCommands {
     "goto-super-method",
     "Go to super method/field definition",
     """|Jumps to super method/field definition of a symbol under cursor according to inheritance rules.
-       |When A {override def x()} <:< B <:< C {def x()} and on method 'A.x' it will jump directly to 'C.x'
+       |When `A {override def x()} <:< B <:< C {def x()}` and on method 'A.x' it will jump directly to 'C.x'
        |as method x() is not overridden in B.
        |If symbol is a reference of a method it will jump to a definition.
        |If symbol under cursor is invalid or does not override anything then command is ignored.
