@@ -1007,8 +1007,12 @@ object MetalsEnrichments
         .map(_.stripPrefix(flag))
     }
 
-    def classpath: List[String] =
-      item.getClasspath.asScala.toList
+    def classpath: List[String] = {
+      val outputClasses = item.getClassDirectory
+      val classes = item.getClasspath.asScala.toList
+      if (classes.contains(outputClasses)) classes
+      else outputClasses :: classes
+    }
 
     def jarClasspath: List[AbsolutePath] =
       classpath
