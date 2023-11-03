@@ -258,10 +258,11 @@ lazy val mtagsShared = project
         .filterNot(isScala3WithPresentationCompiler),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
-    Compile / scalacOptions ++= crossSetting(
-      scalaVersion.value,
-      if3 = List("-Yexplicit-nulls", "-language:unsafeNulls"),
-    ),
+    Compile / scalacOptions ++= {
+      if (scalaVersion.value == V.scala3)
+        List("-Yexplicit-nulls", "-language:unsafeNulls")
+      else Nil
+    },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
       "com.google.protobuf" % "protobuf-java" % "3.24.4",
