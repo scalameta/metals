@@ -6,13 +6,13 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.SyntheticDecorationsParams
 
 case class CompilerSyntheticDecorationsParams(
-    vFileParams: CompilerVirtualFileParams,
+    virtualFileParams: CompilerVirtualFileParams,
     inferredTypes: Boolean,
     typeParameters: Boolean,
     implicitParameters: Boolean,
     implicitConversions: Boolean
 ) extends SyntheticDecorationsParams {
-  override def uri(): URI = vFileParams.uri
-  override def text(): String = vFileParams.text
-  override def token(): CancelToken = vFileParams.token
+  override def uri(): URI = virtualFileParams.uri
+  override def text(): String = virtualFileParams.text
+  override def token(): CancelToken = virtualFileParams.token
 }

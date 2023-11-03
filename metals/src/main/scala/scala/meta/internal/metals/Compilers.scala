@@ -588,18 +588,12 @@ class Compilers(
           .syntheticDecorations(pcParams)
           .asScala
           .map { decorations =>
-            val decorationOptions = decorations.map { decoration =>
+            decorations.map { decoration =>
               DecorationOptions(
                 decoration.label(),
                 adjust.adjustRange(decoration.range()),
               )
             }
-            val isScala2 = compiler.scalaVersion().startsWith("2.")
-            if (isScala2 && path.isWorksheet && !decorationOptions.isEmpty()) {
-              // In scala 2 worksheet, last decoration is for synthetic `main` method
-              decorationOptions.remove(decorationOptions.size() - 1)
-              decorationOptions
-            } else decorationOptions
           }
 
       }

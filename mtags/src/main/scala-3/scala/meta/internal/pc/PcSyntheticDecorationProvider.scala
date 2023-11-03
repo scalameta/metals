@@ -155,29 +155,28 @@ object ImplicitConversion:
   def unapply(tree: Tree)(using Context) =
     tree match
       case Apply(fun: Ident, args) if isSynthetic(fun) =>
-        val lastArgPos =
-          args.lastOption.map(_.sourcePos).getOrElse(fun.sourcePos)
-        Some(
-          fun.symbol.decodedName,
-          lastArgPos.withStart(fun.sourcePos.start),
-        )
+        implicitConversion(fun, args)
       case Apply(Select(fun, name), args)
           if name == nme.apply && isSynthetic(fun) =>
-        val lastArgPos =
-          args.lastOption.map(_.sourcePos).getOrElse(fun.sourcePos)
-        Some(
-          fun.symbol.decodedName,
-          lastArgPos.withStart(fun.sourcePos.start),
-        )
+        implicitConversion(fun, args)
       case _ => None
   private def isSynthetic(tree: Tree)(using Context) =
     tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit)
+
+  private def implicitConversion(fun: Tree, args: List[Tree])(using Context) =
+    val lastArgPos =
+      args.lastOption.map(_.sourcePos).getOrElse(fun.sourcePos)
+    Some(
+      fun.symbol.decodedName,
+      lastArgPos.withStart(fun.sourcePos.start),
+    )
 end ImplicitConversion
 
 object ImplicitParameters:
   def unapply(tree: Tree)(using Context) =
     tree match
-      case Apply(fun, args) if args.exists(isSyntheticArg) =>
+      case Apply(fun, args)
+          if args.exists(isSyntheticArg) && !tree.sourcePos.span.isZeroExtent =>
         val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
         val allImplicit = providedArgs.isEmpty
         val pos = implicitArgs.head.sourcePos
@@ -204,8 +203,12 @@ object TypeParameters:
     tree match
       case TypeApply(sel: Select, _) if sel.isForComprehensionMethod => None
       case TypeApply(fun, args) if inferredTypeArgs(args) =>
+        val pos = fun match
+          case sel: Select if sel.isInfix =>
+            sel.sourcePos.withEnd(sel.nameSpan.end)
+          case _ => fun.sourcePos
         val tpes = args.map(_.tpe.stripTypeVar.widen.finalResultType)
-        Some((tpes, tree.endPos, fun))
+        Some((tpes, pos.endPos, fun))
       case _ => None
   private def inferredTypeArgs(args: List[Tree]): Boolean =
     args.forall {

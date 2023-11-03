@@ -984,8 +984,7 @@ class MetalsLspService(
             .map { path =>
               Future.sequence(
                 List(
-                  publishSynthetics(path, force = true),
-                  worksheetProvider.onDidFocus(path),
+                  publishSynthetics(path, force = true)
                 )
               )
             }
@@ -1116,10 +1115,7 @@ class MetalsLspService(
     CancelTokens.future { token =>
       val shouldShow =
         force ||
-          userConfig.showInferredType.contains("true") ||
-          userConfig.showInferredType.contains("minimal") ||
-          userConfig.showImplicitArguments ||
-          userConfig.showImplicitConversionsAndClasses
+          userConfig.areSyntheticsEnabled()
       if (shouldShow) {
         compilers.syntheticDecorations(path, token).map { decorations =>
           val params = new PublishDecorationsParams(

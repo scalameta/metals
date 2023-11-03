@@ -116,9 +116,8 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     kind = Some(DecorationKind.ImplicitConversion),
   )
 
-  // TODO: Examinate implicit conversion here and unignore
   check(
-    "wrong-given-conversion".ignore,
+    "given-conversion2".tag(IgnoreScala2),
     """|trait Xg:
        |  def doX: Int
        |trait Yg:
@@ -126,7 +125,13 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |given (using Xg): Yg with
        |  def doY = "7"
        |""".stripMargin,
-    "",
+    """|trait Xg:
+       |  def doX: Int
+       |trait Yg:
+       |  def doY: String
+       |given (using Xg): Yg with
+       |  def doY: String = "7"
+       |""".stripMargin,
   )
 
   check(
@@ -149,6 +154,18 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |""".stripMargin,
     """|object Main {
        |  val foo: List[Int] = List[Int](123)
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "list2",
+    """|object O {
+       |  def m = 1 :: List(1)
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  def m: List[Int] = 1 ::[Int] List[Int](1)
        |}
        |""".stripMargin,
   )
@@ -500,6 +517,18 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object O {
        |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
        |  val m: Int = foo[500](new ValueOf(...))
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "case-class1",
+    """|object O {
+       |case class A(x: Int, g: Int)(implicit y: String)
+       |}
+       |""".stripMargin,
+    """|object O {
+       |case class A(x: Int, g: Int)(implicit y: String)
        |}
        |""".stripMargin,
   )

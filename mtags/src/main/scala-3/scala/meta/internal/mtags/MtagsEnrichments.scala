@@ -14,6 +14,7 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Denotations.*
+import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
@@ -256,6 +257,8 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
     end symbolDocumentation
   end extension
 
+  private val infixNames =
+    Set(nme.apply, nme.unapply, nme.unapplySeq)
   extension (tree: Tree)
     def qual: Tree =
       tree match
@@ -271,6 +274,19 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
         val denot = sym.denot.asSeenFrom(pre.tpe.widenTermRefExpr)
         (denot.info, sym.withUpdatedTpe(denot.info))
       catch case NonFatal(e) => (sym.info, sym)
+
+    def isInfix(using ctx: Context) =
+      tree match
+        case Select(New(_), _) => false
+        case Select(_, name: TermName) if infixNames(name) => false
+        case Select(This(_), _) => false
+        // is a select statement without a dot `qual.name`
+        case sel @ Select(qual, _) if !sel.symbol.is(Flags.Synthetic) =>
+          val source = tree.source
+          !(qual.span.end until sel.nameSpan.start)
+            .map(source.apply)
+            .contains('.')
+        case _ => false
   end extension
 
   extension (imp: Import)
@@ -287,7 +303,6 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
         case _ => false
       val wrongSpan = sel.qualifier.span.contains(sel.nameSpan)
       syntheticName && wrongSpan
-
   extension (denot: Denotation)
     def allSymbols: List[Symbol] =
       denot match

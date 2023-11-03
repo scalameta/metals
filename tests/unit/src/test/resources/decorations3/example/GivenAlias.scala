@@ -28,7 +28,7 @@ trait Zg[T]:
 given Xg with
   def doX/*: Int*/ = 7
 
-/*(x$1)*/given (using Xg): Yg with
+given (using Xg): Yg with
   def doY/*: String*/ = "7"
 
 given [T]: Zg[T] with

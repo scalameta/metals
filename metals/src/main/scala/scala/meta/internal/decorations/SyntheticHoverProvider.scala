@@ -1,7 +1,6 @@
 package scala.meta.internal.decorations
 
 import java.nio.charset.Charset
-import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.Try
 
@@ -35,22 +34,15 @@ final class SyntheticHoverProvider(
     userConfig: () => UserConfiguration,
     trees: Trees,
 ) {
-  private object Document {
-    /* We update it with each compilation in order not read the same file on
-     * each change. When typing documents stay the same most of the time.
-     */
-    private val document = new AtomicReference[TextDocument]
 
-    def currentDocument: Option[TextDocument] = Option(document.get())
-
-    def set(doc: TextDocument): Unit = document.set(doc)
-  }
+  @volatile private var document: Option[TextDocument] =
+    Option.empty[TextDocument]
 
   def addSyntheticsHover(
       params: HoverExtParams,
       pcHover: Option[l.Hover],
   ): Option[l.Hover] =
-    if (areSyntheticsEnabled) {
+    if (userConfig().areSyntheticsEnabled()) {
       val path = params.textDocument.getUri().toAbsolutePath
       val position = params.getPosition
       val line = position.getLine()
@@ -106,13 +98,6 @@ final class SyntheticHoverProvider(
     } else {
       pcHover
     }
-
-  private def areSyntheticsEnabled: Boolean = {
-    val showInferredType = !userConfig().showInferredType.contains(
-      "false"
-    ) && userConfig().showInferredType.nonEmpty
-    userConfig().showImplicitArguments || showInferredType || userConfig().showImplicitConversionsAndClasses
-  }
 
   private def createHoverAtPoint(
       syntheticsAtLine: Seq[(l.Range, String)],
@@ -196,7 +181,7 @@ final class SyntheticHoverProvider(
   }
 
   private def currentDocument(path: AbsolutePath): Option[TextDocument] = {
-    Document.currentDocument match {
+    document match {
       case Some(doc) if workspace.resolve(doc.uri) == path => Some(doc)
       case _ =>
         val textDocument = semanticdbs
@@ -214,7 +199,7 @@ final class SyntheticHoverProvider(
       doc <- textDocument
       source <- fingerprints.loadLastValid(path, doc.md5, charset)
       docWithText = doc.withText(source)
-      _ = Document.set(docWithText)
+      _ = document = Some(docWithText)
     } yield docWithText
   }
 

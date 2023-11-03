@@ -447,24 +447,6 @@ abstract class PcCollector[T](
                 )
               else occurences
             case _ => occurences
-        /**
-         * for synthetic decorations in:
-         * given Conversion[Int, String] = _.toString
-         * val x: String = <<>>123
-         */
-        case sel: Select
-            if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
-          parent match
-            case Some(a: Apply) =>
-              val span = a.span.withStart(a.span.point)
-              val amendedSelect = sel.withSpan(span)
-              if filter(amendedSelect) then
-                occurences + collect(
-                  amendedSelect,
-                  pos.withSpan(span),
-                )
-              else occurences
-            case _ => occurences
         /* all definitions:
          * def <<foo>> = ???
          * class <<Foo>> = ???
