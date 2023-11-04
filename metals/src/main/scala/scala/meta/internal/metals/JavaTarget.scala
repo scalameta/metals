@@ -16,7 +16,7 @@ case class JavaTarget(
     javac: JavacOptionsItem,
     bspConnection: Option[BuildServerConnection],
 ) {
-  def displayName: String = info.getDisplayName()
+  def displayName: String = info.getName
 
   def dataKind: String = info.dataKind
 

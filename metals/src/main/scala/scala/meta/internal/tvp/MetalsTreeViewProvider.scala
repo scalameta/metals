@@ -293,7 +293,7 @@ class FolderTreeViewProvider(
     _.getId(),
     _.getUri(),
     uri => new BuildTargetIdentifier(uri),
-    _.getDisplayName(),
+    _.getName(),
     _.baseDirectory,
     { () =>
       buildTargets.all.filter(target =>
@@ -447,7 +447,7 @@ class FolderTreeViewProvider(
     } yield TreeViewNode(
       TreeViewProvider.Compile,
       id.getUri,
-      s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)",
+      s"${info.getName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)",
       icon = "compile",
     )
   }
