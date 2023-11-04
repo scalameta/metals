@@ -66,7 +66,7 @@ final case class DoctorTargetInfo(
     name: String,
     gotoCommand: String,
     dataKind: String,
-    baseDirectory: String,
+    baseDirectory: Option[String],
     targetType: String,
     compilationStatus: DoctorStatus,
     diagnosticsStatus: DoctorStatus,

@@ -88,6 +88,8 @@ object MetalsEnrichments
 
     def isSbtBuild: Boolean = dataKind == "sbt"
 
+    def isScalaBuild: Boolean = dataKind == "scala"
+
     def baseDirectory: String =
       Option(buildTarget.getBaseDirectory()).getOrElse("")
 
@@ -96,7 +98,11 @@ object MetalsEnrichments
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
       asSbtBuildTarget
         .map(_.getScalaBuildTarget)
-        .orElse(decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget]))
+        .orElse(
+          if (isScalaBuild)
+            decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
+          else None
+        )
     }
 
     def asSbtBuildTarget: Option[b.SbtBuildTarget] = {
@@ -104,6 +110,22 @@ object MetalsEnrichments
         decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
       else
         None
+    }
+
+    def getName(): String = {
+      if (buildTarget.getDisplayName == null) {
+        val name =
+          if (buildTarget.getBaseDirectory() != null)
+            buildTarget
+              .getId()
+              .getUri()
+              .stripPrefix(buildTarget.getBaseDirectory())
+          else
+            buildTarget.getId().getUri()
+
+        name.replaceAll("[^a-zA-Z0-9]+", "-")
+      } else
+        buildTarget.getDisplayName
     }
   }
 
