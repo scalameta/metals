@@ -71,6 +71,7 @@ case class QuickBuild(
     additionalSources: Array[String],
     sbtVersion: String,
     sbtAutoImports: Array[String],
+    platformJavaHome: String,
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -84,6 +85,7 @@ case class QuickBuild(
       orEmpty(additionalSources),
       sbtVersion,
       orEmpty(sbtAutoImports),
+      platformJavaHome,
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -141,9 +143,16 @@ case class QuickBuild(
     }
     val classpath = classDirectory :: allJars.filterNot(isSourceJar)
     val allPlugins =
-      if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion))
-        s"org.scalameta:::semanticdb-scalac:${V.semanticdbVersion}" :: compilerPlugins.toList
-      else compilerPlugins.toList
+      if (
+        ScalaVersions.isSupportedAtReleaseMomentScalaVersion(
+          scalaVersion
+        ) && !ScalaVersions.isScala3Version(scalaVersion)
+      ) {
+        val semanticdbVersion = BuildInfoVersions.lastSupportedSemanticdb(
+          scalaVersion
+        )
+        s"org.scalameta:::semanticdb-scalac:$semanticdbVersion" :: compilerPlugins.toList
+      } else compilerPlugins.toList
     val pluginDependencies = allPlugins.map(plugin =>
       QuickBuild
         .toDependency(plugin, scalaVersion, binaryVersion)
@@ -196,7 +205,9 @@ case class QuickBuild(
           artifacts,
         )
       }
-    val javaHome = Option(Properties.jdkHome).map(Paths.get(_))
+    val javaHome = Option(platformJavaHome)
+      .map(Paths.get(_))
+      .orElse(Option(Properties.jdkHome).map(Paths.get(_)))
     val tags = if (isTest) Tag.Test :: Nil else Nil
 
     val scalaCompiler =

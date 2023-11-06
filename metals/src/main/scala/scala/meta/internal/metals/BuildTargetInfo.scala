@@ -105,7 +105,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
         "Base Directory",
         List(URIEncoderDecoder.decode(info.baseDirectory)),
       )
-      output ++= getSection("Source Directories", getSources(info))
+      output ++= getSection("Sources", getSources(info))
     })
 
     val scalaClassesDir = scalaInfo.map(_.classDirectory)
@@ -222,9 +222,12 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
     buildTargets.sourceItemsToBuildTargets
       .filter(_._2.iterator.asScala.contains(target.getId()))
       .toList
-      .map { case (path, _) =>
-        val generated = buildTargets.checkIfGeneratedDir(path)
-        s"$path${if (generated) " (generated)" else ""}"
+      .map {
+        case (path, _) if buildTargets.checkIfGeneratedDir(path) =>
+          s"${path}/* (generated)"
+        case (path, _) if path.isDirectory => s"${path}/*"
+        case (path, _) if !path.exists => s"${path}/* (empty)"
+        case (path, _) => path.toString()
       }
       .sorted
   }

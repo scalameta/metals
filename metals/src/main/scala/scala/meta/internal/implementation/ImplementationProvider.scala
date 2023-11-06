@@ -18,7 +18,6 @@ import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.mtags.{Symbol => MSymbol}
@@ -59,7 +58,7 @@ final class ImplementationProvider(
     implementationsInPath.clear()
   }
 
-  override def onDelete(path: SemanticdbPath): Unit = {
+  override def onDelete(path: AbsolutePath): Unit = {
     implementationsInPath.remove(path.toNIO)
   }
 

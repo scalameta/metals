@@ -72,8 +72,10 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |                      ^^^^^^
        |""".stripMargin,
     dependencies = List(
-      "org.jboss.xnio:xnio-nio:3.8.10.Final"
+      "org.jboss.xnio:xnio-nio:3.8.12.Final"
     ),
+    withoutVirtualDocs = true,
+    useWorkspaceFolders = true,
   )
 
   check(
@@ -87,7 +89,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |                      ^^^^^^
        |""".stripMargin,
     dependencies = List(
-      "org.jboss.xnio:xnio-nio:3.8.10.Final"
+      "org.jboss.xnio:xnio-nio:3.8.12.Final"
     ),
   )
 
@@ -98,6 +100,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
       expected: String,
       dependencies: List[String] = Nil,
       withoutVirtualDocs: Boolean = false,
+      useWorkspaceFolders: Boolean = false,
   )(implicit loc: Location): Unit = {
     test(name, withoutVirtualDocs) {
       val parsed = FileLayout.mapFromString(input)
@@ -107,7 +110,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
       val deps = dependencies
         .map(s => s""""$s"""")
         .mkString("[", ", ", "]")
-      val layout =
+      def simpleLayout =
         s"""|/metals.json
             |{
             |  "a": {
@@ -115,10 +118,24 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
             |  }
             |}
             |""".stripMargin
+
+      def workspaceFoldersLayout =
+        Map(
+          "otherfolder" ->
+            s"""|/metals.json
+                |{
+                |  "a": { }
+                |}
+                |""".stripMargin,
+          "somefolder" -> simpleLayout,
+        )
       for {
-        _ <- initialize(layout)
+        _ <-
+          if (useWorkspaceFolders)
+            initialize(workspaceFoldersLayout, expectError = false)
+          else initialize(simpleLayout)
         // trigger extraction into readonly
-        info = server.server.workspaceSymbol(depSymbol)
+        info = server.fullServer.workspaceSymbol(depSymbol)
         matchedInfo = info.find(_.getLocation().getUri().contains(path))
         uri = matchedInfo match {
           case None =>
@@ -138,7 +155,12 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
             )
           )
           .asScala
-        rendered = locations.asScala.map(renderLocation).mkString("\n")
+        folderRoot =
+          if (useWorkspaceFolders) workspace.resolve("somefolder")
+          else workspace
+        rendered = locations.asScala
+          .map(renderLocation(_, folderRoot))
+          .mkString("\n")
         _ = assertNoDiff(rendered, expected)
       } yield ()
     }
@@ -171,14 +193,17 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     }
   }
 
-  private def renderLocation(loc: l.Location): String = {
+  private def renderLocation(
+      loc: l.Location,
+      folderRoot: AbsolutePath = workspace,
+  ): String = {
     val path = AbsolutePath.fromAbsoluteUri(URI.create(loc.getUri()))
     val relativePath =
       path.jarPath
         .map(jarPath => s"${jarPath.filename}${path}")
         .getOrElse(
           path
-            .toRelative(workspace.resolve(Directories.dependencies))
+            .toRelative(folderRoot.resolve(Directories.dependencies))
             .toString()
         )
     val input = path.toInput.copy(path = relativePath.replace("\\", "/"))

@@ -321,4 +321,15 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
     ),
   )
 
+  check(
+    "named-arg-backtick",
+    """|object <<Main>>/*class*/ {
+       |  def <<foo>>/*method,definition*/(<<`type`>>/*parameter,declaration,readonly*/: <<String>>/*type*/): <<String>>/*type*/ = <<`type`>>/*parameter,readonly*/
+       |  val <<x>>/*variable,definition,readonly*/ = <<foo>>/*method*/(
+       |    <<`type`>>/*parameter,readonly*/ = "abc"
+       |  )
+       |}
+       |""".stripMargin,
+  )
+
 }

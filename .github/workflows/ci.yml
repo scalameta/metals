@@ -6,11 +6,8 @@ on:
   pull_request:
 
 concurrency:
-  # Taken from gradle/gradle
-  # On main, we don't want any jobs cancelled so the sha is used to name the group
-  # On PR branches, we cancel the job if new commits are pushed
-  group: ${{ (github.ref == 'refs/heads/main' ||  startsWith(github.ref, 'refs/tags') ) && format('contributor-pr-base-{0}', github.sha) || format('contributor-pr-{0}', github.ref) }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   unit:
@@ -30,7 +27,7 @@ jobs:
             java: "8"
             shard: 2
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
@@ -128,7 +125,7 @@ jobs:
             name: MiMa
             os: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'

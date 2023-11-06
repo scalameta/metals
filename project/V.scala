@@ -11,44 +11,46 @@ object V {
   val scala3RC: Option[String] = None
   val sbtScala = "2.12.17"
   val ammonite212Version = "2.12.18"
-  val ammonite213Version = "2.13.11"
-  val ammonite3Version = "3.1.3"
+  val ammonite213Version = "2.13.12"
+  val ammonite3Version = "3.3.1"
 
-  val ammonite = "2.5.9"
+  val ammonite = "3.0.0-M0-56-1bcbe7f6"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.11"
   val bloopConfig = "1.5.5"
-  val bsp = "2.1.0-M5"
-  val coursier = "2.1.6"
+  val bsp = "2.1.0-M7"
+  val coursier = "2.1.7"
   val coursierInterfaces =
-    "1.0.18" // changing coursier interfaces version may be not binary compatible.
+    "1.0.19" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
   val debugAdapter = "3.1.4"
   val genyVersion = "1.0.0"
-  val gradleBloop = "1.6.1"
+  val gradleBloop = "1.6.2"
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.9.6"
-  val jsoup = "1.16.1"
+  val jsoup = "1.16.2"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.20.1"
   val mavenBloop = "2.0.0"
-  val mill = "0.11.4"
-  val mdoc = "2.3.7"
+  val mill = "0.11.5"
+  val mdoc = "2.4.0"
   val munit = "1.0.0-M10"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
   val scalaCli = "1.0.4"
   val scalafix = "0.11.1"
-  val scalafmt = "3.7.14"
-  val scalameta = "4.8.3"
+  val scalafmt = "3.7.15"
+  val scalameta = "4.8.12"
   val scribe = "3.12.2"
-  val semanticdb = scalameta
   val qdox = "2.0.3"
 
-  val guava = "com.google.guava" % "guava" % "32.1.2-jre"
+  val guava = "com.google.guava" % "guava" % "32.1.3-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
+
+  def semanticdb(scalaVersion: String) =
+    SemanticDbSupport.last.getOrElse(scalaVersion, scalameta)
 
   def isNightliesEnabled: Boolean =
     sys.env.get("CI").isDefined || sys.env.get("NIGHTLIES").isDefined

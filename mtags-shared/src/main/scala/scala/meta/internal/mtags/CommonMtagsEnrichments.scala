@@ -42,21 +42,19 @@ trait CommonMtagsEnrichments {
       cls: java.lang.Class[T],
       gson: Option[Gson] = None
   ): Option[T] =
-    for {
-      data <- Option(obj)
-      value <-
-        try {
-          Option(
-            gson
-              .getOrElse(new Gson())
-              .fromJson[T](data.asInstanceOf[JsonElement], cls)
-          )
-        } catch {
-          case NonFatal(e) =>
-            logger.log(Level.SEVERE, s"decode error: $cls", e)
-            None
-        }
-    } yield value
+    Option(obj).flatMap { data =>
+      try {
+        Option(
+          gson
+            .getOrElse(new Gson())
+            .fromJson[T](data.asInstanceOf[JsonElement], cls)
+        )
+      } catch {
+        case NonFatal(e) =>
+          logger.log(Level.SEVERE, s"decode error: $cls", e)
+          None
+      }
+    }
 
   implicit class XtensionJEitherCross[A, B](either: JEither[A, B]) {
     def asScala: Either[A, B] =
@@ -358,16 +356,25 @@ trait CommonMtagsEnrichments {
           s"""|range: ${r.start} - ${r.end}
               |uri: ${r.uri()}
               |text:
-              |$withMarkers""".stripMargin
+              |```scala
+              |$withMarkers
+              |```
+              |""".stripMargin
         case o: OffsetParams =>
           s"""|offset: ${o.offset()}
               |uri: ${o.uri()}
               |text:
-              |${textWithPosMarker(o.offset(), o.text())}""".stripMargin
+              |```scala
+              |${textWithPosMarker(o.offset(), o.text())}
+              |```
+              |""".stripMargin
         case v =>
           s"""|uri: ${v.uri()}
               |text:
-              |${v.text()}""".stripMargin
+              |```scala
+              |${v.text()}
+              |```
+              |""".stripMargin
       }
     }
   }

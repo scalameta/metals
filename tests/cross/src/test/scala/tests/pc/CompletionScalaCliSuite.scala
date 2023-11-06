@@ -8,7 +8,8 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "io.cir@@
        |package A
        |""".stripMargin,
-    "io.circe",
+    """|io.circe
+       |io.circul""".stripMargin,
   )
 
   checkEdit(
@@ -132,7 +133,8 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using dep "io.cir@@
        |package A
        |""".stripMargin,
-    "io.circe",
+    """|io.circe
+       |io.circul""".stripMargin,
   )
 
   check(
@@ -193,6 +195,25 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |package A
        |""".stripMargin,
     """|//> using lib "com.outr::scribe-cats::3.7.1"
+       |package A
+       |""".stripMargin,
+    filter = _.startsWith("3.7.1"),
+  )
+
+  check(
+    "version-double-colon3",
+    """|//> using lib "com.outr:scribe-cats_3::@@"
+       |package A
+       |""".stripMargin,
+    "",
+  )
+
+  checkEdit(
+    "version-double-colon-edit2",
+    """|//> using lib "com.outr:scribe-cats_3:3.7@@"
+       |package A
+       |""".stripMargin,
+    """|//> using lib "com.outr:scribe-cats_3:3.7.1"
        |package A
        |""".stripMargin,
     filter = _.startsWith("3.7.1"),

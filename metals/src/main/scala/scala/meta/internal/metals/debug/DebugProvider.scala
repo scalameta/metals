@@ -29,6 +29,7 @@ import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
@@ -272,11 +273,10 @@ class DebugProvider(
     )
     envFromFile(envFile).map { envFromFile =>
       main.setEnvironmentVariables((envFromFile ::: env).asJava)
-      new b.DebugSessionParams(
-        singletonList(target),
-        b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        main.toJson,
-      )
+      val params = new b.DebugSessionParams(singletonList(target))
+      params.setDataKind(b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS)
+      params.setData(main.toJson)
+      params
     }
   }
 
@@ -360,13 +360,13 @@ class DebugProvider(
         if (mains.nonEmpty) {
           verifyMain(buildTarget, mains.toList, params)
         } else if (tests.nonEmpty) {
-          Future(
-            new b.DebugSessionParams(
-              singletonList(buildTarget),
-              b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-              tests.asJava.toJson,
-            )
-          )
+          Future {
+            val params = new b.DebugSessionParams(singletonList(buildTarget))
+            params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+            params.setData(tests.asJava.toJson)
+            params
+          }
+
         } else {
           Future.failed(NoRunOptionException)
         }
@@ -428,9 +428,15 @@ class DebugProvider(
           if params.getDataKind == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
         json.as[b.ScalaMainClass] match {
           case Success(main) if params.getTargets().size > 0 =>
+            val javaBinary = buildTargets
+              .scalaTarget(params.getTargets().get(0))
+              .flatMap(scalaTarget =>
+                JavaBinary.javaBinaryFromPath(scalaTarget.jvmHome)
+              )
+              .orElse(userConfig().usedJavaBinary)
             val updatedData = buildTargetClasses.jvmRunEnvironment
               .get(params.getTargets().get(0))
-              .zip(userConfig().usedJavaBinary) match {
+              .zip(javaBinary) match {
               case None =>
                 main.toJson
               case Some((env, javaHome)) =>
@@ -498,23 +504,29 @@ class DebugProvider(
             }
           }
           .map { tests =>
-            new b.DebugSessionParams(
-              singletonList(target),
-              b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-              tests.asJava.toJson,
+            val params = new b.DebugSessionParams(
+              singletonList(target)
             )
+            params.setDataKind(
+              b.TestParamsDataKind.SCALA_TEST_SUITES
+            )
+            params.setData(tests.asJava.toJson)
+            params
           }
       case (Some(TestTarget), Some(target)) =>
         Future {
-          new b.DebugSessionParams(
-            singletonList(target),
-            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+          val params = new b.DebugSessionParams(
+            singletonList(target)
+          )
+          params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+          params.setData(
             testClasses(target).values
               .map(_.fullyQualifiedName)
               .toList
               .asJava
-              .toJson,
+              .toJson
           )
+          params
         }
     }
 
@@ -522,16 +534,14 @@ class DebugProvider(
     result
   }
 
-  def findMainClassAndItsBuildTarget(params: DebugUnresolvedMainClassParams)(
-      implicit ec: ExecutionContext
-  ): Future[List[(ScalaMainClass, b.BuildTarget)]] =
-    withRebuildRetry(() =>
-      buildTargetClassesFinder
-        .findMainClassAndItsBuildTarget(
-          params.mainClass,
-          Option(params.buildTarget),
-        )
-    )
+  def findMainClassAndItsBuildTarget(
+      params: DebugUnresolvedMainClassParams
+  ): Try[List[(ScalaMainClass, b.BuildTarget)]] =
+    buildTargetClassesFinder
+      .findMainClassAndItsBuildTarget(
+        params.mainClass,
+        Option(params.buildTarget),
+      )
 
   def buildMainClassParams(
       foundClasses: List[(ScalaMainClass, b.BuildTarget)],
@@ -570,14 +580,12 @@ class DebugProvider(
 
   def findTestClassAndItsBuildTarget(
       params: DebugUnresolvedTestClassParams
-  )(implicit ec: ExecutionContext): Future[List[(String, b.BuildTarget)]] =
-    withRebuildRetry(() => {
-      buildTargetClassesFinder
-        .findTestClassAndItsBuildTarget(
-          params.testClass,
-          Option(params.buildTarget),
-        )
-    })
+  ): Try[List[(String, b.BuildTarget)]] =
+    buildTargetClassesFinder
+      .findTestClassAndItsBuildTarget(
+        params.testClass,
+        Option(params.buildTarget),
+      )
 
   def buildTestClassParams(
       targets: List[(String, b.BuildTarget)],
@@ -605,11 +613,14 @@ class DebugProvider(
             Option(params.jvmOptions).getOrElse(Nil.asJava),
             (envFromFile ::: env).asJava,
           )
-          new b.DebugSessionParams(
-            singletonList(target.getId()),
-            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES_SELECTION,
-            scalaTestSuite.toJson,
+          val debugParams = new b.DebugSessionParams(
+            singletonList(target.getId())
           )
+          debugParams.setDataKind(
+            b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
+          )
+          debugParams.setData(scalaTestSuite.toJson)
+          debugParams
         }
       // should not really happen due to
       // `findMainClassAndItsBuildTarget` succeeding with non-empty list
@@ -622,13 +633,14 @@ class DebugProvider(
   def createDebugSession(
       target: b.BuildTargetIdentifier
   ): Future[DebugSessionParams] =
-    Future.successful(
-      new b.DebugSessionParams(
-        singletonList(target),
-        b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE,
-        ().toJson,
+    Future.successful {
+      val params = new b.DebugSessionParams(
+        singletonList(target)
       )
-    )
+      params.setDataKind(b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE)
+      params.setData(().toJson)
+      params
+    }
 
   def startTestSuite(
       buildTarget: b.BuildTarget,
@@ -640,21 +652,28 @@ class DebugProvider(
           val testSuites =
             request.requestData.copy(suites = request.requestData.suites.map {
               suite =>
-                if (testProvider.getFramework(buildTarget, suite) == JUnit4)
-                  suite.copy(tests = suite.tests.map(_.replace("$", "\\$")))
-                else suite
+                testProvider.getFramework(buildTarget, suite) match {
+                  case JUnit4 | MUnit =>
+                    suite.copy(tests = suite.tests.map(escapeTestName))
+                  case _ => suite
+                }
             })
-          new b.DebugSessionParams(
-            singletonList(buildTarget.getId),
-            DebugProvider.ScalaTestSelection,
-            testSuites.toJson,
+          val params = new b.DebugSessionParams(
+            singletonList(buildTarget.getId)
           )
-        } else
-          new b.DebugSessionParams(
-            singletonList(buildTarget.getId),
-            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-            request.requestData.suites.map(_.className).toJson,
+          params.setDataKind(
+            b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
           )
+          params.setData(testSuites.toJson)
+          params
+        } else {
+          val params = new b.DebugSessionParams(
+            singletonList(buildTarget.getId)
+          )
+          params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+          params.setData(request.requestData.suites.map(_.className).toJson)
+          params
+        }
       Future.successful(debugSession)
     }
     for {
@@ -728,11 +747,11 @@ class DebugProvider(
         parameters.getDataKind match {
           case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
             json.as[b.ScalaMainClass].map(_.getClassName)
-          case b.DebugSessionParamsDataKind.SCALA_TEST_SUITES =>
+          case b.TestParamsDataKind.SCALA_TEST_SUITES =>
             json.as[ju.List[String]].map(_.asScala.sorted.mkString(";"))
           case b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE =>
             Success("attach-remote-debug-session")
-          case DebugProvider.ScalaTestSelection =>
+          case b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION =>
             json.as[ScalaTestSuites].map { params =>
               params.suites.asScala
                 .map(suite =>
@@ -799,26 +818,26 @@ class DebugProvider(
     }
   }
 
-  private def withRebuildRetry[A](
-      f: () => Try[A]
-  )(implicit ec: ExecutionContext): Future[A] = {
-    Future.fromTry(f()).recoverWith {
-      case ClassNotFoundInBuildTargetException(_, buildTarget) =>
+  def retryAfterRebuild[A](previousResult: Try[A], f: () => Try[A])(implicit
+      ec: ExecutionContext
+  ): Future[Try[A]] =
+    previousResult match {
+      case Failure(ClassNotFoundInBuildTargetException(_, buildTarget)) =>
         val target = Seq(buildTarget.getId())
         for {
           _ <- compilations.compileTargets(target)
           _ <- buildTargetClasses.rebuildIndex(target)
-          result <- Future.fromTry(f())
+          result <- Future(f())
         } yield result
-      case _: ClassNotFoundException =>
+      case Failure(_: ClassNotFoundException) =>
         val allTargetIds = buildTargets.allBuildTargetIds
         for {
           _ <- compilations.compileTargets(allTargetIds)
           _ <- buildTargetClasses.rebuildIndex(allTargetIds)
-          result <- Future.fromTry(f())
+          result <- Future(f())
         } yield result
+      case result => Future.successful(result)
     }
-  }
 
   private def reportOtherBuildTargets(
       className: String,
@@ -910,8 +929,6 @@ object DebugProvider {
     }
   }
 
-  val ScalaTestSelection = "scala-test-suites-selection"
-
   case object WorkspaceErrorsException
       extends Exception(
         s"Cannot run class, since the workspace has errors."
@@ -924,4 +941,86 @@ object DebugProvider {
       extends Exception(
         "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
       )
+
+  val specialChars: Set[Char] = ".+*?^()[]{}|&$".toSet
+
+  def escapeTestName(testName: String): String =
+    testName.flatMap {
+      case c if specialChars(c) => s"\\$c"
+      case c => s"$c"
+    }
+
+  sealed abstract class ClassSearch[A](debugProvider: DebugProvider)(implicit
+      ec: ExecutionContext
+  ) {
+    private val searchPromise = Promise[Try[A]]()
+    protected def search(): Try[A]
+    protected def dapSessionParams(res: A): Future[DebugSessionParams]
+    def createDapSession(args: A): Future[DebugSession] =
+      dapSessionParams(args).flatMap(debugProvider.asSession(_))
+    def searchResult: Future[(Option[A], ClassSearch[A])] = {
+      Future {
+        val resolved = search()
+        searchPromise.trySuccess(resolved)
+      }
+      searchPromise.future.map(e => (e.toOption, this))
+    }
+    def retrySearchResult: Future[(Option[A], ClassSearch[A])] =
+      searchPromise.future
+        .flatMap(debugProvider.retryAfterRebuild(_, search).map(_.toOption))
+        .map((_, this))
+  }
+
+  final class MainClassSearch(
+      debugProvider: DebugProvider,
+      params: DebugUnresolvedMainClassParams,
+  )(implicit ec: ExecutionContext)
+      extends ClassSearch[List[(ScalaMainClass, b.BuildTarget)]](
+        debugProvider
+      ) {
+    override protected def search()
+        : Try[List[(ScalaMainClass, b.BuildTarget)]] =
+      debugProvider.findMainClassAndItsBuildTarget(params)
+    override protected def dapSessionParams(
+        res: List[(ScalaMainClass, b.BuildTarget)]
+    ): Future[DebugSessionParams] =
+      debugProvider.buildMainClassParams(res, params)
+  }
+
+  final class TestClassSearch(
+      debugProvider: DebugProvider,
+      params: DebugUnresolvedTestClassParams,
+  )(implicit ec: ExecutionContext)
+      extends ClassSearch[List[(String, b.BuildTarget)]](debugProvider) {
+    override protected def search(): Try[List[(String, b.BuildTarget)]] =
+      debugProvider.findTestClassAndItsBuildTarget(params)
+    override protected def dapSessionParams(
+        res: List[(String, b.BuildTarget)]
+    ): Future[DebugSessionParams] =
+      debugProvider.buildTestClassParams(res, params)
+  }
+
+  def getResultFromSearches[A](searches: List[ClassSearch[A]])(
+      default: => Future[DebugSession]
+  )(implicit ec: ExecutionContext): Future[DebugSession] =
+    Future
+      .sequence(searches.map(_.searchResult))
+      .getFirstOrElse(
+        Future
+          .sequence(searches.map(_.retrySearchResult))
+          .getFirstOrElse(default)
+      )
+
+  private implicit class FindFirstDebugSession[A](
+      from: Future[List[(Option[A], ClassSearch[A])]]
+  ) {
+    def getFirstOrElse(
+        default: => Future[DebugSession]
+    )(implicit ec: ExecutionContext): Future[DebugSession] =
+      from.flatMap {
+        _.collectFirst { case (Some(dapSession), search) =>
+          search.createDapSession(dapSession)
+        }.getOrElse(default)
+      }
+  }
 }

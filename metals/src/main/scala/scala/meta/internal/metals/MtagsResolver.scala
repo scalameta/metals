@@ -112,7 +112,7 @@ object MtagsResolver {
         }
       }
 
-      def fetch(tries: Int = 0): State = {
+      def fetch(tries: Int = 0): State = logResolution {
         try {
           val metalsVersion = removedScalaVersions.getOrElse(
             scalaVersion,
@@ -148,6 +148,31 @@ object MtagsResolver {
           .currentTimeMillis() - failure.lastTryMillis) > 5.minutes.toMillis
       }
 
+      def logResolution(state: State): State = {
+        state match {
+          case _: State.Success =>
+            val msg = resolveType match {
+              case ResolveType.Regular => s"Resolved mtags for $scalaVersion"
+              case ResolveType.StablePC =>
+                s"Resolved Scala 3 presentation compiler for $scalaVersion"
+              case ResolveType.Nightly =>
+                s"Resolved latest nightly mtags version: $scalaVersion"
+            }
+            scribe.debug(msg)
+          case _: State.Failure =>
+            val errorMsg = resolveType match {
+              case ResolveType.Regular =>
+                s"Failed to resolve mtags for $scalaVersion"
+              case ResolveType.StablePC =>
+                s"Failed to resolve Scala 3 presentation compiler for $scalaVersion"
+              case ResolveType.Nightly =>
+                s"Failed to resolve latest nightly mtags version: $scalaVersion"
+            }
+            scribe.info(errorMsg)
+        }
+        state
+      }
+
       // The metals_2.12 artifact depends on mtags_2.12.x where "x" matches
       // `mtags.BuildInfo.scalaCompilerVersion`. In the case when
       // `info.getScalaVersion == mtags.BuildInfo.scalaCompilerVersion` then we
@@ -165,16 +190,6 @@ object MtagsResolver {
                 if (shouldResolveAgain(failure))
                   fetch(failure.tries + 1)
                 else {
-                  val errorMsg = resolveType match {
-                    case ResolveType.Regular =>
-                      s"Failed to resolve mtags for $scalaVersion"
-                    case ResolveType.StablePC =>
-                      s"Failed to resolve Scala 3 presentation compiler for $scalaVersion"
-                    case ResolveType.Nightly =>
-                      s"Failed to resolve latest nightly mtags version: $scalaVersion"
-                  }
-
-                  scribe.info(errorMsg)
                   failure
                 }
             }
@@ -183,14 +198,6 @@ object MtagsResolver {
 
         computed match {
           case State.Success(v) =>
-            val msg = resolveType match {
-              case ResolveType.Regular => s"Resolved mtags for $scalaVersion"
-              case ResolveType.StablePC =>
-                s"Resolved Scala 3 presentation compiler for $scalaVersion"
-              case ResolveType.Nightly =>
-                s"Resolved latest nightly mtags version: $scalaVersion"
-            }
-            scribe.debug(msg)
             Some(v)
           // Fallback to Stable PC version
           case _: State.Failure

@@ -95,6 +95,35 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
+  test("initial-config-hidden") {
+    cleanWorkspace()
+    client.showMessageRequestHandler = { params =>
+      val expected = MissingScalafmtConf.createScalafmtConfMessage
+      if (params.getMessage() == expected) {
+        params.getActions().asScala.find(_ == MissingScalafmtConf.runDefaults)
+      } else None
+    }
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a":{"scalaVersion" : ${V.scala213}}}
+            |/a/src/main/scala/a/Main.scala
+            |object FormatMe {
+            | val x = 1  }
+            |""".stripMargin,
+        expectError = true,
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.formatting("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiff(
+        server.textContents(".metals/.scalafmt.conf"),
+        s"""|version = "${V.scalafmtVersion}"
+            |runner.dialect = scala213
+            |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("custom-config-path") {
     for {
       _ <- initialize(
@@ -378,18 +407,18 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     }
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |     "scalaVersion": "2.13.6",
-           |     "scalacOptions": ["-Xsource:3"]
-           |  }
-           |}
-           |/.scalafmt.conf
-           |version = "2.7.5"
-           |/a/src/main/scala/A.scala
-           |object A
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |     "scalaVersion": "${V.scala213}",
+            |     "scalacOptions": ["-Xsource:3"]
+            |  }
+            |}
+            |/.scalafmt.conf
+            |version = "2.7.5"
+            |/a/src/main/scala/A.scala
+            |object A
+            |""".stripMargin
       )
       _ = assertNoDiff(
         server.textContents(".scalafmt.conf"),
@@ -447,23 +476,23 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     }
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |     "scalaVersion": "3.0.0"
-           |  },
-           |  "b" : {
-           |     "scalaVersion": "2.13.5",
-           |     "scalacOptions": ["-Xsource:3"]
-           |  }
-           |}
-           |/.scalafmt.conf
-           |version = "2.7.5"
-           |/a/src/main/scala/A.scala
-           |object A
-           |/b/src/main/scala/B.scala
-           |object B
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |     "scalaVersion": "3.0.0"
+            |  },
+            |  "b" : {
+            |     "scalaVersion": "${V.scala213}",
+            |     "scalacOptions": ["-Xsource:3"]
+            |  }
+            |}
+            |/.scalafmt.conf
+            |version = "2.7.5"
+            |/a/src/main/scala/A.scala
+            |object A
+            |/b/src/main/scala/B.scala
+            |object B
+            |""".stripMargin
       )
       _ = assertNoDiff(
         server.textContents(".scalafmt.conf"),

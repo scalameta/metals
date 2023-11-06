@@ -68,6 +68,8 @@ object ClientCommands {
         |   messages?: DoctorRecommendation[];
         |   /** Explanations for the various statuses present in the doctor */
         |   explanations?: DoctorExplanation[];
+        |   /** Error reports reported from Metals */
+        |   errorReports: ErrorReportInfo[];
         |}
         |```
         |```json
@@ -128,6 +130,22 @@ object ClientCommands {
         |  title: string;
         |  /** Explanations of statuses that can be found in the doctor  */
         |  recommendations: string[]
+        |}
+        |```
+        |```json
+        |export interface ErrorReportInfo {
+        |  /** Display name of the error */
+        |  name: string;
+        |  /** Timestamp of the report creation date */
+        |  timestamp: number;
+        |  /** Error report file uri */
+        |  uri: string;
+        |  /** Build target that the error is associated with */
+        |  buildTarget?: string;
+        |  /** Short error summary */
+        |  shortSummary: string;
+        |  /** The type of error -- This can be metals, metals-full, or bloop currently */
+        |  errorReportType: string;
         |}
         |```
         |""".stripMargin,

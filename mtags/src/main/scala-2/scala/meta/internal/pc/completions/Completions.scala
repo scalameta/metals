@@ -498,6 +498,8 @@ trait Completions { this: MetalsGlobal =>
         SbtLibCompletion(coursierComplete, pos, dep)
       case ScalaCliExtractor(dep) =>
         ScalaCliCompletion(coursierComplete, pos, text, dep)
+      case _ if isMultilineCommentStart(pos, text) =>
+        MultilineCommentCompletion(editRange, pos, text)
       case _ if isScaladocCompletion(pos, text) =>
         val associatedDef = onUnitOf(pos.source) { unit =>
           new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)
@@ -903,11 +905,15 @@ trait Completions { this: MetalsGlobal =>
     loop(lastVisitedParentTrees)
   }
 
+  /** Can character form part of an alphanumeric Scala identifier? */
+  private def isIdentifierPart(c: Char) =
+    (c == '$') || Character.isUnicodeIdentifierPart(c)
+
   /**
    * Returns the start offset of the identifier starting as the given offset position.
    */
   def inferIdentStart(pos: Position, text: String): Int =
-    inferStart(pos, text, Chars.isIdentifierPart)
+    inferStart(pos, text, isIdentifierPart)
 
   /**
    * Returns the end offset of the identifier starting as the given offset position.

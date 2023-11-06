@@ -23,9 +23,9 @@ final class BuildToolSelector(
       buildTools: List[BuildTool]
   ): Future[Option[BuildTool]] =
     tables.buildTool.selectedBuildTool match {
-      case Some(chosen) =>
+      case Some(chosen) if buildTools.exists(_.executableName == chosen) =>
         Future(buildTools.find(_.executableName == chosen))
-      case None =>
+      case _ =>
         buildTools match {
           case buildTool :: Nil =>
             tables.buildTool.chooseBuildTool(buildTool.executableName)

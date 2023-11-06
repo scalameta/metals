@@ -16,6 +16,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.BloopJsonUpdateCause.BloopJsonUpdateCause
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -81,7 +82,7 @@ final class BloopServers(
       projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       userConfiguration: UserConfiguration,
-      addLivenessMonitor: Boolean,
+      bspStatusOpt: Option[ConnectionBspStatus],
   ): Future[BuildServerConnection] = {
     val bloopVersion = userConfiguration.currentBloopVersion
     BuildServerConnection
@@ -95,7 +96,7 @@ final class BloopServers(
         tables.dismissedNotifications.ReconnectBsp,
         config,
         name,
-        addLivenessMonitor,
+        bspStatusOpt,
       )
   }
 

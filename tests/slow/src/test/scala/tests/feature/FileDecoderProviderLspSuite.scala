@@ -323,32 +323,46 @@ class FileDecoderProviderLspSuite
 
   check(
     "semanticdb-jar-compact",
-    s"""
-       |/metals.json
-       |{
-       |  "a": {
-       |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala213}",
-       |    "libraryDependencies": ["org.scalameta::munit:0.7.29"]
-       |  }
-       |}
-       |/a/src/main/scala/a/Main.scala
-       |package a
-       |import munit.Printable
-       |
-       |object Main {
-       |  val a : Printable = null
-       |  println(a)
-       |}
-       |""".stripMargin,
-    "a/src/main/scala/a/Main.scala",
+    Map(
+      "otherfolder" ->
+        s"""
+           |/metals.json
+           |{
+           |  "b": {
+           |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala3}"
+           |  }
+           |}
+           |/b/src/main/scala/b/Main.scala
+           |package b
+           |
+           |object Main { }
+           |""".stripMargin,
+      "somefolder" ->
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala213}",
+           |    "libraryDependencies": ["org.scalameta::munit:0.7.29"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |import munit.Printable
+           |
+           |object Main {
+           |  val a : Printable = null
+           |  println(a)
+           |}
+           |""".stripMargin,
+    ),
+    "somefolder/a/src/main/scala/a/Main.scala",
     None,
-    "decode",
     Right(
       FileDecoderProviderLspSuite.PrintableSemanticDBFile(coursierCacheDir)
     ),
-    customUri = Some(
-      s"metalsDecode:jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29-sources.jar!/munit/Printable.scala.semanticdb-compact"
-    ),
+    identity(_),
+    s"metalsDecode:jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29-sources.jar!/munit/Printable.scala.semanticdb-compact",
   )
 
   check(
@@ -433,27 +447,46 @@ class FileDecoderProviderSbtLspSuite
 
   checkBuildTarget(
     "sbt-buildtarget",
-    SbtBuildLayout(
-      s"""|/a/src/main/scala/Main.scala
-          |package a
-          |class A {
-          |  def foo(): Unit = ()
-          |}
-          |/b/src/main/scala/Main.scala
-          |package b
-          |class B {
-          |  def foo(): Unit = ()
-          |}
-          |""".stripMargin,
-      V.scala3,
+    Map(
+      "otherfolder" ->
+        SbtBuildLayout(
+          s"""/a/src/main/scala/OtherMain.scala
+             |package a
+             |class A {
+             |  def foo(): Unit = ()
+             |}
+             |/b/src/main/scala/OtherMain.scala
+             |package b
+             |class B {
+             |  def foo(): Unit = ()
+             |}
+             |""".stripMargin,
+          V.scala3,
+        ),
+      "somefolder" ->
+        SbtBuildLayout(
+          s"""|/a/src/main/scala/Main.scala
+              |package a
+              |class A {
+              |  def foo(): Unit = ()
+              |}
+              |/b/src/main/scala/Main.scala
+              |package b
+              |class B {
+              |  def foo(): Unit = ()
+              |}
+              |""".stripMargin,
+          V.scala3,
+        ),
     ),
     "a", // buildTarget, see: SbtBuildLayout
     Right(FileDecoderProviderLspSuite.sbtBuildTargetResponse),
     result =>
       FileDecoderProviderLspSuite.filterSections(
         result,
-        Set("Target", "Scala Version", "Base Directory", "Source Directories"),
+        Set("Target", "Scala Version", "Base Directory", "Sources"),
       ),
+    "somefolder",
   )
 
   check(
@@ -497,23 +530,39 @@ class FileDecoderProviderSbtLspSuite
 
 trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
 
+  def checkBuildTarget(
+      testName: TestOptions,
+      input: String,
+      buildTarget: String,
+      expected: Either[String, String],
+      transformResult: String => String,
+  ): Unit = checkBuildTarget(
+    testName,
+    Map("somefolder" -> input),
+    buildTarget,
+    expected,
+    transformResult,
+    "somefolder",
+  )
+
   /**
    * @param expected - we can use "@workspace" to represent the workspace directory
    *                  (can't receive it via params because it will be set at "initialize" request)
    */
   def checkBuildTarget(
       testName: TestOptions,
-      input: String,
+      input: Map[String, String],
       buildTarget: String,
       expected: Either[String, String],
-      transformResult: String => String = identity,
+      transformResult: String => String,
+      folderName: String,
   ): Unit = {
     test(testName) {
       for {
-        _ <- initialize(input)
+        _ <- initialize(input, expectError = false)
         result <- server.executeDecodeFileCommand(
           FileDecoderProvider
-            .createBuildTargetURI(workspace, buildTarget)
+            .createBuildTargetURI(workspace.resolve(folderName), buildTarget)
             .toString
         )
       } yield {
@@ -538,6 +587,26 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
       expected: Either[String, String],
       transformResult: String => String = identity,
       customUri: Option[String] = None,
+  ): Unit = check(
+    testName,
+    Map("somefolder" -> input),
+    s"somefolder/$filePath",
+    picked,
+    expected,
+    transformResult,
+    customUri.getOrElse(
+      s"metalsDecode:file://$workspace/somefolder/$filePath.$extension"
+    ),
+  )
+
+  def check(
+      testName: TestOptions,
+      input: Map[String, String],
+      filePath: String,
+      picked: Option[String],
+      expected: Either[String, String],
+      transformResult: String => String,
+      uri: => String,
   ): Unit = {
     test(testName) {
       cleanWorkspace()
@@ -547,13 +616,9 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
         }
       }
       for {
-        _ <- initialize(input)
+        _ <- initialize(input, expectError = false)
         _ <- server.didOpen(filePath)
-        result <- server.executeDecodeFileCommand(
-          customUri.getOrElse(
-            s"metalsDecode:file://$workspace/$filePath.$extension"
-          )
-        )
+        result <- server.executeDecodeFileCommand(uri)
       } yield {
         assertEquals(
           if (result.value != null) Right(transformResult(result.value))
@@ -1195,7 +1260,7 @@ object FileDecoderProviderLspSuite {
         |  ${V.scala3}
         |
         |Base Directory
-        |  file://@workspace/a[2.13.8]/""".stripMargin
+        |  file://@workspace/somefolder/a[2.13.8]/""".stripMargin
 
   def sbtBuildTargetResponse: String =
     s"""|Target
@@ -1205,11 +1270,11 @@ object FileDecoderProviderLspSuite {
         |  ${V.scala3}
         |
         |Base Directory
-        |  file:@workspace/a/
+        |  file:@workspace/somefolder/a/
         |
-        |Source Directories
-        |  @workspace/a/src/main/java
-        |  @workspace/a/src/main/scala
-        |  @workspace/a/src/main/scala-3
-        |  @workspace/a/target/scala-${V.scala3}/src_managed/main (generated)""".stripMargin
+        |Sources
+        |  @workspace/somefolder/a/src/main/java/* (empty)
+        |  @workspace/somefolder/a/src/main/scala-3/* (empty)
+        |  @workspace/somefolder/a/src/main/scala/*
+        |  @workspace/somefolder/a/target/scala-${V.scala3}/src_managed/main/* (generated)""".stripMargin
 }

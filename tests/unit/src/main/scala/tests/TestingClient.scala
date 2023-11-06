@@ -12,6 +12,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
@@ -19,10 +20,10 @@ import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.ServerLivenessMonitor
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.WorkspaceChoicePopup
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
@@ -74,6 +75,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var selectBspServer: Seq[MessageActionItem] => MessageActionItem = { _ =>
     null
   }
+  var chooseWorkspaceFolder: Seq[MessageActionItem] => MessageActionItem =
+    _.head
   var chooseBuildTool: Seq[MessageActionItem] => MessageActionItem = {
     actions =>
       actions
@@ -87,8 +90,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
   var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
-  var buildServerNotResponding =
-    ServerLivenessMonitor.ServerNotResponding.dismiss
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
   var bspError = BspErrorHandler.dismiss
 
@@ -359,10 +360,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         } else if (ResetWorkspace.params() == params) {
           resetWorkspace
         } else if (
-          params.getMessage == ServerLivenessTestData.serverNotRespondingMessage
-        ) {
-          buildServerNotResponding
-        } else if (
           params
             .getMessage()
             .endsWith(
@@ -377,6 +374,16 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           params.getMessage().startsWith(BspErrorHandler.errorHeader)
         ) {
           bspError
+        } else if (
+          params.getMessage() == ConnectionBspStatus
+            .noResponseParams("Bill", Icons.default)
+            .logMessage(Icons.default)
+        ) {
+          new MessageActionItem("ok")
+        } else if (
+          params.getMessage().startsWith("For which folder would you like to")
+        ) {
+          chooseWorkspaceFolder(params.getActions().asScala.toSeq)
         } else {
           throw new IllegalArgumentException(params.toString)
         }

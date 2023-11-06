@@ -33,6 +33,8 @@ trait BuildTool {
 }
 
 object BuildTool {
+
+  case class Found(buildTool: BuildTool, digest: String)
   def copyFromResource(
       tempDir: Path,
       filePath: String,

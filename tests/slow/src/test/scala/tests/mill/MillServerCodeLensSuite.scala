@@ -1,7 +1,5 @@
 package tests.mill
 
-import scala.concurrent.duration.Duration
-
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -12,8 +10,10 @@ import tests.MillServerInitializer
 class MillServerCodeLensSuite
     extends BaseCodeLensLspSuite("mill-server-lenses", MillServerInitializer) {
 
-  override def munitTimeout: Duration = Duration("4min")
-
+  /*
+   * There is some flakiness involved, possibly https://github.com/com-lihaoyi/mill/issues/2826
+   * We added some timeouts to make sure the test is correctly retried when fetching lenses.
+   */
   test("run-mill-lens", maxRetry = 3) {
     cleanWorkspace()
     writeLayout(
@@ -30,7 +30,7 @@ class MillServerCodeLensSuite
            |// no test lense as debug is not supported
            |class Foo extends munit.FunSuite {}
            |""".stripMargin,
-        V.scala213,
+        V.scala3,
         V.millVersion,
         includeMunit = true,
       )
@@ -63,7 +63,7 @@ class MillServerCodeLensSuite
       lenses <- server.codeLenses("MillMinimal/src/Main.scala")
       _ = assert(lenses.size > 0, "No lenses were generated!")
       command = lenses.head.getCommand()
-      _ = assertEquals(runFromCommand(command), Some("Hello java!"))
+      _ = assertEquals(runFromCommand(command, None), Some("Hello java!"))
     } yield ()
   }
 }

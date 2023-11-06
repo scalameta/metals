@@ -33,9 +33,11 @@ case class JavaTarget(
   def isSemanticdbEnabled: Boolean =
     javac.isSemanticdbEnabled || semanticDbEnabledAlternatively
 
-  def isSourcerootDeclared: Boolean = javac.isSourcerootDeclared
+  def isSourcerootDeclared: Boolean =
+    javac.isSourcerootDeclared || semanticDbEnabledAlternatively
 
-  def isTargetrootDeclared: Boolean = javac.isTargetrootDeclared
+  def isTargetrootDeclared: Boolean =
+    javac.isTargetrootDeclared || semanticDbEnabledAlternatively
 
   def classDirectory: String = javac.getClassDirectory()
 
@@ -47,7 +49,7 @@ case class JavaTarget(
 
   def sourceVersion: Option[String] = javac.sourceVersion
 
-  def targetroot: AbsolutePath = javac.targetroot
+  def targetroot: Option[AbsolutePath] = javac.targetroot
 
   /**
    * Typically to verify that SemanticDB is enabled correctly we check the javacOptions to ensure

@@ -9,6 +9,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TestUserInterfaceKind
@@ -277,7 +278,7 @@ final class RunTestCodeLens(
       className: String,
   ): List[l.Command] = {
     val params = {
-      val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
+      val dataKind = b.TestParamsDataKind.SCALA_TEST_SUITES
       val data = singletonList(className).toJson
       sessionParams(target, dataKind, data)
     }
@@ -293,13 +294,19 @@ final class RunTestCodeLens(
       main: b.ScalaMainClass,
       buildServerCanDebug: Boolean,
   ): List[l.Command] = {
+    val javaBinary = buildTargets
+      .scalaTarget(target)
+      .flatMap(scalaTarget =>
+        JavaBinary.javaBinaryFromPath(scalaTarget.jvmHome)
+      )
+      .orElse(userConfig().usedJavaBinary)
     val (data, shellCommandAdded) = buildTargetClasses.jvmRunEnvironment
       .get(target)
-      .zip(userConfig().usedJavaBinary) match {
+      .zip(javaBinary) match {
       case None =>
         (main.toJson, false)
-      case Some((env, javaHome)) =>
-        (ExtendedScalaMainClass(main, env, javaHome, workspace).toJson, true)
+      case Some((env, javaBinary)) =>
+        (ExtendedScalaMainClass(main, env, javaBinary, workspace).toJson, true)
     }
     val params = {
       val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
@@ -322,7 +329,10 @@ final class RunTestCodeLens(
       dataKind: String,
       data: JsonElement,
   ): b.DebugSessionParams = {
-    new b.DebugSessionParams(List(target).asJava, dataKind, data)
+    val params = new b.DebugSessionParams(List(target).asJava)
+    params.setDataKind(dataKind)
+    params.setData(data)
+    params
   }
 
   private def command(

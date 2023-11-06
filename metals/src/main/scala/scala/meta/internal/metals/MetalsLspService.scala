@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import java.net.URI
 import java.nio.file._
-import java.sql.Connection
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
@@ -18,6 +17,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
@@ -26,6 +26,7 @@ import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BloopInstall
@@ -125,18 +126,23 @@ class MetalsLspService(
     languageClient: ConfiguredLanguageClient,
     initializeParams: InitializeParams,
     clientConfig: ClientConfiguration,
-    userConfig: () => UserConfiguration,
     statusBar: StatusBar,
     focusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
     timerProvider: TimerProvider,
     initTreeView: () => Unit,
-    val folder: AbsolutePath,
+    folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
-) extends Cancelable
+    bspStatus: BspStatus,
+) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
+    with Cancelable
     with TextDocumentService {
   import serverInputs._
+
+  @volatile
+  private var userConfig: UserConfiguration = initialUserConfig
+  private val userConfigPromise: Promise[Unit] = Promise()
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -176,6 +182,13 @@ class MetalsLspService(
 
   implicit val reports: StdReportContext = new StdReportContext(
     folder.toNIO,
+    _.flatMap { uri =>
+      for {
+        filePath <- uri.toAbsolutePathSafe
+        buildTargetId <- buildTargets.inverseSources(filePath)
+        name <- buildTargets.info(buildTargetId).map(_.getDisplayName())
+      } yield name
+    },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
 
@@ -185,12 +198,13 @@ class MetalsLspService(
   private val buildTools: BuildTools = new BuildTools(
     folder,
     bspGlobalDirectories,
-    userConfig,
+    () => userConfig,
     () => tables.buildServers.selectedServer().nonEmpty,
   )
 
+  def javaHome = userConfig.javaHome
   private val optJavaHome =
-    JdkSources.defaultJavaHome(userConfig().javaHome).headOption
+    JdkSources.defaultJavaHome(javaHome).headOption
   private val maybeJdkVersion: Option[JdkVersion] =
     JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
 
@@ -221,12 +235,12 @@ class MetalsLspService(
   )
 
   private val scalaVersionSelector = new ScalaVersionSelector(
-    userConfig,
+    () => userConfig,
     buildTargets,
   )
   private val remote = new RemoteLanguageServer(
     () => folder,
-    userConfig,
+    () => userConfig,
     initialServerConfig,
     buffers,
     buildTargets,
@@ -291,9 +305,9 @@ class MetalsLspService(
   )
 
   private val onTypeFormattingProvider =
-    new OnTypeFormattingProvider(buffers, trees, userConfig)
+    new OnTypeFormattingProvider(buffers, trees, () => userConfig)
   private val rangeFormattingProvider =
-    new RangeFormattingProvider(buffers, trees, userConfig)
+    new RangeFormattingProvider(buffers, trees, () => userConfig)
 
   private val foldingRangeProvider = new FoldingRangeProvider(
     trees,
@@ -307,6 +321,7 @@ class MetalsLspService(
     buildTools,
     tables,
     shellRunner,
+    () => userConfig,
   )
 
   private val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
@@ -314,6 +329,7 @@ class MetalsLspService(
     languageClient,
     shellRunner,
     statusBar,
+    () => userConfig,
   )
 
   private val diagnostics: Diagnostics = new Diagnostics(
@@ -357,6 +373,7 @@ class MetalsLspService(
         clientConfig,
         () => semanticDBIndexer,
         javaInteractiveSemanticdb,
+        buffers,
       )
     )
   }
@@ -372,8 +389,8 @@ class MetalsLspService(
     new BspErrorHandler(
       languageClient,
       folder,
-      restartBspServer,
       () => bspSession,
+      tables,
     )
 
   private val buildClient: ForwardingMetalsBuildClient =
@@ -399,7 +416,7 @@ class MetalsLspService(
         worksheetProvider.onBuildTargetDidCompile(target)
       },
       onBuildTargetDidChangeFunc = params => {
-        maybeQuickConnectToBuildServer(params)
+        onBuildTargetChanges(params)
       },
       bspErrorHandler,
     )
@@ -411,6 +428,9 @@ class MetalsLspService(
     clientConfig.initialConfig,
   )
 
+  private val connectionBspStatus =
+    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
+
   private val bspServers: BspServers = new BspServers(
     folder,
     charset,
@@ -419,7 +439,7 @@ class MetalsLspService(
     tables,
     bspGlobalDirectories,
     clientConfig.initialConfig,
-    userConfig,
+    () => userConfig,
   )
 
   private val bspConnector: BspConnector = new BspConnector(
@@ -428,10 +448,12 @@ class MetalsLspService(
     buildTools,
     languageClient,
     tables,
-    userConfig,
+    () => userConfig,
     statusBar,
     bspConfigGenerator,
     () => bspSession.map(_.mainConnection),
+    restartBspServer,
+    connectionBspStatus,
   )
 
   private val workspaceSymbols: WorkspaceSymbolProvider =
@@ -477,7 +499,7 @@ class MetalsLspService(
     semanticdbs,
     buffers,
     clientConfig,
-    userConfig,
+    () => userConfig,
     languageClient,
     getVisibleName,
     folder,
@@ -490,13 +512,13 @@ class MetalsLspService(
         buffers,
         buildTargets,
         clientConfig,
-        userConfig,
+        () => userConfig,
         trees,
         folder,
       )
     val goSuperLensProvider = new SuperMethodCodeLens(
       buffers,
-      userConfig,
+      () => userConfig,
       clientConfig,
       trees,
     )
@@ -552,7 +574,7 @@ class MetalsLspService(
       charset,
       focusedDocument,
       clientConfig,
-      userConfig,
+      () => userConfig,
       trees,
     )
 
@@ -570,7 +592,7 @@ class MetalsLspService(
   private val formattingProvider: FormattingProvider = new FormattingProvider(
     folder,
     buffers,
-    userConfig,
+    () => userConfig,
     languageClient,
     clientConfig,
     statusBar,
@@ -582,7 +604,7 @@ class MetalsLspService(
   private val javaFormattingProvider: JavaFormattingProvider =
     new JavaFormattingProvider(
       buffers,
-      userConfig,
+      () => userConfig,
       buildTargets,
     )
 
@@ -615,11 +637,10 @@ class MetalsLspService(
     )
 
   private val newFileProvider: NewFileProvider = new NewFileProvider(
-    folder,
     languageClient,
     packageProvider,
-    focusedDocument,
     scalaVersionSelector,
+    clientConfig.icons,
   )
 
   private val symbolSearch: MetalsSymbolSearch = new MetalsSymbolSearch(
@@ -643,7 +664,7 @@ class MetalsLspService(
         buffers,
         buildTargets,
         languageClient,
-        userConfig,
+        () => userConfig,
         statusBar,
         diagnostics,
         embedded,
@@ -658,7 +679,7 @@ class MetalsLspService(
     new Compilers(
       folder,
       clientConfig,
-      userConfig,
+      () => userConfig,
       buildTargets,
       buffers,
       symbolSearch,
@@ -703,14 +724,14 @@ class MetalsLspService(
       compilers,
       statusBar,
       sourceMapper,
-      userConfig,
+      () => userConfig,
       testProvider,
     )
   )
 
   private val scalafixProvider: ScalafixProvider = ScalafixProvider(
     buffers,
-    userConfig,
+    () => userConfig,
     folder,
     statusBar,
     compilations,
@@ -740,7 +761,7 @@ class MetalsLspService(
     tables,
     clientConfig,
     mtagsResolver,
-    () => userConfig().javaHome,
+    () => userConfig.javaHome,
     maybeJdkVersion,
     getVisibleName,
     buildTools,
@@ -759,7 +780,7 @@ class MetalsLspService(
       folder,
       compilers,
       buildTargets,
-      userConfig,
+      () => userConfig,
       shellRunner,
       fileSystemSemanticdbs,
       interactiveSemanticdbs,
@@ -784,7 +805,7 @@ class MetalsLspService(
 
   val treeView =
     new FolderTreeViewProvider(
-      Folder(folder, folderVisibleName),
+      new Folder(folder, folderVisibleName, true),
       buildTargets,
       () => buildClient.ongoingCompilations(),
       definitionIndex,
@@ -821,7 +842,7 @@ class MetalsLspService(
       tables,
       languageClient,
       buildClient,
-      userConfig,
+      () => userConfig,
       () => indexer.profiledIndexWorkspace(() => ()),
       () => folder,
       focusedDocument,
@@ -850,7 +871,7 @@ class MetalsLspService(
     cancelable
   }
 
-  def loadFingerPrints(): Unit = {
+  private def loadFingerPrints(): Unit = {
     // load fingerprints from last execution
     fingerprints.addAll(tables.fingerprints.load())
   }
@@ -862,7 +883,7 @@ class MetalsLspService(
       token: CancelToken,
   ): Future[Unit] = codeActionProvider.executeCommands(params, token)
 
-  def registerNiceToHaveFilePatterns(): Unit = {
+  private def registerNiceToHaveFilePatterns(): Unit = {
     for {
       params <- Option(initializeParams)
       capabilities <- Option(params.getCapabilities)
@@ -888,9 +909,11 @@ class MetalsLspService(
 
   val isInitialized = new AtomicBoolean(false)
 
-  def connectTables(): Connection = tables.connect()
+  def initialized(): Future[Unit] = {
+    loadFingerPrints()
+    registerNiceToHaveFilePatterns()
+    tables.connect()
 
-  def initialized(): Future[Unit] =
     for {
       _ <- maybeSetupScalaCli()
       _ <-
@@ -905,21 +928,30 @@ class MetalsLspService(
             )
           )
     } yield ()
+  }
 
   def onShutdown(): Unit = {
     tables.fingerprints.save(fingerprints.getAllFingerprints())
     cancel()
   }
 
-  def onUserConfigUpdate(old: UserConfiguration): Future[Unit] = {
-    if (userConfig().excludedPackages != old.excludedPackages) {
+  def setUserConfig(newConfig: UserConfiguration): UserConfiguration = {
+    val old = userConfig
+    userConfig = newConfig
+    userConfigPromise.trySuccess(())
+    old
+  }
+
+  def onUserConfigUpdate(newConfig: UserConfiguration): Future[Unit] = {
+    val old = setUserConfig(newConfig)
+    if (userConfig.excludedPackages != old.excludedPackages) {
       excludedPackageHandler = ExcludedPackagesHandler.fromUserConfiguration(
-        userConfig().excludedPackages.getOrElse(Nil)
+        userConfig.excludedPackages.getOrElse(Nil)
       )
       workspaceSymbols.indexClasspath()
     }
 
-    userConfig().fallbackScalaVersion.foreach { version =>
+    userConfig.fallbackScalaVersion.foreach { version =>
       if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
         val params =
           Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
@@ -929,15 +961,22 @@ class MetalsLspService(
       }
     }
 
-    if (userConfig().symbolPrefixes != old.symbolPrefixes) {
+    if (userConfig.symbolPrefixes != old.symbolPrefixes) {
       compilers.restartAll()
     }
 
+    val slowConnect =
+      if (userConfig.customProjectRoot != old.customProjectRoot) {
+        tables.buildTool.reset()
+        tables.buildServers.reset()
+        slowConnectToBuildServer(false).ignoreValue
+      } else Future.successful(())
+
     val resetDecorations =
       if (
-        userConfig().showImplicitArguments != old.showImplicitArguments ||
-        userConfig().showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
-        userConfig().showInferredType != old.showInferredType
+        userConfig.showImplicitArguments != old.showImplicitArguments ||
+        userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
+        userConfig.showInferredType != old.showInferredType
       ) {
         buildServerPromise.future.flatMap { _ =>
           syntheticsDecorator.refresh()
@@ -951,21 +990,21 @@ class MetalsLspService(
         if (session.main.isBloop) {
           bloopServers
             .ensureDesiredVersion(
-              userConfig().currentBloopVersion,
+              userConfig.currentBloopVersion,
               session.version,
-              userConfig().bloopVersion.nonEmpty,
+              userConfig.bloopVersion.nonEmpty,
               old.bloopVersion.isDefined,
               () => autoConnectToBuildServer,
             )
             .flatMap { _ =>
               bloopServers.ensureDesiredJvmSettings(
-                userConfig().bloopJvmProperties,
-                userConfig().javaHome,
+                userConfig.bloopJvmProperties,
+                userConfig.javaHome,
                 () => autoConnectToBuildServer(),
               )
             }
         } else if (
-          userConfig().ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
+          userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
             .exists(Ammonite.isAmmBuildTarget)
         ) {
           languageClient
@@ -984,11 +1023,10 @@ class MetalsLspService(
       }
       .getOrElse(Future.successful(()))
 
-    Future
-      .sequence(
-        List(restartBuildServer, resetDecorations)
-      )
-      .map(_ => ())
+    for {
+      _ <- slowConnect
+      _ <- Future.sequence(List(restartBuildServer, resetDecorations))
+    } yield ()
   }
 
   override def didOpen(
@@ -1139,6 +1177,7 @@ class MetalsLspService(
     compilers.didClose(path)
     trees.didClose(path)
     diagnostics.onClose(path)
+    interactiveSemanticdbs.onClose(path)
   }
 
   override def didSave(
@@ -1182,7 +1221,7 @@ class MetalsLspService(
         .asScala
         .flatMap {
           case FileOutOfScalaCliBspScope.regenerateAndRestart =>
-            val buildTool = ScalaCliBuildTool(folder, folder, userConfig)
+            val buildTool = ScalaCliBuildTool(folder, folder, () => userConfig)
             for {
               _ <- buildTool.generateBspConfig(
                 folder,
@@ -1220,6 +1259,7 @@ class MetalsLspService(
     def isNewBuildTool(path: AbsolutePath): Boolean = {
       path.isInBspDirectory(folder) &&
       path.extension == "json" &&
+      isValidBspFile(path) &&
       !tables.buildServers
         .selectedServer()
         .contains(path.filename.stripSuffix(".json"))
@@ -1309,15 +1349,20 @@ class MetalsLspService(
     }
   }
 
+  private def isValidBspFile(path: AbsolutePath): Boolean =
+    path.readTextOpt.exists(text => Try(ujson.read(text)).toOption.nonEmpty)
+
   private def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
     paths.foreach { path =>
       fingerprints.add(path, FileIO.slurp(path, charset))
     }
+
     Future
       .sequence(
         List(
           Future(indexer.reindexWorkspaceSources(paths)),
-          compilations.compileFiles(paths),
+          compilations
+            .compileFiles(paths, Option(focusedDocumentBuildTarget.get())),
           onBuildChanged(paths).ignoreValue,
           Future.sequence(paths.map(onBuildToolAdded)),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
@@ -1329,7 +1374,8 @@ class MetalsLspService(
     Future
       .sequence(
         List(
-          compilations.compileFiles(List(path)),
+          compilations
+            .compileFiles(List(path), Option(focusedDocumentBuildTarget.get())),
           Future {
             diagnostics.didDelete(path)
             testProvider.onFileDelete(path)
@@ -1534,10 +1580,13 @@ class MetalsLspService(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] = {
     CancelTokens.future { token =>
-      compilers.semanticTokens(params, token).map { semanticTokens =>
-        if (semanticTokens.getData().isEmpty()) null
-        else semanticTokens
-      }
+      for {
+        _ <- userConfigPromise.future
+        res <- compilers.semanticTokens(params, token).map { semanticTokens =>
+          if (semanticTokens.getData().isEmpty()) null
+          else semanticTokens
+        }
+      } yield res
     }
   }
 
@@ -1846,29 +1895,15 @@ class MetalsLspService(
   ): Future[DebugSession] =
     debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
 
-  def findTestClassAndItsBuildTarget(
+  def testClassSearch(
       params: DebugUnresolvedTestClassParams
-  ): Future[List[(String, b.BuildTarget)]] =
-    debugProvider.findTestClassAndItsBuildTarget(params)
+  ): DebugProvider.TestClassSearch =
+    new DebugProvider.TestClassSearch(debugProvider, params)
 
-  def startTestSuiteForResolved(
-      targets: List[(String, b.BuildTarget)],
-      params: DebugUnresolvedTestClassParams,
-  ): Future[DebugSession] = debugProvider
-    .buildTestClassParams(targets, params)
-    .flatMap(debugProvider.asSession)
-
-  def findMainClassAndItsBuildTarget(
+  def mainClassSearch(
       params: DebugUnresolvedMainClassParams
-  ): Future[List[(b.ScalaMainClass, b.BuildTarget)]] =
-    debugProvider.findMainClassAndItsBuildTarget(params)
-
-  def startMainClass(
-      foundClasses: List[(b.ScalaMainClass, b.BuildTarget)],
-      params: DebugUnresolvedMainClassParams,
-  ): Future[DebugSession] = debugProvider
-    .buildMainClassParams(foundClasses, params)
-    .flatMap(debugProvider.asSession)
+  ): DebugProvider.MainClassSearch =
+    new DebugProvider.MainClassSearch(debugProvider, params)
 
   def supportsBuildTarget(
       target: b.BuildTargetIdentifier
@@ -1964,11 +1999,10 @@ class MetalsLspService(
       case Nil => Future(None)
       case buildTools =>
         for {
-          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
+          buildTool <- buildToolSelector.checkForChosenBuildTool(
             buildTools
           )
-          if isCompatibleVersion(buildTool)
-        } yield Some(buildTool)
+        } yield buildTool.filter(isCompatibleVersion)
     }
   }
 
@@ -1978,11 +2012,19 @@ class MetalsLspService(
       buildTool.version,
     )
 
-  def supportedBuildTool(): Future[Option[BuildTool]] = {
+  def supportedBuildTool(): Future[Option[BuildTool.Found]] = {
     def isCompatibleVersion(buildTool: BuildTool) = {
       val isCompatibleVersion = this.isCompatibleVersion(buildTool)
       if (isCompatibleVersion) {
-        Some(buildTool)
+        buildTool.digest(folder) match {
+          case Some(digest) =>
+            Some(BuildTool.Found(buildTool, digest))
+          case None =>
+            scribe.warn(
+              s"Could not calculate checksum for ${buildTool.executableName} in $folder"
+            )
+            None
+        }
       } else {
         scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
         languageClient.showMessage(
@@ -2001,10 +2043,12 @@ class MetalsLspService(
       }
       case buildTools =>
         for {
-          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
+          buildTool <- buildToolSelector.checkForChosenBuildTool(
             buildTools
           )
-        } yield isCompatibleVersion(buildTool)
+        } yield {
+          buildTool.flatMap(isCompatibleVersion)
+        }
     }
   }
 
@@ -2018,51 +2062,47 @@ class MetalsLspService(
         _ == BloopServers.name
       )
       buildChange <- possibleBuildTool match {
-        case Some(buildTool) =>
-          (buildTool.digest(folder), buildTool) match {
-            case (None, _) =>
-              scribe.warn(s"Skipping build import, no checksum.")
-              Future.successful(BuildChange.None)
-            // If there is no .bazelbsp present, we ask user to write bsp config
-            // After that, we should fall into the last case and index workspace
-            case (Some(_), _: BazelBuildTool) if !buildTools.isBazelBsp =>
-              BazelBuildTool
-                .maybeWriteBazelConfig(
-                  shellRunner,
-                  folder,
-                  languageClient,
-                  tables,
-                  forceImport,
-                )
-                .flatMap(_ => quickConnectToBuildServer())
-            case (Some(_), buildTool: ScalaCliBuildTool)
-                if chosenBuildServer.isEmpty =>
-              tables.buildServers.chooseServer(ScalaCliBuildTool.name)
-              val scalaCliBspConfigExists =
-                ScalaCliBuildTool.pathsToScalaCliBsp(folder).exists(_.isFile)
-              if (scalaCliBspConfigExists) Future.successful(BuildChange.None)
-              else
-                buildTool
-                  .generateBspConfig(
-                    folder,
-                    args =>
-                      bspConfigGenerator.runUnconditionally(buildTool, args),
-                    statusBar,
-                  )
-                  .flatMap(_ => quickConnectToBuildServer())
-            case (Some(digest), buildTool: BloopInstallProvider)
-                if isBloopOrEmpty =>
-              slowConnectToBloopServer(forceImport, buildTool, digest)
-            case (Some(digest), _) =>
-              indexer.reloadWorkspaceAndIndex(
-                forceImport,
-                buildTool,
-                digest,
-                importBuild,
-              )
-          }
         case None =>
           Future.successful(BuildChange.None)
+        case Some(BuildTool.Found(buildTool: ScalaCliBuildTool, _))
+            if chosenBuildServer.isEmpty =>
+          tables.buildServers.chooseServer(ScalaCliBuildTool.name)
+          val scalaCliBspConfigExists =
+            ScalaCliBuildTool.pathsToScalaCliBsp(folder).exists(_.isFile)
+          if (scalaCliBspConfigExists) Future.successful(BuildChange.None)
+          else
+            buildTool
+              .generateBspConfig(
+                folder,
+                args => bspConfigGenerator.runUnconditionally(buildTool, args),
+                statusBar,
+              )
+              .flatMap(_ => quickConnectToBuildServer())
+        // If there is no .bazelbsp present, we ask user to write bsp config
+        // After that, we should fall into the last case and index workspace
+        case Some(BuildTool.Found(_: BazelBuildTool, _))
+            if !buildTools.isBazelBsp =>
+          BazelBuildTool
+            .maybeWriteBazelConfig(
+              shellRunner,
+              folder,
+              languageClient,
+              tables,
+              userConfig.javaHome,
+              forceImport,
+            )
+            .flatMap(_ => quickConnectToBuildServer())
+        case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
+            if isBloopOrEmpty =>
+          slowConnectToBloopServer(forceImport, buildTool, digest)
+        case Some(found) =>
+          indexer.reloadWorkspaceAndIndex(
+            forceImport,
+            found.buildTool,
+            found.digest,
+            importBuild,
+          )
+
       }
     } yield buildChange
 
@@ -2074,7 +2114,7 @@ class MetalsLspService(
     if (
       !buildTools.isAutoConnectable()
       && buildTools.loadSupported.isEmpty
-      && folder.hasScalaFiles
+      && folder.isScalaProject()
     ) scalaCli.setupIDE(folder)
     else Future.successful(())
   }
@@ -2137,9 +2177,11 @@ class MetalsLspService(
       change
     }
 
-  private def maybeQuickConnectToBuildServer(
+  private def onBuildTargetChanges(
       params: b.DidChangeBuildTarget
   ): Unit = {
+    // Make sure that no compilation is running, if it is it might not get completed properly
+    compilations.cancel()
     val (ammoniteChanges, otherChanges) =
       params.getChanges.asScala.partition { change =>
         val connOpt = buildTargets.buildServerOf(change.getTarget)
@@ -2168,13 +2210,19 @@ class MetalsLspService(
               .error("Error re-importing Scala CLI build", exception)
         }
 
-    if (otherChanges0.nonEmpty)
-      quickConnectToBuildServer().onComplete {
-        case Failure(e) =>
-          scribe.warn("Error refreshing build", e)
-        case Success(_) =>
-          scribe.info("Refreshed build after change")
+    if (otherChanges0.nonEmpty) {
+      bspSession match {
+        case None => scribe.warn("No build server connected")
+        case Some(session) =>
+          for {
+            _ <- importBuild(session)
+            _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
+          } {
+            focusedDocument().foreach(path => compilations.compileFile(path))
+          }
       }
+
+    }
   }
 
   def autoConnectToBuildServer(): Future[BuildChange] = {
@@ -2201,7 +2249,7 @@ class MetalsLspService(
         bspConnector.connect(
           maybeProjectRoot.getOrElse(folder),
           folder,
-          userConfig(),
+          userConfig,
           shellRunner,
         )
       }
@@ -2241,6 +2289,8 @@ class MetalsLspService(
   }
 
   def disconnectOldBuildServer(): Future[Unit] = {
+    compilations.cancel()
+    buildTargetClasses.cancel()
     diagnostics.reset()
     bspSession.foreach(connection =>
       scribe.info(s"Disconnecting from ${connection.main.name} session...")
@@ -2259,7 +2309,6 @@ class MetalsLspService(
   }
 
   private def importBuild(session: BspSession) = {
-    compilers.cancel()
     val importedBuilds0 = timerProvider.timed("Imported build") {
       session.importBuilds()
     }
@@ -2273,7 +2322,7 @@ class MetalsLspService(
         }
         mainBuildTargetsData.resetConnections(idToConnection)
       }
-    } yield ()
+    } yield compilers.cancel()
   }
 
   private def connectToNewBuildServer(
@@ -2288,8 +2337,11 @@ class MetalsLspService(
       possibleBuildTool <- supportedBuildTool()
       _ <- importBuild(session)
       _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
-      _ = possibleBuildTool.map(
-        workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
+      _ = possibleBuildTool.foreach(buildTool =>
+        workspaceReload.persistChecksumStatus(
+          Digest.Status.Installed,
+          buildTool.buildTool,
+        )
       )
       _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
     } yield {
@@ -2309,7 +2361,7 @@ class MetalsLspService(
       () => buildClient,
       languageClient,
       () => clientConfig.initialConfig,
-      userConfig,
+      () => userConfig,
       parseTreesAndPublishDiags,
     )
   )
@@ -2363,7 +2415,7 @@ class MetalsLspService(
     focusedDocument,
     focusedDocumentBuildTarget,
     buildTargetClasses,
-    userConfig,
+    () => userConfig,
     sh,
     symbolDocs,
     scalaVersionSelector,
@@ -2378,7 +2430,7 @@ class MetalsLspService(
         val messageParams = IncompatibleBloopVersion.params(
           bspServerVersion,
           BuildInfo.bloopVersion,
-          isChangedInSettings = userConfig().bloopVersion != None,
+          isChangedInSettings = userConfig.bloopVersion != None,
         )
         languageClient.showMessageRequest(messageParams).asScala.foreach {
           case action if action == IncompatibleBloopVersion.shutdown =>
@@ -2451,7 +2503,7 @@ class MetalsLspService(
   }
 
   /**
-   * Returns the the definition location or reference locations of a symbol at a
+   * Returns the definition location or reference locations of a symbol at a
    * given text document position. If the symbol represents the definition
    * itself, this method returns the reference locations, otherwise this returns
    * definition location. https://github.com/scalameta/metals/issues/755

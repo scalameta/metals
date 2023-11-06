@@ -693,4 +693,76 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case Sports(time, intensity) => exhaustive-enum-tags3.Activity""".stripMargin,
   )
 
+  check(
+    "type-alias-case".tag(IgnoreScala2),
+    s"""|object O:
+        |  type Id[A] = A
+        |
+        |  enum Animal:
+        |    case Cat, Dog
+        | 
+        |  val animal: Id[Animal] = ???
+        |
+        |  animal match
+        |    cas@@
+        |""".stripMargin,
+    """|case Animal.Cat =>
+       |case Animal.Dog =>
+       |""".stripMargin,
+  )
+
+  check(
+    "type-alias-sealed-trait-case",
+    s"""|object O {
+        | type Id[A] = A
+        |
+        |sealed trait Animal
+        |object Animal {
+        |   case class Cat() extends Animal
+        |   case object Dog extends Animal
+        |}
+        | 
+        | val animal: Id[Animal] = ???
+        |
+        |  animal match {
+        |    cas@@
+        |  }
+        |}
+        |""".stripMargin,
+    """|case Cat() => `type-alias-sealed-trait-case`.O.Animal
+       |case Dog => `type-alias-sealed-trait-case`.O.Animal
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|case Cat() => type-alias-sealed-trait-case.O.Animal
+           |case Dog => type-alias-sealed-trait-case.O.Animal
+           |""".stripMargin
+    ),
+  )
+
+  check(
+    "for-comp",
+    """|object A {
+       |  val a = for {
+       |    foo <- List("a", "b", "c")
+       |    abc = println("Print!")
+       |  } yield bar@@
+       |
+       |}
+       |""".stripMargin,
+    "",
+  )
+
+  check(
+    "lambda-case-tuple",
+    """|object A {
+       |  val a = List((1,2)).foreach {
+       |    case (a,b) => println(a)
+       |    case@@
+       |  }
+       |}
+       |""".stripMargin,
+    "case (Int, Int) => scala",
+  )
+
 }

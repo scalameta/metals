@@ -807,7 +807,9 @@ abstract class BaseWorksheetLspSuite(
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
-      groupExpectedCompletionList = "io.circe"
+      groupExpectedCompletionList =
+        """|io.circe
+           |io.circul""".stripMargin
       groupCompletionList <- server.completion(
         "a/src/main/scala/foo/Main.worksheet.sc",
         "import $ivy.`io.cir@@`",
@@ -903,24 +905,67 @@ abstract class BaseWorksheetLspSuite(
     }
 
   test("semantic-highlighting") {
-
+    val tripleQ = "\"\"\""
     val expected =
       if (scalaVersion == V.scala212)
-        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
-           |<<val>>/*keyword*/ <<hi1>>/*variable,definition,readonly*/ =
-           |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
-           |<<val>>/*keyword*/ <<hi2>>/*variable,definition,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
-           |
-           |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
-           |""".stripMargin
+        s"""|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+            |<<val>>/*keyword*/ <<hi1>>/*variable,definition,readonly*/ =
+            |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
+            |<<val>>/*keyword*/ <<hi2>>/*variable,definition,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
+            |
+            |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+            |<<val>>/*keyword*/ <<str>>/*variable,definition,readonly*/ = <<$tripleQ>>/*string*/
+            |<<  hello>>/*string*/
+            |<<  world$tripleQ>>/*string*/.<<stripMargin>>/*method*/
+            |""".stripMargin
       else
-        """|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
-           |<<val>>/*keyword*/ <<hi1>>/*variable,definition,readonly*/ =
-           |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
-           |<<val>>/*keyword*/ <<hi2>>/*variable,definition,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
-           |
-           |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+        s"""|<<case>>/*keyword*/ <<class>>/*keyword*/ <<Hi>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+            |<<val>>/*keyword*/ <<hi1>>/*variable,definition,readonly*/ =
+            |  <<Hi>>/*class*/(<<1>>/*number*/, <<2>>/*number*/, <<3>>/*number*/)
+            |<<val>>/*keyword*/ <<hi2>>/*variable,definition,readonly*/ = <<Hi>>/*class*/(<<4>>/*number*/, <<5>>/*number*/, <<6>>/*number*/)
+            |
+            |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+            |<<val>>/*keyword*/ <<str>>/*variable,definition,readonly*/ = <<$tripleQ>>/*string*/
+            |<<  hello>>/*string*/
+            |<<  world$tripleQ>>/*string*/.<<stripMargin>>/*method*/
+            |""".stripMargin
+
+    val fileContent =
+      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |$fileContent
            |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      _ <- server.assertSemanticHighlight(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
+
+  test("semantic-highlighting2") {
+    val expected =
+      s"""|
+          |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+          |""".stripMargin
 
     val fileContent =
       TestSemanticTokens.removeSemanticHighlightDecorations(expected)

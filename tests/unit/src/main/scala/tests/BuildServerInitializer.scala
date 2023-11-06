@@ -97,13 +97,18 @@ object SbtServerInitializer extends BuildServerInitializer {
       expectError: Boolean,
       workspaceFolders: List[String] = Nil,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
-    val sbtVersion =
-      SbtBuildTool
-        .loadVersion(workspace)
-        .getOrElse(V.sbtVersion)
-    generateBspConfig(workspace, sbtVersion)
+    val paths =
+      if (workspaceFolders.isEmpty) List(workspace)
+      else workspaceFolders.map(workspace.resolve)
+    paths.foreach { path =>
+      val sbtVersion =
+        SbtBuildTool
+          .loadVersion(path)
+          .getOrElse(V.sbtVersion)
+      generateBspConfig(path, sbtVersion)
+    }
     for {
-      initializeResult <- server.initialize()
+      initializeResult <- server.initialize(workspaceFolders)
       _ <- server.initialized()
       // choose sbt as the Bsp Server
       _ = client.selectBspServer = { items =>
@@ -113,7 +118,13 @@ object SbtServerInitializer extends BuildServerInitializer {
           )
         }
       }
-      _ <- server.executeCommand(ServerCommands.BspSwitch)
+      _ <- paths.zipWithIndex.foldLeft(Future.successful(())) {
+        case (future, (_, i)) =>
+          future.flatMap { _ =>
+            client.chooseWorkspaceFolder = { _(i) }
+            server.executeCommand(ServerCommands.BspSwitch).ignoreValue
+          }
+      }
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()

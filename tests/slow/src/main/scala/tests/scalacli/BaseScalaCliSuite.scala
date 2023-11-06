@@ -66,7 +66,7 @@ abstract class BaseScalaCliSuite(protected val scalaVersion: String)
       server.client.showMessageRequestHandler
     server.client.showMessageRequestHandler = { params =>
       def useBsp = Files.exists(
-        server.server.folder
+        server.server.path
           .resolve(".bsp/scala-cli.json")
           .toNIO
       )

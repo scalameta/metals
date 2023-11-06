@@ -55,20 +55,25 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
 
       Report(
         "empty-hover-scala2",
-        s"""|$fileName
-            |pos: ${pos.toLsp}
+        s"""|pos: ${pos.toLsp}
             |
             |is error: $hasErroneousType
             |symbol: ${tree.symbol}
             |tpe: ${tree.tpe}
             |
             |tree:
+            |```scala
             |$tree
+            |```
             |
             |full tree:
+            |```scala
             |${unit.body}
+            |```
             |""".stripMargin,
-        s"$fileName::$posId"
+        s"empty hover in $fileName",
+        id = Some(s"$fileName::$posId"),
+        path = Some(fileName)
       )
     }
 

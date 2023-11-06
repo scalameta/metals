@@ -286,4 +286,38 @@ class DefinitionCrossLspSuite
       )
     } yield ()
   }
+
+  test("scaladoc-definition-enum") {
+    val testCase =
+      """|package a
+         |
+         |enum O:
+         | def e = 1
+         | /**
+         |  *  This is [[ this.`package.@@A` ]]
+         |  */
+         | case `package.A`
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { "scalaVersion": "${BuildInfo.scala3}" }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty)
+      _ = assert(locations.head.getUri().endsWith("a/Main.scala"))
+    } yield ()
+  }
 }

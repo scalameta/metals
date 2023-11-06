@@ -12,6 +12,7 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
     """|val dependency = "io.cir@@" % 
        |""".stripMargin,
     """|io.circe
+       |io.circul
        |""".stripMargin,
     filename = "A.sbt",
   )

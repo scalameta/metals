@@ -17,7 +17,7 @@ extensions that won't be available when not using the extension.
 
 ## nvim-metals
 
-[`nvim-metals`](https://github.com/scalameta/nvim-metals) Is the the dedicated
+[`nvim-metals`](https://github.com/scalameta/nvim-metals) Is the dedicated
 Metals extension for the [built-in LSP
 support](https://neovim.io/doc/user/lsp.html) in Neovim.
 

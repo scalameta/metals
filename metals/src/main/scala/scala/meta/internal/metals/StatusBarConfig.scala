@@ -16,4 +16,8 @@ object StatusBarConfig {
     new StatusBarConfig(
       System.getProperty("metals.status-bar", "off")
     )
+  def bspDefault =
+    new StatusBarConfig(
+      System.getProperty("metals.bsp-status-bar", "show-message")
+    )
 }

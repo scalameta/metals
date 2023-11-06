@@ -4,6 +4,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import scala.util.matching.Regex
+
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
@@ -21,6 +23,7 @@ trait ReportContext {
 }
 
 trait Reporter {
+  def name: String
   def create(report: => Report, ifVerbose: Boolean = false): Option[Path]
   def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
@@ -29,28 +32,36 @@ trait Reporter {
   def deleteAll(): Unit
 }
 
-class StdReportContext(workspace: Path, level: ReportLevel = ReportLevel.Info)
-    extends ReportContext {
-  lazy val reportsDir: Path =
-    workspace.resolve(StdReportContext.reportsDir).createDirectories()
+class StdReportContext(
+    workspace: Path,
+    resolveBuildTarget: Option[String] => Option[String],
+    level: ReportLevel = ReportLevel.Info
+) extends ReportContext {
+  val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
   val unsanitized =
     new StdReporter(
       workspace,
-      StdReportContext.reportsDir.resolve("metals-full"),
-      level
+      StdReportContext.reportsDir,
+      resolveBuildTarget,
+      level,
+      "metals-full"
     )
   val incognito =
     new StdReporter(
       workspace,
-      StdReportContext.reportsDir.resolve("metals"),
-      level
+      StdReportContext.reportsDir,
+      resolveBuildTarget,
+      level,
+      "metals"
     )
   val bloop =
     new StdReporter(
       workspace,
-      StdReportContext.reportsDir.resolve("bloop"),
-      level
+      StdReportContext.reportsDir,
+      resolveBuildTarget,
+      level,
+      "bloop"
     )
 
   override def cleanUpOldReports(
@@ -61,33 +72,41 @@ class StdReportContext(workspace: Path, level: ReportLevel = ReportLevel.Info)
 
   override def deleteAll(): Unit = {
     all.foreach(_.deleteAll())
-    Files.delete(reportsDir.resolve(StdReportContext.ZIP_FILE_NAME))
+    val zipFile = reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)
+    if (Files.exists(zipFile)) Files.delete(zipFile)
   }
 }
 
-class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
-    extends Reporter {
-  private lazy val reportsDir =
-    workspace.resolve(pathToReports).createDirectories()
+class StdReporter(
+    workspace: Path,
+    pathToReports: Path,
+    resolveBuildTarget: Option[String] => Option[String],
+    level: ReportLevel,
+    override val name: String
+) extends Reporter {
+  private lazy val maybeReportsDir: Path =
+    workspace.resolve(pathToReports).resolve(name)
+  private lazy val reportsDir = maybeReportsDir.createDirectories()
   private val limitedFilesManager =
     new LimitedFilesManager(
-      reportsDir,
+      maybeReportsDir,
       StdReportContext.MAX_NUMBER_OF_REPORTS,
-      "r_.*_"
+      ReportFileName.pattern,
+      ".md"
     )
 
   private lazy val userHome = Option(System.getProperty("user.home"))
 
   private var initialized = false
   private var reported = Set.empty[String]
-  private val idPrefix = "id: "
 
   def readInIds(): Unit = {
     reported = getReports().flatMap { report =>
       val lines = Files.readAllLines(report.file.toPath())
       if (lines.size() > 0) {
         lines.get(0) match {
-          case id if id.startsWith(idPrefix) => Some(id.stripPrefix(idPrefix))
+          case id if id.startsWith(Report.idPrefix) =>
+            Some(id.stripPrefix(Report.idPrefix))
           case _ => None
         }
       } else None
@@ -107,11 +126,10 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       val sanitizedId = report.id.map(sanitize)
       if (sanitizedId.isDefined && reported.contains(sanitizedId.get)) None
       else {
-        val path = reportPath(report.name)
+        val path = reportPath(report)
         path.getParent.createDirectories()
         sanitizedId.foreach(reported += _)
-        val idString = sanitizedId.map(id => s"$idPrefix$id\n").getOrElse("")
-        path.writeText(s"$idString${sanitize(report.fullText)}")
+        path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
         Some(path)
       }
     }
@@ -124,10 +142,12 @@ class StdReporter(workspace: Path, pathToReports: Path, level: ReportLevel)
       .getOrElse(textAfterWokspaceReplace)
   }
 
-  private def reportPath(name: String): Path = {
+  private def reportPath(report: Report): Path = {
     val date = TimeFormatter.getDate()
     val time = TimeFormatter.getTime()
-    val filename = s"r_${name}_${time}"
+    val buildTargetPart =
+      resolveBuildTarget(report.path).map("_(" ++ _ ++ ")").getOrElse("")
+    val filename = s"r_${report.name}${buildTargetPart}_${time}.md"
     reportsDir.resolve(date).resolve(filename)
   }
 
@@ -158,6 +178,7 @@ object StdReportContext {
 
 object EmptyReporter extends Reporter {
 
+  override def name = "empty-reporter"
   override def create(report: => Report, ifVerbose: Boolean): Option[Path] =
     None
 
@@ -181,6 +202,8 @@ object EmptyReportContext extends ReportContext {
 case class Report(
     name: String,
     text: String,
+    shortSummary: String,
+    path: Option[String] = None,
     id: Option[String] = None,
     error: Option[Throwable] = None
 ) {
@@ -190,24 +213,57 @@ case class Report(
                  |$moreInfo"""".stripMargin
     )
 
-  def fullText: String =
+  def fullText(withIdAndSummary: Boolean): String = {
+    val sb = new StringBuilder
+    if (withIdAndSummary) {
+      id.foreach(id => sb.append(s"${Report.idPrefix}$id\n"))
+    }
+    path.foreach(path => sb.append(s"$path\n"))
     error match {
       case Some(error) =>
-        s"""|$error
-            |$text
-            |
-            |error stacktrace:
-            |${error.getStackTrace().mkString("\n\t")}
-            |""".stripMargin
-      case None => text
+        sb.append(
+          s"""|### $error
+              |
+              |$text
+              |
+              |#### Error stacktrace:
+              |
+              |```
+              |${error.getStackTrace().mkString("\n\t")}
+              |```
+              |""".stripMargin
+        )
+      case None => sb.append(s"$text\n")
     }
+    if (withIdAndSummary)
+      sb.append(s"""|${Report.summaryTitle}
+                    |
+                    |$shortSummary""".stripMargin)
+    sb.result()
+  }
 }
 
 object Report {
-  def apply(name: String, text: String, id: String): Report =
-    Report(name, text, id = Some(id))
+
+  def apply(
+      name: String,
+      text: String,
+      error: Throwable,
+      path: Option[String]
+  ): Report =
+    Report(
+      name,
+      text,
+      shortSummary = error.toString(),
+      path = path,
+      error = Some(error)
+    )
+
   def apply(name: String, text: String, error: Throwable): Report =
-    Report(name, text, error = Some(error))
+    Report(name, text, error, path = None)
+
+  val idPrefix = "id: "
+  val summaryTitle = "#### Short summary: "
 }
 
 sealed trait ReportLevel {
@@ -228,4 +284,18 @@ object ReportLevel {
       case "debug" => Debug
       case _ => Info
     }
+}
+
+object ReportFileName {
+  val pattern: Regex = "r_(?<name>[^()]*)(_\\((?<buildTarget>.*)\\))?_".r
+
+  def getReportNameAndBuildTarget(
+      file: TimestampedFile
+  ): (String, Option[String]) =
+    pattern.findPrefixMatchOf(file.name) match {
+      case None => (file.name, None)
+      case Some(foundMatch) =>
+        (foundMatch.group("name"), Option(foundMatch.group("buildTarget")))
+    }
+
 }

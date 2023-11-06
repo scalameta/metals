@@ -56,8 +56,7 @@ object HoverProvider:
           else path.head.sourcePos.start
         Report(
           "empty-hover-scala3",
-          s"""|$uri
-              |pos: ${pos.toLsp}
+          s"""|pos: ${pos.toLsp}
               |
               |tp: $tp
               |has error: ${tp.isError}
@@ -66,11 +65,23 @@ object HoverProvider:
               |has error: ${tpw.isError}
               |
               |path:
-              |- ${path.map(_.toString()).mkString("\n- ")}
+              |${path
+               .map(tree => s"""|```scala
+                                |$tree
+                                |```
+                                |""".stripMargin)
+               .mkString("\n")}
               |trees:
-              |- ${trees.map(_.toString()).mkString("\n- ")}
+              |${trees
+               .map(tree => s"""|```scala
+                                |$tree
+                                |```
+                                |""".stripMargin)
+               .mkString("\n")}
               |""".stripMargin,
-          s"$uri::$posId",
+          s"empty hover in $uri",
+          id = Some(s"$uri::$posId"),
+          path = Some(uri.toString),
         )
       end report
       reportContext.unsanitized.create(report, ifVerbose = true)

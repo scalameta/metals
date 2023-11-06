@@ -29,10 +29,6 @@ class HoverNamedArgSuite extends BaseHoverSuite {
         """|```scala
            |named: Int
            |```
-           |Runs foo
-           |
-           |**Parameters**
-           |- `named`: the argument
            |""".stripMargin
     ),
   )

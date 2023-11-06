@@ -261,4 +261,27 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
   )
 
+  check(
+    "scalac-explain-flag",
+    """|package a
+       |
+       |object A {
+       |  val f = <<Future>>.successful(2)
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${CreateNewSymbol.title("Future")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import scala.concurrent.Future
+       |
+       |object A {
+       |  val f = Future.successful(2)
+       |}
+       |""".stripMargin,
+    scalaVersion = "3.3.1",
+    scalacOptions = List("-explain"),
+  )
 }

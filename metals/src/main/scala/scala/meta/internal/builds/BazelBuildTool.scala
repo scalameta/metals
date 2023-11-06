@@ -54,7 +54,7 @@ case class BazelBuildTool(
     ) ++ BazelBuildTool.projectViewArgs(projectRoot)
   }
 
-  override def minimumVersion: String = "1.0.0"
+  override def minimumVersion: String = "3.0.0"
 
   override def recommendedVersion: String = version
 
@@ -97,6 +97,7 @@ object BazelBuildTool {
   def writeBazelConfig(
       shellRunner: ShellRunner,
       projectDirectory: AbsolutePath,
+      javaHome: Option[String],
   )(implicit
       ec: ExecutionContext
   ): Future[WorkspaceLoadedStatus] = {
@@ -106,6 +107,7 @@ object BazelBuildTool {
         mainClass,
         projectDirectory,
         projectViewArgs(projectDirectory),
+        javaHome,
         false,
       )
     run()
@@ -128,13 +130,14 @@ object BazelBuildTool {
       projectDirectory: AbsolutePath,
       languageClient: LanguageClient,
       tables: Tables,
+      javaHome: Option[String],
       forceImport: Boolean = false,
   )(implicit
       ec: ExecutionContext
   ): Future[WorkspaceLoadedStatus] = {
     val notification = tables.dismissedNotifications.ImportChanges
     if (forceImport) {
-      writeBazelConfig(shellRunner, projectDirectory)
+      writeBazelConfig(shellRunner, projectDirectory, javaHome)
     } else if (!notification.isDismissed) {
       languageClient
         .showMessageRequest(ImportBuild.params("Bazel"))
@@ -144,7 +147,7 @@ object BazelBuildTool {
             notification.dismissForever()
             Future.successful(WorkspaceLoadedStatus.Rejected)
           case item if item == ImportBuild.yes =>
-            writeBazelConfig(shellRunner, projectDirectory)
+            writeBazelConfig(shellRunner, projectDirectory, javaHome)
           case _ =>
             notification.dismiss(2, TimeUnit.MINUTES)
             Future.successful(WorkspaceLoadedStatus.Rejected)

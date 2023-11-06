@@ -4,14 +4,17 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.util.Try
+import scala.util.matching.Regex
+
 import scala.meta.internal.metals.TimeFormatter
 
 class LimitedFilesManager(
     directory: Path,
     fileLimit: Int,
-    prefixPattern: String
+    prefixRegex: Regex,
+    extension: String
 ) {
-  private val fileNameRegex = s"${prefixPattern}([-+]?[0-9]+)".r
 
   def getAllFiles(): List[TimestampedFile] = {
     if (Files.exists(directory) && Files.isDirectory(directory)) {
@@ -22,11 +25,14 @@ class LimitedFilesManager(
     } else List()
   }
 
-  def directoriesWithDate: List[File] = directory
-    .toFile()
-    .listFiles()
-    .toList
-    .filter(d => d.isDirectory() && TimeFormatter.hasDateName(d.getName()))
+  def directoriesWithDate: List[File] =
+    if (Files.exists(directory) && Files.isDirectory(directory))
+      directory
+        .toFile()
+        .listFiles()
+        .toList
+        .filter(d => d.isDirectory() && TimeFormatter.hasDateName(d.getName()))
+    else List()
 
   def deleteOld(limit: Int = fileLimit): List[TimestampedFile] = {
     val files = getAllFiles()
@@ -43,10 +49,11 @@ class LimitedFilesManager(
   }
 
   private def timestampedFile(file: File): Option[TimestampedFile] = {
-    file.getName() match {
-      case fileNameRegex(time) => Some(TimestampedFile(file, time.toLong))
-      case _: String => None
-    }
+    for {
+      reMatch <- prefixRegex.findPrefixMatchOf(file.getName())
+      timeStr = reMatch.after.toString.stripSuffix(extension)
+      time <- Try(timeStr.toLong).toOption
+    } yield TimestampedFile(file, time)
   }
 
   private def filesWithDate(dir: File): List[TimestampedFile] = {
@@ -68,11 +75,10 @@ class LimitedFilesManager(
   }
 
   object WithTimestamp {
-    private val prefix = prefixPattern.r
     def unapply(filename: String): Option[String] = {
       for {
-        prefixMatch <- prefix.findPrefixMatchOf(filename)
-        time = prefixMatch.after.toString
+        prefixMatch <- prefixRegex.findPrefixMatchOf(filename)
+        time = prefixMatch.after.toString.stripSuffix(extension)
       } yield time
     }
   }

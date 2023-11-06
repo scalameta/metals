@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
 import java.net.URI
-import java.net.URLEncoder
 import javax.annotation.Nullable
 
 import scala.annotation.tailrec
@@ -296,12 +295,14 @@ final class FileDecoderProvider(
   }
 
   private def decodeBuildTarget(uri: URI): DecoderResponse = {
-    val targetName =
-      URIEncoderDecoder.decode(
-        uri.toString.stripSuffix(".metals-buildtarget").split('/').last
-      )
-    val text =
-      new BuildTargetInfo(buildTargets).buildTargetDetails(targetName)
+    val text = uri
+      .toString()
+      .toAbsolutePathSafe
+      .map { path =>
+        val targetName = path.filename.stripSuffix(".metals-buildtarget")
+        new BuildTargetInfo(buildTargets).buildTargetDetails(targetName)
+      }
+      .getOrElse(s"Error transforming $uri to path")
     DecoderResponse.success(uri, text)
   }
 
@@ -486,7 +487,7 @@ final class FileDecoderProvider(
     for {
       javaTarget <- buildTargets.javaTarget(targetId)
       classDir = javaTarget.classDirectory
-      targetroot = javaTarget.targetroot
+      targetroot <- javaTarget.targetroot
     } yield (classDir, targetroot)
   }
 
@@ -543,6 +544,7 @@ final class FileDecoderProvider(
           ),
           path.parent,
           redirectErrorOutput = false,
+          userConfig().javaHome,
           Map.empty,
           s => {
             sbOut.append(s)
@@ -642,6 +644,7 @@ final class FileDecoderProvider(
           cfrMain,
           parent,
           args,
+          userConfig().javaHome,
           redirectErrorOutput = false,
           s => {
             sbOut.append(s)
@@ -769,10 +772,10 @@ final class FileDecoderProvider(
 
 object FileDecoderProvider {
   def createBuildTargetURI(
-      workspace: AbsolutePath,
+      workspaceFolder: AbsolutePath,
       buildTargetName: String,
   ): URI =
     URI.create(
-      s"metalsDecode:${URLEncoder.encode(s"file:///${workspace.filename}/${buildTargetName}.metals-buildtarget")}"
+      s"metalsDecode:${workspaceFolder.resolve(s"${buildTargetName}.metals-buildtarget").toURI}"
     )
 }

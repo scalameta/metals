@@ -278,7 +278,8 @@ object Embedded {
     Dependency.of(
       "org.scalameta",
       s"semanticdb-scalac_$scalaVersion",
-      BuildInfo.scalametaVersion,
+      BuildInfo.lastSupportedSemanticdb
+        .getOrElse(scalaVersion, BuildInfo.scalametaVersion),
     )
 
   def downloadDependency(

@@ -21,7 +21,6 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.mtags.Md5Fingerprints
-import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
@@ -80,7 +79,7 @@ final class SyntheticsDecorationProvider(
     }
   }
 
-  override def onDelete(path: SemanticdbPath): Unit = ()
+  override def onDelete(path: AbsolutePath): Unit = ()
   override def reset(): Unit = ()
 
   override def onChange(

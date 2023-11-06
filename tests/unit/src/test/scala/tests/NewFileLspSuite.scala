@@ -648,9 +648,12 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
              |{
              |  "a": { "scalaVersion" : "$localScalaVersion" }
              |}
+             |/focusedDoc.txt
+             |
              |$existingFiles
           """.stripMargin
         )
+        _ <- server.didFocus("focusedDoc.txt")
         _ <- server.executeCommand(command, args: _*)
         _ = {
           assertNoDiff(

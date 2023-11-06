@@ -18,18 +18,22 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
 import com.typesafe.config.ConfigFactory
 import coursierapi.Dependency
+import coursierapi.Repository
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
 import scalafix.interfaces.Scalafix
 import scalafix.interfaces.ScalafixEvaluation
 import scalafix.interfaces.ScalafixFileEvaluationError
+import scalafix.internal.interfaces.ScalafixCoursier
+import scalafix.internal.interfaces.ScalafixInterfacesClassloader
 
 case class ScalafixProvider(
     buffers: Buffers,
@@ -437,12 +441,30 @@ case class ScalafixProvider(
       case None =>
         statusBar.trackBlockingTask("Downloading scalafix") {
           val scalafix =
-            Try(Scalafix.fetchAndClassloadInstance(scalaBinaryVersion))
+            if (scalaBinaryVersion == "2.11") Try(scala211Fallback)
+            else
+              Try(Scalafix.fetchAndClassloadInstance(scalaBinaryVersion))
           scalafix.foreach(api => scalafixCache.update(scalaBinaryVersion, api))
           scalafix
         }
     }
 
+  }
+
+  private def scala211Fallback: Scalafix = {
+    // last version that supports Scala 2.11.12
+    val latestSupporting = "0.10.4"
+    val jars = ScalafixCoursier.scalafixCliJars(
+      Repository.defaults(),
+      latestSupporting,
+      V.scala211,
+    )
+    val parent = new ScalafixInterfacesClassloader(
+      classOf[Scalafix].getClassLoader()
+    );
+    Scalafix.classloadInstance(
+      new URLClassLoader(jars.asScala.toArray, parent)
+    );
   }
 
   private def getRuleClassLoader(
@@ -457,8 +479,22 @@ case class ScalafixProvider(
         ) {
           val rulesDependencies = scalfixRulesKey.usedRulesWithClasspath
           val organizeImportRule =
+            // Scalafix version that supports Scala 2.11 doesn't have the rule built in
+            if (scalfixRulesKey.scalaBinaryVersion == "2.11")
+              Some(
+                Dependency.of(
+                  "com.github.liancheng",
+                  "organize-imports_" + scalfixRulesKey.scalaBinaryVersion,
+                  "0.6.0",
+                )
+              )
+            else None
+
+          val allRules =
             Try(
-              Embedded.rulesClasspath(rulesDependencies.toList)
+              Embedded.rulesClasspath(
+                rulesDependencies.toList ++ organizeImportRule
+              )
             ).map { paths =>
               val classloader = Embedded.toClassLoader(
                 Classpath(paths.map(AbsolutePath(_))),
@@ -467,7 +503,7 @@ case class ScalafixProvider(
               rulesClassloaderCache.update(scalfixRulesKey, classloader)
               classloader
             }
-          organizeImportRule
+          allRules
         }
     }
   }

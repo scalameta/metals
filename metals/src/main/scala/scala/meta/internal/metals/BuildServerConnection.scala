@@ -19,12 +19,15 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.reflect.ClassTag
+import scala.util.Success
 import scala.util.Try
 
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
@@ -73,7 +76,6 @@ class BuildServerConnection private (
 
   private val ongoingRequests =
     new MutableCancelable().addAll(initialConnection.cancelables)
-  private val ongoingCompilations = new MutableCancelable()
 
   def version: String = _version.get()
 
@@ -98,6 +100,9 @@ class BuildServerConnection private (
 
   def isJvmEnvironmentSupported: Boolean =
     capabilities.getJvmRunEnvironmentProvider()
+
+  def isDependencySourcesSupported: Boolean =
+    capabilities.getDependencySourcesProvider()
 
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
@@ -154,7 +159,6 @@ class BuildServerConnection private (
   def compile(params: CompileParams): CompletableFuture[CompileResult] = {
     register(
       server => server.buildTargetCompile(params),
-      isCompile = true,
       onFail = Some(
         (
           new CompileResult(StatusCode.CANCELLED),
@@ -207,7 +211,7 @@ class BuildServerConnection private (
     connection.flatMap { conn =>
       if (conn.capabilities.getJvmRunEnvironmentProvider()) {
         register(
-          server => server.jvmRunEnvironment(params),
+          server => server.buildTargetJvmRunEnvironment(params),
           onFail = Some(
             (
               empty,
@@ -265,7 +269,15 @@ class BuildServerConnection private (
   def buildTargetDependencySources(
       params: DependencySourcesParams
   ): Future[DependencySourcesResult] = {
-    register(server => server.buildTargetDependencySources(params)).asScala
+    if (isDependencySourcesSupported) {
+      register(server => server.buildTargetDependencySources(params)).asScala
+    } else {
+      scribe.warn(
+        s"${initialConnection.displayName} does not support `buildTarget/dependencySources`, unable to fetch dependency sources."
+      )
+      val empty = new DependencySourcesResult(Collections.emptyList)
+      Future.successful(empty)
+    }
   }
 
   def buildTargetInverseSources(
@@ -299,12 +311,7 @@ class BuildServerConnection private (
   override def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
       ongoingRequests.cancel()
-      ongoingCompilations.cancel()
     }
-  }
-
-  def cancelCompilations(): Unit = {
-    ongoingCompilations.cancel()
   }
 
   private def askUser(
@@ -356,9 +363,8 @@ class BuildServerConnection private (
   private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
-      isCompile: Boolean = false,
   ): CompletableFuture[T] = {
-
+    val localCancelable = new MutableCancelable()
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
     ): Future[T] = {
@@ -366,14 +372,14 @@ class BuildServerConnection private (
       val cancelable = Cancelable { () =>
         Try(resultFuture.cancel(true))
       }
-      if (isCompile) ongoingCompilations.add(cancelable)
-      else ongoingRequests.add(cancelable)
+      ongoingRequests.add(cancelable)
+      localCancelable.add(cancelable)
 
       val result = resultFuture.asScala
 
       result.onComplete { _ =>
-        if (isCompile) ongoingCompilations.remove(cancelable)
-        else ongoingRequests.remove(cancelable)
+        ongoingRequests.remove(cancelable)
+        localCancelable.remove(cancelable)
       }
       result
     }
@@ -410,7 +416,14 @@ class BuildServerConnection private (
               Future.failed(new MetalsBspException(name, t))
             })
       }
-    CancelTokens.future(_ => actionFuture)
+
+    CancelTokens.future { token =>
+      token.onCancel().asScala.onComplete {
+        case Success(java.lang.Boolean.TRUE) => localCancelable.cancel()
+        case _ =>
+      }
+      actionFuture
+    }
   }
 
   def isBuildServerResponsive: Future[Option[Boolean]] = {
@@ -438,12 +451,12 @@ object BuildServerConnection {
       projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       localClient: MetalsBuildClient,
-      languageClient: LanguageClient,
+      languageClient: MetalsLanguageClient,
       connect: () => Future[SocketConnection],
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
       serverName: String,
-      addLivenessMonitor: Boolean = false,
+      bspStatusOpt: Option[ConnectionBspStatus] = None,
       retry: Int = 5,
       supportsWrappedSources: Option[Boolean] = None,
   )(implicit
@@ -453,10 +466,10 @@ object BuildServerConnection {
     def setupServer(): Future[LauncherConnection] = {
       connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
         val tracePrinter = Trace.setupTracePrinter("BSP", bspTraceRoot)
-        val requestMonitor =
-          if (addLivenessMonitor) Some(new RequestMonitorImpl) else None
+        val requestMonitorOpt =
+          bspStatusOpt.map(new RequestMonitorImpl(_, serverName))
         val wrapper: MessageConsumer => MessageConsumer =
-          requestMonitor.map(_.wrapper).getOrElse(identity)
+          requestMonitorOpt.map(_.wrapper).getOrElse(identity)
         val launcher =
           new Launcher.Builder[MetalsBuildServer]()
             .traceMessages(tracePrinter.orNull)
@@ -483,16 +496,17 @@ object BuildServerConnection {
           }
 
         val optServerLivenessMonitor =
-          requestMonitor.map {
-            new ServerLivenessMonitor(
-              _,
-              () => server.workspaceBuildTargets(),
-              languageClient,
-              result.getDisplayName(),
-              config.metalsToIdleTime,
-              config.pingInterval,
-            )
-          }
+          for {
+            bspStatus <- bspStatusOpt
+            requestMonitor <- requestMonitorOpt
+          } yield new ServerLivenessMonitor(
+            requestMonitor,
+            () => server.workspaceBuildTargets(),
+            config.metalsToIdleTime,
+            config.pingInterval,
+            bspStatus,
+            serverName,
+          )
 
         LauncherConnection(
           conn,
@@ -530,7 +544,7 @@ object BuildServerConnection {
             reconnectNotification,
             config,
             serverName,
-            addLivenessMonitor,
+            bspStatusOpt,
             retry - 1,
           )
         } else {
@@ -574,13 +588,13 @@ object BuildServerConnection {
       params.setData(data)
       params
     }
-    // Block on the `build/initialize` request because it should respond instantly
-    // and we want to fail fast if the connection is not
+    // Block on the `build/initialize` request because it should respond instantly by Bloop
+    // and we want to fail fast if the connection is not made
     val result =
-      if (serverName == SbtBuildTool.name) {
-        initializeResult.get(60, TimeUnit.SECONDS)
-      } else {
+      if (serverName == BloopServers.name) {
         initializeResult.get(20, TimeUnit.SECONDS)
+      } else {
+        initializeResult.get(60, TimeUnit.SECONDS)
       }
 
     server.onBuildInitialized()
@@ -602,10 +616,8 @@ object BuildServerConnection {
 
     def setReconnect(
         reconnect: () => Future[Unit]
-    )(implicit ec: ExecutionContext): Unit = {
-      optLivenessMonitor.foreach(_.setReconnect(reconnect))
+    )(implicit ec: ExecutionContext): Unit =
       socketConnection.finishedPromise.future.foreach(_ => reconnect())
-    }
 
     /**
      * Whether we can call buildTargetWrappedSources through the BSP connection.

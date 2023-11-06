@@ -293,7 +293,6 @@ a new `metals-vim` bootstrap script using the locally published version.
 coursier bootstrap \
   --java-opt -Dmetals.client=<<NAME_OF_CLIENT>> \
   org.scalameta:metals_2.13:@LOCAL_VERSION@ \ # double-check version here
-  -r bintray:scalacenter/releases \
   -o /usr/local/bin/metals-vim -f
 ```
 

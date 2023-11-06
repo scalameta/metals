@@ -39,6 +39,9 @@
     "Troubleshooting": [
       "troubleshooting/proxy",
       "troubleshooting/faq"
+    ],
+    "Acknowledgements": [
+      "acknowledgements/development"
     ]
   }
 }

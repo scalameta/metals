@@ -884,6 +884,18 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "tuple1",
+    """|object A {
+       |  val <<v>> = List.empty[Tuple1[Int]]
+       |}
+       |""".stripMargin,
+    """|object A {
+       |  val v: List[Tuple1[Int]] = List.empty[Tuple1[Int]]
+       |}
+       |""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

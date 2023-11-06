@@ -36,6 +36,8 @@ class BspConnector(
     statusBar: StatusBar,
     bspConfigGenerator: BspConfigGenerator,
     currentConnection: () => Option[BuildServerConnection],
+    restartBspServer: () => Future[Boolean],
+    bspStatus: ConnectionBspStatus,
 )(implicit ec: ExecutionContext) {
 
   /**
@@ -86,6 +88,7 @@ class BspConnector(
         bspTraceRoot: AbsolutePath,
         addLivenessMonitor: Boolean,
     ): Future[Option[BuildServerConnection]] = {
+      def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
       scribe.info("Attempting to connect to the build server...")
       resolve() match {
         case ResolvedNone =>
@@ -97,22 +100,31 @@ class BspConnector(
               projectRoot,
               bspTraceRoot,
               userConfiguration,
-              addLivenessMonitor,
+              bspStatusOpt,
             )
             .map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
           tables.buildServers.chooseServer(SbtBuildTool.name)
           val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
+          def restartSbtBuildServer() = currentConnection()
+            .withFilter(_.isSbt)
+            .map(_ => restartBspServer().ignoreValue)
+            .getOrElse(Future.successful(()))
           val connectionF =
             for {
               _ <- SbtBuildTool(projectRoot, () => userConfiguration)
-                .ensureCorrectJavaVersion(shellRunner, projectRoot, client)
+                .ensureCorrectJavaVersion(
+                  shellRunner,
+                  projectRoot,
+                  client,
+                  restartSbtBuildServer,
+                )
               connection <- bspServers.newServer(
                 projectRoot,
                 bspTraceRoot,
                 details,
-                addLivenessMonitor,
+                bspStatusOpt,
               )
               _ <-
                 if (shouldReload) connection.workspaceReload()
@@ -129,6 +141,7 @@ class BspConnector(
             .writeBazelConfig(
               shellRunner,
               workspace,
+              userConfig().javaHome,
             )
             .flatMap { _ =>
               bspServers
@@ -141,7 +154,7 @@ class BspConnector(
                         projectRoot,
                         bspTraceRoot,
                         details,
-                        addLivenessMonitor,
+                        bspStatusOpt,
                       )
                       .map(Some(_))
                 }
@@ -151,7 +164,7 @@ class BspConnector(
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
           bspServers
-            .newServer(projectRoot, bspTraceRoot, details, addLivenessMonitor)
+            .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
             .map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
@@ -188,7 +201,7 @@ class BspConnector(
               projectRoot,
               bspTraceRoot,
               item,
-              addLivenessMonitor,
+              bspStatusOpt,
             )
           } yield Some(conn)
       }

@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.0.2-SNAPSHOT"
+def localSnapshotVersion = "1.1.1-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -18,7 +18,7 @@ def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
 def isScala3WithPresentationCompiler(v: String): Boolean =
-  (DottyVersion.parse(v), DottyVersion.parse(V.firstScala3PCVersion)) match {
+  (Version.parse(v), Version.parse(V.firstScala3PCVersion)) match {
     case (Some(v), Some(firstScala3PCVersion)) => v >= firstScala3PCVersion
     case _ => false
   }
@@ -67,7 +67,6 @@ inThisBuild(
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
     packageSrc / publishArtifact := sys.env.contains("CI"),
-    resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
   )
 )
 
@@ -216,7 +215,9 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
     scalaVersion.value,
     if2 = List(
       compilerPlugin(
-        "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
+        "org.scalameta" % "semanticdb-scalac" % V.semanticdb(
+          scalaVersion.value
+        ) cross CrossVersion.full
       )
     ),
   ),
@@ -232,7 +233,7 @@ lazy val interfaces = project
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     mimaPreviousArtifacts := Set(
-      "org.scalameta" % "mtags-interfaces" % "1.0.0"
+      "org.scalameta" % "mtags-interfaces" % "1.0.1"
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -257,9 +258,14 @@ lazy val mtagsShared = project
         .filterNot(isScala3WithPresentationCompiler),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
+    Compile / scalacOptions ++= {
+      if (scalaVersion.value == V.scala3)
+        List("-Yexplicit-nulls", "-language:unsafeNulls")
+      else Nil
+    },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.24.3",
+      "com.google.protobuf" % "protobuf-java" % "3.24.4",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -323,7 +329,9 @@ val mtagsSettings = List(
       if2 = List(
         // for token edit-distance used by goto definition
         "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-        "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+        "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
+          scalaVersion.value
+        ) cross CrossVersion.full,
       ),
       if3 = List(
         "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
@@ -348,10 +356,10 @@ val mtagsSettings = List(
     val current = (Compile / unmanagedSourceDirectories).value
     val base = (Compile / sourceDirectory).value
     val regex = "(\\d+)\\.(\\d+)\\.(\\d+).*".r
-    // For scala +2.13.9 we need to have a special Compat.scala
+    // For scala -2.13.9 we need to have a special Compat.scala
     // For this case filter out `scala-2.13` directory that comes by default
     val scalaVersionsWithSpecialCompat =
-      Set("2.13.9", "2.13.10", "2.13.11", "2.13.12")
+      Set("2.13.5", "2.13.6", "2.13.7", "2.13.8")
     if (scalaVersionsWithSpecialCompat(scalaVersion.value))
       current.filter(f => f.getName() != "scala-2.13")
     else if (isScala3WithPresentationCompiler(scalaVersion.value))
@@ -430,16 +438,16 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.11.1",
+      "com.geirsson" %% "metaconfig-core" % "0.12.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.12",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.20.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.8.10.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.8.12.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "9.22.2",
+      "org.flywaydb" % "flyway-core" % "9.22.3",
       "com.h2database" % "h2" % "2.1.214",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
@@ -489,9 +497,11 @@ lazy val metals = project
       "com.lihaoyi" %% "ujson" % "3.1.3",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.8.0",
-      // for producing SemanticDB from Scala source files
-      "org.scalameta" %% "scalameta" % V.scalameta,
-      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+      // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
+      "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
+      "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
+        scalaVersion.value
+      ) cross CrossVersion.full,
       // For starting Ammonite
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
       "org.scala-lang.modules" %% "scala-xml" % "2.2.0",
@@ -514,7 +524,7 @@ lazy val metals = project
       "mavenBloopVersion" -> V.mavenBloop,
       "gradleBloopVersion" -> V.gradleBloop,
       "scalametaVersion" -> V.scalameta,
-      "semanticdbVersion" -> V.semanticdb,
+      "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
@@ -536,6 +546,7 @@ lazy val metals = project
       "ammonite3" -> V.ammonite3Version,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
   .dependsOn(mtags, `mtags-java`)
@@ -545,9 +556,10 @@ lazy val `sbt-metals` = project
   .settings(
     buildInfoPackage := "scala.meta.internal.sbtmetals",
     buildInfoKeys := Seq[BuildInfoKey](
-      "semanticdbVersion" -> V.semanticdb,
+      "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "supportedScala2Versions" -> V.scala2Versions,
       "javaSemanticdbVersion" -> V.javaSemanticdb,
+      "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
     scalaVersion := V.scala212,
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
@@ -683,6 +695,7 @@ lazy val mtest = project
       "scalaVersion" -> scalaVersion.value,
       "kindProjector" -> V.kindProjector,
       "betterMonadicFor" -> V.betterMonadicFor,
+      "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
     crossScalaVersions := V.nonDeprecatedScalaVersions,
     Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
@@ -832,7 +845,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "com.lihaoyi" %% "pprint" % "0.6.6",
+    dependencyOverrides += "com.geirsson" %% "metaconfig-core" % "0.12.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

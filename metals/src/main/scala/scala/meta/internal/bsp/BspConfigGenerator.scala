@@ -13,6 +13,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -26,6 +27,7 @@ final class BspConfigGenerator(
     languageClient: MetalsLanguageClient,
     shellRunner: ShellRunner,
     statusBar: StatusBar,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(
       buildTool: BuildServerProvider,
@@ -37,6 +39,7 @@ final class BspConfigGenerator(
         args,
         buildTool.projectRoot,
         buildTool.redirectErrorOutput,
+        userConfig().javaHome,
       )
       .map(BspConfigGenerationStatus.fromExitCode)
       .map {
@@ -44,21 +47,22 @@ final class BspConfigGenerator(
           try {
             val bsp = ".bsp"
             workspace.resolve(bsp).createDirectories()
-            val buildToolBspDir = buildTool.projectRoot.resolve(bsp).toNIO
+            val buildToolBspDir = buildTool.projectRoot.resolve(bsp)
             val workspaceBspDir = workspace.resolve(bsp).toNIO
             buildToolBspDir.toFile.listFiles().foreach { file =>
               val path = file.toPath()
               if (!file.isDirectory() && path.filename.endsWith(".json")) {
-                val to =
-                  workspaceBspDir.resolve(path.relativize(buildToolBspDir))
+                val to = workspaceBspDir.resolve(path.filename)
                 Files.move(path, to, StandardCopyOption.REPLACE_EXISTING)
               }
             }
-            Files.delete(buildToolBspDir)
+            buildToolBspDir.deleteRecursively()
             Generated
           } catch {
-            case NonFatal(_) =>
-              Failed(Right("Could not move bsp config from project root"))
+            case NonFatal(e) =>
+              val message = s"Could not move bsp config from project root: $e"
+              scribe.error(message)
+              Failed(Right(message))
           }
         case status => status
       }

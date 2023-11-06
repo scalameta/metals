@@ -1,6 +1,6 @@
 package tests
 
-import java.util.concurrent.CompletableFuture
+import java.nio.file.Paths
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
@@ -9,12 +9,14 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.duration.Duration
 
+import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.metals.BspStatus
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.RequestMonitor
 import scala.meta.internal.metals.ServerLivenessMonitor
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
-
-import org.eclipse.lsp4j.MessageActionItem
-import org.eclipse.lsp4j.ShowMessageRequestParams
+import scala.meta.io.AbsolutePath
 
 class ServerLivenessMonitorSuite extends BaseSuite {
   implicit val ex: ExecutionContextExecutorService =
@@ -24,29 +26,38 @@ class ServerLivenessMonitorSuite extends BaseSuite {
     val pingInterval = Duration("3s")
     val server = new ResponsiveServer(pingInterval)
     val client = new CountMessageRequestsClient
+    val bspStatus = new BspStatus(client, isBspStatusProvider = true)
+    val connectionBspStatus = new ConnectionBspStatus(
+      bspStatus,
+      AbsolutePath(Paths.get(".")),
+      Icons.default,
+    )
     val livenessMonitor = new ServerLivenessMonitor(
       server,
       () => server.sendRequest(true),
-      client,
-      serverName = "responsive server",
       metalsIdleInterval = pingInterval * 4,
       pingInterval,
+      connectionBspStatus,
+      "responsive-server",
     )
+    connectionBspStatus.connected("responsive-server")
     Thread.sleep(pingInterval.toMillis * 3 / 2)
-    assertEquals(livenessMonitor.getState, ServerLivenessMonitor.Idle)
+    assert(livenessMonitor.metalsIsIdle)
     server.sendRequest(false)
     Thread.sleep(pingInterval.toMillis * 2)
-    assertNotEquals(livenessMonitor.getState, ServerLivenessMonitor.Idle)
+    assert(!livenessMonitor.metalsIsIdle)
     Thread.sleep(pingInterval.toMillis * 5)
-    assertEquals(livenessMonitor.getState, ServerLivenessMonitor.Idle)
+    assert(livenessMonitor.metalsIsIdle)
     server.sendRequest(false)
     Thread.sleep(pingInterval.toMillis)
     server.sendRequest(false)
     server.sendRequest(false)
     Thread.sleep(pingInterval.toMillis * 2)
     server.sendRequest(false)
-    assertEquals(livenessMonitor.getState, ServerLivenessMonitor.Running)
+    assert(!livenessMonitor.metalsIsIdle)
+    assert(livenessMonitor.lastPingOk)
     assert(client.showMessageRequests == 0)
+    livenessMonitor.shutdown()
   }
 }
 
@@ -84,10 +95,14 @@ class ResponsiveServer(pingInterval: Duration) extends RequestMonitor {
 
 class CountMessageRequestsClient extends NoopLanguageClient {
   var showMessageRequests = 0
-  override def showMessageRequest(
-      params: ShowMessageRequestParams
-  ): CompletableFuture[MessageActionItem] = {
-    showMessageRequests += 1
-    CompletableFuture.completedFuture(new MessageActionItem("OK"))
-  }
+
+  override def metalsStatus(params: MetalsStatusParams): Unit =
+    if (
+      params == ConnectionBspStatus.noResponseParams(
+        "responsive-server",
+        Icons.default,
+      )
+    ) {
+      showMessageRequests += 1
+    }
 }

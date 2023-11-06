@@ -734,4 +734,119 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive"),
   )
 
+  check(
+    "stale-symbols",
+    """
+      |package example
+      |      
+      |object Main {
+      |  val x: ScalaTargetType = ???
+      |  val y = x match@@
+      |}
+      |sealed trait ScalaTargetType
+      |object ScalaTargetType {
+      |  case object Scala2 extends ScalaTargetType
+      |  case object Scala3 extends ScalaTargetType
+      |  case object JS extends ScalaTargetType
+      |  case object Native extends ScalaTargetType
+      |  case object Typelevel extends ScalaTargetType
+      |  case object ScalaCli extends ScalaTargetType
+      |}""".stripMargin,
+    """|match
+       |match (exhaustive) ScalaTargetType (6 cases)
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "type-alias".tag(IgnoreScala2),
+    s"""|object O {
+        | type Id[A] = A
+        |
+        | enum Animal:
+        |   case Cat, Dog
+        | 
+        | val animal: Id[Animal] = ???
+        |
+        | animal ma@@
+        |}
+        |""".stripMargin,
+    s"""object O {
+       | type Id[A] = A
+       |
+       | enum Animal:
+       |   case Cat, Dog
+       | 
+       | val animal: Id[Animal] = ???
+       |
+       | animal match
+       |\tcase Animal.Cat => $$0
+       |\tcase Animal.Dog =>
+       |
+       |}
+       |""".stripMargin,
+    filter = _.contains("exhaustive"),
+  )
+
+  checkEdit(
+    "type-alias-sealed-trait",
+    s"""|object O {
+        | type Id[A] = A
+        |
+        |sealed trait Animal
+        |object Animal {
+        |   case object Cat extends Animal
+        |   case object Dog extends Animal
+        |}
+        | 
+        | val animal: Id[Animal] = ???
+        |
+        |animal ma@@
+        |}
+        |""".stripMargin,
+    s"""
+       |import O.Animal.Cat
+       |import O.Animal.Dog
+       |object O {
+       | type Id[A] = A
+       |
+       |sealed trait Animal
+       |object Animal {
+       |   case object Cat extends Animal
+       |   case object Dog extends Animal
+       |}
+       | 
+       | val animal: Id[Animal] = ???
+       |
+       |animal match {
+       |\tcase Cat => $$0
+       |\tcase Dog =>
+       |}
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        s"""
+           |import O.Animal.Cat
+           |import O.Animal.Dog
+           |object O {
+           | type Id[A] = A
+           |
+           |sealed trait Animal
+           |object Animal {
+           |   case object Cat extends Animal
+           |   case object Dog extends Animal
+           |}
+           | 
+           | val animal: Id[Animal] = ???
+           |
+           |animal match
+           |\tcase Cat => $$0
+           |\tcase Dog =>
+           |
+           |}
+           |""".stripMargin
+    ),
+    filter = _.contains("exhaustive"),
+  )
+
 }

@@ -23,7 +23,7 @@ final class Compilations(
     workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
     refreshTestSuites: () => Unit,
-    afterCompilation: () => Unit,
+    afterSuccesfulCompilation: () => Unit,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
@@ -34,12 +34,12 @@ final class Compilations(
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
-    ](compile, "compileBatch", shouldLogQueue = true)
+    ](compile, "compileBatch", shouldLogQueue = true, Some(Map.empty))
   private val cascadeBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
-    ](compile, "cascadeBatch", shouldLogQueue = true)
+    ](compile, "cascadeBatch", shouldLogQueue = true, Some(Map.empty))
   def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
@@ -93,10 +93,20 @@ final class Compilations(
     } yield result
   }
 
-  def compileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
+  def compileFiles(
+      paths: Seq[AbsolutePath],
+      focusedDocumentBuildTarget: Option[BuildTargetIdentifier],
+  ): Future[Unit] = {
     for {
       targets <- expand(paths)
       _ <- compileBatch(targets)
+      _ <- focusedDocumentBuildTarget match {
+        case Some(bt)
+            if !targets.contains(bt) &&
+              buildTargets.isInverseDependency(bt, targets.toList) =>
+          compileBatch(bt)
+        case _ => Future.successful(())
+      }
       _ <- compileWorksheets(paths)
     } yield ()
   }
@@ -117,15 +127,6 @@ final class Compilations(
   def cancel(): Unit = {
     cascadeBatch.cancelAll()
     compileBatch.cancelAll()
-    buildTargets.all
-      .flatMap { target =>
-        buildTargets.buildServerOf(target.getId())
-      }
-      .distinct
-      .foreach { conn =>
-        conn.cancelCompilations()
-      }
-
   }
 
   def recompileAll(): Future[Unit] = {
@@ -228,7 +229,7 @@ final class Compilations(
       connection: BuildServerConnection,
       targets: Seq[b.BuildTargetIdentifier],
   ): CancelableFuture[b.CompileResult] = {
-    val originId = UUID.randomUUID().toString
+    val originId = "METALS-$" + UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
     params.setOriginId(originId)
     targets.foreach(target => isCompiling(target) = true)
@@ -239,7 +240,7 @@ final class Compilations(
     val result = compilation.asScala
       .andThen { case result =>
         updateCompiledTargetState(result)
-        afterCompilation()
+        afterSuccesfulCompilation()
 
         // See https://github.com/scalacenter/bloop/issues/1067
         classes.rebuildIndex(

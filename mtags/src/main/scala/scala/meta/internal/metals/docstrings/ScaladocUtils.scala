@@ -7,6 +7,10 @@ import scala.meta.internal.tokenizers.Chars._
  */
 object ScaladocUtils {
 
+  /** Is character a whitespace character (but not a new line)? */
+  def isWhitespace(c: Char): Boolean =
+    c == ' ' || c == '\t' || c == CR
+
   /**
    * Returns index of string `str` following `start` skipping longest
    *  sequence of whitespace characters characters (but no newlines)
@@ -193,6 +197,10 @@ object ScaladocUtils {
       str.substring(1, str.length - 1)
     else
       str
+
+  /** Can character form part of a doc comment variable xxx? */
+  def isVarPart(c: Char): Boolean =
+    '0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z'
 
   /**
    * Returns index following variable, or start index if no variable was recognized

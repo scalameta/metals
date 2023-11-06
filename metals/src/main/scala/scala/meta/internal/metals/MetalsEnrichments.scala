@@ -303,14 +303,28 @@ object MetalsEnrichments
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
-    def hasScalaFiles: Boolean = {
-      def isScalaDir(file: File): Boolean = {
+    def isScalaProject(): Boolean =
+      containsProjectFilesSatisfying(_.isScala)
+    def isMetalsProject(): Boolean =
+      containsProjectFilesSatisfying(_.isScalaOrJavaFilename)
+
+    private def containsProjectFilesSatisfying(
+        fileNamePredicate: String => Boolean
+    ): Boolean = {
+      val directoriesToCheck = Set("test", "src", "it")
+      def dirFilter(f: File) = directoriesToCheck(f.getName()) || f
+        .listFiles()
+        .exists(dir => dir.isDirectory && directoriesToCheck(dir.getName()))
+      def isScalaDir(
+          file: File,
+          dirFilter: File => Boolean = _ => true,
+      ): Boolean = {
         file.listFiles().exists { file =>
-          if (file.isDirectory()) isScalaDir(file)
-          else file.getName().endsWith(".scala")
+          if (file.isDirectory()) dirFilter(file) && isScalaDir(file)
+          else fileNamePredicate(file.getName())
         }
       }
-      path.isDirectory && isScalaDir(path.toFile)
+      path.isDirectory && isScalaDir(path.toFile, dirFilter)
     }
 
     def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
@@ -619,13 +633,13 @@ object MetalsEnrichments
       try {
         Some(toAbsolutePath)
       } catch {
-        case NonFatal(e) =>
+        case NonFatal(error) =>
           reports.incognito.create(
             Report(
               "absolute-path",
               s"""|Uri: $value
                   |""".stripMargin,
-              e,
+              error,
             )
           )
           None
@@ -876,7 +890,7 @@ object MetalsEnrichments
   }
 
   implicit class XtensionJavacOptions(item: b.JavacOptionsItem) {
-    def targetroot: AbsolutePath = {
+    def targetroot: Option[AbsolutePath] = {
       item.getOptions.asScala
         .find(_.startsWith("-Xplugin:semanticdb"))
         .map(arg => {
@@ -893,7 +907,11 @@ object MetalsEnrichments
         })
         .filter(_ != "javac-classes-directory")
         .map(AbsolutePath(_))
-        .getOrElse(item.getClassDirectory.toAbsolutePath)
+        .orElse {
+          val classes = item.getClassDirectory()
+          if (classes.nonEmpty) Some(classes.toAbsolutePath)
+          else None
+        }
     }
 
     def isSemanticdbEnabled: Boolean = {

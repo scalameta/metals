@@ -2,6 +2,8 @@ package tests
 
 import scala.concurrent.duration.Duration
 
+import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
@@ -11,14 +13,15 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaMainClassesParams
 
 class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
+  val pingInterval: Duration = Duration("3s")
   override def serverConfig: MetalsServerConfig =
     MetalsServerConfig.default.copy(
       metalsToIdleTime = Duration("3m"),
-      pingInterval = ServerLivenessTestData.pingInterval,
+      pingInterval = pingInterval,
     )
 
   test("handle-not-responding-server") {
-    val sleepTime = ServerLivenessTestData.pingInterval.toMillis * 4
+    val sleepTime = pingInterval.toMillis * 4
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
 
@@ -51,22 +54,23 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
           List(
             new BuildTargetIdentifier("break"),
             new BuildTargetIdentifier(
-              (ServerLivenessTestData.pingInterval * 6).toString()
+              (pingInterval * 6).toString()
             ),
           ).asJava
         )
       )
       _ = Thread.sleep(sleepTime)
+      noResponseParams = ConnectionBspStatus.noResponseParams(
+        "Bill",
+        Icons.default,
+      )
       _ = assertNoDiff(
         server.client.workspaceMessageRequests,
-        List(
-          Messages.CheckDoctor.allProjectsMisconfigured,
-          ServerLivenessTestData.serverNotRespondingMessage,
-        ).mkString("\n"),
+        s"""|${Messages.CheckDoctor.allProjectsMisconfigured}
+            |${noResponseParams.logMessage(Icons.default)}""".stripMargin,
       )
       _ = assertEquals(isServerResponsive, Some(false))
       _ = Thread.sleep(sleepTime)
-      // we start getting responses from initial pings
       _ = assertEquals(isServerResponsive, Some(true))
     } yield ()
   }

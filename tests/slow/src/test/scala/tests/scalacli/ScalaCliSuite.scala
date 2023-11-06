@@ -8,7 +8,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.SlowTaskConfig
-import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -17,10 +16,7 @@ import tests.FileLayout
 
 class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
   override def serverConfig: MetalsServerConfig =
-    MetalsServerConfig.default.copy(
-      slowTask = SlowTaskConfig.on,
-      statusBar = StatusBarConfig.showMessage,
-    )
+    MetalsServerConfig.default.copy(slowTask = SlowTaskConfig.on)
 
   private def simpleFileTest(useBsp: Boolean): Future[Unit] =
     for {
@@ -266,6 +262,29 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     } yield ()
   }
 
+  test("inner") {
+    for {
+      _ <- scalaCliInitialize(useBsp = false)(
+        s"""|/inner/project.scala
+            |//> using scala "$scalaVersion"
+            |//> using lib "com.lihaoyi::utest::0.8.1"
+            |/inner/MyTests.scala
+            |import utest._
+            |
+            |object MyTests extends TestSuite {
+            |  val tests = Tests {
+            |    test("foo") {
+            |      assert(2 + 2 == 4)
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("inner/MyTests.scala")
+      _ = assert(!client.workspaceDiagnostics.contains("Not found: utest"))
+    } yield ()
+  }
+
   test("relative-semanticdb-root") {
     for {
       _ <- scalaCliInitialize(useBsp = false)(
@@ -384,6 +403,42 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         "test/MyTests.scala",
         "val tests = Test@@s",
         "utest/Tests.scala",
+      )
+    } yield ()
+  }
+
+  test("properly-reindex") {
+    cleanWorkspace()
+    server.client.importBuild = Messages.ImportBuild.yes
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""|/Main.scala
+            |//> using scala 2.13.11
+            |// > using toolkit latest
+            |
+            |object Main {
+            |    println(os.pwd)
+            |}
+            |
+            |""".stripMargin
+      )
+      _ <- server.server.buildServerPromise.future
+      _ <- server.didOpen("Main.scala")
+      _ = assertEquals(
+        server.client.workspaceDiagnostics,
+        """|Main.scala:5:13: error: not found: value os
+           |    println(os.pwd)
+           |            ^^
+           |""".stripMargin,
+      )
+      _ <- server.didSave("Main.scala") { text =>
+        text.replace("// >", "//>")
+      }
+      // cause another compilation to wait on workspace reload, the previous gets cancelled
+      _ <- server.didSave("Main.scala")(identity)
+      _ = assertEquals(
+        server.client.workspaceDiagnostics,
+        "",
       )
     } yield ()
   }

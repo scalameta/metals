@@ -11,6 +11,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
+import ujson.ParsingFailedException
+
 /**
  * Detects what build tool is used in this workspace.
  *
@@ -82,13 +84,17 @@ final class BuildTools(
   def scalaCliProject: Option[AbsolutePath] =
     searchForBuildTool(_.resolve("project.scala").isFile)
       .orElse {
-        ScalaCliBspScope.scalaCliBspRoot(workspace) match {
-          case Nil => None
-          case path :: Nil if path.isFile => Some(path.parent)
-          case path :: Nil =>
-            scribe.info(s"path: $path")
-            Some(path)
-          case _ => Some(workspace)
+        try {
+          ScalaCliBspScope.scalaCliBspRoot(workspace) match {
+            case Nil => None
+            case path :: Nil if path.isFile => Some(path.parent)
+            case path :: Nil => Some(path)
+            case _ => Some(workspace)
+          }
+        } catch {
+          case _: ParsingFailedException =>
+            scribe.warn(s"could not parse scala-cli build server configuration")
+            None
         }
       }
 
@@ -117,21 +123,37 @@ final class BuildTools(
   )
   def isBazel: Boolean = bazelProject.isDefined
 
+  private def customProjectRoot =
+    userConfig().customProjectRoot
+      .map(relativePath => workspace.resolve(relativePath.trim()))
+      .filter { projectRoot =>
+        val exists = projectRoot.exists
+        if (!exists) {
+          scribe.error(s"custom project root $projectRoot does not exist")
+        }
+        exists
+      }
+
   private def searchForBuildTool(
       isProjectRoot: AbsolutePath => Boolean
-  ): Option[AbsolutePath] =
-    if (isProjectRoot(workspace)) Some(workspace)
-    else
-      workspace.toNIO
-        .toFile()
-        .listFiles()
-        .collectFirst {
-          case file
-              if file.isDirectory &&
-                !file.getName.startsWith(".") &&
-                isProjectRoot(AbsolutePath(file.toPath())) =>
-            AbsolutePath(file.toPath())
-        }
+  ): Option[AbsolutePath] = {
+    customProjectRoot match {
+      case Some(projectRoot) => Some(projectRoot).filter(isProjectRoot)
+      case None =>
+        if (isProjectRoot(workspace)) Some(workspace)
+        else
+          workspace.toNIO
+            .toFile()
+            .listFiles()
+            .collectFirst {
+              case file
+                  if file.isDirectory &&
+                    !file.getName.startsWith(".") &&
+                    isProjectRoot(AbsolutePath(file.toPath())) =>
+                AbsolutePath(file.toPath())
+            }
+    }
+  }
 
   def allAvailable: List[BuildTool] = {
     List(

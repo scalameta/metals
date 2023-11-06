@@ -165,7 +165,8 @@ final case class TestingServer(
   lazy val fullServer = languageServer.getOldMetalsLanguageServer
   def server = fullServer.folderServices.head
 
-  implicit val reports: ReportContext = new StdReportContext(workspace.toNIO)
+  implicit val reports: ReportContext =
+    new StdReportContext(workspace.toNIO, _ => None)
 
   private lazy val trees = new Trees(
     buffers,
@@ -594,7 +595,7 @@ final case class TestingServer(
     fullServer.folderServices.foreach { service =>
       require(
         service.bspSession.isDefined,
-        s"Build server ${service.folder} did not initialize",
+        s"Build server ${service.path} did not initialize",
       )
     }
   }
@@ -659,8 +660,9 @@ final case class TestingServer(
     assertSystemExit(parameter)
     val targets = List(new b.BuildTargetIdentifier(buildTarget(target)))
     val params =
-      new b.DebugSessionParams(targets.asJava, kind, parameter.toJson)
-
+      new b.DebugSessionParams(targets.asJava)
+    params.setDataKind(kind)
+    params.setData(parameter.toJson)
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
       .collect { case DebugSession(_, uri) =>
         scribe.info(s"Starting debug session for $uri")
@@ -1034,6 +1036,7 @@ final case class TestingServer(
       filename: String,
       maxRetries: Int = 4,
   ): Future[List[l.CodeLens]] = {
+    Debug.printEnclosing(filename)
     val path = toPath(filename)
     val uri = path.toURI.toString
     val params = new CodeLensParams(new TextDocumentIdentifier(uri))
@@ -1048,9 +1051,18 @@ final case class TestingServer(
     var retries = maxRetries
     val codeLenses = Promise[List[l.CodeLens]]()
     val handler = { refreshCount: Int =>
+      scribe.info(s"Refreshing model for $filename")
       if (refreshCount > 0)
         for {
-          lenses <- fullServer.codeLens(params).asScala.map(_.asScala)
+          lenses <- fullServer
+            .codeLens(params)
+            .asScala
+            .map(_.asScala)
+            .withTimeout(10, util.concurrent.TimeUnit.SECONDS)
+            .recover { _ =>
+              scribe.info(s"Timeout for fetching lenses reached for $filename")
+              Nil
+            }
         } {
           if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
           else if (retries > 0) {
@@ -1072,6 +1084,7 @@ final case class TestingServer(
       // first compilation, to trigger the handler
       _ <- server.compilations.compileFile(path)
       lenses <- codeLenses.future
+        .withTimeout(60, util.concurrent.TimeUnit.SECONDS)
     } yield lenses
   }
 

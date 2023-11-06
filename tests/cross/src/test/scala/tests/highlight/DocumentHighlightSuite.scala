@@ -80,6 +80,59 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
+    "named-args2",
+    """
+      |object Main {
+      |  def foo = check("abc")(
+      |    directory = "foo",
+      |    <<file@@name>> = 1,
+      |  )
+      |
+      |  private def check(name: String)(
+      |    directory: String,
+      |    <<filename>>: Int,
+      |    otherDefault: String = "default"
+      |  ): Unit = ()
+      |}""".stripMargin,
+  )
+
+  check(
+    "named-args2",
+    """
+      |object Main {
+      |  def foo = check("abc")(
+      |    directory = "foo",
+      |    <<file@@name>> = 1,
+      |  )
+      |
+      |  private def check(name: String)(
+      |    directory: String,
+      |    <<filename>>: Int,
+      |    otherDefault: String = "default"
+      |  ): Unit = ()
+      |}""".stripMargin,
+  )
+
+  check(
+    "named-args3",
+    """
+      |package example
+      |
+      |object Main {
+      |  check("abc")(
+      |    directory = Some("foo"),
+      |    <<filename>> = 1
+      |  )(loc = true)
+      |
+      |  private def check(name: String)(
+      |      directory: Option[String],
+      |      <<fil@@ename>>: Int,
+      |      otherDefault: String = "default"
+      |  )(loc: Boolean): Unit = ()
+      |}""".stripMargin,
+  )
+
+  check(
     "scopes",
     """
       |object Main {
@@ -863,6 +916,17 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    if true
        |    b <- List(2)
        |  } yield a + 1
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "named-arg-backtick",
+    """|object Main {
+       |  def foo(<<`type`>>: String): String = <<`type`>>
+       |  val x = foo(
+       |    <<`ty@@pe`>> = "abc"
+       |  )
        |}
        |""".stripMargin,
   )

@@ -63,27 +63,28 @@ class CoursierComplete(scalaVersion: String) {
       dependency: String,
       supportNonJvm: Boolean
   ): List[String] = {
-    val (adjusted, hasDoubleColon) = adjustDoubleColon(dependency)
+    val adjusted = adjustDoubleColon(dependency)
     val sortedCompletions = completions(adjusted).sortWith(
       Version.fromString(_) >= Version.fromString(_)
     )
 
+    def addDoubleColon: Boolean =
+      supportNonJvm && !hasSpecifiedPlatform(dependency) &&
+        dependency.count(_ == ':') == 3
+
     // If dependency name doesn't end with `sjs` or `native` and we can default to `::` before version
-    if (!hasDoubleColon && supportNonJvm && !hasSpecifiedPlatform(dependency))
+    if (addDoubleColon)
       sortedCompletions.map(":" + _)
     else sortedCompletions
 
   }
 
-  private def adjustDoubleColon(dependency: String): (String, Boolean) = {
+  private def adjustDoubleColon(dependency: String): String = {
     val doubleColon = dependency.lastIndexOf("::")
-    val firstColon = dependency.indexOf(":")
-
+    val firstColon = dependency.indexOf("::")
     if (doubleColon > firstColon) {
-      val depString = (dependency.substring(0, doubleColon) +
-        dependency.substring(doubleColon + 1, dependency.length()))
-      (depString, true)
-    } else (dependency, false)
+      dependency.take(doubleColon) + dependency.drop(doubleColon + 1)
+    } else dependency
   }
 
   private def hasSpecifiedPlatform(dependency: String): Boolean = {

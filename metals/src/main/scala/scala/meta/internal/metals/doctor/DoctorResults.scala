@@ -20,7 +20,7 @@ final case class DoctorResults(
 
 object DoctorResults {
   // Version of the Doctor json that is returned.
-  val version = 4
+  val version = 5
 }
 
 final case class DoctorFolderResults(
@@ -29,6 +29,7 @@ final case class DoctorFolderResults(
     messages: Option[List[DoctorMessage]],
     targets: Option[Seq[DoctorTargetInfo]],
     explanations: List[Obj],
+    errorReports: List[ErrorReportInfo],
 ) {
   def toJson: Obj = {
     val json = ujson.Obj(
@@ -40,6 +41,7 @@ final case class DoctorFolderResults(
     )
     targets.foreach(targetList => json("targets") = targetList.map(_.toJson))
     json("explanations") = explanations
+    json("errorReports") = errorReports.map(_.toJson)
     json
   }
 }
@@ -150,5 +152,35 @@ final case class DoctorFolderHeader(
       base.update("isBuildServerResponsive", ibsr)
     }
     base
+  }
+}
+
+/**
+ * Information about an error report.
+ * @param name display name of the error
+ * @param timestamp date and time timestamp of the report
+ * @param uri error report file uri
+ * @param buildTarget optional build target that error is associated with
+ * @param shortSummary short error summary
+ * @param errorReportType one of "metals", "metals-full", "bloop"
+ */
+final case class ErrorReportInfo(
+    name: String,
+    timestamp: Long,
+    uri: String,
+    buildTarget: Option[String],
+    shortSummary: String,
+    errorReportType: String,
+) {
+  def toJson: Obj = {
+    val json = ujson.Obj(
+      "name" -> name,
+      "timestamp" -> timestamp,
+      "uri" -> uri,
+      "shortSummary" -> shortSummary,
+      "errorReportType" -> errorReportType,
+    )
+    buildTarget.foreach(json("buildTarget") = _)
+    json
   }
 }
