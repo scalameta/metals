@@ -15,9 +15,7 @@ private[mtags] case class CharArrayReader private (
     var begCharOffset: Int = -1, // included
     var endCharOffset: Int = 0, // excluded
     /** The start offset of the current line */
-    var lineStartOffset: Int = 0,
-    /** The start offset of the line before the current one */
-    private var lastLineStartOffset: Int = 0
+    var lineStartOffset: Int = 0
 ) {
 
   def this(input: Input, dialect: Dialect, reporter: Reporter) =
@@ -141,7 +139,6 @@ private[mtags] case class CharArrayReader private (
   private def checkLineEnd(): Boolean = {
     val ok = ch == LF || ch == FF
     if (ok) {
-      lastLineStartOffset = lineStartOffset
       lineStartOffset = endCharOffset
     }
     ok
@@ -154,5 +151,12 @@ private[mtags] case class CharArrayReader private (
   def getc(): Int = { nextChar(); ch }
 
   final def wasMultiChar: Boolean = begCharOffset < endCharOffset - 1
+
+  def moveCursor(offset: Int): Unit = {
+    begCharOffset = offset - 1
+    endCharOffset = offset
+    lineStartOffset = input.offsetToLine(offset)
+    nextRawChar()
+  }
 
 }

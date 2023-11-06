@@ -5,6 +5,7 @@ import scala.annotation.tailrec
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.mtags.JavaTokenizer.Token.Word
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.tokenizers.Chars._
@@ -12,11 +13,12 @@ import scala.meta.internal.tokenizers.Reporter
 
 class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
 
-  import JavaToplevelMtags._
+  import JavaTokenizer._
 
   val reporter: Reporter = Reporter(input)
   val reader: CharArrayReader =
     new CharArrayReader(input, dialects.Scala213, reporter)
+  val tokenizer = new JavaTokenizer(reader, input)
 
   override def language: Language = Language.JAVA
 
@@ -28,7 +30,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   }
 
   private def loop: Unit = {
-    val token = fetchToken
+    val token = tokenizer.fetchToken
     token match {
       case Token.EOF =>
       case Token.Package =>
@@ -36,7 +38,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
         paths.foreach { path => pkg(path.value, path.pos) }
         loop
       case Token.Class | Token.Interface | _: Token.Enum | _: Token.Record =>
-        fetchToken match {
+        tokenizer.fetchToken match {
           case Token.Word(v, pos) =>
             val kind = token match {
               case Token.Interface => SymbolInformation.Kind.INTERFACE
@@ -53,16 +55,59 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     }
   }
 
-  @tailrec
-  private def skipMultilineComment(prevStar: Boolean): Unit = {
-    reader.nextChar()
-    if (prevStar) {
-      if (reader.ch == '/') reader.nextChar()
-      else skipMultilineComment(prevStar = reader.ch == '*')
-    } else skipMultilineComment(prevStar = reader.ch == '*')
+  private def readPaths: List[Token.WithPos] = {
+    val builder = List.newBuilder[Token.WithPos]
+    @tailrec
+    def loop(): List[Token.WithPos] = {
+      tokenizer.fetchToken match {
+        case t: Token.WithPos =>
+          builder += t
+          loop()
+        case Token.Dot => loop()
+        case _ =>
+          builder.result()
+      }
+    }
+    loop()
   }
 
-  private def fetchToken: Token = {
+  private def skipBody: Unit = {
+    @tailrec
+    def skipToFirstBrace: Unit =
+      tokenizer.fetchToken match {
+        case Token.LBrace | Token.EOF => ()
+        case _ =>
+          skipToFirstBrace
+      }
+
+    @tailrec
+    def skipToRbrace(open: Int): Unit = {
+      tokenizer.fetchToken match {
+        case Token.RBrace if open == 1 => ()
+        case Token.RBrace =>
+          skipToRbrace(open - 1)
+        case Token.LBrace =>
+          skipToRbrace(open + 1)
+        case Token.EOF => ()
+        case _ =>
+          skipToRbrace(open)
+      }
+    }
+
+    skipToFirstBrace
+    skipToRbrace(1)
+  }
+
+}
+
+class JavaTokenizer(reader: CharArrayReader, input: Input) {
+  import JavaTokenizer._
+
+  def moveCursor(offset: Int): Unit = {
+    reader.moveCursor(offset)
+  }
+
+  def fetchToken: Token = {
 
     @tailrec
     def quotedLiteral(quote: Char): Token = {
@@ -88,7 +133,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
         )
       } else {
 
-        val pos = Position.Range(input, start, reader.endCharOffset)
+        val pos = Position.Range(input, start, reader.begCharOffset)
         builder.mkString match {
           case "package" => Token.Package
           case "class" => Token.Class
@@ -105,9 +150,10 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     def parseToken: (Token, Boolean) = {
       val first = reader.ch
       first match {
-        case ',' | '<' | '>' | '&' | '|' | '!' | '=' | '+' | '-' | '*' | '@' |
-            ':' | '?' | '%' | '^' | '~' =>
+        case ',' | '<' | '>' | '&' | '|' | '!' | '=' | '+' | '-' | '*' | ':' |
+            '?' | '%' | '^' | '~' =>
           (Token.SpecialSym, false)
+        case '@' => (Token.At, false)
         case SU => (Token.EOF, false)
         case '.' => (Token.Dot, false)
         case '{' => (Token.LBrace, false)
@@ -150,54 +196,13 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     t
   }
 
-  private def readPaths: List[Token.WithPos] = {
-    val builder = List.newBuilder[Token.WithPos]
-    @tailrec
-    def loop(): List[Token.WithPos] = {
-      fetchToken match {
-        case t: Token.WithPos =>
-          builder += t
-          loop()
-        case Token.Dot => loop()
-        case _ =>
-          builder.result()
-      }
-    }
-    loop()
-  }
-
-  private def isWhitespace(ch: Char): Boolean = {
-    ch match {
-      case ' ' | '\t' | CR | LF | FF => true
-      case _ => false
-    }
-  }
-
-  private def skipBody: Unit = {
-    @tailrec
-    def skipToFirstBrace: Unit =
-      fetchToken match {
-        case Token.LBrace | Token.EOF => ()
-        case _ =>
-          skipToFirstBrace
-      }
-
-    @tailrec
-    def skipToRbrace(open: Int): Unit = {
-      fetchToken match {
-        case Token.RBrace if open == 1 => ()
-        case Token.RBrace =>
-          skipToRbrace(open - 1)
-        case Token.LBrace =>
-          skipToRbrace(open + 1)
-        case Token.EOF => ()
-        case _ =>
-          skipToRbrace(open)
-      }
-    }
-
-    skipToFirstBrace
-    skipToRbrace(1)
+  @tailrec
+  private def skipMultilineComment(prevStar: Boolean): Unit = {
+    reader.nextChar()
+    if (prevStar) {
+      if (reader.ch == '/') reader.nextChar()
+      else skipMultilineComment(prevStar = reader.ch == '*')
+    } else skipMultilineComment(prevStar = reader.ch == '*')
   }
 
   private def skipLine: Unit =
@@ -208,6 +213,13 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     if (isWhitespace(reader.ch.toChar)) {
       reader.nextChar()
       toNextNonWhiteSpace()
+    }
+  }
+
+  private def isWhitespace(ch: Char): Boolean = {
+    ch match {
+      case ' ' | '\t' | CR | LF | FF => true
+      case _ => false
     }
   }
 
@@ -228,9 +240,37 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     loop(new StringBuilder().append(existing))
   }
 
+  def consumeUntilWord(): Option[Word] = {
+    val token = fetchToken
+    token match {
+      case Token.EOF => None
+      case Word("private", _) => consumeUntilWord()
+      case Word("public", _) => consumeUntilWord()
+      case Word("protected", _) => consumeUntilWord()
+      case Word("static", _) => consumeUntilWord()
+      case Token.Class => consumeUntilWord()
+      case Token.Interface => consumeUntilWord()
+      case _: Token.Enum => consumeUntilWord()
+      case _: Token.Record => consumeUntilWord()
+      case Token.At =>
+        fetchToken
+        consumeUntilWord()
+      case word: Word => Some(word)
+      case Token.LBracket =>
+        consumeUntil(Token.RBrace)
+        consumeUntilWord()
+      case _ => None
+    }
+  }
+
+  private def consumeUntil(token: Token): Unit = {
+    if (fetchToken != Token.EOF && fetchToken != token) {
+      consumeUntil(token)
+    }
+  }
 }
 
-object JavaToplevelMtags {
+object JavaTokenizer {
 
   sealed trait Token
   object Token {
@@ -261,6 +301,7 @@ object JavaToplevelMtags {
     case object Semicolon extends Token
     // any allowed symbol like `=` , `-` and others
     case object SpecialSym extends Token
+    case object At extends Token
     case object Literal extends Token
 
     case class Word(value: String, pos: Position) extends WithPos {

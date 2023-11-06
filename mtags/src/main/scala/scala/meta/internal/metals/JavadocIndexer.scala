@@ -8,7 +8,7 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.docstrings.MarkdownGenerator
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.JavaMtags
+import scala.meta.internal.mtags.OldJavaMtags
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
@@ -28,7 +28,7 @@ import com.thoughtworks.qdox.model.JavaTypeVariable
 class JavadocIndexer(
     input: Input.VirtualFile,
     fn: SymbolDocumentation => Unit
-) extends JavaMtags(input, includeMembers = true) {
+) extends OldJavaMtags(input, includeMembers = true) {
   override def visitClass(
       cls: JavaClass,
       pos: Position,

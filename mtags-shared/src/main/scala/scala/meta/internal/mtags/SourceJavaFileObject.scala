@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.mtags
 
 import java.net.URI
 import javax.tools.JavaFileObject.Kind

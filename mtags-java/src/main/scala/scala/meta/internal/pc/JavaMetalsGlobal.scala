@@ -11,6 +11,7 @@ import javax.tools.ToolProvider
 
 import scala.jdk.CollectionConverters._
 
+import scala.meta.internal.mtags.SourceJavaFileObject
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
 
