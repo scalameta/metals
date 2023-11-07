@@ -12,12 +12,11 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 class BuildTargetInfo(buildTargets: BuildTargets) {
 
-  def buildTargetDetails(targetName: String): String = {
+  def buildTargetDetails(targetName: String, uri: String): String = {
     buildTargets.all
-      .filter(_.getDisplayName == targetName)
-      .map(_.getId())
-      .headOption
-      .map(buildTargetDetail)
+      .find(_.getDisplayName == targetName)
+      .orElse(buildTargets.all.find(_.getId.getUri.toString == uri))
+      .map(target => buildTargetDetail(target.getId()))
       .getOrElse(s"Build target $targetName not found")
   }
 
