@@ -1,10 +1,6 @@
 package bench
 
-import java.net.URI
 import java.util.concurrent.TimeUnit
-
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.pc.PresentationCompiler
 
 import org.eclipse.lsp4j.CompletionList
 import org.openjdk.jmh.annotations.Benchmark
@@ -18,7 +14,7 @@ import org.openjdk.jmh.annotations.State
 @State(Scope.Benchmark)
 class CompletionBench extends PcBenchmark {
 
-  var completionRequests: Map[String, SourceCompletion] = Map.empty
+  var completionRequests: Map[String, SourceRequest] = Map.empty
 
   def beforeAll(): Unit = {
     val akka = Corpus.akka()
@@ -31,40 +27,42 @@ class CompletionBench extends PcBenchmark {
     val exprs =
       "fastparse-2.1.0/scalaparse/src/scalaparse/Exprs.scala"
     completionRequests = Map(
-      "scopeOpen" -> SourceCompletion.fromPath(
+      "scopeOpen" -> SourceRequest.fromPath(
         "A.scala",
-        """
-          |import Java
-          |import scala.collection.mutable
-          |        """.stripMargin,
-        "import Java@@",
+        """|
+           |object Main{
+           |  def foo = ""  
+           |  fo
+           |}
+           |""".stripMargin,
+        "  fo@@",
       ),
-      "scopeDeep" -> SourceCompletion.fromZipPath(
+      "scopeDeep" -> SourceRequest.fromZipPath(
         akka,
         replicator,
         "val nonSensitiveKeys = Join@@ConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.settings)",
       ),
-      "memberDeep" -> SourceCompletion.fromZipPath(
+      "memberDeep" -> SourceRequest.fromZipPath(
         akka,
         replicator,
         "val nonSensitiveKeys = JoinConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.@@settings)",
       ),
-      "scopeTypers" -> SourceCompletion.fromZipPath(
+      "scopeTypers" -> SourceRequest.fromZipPath(
         scala,
         typers,
         "if (argProtos.isDefinedAt(id@@x)) argProtos(idx) else NoType",
       ),
-      "memberTypers" -> SourceCompletion.fromZipPath(
+      "memberTypers" -> SourceRequest.fromZipPath(
         scala,
         typers,
         "if (argProtos.isDefi@@nedAt(idx)) argProtos(idx) else NoType",
       ),
-      "scopeFastparse" -> SourceCompletion.fromZipPath(
+      "scopeFastparse" -> SourceRequest.fromZipPath(
         fastparse,
         exprs,
         "def InfixPattern = P( S@@implePattern ~ (Id ~/ SimplePattern).rep | `_*` )",
       ),
-      "memberFastparse" -> SourceCompletion.fromZipPath(
+      "memberFastparse" -> SourceRequest.fromZipPath(
         fastparse,
         exprs,
         "def CaseClause: P[Unit] = P( `case` ~ !(`class` | `object`) ~/ Pattern ~ ExprCtx.Gua@@rd.? ~ `=>` ~ CaseBlock  )",
@@ -72,33 +70,24 @@ class CompletionBench extends PcBenchmark {
     )
   }
 
-  @Param(
-    Array("scopeOpen", "scopeDeep", "memberDeep", "scopeTypers", "memberTypers",
-      "scopeFastparse", "memberFastparse")
-  )
+  // to test different scenarios use the values from completionRequests
+  @Param(Array("scopeOpen"))
   var currentCompletionRequest: String = _
+
+  @Param(Array("3.3.1", "2.13.12"))
+  var scalaVersion: String = _
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def complete(): CompletionList = {
-    val pc = presentationCompiler()
+    val pc = presentationCompiler(scalaVersion)
     val result = currentCompletion.complete(pc)
     result
   }
 
-  def currentCompletion: SourceCompletion = completionRequests(
+  def currentCompletion: SourceRequest = completionRequests(
     currentCompletionRequest
   )
 
-  def scopeComplete(pc: PresentationCompiler): CompletionList = {
-    val code = "import Java\n"
-    pc.complete(
-      CompilerOffsetParams(
-        URI.create("file://A.scala"),
-        code,
-        code.length - 2,
-      )
-    ).get()
-  }
 }
