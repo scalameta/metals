@@ -67,11 +67,14 @@ class SemanticTokensBench extends PcBenchmark {
   )
   var currentHighlightRequest: String = _
 
+  @Param(Array("3.3.1", "2.13.12"))
+  var scalaVersion: String = _
+
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def semanticHighlight(): List[Integer] = {
-    val pc = presentationCompiler()
+    val pc = presentationCompiler(scalaVersion)
     val text = currentHighlight
     val vFile = CompilerVirtualFileParams(
       URI.create(s"file://${currentHighlightRequest}"),
