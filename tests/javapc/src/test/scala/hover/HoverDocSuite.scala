@@ -40,23 +40,43 @@ class HoverDocSuite extends BaseJavaHoverSuite {
       |    }
       |}
       |""".stripMargin,
-    """|```java
-       |public void sort(java.util.Comparator<? super E> arg0)
-       |```
-       |Sorts this list according to the order induced by the specified
-       |[Comparator](Comparator).  The sort is *stable*: this method must not
-       |reorder equal elements.
-       |
-       |All elements in this list must be *mutually comparable* using the
-       |specified comparator (that is, `c.compare(e1, e2)` must not throw
-       |a `ClassCastException` for any elements `e1` and `e2`
-       |in the list).
-       |
-       |If the specified comparator is `null` then all elements in this
-       |list must implement the [Comparable](Comparable) interface and the elements'
-       |[natural ordering](Comparable) should be used.
-       |
-       |This list must be modifiable, but need not be resizable.""".stripMargin,
+    if (isJava22)
+      """|```java
+         |public void sort(java.util.Comparator<? super E> arg0)
+         |```
+         |Sorts this list according to the order induced by the specified
+         |[Comparator](Comparator) (optional operation).  The sort is *stable*:
+         |this method must not reorder equal elements.
+         |
+         |All elements in this list must be *mutually comparable* using the
+         |specified comparator (that is, `c.compare(e1, e2)` must not throw
+         |a `ClassCastException` for any elements `e1` and `e2`
+         |in the list).
+         |
+         |If the specified comparator is `null` then all elements in this
+         |list must implement the [Comparable](Comparable) interface and the elements'
+         |[natural ordering](Comparable) should be used.
+         |
+         |This list must be modifiable, but need not be resizable.
+         |""".stripMargin
+    else
+      """|```java
+         |public void sort(java.util.Comparator<? super E> arg0)
+         |```
+         |Sorts this list according to the order induced by the specified
+         |[Comparator](Comparator).  The sort is *stable*: this method must not
+         |reorder equal elements.
+         |
+         |All elements in this list must be *mutually comparable* using the
+         |specified comparator (that is, `c.compare(e1, e2)` must not throw
+         |a `ClassCastException` for any elements `e1` and `e2`
+         |in the list).
+         |
+         |If the specified comparator is `null` then all elements in this
+         |list must implement the [Comparable](Comparable) interface and the elements'
+         |[natural ordering](Comparable) should be used.
+         |
+         |This list must be modifiable, but need not be resizable.""".stripMargin,
   )
 
   check(
