@@ -5,7 +5,7 @@ import javax.lang.model.element.Modifier
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.mtags.JavaTokenizer
+import scala.meta.internal.mtags.JavaTokenizer.Token.Word
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.tokenizers.Reporter
@@ -69,10 +69,9 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
   }
 
   override def visitPackage(node: PackageTree, trees: ParseTrees): Unit = {
-    val start = trees.getStart(node)
-    val end = start + node.getPackageName.toString().length()
-    val position = Position.Range(input, start, end)
-    pkg(node.getPackageName.toString, position)
+    namePositions.packageParts(node, trees).foreach {
+      case Word(name, position) => pkg(name, position)
+    }
     super.visitPackage(node, trees)
   }
 
@@ -119,5 +118,21 @@ class NamePositions(input: Input) {
     tokenizer.moveCursor(trees.getStart(node))
     val prev = tokenizer.consumeUntilWord()
     tokenizer.consumeUntilWord().orElse(prev).map(_.pos)
+  }
+
+  def packageParts(node: Tree, trees: ParseTrees): List[Word] = {
+    tokenizer.moveCursor(trees.getStart(node))
+    LazyList
+      .continually(tokenizer.fetchToken)
+      .takeWhile {
+        case _: Word => true
+        case JavaTokenizer.Token.Dot => true
+        case JavaTokenizer.Token.Package => true
+        case _ => false
+      }
+      .collect { case w: Word =>
+        w
+      }
+      .toList
   }
 }

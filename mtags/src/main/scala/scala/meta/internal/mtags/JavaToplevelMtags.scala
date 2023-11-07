@@ -185,7 +185,7 @@ class JavaTokenizer(reader: CharArrayReader, input: Input) {
               (token, true)
           }
         case _ =>
-          val token = kwOrIdent(reader.endCharOffset, new StringBuilder(first))
+          val token = kwOrIdent(reader.begCharOffset, new StringBuilder(first))
           (token, true)
       }
     }
@@ -240,21 +240,21 @@ class JavaTokenizer(reader: CharArrayReader, input: Input) {
     loop(new StringBuilder().append(existing))
   }
 
-  def consumeUntilWord(): Option[Word] = {
-    val token = fetchToken
+  def consumeUntilWord(token: => Token = fetchToken): Option[Word] = {
     token match {
       case Token.EOF => None
       case Word("private", _) => consumeUntilWord()
       case Word("public", _) => consumeUntilWord()
       case Word("protected", _) => consumeUntilWord()
       case Word("static", _) => consumeUntilWord()
+      case Word("abstract", _) => consumeUntilWord()
       case Token.Class => consumeUntilWord()
       case Token.Interface => consumeUntilWord()
       case _: Token.Enum => consumeUntilWord()
       case _: Token.Record => consumeUntilWord()
       case Token.At =>
-        fetchToken
-        consumeUntilWord()
+        val token = consumeAnnotation()
+        consumeUntilWord(token)
       case word: Word => Some(word)
       case Token.LBracket =>
         consumeUntil(Token.RBrace)
@@ -262,6 +262,18 @@ class JavaTokenizer(reader: CharArrayReader, input: Input) {
       case _ => None
     }
   }
+
+  private def consumeAnnotation(): Token =
+    fetchToken match {
+      case _: Word =>
+        fetchToken match {
+          case Token.LParen =>
+            consumeUntil(Token.RParen)
+            fetchToken
+          case t => t
+        }
+      case t => t
+    }
 
   private def consumeUntil(token: Token): Unit = {
     if (fetchToken != Token.EOF && fetchToken != token) {

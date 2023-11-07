@@ -66,9 +66,10 @@ private[mtags] case class CharArrayReader private (
         readerError("invalid unicode surrogate pair", at = begCharOffset)
       else {
         val (lo, loEnd) = readUnicodeChar(hiEnd)
-        if (!Character.isLowSurrogate(lo))
-          readerError("invalid unicode surrogate pair", at = begCharOffset)
-        else {
+        if (!Character.isLowSurrogate(lo)) {
+          ch = hi
+          endCharOffset = hiEnd
+        } else {
           ch = Character.toCodePoint(hi, lo)
           endCharOffset = loEnd
         }
@@ -156,7 +157,7 @@ private[mtags] case class CharArrayReader private (
     begCharOffset = offset - 1
     endCharOffset = offset
     lineStartOffset = input.offsetToLine(offset)
-    nextRawChar()
+    nextChar()
   }
 
 }

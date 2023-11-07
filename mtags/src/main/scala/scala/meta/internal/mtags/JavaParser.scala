@@ -1,13 +1,12 @@
 package scala.meta.internal.mtags
 
 import java.net.URI
+import java.util.Arrays
 import javax.tools.Diagnostic
 import javax.tools.DiagnosticListener
 import javax.tools.JavaCompiler
 import javax.tools.JavaFileObject
 import javax.tools.ToolProvider
-
-import scala.jdk.CollectionConverters._
 
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.Tree
@@ -33,9 +32,9 @@ object JavaParser {
         null,
         null,
         noopDiagnosticListener,
-        Nil.asJava,
+        Arrays.asList(),
         null,
-        List(javaFileObject).asJava
+        Arrays.asList(javaFileObject)
       )
       .asInstanceOf[JavacTask]
     val iter = javacTask.parse().iterator

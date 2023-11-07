@@ -418,7 +418,12 @@ lazy val mtags = project
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `mtags-java` = project
-  .configure(JavaPcSettings.settings(sharedSettings))
+  .settings(
+    sharedSettings,
+    moduleName := "mtags-java",
+    scalaVersion := V.scala213,
+  )
+  .configure(JavaToolsSettings.settings())
   .dependsOn(interfaces, mtagsShared)
 
 lazy val metals = project
