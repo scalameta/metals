@@ -23,13 +23,15 @@ import scribe.writer.Writer
 import tests.BaseImportSuite
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
+import tests.ScriptsAssertions
 import tests.TestSemanticTokens
 
 /**
  * Basic suite to ensure that a connection to sbt server can be made.
  */
 class SbtServerSuite
-    extends BaseImportSuite("sbt-server", SbtServerInitializer) {
+    extends BaseImportSuite("sbt-server", SbtServerInitializer)
+    with ScriptsAssertions {
 
   val preBspVersion = "1.3.13"
   val supportedMetaBuildVersion = "1.6.0-M1"
@@ -494,6 +496,33 @@ class SbtServerSuite
            |```
            |""".stripMargin,
       )
+    } yield ()
+  }
+
+  test("build-sbt") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/build.sbt
+            |${SbtBuildLayout.commonSbtSettings}
+            |ThisBuild / scalaVersion := "${V.scala213}"
+            |val a = project.in(file("a"))
+            |/a/src/main/scala/a/A.scala
+            |package a
+            |object A {
+            | val a = 1
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("build.sbt")
+      res <- definitionsAt(
+        "build.sbt",
+        s"ThisBuild / sc@@alaVersion := \"${V.scala213}\"",
+      )
+      _ = assert(res.length == 1)
+      _ = assertNoDiff(res.head.getUri().toAbsolutePath.filename, "Keys.scala")
     } yield ()
   }
 
