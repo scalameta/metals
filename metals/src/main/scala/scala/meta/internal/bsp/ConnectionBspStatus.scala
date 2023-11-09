@@ -20,6 +20,8 @@ class ConnectionBspStatus(
   private val status = new AtomicReference[BspStatusState](
     BspStatusState(Disconnected, None, None, shouldShow = false)
   )
+
+  /** Paths to all bsp error reports from this session (bsp connection). */
   private val currentSessionErrors = new AtomicReference[Set[String]](Set())
 
   def connected(serverName: String): Unit = changeState(Connected(serverName))
@@ -76,9 +78,7 @@ class ConnectionBspStatus(
         case Connected(serverName) =>
           ConnectionBspStatus.connectedParams(serverName, icons)
         case ErrorMessage(message) =>
-          val currentSessionReports = errorReports.intersect(
-            rc.bloop.getReports().map(_.toPath.toUri().toString()).toSet
-          )
+          val currentSessionReports = syncWithReportContext(errorReports)
           if (currentSessionReports.isEmpty)
             ConnectionBspStatus.connectedParams(statusState.serverName, icons)
           else
@@ -91,6 +91,19 @@ class ConnectionBspStatus(
       }
     bspStatus.status(folderPath, showParams)
   }
+
+  /**
+   * To get the actual number of error reports we take an intersection
+   * of this session's error reports with the reports in `.metals/.reports/bloop`,
+   * this allows for two things:
+   *   1. When user deletes the report from file system the warning will disappear.
+   *   2. Error deduplication. When for a perticular error a report already exists, we remove the old report.
+   * For reports management details look [[scala.meta.internal.metals.StdReporter]]
+   */
+  private def syncWithReportContext(errorReports: Set[String]) =
+    errorReports.intersect(
+      rc.bloop.getReports().map(_.toPath.toUri().toString()).toSet
+    )
 }
 
 object ConnectionBspStatus {

@@ -1252,7 +1252,6 @@ class MetalsLspService(
   def didChangeWatchedFiles(
       events: List[FileEvent]
   ): Future[Unit] = {
-    scribe.debug(s"did change watched files event $events")
     val importantEvents =
       events
         .filterNot(event =>
