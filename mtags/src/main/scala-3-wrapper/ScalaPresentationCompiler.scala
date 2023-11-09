@@ -52,15 +52,15 @@ case class ScalaPresentationCompiler(
     reportsLevel: ReportLevel = ReportLevel.Info,
 ) extends PresentationCompiler:
   val underlying: DottyPresentationCompiler = new DottyPresentationCompiler(
-    buildTargetIdentifier,
-    classpath,
-    options,
-    search,
-    ec,
-    sh,
-    config,
-    folderPath,
-    reportsLevel,
+    buildTargetIdentifier = buildTargetIdentifier,
+    classpath = classpath,
+    options = options,
+    search = search,
+    ec = ec,
+    sh = sh,
+    config = config,
+    folderPath = folderPath,
+    reportsLevel = reportsLevel,
   )
 
   def this() = this("", Nil, Nil)
@@ -208,4 +208,9 @@ case class ScalaPresentationCompiler(
       executorService: ExecutorService
   ): PresentationCompiler =
     underlying.withExecutorService(executorService)
+
+  override def withBuildTargetName(
+      buildTargetName: String
+  ): PresentationCompiler =
+    underlying.withBuildTargetName(buildTargetName)
 end ScalaPresentationCompiler
