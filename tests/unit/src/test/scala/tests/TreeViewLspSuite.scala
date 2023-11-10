@@ -60,7 +60,8 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
   lazy val expectedLibrariesString: String =
     (this.expectedLibraries.toVector
       .map { (s: String) =>
-        if (s != jdkSourcesName) s"${s}.jar -" else s"$jdkSourcesName -"
+        if (s != jdkSourcesName) s"${s}.jar package -"
+        else s"$jdkSourcesName package -"
       })
       .mkString("\n")
 
@@ -125,8 +126,8 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}",
-        """|_empty_/ -
-           |a/ -
+        """|_empty_/ symbol-folder -
+           |a/ symbol-folder -
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
@@ -207,7 +208,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       _ = {
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("sourcecode")}",
-          "sourcecode/ +",
+          "sourcecode/ symbol-folder +",
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:",
@@ -232,12 +233,12 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("circe-core")}!/_root_/",
-          """|io/ +
+          """|io/ symbol-folder +
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("cats-core")}!/_root_/",
-          """|cats/ +
+          """|cats/ symbol-folder +
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
@@ -265,11 +266,11 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             "class Paths",
           ),
           s"""|root
-              |  Libraries (22)
-              |    $jdkSourcesName
-              |      java/
-              |        nio/
-              |          file/
+              |  Libraries (22) library
+              |    $jdkSourcesName package
+              |      java/ symbol-folder
+              |        nio/ symbol-folder
+              |          file/ symbol-folder
               |            Paths symbol-class
               |""".stripMargin,
         )
@@ -292,19 +293,19 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             "sourcecode/SourceContext.scala",
             "object File",
             isIgnored = { label =>
-              label.endsWith(".jar") &&
+              label.endsWith(".jar package") &&
               !label.contains("sourcecode")
             },
           ),
           s"""|root
-              |  Projects (0)
-              |  Libraries (22)
-              |  Libraries (22)
-              |    $jdkSourcesName
-              |    sourcecode_2.13-0.1.7-sources.jar
-              |    sourcecode_2.13-0.1.7-sources.jar
-              |      sourcecode/
-              |      sourcecode/
+              |  Projects (0) project
+              |  Libraries (22) library
+              |  Libraries (22) library
+              |    $jdkSourcesName package
+              |    sourcecode_2.13-0.1.7-sources.jar package
+              |    sourcecode_2.13-0.1.7-sources.jar package
+              |      sourcecode/ symbol-folder
+              |      sourcecode/ symbol-folder
               |        Args symbol-class
               |        Args symbol-object
               |        ArgsMacros symbol-interface
@@ -345,27 +346,27 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             "org/eclipse/lsp4j/services/LanguageClient.java",
             "registerCapability",
             isIgnored = { label =>
-              label.endsWith(".jar") &&
+              label.endsWith(".jar package") &&
               !label.contains("lsp4j-0")
             },
           ),
           s"""|root
-              |  Projects (0)
-              |  Libraries (${expectedLibrariesCount})
-              |  Libraries (${expectedLibrariesCount})
-              |    $jdkSourcesName
-              |    org.eclipse.lsp4j-0.5.0-sources.jar
-              |    org.eclipse.lsp4j-0.5.0-sources.jar
-              |      org/
-              |      org/
-              |        eclipse/
-              |        eclipse/
-              |          lsp4j/
-              |          lsp4j/
-              |            adapters/
-              |            launch/
-              |            services/
-              |            util/
+              |  Projects (0) project
+              |  Libraries (${expectedLibrariesCount}) library
+              |  Libraries (${expectedLibrariesCount}) library
+              |    $jdkSourcesName package
+              |    org.eclipse.lsp4j-0.5.0-sources.jar package
+              |    org.eclipse.lsp4j-0.5.0-sources.jar package
+              |      org/ symbol-folder
+              |      org/ symbol-folder
+              |        eclipse/ symbol-folder
+              |        eclipse/ symbol-folder
+              |          lsp4j/ symbol-folder
+              |          lsp4j/ symbol-folder
+              |            adapters/ symbol-folder
+              |            launch/ symbol-folder
+              |            services/ symbol-folder
+              |            util/ symbol-folder
               |            ApplyWorkspaceEditParams symbol-class
               |            ApplyWorkspaceEditResponse symbol-class
               |            ClientCapabilities symbol-class
@@ -529,7 +530,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |            WorkspaceFoldersOptions symbol-class
               |            WorkspaceServerCapabilities symbol-class
               |            WorkspaceSymbolParams symbol-class
-              |            services/
+              |            services/ symbol-folder
               |              LanguageClient symbol-interface
               |              LanguageClientAware symbol-interface
               |              LanguageClientExtensions symbol-interface
