@@ -25,7 +25,7 @@ class ExtractMethodNoIndentSuite extends BaseExtractMethodSuite {
         |    123 + method(b)
         |
         |  val a = newMethod()
-        |}""".stripMargin,
+        |}""".stripMargin
   )
   checkEdit(
     "multiple-expr",
@@ -51,7 +51,7 @@ class ExtractMethodNoIndentSuite extends BaseExtractMethodSuite {
         |    val c = 1
         |    newMethod(c)
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 }
 
@@ -73,7 +73,7 @@ class CompletionMatchNoIndentSuite extends BaseCompletionSuite {
        |\tcase$$0
        |}
        |}""".stripMargin,
-    filter = !_.contains("exhaustive"),
+    filter = !_.contains("exhaustive")
   )
 
   checkEdit(
@@ -89,6 +89,6 @@ class CompletionMatchNoIndentSuite extends BaseCompletionSuite {
        |\tcase Some(value) =>
        |}
        |}""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 }

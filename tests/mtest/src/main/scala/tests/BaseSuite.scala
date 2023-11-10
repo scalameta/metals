@@ -49,7 +49,7 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
   def isValidScalaVersionForEnv(scalaVersion: String): Boolean =
     this.isJava8 || SemVer.isCompatibleVersion(
       BaseSuite.minScalaVersionForJDK9OrHigher,
-      scalaVersion,
+      scalaVersion
     ) || scalaVersion.startsWith("3.")
 
   override def munitTimeout: Duration = Duration("10min")
@@ -63,9 +63,9 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
         "FlakyWindows",
         test =>
           if (test.tags(FlakyWindows) && Properties.isWin) test.tag(Flaky)
-          else test,
+          else test
       ),
-      munitFlakyTransform,
+      munitFlakyTransform
     )
 
   val compatProcess: Map[String, String => String] =
@@ -74,7 +74,7 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
   def getExpected(
       default: String,
       compat: Map[String, String],
-      scalaVersion: String,
+      scalaVersion: String
   ): String = {
     val postProcess = compatProcess
       .collectFirst {
@@ -90,7 +90,7 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
   def compatOrDefault[A](
       default: A,
       compat: Map[String, A],
-      scalaVersion: String,
+      scalaVersion: String
   ): A =
     Compat
       .forScalaVersion(scalaVersion, compat)

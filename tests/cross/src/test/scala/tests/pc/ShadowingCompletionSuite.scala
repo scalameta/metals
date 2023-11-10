@@ -5,6 +5,10 @@ import tests.BaseCompletionSuite
 
 class ShadowingCompletionSuite extends BaseCompletionSuite {
 
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala211
+  )
+
   override protected def extraDependencies(
       scalaVersion: String
   ): Seq[Dependency] = Seq(
@@ -24,6 +28,6 @@ class ShadowingCompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "2" -> "ListBuffer - scala.collection.mutable"
-    ),
+    )
   )
 }

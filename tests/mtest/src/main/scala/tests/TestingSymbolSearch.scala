@@ -32,12 +32,12 @@ class TestingSymbolSearch(
     docs: Docstrings = Docstrings.empty(EmptyReportContext),
     workspace: TestingWorkspaceSearch =
       TestingWorkspaceSearch.empty(EmptyReportContext),
-    index: GlobalSymbolIndex = OnDemandSymbolIndex.empty()(EmptyReportContext),
+    index: GlobalSymbolIndex = OnDemandSymbolIndex.empty()(EmptyReportContext)
 )(implicit rc: ReportContext = EmptyReportContext)
     extends SymbolSearch {
   override def documentation(
       symbol: String,
-      parents: ParentSymbols,
+      parents: ParentSymbols
   ): Optional[SymbolDocumentation] = {
     docs.documentation(symbol, parents)
   }
@@ -54,7 +54,7 @@ class TestingSymbolSearch(
         ju.Collections.singletonList(
           new Location(
             uri,
-            new Range(new Position(0, 0), new Position(0, 0)),
+            new Range(new Position(0, 0), new Position(0, 0))
           )
         )
     }
@@ -62,7 +62,7 @@ class TestingSymbolSearch(
 
   override def definitionSourceToplevels(
       symbol: String,
-      source: URI,
+      source: URI
   ): ju.List[String] = {
     index.definition(Symbol(symbol)) match {
       case None =>
@@ -77,7 +77,7 @@ class TestingSymbolSearch(
   override def search(
       textQuery: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor,
+      visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
     workspace.search(query, visitor)
@@ -87,7 +87,7 @@ class TestingSymbolSearch(
   override def searchMethods(
       textQuery: String,
       buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor,
+      visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
     workspace.search(
@@ -95,7 +95,7 @@ class TestingSymbolSearch(
       visitor,
       (info: WorkspaceSymbolInformation) => {
         info.sematicdbKind == s.SymbolInformation.Kind.METHOD
-      },
+      }
     )
     SymbolSearch.Result.COMPLETE
   }

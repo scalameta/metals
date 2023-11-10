@@ -14,7 +14,7 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
     """|io.circe
        |io.circul
        |""".stripMargin,
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
   check(
@@ -25,7 +25,7 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
        |""".stripMargin,
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
   checkEdit(
@@ -35,11 +35,11 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
     """|val dependency = ivy"io.circe::circe-config"
        |""".stripMargin,
     filename = "build.sc",
-    filter = _ == "circe-config",
+    filter = _ == "circe-config"
   )
 
   check(
-    "scala-completions",
+    "scala-completions".tag(IgnoreScala211),
     """|val dependency = ivy"io.circe::circe-core@@"
        |""".stripMargin,
     """|circe-core
@@ -48,16 +48,16 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
        |circe-core_sjs1
        |circe-core_sjs1.0-RC2
        |""".stripMargin,
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
   check(
-    "version",
+    "version".tag(IgnoreScala211),
     """|val dependency = ivy"io.circe::circe-core_sjs1:0.13@@"
        |""".stripMargin,
     """|0.13.0
        |""".stripMargin,
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
   check(
@@ -71,7 +71,7 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
        |1.0.0-MF
        |""".stripMargin,
     filter = _.startsWith("1.0"),
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
   checkEdit(
@@ -81,25 +81,25 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
     """|val dependency = ivy"org.typelevel:cats-core_2.11:1.0.1"
        |""".stripMargin,
     filter = _ == "1.0.1",
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
   check(
-    "version-double-colon2",
+    "version-double-colon2".tag(IgnoreScala211),
     """|val dependency = ivy"org.typelevel::cats-core::2.10@@"
        |""".stripMargin,
     """|2.10.0
        |""".stripMargin,
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
   checkEdit(
-    "version-double-colon-edit",
+    "version-double-colon-edit".tag(IgnoreScala211),
     """|val dependency = ivy"org.typelevel::cats-core::2.10@@"
        |""".stripMargin,
     """|val dependency = ivy"org.typelevel::cats-core::2.10.0"
        |""".stripMargin,
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
   check(
@@ -107,7 +107,7 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
     """|val dependency = ivy"org.typelevel:cats-core_2.11::1.0.@@"
        |""".stripMargin,
     "",
-    filename = "build.sc",
+    filename = "build.sc"
   )
 
 }

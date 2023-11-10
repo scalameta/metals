@@ -34,7 +34,7 @@ trait Assertions extends munit.Assertions {
   def assertDiffNotEqual[T](
       obtained: T,
       expected: T,
-      hint: String = "",
+      hint: String = ""
   )(implicit loc: Location): Unit = {
     if (obtained == expected) {
       val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"

@@ -5,6 +5,10 @@ import tests.BaseAutoImportsSuite
 
 class AutoImportsIssueSuite extends BaseAutoImportsSuite {
 
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala211
+  )
+
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
     val binaryVersion =
       if (isScala3Version(scalaVersion)) "2.13"
@@ -14,7 +18,7 @@ class AutoImportsIssueSuite extends BaseAutoImportsSuite {
       Dependency.of(
         "com.typesafe.akka",
         s"akka-actor-typed_$binaryVersion",
-        "2.6.13",
+        "2.6.13"
       )
     )
   }
@@ -33,7 +37,7 @@ class AutoImportsIssueSuite extends BaseAutoImportsSuite {
        |object Greeter {
        |  Address("http", "Test", "TestNodeHostName", 1234)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }

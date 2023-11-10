@@ -24,7 +24,7 @@ class CompletionParameterHintSuite extends BaseCompletionSuite {
     """.stripMargin,
     { case Seq(item) =>
       item.getCommand.getCommand == "hello"
-    },
+    }
   )
 
   checkItems(
@@ -37,6 +37,6 @@ class CompletionParameterHintSuite extends BaseCompletionSuite {
     { case Seq(item1, item2) =>
       item1.getCommand == null &&
       item2.getCommand.getCommand == "hello"
-    },
+    }
   )
 }

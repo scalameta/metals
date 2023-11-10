@@ -12,7 +12,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|enum FooEnum:
        | case <<Ba@@r>>, Baz
        |val bar = FooEnum.<<Bar>>
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -20,7 +20,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|enum FooEnum:
        | case <<Bar>>, Baz
        |val bar = FooEnum.<<Ba@@r>>
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -31,7 +31,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |transparent inline def <<foo>>(i: Int): Foo = new Bar
        |val iii = 123
        |val bar = <<f@@oo>>(iii)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -42,7 +42,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |transparent inline def <<f@@oo>>(i: Int): Foo = new Bar
        |val iii = 123
        |val bar = <<foo>>(iii)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -53,7 +53,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |transparent inline def foo(i: Int): Foo = new Bar
        |val <<ii@@i>> = 123
        |val bar = foo(<<iii>>)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -64,7 +64,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |transparent inline def foo(i: Int): Foo = new Bar
        |val <<iii>> = 123
        |val bar = foo(<<i@@ii>>)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -75,7 +75,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  else
        |    val y = <<power>>(x, n / 2)
        |    if n % 2 == 0 then y * y else y * y * x
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -86,7 +86,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  else
        |    val y = <<po@@wer>>(x, n / 2)
        |    if n % 2 == 0 then y * y else y * y * x
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -95,7 +95,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  def double = <<sbd>> + <<sbd>>
        |  def double2 = <<sbd>> + <<sbd>>
        |end extension
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -104,7 +104,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  def double = <<sb@@d>> + <<sbd>>
        |  def double2 = <<sbd>> + <<sbd>>
        |end extension
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -113,7 +113,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  def double = <<xs>> ++ <<xs>>
        |  def double2 = <<xs>> ++ <<xs>>
        |end extension
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -122,7 +122,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  def double = <<xs>> ++ <<xs>>
        |  def double2 = <<xs>> ++ <<x@@s>>
        |end extension
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -133,7 +133,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |
        |  val x = 1.<<foo@@bar>>()
        |  val y = (1: Int).<<foobar>>()
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -153,43 +153,43 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |      map.get(key) match
        |        case None        => Left(s"Missing ${key} in }")
        |        case Some(value) => Right(value)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
     "given-synthetic1",
     """|given (usi@@ng i: Int): Double = 4.0
-       |val a = given_Double""".stripMargin,
+       |val a = given_Double""".stripMargin
   )
 
   check(
     "given-synthetic2",
     """|given (using i: Int): Double = 4.0
-       |val a = <<given_Doub@@le>>""".stripMargin,
+       |val a = <<given_Doub@@le>>""".stripMargin
   )
 
   check(
     "given-synthetic3",
     """|given Int = 10
-       |val a = <<giv@@en_Int>>""".stripMargin,
+       |val a = <<giv@@en_Int>>""".stripMargin
   )
 
   check(
     "given-synthetic4",
     """|given <<I@@nt>> = 10
-       |val a = given_Int""".stripMargin,
+       |val a = given_Int""".stripMargin
   )
 
   check(
     "given-not-synthetic1",
     """|given <<`giv@@en_D`>>: Double = 4.0
-       |val a = <<`given_D`>>""".stripMargin,
+       |val a = <<`given_D`>>""".stripMargin
   )
 
   check(
     "given-not-synthetic2",
     """|given <<`given_D`>>:Double = 4.0
-       |val a = <<`giv@@en_D`>>""".stripMargin,
+       |val a = <<`giv@@en_D`>>""".stripMargin
   )
 
   check(
@@ -197,14 +197,14 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|extension [<<E@@F>>](xs: List[<<EF>>])
        |    def double(ys: List[<<EF>>]) = xs ++ ys
        |    def double2(ys: List[<<EF>>]) = xs ++ ys
-       |end extension""".stripMargin,
+       |end extension""".stripMargin
   )
 
   check(
     "extension-with-type-param2",
     """|extension [EF, <<E@@M>>](xs: Either[<<EM>>, EF])
        |    def id() = xs
-       |end extension""".stripMargin,
+       |end extension""".stripMargin
   )
 
   check(
@@ -212,7 +212,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|extension [<<EF>>](xs: List[<<E@@F>>])
        |    def double(ys: List[<<EF>>]) = xs ++ ys
        |    def double2(ys: List[<<EF>>]) = xs ++ ys
-       |end extension""".stripMargin,
+       |end extension""".stripMargin
   )
 
   check(
@@ -220,7 +220,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|val i: <<Int>> = 3
        |extension (xs: List[<<In@@t>>])
        |  def id() = xs
-       |end extension""".stripMargin,
+       |end extension""".stripMargin
   )
 
   check(
@@ -228,7 +228,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|extension [<<EF>>](xs: List[<<EF>>])
        |    def double(ys: List[<<E@@F>>]) = xs ++ ys
        |    def double2(ys: List[<<EF>>]) = xs ++ ys
-       |end extension""".stripMargin,
+       |end extension""".stripMargin
   )
 
   check(
@@ -236,7 +236,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|extension [EF](xs: List[EF])
        |    def double(<<y@@s>>: List[EF]) = xs ++ <<ys>>
        |    def double2(ys: List[EF]) = xs ++ ys
-       |end extension""".stripMargin,
+       |end extension""".stripMargin
   )
 
   check(
@@ -244,7 +244,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|extension [EF](<<xs>>: List[EF])
        |    def double(ys: List[EF]) = <<x@@s>> ++ ys
        |    def double2(ys: List[EF]) = <<xs>> ++ ys
-       |end extension""".stripMargin,
+       |end extension""".stripMargin
   )
 
   check(
@@ -254,7 +254,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  case MyNone
        |
        |val alpha = MyOption.<<MySome>>(1)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -264,7 +264,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  case MyNone
        |
        |val alpha = MyOption.<<MySome>>(1)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -272,7 +272,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|enum MyOption[+<<A@@A>>]:
        |  case MySome(value: <<AA>>)
        |  case MyNone
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -280,7 +280,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|enum MyOption[+<<AA>>]:
        |  case MySome(value: <<A@@A>>)
        |  case MyNone
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -288,7 +288,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|enum MyOption[<<AA>>](v: <<AA>>):
        |  def get: <<A@@A>> = ???
        |  case MySome[AA](value: AA) extends MyOption[Int](1)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -297,7 +297,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  def get: <<A@@A>> = ???
        |  case MySome(value: <<AA>>)
        |  case MyNone
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -305,7 +305,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|enum MyOption[AA]:
        |  def get: AA = ???
        |  case MySome[<<AA>>](value: <<A@@A>>) extends MyOption[Int]
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -316,7 +316,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |
        |val a = MyIntOut(1)
        |val m = a.<<un@@even>>
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -326,7 +326,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  extension (i: MyIntOut) def <<uneven>>(u: Int) = i.value % 2 == 1
        |
        |val a = MyIntOut(1).<<un@@even>>(3)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -336,7 +336,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  extension (i: MyIntOut) def <<++>>(u: Int) = i.value + u
        |
        |val a = MyIntOut(1) <<+@@+>> 3
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }
