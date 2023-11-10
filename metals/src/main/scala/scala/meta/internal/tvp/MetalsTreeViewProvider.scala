@@ -260,15 +260,15 @@ class FolderTreeViewProvider(
   private val pendingProjectUpdates =
     ConcurrentHashSet.empty[BuildTargetIdentifier]
   val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
-    definitionIndex,
-    TreeViewProvider.Project,
-    s"libraries",
-    s"Libraries",
-    folder,
-    identity,
-    _.toURI.toString(),
-    _.toAbsolutePath(followSymlink = false),
-    path => {
+    definitionIndex = definitionIndex,
+    viewId = TreeViewProvider.Project,
+    schemeId = s"libraries",
+    title = s"Libraries",
+    folder = folder,
+    id = identity,
+    encode = _.toURI.toString(),
+    decode = _.toAbsolutePath(followSymlink = false),
+    valueTitle = path => {
       if (path.filename == JdkSources.zipFileName) {
         maybeUsedJdkVersion
           .map(ver => s"jdk-${ver}-sources")
@@ -276,31 +276,32 @@ class FolderTreeViewProvider(
       } else
         path.filename
     },
-    _.toString,
-    () => buildTargets.allSourceJars,
-    (path, symbol) => {
+    valueTooltip = _.toString,
+    toplevels = () => buildTargets.allSourceJars,
+    loadSymbols = (path, symbol) => {
       val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
       classpath.jarSymbols(path, symbol, dialect)
     },
+    toplevelIcon = "package",
   )
 
   val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
-    definitionIndex,
-    TreeViewProvider.Project,
-    s"projects",
-    s"Projects",
-    folder,
-    _.getId(),
-    _.getUri(),
-    uri => new BuildTargetIdentifier(uri),
-    _.getName(),
-    _.baseDirectory,
-    { () =>
+    definitionIndex = definitionIndex,
+    viewId = TreeViewProvider.Project,
+    schemeId = s"projects",
+    title = s"Projects",
+    folder = folder,
+    id = _.getId(),
+    encode = _.getUri(),
+    decode = uri => new BuildTargetIdentifier(uri),
+    valueTitle = _.getName(),
+    valueTooltip = _.baseDirectory,
+    toplevels = { () =>
       buildTargets.all.filter(target =>
         buildTargets.buildTargetSources(target.getId()).nonEmpty
       )
     },
-    { (id, symbol) =>
+    loadSymbols = { (id, symbol) =>
       val tops = for {
         scalaTarget <- buildTargets.scalaTarget(id).iterator
         source <- buildTargets.buildTargetSources(id)
@@ -308,6 +309,7 @@ class FolderTreeViewProvider(
       } yield classpath.workspaceSymbols(source, symbol)
       tops.flatten
     },
+    toplevelIcon = "target",
   )
 
   def setVisible(viewId: String, visibility: Boolean): Unit = {
@@ -325,7 +327,7 @@ class FolderTreeViewProvider(
     if (toUpdate.nonEmpty) {
       val nodes = toUpdate.map { target =>
         projects
-          .toViewNode(target)
+          .toplevelNode(target)
           .copy(collapseState = MetalsTreeItemCollapseState.expanded)
       }
       Some(nodes)
@@ -387,8 +389,8 @@ class FolderTreeViewProvider(
     nodeUri match {
       case None if buildTargets.all.nonEmpty =>
         Array(
-          projects.root(showFolderName),
-          libraries.root(showFolderName),
+          projects.root(showFolderName, "project"),
+          libraries.root(showFolderName, "library"),
         )
       case Some(uri) =>
         if (libraries.matches(uri)) {
