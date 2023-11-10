@@ -22,7 +22,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|Int
-       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange
   )
 
   check(
@@ -44,8 +44,8 @@ class RangeHoverSuite extends BaseHoverSuite {
            |def head: T""".stripMargin.hoverRange,
       "2.13" ->
         """|T
-           |def head: T""".stripMargin.hoverRange,
-    ),
+           |def head: T""".stripMargin.hoverRange
+    )
   )
 
   check(
@@ -66,7 +66,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|Int
-       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange
   )
 
   check(
@@ -86,13 +86,13 @@ class RangeHoverSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|IndexedSeq[Int]
-       |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange,
+    """|immutable.IndexedSeq[Int]
+       |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hoverRange,
     compat = Map(
-      "2.12" ->
-        """|immutable.IndexedSeq[Int]
-           |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hoverRange
-    ),
+      ">=2.13.0" ->
+        """|IndexedSeq[Int]
+           |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange
+    )
   )
 
   check(
@@ -120,8 +120,8 @@ class RangeHoverSuite extends BaseHoverSuite {
            |def apply[A](elems: A*): List[A]""".stripMargin.hoverRange,
       "3" ->
         """|List[Int]
-           |def apply[A](elems: A*): List[A]""".stripMargin.hoverRange,
-    ),
+           |def apply[A](elems: A*): List[A]""".stripMargin.hoverRange
+    )
   )
 
   check(
@@ -142,7 +142,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|List[Int]
-       |val l: List[Int]""".stripMargin.hoverRange,
+       |val l: List[Int]""".stripMargin.hoverRange
   )
 
   check(
@@ -168,7 +168,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     compat = Map(
       "3" -> """|Int
                 |def +(x: Int): Int""".stripMargin.hoverRange
-    ),
+    )
   )
 
   check(
@@ -185,7 +185,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|Int
-       |val x: Int""".stripMargin.hoverRange,
+       |val x: Int""".stripMargin.hoverRange
   )
 
   check(
@@ -202,7 +202,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|Int
-       |b: Int""".stripMargin.hoverRange,
+       |b: Int""".stripMargin.hoverRange
   )
 
   check(
@@ -223,7 +223,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|Int
-       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange
   )
 
   check(
@@ -244,7 +244,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|Int
-       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange
   )
 
   check(
@@ -256,7 +256,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |val bar = <<%<%foo(1)%>%>>
        |""".stripMargin,
     """|Bar
-       |inline transparent def foo(i: Int): Foo""".stripMargin.hoverRange,
+       |inline transparent def foo(i: Int): Foo""".stripMargin.hoverRange
   )
 
   check(
@@ -277,6 +277,6 @@ class RangeHoverSuite extends BaseHoverSuite {
        |val x = <<%<%fooOut(FooA1)%>%>>
        |""".stripMargin,
     """|A1.type
-       |def fooOut(f: Foo): f.Out""".stripMargin.hoverRange,
+       |def fooOut(f: Foo): f.Out""".stripMargin.hoverRange
   )
 }

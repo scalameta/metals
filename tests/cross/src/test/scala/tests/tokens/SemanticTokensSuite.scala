@@ -31,7 +31,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |   <<println>>/*method*/(<<msg>>/*parameter,readonly*/)
         | }
         |}
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   check(
@@ -66,7 +66,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
             |   }
             |}
             |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -108,7 +108,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
             |  }
             |}
             |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -188,7 +188,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
             |
             |
             |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -203,7 +203,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |     <<println>>/*method*/("Hello, world!"<<+>>/*method*/ <<str>>/*variable,readonly*/)
         |  }
         |}
-        |""".stripMargin,
+        |""".stripMargin
   )
   check(
     "import(Out of File)",
@@ -217,7 +217,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |     = <<SortedSet>>/*class*/(<<x>>/*parameter,readonly*/)
         |}
         |
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   check(
@@ -250,7 +250,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
                  |    override def <<method>>/*method,definition*/(<<adf>>/*parameter,declaration,readonly*/: <<String>>/*type*/): <<Int>>/*class,abstract*/ = 321
                  |  }
                  |}""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -262,7 +262,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |class <<Imports>>/*class*/ {
         |  // rename reference
         |  <<NoBad>>/*class*/(null)
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   check(
@@ -277,7 +277,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |    case <<Some>>/*class*/(<<b>>/*variable,definition,readonly*/) => <<b>>/*variable,readonly*/
         |    case <<other>>/*variable,definition,readonly*/ => 
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   check(
@@ -290,7 +290,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |  val <<Some>>/*class*/(<<s1>>/*variable,definition,readonly*/) = <<s>>/*variable,readonly*/
         |  val <<Some>>/*class*/(<<s2>>/*variable,definition,readonly*/) = <<s>>/*variable,readonly*/
         |}
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   // When for-comprehension includes line with `=`, we get `scala.x$1`, `scala.x$2` symbols on `foo`.
@@ -318,7 +318,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
            |  } yield <<foo>>/*variable,readonly*/
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -329,7 +329,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
        |    <<`type`>>/*parameter,readonly*/ = "abc"
        |  )
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }

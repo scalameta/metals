@@ -18,7 +18,8 @@ class CompletionPatternSuite extends BaseCompletionSuite {
     "3" -> { (s: String) =>
       // In Scala3 wildcard type has been changed from [_] to [?]
       s.replace("Some[_]", "Some[?]")
-    }
+    },
+    "2.11" -> { (s: String) => s.replace("Some(value)", "Some(x)") }
   )
 
   checkEdit(
@@ -35,7 +36,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case Some(value)$0 =>
       |  }
       |}""".stripMargin,
-    filter = _.contains("Some(value)"),
+    filter = s => s.contains("Some(value)") || s.contains("Some(x)")
   )
 
   check(
@@ -48,7 +49,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|Some(value) scala
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   check(
@@ -59,7 +60,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case ma@@
       |  }
       |}""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -73,7 +74,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
     """|None scala
        |Some(value) scala
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(2)
   )
 
   check(
@@ -86,7 +87,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|Some(value) scala
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
   check(
     "wildcard",
@@ -103,7 +104,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
         """|Some[?] scala
            |""".stripMargin
     ),
-    topLines = Some(1),
+    topLines = Some(1)
   )
   check(
     "wildcard-ident",
@@ -115,7 +116,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|Some[_] scala
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   check(
@@ -133,7 +134,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
         """|Some[?] scala
            |""".stripMargin
     ),
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   check(
@@ -146,6 +147,6 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|Some[_] scala
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 }

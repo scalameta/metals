@@ -34,7 +34,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            |object Main {
            |  val tst = new TClass(2)
            |}""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -48,7 +48,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |    if y < /*scala/Int# Int.scala*/@@x
        |  } yield y
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -60,7 +60,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |    y <- Option(x)
        |  } yield y
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -72,7 +72,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |    y /*scala/Option# Option.scala*/@@<- Option(x)
        |  } yield y
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -85,7 +85,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |    /*scala/Option#WithFilter# Option.scala*/@@if y > 2
        |  } yield y
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -108,7 +108,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            |  tst(new TClass(2))
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -118,7 +118,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |  val increment: Int => Int = _ + 2
        |  incre/*scala/Int# Int.scala*/@@ment(1)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -128,7 +128,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  @@(1, 2)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -137,7 +137,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |  def tst(): Unit = {}
        |
        |  ts@@/*scala/Unit# Unit.scala*/t()
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -146,7 +146,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |  def tst(par1: Int, par2: String, par3: Boolean): Unit = {}
        |
        |  tst(1, p/*scala/Boolean# Boolean.scala*/@@ar3 = true, par2 = "")
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -155,7 +155,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |  def tst(par1: Int, par2: String): Unit = {}
        |
        |  tst(p/*scala/Predef.String# Predef.scala*/@@ar2 = "foo", par1 = 1)
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -165,7 +165,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |
        |  foo(a/*scala/Int# Int.scala*/@@rg = 42)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -180,7 +180,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            |  assert(a/*scala/Boolean# Boolean.scala*/@@ssertion = true)
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -188,7 +188,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """|object Main {
        | List(1).hea/*scala/Int# Int.scala*/@@d
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -203,7 +203,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            | class <<>>Foo(val x: Int)
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -211,7 +211,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """|object Main {
        | va@@l x = 42
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -219,7 +219,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """|object Main {
        | val x = 4/*scala/Int# Int.scala*/@@2
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -227,20 +227,20 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """|object Main {
        | for {
        |   x <- List(1)
-       |   i/*scala/collection/WithFilter# WithFilter.scala*/@@f x > 1
+       |   i/*scala/collection/generic/FilterMonadic# FilterMonadic.scala*/@@f x > 1
        | } println(x)
        |}
        |""".stripMargin,
     compat = Map(
-      "2.12" ->
+      ">=2.13.0" ->
         """|object Main {
            | for {
            |   x <- List(1)
-           |   i/*scala/collection/generic/FilterMonadic# FilterMonadic.scala*/f x > 1
+           |   i/*scala/collection/WithFilter# WithFilter.scala*/f x > 1
            | } println(x)
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -248,7 +248,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """|object Main {
        | "".stripS/*java/lang/String# String.java*/@@uffix("foo")
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -263,7 +263,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            | def foo[<<>>T](param: T): T = param
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -274,7 +274,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        | println(A.fo/*scala/Int# Int.scala*/@@o(2))
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -296,8 +296,8 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            |object Main {
            |  /*scala/collection/immutable/List# List.scala*/List(1)
            |}
-           |""".stripMargin,
-    ),
+           |""".stripMargin
+    )
   )
 
   check(
@@ -306,7 +306,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  ne@@w java.io.File("")
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -314,7 +314,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """|
        |object Main ex@@tends java.io.Serializable {
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -331,7 +331,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            |object Main {
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -340,7 +340,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |imp@@ort scala.concurrent.Future
        |object Main {
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -349,7 +349,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |import scala.co@@ncurrent.Future
        |object Main {
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -358,7 +358,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  val lst = 1 /*scala/collection/immutable/List# List.scala*/@@:: Nil
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -367,7 +367,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  val n = ma@@th.max(1, 2)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -376,7 +376,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  List(1).map(/*scala/Int# Int.scala*/@@_ + 2)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -385,7 +385,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  List(1).foldLeft(0)(_ + /*scala/Int# Int.scala*/@@_)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -394,7 +394,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  def x: /*scala/Int# Int.scala*/@@Int = 42
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -403,7 +403,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |class Main {
        |  val all = Option(42)./*scala/Int# Int.scala*/@@get :: List("1", "2")
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -424,7 +424,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            |  hello(User())
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -445,7 +445,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
            |  hello(new Us@@er())
            |}
            |""".stripMargin
-    ),
+    )
   )
 
 }

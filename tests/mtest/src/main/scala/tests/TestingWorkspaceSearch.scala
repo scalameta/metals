@@ -26,7 +26,7 @@ class TestingWorkspaceSearch(implicit rc: ReportContext = EmptyReportContext) {
   def search(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
-      filter: WorkspaceSymbolInformation => Boolean = _ => true,
+      filter: WorkspaceSymbolInformation => Boolean = _ => true
   ): Unit =
     for {
       (path, (text, dialect)) <- inputs
@@ -34,7 +34,7 @@ class TestingWorkspaceSearch(implicit rc: ReportContext = EmptyReportContext) {
       SemanticdbDefinition.foreach(
         Input.VirtualFile(path, text),
         dialect,
-        includeMembers = true,
+        includeMembers = true
       ) { defn =>
         if (query.matches(defn.info)) {
           val c = defn.toCached
@@ -43,7 +43,7 @@ class TestingWorkspaceSearch(implicit rc: ReportContext = EmptyReportContext) {
               Paths.get(path),
               c.symbol,
               c.kind,
-              c.range,
+              c.range
             )
           }
         }

@@ -29,8 +29,8 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
            |unapplySeq
            |apply
            |""".stripMargin,
-      "3" -> "apply",
-    ),
+      "3" -> "apply"
+    )
   )
 
   checkSnippet(
@@ -43,7 +43,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|println()
        |println
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkSnippet(
@@ -63,7 +63,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" -> "toString"
-    ),
+    )
   )
 
   checkSnippet(
@@ -75,7 +75,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
     // It's expected to have two separate results, one for `object IndexedSeq` and one for `type IndexedSeq[T]`.
     """|IndexedSeq
        |IndexedSeq
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }

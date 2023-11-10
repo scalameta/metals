@@ -6,16 +6,26 @@ import tests.BasePcRenameSuite
 class PcRenameSuite extends BasePcRenameSuite {
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
     val scalaBinaryVersion = createBinaryVersion(scalaVersion)
-    Seq(
-      Dependency.of("io.circe", s"circe-generic_$scalaBinaryVersion", "0.14.1")
-    )
+    if (scalaVersion.startsWith("2.11"))
+      Seq(
+        Dependency
+          .of("io.circe", s"circe-generic_$scalaBinaryVersion", "0.11.2")
+      )
+    else
+      Seq(
+        Dependency.of(
+          "io.circe",
+          s"circe-generic_$scalaBinaryVersion",
+          "0.14.1"
+        )
+      )
   }
 
   check(
     "basic",
     """|val <<a>> = 123
        |<<@@a>> + 1  
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -27,7 +37,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  }
        |}  
        |""".stripMargin,
-    wrap = false,
+    wrap = false
   )
 
   check(
@@ -38,7 +48,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |trait T3[I, J] extends T2[I] { override def <<torename>>(p: I): String = super.<<torename>>(p) }
        |trait T4[I, J] extends T3[J, I] { override def <<torename>>(p: J): String = super.<<torename>>(p) }
        |trait T5[U] extends T4[U, U] { override def <<tore@@name>>(p: U): String = super.<<torename>>(p) }
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -47,7 +57,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |trait PP extends P
        |trait A { def <<torename>>(a: String): P = ??? }
        |trait B extends A { override def <<tore@@name>>(a: String): PP = ??? }
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -60,7 +70,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  val a = new Alphabet with <<ABC>>
        |}
        |""".stripMargin,
-    newName = "Animal",
+    newName = "Animal"
   )
 
   check(
@@ -72,7 +82,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |class GoodMorning extends Hello {
        |  def <<met@@hod>>(abc : String) = true
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -88,7 +98,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |abstract class C extends B[String] {
        |  def <<meth@@od>>(abc : String) : Boolean = false
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -104,7 +114,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |abstract class C extends B with A {
        |  override def <<meth@@od>>(abc : String) : Boolean = false
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -116,7 +126,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  val user = new User()
        |  "" <<::>> user
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -129,7 +139,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  "" <<::>> user
        |}
        |""".stripMargin,
-    newName = "+++:",
+    newName = "+++:"
   )
 
   check(
@@ -138,7 +148,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |class Dog extends <<Animal>>
        |class Cat extends <<Animal>>
        |""".stripMargin,
-    newName = "Tree",
+    newName = "Tree"
   )
 
   check(
@@ -146,14 +156,14 @@ class PcRenameSuite extends BasePcRenameSuite {
     """|class <<Foo>>{}
        |object <<Fo@@o>> {}
   """.stripMargin,
-    newName = "Tree",
+    newName = "Tree"
   )
   check(
     "companion2",
     """|class <<Fo@@o>>{}
        |object <<Foo>>
   """.stripMargin,
-    newName = "Tree",
+    newName = "Tree"
   )
 
   check(
@@ -165,7 +175,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  case object Dog extends <<Animal>>
        |  case object Cat extends <<Animal>>
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -181,7 +191,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |val a = new Alphabet {
        |  override def <<me@@thod>>(adf: String): Int = 321
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -189,7 +199,7 @@ class PcRenameSuite extends BasePcRenameSuite {
     """|implicit val <<some@@Name>>: Int = 1
        |def m[A](implicit a: A): A = a
        |m[Int]
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -201,7 +211,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  val toRename = A.<<toR@@ename>>
        |}
        |""".stripMargin,
-    newName = "`other-rename`",
+    newName = "`other-rename`"
   )
 
   check(
@@ -213,7 +223,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  val toRename = A.<<`to-R@@ename`>>
        |}
        |""".stripMargin,
-    newName = "`other-rename`",
+    newName = "`other-rename`"
   )
 
   check(
@@ -222,7 +232,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |"" match {
        |  case `<<greeting>>` =>
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -232,7 +242,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  case <<`greeting`>> =>
        |}
        |""".stripMargin,
-    newName = "`greeting-!`",
+    newName = "`greeting-!`"
   )
 
   check(
@@ -241,7 +251,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |"" match {
        |  case `<<gre@@eting>>` =>
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -251,7 +261,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  case `gre@@eting` =>
        |}
        |""".stripMargin,
-    newName = "`greeting`",
+    newName = "`greeting`"
   )
 
   check(
@@ -262,7 +272,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        | .copy(<<va@@lue>> = "43")
        | .<<value>>
        |val name2 = Name(<<value>> = "44")
-       |""".stripMargin,
+       |""".stripMargin
   )
   check(
     "params2",
@@ -272,14 +282,14 @@ class PcRenameSuite extends BasePcRenameSuite {
        | .copy(<<value>> = "43")
        | .<<value>>
        |val name2 = Name(<<value>> = "44")
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
     "constructor",
     """|case class Name(<<va@@lue>>: String)
        |val name2 = new Name(<<value>> = "44")
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -289,7 +299,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |val a = classOf[<<AB@@C>>]
        |val b = new CBD[<<ABC>>]
        |""".stripMargin,
-    newName = "Animal",
+    newName = "Animal"
   )
 
   check(
@@ -299,7 +309,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |val a = classOf[<<ABC>>]
        |val b = new CBD[<<ABC>>]
        |""".stripMargin,
-    newName = "Animal",
+    newName = "Animal"
   )
 
   check(
@@ -313,7 +323,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  val x = bar
        |}
        |""".stripMargin,
-    newName = "foo2",
+    newName = "foo2"
   )
 
   check(
@@ -325,7 +335,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |val symbol2: <<Symbol>> = Method("method")
        |val symbol3: <<Symbol>> = Variable("value")
        |""".stripMargin,
-    newName = "NewSymbol",
+    newName = "NewSymbol"
   )
 
   check(
@@ -337,7 +347,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |val symbol2: <<Symbol>> = Method("method")
        |val symbol3: <<Symbol>> = Variable("value")
        |""".stripMargin,
-    newName = "NewSymbol",
+    newName = "NewSymbol"
   )
 
   check(
@@ -348,7 +358,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |    <<v5>> = true
        |    <<v5>> == true
        |  }
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -357,7 +367,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |trait T1[Z] extends S1[Z] { override def <<tore@@name>>(p: Z): String = super.<<torename>>(p) }
        |""".stripMargin,
     filename = "A.worksheet.sc",
-    wrap = false,
+    wrap = false
   )
 
   check(
@@ -368,7 +378,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |""".stripMargin,
     newName = "Tree",
     filename = "A.worksheet.sc",
-    wrap = false,
+    wrap = false
   )
 
   check(
@@ -381,7 +391,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |    <<ab@@c>>.map(_ + 1)
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -391,7 +401,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  def double2 = <<sbd>> + <<sbd>>
        |end extension
        |""".stripMargin,
-    newName = "greeting",
+    newName = "greeting"
   )
 
   check(
@@ -401,7 +411,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  def double2 = <<sbd>> + <<sbd>>
        |end extension
        |""".stripMargin,
-    newName = "greeting",
+    newName = "greeting"
   )
 
   check(
@@ -411,7 +421,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  def double2 = <<xs>> ++ <<xs>>
        |end extension
        |""".stripMargin,
-    newName = "ABC",
+    newName = "ABC"
   )
 
   check(
@@ -421,7 +431,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  def double2 = <<xs>> ++ <<x@@s>>
        |end extension
        |""".stripMargin,
-    newName = "ABC",
+    newName = "ABC"
   )
 
   check(
@@ -433,7 +443,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  }
        |}
        |""".stripMargin,
-    newName = "testing",
+    newName = "testing"
   )
 
   check(
@@ -449,7 +459,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |    )
        |}
        |""".stripMargin,
-    newName = "`other-rename`",
+    newName = "`other-rename`"
   )
 
   check(
@@ -464,7 +474,7 @@ class PcRenameSuite extends BasePcRenameSuite {
       |} yield {
       |  val x = foo + <<foo@@Bar>> + baz
       |  x
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -473,7 +483,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  <<ab@@c>> <- List("a", "b", "c")
        |  _ = println("print!")
        |} yield <<a@@bc>>
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -486,7 +496,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  for {
        |    b <- Bar(List(1,2,3))
        |  } yield b
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -494,7 +504,7 @@ class PcRenameSuite extends BasePcRenameSuite {
     """|def <<he@@llo>>(a: Int) =
        |  ???
        |end <<hello>>
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -502,7 +512,7 @@ class PcRenameSuite extends BasePcRenameSuite {
     """|def <<he@@llo>>(a: Int) =
        |  ???
        |end /* a comment */ <<hello>> /* a comment */
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -510,6 +520,6 @@ class PcRenameSuite extends BasePcRenameSuite {
     """|def <<f@@oo>> =
        |  def bar = 
        |    ???
-       |  end bar""".stripMargin,
+       |  end bar""".stripMargin
   )
 }

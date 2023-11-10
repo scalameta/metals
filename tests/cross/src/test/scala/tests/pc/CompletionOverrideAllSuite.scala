@@ -24,7 +24,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (2 total)
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   checkEdit(
@@ -56,7 +56,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   check(
@@ -76,7 +76,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (3 total)
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   checkEdit(
@@ -113,7 +113,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   check(
@@ -134,7 +134,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (2 total)
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   checkEdit(
@@ -170,7 +170,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   check(
@@ -187,7 +187,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "",
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   check(
@@ -207,7 +207,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (2 total)
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   checkEdit(
@@ -241,7 +241,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   check(
@@ -261,7 +261,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (3 total)
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   checkEdit(
@@ -297,7 +297,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   check(
@@ -323,7 +323,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Implement all members (3 total)
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   checkEdit(
@@ -371,7 +371,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 
   checkEdit(
@@ -397,6 +397,6 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        | 
        |}
        |""".stripMargin,
-    filter = _.contains("Implement"),
+    filter = _.contains("Implement")
   )
 }

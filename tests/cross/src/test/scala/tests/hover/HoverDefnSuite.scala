@@ -11,7 +11,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|val x: List[Int]
-       |""".stripMargin.hover,
+       |""".stripMargin.hover
   )
 
   check(
@@ -21,7 +21,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|var x: List[Int]
-       |""".stripMargin.hover,
+       |""".stripMargin.hover
   )
 
   check(
@@ -31,7 +31,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|def x: List[Int]
-       |""".stripMargin.hover,
+       |""".stripMargin.hover
   )
 
   check(
@@ -41,7 +41,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|def method(x: Int): List[Int]
-       |""".stripMargin.hover,
+       |""".stripMargin.hover
   )
 
   check(
@@ -51,7 +51,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|def empty[T]: Option[T]
-       |""".stripMargin.hover,
+       |""".stripMargin.hover
   )
 
   check(
@@ -60,7 +60,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<def @@empty[T:Ordering] = Option.empty[T]>>
       |}
       |""".stripMargin,
-    "def empty[T: Ordering]: Option[T]".hover,
+    "def empty[T: Ordering]: Option[T]".hover
   )
 
   check(
@@ -72,7 +72,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|```scala
        |x: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -84,7 +84,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|```scala
        |x: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -96,7 +96,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|```scala
        |def this(x: Int): a
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -108,7 +108,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|```scala
        |x: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -120,7 +120,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|```scala
        |implicit x: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -132,7 +132,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|```scala
        |implicit x: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -142,7 +142,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     "object object.MyObject".hover,
     compat = Map(
       "3" -> "object MyObject: `object`".hover
-    ),
+    )
   )
 
   check(
@@ -152,14 +152,14 @@ class HoverDefnSuite extends BaseHoverSuite {
     "abstract trait MyTrait: MyTrait".hover,
     compat = Map(
       "3" -> "trait MyTrait: MyTrait".hover
-    ),
+    )
   )
 
   check(
     "class",
     """class <<M@@yClass>>
       |""".stripMargin,
-    "class MyClass: MyClass".hover,
+    "class MyClass: MyClass".hover
   )
 
   check(
@@ -167,7 +167,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|object a {
        |  type <<M@@yType>> = Int
        |}""".stripMargin,
-    "type MyType: MyType".hover,
+    "type MyType: MyType".hover
   )
 
   check(
@@ -183,7 +183,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     compat = Map(
       // TODO hover doesn't show information on package
       "3" -> "".hover
-    ),
+    )
   )
 
   check(
@@ -198,7 +198,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     "head: Int".hover,
     compat = Map(
       "3" -> "val head: Int".hover
-    ),
+    )
   )
 
   check(
@@ -213,11 +213,11 @@ class HoverDefnSuite extends BaseHoverSuite {
     "value: Int".hover,
     compat = Map(
       "3" -> "val value: Int".hover
-    ),
+    )
   )
 
   check(
-    "val-int-literal".tag(IgnoreScala212),
+    "val-int-literal".tag(IgnoreScalaVersion.forLessThan("2.13.0")),
     """object a {
       |  <<val @@x : 1 = 1>>
       |}
@@ -225,10 +225,10 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|val x: 1
        |""".stripMargin.hover,
     compat = Map(
-      "2.12" -> "",
-      "3" -> """|Int
-                |val x: 1""".stripMargin.hover,
-    ),
+      "3" ->
+        """|Int
+           |val x: 1""".stripMargin.hover
+    )
   )
 
   check(
@@ -237,7 +237,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<val @@x : 1 | 2 = 1>>
       |}
       |""".stripMargin,
-    "val x: 1 | 2".hover,
+    "val x: 1 | 2".hover
   )
 
   check(
@@ -269,7 +269,7 @@ class HoverDefnSuite extends BaseHoverSuite {
            |val x: Option[T]
            |```
            |""".stripMargin.hover
-    ),
+    )
   )
 
   check(
@@ -279,6 +279,6 @@ class HoverDefnSuite extends BaseHoverSuite {
        |  <<val foo@@ = 123>>
        |}
        |""".stripMargin,
-    "val foo: Int".hover,
+    "val foo: Int".hover
   )
 }

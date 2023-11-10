@@ -18,7 +18,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |def main = 100.inc@@
        |""".stripMargin,
     """|incr: Int (extension)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -33,7 +33,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|incr: Int (extension)
        |""".stripMargin,
-    filter = _.contains("(extension)"),
+    filter = _.contains("(extension)")
   )
 
   check(
@@ -48,7 +48,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|incr: Int (extension)
        |""".stripMargin,
-    filter = _.contains("(extension)"),
+    filter = _.contains("(extension)")
   )
 
   check(
@@ -65,7 +65,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|identity: String (extension)
        |""".stripMargin, // incr won't be available
-    filter = _.contains("(extension)"),
+    filter = _.contains("(extension)")
   )
 
   check(
@@ -83,7 +83,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|doSomething: A (extension)
        |""".stripMargin,
-    filter = _.contains("(extension)"),
+    filter = _.contains("(extension)")
   )
 
   checkEdit(
@@ -105,7 +105,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |    def incr: Int = num + 1
        |
        |def main = 100.incr
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -127,7 +127,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |    def plus(other: Int): Int = num + other
        |
        |def main = 100.plus($0)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   // NOTE: In 3.1.3, package object name includes the whole path to file
@@ -143,7 +143,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |  def main = 100.inc@@
        |""".stripMargin,
     """|incr: Int (extension)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -157,7 +157,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |  def main = 100.inc@@
        |""".stripMargin,
     """|incr: Int (extension)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -174,7 +174,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |
        |package example2: 
        |  def main = 100.incr
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -192,7 +192,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|increment: Int (extension)
        |increment2: Int (extension)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }

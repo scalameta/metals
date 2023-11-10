@@ -17,7 +17,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    val toRename3: java.util.List[Int] = ???
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   // currently we are not using presentation compiler in this case
@@ -32,7 +32,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |      StdLibTryprepare(n)
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -46,7 +46,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    user.copy(name = "")
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -54,7 +54,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     """|package a
        |trait S1[X] { def torename(p: X): String = "" }
        |trait T1[Z] extends S1[Z] { override def tore@@name(p: Z): String = super.torename(p) }
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -65,7 +65,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |trait A { def torename(a: String): P = ??? }
        |trait B extends A { override def tore@@name(a: String): PP = ??? }
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -81,7 +81,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    }
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -95,7 +95,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    case Foo(name) => ()
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -107,7 +107,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    toRename
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -119,7 +119,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    if(methodprepare("")) println("Is true!")
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -135,7 +135,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    val a = new Alphabet with ABC
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -148,7 +148,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |class GoodMorning extends Hello {
        |  def met@@hod(abc : String) = true
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -161,7 +161,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |object Main{
        |  val toRename = User##.##("abc")
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -176,7 +176,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    "" :: user
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -192,7 +192,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    @@!user
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -201,7 +201,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |class MyException extends Exce@@ption
        |class NewException extends RuntimeException
        |class NewException2 extends RuntimeException
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -209,7 +209,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     """|package a
        |class Main{}
        |object M@@ain
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -222,7 +222,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -240,7 +240,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    override def me@@thod(adf: String): Int = 321
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -261,7 +261,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    }
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -278,7 +278,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    }
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -287,7 +287,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |import io.circe.generic.JsonCodec
        |@JsonCodec
        |final case class Ma@@in2(name: String)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -297,7 +297,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |  implicit val some@@Name: Int = 1
        |  def m[A](implicit a: A): A = a
        |  m[Int]
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   prepare(
@@ -309,7 +309,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    case `gre@@eting` =>
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -323,7 +323,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    }
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   // If renaming in VS Code, backticks are taken as part of the name
@@ -338,7 +338,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    }
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -355,7 +355,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    val name2 = Name(value = "44")
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -365,7 +365,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |object Main {
        |  val name2 = new Name(value = "44")
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -377,7 +377,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |  val a = classOf[ABC]
        |  val b = new CBD[ABC]
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -393,7 +393,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    val symbol3: Symbol = Variable("value")
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -409,7 +409,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    val symbol3: Symbol = Variable("value")
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -423,7 +423,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    v5 == true
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -437,7 +437,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    v5 == true
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -445,7 +445,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
     """|trait S1[X] { def torename(p: X): String = "" }
        |trait T1[Z] extends S1[Z] { override def <<tore@@name>>(p: Z): String = super.torename(p) }
        |""".stripMargin,
-    filename = "A.worksheet.sc",
+    filename = "A.worksheet.sc"
   )
   prepare(
     "worksheet-classes",
@@ -453,7 +453,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |case class Method(name: String) extends Symbol
        |case class Variable(value: String) extends Symbol
        |""".stripMargin,
-    filename = "A.worksheet.sc",
+    filename = "A.worksheet.sc"
   )
 
   prepare(
@@ -466,7 +466,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    <<ab@@c>>.map(_ + 1)
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -475,7 +475,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |  def double = sbd + sbd
        |  def double2 = sbd + sbd
        |end extension
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -484,7 +484,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |  def double = <<sb@@d>> + sbd
        |  def double2 = sbd + sbd
        |end extension
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -493,7 +493,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |  def double = xs ++ xs
        |  def double2 = xs ++ xs
        |end extension
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -502,7 +502,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |  def double = xs ++ xs
        |  def double2 = xs ++ <<x@@s>>
        |end extension
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   prepare(
@@ -515,7 +515,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |    )
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }

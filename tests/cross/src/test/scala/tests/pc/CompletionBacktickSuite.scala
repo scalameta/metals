@@ -17,7 +17,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     filterText = "type",
     compat = Map(
       "3" -> "type: Int"
-    ),
+    )
   )
 
   checkEdit(
@@ -32,7 +32,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |  Main.`type`
        |}
        |""".stripMargin,
-    filterText = "type",
+    filterText = "type"
   )
 
   check(
@@ -47,7 +47,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     filterText = "hello world",
     compat = Map(
       "3" -> "hello world: Int"
-    ),
+    )
   )
 
   check(
@@ -62,7 +62,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     filterText = "///",
     compat = Map(
       "3" -> "///: Int"
-    ),
+    )
   )
 
   check(
@@ -77,7 +77,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     filterText = "type",
     compat = Map(
       "3" -> ""
-    ),
+    )
   )
 
   check(
@@ -91,7 +91,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     // distinguish if the symbol was defined with backticks in source.
     """spaced: Int
       |""".stripMargin,
-    filterText = "",
+    filterText = ""
   )
 
   check(
@@ -104,7 +104,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     // NOTE(olafur) expected output is empty because the source does not tokenize due to unclosed identifier.
     // It would be nice to fix this limitation down the road.
     "",
-    filter = _.contains("`type`"),
+    filter = _.contains("`type`")
   )
 
   // https://dotty.epfl.ch/docs/internals/syntax.html#soft-keywords
@@ -124,7 +124,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
           |  `$keyword`($$0)
           |}
           |""".stripMargin,
-      filter = _.contains("a: String"),
+      filter = _.contains("a: String")
     )
 
   checkEdit(
@@ -140,7 +140,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |  val a = Pos(1,2)
        |  val b = a.end
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -165,7 +165,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
            |  }
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -185,7 +185,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |  val a = "abc".end
        |}
        |""".stripMargin,
-    filter = _.contains("end: Char"),
+    filter = _.contains("end: Char")
   )
 
   checkEdit(
@@ -201,7 +201,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |  val a = Pos(1,true)
        |  val b = a.`lazy`
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }

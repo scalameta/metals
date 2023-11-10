@@ -8,7 +8,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
   def checkNegative(
       name: String,
       original: String,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   ): Unit =
     check(name, original, expected = "", compat = compat)
 
@@ -20,7 +20,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
       |    List(y)
       |  }
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -29,7 +29,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
       |    @@
       |  def foo = 2
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -41,7 +41,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
       |    x
       |  }
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -49,7 +49,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """object a {
       |  v@@al x = 42
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -57,7 +57,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """obj@@ect a {
       |  val x = 42
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -65,7 +65,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """object a {
       |  ty@@pe Alpha = Int
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -73,7 +73,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """object a {
       |  val x =@@ 42
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -81,7 +81,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """object a {
       |  val x = 4@@2
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -89,7 +89,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """object a {
       |  val x = 4@@2d
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -97,7 +97,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """object a {
       |  val x = 4@@2f
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -105,7 +105,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """object a {
       |  val x = 4@@2L
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -113,7 +113,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
     """object a {
       |  val x = "Hel@@lo"
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
   checkNegative(
@@ -122,7 +122,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
       |  val name = "John"
       |  s"Hel@@lo $name"
       |}
-      |""".stripMargin,
+      |""".stripMargin
   )
 
 }

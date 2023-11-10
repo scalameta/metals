@@ -152,6 +152,9 @@ commands ++= Seq(
         s
     }
   },
+  Command.command("cross-test-2-11") { s =>
+    crossTestDyn(s, V.scala211)
+  },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
   },

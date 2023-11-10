@@ -14,7 +14,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       name: TestOptions,
       code: String,
       expected: String,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
     check(name, code, expected, includeDocs = true, compat = compat)
   }
@@ -24,7 +24,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       expected: String,
       includeDocs: Boolean = false,
       compat: Map[String, String] = Map.empty,
-      stableOrder: Boolean = true,
+      stableOrder: Boolean = true
   )(implicit loc: Location): Unit = {
     test(name) {
       val pkg = scala.meta.Term.Name(name.name).syntax
@@ -98,8 +98,8 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
         sortLines(stableOrder, out.toString()),
         sortLines(
           stableOrder,
-          getExpected(expected, compat, scalaVersion),
-        ),
+          getExpected(expected, compat, scalaVersion)
+        )
       )
     }
   }

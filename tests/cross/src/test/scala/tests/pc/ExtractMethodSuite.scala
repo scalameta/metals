@@ -17,7 +17,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    123 + method(b)
         |
         |  val a = newMethod()
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   checkEdit(
@@ -54,7 +54,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
                          |    newMethod()
                          |  }
                          |
-                         |}""".stripMargin),
+                         |}""".stripMargin)
   )
 
   checkEdit(
@@ -88,7 +88,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
                          |    val c = 1
                          |    newMethod(c)
                          |  }
-                         |}""".stripMargin),
+                         |}""".stripMargin)
   )
 
   checkEdit(
@@ -107,7 +107,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    method(5)
         |
         |  val a = newMethod1()
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   checkEdit(
@@ -132,7 +132,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    val b = 4
         |    newMethod(b, c)
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   checkEdit(
@@ -175,7 +175,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
                          |      newMethod(c)
                          |    }
                          |  }
-                         |}""".stripMargin),
+                         |}""".stripMargin)
   )
 
   checkEdit(
@@ -198,7 +198,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    val b = 4
         |    newMethod(b)
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   checkEdit(
@@ -238,7 +238,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
                          |    val c = 1
                          |    newMethod(c)
                          |  }
-                         |}""".stripMargin),
+                         |}""".stripMargin)
   )
 
   checkEdit(
@@ -255,7 +255,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |  class B(val b: Int) {
         |    def f2 = newMethod(b)
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   checkEdit(
@@ -274,7 +274,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |  def f1(a: Int) = {
         |    newMethod(a)
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   checkEdit(
@@ -293,7 +293,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |  def f1[T](a: T) = {
         |    newMethod(a)
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
   checkEdit(
     "method-type-no-param",
@@ -311,7 +311,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |  def f1[T](a: T) = {
         |    newMethod()
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   checkEdit(
@@ -354,7 +354,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
                          |    val d = 3
                          |    newMethod()
                          |  }
-                         |}""".stripMargin),
+                         |}""".stripMargin)
   )
 
   checkEdit(
@@ -375,7 +375,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    def m2(b: Int) = b + 1
         |    newMethod(a, m2)
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 
   checkEdit(
@@ -398,7 +398,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    newMethod(a, m2)
         |  }
         |}
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   checkEdit(
@@ -419,7 +419,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    newMethod(a, m2)
         |  }
         |}
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   checkEdit(
@@ -440,7 +440,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    newMethod(m2)(2)
         |  }
         |}
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   checkEdit(
@@ -461,7 +461,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    newMethod(m2)
         |  }
         |}
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   checkEdit(
@@ -482,7 +482,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |    newMethod(m2)
         |  }
         |}
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   checkEdit(
@@ -505,6 +505,6 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |      newMethod(color, other)
         |    }
         |  }
-        |}""".stripMargin,
+        |}""".stripMargin
   )
 }

@@ -10,7 +10,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type <<NotI@@nt>> = Int
       |  val set = Set.empty[<<NotInt>>]
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -19,7 +19,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type <<NotInt>> = Int
       |  val set = Set.empty[<<Not@@Int>>]
-      |}""".stripMargin,
+      |}""".stripMargin
   )
   check(
     "type3",
@@ -27,7 +27,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type NotInt = <<In@@t>>
       |  val set = Set.empty[<<Int>>]
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -36,7 +36,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type NotInt = <<Int>>
       |  val set = Set.empty[<<I@@nt>>]
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -45,7 +45,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  var bspSession: Option[<<Stri@@ng>>] =
       |    Option.empty[<<String>>]
-      |}""".stripMargin,
+      |}""".stripMargin
   )
   check(
     "type-in-def2",
@@ -53,7 +53,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  var bspSession: Option[<<String>>] =
       |    Option.empty[<<Stri@@ng>>]
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -62,7 +62,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  var bspSession: <<Op@@tion>>[String] =
       |    <<Option>>.empty[String]
-      |}""".stripMargin,
+      |}""".stripMargin
   )
   check(
     "type-in-def4",
@@ -70,7 +70,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  var bspSession: <<Option>>[String] =
       |    <<Opt@@ion>>.empty[String]
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -79,7 +79,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type A = List[_ <: <<It@@erable>>[Int]]
       |  val a : <<Iterable>>[Int] = ???
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -88,7 +88,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type A = List[_ <: <<Iterable>>[Int]]
       |  val a : <<Ite@@rable>>[Int] = ???
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -97,7 +97,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type A = List[_ <: scala.<<Enumerati@@on>>]
       |  val a : scala.<<Enumeration>> = ???
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -106,7 +106,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type A = List[_ <: scala.<<Enumeration>>]
       |  val a : scala.<<Enumer@@ation>> = ???
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -115,7 +115,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type A = List[_ <: Iterable[<<In@@t>>]]
       |  val a : Iterable[<<Int>>] = ???
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -124,7 +124,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Test {
       |  type A = List[_ <: Iterable[<<Int>>]]
       |  val a : Iterable[<<In@@t>>] = ???
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -136,7 +136,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |
       |  @<<deprecated>>(since = "1.23")
       |  val hello2 = 123
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -148,7 +148,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |
       |  @deprecated(<<si@@nce>> = "1.23")
       |  val hello2 = 123
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -159,7 +159,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  }
        |  object Test {
        |    val b1: A#<<BB>> = 12
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -170,7 +170,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  }
        |  object Test {
        |    val b1: A#<<B@@B>> = 12
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -178,7 +178,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|trait Zg[<<T@@T>>]{
        |  def doZ: List[<<TT>>]
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -186,7 +186,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """|trait Zg[<<TT>>]{
        |  def doZ: List[<<T@@T>>]
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -195,7 +195,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  type <<!!>>[+T, -U] = Int
        |  def m(x: Int <<!@@!>> String) = ???
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }

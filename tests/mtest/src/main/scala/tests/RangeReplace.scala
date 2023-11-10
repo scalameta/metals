@@ -10,7 +10,7 @@ trait RangeReplace {
 
   def renderHighlightsAsString(
       code: String,
-      highlights: List[DocumentHighlight],
+      highlights: List[DocumentHighlight]
   ): String = {
     highlights
       .foldLeft((code, List.empty[(Int, Int)])) {
@@ -19,7 +19,7 @@ trait RangeReplace {
             code,
             base,
             location.getRange,
-            alreadyAddedMarkings,
+            alreadyAddedMarkings
           )
       }
       ._1
@@ -29,7 +29,7 @@ trait RangeReplace {
       base: String,
       range: Range,
       prefix: String = "<<",
-      suffix: String = ">>",
+      suffix: String = ">>"
   ): String =
     replaceInRangeWithAdjustmens(base, base, range, List(), prefix, suffix)._1
 
@@ -39,7 +39,7 @@ trait RangeReplace {
       range: Range,
       alreadyAddedMarkings: List[(Int, Int)],
       prefix: String = "<<",
-      suffix: String = ">>",
+      suffix: String = ">>"
   ): (String, List[(Int, Int)]) = {
     val input = Input.String(code)
     val pos = range
@@ -64,8 +64,8 @@ trait RangeReplace {
         .toString,
       (pos.start, prefix.length) :: (
         pos.end,
-        suffix.length,
-      ) :: alreadyAddedMarkings,
+        suffix.length
+      ) :: alreadyAddedMarkings
     )
   }
 

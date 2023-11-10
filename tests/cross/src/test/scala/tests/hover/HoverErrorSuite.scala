@@ -11,7 +11,7 @@ class HoverErrorSuite extends BaseHoverSuite {
        |  def hello(<<a@@aa>>) : Int = ""
        |}
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -26,7 +26,7 @@ class HoverErrorSuite extends BaseHoverSuite {
        |  def <<ap@@ply>>(org: String) = Dependency(org, None, None)
        |}
        |""".stripMargin,
-    "".stripMargin,
+    "".stripMargin
   )
 
 }

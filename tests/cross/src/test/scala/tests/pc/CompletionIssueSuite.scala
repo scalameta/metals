@@ -12,8 +12,10 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       Dependency.of("org.eclipse.lsp4j", "org.eclipse.lsp4j", "0.16.0"),
       if (scalaVersion.startsWith("2.12"))
         Dependency.of("org.scalameta", "scalameta_2.12", "4.6.0")
+      else if (scalaVersion.startsWith("2.11"))
+        Dependency.of("org.scalameta", "scalameta_2.11", "4.6.0")
       else
-        Dependency.of("org.scalameta", "scalameta_2.13", "4.6.0"),
+        Dependency.of("org.scalameta", "scalameta_2.13", "4.6.0")
     )
   }
 
@@ -22,7 +24,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """package a
       |class Foo@@
       |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -32,7 +34,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |  new Foo@@
       |}
     """.stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -50,7 +52,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "Self[+T] = Main.this.stream.Self",
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   checkEdit(
@@ -88,7 +90,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
                 |  NestedLeaf
                 |}
                 |""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -153,11 +155,11 @@ class CompletionIssueSuite extends BaseCompletionSuite {
            |  val allCountries = Sweden + France + USA + Norway
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
-    "issue-813-empty",
+    "issue-813-empty".tag(IgnoreScala211),
     """|package a
        |
        |object Main {
@@ -175,11 +177,11 @@ class CompletionIssueSuite extends BaseCompletionSuite {
         """|++[B >: Int, That](that: GenTraversableOnce[B])(implicit bf: CanBuildFrom[List[Int],B,That]): That
            |+:[B >: Int, That](elem: B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
            |""".stripMargin
-    ),
+    )
   )
 
   check(
-    "issue-813",
+    "issue-813".tag(IgnoreScala211),
     """|package a
        |
        |object Main {
@@ -197,11 +199,11 @@ class CompletionIssueSuite extends BaseCompletionSuite {
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
            |""".stripMargin
-    ),
+    )
   )
 
   check(
-    "issue-813-space",
+    "issue-813-space".tag(IgnoreScala211),
     """|package a
        |
        |object Main {
@@ -219,11 +221,11 @@ class CompletionIssueSuite extends BaseCompletionSuite {
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
            |""".stripMargin
-    ),
+    )
   )
 
   check(
-    "issue-813-multi",
+    "issue-813-multi".tag(IgnoreScala211),
     """|package a
        |
        |object Main {
@@ -241,7 +243,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
            |""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -254,7 +256,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """object obj {
       |  def method(arg: String): Unit = ()
       |}
-      |import obj.method""".stripMargin,
+      |import obj.method""".stripMargin
   )
 
   // We shouldn't get exhaustive completions for AbsolutePath
@@ -268,7 +270,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |  path match@@
        |}
        |""".stripMargin,
-    "match",
+    "match"
   )
 
   // The tests shows `x$1` but it's because the dependency is not indexed
@@ -299,14 +301,14 @@ class CompletionIssueSuite extends BaseCompletionSuite {
            |  override def createProgress(x$0: WorkDoneProgressCreateParams): CompletableFuture[Void] = ${0:???}
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   override val compatProcess: Map[String, String => String] = Map(
     "2.13" -> { s =>
       s.replace(
         "::[B >: Int](x: B): List[B]",
-        "::[B >: Int](elem: B): List[B]",
+        "::[B >: Int](elem: B): List[B]"
       )
     }
   )

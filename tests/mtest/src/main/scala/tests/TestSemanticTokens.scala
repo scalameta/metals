@@ -67,7 +67,7 @@ object TestSemanticTokens {
             val candidates = head :: rest.takeWhile(nxt =>
               nxt.start() == head.start() && isIdentifier(
                 nxt.start(),
-                nxt.end(),
+                nxt.end()
               )
             )
             val node = candidates.maxBy(node =>
@@ -107,12 +107,12 @@ object TestSemanticTokens {
               deltaStartChar,
               length,
               tokenType,
-              tokenModifier,
+              tokenModifier
             ) => // modifiers ignored for now
           (
             new l.Position(deltaLine, deltaStartChar),
             length,
-            decorationString(tokenType, tokenModifier),
+            decorationString(tokenType, tokenModifier)
           )
         case _ =>
           throw new RuntimeException("Expected output dividable by 5")
@@ -122,7 +122,7 @@ object TestSemanticTokens {
     @tailrec
     def toAbsolutePositions(
         positions: List[(l.Position, Int, String)],
-        last: l.Position,
+        last: l.Position
     ): Unit = {
       positions match {
         case (head, _, _) :: next =>
