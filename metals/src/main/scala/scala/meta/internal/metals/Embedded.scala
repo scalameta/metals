@@ -5,6 +5,7 @@ import java.nio.file.Path
 import java.util.ServiceLoader
 
 import scala.collection.concurrent.TrieMap
+import scala.util.Properties
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -170,6 +171,7 @@ final class Embedded(
 }
 
 object Embedded {
+  private val jdkVersion = JdkVersion.parse(Properties.javaVersion)
 
   lazy val repositories: List[Repository] =
     Repository.defaults().asScala.toList ++
@@ -270,6 +272,13 @@ object Embedded {
       if (scalaBinaryVersion == "2.11") "2.2.24"
       // from 2.2.24 mdoc is compiled with 3.1.x which is incompatible with 3.0.x
       else if (scalaVersion.exists(_.startsWith("3.0"))) "2.2.23"
+      // from 2.4.0 mdoc is released with Scala LTS 3.3.x
+      else if (
+        scalaVersion.exists(_.startsWith("3.1")) ||
+        scalaVersion.exists(_.startsWith("3.2"))
+      ) "2.3.8"
+      // from 2.5.0 mdoc is released with JDK 11
+      else if (jdkVersion.exists(_.major < 11)) "2.4.0"
       else BuildInfo.mdocVersion,
     )
   }
