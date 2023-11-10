@@ -44,6 +44,7 @@ import org.eclipse.lsp4j.TextEdit
  */
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
+    buildTargetName: Option[String] = None,
     classpath: Seq[Path] = Nil,
     options: List[String] = Nil,
     search: SymbolSearch = EmptySymbolSearch,
@@ -55,6 +56,7 @@ case class ScalaPresentationCompiler(
 ) extends PresentationCompiler:
   val underlying: DottyPresentationCompiler = new DottyPresentationCompiler(
     buildTargetIdentifier = buildTargetIdentifier,
+    buildTargetName = buildTargetName,
     classpath = classpath,
     options = options,
     search = search,
@@ -65,7 +67,7 @@ case class ScalaPresentationCompiler(
     reportsLevel = reportsLevel,
   )
 
-  def this() = this("", Nil, Nil)
+  def this() = this("", None, Nil, Nil)
 
   override def syntheticDecorations(
       params: SyntheticDecorationsParams
