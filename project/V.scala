@@ -33,7 +33,7 @@ object V {
   val lsp4jV = "0.20.1"
   val mavenBloop = "2.0.0"
   val mill = "0.11.5"
-  val mdoc = "2.5.0"
+  val mdoc = "2.5.1"
   val munit = "1.0.0-M10"
   val pprint = "0.7.3"
   val sbtBloop = bloop
