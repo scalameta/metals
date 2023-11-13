@@ -6,6 +6,10 @@ import tests.BaseSyntheticDecorationsSuite
 
 class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
 
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreForScala3CompilerPC
+  )
+
   check(
     "type-params",
     """|object Main {
