@@ -625,11 +625,23 @@ class MetalsGlobal(
       code: String,
       filename: String,
       cursor: Option[Int],
-      cursorName: String = CURSOR
+      cursorName: String = CURSOR,
+      withComma: Boolean = false
   ): RichCompilationUnit = {
+    // helps to deal with f(_.) where f has a second parameter
+    def nextIsParen(offset: Int): Boolean = {
+      val next = code(offset)
+      if (next == ')') true
+      else if (next == ' ' && offset + 1 < code.size) nextIsParen(offset + 1)
+      else false
+    }
     val codeWithCursor = cursor match {
       case Some(offset) =>
-        code.take(offset) + cursorName + code.drop(offset)
+        val inside =
+          if (withComma && offset < code.size && nextIsParen(offset))
+            cursorName + ","
+          else cursorName
+        code.take(offset) + inside + code.drop(offset)
       case _ => code
     }
     val unit = newCompilationUnit(codeWithCursor, filename)

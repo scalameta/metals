@@ -273,6 +273,25 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     "match"
   )
 
+  check(
+    "higher-order",
+    """|
+       |class Foo {
+       |  def Bar: Double = 2.0
+       |  def Baz: Double = 1.0
+       |}
+       |
+       |object Bar {
+       |  def higherOrder2(f: Foo => Double, s: String): Nothing = ???
+       |  higherOrder2(_.@@)
+       |}
+       |""".stripMargin,
+    """|Bar: Double
+       |Baz: Double
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
   // The tests shows `x$1` but it's because the dependency is not indexed
   checkEdit(
     "default-java-override",

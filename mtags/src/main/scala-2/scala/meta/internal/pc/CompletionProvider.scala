@@ -45,18 +45,29 @@ class CompletionProvider(
 
   def completions(): CompletionList = {
     val filename = params.uri().toString()
-    val unit = addCompilationUnit(
-      code = params.text,
-      filename = filename,
-      cursor = Some(params.offset),
-      cursorName = cursorName
-    )
+    def baseCompletions(
+        // handling issues in `f(_.) where f has more than one parameter`
+        retryWithComa: Boolean = true,
+        addComma: Boolean = false
+    ): (Position, (InterestingMembers, CompletionPosition, l.Range, String)) = {
+      val unit = addCompilationUnit(
+        code = params.text,
+        filename = filename,
+        cursor = Some(params.offset),
+        cursorName = cursorName,
+        withComma = addComma
+      )
 
-    val pos = unit.position(params.offset)
+      val pos = unit.position(params.offset)
+
+      val result @ (i, _, _, _) =
+        safeCompletionsAt(pos, params.uri())
+      if (i.results.nonEmpty || !retryWithComa) (pos, result)
+      else baseCompletions(retryWithComa = false, addComma = true)
+    }
+
+    val (pos, (i, completion, editRange, query)) = baseCompletions()
     val isSnippet = isSnippetEnabled(pos, params.text())
-
-    val (i, completion, editRange, query) = safeCompletionsAt(pos, params.uri())
-
     val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
     val oldText = params.text().substring(start, end)
