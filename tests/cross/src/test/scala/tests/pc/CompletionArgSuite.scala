@@ -1160,7 +1160,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|aaa = : Int
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   check(
@@ -1176,7 +1176,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|aaa = : Int
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   check(
@@ -1192,7 +1192,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|aaa = : Int
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   check(
@@ -1203,7 +1203,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|x = : Int
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   check(
@@ -1213,7 +1213,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|str = : String
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
 }
