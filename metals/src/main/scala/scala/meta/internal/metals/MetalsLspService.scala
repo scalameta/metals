@@ -1113,9 +1113,8 @@ class MetalsLspService(
       force: Boolean = false,
   ): Future[Unit] = {
     CancelTokens.future { token =>
-      val shouldShow =
-        force ||
-          userConfig.areSyntheticsEnabled()
+      val shouldShow = (force || userConfig.areSyntheticsEnabled()) &&
+        clientConfig.isInlineDecorationProvider()
       if (shouldShow) {
         compilers.syntheticDecorations(path, token).map { decorations =>
           val params = new PublishDecorationsParams(
