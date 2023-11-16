@@ -122,7 +122,7 @@ final object JavaFoldingRangeExtractor {
       text: String,
       path: AbsolutePath,
   ): Option[(Trees, CompilationUnitTree)] = {
-    val javacTask = JavaMetalsGlobal.compilationTask(text, path.toURI)
+    val javacTask = JavaMetalsGlobal.baseCompilationTask(text, path.toURI)
     val elems = javacTask.parse()
     javacTask.analyze()
     val trees = Trees.instance(javacTask)

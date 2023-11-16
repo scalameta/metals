@@ -50,7 +50,7 @@ class JavaHoverProvider(
 
   def hoverOffset(params: OffsetParams): Option[HoverSignature] = {
     val task: JavacTask =
-      JavaMetalsGlobal.compilationTask(params.text(), params.uri())
+      compiler.compilationTask(params.text(), params.uri())
     val scanner = JavaMetalsGlobal.scanner(task)
     val types = task.getTypes()
     val elements = task.getElements()
