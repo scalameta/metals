@@ -18,7 +18,7 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
       base: String,
       expected: String,
       compat: Map[String, String] = Map.empty,
-      kind: Option[Int] = None,
+      kind: Option[Int] = None
   )(implicit location: Location): Unit =
     test(name) {
       def pkgWrap(text: String) =
@@ -28,7 +28,7 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
       val withPkg = pkgWrap(base)
       val vFile = CompilerVirtualFileParams(
         URI.create("file:/Decorations.scala"),
-        withPkg,
+        withPkg
       )
 
       val pcParams = CompilerSyntheticDecorationsParams(
@@ -36,7 +36,7 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
         true,
         true,
         true,
-        true,
+        true
       )
 
       val allDecorations = presentationCompiler
@@ -57,7 +57,7 @@ class BaseSyntheticDecorationsSuite extends BasePCSuite {
 
       assertEquals(
         obtained,
-        pkgWrap(getExpected(expected, compat, scalaVersion)),
+        pkgWrap(getExpected(expected, compat, scalaVersion))
       )
 
     }

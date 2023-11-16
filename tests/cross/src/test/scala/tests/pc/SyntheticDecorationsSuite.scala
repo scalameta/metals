@@ -22,7 +22,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  val x = hello[List[Int]](List[Int](1))
        |}
        |""".stripMargin,
-    kind = Some(DecorationKind.TypeParameter),
+    kind = Some(DecorationKind.TypeParameter)
   )
 
   check(
@@ -45,7 +45,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
            |}
            |""".stripMargin
     ),
-    kind = Some(DecorationKind.TypeParameter),
+    kind = Some(DecorationKind.TypeParameter)
   )
 
   check(
@@ -64,7 +64,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  val x = addOne(1)(imp)
        |}
        |""".stripMargin,
-    kind = Some(DecorationKind.ImplicitParameter),
+    kind = Some(DecorationKind.ImplicitParameter)
   )
 
   check(
@@ -81,7 +81,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  val y: User = intToUser(1)
        |}
        |""".stripMargin,
-    kind = Some(DecorationKind.ImplicitConversion),
+    kind = Some(DecorationKind.ImplicitConversion)
   )
 
   check(
@@ -100,7 +100,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  val x = addOne(1)(imp)
        |}
        |""".stripMargin,
-    kind = Some(DecorationKind.ImplicitParameter),
+    kind = Some(DecorationKind.ImplicitParameter)
   )
 
   check(
@@ -117,7 +117,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  val y: User = intToUser(1)
        |}
        |""".stripMargin,
-    kind = Some(DecorationKind.ImplicitConversion),
+    kind = Some(DecorationKind.ImplicitConversion)
   )
 
   check(
@@ -135,7 +135,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  def doY: String
        |given (using Xg): Yg with
        |  def doY: String = "7"
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -147,7 +147,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val foo: Int = 123
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -159,7 +159,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val foo: List[Int] = List[Int](123)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -171,7 +171,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object O {
        |  def m: List[Int] = 1 ::[Int] List[Int](1)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -190,7 +190,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
            |  val foo: Map[Int, String] = Map[Int, String]((1, "abc"))
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -202,7 +202,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val foo: (Int, Int) = (123, 456)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -214,7 +214,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val foo: Buffer[String] = List[String]("").toBuffer[String]
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -226,7 +226,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val foo: () => Int = () => 123
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -238,7 +238,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val foo: Int = { val z: Int = 123; z + 2}
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -260,7 +260,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |
        |  val c: Foo{type T = Int; type G = Long} = new Foo { type T = Int; type G = Long}
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -280,7 +280,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  val c: Foo{type T = Int} = new Foo { type T = Int }
        |  val d: Foo{type T = Int} = c
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -306,7 +306,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  def y: Int = 0
        |  var z: Int = 0
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -328,7 +328,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |object O {
        | val c: Int = new Foo().getT
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -344,7 +344,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  def getT: T = 1
        |  val c: T = getT
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -358,7 +358,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  opaque type T = Int
        |  def getT: T = 1
        |val c: T = Foo.getT
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -376,7 +376,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        | def get: W = ???
        |
        |val m: Int => Int = O.get
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -394,7 +394,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        | def get: W = ???
        |
        |val m: M => Int = O.get
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -406,7 +406,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val x: (Int, Int) = (1, 2)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -418,7 +418,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val x: (Int, Int) = Tuple2.apply[Int, Int](1, 2)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -430,7 +430,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val x: (Int, Int) = Tuple2[Int, Int](1, 2)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -442,7 +442,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object Main {
        |  val (fst: Int, snd: Int) = (1, 2)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -461,7 +461,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
            |  val hd: Int ::[Int] tail: List[Int] = List[Int](1, 2)
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -486,7 +486,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
            |  }
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -508,7 +508,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
            |  val Foo[Int](fst: Int, snd: Int) = Foo[Int](1, 2)
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -522,7 +522,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
        |  val m: Int = foo[500](new ValueOf(...))
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -534,7 +534,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
     """|object O {
        |case class A(x: Int, g: Int)(implicit y: String)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }
