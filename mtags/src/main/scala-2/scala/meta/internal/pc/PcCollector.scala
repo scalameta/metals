@@ -96,6 +96,14 @@ abstract class PcCollector[T](
       else {
         Some(symbolAlternatives(id.symbol), id.pos)
       }
+    /* Anonynous function parameters such as:
+     * List(1).map{ <<abc>>: Int => abc}
+     * In this case, parameter has incorrect namePosition, so we need to handle it separately
+     */
+    case (vd: ValDef) if isAnonFunctionParam(vd) =>
+      val namePos = vd.pos.withEnd(vd.pos.start + vd.name.length)
+      if (namePos.includes(pos)) Some(symbolAlternatives(vd.symbol), namePos)
+      else None
 
     /* all definitions:
      * def fo@@o = ???
@@ -322,6 +330,30 @@ abstract class PcCollector[T](
             newAcc,
             sel.qualifier
           )
+
+        /**
+         * Anonynous function parameters such as:
+         * List(1).map{ <<abc>>: Int => abc}
+         * In this case, parameter has incorrect namePosition, so we need to handle it separately
+         */
+        case Function(params, body) =>
+          val newAcc = params
+            .filter(vd => vd.pos.isRange && filter(vd))
+            .foldLeft(
+              acc
+            ) { case (acc, vd) =>
+              val pos = vd.pos.withEnd(vd.pos.start + vd.name.length)
+              annotationChildren(vd).foldLeft({
+                acc + collect(
+                  vd,
+                  pos
+                )
+              })(traverse(_, _))
+            }
+          traverse(
+            params.map(_.tpt).foldLeft(newAcc)(traverse(_, _)),
+            body
+          )
         /* all definitions:
          * def <<foo>> = ???
          * class <<Foo>> = ???
@@ -494,5 +526,8 @@ abstract class PcCollector[T](
       case _ => apply.args
     }
   }
+
+  private def isAnonFunctionParam(vd: ValDef): Boolean =
+    vd.symbol != null && vd.symbol.owner.isAnonymousFunction && vd.rhs.isEmpty
 
 }
