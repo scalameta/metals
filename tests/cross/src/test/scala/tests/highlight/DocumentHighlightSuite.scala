@@ -930,4 +930,67 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "map-bind".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    <<abc>>: Int => <<ab@@c>> + 1
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind1".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).foldLeft(0){
+      |    (<<abc>>: Int, bde: Int) => <<ab@@c>> + bde
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind2".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    someLongName:@@ Int => someLongName + 1
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind3".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    someVeryLongName: Int =@@> someVeryLongName + 1
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind4".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    someLongName: <<I@@nt>> => someLongName + 1
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind5".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    someLongName: Int => 
+      |      val <<ab@@c>> = 2
+      |      someLongName + <<abc>>
+      |  }
+      |}""".stripMargin
+  )
+
 }

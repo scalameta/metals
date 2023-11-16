@@ -332,4 +332,14 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
        |""".stripMargin
   )
 
+  check(
+    "map-bind".tag(IgnoreScala3),
+    """
+      |object <<Main>>/*class*/ {
+      |  <<List>>/*class*/(1).<<foldLeft>>/*method*/(0){
+      |    (<<abc>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/, <<bde>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/) => <<abc>>/*parameter,readonly*/ <<+>>/*method,abstract*/ <<bde>>/*parameter,readonly*/
+      |  }
+      |}""".stripMargin
+  )
+
 }
