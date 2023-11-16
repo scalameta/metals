@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 
-import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.jdk.CollectionConverters._
@@ -46,7 +45,7 @@ case class JavaPresentationCompiler(
     workspace: Option[Path] = None
 ) extends PresentationCompiler {
 
-  private val javaCompiler = new JavaMetalsGlobal(search, config)
+  private val javaCompiler = new JavaMetalsGlobal(search, config, classpath)
 
   override def complete(
       params: OffsetParams
@@ -186,7 +185,7 @@ case class JavaPresentationCompiler(
   ): PresentationCompiler =
     copy(
       buildTargetIdentifier = buildTargetIdentifier,
-      classpath = classpath.asScala,
+      classpath = classpath.asScala.toSeq,
       options = options.asScala.toList
     )
 

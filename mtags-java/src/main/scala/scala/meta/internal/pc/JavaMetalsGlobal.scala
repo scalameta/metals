@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.io.File
 import java.io.Writer
 import java.net.URI
+import java.nio.file.Path
 import javax.tools.Diagnostic
 import javax.tools.DiagnosticListener
 import javax.tools.JavaCompiler
@@ -19,7 +20,8 @@ import com.sun.source.util.TreePath
 
 class JavaMetalsGlobal(
     val search: SymbolSearch,
-    val metalsConfig: PresentationCompilerConfig
+    val metalsConfig: PresentationCompilerConfig,
+    val classpath: Seq[Path]
 ) {
   var lastVisitedParentTrees: List[TreePath] = Nil
 
@@ -31,6 +33,16 @@ class JavaMetalsGlobal(
     lastVisitedParentTrees = scanner.lastVisitedParentTrees
     lastVisitedParentTrees.headOption
   }
+
+  def compilationTask(sourceCode: String, uri: URI): JavacTask = {
+    val javaFileObject = SourceJavaFileObject.make(sourceCode, uri)
+    JavaMetalsGlobal.classpathCompilationTask(
+      javaFileObject,
+      None,
+      List("-classpath", classpath.mkString(File.pathSeparator))
+    )
+  }
+
 }
 
 object JavaMetalsGlobal {
@@ -49,12 +61,11 @@ object JavaMetalsGlobal {
     files.iterator().next()
   }
 
-  def compilationTask(sourceCode: String, uri: URI): JavacTask = {
+  def baseCompilationTask(sourceCode: String, uri: URI): JavacTask = {
     val javaFileObject = SourceJavaFileObject.make(sourceCode, uri)
-    compilationTask(javaFileObject, None, Nil)
+    JavaMetalsGlobal.classpathCompilationTask(javaFileObject, None, Nil)
   }
-
-  def compilationTask(
+  def classpathCompilationTask(
       javaFileObject: JavaFileObject,
       out: Option[Writer],
       allOptions: List[String]
