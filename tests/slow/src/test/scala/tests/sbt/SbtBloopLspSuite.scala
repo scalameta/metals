@@ -38,7 +38,8 @@ class SbtBloopLspSuite
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        decorationProvider = Some(true)
+        decorationProvider = Some(true),
+        inlineDecorationProvider = Some(true),
       )
     )
 
