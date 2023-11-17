@@ -1908,6 +1908,7 @@ class MetalsLspService(
     debugProvider
       .debugDiscovery(params)
       .flatMap(debugProvider.asSession)
+      .recover(t => DebugSession.failure(t.getMessage()))
       .asJavaObject
 
   def findBuildTargetByDisplayName(target: String): Option[b.BuildTarget] =

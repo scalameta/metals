@@ -23,8 +23,6 @@ import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.StatusBarState
-import scala.meta.internal.metals.debug.BuildTargetNotFoundException
-import scala.meta.internal.metals.debug.BuildTargetUndefinedException
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.doctor.HeadDoctor
@@ -639,11 +637,6 @@ class WorkspaceLspService(
       folderServices.foreach(_.pause())
     }
 
-  private def displayNotFound(objectName: String, id: String) =
-    languageClient.showMessage(
-      Messages.errorMessageParams(s"$objectName not found: $id")
-    )
-
   private def onFirstSatifying[T, R](mapTo: MetalsLspService => Future[T])(
       satisfies: T => Boolean,
       exec: (MetalsLspService, T) => Future[R],
@@ -854,8 +847,9 @@ class WorkspaceLspService(
           .getResultFromSearches(
             folderServices.map(_.mainClassSearch(params))
           ) {
-            displayNotFound("Main class", params.mainClass)
-            Future.failed(new ju.NoSuchElementException(params.mainClass))
+            Future.successful(
+              DebugSession.failure(s"Main class not found: ${params.mainClass}")
+            )
           }
           .asJavaObject
 
@@ -868,8 +862,11 @@ class WorkspaceLspService(
           (service, someTarget) =>
             service.startTestSuite(someTarget.get, params),
           () => {
-            displayNotFound("Build target", params.target.toString())
-            Future.failed(BuildTargetNotFoundException(params.target.getUri))
+            Future.successful(
+              DebugSession.failure(
+                s"Build target not found: ${params.target.toString()}"
+              )
+            )
           },
         ).asJavaObject
       case ServerCommands.ResolveAndStartTestSuite(params)
@@ -878,8 +875,9 @@ class WorkspaceLspService(
           .getResultFromSearches(
             folderServices.map(_.testClassSearch(params))
           ) {
-            displayNotFound("Test class", params.testClass)
-            Future.failed(new ju.NoSuchElementException(params.testClass))
+            Future.successful(
+              DebugSession.failure(s"Test class: ${params.testClass}")
+            )
           }
           .asJavaObject
       case ServerCommands.StartAttach(params) if params.hostName != null =>
@@ -892,8 +890,9 @@ class WorkspaceLspService(
           (service, someTarget) =>
             service.createDebugSession(someTarget.get.getId()),
           () => {
-            displayNotFound("Build target", params.buildTarget)
-            Future.failed(BuildTargetUndefinedException())
+            Future.successful(
+              DebugSession.failure(s"Build target: ${params.buildTarget}")
+            )
           },
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>

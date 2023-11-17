@@ -142,17 +142,14 @@ class DebugDiscoverySuite
       )
       _ <- server.didOpen(notATestPath)
       result <- server
-        .startDebuggingUnresolved(
+        .assertDebuggingError(
           new DebugDiscoveryParams(
             server.toPath(notATestPath).toURI.toString,
             "runOrTestFile",
-          ).toJson
+          ).toJson,
+          DebugProvider.NoRunOptionException.getMessage(),
         )
-        .recover { case e @ DebugProvider.NoRunOptionException => e }
-    } yield assertNoDiff(
-      result.toString(),
-      DebugProvider.NoRunOptionException.toString(),
-    )
+    } yield ()
   }
 
   test("run-multiple") {
@@ -209,19 +206,14 @@ class DebugDiscoverySuite
       )
       _ <- server.didOpen(mainPath)
       result <- server
-        .startDebuggingUnresolved(
+        .assertDebuggingError(
           new DebugDiscoveryParams(
             server.toPath(mainPath).toURI.toString,
             "run",
-          ).toJson
+          ).toJson,
+          BuildTargetContainsNoMainException("a").getMessage(),
         )
-        .recover { case e: BuildTargetContainsNoMainException =>
-          e
-        }
-    } yield assertNoDiff(
-      result.toString,
-      BuildTargetContainsNoMainException("a").toString(),
-    )
+    } yield ()
   }
 
   test("workspace-error") {
@@ -241,19 +233,14 @@ class DebugDiscoverySuite
       )
       _ <- server.didOpen(mainPath)
       result <- server
-        .startDebuggingUnresolved(
+        .assertDebuggingError(
           new DebugDiscoveryParams(
             server.toPath(mainPath).toURI.toString,
             "run",
-          ).toJson
+          ).toJson,
+          WorkspaceErrorsException.getMessage(),
         )
-        .recover { case WorkspaceErrorsException =>
-          WorkspaceErrorsException
-        }
-    } yield assertNoDiff(
-      result.toString,
-      WorkspaceErrorsException.toString(),
-    )
+    } yield ()
   }
 
   test("other-target-error") {
@@ -317,18 +304,16 @@ class DebugDiscoverySuite
       _ <- server.didSave(mainPath)(identity)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       result <- server
-        .startDebuggingUnresolved(
+        .assertDebuggingError(
           new DebugDiscoveryParams(
             path = server.toPath(mainPath).toURI.toString,
             runType = "run",
             envFile = fakePath,
-          ).toJson
+          ).toJson,
+          InvalidEnvFileException(AbsolutePath(fakePath)).getMessage(),
         )
         .recover { case e: InvalidEnvFileException => e }
-    } yield assertNoDiff(
-      result.toString,
-      InvalidEnvFileException(AbsolutePath(fakePath)).toString(),
-    )
+    } yield ()
   }
 
   test("testFile") {
@@ -420,17 +405,14 @@ class DebugDiscoverySuite
       )
       _ <- server.didOpen(notATestPath)
       result <- server
-        .startDebuggingUnresolved(
+        .assertDebuggingError(
           new DebugDiscoveryParams(
             server.toPath(notATestPath).toURI.toString,
             "testTarget",
-          ).toJson
+          ).toJson,
+          NoTestsFoundException("build target", "a").getMessage(),
         )
-        .recover { case e: NoTestsFoundException => e }
-    } yield assertNoDiff(
-      result.toString(),
-      NoTestsFoundException("build target", "a").toString(),
-    )
+    } yield ()
   }
 
   test("no-semanticdb") {
@@ -454,18 +436,13 @@ class DebugDiscoverySuite
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       _ = cleanCompileCache("a")
       result <- server
-        .startDebuggingUnresolved(
+        .assertDebuggingError(
           new DebugDiscoveryParams(
             server.toPath(fooPath).toURI.toString,
             "testFile",
-          ).toJson
+          ).toJson,
+          SemanticDbNotFoundException.getMessage(),
         )
-        .recover { case SemanticDbNotFoundException =>
-          SemanticDbNotFoundException
-        }
-    } yield assertNoDiff(
-      result.toString,
-      SemanticDbNotFoundException.toString(),
-    )
+    } yield ()
   }
 }

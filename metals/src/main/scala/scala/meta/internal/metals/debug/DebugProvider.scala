@@ -404,7 +404,7 @@ class DebugProvider(
       )
     } yield {
       statusBar.addMessage("Started debug server!")
-      DebugSession(server.sessionName, server.uri.toString)
+      DebugSession.success(server.sessionName, server.uri.toString)
     }
   }
 

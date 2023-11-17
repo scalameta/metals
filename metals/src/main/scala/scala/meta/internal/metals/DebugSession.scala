@@ -1,3 +1,19 @@
 package scala.meta.internal.metals
 
-final case class DebugSession(name: String, uri: String)
+import javax.annotation.Nullable
+
+final case class DebugSession(
+    @Nullable name: String,
+    @Nullable uri: String,
+    @Nullable error: String,
+)
+
+object DebugSession {
+
+  def success(name: String, uri: String): DebugSession = {
+    DebugSession(name, uri, null)
+  }
+  def failure(message: String): DebugSession = {
+    DebugSession(null, null, message)
+  }
+}

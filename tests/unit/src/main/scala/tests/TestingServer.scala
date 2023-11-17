@@ -666,7 +666,7 @@ final case class TestingServer(
     params.setDataKind(kind)
     params.setData(parameter.toJson)
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
-      .collect { case DebugSession(_, uri) =>
+      .collect { case DebugSession(_, uri, _) =>
         scribe.info(s"Starting debug session for $uri")
         TestDebugger(URI.create(uri), stoppageHandler)
       }
@@ -708,8 +708,19 @@ final case class TestingServer(
   ): Future[TestDebugger] = {
     assertSystemExit(params)
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
-      .collect { case DebugSession(_, uri) =>
+      .collect { case DebugSession(_, uri, _) =>
         TestDebugger(URI.create(uri), stoppageHandler)
+      }
+  }
+
+  def assertDebuggingError(
+      params: AnyRef,
+      expected: String,
+  ): Future[Unit] = {
+    assertSystemExit(params)
+    executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
+      .collect { case DebugSession(_, _, msg) =>
+        Assertions.assertNoDiff(msg, expected)
       }
   }
 
