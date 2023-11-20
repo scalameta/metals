@@ -27,10 +27,14 @@ import scala.meta._
 object ScriptFirstImportPosition {
 
   val usingDirectives: List[String] = List("// using", "//> using")
+  val shebang = "#!"
   val ammHeaders: List[String] = List("// scala", "// ammonite")
 
+  private def adjustShebang(text: String): String =
+    text.replaceFirst(shebang, s"//$shebang")
+
   def ammoniteScStartOffset(text: String): Option[Int] = {
-    val it = tokenize(text).iterator
+    val it = tokenize(adjustShebang(text)).iterator
     startMarkerOffset(it, "/*<start>*/").map { startOffset =>
       val offset =
         skipPrefixesOffset(ammHeaders, it, None)
@@ -41,7 +45,7 @@ object ScriptFirstImportPosition {
   }
 
   def scalaCliScStartOffset(text: String): Option[Int] = {
-    val iterator = tokenize(text).iterator
+    val iterator = tokenize(adjustShebang(text)).iterator
     startMarkerOffset(iterator, "/*<script>*/").map { startOffset =>
       val offset =
         skipPrefixesOffset(usingDirectives, iterator, None)
@@ -52,7 +56,7 @@ object ScriptFirstImportPosition {
   }
 
   def skipUsingDirectivesOffset(text: String): Int =
-    skipPrefixesOffset(usingDirectives, text)
+    skipPrefixesOffset(usingDirectives, adjustShebang(text))
 
   def skipPrefixesOffset(prefixes: List[String], text: String): Int = {
     val it = tokenize(text).iterator
@@ -86,17 +90,20 @@ object ScriptFirstImportPosition {
   private def skipPrefixesOffset(
       prefixes: List[String],
       it: Iterator[Token],
-      lastOffset: Option[Int]
+      lastOffset: Option[Int],
+      foundShebang: Boolean = false
   ): Option[Int] = {
     if (it.hasNext) {
       it.next match {
         case t: Token.Comment
             if prefixes.exists(prefix => t.text.startsWith(prefix)) =>
-          skipPrefixesOffset(prefixes, it, Some(t.pos.end))
+          skipPrefixesOffset(prefixes, it, Some(t.pos.end), foundShebang)
+        case t: Token.Comment if t.value.startsWith(shebang) =>
+          skipPrefixesOffset(prefixes, it, Some(t.pos.end), foundShebang = true)
         case t if isWhitespace(t) =>
-          skipPrefixesOffset(prefixes, it, lastOffset)
-        case _ =>
-          lastOffset
+          skipPrefixesOffset(prefixes, it, lastOffset, foundShebang)
+        case _ if foundShebang => lastOffset.map(_ - 2)
+        case _ => lastOffset
       }
     } else lastOffset
   }
