@@ -35,6 +35,7 @@ import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SyntheticDecoration
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
@@ -573,6 +574,22 @@ class Compilers(
             path.toNIO.toUri().toString(),
             compiler.scalaVersion(),
           )
+
+        def adjustDecorations(
+            decorations: ju.List[SyntheticDecoration]
+        ): ju.List[DecorationOptions] = {
+          val withCorrectStart = decorations.asScala.dropWhile { d =>
+            val adjusted = adjust
+              .adjustPos(d.range().getStart(), adjustToZero = false)
+            adjusted.getLine() < 0 || adjusted.getCharacter() < 0
+          }
+          withCorrectStart.map { decoration =>
+            DecorationOptions(
+              decoration.label(),
+              adjust.adjustRange(decoration.range()),
+            )
+          }.asJava
+        }
         val vFile =
           CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
 
@@ -588,12 +605,7 @@ class Compilers(
           .syntheticDecorations(pcParams)
           .asScala
           .map { decorations =>
-            decorations.map { decoration =>
-              DecorationOptions(
-                decoration.label(),
-                adjust.adjustRange(decoration.range()),
-              )
-            }
+            adjustDecorations(decorations)
           }
 
       }

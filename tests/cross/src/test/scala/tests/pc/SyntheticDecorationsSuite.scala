@@ -537,4 +537,15 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |""".stripMargin
   )
 
+  check(
+    "ord",
+    """|object Main {
+       |  val ordered = "acb".sorted
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val ordered: String = augmentString("acb").sorted[Char](Char)
+       |}
+       |""".stripMargin
+  )
 }
