@@ -37,7 +37,7 @@ class WorkspaceFuzzBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def upper(): Seq[SymbolInformation] = {
-    symbols.search(query)
+    symbols.search(query, None)
   }
 
 }
