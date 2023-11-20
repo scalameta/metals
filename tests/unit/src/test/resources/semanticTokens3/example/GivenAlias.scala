@@ -42,6 +42,6 @@
 <<val>>/*keyword*/ <<f>>/*variable,definition,readonly*/ = <<given_Float>>/*variable,readonly*/
 <<val>>/*keyword*/ <<g>>/*variable,definition,readonly*/ = <<`* *`>>/*variable,readonly*/
 <<val>>/*keyword*/ <<i>>/*variable,definition,readonly*/ = <<X>>/*class*/.<<of>>/*method*/[<<Int>>/*class,abstract*/]
-<<val>>/*keyword*/ <<x>>/*variable,definition,readonly*/ = <<given_Xg>>/*class*/
+<<val>>/*keyword*/ <<x>>/*class,definition*/ = <<given_Xg>>/*class*/
 <<val>>/*keyword*/ <<y>>/*variable,definition,readonly*/ = <<given_Yg>>/*method*/
 <<val>>/*keyword*/ <<z>>/*variable,definition,readonly*/ = <<given_Zg_T>>/*method*/[<<String>>/*type*/]
