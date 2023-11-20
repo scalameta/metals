@@ -187,9 +187,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     testRoundtripCompilation()
   }
 
-  def testSelectServerDialogue(
-      additionalMessages: List[String] = Nil
-  ): Future[Unit] = {
+  def testSelectServerDialogue(): Future[Unit] = {
     // when asked, choose the Bob build tool
     client.selectBspServer = { actions =>
       actions.find(_.getTitle == "Bob").get
@@ -203,11 +201,11 @@ class BillLspSuite extends BaseLspSuite("bill") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        (additionalMessages ++
-          List(
-            Messages.BspSwitch.message,
-            Messages.CheckDoctor.allProjectsMisconfigured,
-          )).mkString("\n"),
+        List(
+          Messages.ChooseBuildTool.message,
+          Messages.BspSwitch.message,
+          Messages.CheckDoctor.allProjectsMisconfigured,
+        ).mkString("\n"),
       )
     } yield ()
   }
@@ -216,7 +214,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installWorkspace(workspace.toNIO, "Bob")
-    testSelectServerDialogue(List(Messages.ChooseBuildTool.message))
+    testSelectServerDialogue()
   }
 
   test("mix") {

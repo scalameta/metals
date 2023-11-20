@@ -55,6 +55,7 @@ final class BuildTools(
   def isBloop: Boolean = bloopProject.isDefined
   def isBsp: Boolean = {
     hasJsonFile(workspace.resolve(".bsp")) ||
+    customProjectRoot.exists(root => hasJsonFile(root.resolve(".bsp"))) ||
     bspGlobalDirectories.exists(hasJsonFile)
   }
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
@@ -123,34 +124,33 @@ final class BuildTools(
   def isBazel: Boolean = bazelProject.isDefined
 
   private def customBsps: List[BspOnly] = {
-    val bspFolder = workspace.resolve(".bsp")
+    val bspFolders =
+      (workspace :: customProjectRoot.toList).distinct
+        .map(_.resolve(".bsp")) ++ bspGlobalDirectories
     val root = customProjectRoot.getOrElse(workspace)
-    if (bspFolder.exists && bspFolder.isDirectory) {
-      bspFolder.toFile
+    for {
+      bspFolder <- bspFolders
+      if (bspFolder.exists && bspFolder.isDirectory)
+      buildTool <- bspFolder.toFile
         .listFiles()
         .collect {
           case file
               if file.isFile() && file.getName().endsWith(".json") &&
                 !knownBsps(file.getName().stripSuffix(".json")) =>
-            BspOnly(file.getName().stripSuffix(".json"), root)
+            BspOnly(
+              file.getName().stripSuffix(".json"),
+              root,
+              AbsolutePath(file.toPath()),
+            )
         }
         .toList
-    } else Nil
+    } yield buildTool
   }
 
   private def knownBsps =
     Set(SbtBuildTool.name, MillBuildTool.name) ++ ScalaCli.names
 
-  private def customProjectRoot =
-    userConfig().customProjectRoot
-      .map(relativePath => workspace.resolve(relativePath.trim()))
-      .filter { projectRoot =>
-        val exists = projectRoot.exists
-        if (!exists) {
-          scribe.error(s"custom project root $projectRoot does not exist")
-        }
-        exists
-      }
+  private def customProjectRoot = userConfig().getCustomProjectRoot(workspace)
 
   private def searchForBuildTool(
       isProjectRoot: AbsolutePath => Boolean

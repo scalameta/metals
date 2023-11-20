@@ -10,6 +10,7 @@ import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
@@ -19,6 +20,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -58,7 +60,10 @@ class BspConnector(
       else
         bspServers
           .findAvailableServers()
-          .find(_.getName == sel)
+          .find(buildServer =>
+            (ScalaCli.names(buildServer.getName()) && ScalaCli.names(sel)) ||
+              buildServer.getName == sel
+          )
           .map(ResolvedBspOne)
     }
   }
@@ -129,6 +134,7 @@ class BspConnector(
             .map(Some(_))
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
+          optSetBuildTool(details.getName())
           bspServers
             .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
             .map(Some(_))
@@ -163,6 +169,7 @@ class BspConnector(
                 )
               )
             _ = tables.buildServers.chooseServer(item.getName())
+            _ = optSetBuildTool(item.getName())
             conn <- bspServers.newServer(
               projectRoot,
               bspTraceRoot,
@@ -196,6 +203,19 @@ class BspConnector(
         }
     }
   }
+
+  private def optSetBuildTool(buildServerName: String): Unit =
+    buildTools.loadSupported
+      .find {
+        case _: ScalaCliBuildTool if ScalaCli.names(buildServerName) => true
+        case buildTool: BuildServerProvider
+            if buildTool.buildServerName.contains(buildServerName) =>
+          true
+        case buildTool => buildTool.executableName == buildServerName
+      }
+      .foreach(buildTool =>
+        tables.buildTool.chooseBuildTool(buildTool.executableName)
+      )
 
   private def sbtMetaWorkspaces(root: AbsolutePath): List[AbsolutePath] = {
     def recursive(

@@ -68,6 +68,18 @@ case class UserConfiguration(
     ) && this.showInferredType.nonEmpty
     showImplicitArguments || showInferredType || showImplicitConversionsAndClasses
   }
+
+  def getCustomProjectRoot(workspace: AbsolutePath): Option[AbsolutePath] =
+    customProjectRoot
+      .map(relativePath => workspace.resolve(relativePath.trim()))
+      .filter { projectRoot =>
+        val exists = projectRoot.toFile.exists
+        if (!exists) {
+          scribe.error(s"custom project root $projectRoot does not exist")
+        }
+        exists
+      }
+
 }
 
 object UserConfiguration {
