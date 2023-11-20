@@ -2153,6 +2153,7 @@ class MetalsLspService(
           found.buildTool,
           found.digest,
           importBuild,
+          quickConnectToBuildServer,
         )
       case None =>
         Future.successful(BuildChange.None)

@@ -6,7 +6,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
-import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
@@ -47,7 +46,7 @@ class BspConnector(
    */
   def resolve(buildTool: Option[BuildTool]): BspResolvedResult = {
     resolveExplicit().getOrElse {
-      if (buildTool.isInstanceOf[BloopInstallProvider] || buildTools.isBloop)
+      if (buildTool.exists(_.isBloopInstallProvider) || buildTools.isBloop)
         ResolvedBloop
       else bspServers.resolve()
     }
@@ -179,9 +178,10 @@ class BspConnector(
         possibleBuildServerConn match {
           case None => Future.successful(None)
           case Some(buildServerConn)
-              if buildServerConn.isBloop && buildTool.exists(
-                _.isInstanceOf[SbtBuildTool]
-              ) =>
+              if buildServerConn.isBloop && buildTool.exists {
+                case _: SbtBuildTool => true
+                case _ => false
+              } =>
             // NOTE: (ckipp01) we special case this here since sbt bsp server
             // doesn't yet support metabuilds. So in the future when that
             // changes, re-work this and move the creation of this out above
@@ -280,7 +280,7 @@ class BspConnector(
       if (
         bloopPresent || buildTools
           .loadSupported()
-          .exists(_.isInstanceOf[BloopInstallProvider])
+          .exists(_.isBloopInstallProvider)
       )
         new BspConnectionDetails(
           BloopServers.name,

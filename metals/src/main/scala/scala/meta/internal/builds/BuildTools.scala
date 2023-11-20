@@ -130,16 +130,15 @@ final class BuildTools(
         .listFiles()
         .collect {
           case file
-              if file.isFile() && file.getName().endsWith(".json") && !knowBsps(
-                file.getName().stripSuffix(".json")
-              ) =>
+              if file.isFile() && file.getName().endsWith(".json") &&
+                !knownBsps(file.getName().stripSuffix(".json")) =>
             BspOnly(file.getName().stripSuffix(".json"), root)
         }
         .toList
     } else Nil
   }
 
-  private def knowBsps =
+  private def knownBsps =
     Set(SbtBuildTool.name, MillBuildTool.name) ++ ScalaCli.names
 
   private def customProjectRoot =
@@ -230,6 +229,11 @@ final class BuildTools(
       Some(MavenBuildTool.name)
     else if (isMill && MillBuildTool.isMillRelatedPath(path))
       Some(MillBuildTool.name)
+    else if (
+      path.isFile && path.filename.endsWith(".json") &&
+      path.parent.filename == ".bsp"
+    )
+      Some(path.filename.stripSuffix(".json"))
     else None
   }
 

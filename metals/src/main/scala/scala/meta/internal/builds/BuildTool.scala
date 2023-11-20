@@ -24,6 +24,8 @@ trait BuildTool {
 
   val forcesBuildServer = false
 
+  val isBloopInstallProvider = false
+
 }
 
 object BuildTool {
