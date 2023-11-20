@@ -60,14 +60,23 @@ class ScalaCli(
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
+  private val scalaCliBuildDirectory =
+    new AtomicReference[Option[AbsolutePath]](None)
 
   import ScalaCli.ConnectionState
 
   private val isCancelled = new AtomicBoolean(false)
   def cancel(): Unit =
     if (isCancelled.compareAndSet(false, true))
-      try disconnectOldBuildServer()
-      catch {
+      try {
+        disconnectOldBuildServer().map { _ =>
+          scalaCliBuildDirectory.get() match {
+            case Some(dir) =>
+              dir.deleteRecursively()
+            case _ =>
+          }
+        }
+      } catch {
         case NonFatal(_) =>
       }
 
@@ -205,13 +214,30 @@ class ScalaCli(
     ifConnectedOrElse(st => Option(st.path))(None)
 
   def start(path: AbsolutePath): Future[Unit] = {
+    val workspace =
+      scalaCliBuildDirectory.get() match {
+        case Some(workspace) => workspace
+        case None =>
+          val tmpFile = AbsolutePath(
+            Files.createTempDirectory(s"metals-scala-cli")
+          )
+          val Some(workspace) =
+            scalaCliBuildDirectory.updateAndGet {
+              case None => Some(tmpFile)
+              case some => some
+            }
+          workspace
+      }
+
     disconnectOldBuildServer().onComplete {
       case Failure(e) =>
         scribe.warn("Error disconnecting old Scala CLI server", e)
       case Success(()) =>
     }
 
-    val command = cliCommand :+ "bsp" :+ path.toString()
+    val command =
+      cliCommand :+ "bsp" :+ "--workspace" :+ workspace.toString :+ path
+        .toString()
 
     val connDir = if (path.isDirectory) path else path.parent
 
