@@ -22,7 +22,7 @@ final class PcSyntheticDecorationsProvider(
   def tpdTree = unit.lastBody
 
   def provide(): List[SyntheticDecoration] =
-    traverse(Synthetics.empty, tpdTree).decorations
+    traverse(Synthetics.empty, tpdTree).result()
 
   def collectDecorations(
       tree: Tree,
@@ -220,11 +220,22 @@ final class PcSyntheticDecorationsProvider(
     def containsDef(offset: Int): Boolean = definitions(offset)
     def add(decoration: Decoration, offset: Int): Synthetics =
       copy(
-        decorations = decoration :: decorations,
+        decorations = addDecoration(decoration),
         definitions = definitions + offset
       )
     def add(decoration: Decoration): Synthetics =
-      copy(decorations = decoration :: decorations)
+      copy(
+        decorations = addDecoration(decoration),
+        definitions = definitions
+      )
+    // If method has both type parameter and implicit parameter, we want the type parameter decoration to be displayed first,
+    // but it's added second. This method adds the decoration to the right position in the list.
+    private def addDecoration(decoration: Decoration): List[Decoration] = {
+      val atSamePos =
+        decorations.takeWhile(_.range.getStart() == decoration.range.getStart())
+      (atSamePos :+ decoration) ++ decorations.drop(atSamePos.size)
+    }
+    def result(): List[Decoration] = decorations.reverse
   }
 
   object Synthetics {
