@@ -5,6 +5,8 @@ import java.{util => ju}
 
 import scala.collection.mutable
 
+import scala.meta.Dialect
+import scala.meta.dialects
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
@@ -32,6 +34,7 @@ class WorkspaceSearchVisitor(
     token: CancelChecker,
     index: GlobalSymbolIndex,
     saveClassFileToDisk: Boolean,
+    preferredDialect: Option[Dialect],
 )(implicit rc: ReportContext)
     extends SymbolSearchVisitor {
   private val fromWorkspace = new ju.ArrayList[l.SymbolInformation]()
@@ -88,14 +91,21 @@ class WorkspaceSearchVisitor(
   ): Option[SymbolDefinition] = {
     val nme = Classfile.name(filename)
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))
-
+    val preferredDialects = preferredDialect match {
+      case Some(dialects.Scala213) =>
+        Set(dialects.Scala213, dialects.Scala213Source3)
+      case Some(dialects.Scala212) =>
+        Set(dialects.Scala212, dialects.Scala212Source3)
+      case opt => opt.toSet
+    }
     val forTpe = index.definitions(tpe)
     val defs = if (forTpe.isEmpty) {
       val term = Symbol(Symbols.Global(pkg, Descriptor.Term(nme)))
       index.definitions(term)
     } else forTpe
-
-    defs.sortBy(_.path.toURI.toString).headOption
+    defs.sortBy { defn =>
+      (!preferredDialects(defn.dialect), defn.path.toURI.toString)
+    }.headOption
   }
   override def shouldVisitPackage(pkg: String): Boolean = true
   override def visitWorkspaceSymbol(

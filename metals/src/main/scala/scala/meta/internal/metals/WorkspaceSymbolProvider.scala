@@ -6,6 +6,7 @@ import java.nio.file.Path
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
+import scala.meta.Dialect
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
@@ -39,14 +40,21 @@ final class WorkspaceSymbolProvider(
   var inDependencies: ClasspathSearch =
     ClasspathSearch.empty
 
-  def search(query: String): Seq[l.SymbolInformation] = {
-    search(query, () => ())
+  def search(
+      query: String,
+      preferredDialect: Option[Dialect],
+  ): Seq[l.SymbolInformation] = {
+    search(query, () => (), preferredDialect)
   }
 
-  def search(query: String, token: CancelChecker): Seq[l.SymbolInformation] = {
+  def search(
+      query: String,
+      token: CancelChecker,
+      preferredDialect: Option[Dialect],
+  ): Seq[l.SymbolInformation] = {
     if (query.isEmpty) return Nil
     try {
-      searchUnsafe(query, token)
+      searchUnsafe(query, token, preferredDialect)
     } catch {
       case InterruptException() =>
         Nil
@@ -57,6 +65,7 @@ final class WorkspaceSymbolProvider(
       queryString: String,
       path: AbsolutePath,
       token: CancelToken,
+      preferredDialect: Option[Dialect],
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.exact(queryString)
     val visistor =
@@ -66,6 +75,7 @@ final class WorkspaceSymbolProvider(
         token,
         index,
         saveClassFileToDisk,
+        preferredDialect,
       )
     val targetId = buildTargets.inverseSources(path)
     search(query, visistor, targetId)
@@ -205,6 +215,7 @@ final class WorkspaceSymbolProvider(
   private def searchUnsafe(
       textQuery: String,
       token: CancelChecker,
+      preferredDialect: Option[Dialect],
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     val visitor =
@@ -214,6 +225,7 @@ final class WorkspaceSymbolProvider(
         token,
         index,
         saveClassFileToDisk,
+        preferredDialect,
       )
     search(query, visitor, None)
     visitor.allResults()

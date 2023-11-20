@@ -175,8 +175,9 @@ final class DefinitionProvider(
         else true
       }
 
+      val dialect = scalaVersionSelector.dialectFromBuildTarget(path)
       val locs = workspaceSearch
-        .searchExactFrom(ident.value, path, token)
+        .searchExactFrom(ident.value, path, token, dialect)
 
       val reducedGuesses =
         if (locs.size > 1)
