@@ -131,7 +131,7 @@ final class PcSemanticTokensProvider(
         if sym.isGetter | sym.isSetter then
           getTypeId(SemanticTokenTypes.Variable)
         else getTypeId(SemanticTokenTypes.Method) // "def"
-      else if isPredefClass(sym) then
+      else if sym.isTerm && sym.info.typeSymbol.is(Flags.Module) then
         getTypeId(SemanticTokenTypes.Class) // "class"
       else if sym.isTerm &&
         (!sym.is(Flags.Param) || sym.is(Flags.ParamAccessor))
@@ -152,8 +152,5 @@ final class PcSemanticTokensProvider(
 
     TokenNode(pos.start, pos.`end`, typ, mod)
   end makeNode
-
-  def isPredefClass(sym: Symbol)(using Context) =
-    sym.is(Flags.Method) && sym.info.resultType.typeSymbol.is(Flags.Module)
 
 end PcSemanticTokensProvider

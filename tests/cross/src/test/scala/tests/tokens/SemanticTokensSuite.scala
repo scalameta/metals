@@ -293,6 +293,29 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |""".stripMargin
   )
 
+  check(
+    "predef",
+    """
+      |object <<Main>>/*class*/ {
+      |  val <<a>>/*variable,definition,readonly*/ = <<List>>/*class*/(1,2,3)
+      |  val <<y>>/*class,definition*/ = <<List>>/*class*/
+      |  val <<z>>/*class,definition*/ = <<scala>>/*namespace*/.<<collection>>/*namespace*/.<<immutable>>/*namespace*/.<<List>>/*class*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "val-object",
+    """|case class <<X>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+       |object <<X>>/*class*/
+       |
+       |object <<Main>>/*class*/ {
+       |  val <<x>>/*class,definition*/ = <<X>>/*class*/
+       |  val <<y>>/*variable,definition,readonly*/ = <<X>>/*class*/(1)
+       |}
+       |""".stripMargin
+  )
+
   // When for-comprehension includes line with `=`, we get `scala.x$1`, `scala.x$2` symbols on `foo`.
   // Both `scala` and `x$#` have position on `foo`, and we don't want to highlight it as a `scala` package,
   // so we need `namespace` to have lower priority than `variable`.
