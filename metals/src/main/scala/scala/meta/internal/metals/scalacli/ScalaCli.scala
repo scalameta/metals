@@ -7,6 +7,9 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -19,6 +22,7 @@ import scala.util.Properties
 import scala.util.Success
 import scala.util.control.NonFatal
 
+import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
@@ -60,6 +64,16 @@ class ScalaCli(
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
+
+  private val createdFiles = new ConcurrentLinkedQueue[AbsolutePath]()
+  private def registerFile(path: AbsolutePath) = {
+    createdFiles.add(path)
+    path
+  }
+  private def localTmpWorkspace(path: AbsolutePath) = {
+    val root = if (path.isDirectory) path else path.parent
+    root.resolve(s".metals-scala-cli/")
+  }
   private val scalaCliBuildDirectory =
     new AtomicReference[Option[AbsolutePath]](None)
 
@@ -69,15 +83,13 @@ class ScalaCli(
   def cancel(): Unit =
     if (isCancelled.compareAndSet(false, true))
       try {
-        disconnectOldBuildServer().map { _ =>
-          scalaCliBuildDirectory.get() match {
-            case Some(dir) =>
-              dir.deleteRecursively()
-            case _ =>
-          }
-        }
+        scalaCliBuildDirectory.set(None)
+        disconnectOldBuildServer().asJava.get(100, TimeUnit.MILLISECONDS)
       } catch {
         case NonFatal(_) =>
+        case _: TimeoutException =>
+      } finally {
+        ConcurrentQueue.pollAll(createdFiles).foreach(_.deleteRecursively())
       }
 
   private val state =
@@ -214,20 +226,34 @@ class ScalaCli(
     ifConnectedOrElse(st => Option(st.path))(None)
 
   def start(path: AbsolutePath): Future[Unit] = {
-    val workspace =
-      scalaCliBuildDirectory.get() match {
-        case Some(workspace) => workspace
-        case None =>
-          val tmpFile = AbsolutePath(
-            Files.createTempDirectory(s"metals-scala-cli")
-          )
-          val Some(workspace) =
-            scalaCliBuildDirectory.updateAndGet {
-              case None => Some(tmpFile)
-              case some => some
+    val workspace = {
+      val globalTmpDir =
+        scalaCliBuildDirectory.get() match {
+          case Some(workspace) => workspace
+          case None =>
+            val tmpFile = registerFile {
+              AbsolutePath(
+                Files.createTempDirectory(s"metals-scala-cli")
+              )
             }
+            val Some(workspace) =
+              scalaCliBuildDirectory.updateAndGet {
+                case None => Some(tmpFile)
+                case some => some
+              }
+            workspace
+        }
+
+      // When path and workspace have different roots on Windows `scala-cli` throws an error,
+      // so we fallback to creating a tmp dir relative to `path`.
+      if (globalTmpDir.toNIO.getRoot() == path.toNIO.getRoot()) globalTmpDir
+      else
+        registerFile {
+          val workspace = localTmpWorkspace(path)
+          if (!workspace.exists) Files.createDirectory(workspace.toNIO)
           workspace
-      }
+        }
+    }
 
     disconnectOldBuildServer().onComplete {
       case Failure(e) =>
