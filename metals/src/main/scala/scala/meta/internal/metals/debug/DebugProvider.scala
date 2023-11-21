@@ -688,40 +688,6 @@ class DebugProvider(
       languageClient.metalsStatus(
         Messages.DebugErrorsPresent(clientConfig.icons())
       )
-    case t: ClassNotFoundException =>
-      languageClient.showMessage(
-        Messages.DebugClassNotFound.invalidClass(t.getMessage())
-      )
-    case ClassNotFoundInBuildTargetException(cls, buildTarget) =>
-      languageClient.showMessage(
-        Messages.DebugClassNotFound
-          .invalidTargetClass(cls, buildTarget.getDisplayName())
-      )
-    case BuildTargetNotFoundException(target) =>
-      languageClient.showMessage(
-        Messages.DebugClassNotFound
-          .invalidTarget(target)
-      )
-    case e: BuildTargetNotFoundForPathException =>
-      languageClient.showMessage(
-        Messages.errorMessageParams(e.getMessage())
-      )
-    case e: BuildTargetContainsNoMainException =>
-      languageClient.showMessage(
-        Messages.errorMessageParams(e.getMessage())
-      )
-    case e: BuildTargetUndefinedException =>
-      languageClient.showMessage(
-        Messages.errorMessageParams(e.getMessage())
-      )
-    case e: NoTestsFoundException =>
-      languageClient.showMessage(
-        Messages.errorMessageParams(e.getMessage())
-      )
-    case e: RunType.UnknownRunTypeException =>
-      languageClient.showMessage(
-        Messages.errorMessageParams(e.getMessage())
-      )
     case e @ SemanticDbNotFoundException =>
       languageClient.metalsStatus(
         MetalsStatusParams(
@@ -730,13 +696,7 @@ class DebugProvider(
           command = ClientCommands.RunDoctor.id,
         )
       )
-    case e @ DotEnvFileParser.InvalidEnvFileException(_) =>
-      languageClient.showMessage(Messages.errorMessageParams(e.getMessage()))
-
-    case e @ NoRunOptionException =>
-      languageClient.showMessage(
-        Messages.errorMessageParams(e.getMessage())
-      )
+    case _ =>
   }
 
   private def parseSessionName(
@@ -829,7 +789,7 @@ class DebugProvider(
           _ <- buildTargetClasses.rebuildIndex(target)
           result <- Future(f())
         } yield result
-      case Failure(_: ClassNotFoundException) =>
+      case Failure(_: NoClassFoundException) =>
         val allTargetIds = buildTargets.allBuildTargetIds
         for {
           _ <- compilations.compileTargets(allTargetIds)
@@ -866,6 +826,26 @@ class DebugProvider(
 }
 
 object DebugProvider {
+
+  private def exceptionOrder(t: Throwable): Int = t match {
+    /* Validation errors, should shown first as they are relevant for each build target.
+     */
+    case DotEnvFileParser.InvalidEnvFileException(_) => 0
+    case NoRunOptionException => 1
+    case _: RunType.UnknownRunTypeException => 2
+    /* Target found, but class not, means that we managed to find the proper workspace folder
+     */
+    case _: ClassNotFoundInBuildTargetException => 3
+    case _: BuildTargetContainsNoMainException => 4
+    case _: NoTestsFoundException => 5
+    /* These exception will show up and it's hard to pinpoint which folder we should be in
+     * since we failed to fin the exception anywhere. Probably just showing the error is enough.
+     */
+    case _: BuildTargetNotFoundForPathException => 6
+    case _: NoClassFoundException => 7
+    case _: BuildTargetNotFoundException => 8
+    case _ => 9
+  }
 
   /**
    * Given an occurence and a text document return the symbol of a main method
@@ -958,16 +938,16 @@ object DebugProvider {
     protected def dapSessionParams(res: A): Future[DebugSessionParams]
     def createDapSession(args: A): Future[DebugSession] =
       dapSessionParams(args).flatMap(debugProvider.asSession(_))
-    def searchResult: Future[(Option[A], ClassSearch[A])] = {
+    def searchResult: Future[(Try[A], ClassSearch[A])] = {
       Future {
         val resolved = search()
         searchPromise.trySuccess(resolved)
       }
-      searchPromise.future.map(e => (e.toOption, this))
+      searchPromise.future.map(e => (e, this))
     }
-    def retrySearchResult: Future[(Option[A], ClassSearch[A])] =
+    def retrySearchResult: Future[(Try[A], ClassSearch[A])] =
       searchPromise.future
-        .flatMap(debugProvider.retryAfterRebuild(_, search).map(_.toOption))
+        .flatMap(debugProvider.retryAfterRebuild(_, search))
         .map((_, this))
   }
 
@@ -1000,27 +980,32 @@ object DebugProvider {
       debugProvider.buildTestClassParams(res, params)
   }
 
-  def getResultFromSearches[A](searches: List[ClassSearch[A]])(
-      default: => Future[DebugSession]
+  def getResultFromSearches[A](
+      searches: List[ClassSearch[A]]
   )(implicit ec: ExecutionContext): Future[DebugSession] =
     Future
       .sequence(searches.map(_.searchResult))
-      .getFirstOrElse(
-        Future
-          .sequence(searches.map(_.retrySearchResult))
-          .getFirstOrElse(default)
-      )
+      .getFirstOrError
+      .recoverWith { case _ =>
+        Future.sequence(searches.map(_.retrySearchResult)).getFirstOrError
+      }
 
   private implicit class FindFirstDebugSession[A](
-      from: Future[List[(Option[A], ClassSearch[A])]]
+      from: Future[List[(Try[A], ClassSearch[A])]]
   ) {
-    def getFirstOrElse(
-        default: => Future[DebugSession]
-    )(implicit ec: ExecutionContext): Future[DebugSession] =
-      from.flatMap {
-        _.collectFirst { case (Some(dapSession), search) =>
-          search.createDapSession(dapSession)
-        }.getOrElse(default)
+    def getFirstOrError(implicit ec: ExecutionContext): Future[DebugSession] =
+      from.flatMap { all =>
+        def mostRelevantError() = all
+          .collect { case (Failure(error), _) =>
+            error
+          }
+          .sortBy(DebugProvider.exceptionOrder)
+          .head
+        all
+          .collectFirst { case (Success(dapSession), search) =>
+            search.createDapSession(dapSession)
+          }
+          .getOrElse(Future.failed(mostRelevantError()))
       }
   }
 }

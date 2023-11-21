@@ -16,6 +16,7 @@ import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -410,12 +411,12 @@ class DebugProtocolSuite
               singletonList("Foo"),
             ).toJson
           )
-          .recover { case WorkspaceErrorsException =>
-            WorkspaceErrorsException
+          .recover { case e: ResponseErrorException =>
+            e.getMessage()
           }
-    } yield assertDiffEqual(
+    } yield assertNoDiff(
       result.toString(),
-      WorkspaceErrorsException.toString(),
+      WorkspaceErrorsException.getMessage(),
     )
   }
 
@@ -484,12 +485,12 @@ class DebugProtocolSuite
               "a.Foo"
             ).toJson
           )
-          .recover { case WorkspaceErrorsException =>
-            WorkspaceErrorsException
+          .recover { case e: ResponseErrorException =>
+            e.getMessage()
           }
-    } yield assertContains(
+    } yield assertNoDiff(
       result.toString(),
-      WorkspaceErrorsException.toString(),
+      WorkspaceErrorsException.getMessage(),
     )
   }
 }
