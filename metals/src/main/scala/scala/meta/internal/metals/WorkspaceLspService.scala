@@ -23,8 +23,6 @@ import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.StatusBarState
-import scala.meta.internal.metals.debug.BuildTargetNotFoundException
-import scala.meta.internal.metals.debug.BuildTargetUndefinedException
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.doctor.HeadDoctor
@@ -93,6 +91,7 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbolParams
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages
 
 class WorkspaceLspService(
@@ -639,10 +638,20 @@ class WorkspaceLspService(
       folderServices.foreach(_.pause())
     }
 
-  private def displayNotFound(objectName: String, id: String) =
-    languageClient.showMessage(
-      Messages.errorMessageParams(s"$objectName not found: $id")
-    )
+  private def failedRequest(
+      message: String
+  ): Future[Object] = {
+    Future
+      .failed(
+        new ResponseErrorException(
+          new messages.ResponseError(
+            messages.ResponseErrorCode.InvalidParams,
+            message,
+            null,
+          )
+        )
+      )
+  }
 
   private def onFirstSatifying[T, R](mapTo: MetalsLspService => Future[T])(
       satisfies: T => Boolean,
@@ -842,21 +851,16 @@ class WorkspaceLspService(
         ) match {
           case Some(service) => service.startDebugProvider(params).asJavaObject
           case None =>
-            languageClient.showMessage(
-              Messages.errorMessageParams(
-                s"Could not find folder for build targets: ${targets.mkString(",")}"
-              )
-            )
-            Future.failed(DebugProvider.WorkspaceErrorsException).asJavaObject
+            failedRequest(
+              s"Could not find folder for build targets: ${targets.mkString(",")}"
+            ).asJavaObject
         }
       case ServerCommands.StartMainClass(params) if params.mainClass != null =>
         DebugProvider
           .getResultFromSearches(
             folderServices.map(_.mainClassSearch(params))
-          ) {
-            displayNotFound("Main class", params.mainClass)
-            Future.failed(new ju.NoSuchElementException(params.mainClass))
-          }
+          )
+          .liftToLspError
           .asJavaObject
 
       case ServerCommands.StartTestSuite(params)
@@ -867,20 +871,15 @@ class WorkspaceLspService(
           _.isDefined,
           (service, someTarget) =>
             service.startTestSuite(someTarget.get, params),
-          () => {
-            displayNotFound("Build target", params.target.toString())
-            Future.failed(BuildTargetNotFoundException(params.target.getUri))
-          },
+          () => failedRequest(s"Could not find '${params.target}' build target"),
         ).asJavaObject
       case ServerCommands.ResolveAndStartTestSuite(params)
           if params.testClass != null =>
         DebugProvider
           .getResultFromSearches(
             folderServices.map(_.testClassSearch(params))
-          ) {
-            displayNotFound("Test class", params.testClass)
-            Future.failed(new ju.NoSuchElementException(params.testClass))
-          }
+          )
+          .liftToLspError
           .asJavaObject
       case ServerCommands.StartAttach(params) if params.hostName != null =>
         onFirstSatifying(service =>
@@ -891,13 +890,16 @@ class WorkspaceLspService(
           _.isDefined,
           (service, someTarget) =>
             service.createDebugSession(someTarget.get.getId()),
-          () => {
-            displayNotFound("Build target", params.buildTarget)
-            Future.failed(BuildTargetUndefinedException())
-          },
+          () =>
+            failedRequest(
+              s"Could not find '${params.buildTarget}' build target"
+            ),
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
-        getServiceFor(params.path).debugDiscovery(params)
+        getServiceFor(params.path)
+          .debugDiscovery(params)
+          .liftToLspError
+          .asJavaObject
       case ServerCommands.AnalyzeStacktrace(content) =>
         Future {
           // Getting the service for focused document and first one otherwise

@@ -1909,11 +1909,10 @@ class MetalsLspService(
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
     stacktraceAnalyzer.analyzeCommand(content)
 
-  def debugDiscovery(params: DebugDiscoveryParams): CompletableFuture[Object] =
+  def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
     debugProvider
       .debugDiscovery(params)
       .flatMap(debugProvider.asSession)
-      .asJavaObject
 
   def findBuildTargetByDisplayName(target: String): Option[b.BuildTarget] =
     buildTargets.findByDisplayName(target)

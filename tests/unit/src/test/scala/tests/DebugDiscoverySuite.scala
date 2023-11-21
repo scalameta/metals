@@ -12,6 +12,8 @@ import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
 import scala.meta.internal.metals.debug.NoTestsFoundException
 import scala.meta.io.AbsolutePath
 
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
 class DebugDiscoverySuite
@@ -148,10 +150,10 @@ class DebugDiscoverySuite
             "runOrTestFile",
           ).toJson
         )
-        .recover { case e @ DebugProvider.NoRunOptionException => e }
+        .recover { case e: ResponseErrorException => e.getMessage }
     } yield assertNoDiff(
       result.toString(),
-      DebugProvider.NoRunOptionException.toString(),
+      DebugProvider.NoRunOptionException.getMessage(),
     )
   }
 
@@ -215,12 +217,10 @@ class DebugDiscoverySuite
             "run",
           ).toJson
         )
-        .recover { case e: BuildTargetContainsNoMainException =>
-          e
-        }
+        .recover { case e: ResponseErrorException => e.getMessage }
     } yield assertNoDiff(
       result.toString,
-      BuildTargetContainsNoMainException("a").toString(),
+      BuildTargetContainsNoMainException("a").getMessage(),
     )
   }
 
@@ -247,12 +247,10 @@ class DebugDiscoverySuite
             "run",
           ).toJson
         )
-        .recover { case WorkspaceErrorsException =>
-          WorkspaceErrorsException
-        }
+        .recover { case e: ResponseErrorException => e.getMessage }
     } yield assertNoDiff(
       result.toString,
-      WorkspaceErrorsException.toString(),
+      WorkspaceErrorsException.getMessage(),
     )
   }
 
@@ -324,10 +322,10 @@ class DebugDiscoverySuite
             envFile = fakePath,
           ).toJson
         )
-        .recover { case e: InvalidEnvFileException => e }
+        .recover { case e: ResponseErrorException => e.getMessage }
     } yield assertNoDiff(
       result.toString,
-      InvalidEnvFileException(AbsolutePath(fakePath)).toString(),
+      InvalidEnvFileException(AbsolutePath(fakePath)).getMessage(),
     )
   }
 
@@ -426,10 +424,10 @@ class DebugDiscoverySuite
             "testTarget",
           ).toJson
         )
-        .recover { case e: NoTestsFoundException => e }
+        .recover { case e: ResponseErrorException => e.getMessage }
     } yield assertNoDiff(
       result.toString(),
-      NoTestsFoundException("build target", "a").toString(),
+      NoTestsFoundException("build target", "a").getMessage(),
     )
   }
 
@@ -460,12 +458,10 @@ class DebugDiscoverySuite
             "testFile",
           ).toJson
         )
-        .recover { case SemanticDbNotFoundException =>
-          SemanticDbNotFoundException
-        }
+        .recover { case e: ResponseErrorException => e.getMessage }
     } yield assertNoDiff(
       result.toString,
-      SemanticDbNotFoundException.toString(),
+      SemanticDbNotFoundException.getMessage(),
     )
   }
 }
