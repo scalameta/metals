@@ -25,19 +25,19 @@ class DelegatingGlobalSymbolIndex(
   def addSourceFile(
       file: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
-      dialect: Dialect,
+      dialect: Dialect
   ): Option[mtags.IndexingResult] = {
     underlying.addSourceFile(file, sourceDirectory, dialect)
   }
   def addSourceJar(
       jar: AbsolutePath,
-      dialect: Dialect,
+      dialect: Dialect
   ): List[mtags.IndexingResult] = {
     underlying.addSourceJar(jar, dialect)
   }
   def addSourceDirectory(
       dir: AbsolutePath,
-      dialect: Dialect,
+      dialect: Dialect
   ): List[mtags.IndexingResult] = {
     underlying.addSourceDirectory(dir, dialect)
   }

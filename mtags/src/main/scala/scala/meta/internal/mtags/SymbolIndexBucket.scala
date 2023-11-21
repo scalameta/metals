@@ -93,10 +93,11 @@ class SymbolIndexBucket(
   }
 
   def addSourceFile(
-    source: AbsolutePath,
-    sourceDirectory: Option[AbsolutePath],
+      source: AbsolutePath,
+      sourceDirectory: Option[AbsolutePath]
   ): Option[IndexingResult] = {
-    val IndexingResult(path, topLevels, overrides) = indexSource(source, dialect, sourceDirectory)
+    val IndexingResult(path, topLevels, overrides) =
+      indexSource(source, dialect, sourceDirectory)
     topLevels.foreach { symbol =>
       val acc = toplevels.getOrElse(symbol, Set.empty)
       toplevels(symbol) = acc + source

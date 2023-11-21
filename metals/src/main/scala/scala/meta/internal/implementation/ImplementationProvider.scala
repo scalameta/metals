@@ -10,7 +10,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
@@ -417,9 +416,8 @@ final class ImplementationProvider(
 
   private def semanticdbForJarFile(fileSource: AbsolutePath) = {
     val dialect = ScalaVersions.dialectForDependencyJar(fileSource.filename)
-    val text = FileIO.slurp(fileSource, StandardCharsets.UTF_8)
-    val input = Input.VirtualFile(fileSource.toURI.toString(), text)
-    val textDocument = Mtags.index(input, dialect)
+    FileIO.slurp(fileSource, StandardCharsets.UTF_8)
+    val textDocument = Mtags.index(fileSource, dialect)
     textDocument
   }
 

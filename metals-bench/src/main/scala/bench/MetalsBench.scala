@@ -102,7 +102,15 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def typeHierarchyIndex(): Unit = {
-    scalaDependencySources.inputs.foreach { Mtags.indexWithOverrides(_) }
+    scalaDependencySources.inputs.foreach { input =>
+      implicit val rc: ReportContext = EmptyReportContext
+      new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = true,
+        includeMembers = false,
+        dialects.Scala213,
+      ).index()
+    }
   }
 
   @Benchmark

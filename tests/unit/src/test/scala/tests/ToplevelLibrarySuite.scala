@@ -77,7 +77,7 @@ class ToplevelLibrarySuite extends BaseSuite {
     assertNoDiff(
       obtained.mkString("\n"),
       expected.mkString("\n"),
-      s"${input.text}",
+      s"${input.path}",
     )
   }
 
