@@ -66,32 +66,6 @@ abstract class PcCollector[T](
     all.filter(s => s != NoSymbol && !s.isError)
   }
 
-  /**
-   * For classes defined in methods it's not possible to find
-   * companion via methods in symbol.
-   *
-   * @param sym symbol to find a companion for
-   * @return companion if it exists
-   */
-
-  def adjust(
-      pos: Position,
-      forRename: Boolean = false
-  ): (Position, Boolean) = {
-    val isBackticked = text(pos.start) == '`' &&
-      text(pos.end - 1) == '`' &&
-      pos.start != (pos.end - 1) // for one character names, e.g. `c`
-    //                                                    start-^^-end
-    val isOldNameBackticked = text(pos.start) == '`' &&
-      (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
-      text(pos.end + 1) == '`'
-    if (isBackticked && forRename)
-      (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
-    else if (isOldNameBackticked) // pos
-      (pos.withEnd(pos.end + 2), false)
-    else (pos, false)
-  }
-
   private lazy val namedArgCache = {
     val parsedTree = parseTree(unit.source)
     parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
@@ -122,6 +96,14 @@ abstract class PcCollector[T](
       else {
         Some(symbolAlternatives(id.symbol), id.pos)
       }
+    /* Anonynous function parameters such as:
+     * List(1).map{ <<abc>>: Int => abc}
+     * In this case, parameter has incorrect namePosition, so we need to handle it separately
+     */
+    case (vd: ValDef) if isAnonFunctionParam(vd) =>
+      val namePos = vd.pos.withEnd(vd.pos.start + vd.name.length)
+      if (namePos.includes(pos)) Some(symbolAlternatives(vd.symbol), namePos)
+      else None
 
     /* all definitions:
      * def fo@@o = ???
@@ -348,6 +330,30 @@ abstract class PcCollector[T](
             newAcc,
             sel.qualifier
           )
+
+        /**
+         * Anonynous function parameters such as:
+         * List(1).map{ <<abc>>: Int => abc}
+         * In this case, parameter has incorrect namePosition, so we need to handle it separately
+         */
+        case Function(params, body) =>
+          val newAcc = params
+            .filter(vd => vd.pos.isRange && filter(vd))
+            .foldLeft(
+              acc
+            ) { case (acc, vd) =>
+              val pos = vd.pos.withEnd(vd.pos.start + vd.name.length)
+              annotationChildren(vd).foldLeft({
+                acc + collect(
+                  vd,
+                  pos
+                )
+              })(traverse(_, _))
+            }
+          traverse(
+            params.map(_.tpt).foldLeft(newAcc)(traverse(_, _)),
+            body
+          )
         /* all definitions:
          * def <<foo>> = ???
          * class <<Foo>> = ???
@@ -521,17 +527,7 @@ abstract class PcCollector[T](
     }
   }
 
-  private val forCompMethods =
-    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
-
-  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
-  private def isForComprehensionMethod(sel: Select): Boolean = {
-    val syntheticName = sel.name match {
-      case name: TermName => forCompMethods(name)
-      case _ => false
-    }
-    val wrongSpan = sel.qualifier.pos.includes(sel.namePosition.focusStart)
-    syntheticName && wrongSpan
-  }
+  private def isAnonFunctionParam(vd: ValDef): Boolean =
+    vd.symbol != null && vd.symbol.owner.isAnonymousFunction && vd.rhs.isEmpty
 
 }

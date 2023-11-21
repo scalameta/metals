@@ -13,7 +13,6 @@ import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.decorations.PublishDecorationsParams
@@ -91,7 +90,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
-  var bspError = BspErrorHandler.dismiss
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -188,6 +186,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   def workspaceClientCommands: List[String] = {
     clientCommands.asScala.toList.map(_.getCommand)
   }
+
+  def pollStatusBar(): String = statusParams.poll().text
 
   def statusBarHistory: String = {
     statusParams.asScala
@@ -371,10 +371,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         } else if (params.getMessage() == choicesMessage) {
           params.getActions().asScala.head
         } else if (
-          params.getMessage().startsWith(BspErrorHandler.errorHeader)
-        ) {
-          bspError
-        } else if (
           params.getMessage() == ConnectionBspStatus
             .noResponseParams("Bill", Icons.default)
             .logMessage(Icons.default)
@@ -454,28 +450,31 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     )
   }
 
-  def workspaceDecorations: String = {
-    workspaceDecorations(isHover = false)
+  def syntheticDecorations: String = {
+    syntheticDecorations(isHover = false)
   }
-  def workspaceDecorationHoverMessage: String = {
-    workspaceDecorations(isHover = true)
+
+  def workspaceDecorations(filename: String): String = {
+    syntheticDecorations(isHover = false, Some(filename))
   }
-  private def workspaceDecorations(isHover: Boolean): String = {
+
+  def syntheticDecorationHoverMessage: String =
+    syntheticDecorations(isHover = true)
+
+  def syntheticDecorationHoverMessage(
+      filename: String
+  ): String = {
+    syntheticDecorations(isHover = true, Some(filename))
+  }
+  private def syntheticDecorations(
+      isHover: Boolean,
+      filename: Option[String] = None,
+  ): String = {
     val out = new StringBuilder()
-    val nonEmptyDecorations = decorations.asScala.filter {
-      case (_, decorations) => decorations.nonEmpty
-    }
-    val isSingle = nonEmptyDecorations.size == 1
-    nonEmptyDecorations.foreach { case (path, decorations) =>
-      if (!isSingle) {
-        out
-          .append("/")
-          .append(path.toRelative(workspace).toURI(false).toString())
-          .append("\n")
-      }
+    decorationsForPath(filename).foreach { case (path, synthetics) =>
       val input = path.toInputFromBuffers(buffers)
       input.text.linesIterator.zipWithIndex.foreach { case (line, i) =>
-        val lineDecorations = decorations.toList
+        val lineDecorations = synthetics.toList
           .flatMap(params =>
             params.options.map(o =>
               (
@@ -521,8 +520,19 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     out.toString()
   }
 
+  private def decorationsForPath(filename: Option[String]) = {
+    filename match {
+      case None =>
+        decorations.asScala.find(_._2.nonEmpty)
+      case Some(file) =>
+        val path = workspace.resolve(file)
+        val synthetics = decorations.asScala.getOrElse(path, Set.empty)
+        Some(path, synthetics)
+    }
+  }
+
   def workspaceTreeViewChanges: String = {
-    treeViewChanges.asScala.toSeq
+    val changes = treeViewChanges.asScala.toSeq
       .map { change =>
         change.nodes
           .map(n => n.viewId + " " + Option(n.nodeUri).getOrElse("<root>"))
@@ -530,6 +540,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       }
       .sorted
       .mkString("----\n")
+    treeViewChanges.clear()
+    changes
   }
 
   def applyCodeAction(

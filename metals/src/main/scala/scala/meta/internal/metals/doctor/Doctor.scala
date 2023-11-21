@@ -8,13 +8,12 @@ import java.util.Date
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.Duration
 import scala.util.Try
 
 import scala.meta.internal.bsp.BspResolvedResult
 import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
 import scala.meta.internal.bsp.ResolvedMultiple
@@ -66,6 +65,7 @@ final class Doctor(
     maybeJDKVersion: Option[JdkVersion],
     folderName: String,
     buildTools: BuildTools,
+    bspStatus: ConnectionBspStatus,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
@@ -345,7 +345,7 @@ final class Doctor(
     }
 
     val targetIds = allTargetIds()
-    val errorReports = getErrorReports().groupBy(_.buildTarget)
+    val errorReports = getErrorReports().groupBy(ErrorReportsGroup.from)
     if (targetIds.isEmpty) {
       html
         .element("p")(
@@ -376,7 +376,13 @@ final class Doctor(
                 .element("th")(_.text("Recommendation"))
             )
           ).element("tbody")(html =>
-            buildTargetRows(html, allTargetsInfo, errorReports)
+            buildTargetRows(
+              html,
+              allTargetsInfo,
+              errorReports.collect { case (BuildTarget(name) -> v) =>
+                (name -> v)
+              },
+            )
           )
         )
 
@@ -394,22 +400,20 @@ final class Doctor(
 
   private def addErrorReportsInfo(
       html: HtmlBuilder,
-      errorReports: Map[Option[String], List[ErrorReportInfo]],
+      errorReports: Map[ErrorReportsGroup, List[ErrorReportInfo]],
   ) = {
     html.element("h2")(_.text("Error reports:"))
     errorReports.toVector
       .sortWith {
-        case (Some(v1) -> _, Some(v2) -> _) => v1 < v2
-        case (None -> _, _ -> _) => false
-        case (_ -> _, None -> _) => true
+        case (BuildTarget(v1) -> _, BuildTarget(v2) -> _) => v1 < v2
+        case (v1 -> _, v2 -> _) => v1.orderingNumber < v2.orderingNumber
       }
-      .foreach { case (optBuildTarget, reports) =>
-        def name(default: String) = optBuildTarget.getOrElse(default)
+      .foreach { case (group, reports) =>
         html.element("details")(details =>
           details
-            .element("summary", s"id=reports-${name("other")}")(
+            .element("summary", s"id=reports-${group.id}")(
               _.element("b")(
-                _.text(s"${name("Other error reports")} (${reports.length}):")
+                _.text(s"${group.name} (${reports.length}):")
               )
             )
             .element("table") { table =>
@@ -443,14 +447,14 @@ final class Doctor(
   private def buildTargetRows(
       html: HtmlBuilder,
       infos: Seq[DoctorTargetInfo],
-      errorReports: Map[Option[String], List[ErrorReportInfo]],
+      errorReports: Map[String, List[ErrorReportInfo]],
   ): Unit = {
     infos
       .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
       .foreach { targetInfo =>
         val center = "style='text-align: center'"
         def addErrorReportText(html: HtmlBuilder) =
-          errorReports.getOrElse(Some(targetInfo.name), List.empty) match {
+          errorReports.getOrElse(targetInfo.name, List.empty) match {
             case Nil => html.text(Icons.unicode.check)
             case _ =>
               html.link(s"#reports-${targetInfo.name}", Icons.unicode.alert)
@@ -532,7 +536,7 @@ final class Doctor(
       javaTarget.displayName,
       gotoBuildTargetCommand(workspace, javaTarget.displayName),
       javaTarget.dataKind,
-      javaTarget.baseDirectory,
+      Option(javaTarget.baseDirectory),
       "Java",
       compilationStatus,
       diagnosticsStatus,
@@ -546,10 +550,7 @@ final class Doctor(
   }
 
   private def isServerResponsive: Option[Boolean] =
-    currentBuildServer().flatMap { conn =>
-      val isResponsiveFuture = conn.main.isBuildServerResponsive
-      Try(Await.result(isResponsiveFuture, Duration("1s"))).toOption.flatten
-    }
+    bspStatus.isBuildServerResponsive
 
   private def extractScalaTargetInfo(
       scalaTarget: ScalaTarget,
@@ -612,7 +613,7 @@ final class Doctor(
       scalaTarget.displayName,
       gotoBuildTargetCommand(workspace, scalaTarget.displayName),
       scalaTarget.dataKind,
-      scalaTarget.baseDirectory,
+      Option(scalaTarget.baseDirectory),
       targetType,
       compilationStatus,
       diagnosticsStatus,
@@ -665,5 +666,36 @@ object Doctor {
       .dropWhile(_ == "")
       .map(decode)
       .mkString("\n")
+  }
+}
+
+sealed trait ErrorReportsGroup {
+  def orderingNumber: Int
+  def id: String
+  def name: String
+}
+
+case object Bloop extends ErrorReportsGroup {
+  def orderingNumber = 1
+  def id: String = "bloop"
+  def name: String = "Bloop error reports"
+}
+case class BuildTarget(name: String) extends ErrorReportsGroup {
+  def orderingNumber = 2
+  def id: String = name
+}
+case object Other extends ErrorReportsGroup {
+  def orderingNumber = 3
+  def id: String = "other"
+  def name: String = "Other error reports"
+}
+
+object ErrorReportsGroup {
+  def from(info: ErrorReportInfo): ErrorReportsGroup = {
+    info.buildTarget match {
+      case Some(bt) => BuildTarget(bt)
+      case None if info.errorReportType == "bloop" => Bloop
+      case _ => Other
+    }
   }
 }

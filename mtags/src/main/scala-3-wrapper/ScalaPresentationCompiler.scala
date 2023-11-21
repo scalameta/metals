@@ -19,6 +19,8 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.SyntheticDecorationsParams
 import scala.meta.pc.VirtualFileParams
 
 import dotty.tools.pc.{ScalaPresentationCompiler as DottyPresentationCompiler}
@@ -52,18 +54,23 @@ case class ScalaPresentationCompiler(
     reportsLevel: ReportLevel = ReportLevel.Info,
 ) extends PresentationCompiler:
   val underlying: DottyPresentationCompiler = new DottyPresentationCompiler(
-    buildTargetIdentifier,
-    classpath,
-    options,
-    search,
-    ec,
-    sh,
-    config,
-    folderPath,
-    reportsLevel,
+    buildTargetIdentifier = buildTargetIdentifier,
+    classpath = classpath,
+    options = options,
+    search = search,
+    ec = ec,
+    sh = sh,
+    config = config,
+    folderPath = folderPath,
+    reportsLevel = reportsLevel,
   )
 
   def this() = this("", Nil, Nil)
+
+  override def syntheticDecorations(
+      params: SyntheticDecorationsParams
+  ): CompletableFuture[ju.List[SyntheticDecoration]] =
+    underlying.syntheticDecorations(params)
 
   override def didClose(uri: URI): Unit =
     underlying.didClose(uri)
@@ -208,4 +215,9 @@ case class ScalaPresentationCompiler(
       executorService: ExecutorService
   ): PresentationCompiler =
     underlying.withExecutorService(executorService)
+
+  override def withBuildTargetName(
+      buildTargetName: String
+  ): PresentationCompiler =
+    underlying.withBuildTargetName(buildTargetName)
 end ScalaPresentationCompiler

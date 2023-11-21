@@ -29,7 +29,7 @@ final class Symbol private (val value: String) {
   def isPackage: Boolean = desc.isPackage
   def isParameter: Boolean = desc.isParameter
   def isTypeParameter: Boolean = desc.isTypeParameter
-  private def desc: Descriptor = value.desc
+  private lazy val desc: Descriptor = value.desc
 
   def owner: Symbol = Symbol(value.owner)
   def displayName: String = desc.name.value
@@ -40,14 +40,6 @@ final class Symbol private (val value: String) {
       else loop(s.owner)
     }
     loop(this)
-  }
-  def enclosingPackageChain: String = {
-    def loop(s: Symbol): List[String] = {
-      if (s.isPackage) Nil
-      else s.displayName :: loop(s.owner)
-    }
-    if (isPackage || isNone) displayName
-    else loop(this).reverse.mkString(".")
   }
   def toplevel: Symbol = {
     if (value.isNone) this

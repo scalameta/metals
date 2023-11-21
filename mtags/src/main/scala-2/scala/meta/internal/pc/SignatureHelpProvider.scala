@@ -475,6 +475,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           shortenedNames
         )
     }
+    if (activeSignature == null) {
+      activeSignature = 0
+    }
     val mainSignature = infos(activeSignature)
     val deduplicated = infos
       .filter { sig =>

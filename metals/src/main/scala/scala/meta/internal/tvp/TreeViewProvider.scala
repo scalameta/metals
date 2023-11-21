@@ -2,7 +2,6 @@ package scala.meta.internal.tvp
 
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.{lsp4j => l}
 
 trait TreeViewProvider {
@@ -27,9 +26,6 @@ trait TreeViewProvider {
   ): TreeViewParentResult = TreeViewParentResult()
   def onVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams
-  ): Unit = ()
-  def onBuildTargetDidCompile(
-      id: BuildTargetIdentifier
   ): Unit = ()
 }
 

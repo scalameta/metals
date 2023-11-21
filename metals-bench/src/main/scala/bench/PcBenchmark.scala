@@ -2,9 +2,20 @@ package bench
 
 import java.nio.file.Path
 
+import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContextExecutor
+
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals
 import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.ExcludedPackagesHandler
+import scala.meta.internal.metals.MtagsBinaries
+import scala.meta.internal.metals.MtagsResolver
+import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
@@ -17,9 +28,29 @@ import tests.TestingSymbolSearch
 
 abstract class PcBenchmark {
 
-  var pc: PresentationCompiler = _
+  protected val presentationCompilers: TrieMap[String, PresentationCompiler] =
+    TrieMap.empty[String, PresentationCompiler]
+  protected implicit val ec: ExecutionContextExecutor =
+    scala.concurrent.ExecutionContext.global
+  protected val embedded = new Embedded(
+    new StatusBar(
+      NoopLanguageClient,
+      Time.system,
+      clientConfig = ClientConfiguration.default,
+    )
+  )
 
-  def presentationCompiler(): PresentationCompiler = pc
+  protected final val benchmarkedScalaVersions: Array[String] = Array(
+    metals.BuildInfo.scala3,
+    metals.BuildInfo.scala213,
+  )
+
+  def presentationCompiler(version: String): PresentationCompiler = {
+    presentationCompilers.getOrElseUpdate(
+      version,
+      newPC(version, newSearch()),
+    )
+  }
 
   def beforeAll(): Unit
 
@@ -40,21 +71,33 @@ abstract class PcBenchmark {
     )
   }
 
-  def newPC(search: SymbolSearch = newSearch()): PresentationCompiler = {
-    new ScalaPresentationCompiler()
-      .withSearch(search)
+  def newPC(
+      version: String,
+      search: SymbolSearch = newSearch(),
+  ): PresentationCompiler = {
+    val pc = MtagsResolver.default().resolve(version) match {
+      case Some(MtagsBinaries.BuildIn) => new ScalaPresentationCompiler()
+      case Some(artifacts: MtagsBinaries.Artifacts) =>
+        embedded.presentationCompiler(artifacts, classpath)
+      case _ =>
+        throw new RuntimeException(
+          s"Forgot to release scala version: $version ?"
+        )
+
+    }
+    pc.withSearch(search)
       .newInstance("", classpath.asJava, Nil.asJava)
   }
 
   @Setup
   def setup(): Unit = {
     beforeAll()
-    pc = newPC()
+    benchmarkedScalaVersions.foreach(newPC(_))
   }
 
   @TearDown
   def tearDown(): Unit = {
-    presentationCompiler().shutdown()
+    presentationCompilers.values.foreach(_.shutdown())
   }
 
 }

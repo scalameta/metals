@@ -27,21 +27,20 @@ object JdkSources {
   ): Either[NoSourcesAvailable, AbsolutePath] = {
     val paths = candidates(userJavaHome)
     paths.find(_.isFile) match {
-      case Some(value) => Right(value)
+      case Some(value) => Right(value.dealias)
       case None => Left(NoSourcesAvailable(paths))
     }
   }
 
   private def fromString(path: String): Option[AbsolutePath] = {
-    Option(path).flatMap { str =>
+    Option(path).filter(_.nonEmpty).flatMap { str =>
       Try(AbsolutePath(str)) match {
         case Failure(exception) =>
           logger.warning(
             s"Failed to parse java home path $str: ${exception.getMessage}"
           )
           None
-        case Success(value) =>
-          Some(value)
+        case Success(value) => Some(value)
       }
     }
   }

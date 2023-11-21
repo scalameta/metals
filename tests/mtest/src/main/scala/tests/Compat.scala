@@ -11,7 +11,7 @@ object Compat {
    */
   def forScalaVersion[A](
       scalaVersion: String,
-      cases: Map[String, A],
+      cases: Map[String, A]
   ): Option[A] = {
     val (startsWith, gt) =
       cases.partition { case (v, _) => !v.startsWith(">=") }
@@ -31,7 +31,7 @@ object Compat {
 
   private def matchesGte[A](
       version: String,
-      gtCases: Map[String, A],
+      gtCases: Map[String, A]
   ): Option[A] = {
     val parsed = SemVer.Version.fromString(version)
     val less = gtCases

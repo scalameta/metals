@@ -94,12 +94,29 @@ class BuildServerConnection private (
 
   def isAmmonite: Boolean = name == Ammonite.name
 
+  def supportsLanguage(id: String): Boolean =
+    Option(capabilities.getCompileProvider())
+      .exists(_.getLanguageIds().contains(id)) ||
+      Option(capabilities.getDebugProvider())
+        .exists(_.getLanguageIds().contains(id)) ||
+      Option(capabilities.getRunProvider())
+        .exists(_.getLanguageIds().contains(id)) ||
+      Option(capabilities.getTestProvider())
+        .exists(_.getLanguageIds().contains(id))
+
+  def supportsScala: Boolean = supportsLanguage("scala")
+
+  def supportsJava: Boolean = supportsLanguage("java")
+
   def isDebuggingProvider: Boolean =
     Option(capabilities.getDebugProvider())
       .exists(_.getLanguageIds().contains("scala"))
 
   def isJvmEnvironmentSupported: Boolean =
     capabilities.getJvmRunEnvironmentProvider()
+
+  def isDependencySourcesSupported: Boolean =
+    capabilities.getDependencySourcesProvider()
 
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
@@ -183,13 +200,38 @@ class BuildServerConnection private (
   def mainClasses(
       params: ScalaMainClassesParams
   ): Future[ScalaMainClassesResult] = {
-    register(server => server.buildTargetScalaMainClasses(params)).asScala
+    val resultOnUnsupported = new ScalaMainClassesResult(Collections.emptyList)
+    if (supportsScala) {
+      val onFail = Some(
+        (
+          resultOnUnsupported,
+          "Scala main classes not supported by server",
+        )
+      )
+      register(
+        server => server.buildTargetScalaMainClasses(params),
+        onFail,
+      ).asScala
+    } else Future.successful(resultOnUnsupported)
+
   }
 
   def testClasses(
       params: ScalaTestClassesParams
   ): Future[ScalaTestClassesResult] = {
-    register(server => server.buildTargetScalaTestClasses(params)).asScala
+    val resultOnUnsupported = new ScalaTestClassesResult(Collections.emptyList)
+    if (supportsScala) {
+      val onFail = Some(
+        (
+          resultOnUnsupported,
+          "Scala test classes not supported by server",
+        )
+      )
+      register(
+        server => server.buildTargetScalaTestClasses(params),
+        onFail,
+      ).asScala
+    } else Future.successful(resultOnUnsupported)
   }
 
   def startDebugSession(
@@ -237,13 +279,18 @@ class BuildServerConnection private (
     )
     if (isSbt || isAmmonite) Future.successful(resultOnJavacOptionsUnsupported)
     else {
-      val onFail = Some(
-        (
-          resultOnJavacOptionsUnsupported,
-          "Java targets not supported by server",
+      if (supportsJava) {
+        val onFail = Some(
+          (
+            resultOnJavacOptionsUnsupported,
+            "Java targets not supported by server",
+          )
         )
-      )
-      register(server => server.buildTargetJavacOptions(params), onFail).asScala
+        register(
+          server => server.buildTargetJavacOptions(params),
+          onFail,
+        ).asScala
+      } else Future.successful(resultOnJavacOptionsUnsupported)
     }
   }
 
@@ -253,10 +300,18 @@ class BuildServerConnection private (
     val resultOnScalaOptionsUnsupported = new ScalacOptionsResult(
       List.empty[ScalacOptionsItem].asJava
     )
-    val onFail = Some(
-      (resultOnScalaOptionsUnsupported, "Scala targets not supported by server")
-    )
-    register(server => server.buildTargetScalacOptions(params), onFail).asScala
+    if (supportsScala) {
+      val onFail = Some(
+        (
+          resultOnScalaOptionsUnsupported,
+          "Scala targets not supported by server",
+        )
+      )
+      register(
+        server => server.buildTargetScalacOptions(params),
+        onFail,
+      ).asScala
+    } else Future.successful(resultOnScalaOptionsUnsupported)
   }
 
   def buildTargetSources(params: SourcesParams): Future[SourcesResult] = {
@@ -266,7 +321,15 @@ class BuildServerConnection private (
   def buildTargetDependencySources(
       params: DependencySourcesParams
   ): Future[DependencySourcesResult] = {
-    register(server => server.buildTargetDependencySources(params)).asScala
+    if (isDependencySourcesSupported) {
+      register(server => server.buildTargetDependencySources(params)).asScala
+    } else {
+      scribe.warn(
+        s"${initialConnection.displayName} does not support `buildTarget/dependencySources`, unable to fetch dependency sources."
+      )
+      val empty = new DependencySourcesResult(Collections.emptyList)
+      Future.successful(empty)
+    }
   }
 
   def buildTargetInverseSources(
@@ -415,14 +478,6 @@ class BuildServerConnection private (
     }
   }
 
-  def isBuildServerResponsive: Future[Option[Boolean]] = {
-    val original = connection
-    original.map(
-      _.optLivenessMonitor
-        .map(_.isBuildServerResponsive)
-    )
-  }
-
 }
 
 object BuildServerConnection {
@@ -494,7 +549,6 @@ object BuildServerConnection {
             config.metalsToIdleTime,
             config.pingInterval,
             bspStatus,
-            serverName,
           )
 
         LauncherConnection(

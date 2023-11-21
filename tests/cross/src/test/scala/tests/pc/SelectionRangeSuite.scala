@@ -46,7 +46,7 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
          |    case Some(name) => println("Hello! " + name)
          |    case None =>
          |  }
-         |}<<region<<""".stripMargin,
+         |}<<region<<""".stripMargin
     ),
     Map(
       "3" ->
@@ -86,9 +86,9 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
              |    case Some(name) => println("Hello! " + name)
              |    case None =>
              |  }
-             |}<<region<<""".stripMargin,
+             |}<<region<<""".stripMargin
         )
-    ),
+    )
   )
 
   check(
@@ -135,7 +135,7 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
          |    a <- Some(1)
          |    b <- Some(2)
          |  } yield a + b
-         |}<<region<<""".stripMargin,
+         |}<<region<<""".stripMargin
     ),
     Map(
       "3" -> List(
@@ -174,9 +174,9 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
            |    a <- Some(1)
            |    b <- Some(2)
            |  } yield a + b
-           |}<<region<<""".stripMargin,
+           |}<<region<<""".stripMargin
       )
-    ),
+    )
   )
 
 }

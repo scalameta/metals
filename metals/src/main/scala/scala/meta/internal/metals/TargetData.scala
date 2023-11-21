@@ -77,7 +77,7 @@ final class TargetData {
 
   def allTargetRoots: Iterator[AbsolutePath] = {
     val scalaTargetRoots = scalaTargetInfo.map(_._2.targetroot)
-    val javaTargetRoots = javaTargetInfo.map(_._2.targetroot)
+    val javaTargetRoots = javaTargetInfo.flatMap(_._2.targetroot)
     val allTargetRoots = scalaTargetRoots.toSet ++ javaTargetRoots.toSet
     allTargetRoots.iterator
   }
@@ -110,7 +110,7 @@ final class TargetData {
   }
 
   def javaTargetRoot(buildTarget: BuildTargetIdentifier): Option[AbsolutePath] =
-    javaTarget(buildTarget).map(_.targetroot)
+    javaTarget(buildTarget).flatMap(_.targetroot)
 
   def scalaTargetRoot(
       buildTarget: BuildTargetIdentifier
@@ -141,8 +141,10 @@ final class TargetData {
   }
 
   def targetClassDirectories(id: BuildTargetIdentifier): List[String] = {
-    val scalacData = scalaTarget(id).map(_.scalac.getClassDirectory).toList
-    val javacData = javaTarget(id).map(_.javac.getClassDirectory).toList
+    val scalacData =
+      scalaTarget(id).map(_.scalac.getClassDirectory).filter(_.nonEmpty).toList
+    val javacData =
+      javaTarget(id).map(_.javac.getClassDirectory).filter(_.nonEmpty).toList
     (scalacData ++ javacData).distinct
   }
 

@@ -233,6 +233,24 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
 
     def encloses(other: RangeParams): Boolean =
       pos.start <= other.offset() && pos.end >= other.endOffset()
+
+    def adjust(
+        text: Array[Char],
+        forRename: Boolean = false
+    ): (Position, Boolean) = {
+      val isBackticked = text(pos.start) == '`' &&
+        text(pos.end - 1) == '`' &&
+        pos.start != (pos.end - 1) // for one character names, e.g. `c`
+      //                                                    start-^^-end
+      val isOldNameBackticked = text(pos.start) == '`' &&
+        (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
+        text(pos.end + 1) == '`'
+      if (isBackticked && forRename)
+        (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
+      else if (isOldNameBackticked) // pos
+        (pos.withEnd(pos.end + 2), false)
+      else (pos, false)
+    }
   }
 
   implicit class XtensionRangeParameters(pos: RangeParams) {

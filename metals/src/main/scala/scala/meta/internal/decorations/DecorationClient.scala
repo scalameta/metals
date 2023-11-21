@@ -19,6 +19,21 @@ case class DecorationOptions(
     @Nullable renderOptions: ThemableDecorationInstanceRenderOptions = null,
 )
 
+object DecorationOptions {
+  def apply(text: String, range: Range) =
+    new DecorationOptions(
+      range,
+      renderOptions = ThemableDecorationInstanceRenderOptions(
+        after = ThemableDecorationAttachmentRenderOptions(
+          text,
+          color = "grey",
+          fontStyle = "italic",
+          opacity = 0.7,
+        )
+      ),
+    )
+}
+
 case class PublishDecorationsParams(
     uri: String,
     options: Array[DecorationOptions],

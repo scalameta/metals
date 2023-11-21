@@ -30,8 +30,8 @@ class SelectionRangeCommentSuite extends BaseSelectionRangeSuite {
          |    b <- Some(2)
          |  } yield a + b<<region<<
          |}
-         |""".stripMargin,
-    ),
+         |""".stripMargin
+    )
   )
 
 }

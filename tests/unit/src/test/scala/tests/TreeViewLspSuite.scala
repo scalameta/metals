@@ -1,9 +1,15 @@
 package tests
 
+import java.nio.file.Paths
+
 import scala.collection.SortedSet
+import scala.util.Properties
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.JdkVersion
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.tvp.TreeViewProvider
+import scala.meta.io.AbsolutePath
 
 /**
  * @note This suite will fail on openjdk8 < 262)
@@ -11,41 +17,52 @@ import scala.meta.internal.tvp.TreeViewProvider
  */
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
+  private val javaVersion =
+    JdkVersion
+      .fromReleaseFileString(AbsolutePath(Paths.get(Properties.javaHome)))
+      .getOrElse("")
+
+  private val jdkSourcesName = s"jdk-$javaVersion-sources"
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
 
+  override def userConfig: UserConfiguration =
+    UserConfiguration(javaHome = Some(Properties.javaHome))
+
   /**
    * The libraries we expect to find for tests in this file.
-   *
-   * @note this value changes depending on the JVM version in use as some JAR
-   *       files have moved to become modules on JVM > 8.
    */
-  val expectedLibraries: SortedSet[String] = {
-    lazy val jdk8Libraries = SortedSet(
-      "charsets", "jce", "jsse", "resources", "rt",
-    )
-
-    val otherLibraries = SortedSet(
-      "cats-core_2.13", "cats-kernel_2.13", "checker-qual", "circe-core_2.13",
-      "circe-numbers_2.13", "error_prone_annotations", "failureaccess", "gson",
-      "guava", "j2objc-annotations", "jsr305", "listenablefuture",
-      "org.eclipse.lsp4j", "org.eclipse.lsp4j.generator",
-      "org.eclipse.lsp4j.jsonrpc", "org.eclipse.xtend.lib",
-      "org.eclipse.xtend.lib.macro", "org.eclipse.xtext.xbase.lib",
-      "scala-library", "scala-reflect", "semanticdb-javac",
-      "simulacrum-scalafix-annotations_2.13", "sourcecode_2.13",
-    )
-
-    if (scala.util.Properties.isJavaAtLeast(9.toString)) {
-      otherLibraries
-    } else {
-      otherLibraries ++ jdk8Libraries + "jfr"
-    }
-  }
+  val expectedLibraries: SortedSet[String] = SortedSet(
+    "cats-core_2.13",
+    "cats-kernel_2.13",
+    "checker-qual",
+    "circe-core_2.13",
+    "circe-numbers_2.13",
+    "error_prone_annotations",
+    "failureaccess",
+    "gson",
+    "guava",
+    "j2objc-annotations",
+    jdkSourcesName,
+    "jsr305",
+    "org.eclipse.lsp4j",
+    "org.eclipse.lsp4j.generator",
+    "org.eclipse.lsp4j.jsonrpc",
+    "org.eclipse.xtend.lib",
+    "org.eclipse.xtend.lib.macro",
+    "org.eclipse.xtext.xbase.lib",
+    "scala-library",
+    "scala-reflect",
+    "simulacrum-scalafix-annotations_2.13",
+    "sourcecode_2.13",
+  )
 
   lazy val expectedLibrariesString: String =
-    this.expectedLibraries.toVector
-      .map((s: String) => s"${s}.jar -")
+    (this.expectedLibraries.toVector
+      .map { (s: String) =>
+        if (s != jdkSourcesName) s"${s}.jar package -"
+        else s"$jdkSourcesName package -"
+      })
       .mkString("\n")
 
   lazy val expectedLibrariesCount: Int =
@@ -95,49 +112,78 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             |${TreeViewProvider.Compile} <root>
             |""".stripMargin,
       )
-      folder = server.server.path
-      _ = server.assertTreeViewChildren(
-        s"projects-$folder:${server.buildTarget("a")}",
-        "",
+      _ <- server.didOpen("a/src/main/scala/a/Zero.scala")
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala")(identity)
+      _ <- server.treeViewVisibilityDidChange(
+        TreeViewProvider.Project,
+        isVisible = true,
       )
-      _ <- server.didOpen("a/src/main/scala/a/First.scala")
-      _ <- server.didOpen("b/src/main/scala/b/Third.scala")
+      folder = server.server.path
+      _ <- server.treeViewNodeCollapseDidChange(
+        TreeViewProvider.Project,
+        s"projects-$folder:${server.buildTarget("a")}!/_root_/",
+        isCollapsed = false,
+      )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}",
-        """|_empty_/ -
-           |a/ -
+        """|_empty_/ symbol-folder -
+           |a/ symbol-folder -
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/_empty_/",
-        """|Zero class +
+        """|Zero symbol-class +
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/_empty_/Zero#",
-        """|a val
+        """|a symbol-field
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/",
-        """|First class -
-           |First object
-           |Second class -
-           |Second object
+        """|First symbol-class -
+           |First symbol-object
+           |Second symbol-class -
+           |Second symbol-object
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/First#",
-        """|a() method
-           |b val
+        """|b symbol-field
+           |a() symbol-method
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/Second#",
-        """|a() method
-           |b val
-           |c var
+        """|c symbol-variable
+           |b symbol-field
+           |a() symbol-method
            |""".stripMargin,
+      )
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala") { text =>
+        text.replace("val a = 1", "val a = 1\nval b = 1.0")
+      }
+      _ = assertEquals(
+        server.client.workspaceTreeViewChanges,
+        s"metalsPackages projects-$folder:${server.buildTarget("a")}!/_root_/",
+      )
+      _ = server.assertTreeViewChildren(
+        s"projects-$folder:${server.buildTarget("a")}!/_empty_/Zero#",
+        """|a symbol-field
+           |b symbol-field
+           |""".stripMargin,
+      )
+      _ <- server.treeViewNodeCollapseDidChange(
+        TreeViewProvider.Project,
+        s"projects-$folder:${server.buildTarget("a")}!/_root_/",
+        isCollapsed = true,
+      )
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala") { text =>
+        text.replace("val a = 1", "val a = 1\nval c = 1.0")
+      }
+      _ = assertEmpty(
+        server.client.workspaceTreeViewChanges
       )
     } yield ()
   }
@@ -162,7 +208,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       _ = {
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("sourcecode")}",
-          "sourcecode/ +",
+          "sourcecode/ symbol-folder +",
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:",
@@ -170,30 +216,63 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("scala-library")}!/scala/Some#",
-          """|value val
-             |get() method
+          """|value symbol-field
+             |get() symbol-method
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
-          s"libraries-$folder:${server.jar("lsp4j")}!/org/eclipse/lsp4j/FileChangeType#",
-          """|Created enum
-             |Changed enum
-             |Deleted enum
-             |values() method
-             |valueOf() method
-             |getValue() method
-             |forValue() method
+          s"libraries-$folder:${server.jar("lsp4j-")}!/org/eclipse/lsp4j/FileChangeType#",
+          """|getValue() symbol-method
+             |forValue() symbol-method
+             |<init>() symbol-method
+             |Created symbol-enum-member
+             |Changed symbol-enum-member
+             |Deleted symbol-enum-member
+             |value symbol-field
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("circe-core")}!/_root_/",
-          """|io/ +
+          """|io/ symbol-folder +
+             |""".stripMargin,
+        )
+        server.assertTreeViewChildren(
+          s"libraries-$folder:${server.jar("cats-core")}!/_root_/",
+          """|cats/ symbol-folder +
+             |""".stripMargin,
+        )
+        server.assertTreeViewChildren(
+          s"libraries-$folder:${server.jar("cats-core")}!/cats/compat/",
+          """|FoldableCompat symbol-object -
+             |Seq symbol-object -
+             |SortedSet symbol-object -
+             |Vector symbol-object -
              |""".stripMargin,
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("cats-core")}!/cats/instances/symbol/",
-          """|package object
+          """|package symbol-object
              |""".stripMargin,
+        )
+        assertNoDiff(
+          server.workspaceSymbol("Paths", includeKind = true),
+          """|java.nio.file.Paths Class
+             |""".stripMargin,
+        )
+        val withBase = if (!isJava8) "java.base/" else ""
+        assertNoDiff(
+          server.treeViewReveal(
+            withBase + "java/nio/file/Paths.java",
+            "class Paths",
+          ),
+          s"""|root
+              |  Libraries (22) library
+              |    $jdkSourcesName package
+              |      java/ symbol-folder
+              |        nio/ symbol-folder
+              |          file/ symbol-folder
+              |            Paths symbol-class
+              |""".stripMargin,
         )
         assertNoDiff(
           server.workspaceSymbol("sourcecode.File", includeKind = true),
@@ -214,52 +293,52 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             "sourcecode/SourceContext.scala",
             "object File",
             isIgnored = { label =>
-              label.endsWith(".jar") &&
+              label.endsWith(".jar package") &&
               !label.contains("sourcecode")
             },
           ),
           s"""|root
-              |  Projects (0)
-              |  Libraries (${expectedLibrariesCount})
-              |  Libraries (${expectedLibrariesCount})
-              |    sourcecode_2.13-0.1.7.jar
-              |    sourcecode_2.13-0.1.7.jar
-              |      sourcecode/
-              |      sourcecode/
-              |        Args class
-              |        Args object
-              |        ArgsMacros trait
-              |        Compat object
-              |        Enclosing class
-              |        Enclosing object
-              |        EnclosingMachineMacros trait
-              |        EnclosingMacros trait
-              |        File class
-              |        File object
-              |        FileMacros trait
-              |        FullName class
-              |        FullName object
-              |        FullNameMachineMacros trait
-              |        FullNameMacros trait
-              |        Line class
-              |        Line object
-              |        LineMacros trait
-              |        Macros object
-              |        Name class
-              |        Name object
-              |        NameMachineMacros trait
-              |        NameMacros trait
-              |        Pkg class
-              |        Pkg object
-              |        PkgMacros trait
-              |        SourceCompanion class
-              |        SourceValue class
-              |        Text class
-              |        Text object
-              |        TextMacros trait
-              |        Util object
-              |        File class
-              |          value val
+              |  Projects (0) project
+              |  Libraries (22) library
+              |  Libraries (22) library
+              |    $jdkSourcesName package
+              |    sourcecode_2.13-0.1.7-sources.jar package
+              |    sourcecode_2.13-0.1.7-sources.jar package
+              |      sourcecode/ symbol-folder
+              |      sourcecode/ symbol-folder
+              |        Args symbol-class
+              |        Args symbol-object
+              |        ArgsMacros symbol-interface
+              |        Compat symbol-object
+              |        Enclosing symbol-class
+              |        Enclosing symbol-object
+              |        EnclosingMachineMacros symbol-interface
+              |        EnclosingMacros symbol-interface
+              |        File symbol-class
+              |        File symbol-object
+              |        FileMacros symbol-interface
+              |        FullName symbol-class
+              |        FullName symbol-object
+              |        FullNameMachineMacros symbol-interface
+              |        FullNameMacros symbol-interface
+              |        Line symbol-class
+              |        Line symbol-object
+              |        LineMacros symbol-interface
+              |        Macros symbol-object
+              |        Name symbol-class
+              |        Name symbol-object
+              |        NameMachineMacros symbol-interface
+              |        NameMacros symbol-interface
+              |        Pkg symbol-class
+              |        Pkg symbol-object
+              |        PkgMacros symbol-interface
+              |        SourceCompanion symbol-class
+              |        SourceValue symbol-class
+              |        Text symbol-class
+              |        Text symbol-object
+              |        TextMacros symbol-interface
+              |        Util symbol-object
+              |        File symbol-object
               |""".stripMargin,
         )
         assertNoDiff(
@@ -267,210 +346,209 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             "org/eclipse/lsp4j/services/LanguageClient.java",
             "registerCapability",
             isIgnored = { label =>
-              label.endsWith(".jar") &&
-              !label.contains("lsp4j")
+              label.endsWith(".jar package") &&
+              !label.contains("lsp4j-0")
             },
           ),
           s"""|root
-              |  Projects (0)
-              |  Libraries (${expectedLibrariesCount})
-              |  Libraries (${expectedLibrariesCount})
-              |    org.eclipse.lsp4j-0.5.0.jar
-              |    org.eclipse.lsp4j.generator-0.5.0.jar
-              |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar
-              |    org.eclipse.lsp4j-0.5.0.jar
-              |      org/
-              |      org/
-              |        eclipse/
-              |        eclipse/
-              |          lsp4j/
-              |          lsp4j/
-              |            adapters/
-              |            launch/
-              |            services/
-              |            util/
-              |            ApplyWorkspaceEditParams class
-              |            ApplyWorkspaceEditResponse class
-              |            ClientCapabilities class
-              |            CodeAction class
-              |            CodeActionCapabilities class
-              |            CodeActionContext class
-              |            CodeActionKind class
-              |            CodeActionKindCapabilities class
-              |            CodeActionLiteralSupportCapabilities class
-              |            CodeActionParams class
-              |            CodeLens class
-              |            CodeLensCapabilities class
-              |            CodeLensOptions class
-              |            CodeLensParams class
-              |            CodeLensRegistrationOptions class
-              |            Color class
-              |            ColorInformation class
-              |            ColorPresentation class
-              |            ColorPresentationParams class
-              |            ColorProviderCapabilities class
-              |            ColorProviderOptions class
-              |            ColoringInformation class
-              |            ColoringParams class
-              |            ColoringStyle class
-              |            Command class
-              |            CompletionCapabilities class
-              |            CompletionContext class
-              |            CompletionItem class
-              |            CompletionItemCapabilities class
-              |            CompletionItemKind class
-              |            CompletionItemKindCapabilities class
-              |            CompletionList class
-              |            CompletionOptions class
-              |            CompletionParams class
-              |            CompletionRegistrationOptions class
-              |            CompletionTriggerKind class
-              |            ConfigurationItem class
-              |            ConfigurationParams class
-              |            DefinitionCapabilities class
-              |            Diagnostic class
-              |            DiagnosticRelatedInformation class
-              |            DiagnosticSeverity class
-              |            DidChangeConfigurationCapabilities class
-              |            DidChangeConfigurationParams class
-              |            DidChangeTextDocumentParams class
-              |            DidChangeWatchedFilesCapabilities class
-              |            DidChangeWatchedFilesParams class
-              |            DidChangeWatchedFilesRegistrationOptions class
-              |            DidChangeWorkspaceFoldersParams class
-              |            DidCloseTextDocumentParams class
-              |            DidOpenTextDocumentParams class
-              |            DidSaveTextDocumentParams class
-              |            DocumentColorParams class
-              |            DocumentFilter class
-              |            DocumentFormattingParams class
-              |            DocumentHighlight class
-              |            DocumentHighlightCapabilities class
-              |            DocumentHighlightKind class
-              |            DocumentLink class
-              |            DocumentLinkCapabilities class
-              |            DocumentLinkOptions class
-              |            DocumentLinkParams class
-              |            DocumentLinkRegistrationOptions class
-              |            DocumentOnTypeFormattingOptions class
-              |            DocumentOnTypeFormattingParams class
-              |            DocumentOnTypeFormattingRegistrationOptions class
-              |            DocumentRangeFormattingParams class
-              |            DocumentSymbol class
-              |            DocumentSymbolCapabilities class
-              |            DocumentSymbolParams class
-              |            DynamicRegistrationCapabilities class
-              |            ExecuteCommandCapabilities class
-              |            ExecuteCommandOptions class
-              |            ExecuteCommandParams class
-              |            ExecuteCommandRegistrationOptions class
-              |            FileChangeType class
-              |            FileEvent class
-              |            FileSystemWatcher class
-              |            FoldingRange class
-              |            FoldingRangeCapabilities class
-              |            FoldingRangeKind class
-              |            FoldingRangeProviderOptions class
-              |            FoldingRangeRequestParams class
-              |            FormattingCapabilities class
-              |            FormattingOptions class
-              |            Hover class
-              |            HoverCapabilities class
-              |            ImplementationCapabilities class
-              |            InitializeError class
-              |            InitializeErrorCode class
-              |            InitializeParams class
-              |            InitializeResult class
-              |            InitializedParams class
-              |            InsertTextFormat class
-              |            Location class
-              |            MarkedString class
-              |            MarkupContent class
-              |            MarkupKind class
-              |            MessageActionItem class
-              |            MessageParams class
-              |            MessageType class
-              |            OnTypeFormattingCapabilities class
-              |            ParameterInformation class
-              |            Position class
-              |            PublishDiagnosticsCapabilities class
-              |            PublishDiagnosticsParams class
-              |            Range class
-              |            RangeFormattingCapabilities class
-              |            ReferenceContext class
-              |            ReferenceParams class
-              |            ReferencesCapabilities class
-              |            Registration class
-              |            RegistrationParams class
-              |            RenameCapabilities class
-              |            RenameParams class
-              |            ResourceChange class
-              |            ResponseErrorCode class
-              |            SaveOptions class
-              |            SemanticHighlightingCapabilities class
-              |            SemanticHighlightingInformation class
-              |            SemanticHighlightingParams class
-              |            SemanticHighlightingServerCapabilities class
-              |            ServerCapabilities class
-              |            ShowMessageRequestParams class
-              |            SignatureHelp class
-              |            SignatureHelpCapabilities class
-              |            SignatureHelpOptions class
-              |            SignatureHelpRegistrationOptions class
-              |            SignatureInformation class
-              |            SignatureInformationCapabilities class
-              |            StaticRegistrationOptions class
-              |            SymbolCapabilities class
-              |            SymbolInformation class
-              |            SymbolKind class
-              |            SymbolKindCapabilities class
-              |            SynchronizationCapabilities class
-              |            TextDocumentChangeRegistrationOptions class
-              |            TextDocumentClientCapabilities class
-              |            TextDocumentContentChangeEvent class
-              |            TextDocumentEdit class
-              |            TextDocumentIdentifier class
-              |            TextDocumentItem class
-              |            TextDocumentPositionParams class
-              |            TextDocumentRegistrationOptions class
-              |            TextDocumentSaveReason class
-              |            TextDocumentSaveRegistrationOptions class
-              |            TextDocumentSyncKind class
-              |            TextDocumentSyncOptions class
-              |            TextEdit class
-              |            TypeDefinitionCapabilities class
-              |            Unregistration class
-              |            UnregistrationParams class
-              |            VersionedTextDocumentIdentifier class
-              |            WatchKind class
-              |            WillSaveTextDocumentParams class
-              |            WorkspaceClientCapabilities class
-              |            WorkspaceEdit class
-              |            WorkspaceEditCapabilities class
-              |            WorkspaceFolder class
-              |            WorkspaceFoldersChangeEvent class
-              |            WorkspaceFoldersOptions class
-              |            WorkspaceServerCapabilities class
-              |            WorkspaceSymbolParams class
-              |            services/
-              |              LanguageClient class
-              |              LanguageClientAware class
-              |              LanguageClientExtensions class
-              |              LanguageServer class
-              |              TextDocumentService class
-              |              WorkspaceService class
-              |              LanguageClient class
-              |                applyEdit() method
-              |                registerCapability() method
-              |                unregisterCapability() method
-              |                telemetryEvent() method
-              |                publishDiagnostics() method
-              |                showMessage() method
-              |                showMessageRequest() method
-              |                logMessage() method
-              |                workspaceFolders() method
-              |                configuration() method
-              |                semanticHighlighting() method
+              |  Projects (0) project
+              |  Libraries (${expectedLibrariesCount}) library
+              |  Libraries (${expectedLibrariesCount}) library
+              |    $jdkSourcesName package
+              |    org.eclipse.lsp4j-0.5.0-sources.jar package
+              |    org.eclipse.lsp4j-0.5.0-sources.jar package
+              |      org/ symbol-folder
+              |      org/ symbol-folder
+              |        eclipse/ symbol-folder
+              |        eclipse/ symbol-folder
+              |          lsp4j/ symbol-folder
+              |          lsp4j/ symbol-folder
+              |            adapters/ symbol-folder
+              |            launch/ symbol-folder
+              |            services/ symbol-folder
+              |            util/ symbol-folder
+              |            ApplyWorkspaceEditParams symbol-class
+              |            ApplyWorkspaceEditResponse symbol-class
+              |            ClientCapabilities symbol-class
+              |            CodeAction symbol-class
+              |            CodeActionCapabilities symbol-class
+              |            CodeActionContext symbol-class
+              |            CodeActionKind symbol-class
+              |            CodeActionKindCapabilities symbol-class
+              |            CodeActionLiteralSupportCapabilities symbol-class
+              |            CodeActionParams symbol-class
+              |            CodeLens symbol-class
+              |            CodeLensCapabilities symbol-class
+              |            CodeLensOptions symbol-class
+              |            CodeLensParams symbol-class
+              |            CodeLensRegistrationOptions symbol-class
+              |            Color symbol-class
+              |            ColorInformation symbol-class
+              |            ColorPresentation symbol-class
+              |            ColorPresentationParams symbol-class
+              |            ColorProviderCapabilities symbol-class
+              |            ColorProviderOptions symbol-class
+              |            ColoringInformation symbol-class
+              |            ColoringParams symbol-class
+              |            ColoringStyle symbol-class
+              |            Command symbol-class
+              |            CompletionCapabilities symbol-class
+              |            CompletionContext symbol-class
+              |            CompletionItem symbol-class
+              |            CompletionItemCapabilities symbol-class
+              |            CompletionItemKind symbol-enum
+              |            CompletionItemKindCapabilities symbol-class
+              |            CompletionList symbol-class
+              |            CompletionOptions symbol-class
+              |            CompletionParams symbol-class
+              |            CompletionRegistrationOptions symbol-class
+              |            CompletionTriggerKind symbol-enum
+              |            ConfigurationItem symbol-class
+              |            ConfigurationParams symbol-class
+              |            DefinitionCapabilities symbol-class
+              |            Diagnostic symbol-class
+              |            DiagnosticRelatedInformation symbol-class
+              |            DiagnosticSeverity symbol-enum
+              |            DidChangeConfigurationCapabilities symbol-class
+              |            DidChangeConfigurationParams symbol-class
+              |            DidChangeTextDocumentParams symbol-class
+              |            DidChangeWatchedFilesCapabilities symbol-class
+              |            DidChangeWatchedFilesParams symbol-class
+              |            DidChangeWatchedFilesRegistrationOptions symbol-class
+              |            DidChangeWorkspaceFoldersParams symbol-class
+              |            DidCloseTextDocumentParams symbol-class
+              |            DidOpenTextDocumentParams symbol-class
+              |            DidSaveTextDocumentParams symbol-class
+              |            DocumentColorParams symbol-class
+              |            DocumentFilter symbol-class
+              |            DocumentFormattingParams symbol-class
+              |            DocumentHighlight symbol-class
+              |            DocumentHighlightCapabilities symbol-class
+              |            DocumentHighlightKind symbol-enum
+              |            DocumentLink symbol-class
+              |            DocumentLinkCapabilities symbol-class
+              |            DocumentLinkOptions symbol-class
+              |            DocumentLinkParams symbol-class
+              |            DocumentLinkRegistrationOptions symbol-class
+              |            DocumentOnTypeFormattingOptions symbol-class
+              |            DocumentOnTypeFormattingParams symbol-class
+              |            DocumentOnTypeFormattingRegistrationOptions symbol-class
+              |            DocumentRangeFormattingParams symbol-class
+              |            DocumentSymbol symbol-class
+              |            DocumentSymbolCapabilities symbol-class
+              |            DocumentSymbolParams symbol-class
+              |            DynamicRegistrationCapabilities symbol-class
+              |            ExecuteCommandCapabilities symbol-class
+              |            ExecuteCommandOptions symbol-class
+              |            ExecuteCommandParams symbol-class
+              |            ExecuteCommandRegistrationOptions symbol-class
+              |            FileChangeType symbol-enum
+              |            FileEvent symbol-class
+              |            FileSystemWatcher symbol-class
+              |            FoldingRange symbol-class
+              |            FoldingRangeCapabilities symbol-class
+              |            FoldingRangeKind symbol-class
+              |            FoldingRangeProviderOptions symbol-class
+              |            FoldingRangeRequestParams symbol-class
+              |            FormattingCapabilities symbol-class
+              |            FormattingOptions symbol-class
+              |            Hover symbol-class
+              |            HoverCapabilities symbol-class
+              |            ImplementationCapabilities symbol-class
+              |            InitializeError symbol-class
+              |            InitializeErrorCode symbol-interface
+              |            InitializeParams symbol-class
+              |            InitializeResult symbol-class
+              |            InitializedParams symbol-class
+              |            InsertTextFormat symbol-enum
+              |            Location symbol-class
+              |            MarkedString symbol-class
+              |            MarkupContent symbol-class
+              |            MarkupKind symbol-class
+              |            MessageActionItem symbol-class
+              |            MessageParams symbol-class
+              |            MessageType symbol-enum
+              |            OnTypeFormattingCapabilities symbol-class
+              |            ParameterInformation symbol-class
+              |            Position symbol-class
+              |            PublishDiagnosticsCapabilities symbol-class
+              |            PublishDiagnosticsParams symbol-class
+              |            Range symbol-class
+              |            RangeFormattingCapabilities symbol-class
+              |            ReferenceContext symbol-class
+              |            ReferenceParams symbol-class
+              |            ReferencesCapabilities symbol-class
+              |            Registration symbol-class
+              |            RegistrationParams symbol-class
+              |            RenameCapabilities symbol-class
+              |            RenameParams symbol-class
+              |            ResourceChange symbol-class
+              |            ResponseErrorCode symbol-enum
+              |            SaveOptions symbol-class
+              |            SemanticHighlightingCapabilities symbol-class
+              |            SemanticHighlightingInformation symbol-class
+              |            SemanticHighlightingParams symbol-class
+              |            SemanticHighlightingServerCapabilities symbol-class
+              |            ServerCapabilities symbol-class
+              |            ShowMessageRequestParams symbol-class
+              |            SignatureHelp symbol-class
+              |            SignatureHelpCapabilities symbol-class
+              |            SignatureHelpOptions symbol-class
+              |            SignatureHelpRegistrationOptions symbol-class
+              |            SignatureInformation symbol-class
+              |            SignatureInformationCapabilities symbol-class
+              |            StaticRegistrationOptions symbol-class
+              |            SymbolCapabilities symbol-class
+              |            SymbolInformation symbol-class
+              |            SymbolKind symbol-enum
+              |            SymbolKindCapabilities symbol-class
+              |            SynchronizationCapabilities symbol-class
+              |            TextDocumentChangeRegistrationOptions symbol-class
+              |            TextDocumentClientCapabilities symbol-class
+              |            TextDocumentContentChangeEvent symbol-class
+              |            TextDocumentEdit symbol-class
+              |            TextDocumentIdentifier symbol-class
+              |            TextDocumentItem symbol-class
+              |            TextDocumentPositionParams symbol-class
+              |            TextDocumentRegistrationOptions symbol-class
+              |            TextDocumentSaveReason symbol-enum
+              |            TextDocumentSaveRegistrationOptions symbol-class
+              |            TextDocumentSyncKind symbol-enum
+              |            TextDocumentSyncOptions symbol-class
+              |            TextEdit symbol-class
+              |            TypeDefinitionCapabilities symbol-class
+              |            Unregistration symbol-class
+              |            UnregistrationParams symbol-class
+              |            VersionedTextDocumentIdentifier symbol-class
+              |            WatchKind symbol-class
+              |            WillSaveTextDocumentParams symbol-class
+              |            WorkspaceClientCapabilities symbol-class
+              |            WorkspaceEdit symbol-class
+              |            WorkspaceEditCapabilities symbol-class
+              |            WorkspaceFolder symbol-class
+              |            WorkspaceFoldersChangeEvent symbol-class
+              |            WorkspaceFoldersOptions symbol-class
+              |            WorkspaceServerCapabilities symbol-class
+              |            WorkspaceSymbolParams symbol-class
+              |            services/ symbol-folder
+              |              LanguageClient symbol-interface
+              |              LanguageClientAware symbol-interface
+              |              LanguageClientExtensions symbol-interface
+              |              LanguageServer symbol-interface
+              |              TextDocumentService symbol-interface
+              |              WorkspaceService symbol-interface
+              |              LanguageClient symbol-interface
+              |                applyEdit() symbol-method
+              |                registerCapability() symbol-method
+              |                unregisterCapability() symbol-method
+              |                telemetryEvent() symbol-method
+              |                publishDiagnostics() symbol-method
+              |                showMessage() symbol-method
+              |                showMessageRequest() symbol-method
+              |                logMessage() symbol-method
+              |                workspaceFolders() symbol-method
+              |                configuration() symbol-method
+              |                semanticHighlighting() symbol-method
               |""".stripMargin,
         )
       }

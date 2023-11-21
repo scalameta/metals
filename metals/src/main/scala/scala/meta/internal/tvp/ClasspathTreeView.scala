@@ -28,17 +28,19 @@ class ClasspathTreeView[Value, Key](
     valueTooltip: Value => String,
     toplevels: () => Iterator[Value],
     loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation],
+    toplevelIcon: String,
 ) {
   val scheme: String = s"$schemeId-${folder.path.toString()}"
   val rootUri: String = scheme + ":"
 
-  def root(showFolderName: Boolean): TreeViewNode = {
+  def root(showFolderName: Boolean, icon: String): TreeViewNode = {
     val folderPart = if (showFolderName) s" (${folder.nameOrUri})" else ""
     TreeViewNode(
       viewId,
       rootUri,
       title + folderPart + s" (${toplevels().size})",
       collapseState = MetalsTreeItemCollapseState.collapsed,
+      icon = icon,
     )
   }
 
@@ -50,7 +52,7 @@ class ClasspathTreeView[Value, Key](
 
   def children(uri: String): Array[TreeViewNode] = {
     if (uri == rootUri) {
-      TreeViewNode.sortAlphabetically(toplevels().map(toViewNode).toArray)
+      TreeViewNode.sortAlphabetically(toplevels().map(toplevelNode).toArray)
     } else {
       val node = fromUri(uri)
 
@@ -78,7 +80,9 @@ class ClasspathTreeView[Value, Key](
         val label =
           if (child.kind.isPackage) {
             displayName + "/"
-          } else if (child.kind.isMethod && !child.isVal && !child.isVar) {
+          } else if (
+            child.kind.isConstructor || (child.kind.isMethod && !child.isVal && !child.isVar)
+          ) {
             displayName + "()"
           } else {
             displayName
@@ -87,6 +91,7 @@ class ClasspathTreeView[Value, Key](
         // Get the children of this child to determine its collapse state.
         val grandChildren =
           transitiveChildren.filter(_.symbol.owner == child.symbol)
+
         val collapseState =
           if (!childHasSiblings && grandChildren.nonEmpty)
             MetalsTreeItemCollapseState.expanded
@@ -102,17 +107,21 @@ class ClasspathTreeView[Value, Key](
           else MetalsCommand.goto(child.symbol)
 
         val icon = child.kind match {
-          case k.OBJECT | k.PACKAGE_OBJECT => "object"
-          case k.TRAIT => "trait"
-          case k.CLASS => "class"
-          case k.INTERFACE => "interface"
-          case k.METHOD | k.MACRO =>
-            if (child.properties.isVal) "val"
-            else if (child.properties.isVar) "var"
-            else "method"
-          case k.FIELD =>
-            if (child.properties.isEnum) "enum"
-            else "field"
+          case k.OBJECT | k.PACKAGE_OBJECT => "symbol-object"
+          case k.TRAIT => "symbol-interface"
+          case k.CLASS if child.properties.isEnum => "symbol-enum"
+          case k.CLASS => "symbol-class"
+          case k.INTERFACE => "symbol-interface"
+          case k.CONSTRUCTOR => "symbol-method"
+          case k.METHOD | k.MACRO if (child.properties.isVal) => "symbol-field"
+          case k.METHOD | k.MACRO if (child.properties.isVar) =>
+            "symbol-variable"
+          case k.METHOD | k.MACRO => "symbol-method"
+          case k.FIELD if (child.properties.isEnum) => "symbol-enum-member"
+          case k.FIELD => "symbol-field"
+          case k.TYPE_PARAMETER => "symbol-type-parameter"
+          case k.TYPE => "symbol-type-parameter"
+          case k.PACKAGE => "symbol-folder"
           case _ => null
         }
 
@@ -164,7 +173,7 @@ class ClasspathTreeView[Value, Key](
     }
   }
 
-  def toViewNode(value: Value): TreeViewNode = {
+  def toplevelNode(value: Value): TreeViewNode = {
     val uri = toUri(id(value)).toUri
     TreeViewNode(
       viewId,
@@ -172,6 +181,7 @@ class ClasspathTreeView[Value, Key](
       valueTitle(value),
       tooltip = valueTooltip(value),
       collapseState = MetalsTreeItemCollapseState.collapsed,
+      icon = toplevelIcon,
     )
   }
 

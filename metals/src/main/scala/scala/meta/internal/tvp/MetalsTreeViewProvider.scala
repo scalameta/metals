@@ -1,5 +1,6 @@
 package scala.meta.internal.tvp
 
+import java.nio.file.Paths
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -7,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.concurrent.TrieMap
 
+import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -128,13 +130,27 @@ class MetalsTreeViewProvider(
       path: AbsolutePath,
       pos: l.Position,
   ): Option[TreeViewNodeRevealResult] = {
+    def dialectFromWorkspace =
+      getFolderTreeViewProviders().iterator
+        .map(_.dialectOf(path))
+        .collectFirst { case Some(dialect) =>
+          dialect
+        }
+        .getOrElse(dialects.Scala213)
+    val dialect =
+      if (path.isJarFileSystem) {
+        path.jarPath
+          .map { p =>
+            ScalaVersions.dialectForDependencyJar(p.filename)
+          }
+          .getOrElse(dialects.Scala3)
+      } else dialectFromWorkspace
     val input = path.toInput
     val occurrences =
       Mtags
         .allToplevels(
           input,
-          // TreeViewProvider doesn't work with Scala 3 - see #2859
-          dialects.Scala213,
+          dialect,
         )
         .occurrences
         .filterNot(_.symbol.isPackage)
@@ -143,7 +159,7 @@ class MetalsTreeViewProvider(
       val closestSymbol = occurrences.minBy { occ =>
         val startLine = occ.range.fold(Int.MaxValue)(_.startLine)
         val distance = math.abs(pos.getLine - startLine)
-        val isLeading = pos.getLine() > startLine
+        val isLeading = pos.getLine() >= startLine
         (!isLeading, distance)
       }
       val result =
@@ -184,6 +200,9 @@ class MetalsTreeViewProvider(
       params: TreeViewVisibilityDidChangeParams
   ): Unit = {
     val trees = getFolderTreeViewProviders()
+    trees.foreach {
+      _.setVisible(params.viewId, params.visible)
+    }
     if (params.visible) {
       params.viewId match {
         case TreeViewProvider.Compile =>
@@ -218,19 +237,6 @@ class MetalsTreeViewProvider(
     }
   }
 
-  override def onBuildTargetDidCompile(
-      id: BuildTargetIdentifier
-  ): Unit = {
-    val toUpdate =
-      getFolderTreeViewProviders().map(_.onBuildTargetDidCompile(id)).collect {
-        case Some(value) => value
-      }
-    if (toUpdate.nonEmpty) {
-      languageClient.metalsTreeViewDidChange(
-        TreeViewDidChangeParams(toUpdate.flatten.toArray)
-      )
-    }
-  }
 }
 
 class FolderTreeViewProvider(
@@ -238,61 +244,82 @@ class FolderTreeViewProvider(
     buildTargets: BuildTargets,
     compilations: () => TreeViewCompilations,
     definitionIndex: GlobalSymbolIndex,
-    doCompile: BuildTargetIdentifier => Unit,
-    isBloop: () => Boolean,
-    statistics: StatisticsConfig,
+    userConfig: () => UserConfiguration,
+    scalaVersionSelector: ScalaVersionSelector,
+    classpath: IndexedSymbols,
 ) {
-  private val classpath = new ClasspathSymbols(
-    isStatisticsEnabled = statistics.isTreeView
-  )
+  def dialectOf(path: AbsolutePath): Option[Dialect] =
+    scalaVersionSelector.dialectFromBuildTarget(path)
+  private def maybeUsedJdkVersion =
+    JdkSources.defaultJavaHome(userConfig().javaHome).headOption.flatMap {
+      path =>
+        JdkVersion.fromReleaseFileString(path)
+    }
   private val isVisible = TrieMap.empty[String, Boolean].withDefaultValue(false)
-  private val isCollapsed = TrieMap.empty[BuildTargetIdentifier, Boolean]
+  private val isCollapsedTarget = TrieMap.empty[BuildTargetIdentifier, Boolean]
   private val pendingProjectUpdates =
     ConcurrentHashSet.empty[BuildTargetIdentifier]
   val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
-    definitionIndex,
-    TreeViewProvider.Project,
-    s"libraries",
-    s"Libraries",
-    folder,
-    identity,
-    _.toURI.toString(),
-    _.toAbsolutePath,
-    _.filename,
-    _.toString,
-    () => buildTargets.allWorkspaceJars,
-    (path, symbol) => classpath.symbols(path, symbol),
+    definitionIndex = definitionIndex,
+    viewId = TreeViewProvider.Project,
+    schemeId = s"libraries",
+    title = s"Libraries",
+    folder = folder,
+    id = identity,
+    encode = _.toURI.toString(),
+    decode = _.toAbsolutePath(followSymlink = false),
+    valueTitle = path => {
+      if (path.filename == JdkSources.zipFileName) {
+        maybeUsedJdkVersion
+          .map(ver => s"jdk-${ver}-sources")
+          .getOrElse("jdk-sources")
+      } else
+        path.filename
+    },
+    valueTooltip = _.toString,
+    toplevels = () => buildTargets.allSourceJars,
+    loadSymbols = (path, symbol) => {
+      val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
+      classpath.jarSymbols(path, symbol, dialect)
+    },
+    toplevelIcon = "package",
   )
 
   val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
-    definitionIndex,
-    TreeViewProvider.Project,
-    s"projects",
-    s"Projects",
-    folder,
-    _.getId(),
-    _.getUri(),
-    uri => new BuildTargetIdentifier(uri),
-    _.getDisplayName(),
-    _.baseDirectory,
-    { () =>
+    definitionIndex = definitionIndex,
+    viewId = TreeViewProvider.Project,
+    schemeId = s"projects",
+    title = s"Projects",
+    folder = folder,
+    id = _.getId(),
+    encode = _.getUri(),
+    decode = uri => new BuildTargetIdentifier(uri),
+    valueTitle = _.getName(),
+    valueTooltip = _.baseDirectory,
+    toplevels = { () =>
       buildTargets.all.filter(target =>
         buildTargets.buildTargetSources(target.getId()).nonEmpty
       )
     },
-    { (id, symbol) =>
-      if (isBloop()) doCompile(id)
-      buildTargets
-        .targetClassDirectories(id)
-        .flatMap(cd => classpath.symbols(cd.toAbsolutePath, symbol))
-        .iterator
+    loadSymbols = { (id, symbol) =>
+      val tops = for {
+        scalaTarget <- buildTargets.scalaTarget(id).iterator
+        source <- buildTargets.buildTargetSources(id)
+        dialect = scalaTarget.dialect(source)
+      } yield classpath.workspaceSymbols(source, symbol)
+      tops.flatten
     },
+    toplevelIcon = "target",
   )
+
+  def setVisible(viewId: String, visibility: Boolean): Unit = {
+    isVisible(viewId) = visibility
+  }
 
   def flushPendingProjectUpdates(): Option[Array[TreeViewNode]] = {
     val toUpdate = pendingProjectUpdates.asScala.iterator
       .filter { id =>
-        !isCollapsed.getOrElse(id, true) &&
+        !isCollapsedTarget.getOrElse(id, true) &&
         isVisible(TreeViewProvider.Project)
       }
       .flatMap(buildTargets.info)
@@ -300,7 +327,7 @@ class FolderTreeViewProvider(
     if (toUpdate.nonEmpty) {
       val nodes = toUpdate.map { target =>
         projects
-          .toViewNode(target)
+          .toplevelNode(target)
           .copy(collapseState = MetalsTreeItemCollapseState.expanded)
       }
       Some(nodes)
@@ -312,14 +339,12 @@ class FolderTreeViewProvider(
   def onBuildTargetDidCompile(
       id: BuildTargetIdentifier
   ): Option[Array[TreeViewNode]] = {
-    buildTargets
-      .targetClassDirectories(id)
-      .foreach(cd => classpath.clearCache(cd.toAbsolutePath))
-    if (isCollapsed.contains(id)) {
+    if (isCollapsedTarget.getOrElse(id, true) == true) {
+      None // do nothing if the user never expanded the tree view node.
+    } else {
       pendingProjectUpdates.add(id)
       flushPendingProjectUpdates()
-    } else {
-      None // do nothing if the user never expanded the tree view node.
+
     }
   }
 
@@ -329,7 +354,7 @@ class FolderTreeViewProvider(
     if (projects.matches(params.nodeUri)) {
       val uri = projects.fromUri(params.nodeUri)
       if (uri.isRoot) {
-        isCollapsed(uri.key) = params.collapsed
+        isCollapsedTarget(uri.key) = params.collapsed
       }
     }
   }
@@ -364,8 +389,8 @@ class FolderTreeViewProvider(
     nodeUri match {
       case None if buildTargets.all.nonEmpty =>
         Array(
-          projects.root(showFolderName),
-          libraries.root(showFolderName),
+          projects.root(showFolderName, "project"),
+          libraries.root(showFolderName, "library"),
         )
       case Some(uri) =>
         if (libraries.matches(uri)) {
@@ -381,18 +406,35 @@ class FolderTreeViewProvider(
   def revealResult(
       path: AbsolutePath,
       closestSymbol: SymbolOccurrence,
-  ): Option[List[String]] =
+  ): Option[List[String]] = {
     if (path.isDependencySource(folder.path) || path.isJarFileSystem) {
-      buildTargets
-        .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
-        .map { inferred =>
-          libraries.toUri(inferred.jar, inferred.symbol).parentChain
+      val closestToplevel = Symbol(closestSymbol.symbol).toplevel
+      def pathJar = AbsolutePath(
+        Paths.get(path.toNIO.getFileSystem().toString())
+      ).dealias
+      def jdkSources = JdkSources(userConfig().javaHome).toOption
+        .collect {
+          case sources
+              if sources == pathJar || !path.isJarFileSystem &&
+                path.isSrcZipInReadonlyDirectory(folder.path) =>
+            libraries.toUri(sources, closestToplevel.value).parentChain
         }
+
+      val result = buildTargets
+        .inferBuildTarget(List(closestToplevel))
+        .map { inferred =>
+          val sourceJar = inferred.jar.parent.resolve(
+            inferred.jar.filename.replace(".jar", "-sources.jar")
+          )
+          libraries.toUri(sourceJar, inferred.symbol).parentChain
+        }
+      result.orElse(jdkSources)
     } else {
       buildTargets
         .inverseSources(path)
         .map(id => projects.toUri(id, closestSymbol.symbol).parentChain)
     }
+  }
 
   private def ongoingCompilations: Array[TreeViewNode] = {
     compilations().buildTargets.flatMap(ongoingCompileNode).toArray
@@ -407,7 +449,7 @@ class FolderTreeViewProvider(
     } yield TreeViewNode(
       TreeViewProvider.Compile,
       id.getUri,
-      s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)",
+      s"${info.getName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)",
       icon = "compile",
     )
   }

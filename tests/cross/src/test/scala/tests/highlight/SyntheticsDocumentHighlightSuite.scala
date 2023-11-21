@@ -15,7 +15,7 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |} yield { 
       |   <<add>>.toString.toList.map(_.toChar)
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -29,7 +29,7 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |} yield { 
       |   <<ad@@d>>.toString.toList.map(_.toChar)
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -43,7 +43,7 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |} yield { 
       |   <<abc>>.toString.toList.map(_.toChar)
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -57,7 +57,7 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |} yield { 
       |   <<abc>>.toString.toList.map(_.toChar)
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -71,7 +71,7 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |} yield { 
       |   <<ab@@c>>.toString.toList.map(_.toChar)
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
 }

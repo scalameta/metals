@@ -16,6 +16,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
@@ -34,6 +35,7 @@ import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SyntheticDecoration
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
@@ -558,6 +560,56 @@ class Compilers(
         }
         .getOrElse(Future.successful(new SemanticTokens(emptyTokens)))
     }
+
+  }
+
+  def syntheticDecorations(
+      path: AbsolutePath,
+      token: CancelToken,
+  ): Future[ju.List[DecorationOptions]] = {
+    loadCompiler(path)
+      .map { compiler =>
+        val (input, _, adjust) =
+          sourceAdjustments(
+            path.toNIO.toUri().toString(),
+            compiler.scalaVersion(),
+          )
+
+        def adjustDecorations(
+            decorations: ju.List[SyntheticDecoration]
+        ): ju.List[DecorationOptions] = {
+          val withCorrectStart = decorations.asScala.dropWhile { d =>
+            val adjusted = adjust
+              .adjustPos(d.range().getStart(), adjustToZero = false)
+            adjusted.getLine() < 0 || adjusted.getCharacter() < 0
+          }
+          withCorrectStart.map { decoration =>
+            DecorationOptions(
+              decoration.label(),
+              adjust.adjustRange(decoration.range()),
+            )
+          }.asJava
+        }
+        val vFile =
+          CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
+
+        val pcParams = CompilerSyntheticDecorationsParams(
+          vFile,
+          typeParameters = userConfig().showInferredType.contains("true"),
+          inferredTypes = userConfig().showInferredType.contains("minimal") ||
+            userConfig().showInferredType.contains("true"),
+          implicitParameters = userConfig().showImplicitArguments,
+          implicitConversions = userConfig().showImplicitConversionsAndClasses,
+        )
+        compiler
+          .syntheticDecorations(pcParams)
+          .asScala
+          .map { decorations =>
+            adjustDecorations(decorations)
+          }
+
+      }
+      .getOrElse(Future.successful(Nil.asJava))
 
   }
 

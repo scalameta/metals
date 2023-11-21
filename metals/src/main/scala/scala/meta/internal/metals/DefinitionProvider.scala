@@ -448,13 +448,12 @@ class DestinationProvider(
   private def bestTextDocument(
       symbolDefinition: SymbolDefinition
   ): TextDocument = {
-    val defnRevisedInput = symbolDefinition.path.toInput
     // Read text file from disk instead of editor buffers because the file
     // on disk is more likely to parse.
     lazy val parsed = {
       mtags.index(
         symbolDefinition.path.toLanguage,
-        defnRevisedInput,
+        symbolDefinition.path,
         symbolDefinition.dialect,
       )
     }

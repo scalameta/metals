@@ -262,6 +262,8 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       Files.exists(path.toNIO)
     }
 
+    def isRoot: Boolean = path.toNIO.getRoot() == path.toNIO
+
     def root: Option[AbsolutePath] =
       Option(path.toNIO.getRoot()).map(AbsolutePath(_))
 
@@ -353,6 +355,9 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     }
     def isScalaScript: Boolean = {
       filename.endsWith(".sc")
+    }
+    def isSourcesJar: Boolean = {
+      filename.endsWith("-sources.jar") || filename == "src.zip"
     }
     def isMill: Boolean = isScalaScript && filename == "build.sc"
     def isAmmoniteScript: Boolean =

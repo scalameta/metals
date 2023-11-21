@@ -455,18 +455,6 @@ trait Completions { this: MetalsGlobal =>
         ident: Ident,
         apply: Apply
     ): CompletionPosition = {
-      def isInfix(apply: Apply, text: String) =
-        apply.fun match {
-          case Select(New(_), _) => false
-          case Select(_, name) if name.decoded == "apply" => false
-          case Select(This(_), _) => false
-          // is a select statement without a dot `qual.name`
-          case Select(qual, _) => {
-            val pos = qual.pos.end
-            pos < text.length() && text(pos) != '.'
-          }
-          case _ => false
-        }
       if (hasLeadingBrace(ident, text)) {
         if (isCasePrefix(ident.name)) {
           val moveToNewLine = ident.pos.line == apply.pos.line
@@ -485,7 +473,7 @@ trait Completions { this: MetalsGlobal =>
           NoneCompletion
         }
       } else {
-        if (!isInfix(apply, text)) {
+        if (!isInfix(apply.fun, text)) {
           ArgCompletion(ident, apply, pos, text, completions)
         } else NoneCompletion
       }

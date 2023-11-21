@@ -47,7 +47,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       name: TestOptions,
       query: String,
       expected: String,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
     test(name) {
       val (code, offset) = params(query, "A.scala")
@@ -59,7 +59,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
               URI.create("file:///A.scala"),
               code,
               offset,
-              token,
+              token
             )
           )
           .get()
@@ -76,7 +76,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
             URI.create("file:///A.scala"),
             code,
             offset,
-            EmptyCancelToken,
+            EmptyCancelToken
           )
         )
         .get()
@@ -99,7 +99,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|assert(assertion: Boolean): Unit
        |assert(assertion: Boolean, message: => Any): Unit
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   /**
@@ -133,7 +133,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
             uri,
             code,
             offset,
-            FreezeCancelToken,
+            FreezeCancelToken
           )
         )
         .get()
@@ -146,7 +146,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
           uri,
           code,
           offset,
-          EmptyCancelToken,
+          EmptyCancelToken
         )
       )
       .get()

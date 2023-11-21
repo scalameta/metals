@@ -63,7 +63,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |                       ^^^^^^^^^^^
        |  @param ifEmpty the expression to evaluate if empty.
        |  @param f the function to apply if nonempty.
-        """.stripMargin,
+        """.stripMargin
   )
 
   checkDoc(
@@ -93,7 +93,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
             |  @param ifEmpty the expression to evaluate if empty.
             |  @param f the function to apply if nonempty.
             |""".stripMargin
-    ),
+    )
   )
 
   val addedSpace: String = {
@@ -189,8 +189,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |          Returns `z` if this collection is empty.
            |foldLeft[B](z: B)(op: (B, Int) => B): B
            |                  ^^^^^^^^^^^^^^^^^
-           |""".stripMargin,
-    ),
+           |""".stripMargin
+    )
   )
 
   checkDoc(
@@ -204,7 +204,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """|
        |curry(a: Int, b: Int)(c: Int): Int
        |                      ^^^^^^
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkDoc(
@@ -214,45 +214,45 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  List(1).map(x => @@)
       |}
     """.stripMargin,
-    """|Builds a new collection by applying a function to all elements of this collection.
+    """|Builds a new collection by applying a function to all elements of this general collection.
        |
        |
        |**Type Parameters**
        |- `B`: the element type of the returned collection.
+       |- `That`: the class of the returned collection. Where possible, `That` is
+       |the same class as the current collection class `Repr`, but this
+       |depends on the element type `B` being admissible for that class,
+       |which means that an implicit instance of type `CanBuildFrom[Repr, B, That]`
+       |is found.
        |
        |**Parameters**
        |- `f`: the function to apply to each element.
+       |- `bf`: an implicit value of class `CanBuildFrom` which determines
+       |the result class `That` from the current representation type `Repr` and
+       |the new element type `B`.
        |
-       |**Returns:** a new collection resulting from applying the given function
-       |               `f` to each element of this collection and collecting the results.
-       |map[B](f: Int => B): List[B]
-       |       ^^^^^^^^^^^
+       |**Returns:** a new general collection resulting from applying the given function
+       |                 `f` to each element of this general collection and collecting the results.
+       |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
+       |             ^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "2.12" ->
-        """|Builds a new collection by applying a function to all elements of this general collection.
+      ">=2.13.0" ->
+        """|Builds a new collection by applying a function to all elements of this collection.
            |
            |
            |**Type Parameters**
            |- `B`: the element type of the returned collection.
-           |- `That`: the class of the returned collection. Where possible, `That` is
-           |the same class as the current collection class `Repr`, but this
-           |depends on the element type `B` being admissible for that class,
-           |which means that an implicit instance of type `CanBuildFrom[Repr, B, That]`
-           |is found.
            |
            |**Parameters**
            |- `f`: the function to apply to each element.
-           |- `bf`: an implicit value of class `CanBuildFrom` which determines
-           |the result class `That` from the current representation type `Repr` and
-           |the new element type `B`.
            |
-           |**Returns:** a new general collection resulting from applying the given function
-           |                 `f` to each element of this general collection and collecting the results.
-           |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
-           |             ^^^^^^^^^^^
+           |**Returns:** a new collection resulting from applying the given function
+           |               `f` to each element of this collection and collecting the results.
+           |map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
            |""".stripMargin
-    ),
+    )
   )
 
   checkDoc(
@@ -300,8 +300,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |apply[A](x: A): Option[A]
            |         ^^^^
            |  @param x the value
-           |""".stripMargin,
-    ),
+           |""".stripMargin
+    )
   )
 
   checkDoc(
@@ -333,8 +333,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |singleton[T](o: T): java.util.Set[T]
            |             ^^^^
            |  @param o o the sole object to be stored in the returned set.
-           |""".stripMargin,
-    ),
+           |""".stripMargin
+    )
   )
 
   checkDoc(
@@ -384,7 +384,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |  @param fin Finally logic which if defined will be invoked after catch logic
            |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -406,7 +406,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
                 |File(parent: String, child: String)
                 |File(pathname: String)
                 |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -426,7 +426,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |substring(beginIndex: Int): String
            |          ^^^^^^^^^^^^^^^
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -460,7 +460,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |valueOf(data: Array[Char]): String
            |valueOf(obj: Object): String
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -505,8 +505,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |valueOf(data: Array[Char], offset: Int, count: Int): String
            |valueOf(data: Array[Char]): String
            |valueOf(obj: Object): String
-           |""".stripMargin,
-    ),
+           |""".stripMargin
+    )
   )
 
   checkDoc(
@@ -527,8 +527,14 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            | `A`.
            |Some[A](value: A)
            |        ^^^^^^^^
+           |""".stripMargin,
+      "2.11" ->
+        """|Class `Some[A]` represents existing values of type
+           | `A`.
+           |<init>(x: Int): Some[Int]
+           |       ^^^^^^
            |""".stripMargin
-    ),
+    )
   )
 
   checkDoc(
@@ -546,6 +552,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |**Returns:** a new range with a different step
        |by(step: Int): Range
        |   ^^^^^^^^^
-       |""".stripMargin,
+       |""".stripMargin
   )
 }

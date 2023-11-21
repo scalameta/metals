@@ -61,6 +61,13 @@ case class UserConfiguration(
     bloopVersion.getOrElse(BuildInfo.bloopVersion)
 
   def usedJavaBinary(): Option[AbsolutePath] = JavaBinary.path(javaHome)
+
+  def areSyntheticsEnabled(): Boolean = {
+    val showInferredType = !this.showInferredType.contains(
+      "false"
+    ) && this.showInferredType.nonEmpty
+    showImplicitArguments || showInferredType || showImplicitConversionsAndClasses
+  }
 }
 
 object UserConfiguration {

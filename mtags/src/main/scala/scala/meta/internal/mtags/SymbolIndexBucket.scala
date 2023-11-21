@@ -2,7 +2,6 @@ package scala.meta.internal.mtags
 
 import java.io.UncheckedIOException
 import java.nio.CharBuffer
-import java.nio.charset.StandardCharsets
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -11,7 +10,6 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
-import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
@@ -45,8 +43,6 @@ class SymbolIndexBucket(
     dialect: Dialect
 ) {
 
-  import SymbolIndexBucket.stdLibPatches
-
   private val logger = Logger.getLogger(classOf[SymbolIndexBucket].getName)
 
   def close(): Unit = sourceJars.close()
@@ -71,8 +67,7 @@ class SymbolIndexBucket(
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
-            case source if source.isScala =>
-              addSourceFile(source, None, Some(jar))
+            case source if source.isScala => addSourceFile(source, None)
             case _ =>
               None
           }
@@ -90,14 +85,7 @@ class SymbolIndexBucket(
       symbols: List[(String, AbsolutePath)]
   ): Unit = {
     if (sourceJars.addEntry(jar.toNIO)) {
-      val patched =
-        if (stdLibPatches.isScala3Library(jar))
-          symbols.map { case (sym, path) =>
-            (stdLibPatches.patchSymbol(sym), path)
-          }
-        else symbols
-
-      patched.foreach { case (sym, path) =>
+      symbols.foreach { case (sym, path) =>
         val acc = toplevels.getOrElse(sym, Set.empty)
         toplevels(sym) = acc + path
       }
@@ -105,34 +93,24 @@ class SymbolIndexBucket(
   }
 
   def addSourceFile(
-      source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath],
-      fromSourceJar: Option[AbsolutePath] = None
+    source: AbsolutePath,
+    sourceDirectory: Option[AbsolutePath],
   ): Option[IndexingResult] = {
-    val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val IndexingResult(path, topLevels, overrides) =
-      indexSource(source, uri, dialect)
-    val symbols =
-      fromSourceJar match {
-        case Some(jar) if stdLibPatches.isScala3Library(jar) =>
-          topLevels.map(stdLibPatches.patchSymbol)
-        case _ => topLevels
-      }
-    symbols.foreach { symbol =>
+    val IndexingResult(path, topLevels, overrides) = indexSource(source, dialect, sourceDirectory)
+    topLevels.foreach { symbol =>
       val acc = toplevels.getOrElse(symbol, Set.empty)
       toplevels(symbol) = acc + source
     }
-    Some(IndexingResult(path, symbols, overrides))
+    Some(IndexingResult(path, topLevels, overrides))
   }
 
   private def indexSource(
       source: AbsolutePath,
-      uri: String,
-      dialect: Dialect
+      dialect: Dialect,
+      sourceDirectory: Option[AbsolutePath]
   ): IndexingResult = {
-    val text = FileIO.slurp(source, StandardCharsets.UTF_8)
-    val input = Input.VirtualFile(uri, text)
-    val (doc, overrides) = mtags.indexWithOverrides(input, dialect)
+    val uri = source.toIdeallyRelativeURI(sourceDirectory)
+    val (doc, overrides) = mtags.indexWithOverrides(source, dialect)
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)
@@ -228,7 +206,9 @@ class SymbolIndexBucket(
               definitionSymbol = symbol,
               path = location.path,
               dialect = dialect,
-              range = location.range
+              range = location.range,
+              kind = None,
+              properties = 0
             )
           }.toList
         }
@@ -264,6 +244,11 @@ class SymbolIndexBucket(
     }
   }
 
+  private def allSymbols(path: AbsolutePath): s.TextDocument = {
+    val toIndexSource0 = toIndexSource(path)
+    mtags.allSymbols(toIndexSource0, dialect)
+  }
+
   // similar as addSourceFile except indexes all global symbols instead of
   // only non-trivial toplevel symbols.
   private def addMtagsSourceFile(
@@ -272,14 +257,7 @@ class SymbolIndexBucket(
   ): Unit = try {
     val docs: s.TextDocuments = PathIO.extension(file.toNIO) match {
       case "scala" | "java" | "sc" =>
-        val language = file.toLanguage
-        val toIndexSource0 = toIndexSource(file)
-        val input = toIndexSource0.toInput
-        val document =
-          stdLibPatches.patchDocument(
-            file,
-            mtags.index(language, input, dialect)
-          )
+        val document = allSymbols(file)
         s.TextDocuments(List(document))
       case _ =>
         s.TextDocuments(Nil)
@@ -376,37 +354,4 @@ object SymbolIndexBucket {
       dialect
     )
 
-  /**
-   * Scala 3 has a specific package that adds / replaces some symbols in scala.Predef + scala.language
-   * https://github.com/lampepfl/dotty/blob/main/library/src/scala/runtime/stdLibPatches/
-   * We need to do the same to correctly provide location for symbols obtained from semanticdb.
-   */
-  object stdLibPatches {
-    val packageName = "scala/runtime/stdLibPatches"
-
-    def isScala3Library(jar: AbsolutePath): Boolean =
-      jar.filename.startsWith("scala3-library_3")
-
-    def isScala3LibraryPatchSource(file: AbsolutePath): Boolean = {
-      file.jarPath.exists(
-        isScala3Library(_)
-      ) && file.parent.filename == "stdLibPatches"
-    }
-
-    def patchSymbol(sym: String): String =
-      sym.replace(packageName, "scala")
-
-    def patchDocument(
-        file: AbsolutePath,
-        doc: s.TextDocument
-    ): s.TextDocument = {
-      if (isScala3LibraryPatchSource(file)) {
-        val occs =
-          doc.occurrences.map(occ => occ.copy(symbol = patchSymbol(occ.symbol)))
-
-        doc.copy(occurrences = occs)
-      } else doc
-    }
-
-  }
 }

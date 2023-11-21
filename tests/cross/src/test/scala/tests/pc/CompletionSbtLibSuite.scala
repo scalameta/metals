@@ -14,7 +14,7 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
     """|io.circe
        |io.circul
        |""".stripMargin,
-    filename = "A.sbt",
+    filename = "A.sbt"
   )
 
   check(
@@ -25,7 +25,7 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
        |""".stripMargin,
-    filename = "A.sbt",
+    filename = "A.sbt"
   )
 
   check(
@@ -39,23 +39,29 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
        |circe-core_sjs1.0-RC2
        |""".stripMargin,
     filename = "A.sbt",
+    compat = Map(
+      "2.11" ->
+        """|circe-core
+           |circe-core_sjs0.6
+           |""".stripMargin
+    )
   )
 
   check(
-    "version",
+    "version".tag(IgnoreScala211),
     """|val dependency = "io.circe" %% "circe-core_sjs1" % "0.13@@"
        |""".stripMargin,
     """|0.13.0
        |""".stripMargin,
-    filename = "A.sbt",
+    filename = "A.sbt"
   )
 
   checkEdit(
-    "double-percent-edit",
+    "double-percent-edit".tag(IgnoreScala211),
     """|val dependency = "io.circe" %% "circe-core_n@@"
        |""".stripMargin,
     """|val dependency = "io.circe" %% "circe-core_native0.4"
        |""".stripMargin,
-    filename = "A.sbt",
+    filename = "A.sbt"
   )
 }

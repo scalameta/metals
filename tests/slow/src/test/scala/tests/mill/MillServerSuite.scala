@@ -118,4 +118,58 @@ class MillServerSuite
       }
     }
   }
+
+  test(s"presentation-compiler") {
+    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
+    writeLayout(
+      s"""
+         |/.mill-version
+         |$supportedBspVersion
+         |/build.sc
+         |import mill._, scalalib._
+         |object foo extends ScalaModule {
+         |  def scalaVersion = "${V.scala213}"
+         |}
+         |/foo/src/Main.scala
+         |package foo
+         |
+         |import foo.A
+         |object Main extends App {
+         |  println(A.msg)
+         |}
+         |
+         |/foo/src/A.scala
+         |package foo
+         |
+         |object A {
+         |  def msg = "Hello"
+         |}
+         |""".stripMargin
+    )
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        importBuildMessage,
+      )
+      _ = client.messageRequests.clear() // restart
+      _ = assert(!millBspConfig.exists)
+      _ = server.server.buildServerPromise = Promise()
+      _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
+      _ <- server.server.buildServerPromise.future
+      _ = assert(millBspConfig.exists)
+      _ = server.assertBuildServerConnection()
+      _ <- server.didOpen("foo/src/Main.scala")
+      _ <- server.assertHoverAtLine(
+        "foo/src/Main.scala",
+        "println(A.m@@sg)",
+        """|```scala
+           |def msg: String
+           |```
+           |""".stripMargin,
+      )
+
+    } yield {}
+  }
 }

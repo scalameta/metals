@@ -9,7 +9,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """
       |object Main {
       |  Option(1).<<he@@ad>>
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -19,7 +19,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val <<abc>> = 123
       |  <<abc>>.toInt
       |  println(<<ab@@c>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
   check(
     "multiple2",
@@ -28,7 +28,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val <<a@@bc>> = 123
       |  <<abc>>.toInt
       |  println(<<abc>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -38,7 +38,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val <<abc>> = 123
       |  <<ab@@c>>.toInt
       |  println(<<abc>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -48,7 +48,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val abc = 123
       |  abc.<<to@@Int>>
       |  134l.toInt
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -61,7 +61,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |    <<ba@@r>> = 456
       |  ) 
       |
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -76,11 +76,11 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val y = x.<<foo>>
       |  
       |
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
-    "named-args2",
+    "named-args2".tag(IgnoreScala211),
     """
       |object Main {
       |  def foo = check("abc")(
@@ -93,11 +93,11 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |    <<filename>>: Int,
       |    otherDefault: String = "default"
       |  ): Unit = ()
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
-    "named-args2",
+    "named-args2".tag(IgnoreScala211),
     """
       |object Main {
       |  def foo = check("abc")(
@@ -110,7 +110,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |    <<filename>>: Int,
       |    otherDefault: String = "default"
       |  ): Unit = ()
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -129,7 +129,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      <<fil@@ename>>: Int,
       |      otherDefault: String = "default"
       |  )(loc: Boolean): Unit = ()
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -139,7 +139,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val <<@@a>> = 123
       |  val f = (a: Int) => a + 1
       |  println(<<a>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -149,7 +149,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val <<a>> = 123
       |  val f = (a: Int) => a + 1
       |  println(<<@@a>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -160,7 +160,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val user = User(<<name>> = "Susan")
       |  println(user.<<name>>)
       |  user.copy(<<name>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -171,7 +171,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val user = User(<<na@@me>> = "Susan")
       |  println(user.<<name>>)
       |  user.copy(<<name>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -182,7 +182,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val user = User(<<name>> = "Susan")
       |  println(user.<<n@@ame>>)
       |  user.copy(<<name>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -193,7 +193,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val user = User(<<name>> = "Susan")
       |  println(user.<<name>>)
       |  user.copy(<<na@@me>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -205,7 +205,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val user = <<User>>(name = "Susan")
       |  println(user.name)
       |  user.copy(name = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -217,7 +217,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val user = <<User>>(name = "Susan")
       |  println(user.name)
       |  user.copy(name = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -229,7 +229,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val user = <<U@@ser>>(name = "Susan")
       |  println(user.name)
       |  user.copy(name = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -241,7 +241,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  println(user.<<name>>)
       |  user.<<name>> = ""
       |  user.copy(<<name>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -253,7 +253,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  println(user.<<name>>)
       |  user.<<name>> = ""
       |  user.copy(<<name>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -265,7 +265,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  println(user.<<n@@ame>>)
       |  user.<<name>> = ""
       |  user.copy(<<name>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -277,7 +277,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  println(user.<<name>>)
       |  user.<<na@@me>> = ""
       |  user.copy(<<name>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -289,7 +289,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  println(user.<<name>>)
       |  user.<<name>> = ""
       |  user.copy(<<na@@me>> = "John")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -300,7 +300,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  <<abd>> = 344
       |  <<abd>> +=1
       |  println(<<abd>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -311,7 +311,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  <<ab@@d>> = 344
       |  <<abd>> +=1
       |  println(<<abd>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -322,7 +322,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  <<abd>> = 344
       |  <<ab@@d>> +=1
       |  println(<<abd>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -333,7 +333,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  <<abd>> = 344
       |  <<abd>> +=1
       |  println(<<a@@bd>>)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -343,7 +343,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  def hello() = ""
       |  def <<hel@@lo>>(a : Int) = ""
       |  def hello(a : Int, b : String) = ""
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -360,7 +360,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -377,7 +377,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -394,7 +394,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -411,7 +411,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
   check(
     "local-assign2",
@@ -427,7 +427,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
   check(
     "local-assign3",
@@ -443,7 +443,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -460,7 +460,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -477,7 +477,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -494,7 +494,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      def m2: Int = abc + 2
       |    }
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -507,7 +507,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  }
       |  val t = new T1
       |  t.<<arg>> = 123
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -521,7 +521,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val t = new T1
       |  t.<<arg>> = 123
       |
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -534,7 +534,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  }
       |  val t = new T1
       |  t.<<ar@@g>> = 123
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -545,7 +545,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  def bar(<<n@@ame>>: String) = ???
       |  foo(name = "123")
       |  bar(<<name>> = "123")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -556,7 +556,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  def bar(<<name>>: String) = ???
       |  foo(name = "123")
       |  bar(<<na@@me>> = "123")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -567,7 +567,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  def bar(name: String) = ???
       |  foo(<<name>> = "123")
       |  bar(name = "123")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -578,7 +578,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  def bar(name: String) = ???
       |  foo(<<na@@me>> = "123")
       |  bar(name = "123")
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -587,7 +587,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.util.<<Tr@@y>>
       |object Test {
       |   <<Try>>(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -596,7 +596,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.util.<<Try>>
       |object Test {
       |   <<Tr@@y>>(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -605,7 +605,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.<<ut@@il>>.Try
       |object Test {
       |   scala.<<util>>.Try(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -614,7 +614,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.<<util>>.Try
       |object Test {
       |   scala.<<ut@@il>>.Try(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -623,7 +623,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.util.{ <<Try>> => <<ATr@@y>>}
       |object Test {
       |   <<ATry>>(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -632,7 +632,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.util.{ <<Try>> => <<ATry>>}
       |object Test {
       |   <<ATr@@y>>(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   // @note, we could try and not highlight normal Try,
@@ -643,7 +643,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.util.{ <<Try>> => <<ATr@@y>>}
       |object Test {
       |   scala.util.<<Try>>(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -652,7 +652,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.util.{ <<Try>> => <<ATry>>}
       |object Test {
       |   scala.util.<<Tr@@y>>(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -661,7 +661,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |import scala.util.{ <<T@@ry>> => <<ATry>>}
       |object Test {
       |   scala.util.<<Try>>(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -674,7 +674,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |     case Success(<<va@@lue>>) =>
       |       <<value>>
       |   }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -687,7 +687,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |     case Success(<<value>>) =>
       |       <<va@@lue>>
       |   }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -698,7 +698,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    object <<User>>{ def nnn = ""}
        |    <<User>>.nnn
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -709,7 +709,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    object <<U@@ser>>{ def nnn = ""}
        |    <<User>>.nnn
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -720,7 +720,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    object <<User>>{ def nnn = ""}
        |    <<Use@@r>>.nnn
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -733,13 +733,13 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |      <<Use@@r>>.nnn
        |    }
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
     // Scala 2.12.x has a bug where the namePos points at `object`
     // working around it would involve a lot of additional logic
-    "package-object".tag(IgnoreScala212),
+    "package-object".tag(IgnoreScalaVersion.forLessThan("2.13.0")),
     """|package example
        |
        |package object <<nes@@ted>> {
@@ -747,7 +747,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  class PackageObjectNestedClass
        |
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -757,7 +757,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |      case class User(<<name>>: String)
        |      val a = User(<<na@@me>> = "abc")
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -766,7 +766,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |  val <<`hi-!`>> = 5
        |
        |  <<`hi@@-!`>> + 3
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -777,21 +777,21 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    <<a@@bc>> + 1
        |  }
        |  val d = abc + 1
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
     "select-parentheses",
     """|object Main {
        |  val a = (1 + 2 + 3).<<toStr@@ing>>
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
     "select-parentheses2".tag(IgnoreScala2),
     """|object Main {
        |  val a = (1 + 2 + 3) <<:@@:>> Nil
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   check(
@@ -804,7 +804,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |    a,
       |    <<b@@>>,
       |  )
-      |}""".stripMargin,
+      |}""".stripMargin
   )
   check(
     "trailling-comma2".tag(IgnoreScala2),
@@ -816,7 +816,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |    a,
       |    <<`ab@@`>>,
       |  )
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -833,7 +833,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |    val x = foo + <<foo@@Bar>> + baz
       |    x
       |  }
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -844,7 +844,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    a <- List(1)
        |  } yield a + 1
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -856,7 +856,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    if true
        |  } yield a + 1
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -867,7 +867,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    a <- List(1)
        |  } {}
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -879,7 +879,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    if true
        |  } {}
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -891,7 +891,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    if true
        |  } yield a + 1
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -904,7 +904,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    if true
        |  } yield a + 1
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -917,7 +917,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    b <- List(2)
        |  } yield a + 1
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -928,6 +928,69 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |    <<`ty@@pe`>> = "abc"
        |  )
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
+
+  check(
+    "map-bind".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    <<abc>>: Int => <<ab@@c>> + 1
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind1".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).foldLeft(0){
+      |    (<<abc>>: Int, bde: Int) => <<ab@@c>> + bde
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind2".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    someLongName:@@ Int => someLongName + 1
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind3".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    someVeryLongName: Int =@@> someVeryLongName + 1
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind4".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    someLongName: <<I@@nt>> => someLongName + 1
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind5".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  List(1).map {
+      |    someLongName: Int => 
+      |      val <<ab@@c>> = 2
+      |      someLongName + <<abc>>
+      |  }
+      |}""".stripMargin
+  )
+
 }

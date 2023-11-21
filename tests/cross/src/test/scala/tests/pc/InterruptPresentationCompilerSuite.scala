@@ -49,7 +49,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
   def check(
       name: String,
       original: String,
-      act: (PresentationCompiler, OffsetParams) => CompletableFuture[_],
+      act: (PresentationCompiler, OffsetParams) => CompletableFuture[_]
   )(implicit loc: Location): Unit = {
     test(name) {
       val (code, offset) = this.params(original, "A.scala")
@@ -61,8 +61,8 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
             URI.create("file:///A.scala"),
             code,
             offset,
-            interrupt.token.get(),
-          ),
+            interrupt.token.get()
+          )
         ).get()
         fail(s"Expected cancellation exception. Obtained $result")
       } catch {
@@ -71,7 +71,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       val isInterrupted = interrupt.isInterrupted.get()
       Predef.assert(
         !isInterrupted,
-        "thread was interrupted, expected no interruption.",
+        "thread was interrupted, expected no interruption."
       )
     }
   }
@@ -85,7 +85,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       |""".stripMargin,
     (pc, params) => {
       pc.hover(params)
-    },
+    }
   )
 
   check(
@@ -97,7 +97,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       |""".stripMargin,
     (pc, params) => {
       pc.signatureHelp(params)
-    },
+    }
   )
 
 }

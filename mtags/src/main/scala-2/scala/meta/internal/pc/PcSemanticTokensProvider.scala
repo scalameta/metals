@@ -1,4 +1,5 @@
 package scala.meta.internal.pc
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.SemanticTokens._
 import scala.meta.pc.Node
 import scala.meta.pc.VirtualFileParams
@@ -59,7 +60,7 @@ final class PcSemanticTokensProvider(
         Some(
           makeNode(
             sym = sym,
-            pos = adjust(pos)._1,
+            pos = pos.adjust(text)._1,
             isDefinition = isDefinition(tree),
             isDeclaration = isDeclaration(tree)
           )

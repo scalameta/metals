@@ -67,7 +67,6 @@ inThisBuild(
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
     packageSrc / publishArtifact := sys.env.contains("CI"),
-    resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
   )
 )
 
@@ -152,6 +151,9 @@ commands ++= Seq(
         println("No nightly versions was found. Skipping cross/test")
         s
     }
+  },
+  Command.command("cross-test-2-11") { s =>
+    crossTestDyn(s, V.scala211)
   },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
@@ -259,9 +261,14 @@ lazy val mtagsShared = project
         .filterNot(isScala3WithPresentationCompiler),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
+    Compile / scalacOptions ++= {
+      if (scalaVersion.value == V.scala3)
+        List("-Yexplicit-nulls", "-language:unsafeNulls")
+      else Nil
+    },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.24.4",
+      "com.google.protobuf" % "protobuf-java" % "3.25.1",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -352,10 +359,10 @@ val mtagsSettings = List(
     val current = (Compile / unmanagedSourceDirectories).value
     val base = (Compile / sourceDirectory).value
     val regex = "(\\d+)\\.(\\d+)\\.(\\d+).*".r
-    // For scala +2.13.9 we need to have a special Compat.scala
+    // For scala -2.13.9 we need to have a special Compat.scala
     // For this case filter out `scala-2.13` directory that comes by default
     val scalaVersionsWithSpecialCompat =
-      Set("2.13.9", "2.13.10", "2.13.11", "2.13.12")
+      Set("2.13.5", "2.13.6", "2.13.7", "2.13.8")
     if (scalaVersionsWithSpecialCompat(scalaVersion.value))
       current.filter(f => f.getName() != "scala-2.13")
     else if (isScala3WithPresentationCompiler(scalaVersion.value))

@@ -38,7 +38,8 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceReload
-import scala.meta.internal.decorations.SyntheticsDecorationProvider
+import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.decorations.SyntheticHoverProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -382,15 +383,17 @@ class MetalsLspService(
     )
   )
 
+  private val connectionBspStatus =
+    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
+
   private val bspErrorHandler: BspErrorHandler =
     new BspErrorHandler(
-      languageClient,
-      folder,
       () => bspSession,
       tables,
+      connectionBspStatus,
     )
 
-  private val buildClient: ForwardingMetalsBuildClient =
+  val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,
       diagnostics,
@@ -424,9 +427,6 @@ class MetalsLspService(
     tables,
     clientConfig.initialConfig,
   )
-
-  private val connectionBspStatus =
-    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
 
   private val bspServers: BspServers = new BspServers(
     folder,
@@ -561,26 +561,28 @@ class MetalsLspService(
     buildTargets,
   )
 
-  private val syntheticsDecorator: SyntheticsDecorationProvider =
-    new SyntheticsDecorationProvider(
+  private val syntheticHoverProvider: SyntheticHoverProvider =
+    new SyntheticHoverProvider(
       folder,
       semanticdbs,
       buffers,
-      languageClient,
       fingerprints,
       charset,
-      focusedDocument,
       clientConfig,
       () => userConfig,
       trees,
     )
 
+  val classpathTreeIndex = new IndexedSymbols(
+    isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView
+  )
+
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
-      syntheticsDecorator,
       testProvider,
+      classpathTreeIndex,
     ),
     buildTargets,
     folder,
@@ -762,6 +764,7 @@ class MetalsLspService(
     maybeJdkVersion,
     getVisibleName,
     buildTools,
+    connectionBspStatus,
   )
 
   val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
@@ -806,9 +809,9 @@ class MetalsLspService(
       buildTargets,
       () => buildClient.ongoingCompilations(),
       definitionIndex,
-      id => compilations.compileTarget(id),
-      () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false),
-      clientConfig.initialConfig.statistics,
+      () => userConfig,
+      scalaVersionSelector,
+      classpathTreeIndex,
     )
 
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
@@ -975,9 +978,18 @@ class MetalsLspService(
         userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
         userConfig.showInferredType != old.showInferredType
       ) {
-        buildServerPromise.future.flatMap { _ =>
-          syntheticsDecorator.refresh()
-        }
+        for {
+          _ <- buildServerPromise.future
+          _ <- focusedDocument()
+            .map { path =>
+              Future.sequence(
+                List(
+                  publishSynthetics(path, force = true)
+                )
+              )
+            }
+            .getOrElse(Future.successful(()))
+        } yield ()
       } else {
         Future.successful(())
       }
@@ -1052,12 +1064,12 @@ class MetalsLspService(
     val interactive = buildServerPromise.future.map { _ =>
       interactiveSemanticdbs.textDocument(path)
     }
-    // We need both parser and semanticdb for synthetic decorations
-    val publishSynthetics = for {
+
+    val publishSynthetics0 = for {
       _ <- Future.sequence(List(parseTrees(path), interactive))
       _ <- Future.sequence(
         List(
-          syntheticsDecorator.publishSynthetics(path),
+          publishSynthetics(path),
           testProvider.didOpen(path),
         )
       )
@@ -1083,7 +1095,7 @@ class MetalsLspService(
             .sequence(
               List(
                 compileAndLoad,
-                publishSynthetics,
+                publishSynthetics0,
               )
             )
             .ignoreValue
@@ -1094,6 +1106,26 @@ class MetalsLspService(
         } yield ()
       }.asJava
     }
+  }
+
+  def publishSynthetics(
+      path: AbsolutePath,
+      force: Boolean = false,
+  ): Future[Unit] = {
+    CancelTokens.future { token =>
+      val shouldShow = (force || userConfig.areSyntheticsEnabled()) &&
+        clientConfig.isInlineDecorationProvider()
+      if (shouldShow) {
+        compilers.syntheticDecorations(path, token).map { decorations =>
+          val params = new PublishDecorationsParams(
+            path.toURI.toString(),
+            decorations.asScala.toArray,
+            if (clientConfig.isInlineDecorationProvider()) true else null,
+          )
+          languageClient.metalsPublishDecorations(params)
+        }
+      } else Future.successful(())
+    }.asScala
   }
 
   def didFocus(
@@ -1108,12 +1140,12 @@ class MetalsLspService(
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
-      syntheticsDecorator.publishSynthetics(path)
+      publishSynthetics(path)
       CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
     } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
-      syntheticsDecorator.publishSynthetics(path)
+      publishSynthetics(path)
       worksheetProvider.onDidFocus(path)
       buildTargets.inverseSources(path) match {
         case Some(target) =>
@@ -1163,7 +1195,9 @@ class MetalsLspService(
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
         parseTrees(path)
-          .flatMap { _ => syntheticsDecorator.publishSynthetics(path) }
+          .flatMap { _ =>
+            publishSynthetics(path)
+          }
           .ignoreValue
           .asJava
     }
@@ -1265,7 +1299,13 @@ class MetalsLspService(
         .toSeq
     val (deleteEvents, changeAndCreateEvents) =
       importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
-    deleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
+    val (bloopReportDelete, otherDeleteEvents) =
+      deleteEvents.partition(
+        _.getUri().toAbsolutePath.toNIO
+          .startsWith(reports.bloop.maybeReportsDir)
+      )
+    if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
+    otherDeleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
     onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
   }
 
@@ -1293,7 +1333,6 @@ class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
-
     event.eventType match {
       case EventType.CreateOrModify
           if path.isInBspDirectory(folder) && path.extension == "json"
@@ -1397,7 +1436,10 @@ class MetalsLspService(
       compilers
         .hover(params, token)
         .map { hover =>
-          syntheticsDecorator.addSyntheticsHover(params, hover.map(_.toLsp()))
+          syntheticHoverProvider.addSyntheticsHover(
+            params,
+            hover.map(_.toLsp()),
+          )
         }
         .map(
           _.orElse {

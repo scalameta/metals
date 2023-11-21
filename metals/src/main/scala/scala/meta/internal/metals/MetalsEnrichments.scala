@@ -88,6 +88,8 @@ object MetalsEnrichments
 
     def isSbtBuild: Boolean = dataKind == "sbt"
 
+    def isScalaBuild: Boolean = dataKind == "scala"
+
     def baseDirectory: String =
       Option(buildTarget.getBaseDirectory()).getOrElse("")
 
@@ -96,7 +98,11 @@ object MetalsEnrichments
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
       asSbtBuildTarget
         .map(_.getScalaBuildTarget)
-        .orElse(decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget]))
+        .orElse(
+          if (isScalaBuild)
+            decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
+          else None
+        )
     }
 
     def asSbtBuildTarget: Option[b.SbtBuildTarget] = {
@@ -104,6 +110,22 @@ object MetalsEnrichments
         decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
       else
         None
+    }
+
+    def getName(): String = {
+      if (buildTarget.getDisplayName == null) {
+        val name =
+          if (buildTarget.getBaseDirectory() != null)
+            buildTarget
+              .getId()
+              .getUri()
+              .stripPrefix(buildTarget.getBaseDirectory())
+          else
+            buildTarget.getId().getUri()
+
+        name.replaceAll("[^a-zA-Z0-9]+", "-")
+      } else
+        buildTarget.getDisplayName
     }
   }
 
@@ -361,7 +383,11 @@ object MetalsEnrichments
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
       )
-
+    def isSrcZipInReadonlyDirectory(workspace: AbsolutePath): Boolean = {
+      path.toNIO.startsWith(
+        workspace.resolve(Directories.dependencies.resolve("src.zip")).toNIO
+      )
+    }
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
       // windows throws an exception on toRelative when on different drives
       if (path.toNIO.getRoot() != prefix.toNIO.getRoot())
@@ -884,7 +910,7 @@ object MetalsEnrichments
   }
 
   implicit class XtensionJavacOptions(item: b.JavacOptionsItem) {
-    def targetroot: AbsolutePath = {
+    def targetroot: Option[AbsolutePath] = {
       item.getOptions.asScala
         .find(_.startsWith("-Xplugin:semanticdb"))
         .map(arg => {
@@ -901,7 +927,11 @@ object MetalsEnrichments
         })
         .filter(_ != "javac-classes-directory")
         .map(AbsolutePath(_))
-        .getOrElse(item.getClassDirectory.toAbsolutePath)
+        .orElse {
+          val classes = item.getClassDirectory()
+          if (classes.nonEmpty) Some(classes.toAbsolutePath)
+          else None
+        }
     }
 
     def isSemanticdbEnabled: Boolean = {
@@ -1007,8 +1037,12 @@ object MetalsEnrichments
         .map(_.stripPrefix(flag))
     }
 
-    def classpath: List[String] =
-      item.getClasspath.asScala.toList
+    def classpath: List[String] = {
+      val outputClasses = item.getClassDirectory
+      val classes = item.getClasspath.asScala.toList
+      if (classes.contains(outputClasses)) classes
+      else outputClasses :: classes
+    }
 
     def jarClasspath: List[AbsolutePath] =
       classpath

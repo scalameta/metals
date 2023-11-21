@@ -10,13 +10,13 @@ import scala.meta.pc.OffsetParams
 import org.eclipse.{lsp4j => l}
 
 final class PcInlineValueProviderImpl(
-    val compiler: MetalsGlobal,
+    val cp: MetalsGlobal,
     val params: OffsetParams
 ) extends InlineValueProvider {
-  import compiler._
+  import cp._
 
   val pcCollector: PcCollector[Occurence] =
-    new PcCollector[Occurence](compiler, params) {
+    new PcCollector[Occurence](cp, params) {
       def collect(
           parent: Option[compiler.Tree]
       )(
@@ -24,7 +24,7 @@ final class PcInlineValueProviderImpl(
           pos: Position,
           sym: Option[compiler.Symbol]
       ): Occurence = {
-        val (adjustedPos, _) = adjust(pos)
+        val (adjustedPos, _) = pos.adjust(this.text)
         Occurence(
           tree.asInstanceOf[Tree],
           parent.map(_.asInstanceOf[Tree]),

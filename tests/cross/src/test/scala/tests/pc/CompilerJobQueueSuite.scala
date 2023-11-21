@@ -33,7 +33,7 @@ class CompilerJobQueueSuite extends BaseSuite {
       cancelled,
       () => {
         Thread.sleep(1000)
-      },
+      }
     )
     jobs.shutdown()
     assert(Try(cancelled.get).isFailure)

@@ -17,7 +17,7 @@ class BaseExtractMethodSuite extends BaseCodeActionSuite {
       name: TestOptions,
       original: String,
       expected: String,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit location: Location): Unit =
     test(name) {
       val (edits, code) = getAutoImplement(original)
@@ -27,7 +27,7 @@ class BaseExtractMethodSuite extends BaseCodeActionSuite {
 
   def getAutoImplement(
       original: String,
-      filename: String = "file:/A.scala",
+      filename: String = "file:/A.scala"
   ): (List[l.TextEdit], String) = {
     val withoutExtractionPos = original.replace("@@", "")
     val onlyRangeClose = withoutExtractionPos
@@ -37,19 +37,19 @@ class BaseExtractMethodSuite extends BaseCodeActionSuite {
       URI.create(filename),
       code,
       original.indexOf("@@"),
-      cancelToken,
+      cancelToken
     )
     val rangeParams = CompilerRangeParams(
       URI.create(filename),
       code,
       withoutExtractionPos.indexOf("<<"),
       onlyRangeClose.indexOf(">>"),
-      cancelToken,
+      cancelToken
     )
     val result = presentationCompiler
       .extractMethod(
         rangeParams,
-        extractionPos,
+        extractionPos
       )
       .get()
     (result.asScala.toList, code)

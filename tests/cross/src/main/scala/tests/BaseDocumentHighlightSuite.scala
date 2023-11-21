@@ -14,8 +14,8 @@ class BaseDocumentHighlightSuite extends BasePCSuite with RangeReplace {
 
   def check(
       name: TestOptions,
-      original: String,
-      //   compat: Map[String, String] = Map.empty,
+      original: String
+      //   compat: Map[String, String] = Map.empty
   )(implicit location: Location): Unit =
     test(name) {
 
@@ -30,7 +30,7 @@ class BaseDocumentHighlightSuite extends BasePCSuite with RangeReplace {
             URI.create("file:/Highlight.scala"),
             code,
             offset,
-            EmptyCancelToken,
+            EmptyCancelToken
           )
         )
         .get()
@@ -41,13 +41,13 @@ class BaseDocumentHighlightSuite extends BasePCSuite with RangeReplace {
 
       assertEquals(
         renderHighlightsAsString(base, highlights),
-        expected,
+        expected
       )
 
     }
   private def compareHighlights(
       h1: DocumentHighlight,
-      h2: DocumentHighlight,
+      h2: DocumentHighlight
   ) = {
     val r1 = h1.getRange().getStart()
     val r2 = h2.getRange().getStart()

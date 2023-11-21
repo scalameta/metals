@@ -9,15 +9,23 @@ import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.io.AbsolutePath
 
 final class Mtags(implicit rc: ReportContext) {
   def totalLinesOfCode: Long = javaLines + scalaLines
   def totalLinesOfScala: Long = scalaLines
   def totalLinesOfJava: Long = javaLines
+
+  def allSymbols(path: AbsolutePath, dialect: Dialect): TextDocument = {
+    val language = path.toLanguage
+    index(language, path, dialect)
+  }
+
   def toplevels(
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
-  ): List[String] = {
+  ): TextDocument = {
+    val input = path.toInput
     val language = input.toLanguage
 
     if (language.isJava || language.isScala) {
@@ -32,23 +40,21 @@ final class Mtags(implicit rc: ReportContext) {
             dialect
           )
       addLines(language, input.text)
-      mtags
-        .index()
-        .occurrences
-        .iterator
-        .filterNot(_.symbol.isPackage)
-        .map(_.symbol)
-        .toList
+      Mtags.stdLibPatches.patchDocument(
+        path,
+        mtags.index()
+      )
     } else {
-      Nil
+      TextDocument()
     }
   }
 
   def indexWithOverrides(
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect = dialects.Scala213,
       includeMembers: Boolean = false
   ): (TextDocument, MtagsIndexer.AllOverrides) = {
+    val input = path.toInput
     val language = input.toLanguage
     if (language.isJava || language.isScala) {
       val mtags =
@@ -62,17 +68,32 @@ final class Mtags(implicit rc: ReportContext) {
             dialect
           )
       addLines(language, input.text)
-      val doc = mtags.index()
+      val doc =
+        Mtags.stdLibPatches.patchDocument(
+          path,
+          mtags.index()
+        )
       val overrides = mtags.overrides()
       (doc, overrides)
     } else (TextDocument(), Nil)
   }
 
+  def topLevelSymbols(
+      path: AbsolutePath,
+      dialect: Dialect = dialects.Scala213
+  ): List[String] = {
+    toplevels(path, dialect).occurrences.iterator
+      .filterNot(_.symbol.isPackage)
+      .map(_.symbol)
+      .toList
+  }
+
   def index(
       language: Language,
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect
   ): TextDocument = {
+    val input = path.toInput
     addLines(language, input.text)
     val result =
       if (language.isJava) {
@@ -84,7 +105,11 @@ final class Mtags(implicit rc: ReportContext) {
       } else {
         TextDocument()
       }
-    result
+    Mtags.stdLibPatches
+      .patchDocument(
+        path,
+        result
+      )
       .withUri(input.path)
       .withText(input.text)
   }
@@ -99,10 +124,10 @@ final class Mtags(implicit rc: ReportContext) {
   }
 }
 object Mtags {
-  def index(input: Input.VirtualFile, dialect: Dialect)(implicit
+  def index(path: AbsolutePath, dialect: Dialect)(implicit
       rc: ReportContext = EmptyReportContext
   ): TextDocument = {
-    new Mtags().index(input.toLanguage, input, dialect)
+    new Mtags().index(path.toLanguage, path, dialect)
   }
 
   def toplevels(document: TextDocument): List[String] = {
@@ -132,20 +157,61 @@ object Mtags {
     }
 
   def toplevels(
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
-  )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
-    new Mtags().toplevels(input, dialect)
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
+    new Mtags().toplevels(path, dialect)
   }
 
   def indexWithOverrides(
-      input: Input.VirtualFile,
+      path: AbsolutePath,
       dialect: Dialect = dialects.Scala213,
       includeMembers: Boolean = false
   )(implicit
       rc: ReportContext = EmptyReportContext
   ): (TextDocument, MtagsIndexer.AllOverrides) = {
-    new Mtags().indexWithOverrides(input, dialect, includeMembers)
+    new Mtags().indexWithOverrides(path, dialect, includeMembers)
+  }
+
+  def topLevelSymbols(
+      path: AbsolutePath,
+      dialect: Dialect = dialects.Scala213
+  )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
+    new Mtags().topLevelSymbols(path, dialect)
+  }
+
+  /**
+   * Scala 3 has a specific package that adds / replaces some symbols in scala.Predef + scala.language
+   * https://github.com/lampepfl/dotty/blob/main/library/src/scala/runtime/stdLibPatches/
+   * We need to do the same to correctly provide location for symbols obtained from semanticdb.
+   */
+  private object stdLibPatches {
+    val packageName = "scala/runtime/stdLibPatches"
+
+    private def isScala3Library(jar: AbsolutePath): Boolean =
+      jar.filename.startsWith("scala3-library_3")
+
+    private def isScala3LibraryPatchSource(file: AbsolutePath): Boolean = {
+      !file.parent.isRoot &&
+      file.parent.filename == "stdLibPatches" &&
+      file.jarPath.exists(isScala3Library(_))
+    }
+
+    private def patchSymbol(sym: String): String =
+      sym.replace(packageName, "scala")
+
+    def patchDocument(
+        file: AbsolutePath,
+        doc: TextDocument
+    ): TextDocument = {
+      if (isScala3LibraryPatchSource(file)) {
+        val occs =
+          doc.occurrences.map(occ => occ.copy(symbol = patchSymbol(occ.symbol)))
+
+        doc.copy(occurrences = occs)
+      } else doc
+    }
+
   }
 
 }

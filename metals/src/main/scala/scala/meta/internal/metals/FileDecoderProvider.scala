@@ -300,7 +300,12 @@ final class FileDecoderProvider(
       .toAbsolutePathSafe
       .map { path =>
         val targetName = path.filename.stripSuffix(".metals-buildtarget")
-        new BuildTargetInfo(buildTargets).buildTargetDetails(targetName)
+        // display name for mill-build is `mill-build/` and `mill-build/mill-build/` for meta builds
+        val withoutSuffix = uri.toString().stripSuffix("/.metals-buildtarget")
+        new BuildTargetInfo(buildTargets).buildTargetDetails(
+          targetName,
+          withoutSuffix,
+        )
       }
       .getOrElse(s"Error transforming $uri to path")
     DecoderResponse.success(uri, text)
@@ -487,7 +492,7 @@ final class FileDecoderProvider(
     for {
       javaTarget <- buildTargets.javaTarget(targetId)
       classDir = javaTarget.classDirectory
-      targetroot = javaTarget.targetroot
+      targetroot <- javaTarget.targetroot
     } yield (classDir, targetroot)
   }
 

@@ -37,6 +37,7 @@ abstract class PcCollector[T](
   val uri = params.uri()
   val filePath = Paths.get(uri)
   val sourceText = params.text
+  val text = sourceText.toCharArray()
   val source =
     SourceFile.virtual(filePath.toString, sourceText)
   driver.run(uri, source)
@@ -70,46 +71,7 @@ abstract class PcCollector[T](
     case _ => rawPath
   def collect(
       parent: Option[Tree]
-  )(tree: Tree, pos: SourcePosition, symbol: Option[Symbol]): T
-
-  /**
-   * @return (adjusted position, should strip backticks)
-   */
-  def adjust(
-      pos1: SourcePosition,
-      forRename: Boolean = false,
-  ): (SourcePosition, Boolean) =
-    if !pos1.span.isCorrect then (pos1, false)
-    else
-      val pos0 =
-        val span = pos1.span
-        if span.exists && span.point > span.end then
-          pos1.withSpan(
-            span
-              .withStart(span.point)
-              .withEnd(span.point + (span.end - span.start))
-          )
-        else pos1
-
-      val pos =
-        if pos0.end > 0 && sourceText(pos0.end - 1) == ',' then
-          pos0.withEnd(pos0.end - 1)
-        else pos0
-      val isBackticked =
-        sourceText(pos.start) == '`' &&
-          pos.end > 0 &&
-          sourceText(pos.end - 1) == '`'
-      // when the old name contains backticks, the position is incorrect
-      val isOldNameBackticked = sourceText(pos.start) != '`' &&
-        pos.start > 0 &&
-        sourceText(pos.start - 1) == '`' &&
-        sourceText(pos.end) == '`'
-      if isBackticked && forRename then
-        (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
-      else if isOldNameBackticked then
-        (pos.withStart(pos.start - 1).withEnd(pos.end + 1), false)
-      else (pos, false)
-  end adjust
+  )(tree: Tree | EndMarker, pos: SourcePosition, symbol: Option[Symbol]): T
 
   def symbolAlternatives(sym: Symbol) =
     def member(parent: Symbol) = parent.info.member(sym.name).symbol
@@ -435,7 +397,7 @@ abstract class PcCollector[T](
         parent: Option[Tree],
     ): Set[T] =
       def collect(
-          tree: Tree,
+          tree: Tree | EndMarker,
           pos: SourcePosition,
           symbol: Option[Symbol] = None,
       ) =
@@ -460,7 +422,7 @@ abstract class PcCollector[T](
          */
         case sel: Select
             if sel.span.isCorrect && filter(sel) &&
-              !isForComprehensionMethod(sel) =>
+              !sel.isForComprehensionMethod =>
           occurences + collect(
             sel,
             pos.withSpan(selectNameSpan(sel)),
@@ -493,6 +455,12 @@ abstract class PcCollector[T](
         case df: NamedDefTree
             if df.span.isCorrect && df.nameSpan.isCorrect &&
               filter(df) && !isGeneratedGiven(df) =>
+          def collectEndMarker =
+            EndMarker.getPosition(df, pos, sourceText).map {
+              collect(EndMarker(df.symbol), _)
+            }
+          end collectEndMarker
+
           val annots = collectTrees(df.mods.annotations)
           val traverser =
             new PcCollector.DeepFolderWithParent[Set[T]](
@@ -502,7 +470,7 @@ abstract class PcCollector[T](
             occurences + collect(
               df,
               pos.withSpan(df.nameSpan),
-            )
+            ) ++ collectEndMarker
           ) { case (set, tree) =>
             traverser(set, tree)
           }
@@ -632,17 +600,6 @@ abstract class PcCollector[T](
         Span(span.start, span.start + realName.length, point)
       else Span(point, span.end, point)
     else span
-
-  private val forCompMethods =
-    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
-
-  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
-  private def isForComprehensionMethod(sel: Select): Boolean =
-    val syntheticName = sel.name match
-      case name: TermName => forCompMethods(name)
-      case _ => false
-    val wrongSpan = sel.qualifier.span.contains(sel.nameSpan)
-    syntheticName && wrongSpan
 end PcCollector
 
 object PcCollector:
@@ -667,3 +624,34 @@ case class ExtensionParamOccurence(
     sym: Symbol,
     methods: List[untpd.Tree],
 )
+
+case class EndMarker(symbol: Symbol)
+
+object EndMarker:
+  /**
+   * Matches end marker line from start to the name's beginning.
+   * E.g.
+   *    end /* some comment */
+   */
+  private val endMarkerRegex = """.*end(/\*.*\*/|\s)+""".r
+  def getPosition(df: NamedDefTree, pos: SourcePosition, sourceText: String)(
+      implicit ct: Context
+  ): Option[SourcePosition] =
+    val name = df.name.toString()
+    val endMarkerLine =
+      sourceText.slice(df.span.start, df.span.end).split('\n').last
+    val index = endMarkerLine.length() - name.length()
+    if index < 0 then None
+    else
+      val (possiblyEndMarker, possiblyEndMarkerName) =
+        endMarkerLine.splitAt(index)
+      Option.when(
+        possiblyEndMarkerName == name &&
+          endMarkerRegex.matches(possiblyEndMarker)
+      )(
+        pos
+          .withStart(df.span.end - name.length())
+          .withEnd(df.span.end)
+      )
+  end getPosition
+end EndMarker

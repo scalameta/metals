@@ -12,12 +12,11 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 class BuildTargetInfo(buildTargets: BuildTargets) {
 
-  def buildTargetDetails(targetName: String): String = {
+  def buildTargetDetails(targetName: String, uri: String): String = {
     buildTargets.all
-      .filter(_.getDisplayName == targetName)
-      .map(_.getId())
-      .headOption
-      .map(buildTargetDetail)
+      .find(_.getName == targetName)
+      .orElse(buildTargets.all.find(_.getId.getUri.toString == uri))
+      .map(target => buildTargetDetail(target.getId()))
       .getOrElse(s"Build target $targetName not found")
   }
 
@@ -33,7 +32,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
 
     commonInfo.foreach(info => {
       output += "Target"
-      output += s"  ${info.getDisplayName}"
+      output += s"  ${info.getName}"
 
       if (!info.getTags.isEmpty)
         output ++= getSection("Tags", info.getTags.asScala.toList)
@@ -92,7 +91,10 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
         "Scala Binary Version",
         List(info.scalaBinaryVersion),
       )
-      output ++= getSection("Scala Platform", List(info.scalaPlatform))
+      output ++= getSection(
+        "Scala Platform",
+        List(info.scalaPlatform.toString()),
+      )
       info.jvmVersion.foreach(jvmVersion =>
         output ++= getSection("JVM Version", List(jvmVersion))
       )
@@ -137,18 +139,19 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
 
   private def getSection(
       sectionName: String,
-      sectionText: List[_],
+      sectionText: List[String],
   ): List[String] =
     "" :: sectionName :: {
       if (sectionText.isEmpty) List("  NONE")
-      else sectionText.map(text => s"  $text")
+      else
+        sectionText.map(text => s"  ${if (text.isEmpty) "[BLANK]" else text}")
     }
 
   private def translateCapability(
       capability: String,
       hasCapability: Boolean,
   ): String =
-    if (hasCapability) s"  $capability" else s"  $capability <- NOT SUPPORTED"
+    if (hasCapability) capability else s"$capability <- NOT SUPPORTED"
 
   private def jarHasSource(jarName: String): Boolean = {
     val sourceJarName = jarName.replace(".jar", "-sources.jar")
@@ -195,7 +198,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
         )
       )
     } else
-      List("  NONE")
+      List("NONE")
   }
 
   private def getDependencies(target: BuildTarget): List[String] = {
@@ -203,7 +206,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       .map(f =>
         buildTargets
           .info(f)
-          .map(_.getDisplayName())
+          .map(_.getName())
           .getOrElse("Unknown target")
       )
       .toList
@@ -214,7 +217,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       .filter(dependentTarget =>
         dependentTarget.getDependencies.contains(target.getId())
       )
-      .map(_.getDisplayName())
+      .map(_.getName())
       .toList
   }
 

@@ -17,7 +17,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
       methodBody: String,
       newName: String = "newName",
       filename: String = "A.scala",
-      wrap: Boolean = true,
+      wrap: Boolean = true
   )(implicit location: Location): Unit =
     test(name) {
       val original =
@@ -41,9 +41,9 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
             URI.create(s"file:/$filename"),
             code,
             offset,
-            EmptyCancelToken,
+            EmptyCancelToken
           ),
-          newName,
+          newName
         )
         .get()
         .asScala
@@ -51,7 +51,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
 
       assertEquals(
         TextEdits.applyEdits(base, renames),
-        expected,
+        expected
       )
 
     }
@@ -59,7 +59,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
   def prepare(
       name: TestOptions,
       input: String,
-      filename: String = "A.scala",
+      filename: String = "A.scala"
   ): Unit = {
     test(name) {
       val edit = input.replaceAll("(<<|>>)", "")
@@ -73,7 +73,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
             URI.create(s"file:/$filename"),
             code,
             offset,
-            EmptyCancelToken,
+            EmptyCancelToken
           )
         )
         .get()
@@ -82,7 +82,7 @@ class BasePcRenameSuite extends BasePCSuite with RangeReplace {
         if (!range.isPresent()) base else replaceInRange(base, range.get())
       assertNoDiff(
         withRange,
-        expected,
+        expected
       )
     }
   }

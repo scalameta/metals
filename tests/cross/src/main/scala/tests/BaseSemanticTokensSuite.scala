@@ -15,7 +15,7 @@ class BaseSemanticTokensSuite extends BasePCSuite {
   def check(
       name: TestOptions,
       expected: String,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit location: Location): Unit =
     test(name) {
       val base =
@@ -30,11 +30,11 @@ class BaseSemanticTokensSuite extends BasePCSuite {
 
       val obtained = TestSemanticTokens.pcSemanticString(
         base,
-        nodes.asScala.toList,
+        nodes.asScala.toList
       )
       assertEquals(
         obtained,
-        getExpected(expected, compat, scalaVersion),
+        getExpected(expected, compat, scalaVersion)
       )
 
     }

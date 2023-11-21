@@ -95,6 +95,35 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
+  test("initial-config-hidden") {
+    cleanWorkspace()
+    client.showMessageRequestHandler = { params =>
+      val expected = MissingScalafmtConf.createScalafmtConfMessage
+      if (params.getMessage() == expected) {
+        params.getActions().asScala.find(_ == MissingScalafmtConf.runDefaults)
+      } else None
+    }
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a":{"scalaVersion" : ${V.scala213}}}
+            |/a/src/main/scala/a/Main.scala
+            |object FormatMe {
+            | val x = 1  }
+            |""".stripMargin,
+        expectError = true,
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.formatting("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiff(
+        server.textContents(".metals/.scalafmt.conf"),
+        s"""|version = "${V.scalafmtVersion}"
+            |runner.dialect = scala213
+            |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("custom-config-path") {
     for {
       _ <- initialize(
