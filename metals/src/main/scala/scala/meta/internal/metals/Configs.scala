@@ -37,6 +37,9 @@ object Configs {
           new FileSystemWatcher(
             Either.forLeft(s"$root/project/build.properties")
           ),
+          new FileSystemWatcher(
+            Either.forLeft(s"$root/.metals/.reports/bloop/*/*")
+          ),
         ).asJava
       )
     }

@@ -383,15 +383,17 @@ class MetalsLspService(
     )
   )
 
+  private val connectionBspStatus =
+    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
+
   private val bspErrorHandler: BspErrorHandler =
     new BspErrorHandler(
-      languageClient,
-      folder,
       () => bspSession,
       tables,
+      connectionBspStatus,
     )
 
-  private val buildClient: ForwardingMetalsBuildClient =
+  val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,
       diagnostics,
@@ -425,9 +427,6 @@ class MetalsLspService(
     tables,
     clientConfig.initialConfig,
   )
-
-  private val connectionBspStatus =
-    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
 
   private val bspServers: BspServers = new BspServers(
     folder,
@@ -765,6 +764,7 @@ class MetalsLspService(
     maybeJdkVersion,
     getVisibleName,
     buildTools,
+    connectionBspStatus,
   )
 
   val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
@@ -1299,7 +1299,13 @@ class MetalsLspService(
         .toSeq
     val (deleteEvents, changeAndCreateEvents) =
       importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
-    deleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
+    val (bloopReportDelete, otherDeleteEvents) =
+      deleteEvents.partition(
+        _.getUri().toAbsolutePath.toNIO
+          .startsWith(reports.bloop.maybeReportsDir)
+      )
+    if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
+    otherDeleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
     onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
   }
 
@@ -1327,7 +1333,6 @@ class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
-
     event.eventType match {
       case EventType.CreateOrModify
           if path.isInBspDirectory(folder) && path.extension == "json"

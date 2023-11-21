@@ -379,4 +379,11 @@ trait CommonMtagsEnrichments {
       }
     }
   }
+
+  implicit class XtensionText(text: String) {
+    def trimTo(maxLength: Int): String =
+      if (text.length() <= maxLength) text
+      else s"${text.take(maxLength)}..."
+  }
+
 }
