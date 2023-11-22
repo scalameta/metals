@@ -837,6 +837,21 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
+    "for-comp-bind2",
+    """
+      |object Main {
+      |  val abc = for {
+      |    <<f@@oo>> <- List(1)
+      |    baz = <<foo>> + 1
+      |    a <- List(<<foo>>, 123)
+      |  } yield {
+      |    val x = <<foo>> + baz
+      |    x
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
     "for-comp-map",
     """|object Main {
        |  val x = List(1).<<m@@ap>>(_ + 1)
@@ -989,6 +1004,18 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |    someLongName: Int => 
       |      val <<ab@@c>> = 2
       |      someLongName + <<abc>>
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind6",
+    """
+      |object Main {
+      |  List("test").map {
+      |        case <<string@@Name>>: String if <<stringName>>.startsWith("a") => <<stringName>> + "a"
+      |        case stringName: String if stringName.startsWith("b") => stringName + "b"
+      |        case stringName: String => stringName + "c"
       |  }
       |}""".stripMargin
   )
