@@ -107,7 +107,7 @@ object ImportedBuild {
       dependencySources: DependencySourcesResult,
       javacOptions: JavacOptionsResult,
       scalacOptions: ScalacOptionsResult,
-  )(implicit ec: ExecutionContext): Future[DependencySourcesResult] = Future {
+  )(implicit ec: ExecutionContext): Future[DependencySourcesResult] = {
     val dependencySourcesItems = dependencySources.getItems().asScala.toList
     val idsLookup = dependencySourcesItems.map(_.getTarget()).toSet
     val classpaths = javacOptions
@@ -119,16 +119,21 @@ object ImportedBuild {
         .asScala
         .map(item => (item.getTarget(), item.getClasspath()))
 
-    val newItems =
-      classpaths.collect {
-        case (id, classpath) if !idsLookup(id) =>
-          val items = JarSourcesProvider.fetchSources(
-            classpath.asScala.filter(_.endsWith(".jar")).toSeq
-          )
-          new DependencySourcesItem(id, items.asJava)
+    val newItemsFuture =
+      Future.sequence {
+        classpaths.collect {
+          case (id, classpath) if !idsLookup(id) =>
+            for {
+              items <- JarSourcesProvider.fetchSources(
+                classpath.asScala.filter(_.endsWith(".jar")).toSeq
+              )
+            } yield new DependencySourcesItem(id, items.asJava)
+        }
       }
 
-    new DependencySourcesResult((dependencySourcesItems ++ newItems).asJava)
+    newItemsFuture.map { newItems =>
+      new DependencySourcesResult((dependencySourcesItems ++ newItems).asJava)
+    }
   }
 
   def fromList(data: Seq[ImportedBuild]): ImportedBuild =

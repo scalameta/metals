@@ -1,9 +1,14 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Success
 import scala.util.Try
+import scala.util.control.NonFatal
 import scala.xml.XML
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -12,12 +17,13 @@ import scala.meta.io.AbsolutePath
 
 import coursierapi.Dependency
 import coursierapi.Fetch
+import coursierapi.error.CoursierError
 
 object JarSourcesProvider {
 
   private val sbtRegex = "sbt-(.*)".r
 
-  def fetchSources(jars: Seq[String]): Seq[String] = {
+  def fetchSources(jars: Seq[String])(implicit ec: ExecutionContext): Future[Seq[String]] = {
     def sourcesPath(jar: String) = s"${jar.stripSuffix(".jar")}-sources.jar"
 
     val (haveSources, toDownload) = jars.partition { jar =>
@@ -37,25 +43,33 @@ object JarSourcesProvider {
     }.distinct
 
     val fetchedSources =
-      dependencies.flatMap { dep =>
-        Try(fetchDependencySources(dep)).toEither match {
-          case Right(fetched) => fetched.map(_.toUri().toString())
-          case Left(error) =>
-            scribe.warn(
-              s"could not fetch dependency sources for $dep, error: $error"
-            )
-            None
+      Future.sequence {
+        dependencies.map{ dep =>
+          fetchDependencySources(dep)
+          .recover {
+            case error : CoursierError =>
+              scribe.warn(s"Could not fetch dependency sources for $dep, error: $error")
+              Nil
+          }
         }
-      }
+      }.recover {
+        case _: TimeoutException =>
+          scribe.warn(s"Timeout when fetching dependency sources.")
+          Nil
+        case NonFatal(e) =>
+          scribe.warn(s"Could not fetch dependency sources, error: $e.")
+          Nil
+      }.map(_.flatten.map(_.toUri().toString()))
+
     val existingSources = haveSources.map(sourcesPath)
-    fetchedSources ++ existingSources
+    fetchedSources.map(_ ++ existingSources)
 
   }
 
   private def sbtFallback(jar: AbsolutePath): Option[Dependency] = {
     val filename = jar.filename.stripSuffix(".jar")
     filename match {
-      case sbtRegex(versionStr) if Try().isSuccess =>
+      case sbtRegex(versionStr) =>
         Try(SemVer.Version.fromString(versionStr)) match {
           case Success(version) if version.toString == versionStr =>
             Some(Dependency.of("org.scala-sbt", "sbt", versionStr))
@@ -91,7 +105,7 @@ object JarSourcesProvider {
 
   private def fetchDependencySources(
       dependency: Dependency
-  ): List[Path] = {
+  )(implicit ec: ExecutionContext): Future[List[Path]] = Future {
     Fetch
       .create()
       .withDependencies(dependency)
@@ -101,6 +115,6 @@ object JarSourcesProvider {
       .asScala
       .map(_.toPath())
       .toList
-  }
+  }.withTimeout(5, TimeUnit.MINUTES)
 
 }
