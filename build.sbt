@@ -487,8 +487,9 @@ lazy val metals = project
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
-      // for comparing versions
-      "io.get-coursier" %% "versions" % "0.3.2",
+      // for comparing versions && fetching from sbt maven repository
+      "io.get-coursier" %% "coursier" % V.coursier,
+      "io.get-coursier" %% "coursier-sbt-maven-repository" % V.coursier,
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,

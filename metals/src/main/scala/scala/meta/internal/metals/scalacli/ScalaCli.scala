@@ -41,7 +41,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
-import coursier.version.Version
+import coursier.core.Version
 
 // todo https://github.com/scalameta/metals/issues/4788
 // clean () =>, use plain values

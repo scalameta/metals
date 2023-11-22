@@ -15,15 +15,23 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
-import coursierapi.Dependency
-import coursierapi.Fetch
-import coursierapi.error.CoursierError
+import coursier.Fetch
+import coursier.Repositories
+import coursier.core.Classifier
+import coursier.core.Dependency
+import coursier.core.Module
+import coursier.core.ModuleName
+import coursier.core.Organization
+import coursier.error.CoursierError
+import coursier.maven.SbtMavenRepository
 
 object JarSourcesProvider {
 
   private val sbtRegex = "sbt-(.*)".r
 
-  def fetchSources(jars: Seq[String])(implicit ec: ExecutionContext): Future[Seq[String]] = {
+  def fetchSources(
+      jars: Seq[String]
+  )(implicit ec: ExecutionContext): Future[Seq[String]] = {
     def sourcesPath(jar: String) = s"${jar.stripSuffix(".jar")}-sources.jar"
 
     val (haveSources, toDownload) = jars.partition { jar =>
@@ -43,23 +51,27 @@ object JarSourcesProvider {
     }.distinct
 
     val fetchedSources =
-      Future.sequence {
-        dependencies.map{ dep =>
-          fetchDependencySources(dep)
-          .recover {
-            case error : CoursierError =>
-              scribe.warn(s"Could not fetch dependency sources for $dep, error: $error")
-              Nil
+      Future
+        .sequence {
+          dependencies.map { dep =>
+            fetchDependencySources(dep)
+              .recover { case error: CoursierError =>
+                scribe.warn(
+                  s"Could not fetch dependency sources for $dep, error: $error"
+                )
+                Nil
+              }
           }
         }
-      }.recover {
-        case _: TimeoutException =>
-          scribe.warn(s"Timeout when fetching dependency sources.")
-          Nil
-        case NonFatal(e) =>
-          scribe.warn(s"Could not fetch dependency sources, error: $e.")
-          Nil
-      }.map(_.flatten.map(_.toUri().toString()))
+        .recover {
+          case _: TimeoutException =>
+            scribe.warn(s"Timeout when fetching dependency sources.")
+            Nil
+          case NonFatal(e) =>
+            scribe.warn(s"Could not fetch dependency sources, error: $e.")
+            Nil
+        }
+        .map(_.flatten.map(_.toUri().toString()))
 
     val existingSources = haveSources.map(sourcesPath)
     fetchedSources.map(_ ++ existingSources)
@@ -72,7 +84,12 @@ object JarSourcesProvider {
       case sbtRegex(versionStr) =>
         Try(SemVer.Version.fromString(versionStr)) match {
           case Success(version) if version.toString == versionStr =>
-            Some(Dependency.of("org.scala-sbt", "sbt", versionStr))
+            val module = Module(
+              Organization("org.scala-sbt"),
+              ModuleName("sbt"),
+              Map.empty,
+            )
+            Some(Dependency(module, versionStr))
           case _ => None
         }
       case _ => None
@@ -84,37 +101,39 @@ object JarSourcesProvider {
     val groupId = (xml \ "groupId").text
     val version = (xml \ "version").text
     val artifactId = (xml \ "artifactId").text
-    Option
-      .when(groupId.nonEmpty && version.nonEmpty && artifactId.nonEmpty) {
-        Dependency.of(groupId, artifactId, version)
-      }
-      .filterNot(dep => isSbtDap(dep) || isMetalsPlugin(dep))
+    val properties = (xml \ "properties")
+
+    def getProperty(name: String) =
+      properties.map(node => (node \ name).text).find(_.nonEmpty).map(name -> _)
+
+    Option.when(groupId.nonEmpty && version.nonEmpty && artifactId.nonEmpty) {
+      val scalaVersion = getProperty("scalaVersion").toMap
+      val sbtVersion = getProperty("sbtVersion").toMap
+      val attributes = (scalaVersion ++ sbtVersion)
+      Dependency(
+        Module(Organization(groupId), ModuleName(artifactId), attributes),
+        version,
+      )
+    }
   }
 
-  private def isSbtDap(dependency: Dependency) = {
-    dependency.getModule().getOrganization() == "ch.epfl.scala" &&
-    dependency.getModule().getName() == "sbt-debug-adapter" &&
-    dependency.getVersion() == BuildInfo.debugAdapterVersion
-  }
+  private val sbtMaven = SbtMavenRepository(Repositories.central)
+  private val metalsPluginSnapshots = SbtMavenRepository(
+    Repositories.sonatype("public")
+  )
 
-  private def isMetalsPlugin(dependency: Dependency) = {
-    dependency.getModule().getOrganization() == "org.scalameta" &&
-    dependency.getModule().getName() == "sbt-metals" &&
-    dependency.getVersion() == BuildInfo.metalsVersion
-  }
-
-  private def fetchDependencySources(
+  def fetchDependencySources(
       dependency: Dependency
-  )(implicit ec: ExecutionContext): Future[List[Path]] = Future {
-    Fetch
-      .create()
-      .withDependencies(dependency)
-      .addClassifiers("sources")
-      .fetchResult()
-      .getFiles()
-      .asScala
-      .map(_.toPath())
-      .toList
-  }.withTimeout(5, TimeUnit.MINUTES)
+  )(implicit ec: ExecutionContext): Future[List[Path]] = {
+    val repositories =
+      List(Repositories.central, sbtMaven, metalsPluginSnapshots)
+    Fetch()
+      .withRepositories(repositories)
+      .withDependencies(Seq(dependency))
+      .addClassifiers(Classifier.sources)
+      .future()
+      .map(_.map(_.toPath()).toList)
+      .withTimeout(5, TimeUnit.MINUTES)
+  }
 
 }
