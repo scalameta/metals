@@ -23,10 +23,14 @@ class TimeoutSuite extends FunSuite {
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   val duration: FiniteDuration = Duration(1, TimeUnit.SECONDS)
+  val onTimeout: Duration => Future[FutureWithTimeout.OnTimeout] = _ =>
+    Future.successful(FutureWithTimeout.Cancel)
 
   test("simple-timeout") {
     val promise = Promise[Unit]()
-    val f = FutureWithTimeout(duration)(ExampleFutures.infinite(promise)).future
+    val f = FutureWithTimeout(duration, onTimeout)(
+      ExampleFutures.infinite(promise)
+    ).future
     assert(!f.isCompleted)
 
     for {
@@ -42,7 +46,7 @@ class TimeoutSuite extends FunSuite {
   }
 
   test("no-timeout") {
-    FutureWithTimeout(duration)(ExampleFutures.fast).future.map {
+    FutureWithTimeout(duration, onTimeout)(ExampleFutures.fast).future.map {
       case (res, time) =>
         assert(time.toMillis >= ExampleFutures.timeStep)
         assertEquals(res, 1)
@@ -54,14 +58,20 @@ class TimeoutSuite extends FunSuite {
     val timeouts = new Timeouts(min(3))
     val flexTimeout = Timeout.FlexTimeout("flex", min(6))
     assertEquals(timeouts.getTimeout(Timeout.NoTimeout), None)
-    assertEquals(timeouts.getTimeout(Timeout.DefaultFlexTimeout), Some(min(3)))
+    assertEquals(
+      timeouts.getTimeout(Timeout.DefaultFlexTimeout("request")),
+      Some(min(3)),
+    )
     assertEquals(timeouts.getTimeout(flexTimeout), Some(min(6)))
-    timeouts.measured(Timeout.DefaultFlexTimeout, min(1))
-    timeouts.measured(Timeout.DefaultFlexTimeout, min(3))
+    timeouts.measured(Timeout.DefaultFlexTimeout("request"), min(1))
+    timeouts.measured(Timeout.DefaultFlexTimeout("request"), min(3))
     timeouts.measured(flexTimeout, min(1))
     timeouts.measured(flexTimeout, min(2))
     // avg * 3 > min
-    assertEquals(timeouts.getTimeout(Timeout.DefaultFlexTimeout), Some(min(6)))
+    assertEquals(
+      timeouts.getTimeout(Timeout.DefaultFlexTimeout("request")),
+      Some(min(6)),
+    )
     // avg * 3 < min
     assertEquals(timeouts.getTimeout(flexTimeout), Some(min(6)))
   }

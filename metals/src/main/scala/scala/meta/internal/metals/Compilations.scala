@@ -31,8 +31,8 @@ final class Compilations(
     onStartCompilation: () => Unit,
 )(implicit ec: ExecutionContext) {
 
-  val cascadeCompileTimeout = Timeout.NoTimeout
-  val compileTimeout: Timeout.FlexTimeout =
+  private val cascadeCompileTimeout = Timeout.NoTimeout
+  private val compileTimeout: Timeout.FlexTimeout =
     Timeout.FlexTimeout("compile", Duration(10, TimeUnit.MINUTES))
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
   private val compileBatch =

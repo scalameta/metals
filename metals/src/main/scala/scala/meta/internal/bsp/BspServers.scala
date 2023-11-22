@@ -141,6 +141,7 @@ final class BspServers(
       client,
       newConnection,
       tables.dismissedNotifications.ReconnectBsp,
+      tables.dismissedNotifications.RequestTimeout,
       config,
       details.getName(),
       bspStatusOpt,

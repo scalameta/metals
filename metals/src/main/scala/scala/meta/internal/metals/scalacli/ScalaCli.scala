@@ -224,6 +224,7 @@ class ScalaCli(
         languageClient,
         () => ScalaCli.socketConn(command, connDir),
         tables.dismissedNotifications.ReconnectScalaCli,
+        tables.dismissedNotifications.RequestTimeout,
         config(),
         "Scala CLI",
         supportsWrappedSources = Some(true),

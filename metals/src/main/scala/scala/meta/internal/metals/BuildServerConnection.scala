@@ -18,7 +18,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 import scala.util.Success
 
@@ -53,13 +53,14 @@ class BuildServerConnection private (
     initialConnection: BuildServerConnection.LauncherConnection,
     languageClient: LanguageClient,
     reconnectNotification: DismissedNotifications#Notification,
+    requestTimeOutNotification: DismissedNotifications#Notification,
     config: MetalsServerConfig,
     workspace: AbsolutePath,
     supportsWrappedSources: Boolean,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
-  private val defaultMinTimeout = Duration(3, TimeUnit.MINUTES)
+  private val defaultMinTimeout = FiniteDuration(3, TimeUnit.MINUTES)
 
   @volatile private var connection = Future.successful(initialConnection)
   initialConnection.setReconnect(() => reconnect().ignoreValue)
@@ -71,7 +72,12 @@ class BuildServerConnection private (
   }
 
   val requestRegistry =
-    new RequestRegistry(defaultMinTimeout, initialConnection.cancelables)
+    new RequestRegistry(
+      defaultMinTimeout,
+      initialConnection.cancelables,
+      languageClient,
+      Some(requestTimeOutNotification),
+    )
 
   private val isShuttingDown = new AtomicBoolean(false)
   private val onReconnection =
@@ -423,7 +429,7 @@ class BuildServerConnection private (
   private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
-      timeout: Timeout = Timeout.DefaultFlexTimeout,
+      timeout: Timeout = Timeout.NoTimeout,
   ): CompletableFuture[T] = {
     val localCancelable = new MutableCancelable()
     def runWithCanceling(
@@ -500,6 +506,7 @@ object BuildServerConnection {
       localClient: MetalsBuildClient,
       languageClient: MetalsLanguageClient,
       connect: () => Future[SocketConnection],
+      requestTimeOutNotification: DismissedNotifications#Notification,
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
       serverName: String,
@@ -572,6 +579,7 @@ object BuildServerConnection {
           setupServer,
           connection,
           languageClient,
+          requestTimeOutNotification,
           reconnectNotification,
           config,
           projectRoot,
@@ -588,6 +596,7 @@ object BuildServerConnection {
             languageClient,
             connect,
             reconnectNotification,
+            requestTimeOutNotification,
             config,
             serverName,
             bspStatusOpt,

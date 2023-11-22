@@ -1,26 +1,35 @@
 package tests
 
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
 
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.utils.RequestRegistry
 import scala.meta.internal.metals.utils.Timeout
 
 import munit.FunSuite
+import org.eclipse.lsp4j.MessageActionItem
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class RequestRegistrySuite extends FunSuite {
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
-  val duration: FiniteDuration = Duration(1, TimeUnit.SECONDS)
-  def createRegistry() = new RequestRegistry(duration, List())
+  val duration: FiniteDuration = FiniteDuration(1, TimeUnit.SECONDS)
+  def createRegistry() =
+    new RequestRegistry(duration, List(), CancellingLanguageClient)
+  val defaultTimeout: Timeout.DefaultFlexTimeout =
+    Timeout.DefaultFlexTimeout("request")
 
   test("avg") {
     val requestRegistry = createRegistry()
@@ -44,15 +53,15 @@ class RequestRegistrySuite extends FunSuite {
           doneTimeout,
         )
         .future
-      _ <- requestRegistry.register(ExampleFutures.fast).future
-      _ <- requestRegistry.register(ExampleFutures.fast).future
-      _ <- requestRegistry.register(ExampleFutures.fast).future
+      _ <- requestRegistry.register(ExampleFutures.fast, defaultTimeout).future
+      _ <- requestRegistry.register(ExampleFutures.fast, defaultTimeout).future
+      _ <- requestRegistry.register(ExampleFutures.fast, defaultTimeout).future
       _ = assert(
-        requestRegistry.getTimeout(Timeout.DefaultFlexTimeout).get > duration
+        requestRegistry.getTimeout(defaultTimeout).get > duration
       )
       _ = assert(
         requestRegistry
-          .getTimeout(Timeout.DefaultFlexTimeout)
+          .getTimeout(defaultTimeout)
           .get < duration * 2
       )
       _ = assert(requestRegistry.getTimeout(doneTimeout).get == duration)
@@ -64,15 +73,15 @@ class RequestRegistrySuite extends FunSuite {
     val requestRegistry = createRegistry()
     for {
       err <- requestRegistry
-        .register(ExampleFutures.infinite(promise))
+        .register(ExampleFutures.infinite(promise), defaultTimeout)
         .future
         .failed
       _ = assert(err.isInstanceOf[TimeoutException])
       _ = assertEquals(
-        requestRegistry.getTimeout(Timeout.DefaultFlexTimeout).get,
+        requestRegistry.getTimeout(defaultTimeout).get,
         duration * 3,
       )
-      _ <- requestRegistry.register(ExampleFutures.fast).future
+      _ <- requestRegistry.register(ExampleFutures.fast, defaultTimeout).future
       _ <- promise.future
     } yield ()
   }
@@ -83,11 +92,11 @@ class RequestRegistrySuite extends FunSuite {
     val requestRegistry = createRegistry()
     val f1 = requestRegistry.register(
       ExampleFutures.infinite(promise1),
-      Timeout.NoTimeout,
+      Timeout.NoTimeout
     )
     val f2 = requestRegistry.register(
       ExampleFutures.infinite(promise2),
-      Timeout.NoTimeout,
+      Timeout.NoTimeout
     )
     requestRegistry.cancel()
     for {
@@ -104,4 +113,11 @@ class RequestRegistrySuite extends FunSuite {
 
 object RequestType extends Enumeration {
   val Type1, Type2 = Value
+}
+
+object CancellingLanguageClient extends NoopLanguageClient {
+  override def showMessageRequest(
+      requestParams: ShowMessageRequestParams
+  ): CompletableFuture[MessageActionItem] =
+    Future.successful(Messages.RequestTimeout.cancel).asJava
 }
