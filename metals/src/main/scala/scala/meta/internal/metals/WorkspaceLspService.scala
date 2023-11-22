@@ -385,6 +385,20 @@ class WorkspaceLspService(
   override def hover(params: HoverExtParams): CompletableFuture[Hover] =
     getServiceFor(params.textDocument.getUri()).hover(params)
 
+  override def inlayHints(
+      params: lsp4j.InlayHintParams
+  ): CompletableFuture[java.util.List[lsp4j.InlayHint]] =
+    getServiceFor(params.getTextDocument.getUri()).inlayHints(params)
+
+  override def inlayHintResolve(
+      inlayHint: lsp4j.InlayHint
+  ): CompletableFuture[lsp4j.InlayHint] =
+    onCurrentFolder[lsp4j.InlayHint](
+      f = _.inlayHintResolve(inlayHint).asScala,
+      actionName = "inlayHintResolve",
+      default = () => inlayHint,
+    ).asJava
+
   override def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[ju.List[DocumentHighlight]] =
@@ -1092,6 +1106,9 @@ class WorkspaceLspService(
         } else {
           capabilities.setCodeActionProvider(true)
         }
+        val inlayHintsCapabilities = new lsp4j.InlayHintRegistrationOptions()
+        inlayHintsCapabilities.setResolveProvider(true)
+        capabilities.setInlayHintProvider(inlayHintsCapabilities)
 
         val textDocumentSyncOptions = new lsp4j.TextDocumentSyncOptions
         textDocumentSyncOptions.setChange(lsp4j.TextDocumentSyncKind.Full)

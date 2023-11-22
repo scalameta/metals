@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.DocumentRangeFormattingParams;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
+import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.SelectionRange;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
@@ -167,7 +168,7 @@ public abstract class PresentationCompiler {
 	/**
 	 * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters and conversions.
 	 */
-	public CompletableFuture<List<SyntheticDecoration>> syntheticDecorations(SyntheticDecorationsParams params) {
+	public CompletableFuture<List<InlayHint>> inlayHints(InlayHintsParams params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 

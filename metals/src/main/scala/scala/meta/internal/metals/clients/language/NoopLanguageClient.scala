@@ -71,6 +71,9 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
 
   override def notifyProgress(params: ProgressParams): Unit = ()
 
+  override def refreshInlayHints(): CompletableFuture[Void] = {
+    CompletableFuture.completedFuture(null)
+  }
 }
 
 object NoopLanguageClient extends NoopLanguageClient

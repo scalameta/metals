@@ -1053,6 +1053,14 @@ class MetalsGlobal(
       case _ => false
     }
 
+  def enclosedChildren(tree: Tree, pos: Position): List[Tree] = {
+    tree.children
+      .filter(c =>
+        !c.pos.isDefined ||
+          c.pos.start <= pos.end && c.pos.end >= pos.start
+      )
+  }
+
   // Extractor for both term and type applications like `foo(1)` and foo[T]`
   object TreeApply {
     def unapply(tree: Tree): Option[(Tree, List[Tree])] =
