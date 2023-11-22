@@ -6,7 +6,7 @@ import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.CoursierComplete
 
-import coursier.version.Version
+import coursier.core.Version
 
 class ScalaCliActionsSuite
     extends BaseScalaCLIActionSuite("actionableDiagnostic") {
