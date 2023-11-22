@@ -31,20 +31,20 @@ import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
+import scala.meta.pc.InlayHintsParams
 import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SyntheticDecoration
-import scala.meta.pc.SyntheticDecorationsParams
 import scala.meta.pc.VirtualFileParams
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
+import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
@@ -171,16 +171,16 @@ case class ScalaPresentationCompiler(
     }
   }
 
-  override def syntheticDecorations(
-      params: SyntheticDecorationsParams
-  ): CompletableFuture[ju.List[SyntheticDecoration]] = {
-    val empty: ju.List[SyntheticDecoration] =
-      new ju.ArrayList[SyntheticDecoration]()
+  override def inlayHints(
+      params: InlayHintsParams
+  ): CompletableFuture[ju.List[InlayHint]] = {
+    val empty: ju.List[InlayHint] =
+      new ju.ArrayList[InlayHint]()
     compilerAccess.withInterruptableCompiler(Some(params))(
       empty,
       params.token
     ) { pc =>
-      new PcSyntheticDecorationsProvider(
+      new PcInlayHintsProvider(
         pc.compiler(),
         params
       ).provide().asJava

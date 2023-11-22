@@ -868,10 +868,14 @@ class SbtBloopLspSuite
       _ <- server.didOpen("build.sbt")
       _ <- server.didSave("build.sbt")(identity)
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.syntheticDecorations,
-        s"""|def foo(): String = "2.13.2"
-            |def bar(): String = foo() 
+      _ <- server.assertInlayHints(
+        "build.sbt",
+        s"""|def foo() = "2.13.2"
+            |def bar() = foo()
+            |scalaVersion := "2.13.2"
+           """.stripMargin,
+        s"""|def foo()/*: String<<java/lang/String#>>*/ = "2.13.2"
+            |def bar()/*: String<<java/lang/String#>>*/ = foo()
             |scalaVersion := "2.13.2"
            """.stripMargin,
       )

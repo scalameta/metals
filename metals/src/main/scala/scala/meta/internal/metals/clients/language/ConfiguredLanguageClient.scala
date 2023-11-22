@@ -145,6 +145,18 @@ final class ConfiguredLanguageClient(
     } else CompletableFuture.allOf()
   }
 
+  override def refreshInlayHints(): CompletableFuture[Void] = {
+    if (clientConfig.isInlayHintsEnabled()) {
+      underlying
+        .refreshInlayHints()
+        .handle { (msg, ex) =>
+          if (ex != null)
+            scribe.warn(s"Error while refreshing inlayHints: $msg", ex)
+          msg
+        }
+    } else CompletableFuture.allOf()
+  }
+
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit =

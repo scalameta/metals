@@ -6,7 +6,7 @@ object SlowSaveExpect {
   def main(args: Array[String]): Unit = {
     List[BaseExpectSuite](
       new SemanticTokensScala3ExpectSuite(),
-      new SyntheticDecorationsScala3ExpectSuite(),
+      new InlayHintsScala3ExpectSuite(),
     ).foreach { suite =>
       val header = suite.suiteName.length + 2
       println("=" * header)
