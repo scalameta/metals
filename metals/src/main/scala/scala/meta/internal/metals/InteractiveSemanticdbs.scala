@@ -201,8 +201,12 @@ final class InteractiveSemanticdbs(
       .getOrElse(compilers().fallbackCompiler(source))
 
     val (prependedLinesSize, modifiedText) =
-      buildTargets
-        .sbtAutoImports(source)
+      Option
+        .when(source.isSbt)(
+          buildTargets
+            .sbtAutoImports(source)
+        )
+        .flatten
         .fold((0, text))(imports =>
           (imports.size, SbtBuildTool.prependAutoImports(text, imports))
         )

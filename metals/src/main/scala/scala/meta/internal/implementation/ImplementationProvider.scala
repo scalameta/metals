@@ -174,31 +174,29 @@ final class ImplementationProvider(
       val dealiased =
         if (sym.desc.isType) dealiasClass(sym, symbolSearch) else sym
 
-      val definitionDocument =
-        if (currentDocument.definesSymbol(dealiased)) {
-          Some(currentDocument)
-        } else {
-          findSemanticDbForSymbol(dealiased)
-        }
+      val isWorkspaceSymbol =
+        (source.isWorkspaceSource(workspace) &&
+          currentDocument.definesSymbol(dealiased)) ||
+          findSymbolDefinition(dealiased).exists(
+            _.path.isWorkspaceSource(workspace)
+          )
 
-      val inheritanceContext = definitionDocument match {
-        // symbol is not in workspace, we only search classpath for it
-        case None =>
-          globalTable.globalContextFor(
-            source,
+      val inheritanceContext = if (!isWorkspaceSymbol) {
+        // symbol is not in workspace, we search both workspace and dependencies for it
+        globalTable.globalContextFor(
+          source,
+          implementationsInPath.asScala.toMap,
+          definitionProvider,
+          implementationsInDependencySources.asScala.toMap,
+        )
+      } else {
+        // symbol in workspace we search the workspace for it only
+        Some(
+          InheritanceContext.fromDefinitions(
+            symbolSearch,
             implementationsInPath.asScala.toMap,
-            definitionProvider,
-            implementationsInDependencySources.asScala.toMap,
           )
-        // symbol is in workspace,
-        // we might need to search different places for related symbols
-        case Some(_) =>
-          Some(
-            InheritanceContext.fromDefinitions(
-              symbolSearch,
-              implementationsInPath.asScala.toMap,
-            )
-          )
+        )
       }
       symbolLocationsFromContext(
         dealiased,
@@ -426,11 +424,14 @@ final class ImplementationProvider(
       classContext: InheritanceContext,
       file: Path,
   ): Future[Map[Path, Set[ClassLocation]]] = {
+    val visited = mutable.Set.empty[String]
 
     def loop(
         symbol: String,
         currentPath: Option[Path],
     ): Future[Set[ClassLocation]] = {
+      visited.add(symbol)
+      scribe.debug(s"searching for implementations for symbol $symbol")
       val directImplementations =
         classContext
           .getLocations(symbol)
@@ -446,9 +447,17 @@ final class ImplementationProvider(
           })
       directImplementations.flatMap { directImplementations =>
         Future
-          .sequence(directImplementations.map { loc =>
-            loop(loc.symbol, loc.file)
-          })
+          .sequence(
+            directImplementations
+              .withFilter(loc =>
+                (!visited(
+                  loc.symbol
+                ) && loc.symbol.desc.isType) || loc.symbol.isLocal
+              )
+              .map { loc =>
+                loop(loc.symbol, loc.file)
+              }
+          )
           .map(rec => directImplementations ++ rec.flatten)
       }
     }
