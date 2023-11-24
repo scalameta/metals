@@ -365,4 +365,45 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
       |}""".stripMargin
   )
 
+  check(
+    "constructor",
+    """
+      |object <<Main>>/*class*/ {
+      |  class <<Abc>>/*class*/[<<T>>/*typeParameter,declaration,abstract*/](<<abc>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+      |  object <<Abc>>/*class*/
+      |  val <<x>>/*variable,definition,readonly*/ = new <<Abc>>/*class*/(123)
+      |}""".stripMargin,
+    compat = Map(
+      "3" -> """
+               |object <<Main>>/*class*/ {
+               |  class <<Abc>>/*class*/[<<T>>/*typeParameter,definition,abstract*/](<<abc>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+               |  object <<Abc>>/*class*/
+               |  val <<x>>/*variable,definition,readonly*/ = new <<Abc>>/*class*/(123)
+               |}""".stripMargin
+    )
+  )
+
+  check(
+    "constructor1",
+    """
+      |object <<Main>>/*class*/ {
+      |  class <<Abc>>/*class*/[<<T>>/*typeParameter,declaration,abstract*/](<<abc>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+      |  object <<Abc>>/*class*/ {
+      |    def <<apply>>/*method,definition*/[<<T>>/*typeParameter,declaration,abstract*/](<<abc>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/, <<bde>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/) = new <<Abc>>/*class*/(<<abc>>/*parameter,readonly*/)
+      |  }
+      |  val <<x>>/*variable,definition,readonly*/ = <<Abc>>/*class*/(123, 456)
+      |}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """
+          |object <<Main>>/*class*/ {
+          |  class <<Abc>>/*class*/[<<T>>/*typeParameter,definition,abstract*/](<<abc>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+          |  object <<Abc>>/*class*/ {
+          |    def <<apply>>/*method,definition*/[<<T>>/*typeParameter,definition,abstract*/](<<abc>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/, <<bde>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/) = new <<Abc>>/*class*/(<<abc>>/*parameter,readonly*/)
+          |  }
+          |  val <<x>>/*variable,definition,readonly*/ = <<Abc>>/*class*/(123, 456)
+          |}""".stripMargin
+    )
+  )
+
 }

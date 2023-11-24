@@ -1044,4 +1044,98 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |""".stripMargin
   )
 
+  check(
+    "constructor",
+    """
+      |object Main {
+      |  class <<A@@bc>>[T](abc: T)
+      |  val x = new <<Abc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor1",
+    """
+      |object Main {
+      |  case class <<Abc>>[T](abc: T)
+      |  val x = <<A@@bc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor2",
+    """
+      |object Main {
+      |  class <<A@@bc>>[T](abc: T)
+      |  object <<Abc>>
+      |  val x = new <<Abc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor3",
+    """
+      |object Main {
+      |  class <<Abc>>[T](abc: T)
+      |  object <<Abc>>
+      |  val x = new <<A@@bc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor4",
+    """
+      |object Main {
+      |  class <<Abc>>[T](abc: T)
+      |  object <<Ab@@c>>
+      |  val x = new <<Abc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor5",
+    """
+      |object Main {
+      |  class <<Abc>>[T](abc: T)
+      |  object <<Abc>> {
+      |    def apply(abc: Int, bde: Int) = new <<Abc>>(abc + bde)
+      |  }
+      |  val x = <<Ab@@c>>(123, 456)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor6".tag(IgnoreScala2),
+    """
+      |class <<Abc>>[T](a: T)
+      |object O {
+      |  def foo(a: Int) = new <<Abc>>[Int](a)
+      |  val x = <<Ab@@c>>[Int](2)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor7",
+    """
+      |object Bar {
+      |class <<Abc>>[T](a: T)
+      |}
+      |
+      |object O {
+      |  val x = new Bar.<<Ab@@c>>(2)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor8".tag(IgnoreScala2),
+    """
+      |object Bar {
+      |class <<Abc>>[T](a: T)
+      |}
+      |
+      |object O {
+      |  val x = Bar.<<Ab@@c>>[Int](2)
+      |}""".stripMargin
+  )
+
 }
