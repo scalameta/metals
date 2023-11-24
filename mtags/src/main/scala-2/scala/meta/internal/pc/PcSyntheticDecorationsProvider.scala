@@ -157,9 +157,11 @@ final class PcSyntheticDecorationsProvider(
       case dd @ DefDef(_, _, _, _, tpt, _)
           if hasMissingTypeAnnot(dd, tpt) &&
             !dd.symbol.isConstructor &&
-            !dd.symbol.isMutable =>
+            !dd.symbol.isMutable &&
+            !samePosAsOwner(dd.symbol) =>
         Some(dd.symbol.tpe.widen.finalResultType, findTpePos(dd))
-      case bb @ Bind(name, Ident(nme.WILDCARD)) if name != nme.WILDCARD =>
+      case bb @ Bind(name, Ident(nme.WILDCARD))
+          if name != nme.WILDCARD && name != nme.DEFAULT_CASE =>
         Some(bb.symbol.tpe.widen.finalResultType, bb.namePosition)
       case _ => None
     }
@@ -168,6 +170,11 @@ final class PcSyntheticDecorationsProvider(
 
     private def primaryConstructorParam(sym: Symbol) =
       sym.safeOwner.isPrimaryConstructor
+
+    private def samePosAsOwner(sym: Symbol) = {
+      val owner = sym.safeOwner
+      sym.pos == owner.pos
+    }
 
     private def findTpePos(dd: DefDef) = {
       if (dd.rhs.isEmpty) dd.pos
