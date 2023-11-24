@@ -548,4 +548,22 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "partial-fun".tag(IgnoreScalaVersion.forLessThan("2.13.0")),
+    """|object Main {
+       |  List(1).collect { case x => x }
+       |  val x: PartialFunction[Int, Int] = { 
+       |    case 1 => 2 
+       |  }
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  List[Int](1).collect[Int] { case x: Int => x }
+       |  val x: PartialFunction[Int, Int] = { 
+       |    case 1 => 2 
+       |  }
+       |}
+       |""".stripMargin
+  )
 }
