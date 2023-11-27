@@ -47,6 +47,8 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StdReportContext
+import scala.meta.internal.metals.MirroredReportContext
+import scala.meta.internal.metals.RemoteTelemetryReportContext
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -88,6 +90,7 @@ import scala.meta.metals.lsp.TextDocumentService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
+import scala.meta.internal.telemetry
 
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
@@ -177,8 +180,7 @@ class MetalsLspService(
   )
 
   val tables: Tables = register(new Tables(folder, time))
-
-  implicit val reports: StdReportContext = new StdReportContext(
+  val localFileReports: StdReportContext = new StdReportContext(
     folder.toNIO,
     _.flatMap { uri =>
       for {
@@ -189,9 +191,17 @@ class MetalsLspService(
     },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
+  private val remoteTelemetryReports = new RemoteTelemetryReportContext(
+    serverEndpoint = serverInputs.initialServerConfig.telemetryServer,
+    workspace = Some(folder.toNIO),
+    getReporterContext = makeTelemetryContext,
+  )
+
+  implicit val reports: ReportContext =
+    new MirroredReportContext(localFileReports, remoteTelemetryReports)
 
   val folderReportsZippper: FolderReportsZippper =
-    FolderReportsZippper(doctor.getTargetsInfoForReports, reports)
+    FolderReportsZippper(doctor.getTargetsInfoForReports, localFileReports)
 
   private val buildTools: BuildTools = new BuildTools(
     folder,
@@ -1264,7 +1274,7 @@ class MetalsLspService(
     val (bloopReportDelete, otherDeleteEvents) =
       deleteEvents.partition(
         _.getUri().toAbsolutePath.toNIO
-          .startsWith(reports.bloop.maybeReportsDir)
+          .startsWith(localFileReports.bloop.maybeReportsDir)
       )
     if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
     otherDeleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
@@ -2848,4 +2858,17 @@ class MetalsLspService(
 
   def runDoctorCheck(): Unit = doctor.check(headDoctor)
 
+  private def makeTelemetryContext(): telemetry.ReporterContext =
+    telemetry.ReporterContext.metalsLsp(
+      telemetry.MetalsLspContext(
+        metalsVersion = BuildInfo.metalsVersion,
+        buildServerConnections = bspSession.toList.flatMap(
+          telemetry.conversion.BuildServerConnections(_)
+        ),
+        userConfig = telemetry.conversion.UserConfiguration(userConfig),
+        serverConfig = telemetry.conversion.MetalsServerConfig(
+          serverInputs.initialServerConfig
+        ),
+      )
+    )
 }

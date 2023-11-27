@@ -81,6 +81,30 @@ class StdReportContext(
   }
 }
 
+private class ReportSanitizer(workspace: Option[Path]) {
+  private lazy val userHome = Option(System.getProperty("user.home"))
+
+  def apply(report: Report): Report = report.copy(
+    id = report.id.map(sanitize),
+    name = sanitize(report.name),
+    text = sanitize(report.text),
+    shortSummary = sanitize(report.shortSummary),
+    path = report.path.map(sanitize)
+  )
+
+  def apply(text: String): String = sanitize(text)
+  def sanitize(text: String): String = {
+    val textAfterWokspaceReplace = workspace
+      .map(_.toString())
+      .foldLeft(text)(
+        _.replace(_, StdReportContext.WORKSPACE_STR)
+      )
+    userHome.foldLeft(textAfterWokspaceReplace)(
+      _.replace(_, StdReportContext.HOME_STR)
+    )
+  }
+}
+
 class StdReporter(
     workspace: Path,
     pathToReports: Path,
@@ -88,6 +112,7 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
+  private val sanitizer = new ReportSanitizer(Some(workspace))
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
@@ -98,8 +123,6 @@ class StdReporter(
       ReportFileName.pattern,
       ".md"
     )
-
-  private lazy val userHome = Option(System.getProperty("user.home"))
 
   private val initialized = new AtomicBoolean(false)
   private val reported = new AtomicReference(Map[String, Path]())
@@ -148,13 +171,7 @@ class StdReporter(
       }
     }
 
-  override def sanitize(text: String): String = {
-    val textAfterWokspaceReplace =
-      text.replace(workspace.toString(), StdReportContext.WORKSPACE_STR)
-    userHome
-      .map(textAfterWokspaceReplace.replace(_, StdReportContext.HOME_STR))
-      .getOrElse(textAfterWokspaceReplace)
-  }
+  override def sanitize(text: String): String = sanitizer(text)
 
   private def reportPath(report: Report): Path = {
     val date = TimeFormatter.getDate()
@@ -188,6 +205,41 @@ object StdReportContext {
   val ZIP_FILE_NAME = "reports.zip"
 
   def reportsDir: Path = Paths.get(".metals").resolve(".reports")
+}
+
+/**
+ * Fan-out report context delegating reporting to all underlyin reporters of given type.
+ */
+class MirroredReportContext(primiary: ReportContext, auxilary: ReportContext*)
+    extends ReportContext {
+  private def mirror(selector: ReportContext => Reporter): Reporter =
+    new MirroredReporter(selector(primiary), auxilary.map(selector): _*)
+  override lazy val unsanitized: Reporter = mirror(_.unsanitized)
+  override lazy val incognito: Reporter = mirror(_.incognito)
+  override lazy val bloop: Reporter = mirror(_.bloop)
+}
+
+private class MirroredReporter(
+    primaryReporter: Reporter,
+    auxilaryReporters: Reporter*
+) extends Reporter {
+  override val name: String =
+    s"${primaryReporter.name}-mirror-${auxilaryReporters.mkString("|")}"
+  private final def allReporters = primaryReporter :: auxilaryReporters.toList
+
+  override def create(report: => Report, ifVerbose: Boolean): Option[Path] = {
+    auxilaryReporters.foreach(_.create(report, ifVerbose))
+    primaryReporter.create(report, ifVerbose)
+  }
+
+  override def cleanUpOldReports(maxReportsNumber: Int): List[TimestampedFile] =
+    allReporters.flatMap(_.cleanUpOldReports(maxReportsNumber))
+
+  override def getReports(): List[TimestampedFile] =
+    allReporters.flatMap(_.getReports())
+
+  override def deleteAll(): Unit =
+    allReporters.foreach(_.deleteAll())
 }
 
 object EmptyReporter extends Reporter {

@@ -251,6 +251,19 @@ lazy val interfaces = project
     ),
   )
 
+lazy val telemetryInterfaces = project
+  .in(file("telemetry-interface"))
+  .settings(sharedSettings)
+  .enablePlugins(smithy4s.codegen.Smithy4sCodegenPlugin)
+  .settings(
+    moduleName := "telemetry-interface",
+    crossScalaVersions := Seq(V.scala212, V.scala213, V.scala3),
+    libraryDependencies ++= Seq(
+      "com.disneystreaming.smithy4s" %% "smithy4s-core" % smithy4sVersion.value,
+      "com.disneystreaming.smithy4s" %% "smithy4s-json" % smithy4sVersion.value,
+    ).map(_.exclude("org.scala-lang.modules", "scala-collection-compat_3")),
+  )
+
 lazy val mtagsShared = project
   .in(file("mtags-shared"))
   .settings(sharedSettings)
@@ -272,9 +285,10 @@ lazy val mtagsShared = project
       "org.lz4" % "lz4-java" % "1.8.0",
       "com.google.protobuf" % "protobuf-java" % "3.25.3",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
+      "com.lihaoyi" %% "requests" % V.requests,
     ),
   )
-  .dependsOn(interfaces)
+  .dependsOn(interfaces, telemetryInterfaces)
 
 def multiScalaDirectories(root: File, scalaVersion: String) = {
   val base = root / "src" / "main"
@@ -321,6 +335,7 @@ val mtagsSettings = List(
   Compile / doc / sources := Seq.empty,
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
+    "com.lihaoyi" %% "requests" % V.requests,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
     "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
@@ -391,7 +406,7 @@ lazy val mtags3 = project
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
   )
-  .dependsOn(interfaces)
+  .dependsOn(interfaces, telemetryInterfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags3WithPresentationCompiler = project
@@ -409,7 +424,7 @@ lazy val mtags3WithPresentationCompiler = project
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
   )
-  .dependsOn(interfaces)
+  .dependsOn(interfaces, telemetryInterfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags = project
@@ -502,7 +517,8 @@ lazy val metals = project
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "3.1.5",
       // For fetching projects' templates
-      "com.lihaoyi" %% "requests" % "0.8.0",
+      // For remote language server
+      "com.lihaoyi" %% "requests" % V.requests,
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
       "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(

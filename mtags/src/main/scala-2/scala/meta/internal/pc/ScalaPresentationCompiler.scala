@@ -50,6 +50,10 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import scala.meta.internal.metals.RemoteTelemetryReportContext
+import scala.meta.internal.metals.MirroredReportContext
+import scala.meta.internal.{telemetry => telemetryApi}
+import scala.meta.internal.pc.{telemetry => pcTelemetryApi}
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -71,10 +75,18 @@ case class ScalaPresentationCompiler(
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
-  implicit val reportContex: ReportContext =
-    folderPath
+  implicit val reportContex: ReportContext = {
+    val remoteReporters = new RemoteTelemetryReportContext(
+      serverEndpoint = RemoteTelemetryReportContext.discoverTelemetryServer,
+      workspace = folderPath,
+      getReporterContext = makeTelemetryContext
+    )
+    val localReporters = folderPath
       .map(new StdReportContext(_, _ => buildTargetName, reportsLevel))
       .getOrElse(EmptyReportContext)
+
+    new MirroredReportContext(localReporters, remoteReporters)
+  }
 
   override def withBuildTargetName(
       buildTargetName: String
@@ -450,6 +462,15 @@ case class ScalaPresentationCompiler(
       folderPath
     )
   }
+
+  def makeTelemetryContext(): telemetryApi.ReporterContext =
+    telemetryApi.ReporterContext.scalaPresentationCompiler(
+      telemetryApi.ScalaPresentationCompilerContext(
+        scalaVersion = scalaVersion,
+        options = options,
+        config = pcTelemetryApi.conversion.PresentationCompilerConfig(config)
+      )
+    )
 
   // ================
   // Internal methods
