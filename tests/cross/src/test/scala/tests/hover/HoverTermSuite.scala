@@ -519,4 +519,23 @@ class HoverTermSuite extends BaseHoverSuite {
     "def this(): tailrec".hover
   )
 
+  check(
+    "apply-chain".tag(IgnoreScala2),
+    """
+      |trait Consumer {
+      |  def subConsumer: Consumer
+      |  def consume(value: Int)(n: Int): Unit
+      |}
+      |
+      |object O {
+      |  val consumer: Consumer = ???
+      |  val m = consumer.subConsumer.<<co@@nsume>>
+      |}
+      |""".stripMargin,
+    """|```scala
+       |def consume(value: Int)(n: Int): Unit
+       |```
+       |""".stripMargin
+  )
+
 }
