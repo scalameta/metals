@@ -121,7 +121,10 @@ object MetalsInteractive:
     def contains(tree: Tree): Boolean = tree match
       case select: Select =>
         // using `nameSpan` as SourceTree for Select (especially symbolic-infix e.g. `::` of `1 :: Nil`) miscalculate positions
-        select.nameSpan.contains(sourcePos.span)
+        select.nameSpan.contains(sourcePos.span) ||
+        (select.span.contains(sourcePos.span) &&
+          !select.qualifier.span.contains(sourcePos.span) &&
+          select.qualifier.symbol.is(Flags.Synthetic))
       case tree: Ident =>
         tree.sourcePos.contains(sourcePos)
       case tree: NamedDefTree =>
