@@ -1193,7 +1193,6 @@ class Compilers(
         case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
         case artifacts: MtagsBinaries.Artifacts =>
           embedded.presentationCompiler(artifacts, classpath)
-
       }
 
     val filteredOptions = plugins.filterSupportedOptions(options)

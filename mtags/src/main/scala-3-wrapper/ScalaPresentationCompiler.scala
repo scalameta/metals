@@ -9,9 +9,11 @@ import java.{util as ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.Node
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
@@ -92,12 +94,16 @@ case class ScalaPresentationCompiler(
       classpath: ju.List[Path],
       options: ju.List[String],
   ): PresentationCompiler =
-    underlying.newInstance(buildTargetIdentifier, classpath, options)
+    copy(
+      buildTargetIdentifier = buildTargetIdentifier,
+      classpath = classpath.asScala.toSeq,
+      options = options.asScala.toList,
+    )
 
   override def withScheduledExecutorService(
       scheduledExecutorService: ScheduledExecutorService
   ): PresentationCompiler =
-    underlying.withScheduledExecutorService(scheduledExecutorService)
+    copy(sh = Some(scheduledExecutorService))
 
   override def hover(
       params: OffsetParams
@@ -114,7 +120,7 @@ case class ScalaPresentationCompiler(
     underlying.shutdown()
 
   override def withWorkspace(workspace: Path): PresentationCompiler =
-    underlying.withWorkspace(workspace)
+    copy(folderPath = Some(workspace))
 
   override def complete(
       params: OffsetParams
@@ -124,7 +130,7 @@ case class ScalaPresentationCompiler(
   override def withConfiguration(
       config: PresentationCompilerConfig
   ): PresentationCompiler =
-    underlying.withConfiguration(config)
+    copy(config = config)
 
   override def insertInferredType(
       params: OffsetParams
@@ -151,7 +157,7 @@ case class ScalaPresentationCompiler(
     underlying.diagnosticsForDebuggingPurposes()
 
   override def withSearch(search: SymbolSearch): PresentationCompiler =
-    underlying.withSearch(search)
+    copy(search = search)
 
   override def scalaVersion(): String =
     underlying.scalaVersion()
@@ -216,10 +222,24 @@ case class ScalaPresentationCompiler(
   override def withExecutorService(
       executorService: ExecutorService
   ): PresentationCompiler =
-    underlying.withExecutorService(executorService)
+    copy(ec = ExecutionContext.fromExecutorService(executorService))
 
   override def withBuildTargetName(
       buildTargetName: String
   ): PresentationCompiler =
-    underlying.withBuildTargetName(buildTargetName)
+    copy(buildTargetIdentifier = buildTargetName)
+
+  override def semanticTokens(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[Node]] =
+    underlying.semanticTokens(params)
+
+  override def withReportsLoggerLevel(level: String): PresentationCompiler =
+    copy(reportsLevel = ReportLevel.fromString(level))
+
+  override def inlineValue(
+      params: OffsetParams
+  ): CompletableFuture[ju.List[TextEdit]] =
+    underlying.inlineValue(params)
+
 end ScalaPresentationCompiler
