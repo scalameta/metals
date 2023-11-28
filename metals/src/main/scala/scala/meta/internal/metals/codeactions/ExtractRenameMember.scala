@@ -114,9 +114,7 @@ class ExtractRenameMember(
           case _ =>
             val codeActionOpt = for {
               defn <- defnAtCursor
-              if canExtractDefn(
-                defn.member
-              )
+              if canExtractDefn(defn.member)
               memberType <- getMemberType(defn.member)
               title = ExtractRenameMember.title(
                 memberType,
@@ -143,6 +141,11 @@ class ExtractRenameMember(
         case t: Defn.Trait => nodes += EndableMember(t, None)
         case o: Defn.Object => nodes += EndableMember(o, None)
         case e: Defn.Enum => nodes += EndableMember(e, None)
+        case t: Defn.Type if t.mods.exists {
+              case Mod.Opaque() => true
+              case _ => false
+            } =>
+          nodes += EndableMember(t, None)
         case endMarker: Term.EndMarker =>
           if (nodes.size > 0) {
             val last = nodes.remove(nodes.size - 1)
@@ -191,7 +194,6 @@ class ExtractRenameMember(
               case o: Defn.Object => o.name.value :: completePreName(o)
               case po: Pkg.Object => po.name.value :: completePreName(po)
               case tmpl: Template => completePreName(tmpl)
-              case _: Source => Nil
               case _ => Nil
             }
           case None => Nil
@@ -275,19 +277,21 @@ class ExtractRenameMember(
       .map(endMarker => "\n" + endMarker.toString())
       .getOrElse("")
 
-    val structure = pkg.toList.mkString("\n") ::
-      imports.mkString("\n") ::
-      endableMember.commentsAbove.map(_.text).getOrElse("") +
-      endableMember.member.toString + marker(endableMember) ::
-      maybeCompanionEndableMember
-        .flatMap(_.commentsAbove)
-        .map(_.text)
-        .getOrElse("") +
-      maybeCompanionEndableMember
-        .map(_.member.toString)
-        .getOrElse("") + maybeCompanionEndableMember
-        .map(marker)
-        .getOrElse("") :: Nil
+    def memberParts(member: EndableMember) =
+      member.commentsAbove.map(_.text).getOrElse("") +
+        member.member.toString + marker(member)
+
+    val definitionsParts = maybeCompanionEndableMember match {
+      case None => List(memberParts(endableMember))
+      case Some(companion)
+          if (companion.memberPos.getStart.getLine < endableMember.memberPos.getStart.getLine) =>
+        List(memberParts(companion), memberParts(endableMember))
+      case Some(companion) =>
+        List(memberParts(endableMember), memberParts(companion))
+    }
+
+    val structure =
+      pkg.toList.mkString("\n") :: imports.mkString("\n") :: definitionsParts
 
     val preDefinitionLines = pkg.toList.length + imports.length
     val defnLine =
@@ -322,6 +326,7 @@ class ExtractRenameMember(
       case t: Defn.Trait => namesFromTemplate(t.templ)
       case o: Defn.Object => namesFromTemplate(o.templ)
       case e: Defn.Enum => namesFromTemplate(e.templ)
+      case _ => Nil
     }
   }
 
@@ -538,6 +543,7 @@ object ExtractRenameMember {
     case _: Defn.Enum => "enum"
     case _: Defn.Trait => "trait"
     case _: Defn.Object => "object"
+    case _: Defn.Type => "opaque type"
   }
 
   def title(memberType: String, name: String): String =
