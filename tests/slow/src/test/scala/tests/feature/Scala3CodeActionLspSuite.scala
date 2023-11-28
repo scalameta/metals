@@ -600,6 +600,54 @@ class Scala3CodeActionLspSuite
        |""".stripMargin,
   )
 
+  checkExtractedMember(
+    "opaque-type",
+    """|final class Bar()
+       |
+       |opaque type <<Foo>> = String
+       |
+       |object Foo:
+       |  val x = 1
+       |""".stripMargin,
+    expectedActions = ExtractRenameMember.title("opaque type", "Foo"),
+    """|
+       |final class Bar()
+       |
+       |""".stripMargin,
+    newFile = (
+      "Foo.scala",
+      s"""opaque type Foo = String
+         |
+         |object Foo:
+         |  val x = 1
+         |""".stripMargin,
+    ),
+  )
+
+  checkExtractedMember(
+    "opaque-type-companion",
+    """|final class Bar()
+       |
+       |opaque type Foo = String
+       |
+       |object <<Foo>>:
+       |  val x = 1
+       |""".stripMargin,
+    expectedActions = ExtractRenameMember.title("object", "Foo"),
+    """|
+       |final class Bar()
+       |
+       |""".stripMargin,
+    newFile = (
+      "Foo.scala",
+      s"""opaque type Foo = String
+         |
+         |object Foo:
+         |  val x = 1
+         |""".stripMargin,
+    ),
+  )
+
   private def getPath(name: String) = s"a/src/main/scala/a/$name"
 
   def checkExtractedMember(
