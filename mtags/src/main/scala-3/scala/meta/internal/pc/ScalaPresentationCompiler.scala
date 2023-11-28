@@ -8,6 +8,7 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
+import java.util.logging.Logger
 
 import scala.collection.JavaConverters.*
 import scala.concurrent.ExecutionContext
@@ -54,12 +55,17 @@ case class ScalaPresentationCompiler(
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   private val forbiddenDoubleOptions = Set("-release")
+
+  val logger: Logger =
+    Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
+
   given ReportContext =
     val remoteReporters = new RemoteTelemetryReportContext(
       serverEndpoint = RemoteTelemetryReportContext.discoverTelemetryServer,
       workspace = folderPath,
       getReporterContext = makeTelemetryContext,
-    )(using ec = ec)
+      logger = ???,
+    )
     val localReporters = folderPath
       .map(new StdReportContext(_, _ => buildTargetName, reportsLevel))
       .getOrElse(EmptyReportContext)
@@ -461,12 +467,11 @@ case class ScalaPresentationCompiler(
   override def isLoaded() = compilerAccess.isLoaded()
 
   private def makeTelemetryContext(): telemetryApi.ReporterContext =
-    telemetryApi.ReporterContext.scalaPresentationCompiler(
-      telemetryApi.ScalaPresentationCompilerContext(
-        scalaVersion = scalaVersion,
-        options = options,
-        config = pcTelemetryApi.conversion.PresentationCompilerConfig(config),
-      )
+    new telemetryApi.ScalaPresentationCompilerContext(
+      /* scalaVersion = */ scalaVersion,
+      /* options = */ options.asJava,
+      /* config = */ pcTelemetryApi.conversion.PresentationCompilerConfig(
+        config
+      ),
     )
-
 end ScalaPresentationCompiler

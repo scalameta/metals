@@ -195,6 +195,14 @@ class MetalsLspService(
     serverEndpoint = serverInputs.initialServerConfig.telemetryServer,
     workspace = Some(folder.toNIO),
     getReporterContext = makeTelemetryContext,
+    logger = {
+      val logger = logging.MetalsLogger.default
+      RemoteTelemetryReportContext.LoggerAccess(
+        info = logger.info(_),
+        warning = logger.warn(_),
+        error = logger.error(_),
+      )
+    },
   )
 
   implicit val reports: ReportContext =
@@ -2859,16 +2867,16 @@ class MetalsLspService(
   def runDoctorCheck(): Unit = doctor.check(headDoctor)
 
   private def makeTelemetryContext(): telemetry.ReporterContext =
-    telemetry.ReporterContext.metalsLsp(
-      telemetry.MetalsLspContext(
-        metalsVersion = BuildInfo.metalsVersion,
-        buildServerConnections = bspSession.toList.flatMap(
+    new telemetry.MetalsLspContext(
+      /* metalsVersion = */ BuildInfo.metalsVersion,
+      /* userConfig = */ telemetry.conversion.UserConfiguration(userConfig),
+      /* serverConfig = */ telemetry.conversion.MetalsServerConfig(
+        serverInputs.initialServerConfig
+      ),
+      /* buildServerConnections = */ bspSession.toList
+        .flatMap(
           telemetry.conversion.BuildServerConnections(_)
-        ),
-        userConfig = telemetry.conversion.UserConfiguration(userConfig),
-        serverConfig = telemetry.conversion.MetalsServerConfig(
-          serverInputs.initialServerConfig
-        ),
-      )
+        )
+        .asJava,
     )
 }

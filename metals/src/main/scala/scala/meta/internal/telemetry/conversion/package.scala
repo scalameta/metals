@@ -5,29 +5,30 @@ import scala.meta.internal.telemetry
 import scala.meta.internal.bsp
 import scala.meta.internal.pc.telemetry.conversion.PresentationCompilerConfig
 
+import scala.collection.JavaConverters._
+import scala.jdk.OptionConverters._
+
 package object conversion {
   def UserConfiguration(
       config: metals.UserConfiguration
   ): MetalsUserConfiguration =
-    MetalsUserConfiguration(
-      symbolPrefixes = config.symbolPrefixes,
-      bloopSbtAlreadyInstalled = config.bloopSbtAlreadyInstalled,
-      superMethodLensesEnabled = config.superMethodLensesEnabled,
-      showImplicitArguments = config.showImplicitArguments,
-      showImplicitConversionsAndClasses =
-        config.showImplicitConversionsAndClasses,
-      enableStripMarginOnTypeFormatting =
-        config.enableStripMarginOnTypeFormatting,
-      enableIndentOnPaste = config.enableIndentOnPaste,
-      enableSemanticHighlighting = config.enableSemanticHighlighting,
-      testUserInterface = TestUserInterfaceKind(config.testUserInterface),
-      bloopVersion = config.bloopVersion,
-      bloopJvmProperties = config.bloopJvmProperties,
-      ammoniteJvmProperties = config.ammoniteJvmProperties,
-      showInferredType = config.showInferredType,
-      remoteLanguageServer = config.remoteLanguageServer,
-      excludedPackages = config.excludedPackages,
-      fallbackScalaVersion = config.fallbackScalaVersion,
+    new MetalsUserConfiguration(
+      /* symbolPrefixes = */ config.symbolPrefixes.asJava,
+      /* bloopSbtAlreadyInstalled = */ config.bloopSbtAlreadyInstalled,
+      /* bloopVersion = */ config.bloopVersion.toJava,
+      /* bloopJvmProperties = */ config.bloopJvmProperties.toList.flatten.asJava,
+      /* ammoniteJvmProperties = */ config.ammoniteJvmProperties.toList.flatten.asJava,
+      /* superMethodLensesEnabled = */ config.superMethodLensesEnabled,
+      /* showInferredType = */ config.showInferredType.toJava,
+      /* showImplicitArguments = */ config.showImplicitArguments,
+      /* showImplicitConversionsAndClasses = */ config.showImplicitConversionsAndClasses,
+      /* remoteLanguageServer = */ config.remoteLanguageServer.toJava,
+      /* enableStripMarginOnTypeFormatting = */ config.enableStripMarginOnTypeFormatting,
+      /* enableIndentOnPaste = */ config.enableIndentOnPaste,
+      /* enableSemanticHighlighting = */ config.enableSemanticHighlighting,
+      /* excludedPackages = */ config.excludedPackages.toList.flatten.asJava,
+      /* fallbackScalaVersion = */ config.fallbackScalaVersion.toJava,
+      /* testUserInterface = */ TestUserInterfaceKind(config.testUserInterface),
     )
 
   def BuildServerConnections(
@@ -36,10 +37,10 @@ package object conversion {
     def convert(
         conn: metals.BuildServerConnection,
         isMain: Boolean,
-    ) = telemetry.BuildServerConnection(
-      name = conn.name,
-      version = conn.version,
-      isMain = isMain,
+    ) = new telemetry.BuildServerConnection(
+      /* name = */ conn.name,
+      /* version = */ conn.version,
+      /* isMain = */ isMain,
     )
     convert(session.main, isMain = true) ::
       session.meta.map(convert(_, isMain = false))
@@ -47,23 +48,22 @@ package object conversion {
 
   def TestUserInterfaceKind(
       kind: metals.TestUserInterfaceKind
-  ): TestUserInterfaceKind = kind match {
-    case metals.TestUserInterfaceKind.CodeLenses =>
-      telemetry.TestUserInterfaceKind.CODE_LENSES
-    case metals.TestUserInterfaceKind.TestExplorer =>
-      telemetry.TestUserInterfaceKind.TEST_EXPLOLER
+  ): String = kind match {
+    case metals.TestUserInterfaceKind.CodeLenses => "CodeLenses"
+    case metals.TestUserInterfaceKind.TestExplorer => "TestExplorer"
   }
 
   def MetalsServerConfig(
       config: metals.MetalsServerConfig
-  ): MetalsServerConfiguration = MetalsServerConfiguration(
-    executeClientCommand = config.executeClientCommand.value,
-    snippetAutoIndent = config.snippetAutoIndent,
-    isHttpEnabled = config.isHttpEnabled,
-    isInputBoxEnabled = config.isInputBoxEnabled,
-    askToReconnect = config.askToReconnect,
-    allowMultilineStringFormatting = config.allowMultilineStringFormatting,
-    compilers = PresentationCompilerConfig(config.compilers),
-  )
+  ): telemetry.MetalsServerConfiguration =
+    new telemetry.MetalsServerConfiguration(
+      /* executeClientCommand = */ config.executeClientCommand.value,
+      /* snippetAutoIndent = */ config.snippetAutoIndent,
+      /* isHttpEnabled = */ config.isHttpEnabled,
+      /* isInputBoxEnabled = */ config.isInputBoxEnabled,
+      /* askToReconnect = */ config.askToReconnect,
+      /* allowMultilineStringFormatting = */ config.allowMultilineStringFormatting,
+      /* compilers = */ PresentationCompilerConfig(config.compilers),
+    )
 
 }

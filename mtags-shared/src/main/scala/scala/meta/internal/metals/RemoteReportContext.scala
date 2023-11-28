@@ -2,24 +2,37 @@ package scala.meta.internal.metals
 
 import scala.meta.internal.telemetry
 import scala.meta.internal.metals.utils.TimestampedFile
+import scala.meta.internal.jdk.OptionConverters._
 
-import smithy4s.json.Json
-import smithy4s.Schema
 import requests.Response
+import com.google.gson.JsonSyntaxException
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.util.Random
 
-import java.io.StringWriter
-import java.io.PrintWriter
 import java.nio.file.Path
-
+import java.io.InputStreamReader
+import scala.util.Try
+import RemoteTelemetryReportContext.LoggerAccess
 object RemoteTelemetryReportContext {
   def discoverTelemetryServer =
     sys.props.getOrElse("metals.telemetry-server", DefaultEndpoint)
   final val DefaultEndpoint =
     "https://scala3.westeurope.cloudapp.azure.com/telemetry"
+
+  // Proxy for different logging mechanism java.util.logging in PresentatilnCompiler and scribe in metals
+  case class LoggerAccess(
+      info: String => Unit,
+      error: String => Unit,
+      warning: String => Unit
+  )
+  object LoggerAccess {
+    object system
+        extends LoggerAccess(
+          info = System.out.println(_),
+          error = System.err.println(_),
+          warning = System.err.println(_)
+        )
+  }
 }
 
 /**
@@ -31,18 +44,19 @@ object RemoteTelemetryReportContext {
 class RemoteTelemetryReportContext(
     serverEndpoint: String,
     workspace: Option[Path],
-    getReporterContext: () => telemetry.ReporterContext
-)(implicit ec: ExecutionContext)
-    extends ReportContext {
+    getReporterContext: () => telemetry.ReporterContext,
+    logger: LoggerAccess
+) extends ReportContext {
   override lazy val unsanitized: Reporter = reporter("unsanitized")
   override lazy val incognito: Reporter = reporter("sanitized")
   override lazy val bloop: Reporter = reporter("bloop")
 
   private def reporter(name: String) = new TelemetryReporter(
-    name,
-    serverEndpoint,
-    workspace,
-    getReporterContext
+    name = name,
+    serverEndpoint = serverEndpoint,
+    workspace = workspace,
+    getReporterContext = getReporterContext,
+    logger = logger
   )
 }
 
@@ -50,9 +64,9 @@ private class TelemetryReporter(
     override val name: String,
     serverEndpoint: String,
     workspace: Option[Path],
-    getReporterContext: () => telemetry.ReporterContext
-)(implicit ec: ExecutionContext)
-    extends Reporter {
+    getReporterContext: () => telemetry.ReporterContext,
+    logger: LoggerAccess
+) extends Reporter {
 
   override def getReports(): List[TimestampedFile] = Nil
   override def cleanUpOldReports(maxReportsNumber: Int): List[TimestampedFile] =
@@ -60,20 +74,22 @@ private class TelemetryReporter(
   override def deleteAll(): Unit = ()
 
   private val sanitizer = new ReportSanitizer(workspace)
-  private lazy val environmentInfo = telemetry.Environment(
-    java = telemetry.JavaInfo(
-      version = sys.props("java.version"),
-      distribution = sys.props.get("java.vendor")
-    ),
-    system = telemetry.SystemInfo(
-      architecture = sys.props("os.arch"),
-      name = sys.props("os.name"),
-      version = sys.props("os.version")
+  private lazy val environmentInfo: telemetry.Environment =
+    new telemetry.Environment(
+      /* java = */ new telemetry.JavaInfo(
+        /* version = */ sys.props("java.version"),
+        /* distribution = */ sys.props.get("java.vendor").toJava
+      ),
+      /* system = */ new telemetry.SystemInfo(
+        /* architecture = */ sys.props("os.arch"),
+        /* name = */ sys.props("os.name"),
+        /* version = */ sys.props("os.version")
+      )
     )
-  )
 
-  val client = new TelemetryClient(
-    new TelemetryClient.Config(serverHost = serverEndpoint)
+  val client: telemetry.TelemetryService = new TelemetryClient(
+    new TelemetryClient.Config(serverHost = serverEndpoint),
+    logger = logger
   )
 
   override def create(
@@ -83,53 +99,45 @@ private class TelemetryReporter(
     val report = sanitizer(unsanitizedReport)
     client
       .sendReportEvent(
-        telemetry.ReportEvent(
-          id = report.id,
-          name = report.name,
-          text = report.text,
-          shortSummary = report.shortSummary,
-          error = report.error.map(toReporterError),
-          env = environmentInfo,
-          reporterName = name,
-          reporterContext = getReporterContext()
+        new telemetry.ReportEvent(
+          /* name =  */ report.name,
+          /* text =  */ report.text,
+          /* shortSummary =  */ report.shortSummary,
+          /* id =  */ report.id.toJava,
+          /* error =  */ report.error
+            .map(telemetry.ReportedError.fromThrowable(_, sanitizer.apply))
+            .toJava,
+          /* reporterName =  */ name,
+          /* reporterContext =  */ getReporterContext() match {
+            case ctx: telemetry.MetalsLspContext =>
+              telemetry.ReporterContextUnion.metalsLSP(ctx)
+            case ctx: telemetry.ScalaPresentationCompilerContext =>
+              telemetry.ReporterContextUnion.scalaPresentationCompiler(ctx)
+            case ctx: telemetry.UnknownProducerContext =>
+              telemetry.ReporterContextUnion.unknown(ctx)
+          },
+          /* env =  */ environmentInfo
         )
       )
-      .onComplete(println)
     None
   }
-
-  private def toReporterError(e: Throwable) = telemetry.ReportedError(
-    exceptions = {
-      val exceptions = List.newBuilder[String]
-      var current = e
-      while (current != null) {
-        exceptions += current.getClass().getName()
-        current = current.getCause()
-      }
-      exceptions.result()
-    },
-    stacktrace = {
-      val stringWriter = new StringWriter()
-      scala.util.Using.resource(new PrintWriter(stringWriter)) {
-        e.printStackTrace(_)
-      }
-      val stacktrace = stringWriter.toString()
-      sanitizer(stacktrace)
-    }
-  )
 }
 
-private class TelemetryClient(config: TelemetryClient.Config)(implicit
-    ec: ExecutionContext
-) extends telemetry.TelemetryService[Future] {
+private class TelemetryClient(
+    config: TelemetryClient.Config,
+    logger: LoggerAccess
+) extends telemetry.TelemetryService {
+  import telemetry.{TelemetryService => api}
   import TelemetryClient._
-  import telemetry.{TelemetryServiceOperation => Op}
 
   implicit private def clientConfig: Config = config
 
-  private val SendReportEvent = new Endpoint(Op.SendReportEvent)
-  override def sendReportEvent(event: telemetry.ReportEvent): Future[Unit] =
-    SendReportEvent(event).map(_ => ())
+  private val SendReportEvent = new Endpoint(api.SendReportEventEndpoint)
+
+  override def sendReportEvent(event: telemetry.ReportEvent): Unit =
+    SendReportEvent(event).recover { case err =>
+      logger.warning(s"Failed to send report: ${err}")
+    }
 }
 
 private object TelemetryClient {
@@ -138,62 +146,57 @@ private object TelemetryClient {
 
   case class Config(serverHost: String)
 
-  private class Endpoint[-In, +Err, +Out](
-      // format: off
-      endpoint:  smithy4s.Endpoint[telemetry.TelemetryServiceOperation, In, Err, Out, _, _]
-      // format: on
-  )(implicit config: Config, ec: ExecutionContext) {
-    def apply(data: In): Future[Either[Err, Out]] =
-      execute(data).map(decodeResponse)
-
-    private val httpEndpoint = endpoint.schema.hints
-      .get[smithy.api.Http]
-      .get
-
-    private val endpointURL = s"${config.serverHost}${httpEndpoint.uri}"
-    private val requester = requests.send(httpEndpoint.method.value)
-
-    private def execute(
-        data: In,
-        retries: Int = 3,
-        backoffMillis: Int = 100
-    ): Future[Response] = {
-
-      Future {
-        requester(
-          url = endpointURL,
-          data = Json.writePrettyString(data)(endpoint.input),
-          keepAlive = false,
-          check = false
-        )
-      }.recoverWith {
-        case _: requests.TimeoutException | _: requests.UnknownHostException
-            if retries > 0 =>
-          Thread.sleep(backoffMillis)
-          execute(data, retries - 1, backoffMillis + Random.nextInt(1000))
-      }
+  class Endpoint[-In, +Out](
+      endpoint: telemetry.ServiceEndpoint[In, Out]
+  )(implicit config: Config) {
+    def apply(data: In): Try[Out] = {
+      val json = encodeRequest(data)
+      execute(json).map(decodeResponse)
     }
 
-    private def decodeResponse(response: Response): Either[Err, Out] = {
-      def read[T: Schema] = Json
-        .read[T](smithy4s.Blob(response.bytes))
-        .left
-        .map(err =>
-          // Malformed content when reading, panic
-          throw new DeserializationException(
-            s"path=${err.path}, expeced=${err.expected}, message=${err.message}"
-          )
-        )
+    private val endpointURL = s"${config.serverHost}${endpoint.getUri()}"
+    private val requester = requests.send(endpoint.getMethod())
 
-      if (response.is2xx) read[Out](endpoint.output)
-      else
-        endpoint.error match {
-          case Some(errSchema) => read[Err](errSchema.schema).swap
-          case _ =>
-            throw new IllegalStateException(
-              s"${httpEndpoint} should never result in error"
-            )
+    private def execute(
+        data: String,
+        retries: Int = 3,
+        backoffMillis: Int = 100
+    ): Try[Response] = Try {
+      requester(
+        url = endpointURL,
+        data = data,
+        keepAlive = false,
+        check = false
+      )
+    }.recoverWith {
+      case _: requests.TimeoutException | _: requests.UnknownHostException
+          if retries > 0 =>
+        Thread.sleep(backoffMillis)
+        execute(data, retries - 1, backoffMillis + Random.nextInt(1000))
+    }
+
+    private def encodeRequest(request: In): String =
+      telemetry.GsonCodecs.gson.toJson(request)
+
+    private def decodeResponse(response: Response): Out = {
+      if (response.is2xx) {
+        val outputType = endpoint.getOutputType()
+        if (outputType == classOf[Void]) ().asInstanceOf[Out]
+        else {
+          response.readBytesThrough { is =>
+            try
+              telemetry.GsonCodecs.gson
+                .fromJson(new InputStreamReader(is), outputType)
+            catch {
+              case err: JsonSyntaxException =>
+                throw new DeserializationException(err.getMessage())
+            }
+          }
         }
+      } else
+        throw new IllegalStateException(
+          s"${endpoint.getMethod()}:${endpoint.getUri()} should never result in error, got ${response}"
+        )
     }
   }
 }

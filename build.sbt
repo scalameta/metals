@@ -254,14 +254,13 @@ lazy val interfaces = project
 lazy val telemetryInterfaces = project
   .in(file("telemetry-interface"))
   .settings(sharedSettings)
-  .enablePlugins(smithy4s.codegen.Smithy4sCodegenPlugin)
   .settings(
+    sharedJavacOptions,
     moduleName := "telemetry-interface",
-    crossScalaVersions := Seq(V.scala212, V.scala213, V.scala3),
-    libraryDependencies ++= Seq(
-      "com.disneystreaming.smithy4s" %% "smithy4s-core" % smithy4sVersion.value,
-      "com.disneystreaming.smithy4s" %% "smithy4s-json" % smithy4sVersion.value,
-    ).map(_.exclude("org.scala-lang.modules", "scala-collection-compat_3")),
+    autoScalaLibrary := false,
+    crossVersion := CrossVersion.disabled,
+    crossPaths := false,
+    libraryDependencies += "com.google.code.gson" % "gson" % V.gson,
   )
 
 lazy val mtagsShared = project
