@@ -189,44 +189,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
           range = t.namePosition,
           Some(report)
         )
-      case Block((valDef @ ValDef(_, _, _, rhs)) :: Nil, FunctionApply(app))
-          if Option(valDef.symbol).exists(_.isSynthetic) =>
-        def locateTree(
-            tree: Tree,
-            enclosingApply: Option[Tree]
-        ): Option[(Tree, Option[Tree])] =
-          tree match {
-            case ident: Ident if ident.namePosition.encloses(pos) =>
-              Some((ident, enclosingApply))
-            case select: Select if select.namePosition.encloses(pos) =>
-              Some((select, enclosingApply))
-            case Select(qualifier, _) => locateTree(qualifier, None)
-            case app @ TreeApply(fun, _) if fun.pos.encloses(pos) =>
-              locateTree(fun, enclosingApply.orElse(Some(app)))
-            case TreeApply(_, args) =>
-              argAtPos(args, pos).map(tree => (tree, None))
-            case _ => None
-          }
-
-        val chosenPart = if (rhs.pos.encloses(pos)) rhs else app
-        for {
-          (locatedTree, enclosingApply) <- locateTree(chosenPart, None)
-          symbol <- Option(locatedTree.symbol)
-          expanded = enclosingApply match {
-            case Some(app) if app.symbol != null && app.tpe != null => app
-            case _ => locatedTree
-          }
-          tpe <- Option(expanded.tpe)
-          hover <- toHover(
-            symbol = symbol,
-            keyword = symbol.keyString,
-            seenFrom = seenFromType(tree, symbol),
-            tpe = tpe,
-            pos = pos,
-            range = expanded.pos,
-            Some(report)
-          )
-        } yield hover
       case _ =>
         // Don't show hover for non-identifiers.
         None
@@ -342,21 +304,19 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
           if !fun.pos.includes(pos) &&
             !isForSynthetic(typedTree) =>
         // Looks like a named argument, try the arguments.
-        argAtPos(args, pos).getOrElse(typedTree)
+        val arg = args.collectFirst {
+          case arg if treePos(arg).includes(pos) =>
+            arg match {
+              case Block(_, expr) if treePos(expr).includes(pos) =>
+                // looks like a desugaring of named arguments in different order from definition-site.
+                expr
+              case a => a
+            }
+        }
+        arg.getOrElse(typedTree)
       case t => t
     }
   }
-
-  private def argAtPos(args: List[Tree], pos: Position) =
-    args.collectFirst {
-      case arg if treePos(arg).includes(pos) =>
-        arg match {
-          case Block(_, expr) if treePos(expr).includes(pos) =>
-            // looks like a desugaring of named arguments in different order from definition-site.
-            expr
-          case a => a
-        }
-    }
 
   lazy val isForName: Set[Name] = Set[Name](
     nme.map,
@@ -374,14 +334,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
       case gtree: Select if isForComprehensionSyntheticName(gtree) => true
       case _ => false
     }
-  }
-
-  object FunctionApply {
-    def unapply(tree: Tree): Option[Apply] =
-      Option(tree).collect {
-        case Function(_, apply: Apply) => apply
-        case Function(_, FunctionApply(apply)) => apply
-      }
   }
 
 }
