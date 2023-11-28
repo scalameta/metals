@@ -233,7 +233,9 @@ object MetalsEnrichments
         ec: ExecutionContext
     ): Future[A] = withTimeout(FiniteDuration(length, unit))
 
-    def withTimeout(duration: FiniteDuration)(implicit ec: ExecutionContext): Future[A] = {
+    def withTimeout(
+        duration: FiniteDuration
+    )(implicit ec: ExecutionContext): Future[A] = {
       Future(Await.result(future, duration))
     }
 

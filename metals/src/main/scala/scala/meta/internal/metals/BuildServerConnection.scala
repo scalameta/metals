@@ -61,6 +61,8 @@ class BuildServerConnection private (
     extends Cancelable {
 
   private val defaultMinTimeout = FiniteDuration(3, TimeUnit.MINUTES)
+  private def defaultTimeout(name: String) =
+    Some(Timeout.default(name, defaultMinTimeout))
 
   @volatile private var connection = Future.successful(initialConnection)
   initialConnection.setReconnect(() => reconnect().ignoreValue)
@@ -73,7 +75,6 @@ class BuildServerConnection private (
 
   val requestRegistry =
     new RequestRegistry(
-      defaultMinTimeout,
       initialConnection.cancelables,
       languageClient,
       Some(requestTimeOutNotification),
@@ -182,7 +183,7 @@ class BuildServerConnection private (
 
   def compile(
       params: CompileParams,
-      timeout: Timeout,
+      timeout: Option[Timeout],
   ): CompletableFuture[CompileResult] = {
     register(
       server => server.buildTargetCompile(params),
@@ -225,6 +226,7 @@ class BuildServerConnection private (
       register(
         server => server.buildTargetScalaMainClasses(params),
         onFail,
+        defaultTimeout("main classes"),
       ).asScala
     } else Future.successful(resultOnUnsupported)
 
@@ -244,6 +246,7 @@ class BuildServerConnection private (
       register(
         server => server.buildTargetScalaTestClasses(params),
         onFail,
+        defaultTimeout("test classes"),
       ).asScala
     } else Future.successful(resultOnUnsupported)
   }
@@ -429,7 +432,7 @@ class BuildServerConnection private (
   private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
-      timeout: Timeout = Timeout.NoTimeout,
+      timeout: Option[Timeout] = None,
   ): CompletableFuture[T] = {
     val localCancelable = new MutableCancelable()
     def runWithCanceling(

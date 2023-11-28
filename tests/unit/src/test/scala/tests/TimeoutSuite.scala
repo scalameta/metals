@@ -55,25 +55,25 @@ class TimeoutSuite extends FunSuite {
 
   test("timeouts") {
     def min(int: Int) = Duration(int, TimeUnit.MINUTES)
-    val timeouts = new Timeouts(min(3))
-    val flexTimeout = Timeout.FlexTimeout("flex", min(6))
-    assertEquals(timeouts.getTimeout(Timeout.NoTimeout), None)
+    val defaultTime = Timeout.default("request", min(3))
+    val timeouts = new Timeouts()
+    val flexTimeout = Timeout("flex", min(6))
     assertEquals(
-      timeouts.getTimeout(Timeout.DefaultFlexTimeout("request")),
-      Some(min(3)),
+      timeouts.getTimeout(defaultTime),
+      min(3),
     )
-    assertEquals(timeouts.getTimeout(flexTimeout), Some(min(6)))
-    timeouts.measured(Timeout.DefaultFlexTimeout("request"), min(1))
-    timeouts.measured(Timeout.DefaultFlexTimeout("request"), min(3))
+    assertEquals(timeouts.getTimeout(flexTimeout), min(6))
+    timeouts.measured(defaultTime, min(1))
+    timeouts.measured(defaultTime, min(3))
     timeouts.measured(flexTimeout, min(1))
     timeouts.measured(flexTimeout, min(2))
     // avg * 3 > min
     assertEquals(
-      timeouts.getTimeout(Timeout.DefaultFlexTimeout("request")),
-      Some(min(6)),
+      timeouts.getTimeout(defaultTime),
+      min(6),
     )
     // avg * 3 < min
-    assertEquals(timeouts.getTimeout(flexTimeout), Some(min(6)))
+    assertEquals(timeouts.getTimeout(flexTimeout), min(6))
   }
 }
 

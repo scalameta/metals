@@ -5,53 +5,34 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.duration.FiniteDuration
 
-sealed trait Timeout
+case class Timeout(id: String, name: String, minTimeout: FiniteDuration)
 object Timeout {
-  case object NoTimeout extends Timeout
-  case class DefaultFlexTimeout(id: String) extends Timeout
-  case class FlexTimeout(id: String, minTimeout: FiniteDuration) extends Timeout
+  def apply(name: String, minTimeout: FiniteDuration): Timeout =
+    Timeout(name, name, minTimeout)
+  def default(name: String, minTimeout: FiniteDuration): Timeout =
+    Timeout("default", name, minTimeout)
 }
 
-class Timeouts(defaultMinTimeout: FiniteDuration) {
-  private val defaultFlexTimeout: AtomicReference[Option[AvgTime]] =
-    new AtomicReference(None)
+class Timeouts() {
   private val timeouts: AtomicReference[Map[String, AvgTime]] =
     new AtomicReference(Map())
+
   def measured(timeout: Timeout, time: FiniteDuration): Any = {
     val addToOption: Option[AvgTime] => Option[AvgTime] = {
       case Some(avgTime) => Some(avgTime.add(time))
       case None => Some(AvgTime.of(time))
     }
-    timeout match {
-      case Timeout.DefaultFlexTimeout(_) =>
-        defaultFlexTimeout.getAndUpdate(addToOption(_))
-      case Timeout.FlexTimeout(id, _) =>
-        timeouts.getAndUpdate(_.updatedWith(id)(addToOption))
-      case _ =>
-    }
+    timeouts.getAndUpdate(_.updatedWith(timeout.id)(addToOption))
   }
 
-  def getNameAndTimeout(timeout: Timeout): Option[(String, FiniteDuration)] = {
-    timeout match {
-      case Timeout.DefaultFlexTimeout(id) =>
-        Some(
-          defaultFlexTimeout.get
-            .map(_.avgWithMin(defaultMinTimeout))
-            .getOrElse(defaultMinTimeout)
-        ).map((id, _))
-      case Timeout.FlexTimeout(id, minTimeout) =>
-        Some(
-          timeouts.get
-            .get(id)
-            .map(_.avgWithMin(minTimeout))
-            .getOrElse(minTimeout)
-        ).map((id, _))
-      case Timeout.NoTimeout => None
-    }
+  def getTimeout(timeout: Timeout): FiniteDuration = {
+    val Timeout(id, _, minTimeout) = timeout
+    timeouts.get
+      .get(id)
+      .map(_.avgWithMin(minTimeout))
+      .getOrElse(minTimeout)
   }
 
-  def getTimeout(timeout: Timeout): Option[FiniteDuration] =
-    getNameAndTimeout(timeout).map(_._2)
 }
 
 case class AvgTime(samples: Int, totalTime: Long) {

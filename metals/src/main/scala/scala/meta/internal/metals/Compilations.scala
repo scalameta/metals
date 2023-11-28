@@ -30,17 +30,15 @@ final class Compilations(
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
 )(implicit ec: ExecutionContext) {
-
-  private val cascadeCompileTimeout = Timeout.NoTimeout
-  private val compileTimeout: Timeout.FlexTimeout =
-    Timeout.FlexTimeout("compile", Duration(10, TimeUnit.MINUTES))
+  private val compileTimeout: Timeout =
+    Timeout("compile", Duration(10, TimeUnit.MINUTES))
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
   private val compileBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
     ](
-      compile(compileTimeout),
+      compile(timeout = Some(compileTimeout)),
       "compileBatch",
       shouldLogQueue = true,
       Some(Map.empty),
@@ -50,7 +48,7 @@ final class Compilations(
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
     ](
-      compile(cascadeCompileTimeout),
+      compile(timeout = None),
       "cascadeBatch",
       shouldLogQueue = true,
       Some(Map.empty),
@@ -166,7 +164,7 @@ final class Compilations(
       for {
         cleanResult <- cleaned
         if cleanResult.getCleaned() == true
-        _ <- compile(cascadeCompileTimeout)(targetIds).future
+        _ <- compile(timeout = None)(targetIds).future
       } yield ()
     }
 
@@ -204,7 +202,7 @@ final class Compilations(
     Future.sequence(expansions).map(_.flatten)
   }
 
-  private def compile(timeout: Timeout)(
+  private def compile(timeout: Option[Timeout])(
       targets: Seq[b.BuildTargetIdentifier]
   ): CancelableFuture[Map[BuildTargetIdentifier, b.CompileResult]] = {
 
@@ -243,7 +241,7 @@ final class Compilations(
   private def compile(
       connection: BuildServerConnection,
       targets: Seq[b.BuildTargetIdentifier],
-      timeout: Timeout,
+      timeout: Option[Timeout],
   ): CancelableFuture[b.CompileResult] = {
     val params = new b.CompileParams(targets.asJava)
     targets.foreach(target => isCompiling(target) = true)

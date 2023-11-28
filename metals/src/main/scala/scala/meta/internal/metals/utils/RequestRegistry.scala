@@ -7,7 +7,6 @@ import java.util.concurrent.TimeoutException
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.concurrent.duration.FiniteDuration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -22,7 +21,6 @@ import scala.meta.internal.metals.MutableCancelable
 import org.eclipse.lsp4j.services.LanguageClient
 
 class RequestRegistry(
-    defaultMinTimeout: FiniteDuration,
     initialCancellables: List[Cancelable],
     languageClient: LanguageClient,
     requestTimeOutNotification: Option[DismissedNotifications#Notification] =
@@ -30,7 +28,7 @@ class RequestRegistry(
 )(implicit
     ex: ExecutionContext
 ) {
-  private val timeouts: Timeouts = new Timeouts(defaultMinTimeout)
+  private val timeouts: Timeouts = new Timeouts()
   private val ongoingRequests =
     new MutableCancelable().addAll(initialCancellables)
 
@@ -54,13 +52,14 @@ class RequestRegistry(
 
   def register[T](
       action: () => CompletableFuture[T],
-      timeout: Timeout,
+      timeout: Option[Timeout],
   ): CancelableFuture[T] = {
     val CancelableFuture(result, cancelable) =
-      timeouts.getNameAndTimeout(timeout) match {
-        case Some((actionName, timeoutValue))
+      timeout match {
+        case Some(timeout)
             if !requestTimeOutNotification.exists(_.isDismissed) =>
-          FutureWithTimeout(timeoutValue, onTimeout(actionName)(_))(action)
+          val timeoutValue = timeouts.getTimeout(timeout)
+          FutureWithTimeout(timeoutValue, onTimeout(timeout.name)(_))(action)
             .transform {
               case Success((res, time)) =>
                 timeouts.measured(timeout, time)
@@ -92,7 +91,6 @@ class RequestRegistry(
     ongoingRequests.cancel()
   }
 
-  def getTimeout(timeout: Timeout): Option[Duration] =
-    timeouts.getTimeout(timeout)
+  def getTimeout(timeout: Timeout): Duration = timeouts.getTimeout(timeout)
 
 }
