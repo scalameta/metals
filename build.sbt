@@ -400,7 +400,7 @@ lazy val mtags3WithPresentationCompiler = project
     mtagsSettings,
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala-3-wrapper",
     moduleName := "mtags3WithPresentationCompiler",
-    scalaVersion := V.firstScala3PCVersion,
+    scalaVersion := V.wrapperMetalsVersion,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3-wrapper",
     publish / skip := true,
     scalafixConfig := Some(
