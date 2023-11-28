@@ -70,7 +70,7 @@ class FallbackMetalsLspService(
       maybeJdkVersion,
       folderName = getVisibleName,
       buildTools = None,
-      bspStatus = None
+      bspStatus = None,
     )
   override protected def bspSession: Option[BspSession] = None
   override protected def buildServerPromise: Promise[Unit] =

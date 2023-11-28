@@ -13,7 +13,8 @@ class ShowBspErrorHandler(
     currentSession: () => Option[BspSession],
     tables: Tables,
     bspStatus: ConnectionBspStatus,
-)(implicit reportContext: ReportContext) extends BspErrorHandler {
+)(implicit reportContext: ReportContext)
+    extends BspErrorHandler {
   def onError(message: String): Unit = {
     if (shouldShowBspError) {
       for {

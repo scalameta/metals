@@ -270,7 +270,7 @@ class BspMetalsLspService(
     maybeJdkVersion,
     getVisibleName,
     Some(buildTools),
-    Some(connectionBspStatus)
+    Some(connectionBspStatus),
   )
 
   val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
@@ -521,7 +521,9 @@ class BspMetalsLspService(
     }
   }
 
-  override protected def onDeleteWatchedFiles(files: List[AbsolutePath]): Unit = {
+  override protected def onDeleteWatchedFiles(
+      files: List[AbsolutePath]
+  ): Unit = {
     val (bloopReportDelete, otherDeleteEvents) =
       files.partition(_.toNIO.startsWith(reports.bloop.maybeReportsDir))
     if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()

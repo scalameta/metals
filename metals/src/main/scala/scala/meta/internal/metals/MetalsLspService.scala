@@ -757,7 +757,8 @@ abstract class MetalsLspService(
       userConfig.showInferredType != old.showInferredType
     ) {
       buildServerPromise.future.flatMap { _ =>
-        focusedDocument().map(publishSynthetics(_, force = true))
+        focusedDocument()
+          .map(publishSynthetics(_, force = true))
           .getOrElse(Future.successful(()))
       }
     } else {
@@ -1001,7 +1002,8 @@ abstract class MetalsLspService(
     onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
   }
 
-  protected def onDeleteWatchedFiles(files: List[AbsolutePath]): Unit = files.foreach(onDelete)
+  protected def onDeleteWatchedFiles(files: List[AbsolutePath]): Unit =
+    files.foreach(onDelete)
 
   /**
    * This filter is an optimization and it is closely related to which files are
@@ -1071,7 +1073,8 @@ abstract class MetalsLspService(
           compilations
             .compileFiles(paths, Option(focusedDocumentBuildTarget.get())),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
-      ).ignoreValue
+      )
+      .ignoreValue
   }
 
   protected def onDelete(path: AbsolutePath): Future[Unit] = {
