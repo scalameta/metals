@@ -81,30 +81,6 @@ class StdReportContext(
   }
 }
 
-private class ReportSanitizer(workspace: Option[Path]) {
-  private lazy val userHome = Option(System.getProperty("user.home"))
-
-  def apply(report: Report): Report = report.copy(
-    id = report.id.map(sanitize),
-    name = sanitize(report.name),
-    text = sanitize(report.text),
-    shortSummary = sanitize(report.shortSummary),
-    path = report.path.map(sanitize)
-  )
-
-  def apply(text: String): String = sanitize(text)
-  def sanitize(text: String): String = {
-    val textAfterWokspaceReplace = workspace
-      .map(_.toString())
-      .foldLeft(text)(
-        _.replace(_, StdReportContext.WORKSPACE_STR)
-      )
-    userHome.foldLeft(textAfterWokspaceReplace)(
-      _.replace(_, StdReportContext.HOME_STR)
-    )
-  }
-}
-
 class StdReporter(
     workspace: Path,
     pathToReports: Path,
@@ -112,7 +88,9 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
-  private val sanitizer = new ReportSanitizer(Some(workspace))
+  private val sanitizer: ReportSanitizer = new WorkspaceReportSanitizer(
+    Some(workspace)
+  )
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()

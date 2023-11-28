@@ -19,11 +19,11 @@ object SampleReports {
   private def maybeEmptyMap[K, V](values: (K, V)*)(implicit
       ctrl: MapControl
   ): ju.Map[K, V] =
-    if (ctrl.setEmpty) ju.Map.of() else values.toMap.asJava
+    if (ctrl.setEmpty) ju.Collections.emptyMap else values.toMap.asJava
   private def maybeEmptyList[T](values: T*)(implicit
       ctrl: ListControl
   ): ju.List[T] =
-    if (ctrl.setEmpty) ju.List.of() else values.asJava
+    if (ctrl.setEmpty) ju.Collections.emptyList else values.asJava
 
   private def reportOf(ctx: telemetry.ReporterContextUnion)(implicit
       opt: OptionalControl,

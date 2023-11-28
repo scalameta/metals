@@ -2,26 +2,43 @@ package scala.meta.internal.pc.telemetry
 
 import scala.meta.pc
 import scala.meta.internal.telemetry
-import java.util.Map
-import java.util.List
+import java.{util => ju}
 
-// scalafmt: maxCollumn=100
+// TOOD: scalafmt crashes when maxCollumn=100
 package object conversion {
   def PresentationCompilerConfig(
       config: pc.PresentationCompilerConfig
-  ): telemetry.PresentationCompilerConfig = new telemetry.PresentationCompilerConfig(
-      /* symbolPrefixes = */ Map.copyOf(config.symbolPrefixes),
+  ): telemetry.PresentationCompilerConfig =
+    new telemetry.PresentationCompilerConfig(
+      /* symbolPrefixes = */ copyOf(config.symbolPrefixes),
       /* completionCommand = */ config.completionCommand,
       /* parameterHintsCommand = */ config.parameterHintsCommand(),
       /* overrideDefFormat = */ config.overrideDefFormat.name(),
       /* isDefaultSymbolPrefixes = */ config.isDefaultSymbolPrefixes(),
-      /* isCompletionItemDetailEnabled = */ config.isCompletionItemDetailEnabled(),
-      /* isStripMarginOnTypeFormattingEnabled = */ config.isStripMarginOnTypeFormattingEnabled(),
-      /* isCompletionItemDocumentationEnabled = */ config.isCompletionItemDocumentationEnabled(),
+      /* isCompletionItemDetailEnabled = */ config
+        .isCompletionItemDetailEnabled(),
+      /* isStripMarginOnTypeFormattingEnabled = */ config
+        .isStripMarginOnTypeFormattingEnabled(),
+      /* isCompletionItemDocumentationEnabled = */ config
+        .isCompletionItemDocumentationEnabled(),
       /* isHoverDocumentationEnabled = */ config.isHoverDocumentationEnabled(),
       /* snippetAutoIndent = */ config.snippetAutoIndent(),
-      /* isSignatureHelpDocumentationEnabled = */ config.isSignatureHelpDocumentationEnabled(),
+      /* isSignatureHelpDocumentationEnabled = */ config
+        .isSignatureHelpDocumentationEnabled(),
       /* isCompletionSnippetsEnabled = */ config.isCompletionSnippetsEnabled(),
-      /* semanticdbCompilerOptions = */ List.copyOf(config.semanticdbCompilerOptions)
+      /* semanticdbCompilerOptions = */ copyOf(config.semanticdbCompilerOptions)
     )
+
+  // Java Collections utilities not available in JDK 8
+  private def copyOf[T](v: ju.List[T]): ju.List[T] = {
+    val copy = new ju.ArrayList[T](v.size())
+    copy.addAll(v)
+    copy
+  }
+
+  private def copyOf[K, V](v: ju.Map[K, V]): ju.Map[K, V] = {
+    val copy = new ju.HashMap[K, V](v.size())
+    copy.putAll(v)
+    copy
+  }
 }

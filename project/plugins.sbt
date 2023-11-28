@@ -8,9 +8,6 @@ addSbtPlugin("com.github.reibitto" % "sbt-welcome" % "0.4.0")
 // Mima used for mtags-interfaces
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.3")
 
-// Smithy used for telemetry protocols
-addSbtPlugin("com.disneystreaming.smithy4s" % "smithy4s-sbt-codegen" % "0.18.3")
-
 libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
 
 resolvers ++= Resolver.sonatypeOssRepos("public")

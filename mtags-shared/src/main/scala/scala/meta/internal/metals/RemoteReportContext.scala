@@ -73,7 +73,9 @@ private class TelemetryReporter(
     Nil
   override def deleteAll(): Unit = ()
 
-  private val sanitizer = new ReportSanitizer(workspace)
+  private val sanitizer: ReportSanitizer = new WorkspaceReportSanitizer(
+    workspace
+  )
   private lazy val environmentInfo: telemetry.Environment =
     new telemetry.Environment(
       /* java = */ new telemetry.JavaInfo(
@@ -105,7 +107,7 @@ private class TelemetryReporter(
           /* shortSummary =  */ report.shortSummary,
           /* id =  */ report.id.toJava,
           /* error =  */ report.error
-            .map(telemetry.ReportedError.fromThrowable(_, sanitizer.apply))
+            .map(telemetry.ReportedError.fromThrowable(_, sanitizer.apply(_)))
             .toJava,
           /* reporterName =  */ name,
           /* reporterContext =  */ getReporterContext() match {

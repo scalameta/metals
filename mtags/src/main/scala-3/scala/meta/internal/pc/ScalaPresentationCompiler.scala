@@ -64,7 +64,11 @@ case class ScalaPresentationCompiler(
       serverEndpoint = RemoteTelemetryReportContext.discoverTelemetryServer,
       workspace = folderPath,
       getReporterContext = makeTelemetryContext,
-      logger = ???,
+      logger = RemoteTelemetryReportContext.LoggerAccess(
+        info = logger.info(_),
+        warning = logger.warning(_),
+        error = logger.severe(_),
+      ),
     )
     val localReporters = folderPath
       .map(new StdReportContext(_, _ => buildTargetName, reportsLevel))

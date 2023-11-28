@@ -129,8 +129,6 @@ object MockTelemetryServer {
           exchange
             .getResponseHeaders()
             .put(Headers.CONTENT_TYPE, "application/json")
-          exchange.setStatusCode(200)
-          exchange.endExchange()
           exchange
             .getResponseSender()
             .send(
