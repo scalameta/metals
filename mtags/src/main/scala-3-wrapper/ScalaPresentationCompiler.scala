@@ -13,9 +13,9 @@ import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc.AutoImportsResult
-import scala.meta.pc.Node
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.HoverSignature
+import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
