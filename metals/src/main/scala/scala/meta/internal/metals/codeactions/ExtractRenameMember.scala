@@ -14,6 +14,7 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
+import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -147,11 +148,13 @@ class ExtractRenameMember(
             } =>
           nodes += EndableMember(t, None)
         case endMarker: Term.EndMarker =>
-          if (nodes.size > 0) {
-            val last = nodes.remove(nodes.size - 1)
-            nodes += EndableMember(last.member, Some(endMarker))
+          nodes.lastOption match {
+            case Some(last)
+                if last.maybeEndMarker.isEmpty && endMarker.name.value == last.member.name.value =>
+              nodes.remove(nodes.size - 1)
+              nodes += EndableMember(last.member, Some(endMarker))
+            case _ =>
           }
-
         case s: Source =>
           super.apply(s)
         case _ =>
@@ -162,21 +165,59 @@ class ExtractRenameMember(
     nodes.toList
   }
 
-  case class Comments(text: String, startPos: l.Position)
+  private def findExtensions(
+      tree: Tree
+  ): List[EndableDefn[Defn.ExtensionGroup]] = {
+    val nodes: ListBuffer[EndableDefn[Defn.ExtensionGroup]] = ListBuffer()
 
-  case class EndableMember(
-      member: Member,
+    val traverser = new SimpleTraverser {
+      override def apply(tree: Tree): Unit = tree match {
+        case p: Pkg => super.apply(p)
+        case s: Source => super.apply(s)
+        case e: Defn.ExtensionGroup =>
+          nodes += EndableDefn[Defn.ExtensionGroup](e, None)
+        case endMarker: Term.EndMarker if endMarker.name.value == "extension" =>
+          nodes.lastOption match {
+            case Some(last) if last.maybeEndMarker.isEmpty =>
+              nodes.remove(nodes.size - 1)
+              nodes += EndableDefn[Defn.ExtensionGroup](
+                last.member,
+                Some(endMarker),
+              )
+            case _ =>
+          }
+        case _ =>
+      }
+    }
+    traverser(tree)
+
+    nodes.toList
+  }
+
+  case class Comments(text: String, startPos: Int)
+
+  type EndableMember = EndableDefn[Member]
+  object EndableMember {
+    def apply(
+        member: Member,
+        maybeEndMarker: Option[Term.EndMarker],
+    ): EndableMember =
+      EndableDefn(member, maybeEndMarker)
+  }
+  case class EndableDefn[T <: Tree](
+      member: T,
       maybeEndMarker: Option[Term.EndMarker],
       commentsAbove: Option[Comments] = None,
   ) {
-    def withComments(comments: Comments): EndableMember =
+    def withComments(comments: Comments): EndableDefn[T] =
       this.copy(commentsAbove = Some(comments))
-    def memberPos: l.Range = {
-      val pos = member.pos.toLsp
-      commentsAbove.foreach(comments => pos.setStart(comments.startPos))
-      pos
-    }
-    def endMarkerPos: Option[l.Range] = maybeEndMarker.map(_.pos.toLsp)
+    def memberPos: Position =
+      commentsAbove match {
+        case None => member.pos
+        case Some(comment) =>
+          Position.Range(member.pos.input, comment.startPos, member.pos.end)
+      }
+    def endMarkerPos: Option[Position] = maybeEndMarker.map(_.pos)
   }
 
   private def isSealed(t: Tree): Boolean = t match {
@@ -231,6 +272,7 @@ class ExtractRenameMember(
       range: l.Range,
       endableMember: EndableMember,
       maybeCompanionEndableMember: Option[EndableMember],
+      extensions: List[EndableDefn[Defn.ExtensionGroup]],
   ): (String, Int) = {
     // List of sequential packages or imports before the member definition
     val packages: ListBuffer[Pkg] = ListBuffer()
@@ -273,25 +315,27 @@ class ExtractRenameMember(
 
     val pkg: Option[Pkg] = mergedTermsOpt.map(t => Pkg(ref = t, stats = Nil))
 
-    def marker(endableMember: EndableMember) = endableMember.maybeEndMarker
-      .map(endMarker => "\n" + endMarker.toString())
-      .getOrElse("")
-
-    def memberParts(member: EndableMember) =
+    def memberParts[T <: Tree](member: EndableDefn[T]) = {
+      val endMarker =
+        member.maybeEndMarker
+          .map(endMarker => "\n" + endMarker.toString())
+          .getOrElse("")
       member.commentsAbove.map(_.text).getOrElse("") +
-        member.member.toString + marker(member)
+        member.member.toString + endMarker
+    }
 
     val definitionsParts = maybeCompanionEndableMember match {
       case None => List(memberParts(endableMember))
       case Some(companion)
-          if (companion.memberPos.getStart.getLine < endableMember.memberPos.getStart.getLine) =>
+          if (companion.memberPos.start < endableMember.memberPos.start) =>
         List(memberParts(companion), memberParts(endableMember))
       case Some(companion) =>
         List(memberParts(endableMember), memberParts(companion))
     }
 
     val structure =
-      pkg.toList.mkString("\n") :: imports.mkString("\n") :: definitionsParts
+      pkg.toList.mkString("\n") :: imports.mkString("\n") ::
+        definitionsParts ++ extensions.map(memberParts)
 
     val preDefinitionLines = pkg.toList.length + imports.length
     val defnLine =
@@ -424,6 +468,7 @@ class ExtractRenameMember(
 
     val opt = for {
       tree <- trees.get(path)
+      text <- buffers.get(path)
       definitions = membersDefinitions(tree)
       memberDefn <- definitions
         .find(
@@ -433,11 +478,23 @@ class ExtractRenameMember(
       companion = definitions
         .find(isCompanion(memberDefn.member))
         .map(withComment)
+      extensions = findExtensions(tree).filter { e =>
+        e.member.paramClauses.toList match {
+          case Term.ParamClause(param :: Nil, _) :: Nil =>
+            param.decltpe match {
+              case Some(Type.Name(name)) =>
+                name == memberDefn.member.name.value
+              case _ => false
+            }
+          case _ => false
+        }
+      }
       (fileContent, defnLine) = newFileContent(
         tree,
         range,
         memberDefn,
         companion,
+        extensions,
       )
       newFilePath = newPathFromClass(uri, memberDefn.member)
       if !newFilePath.exists
@@ -449,6 +506,8 @@ class ExtractRenameMember(
         fileContent,
         memberDefn,
         companion,
+        extensions,
+        text,
       )
       val newFileMemberRange = new l.Range()
       val pos = new l.Position(defnLine, 0)
@@ -476,18 +535,26 @@ class ExtractRenameMember(
 
   override def kind: String = l.CodeActionKind.RefactorExtract
 
+  private def whiteChars = Set('\r', '\n', ' ', '\t')
+
   private def extractClassCommand(
       newUri: String,
       content: String,
       endableMember: EndableMember,
       maybeEndableMemberCompanion: Option[EndableMember],
+      extensions: List[EndableDefn[Defn.ExtensionGroup]],
+      fileText: String,
   ): List[l.TextEdit] = {
     val newPath = newUri.toAbsolutePath
 
     newPath.writeText(content)
 
-    def removeEdits(range: l.Range): List[l.TextEdit] =
-      List(new l.TextEdit(range, ""))
+    def removeEdit(pos: Position): l.TextEdit = new l.TextEdit(pos.toLsp, "")
+
+    def removesPositionsForMember[T <: Tree](
+        member: EndableDefn[T]
+    ): List[Position] =
+      member.memberPos :: member.endMarkerPos.toList
 
     val packageEdit = endableMember.member.parent
       .flatMap {
@@ -500,17 +567,47 @@ class ExtractRenameMember(
           Some(p)
         case _ => None
       }
-      .map(tree => removeEdits(tree.pos.toLsp))
+      .map(tree => List(removeEdit(tree.pos)))
 
-    packageEdit.getOrElse(
-      removeEdits(endableMember.memberPos) ++
-        (maybeEndableMemberCompanion
-          .map(_.memberPos)
-          ++ endableMember.endMarkerPos
-          ++ maybeEndableMemberCompanion
-            .flatMap(_.endMarkerPos)).flatMap(removeEdits)
-    )
+    // if there are only white chars between remove edits, we merge them
+    def mergeEdits(
+        edits: List[Position],
+        acc: List[Position],
+    ): List[Position] = {
+      edits match {
+        case edit1 :: edit2 :: rest =>
+          def onlyWhiteCharsBetween =
+            fileText.slice(edit1.end, edit2.start).forall(whiteChars)
+          if (edit1.end >= edit2.start || onlyWhiteCharsBetween) {
+            val merged = Position.Range(edit1.input, edit1.start, edit2.end)
+            mergeEdits(merged :: rest, acc)
+          } else {
+            mergeEdits(edit2 :: rest, edit1 :: acc)
+          }
+        case edit :: Nil =>
+          val followingWhites =
+            fileText.splitAt(edit.end)._2.takeWhile(whiteChars).size
+          Position.Range(
+            edit.input,
+            edit.start,
+            edit.end + followingWhites,
+          ) :: acc
+        case Nil => acc
+      }
+    }
 
+    def membersRemove: List[l.TextEdit] = {
+      val positions =
+        removesPositionsForMember(endableMember) ++
+          maybeEndableMemberCompanion.toList.flatMap(
+            removesPositionsForMember
+          ) ++
+          extensions
+            .flatMap(removesPositionsForMember)
+      mergeEdits(positions.sortBy(_.start), Nil).map(removeEdit)
+    }
+
+    packageEdit.getOrElse(membersRemove)
   }
 
   private def findCommentsAbove(path: AbsolutePath, member: Member) = {
@@ -529,7 +626,7 @@ class ExtractRenameMember(
         .map(_.pos)
     } yield Comments(
       part.splitAt(commentPos.start)._2,
-      commentPos.toLsp.getStart(),
+      commentPos.start,
     )
   }
 

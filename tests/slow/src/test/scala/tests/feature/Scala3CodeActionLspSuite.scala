@@ -648,6 +648,45 @@ class Scala3CodeActionLspSuite
     ),
   )
 
+  checkExtractedMember(
+    "opaque-type-extensions",
+    """|final class Bar()
+       |
+       |opaque type <<Foo>> = String
+       |
+       |object Foo:
+       |  val x = 1
+       |
+       |extension (f: Foo)
+       |  def u = 3
+       |end extension
+       |
+       |extension (i: Int)
+       |  def r = 1
+       |end extension
+       |""".stripMargin,
+    expectedActions = ExtractRenameMember.title("opaque type", "Foo"),
+    """|
+       |final class Bar()
+       |
+       |extension (i: Int)
+       |  def r = 1
+       |end extension
+       |""".stripMargin,
+    newFile = (
+      "Foo.scala",
+      s"""opaque type Foo = String
+         |
+         |object Foo:
+         |  val x = 1
+         |
+         |extension (f: Foo)
+         |  def u = 3
+         |end extension
+         |""".stripMargin,
+    ),
+  )
+
   private def getPath(name: String) = s"a/src/main/scala/a/$name"
 
   def checkExtractedMember(
