@@ -494,7 +494,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val List[Int](l1: Int, l2: Int) = List[Int](12, 13)
            |  println("Hello!")
            |  val abc: Int = 123
-           |  val tupleBound: (String, String) @ (one: String, two: String) = ("1", "2")
+           |  val tupleBound @ (one: String, two: String) = ("1", "2")
            |  val tupleExplicit: (String, String) = Tuple2[String, String]("1", "2")
            |  val tupleExplicitApply: (String, String) = Tuple2.apply[String, String]("1", "2")
            |  var variable: Int = 123

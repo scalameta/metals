@@ -566,4 +566,28 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "val-def-with-bind",
+    """|object O {
+       |  val tupleBound @ (one, two) = ("1", "2")
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  val tupleBound @ (one: String, two: String) = ("1", "2")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "val-def-with-bind-and-comment",
+    """|object O {
+       |  val tupleBound /* comment */ @ (one, two) = ("1", "2")
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  val tupleBound /* comment */ @ (one: String, two: String) = ("1", "2")
+       |}
+       |""".stripMargin
+  )
 }

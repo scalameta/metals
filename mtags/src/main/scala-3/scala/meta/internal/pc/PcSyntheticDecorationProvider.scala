@@ -221,7 +221,8 @@ object InferredType:
     tree match
       case vd @ ValDef(_, tpe, _)
           if isValidSpan(tpe.span, vd.nameSpan) &&
-            !vd.symbol.is(Flags.Enum) =>
+            !vd.symbol.is(Flags.Enum) &&
+            !isValDefBind(vd) =>
         if vd.symbol == vd.symbol.sourceSymbol then
           Some(tpe.tpe, tpe.sourcePos.withSpan(vd.nameSpan), vd)
         else None
@@ -244,6 +245,14 @@ object InferredType:
     tpeSpan.isZeroExtent &&
       nameSpan.exists &&
       !nameSpan.isZeroExtent
+
+  /* If is left part of val definition bind:
+   * val <<t>> @ ... =
+   */
+  private def isValDefBind(vd: ValDef)(using Context) =
+    val (_, afterDef) = vd.source.content().splitAt(vd.nameSpan.end)
+    val index = indexAfterSpacesAndComments(afterDef)
+    index >= 0 && index < afterDef.size && afterDef(index) == '@'
 
 end InferredType
 
