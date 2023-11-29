@@ -36,7 +36,7 @@ class WorksheetModifier extends StringModifier {
         |This format is important since this is what tells Metals that it's meant to be
         |treated as a worksheet and not just a Scala script. Where you create the
         |script also matters. If you'd like to use classes and values from your
-        |project, you need to make sure the worksheet is created inside of your `src/main/scala`
+        |project, you need to make sure the worksheet is created inside of your sources next to any existing Scala files.
         |directory. You can still create a worksheet in other places, but you will
         |only have access to the standard library and your dependencies.
         |
