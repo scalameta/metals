@@ -1108,8 +1108,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some(value) scala
-           |Seq: scala.collection.immutable
-           |Set: scala.collection.immutable
+           |Seq scala.collection.immutable
+           |Set scala.collection.immutable
            |""".stripMargin,
       // TODO https://github.com/scalameta/metals/issues/5885
       ">=3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY" ->
