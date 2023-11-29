@@ -37,6 +37,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |dependencies {
             |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -141,6 +143,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |dependencies {
             |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -238,6 +242,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |dependencies {
             |    implementation 'org.scala-lang:scala-reflect:${V.scala213}'
             |}
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -267,6 +273,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |dependencies {
             |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -336,6 +344,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ <- initialize(
         """|/build.gradle
            |, syntax error
+           |/src/main/scala/A.scala
+           |
            |""".stripMargin,
         expectError = true,
       )

@@ -36,6 +36,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -79,6 +81,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ <- server.server.buildServerPromise.future

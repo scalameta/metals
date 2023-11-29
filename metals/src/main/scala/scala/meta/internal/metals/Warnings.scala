@@ -18,7 +18,7 @@ final class Warnings(
     buildTargets: BuildTargets,
     statusBar: StatusBar,
     icons: Icons,
-    buildTools: Option[BuildTools],
+    buildTools: => Option[BuildTools],
     isCompiling: BuildTargetIdentifier => Boolean,
 ) {
   def noSemanticdb(path: AbsolutePath): Unit = {

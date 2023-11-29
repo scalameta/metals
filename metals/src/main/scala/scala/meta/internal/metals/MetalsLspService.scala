@@ -630,14 +630,6 @@ abstract class MetalsLspService(
     languageClient,
   )
 
-  // val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
-  //   () => tables.buildTool.selectedBuildTool(),
-  //   buildTargets,
-  //   () => bspSession,
-  //   () => bspConnector.resolve(),
-  //   buildTools,
-  // )
-
   protected val fileDecoderProvider: FileDecoderProvider =
     new FileDecoderProvider(
       folder,

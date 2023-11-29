@@ -55,7 +55,7 @@ class FallbackMetalsLspService(
       maxScalaCliServers = 10,
     ) {
 
-  override protected def doctor: Doctor =
+  override protected val doctor: Doctor =
     new Doctor(
       path,
       buildTargets,
@@ -72,11 +72,11 @@ class FallbackMetalsLspService(
       buildTools = None,
       bspStatus = None,
     )
-  override protected def bspSession: Option[BspSession] = None
-  override protected def buildServerPromise: Promise[Unit] =
+  override protected val bspSession: Option[BspSession] = None
+  override protected val buildServerPromise: Promise[Unit] =
     Promise().success(())
-  override protected def bspErrorHandler: BspErrorHandler = LogBspErrorHandler
-  override protected def optBuildTools: Option[BuildTools] = None
+  override protected val bspErrorHandler: BspErrorHandler = LogBspErrorHandler
+  override protected val optBuildTools: Option[BuildTools] = None
 
   private val files: AtomicReference[Set[AbsolutePath]] = new AtomicReference(
     Set.empty

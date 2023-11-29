@@ -141,11 +141,10 @@ class MetalsLanguageServer(
                 new Folder(
                   root.toAbsolutePath,
                   Some("root"),
-                  isKnownMetalsProject = true,
+                  isKnownMetalsProject = false,
                 )
               )
               .toList
-          case head :: Nil => List(Folder(head, isKnownMetalsProject = true))
           case many => many.map(Folder(_, isKnownMetalsProject = false))
         }
       }
@@ -159,7 +158,6 @@ class MetalsLanguageServer(
       } else {
         lazy val fallbackServicePath = FallbackMetalsLspService.path()
         val service = createService(folders, params, fallbackServicePath)
-        val folderPaths = folders.map(_.path)
 
         setupJna()
 
@@ -186,7 +184,7 @@ class MetalsLanguageServer(
           s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
         }
         scribe.info(
-          s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPaths
+          s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPathsWithScala
               .mkString(", ")}' $clientInfo."
         )
 

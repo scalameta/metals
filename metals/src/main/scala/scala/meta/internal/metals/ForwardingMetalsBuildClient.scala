@@ -42,7 +42,7 @@ final class ForwardingMetalsBuildClient(
     didCompile: CompileReport => Unit,
     onBuildTargetDidCompile: BuildTargetIdentifier => Unit,
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
-    bspErrorHandler: BspErrorHandler,
+    bspErrorHandler: => BspErrorHandler,
 ) extends MetalsBuildClient
     with Cancelable {
 
