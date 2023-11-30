@@ -1343,18 +1343,6 @@ class MetalsLspService(
     }
     if (isScalaOrJava && event.eventType == EventType.Delete) {
       onDelete(path).asJava
-    } else if (
-      isScalaOrJava &&
-      !path.isDirectory &&
-      !savedFiles.isRecentlyActive(path) &&
-      !buffers.contains(path)
-    ) {
-      event.eventType match {
-        case EventType.CreateOrModify =>
-          buildTargets.onCreate(path)
-        case _ =>
-      }
-      onChange(List(path)).asJava
     } else if (path.isSemanticdb) {
       val semanticdbPath = SemanticdbPath(path)
       Future {
