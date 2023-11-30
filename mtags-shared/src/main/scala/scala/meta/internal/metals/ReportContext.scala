@@ -88,7 +88,7 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
-  private val sanitizer: ReportSanitizer = new WorkspaceReportSanitizer(
+  private val sanitizer: ReportSanitizer = new WorkspaceSanitizer(
     Some(workspace)
   )
   val maybeReportsDir: Path =

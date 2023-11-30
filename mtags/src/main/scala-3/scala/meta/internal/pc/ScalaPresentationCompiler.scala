@@ -28,8 +28,9 @@ import scala.meta.pc.*
 import scala.meta.pc.PcSymbolInformation as IPcSymbolInformation
 import scala.meta.internal.telemetry as telemetryApi
 import scala.meta.internal.pc.{telemetry as pcTelemetryApi}
-import scala.meta.internal.metals.RemoteTelemetryReportContext
+import scala.meta.internal.metals.RemoteReportContext
 import scala.meta.internal.metals.MirroredReportContext
+import scala.meta.internal.metals.ScalametaSourceCodeTransformer
 
 import dotty.tools.dotc.reporting.StoreReporter
 import org.eclipse.lsp4j as l
@@ -60,11 +61,14 @@ case class ScalaPresentationCompiler(
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
   given ReportContext =
-    val remoteReporters = new RemoteTelemetryReportContext(
-      serverEndpoint = RemoteTelemetryReportContext.discoverTelemetryServer,
-      workspace = folderPath,
+    val remoteReporters = new RemoteReportContext(
+      serverEndpoint = RemoteReportContext.discoverTelemetryServer,
       getReporterContext = makeTelemetryContext,
-      logger = RemoteTelemetryReportContext.LoggerAccess(
+      sanitizers = new RemoteReportContext.Sanitizers(
+        workspace = folderPath,
+        sourceCodeTransformer = Some(ScalametaSourceCodeTransformer),
+      ),
+      logger = RemoteReportContext.LoggerAccess(
         info = logger.info(_),
         warning = logger.warning(_),
         error = logger.severe(_),

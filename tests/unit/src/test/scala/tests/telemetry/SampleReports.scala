@@ -30,8 +30,7 @@ object SampleReports {
       list: ListControl,
   ): telemetry.ReportEvent = new telemetry.ReportEvent(
     "name",
-    "test",
-    "shortSummary",
+    optional("text"),
     optional("id"),
     optional(
       new telemetry.ReportedError(

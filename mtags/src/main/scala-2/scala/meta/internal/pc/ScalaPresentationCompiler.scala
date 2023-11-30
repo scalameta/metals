@@ -50,10 +50,11 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import scala.meta.internal.metals.RemoteTelemetryReportContext
-import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.{telemetry => telemetryApi}
 import scala.meta.internal.pc.{telemetry => pcTelemetryApi}
+import scala.meta.internal.metals.RemoteReportContext
+import scala.meta.internal.metals.MirroredReportContext
+import scala.meta.internal.metals.ScalametaSourceCodeTransformer
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -76,11 +77,14 @@ case class ScalaPresentationCompiler(
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
   implicit val reportContex: ReportContext = {
-    val remoteReporters = new RemoteTelemetryReportContext(
-      serverEndpoint = RemoteTelemetryReportContext.discoverTelemetryServer,
-      workspace = folderPath,
+    val remoteReporters = new RemoteReportContext(
+      serverEndpoint = RemoteReportContext.discoverTelemetryServer,
       getReporterContext = makeTelemetryContext,
-      logger = RemoteTelemetryReportContext.LoggerAccess(
+      sanitizers = new RemoteReportContext.Sanitizers(
+        workspace = folderPath,
+        sourceCodeTransformer = Some(ScalametaSourceCodeTransformer)
+      ),
+      logger = RemoteReportContext.LoggerAccess(
         info = logger.info(_),
         warning = logger.warning(_),
         error = logger.severe(_)

@@ -4,19 +4,17 @@ import java.util.Optional;
 
 public class ReportEvent {
 	final private String name;
-	final private String text;
-	final private String shortSummary;
+	final private Optional<String> text;
 	final private Optional<String> id;
 	final private Optional<ReportedError> error;
 	final private String reporterName;
 	final private ReporterContextUnion reporterContext;
 	final private Environment env;
 
-	public ReportEvent(String name, String text, String shortSummary, Optional<String> id,
-			Optional<ReportedError> error, String reporterName, ReporterContextUnion reporterContext, Environment env) {
+	public ReportEvent(String name, Optional<String> text, Optional<String> id, Optional<ReportedError> error,
+			String reporterName, ReporterContextUnion reporterContext, Environment env) {
 		this.name = name;
 		this.text = text;
-		this.shortSummary = shortSummary;
 		this.id = id;
 		this.error = error;
 		this.reporterName = reporterName;
@@ -28,12 +26,8 @@ public class ReportEvent {
 		return name;
 	}
 
-	public String getText() {
+	public Optional<String> getText() {
 		return text;
-	}
-
-	public String getShortSummary() {
-		return shortSummary;
 	}
 
 	public Optional<String> getId() {
@@ -62,7 +56,6 @@ public class ReportEvent {
 		int result = 1;
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime * result + ((text == null) ? 0 : text.hashCode());
-		result = prime * result + ((shortSummary == null) ? 0 : shortSummary.hashCode());
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		result = prime * result + ((error == null) ? 0 : error.hashCode());
 		result = prime * result + ((reporterName == null) ? 0 : reporterName.hashCode());
@@ -89,11 +82,6 @@ public class ReportEvent {
 			if (other.text != null)
 				return false;
 		} else if (!text.equals(other.text))
-			return false;
-		if (shortSummary == null) {
-			if (other.shortSummary != null)
-				return false;
-		} else if (!shortSummary.equals(other.shortSummary))
 			return false;
 		if (id == null) {
 			if (other.id != null)

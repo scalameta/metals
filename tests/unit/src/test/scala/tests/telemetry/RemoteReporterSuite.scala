@@ -27,12 +27,12 @@ class RemoteReporterSuite extends BaseSuite {
 
   // Remote telemetry reporter should be treated as best effort, ensure that logging
   test("ignore connectiviy failures") {
-    val reporter = new metals.RemoteTelemetryReportContext(
+    val reporter = new metals.RemoteReportContext(
       "https://not.existing.endpoint.for.metals.tests:8081",
-      None,
       getReporterContext = () =>
         SampleReports.metalsLSPReport().getReporterContext.getMetalsLSP.get(),
-      logger = metals.RemoteTelemetryReportContext.LoggerAccess.system,
+      sanitizers = new metals.RemoteReportContext.Sanitizers(None, None),
+      logger = metals.RemoteReportContext.LoggerAccess.system,
     )
 
     assertEquals(
@@ -56,11 +56,14 @@ class RemoteReporterSuite extends BaseSuite {
           SampleReports.scalaPresentationCompilerReport(),
           SampleReports.unknownReport(),
         ).map(_.getReporterContext().get())
-        reporter = new metals.RemoteTelemetryReportContext(
+        reporter = new metals.RemoteReportContext(
           serverEndpoint,
-          None,
           getReporterContext = () => reporterCtx,
-          logger = metals.RemoteTelemetryReportContext.LoggerAccess.system,
+          sanitizers = new metals.RemoteReportContext.Sanitizers(
+            None,
+            Some(metals.ScalametaSourceCodeTransformer),
+          ),
+          logger = metals.RemoteReportContext.LoggerAccess.system,
         )
       } {
         val createdReport = simpleReport(reporterCtx.toString())

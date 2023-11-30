@@ -15,8 +15,7 @@ trait ReportSanitizer {
   def sanitize(text: String): String
 }
 
-class WorkspaceReportSanitizer(workspace: Option[Path])
-    extends ReportSanitizer {
+class WorkspaceSanitizer(workspace: Option[Path]) extends ReportSanitizer {
   private lazy val userHome = Option(System.getProperty("user.home"))
 
   override def sanitize(text: String): String = {
