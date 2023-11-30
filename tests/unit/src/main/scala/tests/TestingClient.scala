@@ -302,9 +302,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         .map(tool => createParams(tool.toString()))
         .contains(params)
     }
-    // NOTE: (ckipp01) Just for easiness of testing, we are going to just look
-    // for sbt and mill builds together, which are most common. The logic however
-    // is identical for all build tools.
 
     def isNewBuildToolDetectedMessage(): Boolean = {
       val buildTools = BuildTools.default().allAvailable

@@ -12,6 +12,7 @@ import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import org.eclipse.{lsp4j => l}
 import tests.FileLayout
 
 class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
@@ -267,6 +268,18 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- server.initialized()
       _ = FileLayout.fromString(simpleFileLayout, workspace)
       _ = FileLayout.fromString(bspLayout, workspace)
+      _ <- server.fullServer
+        .didChangeWatchedFiles(
+          new l.DidChangeWatchedFilesParams(
+            List(
+              new l.FileEvent(
+                workspace.resolve(".bsp/scala-cli.json").toURI.toString(),
+                l.FileChangeType.Created,
+              )
+            ).asJava
+          )
+        )
+        .asScala
       _ <- server.server.indexingPromise.future
       _ <- server.didOpen("MyTests.scala")
       _ <- assertDefinitionAtLocation(

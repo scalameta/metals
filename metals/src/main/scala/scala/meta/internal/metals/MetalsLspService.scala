@@ -17,7 +17,6 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
@@ -287,7 +286,7 @@ class MetalsLspService(
   )
 
   private val onBuildChanged =
-    BatchedFunction.fromFuture[AbsolutePath, BuildChange](
+    BatchedFunction.fromFuture[AbsolutePath, Unit](
       onBuildChangedUnbatched,
       "onBuildChanged",
     )
@@ -912,7 +911,8 @@ class MetalsLspService(
 
   val isInitialized = new AtomicBoolean(false)
 
-  def fullConnect(): Future[Unit] =
+  def fullConnect(): Future[Unit] = {
+    buildTools.initialize()
     for {
       found <- supportedBuildTool()
       chosenBuildServer = found match {
@@ -934,6 +934,7 @@ class MetalsLspService(
           )
         )
     } yield ()
+  }
 
   def initialized(): Future[Unit] = {
     loadFingerPrints()
@@ -946,8 +947,7 @@ class MetalsLspService(
         Future
           .sequence(
             List[Future[Unit]](
-              Future(buildTools.initialize()),
-              fullConnect().ignoreValue,
+              fullConnect(),
               Future(workspaceSymbols.indexClasspath()),
               Future(formattingProvider.load()),
             )
@@ -1358,14 +1358,6 @@ class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
-    event.eventType match {
-      case EventType.CreateOrModify
-          if path.isInBspDirectory(folder) && path.extension == "json"
-            && isValidBspFile(path) =>
-        scribe.info(s"Detected new build tool in $path")
-        quickConnectToBuildServer()
-      case _ =>
-    }
     if (isScalaOrJava && event.eventType == EventType.Delete) {
       onDelete(path).asJava
     } else if (
@@ -1393,14 +1385,11 @@ class MetalsLspService(
         }
       }.asJava
     } else if (path.isBuild) {
-      onBuildChanged(List(path)).ignoreValue.asJava
+      onBuildChanged(List(path)).asJava
     } else {
       CompletableFuture.completedFuture(())
     }
   }
-
-  private def isValidBspFile(path: AbsolutePath): Boolean =
-    path.readTextOpt.exists(text => Try(ujson.read(text)).toOption.nonEmpty)
 
   private def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
     paths.foreach { path =>
@@ -1413,8 +1402,7 @@ class MetalsLspService(
           Future(indexer.reindexWorkspaceSources(paths)),
           compilations
             .compileFiles(paths, Option(focusedDocumentBuildTarget.get())),
-          onBuildChanged(paths).ignoreValue,
-          Future.sequence(paths.map(onBuildToolAdded)),
+          onBuildChanged(paths),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
@@ -2078,8 +2066,6 @@ class MetalsLspService(
         if (!buildTools.isAutoConnectable()) {
           warnings.noBuildTool()
         }
-        // wait for a bsp file to show up
-        fileWatcher.start(Set(folder.resolve(".bsp")))
         Future(None)
       }
       case buildTools =>
@@ -2515,30 +2501,40 @@ class MetalsLspService(
 
   private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
-  ): Future[BuildChange] = {
+  ): Future[Unit] = {
     val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
-    val buildChange = for {
-      chosenBuildTool <- tables.buildTool.selectedBuildTool()
-      if (changedBuilds.contains(chosenBuildTool))
-    } yield slowConnectToBuildServer(forceImport = false)
-    buildChange.getOrElse(Future.successful(BuildChange.None))
+    tables.buildTool.selectedBuildTool() match {
+      // no build tool and new added
+      case None if changedBuilds.nonEmpty =>
+        scribe.info(s"Detected new build tool in $path")
+        fullConnect()
+      // used build tool changed
+      case Some(chosenBuildTool) if changedBuilds.contains(chosenBuildTool) =>
+        slowConnectToBuildServer(forceImport = false).ignoreValue
+      // maybe new build tool added
+      case Some(chosenBuildTool) if changedBuilds.nonEmpty =>
+        onBuildToolsAdded(chosenBuildTool, changedBuilds)
+      case _ => Future.unit
+    }
   }
 
-  private def onBuildToolAdded(
-      path: AbsolutePath
-  ): Future[BuildChange] = {
+  private def onBuildToolsAdded(
+      currentBuildToolName: String,
+      newBuildToolsChanged: Seq[String],
+  ): Future[Unit] = {
     val supportedBuildTools = buildTools.loadSupported()
     val maybeBuildChange = for {
-      currentBuildToolName <- tables.buildTool.selectedBuildTool()
       currentBuildTool <- supportedBuildTools.find(
         _.executableName == currentBuildToolName
       )
-      addedBuildName <- buildTools.isBuildRelated(path)
-      if (buildTools.newBuildTool(addedBuildName))
-      if (addedBuildName != currentBuildToolName)
-      newBuildTool <- supportedBuildTools.find(
-        _.executableName == addedBuildName
-      )
+      newBuildTool <- newBuildToolsChanged
+        .filter(buildTools.newBuildTool)
+        .flatMap(addedBuildName =>
+          supportedBuildTools.find(
+            _.executableName == addedBuildName
+          )
+        )
+        .headOption
     } yield {
       buildToolSelector
         .onNewBuildToolAdded(newBuildTool, currentBuildTool)
@@ -2546,8 +2542,8 @@ class MetalsLspService(
           if (switch) slowConnectToBuildServer(forceImport = false)
           else Future.successful(BuildChange.None)
         }
-    }
-    maybeBuildChange.getOrElse(Future.successful(BuildChange.None))
+    }.ignoreValue
+    maybeBuildChange.getOrElse(Future.unit)
   }
 
   /**
