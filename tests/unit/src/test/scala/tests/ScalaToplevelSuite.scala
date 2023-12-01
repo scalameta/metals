@@ -348,8 +348,8 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "a/",
       "a/A.",
-      "a/A.bar.",
-      "a/A.foo.",
+      "a/A.bar().",
+      "a/A.foo().",
     ),
     mode = All,
     dialect = dialects.Scala3,
@@ -369,8 +369,8 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "a/",
       "a/Test$package.",
-      "a/Test$package.bar.",
-      "a/Test$package.foo.",
+      "a/Test$package.bar().",
+      "a/Test$package.foo().",
     ),
     mode = All,
     dialect = dialects.Scala3,
@@ -386,8 +386,8 @@ class ScalaToplevelSuite extends BaseSuite {
        |  def baz: Long = ???
        |""".stripMargin,
     List(
-      "a/", "a/Test$package.", "a/Test$package.foo.", "a/Test$package.bar.",
-      "a/Test$package.baz.",
+      "a/", "a/Test$package.", "a/Test$package.foo().", "a/Test$package.bar().",
+      "a/Test$package.baz().",
     ),
     mode = All,
     dialect = dialects.Scala3,

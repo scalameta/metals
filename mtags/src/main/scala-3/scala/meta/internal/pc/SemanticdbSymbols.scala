@@ -48,7 +48,20 @@ object SemanticdbSymbols:
                   //   however in scalac this method is defined only in `module Files`
                   if typeSym.is(JavaDefined) then
                     typeSym :: owner.info.decl(termName(value)).symbol :: Nil
+                  /**
+                   * Looks like decl doesn't work for:
+                   *  package a:
+                   *   implicit class A (i: Int):
+                   *      def inc = i + 1
+                   */
+                  else if typeSym == NoSymbol then
+                    val searched = typeName(value)
+                    owner.info.allMembers
+                      .find(_.name == searched)
+                      .map(_.symbol)
+                      .toList
                   else typeSym :: Nil
+                  end if
                 case Descriptor.Term(value) =>
                   val outSymbol = owner.info.decl(termName(value)).symbol
                   if outSymbol.exists
@@ -91,6 +104,8 @@ object SemanticdbSymbols:
                     .map(_.symbol)
                     .filter(sym => symbolName(sym) == s)
                     .toList
+          end match
+        end tryMember
 
         parentSymbol.flatMap(tryMember)
     try

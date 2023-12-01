@@ -224,7 +224,7 @@ class CompletionProvider(
 
     def mkItemWithImports(
         v: CompletionValue.Workspace | CompletionValue.Extension |
-          CompletionValue.Interpolator
+          CompletionValue.Interpolator | CompletionValue.ImplicitClass
     ) =
       val sym = v.symbol
       path match
@@ -277,7 +277,8 @@ class CompletionProvider(
     end mkItemWithImports
 
     completion match
-      case v: (CompletionValue.Workspace | CompletionValue.Extension) =>
+      case v: (CompletionValue.Workspace | CompletionValue.Extension |
+            CompletionValue.ImplicitClass) =>
         mkItemWithImports(v)
       case v: CompletionValue.Interpolator if v.isWorkspace || v.isExtension =>
         mkItemWithImports(v)
