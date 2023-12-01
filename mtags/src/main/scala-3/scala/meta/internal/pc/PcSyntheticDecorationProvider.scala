@@ -37,6 +37,7 @@ class PcSyntheticDecorationsProvider(
   driver.run(uri, source)
   given ctx: Context = driver.currentCtx
   val unit = driver.currentCtx.run.units.head
+  given InferredType.Text = InferredType.Text(text)
 
   def tpdTree = unit.tpdTree
   def provide(): List[SyntheticDecoration] =
@@ -217,11 +218,16 @@ object TypeParameters:
 end TypeParameters
 
 object InferredType:
-  def unapply(tree: Tree)(using Context) =
+  opaque type Text = Array[Char]
+  object Text:
+    def apply(text: Array[Char]): Text = text
+
+  def unapply(tree: Tree)(using text: Text, cxt: Context) =
     tree match
       case vd @ ValDef(_, tpe, _)
           if isValidSpan(tpe.span, vd.nameSpan) &&
-            !vd.symbol.is(Flags.Enum) =>
+            !vd.symbol.is(Flags.Enum) &&
+            !isValDefBind(text, vd) =>
         if vd.symbol == vd.symbol.sourceSymbol then
           Some(tpe.tpe, tpe.sourcePos.withSpan(vd.nameSpan), vd)
         else None
@@ -244,6 +250,14 @@ object InferredType:
     tpeSpan.isZeroExtent &&
       nameSpan.exists &&
       !nameSpan.isZeroExtent
+
+  /* If is left part of val definition bind:
+   * val <<t>> @ ... =
+   */
+  def isValDefBind(text: Text, vd: ValDef)(using Context) =
+    val afterDef = text.drop(vd.nameSpan.end)
+    val index = indexAfterSpacesAndComments(afterDef)
+    index >= 0 && index < afterDef.size && afterDef(index) == '@'
 
 end InferredType
 

@@ -152,7 +152,8 @@ final class PcSyntheticDecorationsProvider(
           if hasMissingTypeAnnot(vd, tpt) &&
             !primaryConstructorParam(vd.symbol) &&
             isNotInUnapply(vd) &&
-            !isCompilerGeneratedSymbol(vd.symbol) =>
+            !isCompilerGeneratedSymbol(vd.symbol) &&
+            !isValDefBind(vd) =>
         Some(vd.symbol.tpe.widen.finalResultType, vd.namePosition)
       case dd @ DefDef(_, _, _, _, tpt, _)
           if hasMissingTypeAnnot(dd, tpt) &&
@@ -191,6 +192,15 @@ final class PcSyntheticDecorationsProvider(
 
     private def isNotInUnapply(vd: ValDef) =
       !vd.rhs.pos.isRange || vd.rhs.pos.start > vd.namePosition.end
+
+    /* If is left part of val definition bind:
+     * val <<t>> @ ... =
+     */
+    private def isValDefBind(vd: ValDef) = {
+      val afterDef = text.drop(vd.namePosition.end)
+      val index = indexAfterSpacesAndComments(afterDef)
+      index >= 0 && index < afterDef.size && afterDef(index) == '@'
+    }
   }
 
   private def syntheticTupleApply(sel: Select): Boolean = {
